@@ -25,7 +25,7 @@ Credits
 
 Developed by [Omar Cornut](http://www.miracleworld.net). The library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com). 
 
-Embed font proggy_clean.fon (c) by Tristan Grimmer (also MIT license).
+Embeds [proggy_clean font](http://www.proggyfonts.net/) by Tristan Grimmer (also MIT license).
 
 Inspiration, feedback, and testing: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Matt Willis. Thanks!
 
