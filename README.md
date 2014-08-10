@@ -1,13 +1,16 @@
 ImGui
 =====
 
-ImGui is a bloat-free graphical user interface library for C/C++. It is portable, renderer agnostic and carries minimal amount of dependencies (only 3 files are needed). It is based on an "Immediate" graphical user interface paradigm which allows you to build simple user interfaces with ease.
+ImGui is a bloat-free graphical user interface library for C/C++. It is portable, renderer agnostic and carries minimal amount of dependencies (only 3 files are needed). It is based on an "immediate" graphical user interface paradigm which allows you to build simple user interfaces with ease.
 
-ImGui is designed to allow programmers to create "content creation" or "debug" tools (as opposed to tools for the average end-user). As thus, it is lacking certain features normally found in more high-level libraries, such as string localisation.
+ImGui is designed to allow programmers to create "content creation" or "debug" tools (as opposed to tools for the average end-user). It favors simplicity and thus lacks certain features normally found in more high-level libraries, such as string localisation.
 
-A simple usage example:
+Usage example:
 
 ![screenshot of sample code alongside its output with ImGui](/web/code_sample_01.png?raw=true)
+
+ImGui output vertex buffer and simple command-list that you can render in application. Refer to the sample applications in the examples/ folder for instructions on how to integrate ImGui within your existing codebase. 
+
 
 Gallery
 -------
