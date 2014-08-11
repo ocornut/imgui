@@ -226,6 +226,7 @@ ImGuiStyle::ImGuiStyle()
 	Colors[ImGuiCol_ScrollbarGrabHovered]	= ImVec4(0.40f, 0.40f, 0.80f, 0.40f);
 	Colors[ImGuiCol_ScrollbarGrabActive]	= ImVec4(0.80f, 0.50f, 0.50f, 0.40f);
 	Colors[ImGuiCol_ComboBg]				= ImVec4(0.20f, 0.20f, 0.20f, 0.99f);
+	Colors[ImGuiCol_CheckHovered]			= ImVec4(0.60f, 0.40f, 0.40f, 1.00f);
 	Colors[ImGuiCol_CheckActive]			= ImVec4(0.90f, 0.90f, 0.90f, 0.50f);
 	Colors[ImGuiCol_SliderGrab]				= ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
 	Colors[ImGuiCol_SliderGrabActive]		= ImVec4(0.80f, 0.50f, 0.50f, 1.00f);
@@ -2173,6 +2174,7 @@ const char* GetStyleColorName(ImGuiCol idx)
 	case ImGuiCol_ScrollbarGrabHovered: return "ScrollbarGrabHovered";
 	case ImGuiCol_ScrollbarGrabActive: return "ScrollbarGrabActive";
 	case ImGuiCol_ComboBg: return "ComboBg";
+	case ImGuiCol_CheckHovered: return "CheckHovered";
 	case ImGuiCol_CheckActive: return "CheckActive";
 	case ImGuiCol_SliderGrab: return "SliderGrab";
 	case ImGuiCol_SliderGrabActive: return "SliderGrabActive";
@@ -3306,12 +3308,12 @@ void Checkbox(const char* label, bool* v)
 	const ImGuiAabb text_bb(window->DC.CursorPos + ImVec2(0,style.FramePadding.y), window->DC.CursorPos + ImVec2(0,style.FramePadding.y) + text_size);
 	ItemSize(ImVec2(text_bb.GetWidth(), check_bb.GetHeight()));
 
-	if (ClipAdvance(check_bb))
+	const ImGuiAabb total_bb(ImMin(check_bb.Min, text_bb.Min), ImMax(check_bb.Max, text_bb.Max));
+
+	if (ClipAdvance(total_bb))
 		return;
 
-	RenderFrame(check_bb.Min, check_bb.Max, window->Color(ImGuiCol_FrameBg));
-
-	const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(check_bb);
+	const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(total_bb);
 	const bool pressed = hovered && g.IO.MouseClicked[0];
 	if (hovered)
 		g.HoveredId = id;
@@ -3320,6 +3322,8 @@ void Checkbox(const char* label, bool* v)
 		*v = !(*v);
 		g.ActiveId = 0;	// Clear focus
 	}
+
+	RenderFrame(check_bb.Min, check_bb.Max, window->Color(hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg));
 
 	if (*v)
 	{
@@ -3360,7 +3364,9 @@ bool RadioButton(const char* label, bool active)
 	const ImGuiAabb text_bb(window->DC.CursorPos + ImVec2(0, style.FramePadding.y), window->DC.CursorPos + ImVec2(0, style.FramePadding.y) + text_size);
 	ItemSize(ImVec2(text_bb.GetWidth(), check_bb.GetHeight()));
 
-	if (ClipAdvance(check_bb))
+	const ImGuiAabb total_bb(ImMin(check_bb.Min, text_bb.Min), ImMax(check_bb.Max, text_bb.Max));
+
+	if (ClipAdvance(total_bb))
 		return false;
 
 	ImVec2 center = check_bb.GetCenter();
@@ -3368,12 +3374,12 @@ bool RadioButton(const char* label, bool active)
 	center.y = (float)(int)center.y + 0.5f;
 	const float radius = check_bb.GetHeight() * 0.5f;
 
-	const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(check_bb);
+	const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(total_bb);
 	const bool pressed = hovered && g.IO.MouseClicked[0];
 	if (hovered)
 		g.HoveredId = id;
 
-	window->DrawList->AddCircleFilled(center, radius, window->Color(ImGuiCol_FrameBg), 16);
+	window->DrawList->AddCircleFilled(center, radius, window->Color(hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg), 16);
 	if (active)
 		window->DrawList->AddCircleFilled(center, radius-2, window->Color(ImGuiCol_CheckActive), 16);
 
