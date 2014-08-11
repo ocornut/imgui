@@ -9,3 +9,6 @@ examples/opengl_example/ipch/*
 *.sdf
 *.suo
 *.vcxproj.user
+
+## Ini files
+imgui.ini
