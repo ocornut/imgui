@@ -158,7 +158,6 @@
 
 #include "imgui.h"
 #include <ctype.h>		// toupper
-#include <limits.h>		// INT_MAX
 #include <math.h>		// sqrt
 #include <stdint.h>		// intptr_t
 #include <stdio.h>		// vsnprintf
@@ -291,6 +290,12 @@ void ImGuiIO::AddInputCharacter(char c)
 
 #undef PI
 const float PI = 3.14159265358979323846f;
+
+#ifdef INT_MAX
+#define IM_INT_MAX INT_MAX
+#else
+#define IM_INT_MAX 2147483647
+#endif
 
 // Math bits
 // We are keeping those static in the .cpp file so as not to leak them outside, in the case the user has implicit cast operators between ImVec2 and its own types.
@@ -907,8 +912,8 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
 		AutoFitFrames = 3;
 
 	FocusIdxCounter = -1;
-	FocusIdxRequestCurrent = INT_MAX;
-	FocusIdxRequestNext = INT_MAX;
+	FocusIdxRequestCurrent = IM_INT_MAX;
+	FocusIdxRequestNext = IM_INT_MAX;
 
 	DrawList = new ImDrawList();
 }
@@ -949,7 +954,7 @@ bool ImGuiWindow::FocusItemRegister(bool is_active, int* out_idx)
 		return false;
 
 	// Process input at this point: TAB, Shift-TAB switch focus
-	if (FocusIdxRequestNext == INT_MAX && is_active && ImGui::IsKeyPressedMap(ImGuiKey_Tab))
+	if (FocusIdxRequestNext == IM_INT_MAX && is_active && ImGui::IsKeyPressedMap(ImGuiKey_Tab))
 	{
 		// Modulo on index will be applied at the end of frame once we've got the total counter of items.
 		FocusIdxRequestNext = FocusIdxCounter + (g.IO.KeyShift ? -1 : +1);
@@ -1826,9 +1831,9 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 		window->ItemWidthDefault = (float)(int)(window->Size.x > 0.0f ? window->Size.x * 0.65f : 250.0f);
 
 		// Prepare for focus requests
-		if (window->FocusIdxRequestNext == INT_MAX || window->FocusIdxCounter == -1)
+		if (window->FocusIdxRequestNext == IM_INT_MAX || window->FocusIdxCounter == -1)
 		{
-			window->FocusIdxRequestCurrent = INT_MAX;
+			window->FocusIdxRequestCurrent = IM_INT_MAX;
 		}
 		else
 		{
@@ -1836,7 +1841,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 			window->FocusIdxRequestCurrent = (window->FocusIdxRequestNext + mod) % mod;
 		}
 		window->FocusIdxCounter = -1;
-		window->FocusIdxRequestNext = INT_MAX;
+		window->FocusIdxRequestNext = IM_INT_MAX;
 
 		ImGuiAabb title_bar_aabb = window->TitleBarAabb();
 
