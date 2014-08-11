@@ -156,8 +156,10 @@
 */
 
 #include "imgui.h"
-#include <ctype.h>
+#include <ctype.h>		// toupper
+#include <limits.h>		// INT_MAX
 #include <math.h>		// sqrt
+#include <stdint.h>		// intptr_t
 #include <stdio.h>		// vsnprintf
 #include <string.h>		// memset
 
