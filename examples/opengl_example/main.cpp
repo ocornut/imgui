@@ -15,8 +15,6 @@ static GLuint vertexShader;
 static GLuint fragmentShader;
 static GLuint shaderProgram;
 static GLuint fontTex;
-static GLint uniMVP;
-static GLint uniClipRect;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structuer)
 static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
@@ -34,13 +32,11 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 	unsigned char* buffer_data = (unsigned char*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 	if (!buffer_data)
 		return;
-	int vtx_consumed = 0;
 	for (int n = 0; n < cmd_lists_count; n++)
 	{
 		const ImDrawList* cmd_list = cmd_lists[n];
 		memcpy(buffer_data, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
 		buffer_data += cmd_list->vtx_buffer.size() * sizeof(ImDrawVert);
-		vtx_consumed += cmd_list->vtx_buffer.size();
 	}
 	glUnmapBuffer(GL_ARRAY_BUFFER);
 	
@@ -53,63 +49,59 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 	// Bind texture and enable our shader
 	glBindTexture(GL_TEXTURE_2D, fontTex);
 	glUseProgram(shaderProgram);
+	const GLint uniMVP = glGetUniformLocation(shaderProgram, "MVP");
+	const GLint uniClipRect = glGetUniformLocation(shaderProgram, "ClipRect");
 
 	// Setup orthographic projection matrix
-	const float L = 0.0f;
-	const float R = ImGui::GetIO().DisplaySize.x;
-	const float B = ImGui::GetIO().DisplaySize.y;
-	const float T = 0.0f;
+	const float width = ImGui::GetIO().DisplaySize.x;
+	const float height = ImGui::GetIO().DisplaySize.y;
 	const float mvp[4][4] = 
 	{
-		{ 2.0f/(R-L),	0.0f,			0.0f,		0.0f },
-		{ 0.0f,			2.0f/(T-B),		0.0f,		0.0f },
+		{ 2.0f/width,	0.0f,			0.0f,		0.0f },
+		{ 0.0f,			2.0f/-height,	0.0f,		0.0f },
 		{ 0.0f,			0.0f,			-1.0f,		0.0f },
-		{ -(R+L)/(R-L),	-(T+B)/(T-B),	0.0f,		1.0f },
+		{ -1.0f,		1.0f,			0.0f,		1.0f },
 	};
 	glUniformMatrix4fv(uniMVP, 1, GL_FALSE, &mvp[0][0]);
 
 	// Render command lists
-	vtx_consumed = 0;						// offset in vertex buffer. each command consume ImDrawCmd::vtx_count of those
+	int vtx_offset = 0;
 	for (int n = 0; n < cmd_lists_count; n++)
 	{
-		const ImDrawList* cmd_list = cmd_lists[n];
-
 		// Setup stack of clipping rectangles
-		bool clip_rect_dirty = true;
-		int clip_rect_buf_consumed = 0;
+		int clip_rect_buf_offset = 0;
 		ImVector<ImVec4> clip_rect_stack;
 		clip_rect_stack.push_back(ImVec4(-9999,-9999,+9999,+9999));
 
 		// Render command list
-		const ImDrawCmd* pcmd = &cmd_list->commands.front();
-		const ImDrawCmd* pcmd_end = &cmd_list->commands.back();
-		while (pcmd <= pcmd_end)
+		const ImDrawList* cmd_list = cmd_lists[n];
+		const ImDrawCmd* pcmd_end = cmd_list->commands.end();
+		for (const ImDrawCmd* pcmd = cmd_list->commands.begin(); pcmd != pcmd_end; pcmd++)
 		{
-			const ImDrawCmd& cmd = *pcmd++;
-			switch (cmd.cmd_type)
+			switch (pcmd->cmd_type)
 			{
 			case ImDrawCmdType_DrawTriangleList:
-				if (clip_rect_dirty)
-				{
-					glUniform4fv(uniClipRect, 1, (float*)&clip_rect_stack.back());
-					clip_rect_dirty = false;
-				}
-				glDrawArrays(GL_TRIANGLES, vtx_consumed, cmd.vtx_count);
-				vtx_consumed += cmd.vtx_count;
+				glUniform4fv(uniClipRect, 1, (float*)&clip_rect_stack.back());
+				glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
+				vtx_offset += pcmd->vtx_count;
 				break;
 
 			case ImDrawCmdType_PushClipRect:
-				clip_rect_stack.push_back(cmd_list->clip_rect_buffer[clip_rect_buf_consumed++]);
-				clip_rect_dirty = true;
+				clip_rect_stack.push_back(cmd_list->clip_rect_buffer[clip_rect_buf_offset++]);
 				break;
 
 			case ImDrawCmdType_PopClipRect:
 				clip_rect_stack.pop_back();
-				clip_rect_dirty = true;
 				break;
 			}
 		}
 	}
+
+	// Cleanup GL state
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glUseProgram(0);
 }
 
 static const char* ImImpl_GetClipboardTextFn()
@@ -122,6 +114,7 @@ static void ImImpl_SetClipboardTextFn(const char* text, const char* text_end)
 	if (!text_end)
 		text_end = text + strlen(text);
 
+	// Add a zero-terminator because glfw function doesn't take a size
 	char* buf = (char*)malloc(text_end - text + 1);
 	memcpy(buf, text, text_end-text);
 	buf[text_end-text] = '\0';
@@ -283,9 +276,6 @@ void InitImGui()
 	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &status);
 	IM_ASSERT(status == GL_TRUE);
 
-	uniMVP = glGetUniformLocation(shaderProgram, "MVP");
-	uniClipRect = glGetUniformLocation(shaderProgram, "ClipRect");
-
 	// Create Vertex Buffer Objects & Vertex Array Objects
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -304,6 +294,9 @@ void InitImGui()
 	glVertexAttribPointer(colAttrib, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (void*)(4*sizeof(float)));
 	glEnableVertexAttribArray(colAttrib);
 	err = glGetError(); IM_ASSERT(err == GL_NO_ERROR);
+
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// Load font texture
 	glGenTextures(1, &fontTex);

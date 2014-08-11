@@ -83,45 +83,37 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 	g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &mat);
 
 	// Render command lists
-	int vtx_consumed = 0;					// offset in vertex buffer. each command consume ImDrawCmd::vtx_count of those
+	int vtx_offset = 0;
 	for (int n = 0; n < cmd_lists_count; n++)
 	{
-		const ImDrawList* cmd_list = cmd_lists[n];
-
 		// Setup stack of clipping rectangles
-		bool clip_rect_dirty = true;
-		int clip_rect_buf_consumed = 0;
+		int clip_rect_buf_offset = 0;
 		ImVector<ImVec4> clip_rect_stack; 
 		clip_rect_stack.push_back(ImVec4(-9999,-9999,+9999,+9999));
 
 		// Render command list
-		const ImDrawCmd* pcmd = &cmd_list->commands.front();
-		const ImDrawCmd* pcmd_end = &cmd_list->commands.back();
-		while (pcmd <= pcmd_end)
+		const ImDrawList* cmd_list = cmd_lists[n];
+		const ImDrawCmd* pcmd_end = cmd_list->commands.end();
+		for (const ImDrawCmd* pcmd = cmd_list->commands.begin(); pcmd != pcmd_end; pcmd++)
 		{
-			const ImDrawCmd& cmd = *pcmd++;
-			switch (cmd.cmd_type)
+			switch (pcmd->cmd_type)
 			{
 			case ImDrawCmdType_DrawTriangleList:
-				if (clip_rect_dirty)
 				{
 					const ImVec4& clip_rect = clip_rect_stack.back();
 					const RECT r = { (LONG)clip_rect.x, (LONG)clip_rect.y, (LONG)clip_rect.z, (LONG)clip_rect.w };
 					g_pd3dDevice->SetScissorRect(&r);
-					clip_rect_dirty = false;
+					g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, vtx_offset, pcmd->vtx_count/3);
+					vtx_offset += pcmd->vtx_count;
 				}
-				g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, vtx_consumed, cmd.vtx_count/3);
-				vtx_consumed += cmd.vtx_count;
 				break;
 
 			case ImDrawCmdType_PushClipRect:
-				clip_rect_stack.push_back(cmd_list->clip_rect_buffer[clip_rect_buf_consumed++]);
-				clip_rect_dirty = true;
+				clip_rect_stack.push_back(cmd_list->clip_rect_buffer[clip_rect_buf_offset++]);
 				break;
 
 			case ImDrawCmdType_PopClipRect:
 				clip_rect_stack.pop_back();
-				clip_rect_dirty = true;
 				break;
 			}
 		}
