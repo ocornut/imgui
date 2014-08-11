@@ -217,58 +217,6 @@ void InitGL()
 	glewInit();
 
 	GLenum err = GL_NO_ERROR;
-	GLint status = GL_TRUE;
-	err = glGetError(); IM_ASSERT(err == GL_NO_ERROR);
-
-    // Create and compile the vertex shader
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexSource, NULL);
-    glCompileShader(vertexShader);
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
-	if (status != GL_TRUE)
-	{
-		char buffer[512];
-		glGetShaderInfoLog(vertexShader, 1024, NULL, buffer);
-		printf("%s", buffer);
-		IM_ASSERT(status == GL_TRUE);
-	}
-
-    // Create and compile the fragment shader
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
-    glCompileShader(fragmentShader);
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
-	IM_ASSERT(status == GL_TRUE);
-
-    // Link the vertex and fragment shader into a shader program
-    shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glBindFragDataLocation(shaderProgram, 0, "o_col");
-    glLinkProgram(shaderProgram);
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &status);
-	IM_ASSERT(status == GL_TRUE);
-
-	uniMVP = glGetUniformLocation(shaderProgram, "MVP");
-	uniClipRect = glGetUniformLocation(shaderProgram, "ClipRect");
-
-	// Create Vertex Buffer Objects & Vertex Array Objects
-	glGenBuffers(1, &vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-	
-	GLint posAttrib = glGetAttribLocation(shaderProgram, "i_pos");
-	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), 0);
-	glEnableVertexAttribArray(posAttrib);
-
-	GLint uvAttrib = glGetAttribLocation(shaderProgram, "i_uv");
-	glEnableVertexAttribArray(uvAttrib);
-	glVertexAttribPointer(uvAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (void*)(2*sizeof(float)));
-
-	GLint colAttrib = glGetAttribLocation(shaderProgram, "i_col");
-	glVertexAttribPointer(colAttrib, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (void*)(4*sizeof(float)));
-	glEnableVertexAttribArray(colAttrib);
 	err = glGetError(); IM_ASSERT(err == GL_NO_ERROR);
 }
 
@@ -278,9 +226,10 @@ void InitImGui()
 	glfwGetWindowSize(window, &w, &h);
 
 	ImGuiIO& io = ImGui::GetIO();
-	io.DisplaySize = ImVec2((float)w, (float)h);
-	io.DeltaTime = 1.0f/60.0f;
-	io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
+	io.DisplaySize = ImVec2((float)w, (float)h);			// Display size, in pixels. For clamping windows positions.
+	io.DeltaTime = 1.0f/60.0f;								// Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
+	io.PixelCenterOffset = 0.5f;							// Align OpenGL texels
+	io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;					// Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
 	io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
 	io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
 	io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
@@ -297,11 +246,67 @@ void InitImGui()
 	io.KeyMap[ImGuiKey_X] = GLFW_KEY_X;
 	io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
 	io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
-	io.PixelCenterOffset = 0.5f;
 
 	io.RenderDrawListsFn = ImImpl_RenderDrawLists;
 	io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
 	io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
+
+
+	// Setup graphics backend
+	GLint status = GL_TRUE;
+	GLenum err = GL_NO_ERROR;
+	err = glGetError(); IM_ASSERT(err == GL_NO_ERROR);
+
+	// Create and compile the vertex shader
+	vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &vertexSource, NULL);
+	glCompileShader(vertexShader);
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+	if (status != GL_TRUE)
+	{
+		char buffer[512];
+		glGetShaderInfoLog(vertexShader, 1024, NULL, buffer);
+		printf("%s", buffer);
+		IM_ASSERT(status == GL_TRUE);
+	}
+
+	// Create and compile the fragment shader
+	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
+	glCompileShader(fragmentShader);
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+	IM_ASSERT(status == GL_TRUE);
+
+	// Link the vertex and fragment shader into a shader program
+	shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	glBindFragDataLocation(shaderProgram, 0, "o_col");
+	glLinkProgram(shaderProgram);
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &status);
+	IM_ASSERT(status == GL_TRUE);
+
+	uniMVP = glGetUniformLocation(shaderProgram, "MVP");
+	uniClipRect = glGetUniformLocation(shaderProgram, "ClipRect");
+
+	// Create Vertex Buffer Objects & Vertex Array Objects
+	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+
+	GLint posAttrib = glGetAttribLocation(shaderProgram, "i_pos");
+	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), 0);
+	glEnableVertexAttribArray(posAttrib);
+
+	GLint uvAttrib = glGetAttribLocation(shaderProgram, "i_uv");
+	glEnableVertexAttribArray(uvAttrib);
+	glVertexAttribPointer(uvAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (void*)(2*sizeof(float)));
+
+	GLint colAttrib = glGetAttribLocation(shaderProgram, "i_col");
+	glVertexAttribPointer(colAttrib, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (void*)(4*sizeof(float)));
+	glEnableVertexAttribArray(colAttrib);
+	err = glGetError(); IM_ASSERT(err == GL_NO_ERROR);
 
 	// Load font texture
 	glGenTextures(1, &fontTex);
@@ -348,10 +353,10 @@ int main(int argc, char** argv)
 		time = current_time;
 		double mouse_x, mouse_y;
 		glfwGetCursorPos(window, &mouse_x, &mouse_y);
-		io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
+		io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);							// Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
 		io.MouseDown[0] = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != 0;
 		io.MouseDown[1] = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) != 0;
-		io.MouseWheel = (mouse_wheel != 0) ? mouse_wheel > 0.0f ? 1 : - 1 : 0;
+		io.MouseWheel = (mouse_wheel != 0) ? mouse_wheel > 0.0f ? 1 : - 1 : 0;			// Mouse wheel: -1,0,+1
 		mouse_wheel = 0.0f;
 		ImGui::NewFrame();
 

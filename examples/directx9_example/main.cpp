@@ -203,17 +203,6 @@ HRESULT InitD3D(HWND hWnd)
     if (g_pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &d3dpp, &g_pd3dDevice) < 0)
         return E_FAIL;
 
-	// Create the vertex buffer.
-	if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
-        return E_FAIL;
-
-	// Load font texture
-	const void* png_data;
-	unsigned int png_size;
-	ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
-	if (D3DXCreateTextureFromFileInMemory(g_pd3dDevice, png_data, png_size, &g_pTexture) < 0)
-		return E_FAIL;
-
     return S_OK;
 }
 
@@ -247,9 +236,11 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		io.MouseDown[1] = false; 
 		return true;
 	case WM_MOUSEWHEEL:
+		// Mouse wheel: -1,0,+1
 		io.MouseWheel = GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1 : -1;
 		return true;
 	case WM_MOUSEMOVE:
+		// Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
 		io.MousePos.x = (signed short)(lParam);
 		io.MousePos.y = (signed short)(lParam >> 16); 
 		return true;
@@ -274,9 +265,10 @@ void InitImGui()
 	GetClientRect(hWnd, &rect);
 
 	ImGuiIO& io = ImGui::GetIO();
-	io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
-	io.DeltaTime = 1.0f/60.0f;
-	io.KeyMap[ImGuiKey_Tab] = VK_TAB;
+	io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));	// Display size, in pixels. For clamping windows positions.
+	io.DeltaTime = 1.0f/60.0f;																	// Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
+	io.PixelCenterOffset = 0.0f;																// Align Direct3D Texels
+	io.KeyMap[ImGuiKey_Tab] = VK_TAB;															// Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
 	io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
 	io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
 	io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
@@ -293,11 +285,28 @@ void InitImGui()
 	io.KeyMap[ImGuiKey_X] = 'X';
 	io.KeyMap[ImGuiKey_Y] = 'Y';
 	io.KeyMap[ImGuiKey_Z] = 'Z';
-	io.PixelCenterOffset = 0.0f;
 
 	io.RenderDrawListsFn = ImImpl_RenderDrawLists;
 	io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
 	io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
+
+	
+	// Create the vertex buffer
+	if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
+	{
+		IM_ASSERT(0);
+		return;
+	}
+
+	// Load font texture
+	const void* png_data;
+	unsigned int png_size;
+	ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
+	if (D3DXCreateTextureFromFileInMemory(g_pd3dDevice, png_data, png_size, &g_pTexture) < 0)
+	{
+		IM_ASSERT(0);
+		return;
+	}
 }
 
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)

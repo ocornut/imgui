@@ -381,7 +381,7 @@ struct ImGuiIO
 	void		(*SetClipboardTextFn)(const char* text, const char* text_end);	// Required for clipboard support (nb- the string is *NOT* zero-terminated at 'text_end')
 
 	// Input - Fill before calling NewFrame()
-	ImVec2		MousePos;					// Mouse position (set to -1,-1 if no mouse / on another screen, etc.)
+	ImVec2		MousePos;					// Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
 	bool		MouseDown[2];				// Mouse buttons
 	int			MouseWheel;					// Mouse wheel: -1,0,+1
 	bool		KeyCtrl;					// Keyboard modifier pressed: Control
