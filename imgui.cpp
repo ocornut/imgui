@@ -226,7 +226,7 @@ ImGuiStyle::ImGuiStyle()
 	Colors[ImGuiCol_ScrollbarGrabHovered]	= ImVec4(0.40f, 0.40f, 0.80f, 0.40f);
 	Colors[ImGuiCol_ScrollbarGrabActive]	= ImVec4(0.80f, 0.50f, 0.50f, 0.40f);
 	Colors[ImGuiCol_ComboBg]				= ImVec4(0.20f, 0.20f, 0.20f, 0.99f);
-	Colors[ImGuiCol_CheckHovered]			= ImVec4(0.60f, 0.40f, 0.40f, 1.00f);
+	Colors[ImGuiCol_CheckHovered]			= ImVec4(0.60f, 0.40f, 0.40f, 0.45f);
 	Colors[ImGuiCol_CheckActive]			= ImVec4(0.90f, 0.90f, 0.90f, 0.50f);
 	Colors[ImGuiCol_SliderGrab]				= ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
 	Colors[ImGuiCol_SliderGrabActive]		= ImVec4(0.80f, 0.50f, 0.50f, 1.00f);
@@ -2123,6 +2123,12 @@ void PopItemWidth()
 	window->DC.ItemWidth.pop_back();
 }
 
+float GetItemWidth()
+{
+	ImGuiWindow* window = GetCurrentWindow();
+	return window->DC.ItemWidth.back();
+}
+
 void PushAllowKeyboardFocus(bool allow_keyboard_focus)
 {
 	ImGuiWindow* window = GetCurrentWindow();
@@ -3307,7 +3313,6 @@ void Checkbox(const char* label, bool* v)
 
 	const ImGuiAabb text_bb(window->DC.CursorPos + ImVec2(0,style.FramePadding.y), window->DC.CursorPos + ImVec2(0,style.FramePadding.y) + text_size);
 	ItemSize(ImVec2(text_bb.GetWidth(), check_bb.GetHeight()));
-
 	const ImGuiAabb total_bb(ImMin(check_bb.Min, text_bb.Min), ImMax(check_bb.Max, text_bb.Max));
 
 	if (ClipAdvance(total_bb))
@@ -3324,7 +3329,6 @@ void Checkbox(const char* label, bool* v)
 	}
 
 	RenderFrame(check_bb.Min, check_bb.Max, window->Color(hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg));
-
 	if (*v)
 	{
 		window->DrawList->AddRectFilled(check_bb.Min+ImVec2(4,4), check_bb.Max-ImVec2(4,4), window->Color(ImGuiCol_CheckActive));
@@ -3363,7 +3367,6 @@ bool RadioButton(const char* label, bool active)
 
 	const ImGuiAabb text_bb(window->DC.CursorPos + ImVec2(0, style.FramePadding.y), window->DC.CursorPos + ImVec2(0, style.FramePadding.y) + text_size);
 	ItemSize(ImVec2(text_bb.GetWidth(), check_bb.GetHeight()));
-
 	const ImGuiAabb total_bb(ImMin(check_bb.Min, text_bb.Min), ImMax(check_bb.Max, text_bb.Max));
 
 	if (ClipAdvance(total_bb))
@@ -5146,11 +5149,17 @@ void ShowStyleEditor(ImGuiStyle* ref)
 	ImGui::SameLine();
 	ImGui::RadioButton("HEX", &edit_mode, ImGuiColorEditMode_HEX);
 
+	static ImGuiTextFilter filter;
+	filter.Draw("Filter colors", 200);
+
 	ImGui::ColorEditMode(edit_mode);
 	for (size_t i = 0; i < ImGuiCol_COUNT; i++)
 	{
+		const char* name = GetStyleColorName(i);
+		if (!filter.PassFilter(name))
+			continue;
 		ImGui::PushID(i);
-		ImGui::ColorEdit4(GetStyleColorName(i), (float*)&style.Colors[i], true);
+		ImGui::ColorEdit4(name, (float*)&style.Colors[i], true);
 		if (memcmp(&style.Colors[i], (ref ? &ref->Colors[i] : &def.Colors[i]), sizeof(ImVec4)) != 0)
 		{
 			ImGui::SameLine(); if (ImGui::Button("Revert")) style.Colors[i] = ref ? ref->Colors[i] : def.Colors[i];

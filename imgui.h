@@ -145,6 +145,7 @@ namespace ImGui
 	void		SetTreeStateStorage(ImGuiStorage* tree);
 	void		PushItemWidth(float item_width);
 	void		PopItemWidth();
+	float		GetItemWidth();
 	void		PushAllowKeyboardFocus(bool v);
 	void		PopAllowKeyboardFocus();
 	void		PushStyleColor(ImGuiCol idx, ImVec4 col);
