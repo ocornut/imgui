@@ -211,6 +211,7 @@ ImGuiStyle::ImGuiStyle()
 	TreeNodeSpacing			= 22.0f;
 	ColumnsMinSpacing		= 6.0f;				// Minimum space between two columns
 	ScrollBarWidth			= 16.0f;
+	PixelCenterOffset		= 0.0f;				// for <= d3d9, this should be 0.5f.  for ogl & d3d10+, 0.0f is correct
 
 	Colors[ImGuiCol_Text]					= ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
 	Colors[ImGuiCol_WindowBg]				= ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
@@ -3355,8 +3356,8 @@ bool RadioButton(const char* label, bool active)
 		return false;
 
 	ImVec2 center = check_bb.GetCenter();
-	center.x = (float)(int)center.x + 0.5f;
-	center.y = (float)(int)center.y + 0.5f;
+	center.x = (float)(int)center.x + style.PixelCenterOffset;
+	center.y = (float)(int)center.y + style.PixelCenterOffset;
 	const float radius = check_bb.GetHeight() * 0.5f;
 
 	const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(check_bb);

@@ -352,6 +352,7 @@ struct ImGuiStyle
 	float		TreeNodeSpacing;
 	float		ColumnsMinSpacing;
 	float		ScrollBarWidth;
+	float		PixelCenterOffset;
 	ImVec4		Colors[ImGuiCol_COUNT];
 
 	ImGuiStyle();
