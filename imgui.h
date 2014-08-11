@@ -302,6 +302,7 @@ enum ImGuiCol_
 	ImGuiCol_ScrollbarGrabHovered,
 	ImGuiCol_ScrollbarGrabActive,
 	ImGuiCol_ComboBg,
+	ImGuiCol_CheckHovered,
 	ImGuiCol_CheckActive,
 	ImGuiCol_SliderGrab,
 	ImGuiCol_SliderGrabActive,
