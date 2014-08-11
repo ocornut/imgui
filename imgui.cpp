@@ -3356,8 +3356,8 @@ bool RadioButton(const char* label, bool active)
 		return false;
 
 	ImVec2 center = check_bb.GetCenter();
-	center.x = (float)(int)center.x + 0.5f;
-	center.y = (float)(int)center.y + 0.5f;
+	center.x = (float)(int)center.x + style.PixelCenterOffset;
+	center.y = (float)(int)center.y + style.PixelCenterOffset;
 	const float radius = check_bb.GetHeight() * 0.5f;
 
 	const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(check_bb);
