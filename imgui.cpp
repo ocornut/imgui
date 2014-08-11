@@ -144,6 +144,7 @@
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
  - keyboard: full keyboard navigation and focus
+ - clipboard: add a default "local" implementation of clipboard functions (user will only need to override them to connect to OS clipboard)
  - misc: not thread-safe
  - optimisation/render: use indexed rendering
  - optimisation/render: move clip-rect to vertex data? would allow merging all commands
