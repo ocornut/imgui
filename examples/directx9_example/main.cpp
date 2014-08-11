@@ -293,6 +293,7 @@ void InitImGui()
 	io.KeyMap[ImGuiKey_X] = 'X';
 	io.KeyMap[ImGuiKey_Y] = 'Y';
 	io.KeyMap[ImGuiKey_Z] = 'Z';
+	io.PixelCenterOffset = 0.0f;
 
 	io.RenderDrawListsFn = ImImpl_RenderDrawLists;
 	io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;

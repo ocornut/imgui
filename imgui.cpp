@@ -262,6 +262,7 @@ ImGuiIO::ImGuiIO()
 	LogFilename = "imgui_log.txt";
 	Font = NULL;
 	FontAllowScaling = false;
+	PixelCenterOffset = 0.5f;
 	MousePos = ImVec2(-1,-1);
 	MousePosPrev = ImVec2(-1,-1);
 	MouseDoubleClickTime = 0.30f;
@@ -5003,6 +5004,8 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
 	float line_width = 0.0f;
 	const ImVec4 clip_rect = clip_rect_ref;
 
+	const float uv_offset = GImGui.IO.PixelCenterOffset;
+
 	float x = pos.x;
 	float y = pos.y;
 	for (const char* s = text_begin; s < text_end; s++)
@@ -5039,10 +5042,10 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
 					continue;
 				}
 
-				const float s1 = (0.0f + glyph->X) * tex_scale_x;
-				const float t1 = (0.0f + glyph->Y) * tex_scale_y;
-				const float s2 = (0.0f + glyph->X + glyph->Width) * tex_scale_x;
-				const float t2 = (0.0f + glyph->Y + glyph->Height) * tex_scale_y;
+				const float s1 = (uv_offset + glyph->X) * tex_scale_x;
+				const float t1 = (uv_offset + glyph->Y) * tex_scale_y;
+				const float s2 = (uv_offset + glyph->X + glyph->Width) * tex_scale_x;
+				const float t2 = (uv_offset + glyph->Y + glyph->Height) * tex_scale_y;
 
 				out_vertices[0].pos = ImVec2(x1, y1);
 				out_vertices[0].uv  = ImVec2(s1, t1);
