@@ -9,7 +9,7 @@ Usage example:
 
 ![screenshot of sample code alongside its output with ImGui](/web/code_sample_01.png?raw=true)
 
-ImGui output vertex buffer and simple command-list that you can render in application. Refer to the sample applications in the examples/ folder for instructions on how to integrate ImGui within your existing codebase. 
+ImGui outputs vertex buffers and simple command-lists that you can render in your application. Because it doesn't know or touch graphics state directly, you can call ImGui commands anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate ImGui with your existing codebase. 
 
 
 Gallery
@@ -25,7 +25,7 @@ Credits
 
 Developed by [Omar Cornut](http://www.miracleworld.net). The library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com). 
 
-Embeds [proggy_clean font](http://www.proggyfonts.net/) by Tristan Grimmer (also MIT license).
+Embeds [proggy_clean](http://www.proggyfonts.net/) font by Tristan Grimmer (also MIT license).
 
 Inspiration, feedback, and testing: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Matt Willis. Thanks!
 
