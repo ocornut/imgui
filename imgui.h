@@ -391,9 +391,12 @@ struct ImGuiIO
 	bool		KeysDown[512];				// Keyboard keys that are pressed (in whatever order user naturally has access to keyboard data)
 	char		InputCharacters[16];		// List of characters input (translated by user from keypress+keyboard state). Fill using AddInputCharacter() helper.
 
-	// Output - Retrieve after calling NewFrame(), you can use them to discard inputs for the rest of your application
+	// Output - Retrieve after calling NewFrame(), you can use them to discard inputs or hide them from the rest of your application
 	bool		WantCaptureMouse;			// ImGui is using your mouse input (= window is being hovered or widget is active).
 	bool		WantCaptureKeyboard;		// imGui is using your keyboard input (= widget is active).
+
+	// Function
+	void		AddInputCharacter(char c);	// Helper to add a new character into InputCharacters[]
 
 	// [Internal] ImGui will maintain those fields for you
 	ImVec2		MousePosPrev;
@@ -406,7 +409,6 @@ struct ImGuiIO
 	float		KeysDownTime[512];
 
 	ImGuiIO();
-	void		AddInputCharacter(char c);	// Helper to add a new character into InputCharacters[]
 };
 
 //-----------------------------------------------------------------------------

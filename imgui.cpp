@@ -694,6 +694,7 @@ public:
 
 static ImGuiWindow*	GetCurrentWindow()
 {
+	IM_ASSERT(GImGui.CurrentWindow != NULL);	// ImGui::NewFrame() hasn't been called yet?
 	GImGui.CurrentWindow->Accessed = true;
 	return GImGui.CurrentWindow;
 }
