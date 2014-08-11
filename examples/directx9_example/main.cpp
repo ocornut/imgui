@@ -12,16 +12,15 @@ static LPDIRECT3D9             g_pD3D = NULL;		// Used to create the D3DDevice
 static LPDIRECT3DDEVICE9       g_pd3dDevice = NULL; // Our rendering device
 static LPDIRECT3DVERTEXBUFFER9 g_pVB = NULL;		// Buffer to hold vertices
 static LPDIRECT3DTEXTURE9      g_pTexture = NULL;	// Our texture
-
 struct CUSTOMVERTEX
 {
     D3DXVECTOR3	position;
     D3DCOLOR	color;
     float		tu, tv;
 };
-
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
 
+// This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structuer)
 static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
 	size_t total_vtx_count = 0;
@@ -30,31 +29,13 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 	if (total_vtx_count == 0)
 		return;
 
-	ImVector<ImVec4> clip_rect_stack;
-	clip_rect_stack.push_back(ImVec4(-9999,-9999,+9999,+9999));
-
-	// Setup orthographic projection
-	// Set up world matrix
-	D3DXMATRIXA16 mat;
-	D3DXMatrixIdentity(&mat);
-	g_pd3dDevice->SetTransform(D3DTS_WORLD, &mat);
-	g_pd3dDevice->SetTransform(D3DTS_VIEW, &mat);
-	D3DXMatrixOrthoOffCenterLH(&mat, 0.0f, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y, 0.0f, -1.0f, +1.0f);
-	g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &mat);
-    
-	D3DSURFACE_DESC texture_desc;
-	g_pTexture->GetLevelDesc(0, &texture_desc);
-
-    // Fill the vertex buffer
+	// Copy and convert all vertices into a single contiguous buffer
     CUSTOMVERTEX* vtx_dst;
     if (g_pVB->Lock(0, total_vtx_count, (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
         return;
-
 	for (int n = 0; n < cmd_lists_count; n++)
 	{
 		const ImDrawList* cmd_list = cmd_lists[n];
-		if (cmd_list->commands.empty() || cmd_list->vtx_buffer.empty())
-			continue;
 		const ImDrawVert* vtx_src = &cmd_list->vtx_buffer[0];
 		for (size_t i = 0; i < cmd_list->vtx_buffer.size(); i++)
 		{
@@ -73,11 +54,10 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 	g_pd3dDevice->SetStreamSource( 0, g_pVB, 0, sizeof( CUSTOMVERTEX ) );
 	g_pd3dDevice->SetFVF( D3DFVF_CUSTOMVERTEX );
 
-	// Setup render state: alpha-blending enabled, no face culling, no depth testing
+	// Setup render state: alpha-blending, no face culling, no depth testing
     g_pd3dDevice->SetRenderState( D3DRS_CULLMODE, D3DCULL_NONE );
     g_pd3dDevice->SetRenderState( D3DRS_LIGHTING, false );
     g_pd3dDevice->SetRenderState( D3DRS_ZENABLE, false );
-
 	g_pd3dDevice->SetRenderState( D3DRS_ALPHABLENDENABLE, true );
 	g_pd3dDevice->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD );
 	g_pd3dDevice->SetRenderState( D3DRS_ALPHATESTENABLE, false );
@@ -94,17 +74,29 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 	g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
 	g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
 
-	int vtx_consumed = 0;					// offset in vertex buffer. each command consume ImDrawCmd::vtx_count of those
-	bool clip_rect_dirty = true;
+	// Setup orthographic projection matrix
+	D3DXMATRIXA16 mat;
+	D3DXMatrixIdentity(&mat);
+	g_pd3dDevice->SetTransform(D3DTS_WORLD, &mat);
+	g_pd3dDevice->SetTransform(D3DTS_VIEW, &mat);
+	D3DXMatrixOrthoOffCenterLH(&mat, 0.0f, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y, 0.0f, -1.0f, +1.0f);
+	g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &mat);
 
+	// Render command lists
+	int vtx_consumed = 0;					// offset in vertex buffer. each command consume ImDrawCmd::vtx_count of those
 	for (int n = 0; n < cmd_lists_count; n++)
 	{
 		const ImDrawList* cmd_list = cmd_lists[n];
-		if (cmd_list->commands.empty() || cmd_list->vtx_buffer.empty())
-			continue;
+
+		// Setup stack of clipping rectangles
+		bool clip_rect_dirty = true;
+		int clip_rect_buf_consumed = 0;
+		ImVector<ImVec4> clip_rect_stack; 
+		clip_rect_stack.push_back(ImVec4(-9999,-9999,+9999,+9999));
+
+		// Render command list
 		const ImDrawCmd* pcmd = &cmd_list->commands.front();
 		const ImDrawCmd* pcmd_end = &cmd_list->commands.back();
-		int clip_rect_buf_consumed = 0;		// offset in cmd_list->clip_rect_buffer. each PushClipRect command consume 1 of those.
 		while (pcmd <= pcmd_end)
 		{
 			const ImDrawCmd& cmd = *pcmd++;
@@ -289,7 +281,6 @@ void InitImGui()
 	io.RenderDrawListsFn = ImImpl_RenderDrawLists;
 	io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
 	io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
-
 	
 	// Create the vertex buffer
 	if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
@@ -396,13 +387,15 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
 				ImGui::End();
 			}
 
-			// 3) Render
+			// 3) Rendering
+			// Clear frame buffer
 		    g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, false);
 			g_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
 			g_pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
-			g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(204, 153, 153), 1.0f, 0);	// Clear the backbuffer and the zbuffer
+			g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(204, 153, 153), 1.0f, 0);
 			if (g_pd3dDevice->BeginScene() >= 0)
 			{
+				// Render ImGui
 				ImGui::Render();
 				g_pd3dDevice->EndScene();
 			}
