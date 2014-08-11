@@ -3303,10 +3303,12 @@ void Checkbox(const char* label, bool* v)
 	const ImGuiAabb text_bb(window->DC.CursorPos + ImVec2(0,style.FramePadding.y), window->DC.CursorPos + ImVec2(0,style.FramePadding.y) + text_size);
 	ItemSize(ImVec2(text_bb.GetWidth(), check_bb.GetHeight()));
 
-	if (ClipAdvance(check_bb))
+	const ImGuiAabb total_bb(ImMin(check_bb.Min, text_bb.Min), ImMax(check_bb.Max, text_bb.Max));
+
+	if (ClipAdvance(total_bb))
 		return;
 
-	const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(check_bb);
+	const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(total_bb);
 	const bool pressed = hovered && g.IO.MouseClicked[0];
 	if (hovered)
 		g.HoveredId = id;
@@ -3357,7 +3359,9 @@ bool RadioButton(const char* label, bool active)
 	const ImGuiAabb text_bb(window->DC.CursorPos + ImVec2(0, style.FramePadding.y), window->DC.CursorPos + ImVec2(0, style.FramePadding.y) + text_size);
 	ItemSize(ImVec2(text_bb.GetWidth(), check_bb.GetHeight()));
 
-	if (ClipAdvance(check_bb))
+	const ImGuiAabb total_bb(ImMin(check_bb.Min, text_bb.Min), ImMax(check_bb.Max, text_bb.Max));
+
+	if (ClipAdvance(total_bb))
 		return false;
 
 	ImVec2 center = check_bb.GetCenter();
@@ -3365,7 +3369,7 @@ bool RadioButton(const char* label, bool active)
 	center.y = (float)(int)center.y + 0.5f;
 	const float radius = check_bb.GetHeight() * 0.5f;
 
-	const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(check_bb);
+	const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(total_bb);
 	const bool pressed = hovered && g.IO.MouseClicked[0];
 	if (hovered)
 		g.HoveredId = id;
