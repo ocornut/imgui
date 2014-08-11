@@ -297,6 +297,8 @@ void InitImGui()
 	io.RenderDrawListsFn = ImImpl_RenderDrawLists;
 	io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
 	io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
+
+	ImGui::GetStyle().PixelCenterOffset = 0.5f; // to make texels & pixels align
 }
 
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
