@@ -5,7 +5,7 @@ ImGui is a bloat-free graphical user interface library for C++. It is portable, 
 
 ImGui is designed to allow programmers to create "content creation" or "debug" tools (as opposed to tools for the average end-user). It favors simplicity and thus lacks certain features normally found in more high-level libraries, such as string localisation.
 
-Usage example:
+After ImGui is setup in your application, you can use it like in this example:
 
 ![screenshot of sample code alongside its output with ImGui](/web/code_sample_01.png?raw=true)
 
