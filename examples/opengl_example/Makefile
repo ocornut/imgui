@@ -1,0 +1,17 @@
+# This makefile currently only works for mac os
+# You should install via homebrew:
+#    brew install glew
+#    brew install glfw3
+#
+
+CXXFLAGS=-framework OpenGL -framework Cocoa -framework IOKit 
+#CXXFLAGS+=-L/usr/local/Cellar/glew/1.10.0/lib -L/usr/local/Cellar/glfw3/3.0.4/lib
+CXXFLAGS+=-lglew -lglfw3
+CXXFLAGS+=-I../../
+CXXFLAGS+= -D__APPLE__
+
+main: main.cpp ../../imgui.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+clean:
+	rm main
