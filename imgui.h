@@ -29,8 +29,8 @@ typedef ImU32 ImGuiID;
 typedef int ImGuiCol;				// enum ImGuiCol_
 typedef int ImGuiKey;				// enum ImGuiKey_
 typedef int ImGuiColorEditMode;		// enum ImGuiColorEditMode_
-typedef ImU32 ImGuiWindowFlags;		// enum ImGuiWindowFlags_
-typedef ImU32 ImGuiInputTextFlags;	// enum ImGuiInputTextFlags_
+typedef int ImGuiWindowFlags;		// enum ImGuiWindowFlags_
+typedef int ImGuiInputTextFlags;	// enum ImGuiInputTextFlags_
 typedef ImBitmapFont* ImFont;
 
 struct ImVec2
@@ -143,6 +143,7 @@ namespace ImGui
 	void		SetFontScale(float scale);
 	void		SetScrollPosHere();
 	void		SetTreeStateStorage(ImGuiStorage* tree);
+	ImGuiStorage* GetTreeStateStorage();
 	void		PushItemWidth(float item_width);
 	void		PopItemWidth();
 	float		GetItemWidth();
@@ -221,9 +222,9 @@ namespace ImGui
 
 	// Logging
 	void		LogButtons();
-	void		LogToTTY(int max_depth);
-	void		LogToFile(int max_depth, const char* filename);
-	void		LogToClipboard(int max_depth);
+	void		LogToTTY(int max_depth = -1);
+	void		LogToFile(int max_depth = -1, const char* filename = NULL);
+	void		LogToClipboard(int max_depth = -1);
 
 	// Utilities
 	void		SetTooltip(const char* fmt, ...);									// set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). (currently no contention handling, last call win)
@@ -232,6 +233,8 @@ namespace ImGui
 	bool		IsClipped(ImVec2 item_size);										// to perform coarse clipping on user's side (as an optimisation)
 	bool		IsKeyPressed(int key_index, bool repeat = true);					// key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry
 	bool		IsMouseClicked(int button, bool repeat = false);
+	bool		IsMouseDoubleClicked(int button);
+	bool		IsMouseHoveringBox(const ImVec2& box_min, const ImVec2& box_max);
 	ImVec2		GetMousePos();
 	float		GetTime();
 	int			GetFrameCount();
@@ -469,7 +472,7 @@ struct ImGuiTextBuffer
 	size_t				size() const { return Buf.size()-1; }
 	bool				empty() { return Buf.empty(); }
 	void				clear() { Buf.clear(); Buf.push_back(0); }
-	void				Append(const char* fmt, ...);
+	void				append(const char* fmt, ...);
 };
 
 // Helper: Key->value storage
