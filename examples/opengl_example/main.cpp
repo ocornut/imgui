@@ -8,6 +8,10 @@
 #pragma warning (disable: 4996)		// 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
 
+#ifdef __APPLE__
+#define nullptr NULL
+#endif
+
 static GLFWwindow* window;
 static GLuint vbo;
 static GLuint vao;
@@ -39,7 +43,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 		buffer_data += cmd_list->vtx_buffer.size() * sizeof(ImDrawVert);
 	}
 	glUnmapBuffer(GL_ARRAY_BUFFER);
-	
+
 	// Setup render state: alpha-blending enabled, no face culling, no depth testing
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -55,7 +59,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 	// Setup orthographic projection matrix
 	const float width = ImGui::GetIO().DisplaySize.x;
 	const float height = ImGui::GetIO().DisplaySize.y;
-	const float mvp[4][4] = 
+	const float mvp[4][4] =
 	{
 		{ 2.0f/width,	0.0f,			0.0f,		0.0f },
 		{ 0.0f,			2.0f/-height,	0.0f,		0.0f },
@@ -149,7 +153,7 @@ const GLchar* fragmentSource =
     "out vec4 o_col;"
     "void main() {"
     "   o_col = texture(Tex, uv) * col;"
-	//"   if (pixel_pos.x < ClipRect.x || pixel_pos.y < ClipRect.y || pixel_pos.x > ClipRect.z || pixel_pos.y > ClipRect.w) discard;"						// Clipping: using discard	
+	//"   if (pixel_pos.x < ClipRect.x || pixel_pos.y < ClipRect.y || pixel_pos.x > ClipRect.z || pixel_pos.y > ClipRect.w) discard;"						// Clipping: using discard
 	//"   if (step(ClipRect.x,pixel_pos.x) * step(ClipRect.y,pixel_pos.y) * step(pixel_pos.x,ClipRect.z) * step(pixel_pos.y,ClipRect.w) < 1.0f) discard;"	// Clipping: using discard and step
 	"   o_col.w *= (step(ClipRect.x,pixel_pos.x) * step(ClipRect.y,pixel_pos.y) * step(pixel_pos.x,ClipRect.z) * step(pixel_pos.y,ClipRect.w));"			// Clipping: branch-less, set alpha 0.0f
     "}";
@@ -191,10 +195,12 @@ void InitGL()
     if (!glfwInit())
         exit(1);
 
-	//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#ifdef __APPLE__
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
 	glfwWindowHint(GLFW_REFRESH_RATE, 60);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	window = glfwCreateWindow(1280, 720, "ImGui OpenGL example", nullptr, nullptr);
@@ -208,7 +214,8 @@ void InitGL()
 	glewInit();
 
 	GLenum err = GL_NO_ERROR;
-	err = glGetError(); IM_ASSERT(err == GL_NO_ERROR);
+	err = glGetError();
+    //IM_ASSERT(err == GL_NO_ERROR);
 }
 
 void InitImGui()
