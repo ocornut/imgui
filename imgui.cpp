@@ -184,7 +184,7 @@ static void			ItemSize(ImVec2 size, ImVec2* adjust_start_offset = NULL);
 static void			ItemSize(const ImGuiAabb& aabb, ImVec2* adjust_start_offset = NULL);
 static void			PushColumnClipRect(int column_index = -1);
 static bool			IsClipped(const ImGuiAabb& aabb);
-static bool			ClipAdvance(const ImGuiAabb& aabb, bool skip_columns = false);
+static bool			ClipAdvance(const ImGuiAabb& aabb);
 
 static bool			IsMouseHoveringBox(const ImGuiAabb& box);
 static bool			IsKeyPressedMap(ImGuiKey key, bool repeat = true);
@@ -3414,7 +3414,7 @@ bool RadioButton(const char* label, int* v, int v_button)
 // Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, ASCII, fixed-width font)
 int		STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)									{ return (int)strlen(obj->Text); }
 char	STB_TEXTEDIT_GETCHAR(const STB_TEXTEDIT_STRING* obj, int idx)							{ return (char)obj->Text[idx]; }
-float	STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)		{ return obj->Font->CalcTextSize(obj->FontSize, 0, &obj->Text[char_idx], &obj->Text[char_idx]+1, NULL).x; }
+float	STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)		{ (void)line_start_idx; return obj->Font->CalcTextSize(obj->FontSize, 0, &obj->Text[char_idx], &obj->Text[char_idx]+1, NULL).x; }
 char	STB_TEXTEDIT_KEYTOTEXT(int key)															{ return key >= 0x10000 ? 0 : (char)key; }
 char	STB_TEXTEDIT_NEWLINE = '\n';
 void	STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* obj, int line_start_idx)
@@ -4223,7 +4223,7 @@ void Separator()
 	const ImGuiAabb bb(ImVec2(window->Pos.x, window->DC.CursorPos.y), ImVec2(window->Pos.x + window->Size.x, window->DC.CursorPos.y));
 	ItemSize(ImVec2(0.0f, bb.GetSize().y));	// NB: we don't provide our width so that it doesn't get feed back into AutoFit
 
-	if (ClipAdvance(bb, true))
+	if (ClipAdvance(bb))
 	{
 		if (window->DC.ColumnsCount > 1)
 			ImGui::PushColumnClipRect();
@@ -4307,7 +4307,7 @@ bool IsClipped(ImVec2 item_size)
 	return IsClipped(ImGuiAabb(window->DC.CursorPos, window->DC.CursorPos + item_size));
 }
 
-static bool ClipAdvance(const ImGuiAabb& bb, bool skip_columns)
+static bool ClipAdvance(const ImGuiAabb& bb)
 {
 	ImGuiWindow* window = GetCurrentWindow();
 	if (ImGui::IsClipped(bb))
