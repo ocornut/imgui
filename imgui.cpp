@@ -2370,10 +2370,6 @@ void TextUnformatted(const char* text, const char* text_end)
 					pos.y += lines_skipped * line_height;
 				}
 			}
-			else
-			{
-				printf("");
-			}
 
 			// lines to render?
 			if (line < text_end)
