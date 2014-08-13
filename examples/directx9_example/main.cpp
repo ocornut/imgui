@@ -220,6 +220,35 @@ void InitImGui()
 	}
 }
 
+INT64 ticks_per_second = 0;
+INT64 time = 0;
+
+void UpdateImGui()
+{
+	ImGuiIO& io = ImGui::GetIO();
+
+	// Setup timestep
+	INT64 current_time;
+	QueryPerformanceCounter((LARGE_INTEGER *)&current_time); 
+	io.DeltaTime = (float)(current_time - time) / ticks_per_second;
+	time = current_time;
+
+	// Setup inputs
+	// (we already got mouse position, buttons, wheel from the window message callback)
+	BYTE keystate[256];
+	GetKeyboardState(keystate);
+	for (int i = 0; i < 256; i++)
+		io.KeysDown[i] = (keystate[i] & 0x80) != 0;
+	io.KeyCtrl = (keystate[VK_CONTROL] & 0x80) != 0;
+	io.KeyShift = (keystate[VK_SHIFT] & 0x80) != 0;
+	// io.MousePos : filled by WM_MOUSEMOVE event
+	// io.MouseDown : filled by WM_*BUTTON* events
+	// io.MouseWheel : filled by WM_MOUSEWHEEL events
+
+	// Start the frame
+	ImGui::NewFrame();
+}
+
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
 {
     // Register the window class
@@ -229,101 +258,91 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
     // Create the application's window
     hWnd = CreateWindow(L"ImGui Example", L"ImGui DirectX9 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
 
-	INT64 ticks_per_second, time;
 	if (!QueryPerformanceFrequency((LARGE_INTEGER *)&ticks_per_second))
 		return 1;
 	if (!QueryPerformanceCounter((LARGE_INTEGER *)&time))
 		return 1;
 
 	// Initialize Direct3D
-    if (InitD3D(hWnd) >= 0)
+    if (InitD3D(hWnd) < 0)
+	{
+		if (g_pVB)
+			g_pVB->Release();
+	    UnregisterClass(L"ImGui Example", wc.hInstance);
+		return 1;
+	}
+
+	// Show the window
+	ShowWindow(hWnd, SW_SHOWDEFAULT);
+	UpdateWindow(hWnd);
+
+	InitImGui();
+
+    // Enter the message loop
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
+    while (msg.message != WM_QUIT)
     {
-        // Show the window
-        ShowWindow(hWnd, SW_SHOWDEFAULT);
-        UpdateWindow(hWnd);
-
-		InitImGui();
-
-        // Enter the message loop
-        MSG msg;
-        ZeroMemory(&msg, sizeof(msg));
-        while (msg.message != WM_QUIT)
+        if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
         {
-            if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
-            {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-				continue;
-            }
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+			continue;
+        }
 		
-			// 1) ImGui start frame, setup time delta & inputs
-			ImGuiIO& io = ImGui::GetIO();
-			INT64 current_time;
-			QueryPerformanceCounter((LARGE_INTEGER *)&current_time); 
-			io.DeltaTime = (float)(current_time - time) / ticks_per_second;
-			time = current_time;
-			BYTE keystate[256];
-			GetKeyboardState(keystate);
-			for (int i = 0; i < 256; i++)
-				io.KeysDown[i] = (keystate[i] & 0x80) != 0;
-			io.KeyCtrl = (keystate[VK_CONTROL] & 0x80) != 0;
-			io.KeyShift = (keystate[VK_SHIFT] & 0x80) != 0;
-			// io.MousePos : filled by WM_MOUSEMOVE event
-			// io.MouseDown : filled by WM_*BUTTON* events
-			// io.MouseWheel : filled by WM_MOUSEWHEEL events
-			ImGui::NewFrame();
+		UpdateImGui();
 
-			// 2) ImGui usage
-			static bool show_test_window = true;
-			static bool show_another_window = false;
-			static float f;
-			ImGui::Text("Hello, world!");
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-			show_test_window ^= ImGui::Button("Test Window");
-			show_another_window ^= ImGui::Button("Another Window");
+		// Create a simple window
+		// Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
+		static bool show_test_window = true;
+		static bool show_another_window = false;
+		static float f;
+		ImGui::Text("Hello, world!");
+		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+		show_test_window ^= ImGui::Button("Test Window");
+		show_another_window ^= ImGui::Button("Another Window");
 
-			// Calculate and show framerate
-			static float ms_per_frame[120] = { 0 };
-			static int ms_per_frame_idx = 0;
-			static float ms_per_frame_accum = 0.0f;
-			ms_per_frame_accum -= ms_per_frame[ms_per_frame_idx];
-			ms_per_frame[ms_per_frame_idx] = io.DeltaTime * 1000.0f;
-			ms_per_frame_accum += ms_per_frame[ms_per_frame_idx];
-			ms_per_frame_idx = (ms_per_frame_idx + 1) % 120;
-			const float ms_per_frame_avg = ms_per_frame_accum / 120;
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
+		// Calculate and show framerate
+		static float ms_per_frame[120] = { 0 };
+		static int ms_per_frame_idx = 0;
+		static float ms_per_frame_accum = 0.0f;
+		ms_per_frame_accum -= ms_per_frame[ms_per_frame_idx];
+		ms_per_frame[ms_per_frame_idx] = ImGui::GetIO().DeltaTime * 1000.0f;
+		ms_per_frame_accum += ms_per_frame[ms_per_frame_idx];
+		ms_per_frame_idx = (ms_per_frame_idx + 1) % 120;
+		const float ms_per_frame_avg = ms_per_frame_accum / 120;
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
 
-			if (show_test_window)
-			{
-				// More example code in ShowTestWindow()
-				ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));		// Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
-				ImGui::ShowTestWindow(&show_test_window);
-			}
-
-			if (show_another_window)
-			{
-				ImGui::Begin("Another Window", &show_another_window, ImVec2(200,100));
-				ImGui::Text("Hello");
-				ImGui::End();
-			}
-
-			// 3) Rendering
-			// Clear frame buffer
-		    g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, false);
-			g_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
-			g_pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
-			g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(204, 153, 153), 1.0f, 0);
-			if (g_pd3dDevice->BeginScene() >= 0)
-			{
-				// Render ImGui
-				ImGui::Render();
-				g_pd3dDevice->EndScene();
-			}
-		    g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
+		// Show the ImGui test window
+		// Most of user example code is in ImGui::ShowTestWindow()
+		if (show_test_window)
+		{
+			ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));		// Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
+			ImGui::ShowTestWindow(&show_test_window);
 		}
 
-		ImGui::Shutdown();
-    }
+		// Show another simple window
+		if (show_another_window)
+		{
+			ImGui::Begin("Another Window", &show_another_window, ImVec2(200,100));
+			ImGui::Text("Hello");
+			ImGui::End();
+		}
+
+		// Rendering
+		g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, false);
+		g_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
+		g_pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
+		g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(204, 153, 153), 1.0f, 0);
+		if (g_pd3dDevice->BeginScene() >= 0)
+		{
+			ImGui::Render();
+			g_pd3dDevice->EndScene();
+		}
+		g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
+	}
+
+	ImGui::Shutdown();
 
 	if (g_pVB)
 		g_pVB->Release();
