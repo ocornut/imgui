@@ -439,7 +439,7 @@ static void ImConvertColorRGBtoHSV(float r, float g, float b, float& out_h, floa
 	}
 
 	const float chroma = r - (g < b ? g : b);
-	out_h = abs(K + (g - b) / (6.f * chroma + 1e-20f));
+	out_h = fabsf(K + (g - b) / (6.f * chroma + 1e-20f));
 	out_s = chroma / (r + 1e-20f);
 	out_v = r;
 }
@@ -2999,8 +2999,8 @@ bool SliderFloat(const char* label, float* v, float v_min, float v_max, const ch
 		if (v_min * v_max < 0.0f)
 		{
 			// Different sign
-			const float linear_dist_min_to_0 = powf(abs(0.0f - v_min), 1.0f/power);
-			const float linear_dist_max_to_0 = powf(abs(v_max - 0.0f), 1.0f/power);
+			const float linear_dist_min_to_0 = powf(fabsf(0.0f - v_min), 1.0f/power);
+			const float linear_dist_max_to_0 = powf(fabsf(v_max - 0.0f), 1.0f/power);
 			linear_zero_pos = linear_dist_min_to_0 / (linear_dist_min_to_0+linear_dist_max_to_0);
 		}
 		else
@@ -3070,7 +3070,7 @@ bool SliderFloat(const char* label, float* v, float v_min, float v_max, const ch
 			if (!is_unbound)
 			{
 				const float normalized_pos = ImClamp((g.IO.MousePos.x - slider_effective_x1) / slider_effective_w, 0.0f, 1.0f);
-
+				
 				// Linear slider
 				//float new_value = ImLerp(v_min, v_max, normalized_pos);
 
@@ -3086,9 +3086,11 @@ bool SliderFloat(const char* label, float* v, float v_min, float v_max, const ch
 				else
 				{
 					// Positive: rescale to the positive range before powering
-					float a = normalized_pos;
-					if (abs(linear_zero_pos - 1.0f) > 1.e-6)
-						a = (a - linear_zero_pos) / (1.0f - linear_zero_pos);
+					float a;
+					if (fabsf(linear_zero_pos - 1.0f) > 1.e-6)
+						a = (normalized_pos - linear_zero_pos) / (1.0f - linear_zero_pos);
+					else
+						a = normalized_pos;
 					a = powf(a, power);
 					new_value = ImLerp(ImMax(v_min,0.0f), v_max, a);
 				}
@@ -4750,10 +4752,10 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
 	if ((col >> 24) == 0)
 		return;
 
-	//const float r = ImMin(rounding, ImMin(abs(b.x-a.x), abs(b.y-a.y))*0.5f);
+	//const float r = ImMin(rounding, ImMin(fabsf(b.x-a.x), fabsf(b.y-a.y))*0.5f);
 	float r = rounding;
-	r = ImMin(r, abs(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ));
-	r = ImMin(r, abs(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ));
+	r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ));
+	r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ));
 
 	if (r == 0.0f || rounding_corners == 0)
 	{
@@ -4783,10 +4785,10 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
 	if ((col >> 24) == 0)
 		return;
 
-	//const float r = ImMin(rounding, ImMin(abs(b.x-a.x), abs(b.y-a.y))*0.5f);
+	//const float r = ImMin(rounding, ImMin(fabsf(b.x-a.x), fabsf(b.y-a.y))*0.5f);
 	float r = rounding;
-	r = ImMin(r, abs(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ));
-	r = ImMin(r, abs(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ));
+	r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ));
+	r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ));
 
 	if (r == 0.0f || rounding_corners == 0)
 	{
