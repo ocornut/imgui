@@ -183,6 +183,7 @@ namespace ImGui
 	bool		SmallButton(const char* label);
 	bool		CollapsingHeader(const char* label, const char* str_id = NULL, const bool display_frame = true, const bool default_open = false);
 	bool		SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
+	bool		SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
 	bool		SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
 	bool		SliderAngle(const char* label, float* v, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f);		// *v in radians
 	bool		SliderInt(const char* label, int* v, int v_min, int v_max, const char* display_format = "%.0f");
@@ -193,6 +194,7 @@ namespace ImGui
 	bool		RadioButton(const char* label, bool active);
 	bool		RadioButton(const char* label, int* v, int v_button);
 	bool		InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f, int decimal_precision = -1);
+	bool		InputFloat2(const char* label, float v[2], int decimal_precision = -1);
 	bool		InputFloat3(const char* label, float v[3], int decimal_precision = -1);
 	bool		InputInt(const char* label, int* v, int step = 1, int step_fast = 100);
 	bool		InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0);
