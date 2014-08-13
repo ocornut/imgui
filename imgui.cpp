@@ -978,7 +978,11 @@ void ImGuiWindow::AddToRenderList()
 	ImGuiState& g = GImGui;
 
 	if (!DrawList->commands.empty() && !DrawList->vtx_buffer.empty())
+	{
+		if (DrawList->commands.back().vtx_count == 0)
+			DrawList->commands.pop_back();
 		g.RenderDrawLists.push_back(DrawList);
+	}
 	for (size_t i = 0; i < DC.ChildWindows.size(); i++)
 	{
 		ImGuiWindow* child = DC.ChildWindows[i];
@@ -1801,6 +1805,10 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 			if (!(flags & ImGuiWindowFlags_ComboBox))
 				ImGui::PushClipRect(parent_window->ClipRectStack.back());
 		}
+		else
+		{
+			ImGui::PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
+		}
 
 		// ID stack
 		window->IDStack.resize(0);
@@ -2035,12 +2043,10 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 		// Title bar
 		if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
 		{
-			ImGui::PushClipRect(ImVec4(window->Pos.x-0.5f, window->Pos.y-0.5f, window->Pos.x+window->Size.x-1.5f, window->Pos.y+window->Size.y-1.5f), false);
 			RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
 			RenderText(window->Pos + style.FramePadding + ImVec2(window->FontSize() + style.ItemInnerSpacing.x, 0), name);
 			if (open)
 				ImGui::CloseWindowButton(open);
-			ImGui::PopClipRect();
 		}
 	}
 
@@ -2070,8 +2076,14 @@ void End()
 	ImGui::Columns(1, "#CloseColumns");
 	ImGui::PopClipRect();
 	if (window->Flags & ImGuiWindowFlags_ChildWindow)
+	{
 		if (!(window->Flags & ImGuiWindowFlags_ComboBox))
 			ImGui::PopClipRect();
+	}
+	else
+	{
+		ImGui::PopClipRect();
+	}
 
 	// Select window for move/focus when we're done with all our widgets
 	ImGuiAabb bb(window->Pos, window->Pos+window->Size);
@@ -4544,58 +4556,62 @@ void ImDrawList::Clear()
 {
 	commands.resize(0);
 	vtx_buffer.resize(0);
-	clip_rect_buffer.resize(0);
-	vtx_write_ = NULL;
-	clip_rect_stack_.resize(0);
+	vtx_write = NULL;
+	clip_rect_stack.resize(0);
 }
 
 void ImDrawList::PushClipRect(const ImVec4& clip_rect)
 {
-	commands.push_back(ImDrawCmd(ImDrawCmdType_PushClipRect));
-	clip_rect_buffer.push_back(clip_rect);
-	clip_rect_stack_.push_back(clip_rect);
+	if (!commands.empty() && commands.back().vtx_count == 0)
+	{
+		// Reuse empty command because high-level clipping may have discarded the other vertices already
+		commands.back().clip_rect = clip_rect;
+	}
+	else
+	{
+		ImDrawCmd draw_cmd;
+		draw_cmd.vtx_count = 0;
+		draw_cmd.clip_rect = clip_rect;
+		commands.push_back(draw_cmd);
+	}
+	clip_rect_stack.push_back(clip_rect);
 }
 
 void ImDrawList::PopClipRect()
 {
-	if (!commands.empty() && commands.back().cmd_type == ImDrawCmdType_PushClipRect)
+	clip_rect_stack.pop_back();
+	const ImVec4 clip_rect = clip_rect_stack.empty() ? ImVec4(-9999.0f,-9999.0f, +9999.0f, +9999.0f) : clip_rect_stack.back();
+	if (!commands.empty() && commands.back().vtx_count == 0)
 	{
-		// Discard push/pop combo because high-level clipping may have discarded the other draw commands already
-		commands.pop_back();
-		clip_rect_buffer.pop_back();
+		// Reuse empty command because high-level clipping may have discarded the other vertices already
+		commands.back().clip_rect = clip_rect;
 	}
 	else
 	{
-		commands.push_back(ImDrawCmd(ImDrawCmdType_PopClipRect));
+		ImDrawCmd draw_cmd;
+		draw_cmd.vtx_count = 0;
+		draw_cmd.clip_rect = clip_rect;
+		commands.push_back(draw_cmd);
 	}
-	clip_rect_stack_.pop_back();
 }
 
-void ImDrawList::AddCommand(ImDrawCmdType cmd_type, int vtx_count)
+void ImDrawList::ReserveVertices(unsigned int vtx_count)
 {
-	// Maximum value that can fit in our u16 vtx_count member
-	const int VTX_COUNT_MAX = (1<<16);
-
-	// Merge commands if we can, turning them into less draw calls
-	ImDrawCmd* prev = commands.empty() ? NULL : &commands.back();
-	if (vtx_count > 0 && prev && prev->cmd_type == cmd_type && prev->vtx_count + vtx_count < VTX_COUNT_MAX)
-		prev->vtx_count += vtx_count;
-	else
-		commands.push_back(ImDrawCmd(cmd_type, vtx_count));
-
 	if (vtx_count > 0)
 	{
+		ImDrawCmd& draw_cmd = commands.back();
+		draw_cmd.vtx_count += vtx_count;
 		vtx_buffer.resize(vtx_buffer.size() + vtx_count);
-		vtx_write_ = &vtx_buffer[vtx_buffer.size() - vtx_count];
+		vtx_write = &vtx_buffer[vtx_buffer.size() - vtx_count];
 	}
 }
 
 void ImDrawList::AddVtx(const ImVec2& pos, ImU32 col)
 {
-	vtx_write_->pos = pos;
-	vtx_write_->col = col;
-	vtx_write_->uv = IMDRAW_TEX_UV_FOR_WHITE;
-	vtx_write_++;
+	vtx_write->pos = pos;
+	vtx_write->col = col;
+	vtx_write->uv = IMDRAW_TEX_UV_FOR_WHITE;
+	vtx_write++;
 }
 
 void ImDrawList::AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col)
@@ -4617,7 +4633,7 @@ void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col)
 	if ((col >> 24) == 0)
 		return;
 
-	AddCommand(ImDrawCmdType_DrawTriangleList, 6);
+	ReserveVertices(6);
 	AddVtxLine(a, b, col);
 }
 
@@ -4638,7 +4654,7 @@ void ImDrawList::AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, i
 	
 	if (tris)
 	{
-		AddCommand(ImDrawCmdType_DrawTriangleList, (a_max-a_min) * 3);
+		ReserveVertices((a_max-a_min) * 3);
 		for (int a = a_min; a < a_max; a++)
 		{
 			AddVtx(center + circle_vtx[a % ARRAYSIZE(circle_vtx)] * rad, col);
@@ -4648,7 +4664,7 @@ void ImDrawList::AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, i
 	}
 	else
 	{
-		AddCommand(ImDrawCmdType_DrawTriangleList, (a_max-a_min) * 6);
+		ReserveVertices((a_max-a_min) * 6);
 		for (int a = a_min; a < a_max; a++)
 			AddVtxLine(center + circle_vtx[a % ARRAYSIZE(circle_vtx)] * rad, center + circle_vtx[(a+1) % ARRAYSIZE(circle_vtx)] * rad, col);
 	}
@@ -4666,7 +4682,7 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
 
 	if (r == 0.0f || rounding_corners == 0)
 	{
-		AddCommand(ImDrawCmdType_DrawTriangleList, 4*6);
+		ReserveVertices(4*6);
 		AddVtxLine(ImVec2(a.x,a.y), ImVec2(b.x,a.y), col);
 		AddVtxLine(ImVec2(b.x,a.y), ImVec2(b.x,b.y), col);
 		AddVtxLine(ImVec2(b.x,b.y), ImVec2(a.x,b.y), col);
@@ -4674,7 +4690,7 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
 	}
 	else
 	{
-		AddCommand(ImDrawCmdType_DrawTriangleList, 4*6);
+		ReserveVertices(4*6);
 		AddVtxLine(ImVec2(a.x + ((rounding_corners & 1)?r:0), a.y), ImVec2(b.x - ((rounding_corners & 2)?r:0), a.y), col);
 		AddVtxLine(ImVec2(b.x, a.y + ((rounding_corners & 2)?r:0)), ImVec2(b.x, b.y - ((rounding_corners & 4)?r:0)), col);
 		AddVtxLine(ImVec2(b.x - ((rounding_corners & 4)?r:0), b.y), ImVec2(a.x + ((rounding_corners & 8)?r:0), b.y), col);
@@ -4700,7 +4716,7 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
 	if (r == 0.0f || rounding_corners == 0)
 	{
 		// Use triangle so we can merge more draw calls together (at the cost of extra vertices)
-		AddCommand(ImDrawCmdType_DrawTriangleList, 6);
+		ReserveVertices(6);
 		AddVtx(ImVec2(a.x,a.y), col);
 		AddVtx(ImVec2(b.x,a.y), col);
 		AddVtx(ImVec2(b.x,b.y), col);
@@ -4710,7 +4726,7 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
 	}
 	else
 	{
-		AddCommand(ImDrawCmdType_DrawTriangleList, 6+6*2);
+		ReserveVertices(6+6*2);
 		AddVtx(ImVec2(a.x+r,a.y), col);
 		AddVtx(ImVec2(b.x-r,a.y), col);
 		AddVtx(ImVec2(b.x-r,b.y), col);
@@ -4748,7 +4764,7 @@ void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec
 	if ((col >> 24) == 0)
 		return;
 
-	AddCommand(ImDrawCmdType_DrawTriangleList, 3);
+	ReserveVertices(3);
 	AddVtx(a, col);
 	AddVtx(b, col);
 	AddVtx(c, col);
@@ -4759,7 +4775,7 @@ void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int nu
 	if ((col >> 24) == 0)
 		return;
 
-	AddCommand(ImDrawCmdType_DrawTriangleList, num_segments*6);
+	ReserveVertices(num_segments*6);
 	const float a_step = 2*PI/(float)num_segments;
 	float a0 = 0.0f;
 	for (int i = 0; i < num_segments; i++)
@@ -4775,7 +4791,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
 	if ((col >> 24) == 0)
 		return;
 
-	AddCommand(ImDrawCmdType_DrawTriangleList, num_segments*3);
+	ReserveVertices(num_segments*3);
 	const float a_step = 2*PI/(float)num_segments;
 	float a0 = 0.0f;
 	for (int i = 0; i < num_segments; i++)
@@ -4796,17 +4812,19 @@ void ImDrawList::AddText(ImFont font, float font_size, const ImVec2& pos, ImU32 
 	if (text_end == NULL)
 		text_end = text_begin + strlen(text_begin);
 
-	int char_count = (int)(text_end - text_begin);
-	int vtx_count_max = char_count * 6;
-	size_t vtx_begin = vtx_buffer.size();
-	AddCommand(ImDrawCmdType_DrawTriangleList, vtx_count_max);
+	// reserve vertices for worse case
+	const int char_count = (int)(text_end - text_begin);
+	const int vtx_count_max = char_count * 6;
+	const size_t vtx_begin = vtx_buffer.size();
+	ReserveVertices(vtx_count_max);
 
-	font->RenderText(font_size, pos, col, clip_rect_stack_.back(), text_begin, text_end, vtx_write_);
-	vtx_buffer.resize(vtx_write_ - &vtx_buffer.front());
-	int vtx_count = (int)(vtx_buffer.size() - vtx_begin);
+	font->RenderText(font_size, pos, col, clip_rect_stack.back(), text_begin, text_end, vtx_write);
 
+	// give unused vertices
+	vtx_buffer.resize(vtx_write - &vtx_buffer.front());
+	const int vtx_count = (int)(vtx_buffer.size() - vtx_begin);
 	commands.back().vtx_count -= (vtx_count_max - vtx_count);
-	vtx_write_ -= (vtx_count_max - vtx_count);
+	vtx_write -= (vtx_count_max - vtx_count);
 }
 
 //-----------------------------------------------------------------------------

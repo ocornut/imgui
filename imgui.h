@@ -499,19 +499,10 @@ struct ImGuiStorage
 // Hold a series of drawing commands. The user provide a renderer for ImDrawList
 //-----------------------------------------------------------------------------
 
-enum ImDrawCmdType
-{
-	ImDrawCmdType_DrawTriangleList,
-	ImDrawCmdType_PushClipRect,
-	ImDrawCmdType_PopClipRect,
-};
-
-// sizeof() == 4
 struct ImDrawCmd
 {
-	ImDrawCmdType	cmd_type : 16;
-	unsigned int	vtx_count : 16;
-	ImDrawCmd(ImDrawCmdType _cmd_type = ImDrawCmdType_DrawTriangleList, unsigned int _vtx_count = 0) { cmd_type = _cmd_type; vtx_count = _vtx_count; }
+	unsigned int	vtx_count;
+	ImVec4			clip_rect;
 };
 
 #ifndef IMDRAW_TEX_UV_FOR_WHITE
@@ -532,16 +523,15 @@ struct ImDrawList
 {
 	ImVector<ImDrawCmd>		commands;
 	ImVector<ImDrawVert>	vtx_buffer;			// each command consume ImDrawCmd::vtx_count of those
-	ImVector<ImVec4>		clip_rect_buffer;	// each PushClipRect command consume 1 of those
-	ImVector<ImVec4>		clip_rect_stack_;	// [internal] clip rect stack while building the command-list (so text command can perform clipping early on)
-	ImDrawVert*				vtx_write_;			// [internal] point within vtx_buffer after each add command. allow us to use less [] and .resize on the vector (often slow on windows/debug)
+	ImVector<ImVec4>		clip_rect_stack;	// [internal] clip rect stack while building the command-list (so text command can perform clipping early on)
+	ImDrawVert*				vtx_write;			// [internal] point within vtx_buffer after each add command (to avoid using the ImVector<> operators too much)
 
 	ImDrawList() { Clear(); }
 
 	void Clear();
 	void PushClipRect(const ImVec4& clip_rect);
 	void PopClipRect();
-	void AddCommand(ImDrawCmdType cmd_type, int vtx_count);
+	void ReserveVertices(unsigned int vtx_count);
 	void AddVtx(const ImVec2& pos, ImU32 col);
 	void AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col);
 

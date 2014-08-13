@@ -86,36 +86,15 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 	int vtx_offset = 0;
 	for (int n = 0; n < cmd_lists_count; n++)
 	{
-		// Setup stack of clipping rectangles
-		int clip_rect_buf_offset = 0;
-		ImVector<ImVec4> clip_rect_stack; 
-		clip_rect_stack.push_back(ImVec4(-9999,-9999,+9999,+9999));
-
 		// Render command list
 		const ImDrawList* cmd_list = cmd_lists[n];
 		const ImDrawCmd* pcmd_end = cmd_list->commands.end();
 		for (const ImDrawCmd* pcmd = cmd_list->commands.begin(); pcmd != pcmd_end; pcmd++)
 		{
-			switch (pcmd->cmd_type)
-			{
-			case ImDrawCmdType_DrawTriangleList:
-				{
-					const ImVec4& clip_rect = clip_rect_stack.back();
-					const RECT r = { (LONG)clip_rect.x, (LONG)clip_rect.y, (LONG)clip_rect.z, (LONG)clip_rect.w };
-					g_pd3dDevice->SetScissorRect(&r);
-					g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, vtx_offset, pcmd->vtx_count/3);
-					vtx_offset += pcmd->vtx_count;
-				}
-				break;
-
-			case ImDrawCmdType_PushClipRect:
-				clip_rect_stack.push_back(cmd_list->clip_rect_buffer[clip_rect_buf_offset++]);
-				break;
-
-			case ImDrawCmdType_PopClipRect:
-				clip_rect_stack.pop_back();
-				break;
-			}
+			const RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
+			g_pd3dDevice->SetScissorRect(&r);
+			g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, vtx_offset, pcmd->vtx_count/3);
+			vtx_offset += pcmd->vtx_count;
 		}
 	}
 }

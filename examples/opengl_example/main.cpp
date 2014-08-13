@@ -68,32 +68,13 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 	int vtx_offset = 0;
 	for (int n = 0; n < cmd_lists_count; n++)
 	{
-		// Setup stack of clipping rectangles
-		int clip_rect_buf_offset = 0;
-		ImVector<ImVec4> clip_rect_stack;
-		clip_rect_stack.push_back(ImVec4(-9999,-9999,+9999,+9999));
-
-		// Render command list
 		const ImDrawList* cmd_list = cmd_lists[n];
 		const ImDrawCmd* pcmd_end = cmd_list->commands.end();
 		for (const ImDrawCmd* pcmd = cmd_list->commands.begin(); pcmd != pcmd_end; pcmd++)
 		{
-			switch (pcmd->cmd_type)
-			{
-			case ImDrawCmdType_DrawTriangleList:
-				glUniform4fv(uniClipRect, 1, (float*)&clip_rect_stack.back());
-				glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
-				vtx_offset += pcmd->vtx_count;
-				break;
-
-			case ImDrawCmdType_PushClipRect:
-				clip_rect_stack.push_back(cmd_list->clip_rect_buffer[clip_rect_buf_offset++]);
-				break;
-
-			case ImDrawCmdType_PopClipRect:
-				clip_rect_stack.pop_back();
-				break;
-			}
+			glUniform4fv(uniClipRect, 1, (float*)&pcmd->clip_rect);
+			glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
+			vtx_offset += pcmd->vtx_count;
 		}
 	}
 
