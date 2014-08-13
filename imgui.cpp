@@ -110,12 +110,13 @@
  ISSUES AND TODO-LIST
 
  - misc: merge ImVec4 / ImGuiAabb, they are essentially duplicate containers
- - main: make IsHovered() more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - window: autofit is losing its purpose when user relies on any dynamic layout (window width multiplier, column). maybe just discard autofit?
  - window: support horizontal scroll
  - window: fix resize grip scaling along with Rounding style setting
  - widgets: switching from "widget-label" to "label-widget" would make it more convenient to integrate widgets in trees
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
+ - main: make IsHovered() more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
+ - main: make IsHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
  - scrollbar: use relative mouse movement when first-clicking inside of scroll grab box.
  - input number: optional range min/max
  - input number: holding [-]/[+] buttons should increase the step non-linearly
@@ -1804,6 +1805,8 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 			window->SizeFull = size;
 			if (!(flags & ImGuiWindowFlags_ComboBox))
 				ImGui::PushClipRect(parent_window->ClipRectStack.back());
+			else
+				ImGui::PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
 		}
 		else
 		{
@@ -2074,16 +2077,8 @@ void End()
 	ImGuiWindow* window = g.CurrentWindow;
 
 	ImGui::Columns(1, "#CloseColumns");
-	ImGui::PopClipRect();
-	if (window->Flags & ImGuiWindowFlags_ChildWindow)
-	{
-		if (!(window->Flags & ImGuiWindowFlags_ComboBox))
-			ImGui::PopClipRect();
-	}
-	else
-	{
-		ImGui::PopClipRect();
-	}
+	ImGui::PopClipRect();	// inner window clip rectangle
+	ImGui::PopClipRect();	// outer window clip rectangle
 
 	// Select window for move/focus when we're done with all our widgets
 	ImGuiAabb bb(window->Pos, window->Pos+window->Size);
@@ -4042,6 +4037,7 @@ bool Combo(const char* label, int* current_item, bool (*items_getter)(void*, int
 		ImGuiWindowFlags flags = ImGuiWindowFlags_ComboBox | ((window->Flags & ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
 		ImGui::BeginChild("#ComboBox", popup_aabb.GetSize(), false, flags);
 		ImGuiWindow* child_window = GetCurrentWindow();
+		ImGui::Spacing();
 
 		bool combo_item_active = false;
 		combo_item_active |= (g.ActiveId == child_window->GetID("#SCROLLY"));
