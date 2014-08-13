@@ -85,9 +85,9 @@ public:
 
 	inline void					clear()							{ if (_data) { _size = _capacity = 0; free(_data); _data = NULL; } }
 	inline iterator				begin()							{ return _data; }
-	inline const iterator		begin() const					{ return _data; }
+	inline const_iterator		begin() const					{ return _data; }
 	inline iterator				end()							{ return _data + _size; }
-	inline const iterator		end() const						{ return _data + _size; }
+	inline const_iterator		end() const						{ return _data + _size; }
 	inline value_type&			front()							{ return at(0); }
 	inline const value_type&	front() const					{ return at(0); }
 	inline value_type&			back()							{ IM_ASSERT(_size > 0); return at(_size-1); }
