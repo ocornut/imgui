@@ -4442,7 +4442,8 @@ void Columns(int columns_count, const char* id, bool border)
 
 			// Draw before resize so our items positioning are in sync with the line
 			const ImU32 col = window->Color(held ? ImGuiCol_ColumnActive : hovered ? ImGuiCol_ColumnHovered : ImGuiCol_Column);
-			window->DrawList->AddLine(ImVec2(x, y1), ImVec2(x, y2), col);
+			const float xi = (float)(int)x;
+			window->DrawList->AddLine(ImVec2(xi, y1), ImVec2(xi, y2), col);
 
 			if (held)
 			{
