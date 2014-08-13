@@ -99,55 +99,6 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 	}
 }
 
-// Get text data in Win32 clipboard
-static const char* ImImpl_GetClipboardTextFn()
-{
-	static char* buf_local = NULL;
-	if (buf_local)
-	{
-		free(buf_local);
-		buf_local = NULL;
-	}
-
-	if (!OpenClipboard(NULL)) 
-		return NULL;
-
-	HANDLE buf_handle = GetClipboardData(CF_TEXT); 
-	if (buf_handle == NULL)
-		return NULL;
-
-	if (char* buf_global = (char*)GlobalLock(buf_handle))
-		buf_local = strdup(buf_global);
-	GlobalUnlock(buf_handle); 
-	CloseClipboard(); 
-
-	return buf_local;
-}
-
-// Set text data in Win32 clipboard
-static void ImImpl_SetClipboardTextFn(const char* text, const char* text_end)
-{
-	if (!OpenClipboard(NULL))
-		return;
-
-	if (!text_end)
-		text_end = text + strlen(text);
-
-	const int buf_length = (text_end - text) + 1;
-	HGLOBAL buf_handle = GlobalAlloc(GMEM_MOVEABLE, buf_length * sizeof(char)); 
-	if (buf_handle == NULL)
-		return;
-
-	char* buf_global = (char *)GlobalLock(buf_handle); 
-	memcpy(buf_global, text, text_end - text);
-	buf_global[text_end - text] = 0;
-	GlobalUnlock(buf_handle); 
-
-	EmptyClipboard();
-	SetClipboardData(CF_TEXT, buf_handle);
-	CloseClipboard();
-}
-
 HRESULT InitD3D(HWND hWnd)
 {
     if (NULL == (g_pD3D = Direct3DCreate9(D3D_SDK_VERSION)))
@@ -250,8 +201,6 @@ void InitImGui()
 	io.KeyMap[ImGuiKey_Z] = 'Z';
 
 	io.RenderDrawListsFn = ImImpl_RenderDrawLists;
-	io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
-	io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
 	
 	// Create the vertex buffer
 	if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)

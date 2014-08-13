@@ -4,15 +4,18 @@
 
 #pragma once
 
-//----- Define your own ImVector<> type if you don't want to use the provided implementation defined in imgui.h
+// Define your own ImVector<> type if you don't want to use the provided implementation defined in imgui.h
 //#include <vector>
 //#define ImVector	std::vector
 //#define ImVector	MyVector
 
-//----- Define assertion handler. Default to calling assert().
+// Define assertion handler. Default to calling assert().
 // #define IM_ASSERT(_EXPR)	MyAssert(_EXPR)
 
-//----- Define implicit cast operators to convert back<>forth from your math types and ImVec2/ImVec4.
+// Tell ImGui to not implement default clipboard handlers for Windows (so as not to link with OpenClipboard(), etc.)
+// #define IMGUI_DONT_IMPLEMENT_WINDOWS_CLIPBOARD_FUNCTIONS
+
+// Define implicit cast operators to convert back<>forth from your math types and ImVec2/ImVec4.
 /*
 #define IM_VEC2_CLASS_EXTRA													\
 		ImVec2(const MyVec2& f) { x = f.x; y = f.y; }						\
@@ -23,8 +26,8 @@
 		operator MyVec4() const { return MyVec4(x,y,z,w); }
 */
 
-//----- Freely implement extra functions within the ImGui:: namespace.
-//----- e.g. you can create variants of the ImGui::Value() helper for your low-level math types.
+// Freely implement extra functions within the ImGui:: namespace.
+// e.g. you can create variants of the ImGui::Value() helper for your low-level math types.
 /*
 namespace ImGui
 {
