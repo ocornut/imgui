@@ -4660,10 +4660,14 @@ void ImDrawList::ReserveVertices(unsigned int vtx_count)
 {
 	if (vtx_count > 0)
 	{
-		ImDrawCmd& draw_cmd = commands.back();
-		draw_cmd.vtx_count += vtx_count;
-		vtx_buffer.resize(vtx_buffer.size() + vtx_count);
-		vtx_write = &vtx_buffer[vtx_buffer.size() - vtx_count];
+            if (!commands.empty())
+            {
+                ImDrawCmd& draw_cmd = commands.back();
+                draw_cmd.vtx_count += vtx_count;
+            }
+
+            vtx_buffer.resize(vtx_buffer.size() + vtx_count);
+            vtx_write = &vtx_buffer[vtx_buffer.size() - vtx_count];
 	}
 }
 
