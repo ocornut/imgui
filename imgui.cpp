@@ -5079,7 +5079,7 @@ ImVec2 ImBitmapFont::CalcTextSize(float size, float max_width, const char* text_
 			text_size.y += line_height;
 			line_width = 0;
 		}
-		if (const FntGlyph* glyph = FindGlyph((unsigned short)c))
+		else if (const FntGlyph* glyph = FindGlyph((unsigned short)c))
 		{
 			const float char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
 			//const float char_extend = (glyph->XOffset + glyph->Width * scale);
