@@ -1,0 +1,14 @@
+## Visual Studio files
+examples/directx9_example/Debug/*
+examples/directx9_example/Release/*
+examples/directx9_example/ipch/*
+examples/opengl_example/Debug/*
+examples/opengl_example/Release/*
+examples/opengl_example/ipch/*
+*.opensdf
+*.sdf
+*.suo
+*.vcxproj.user
+
+## Ini files
+imgui.ini
