@@ -231,7 +231,7 @@ namespace ImGui
 	// Utilities
 	void		SetTooltip(const char* fmt, ...);									// set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). (currently no contention handling, last call win)
 	void		SetNewWindowDefaultPos(ImVec2 pos);									// set position of window that do
-	bool		IsItemHovered();													// was the last item active area hovered by mouse?
+	bool		IsHovered();														// was the last item active area hovered by mouse?
 	ImVec2		GetItemBoxMin();													// get bounding box of last item
 	ImVec2		GetItemBoxMax();													// get bounding box of last item
 	bool		IsClipped(ImVec2 item_size);										// to perform coarse clipping on user's side (as an optimisation)

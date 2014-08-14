@@ -1671,7 +1671,7 @@ ImVec2 GetMousePos()
 	return GImGui.IO.MousePos;
 }
 
-bool IsItemHovered()
+bool IsHovered()
 {
 	ImGuiWindow* window = GetCurrentWindow();
 	return window->DC.LastItemHovered;
@@ -5427,7 +5427,7 @@ void ShowTestWindow(bool* open)
 		ImGui::RadioButton("radio c", &e, 2);
 
 		ImGui::Text("Hover me");
-		if (ImGui::IsItemHovered())
+		if (ImGui::IsHovered())
 			ImGui::SetTooltip("I am a tooltip");
 
 		static int item = 1;
