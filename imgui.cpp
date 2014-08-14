@@ -113,6 +113,7 @@
  - window: autofit is losing its purpose when user relies on any dynamic layout (window width multiplier, column). maybe just discard autofit?
  - window: support horizontal scroll
  - window: fix resize grip scaling along with Rounding style setting
+ - window/style: add global alpha modifier (not just "fill_alpha")
  - widgets: switching from "widget-label" to "label-widget" would make it more convenient to integrate widgets in trees
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
  - main: make IsHovered() more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
@@ -516,6 +517,7 @@ struct ImGuiDrawContext
 	float					PrevLineHeight;
 	float					LogLineHeight;
 	int						TreeDepth;
+	ImGuiAabb				LastItemAabb;
 	bool					LastItemHovered;
 	ImVector<ImGuiWindow*>	ChildWindows;
 	ImVector<bool>			AllowKeyboardFocus;
@@ -538,6 +540,7 @@ struct ImGuiDrawContext
 		CurrentLineHeight = PrevLineHeight = 0.0f;
 		LogLineHeight = -1.0f;
 		TreeDepth = 0;
+		LastItemAabb = ImGuiAabb(0.0f,0.0f,0.0f,0.0f);
 		LastItemHovered = false;
 		StateStorage = NULL;
 		OpenNextNode = -1;
@@ -1668,10 +1671,22 @@ ImVec2 GetMousePos()
 	return GImGui.IO.MousePos;
 }
 
-bool IsHovered()
+bool IsItemHovered()
 {
 	ImGuiWindow* window = GetCurrentWindow();
 	return window->DC.LastItemHovered;
+}
+
+ImVec2 GetItemBoxMin()
+{
+	ImGuiWindow* window = GetCurrentWindow();
+	return window->DC.LastItemAabb.Min;
+}
+
+ImVec2 GetItemBoxMax()
+{
+	ImGuiWindow* window = GetCurrentWindow();
+	return window->DC.LastItemAabb.Max;
 }
 
 void SetTooltip(const char* fmt, ...)
@@ -4398,6 +4413,7 @@ bool IsClipped(ImVec2 item_size)
 static bool ClipAdvance(const ImGuiAabb& bb)
 {
 	ImGuiWindow* window = GetCurrentWindow();
+	window->DC.LastItemAabb = bb;
 	if (ImGui::IsClipped(bb))
 	{
 		window->DC.LastItemHovered = false;
@@ -5411,7 +5427,7 @@ void ShowTestWindow(bool* open)
 		ImGui::RadioButton("radio c", &e, 2);
 
 		ImGui::Text("Hover me");
-		if (ImGui::IsHovered())
+		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("I am a tooltip");
 
 		static int item = 1;
