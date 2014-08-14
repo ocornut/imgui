@@ -2091,7 +2091,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 			ImGui::PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
 	}
 
-	// Innter clipping rectangle
+	// Inner clipping rectangle
 	// We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
 	const ImGuiAabb title_bar_aabb = window->TitleBarAabb();
 	ImVec4 clip_rect(title_bar_aabb.Min.x+0.5f, title_bar_aabb.Max.y+0.5f, window->Aabb().Max.x-1.5f, window->Aabb().Max.y-1.5f);
@@ -5239,7 +5239,7 @@ static void SetClipboardTextFn_DefaultImpl(const char* text, const char* text_en
 		return;
 	if (!text_end)
 		text_end = text + strlen(text);
-	const int buf_length = (text_end - text) + 1;
+	const int buf_length = (int)(text_end - text) + 1;
 	HGLOBAL buf_handle = GlobalAlloc(GMEM_MOVEABLE, buf_length * sizeof(char)); 
 	if (buf_handle == NULL)
 		return;
