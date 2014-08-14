@@ -162,12 +162,6 @@
 #include <stdio.h>		// vsnprintf
 #include <string.h>		// memset
 
-#ifdef __GNUC__
-  #include <limits.h>
-  #include <stdint.h>
-#endif
-
-
 #ifdef _MSC_VER
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
