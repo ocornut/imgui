@@ -1833,15 +1833,13 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 			parent_window->DC.ChildWindows.push_back(window);
 			window->Pos = window->PosFloat = parent_window->DC.CursorPos;
 			window->SizeFull = size;
-			if (!(flags & ImGuiWindowFlags_ComboBox))
-				ImGui::PushClipRect(parent_window->ClipRectStack.back());
-			else
-				ImGui::PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
 		}
+
+		// Outer clipping rectangle
+		if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
+			ImGui::PushClipRect(g.CurrentWindowStack[g.CurrentWindowStack.size()-2]->ClipRectStack.back());
 		else
-		{
 			ImGui::PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
-		}
 
 		// ID stack
 		window->IDStack.resize(0);
@@ -2082,8 +2080,16 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 				ImGui::CloseWindowButton(open);
 		}
 	}
+	else
+	{
+		// Outer clipping rectangle
+		if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
+			ImGui::PushClipRect(g.CurrentWindowStack[g.CurrentWindowStack.size()-2]->ClipRectStack.back());
+		else
+			ImGui::PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
+	}
 
-	// Clip rectangle
+	// Innter clipping rectangle
 	// We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
 	const ImGuiAabb title_bar_aabb = window->TitleBarAabb();
 	ImVec4 clip_rect(title_bar_aabb.Min.x+0.5f, title_bar_aabb.Max.y+0.5f, window->Aabb().Max.x-1.5f, window->Aabb().Max.y-1.5f);
