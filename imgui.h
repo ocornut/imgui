@@ -509,8 +509,8 @@ struct ImDrawCmd
 	ImVec4			clip_rect;
 };
 
-#ifndef IMDRAW_TEX_UV_FOR_WHITE
-#define IMDRAW_TEX_UV_FOR_WHITE	ImVec2(0,0)
+#ifndef IMGUI_FONT_TEX_UV_FOR_WHITE
+#define IMGUI_FONT_TEX_UV_FOR_WHITE	ImVec2(0.f,0.f)
 #endif
 
 // sizeof() == 20

@@ -101,7 +101,7 @@
 
  - if you want to use a different font than the default
    - create bitmap font data using BMFont. allocate ImGui::GetIO().Font and use ->LoadFromFile()/LoadFromMemory(), set ImGui::GetIO().FontHeight
-   - load your texture yourself. texture *MUST* have white pixel at UV coordinate 'IMDRAW_TEX_UV_FOR_WHITE' (you can #define it in imconfig.h), this is used by solid objects.
+   - load your texture yourself. texture *MUST* have white pixel at UV coordinate 'IMGUI_FONT_TEX_UV_FOR_WHITE' (you can #define it in imconfig.h), this is used by solid objects.
 
  - tip: the construct 'if (IMGUI_ONCE_UPON_A_FRAME)' will evaluate to true only once a frame, you can use it to add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can call Render() multiple times (e.g for VR renders), up to you to communicate the extra state to your RenderDrawListFn function.
@@ -4703,7 +4703,7 @@ void ImDrawList::AddVtx(const ImVec2& pos, ImU32 col)
 {
 	vtx_write->pos = pos;
 	vtx_write->col = col;
-	vtx_write->uv = IMDRAW_TEX_UV_FOR_WHITE;
+	vtx_write->uv = IMGUI_FONT_TEX_UV_FOR_WHITE;
 	vtx_write++;
 }
 
