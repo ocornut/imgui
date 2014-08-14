@@ -13,7 +13,7 @@
 //#define IM_ASSERT(_EXPR)	MyAssert(_EXPR)
 
 //---- Don't implement default clipboard handlers for Windows (so as not to link with OpenClipboard(), etc.)
-//#define IMGUI_DONT_IMPLEMENT_WINDOWS_CLIPBOARD_FUNCTIONS
+//#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS
 
 //---- If you are loading a custom font, ImGui expect to find a pure white pixel at (0,0)
 // Change it's UV coordinate here if you can't have a white pixel at (0,0)

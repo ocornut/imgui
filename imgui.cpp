@@ -146,7 +146,6 @@
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
  - keyboard: full keyboard navigation and focus
- - clipboard: add a default "local" implementation of clipboard functions (user will only need to override them to connect to OS clipboard)
  - misc: not thread-safe
  - optimisation/render: use indexed rendering
  - optimisation/render: move clip-rect to vertex data? would allow merging all commands
@@ -154,8 +153,6 @@
  - optimisation: turn some the various stack vectors into statically-sized arrays
  - optimisation: better clipping for multi-component widgets
  - optimisation: specialize for height based clipping first (assume widgets never go up + height tests before width tests?)
- - optimisation/portability: provide ImVector style implementation
- - optimisation/portability: remove dependency on <algorithm>
 */
 
 #include "imgui.h"
@@ -198,15 +195,11 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs);
 }; // namespace ImGui
 
 //-----------------------------------------------------------------------------
-// Platform dependant helpers
+// Platform dependant default implementations
 //-----------------------------------------------------------------------------
 
-#ifdef _MSC_VER
-#ifndef IMGUI_DONT_IMPLEMENT_WINDOWS_CLIPBOARD_FUNCTIONS
-static const char*	GetClipboardTextFn_DefaultImplWindows();
-static void			SetClipboardTextFn_DefaultImplWindows(const char* text, const char* text_end);
-#endif
-#endif
+static const char*	GetClipboardTextFn_DefaultImpl();
+static void			SetClipboardTextFn_DefaultImpl(const char* text, const char* text_end);
 
 //-----------------------------------------------------------------------------
 // User facing structures
@@ -282,12 +275,8 @@ ImGuiIO::ImGuiIO()
 	MouseDoubleClickMaxDist = 6.0f;
 
 	// Platform dependant default implementations
-#ifdef _MSC_VER
-#ifndef IMGUI_DONT_IMPLEMENT_WINDOWS_CLIPBOARD_FUNCTIONS
-	GetClipboardTextFn = GetClipboardTextFn_DefaultImplWindows;
-	SetClipboardTextFn = SetClipboardTextFn_DefaultImplWindows;
-#endif
-#endif
+	GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;
+	SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
 }
 
 // Pass in translated ASCII characters for text input.
@@ -630,6 +619,7 @@ struct ImGuiState
 	ImGuiStorage			ColorEditModeStorage;				// for user selection
 	ImGuiID					ActiveComboID;
 	char					Tooltip[1024];
+	char*					PrivateClipboard;					// if no custom clipboard handler is defined
 
 	// Logging
 	bool					LogEnabled;
@@ -653,6 +643,7 @@ struct ImGuiState
 		SliderAsInputTextId = 0;
 		ActiveComboID = 0;
 		memset(Tooltip, 0, sizeof(Tooltip));
+		PrivateClipboard = NULL;
 		LogEnabled = false;
 		LogFile = NULL;
 		LogAutoExpandMaxDepth = 2;
@@ -1311,6 +1302,12 @@ void Shutdown()
 	{
 		delete g.IO.Font;
 		g.IO.Font = NULL;
+	}
+
+	if (g.PrivateClipboard)
+	{
+		free(g.PrivateClipboard);
+		g.PrivateClipboard = NULL;
 	}
 
 	g.Initialized = false;
@@ -5201,13 +5198,13 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
 // PLATFORM DEPENDANT HELPERS
 //-----------------------------------------------------------------------------
 
-#ifdef _MSC_VER
-#ifndef IMGUI_DONT_IMPLEMENT_WINDOWS_CLIPBOARD_FUNCTIONS
+#if defined(_MSC_VER) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS)
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-static const char*	GetClipboardTextFn_DefaultImplWindows()
+// Win32 API clipboard implementation
+static const char*	GetClipboardTextFn_DefaultImpl()
 {
 	static char* buf_local = NULL;
 	if (buf_local)
@@ -5215,47 +5212,62 @@ static const char*	GetClipboardTextFn_DefaultImplWindows()
 		free(buf_local);
 		buf_local = NULL;
 	}
-
 	if (!OpenClipboard(NULL)) 
 		return NULL;
-
 	HANDLE buf_handle = GetClipboardData(CF_TEXT); 
 	if (buf_handle == NULL)
 		return NULL;
-
 	if (char* buf_global = (char*)GlobalLock(buf_handle))
 		buf_local = strdup(buf_global);
 	GlobalUnlock(buf_handle); 
 	CloseClipboard(); 
-
 	return buf_local;
 }
 
-static void			SetClipboardTextFn_DefaultImplWindows(const char* text, const char* text_end)
+// Win32 API clipboard implementation
+static void SetClipboardTextFn_DefaultImpl(const char* text, const char* text_end)
 {
 	if (!OpenClipboard(NULL))
 		return;
-
 	if (!text_end)
 		text_end = text + strlen(text);
-
 	const int buf_length = (text_end - text) + 1;
 	HGLOBAL buf_handle = GlobalAlloc(GMEM_MOVEABLE, buf_length * sizeof(char)); 
 	if (buf_handle == NULL)
 		return;
-
 	char* buf_global = (char *)GlobalLock(buf_handle); 
 	memcpy(buf_global, text, text_end - text);
 	buf_global[text_end - text] = 0;
 	GlobalUnlock(buf_handle); 
-
 	EmptyClipboard();
 	SetClipboardData(CF_TEXT, buf_handle);
 	CloseClipboard();
 }
 
-#endif // #ifndef IMGUI_DONT_IMPLEMENT_WINDOWS_CLIPBOARD_FUNCTIONS
-#endif // #ifdef _MSC_VER
+#else
+
+// Local ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers
+static const char*	GetClipboardTextFn_DefaultImpl()
+{
+	return GImGui.PrivateClipboard;
+}
+
+// Local ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers
+static void SetClipboardTextFn_DefaultImpl(const char* text, const char* text_end)
+{
+	if (GImGui.PrivateClipboard)
+	{
+		free(GImGui.PrivateClipboard);
+		GImGui.PrivateClipboard = NULL;
+	}
+	if (!text_end)
+		text_end = text + strlen(text);
+	GImGui.PrivateClipboard = (char*)malloc(text_end - text + 1);
+	memcpy(GImGui.PrivateClipboard, text, text_end - text);
+	GImGui.PrivateClipboard[text_end - text] = 0;
+}
+
+#endif
 
 //-----------------------------------------------------------------------------
 // HELP
