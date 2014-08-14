@@ -1783,7 +1783,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 	ImGuiWindow* window = FindWindow(name);
 	if (!window)
 	{
-		if (flags & ImGuiWindowFlags_ChildWindow)
+		if (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip))
 		{
 			window = new ImGuiWindow(name, ImVec2(0,0), size);
 		}
