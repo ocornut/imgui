@@ -1116,11 +1116,13 @@ static void SaveSettings()
 		return;
 	for (size_t i = 0; i != g.Settings.size(); i++)
 	{
-		const ImGuiIniData* ini = g.Settings[i];
-		fprintf(f, "[%s]\n", ini->Name);
-		fprintf(f, "Pos=%d,%d\n", (int)ini->Pos.x, (int)ini->Pos.y);
-		fprintf(f, "Size=%d,%d\n", (int)ini->Size.x, (int)ini->Size.y);
-		fprintf(f, "Collapsed=%d\n", ini->Collapsed);
+		const ImGuiIniData* settings = g.Settings[i];
+		if (settings->Pos.x == FLT_MAX)
+			continue;
+		fprintf(f, "[%s]\n", settings->Name);
+		fprintf(f, "Pos=%d,%d\n", (int)settings->Pos.x, (int)settings->Pos.y);
+		fprintf(f, "Size=%d,%d\n", (int)settings->Size.x, (int)settings->Size.y);
+		fprintf(f, "Collapsed=%d\n", settings->Collapsed);
 		fprintf(f, "\n");
 	}
 
