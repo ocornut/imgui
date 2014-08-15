@@ -7,7 +7,7 @@
 
 #pragma warning (disable: 4996)		// 'This function or variable may be unsafe': strdup
 
-static bool emulateIndependentWindows = true;
+static bool emulateIndependentWindows = false;
 
 static HWND hWnd;
 static LPDIRECT3D9             g_pD3D = NULL;		// Used to create the D3DDevice
