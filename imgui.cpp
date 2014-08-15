@@ -109,6 +109,8 @@
 
  ISSUES AND TODO-LIST
 
+ - misc: allow user to call NewFrame() multiple times without a render.
+ - misc: add extra mouse buttons for user storage (and clarify that ImGui doesn't use them)
  - misc: merge ImVec4 / ImGuiAabb, they are essentially duplicate containers
  - window: autofit is losing its purpose when user relies on any dynamic layout (window width multiplier, column). maybe just discard autofit?
  - window: support horizontal scroll
@@ -135,6 +137,7 @@
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms (may or not lead to ImGui changes)
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is unprecise. change to relative movement slider? hide mouse cursor, allow more precise input using less screen-space.
+ - treenode: ignore click when keyboard modifiers are pressed so that users can catch them for other purposes.
  - text edit: centered text for slider or input text to it matches typical positionning.
  - text edit: flag to disable live update of the user buffer. 
  - text edit: field resize behaviour - field could stretch when being edited? hover tooltip shows more text?
@@ -147,6 +150,7 @@
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
  - keyboard: full keyboard navigation and focus
  - misc: not thread-safe
+ - tooltip: add a BeginTooltip()/EndTooltip() helper.
  - optimisation/render: use indexed rendering
  - optimisation/render: move clip-rect to vertex data? would allow merging all commands
  - optimisation/render: merge command-list of all windows into one command-list?
