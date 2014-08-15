@@ -132,7 +132,6 @@
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
  - plot: plot lines draws 1 item too much?
- - plot: add a stride parameter?
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms (may or not lead to ImGui changes)
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
@@ -3323,7 +3322,13 @@ enum ImGuiPlotType
 	ImGuiPlotType_Histogram,
 };
 
-static void Plot(ImGuiPlotType plot_type, const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size)
+static float PlotGetValue(const float* values, size_t stride, int idx)
+{
+	float v = *(float*)((unsigned char*)values + idx * stride);
+	return v;
+}
+
+static void Plot(ImGuiPlotType plot_type, const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, size_t stride)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
@@ -3353,8 +3358,9 @@ static void Plot(ImGuiPlotType plot_type, const char* label, const float* values
 		float v_max = -FLT_MAX;
 		for (int i = 0; i < values_count; i++)
 		{
-			v_min = ImMin(v_min, values[i]);
-			v_max = ImMax(v_max, values[i]);
+			const float v = PlotGetValue(values, stride, i);
+			v_min = ImMin(v_min, v);
+			v_max = ImMax(v_max, v);
 		}
 		if (scale_min == FLT_MAX)
 			scale_min = v_min;
@@ -3376,8 +3382,8 @@ static void Plot(ImGuiPlotType plot_type, const char* label, const float* values
 		const int v_idx = (int)(t * (values_count + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0)));
 		IM_ASSERT(v_idx >= 0 && v_idx < values_count);
 		
-		const float v0 = values[(v_idx + values_offset) % values_count];
-		const float v1 = values[(v_idx + 1 + values_offset) % values_count];
+		const float v0 = PlotGetValue(values, stride, (v_idx + values_offset) % values_count);
+		const float v1 = PlotGetValue(values, stride, (v_idx + 1 + values_offset) % values_count);
 		if (plot_type == ImGuiPlotType_Lines)
 			ImGui::SetTooltip("%d: %8.4g\n%d: %8.4g", v_idx, v0, v_idx+1, v1);
 		else if (plot_type == ImGuiPlotType_Histogram)
@@ -3387,7 +3393,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, const float* values
 
 	const float t_step = 1.0f / (float)res_w;
 
-	float v0 = values[(0 + values_offset) % values_count];
+	float v0 = PlotGetValue(values, stride, (0 + values_offset) % values_count);
 	float t0 = 0.0f;
 	ImVec2 p0 = ImVec2( t0, 1.0f - ImSaturate((v0 - scale_min) / (scale_max - scale_min)) );
 
@@ -3399,7 +3405,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, const float* values
 		const float t1 = t0 + t_step;
 		const int v_idx = (int)(t0 * values_count);
 		IM_ASSERT(v_idx >= 0 && v_idx < values_count);
-		const float v1 = values[(v_idx + values_offset + 1) % values_count];
+		const float v1 = PlotGetValue(values, stride, (v_idx + values_offset + 1) % values_count);
 		const ImVec2 p1 = ImVec2( t1, 1.0f - ImSaturate((v1 - scale_min) / (scale_max - scale_min)) );
 
 		// NB: draw calls are merged into ones
@@ -3420,14 +3426,14 @@ static void Plot(ImGuiPlotType plot_type, const char* label, const float* values
 	RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, graph_bb.Min.y), label);
 }
 
-void PlotLines(const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size)
+void PlotLines(const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, size_t stride)
 {
-	ImGui::Plot(ImGuiPlotType_Lines, label, values, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
+	ImGui::Plot(ImGuiPlotType_Lines, label, values, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size, stride);
 }
 
-void PlotHistogram(const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size)
+void PlotHistogram(const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, size_t stride)
 {
-	ImGui::Plot(ImGuiPlotType_Histogram, label, values, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
+	ImGui::Plot(ImGuiPlotType_Histogram, label, values, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size, stride);
 }
 
 void Checkbox(const char* label, bool* v)
