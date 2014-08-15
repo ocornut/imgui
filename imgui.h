@@ -135,7 +135,7 @@ namespace ImGui
 	bool		GetWindowIsFocused();
 	float		GetWindowWidth();
 	ImVec2		GetWindowPos();														// you should rarely need/care about the window position, but it can be useful if you want to use your own drawing
-	void		SetWindowPos(ImVec2 pos);											// unchecked
+	void		SetWindowPos(const ImVec2& pos);									// unchecked
 	ImVec2		GetWindowSize();
 	ImVec2		GetWindowContentRegionMin();
 	ImVec2		GetWindowContentRegionMax();
@@ -149,7 +149,7 @@ namespace ImGui
 	float		GetItemWidth();
 	void		PushAllowKeyboardFocus(bool v);
 	void		PopAllowKeyboardFocus();
-	void		PushStyleColor(ImGuiCol idx, ImVec4 col);
+	void		PushStyleColor(ImGuiCol idx, const ImVec4& col);
 	void		PopStyleColor();
 
 	// Layout
@@ -161,8 +161,8 @@ namespace ImGui
 	float		GetColumnOffset(int column_index = -1);
 	void		SetColumnOffset(int column_index, float offset);
 	float		GetColumnWidth(int column_index = -1);
-	ImVec2		GetCursorPos();														// cursor position relative to window position
-	void		SetCursorPos(ImVec2 p);
+	ImVec2		GetCursorPos();														// cursor position is relative to window position
+	void		SetCursorPos(const ImVec2& pos);									// "
 	void		AlignFirstTextHeightToWidgets();									// call once if the first item on the line is a Text() item and you want to vertically lower it to match higher widgets.
 	float		GetTextLineSpacing();
 	float		GetTextLineHeight();
@@ -176,6 +176,7 @@ namespace ImGui
 	// Widgets
 	void		Text(const char* fmt, ...);
 	void		TextV(const char* fmt, va_list args);
+	void		TextColored(const ImVec4& col, const char* fmt, ...);				// shortcut to doing PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
 	void		TextUnformatted(const char* text, const char* text_end = NULL);		// doesn't require null terminated string if 'text_end' is specified. no copy done to any bounded stack buffer, better for long chunks of text.
 	void		LabelText(const char* label, const char* fmt, ...);
 	void		BulletText(const char* fmt, ...);
@@ -230,11 +231,11 @@ namespace ImGui
 
 	// Utilities
 	void		SetTooltip(const char* fmt, ...);									// set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). (currently no contention handling, last call win)
-	void		SetNewWindowDefaultPos(ImVec2 pos);									// set position of window that do
+	void		SetNewWindowDefaultPos(const ImVec2& pos);							// set position of window that do
 	bool		IsHovered();														// was the last item active area hovered by mouse?
 	ImVec2		GetItemBoxMin();													// get bounding box of last item
 	ImVec2		GetItemBoxMax();													// get bounding box of last item
-	bool		IsClipped(ImVec2 item_size);										// to perform coarse clipping on user's side (as an optimisation)
+	bool		IsClipped(const ImVec2& item_size);									// to perform coarse clipping on user's side (as an optimisation)
 	bool		IsKeyPressed(int key_index, bool repeat = true);					// key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry
 	bool		IsMouseClicked(int button, bool repeat = false);
 	bool		IsMouseDoubleClicked(int button);

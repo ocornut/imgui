@@ -1697,7 +1697,7 @@ void SetTooltip(const char* fmt, ...)
 	va_end(args);
 }
 
-void SetNewWindowDefaultPos(ImVec2 pos)
+void SetNewWindowDefaultPos(const ImVec2& pos)
 {
 	ImGuiState& g = GImGui;
 	g.NewWindowDefaultPos = pos;
@@ -2196,7 +2196,7 @@ void PopAllowKeyboardFocus()
 	window->DC.AllowKeyboardFocus.pop_back();
 }
 
-void PushStyleColor(ImGuiCol idx, ImVec4 col)
+void PushStyleColor(ImGuiCol idx, const ImVec4& col)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
@@ -2284,7 +2284,7 @@ ImVec2 GetWindowPos()
 	return window->Pos;
 }
 
-void SetWindowPos(ImVec2 pos)
+void SetWindowPos(const ImVec2& pos)
 {
 	ImGuiWindow* window = GetCurrentWindow();
 	window->Pos = pos;
@@ -2342,10 +2342,10 @@ ImVec2 GetCursorPos()
 	return window->DC.CursorPos - window->Pos;
 }
 
-void SetCursorPos(ImVec2 p)
+void SetCursorPos(const ImVec2& pos)
 {
 	ImGuiWindow* window = GetCurrentWindow();
-	window->DC.CursorPos = window->Pos + p;
+	window->DC.CursorPos = window->Pos + pos;
 }
 
 void SetScrollPosHere()
@@ -2383,6 +2383,16 @@ void Text(const char* fmt, ...)
 	va_start(args, fmt);
 	TextV(fmt, args);
 	va_end(args);
+}
+
+void TextColored(const ImVec4& col, const char* fmt, ...)
+{
+	ImGui::PushStyleColor(ImGuiCol_Text, col);
+	va_list args;
+	va_start(args, fmt);
+	TextV(fmt, args);
+	va_end(args);
+	ImGui::PopStyleColor();
 }
 
 void TextUnformatted(const char* text, const char* text_end)
@@ -4409,7 +4419,7 @@ bool IsClipped(const ImGuiAabb& bb)
 	return false;
 }
 
-bool IsClipped(ImVec2 item_size)
+bool IsClipped(const ImVec2& item_size)
 {
 	ImGuiWindow* window = GetCurrentWindow();
 	return IsClipped(ImGuiAabb(window->DC.CursorPos, window->DC.CursorPos + item_size));
@@ -5438,6 +5448,14 @@ void ShowTestWindow(bool* open)
 			ImGui::BulletText("Bullet point 1");
 			ImGui::BulletText("Bullet point 2\nOn multiple lines");
 			ImGui::BulletText("Bullet point 3");
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode("Colored Text"))
+		{
+			// This is a merely a shortcut, you can use PushStyleColor()/PopStyleColor() for more flexibility.
+			ImGui::TextColored(ImVec4(1.0f,0.0f,1.0f,1.0f), "Pink");
+			ImGui::TextColored(ImVec4(1.0f,1.0f,0.0f,1.0f), "Yellow");
 			ImGui::TreePop();
 		}
 
