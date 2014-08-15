@@ -132,6 +132,7 @@
  - combo: turn child handling code into popup helper
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
+ - plot: plot lines draws 1 item too much?
  - plot: add a stride parameter?
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms (may or not lead to ImGui changes)
@@ -194,6 +195,7 @@ static bool			IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
 static bool			CloseWindowButton(bool* open = NULL);
 static void			FocusWindow(ImGuiWindow* window);
+static ImGuiWindow* FindWindow(const char* name);
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs);
 
 }; // namespace ImGui
@@ -1372,7 +1374,7 @@ void Render()
 		ImGui::End();
 
 		// Sort the window list so that all child windows are after their parent
-		// When cannot do that on FocusWindow() because childs may not exist yet
+		// We cannot do that on FocusWindow() because childs may not exist yet
 		ImVector<ImGuiWindow*> sorted_windows;
 		sorted_windows.reserve(g.Windows.size());
 		for (size_t i = 0; i != g.Windows.size(); i++)
@@ -1391,34 +1393,28 @@ void Render()
 		memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
 	}
 
+	// Render tooltip
+	if (g.Tooltip[0])
+	{
+		// Use a dummy window to render the tooltip
+		ImGui::BeginTooltip();
+		ImGui::TextUnformatted(g.Tooltip);
+		ImGui::EndTooltip();
+	}
+
 	// Gather windows to render
 	g.RenderDrawLists.resize(0);
 	for (size_t i = 0; i != g.Windows.size(); i++)
 	{
 		ImGuiWindow* window = g.Windows[i];
-		if (!window->Visible)
-			continue;
-		if (window->Flags & ImGuiWindowFlags_ChildWindow)
-			continue;
-		window->AddToRenderList();
+		if (window->Visible && (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) == 0)
+			window->AddToRenderList();
 	}
-
-	// Render tooltip
-	if (g.Tooltip[0])
+	for (size_t i = 0; i != g.Windows.size(); i++)
 	{
-		// Use a dummy window to render the tooltip
-		ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), 0.0f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_Tooltip);
-		ImGuiWindow* window = GetCurrentWindow();
-		//window->DrawList->Clear();
-		ImGui::PushClipRect(ImVec4(-9999,-9999,+9999,+9999), false);
-		const ImVec2 text_size = CalcTextSize(g.Tooltip, NULL, false);
-		const ImVec2 pos = g.IO.MousePos + ImVec2(32,16);
-		const ImGuiAabb bb(pos - g.Style.FramePadding*2, pos + text_size + g.Style.FramePadding*2);
-		ImGui::RenderFrame(bb.Min, bb.Max, window->Color(ImGuiCol_TooltipBg), false, g.Style.WindowRounding);
-		ImGui::RenderText(pos, g.Tooltip, NULL, false);
-		ImGui::PopClipRect();
-		ImGui::End();
-		window->AddToRenderList();
+		ImGuiWindow* window = g.Windows[i];
+		if (window->Visible && (window->Flags & ImGuiWindowFlags_Tooltip))
+			window->AddToRenderList();
 	}
 
 	// Render
@@ -1726,6 +1722,17 @@ static ImGuiWindow* FindWindow(const char* name)
 	return NULL;
 }
 
+void BeginTooltip()
+{
+	ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), 0.9f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_Tooltip);
+}
+
+void EndTooltip()
+{
+	IM_ASSERT(GetCurrentWindow()->Flags & ImGuiWindowFlags_Tooltip);
+	ImGui::End();
+}
+
 void BeginChild(const char* str_id, ImVec2 size, bool border, ImGuiWindowFlags extra_flags)
 {
 	ImGuiState& g = GImGui;
@@ -1824,12 +1831,21 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 	const bool first_begin_of_the_frame = (window->LastFrameDrawn != current_frame);
 	if (first_begin_of_the_frame)
 	{
-		// New windows appears in front
-		if (window->LastFrameDrawn < current_frame - 1)
-			ImGui::FocusWindow(window);
-
 		window->DrawList->Clear();
 		window->Visible = true;
+
+		// New windows appears in front
+		if (window->LastFrameDrawn < current_frame - 1)
+		{
+			ImGui::FocusWindow(window);
+			if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
+			{
+				// Hide for 1 frame while resizing
+				window->AutoFitFrames = 2;
+				window->Visible = false;
+			}
+		}
+
 		window->LastFrameDrawn = current_frame;
 		window->ClipRectStack.resize(0);
 
@@ -1871,6 +1887,12 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 			}
 		}
 
+		// Tooltips always follow mouse
+		if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
+		{
+			window->PosFloat = g.IO.MousePos + ImVec2(32,16) - g.Style.FramePadding*2;
+		}
+
 		// Clamp into view
 		if (!(window->Flags & ImGuiWindowFlags_ChildWindow))
 		{
@@ -1884,7 +1906,12 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 		{
 			window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
 		}
-		window->ItemWidthDefault = (float)(int)(window->Size.x > 0.0f ? window->Size.x * 0.65f : 250.0f);
+
+		// Default item width
+		if (window->Size.x > 0.0f && !(window->Flags & ImGuiWindowFlags_Tooltip))
+			window->ItemWidthDefault = (float)(int)(window->Size.x * 0.65f);
+		else
+			window->ItemWidthDefault = 200.0f;
 
 		// Prepare for focus requests
 		if (window->FocusIdxRequestNext == IM_INT_MAX || window->FocusIdxCounter == -1)
@@ -1939,9 +1966,17 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 		{
 			window->Size = window->SizeFull;
 
-			// Draw resize grip
+			// Draw resize grip and resize
 			ImU32 resize_col = 0;
-			if (!(window->Flags & ImGuiWindowFlags_NoResize))
+			if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
+			{
+				if (window->AutoFitFrames > 0)
+				{
+					// Tooltip always resize
+					window->SizeFull = window->SizeContentsFit + g.Style.WindowPadding - ImVec2(0.0f, g.Style.ItemSpacing.y);
+				}
+			}
+			else if (!(window->Flags & ImGuiWindowFlags_NoResize))
 			{
 				const ImGuiAabb resize_aabb(window->Aabb().GetBR()-ImVec2(18,18), window->Aabb().GetBR());
 				const ImGuiID resize_id = window->GetID("#RESIZE");
@@ -1949,7 +1984,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 				ButtonBehaviour(resize_aabb, resize_id, &hovered, &held);
 				resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
-				const ImVec2 size_auto_fit = ImClamp(window->SizeContentsFit + style.AutoFitPadding, style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding);
+				ImVec2 size_auto_fit = ImClamp(window->SizeContentsFit + style.AutoFitPadding, style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding);
 				if (window->AutoFitFrames > 0)
 				{
 					// Auto-fit only grows during the first few frames
@@ -2291,7 +2326,12 @@ ImVec2 GetWindowPos()
 void SetWindowPos(const ImVec2& pos)
 {
 	ImGuiWindow* window = GetCurrentWindow();
-	window->Pos = pos;
+	const ImVec2 old_pos = window->Pos;
+	window->PosFloat = pos;
+	window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
+
+	// If we happen to move the window while it is showing (which is a bad idea) let's at least offset the cursor
+	window->DC.CursorPos += (window->Pos - old_pos);
 }
 
 ImVec2 GetWindowSize()
@@ -5471,6 +5511,17 @@ void ShowTestWindow(bool* open)
 		ImGui::Text("Hover me");
 		if (ImGui::IsHovered())
 			ImGui::SetTooltip("I am a tooltip");
+
+		ImGui::SameLine();
+		ImGui::Text("- or me");
+		if (ImGui::IsHovered())
+		{
+			ImGui::BeginTooltip();
+			ImGui::Text("I am a fancy tooltip");
+			static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
+			ImGui::PlotLines("Curve", arr, IM_ARRAYSIZE(arr));
+			ImGui::EndTooltip();
+		}
 
 		static int item = 1;
 		ImGui::Combo("combo", &item, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");

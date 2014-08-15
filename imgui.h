@@ -135,7 +135,7 @@ namespace ImGui
 	bool		GetWindowIsFocused();
 	float		GetWindowWidth();
 	ImVec2		GetWindowPos();														// you should rarely need/care about the window position, but it can be useful if you want to use your own drawing
-	void		SetWindowPos(const ImVec2& pos);									// unchecked
+	void		SetWindowPos(const ImVec2& pos);									// set current window pos
 	ImVec2		GetWindowSize();
 	ImVec2		GetWindowContentRegionMin();
 	ImVec2		GetWindowContentRegionMax();
@@ -151,6 +151,11 @@ namespace ImGui
 	void		PopAllowKeyboardFocus();
 	void		PushStyleColor(ImGuiCol idx, const ImVec4& col);
 	void		PopStyleColor();
+
+	// Tooltip
+	void		SetTooltip(const char* fmt, ...);									// set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). last call wins.
+	void		BeginTooltip();														// use to create full-featured tooltip windows that aren't just text. 
+	void		EndTooltip();
 
 	// Layout
 	void		Separator();														// horizontal line
@@ -230,7 +235,6 @@ namespace ImGui
 	void		LogToClipboard(int max_depth = -1);
 
 	// Utilities
-	void		SetTooltip(const char* fmt, ...);									// set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). (currently no contention handling, last call win)
 	void		SetNewWindowDefaultPos(const ImVec2& pos);							// set position of window that do
 	bool		IsHovered();														// was the last item active area hovered by mouse?
 	ImVec2		GetItemBoxMin();													// get bounding box of last item
