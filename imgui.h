@@ -402,7 +402,7 @@ struct ImGuiIO
 
 	// Input - Fill before calling NewFrame()
 	ImVec2		MousePos;					// Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
-	bool		MouseDown[2];				// Mouse buttons
+	bool		MouseDown[5];				// Mouse buttons. ImGui itself only uses button 0 (left button) but you can use others as storage for convenience.
 	int			MouseWheel;					// Mouse wheel: -1,0,+1
 	bool		KeyCtrl;					// Keyboard modifier pressed: Control
 	bool		KeyShift;					// Keyboard modifier pressed: Shift
@@ -419,11 +419,11 @@ struct ImGuiIO
 	// [Internal] ImGui will maintain those fields for you
 	ImVec2		MousePosPrev;
 	ImVec2		MouseDelta;
-	bool		MouseClicked[2];
-	ImVec2		MouseClickedPos[2];
-	float		MouseClickedTime[2];
-	bool		MouseDoubleClicked[2];
-	float		MouseDownTime[2];
+	bool		MouseClicked[5];
+	ImVec2		MouseClickedPos[5];
+	float		MouseClickedTime[5];
+	bool		MouseDoubleClicked[5];
+	float		MouseDownTime[5];
 	float		KeysDownTime[512];
 
 	ImGuiIO();
