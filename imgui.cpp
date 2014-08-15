@@ -131,7 +131,6 @@
  - combo: turn child handling code into popup helper
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
- - plot: plot lines draws 1 item too much?
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms (may or not lead to ImGui changes)
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
@@ -3400,7 +3399,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, const float* values
 	const ImU32 col_base = window->Color((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLines : ImGuiCol_PlotHistogram);
 	const ImU32 col_hovered = window->Color((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLinesHovered : ImGuiCol_PlotHistogramHovered);
 
-	while (t0 < 1.0f)
+	for (int n = 0; n < res_w; n++)
 	{
 		const float t1 = t0 + t_step;
 		const int v_idx = (int)(t0 * values_count);
