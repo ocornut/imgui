@@ -129,7 +129,6 @@
  - columns: columns header to act as button (~sort op) and allow resize/reorder
  - columns: user specify columns size
  - combo: turn child handling code into popup helper
- - combo: slow down mouse wheel scroll speed
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
  - plot: plot lines draws 1 item too much?
@@ -1259,7 +1258,8 @@ void NewFrame()
 		else
 		{
 			// Scroll
-			window->NextScrollY -= g.IO.MouseWheel * window->FontSize() * 5.0f;
+			const int scroll_lines = (window->Flags & ImGuiWindowFlags_ComboBox) ? 3 : 5;
+			window->NextScrollY -= g.IO.MouseWheel * window->FontSize() * scroll_lines;
 		}
 	}
 
