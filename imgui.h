@@ -18,6 +18,7 @@ struct ImGuiWindow;
 #include <float.h>			// FLT_MAX
 #include <stdarg.h>			// va_list
 #include <stdlib.h>			// NULL
+#include <string.h>
 
 #ifndef IM_ASSERT
 #include <assert.h>
@@ -32,6 +33,9 @@ typedef int ImGuiColorEditMode;		// enum ImGuiColorEditMode_
 typedef int ImGuiWindowFlags;		// enum ImGuiWindowFlags_
 typedef int ImGuiInputTextFlags;	// enum ImGuiInputTextFlags_
 typedef ImBitmapFont* ImFont;
+
+typedef void* (*ImGui_MallocCallback)(size_t size);
+typedef void (*ImGui_FreeCallback)(void *ptr);
 
 struct ImVec2
 {
@@ -58,6 +62,11 @@ struct ImVec4
 // std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug). 
 // this implementation does NOT call c++ constructors! we don't need them! also only provide the minimum functionalities we need.
 #ifndef ImVector
+
+// Forward declarations for Malloc/Free proxies
+void* ImGui_ProxyMalloc(size_t size);
+void ImGui_ProxyFree(void *ptr);
+
 template<typename T>
 class ImVector
 {
@@ -72,7 +81,7 @@ public:
 	typedef const value_type*	const_iterator;
 
 	ImVector()					{ _size = _capacity = 0; _data = NULL; }
-	~ImVector()					{ if (_data) free(_data); }
+    ~ImVector()					{ if (_data) ImGui_ProxyFree(_data); }
 
 	inline bool					empty() const					{ return _size == 0; }
 	inline size_t				size() const					{ return _size; }
@@ -83,7 +92,7 @@ public:
     inline value_type&			operator[](size_t i)			{ IM_ASSERT(i < _size); return _data[i]; }
     inline const value_type&	operator[](size_t i) const		{ IM_ASSERT(i < _size); return _data[i]; }
 
-	inline void					clear()							{ if (_data) { _size = _capacity = 0; free(_data); _data = NULL; } }
+    inline void					clear()							{ if (_data) { _size = _capacity = 0; ImGui_ProxyFree(_data); _data = NULL; } }
 	inline iterator				begin()							{ return _data; }
 	inline const_iterator		begin() const					{ return _data; }
 	inline iterator				end()							{ return _data + _size; }
@@ -94,7 +103,18 @@ public:
 	inline const value_type&	back() const					{ IM_ASSERT(_size > 0); return at(_size-1); }
 	inline void					swap(ImVector<T>& rhs)			{ const size_t rhs_size = rhs._size; rhs._size = _size; _size = rhs_size; const size_t rhs_cap = rhs._capacity; rhs._capacity = _capacity; _capacity = rhs_cap; value_type* rhs_data = rhs._data; rhs._data = _data; _data = rhs_data; }
 
-	inline void					reserve(size_t new_capacity)	{ _data = (value_type*)realloc(_data, new_capacity * sizeof(value_type)); _capacity = new_capacity; }
+    inline void                 reserve(size_t new_capacity)
+    {
+        if (!_data) {
+            _data = (value_type*)ImGui_ProxyMalloc(new_capacity*sizeof(value_type));
+        }   else    {
+            void *tmp = ImGui_ProxyMalloc(new_capacity*sizeof(value_type));
+            memcpy(tmp, _data, sizeof(value_type)*_capacity);
+            ImGui_ProxyFree(_data);
+            _data = (value_type*)tmp;
+        }
+        _capacity = new_capacity;
+    }
 	inline void					resize(size_t new_size)			{ if (new_size > _capacity) reserve(new_size); _size = new_size; }
 
 	inline void					push_back(const value_type& v)	{ if (_size == _capacity) reserve(_capacity ? _capacity * 2 : 4); _data[_size++] = v; }
@@ -371,7 +391,9 @@ struct ImGuiStyle
 struct ImGuiIO
 {
 	// Settings (fill once)					// Default value:
-	ImVec2		DisplaySize;				// <unset>					// Display size, in pixels. For clamping windows positions.
+    ImGui_MallocCallback MallocFn;
+    ImGui_FreeCallback FreeFn;
+    ImVec2		DisplaySize;				// <unset>					// Display size, in pixels. For clamping windows positions.
 	float		DeltaTime;					// = 1.0f/60.0f				// Time elapsed since last frame, in seconds.
 	float		IniSavingRate;				// = 5.0f					// Maximum time between saving .ini file, in seconds. Set to a negative value to disable .ini saving.
 	const char* IniFilename;				// = "imgui.ini"			// Absolute path to .ini file.
@@ -476,13 +498,15 @@ struct ImGuiTextBuffer
 {
 	ImVector<char>		Buf;
 
-	ImGuiTextBuffer()	{ Buf.push_back(0); }
-	const char*			begin() const { return Buf.begin(); }
-	const char*			end() const { return Buf.end()-1; }
-	size_t				size() const { return Buf.size()-1; }
-	bool				empty() { return Buf.empty(); }
-	void				clear() { Buf.clear(); Buf.push_back(0); }
-	void				append(const char* fmt, ...);
+    ImGuiTextBuffer()	{  }
+    void init() { if (Buf.empty())  Buf.push_back(0); }
+    const char*			begin() const { return Buf.begin(); }
+    const char*			end() const { return Buf.end()-1; }
+    size_t				size() const { return Buf.size()-1; }
+    bool				empty() { return Buf.empty(); }
+    void				clear() { Buf.clear(); Buf.push_back(0); }
+    void				append(const char* fmt, ...);
+    void                destroy() { Buf.clear();    }
 };
 
 // Helper: Key->value storage

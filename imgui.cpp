@@ -166,6 +166,15 @@
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
 
+#include <new>
+#define IMGUI_INTERNAL_USE
+#include "immem.h"
+#undef IMGUI_INTERNAL_USE
+
+// Block sizes for each memory. Don't really know about the optimized values
+#define DRAWLIST_BLOCK_SIZE 128
+#define GUIWINDOW_BLOCK_SIZE 64
+
 //-------------------------------------------------------------------------
 // Forward Declarations
 //-------------------------------------------------------------------------
@@ -193,6 +202,9 @@ static void			FocusWindow(ImGuiWindow* window);
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs);
 
 }; // namespace ImGui
+
+static char*        StrDup(const char *str);
+static void         StrDup_Free(char *str);
 
 //-----------------------------------------------------------------------------
 // Platform dependant default implementations
@@ -262,6 +274,10 @@ ImGuiStyle::ImGuiStyle()
 ImGuiIO::ImGuiIO()
 {
 	memset(this, 0, sizeof(*this));
+
+    MallocFn = malloc;
+    FreeFn = free;
+
 	DeltaTime = 1.0f/60.0f;
 	IniSavingRate = 5.0f;
 	IniFilename = "imgui.ini";
@@ -585,7 +601,7 @@ struct ImGuiIniData
 	bool	Collapsed;
 
 	ImGuiIniData() { memset(this, 0, sizeof(*this)); }
-	~ImGuiIniData() { if (Name) { free(Name); Name = NULL; } }
+    ~ImGuiIniData() { if (Name) { StrDup_Free(Name); Name = NULL; } }
 };
 
 struct ImGuiState
@@ -624,8 +640,12 @@ struct ImGuiState
 	// Logging
 	bool					LogEnabled;
 	FILE*					LogFile;
-	ImGuiTextBuffer			LogClipboard;
+    ImGuiTextBuffer			LogClipboard;
 	int						LogAutoExpandMaxDepth;
+
+    // Memory Pools
+    PoolAlloc<ImDrawList>   DrawListPool;
+    PoolAlloc<ImGuiWindow>  GuiWindowPool;
 
 	ImGuiState()
 	{
@@ -646,7 +666,7 @@ struct ImGuiState
 		PrivateClipboard = NULL;
 		LogEnabled = false;
 		LogFile = NULL;
-		LogAutoExpandMaxDepth = 2;
+        LogAutoExpandMaxDepth = 2;
 	}
 };
 
@@ -907,7 +927,7 @@ void ImGuiTextBuffer::append(const char* fmt, ...)
 
 ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_size)
 {
-	Name = strdup(name);
+    Name = StrDup(name);
 	ID = GetID(name); 
 	IDStack.push_back(ID);
 
@@ -932,14 +952,17 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
 	FocusIdxRequestCurrent = IM_INT_MAX;
 	FocusIdxRequestNext = IM_INT_MAX;
 
-	DrawList = new ImDrawList();
+    ImDrawList *buff = GImGui.DrawListPool.alloc();
+    IM_ASSERT(buff);
+    DrawList = new(buff) ImDrawList();
 }
 
 ImGuiWindow::~ImGuiWindow()
 {
-	delete DrawList;
+    DrawList->~ImDrawList();
+    GImGui.DrawListPool.free(DrawList);
 	DrawList = NULL;
-	free(Name);
+    StrDup_Free(Name);
 	Name = NULL;
 }
 
@@ -1019,9 +1042,9 @@ static ImGuiIniData* FindWindowSettings(const char* name)
 		if (ImStricmp(ini->Name, name) == 0)
 			return ini;
 	}
-	ImGuiIniData* ini = new ImGuiIniData();
-	ini->Name = strdup(name);
-	ini->Collapsed = false;
+    ImGuiIniData* ini = new ImGuiIniData();
+    ini->Name = StrDup(name);
+    ini->Collapsed = false;
 	ini->Pos = ImVec2(FLT_MAX,FLT_MAX);
 	ini->Size = ImVec2(0,0);
 	g.Settings.push_back(ini);
@@ -1156,8 +1179,14 @@ void NewFrame()
 
 	if (!g.Initialized)
 	{
-		// Initialize on first frame
+        // Initialize on first frame
 		IM_ASSERT(g.Settings.empty());
+
+        g.LogClipboard.init();
+
+        g.DrawListPool.create(DRAWLIST_BLOCK_SIZE, g.IO.MallocFn, g.IO.FreeFn);
+        g.GuiWindowPool.create(GUIWINDOW_BLOCK_SIZE, g.IO.MallocFn, g.IO.FreeFn);
+
 		LoadSettings();
 		if (!g.IO.Font)
 		{
@@ -1169,6 +1198,7 @@ void NewFrame()
 			g.IO.Font->LoadFromMemory(fnt_data, fnt_size);
 			g.IO.FontHeight = g.IO.Font->GetFontSize();
 		}
+
 		g.Initialized = true;
 	}
 
@@ -1282,8 +1312,10 @@ void Shutdown()
 
 	SaveSettings();
 
-	for (size_t i = 0; i < g.Windows.size(); i++)
-		delete g.Windows[i];
+    for (size_t i = 0; i < g.Windows.size(); i++)   {
+        g.Windows[i]->~ImGuiWindow();
+        g.GuiWindowPool.free(g.Windows[i]);
+    }
 	g.Windows.clear();
 	g.CurrentWindowStack.clear();
 	g.FocusedWindow = NULL;
@@ -1292,6 +1324,7 @@ void Shutdown()
 	for (size_t i = 0; i < g.Settings.size(); i++)
 		delete g.Settings[i];
 	g.Settings.clear();
+    g.RenderDrawLists.clear();
 	g.ColorEditModeStorage.Clear();
 	if (g.LogFile && g.LogFile != stdout)
 	{
@@ -1306,9 +1339,14 @@ void Shutdown()
 
 	if (g.PrivateClipboard)
 	{
-		free(g.PrivateClipboard);
+        GImGui.IO.FreeFn(g.PrivateClipboard);
 		g.PrivateClipboard = NULL;
 	}
+
+    g.DrawListPool.destroy();
+    g.GuiWindowPool.destroy();
+
+    g.LogClipboard.destroy();
 
 	g.Initialized = false;
 }
@@ -1783,9 +1821,12 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 	ImGuiWindow* window = FindWindow(name);
 	if (!window)
 	{
+        ImGuiWindow *buff = GImGui.GuiWindowPool.alloc();
+        IM_ASSERT(buff);
+
 		if (flags & ImGuiWindowFlags_ChildWindow)
 		{
-			window = new ImGuiWindow(name, ImVec2(0,0), size);
+            window = new(buff) ImGuiWindow(name, ImVec2(0,0), size);
 		}
 		else
 		{
@@ -1793,7 +1834,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 			if (settings && ImLength(settings->Size) > 0.0f && !(flags & ImGuiWindowFlags_NoResize))// && ImLengthsize) == 0.0f)
 				size = settings->Size;
 
-			window = new ImGuiWindow(name, g.NewWindowDefaultPos, size);
+            window = new(buff) ImGuiWindow(name, g.NewWindowDefaultPos, size);
 
 			if (settings->Pos.x != FLT_MAX)
 			{
@@ -3809,7 +3850,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
 				{
 					// Remove new-line from pasted buffer
 					size_t clipboard_len = strlen(clipboard);
-					char* clipboard_filtered = (char*)malloc(clipboard_len+1);
+                    char* clipboard_filtered = (char*)GImGui.IO.MallocFn(clipboard_len+1);
 					int clipboard_filtered_len = 0;
 					for (int i = 0; clipboard[i]; i++)
 					{
@@ -3820,7 +3861,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
 					}
 					clipboard_filtered[clipboard_filtered_len] = 0;
 					stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
-					free(clipboard_filtered);
+                    GImGui.IO.FreeFn(clipboard_filtered);
 				}
 		}
 		else if (g.IO.InputCharacters[0])
@@ -4422,7 +4463,7 @@ static bool ClipAdvance(const ImGuiAabb& bb)
 		window->DC.LastItemHovered = false;
 		return true;
 	}
-	window->DC.LastItemHovered = ImGui::IsMouseHoveringBox(bb);		// this is a sensible default but widgets are free to override it after calling ClipAdvance
+    window->DC.LastItemHovered = ImGui::IsMouseHoveringBox(bb);		// this is a sensible default but widgets are GImGui.IO.FreeFn to override it after calling ClipAdvance
 	return false;
 }
 
@@ -4941,7 +4982,7 @@ ImBitmapFont::ImBitmapFont()
 void	ImBitmapFont::Clear()
 {
 	if (Data && DataOwned)
-		free(Data);
+        GImGui.IO.FreeFn(Data);
 	Data = NULL;
 	DataOwned = false;
 	Info = NULL;
@@ -4964,7 +5005,7 @@ bool	ImBitmapFont::LoadFromFile(const char* filename)
 		return false;
 	if (fseek(f, 0, SEEK_SET)) 
 		return false;
-	if ((Data = (unsigned char*)malloc(DataSize)) == NULL)
+    if ((Data = (unsigned char*)GImGui.IO.MallocFn(DataSize)) == NULL)
 	{
 		fclose(f);
 		return false;
@@ -4972,7 +5013,7 @@ bool	ImBitmapFont::LoadFromFile(const char* filename)
 	if ((int)fread(Data, 1, DataSize, f) != DataSize)
 	{
 		fclose(f);
-		free(Data);
+        GImGui.IO.FreeFn(Data);
 		return false;
 	}
 	fclose(f);
@@ -5215,7 +5256,7 @@ static const char*	GetClipboardTextFn_DefaultImpl()
 	static char* buf_local = NULL;
 	if (buf_local)
 	{
-		free(buf_local);
+        GImGui.IO.FreeFn(buf_local);
 		buf_local = NULL;
 	}
 	if (!OpenClipboard(NULL)) 
@@ -5224,7 +5265,7 @@ static const char*	GetClipboardTextFn_DefaultImpl()
 	if (buf_handle == NULL)
 		return NULL;
 	if (char* buf_global = (char*)GlobalLock(buf_handle))
-		buf_local = strdup(buf_global);
+        buf_local = StrDup(buf_global);
 	GlobalUnlock(buf_handle); 
 	CloseClipboard(); 
 	return buf_local;
@@ -5263,12 +5304,12 @@ static void SetClipboardTextFn_DefaultImpl(const char* text, const char* text_en
 {
 	if (GImGui.PrivateClipboard)
 	{
-		free(GImGui.PrivateClipboard);
+        GImGui.IO.FreeFn(GImGui.PrivateClipboard);
 		GImGui.PrivateClipboard = NULL;
 	}
 	if (!text_end)
 		text_end = text + strlen(text);
-	GImGui.PrivateClipboard = (char*)malloc(text_end - text + 1);
+    GImGui.PrivateClipboard = (char*)GImGui.IO.MallocFn(text_end - text + 1);
 	memcpy(GImGui.PrivateClipboard, text, text_end - text);
 	GImGui.PrivateClipboard[text_end - text] = 0;
 }
@@ -5718,8 +5759,9 @@ void ShowTestWindow(bool* open)
 
 	if (ImGui::CollapsingHeader("Long text"))
 	{
-		static ImGuiTextBuffer log;
+        /*static*/ ImGuiTextBuffer log;
 		static int lines = 0;
+        log.init();
 		ImGui::Text("Printing unusually long amount of text.");
 		ImGui::Text("Buffer contents: %d lines, %d bytes", lines, log.size());
 		if (ImGui::Button("Clear")) { log.clear(); lines = 0; }
@@ -5741,6 +5783,20 @@ void ShowTestWindow(bool* open)
 
 }; // namespace ImGui
 
+static char* StrDup(const char *str)
+{
+    char *buff = (char*)GImGui.IO.MallocFn(strlen(str) + 1);
+    IM_ASSERT(buff);
+    strcpy(buff, str);
+    return buff;
+}
+
+static void StrDup_Free(char *str)
+{
+    IM_ASSERT(str);
+    GImGui.IO.FreeFn(str);
+}
+
 //-----------------------------------------------------------------------------
 // Font data
 // Bitmap exported from proggy_clean.fon (c) by Tristan Grimmer http://www.proggyfonts.net
@@ -5748,7 +5804,7 @@ void ShowTestWindow(bool* open)
 /*
 // Copyright (c) 2004, 2005 Tristan Grimmer
 
-// Permission is hereby granted, free of charge, to any person obtaining a copy 
+// Permission is hereby granted, GImGui.IO.FreeFn of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
@@ -5950,3 +6006,13 @@ void GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const voi
 };
 
 //-----------------------------------------------------------------------------
+
+void* ImGui_ProxyMalloc(size_t size)
+{
+    return GImGui.IO.MallocFn(size);
+}
+
+void ImGui_ProxyFree(void *ptr)
+{
+    GImGui.IO.FreeFn(ptr);
+}
