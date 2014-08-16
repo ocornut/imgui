@@ -169,10 +169,6 @@
 
 #include <new>
 
-// Block sizes for each memory. Don't really know about the optimized values
-#define DRAWLIST_BLOCK_SIZE 128
-#define GUIWINDOW_BLOCK_SIZE 64
-
 //-------------------------------------------------------------------------
 // Forward Declarations
 //-------------------------------------------------------------------------
