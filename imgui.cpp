@@ -109,7 +109,6 @@
 
  ISSUES AND TODO-LIST
 
- - main: window title clipping is broken.
  - misc: allow user to call NewFrame() multiple times without a render.
  - misc: merge ImVec4 / ImGuiAabb, they are essentially duplicate containers
  - window: autofit is losing its purpose when user relies on any dynamic layout (window width multiplier, column). maybe just discard autofit?
@@ -147,7 +146,7 @@
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
  - input: keyboard: full keyboard navigation and focus.
- - input: support trackpad style scrolling.
+ - input: support trackpad style scrolling & slider edit.
  - misc: not thread-safe
  - optimisation/render: use indexed rendering
  - optimisation/render: move clip-rect to vertex data? would allow merging all commands
@@ -2115,9 +2114,18 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 		if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
 		{
 			RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
-			RenderText(window->Pos + style.FramePadding + ImVec2(window->FontSize() + style.ItemInnerSpacing.x, 0), name);
 			if (open)
 				ImGui::CloseWindowButton(open);
+
+			const ImVec2 text_size = CalcTextSize(name);
+			const ImVec2 text_min = window->Pos + style.FramePadding + ImVec2(window->FontSize() + style.ItemInnerSpacing.x, 0.0f);
+			const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (open ? (title_bar_aabb.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y + text_size.y);
+			const bool clip_title = text_size.x > (text_max.x - text_min.x);	// only push a clip rectangle if we need to, because it may turn into a separate draw call
+			if (clip_title)
+				ImGui::PushClipRect(ImVec4(text_min.x, text_min.y, text_max.x, text_max.y));
+			RenderText(text_min, name);
+			if (clip_title)
+				ImGui::PopClipRect();
 		}
 	}
 	else
@@ -2693,7 +2701,6 @@ static bool CloseWindowButton(bool* open)
 	ImGuiWindow* window = GetCurrentWindow();
 
 	const ImGuiID id = window->GetID("##CLOSE");
-
 	const float title_bar_height = window->TitleBarHeight();
 	const ImGuiAabb bb(window->Aabb().GetTR() + ImVec2(-title_bar_height+3.0f,2.0f), window->Aabb().GetTR() + ImVec2(-2.0f,+title_bar_height-2.0f));
 
@@ -2703,7 +2710,6 @@ static bool CloseWindowButton(bool* open)
 	// Render
 	const ImU32 col = window->Color((held && hovered) ? ImGuiCol_CloseButtonActive : hovered ? ImGuiCol_CloseButtonHovered : ImGuiCol_CloseButton);
 	window->DrawList->AddCircleFilled(bb.GetCenter(), ImMax(2.0f,title_bar_height*0.5f-4), col, 16);
-	//RenderFrame(bb.Min, bb.Max, col, false);
 
 	const float cross_padding = 4;
 	if (hovered && bb.GetWidth() >= (cross_padding+1)*2 && bb.GetHeight() >= (cross_padding+1)*2)
