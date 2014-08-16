@@ -155,7 +155,7 @@ namespace ImGui
 	bool		GetWindowIsFocused();
 	float		GetWindowWidth();
 	ImVec2		GetWindowPos();														// you should rarely need/care about the window position, but it can be useful if you want to use your own drawing
-	void		SetWindowPos(ImVec2 pos);											// unchecked
+	void		SetWindowPos(const ImVec2& pos);									// set current window pos
 	ImVec2		GetWindowSize();
 	ImVec2		GetWindowContentRegionMin();
 	ImVec2		GetWindowContentRegionMax();
@@ -169,8 +169,13 @@ namespace ImGui
 	float		GetItemWidth();
 	void		PushAllowKeyboardFocus(bool v);
 	void		PopAllowKeyboardFocus();
-	void		PushStyleColor(ImGuiCol idx, ImVec4 col);
+	void		PushStyleColor(ImGuiCol idx, const ImVec4& col);
 	void		PopStyleColor();
+
+	// Tooltip
+	void		SetTooltip(const char* fmt, ...);									// set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). last call wins.
+	void		BeginTooltip();														// use to create full-featured tooltip windows that aren't just text. 
+	void		EndTooltip();
 
 	// Layout
 	void		Separator();														// horizontal line
@@ -181,8 +186,8 @@ namespace ImGui
 	float		GetColumnOffset(int column_index = -1);
 	void		SetColumnOffset(int column_index, float offset);
 	float		GetColumnWidth(int column_index = -1);
-	ImVec2		GetCursorPos();														// cursor position relative to window position
-	void		SetCursorPos(ImVec2 p);
+	ImVec2		GetCursorPos();														// cursor position is relative to window position
+	void		SetCursorPos(const ImVec2& pos);									// "
 	void		AlignFirstTextHeightToWidgets();									// call once if the first item on the line is a Text() item and you want to vertically lower it to match higher widgets.
 	float		GetTextLineSpacing();
 	float		GetTextLineHeight();
@@ -196,6 +201,7 @@ namespace ImGui
 	// Widgets
 	void		Text(const char* fmt, ...);
 	void		TextV(const char* fmt, va_list args);
+	void		TextColored(const ImVec4& col, const char* fmt, ...);				// shortcut to doing PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
 	void		TextUnformatted(const char* text, const char* text_end = NULL);		// doesn't require null terminated string if 'text_end' is specified. no copy done to any bounded stack buffer, better for long chunks of text.
 	void		LabelText(const char* label, const char* fmt, ...);
 	void		BulletText(const char* fmt, ...);
@@ -207,8 +213,8 @@ namespace ImGui
 	bool		SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
 	bool		SliderAngle(const char* label, float* v, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f);		// *v in radians
 	bool		SliderInt(const char* label, int* v, int v_min, int v_max, const char* display_format = "%.0f");
-	void		PlotLines(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0));
-	void		PlotHistogram(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0));
+	void		PlotLines(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), size_t stride = sizeof(float));
+	void		PlotHistogram(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), size_t stride = sizeof(float));
 	void		Checkbox(const char* label, bool* v);
 	void		CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value);
 	bool		RadioButton(const char* label, bool active);
@@ -249,12 +255,11 @@ namespace ImGui
 	void		LogToClipboard(int max_depth = -1);
 
 	// Utilities
-	void		SetTooltip(const char* fmt, ...);									// set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). (currently no contention handling, last call win)
-	void		SetNewWindowDefaultPos(ImVec2 pos);									// set position of window that do
+	void		SetNewWindowDefaultPos(const ImVec2& pos);							// set position of window that do
 	bool		IsHovered();														// was the last item active area hovered by mouse?
 	ImVec2		GetItemBoxMin();													// get bounding box of last item
 	ImVec2		GetItemBoxMax();													// get bounding box of last item
-	bool		IsClipped(ImVec2 item_size);										// to perform coarse clipping on user's side (as an optimisation)
+	bool		IsClipped(const ImVec2& item_size);									// to perform coarse clipping on user's side (as an optimisation)
 	bool		IsKeyPressed(int key_index, bool repeat = true);					// key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry
 	bool		IsMouseClicked(int button, bool repeat = false);
 	bool		IsMouseDoubleClicked(int button);
@@ -419,7 +424,7 @@ struct ImGuiIO
 
 	// Input - Fill before calling NewFrame()
 	ImVec2		MousePos;					// Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
-	bool		MouseDown[2];				// Mouse buttons
+	bool		MouseDown[5];				// Mouse buttons. ImGui itself only uses button 0 (left button) but you can use others as storage for convenience.
 	int			MouseWheel;					// Mouse wheel: -1,0,+1
 	bool		KeyCtrl;					// Keyboard modifier pressed: Control
 	bool		KeyShift;					// Keyboard modifier pressed: Shift
@@ -436,11 +441,11 @@ struct ImGuiIO
 	// [Internal] ImGui will maintain those fields for you
 	ImVec2		MousePosPrev;
 	ImVec2		MouseDelta;
-	bool		MouseClicked[2];
-	ImVec2		MouseClickedPos[2];
-	float		MouseClickedTime[2];
-	bool		MouseDoubleClicked[2];
-	float		MouseDownTime[2];
+	bool		MouseClicked[5];
+	ImVec2		MouseClickedPos[5];
+	float		MouseClickedTime[5];
+	bool		MouseDoubleClicked[5];
+	float		MouseDownTime[5];
 	float		KeysDownTime[512];
 
 	ImGuiIO();
