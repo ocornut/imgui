@@ -109,6 +109,7 @@
 
  ISSUES AND TODO-LIST
 
+ - main: window title clipping is broken.
  - misc: allow user to call NewFrame() multiple times without a render.
  - misc: merge ImVec4 / ImGuiAabb, they are essentially duplicate containers
  - window: autofit is losing its purpose when user relies on any dynamic layout (window width multiplier, column). maybe just discard autofit?
@@ -145,7 +146,8 @@
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
- - keyboard: full keyboard navigation and focus
+ - input: keyboard: full keyboard navigation and focus.
+ - input: support trackpad style scrolling.
  - misc: not thread-safe
  - optimisation/render: use indexed rendering
  - optimisation/render: move clip-rect to vertex data? would allow merging all commands

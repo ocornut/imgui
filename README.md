@@ -38,7 +38,7 @@ Developed by [Omar Cornut](http://www.miracleworld.net). The library was develop
 
 Embeds [proggy_clean](http://www.proggyfonts.net/) font by Tristan Grimmer (also MIT license).
 
-Inspiration, feedback, and testing: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Matt Willis. Thanks!
+Inspiration, feedback, and testing: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. Thanks!
 
 License
 -------
