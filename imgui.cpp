@@ -109,7 +109,6 @@
 
  ISSUES AND TODO-LIST
 
- - misc: allow user to call NewFrame() multiple times without a render.
  - misc: merge ImVec4 / ImGuiAabb, they are essentially duplicate containers
  - window: autofit is losing its purpose when user relies on any dynamic layout (window width multiplier, column). maybe just discard autofit?
  - window: support horizontal scroll
@@ -148,6 +147,7 @@
  - input: keyboard: full keyboard navigation and focus.
  - input: support trackpad style scrolling & slider edit.
  - misc: not thread-safe
+ - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - optimisation/render: use indexed rendering
  - optimisation/render: move clip-rect to vertex data? would allow merging all commands
  - optimisation/render: merge command-list of all windows into one command-list?
@@ -1247,7 +1247,7 @@ void NewFrame()
 				float scale = new_font_scale / window->FontScale;
 				window->FontScale = new_font_scale;
 
-				ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
+				const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
 				window->Pos += offset;
 				window->PosFloat += offset;
 				window->Size *= scale;
@@ -1271,11 +1271,17 @@ void NewFrame()
 
 	// Mark all windows as not visible
 	for (size_t i = 0; i != g.Windows.size(); i++)
-		g.Windows[i]->Visible = false;
+	{
+		ImGuiWindow* window = g.Windows[i];
+		window->Visible = false;
+		window->Accessed = false;
+	}
 
-	// Create implicit window
-	// We will only render it if the user has added something to it.
-	IM_ASSERT(g.CurrentWindowStack.empty());	// No window should be open at the beginning of the frame!
+	// No window should be open at the beginning of the frame.
+	// But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
+	g.CurrentWindowStack.clear();
+
+	// Create implicit window - we will only render it if the user has added something to it.
 	ImGui::Begin("Debug", NULL, ImVec2(400,400));
 }
 
