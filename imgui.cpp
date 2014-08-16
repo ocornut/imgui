@@ -168,9 +168,6 @@
 #endif
 
 #include <new>
-#define IMGUI_INTERNAL_USE
-#include "immem.h"
-#undef IMGUI_INTERNAL_USE
 
 // Block sizes for each memory. Don't really know about the optimized values
 #define DRAWLIST_BLOCK_SIZE 128
@@ -645,10 +642,6 @@ struct ImGuiState
     ImGuiTextBuffer			LogClipboard;
 	int						LogAutoExpandMaxDepth;
 
-    // Memory Pools
-    PoolAlloc<ImDrawList>   DrawListPool;
-    PoolAlloc<ImGuiWindow>  GuiWindowPool;
-
 	ImGuiState()
 	{
 		Initialized = false;
@@ -954,7 +947,7 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
 	FocusIdxRequestCurrent = IM_INT_MAX;
 	FocusIdxRequestNext = IM_INT_MAX;
 
-    ImDrawList *buff = GImGui.DrawListPool.alloc();
+    void *buff = GImGui.IO.MallocFn(sizeof(ImDrawList));
     IM_ASSERT(buff);
     DrawList = new(buff) ImDrawList();
 }
@@ -962,7 +955,7 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
 ImGuiWindow::~ImGuiWindow()
 {
     DrawList->~ImDrawList();
-    GImGui.DrawListPool.free(DrawList);
+    GImGui.IO.FreeFn(DrawList);
 	DrawList = NULL;
     StrDup_Free(Name);
 	Name = NULL;
@@ -1044,7 +1037,9 @@ static ImGuiIniData* FindWindowSettings(const char* name)
 		if (ImStricmp(ini->Name, name) == 0)
 			return ini;
 	}
-    ImGuiIniData* ini = new ImGuiIniData();
+
+    void *buff = GImGui.IO.MallocFn(sizeof(ImGuiIniData));
+    ImGuiIniData* ini = new(buff) ImGuiIniData();
     ini->Name = StrDup(name);
     ini->Collapsed = false;
 	ini->Pos = ImVec2(FLT_MAX,FLT_MAX);
@@ -1073,12 +1068,12 @@ static void LoadSettings()
 		return;
 	if (fseek(f, 0, SEEK_SET)) 
 		return;
-	char* f_data = new char[f_size+1];
+    char* f_data = (char*)g.IO.MallocFn(f_size+1);
 	f_size = (long)fread(f_data, 1, f_size, f);	// Text conversion alter read size so let's not be fussy about return value
 	fclose(f);
 	if (f_size == 0)
 	{
-		delete[] f_data;
+        g.IO.FreeFn(f_data);
 		return;
 	}
 	f_data[f_size] = 0;
@@ -1112,7 +1107,7 @@ static void LoadSettings()
 		line_start = line_end+1;
 	}
 
-	delete[] f_data;
+    g.IO.FreeFn(f_data);
 }
 
 static void SaveSettings()
@@ -1188,9 +1183,6 @@ void NewFrame()
 
         g.LogClipboard.init();
 
-        g.DrawListPool.create(DRAWLIST_BLOCK_SIZE, g.IO.MallocFn, g.IO.FreeFn);
-        g.GuiWindowPool.create(GUIWINDOW_BLOCK_SIZE, g.IO.MallocFn, g.IO.FreeFn);
-
 		LoadSettings();
 		if (!g.IO.Font)
 		{
@@ -1198,7 +1190,8 @@ void NewFrame()
 			const void* fnt_data;
 			unsigned int fnt_size;
 			ImGui::GetDefaultFontData(&fnt_data, &fnt_size, NULL, NULL);
-			g.IO.Font = new ImBitmapFont();
+            void *buff = g.IO.MallocFn(sizeof(ImBitmapFont));
+            g.IO.Font = new(buff) ImBitmapFont();
 			g.IO.Font->LoadFromMemory(fnt_data, fnt_size);
 			g.IO.FontHeight = g.IO.Font->GetFontSize();
 		}
@@ -1319,15 +1312,17 @@ void Shutdown()
 
     for (size_t i = 0; i < g.Windows.size(); i++)   {
         g.Windows[i]->~ImGuiWindow();
-        g.GuiWindowPool.free(g.Windows[i]);
+        g.IO.FreeFn(g.Windows[i]);
     }
 	g.Windows.clear();
 	g.CurrentWindowStack.clear();
 	g.FocusedWindow = NULL;
 	g.HoveredWindow = NULL;
 	g.HoveredWindowExcludingChilds = NULL;
-	for (size_t i = 0; i < g.Settings.size(); i++)
-		delete g.Settings[i];
+    for (size_t i = 0; i < g.Settings.size(); i++)  {
+        g.Settings[i]->~ImGuiIniData();
+        g.IO.FreeFn(g.Settings[i]);
+    }
 	g.Settings.clear();
     g.RenderDrawLists.clear();
 	g.ColorEditModeStorage.Clear();
@@ -1338,7 +1333,8 @@ void Shutdown()
 	}
 	if (g.IO.Font)
 	{
-		delete g.IO.Font;
+        g.IO.Font->~ImBitmapFont();
+        g.IO.FreeFn(g.IO.Font);
 		g.IO.Font = NULL;
 	}
 
@@ -1347,9 +1343,6 @@ void Shutdown()
         GImGui.IO.FreeFn(g.PrivateClipboard);
 		g.PrivateClipboard = NULL;
 	}
-
-    g.DrawListPool.destroy();
-    g.GuiWindowPool.destroy();
 
     g.LogClipboard.destroy();
 
@@ -1831,7 +1824,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 	ImGuiWindow* window = FindWindow(name);
 	if (!window)
 	{
-        ImGuiWindow *buff = GImGui.GuiWindowPool.alloc();
+        void *buff = g.IO.MallocFn(sizeof(ImGuiWindow));
         IM_ASSERT(buff);
 
 		if (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip))

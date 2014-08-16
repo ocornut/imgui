@@ -17,5 +17,4 @@ SOURCES += \
 
 HEADERS += \
     imgui.h \
-    imconfig.h \
-    immem.h
+    imconfig.h
