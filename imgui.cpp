@@ -1003,8 +1003,8 @@ void ImGuiWindow::AddToRenderList()
 	for (size_t i = 0; i < DC.ChildWindows.size(); i++)
 	{
 		ImGuiWindow* child = DC.ChildWindows[i];
-		IM_ASSERT(child->Visible);	// Shouldn't be in this list if we are not active this frame
-		child->AddToRenderList();
+		if (child->Visible)					// clipped childs may have been marked not Visible
+			child->AddToRenderList();
 	}
 }
 
@@ -1334,7 +1334,8 @@ static void AddWindowToSortedBuffer(ImGuiWindow* window, ImVector<ImGuiWindow*>&
 		for (size_t i = 0; i < window->DC.ChildWindows.size(); i++)
 		{
 			ImGuiWindow* child = window->DC.ChildWindows[i];
-			AddWindowToSortedBuffer(child, sorted_windows);
+			if (child->Visible)
+				AddWindowToSortedBuffer(child, sorted_windows);
 		}
 	}
 }
@@ -2176,8 +2177,8 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 		// We also hide the window from rendering because we've already added its border to the command list.
 		// (we could perform the check earlier in the function but it is simplier at this point)
 		// FIXME-WIP
-		//if (window->Collapsed)
-		//	window->Visible = false;
+		if (window->Collapsed)
+			window->Visible = false;
 	}
 
 	// Return collapsed so that user can perform an early out optimisation
