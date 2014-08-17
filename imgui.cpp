@@ -2042,7 +2042,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 				ImGuiAabb scrollbar_bb(window->Aabb().Max.x - style.ScrollBarWidth, title_bar_aabb.Max.y+1, window->Aabb().Max.x, window->Aabb().Max.y-1);
 				//window->DrawList->AddLine(scrollbar_bb.GetTL(), scrollbar_bb.GetBL(), g.Colors[ImGuiCol_Border]);
 				window->DrawList->AddRectFilled(scrollbar_bb.Min, scrollbar_bb.Max, window->Color(ImGuiCol_ScrollbarBg));
-				scrollbar_bb.Expand(ImVec2(-3,-3));
+				scrollbar_bb.Expand(ImVec2(0,-3));
 
 				const float grab_size_y_norm = ImSaturate(window->Size.y / ImMax(window->SizeContentsFit.y, window->Size.y));
 				const float grab_size_y = scrollbar_bb.GetHeight() * grab_size_y_norm;
@@ -2146,7 +2146,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 	// Inner clipping rectangle
 	// We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
 	const ImGuiAabb title_bar_aabb = window->TitleBarAabb();
-	ImVec4 clip_rect(title_bar_aabb.Min.x+0.5f, title_bar_aabb.Max.y+0.5f, window->Aabb().Max.x-1.5f, window->Aabb().Max.y-1.5f);
+	ImVec4 clip_rect(title_bar_aabb.Min.x+0.5f+window->WindowPadding().x*0.5f, title_bar_aabb.Max.y+0.5f, window->Aabb().Max.x+0.5f-window->WindowPadding().x*0.5f, window->Aabb().Max.y-1.5f);
 	if (window->ScrollbarY)
 		clip_rect.z -= g.Style.ScrollBarWidth;
 	ImGui::PushClipRect(clip_rect);
