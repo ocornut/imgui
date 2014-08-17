@@ -123,8 +123,7 @@
  - input number: optional range min/max
  - input number: holding [-]/[+] buttons should increase the step non-linearly
  - input number: rename Input*() to Input(), Slider*() to Slider() ?
- - layout: clean up the InputFloat3/SliderFloat3/ColorEdit4 horrible layout code. item width should include frame padding, then we can have a generic horizontal layout helper.
- - add input4 helper (once above layout helpers are in they'll be smaller)
+ - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 horrible layout code. item width should include frame padding, then we can have a generic horizontal layout helper.
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills)
  - columns: columns header to act as button (~sort op) and allow resize/reorder
  - columns: user specify columns size
@@ -3285,7 +3284,7 @@ bool SliderInt(const char* label, int* v, int v_min, int v_max, const char* disp
 	return changed;
 }
 
-bool SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* display_format, float power)
+static bool SliderFloatN(const char* label, float v[3], int components, float v_min, float v_max, const char* display_format, float power)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
@@ -3293,63 +3292,46 @@ bool SliderFloat2(const char* label, float v[2], float v_min, float v_max, const
 		return false;
 
 	const ImGuiStyle& style = g.Style;
-
-	bool value_changed = false;
-	ImGui::PushID(label);
-
-	const int components = 2;
 	const float w_full = window->DC.ItemWidth.back();
 	const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f+style.ItemInnerSpacing.x)*(components-1)) / (float)components));
 	const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one+style.FramePadding.x*2.0f+style.ItemInnerSpacing.x)*(components-1)));
 
+	bool value_changed = false;
+	ImGui::PushID(label);
 	ImGui::PushItemWidth(w_item_one);
-	value_changed |= ImGui::SliderFloat("##X", &v[0], v_min, v_max, display_format, power);
-	ImGui::SameLine(0, 0);
+	for (int i = 0; i < components; i++)
+	{
+		ImGui::PushID(i);
+		if (i + 1 == components)
+		{
+			ImGui::PopItemWidth();
+			ImGui::PushItemWidth(w_item_last);
+		}
+		value_changed |= ImGui::SliderFloat("##v", &v[i], v_min, v_max, display_format, power);
+		ImGui::SameLine(0, 0);
+		ImGui::PopID();
+	}
 	ImGui::PopItemWidth();
-	ImGui::PushItemWidth(w_item_last);
-	value_changed |= ImGui::SliderFloat("##Y", &v[1], v_min, v_max, display_format, power);
-	ImGui::SameLine(0, 0);
-	ImGui::PopItemWidth();
+	ImGui::PopID();
 
 	ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
 
-	ImGui::PopID();
 	return value_changed;
+}
+
+bool SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* display_format, float power)
+{
+	return SliderFloatN(label, v, 2, v_min, v_max, display_format, power);
 }
 
 bool SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* display_format, float power)
 {
-	ImGuiState& g = GImGui;
-	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
-		return false;
+	return SliderFloatN(label, v, 3, v_min, v_max, display_format, power);
+}
 
-	const ImGuiStyle& style = g.Style;
-
-	bool value_changed = false;
-	ImGui::PushID(label);
-
-	const int components = 3;
-	const float w_full = window->DC.ItemWidth.back();
-	const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f+style.ItemInnerSpacing.x)*(components-1)) / (float)components));
-	const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one+style.FramePadding.x*2.0f+style.ItemInnerSpacing.x)*(components-1)));
-
-	ImGui::PushItemWidth(w_item_one);
-	value_changed |= ImGui::SliderFloat("##X", &v[0], v_min, v_max, display_format, power);
-	ImGui::SameLine(0, 0);
-	value_changed |= ImGui::SliderFloat("##Y", &v[1], v_min, v_max, display_format, power);
-	ImGui::SameLine(0, 0);
-	ImGui::PopItemWidth();
-
-	ImGui::PushItemWidth(w_item_last);
-	value_changed |= ImGui::SliderFloat("##Z", &v[2], v_min, v_max, display_format, power);
-	ImGui::SameLine(0, 0);
-	ImGui::PopItemWidth();
-
-	ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
-
-	ImGui::PopID();
-	return value_changed;
+bool SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* display_format, float power)
+{
+	return SliderFloatN(label, v, 4, v_min, v_max, display_format, power);
 }
 
 // Enum for ImGui::Plot()
@@ -4004,7 +3986,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
 	return value_changed;
 }
 
-bool InputFloat2(const char* label, float v[2], int decimal_precision)
+static bool InputFloatN(const char* label, float* v, int components, int decimal_precision)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
@@ -4012,63 +3994,46 @@ bool InputFloat2(const char* label, float v[2], int decimal_precision)
 		return false;
 
 	const ImGuiStyle& style = g.Style;
-
-	bool value_changed = false;
-	ImGui::PushID(label);
-
-	const int components = 2;
 	const float w_full = window->DC.ItemWidth.back();
 	const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f+style.ItemInnerSpacing.x) * (components-1)) / (float)components));
 	const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one+style.FramePadding.x*2.0f+style.ItemInnerSpacing.x) * (components-1)));
 
+	bool value_changed = false;
+	ImGui::PushID(label);
 	ImGui::PushItemWidth(w_item_one);
-	value_changed |= ImGui::InputFloat("##X", &v[0], 0, 0, decimal_precision);
-	ImGui::SameLine(0, 0);
+	for (int i = 0; i < components; i++)
+	{
+		ImGui::PushID(i);
+		if (i + 1 == components)
+		{
+			ImGui::PopItemWidth();
+			ImGui::PushItemWidth(w_item_last);
+		}
+		value_changed |= ImGui::InputFloat("##v", &v[i], 0, 0, decimal_precision);
+		ImGui::SameLine(0, 0);
+		ImGui::PopID();
+	}
 	ImGui::PopItemWidth();
-	ImGui::PushItemWidth(w_item_last);
-	value_changed |= ImGui::InputFloat("##Y", &v[1], 0, 0, decimal_precision);
-	ImGui::SameLine(0, 0);
-	ImGui::PopItemWidth();
+	ImGui::PopID();
 
 	ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
 
-	ImGui::PopID();
 	return value_changed;
+}
+
+bool InputFloat2(const char* label, float v[2], int decimal_precision)
+{
+	return InputFloatN(label, v, 2, decimal_precision);
 }
 
 bool InputFloat3(const char* label, float v[3], int decimal_precision)
 {
-	ImGuiState& g = GImGui;
-	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
-		return false;
+	return InputFloatN(label, v, 3, decimal_precision);
+}
 
-	const ImGuiStyle& style = g.Style;
-
-	bool value_changed = false;
-	ImGui::PushID(label);
-
-	const int components = 3;
-	const float w_full = window->DC.ItemWidth.back();
-	const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f+style.ItemInnerSpacing.x) * (components-1)) / (float)components));
-	const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one+style.FramePadding.x*2.0f+style.ItemInnerSpacing.x) * (components-1)));
-
-	ImGui::PushItemWidth(w_item_one);
-	value_changed |= ImGui::InputFloat("##X", &v[0], 0, 0, decimal_precision);
-	ImGui::SameLine(0, 0);
-	value_changed |= ImGui::InputFloat("##Y", &v[1], 0, 0, decimal_precision);
-	ImGui::SameLine(0, 0);
-	ImGui::PopItemWidth();
-
-	ImGui::PushItemWidth(w_item_last);
-	value_changed |= ImGui::InputFloat("##Z", &v[2], 0, 0, decimal_precision);
-	ImGui::SameLine(0, 0);
-	ImGui::PopItemWidth();
-
-	ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
-
-	ImGui::PopID();
-	return value_changed;
+bool InputFloat4(const char* label, float v[4], int decimal_precision)
+{
+	return InputFloatN(label, v, 4, decimal_precision);
 }
 
 static bool Combo_ArrayGetter(void* data, int idx, const char** out_text)
@@ -5585,11 +5550,14 @@ void ShowTestWindow(bool* open)
 		ImGui::InputInt("input int", &i0);
 		ImGui::InputFloat("input float", &f0, 0.01f, 1.0f);
 
-		//static float vec2b[3] = { 0.10f, 0.20f };
-		//ImGui::InputFloat2("input float2", vec2b);
+		//static float vec2a[3] = { 0.10f, 0.20f };
+		//ImGui::InputFloat2("input float2", vec2a);
 
-		static float vec3b[3] = { 0.10f, 0.20f, 0.30f };
-		ImGui::InputFloat3("input float3", vec3b);
+		static float vec3a[3] = { 0.10f, 0.20f, 0.30f };
+		ImGui::InputFloat3("input float3", vec3a);
+
+		//static float vec4a[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+		//ImGui::InputFloat4("input float4", vec4a);
 
 		static int i1=0;
 		static int i2=42;
@@ -5607,11 +5575,14 @@ void ShowTestWindow(bool* open)
 		static float angle = 0.0f;
 		ImGui::SliderAngle("angle", &angle);
 
-		//static float vec2a[3] = { 0.10f, 0.20f };
-		//ImGui::SliderFloat2("slider float2", vec2a, 0.0f, 1.0f);
+		//static float vec2b[3] = { 0.10f, 0.20f };
+		//ImGui::SliderFloat2("slider float2", vec2b, 0.0f, 1.0f);
 
-		static float vec3a[3] = { 0.10f, 0.20f, 0.30f };
-		ImGui::SliderFloat3("slider float3", vec3a, 0.0f, 1.0f);
+		static float vec3b[3] = { 0.10f, 0.20f, 0.30f };
+		ImGui::SliderFloat3("slider float3", vec3b, 0.0f, 1.0f);
+
+		//static float vec4b[4] = { 0.10f, 0.20f, 0.30f, 0.40f };
+		//ImGui::SliderFloat4("slider float4", vec4b, 0.0f, 1.0f);
 
 		static float col1[3] = { 1.0f,0.0f,0.2f };
 		static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };

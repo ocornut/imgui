@@ -191,6 +191,7 @@ namespace ImGui
 	bool		SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
 	bool		SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
 	bool		SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
+	bool		SliderFloat4(const char* label, float v[3], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
 	bool		SliderAngle(const char* label, float* v, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f);		// *v in radians
 	bool		SliderInt(const char* label, int* v, int v_min, int v_max, const char* display_format = "%.0f");
 	void		PlotLines(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), size_t stride = sizeof(float));
@@ -202,6 +203,7 @@ namespace ImGui
 	bool		InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f, int decimal_precision = -1);
 	bool		InputFloat2(const char* label, float v[2], int decimal_precision = -1);
 	bool		InputFloat3(const char* label, float v[3], int decimal_precision = -1);
+	bool		InputFloat4(const char* label, float v[4], int decimal_precision = -1);
 	bool		InputInt(const char* label, int* v, int step = 1, int step_fast = 100);
 	bool		InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0);
 	bool		Combo(const char* label, int* current_item, const char** items, int items_count, int popup_height_items = 7);
