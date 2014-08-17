@@ -119,6 +119,7 @@
  - main: make IsHovered() more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: make IsHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
  - scrollbar: use relative mouse movement when first-clicking inside of scroll grab box.
+ - scrollbar: make the grab visible and a minimum size for long scroll regions
  - input number: optional range min/max
  - input number: holding [-]/[+] buttons should increase the step non-linearly
  - input number: rename Input*() to Input(), Slider*() to Slider() ?
@@ -1800,6 +1801,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 	ImGuiWindow* window = FindWindow(name);
 	if (!window)
 	{
+		// Create window the first time, and load settings
 		if (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip))
 		{
 			window = new ImGuiWindow(name, ImVec2(0,0), size);
@@ -2042,6 +2044,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 				ImGuiAabb scrollbar_bb(window->Aabb().Max.x - style.ScrollBarWidth, title_bar_aabb.Max.y+1, window->Aabb().Max.x, window->Aabb().Max.y-1);
 				//window->DrawList->AddLine(scrollbar_bb.GetTL(), scrollbar_bb.GetBL(), g.Colors[ImGuiCol_Border]);
 				window->DrawList->AddRectFilled(scrollbar_bb.Min, scrollbar_bb.Max, window->Color(ImGuiCol_ScrollbarBg));
+				scrollbar_bb.Max.x -= 3;
 				scrollbar_bb.Expand(ImVec2(0,-3));
 
 				const float grab_size_y_norm = ImSaturate(window->Size.y / ImMax(window->SizeContentsFit.y, window->Size.y));
@@ -2138,9 +2141,14 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 	{
 		// Outer clipping rectangle
 		if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
-			ImGui::PushClipRect(g.CurrentWindowStack[g.CurrentWindowStack.size()-2]->ClipRectStack.back());
+		{
+			ImGuiWindow* parent_window = g.CurrentWindowStack[g.CurrentWindowStack.size()-2];
+			ImGui::PushClipRect(parent_window->ClipRectStack.back());
+		}
 		else
+		{
 			ImGui::PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
+		}
 	}
 
 	// Inner clipping rectangle
@@ -2155,6 +2163,21 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 	{
 		// Clear 'accessed' flag last thing
 		window->Accessed = false;
+	}
+
+	// Child window can be out of sight and have "negative" clip windows.
+	// Mark them as collapsed so commands are skipped earlier (we can't manually collapse because they have no title bar).
+	if (flags & ImGuiWindowFlags_ChildWindow)
+	{
+		IM_ASSERT((flags & ImGuiWindowFlags_NoTitleBar) != 0);
+		const ImVec4 clip_rect = window->ClipRectStack.back();
+		window->Collapsed = (clip_rect.x >= clip_rect.z || clip_rect.y >= clip_rect.w);
+
+		// We also hide the window from rendering because we've already added its border to the command list.
+		// (we could perform the check earlier in the function but it is simplier at this point)
+		// FIXME-WIP
+		//if (window->Collapsed)
+		//	window->Visible = false;
 	}
 
 	// Return collapsed so that user can perform an early out optimisation
@@ -4586,6 +4609,8 @@ void Columns(int columns_count, const char* id, bool border)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
+	if (window->Collapsed)
+		return;
 
 	if (window->DC.ColumnsCount != 1)
 	{
