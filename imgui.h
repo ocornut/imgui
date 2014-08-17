@@ -62,46 +62,46 @@ template<typename T>
 class ImVector
 {
 private:
-	size_t						_size;
-	size_t						_capacity;
-	T*							_data;
+	size_t						Size;
+	size_t						Capacity;
+	T*							Data;
 
 public:
 	typedef T					value_type;
 	typedef value_type*			iterator;
 	typedef const value_type*	const_iterator;
 
-	ImVector()					{ _size = _capacity = 0; _data = NULL; }
-	~ImVector()					{ if (_data) free(_data); }
+	ImVector()					{ Size = Capacity = 0; Data = NULL; }
+	~ImVector()					{ if (Data) free(Data); }
 
-	inline bool					empty() const					{ return _size == 0; }
-	inline size_t				size() const					{ return _size; }
-	inline size_t				capacity() const				{ return _capacity; }
+	inline bool					empty() const					{ return Size == 0; }
+	inline size_t				size() const					{ return Size; }
+	inline size_t				capacity() const				{ return Capacity; }
 
-    inline value_type&			at(size_t i)					{ IM_ASSERT(i < _size); return _data[i]; }
-    inline const value_type&	at(size_t i) const				{ IM_ASSERT(i < _size); return _data[i]; }
-    inline value_type&			operator[](size_t i)			{ IM_ASSERT(i < _size); return _data[i]; }
-    inline const value_type&	operator[](size_t i) const		{ IM_ASSERT(i < _size); return _data[i]; }
+    inline value_type&			at(size_t i)					{ IM_ASSERT(i < Size); return Data[i]; }
+    inline const value_type&	at(size_t i) const				{ IM_ASSERT(i < Size); return Data[i]; }
+    inline value_type&			operator[](size_t i)			{ IM_ASSERT(i < Size); return Data[i]; }
+    inline const value_type&	operator[](size_t i) const		{ IM_ASSERT(i < Size); return Data[i]; }
 
-	inline void					clear()							{ if (_data) { _size = _capacity = 0; free(_data); _data = NULL; } }
-	inline iterator				begin()							{ return _data; }
-	inline const_iterator		begin() const					{ return _data; }
-	inline iterator				end()							{ return _data + _size; }
-	inline const_iterator		end() const						{ return _data + _size; }
+	inline void					clear()							{ if (Data) { Size = Capacity = 0; free(Data); Data = NULL; } }
+	inline iterator				begin()							{ return Data; }
+	inline const_iterator		begin() const					{ return Data; }
+	inline iterator				end()							{ return Data + Size; }
+	inline const_iterator		end() const						{ return Data + Size; }
 	inline value_type&			front()							{ return at(0); }
 	inline const value_type&	front() const					{ return at(0); }
-	inline value_type&			back()							{ IM_ASSERT(_size > 0); return at(_size-1); }
-	inline const value_type&	back() const					{ IM_ASSERT(_size > 0); return at(_size-1); }
-	inline void					swap(ImVector<T>& rhs)			{ const size_t rhs_size = rhs._size; rhs._size = _size; _size = rhs_size; const size_t rhs_cap = rhs._capacity; rhs._capacity = _capacity; _capacity = rhs_cap; value_type* rhs_data = rhs._data; rhs._data = _data; _data = rhs_data; }
+	inline value_type&			back()							{ IM_ASSERT(Size > 0); return at(Size-1); }
+	inline const value_type&	back() const					{ IM_ASSERT(Size > 0); return at(Size-1); }
+	inline void					swap(ImVector<T>& rhs)			{ const size_t rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; const size_t rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
 
-	inline void					reserve(size_t new_capacity)	{ _data = (value_type*)realloc(_data, new_capacity * sizeof(value_type)); _capacity = new_capacity; }
-	inline void					resize(size_t new_size)			{ if (new_size > _capacity) reserve(new_size); _size = new_size; }
+	inline void					reserve(size_t new_capacity)	{ Data = (value_type*)realloc(Data, new_capacity * sizeof(value_type)); Capacity = new_capacity; }
+	inline void					resize(size_t new_size)			{ if (new_size > Capacity) reserve(new_size); Size = new_size; }
 
-	inline void					push_back(const value_type& v)	{ if (_size == _capacity) reserve(_capacity ? _capacity * 2 : 4); _data[_size++] = v; }
-	inline void					pop_back()						{ IM_ASSERT(_size > 0); _size--; }
+	inline void					push_back(const value_type& v)	{ if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); Data[Size++] = v; }
+	inline void					pop_back()						{ IM_ASSERT(Size > 0); Size--; }
 
-	inline iterator				erase(const_iterator it)		{ IM_ASSERT(it >= begin() && it < end()); const int off = it - begin(); memmove(_data + off, _data + off + 1, (_size - off - 1) * sizeof(value_type)); _size--; return _data + off; }
-	inline void					insert(const_iterator it, const value_type& v)	{ IM_ASSERT(it >= begin() && it <= end()); const int off = it - begin(); if (_size == _capacity) reserve(_capacity ? _capacity * 2 : 4); if (off < (int)_size) memmove(_data + off + 1, _data + off, (_size - off) * sizeof(value_type)); _data[off] = v; _size++; }
+	inline iterator				erase(const_iterator it)		{ IM_ASSERT(it >= begin() && it < end()); const int off = it - begin(); memmove(Data + off, Data + off + 1, (Size - off - 1) * sizeof(value_type)); Size--; return Data + off; }
+	inline void					insert(const_iterator it, const value_type& v)	{ IM_ASSERT(it >= begin() && it <= end()); const int off = it - begin(); if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); if (off < (int)Size) memmove(Data + off + 1, Data + off, (Size - off) * sizeof(value_type)); Data[off] = v; Size++; }
 };
 #endif // #ifndef ImVector
 
