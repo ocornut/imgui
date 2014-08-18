@@ -129,6 +129,8 @@
  - combo: turn child handling code into popup helper
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
+ - plot: make it easier for user to draw into the graph (e.g: draw basis, highlight certain pointsm, 2d plots, multiple plots)
+ - plot: "smooth" automatic scale, user give an input 0.0(full user scale) 1.0(full derived from value)
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms (may or not lead to ImGui changes)
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
@@ -2191,7 +2193,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 		window->Visible = false;
 
 	// Return false if we don't intend to display anything to allow user to perform an early out optimisation
-	window->SkipItems = !window->Visible || window->Collapsed;
+	window->SkipItems = window->Collapsed || (!window->Visible && window->AutoFitFrames == 0);
 	return !window->SkipItems;
 }
 
