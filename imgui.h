@@ -353,21 +353,21 @@ enum ImGuiColorEditMode_
 	ImGuiColorEditMode_HEX = 2,
 };
 
-// See constructor for comments of individual fields.
 struct ImGuiStyle
 {
-	ImVec2		WindowPadding;
-	ImVec2		WindowMinSize;
-	ImVec2		FramePadding;
-	ImVec2		ItemSpacing;
-	ImVec2		ItemInnerSpacing;
-	ImVec2		TouchExtraPadding;
-	ImVec2		AutoFitPadding;
-	float		WindowFillAlphaDefault;
-	float		WindowRounding;
-	float		TreeNodeSpacing;
-	float		ColumnsMinSpacing;
-	float		ScrollBarWidth;
+	float		Alpha;						// Global alpha applies to everything in ImGui
+	ImVec2		WindowPadding;				// Padding within a window
+	ImVec2		WindowMinSize;				// Minimum window size
+	ImVec2		FramePadding;				// Padding within a framed rectangle (used by most widgets)
+	ImVec2		ItemSpacing;				// Horizontal and vertical spacing between widgets/lines
+	ImVec2		ItemInnerSpacing;			// Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
+	ImVec2		TouchExtraPadding;			// Expand bounding box for touch-based system where touch position is not accurate enough (unnecessary for mouse inputs). Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget running. So dont grow this too much!
+	ImVec2		AutoFitPadding;				// Extra space after auto-fit (double-clicking on resize grip)
+	float		WindowFillAlphaDefault;		// Default alpha of window background, if not specified in ImGui::Begin()
+	float		WindowRounding;				// Radius of window corners rounding. Set to 0.0f to have rectangular windows
+	float		TreeNodeSpacing;			// Horizontal spacing when entering a tree node
+	float		ColumnsMinSpacing;			// Minimum horizontal spacing between two columns
+	float		ScrollBarWidth;				// Width of the vertical scroll bar
 	ImVec4		Colors[ImGuiCol_COUNT];
 
 	ImGuiStyle();

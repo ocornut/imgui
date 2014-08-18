@@ -210,18 +210,19 @@ static void			SetClipboardTextFn_DefaultImpl(const char* text, const char* text_
 
 ImGuiStyle::ImGuiStyle()
 {
+	Alpha					= 1.0f;				// Global alpha applies to everything in ImGui
 	WindowPadding			= ImVec2(8,8);		// Padding within a window
 	WindowMinSize			= ImVec2(48,48);	// Minimum window size
 	FramePadding			= ImVec2(5,4);		// Padding within a framed rectangle (used by most widgets)
-	ItemSpacing				= ImVec2(10,5);		// Horizontal and vertical spacing between widgets
+	ItemSpacing				= ImVec2(10,5);		// Horizontal and vertical spacing between widgets/lines
 	ItemInnerSpacing		= ImVec2(5,5);		// Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
 	TouchExtraPadding		= ImVec2(0,0);		// Expand bounding box for touch-based system where touch position is not accurate enough (unnecessary for mouse inputs). Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget running. So dont grow this too much!
 	AutoFitPadding			= ImVec2(8,8);		// Extra space after auto-fit (double-clicking on resize grip)
-	WindowFillAlphaDefault	= 0.70f;
-	WindowRounding			= 10.0f;
-	TreeNodeSpacing			= 22.0f;
-	ColumnsMinSpacing		= 6.0f;				// Minimum space between two columns
-	ScrollBarWidth			= 16.0f;
+	WindowFillAlphaDefault	= 0.70f;			// Default alpha of window background, if not specified in ImGui::Begin()
+	WindowRounding			= 10.0f;			// Radius of window corners rounding. Set to 0.0f to have rectangular windows
+	TreeNodeSpacing			= 22.0f;			// Horizontal spacing when entering a tree node
+	ColumnsMinSpacing		= 6.0f;				// Minimum horizontal spacing between two columns
+	ScrollBarWidth			= 16.0f;			// Width of the vertical scroll bar
 
 	Colors[ImGuiCol_Text]					= ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
 	Colors[ImGuiCol_WindowBg]				= ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
@@ -705,7 +706,8 @@ public:
 	float		TitleBarHeight() const					{ return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0 : FontSize() + GImGui.Style.FramePadding.y * 2.0f; }
 	ImGuiAabb	TitleBarAabb() const					{ return ImGuiAabb(Pos, Pos + ImVec2(SizeFull.x, TitleBarHeight())); }
 	ImVec2		WindowPadding() const					{ return ((Flags & ImGuiWindowFlags_ChildWindow) && !(Flags & ImGuiWindowFlags_ShowBorders)) ? ImVec2(1,1) : GImGui.Style.WindowPadding; }
-	ImU32		Color(ImGuiCol idx, float a=1.f) const	{ ImVec4 c = GImGui.Style.Colors[idx]; c.w *= a; return ImConvertColorFloat4ToU32(c); }
+	ImU32		Color(ImGuiCol idx, float a=1.f) const	{ ImVec4 c = GImGui.Style.Colors[idx]; c.w *= GImGui.Style.Alpha * a; return ImConvertColorFloat4ToU32(c); }
+	ImU32		Color(const ImVec4& col) const			{ ImVec4 c = col; c.w *= GImGui.Style.Alpha; return ImConvertColorFloat4ToU32(c); }
 };
 
 static ImGuiWindow*	GetCurrentWindow()
@@ -4215,9 +4217,7 @@ bool ColorButton(const ImVec4& col, bool small_height, bool outline_border)
 
 	const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(bb);
 	const bool pressed = hovered && g.IO.MouseClicked[0];
-	
-	const ImU32 col32 = ImConvertColorFloat4ToU32(col);
-	RenderFrame(bb.Min, bb.Max, col32, outline_border);
+	RenderFrame(bb.Min, bb.Max, window->Color(col), outline_border);
 
 	if (hovered)
 	{
@@ -5391,6 +5391,7 @@ void ShowStyleEditor(ImGuiStyle* ref)
 			*ref = g.Style;
 	}
 
+	ImGui::SliderFloat("Alpha", &style.Alpha, 0.20f, 1.0f, "%.2f");					// Not exposing zero here so user doesn't "lose" the UI. But application code could have a toggle to switch between zero and non-zero.
 	ImGui::SliderFloat("Rounding", &style.WindowRounding, 0.0f, 16.0f, "%.0f");
 
 	static ImGuiColorEditMode edit_mode = ImGuiColorEditMode_RGB;
