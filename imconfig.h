@@ -39,3 +39,25 @@ namespace ImGui
 	void	Value(const char* prefix, const MyVec4& v, const char* float_format = NULL);
 };
 */
+
+//---- Define malloc/free/realloc functions to override internal memory allocations for ImGui
+/*
+ * #define IM_MALLOC imgui_malloc
+ * #define IM_FREE imgui_free
+ * #define IM_REALLOC imgui_realloc
+ *
+ * void* imgui_malloc(size_t size);
+ * void imgui_free(void *ptr);
+ * void* imgui_realloc(void *ptr, size_t size);
+ */
+#ifndef IM_MALLOC
+  #define IM_MALLOC malloc
+#endif
+
+#ifndef IM_FREE
+  #define IM_FREE free
+#endif
+
+#ifndef IM_REALLOC
+  #define IM_REALLOC realloc
+#endif
