@@ -121,7 +121,7 @@
  - scrollbar: make the grab visible and a minimum size for long scroll regions
  - input number: optional range min/max
  - input number: holding [-]/[+] buttons should increase the step non-linearly
- - input number: rename Input*() to Input(), Slider*() to Slider() ?
+ - input number: use mouse wheel to step up/down
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 horrible layout code. item width should include frame padding, then we can have a generic horizontal layout helper.
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills)
  - columns: columns header to act as button (~sort op) and allow resize/reorder
