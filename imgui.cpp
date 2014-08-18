@@ -5586,7 +5586,7 @@ void ShowTestWindow(bool* open)
 		ImGui::SliderFloat("float", &f1, 0.0f, 2.0f);
 		ImGui::SliderFloat("log float", &f2, 0.0f, 10.0f, "%.4f", 2.0f);
 		ImGui::SliderFloat("signed log float", &f3, -10.0f, 10.0f, "%.4f", 3.0f);
-		ImGui::SliderFloat("unbound float", &f4, -FLT_MAX, FLT_MAX, "%.4f", 3.0f);
+		ImGui::SliderFloat("unbound float", &f4, -FLT_MAX, FLT_MAX, "%.4f");
 		static float angle = 0.0f;
 		ImGui::SliderAngle("angle", &angle);
 
