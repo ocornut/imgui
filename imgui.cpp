@@ -669,9 +669,9 @@ struct ImGuiWindow
 	float					ScrollY;
 	float					NextScrollY;
 	bool					ScrollbarY;
-	bool					Visible;
+	bool					Visible;							// Set to true on Begin()
+	bool					Accessed;							// Set to true when any widget access the current window
 	bool					Collapsed;
-	bool					Accessed;
 	int						AutoFitFrames;
 
 	ImGuiDrawContext		DC;
@@ -924,6 +924,7 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
 	NextScrollY = 0.0f;
 	ScrollbarY = false;
 	Visible = false;
+	Accessed = false;
 	Collapsed = false;
 	AutoFitFrames = -1;
 	LastFrameDrawn = -1;
@@ -2177,13 +2178,14 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 
 		// We also hide the window from rendering because we've already added its border to the command list.
 		// (we could perform the check earlier in the function but it is simplier at this point)
-		// FIXME-WIP
 		if (window->Collapsed)
 			window->Visible = false;
 	}
 
 	// Return collapsed so that user can perform an early out optimisation
-	return !window->Collapsed;
+	const bool hidden = g.Style.Alpha <= 0.0f;
+	const bool collapsed = window->Collapsed;
+	return hidden || !collapsed;
 }
 
 void End()
