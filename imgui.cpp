@@ -1401,34 +1401,39 @@ void Render()
 		memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
 	}
 
-	// Render tooltip
-	if (g.Tooltip[0])
+	// Skip render altogether if alpha is 0.0
+	// Note that vertex buffers have been created, so it is best practice that you don't call Begin/End in the first place.
+	if (g.Style.Alpha > 0.0f)
 	{
-		// Use a dummy window to render the tooltip
-		ImGui::BeginTooltip();
-		ImGui::TextUnformatted(g.Tooltip);
-		ImGui::EndTooltip();
-	}
+		// Render tooltip
+		if (g.Tooltip[0])
+		{
+			// Use a dummy window to render the tooltip
+			ImGui::BeginTooltip();
+			ImGui::TextUnformatted(g.Tooltip);
+			ImGui::EndTooltip();
+		}
 
-	// Gather windows to render
-	g.RenderDrawLists.resize(0);
-	for (size_t i = 0; i != g.Windows.size(); i++)
-	{
-		ImGuiWindow* window = g.Windows[i];
-		if (window->Visible && (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) == 0)
-			window->AddToRenderList();
-	}
-	for (size_t i = 0; i != g.Windows.size(); i++)
-	{
-		ImGuiWindow* window = g.Windows[i];
-		if (window->Visible && (window->Flags & ImGuiWindowFlags_Tooltip))
-			window->AddToRenderList();
-	}
+		// Gather windows to render
+		g.RenderDrawLists.resize(0);
+		for (size_t i = 0; i != g.Windows.size(); i++)
+		{
+			ImGuiWindow* window = g.Windows[i];
+			if (window->Visible && (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) == 0)
+				window->AddToRenderList();
+		}
+		for (size_t i = 0; i != g.Windows.size(); i++)
+		{
+			ImGuiWindow* window = g.Windows[i];
+			if (window->Visible && (window->Flags & ImGuiWindowFlags_Tooltip))
+				window->AddToRenderList();
+		}
 
-	// Render
-	if (!g.RenderDrawLists.empty())
-		g.IO.RenderDrawListsFn(&g.RenderDrawLists[0], (int)g.RenderDrawLists.size());
-	g.RenderDrawLists.resize(0);
+		// Render
+		if (!g.RenderDrawLists.empty())
+			g.IO.RenderDrawListsFn(&g.RenderDrawLists[0], (int)g.RenderDrawLists.size());
+		g.RenderDrawLists.resize(0);
+	}
 }
 
 // Find the optional ## from which we stop displaying text.
