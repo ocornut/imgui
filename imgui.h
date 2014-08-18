@@ -25,11 +25,6 @@ struct ImGuiWindow;
 #define IM_ASSERT(_EXPR)	assert(_EXPR)
 #endif
 
-#ifndef IM_MALLOC
-#define IM_MALLOC malloc
-#endif
-
-
 typedef unsigned int ImU32;
 typedef ImU32 ImGuiID;
 typedef int ImGuiCol;				// enum ImGuiCol_
@@ -38,9 +33,6 @@ typedef int ImGuiColorEditMode;		// enum ImGuiColorEditMode_
 typedef int ImGuiWindowFlags;		// enum ImGuiWindowFlags_
 typedef int ImGuiInputTextFlags;	// enum ImGuiInputTextFlags_
 typedef ImBitmapFont* ImFont;
-
-typedef void* (*ImGui_MallocCallback)(size_t size);
-typedef void (*ImGui_FreeCallback)(void *ptr);
 
 struct ImVec2
 {
@@ -76,57 +68,46 @@ template<typename T>
 class ImVector
 {
 private:
-	size_t						_size;
-	size_t						_capacity;
-	T*							_data;
+	size_t						Size;
+	size_t						Capacity;
+	T*							Data;
 
 public:
 	typedef T					value_type;
 	typedef value_type*			iterator;
 	typedef const value_type*	const_iterator;
 
-	ImVector()					{ _size = _capacity = 0; _data = NULL; }
-    ~ImVector()					{ if (_data) ImGui_ProxyFree(_data); }
+	ImVector()					{ Size = Capacity = 0; Data = NULL; }
+    ~ImVector()					{ if (Data) IM_FREE(Data); }
 
-	inline bool					empty() const					{ return _size == 0; }
-	inline size_t				size() const					{ return _size; }
-	inline size_t				capacity() const				{ return _capacity; }
+	inline bool					empty() const					{ return Size == 0; }
+	inline size_t				size() const					{ return Size; }
+	inline size_t				capacity() const				{ return Capacity; }
 
-    inline value_type&			at(size_t i)					{ IM_ASSERT(i < _size); return _data[i]; }
-    inline const value_type&	at(size_t i) const				{ IM_ASSERT(i < _size); return _data[i]; }
-    inline value_type&			operator[](size_t i)			{ IM_ASSERT(i < _size); return _data[i]; }
-    inline const value_type&	operator[](size_t i) const		{ IM_ASSERT(i < _size); return _data[i]; }
+    inline value_type&			at(size_t i)					{ IM_ASSERT(i < Size); return Data[i]; }
+    inline const value_type&	at(size_t i) const				{ IM_ASSERT(i < Size); return Data[i]; }
+    inline value_type&			operator[](size_t i)			{ IM_ASSERT(i < Size); return Data[i]; }
+    inline const value_type&	operator[](size_t i) const		{ IM_ASSERT(i < Size); return Data[i]; }
 
-    inline void					clear()							{ if (_data) { _size = _capacity = 0; ImGui_ProxyFree(_data); _data = NULL; } }
-	inline iterator				begin()							{ return _data; }
-	inline const_iterator		begin() const					{ return _data; }
-	inline iterator				end()							{ return _data + _size; }
-	inline const_iterator		end() const						{ return _data + _size; }
+    inline void					clear()							{ if (Data) { Size = Capacity = 0; IM_FREE(Data); Data = NULL; } }
+	inline iterator				begin()							{ return Data; }
+	inline const_iterator		begin() const					{ return Data; }
+	inline iterator				end()							{ return Data + Size; }
+	inline const_iterator		end() const						{ return Data + Size; }
 	inline value_type&			front()							{ return at(0); }
 	inline const value_type&	front() const					{ return at(0); }
-	inline value_type&			back()							{ IM_ASSERT(_size > 0); return at(_size-1); }
-	inline const value_type&	back() const					{ IM_ASSERT(_size > 0); return at(_size-1); }
-	inline void					swap(ImVector<T>& rhs)			{ const size_t rhs_size = rhs._size; rhs._size = _size; _size = rhs_size; const size_t rhs_cap = rhs._capacity; rhs._capacity = _capacity; _capacity = rhs_cap; value_type* rhs_data = rhs._data; rhs._data = _data; _data = rhs_data; }
+	inline value_type&			back()							{ IM_ASSERT(Size > 0); return at(Size-1); }
+	inline const value_type&	back() const					{ IM_ASSERT(Size > 0); return at(Size-1); }
+	inline void					swap(ImVector<T>& rhs)			{ const size_t rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; const size_t rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
 
-    inline void                 reserve(size_t new_capacity)
-    {
-        if (!_data) {
-            _data = (value_type*)ImGui_ProxyMalloc(new_capacity*sizeof(value_type));
-        }   else    {
-            void *tmp = ImGui_ProxyMalloc(new_capacity*sizeof(value_type));
-            memcpy(tmp, _data, sizeof(value_type)*_capacity);
-            ImGui_ProxyFree(_data);
-            _data = (value_type*)tmp;
-        }
-        _capacity = new_capacity;
-    }
-	inline void					resize(size_t new_size)			{ if (new_size > _capacity) reserve(new_size); _size = new_size; }
+    inline void					reserve(size_t new_capacity)	{ Data = (value_type*)IM_REALLOC(Data, new_capacity * sizeof(value_type)); Capacity = new_capacity; }
+	inline void					resize(size_t new_size)			{ if (new_size > Capacity) reserve(new_size); Size = new_size; }
 
-	inline void					push_back(const value_type& v)	{ if (_size == _capacity) reserve(_capacity ? _capacity * 2 : 4); _data[_size++] = v; }
-	inline void					pop_back()						{ IM_ASSERT(_size > 0); _size--; }
+	inline void					push_back(const value_type& v)	{ if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); Data[Size++] = v; }
+	inline void					pop_back()						{ IM_ASSERT(Size > 0); Size--; }
 
-	inline iterator				erase(const_iterator it)		{ IM_ASSERT(it >= begin() && it < end()); const int off = it - begin(); memmove(_data + off, _data + off + 1, (_size - off - 1) * sizeof(value_type)); _size--; return _data + off; }
-	inline void					insert(const_iterator it, const value_type& v)	{ IM_ASSERT(it >= begin() && it <= end()); const int off = it - begin(); if (_size == _capacity) reserve(_capacity ? _capacity * 2 : 4); if (off < (int)_size) memmove(_data + off + 1, _data + off, (_size - off) * sizeof(value_type)); _data[off] = v; _size++; }
+	inline iterator				erase(const_iterator it)		{ IM_ASSERT(it >= begin() && it < end()); const int off = it - begin(); memmove(Data + off, Data + off + 1, (Size - off - 1) * sizeof(value_type)); Size--; return Data + off; }
+	inline void					insert(const_iterator it, const value_type& v)	{ IM_ASSERT(it >= begin() && it <= end()); const int off = it - begin(); if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); if (off < (int)Size) memmove(Data + off + 1, Data + off, (Size - off) * sizeof(value_type)); Data[off] = v; Size++; }
 };
 #endif // #ifndef ImVector
 
@@ -216,6 +197,7 @@ namespace ImGui
 	bool		SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
 	bool		SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
 	bool		SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
+	bool		SliderFloat4(const char* label, float v[3], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
 	bool		SliderAngle(const char* label, float* v, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f);		// *v in radians
 	bool		SliderInt(const char* label, int* v, int v_min, int v_max, const char* display_format = "%.0f");
 	void		PlotLines(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), size_t stride = sizeof(float));
@@ -227,6 +209,7 @@ namespace ImGui
 	bool		InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f, int decimal_precision = -1);
 	bool		InputFloat2(const char* label, float v[2], int decimal_precision = -1);
 	bool		InputFloat3(const char* label, float v[3], int decimal_precision = -1);
+	bool		InputFloat4(const char* label, float v[4], int decimal_precision = -1);
 	bool		InputInt(const char* label, int* v, int step = 1, int step_fast = 100);
 	bool		InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0);
 	bool		Combo(const char* label, int* current_item, const char** items, int items_count, int popup_height_items = 7);
@@ -401,8 +384,6 @@ struct ImGuiStyle
 struct ImGuiIO
 {
 	// Settings (fill once)					// Default value:
-    ImGui_MallocCallback MallocFn;
-    ImGui_FreeCallback FreeFn;
     ImVec2		DisplaySize;				// <unset>					// Display size, in pixels. For clamping windows positions.
 	float		DeltaTime;					// = 1.0f/60.0f				// Time elapsed since last frame, in seconds.
 	float		IniSavingRate;				// = 5.0f					// Maximum time between saving .ini file, in seconds. Set to a negative value to disable .ini saving.
@@ -508,15 +489,13 @@ struct ImGuiTextBuffer
 {
 	ImVector<char>		Buf;
 
-    ImGuiTextBuffer()	{  }
-    void init() { if (Buf.empty())  Buf.push_back(0); }
+    ImGuiTextBuffer()	{ Buf.push_back(0); }
     const char*			begin() const { return Buf.begin(); }
     const char*			end() const { return Buf.end()-1; }
     size_t				size() const { return Buf.size()-1; }
     bool				empty() { return Buf.empty(); }
     void				clear() { Buf.clear(); Buf.push_back(0); }
     void				append(const char* fmt, ...);
-    void                destroy() { Buf.clear();    }
 };
 
 // Helper: Key->value storage
