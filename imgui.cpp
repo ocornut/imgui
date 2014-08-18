@@ -671,7 +671,8 @@ struct ImGuiWindow
 	bool					ScrollbarY;
 	bool					Visible;							// Set to true on Begin()
 	bool					Accessed;							// Set to true when any widget access the current window
-	bool					Collapsed;
+	bool					Collapsed;							// Set when collapsing window to become only title-bar
+	bool					SkipItems;							// == Visible && !Collapsed
 	int						AutoFitFrames;
 
 	ImGuiDrawContext		DC;
@@ -926,6 +927,7 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
 	Visible = false;
 	Accessed = false;
 	Collapsed = false;
+	SkipItems = false;
 	AutoFitFrames = -1;
 	LastFrameDrawn = -1;
 	ItemWidthDefault = 0.0f;
@@ -1945,7 +1947,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 		// Apply and ImClamp scrolling
 		window->ScrollY = window->NextScrollY;
 		window->ScrollY = ImMax(window->ScrollY, 0.0f);
-		if (!window->Collapsed)
+		if (!window->Collapsed && !window->SkipItems)
 			window->ScrollY = ImMin(window->ScrollY, ImMax(0.0f, (float)window->SizeContentsFit.y - window->SizeFull.y));
 		window->NextScrollY = window->ScrollY;
 
@@ -2186,9 +2188,12 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 		if (window->Collapsed)
 			window->Visible = false;
 	}
+	if (g.Style.Alpha <= 0.0f)
+		window->Visible = false;
 
-	// Return collapsed so that user can perform an early out optimisation
-	return !window->Collapsed;
+	// Return false if we don't intend to display anything to allow user to perform an early out optimisation
+	window->SkipItems = !window->Visible || window->Collapsed;
+	return !window->SkipItems;
 }
 
 void End()
@@ -2456,7 +2461,7 @@ ImGuiStorage* GetTreeStateStorage()
 void TextV(const char* fmt, va_list args)
 {
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 
 	static char buf[1024];
@@ -2486,7 +2491,7 @@ void TextUnformatted(const char* text, const char* text_end)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 
 	const char* text_begin = text;
@@ -2584,7 +2589,7 @@ void AlignFirstTextHeightToWidgets()
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 
 	// Declare a dummy item size to that upcoming items that are smaller will center-align on the newly expanded line height.
@@ -2596,7 +2601,7 @@ void LabelText(const char* label, const char* fmt, ...)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 	const ImGuiStyle& style = g.Style;
 	const float w = window->DC.ItemWidth.back();
@@ -2669,7 +2674,7 @@ bool Button(const char* label, ImVec2 size, bool repeat_when_held)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return false;
 
 	const ImGuiStyle& style = g.Style;
@@ -2709,7 +2714,7 @@ bool SmallButton(const char* label)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return false;
 
 	const ImGuiStyle& style = g.Style;
@@ -2827,7 +2832,7 @@ bool CollapsingHeader(const char* label, const char* str_id, const bool display_
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return false;
 
 	const ImGuiStyle& style = g.Style;
@@ -2907,7 +2912,7 @@ void BulletText(const char* fmt, ...)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 
 	static char buf[1024];
@@ -3059,7 +3064,7 @@ bool SliderFloat(const char* label, float* v, float v_min, float v_max, const ch
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return false;
 
 	const ImGuiStyle& style = g.Style;
@@ -3295,7 +3300,7 @@ static bool SliderFloatN(const char* label, float v[3], int components, float v_
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return false;
 
 	const ImGuiStyle& style = g.Style;
@@ -3358,7 +3363,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, const float* values
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 
 	const ImGuiStyle& style = g.Style;
@@ -3466,7 +3471,7 @@ void Checkbox(const char* label, bool* v)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 
 	const ImGuiStyle& style = g.Style;
@@ -3520,7 +3525,7 @@ bool RadioButton(const char* label, bool active)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return false;
 
 	const ImGuiStyle& style = g.Style;
@@ -3709,7 +3714,7 @@ bool InputFloat(const char* label, float *v, float step, float step_fast, int de
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return false;
 
 	const ImGuiStyle& style = g.Style;
@@ -3773,7 +3778,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return false;
 
 	const ImGuiIO& io = g.IO;
@@ -3997,7 +4002,7 @@ static bool InputFloatN(const char* label, float* v, int components, int decimal
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return false;
 
 	const ImGuiStyle& style = g.Style;
@@ -4094,7 +4099,7 @@ bool Combo(const char* label, int* current_item, bool (*items_getter)(void*, int
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return false;
 
 	const ImGuiStyle& style = g.Style;
@@ -4209,7 +4214,7 @@ bool ColorButton(const ImVec4& col, bool small_height, bool outline_border)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return false;
 
 	const ImGuiStyle& style = g.Style;
@@ -4256,7 +4261,7 @@ bool ColorEdit4(const char* label, float col[4], bool alpha)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return false;
 
 	const ImGuiStyle& style = g.Style;
@@ -4392,7 +4397,7 @@ void ColorEditMode(ImGuiColorEditMode mode)
 void Separator()
 {
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 
 	if (window->DC.ColumnsCount > 1)
@@ -4417,7 +4422,7 @@ void Separator()
 void Spacing()
 {
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 
 	ItemSize(ImVec2(0,0));
@@ -4427,7 +4432,7 @@ static void ItemSize(ImVec2 size, ImVec2* adjust_start_offset)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 
 	const float line_height = ImMax(window->DC.CurrentLineHeight, size.y);
@@ -4453,7 +4458,7 @@ void NextColumn()
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 
 	if (window->DC.ColumnsCount > 1)
@@ -4507,7 +4512,7 @@ void SameLine(int column_x, int spacing_w)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 	
 	float x, y;
@@ -4580,7 +4585,7 @@ void Columns(int columns_count, const char* id, bool border)
 {
 	ImGuiState& g = GImGui;
 	ImGuiWindow* window = GetCurrentWindow();
-	if (window->Collapsed)
+	if (window->SkipItems)
 		return;
 
 	if (window->DC.ColumnsCount != 1)
@@ -4809,6 +4814,9 @@ void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col)
 
 void ImDrawList::AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, int a_max, bool tris, const ImVec2& third_point_offset)
 {
+	if ((col >> 24) == 0)
+		return;
+
 	static ImVec2 circle_vtx[12];
 	static bool circle_vtx_builds = false;
 	if (!circle_vtx_builds)
