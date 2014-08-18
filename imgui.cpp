@@ -2183,9 +2183,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
 	}
 
 	// Return collapsed so that user can perform an early out optimisation
-	const bool hidden = g.Style.Alpha <= 0.0f;
-	const bool collapsed = window->Collapsed;
-	return hidden || !collapsed;
+	return !window->Collapsed;
 }
 
 void End()
