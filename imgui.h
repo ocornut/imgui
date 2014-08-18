@@ -25,6 +25,11 @@ struct ImGuiWindow;
 #define IM_ASSERT(_EXPR)	assert(_EXPR)
 #endif
 
+#ifndef IM_MALLOC
+#define IM_MALLOC malloc
+#endif
+
+
 typedef unsigned int ImU32;
 typedef ImU32 ImGuiID;
 typedef int ImGuiCol;				// enum ImGuiCol_

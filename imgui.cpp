@@ -162,12 +162,12 @@
 #include <stdint.h>		// intptr_t
 #include <stdio.h>		// vsnprintf
 #include <string.h>		// memset
+#include <new>          // new (ptr)
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
 
-#include <new>
 
 //-------------------------------------------------------------------------
 // Forward Declarations
@@ -198,8 +198,8 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs);
 
 }; // namespace ImGui
 
-static char*        StrDup(const char *str);
-static void         StrDup_Free(char *str);
+static char*        ImStrDup(const char *str);
+static void         ImStrDup_Free(char *str);
 
 //-----------------------------------------------------------------------------
 // Platform dependant default implementations
@@ -596,7 +596,7 @@ struct ImGuiIniData
 	bool	Collapsed;
 
 	ImGuiIniData() { memset(this, 0, sizeof(*this)); }
-    ~ImGuiIniData() { if (Name) { StrDup_Free(Name); Name = NULL; } }
+    ~ImGuiIniData() { if (Name) { ImStrDup_Free(Name); Name = NULL; } }
 };
 
 struct ImGuiState
@@ -918,7 +918,7 @@ void ImGuiTextBuffer::append(const char* fmt, ...)
 
 ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_size)
 {
-    Name = StrDup(name);
+    Name = ImStrDup(name);
 	ID = GetID(name); 
 	IDStack.push_back(ID);
 
@@ -953,7 +953,7 @@ ImGuiWindow::~ImGuiWindow()
     DrawList->~ImDrawList();
     GImGui.IO.FreeFn(DrawList);
 	DrawList = NULL;
-    StrDup_Free(Name);
+    ImStrDup_Free(Name);
 	Name = NULL;
 }
 
@@ -1036,7 +1036,7 @@ static ImGuiIniData* FindWindowSettings(const char* name)
 
     void *buff = GImGui.IO.MallocFn(sizeof(ImGuiIniData));
     ImGuiIniData* ini = new(buff) ImGuiIniData();
-    ini->Name = StrDup(name);
+    ini->Name = ImStrDup(name);
     ini->Collapsed = false;
 	ini->Pos = ImVec2(FLT_MAX,FLT_MAX);
 	ini->Size = ImVec2(0,0);
@@ -5318,7 +5318,7 @@ static const char*	GetClipboardTextFn_DefaultImpl()
 	if (buf_handle == NULL)
 		return NULL;
 	if (char* buf_global = (char*)GlobalLock(buf_handle))
-        buf_local = StrDup(buf_global);
+        buf_local = ImStrDup(buf_global);
 	GlobalUnlock(buf_handle); 
 	CloseClipboard(); 
 	return buf_local;
@@ -5855,7 +5855,7 @@ void ShowTestWindow(bool* open)
 
 }; // namespace ImGui
 
-static char* StrDup(const char *str)
+static char* ImStrDup(const char *str)
 {
     char *buff = (char*)GImGui.IO.MallocFn(strlen(str) + 1);
     IM_ASSERT(buff);
@@ -5863,7 +5863,7 @@ static char* StrDup(const char *str)
     return buff;
 }
 
-static void StrDup_Free(char *str)
+static void ImStrDup_Free(char *str)
 {
     IM_ASSERT(str);
     GImGui.IO.FreeFn(str);
