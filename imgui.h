@@ -60,10 +60,6 @@ struct ImVec4
 // this implementation does NOT call c++ constructors! we don't need them! also only provide the minimum functionalities we need.
 #ifndef ImVector
 
-// Forward declarations for Malloc/Free proxies
-void* ImGui_ProxyMalloc(size_t size);
-void ImGui_ProxyFree(void *ptr);
-
 template<typename T>
 class ImVector
 {
