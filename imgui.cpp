@@ -1574,7 +1574,7 @@ static void RenderCollapseTriangle(ImVec2 p_min, bool open, float scale = 1.0f, 
     window->DrawList->AddTriangleFilled(a, b, c, window->Color(ImGuiCol_Border));
 }
 
-static ImVec2 CalcTextSize(const char* text, const char* text_end, const bool hide_text_after_hash)
+ImVec2 CalcTextSize(const char* text, const char* text_end, const bool hide_text_after_hash)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
