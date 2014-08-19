@@ -179,7 +179,6 @@ namespace ImGui
 static bool         ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false);
 static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
 static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, const bool hide_text_after_hash = true);
-static ImVec2       CalcTextSize(const char* text, const char* text_end = NULL, const bool hide_text_after_hash = true);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
 
 static void         ItemSize(ImVec2 size, ImVec2* adjust_start_offset = NULL);
@@ -2439,6 +2438,12 @@ void SetCursorPos(const ImVec2& pos)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos = window->Pos + pos;
+}
+
+ImVec2 GetCursorScreenPos()
+{
+	ImGuiWindow* window = GetCurrentWindow();
+	return window->DC.CursorPos;
 }
 
 void SetScrollPosHere()

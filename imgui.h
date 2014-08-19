@@ -166,8 +166,9 @@ namespace ImGui
     float       GetColumnOffset(int column_index = -1);
     void        SetColumnOffset(int column_index, float offset);
     float       GetColumnWidth(int column_index = -1);
-    ImVec2      GetCursorPos();                                                     // cursor position is relative to window position
+    ImVec2      GetCursorPos();                                                     // cursor position relative to window position
     void        SetCursorPos(const ImVec2& pos);                                    // "
+	ImVec2      GetCursorScreenPos();												// cursor position in screen space
     void        AlignFirstTextHeightToWidgets();                                    // call once if the first item on the line is a Text() item and you want to vertically lower it to match higher widgets.
     float       GetTextLineSpacing();
     float       GetTextLineHeight();
@@ -251,6 +252,7 @@ namespace ImGui
     int         GetFrameCount();
     const char* GetStyleColorName(ImGuiCol idx);
     void        GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size);
+	ImVec2		CalcTextSize(const char* text, const char* text_end = NULL, const bool hide_text_after_hash = true);
 
 }; // namespace ImGui
 
