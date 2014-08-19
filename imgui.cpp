@@ -2442,8 +2442,8 @@ void SetCursorPos(const ImVec2& pos)
 
 ImVec2 GetCursorScreenPos()
 {
-	ImGuiWindow* window = GetCurrentWindow();
-	return window->DC.CursorPos;
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->DC.CursorPos;
 }
 
 void SetScrollPosHere()
