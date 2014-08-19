@@ -2495,6 +2495,7 @@ void TextUnformatted(const char* text, const char* text_end)
     if (window->SkipItems)
         return;
 
+	IM_ASSERT(text != NULL);
     const char* text_begin = text;
     if (text_end == NULL)
         text_end = text + strlen(text);
