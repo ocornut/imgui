@@ -378,7 +378,7 @@ static ImU32 crc32(const void* data, size_t data_size, ImU32 seed = 0)
 		{ 
 			ImU32 crc = i; 
 			for (ImU32 j = 0; j < 8; j++) 
-				crc = (crc >> 1) ^ (-int(crc & 1) & polynomial); 
+				crc = (crc >> 1) ^ (-ImU32(crc & 1) & polynomial); 
 			crc32_lut[i] = crc; 
 		}
 	}
@@ -396,16 +396,14 @@ static size_t ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
 	int w = vsnprintf(buf, buf_size, fmt, args);
 	va_end(args);
 	buf[buf_size-1] = 0;
-	if (w == -1) w = (int)buf_size;
-	return w;
+	return (w == -1) ? buf_size : (size_t)w;
 }
 
 static size_t ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
 {
 	int w = vsnprintf(buf, buf_size, fmt, args);
 	buf[buf_size-1] = 0;
-	if (w == -1) w = (int)buf_size;
-	return w;
+	return (w == -1) ? buf_size : (size_t)w;
 }
 
 static ImU32 ImConvertColorFloat4ToU32(const ImVec4& in)
@@ -900,13 +898,13 @@ void ImGuiTextBuffer::append(const char* fmt, ...)
 		return;
 
 	const size_t write_off = Buf.size();
-	if (write_off + len >= Buf.capacity())
+	if (write_off + (size_t)len >= Buf.capacity())
 		Buf.reserve(Buf.capacity() * 2);
 
 	Buf.resize(write_off + (size_t)len);
 
 	va_start(args, fmt);
-	ImFormatStringV(&Buf[write_off] - 1, len+1, fmt, args);
+	ImFormatStringV(&Buf[write_off] - 1, (size_t)len+1, fmt, args);
 	va_end(args);
 }
 
@@ -1055,17 +1053,18 @@ static void LoadSettings()
 	long f_size = ftell(f);	
 	if (f_size == -1) 
 		return;
+	size_t size = (size_t)f_size;
 	if (fseek(f, 0, SEEK_SET)) 
 		return;
-	char* f_data = new char[f_size+1];
-	f_size = (long)fread(f_data, 1, f_size, f);	// Text conversion alter read size so let's not be fussy about return value
+	char* f_data = new char[size+1];
+	size = fread(f_data, 1, size, f);	// Text conversion alter read size so let's not be fussy about return value
 	fclose(f);
-	if (f_size == 0)
+	if (size == 0)
 	{
 		delete[] f_data;
 		return;
 	}
-	f_data[f_size] = 0;
+	f_data[size] = 0;
 
 	ImGuiIniData* settings = NULL;
 	const char* buf_end = f_data + f_size;
@@ -3356,7 +3355,7 @@ enum ImGuiPlotType
 
 static float PlotGetValue(const float* values, size_t stride, int idx)
 {
-	float v = *(float*)((unsigned char*)values + idx * stride);
+	float v = *(float*)((unsigned char*)values + (size_t)idx * stride);
 	return v;
 }
 
@@ -3609,14 +3608,14 @@ void	STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int idx, int n)						{ c
 bool	STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int idx, const char* new_text, int new_text_len)
 {
 	char* buf_end = obj->Text + obj->BufSize;
-	const int text_len = (int)strlen(obj->Text);
+	const size_t text_len = strlen(obj->Text);
 
 	if (new_text_len > buf_end - (obj->Text + text_len + 1))
 		return false;
 
-	memmove(obj->Text + idx + new_text_len, obj->Text + idx, text_len - idx);
-	memcpy(obj->Text + idx, new_text, new_text_len);
-	obj->Text[text_len + new_text_len] = 0;
+	memmove(obj->Text + (size_t)idx + new_text_len, obj->Text + (size_t)idx, text_len - (size_t)idx);
+	memcpy(obj->Text + (size_t)idx, new_text, (size_t)new_text_len);
+	obj->Text[text_len + (size_t)new_text_len] = 0;
 
 	return true;
 }
@@ -4132,7 +4131,7 @@ bool Combo(const char* label, int* current_item, bool (*items_getter)(void*, int
 	ImGui::SameLine(0, (int)g.Style.ItemInnerSpacing.x);
 	ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
 
-	ImGui::PushID(id);
+	ImGui::PushID((int)id);
 	bool menu_toggled = false;
 	if (hovered)
 	{
@@ -4540,7 +4539,7 @@ float GetColumnOffset(int column_index)
 	if (column_index < 0)
 		column_index = window->DC.ColumnCurrent;
 
-	const ImGuiID column_id = ImGuiID(window->DC.ColumnsSetID + column_index);
+	const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
 	RegisterAliveId(column_id);
 	const float default_t = column_index / (float)window->DC.ColumnsCount;
 	const float t = (float)window->StateStorage.GetInt(column_id, (int)(default_t * 8096)) / 8096;		// Cheaply store our floating point value inside the integer (could store an union into the map?)
@@ -4556,7 +4555,7 @@ void SetColumnOffset(int column_index, float offset)
 	if (column_index < 0)
 		column_index = window->DC.ColumnCurrent;
 
-	const ImGuiID column_id = ImGuiID(window->DC.ColumnsSetID + column_index);
+	const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
 	const float t = (offset - window->DC.ColumnStartX) / (window->Size.x - g.Style.ScrollBarWidth - window->DC.ColumnStartX);
 	window->StateStorage.SetInt(column_id, (int)(t*8096));
 }
@@ -4606,7 +4605,7 @@ void Columns(int columns_count, const char* id, bool border)
 		{
 			float x = window->Pos.x + GetColumnOffset(i);
 			
-			const ImGuiID column_id = ImGuiID(window->DC.ColumnsSetID + i);
+			const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(i);
 			const ImGuiAabb column_aabb(ImVec2(x-4,y1),ImVec2(x+4,y2));
 
 			if (IsClipped(column_aabb))
@@ -4833,7 +4832,7 @@ void ImDrawList::AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, i
 	
 	if (tris)
 	{
-		ReserveVertices((a_max-a_min) * 3);
+		ReserveVertices((unsigned int)(a_max-a_min) * 3);
 		for (int a = a_min; a < a_max; a++)
 		{
 			AddVtx(center + circle_vtx[a % IM_ARRAYSIZE(circle_vtx)] * rad, col);
@@ -4843,7 +4842,7 @@ void ImDrawList::AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, i
 	}
 	else
 	{
-		ReserveVertices((a_max-a_min) * 6);
+		ReserveVertices((unsigned int)(a_max-a_min) * 6);
 		for (int a = a_min; a < a_max; a++)
 			AddVtxLine(center + circle_vtx[a % IM_ARRAYSIZE(circle_vtx)] * rad, center + circle_vtx[(a+1) % IM_ARRAYSIZE(circle_vtx)] * rad, col);
 	}
@@ -4954,7 +4953,7 @@ void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int nu
 	if ((col >> 24) == 0)
 		return;
 
-	ReserveVertices(num_segments*6);
+	ReserveVertices((unsigned int)num_segments*6);
 	const float a_step = 2*PI/(float)num_segments;
 	float a0 = 0.0f;
 	for (int i = 0; i < num_segments; i++)
@@ -4970,7 +4969,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
 	if ((col >> 24) == 0)
 		return;
 
-	ReserveVertices(num_segments*3);
+	ReserveVertices((unsigned int)num_segments*3);
 	const float a_step = 2*PI/(float)num_segments;
 	float a0 = 0.0f;
 	for (int i = 0; i < num_segments; i++)
@@ -4992,17 +4991,17 @@ void ImDrawList::AddText(ImFont font, float font_size, const ImVec2& pos, ImU32 
 		text_end = text_begin + strlen(text_begin);
 
 	// reserve vertices for worse case
-	const int char_count = (int)(text_end - text_begin);
-	const int vtx_count_max = char_count * 6;
+	const unsigned int char_count = (unsigned int)(text_end - text_begin);
+	const unsigned int vtx_count_max = char_count * 6;
 	const size_t vtx_begin = vtx_buffer.size();
 	ReserveVertices(vtx_count_max);
 
 	font->RenderText(font_size, pos, col, clip_rect_stack.back(), text_begin, text_end, vtx_write);
 
 	// give unused vertices
-	vtx_buffer.resize(vtx_write - &vtx_buffer.front());
-	const int vtx_count = (int)(vtx_buffer.size() - vtx_begin);
-	commands.back().vtx_count -= (vtx_count_max - vtx_count);
+	vtx_buffer.resize((size_t)(vtx_write - &vtx_buffer.front()));
+	const size_t vtx_count = vtx_buffer.size() - vtx_begin;
+	commands.back().vtx_count -= (unsigned int)(vtx_count_max - vtx_count);
 	vtx_write -= (vtx_count_max - vtx_count);
 }
 
@@ -5043,8 +5042,10 @@ bool	ImBitmapFont::LoadFromFile(const char* filename)
 		return false;
 	if (fseek(f, 0, SEEK_END)) 
 		return false;
-	if ((DataSize = (int)ftell(f)) == -1)
+	long f_size = ftell(f);
+	if (f_size == -1)
 		return false;
+	DataSize = (size_t)f_size;
 	if (fseek(f, 0, SEEK_SET)) 
 		return false;
 	if ((Data = (unsigned char*)malloc(DataSize)) == NULL)
@@ -5052,7 +5053,7 @@ bool	ImBitmapFont::LoadFromFile(const char* filename)
 		fclose(f);
 		return false;
 	}
-	if ((int)fread(Data, 1, DataSize, f) != DataSize)
+	if (fread(Data, 1, DataSize, f) != DataSize)
 	{
 		fclose(f);
 		free(Data);
@@ -5063,7 +5064,7 @@ bool	ImBitmapFont::LoadFromFile(const char* filename)
 	return LoadFromMemory(Data, DataSize);
 }
 
-bool	ImBitmapFont::LoadFromMemory(const void* data, int data_size)
+bool	ImBitmapFont::LoadFromMemory(const void* data, size_t data_size)
 {
 	Data = (unsigned char*)data;
 	DataSize = data_size;
@@ -5351,8 +5352,8 @@ static void SetClipboardTextFn_DefaultImpl(const char* text, const char* text_en
 	}
 	if (!text_end)
 		text_end = text + strlen(text);
-	GImGui.PrivateClipboard = (char*)malloc(text_end - text + 1);
-	memcpy(GImGui.PrivateClipboard, text, text_end - text);
+	GImGui.PrivateClipboard = (char*)malloc((size_t)(text_end - text + 1));
+	memcpy(GImGui.PrivateClipboard, text, (size_t)(text_end - text));
 	GImGui.PrivateClipboard[text_end - text] = 0;
 }
 
@@ -5449,7 +5450,7 @@ void ShowTestWindow(bool* open)
 	static bool no_scrollbar = false;
 	static float fill_alpha = 0.65f;
 
-	const ImU32 layout_flags = (no_titlebar ? ImGuiWindowFlags_NoTitleBar : 0) | (no_border ? 0 : ImGuiWindowFlags_ShowBorders) | (no_resize ? ImGuiWindowFlags_NoResize : 0) | (no_move ? ImGuiWindowFlags_NoMove : 0) | (no_scrollbar ? ImGuiWindowFlags_NoScrollbar : 0);
+	const int layout_flags = (no_titlebar ? ImGuiWindowFlags_NoTitleBar : 0) | (no_border ? 0 : ImGuiWindowFlags_ShowBorders) | (no_resize ? ImGuiWindowFlags_NoResize : 0) | (no_move ? ImGuiWindowFlags_NoMove : 0) | (no_scrollbar ? ImGuiWindowFlags_NoScrollbar : 0);
 	ImGui::Begin("ImGui Test", open, ImVec2(550,680), fill_alpha, layout_flags);
 	ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);
 
@@ -5623,8 +5624,8 @@ void ShowTestWindow(bool* open)
 			{
 				refresh_time = ImGui::GetTime();
 				static float phase = 0.0f;
-				values[values_offset] = cos(phase); 
-				values_offset = (values_offset+1)%values.size(); 
+				values[(size_t)values_offset] = cos(phase); 
+				values_offset = (values_offset+1)%(int)values.size(); 
 				phase += 0.10f*values_offset; 
 			}
 		}
@@ -5835,7 +5836,7 @@ void ShowTestWindow(bool* open)
 		ImGui::SameLine();
 		if (ImGui::Button("Add 1000 lines"))
 		{
-			for (size_t i = 0; i < 1000; i++)
+			for (int i = 0; i < 1000; i++)
 				log.append("%i The quick brown fox jumps over the lazy dog\n", lines+i);
 			lines += 1000;
 		}
