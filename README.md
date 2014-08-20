@@ -30,6 +30,14 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 - [Jari Komppa's tutorial on building an ImGui library](http://iki.fi/sol/imgui/).
 - [Casey Muratori's original video that popularized the concept](https://mollyrocket.com/861).
 
+Frequently Asked Question
+-------------------------
+<b>Can you reskin the look of ImGui?</b>
+
+Yes, you can alter the look of the interface to some degree: changing colors, sizes and padding, font. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. The example below uses modified settings to create a more compact UI:
+
+![skinning screenshot 1](/web/skinning_sample_01.png?raw=true)
+
 
 Credits
 -------
