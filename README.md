@@ -32,9 +32,17 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 
 Frequently Asked Question
 -------------------------
+<b>How do you use ImGui on a platform that may not have a mouse and keyboard?</b>
+
+I recommend using [Synergy](http://synergy-project.org) and the uSynergy.c micro client to share your mouse and keyboard. This way you can seemingly use your PC input devices on a video game console or a tablet. ImGui was also designed to function with touch inputs if you increase the padding of widgets to compensate for the lack of precision of touch devices, but it is recommended you use a mouse to allow optimising for screen real-estate.
+
+<b>Can you create elaborate/serious tools with ImGui?</b>
+
+Yes. I have written data browsers, debuggers, profilers and all sort of non-trivial tools with the library. There's no reason you cannot, and in my experience the simplicity of the API is very empowering. However note that ImGui is very programmer centric and the immediate-mode GUI paradigm might requires a bit of adaptation before you can realize its full potential. 
+
 <b>Can you reskin the look of ImGui?</b>
 
-Yes, you can alter the look of the interface to some degree: changing colors, sizes and padding, font. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. The example below uses modified settings to create a more compact UI:
+Yes, you can alter the look of the interface to some degree: changing colors, sizes and padding, font. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. The example below uses modified settings to create a more compact UI with different colors:
 
 ![skinning screenshot 1](/web/skinning_sample_01.png?raw=true)
 
