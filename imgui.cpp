@@ -141,6 +141,7 @@
  - text edit: pasting text into a number box should filter the characters the same way direct input does
  - text edit: allow code to catch user pressing Return (perhaps through disable live edit? so only Return apply the final value, also allow catching Return if value didn't changed)
  - settings: write more decent code to allow saving/loading new fields
+ - settings: api for per-tool simple persistant data (bool,int,float) in .ini file
  - log: be able to right-click and log a window or tree-node into tty/file/clipboard?
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wildcards (with implicit leading/trailing *), regexps
