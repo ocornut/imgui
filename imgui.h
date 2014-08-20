@@ -622,7 +622,7 @@ struct ImBitmapFont
 #pragma pack(pop)
 
     unsigned char*          Data;               // Raw data, content of .fnt file
-    int                     DataSize;           //
+    size_t                  DataSize;           //
     bool                    DataOwned;          // 
     const FntInfo*          Info;               // (point into raw data)
     const FntCommon*        Common;             // (point into raw data)
@@ -637,7 +637,7 @@ struct ImBitmapFont
     ImBitmapFont();
     ~ImBitmapFont() { Clear(); }
 
-    bool                    LoadFromMemory(const void* data, int data_size);
+    bool                    LoadFromMemory(const void* data, size_t data_size);
     bool                    LoadFromFile(const char* filename);
     void                    Clear();
     void                    BuildLookupTable();
