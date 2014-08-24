@@ -3464,7 +3464,6 @@ static void Plot(ImGuiPlotType plot_type, const char* label, const float* values
         else if (plot_type == ImGuiPlotType_Histogram)
             window->DrawList->AddRectFilled(ImLerp(graph_bb.Min, graph_bb.Max, p0), ImLerp(graph_bb.Min, graph_bb.Max, ImVec2(p1.x, 1.0f))+ImVec2(-1,0), v_hovered == v_idx ? col_hovered : col_base);
 
-        v0 = v1;
         t0 = t1;
         p0 = p1;
     }
