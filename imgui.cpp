@@ -1049,13 +1049,22 @@ static void LoadSettings()
     if ((f = fopen(filename, "rt")) == NULL)
         return;
     if (fseek(f, 0, SEEK_END)) 
-        return;
+    {
+       fclose(f); 
+       return; 
+    }
     const long f_size_signed = ftell(f);
     if (f_size_signed == -1) 
-        return;
+    {
+       fclose(f); 
+       return; 
+    }
     size_t f_size = (size_t)f_size_signed;
     if (fseek(f, 0, SEEK_SET)) 
-        return;
+    {
+       fclose(f); 
+       return; 
+    }
     char* f_data = new char[f_size+1];
     f_size = fread(f_data, 1, f_size, f); // Text conversion alter read size so let's not be fussy about return value
     fclose(f);
