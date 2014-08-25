@@ -107,7 +107,7 @@ public:
 
 // Helpers at bottom of the file:
 // - if (IMGUI_ONCE_UPON_A_FRAME)       // Execute a block of code once per frame only
-// - struct ImGuiTextFilter             // Parse and apply text filter. In format "aaaaa[,bbbb][,ccccc]"
+// - struct ImGuiTextFilter             // Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
 // - struct ImGuiTextBuffer             // Text buffer for logging/accumulating text
 // - struct ImGuiStorage                // Custom key value storage (if you need to alter open/close states manually)
 // - struct ImDrawList                  // Draw command list
@@ -449,7 +449,7 @@ private:
     bool        TryIsNewFrame() const   { const int current_frame = ImGui::GetFrameCount(); if (LastFrame == current_frame) return false; LastFrame = current_frame; return true; }
 };
 
-// Helper: Parse and apply text filter. In format "aaaaa[,bbbb][,ccccc]"
+// Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
 struct ImGuiTextFilter
 {
     struct TextRange 
@@ -463,7 +463,7 @@ struct ImGuiTextFilter
         const char* end() const { return e; }
         bool empty() const { return b == e; }
         char front() const { return *b; }
-        static bool isblank(char c) { return c == ' ' && c == '\t'; } 
+        static bool isblank(char c) { return c == ' ' || c == '\t'; } 
         void trim_blanks() { while (b < e && isblank(*b)) b++; while (e > b && isblank(*(e-1))) e--; }
         void split(char separator, ImVector<TextRange>& out);
     };

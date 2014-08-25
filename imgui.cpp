@@ -725,6 +725,7 @@ static void RegisterAliveId(const ImGuiID& id)
 
 //-----------------------------------------------------------------------------
 
+// Helper: Key->value storage
 void ImGuiStorage::Clear()
 {
     Data.clear();
@@ -797,6 +798,7 @@ void ImGuiStorage::SetAllInt(int v)
 
 //-----------------------------------------------------------------------------
 
+// Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
 ImGuiTextFilter::ImGuiTextFilter()
 {
     InputBuf[0] = 0;
@@ -888,6 +890,7 @@ bool ImGuiTextFilter::PassFilter(const char* val) const
 
 //-----------------------------------------------------------------------------
 
+// Helper: Text buffer for logging/accumulating text
 void ImGuiTextBuffer::append(const char* fmt, ...)
 {
     va_list args;
@@ -5854,7 +5857,12 @@ void ShowTestWindow(bool* open)
     if (ImGui::CollapsingHeader("Filtering"))
     {
         static ImGuiTextFilter filter;
-        filter.Draw();
+		ImGui::Text("Filter usage:\n"
+			        "  \"\"         display all lines\n"
+			        "  \"xxx\"      display lines containing \"xxx\"\n"
+					"  \"xxx,yyy\"  display lines containing \"xxx\" or \"yyy\"\n"
+					"  \"-xxx\"     hide lines containing \"xxx\"");
+		filter.Draw();
         const char* lines[] = { "aaa1.c", "bbb1.c", "ccc1.c", "aaa2.cpp", "bbb2.cpp", "ccc2.cpp", "abc.h", "hello, world" };
         for (size_t i = 0; i < IM_ARRAYSIZE(lines); i++)
             if (filter.PassFilter(lines[i]))
