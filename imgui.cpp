@@ -5896,7 +5896,8 @@ void ShowTestWindow(bool* open)
 
 //-----------------------------------------------------------------------------
 // Font data
-// Bitmap exported from proggy_clean.fon (c) by Tristan Grimmer http://www.proggyfonts.net
+// Bitmap exported from proggy_clean.fon (c) by Tristan Grimmer http://upperbounds.net/
+// Also available on unofficial ProggyFonts mirror http://www.proggyfonts.net
 //-----------------------------------------------------------------------------
 /*
 // Copyright (c) 2004, 2005 Tristan Grimmer
