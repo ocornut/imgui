@@ -5030,11 +5030,14 @@ void ImDrawList::AddText(ImFont font, float font_size, const ImVec2& pos, ImU32 
 ImBitmapFont::ImBitmapFont()
 {
     Data = NULL;
+    DataSize = 0;
     DataOwned = false;
     Info = NULL;
     Common = NULL;
     Glyphs = NULL;
     GlyphsCount = 0;
+    Kerning = NULL;
+    KerningCount = 0;
     TabCount = 4;
 }
 
