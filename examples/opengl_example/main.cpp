@@ -11,14 +11,17 @@
 static GLFWwindow* window;
 static GLuint fontTex;
 
-// This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structuer)
-// We are using the fixed pipeline. 
-// A faster way would be to collate all vertices from all cmd_lists into a single vertex buffer
+// This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
+// If text or lines are blurry when integrating ImGui in your engine:
+// - try adjusting ImGui::GetIO().PixelCenterOffset to 0.0f or 0.5f
+// - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
     if (cmd_lists_count == 0)
         return;
 
+    // We are using the OpenGL fixed pipeline to make the example code simpler to read!
+    // A probable faster way to render would be to collate all vertices from all cmd_lists into a single vertex buffer.
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

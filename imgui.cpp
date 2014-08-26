@@ -53,7 +53,7 @@
    - every frame: 
       1/ in your mainloop or right after you got your keyboard/mouse info, call ImGui::GetIO() and fill the 'Input' data, then call ImGui::NewFrame().
       2/ use any ImGui function you want between NewFrame() and Render()
-      3/ ImGui::Render() to render all the accumulated command-lists. it will cack your RenderDrawListFn handler set in the IO structure.
+      3/ ImGui::Render() to render all the accumulated command-lists. it will call your RenderDrawListFn handler that you set in the IO structure.
    - all rendering information are stored into command-lists until ImGui::Render() is called.
    - effectively it means you can create widgets at any time in your code, regardless of "update" vs "render" considerations.
    - a typical application skeleton may be:
@@ -86,6 +86,10 @@
             ImGui::Render();
             // swap video buffer, etc.
         }
+
+ - if text or lines are blurry when integrating ImGui in your engine:
+   - try adjusting ImGui::GetIO().PixelCenterOffset to 0.0f or 0.5f
+   - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 
  - some widgets carry state and requires an unique ID to do so.
    - unique ID are typically derived from a string label, an indice or a pointer.
