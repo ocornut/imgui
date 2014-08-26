@@ -149,10 +149,10 @@ void InitImGui()
     glfwGetWindowSize(window, &w, &h);
 
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)w, (float)h);            // Display size, in pixels. For clamping windows positions.
-    io.DeltaTime = 1.0f/60.0f;                                // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
-    io.PixelCenterOffset = 0.5f;                            // Align OpenGL texels
-    io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                    // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
+    io.DisplaySize = ImVec2((float)w, (float)h);        // Display size, in pixels. For clamping windows positions.
+    io.DeltaTime = 1.0f/60.0f;                          // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
+    io.PixelCenterOffset = 0.5f;                        // Align OpenGL texels
+    io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;             // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
