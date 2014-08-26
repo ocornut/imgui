@@ -36,9 +36,14 @@ Frequently Asked Question
 
 I recommend using [Synergy](http://synergy-project.org) and the uSynergy.c micro client to share your mouse and keyboard. This way you can seemingly use your PC input devices on a video game console or a tablet. ImGui was also designed to function with touch inputs if you increase the padding of widgets to compensate for the lack of precision of touch devices, but it is recommended you use a mouse to allow optimising for screen real-estate.
 
+<b>I integrated ImGui in my engine and the text or lines are blurry..</b>
+
+- Try adjusting ImGui::GetIO().PixelCenterOffset to 0.0f or 0.5f.
+- In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
+
 <b>Can you create elaborate/serious tools with ImGui?</b>
 
-Yes. I have written data browsers, debuggers, profilers and all sort of non-trivial tools with the library. There's no reason you cannot, and in my experience the simplicity of the API is very empowering. However note that ImGui is very programmer centric and the immediate-mode GUI paradigm might requires a bit of adaptation before you can realize its full potential. 
+Yes. I have written data browsers, debuggers, profilers and all sort of non-trivial tools with the library. There's no reason you cannot, and in my experience the simplicity of the API is very empowering. However note that ImGui is programmer centric and the immediate-mode GUI paradigm might requires a bit of adaptation before you can realize its full potential. 
 
 <b>Can you reskin the look of ImGui?</b>
 
