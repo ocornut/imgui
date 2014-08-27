@@ -183,9 +183,11 @@ namespace ImGui
 {
 
 static bool         ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false);
-static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
-static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, const bool hide_text_after_hash = true);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
+
+static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, const bool hide_text_after_hash = true);
+static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
+static void         RenderCollapseTriangle(ImVec2 p_min, bool open, float scale = 1.0f, bool shadow = false);
 
 static void         ItemSize(ImVec2 size, ImVec2* adjust_start_offset = NULL);
 static void         ItemSize(const ImGuiAabb& aabb, ImVec2* adjust_start_offset = NULL);
@@ -1563,7 +1565,7 @@ static void RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
     }
 }
 
-static void RenderCollapseTriangle(ImVec2 p_min, bool open, float scale = 1.0f, bool shadow = false)
+static void RenderCollapseTriangle(ImVec2 p_min, bool open, float scale, bool shadow)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
@@ -2071,8 +2073,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
                 ImGuiAabb scrollbar_bb(window->Aabb().Max.x - style.ScrollBarWidth, title_bar_aabb.Max.y+1, window->Aabb().Max.x, window->Aabb().Max.y-1);
                 //window->DrawList->AddLine(scrollbar_bb.GetTL(), scrollbar_bb.GetBL(), g.Colors[ImGuiCol_Border]);
                 window->DrawList->AddRectFilled(scrollbar_bb.Min, scrollbar_bb.Max, window->Color(ImGuiCol_ScrollbarBg));
-                scrollbar_bb.Max.x -= 3;
-                scrollbar_bb.Expand(ImVec2(0,-3));
+                scrollbar_bb.Expand(ImVec2(-3,-3));
 
                 const float grab_size_y_norm = ImSaturate(window->Size.y / ImMax(window->SizeContentsFit.y, window->Size.y));
                 const float grab_size_y = scrollbar_bb.GetHeight() * grab_size_y_norm;
@@ -2766,15 +2767,15 @@ static bool CloseWindowButton(bool* open)
     ImGuiWindow* window = GetCurrentWindow();
 
     const ImGuiID id = window->GetID("##CLOSE");
-    const float title_bar_height = window->TitleBarHeight();
-    const ImGuiAabb bb(window->Aabb().GetTR() + ImVec2(-title_bar_height+2.0f,2.0f), window->Aabb().GetTR() + ImVec2(-2.0f,+title_bar_height-2.0f));
+    const float size = window->TitleBarHeight() - 4.0f;
+    const ImGuiAabb bb(window->Aabb().GetTR() + ImVec2(-2.0f-size,2.0f), window->Aabb().GetTR() + ImVec2(-2.0f,2.0f+size));
 
     bool hovered, held;
     bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
 
     // Render
     const ImU32 col = window->Color((held && hovered) ? ImGuiCol_CloseButtonActive : hovered ? ImGuiCol_CloseButtonHovered : ImGuiCol_CloseButton);
-    window->DrawList->AddCircleFilled(bb.GetCenter(), ImMax(2.0f,title_bar_height*0.5f-4), col, 16);
+    window->DrawList->AddCircleFilled(bb.GetCenter(), ImMax(2.0f,size*0.5f-2.0f), col, 16);
 
     const float cross_padding = 4.0f;
     if (hovered && bb.GetWidth() >= (cross_padding+1)*2 && bb.GetHeight() >= (cross_padding+1)*2)
@@ -3526,7 +3527,7 @@ void Checkbox(const char* label, bool* v)
     RenderFrame(check_bb.Min, check_bb.Max, window->Color(hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg));
     if (*v)
     {
-        window->DrawList->AddRectFilled(check_bb.Min+ImVec2(4,4), check_bb.Max-ImVec2(4,4), window->Color(ImGuiCol_CheckActive));
+        window->DrawList->AddRectFilled(check_bb.Min+ImVec2(3,3), check_bb.Max-ImVec2(3,3), window->Color(ImGuiCol_CheckActive));
     }
 
     if (g.LogEnabled)
@@ -3579,7 +3580,7 @@ bool RadioButton(const char* label, bool active)
 
     window->DrawList->AddCircleFilled(center, radius, window->Color(hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg), 16);
     if (active)
-        window->DrawList->AddCircleFilled(center, radius-2, window->Color(ImGuiCol_CheckActive), 16);
+        window->DrawList->AddCircleFilled(center, radius-3.0f, window->Color(ImGuiCol_CheckActive), 16);
 
     if (window->Flags & ImGuiWindowFlags_ShowBorders)
     {
