@@ -2887,8 +2887,8 @@ bool CollapsingHeader(const char* label, const char* str_id, const bool display_
     ImGuiAabb bb = ImGuiAabb(pos_min, ImVec2(pos_max.x, pos_min.y + text_size.y));
     if (display_frame)
     {
-        bb.Min.x -= window_padding.x*0.5f;
-        bb.Max.x += window_padding.x*0.5f;
+        bb.Min.x -= window_padding.x*0.5f - 1;
+        bb.Max.x += window_padding.x*0.5f - 1;
         bb.Max.y += style.FramePadding.y * 2;
     }
 
@@ -5510,10 +5510,10 @@ void ShowTestWindow(bool* open)
 
     if (ImGui::CollapsingHeader("Window options"))
     {
-        ImGui::Checkbox("no titlebar", &no_titlebar); ImGui::SameLine(200);
-        ImGui::Checkbox("no border", &no_border); ImGui::SameLine(400);
+        ImGui::Checkbox("no titlebar", &no_titlebar); ImGui::SameLine(150);
+        ImGui::Checkbox("no border", &no_border); ImGui::SameLine(300);
         ImGui::Checkbox("no resize", &no_resize); 
-        ImGui::Checkbox("no move", &no_move); ImGui::SameLine(200);
+        ImGui::Checkbox("no move", &no_move); ImGui::SameLine(150);
         ImGui::Checkbox("no scrollbar", &no_scrollbar);
         ImGui::SliderFloat("fill alpha", &fill_alpha, 0.0f, 1.0f);
         if (ImGui::TreeNode("Style Editor"))
@@ -5595,6 +5595,9 @@ void ShowTestWindow(bool* open)
             ImGui::PlotLines("Curve", arr, IM_ARRAYSIZE(arr));
             ImGui::EndTooltip();
         }
+
+        ImGui::Separator();
+        ImGui::Text("^ Horizontal separator");
 
         static int item = 1;
         ImGui::Combo("combo", &item, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");
