@@ -154,6 +154,7 @@
  - input: support trackpad style scrolling & slider edit.
  - misc: not thread-safe
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
+ - style editor: add a button to print C code.
  - optimisation/render: use indexed rendering
  - optimisation/render: move clip-rect to vertex data? would allow merging all commands
  - optimisation/render: merge command-list of all windows into one command-list?
@@ -1585,7 +1586,7 @@ static void RenderCollapseTriangle(ImVec2 p_min, bool open, float scale = 1.0f, 
         c = center + ImVec2(-0.500f,-0.866f)*r;
     }
     
-    if (shadow)
+    if (shadow && (window->Flags & ImGuiWindowFlags_ShowBorders) != 0)
         window->DrawList->AddTriangleFilled(a+ImVec2(2,2), b+ImVec2(2,2), c+ImVec2(2,2), window->Color(ImGuiCol_BorderShadow));
     window->DrawList->AddTriangleFilled(a, b, c, window->Color(ImGuiCol_Border));
 }
@@ -2766,7 +2767,7 @@ static bool CloseWindowButton(bool* open)
 
     const ImGuiID id = window->GetID("##CLOSE");
     const float title_bar_height = window->TitleBarHeight();
-    const ImGuiAabb bb(window->Aabb().GetTR() + ImVec2(-title_bar_height+3.0f,2.0f), window->Aabb().GetTR() + ImVec2(-2.0f,+title_bar_height-2.0f));
+    const ImGuiAabb bb(window->Aabb().GetTR() + ImVec2(-title_bar_height+2.0f,2.0f), window->Aabb().GetTR() + ImVec2(-2.0f,+title_bar_height-2.0f));
 
     bool hovered, held;
     bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
@@ -2775,7 +2776,7 @@ static bool CloseWindowButton(bool* open)
     const ImU32 col = window->Color((held && hovered) ? ImGuiCol_CloseButtonActive : hovered ? ImGuiCol_CloseButtonHovered : ImGuiCol_CloseButton);
     window->DrawList->AddCircleFilled(bb.GetCenter(), ImMax(2.0f,title_bar_height*0.5f-4), col, 16);
 
-    const float cross_padding = 4;
+    const float cross_padding = 4.0f;
     if (hovered && bb.GetWidth() >= (cross_padding+1)*2 && bb.GetHeight() >= (cross_padding+1)*2)
     {
         window->DrawList->AddLine(bb.GetTL()+ImVec2(+cross_padding,+cross_padding), bb.GetBR()+ImVec2(-cross_padding,-cross_padding), window->Color(ImGuiCol_Text));
@@ -2924,7 +2925,7 @@ bool CollapsingHeader(const char* label, const char* str_id, const bool display_
     {
         if ((held && hovered) || hovered)
             RenderFrame(bb.Min, bb.Max, col, false);
-        RenderCollapseTriangle(bb.Min + ImVec2(style.FramePadding.x, window->FontSize()*0.15f), opened, 0.70f);
+        RenderCollapseTriangle(bb.Min + ImVec2(style.FramePadding.x, window->FontSize()*0.15f), opened, 0.70f, false);
         RenderText(bb.Min + ImVec2(window->FontSize() + style.FramePadding.x*2,0), label);
     }
 
