@@ -88,8 +88,8 @@
         }
 
  - if text or lines are blurry when integrating ImGui in your engine:
-   - try adjusting ImGui::GetIO().PixelCenterOffset to 0.0f or 0.5f
    - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
+   - try adjusting ImGui::GetIO().PixelCenterOffset to 0.5f or 0.375f
 
  - some widgets carry state and requires an unique ID to do so.
    - unique ID are typically derived from a string label, an indice or a pointer.
@@ -280,7 +280,7 @@ ImGuiIO::ImGuiIO()
     LogFilename = "imgui_log.txt";
     Font = NULL;
     FontAllowScaling = false;
-    PixelCenterOffset = 0.5f;
+    PixelCenterOffset = 0.0f;
     MousePos = ImVec2(-1,-1);
     MousePosPrev = ImVec2(-1,-1);
     MouseDoubleClickTime = 0.30f;
@@ -1560,8 +1560,10 @@ static void RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
     window->DrawList->AddRectFilled(p_min, p_max, fill_col, rounding);
     if (border && (window->Flags & ImGuiWindowFlags_ShowBorders))
     {
-        window->DrawList->AddRect(p_min+ImVec2(1,1), p_max+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), rounding);
-        window->DrawList->AddRect(p_min, p_max, window->Color(ImGuiCol_Border), rounding);
+        // FIXME: I have no idea how this is working correctly but it is the best I've found that works on multiple rendering
+        const float offset = GImGui.IO.PixelCenterOffset;
+        window->DrawList->AddRect(p_min+ImVec2(1.5f-offset,1.5f-offset), p_max+ImVec2(1.0f-offset*2,1.0f-offset*2), window->Color(ImGuiCol_BorderShadow), rounding);
+        window->DrawList->AddRect(p_min+ImVec2(0.5f-offset,0.5f-offset), p_max+ImVec2(0.0f-offset*2,0.0f-offset*2), window->Color(ImGuiCol_Border), rounding);
     }
 }
 
@@ -2768,20 +2770,21 @@ static bool CloseWindowButton(bool* open)
 
     const ImGuiID id = window->GetID("##CLOSE");
     const float size = window->TitleBarHeight() - 4.0f;
-    const ImGuiAabb bb(window->Aabb().GetTR() + ImVec2(-2.0f-size,2.0f), window->Aabb().GetTR() + ImVec2(-2.0f,2.0f+size));
+    const ImGuiAabb bb(window->Aabb().GetTR() + ImVec2(-3.0f-size,2.0f), window->Aabb().GetTR() + ImVec2(-3.0f,2.0f+size));
 
     bool hovered, held;
     bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
 
     // Render
     const ImU32 col = window->Color((held && hovered) ? ImGuiCol_CloseButtonActive : hovered ? ImGuiCol_CloseButtonHovered : ImGuiCol_CloseButton);
-    window->DrawList->AddCircleFilled(bb.GetCenter(), ImMax(2.0f,size*0.5f-2.0f), col, 16);
+    const ImVec2 center = bb.GetCenter();
+    window->DrawList->AddCircleFilled(center, ImMax(2.0f,size*0.5f), col, 16);
 
-    const float cross_padding = 4.0f;
-    if (hovered && bb.GetWidth() >= (cross_padding+1)*2 && bb.GetHeight() >= (cross_padding+1)*2)
+    const float cross_extent = (size * 0.5f * 0.7071f) - 1.0f;
+    if (hovered)
     {
-        window->DrawList->AddLine(bb.GetTL()+ImVec2(+cross_padding,+cross_padding), bb.GetBR()+ImVec2(-cross_padding,-cross_padding), window->Color(ImGuiCol_Text));
-        window->DrawList->AddLine(bb.GetBL()+ImVec2(+cross_padding,-cross_padding), bb.GetTR()+ImVec2(-cross_padding,+cross_padding), window->Color(ImGuiCol_Text));
+        window->DrawList->AddLine(center + ImVec2(+cross_extent,+cross_extent), center + ImVec2(-cross_extent,-cross_extent), window->Color(ImGuiCol_Text));
+        window->DrawList->AddLine(center + ImVec2(+cross_extent,-cross_extent), center + ImVec2(-cross_extent,+cross_extent), window->Color(ImGuiCol_Text));
     }
 
     if (open != NULL && pressed)
@@ -4815,16 +4818,18 @@ void ImDrawList::AddVtx(const ImVec2& pos, ImU32 col)
 
 void ImDrawList::AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col)
 {
-    const ImVec2 n = (b - a) / ImLength(b - a);
-    const ImVec2 hn = ImVec2(n.y, -n.x) * 0.5f;
+    const float offset = GImGui.IO.PixelCenterOffset;
+    const ImVec2 hn = (b - a) * (0.50f / ImLength(b - a));     // half normal
+    const ImVec2 hp0 = ImVec2(offset - hn.y, offset + hn.x);   // half perpendiculars + user offset
+    const ImVec2 hp1 = ImVec2(offset + hn.y, offset - hn.x);
 
-    AddVtx(a - hn, col);
-    AddVtx(b - hn, col);
-    AddVtx(a + hn, col);
-
-    AddVtx(b - hn, col);
-    AddVtx(b + hn, col);
-    AddVtx(a + hn, col);
+    // Two triangles makes up one line. Using triangles allows us to make draw calls.
+    AddVtx(a + hp0, col);
+    AddVtx(b + hp0, col);
+    AddVtx(a + hp1, col);
+    AddVtx(b + hp0, col);
+    AddVtx(b + hp1, col);
+    AddVtx(a + hp1, col);
 }
 
 void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col)
@@ -4966,10 +4971,12 @@ void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec
     if ((col >> 24) == 0)
         return;
 
+    const ImVec2 offset(GImGui.IO.PixelCenterOffset,GImGui.IO.PixelCenterOffset);
+
     ReserveVertices(3);
-    AddVtx(a, col);
-    AddVtx(b, col);
-    AddVtx(c, col);
+    AddVtx(a + offset, col);
+    AddVtx(b + offset, col);
+    AddVtx(c + offset, col);
 }
 
 void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments)
@@ -4977,13 +4984,15 @@ void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int nu
     if ((col >> 24) == 0)
         return;
 
+    const ImVec2 offset(GImGui.IO.PixelCenterOffset,GImGui.IO.PixelCenterOffset);
+
     ReserveVertices((unsigned int)num_segments*6);
     const float a_step = 2*PI/(float)num_segments;
     float a0 = 0.0f;
     for (int i = 0; i < num_segments; i++)
     {
         const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        AddVtxLine(centre + ImVec2(cos(a0),sin(a0))*radius, centre + ImVec2(cos(a1),sin(a1))*radius, col);
+        AddVtxLine(centre + offset + ImVec2(cos(a0),sin(a0))*radius, centre + ImVec2(cos(a1),sin(a1))*radius, col);
         a0 = a1;
     }
 }
@@ -4993,15 +5002,17 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
     if ((col >> 24) == 0)
         return;
 
+    const ImVec2 offset(GImGui.IO.PixelCenterOffset,GImGui.IO.PixelCenterOffset);
+
     ReserveVertices((unsigned int)num_segments*3);
     const float a_step = 2*PI/(float)num_segments;
     float a0 = 0.0f;
     for (int i = 0; i < num_segments; i++)
     {
         const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        AddVtx(centre + ImVec2(cos(a0),sin(a0))*radius, col);
-        AddVtx(centre + ImVec2(cos(a1),sin(a1))*radius, col);
-        AddVtx(centre, col);
+        AddVtx(centre + offset + ImVec2(cos(a0),sin(a0))*radius, col);
+        AddVtx(centre + offset + ImVec2(cos(a1),sin(a1))*radius, col);
+        AddVtx(centre + offset, col);
         a0 = a1;
     }
 }
@@ -5231,12 +5242,10 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
     const float outline = (float)Info->Outline;
 
     // Align to be pixel perfect
-    pos.x = (float)(int)pos.x + 0.5f;
-    pos.y = (float)(int)pos.y + 0.5f;
+    pos.x = (float)(int)pos.x;
+    pos.y = (float)(int)pos.y;
 
     const ImVec4 clip_rect = clip_rect_ref;
-
-    const float uv_offset = GImGui.IO.PixelCenterOffset;
 
     float x = pos.x;
     float y = pos.y;
@@ -5274,10 +5283,10 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
                     continue;
                 }
 
-                const float s1 = (uv_offset + glyph->X) * tex_scale_x;
-                const float t1 = (uv_offset + glyph->Y) * tex_scale_y;
-                const float s2 = (uv_offset + glyph->X + glyph->Width) * tex_scale_x;
-                const float t2 = (uv_offset + glyph->Y + glyph->Height) * tex_scale_y;
+                const float s1 = (glyph->X) * tex_scale_x;
+                const float t1 = (glyph->Y) * tex_scale_y;
+                const float s2 = (glyph->X + glyph->Width) * tex_scale_x;
+                const float t2 = (glyph->Y + glyph->Height) * tex_scale_y;
 
                 out_vertices[0].pos = ImVec2(x1, y1);
                 out_vertices[0].uv  = ImVec2(s1, t1);

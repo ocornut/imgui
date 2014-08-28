@@ -391,7 +391,7 @@ struct ImGuiIO
     ImFont      Font;                       // <auto>                   // Gets passed to text functions. Typedef ImFont to the type you want (ImBitmapFont* or your own font).
     float       FontHeight;                 // <auto>                   // Default font height, must be the vertical distance between two lines of text, aka == CalcTextSize(" ").y
     bool        FontAllowScaling;           // = false                  // Set to allow scaling text with CTRL+Wheel.
-    float       PixelCenterOffset;          // = 0.5f                   // Set to 0.0f for DirectX <= 9, 0.5f for Direct3D >= 10 and OpenGL.
+    float       PixelCenterOffset;          // = 0.0f                   // Try to set to 0.5f or 0.375f if rendering is blurry
 
     // Settings - Rendering function (REQUIRED)
     // See example code if you are unsure of how to implement this.
