@@ -15,10 +15,6 @@
 //---- Don't implement default clipboard handlers for Windows (so as not to link with OpenClipboard(), etc.)
 //#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS
 
-//---- If you are loading a custom font, ImGui expect to find a pure white pixel at (0,0)
-// Change it's UV coordinate here if you can't have a white pixel at (0,0)
-//#define IMGUI_FONT_TEX_UV_FOR_WHITE   ImVec2(0.f/256.f,0.f/256.f)
-
 //---- Define implicit cast operators to convert back<>forth from your math types and ImVec2/ImVec4.
 /*
 #define IM_VEC2_CLASS_EXTRA                                                 \
