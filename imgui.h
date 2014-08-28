@@ -390,6 +390,7 @@ struct ImGuiIO
     int         KeyMap[ImGuiKey_COUNT];     // <unset>                  // Map of indices into the KeysDown[512] entries array
     ImFont      Font;                       // <auto>                   // Gets passed to text functions. Typedef ImFont to the type you want (ImBitmapFont* or your own font).
     float       FontHeight;                 // <auto>                   // Default font height, must be the vertical distance between two lines of text, aka == CalcTextSize(" ").y
+    ImVec2      FontTexUvForWhite;          // = (0.0f,0.0f)            // Font texture must have a white pixel at this UV coordinate. Adjust if you are using custom texture.
     bool        FontAllowScaling;           // = false                  // Set to allow scaling text with CTRL+Wheel.
     float       PixelCenterOffset;          // = 0.0f                   // Try to set to 0.5f or 0.375f if rendering is blurry
 
@@ -523,10 +524,6 @@ struct ImDrawCmd
     unsigned int    vtx_count;
     ImVec4          clip_rect;
 };
-
-#ifndef IMGUI_FONT_TEX_UV_FOR_WHITE
-#define IMGUI_FONT_TEX_UV_FOR_WHITE ImVec2(0.f,0.f)
-#endif
 
 // sizeof() == 20
 struct ImDrawVert
