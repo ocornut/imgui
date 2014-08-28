@@ -3495,12 +3495,12 @@ void PlotHistogram(const char* label, const float* values, int values_count, int
     ImGui::Plot(ImGuiPlotType_Histogram, label, values, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size, stride);
 }
 
-void Checkbox(const char* label, bool* v)
+bool Checkbox(const char* label, bool* v)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
-        return;
+        return false;
 
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
@@ -3516,7 +3516,7 @@ void Checkbox(const char* label, bool* v)
     const ImGuiAabb total_bb(ImMin(check_bb.Min, text_bb.Min), ImMax(check_bb.Max, text_bb.Max));
 
     if (ClipAdvance(total_bb))
-        return;
+        return false;
 
     const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(total_bb);
     const bool pressed = hovered && g.IO.MouseClicked[0];
@@ -3537,16 +3537,19 @@ void Checkbox(const char* label, bool* v)
     if (g.LogEnabled)
         LogText(text_bb.GetTL(), *v ? "[x]" : "[ ]");
     RenderText(text_bb.GetTL(), label);
+
+    return pressed;
 }
 
-void CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value)
+bool CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value)
 {
     bool v = (*flags & flags_value) ? true : false;
-    ImGui::Checkbox(label, &v);
+    bool pressed = ImGui::Checkbox(label, &v);
     if (v)
         *flags |= flags_value;
     else
         *flags &= ~flags_value;
+    return pressed;
 }
 
 bool RadioButton(const char* label, bool active)

@@ -197,8 +197,8 @@ namespace ImGui
     bool        SliderInt(const char* label, int* v, int v_min, int v_max, const char* display_format = "%.0f");
     void        PlotLines(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), size_t stride = sizeof(float));
     void        PlotHistogram(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), size_t stride = sizeof(float));
-    void        Checkbox(const char* label, bool* v);
-    void        CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value);
+    bool        Checkbox(const char* label, bool* v);
+    bool        CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value);
     bool        RadioButton(const char* label, bool active);
     bool        RadioButton(const char* label, int* v, int v_button);
     bool        InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f, int decimal_precision = -1);
