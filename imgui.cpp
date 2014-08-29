@@ -2461,6 +2461,18 @@ void SetCursorPos(const ImVec2& pos)
     window->DC.CursorPos = window->Pos + pos;
 }
 
+void SetCursorPosX(float x)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.CursorPos.x = window->Pos.x + x;
+}
+
+void SetCursorPosY(float y)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.CursorPos.y = window->Pos.y + y;
+}
+
 ImVec2 GetCursorScreenPos()
 {
     ImGuiWindow* window = GetCurrentWindow();

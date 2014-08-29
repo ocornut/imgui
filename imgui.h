@@ -168,6 +168,8 @@ namespace ImGui
     float       GetColumnWidth(int column_index = -1);
     ImVec2      GetCursorPos();                                                     // cursor position relative to window position
     void        SetCursorPos(const ImVec2& pos);                                    // "
+    void        SetCursorPosX(float x);                                             // "
+    void        SetCursorPosY(float y);                                             // "
     ImVec2      GetCursorScreenPos();												// cursor position in screen space
     void        AlignFirstTextHeightToWidgets();                                    // call once if the first item on the line is a Text() item and you want to vertically lower it to match higher widgets.
     float       GetTextLineSpacing();
