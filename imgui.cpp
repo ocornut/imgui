@@ -279,6 +279,7 @@ ImGuiIO::ImGuiIO()
     IniFilename = "imgui.ini";
     LogFilename = "imgui_log.txt";
     Font = NULL;
+	FontYOffset = 0.0f;
     FontTexUvForWhite = ImVec2(0.0f,0.0f);
     FontAllowScaling = false;
     PixelCenterOffset = 0.0f;
@@ -1199,6 +1200,7 @@ void NewFrame()
             ImGui::GetDefaultFontData(&fnt_data, &fnt_size, NULL, NULL);
             g.IO.Font = new ImBitmapFont();
             g.IO.Font->LoadFromMemory(fnt_data, fnt_size);
+			g.IO.FontYOffset = +1;
         }
         g.Initialized = true;
     }
@@ -5093,6 +5095,8 @@ void    ImBitmapFont::Clear()
 
 bool    ImBitmapFont::LoadFromFile(const char* filename)
 {
+	IM_ASSERT(!IsLoaded());		// Call Clear()
+
     // Load file
     FILE* f;
     if ((f = fopen(filename, "rb")) == NULL)
@@ -5123,7 +5127,9 @@ bool    ImBitmapFont::LoadFromFile(const char* filename)
 
 bool    ImBitmapFont::LoadFromMemory(const void* data, size_t data_size)
 {
-    Data = (unsigned char*)data;
+	IM_ASSERT(!IsLoaded());			// Call Clear()
+
+	Data = (unsigned char*)data;
     DataSize = data_size;
 
     // Parse data
@@ -5262,7 +5268,7 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
 
     // Align to be pixel perfect
     pos.x = (float)(int)pos.x;
-    pos.y = (float)(int)pos.y;
+	pos.y = (float)(int)pos.y + GImGui.IO.FontYOffset;
 
     const ImVec4 clip_rect = clip_rect_ref;
 
