@@ -104,8 +104,8 @@
       e.g. "##Foobar" display an empty label and uses "##Foobar" as ID
 
  - if you want to use a different font than the default
-   - create bitmap font data using BMFont. allocate ImGui::GetIO().Font and use ->LoadFromFile()/LoadFromMemory(), set ImGui::GetIO().FontHeight
-   - load your texture yourself. texture *MUST* have white pixel at UV coordinate Imgui::GetIO().FontTexUvForWhite. This is used to draw all solid shapes.
+   - create bitmap font data using BMFont. allocate ImGui::GetIO().Font and use ->LoadFromFile()/LoadFromMemory().
+   - load your texture yourself. texture *MUST* have white pixel at UV coordinate ImGui::GetIO().FontTexUvForWhite. This is used to draw all solid shapes.
 
  - tip: the construct 'if (IMGUI_ONCE_UPON_A_FRAME)' will evaluate to true only once a frame, you can use it to add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can call Render() multiple times (e.g for VR renders), up to you to communicate the extra state to your RenderDrawListFn function.
@@ -604,6 +604,8 @@ struct ImGuiState
     bool                    Initialized;
     ImGuiIO                 IO;
     ImGuiStyle              Style;
+	float					FontSize;							// == IO.Font->GetFontSize(). Vertical distance between two lines of text, aka == CalcTextSize(" ").y
+
     float                   Time;
     int                     FrameCount;
     int                     FrameCountRendered;
@@ -709,7 +711,7 @@ public:
 
     ImGuiAabb   Aabb() const                            { return ImGuiAabb(Pos, Pos+Size); }
     ImFont      Font() const                            { return GImGui.IO.Font; }
-    float       FontSize() const                        { return GImGui.IO.FontHeight * FontScale; }
+    float       FontSize() const                        { return GImGui.FontSize * FontScale; }
     ImVec2      CursorPos() const                       { return DC.CursorPos; }
     float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0 : FontSize() + GImGui.Style.FramePadding.y * 2.0f; }
     ImGuiAabb   TitleBarAabb() const                    { return ImGuiAabb(Pos, Pos + ImVec2(SizeFull.x, TitleBarHeight())); }
@@ -1197,14 +1199,15 @@ void NewFrame()
             ImGui::GetDefaultFontData(&fnt_data, &fnt_size, NULL, NULL);
             g.IO.Font = new ImBitmapFont();
             g.IO.Font->LoadFromMemory(fnt_data, fnt_size);
-            g.IO.FontHeight = g.IO.Font->GetFontSize();
         }
         g.Initialized = true;
     }
+	IM_ASSERT(g.IO.Font && g.IO.Font->IsLoaded());  // Font not loaded
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
     g.Tooltip[0] = '\0';
+    g.FontSize = g.IO.Font->GetFontSize();
 
     // Update inputs state
     if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0)

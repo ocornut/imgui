@@ -391,7 +391,6 @@ struct ImGuiIO
     float       MouseDoubleClickMaxDist;    // = 6.0f                   // Distance threshold to stay in to validate a double-click, in pixels.
     int         KeyMap[ImGuiKey_COUNT];     // <unset>                  // Map of indices into the KeysDown[512] entries array
     ImFont      Font;                       // <auto>                   // Gets passed to text functions. Typedef ImFont to the type you want (ImBitmapFont* or your own font).
-    float       FontHeight;                 // <auto>                   // Default font height, must be the vertical distance between two lines of text, aka == CalcTextSize(" ").y
     ImVec2      FontTexUvForWhite;          // = (0.0f,0.0f)            // Font texture must have a white pixel at this UV coordinate. Adjust if you are using custom texture.
     bool        FontAllowScaling;           // = false                  // Set to allow scaling text with CTRL+Wheel.
     float       PixelCenterOffset;          // = 0.0f                   // Try to set to 0.5f or 0.375f if rendering is blurry
@@ -642,6 +641,7 @@ struct ImBitmapFont
     void                    BuildLookupTable();
     const FntGlyph *        FindGlyph(unsigned short c) const;
     float                   GetFontSize() const { return (float)Info->FontSize; }
+	bool					IsLoaded() const { return Info != NULL && Common != NULL && Glyphs != NULL; }
 
     ImVec2                  CalcTextSize(float size, float max_width, const char* text_begin, const char* text_end, const char** remaining = NULL) const;
     void                    RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices) const;
