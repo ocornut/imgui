@@ -43,29 +43,29 @@ Configure bmfont:
   1. Load the .FNT data, e.g.
     
     // proggy_clean_13 [default]
-	  io.Font->LoadFromFile("proggy_clean_13.fnt");
-	  io.FontTexUvForWhite = ImVec2(0.0f/256.0f,0.0f/128);
-	  io.FontYOffset = +1;
+    io.Font->LoadFromFile("proggy_clean_13.fnt");
+    io.FontTexUvForWhite = ImVec2(0.0f/256.0f,0.0f/128);
+    io.FontYOffset = +1;
 
     // proggy_small_12
-	  io.Font = new ImBitmapFont();
-	  io.Font->LoadFromFile("proggy_small_12.fnt");
-	  io.FontTexUvForWhite = ImVec2(84.0f/256.0f,20.0f/64);
-	  io.FontYOffset = +2;
+    io.Font = new ImBitmapFont();
+    io.Font->LoadFromFile("proggy_small_12.fnt");
+    io.FontTexUvForWhite = ImVec2(84.0f/256.0f,20.0f/64);
+    io.FontYOffset = +2;
     
     // proggy_small_14
-	  io.Font = new ImBitmapFont();
-	  io.Font->LoadFromFile("proggy_small_14.fnt");
-	  io.FontTexUvForWhite = ImVec2(84.0f/256.0f,20.0f/64);
-	  io.FontYOffset = +3;
-	  
-	  // courier_new_16
-	  io.Font->LoadFromFile("courier_new_16.fnt");
-	  io.FontTexUvForWhite = ImVec2(1.0f/256.0f,4.0f/128);
-	  
-	  // courier_new_18
-	  io.Font->LoadFromFile("courier_new_18.fnt");
-	  io.FontTexUvForWhite = ImVec2(4.0f/256.0f,5.0f/256);
+    io.Font = new ImBitmapFont();
+    io.Font->LoadFromFile("proggy_small_14.fnt");
+    io.FontTexUvForWhite = ImVec2(84.0f/256.0f,20.0f/64);
+    io.FontYOffset = +3;
+    
+    // courier_new_16
+    io.Font->LoadFromFile("courier_new_16.fnt");
+    io.FontTexUvForWhite = ImVec2(1.0f/256.0f,4.0f/128);
+    
+    // courier_new_18
+    io.Font->LoadFromFile("courier_new_18.fnt");
+    io.FontTexUvForWhite = ImVec2(4.0f/256.0f,5.0f/256);
 
   2. Load the matching .PNG data into a texture
 
