@@ -19,6 +19,18 @@ struct ImGuiWindow;
 #include <stdarg.h>         // va_list
 #include <stdlib.h>         // NULL
 
+#ifndef IM_MALLOC
+#define IM_MALLOC(_SIZE) malloc((_SIZE))
+#endif
+
+#ifndef IM_FREE
+#define IM_FREE(_PTR) free((_PTR))
+#endif
+
+#ifndef IM_REALLOC
+#define IM_REALLOC(_PTR, _SIZE) realloc((_PTR), (_SIZE))
+#endif
+
 #ifndef IM_ASSERT
 #include <assert.h>
 #define IM_ASSERT(_EXPR)    assert(_EXPR)
@@ -58,6 +70,7 @@ struct ImVec4
 // std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug). 
 // this implementation does NOT call c++ constructors! we don't need them! also only provide the minimum functionalities we need.
 #ifndef ImVector
+
 template<typename T>
 class ImVector
 {
@@ -72,7 +85,7 @@ public:
     typedef const value_type*   const_iterator;
 
     ImVector()                  { Size = Capacity = 0; Data = NULL; }
-    ~ImVector()                 { if (Data) free(Data); }
+    ~ImVector()                 { if (Data) IM_FREE(Data); }
 
     inline bool                 empty() const                   { return Size == 0; }
     inline size_t               size() const                    { return Size; }
@@ -83,7 +96,7 @@ public:
     inline value_type&          operator[](size_t i)            { IM_ASSERT(i < Size); return Data[i]; }
     inline const value_type&    operator[](size_t i) const      { IM_ASSERT(i < Size); return Data[i]; }
 
-    inline void                 clear()                         { if (Data) { Size = Capacity = 0; free(Data); Data = NULL; } }
+    inline void                 clear()                         { if (Data) { Size = Capacity = 0; IM_FREE(Data); Data = NULL; } }
     inline iterator             begin()                         { return Data; }
     inline const_iterator       begin() const                   { return Data; }
     inline iterator             end()                           { return Data + Size; }
@@ -94,7 +107,7 @@ public:
     inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return at(Size-1); }
     inline void                 swap(ImVector<T>& rhs)          { const size_t rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; const size_t rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
 
-    inline void                 reserve(size_t new_capacity)    { Data = (value_type*)realloc(Data, new_capacity * sizeof(value_type)); Capacity = new_capacity; }
+    inline void                 reserve(size_t new_capacity)    { Data = (value_type*)IM_REALLOC(Data, new_capacity * sizeof(value_type)); Capacity = new_capacity; }
     inline void                 resize(size_t new_size)         { if (new_size > Capacity) reserve(new_size); Size = new_size; }
 
     inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); Data[Size++] = v; }
