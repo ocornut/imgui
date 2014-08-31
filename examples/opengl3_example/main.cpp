@@ -92,7 +92,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         const const ImDrawVert* vtx_buffer = reinterpret_cast<const ImDrawVert*>(cmd_list->vtx_buffer.begin());
         int vtx_size = static_cast<int>(cmd_list->vtx_buffer.size());
 
-        unsigned offset = stream(GL_ARRAY_BUFFER, shader_handle, &cursor, &size, vtx_buffer, vtx_size);
+        unsigned offset = stream(GL_ARRAY_BUFFER, vbohandle, &cursor, &size, vtx_buffer, vtx_size);
 
         glVertexAttribPointer(position_location, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (void*)(offset));
         glVertexAttribPointer(uv_location, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (void*)(offset + 8));
