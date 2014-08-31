@@ -5,16 +5,9 @@
 #pragma once
 
 //---- Define your own malloc/free/realloc functions if you want to override internal memory allocations for ImGui
-/*
- #define IM_MALLOC(_SIZE) MyMalloc(_SIZE)
- #define IM_FREE(_PTR) MyFree(_PTR)
- #define IM_REALLOC(_PTR, _SIZE) MyRealloc(_PTR, _SIZE)
-
- #include <stdlib.h>    // size_t
- void* MyMalloc(size_t size);
- void MyFree(void *ptr);
- void* MyRealloc(void *ptr, size_t size);
-*/
+//#define IM_MALLOC(_SIZE)			MyMalloc(_SIZE)			// void* MyMalloc(size_t size);
+//#define IM_FREE(_PTR)				MyFree(_PTR)			// void MyFree(void *ptr);
+//#define IM_REALLOC(_PTR, _SIZE)	MyRealloc(_PTR, _SIZE)	// void* MyRealloc(void *ptr, size_t size);
 
 //---- Define your own ImVector<> type if you don't want to use the provided implementation defined in imgui.h
 //#include <vector>

@@ -17,7 +17,7 @@ struct ImGuiWindow;
 #include "imconfig.h"
 #include <float.h>          // FLT_MAX
 #include <stdarg.h>         // va_list
-#include <stdlib.h>         // NULL
+#include <stdlib.h>         // NULL, malloc
 
 #ifndef IM_MALLOC
 #define IM_MALLOC(_SIZE) malloc((_SIZE))
@@ -70,7 +70,6 @@ struct ImVec4
 // std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug). 
 // this implementation does NOT call c++ constructors! we don't need them! also only provide the minimum functionalities we need.
 #ifndef ImVector
-
 template<typename T>
 class ImVector
 {

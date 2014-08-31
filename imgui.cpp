@@ -194,7 +194,6 @@
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
 
-
 //-------------------------------------------------------------------------
 // Forward Declarations
 //-------------------------------------------------------------------------
@@ -666,7 +665,7 @@ struct ImGuiState
     // Logging
     bool                    LogEnabled;
     FILE*                   LogFile;
-    ImGuiTextBuffer*        LogClipboard;
+    ImGuiTextBuffer*        LogClipboard;						// pointer so our GImGui static constructor doesn't call heap allocators.
     int                     LogAutoExpandMaxDepth;
 
     ImGuiState()
