@@ -56,10 +56,11 @@
       3/ ImGui::Render() to render all the accumulated command-lists. it will call your RenderDrawListFn handler that you set in the IO structure.
    - all rendering information are stored into command-lists until ImGui::Render() is called.
    - effectively it means you can create widgets at any time in your code, regardless of "update" vs "render" considerations.
+   - refer to the examples applications in the examples/ folder for instruction on how to setup your code.
    - a typical application skeleton may be:
 
         // Application init
-        // TODO: Fill all 'Settings' fields of the io structure
+        // TODO: Fill all settings fields of the io structure
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize.x = 1920.0f;
         io.DisplaySize.y = 1280.0f;
@@ -87,14 +88,33 @@
             // swap video buffer, etc.
         }
 
+ TROUBLESHOOTING & FREQUENTLY ASKED QUESTIONS
+
  - if text or lines are blurry when integrating ImGui in your engine:
    - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
    - try adjusting ImGui::GetIO().PixelCenterOffset to 0.5f or 0.375f
 
- - some widgets carry state and requires an unique ID to do so.
-   - unique ID are typically derived from a string label, an indice or a pointer.
-   - use PushID/PopID to easily create scopes and avoid ID conflicts. A Window is also an implicit scope.
-   - when creating trees, ID are particularly important because you want to preserve the opened/closed state of tree nodes.
+ - if you can only see text but no solid shapes or lines:
+   - make sure io.FontTexUvForWhite is set to the texture coordinates of a pure white pixel in your texture. 
+     (this is done for you if you are using the default font)
+     (ImGui is using this texture coordinate to draw solid objects so text and solid draw calls can be merged into one.)
+
+ - if you want to use a different font than the default:
+   - create bitmap font data using BMFont, make sure that BMFont is exporting the .fnt file in Binary mode.
+       io.Font = new ImBitmapFont();
+	   io.Font->LoadFromFile("path_to_your_fnt_file.fnt");
+   - load your texture yourself. texture *MUST* have white pixel at UV coordinate io.FontTexUvForWhite. This is used to draw all solid shapes.
+   - the extra_fonts/ folder provides examples of using external fonts.
+
+ - if you are confused about the meaning or use of ID in ImGui:
+   - some widgets requires state to be carried over multiple frames (most typically ImGui often wants remember what is the "active" widget).
+     to do so they need an unique ID. unique ID are typically derived from a string label, an indice or a pointer.
+     when you call Button("OK") the button shows "OK" and also use "OK" as an ID.
+   - ID are uniquely scoped within Windows so no conflict can happen if you have two buttons called "OK" in two different Windows.
+     within a same Window, use PushID() / PopID() to easily create scopes and avoid ID conflicts. 
+	 so if you have a loop creating "multiple" items, you can use PushID() / PopID() with the index of each item, or their pointer, etc.
+	 some functions like TreeNode() implicitly creates a scope for you by calling PushID()
+   - when dealing with trees, ID are important because you want to preserve the opened/closed state of tree nodes.
      depending on your use cases you may want to use strings, indices or pointers as ID. experiment and see what makes more sense!
       e.g. When displaying a single object, using a static string as ID will preserve your node open/closed state when the targetted object change
       e.g. When displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state per object
@@ -102,14 +122,12 @@
       e.g. "Label" display "Label" and uses "Label" as ID
       e.g. "Label##Foobar" display "Label" and uses "Label##Foobar" as ID
       e.g. "##Foobar" display an empty label and uses "##Foobar" as ID
-
- - if you want to use a different font than the default
-   - create bitmap font data using BMFont. allocate ImGui::GetIO().Font and use ->LoadFromFile()/LoadFromMemory().
-   - load your texture yourself. texture *MUST* have white pixel at UV coordinate ImGui::GetIO().FontTexUvForWhite. This is used to draw all solid shapes.
+   - read articles about the imgui principles (see web links) to understand the requirement and use of ID.
 
  - tip: the construct 'if (IMGUI_ONCE_UPON_A_FRAME)' will evaluate to true only once a frame, you can use it to add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can call Render() multiple times (e.g for VR renders), up to you to communicate the extra state to your RenderDrawListFn function.
- - tip: you can create widgets without a Begin/End block, they will go in an implicit window called "Debug"
+ - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
+ - tip: read the ShowTestWindow() code for more example of how to use ImGui!
 
  ISSUES AND TODO-LIST
 
