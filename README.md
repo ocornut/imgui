@@ -34,7 +34,7 @@ Frequently Asked Question
 -------------------------
 <b>How do you use ImGui on a platform that may not have a mouse and keyboard?</b>
 
-I recommend using [Synergy](http://synergy-project.org) and the uSynergy.c micro client to share your mouse and keyboard. This way you can seemingly use your PC input devices on a video game console or a tablet. ImGui was also designed to function with touch inputs if you increase the padding of widgets to compensate for the lack of precision of touch devices, but it is recommended you use a mouse to allow optimising for screen real-estate.
+I recommend using [Synergy](http://synergy-project.org). With the uSynergy.c micro client running you can seamlessly use your PC input devices from a video game console or a tablet. ImGui was also designed to function with touch inputs if you increase the padding of widgets to compensate for the lack of precision of touch devices, but it is recommended you use a mouse to allow optimising for screen real-estate.
 
 <b>I integrated ImGui in my engine and the text or lines are blurry..</b>
 
