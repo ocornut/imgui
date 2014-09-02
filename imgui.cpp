@@ -3687,6 +3687,8 @@ bool RadioButton(const char* label, bool active)
         window->DrawList->AddCircle(center, radius, window->Color(ImGuiCol_Border), 16);
     }
 
+    if (g.LogEnabled)
+        LogText(text_bb.GetTL(), active ? "(x)" : "( )");
     RenderText(text_bb.GetTL(), label);
 
     return pressed;
