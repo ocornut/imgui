@@ -145,16 +145,16 @@ namespace ImGui
     void        BeginChild(const char* str_id, ImVec2 size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);
     void        EndChild();
     bool        GetWindowIsFocused();
-    float       GetWindowWidth();
-    ImVec2      GetWindowPos();                                                     // you should rarely need/care about the window position, but it can be useful if you want to use your own drawing
-    void        SetWindowPos(const ImVec2& pos);                                    // set current window pos
     ImVec2      GetWindowSize();
+    float       GetWindowWidth();
+    ImVec2      GetWindowPos();                                                     // you should rarely need/care about the window position, but it can be useful if you want to use your own drawing.
+    void        SetWindowPos(const ImVec2& pos);                                    // set current window pos.
     ImVec2      GetWindowContentRegionMin();
     ImVec2      GetWindowContentRegionMax();
-    ImDrawList* GetWindowDrawList();
+    ImDrawList* GetWindowDrawList();                                                // get rendering command-list if you want to append your own draw primitives.
     void        SetFontScale(float scale);
-    void        SetScrollPosHere();
-    void        SetTreeStateStorage(ImGuiStorage* tree);
+    void        SetScrollPosHere();                                                 // adjust scrolling position to center into the current cursor position.
+    void        SetTreeStateStorage(ImGuiStorage* tree);                            // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it).
     ImGuiStorage* GetTreeStateStorage();
     void        PushItemWidth(float item_width);
     void        PopItemWidth();
@@ -166,7 +166,7 @@ namespace ImGui
 
     // Tooltip
     void        SetTooltip(const char* fmt, ...);                                   // set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). last call wins.
-    void        BeginTooltip();                                                     // use to create full-featured tooltip windows that aren't just text. 
+    void        BeginTooltip();                                                     // use to create full-featured tooltip windows that aren't just text.
     void        EndTooltip();
 
     // Layout
@@ -183,7 +183,7 @@ namespace ImGui
     void        SetCursorPosX(float x);                                             // "
     void        SetCursorPosY(float y);                                             // "
     ImVec2      GetCursorScreenPos();												// cursor position in screen space
-    void        AlignFirstTextHeightToWidgets();                                    // call once if the first item on the line is a Text() item and you want to vertically lower it to match higher widgets.
+    void        AlignFirstTextHeightToWidgets();                                    // call once if the first item on the line is a Text() item and you want to vertically lower it to match subsequent (bigger) widgets.
     float       GetTextLineSpacing();
     float       GetTextLineHeight();
 
@@ -203,7 +203,7 @@ namespace ImGui
     bool        Button(const char* label, ImVec2 size = ImVec2(0,0), bool repeat_when_held = false);
     bool        SmallButton(const char* label);
     bool        CollapsingHeader(const char* label, const char* str_id = NULL, const bool display_frame = true, const bool default_open = false);
-    bool        SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
+    bool        SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);     // adjust display_format to decorate the value with a prefix or a suffix. Use power!=1.0 for logarithmic sliders.
     bool        SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
     bool        SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
     bool        SliderFloat4(const char* label, float v[3], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
@@ -228,10 +228,10 @@ namespace ImGui
     bool        ColorEdit3(const char* label, float col[3]);
     bool        ColorEdit4(const char* label, float col[4], bool show_alpha = true);
     void        ColorEditMode(ImGuiColorEditMode mode);
-    bool        TreeNode(const char* str_label_id);                                 // if returning 'true' the user is responsible for calling TreePop
+    bool        TreeNode(const char* str_label_id);                                 // if returning 'true' the node is open and the user is responsible for calling TreePop
     bool        TreeNode(const char* str_id, const char* fmt, ...);                 // "
     bool        TreeNode(const void* ptr_id, const char* fmt, ...);                 // "
-    void        TreePush(const char* str_id = NULL);                                // already called by TreeNode(), but you can call Push/Pop yourself for layout purpose
+    void        TreePush(const char* str_id = NULL);                                // already called by TreeNode(), but you can call Push/Pop yourself for layouting purpose
     void        TreePush(const void* ptr_id = NULL);                                // "
     void        TreePop();
     void        OpenNextNode(bool open);                                            // force open/close the next TreeNode or CollapsingHeader
@@ -290,8 +290,8 @@ enum ImGuiWindowFlags_
 enum ImGuiInputTextFlags_
 {
     // Default: 0
-    ImGuiInputTextFlags_CharsDecimal        = 1 << 0,
-    ImGuiInputTextFlags_CharsHexadecimal    = 1 << 1,
+    ImGuiInputTextFlags_CharsDecimal        = 1 << 0,   // Allow 0123456789.+-*/
+    ImGuiInputTextFlags_CharsHexadecimal    = 1 << 1,   // Allow 0123456789ABCDEFabcdef
     ImGuiInputTextFlags_AutoSelectAll       = 1 << 2,
     ImGuiInputTextFlags_AlignCenter         = 1 << 3,
 };
