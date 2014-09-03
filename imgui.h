@@ -14,7 +14,6 @@ struct ImGuiStorage;
 struct ImGuiStyle;
 struct ImGuiWindow;
 
-#include "imconfig.h"
 #include <float.h>          // FLT_MAX
 #include <stdarg.h>         // va_list
 #include <stdlib.h>         // NULL, malloc
