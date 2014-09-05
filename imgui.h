@@ -220,7 +220,7 @@ namespace ImGui
     bool        InputFloat3(const char* label, float v[3], int decimal_precision = -1);
     bool        InputFloat4(const char* label, float v[4], int decimal_precision = -1);
     bool        InputInt(const char* label, int* v, int step = 1, int step_fast = 100);
-    bool        InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0);
+    bool        InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, bool* enter = NULL);
     bool        Combo(const char* label, int* current_item, const char** items, int items_count, int popup_height_items = 7);
     bool        Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int popup_height_items = 7);      // Separate items with \0, end item-list with \0\0
     bool        Combo(const char* label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int popup_height_items = 7);
