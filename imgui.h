@@ -294,6 +294,7 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_CharsHexadecimal    = 1 << 1,   // Allow 0123456789ABCDEFabcdef
     ImGuiInputTextFlags_AutoSelectAll       = 1 << 2,
     ImGuiInputTextFlags_AlignCenter         = 1 << 3,
+    ImGuiInputTextFlags_EnterReturnsTrue    = 1 << 4,
 };
 
 // User fill ImGuiIO.KeyMap[] array with indices into the ImGuiIO.KeysDown[512] array
