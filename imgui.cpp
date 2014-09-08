@@ -162,7 +162,6 @@
  - text edit: flag to disable live update of the user buffer. 
  - text edit: field resize behaviour - field could stretch when being edited? hover tooltip shows more text?
  - text edit: pasting text into a number box should filter the characters the same way direct input does
- - text edit: allow code to catch user pressing Return (perhaps through disable live edit? so only Return apply the final value, also allow catching Return if value didn't changed)
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistant data (bool,int,float) in .ini file
  - log: be able to right-click and log a window or tree-node into tty/file/clipboard?
@@ -3962,6 +3961,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
 
     bool value_changed = false;
     bool cancel_edit = false;
+    bool enter_pressed = false;
     if (g.ActiveId == id)
     {
 		// Edit in progress
@@ -4001,7 +4001,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
         else if (IsKeyPressedMap(ImGuiKey_End))                 edit_state.OnKeyboardPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask);
         else if (IsKeyPressedMap(ImGuiKey_Delete))              edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_DELETE | k_mask);
         else if (IsKeyPressedMap(ImGuiKey_Backspace))           edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask);
-        else if (IsKeyPressedMap(ImGuiKey_Enter))               { g.ActiveId = 0; }
+        else if (IsKeyPressedMap(ImGuiKey_Enter))               { g.ActiveId = 0; enter_pressed = true; }
         else if (IsKeyPressedMap(ImGuiKey_Escape))              { g.ActiveId = 0; cancel_edit = true; }
         else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Z))   edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_UNDO);      // I don't want to use shortcuts but we should probably have an Input-catch stack
         else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Y))   edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_REDO);
@@ -4122,7 +4122,10 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
 
     RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
-    return value_changed;
+    if ((flags & ImGuiInputTextFlags_EnterReturnsTrue) != 0)
+        return enter_pressed;
+    else
+        return value_changed;
 }
 
 static bool InputFloatN(const char* label, float* v, int components, int decimal_precision)
