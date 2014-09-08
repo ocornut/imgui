@@ -3279,7 +3279,7 @@ bool SliderFloat(const char* label, float* v, float v_min, float v_max, const ch
         g.ActiveId = g.SliderAsInputTextId;
         g.HoveredId = 0;
         window->FocusItemUnregister();      // Our replacement slider will override the focus ID (that we needed to declare previously to allow for a TAB focus to happen before we got selected)
-        value_changed = ImGui::InputText(label, text_buf, IM_ARRAYSIZE(text_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_AlignCenter);
+        value_changed = ImGui::InputText(label, text_buf, IM_ARRAYSIZE(text_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
         if (g.SliderAsInputTextId == 0)
         {
             // First frame
@@ -3834,7 +3834,7 @@ void ImGuiTextEditState::RenderTextScrolledClipped(ImFont font, float font_size,
 namespace ImGui
 {
 
-bool InputFloat(const char* label, float *v, float step, float step_fast, int decimal_precision)
+bool InputFloat(const char* label, float *v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags extra_flags)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -3857,7 +3857,8 @@ bool InputFloat(const char* label, float *v, float step, float step_fast, int de
     else
         ImFormatString(buf, IM_ARRAYSIZE(buf), "%.*f", decimal_precision, *v);
     bool value_changed = false;
-    if (ImGui::InputText("", buf, IM_ARRAYSIZE(buf), ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_AlignCenter|ImGuiInputTextFlags_AutoSelectAll))
+	const ImGuiInputTextFlags flags = extra_flags | (ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_AutoSelectAll);
+    if (ImGui::InputText("", buf, IM_ARRAYSIZE(buf), flags))
     {
         ApplyNumericalTextInput(buf, v);
         value_changed = true;
@@ -3891,10 +3892,10 @@ bool InputFloat(const char* label, float *v, float step, float step_fast, int de
     return value_changed;
 }
 
-bool InputInt(const char* label, int *v, int step, int step_fast)
+bool InputInt(const char* label, int *v, int step, int step_fast, ImGuiInputTextFlags extra_flags)
 {
     float f = (float)*v;
-    const bool value_changed = ImGui::InputFloat(label, &f, (float)step, (float)step_fast, 0);
+    const bool value_changed = ImGui::InputFloat(label, &f, (float)step, (float)step_fast, 0, extra_flags);
     *v = (int)f;
     return value_changed;
 }
@@ -5871,7 +5872,7 @@ void ShowTestWindow(bool* open)
         bool goto_line = ImGui::Button("Goto");
         ImGui::SameLine(); 
         ImGui::PushItemWidth(100);
-        ImGui::InputInt("##Line", &line, 0); 
+        goto_line |= ImGui::InputInt("##Line", &line, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::PopItemWidth();
         ImGui::BeginChild("Sub1", ImVec2(ImGui::GetWindowWidth()*0.5f,300));
         for (int i = 0; i < 100; i++)

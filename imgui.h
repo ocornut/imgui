@@ -215,12 +215,12 @@ namespace ImGui
     bool        CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value);
     bool        RadioButton(const char* label, bool active);
     bool        RadioButton(const char* label, int* v, int v_button);
-    bool        InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f, int decimal_precision = -1);
+    bool        InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0);
+    bool        InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f, int decimal_precision = -1, ImGuiInputTextFlags extra_flags = 0);
     bool        InputFloat2(const char* label, float v[2], int decimal_precision = -1);
     bool        InputFloat3(const char* label, float v[3], int decimal_precision = -1);
     bool        InputFloat4(const char* label, float v[4], int decimal_precision = -1);
-    bool        InputInt(const char* label, int* v, int step = 1, int step_fast = 100);
-    bool        InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0);
+    bool        InputInt(const char* label, int* v, int step = 1, int step_fast = 100, ImGuiInputTextFlags extra_flags = 0);
     bool        Combo(const char* label, int* current_item, const char** items, int items_count, int popup_height_items = 7);
     bool        Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int popup_height_items = 7);      // Separate items with \0, end item-list with \0\0
     bool        Combo(const char* label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int popup_height_items = 7);
@@ -292,9 +292,9 @@ enum ImGuiInputTextFlags_
     // Default: 0
     ImGuiInputTextFlags_CharsDecimal        = 1 << 0,   // Allow 0123456789.+-*/
     ImGuiInputTextFlags_CharsHexadecimal    = 1 << 1,   // Allow 0123456789ABCDEFabcdef
-    ImGuiInputTextFlags_AutoSelectAll       = 1 << 2,
-    ImGuiInputTextFlags_AlignCenter         = 1 << 3,
-    ImGuiInputTextFlags_EnterReturnsTrue    = 1 << 4,
+    ImGuiInputTextFlags_AutoSelectAll       = 1 << 2,   // Select entire text when first taking focus
+    ImGuiInputTextFlags_EnterReturnsTrue    = 1 << 3,   // Return 'true' when Enter is pressed (as opposed to when the value was modified)
+    //ImGuiInputTextFlags_AlignCenter       = 1 << 3,
 };
 
 // User fill ImGuiIO.KeyMap[] array with indices into the ImGuiIO.KeysDown[512] array
