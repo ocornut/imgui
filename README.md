@@ -51,6 +51,10 @@ Yes, you can alter the look of the interface to some degree: changing colors, si
 
 ![skinning screenshot 1](/web/skinning_sample_01.png?raw=true)
 
+<b>Can you develop features xxxx for ImGui?</b>
+
+Please use GitHub 'Issues' facilities to suggest and discuss improvements. If you are company and would like specific non-trivial features to be implemented, I am available for hire to work on or with ImGui. Donations are also welcome to support further work on the library. 
+
 
 Credits
 -------
