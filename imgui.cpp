@@ -5190,13 +5190,22 @@ bool    ImBitmapFont::LoadFromFile(const char* filename)
     if ((f = fopen(filename, "rb")) == NULL)
         return false;
     if (fseek(f, 0, SEEK_END)) 
+	{
+		fclose(f);
         return false;
+	}
     const long f_size = ftell(f);
     if (f_size == -1)
+	{
+		fclose(f);
         return false;
+	}
     DataSize = (size_t)f_size;
     if (fseek(f, 0, SEEK_SET)) 
+	{
+		fclose(f);
         return false;
+	}
     if ((Data = (unsigned char*)IM_MALLOC(DataSize)) == NULL)
     {
         fclose(f);
