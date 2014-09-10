@@ -6237,3 +6237,10 @@ void GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const voi
 };
 
 //-----------------------------------------------------------------------------
+
+//---- Include imgui_user.cpp at the end of imgui.cpp so you can include code that extends ImGui using its private data/functions.
+#ifdef IMGUI_INCLUDE_IMGUI_USER_CPP
+#include "imgui_user.cpp"
+#endif
+
+//-----------------------------------------------------------------------------
