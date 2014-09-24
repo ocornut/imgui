@@ -1,4 +1,4 @@
-// ImGui library v1.11
+// ImGui library v1.11+
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -301,7 +301,8 @@ ImGuiIO::ImGuiIO()
     Font = NULL;
 	FontYOffset = 0.0f;
     FontTexUvForWhite = ImVec2(0.0f,0.0f);
-    FontAllowScaling = false;
+	FontBaseScale = 1.0f;
+    FontAllowUserScaling = false;
     PixelCenterOffset = 0.0f;
     MousePos = ImVec2(-1,-1);
     MousePosPrev = ImVec2(-1,-1);
@@ -633,7 +634,7 @@ struct ImGuiState
     bool                    Initialized;
     ImGuiIO                 IO;
     ImGuiStyle              Style;
-	float					FontSize;							// == IO.Font->GetFontSize(). Vertical distance between two lines of text, aka == CalcTextSize(" ").y
+	float					FontSize;							// == IO.FontBaseScale * IO.Font->GetFontSize(). Vertical distance between two lines of text, aka == CalcTextSize(" ").y
 
     float                   Time;
     int                     FrameCount;
@@ -720,7 +721,7 @@ struct ImGuiWindow
     int                     LastFrameDrawn;
     float                   ItemWidthDefault;
     ImGuiStorage            StateStorage;
-    float                   FontScale;
+    float                   FontWindowScale;                    // Scale multipler per-window
 
     int                     FocusIdxCounter;                    // Start at -1 and increase as assigned via FocusItemRegister()
     int                     FocusIdxRequestCurrent;             // Item being requested for focus, rely on layout to be stable between the frame pressing TAB and the next frame
@@ -741,7 +742,7 @@ public:
 
     ImGuiAabb   Aabb() const                            { return ImGuiAabb(Pos, Pos+Size); }
     ImFont      Font() const                            { return GImGui.IO.Font; }
-    float       FontSize() const                        { return GImGui.FontSize * FontScale; }
+    float       FontSize() const                        { return GImGui.FontSize * FontWindowScale; }
     ImVec2      CursorPos() const                       { return DC.CursorPos; }
     float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0 : FontSize() + GImGui.Style.FramePadding.y * 2.0f; }
     ImGuiAabb   TitleBarAabb() const                    { return ImGuiAabb(Pos, Pos + ImVec2(SizeFull.x, TitleBarHeight())); }
@@ -973,7 +974,7 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
     AutoFitFrames = -1;
     LastFrameDrawn = -1;
     ItemWidthDefault = 0.0f;
-    FontScale = 1.0f;
+    FontWindowScale = 1.0f;
 
     if (ImLength(Size) < 0.001f)
         AutoFitFrames = 3;
@@ -1218,6 +1219,7 @@ void NewFrame()
     IM_ASSERT(g.IO.DeltaTime > 0.0f);
     IM_ASSERT(g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f);
     IM_ASSERT(g.IO.RenderDrawListsFn != NULL);  // Must be implemented
+	IM_ASSERT(g.IO.FontBaseScale > 0.0f);
 
     if (!g.Initialized)
     {
@@ -1245,7 +1247,7 @@ void NewFrame()
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
     g.Tooltip[0] = '\0';
-    g.FontSize = g.IO.Font->GetFontSize();
+	g.FontSize = g.IO.FontBaseScale * g.IO.Font->GetFontSize();
 
     // Update inputs state
     if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0)
@@ -1306,12 +1308,12 @@ void NewFrame()
         ImGuiWindow* window = g.HoveredWindow;
         if (g.IO.KeyCtrl)
         {
-            if (g.IO.FontAllowScaling)
+            if (g.IO.FontAllowUserScaling)
             {
                 // Zoom / Scale window
-                float new_font_scale = ImClamp(window->FontScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
-                float scale = new_font_scale / window->FontScale;
-                window->FontScale = new_font_scale;
+                float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
+                float scale = new_font_scale / window->FontWindowScale;
+                window->FontWindowScale = new_font_scale;
 
                 const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
                 window->Pos += offset;
@@ -2507,10 +2509,10 @@ ImDrawList* GetWindowDrawList()
     return window->DrawList;
 }
 
-void SetFontScale(float scale)
+void SetWindowFontScale(float scale)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->FontScale = scale;
+    window->FontWindowScale = scale;
 }
 
 ImVec2 GetCursorPos()
@@ -5533,7 +5535,7 @@ void ShowUserGuide()
     ImGui::BulletText("Click and drag on lower right corner to resize window.");
     ImGui::BulletText("Click and drag on any empty space to move window.");
     ImGui::BulletText("Mouse Wheel to scroll.");
-    if (g.IO.FontAllowScaling)
+    if (g.IO.FontAllowUserScaling)
         ImGui::BulletText("CTRL+Mouse Wheel to zoom window contents.");
     ImGui::BulletText("TAB/SHIFT+TAB to cycle thru keyboard editable fields.");
     ImGui::BulletText("CTRL+Click on a slider to input text.");

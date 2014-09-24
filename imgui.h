@@ -152,7 +152,7 @@ namespace ImGui
     ImVec2      GetWindowContentRegionMin();
     ImVec2      GetWindowContentRegionMax();
     ImDrawList* GetWindowDrawList();                                                // get rendering command-list if you want to append your own draw primitives.
-    void        SetFontScale(float scale);
+    void        SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontBaseScale if you want to scale all windows together.
     void        SetScrollPosHere();                                                 // adjust scrolling position to center into the current cursor position.
     void        SetTreeStateStorage(ImGuiStorage* tree);                            // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it).
     ImGuiStorage* GetTreeStateStorage();
@@ -406,7 +406,8 @@ struct ImGuiIO
     ImFont      Font;                       // <auto>                   // Gets passed to text functions. Typedef ImFont to the type you want (ImBitmapFont* or your own font).
 	float		FontYOffset;				// = 0.0f					// Offset font rendering by xx pixels in Y axis.
     ImVec2      FontTexUvForWhite;          // = (0.0f,0.0f)            // Font texture must have a white pixel at this UV coordinate. Adjust if you are using custom texture.
-    bool        FontAllowScaling;           // = false                  // Set to allow scaling text with CTRL+Wheel.
+	float       FontBaseScale;              // = 1.0f                   // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
+    bool        FontAllowUserScaling;       // = false                  // Set to allow scaling text with CTRL+Wheel.
     float       PixelCenterOffset;          // = 0.0f                   // Try to set to 0.5f or 0.375f if rendering is blurry
 
     // Settings - Rendering function (REQUIRED)
