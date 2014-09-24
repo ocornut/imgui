@@ -431,8 +431,8 @@ struct ImGuiIO
     char        InputCharacters[16];        // List of characters input (translated by user from keypress+keyboard state). Fill using AddInputCharacter() helper.
 
     // Output - Retrieve after calling NewFrame(), you can use them to discard inputs or hide them from the rest of your application
-    bool        WantCaptureMouse;           // ImGui is using your mouse input (= window is being hovered or widget is active).
-    bool        WantCaptureKeyboard;        // imGui is using your keyboard input (= widget is active).
+    bool        WantCaptureMouse;           // Mouse is hovering a window or widget is active (= ImGui will use your mouse input)
+    bool        WantCaptureKeyboard;        // Widget is active (= ImGui will use your keyboard input)
 
     // Function
     void        AddInputCharacter(char c);  // Helper to add a new character into InputCharacters[]
