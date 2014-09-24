@@ -163,6 +163,7 @@ namespace ImGui
 
     // Tooltip
     void        SetTooltip(const char* fmt, ...);                                   // set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). last call wins.
+    void        SetTooltipV(const char* fmt, va_list args);
     void        BeginTooltip();                                                     // use to create full-featured tooltip windows that aren't just text.
     void        EndTooltip();
 
@@ -194,9 +195,12 @@ namespace ImGui
     void        Text(const char* fmt, ...);
     void        TextV(const char* fmt, va_list args);
     void        TextColored(const ImVec4& col, const char* fmt, ...);               // shortcut to doing PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
+    void        TextColoredV(const ImVec4& col, const char* fmt, va_list args);
     void        TextUnformatted(const char* text, const char* text_end = NULL);     // doesn't require null terminated string if 'text_end' is specified. no copy done to any bounded stack buffer, better for long chunks of text.
     void        LabelText(const char* label, const char* fmt, ...);
+    void        LabelTextV(const char* label, const char* fmt, va_list args);
     void        BulletText(const char* fmt, ...);
+    void        BulletTextV(const char* fmt, va_list args);
     bool        Button(const char* label, ImVec2 size = ImVec2(0,0), bool repeat_when_held = false);
     bool        SmallButton(const char* label);
     bool        CollapsingHeader(const char* label, const char* str_id = NULL, const bool display_frame = true, const bool default_open = false);
@@ -228,6 +232,8 @@ namespace ImGui
     bool        TreeNode(const char* str_label_id);                                 // if returning 'true' the node is open and the user is responsible for calling TreePop
     bool        TreeNode(const char* str_id, const char* fmt, ...);                 // "
     bool        TreeNode(const void* ptr_id, const char* fmt, ...);                 // "
+    bool        TreeNodeV(const char* str_id, const char* fmt, va_list args);       // "
+    bool        TreeNodeV(const void* ptr_id, const char* fmt, va_list args);       // "
     void        TreePush(const char* str_id = NULL);                                // already called by TreeNode(), but you can call Push/Pop yourself for layouting purpose
     void        TreePush(const void* ptr_id = NULL);                                // "
     void        TreePop();

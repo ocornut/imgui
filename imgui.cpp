@@ -1844,13 +1844,18 @@ ImVec2 GetItemBoxMax()
     return window->DC.LastItemAabb.Max;
 }
 
-// Tooltip is sorted and turned into a BeginTooltip()/EndTooltip() sequence at the end of the frame. Each call override previous value.
-void SetTooltip(const char* fmt, ...)
+// Tooltip is stored and turned into a BeginTooltip()/EndTooltip() sequence at the end of the frame. Each call override previous value.
+void SetTooltipV(const char* fmt, va_list args)
 {
     ImGuiState& g = GImGui;
+    ImFormatStringV(g.Tooltip, IM_ARRAYSIZE(g.Tooltip), fmt, args);
+}
+
+void SetTooltip(const char* fmt, ...)
+{
     va_list args;
     va_start(args, fmt);
-    ImFormatStringV(g.Tooltip, IM_ARRAYSIZE(g.Tooltip), fmt, args);
+    SetTooltipV(fmt, args);
     va_end(args);
 }
 
@@ -2636,14 +2641,19 @@ void Text(const char* fmt, ...)
     va_end(args);
 }
 
-void TextColored(const ImVec4& col, const char* fmt, ...)
+void TextColoredV(const ImVec4& col, const char* fmt, va_list args)
 {
     ImGui::PushStyleColor(ImGuiCol_Text, col);
+    TextV(fmt, args);
+    ImGui::PopStyleColor();
+}
+
+void TextColored(const ImVec4& col, const char* fmt, ...)
+{
     va_list args;
     va_start(args, fmt);
-    TextV(fmt, args);
+    TextColoredV(col, fmt, args);
     va_end(args);
-    ImGui::PopStyleColor();
 }
 
 void TextUnformatted(const char* text, const char* text_end)
@@ -2758,7 +2768,7 @@ void AlignFirstTextHeightToWidgets()
 }
 
 // Add a label+text combo aligned to other label+value widgets
-void LabelText(const char* label, const char* fmt, ...)
+void LabelTextV(const char* label, const char* fmt, va_list args)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -2768,11 +2778,8 @@ void LabelText(const char* label, const char* fmt, ...)
     const float w = window->DC.ItemWidth.back();
 
     static char buf[1024];
-    va_list args;
-    va_start(args, fmt);
     const char* text_begin = &buf[0];
     const char* text_end = text_begin + ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
-    va_end(args);
 
     const ImVec2 text_size = CalcTextSize(label);
     const ImGuiAabb value_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2, text_size.y));
@@ -2785,6 +2792,14 @@ void LabelText(const char* label, const char* fmt, ...)
     // Render
     RenderText(value_bb.Min, text_begin, text_end);
     RenderText(ImVec2(value_bb.Max.x + style.ItemInnerSpacing.x, value_bb.Min.y), label);
+}
+
+void LabelText(const char* label, const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    LabelTextV(label, fmt, args);
+    va_end(args);
 }
 
 static bool ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat)
@@ -3080,7 +3095,7 @@ bool CollapsingHeader(const char* label, const char* str_id, const bool display_
 }
 
 // Text with a little bullet aligned to the typical tree node.
-void BulletText(const char* fmt, ...)
+void BulletTextV(const char* fmt, va_list args)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -3088,11 +3103,8 @@ void BulletText(const char* fmt, ...)
         return;
 
     static char buf[1024];
-    va_list args;
-    va_start(args, fmt);
     const char* text_begin = buf;
     const char* text_end = text_begin + ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
-    va_end(args);
 
     const float line_height = window->FontSize();
     const ImVec2 text_size = CalcTextSize(text_begin, text_end);
@@ -3108,14 +3120,19 @@ void BulletText(const char* fmt, ...)
     RenderText(bb.Min+ImVec2(window->FontSize()+g.Style.FramePadding.x*2,0), text_begin, text_end);
 }
 
-// If returning 'true' the node is open and the user is responsible for calling TreePop
-bool TreeNode(const char* str_id, const char* fmt, ...)
+void BulletText(const char* fmt, ...)
 {
-    static char buf[1024];
     va_list args;
     va_start(args, fmt);
-    ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
+    BulletTextV(fmt, args);
     va_end(args);
+}
+
+// If returning 'true' the node is open and the user is responsible for calling TreePop
+bool TreeNodeV(const char* str_id, const char* fmt, va_list args)
+{
+    static char buf[1024];
+    ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
 
     if (!str_id || !str_id[0])
         str_id = fmt;
@@ -3130,14 +3147,20 @@ bool TreeNode(const char* str_id, const char* fmt, ...)
     return opened;
 }
 
-// If returning 'true' the node is open and the user is responsible for calling TreePop
-bool TreeNode(const void* ptr_id, const char* fmt, ...)
+bool TreeNode(const char* str_id, const char* fmt, ...)
 {
-    static char buf[1024];
     va_list args;
     va_start(args, fmt);
-    ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
+    bool s = TreeNodeV(str_id, fmt, args);
     va_end(args);
+    return s;
+}
+
+// If returning 'true' the node is open and the user is responsible for calling TreePop
+bool TreeNodeV(const void* ptr_id, const char* fmt, va_list args)
+{
+    static char buf[1024];
+    ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
 
     if (!ptr_id)
         ptr_id = fmt;
@@ -3150,6 +3173,15 @@ bool TreeNode(const void* ptr_id, const char* fmt, ...)
         ImGui::TreePush(ptr_id);
 
     return opened;
+}
+
+bool TreeNode(const void* ptr_id, const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    bool s = TreeNodeV(ptr_id, fmt, args);
+    va_end(args);
+    return s;
 }
 
 bool TreeNode(const char* str_label_id)
