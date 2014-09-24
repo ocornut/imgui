@@ -7,6 +7,7 @@
 /*
  
  MISSION STATEMENT
+ =================
 
  - easy to use to create code-driven and data-driven tools
  - easy to use to create adhoc short-lived tools and long-lived, more elaborate tools
@@ -24,7 +25,8 @@
  - assume ASCII text, using strlen() and [] operators, etc
  - occasionally use statically sized buffers for string manipulations - won't crash, but some long text may be clipped
  
- USER GUIDE
+ END-USER GUIDE
+ ==============
 
  - double-click title bar to collapse window
  - click upper right corner to close a window, available when 'bool* open' is passed to ImGui::Begin()
@@ -46,9 +48,12 @@
    - You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract (because - would set a negative value!)
 
  PROGRAMMER GUIDE
+ ================
 
  - your code creates the UI, if your code doesn't run the UI is gone! == dynamic UI, no construction step, less data retention on your side, no state duplication, less sync, less errors.
  - see ImGui::ShowTestWindow() for user-side sample code
+ - see examples/ folder for standalone sample applications.
+
  - getting started:
    - initialisation: call ImGui::GetIO() and fill the 'Settings' data.
    - every frame: 
@@ -90,6 +95,7 @@
         }
 
  TROUBLESHOOTING & FREQUENTLY ASKED QUESTIONS
+ ============================================
 
  - if text or lines are blurry when integrating ImGui in your engine:
    - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
@@ -130,7 +136,16 @@
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
  - tip: read the ShowTestWindow() code for more example of how to use ImGui!
 
- ISSUES AND TODO-LIST
+ API CHANGES
+ ===========
+
+  - 2014/09/24 (1.12) renamed SetFontScale() to SetWindowFontScale().
+  - 2014/08/30 (1.09) removed IO.FontHeight (now computed automatically)
+  - 2014/08/30 (1.09) moved IMGUI_FONT_TEX_UV_FOR_WHITE preprocessor define to IO.FontTexUvForWhite
+  - 2014/08/28 (1.09) changed the behaviour of IO.PixelCenterOffset following various rendering fixes
+
+ ISSUES & TODO-LIST
+ ==================
 
  - misc: merge ImVec4 / ImGuiAabb, they are essentially duplicate containers
  - window: autofit is losing its purpose when user relies on any dynamic layout (window width multiplier, column). maybe just discard autofit?
