@@ -57,10 +57,10 @@ struct ImVec4
 
 namespace ImGui
 {
-	// Proxy functions to access the MemAllocFn/MemFreeFn/MemReallocFn pointers in ImGui::GetIO(). The only reason they exist here is to allow ImVector<> to compile inline.
+    // Proxy functions to access the MemAllocFn/MemFreeFn/MemReallocFn pointers in ImGui::GetIO(). The only reason they exist here is to allow ImVector<> to compile inline.
     void*       MemAlloc(size_t sz);
-	void        MemFree(void* ptr);
-	void*       MemRealloc(void* ptr, size_t sz);
+    void        MemFree(void* ptr);
+    void*       MemRealloc(void* ptr, size_t sz);
 };
 
 // std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug). 
@@ -180,7 +180,7 @@ namespace ImGui
     void        SetCursorPos(const ImVec2& pos);                                    // "
     void        SetCursorPosX(float x);                                             // "
     void        SetCursorPosY(float y);                                             // "
-    ImVec2      GetCursorScreenPos();												// cursor position in screen space
+    ImVec2      GetCursorScreenPos();                                               // cursor position in screen space
     void        AlignFirstTextHeightToWidgets();                                    // call once if the first item on the line is a Text() item and you want to vertically lower it to match subsequent (bigger) widgets.
     float       GetTextLineSpacing();
     float       GetTextLineHeight();
@@ -263,10 +263,10 @@ namespace ImGui
     bool        IsKeyPressed(int key_index, bool repeat = true);                    // key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry
     bool        IsMouseClicked(int button, bool repeat = false);
     bool        IsMouseDoubleClicked(int button);
-	bool		IsMouseHoveringWindow();                                            // is mouse hovering current window ("window" in API names always refer to current window)
-	bool		IsMouseHoveringAnyWindow();											// is mouse hovering any active imgui window
+    bool        IsMouseHoveringWindow();                                            // is mouse hovering current window ("window" in API names always refer to current window)
+    bool        IsMouseHoveringAnyWindow();                                         // is mouse hovering any active imgui window
     bool        IsMouseHoveringBox(const ImVec2& box_min, const ImVec2& box_max);   // is mouse hovering given bounding box
-	bool		IsPosHoveringAnyWindow(const ImVec2& pos);							// is given position hovering any active imgui window
+    bool        IsPosHoveringAnyWindow(const ImVec2& pos);                          // is given position hovering any active imgui window
     ImVec2      GetMousePos();                                                      // shortcut to ImGui::GetIO().MousePos provided by user, to be consistent with other calls
     float       GetTime();
     int         GetFrameCount();
@@ -410,9 +410,9 @@ struct ImGuiIO
     float       MouseDoubleClickMaxDist;    // = 6.0f                   // Distance threshold to stay in to validate a double-click, in pixels.
     int         KeyMap[ImGuiKey_COUNT];     // <unset>                  // Map of indices into the KeysDown[512] entries array
     ImFont      Font;                       // <auto>                   // Gets passed to text functions. Typedef ImFont to the type you want (ImBitmapFont* or your own font).
-	float		FontYOffset;				// = 0.0f					// Offset font rendering by xx pixels in Y axis.
+    float       FontYOffset;                // = 0.0f                   // Offset font rendering by xx pixels in Y axis.
     ImVec2      FontTexUvForWhite;          // = (0.0f,0.0f)            // Font texture must have a white pixel at this UV coordinate. Adjust if you are using custom texture.
-	float       FontBaseScale;              // = 1.0f                   // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
+    float       FontBaseScale;              // = 1.0f                   // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
     bool        FontAllowUserScaling;       // = false                  // Set to allow scaling text with CTRL+Wheel.
     float       PixelCenterOffset;          // = 0.0f                   // Try to set to 0.5f or 0.375f if rendering is blurry
 
@@ -426,12 +426,12 @@ struct ImGuiIO
     // NB- for SetClipboardTextFn, the string is *NOT* zero-terminated at 'text_end'
     const char* (*GetClipboardTextFn)();                                        
     void        (*SetClipboardTextFn)(const char* text, const char* text_end);
-	
-	// Settings - Memory allocation
-	// Default to posix malloc/realloc/free functions.
-	void*       (*MemAllocFn)(size_t sz);
-	void*       (*MemReallocFn)(void* ptr, size_t sz);
-	void        (*MemFreeFn)(void* ptr);
+    
+    // Settings - Memory allocation
+    // Default to posix malloc/realloc/free functions.
+    void*       (*MemAllocFn)(size_t sz);
+    void*       (*MemReallocFn)(void* ptr, size_t sz);
+    void        (*MemFreeFn)(void* ptr);
 
     // Input - Fill before calling NewFrame()
     ImVec2      MousePos;                   // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
@@ -668,7 +668,7 @@ struct ImBitmapFont
     void                    BuildLookupTable();
     const FntGlyph *        FindGlyph(unsigned short c) const;
     float                   GetFontSize() const { return (float)Info->FontSize; }
-	bool					IsLoaded() const { return Info != NULL && Common != NULL && Glyphs != NULL; }
+    bool                    IsLoaded() const { return Info != NULL && Common != NULL && Glyphs != NULL; }
 
     ImVec2                  CalcTextSize(float size, float max_width, const char* text_begin, const char* text_end, const char** remaining = NULL) const;
     void                    RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices) const;

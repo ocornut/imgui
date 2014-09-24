@@ -109,7 +109,7 @@
  - if you want to use a different font than the default:
    - create bitmap font data using BMFont, make sure that BMFont is exporting the .fnt file in Binary mode.
        io.Font = new ImBitmapFont();
-	   io.Font->LoadFromFile("path_to_your_fnt_file.fnt");
+       io.Font->LoadFromFile("path_to_your_fnt_file.fnt");
    - load your texture yourself. texture *MUST* have white pixel at UV coordinate io.FontTexUvForWhite. This is used to draw all solid shapes.
    - the extra_fonts/ folder provides examples of using external fonts.
 
@@ -119,8 +119,8 @@
      when you call Button("OK") the button shows "OK" and also use "OK" as an ID.
    - ID are uniquely scoped within Windows so no conflict can happen if you have two buttons called "OK" in two different Windows.
      within a same Window, use PushID() / PopID() to easily create scopes and avoid ID conflicts. 
-	 so if you have a loop creating "multiple" items, you can use PushID() / PopID() with the index of each item, or their pointer, etc.
-	 some functions like TreeNode() implicitly creates a scope for you by calling PushID()
+     so if you have a loop creating "multiple" items, you can use PushID() / PopID() with the index of each item, or their pointer, etc.
+     some functions like TreeNode() implicitly creates a scope for you by calling PushID()
    - when dealing with trees, ID are important because you want to preserve the opened/closed state of tree nodes.
      depending on your use cases you may want to use strings, indices or pointers as ID. experiment and see what makes more sense!
       e.g. When displaying a single object, using a static string as ID will preserve your node open/closed state when the targetted object change
@@ -315,9 +315,9 @@ ImGuiIO::ImGuiIO()
     IniFilename = "imgui.ini";
     LogFilename = "imgui_log.txt";
     Font = NULL;
-	FontYOffset = 0.0f;
+    FontYOffset = 0.0f;
     FontTexUvForWhite = ImVec2(0.0f,0.0f);
-	FontBaseScale = 1.0f;
+    FontBaseScale = 1.0f;
     FontAllowUserScaling = false;
     PixelCenterOffset = 0.0f;
     MousePos = ImVec2(-1,-1);
@@ -325,12 +325,12 @@ ImGuiIO::ImGuiIO()
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
 
-	// Memory management functions, default to posix
-	MemAllocFn = malloc;
-	MemReallocFn = realloc;
-	MemFreeFn = free;
+    // Memory management functions, default to posix
+    MemAllocFn = malloc;
+    MemReallocFn = realloc;
+    MemFreeFn = free;
 
-	// Platform dependant default implementations
+    // Platform dependant default implementations
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
 }
@@ -655,7 +655,7 @@ struct ImGuiState
     bool                    Initialized;
     ImGuiIO                 IO;
     ImGuiStyle              Style;
-	float					FontSize;							// == IO.FontBaseScale * IO.Font->GetFontSize(). Vertical distance between two lines of text, aka == CalcTextSize(" ").y
+    float                   FontSize;                           // == IO.FontBaseScale * IO.Font->GetFontSize(). Vertical distance between two lines of text, aka == CalcTextSize(" ").y
 
     float                   Time;
     int                     FrameCount;
@@ -688,7 +688,7 @@ struct ImGuiState
     // Logging
     bool                    LogEnabled;
     FILE*                   LogFile;
-    ImGuiTextBuffer*        LogClipboard;						// pointer so our GImGui static constructor doesn't call heap allocators.
+    ImGuiTextBuffer*        LogClipboard;                       // pointer so our GImGui static constructor doesn't call heap allocators.
     int                     LogAutoExpandMaxDepth;
 
     ImGuiState()
@@ -1085,19 +1085,19 @@ namespace ImGui
 
 void*   MemAlloc(size_t sz)
 {
-	return GImGui.IO.MemAllocFn(sz);
+    return GImGui.IO.MemAllocFn(sz);
 }
 
 void    MemFree(void* ptr)
 {
-	return GImGui.IO.MemFreeFn(ptr);
+    return GImGui.IO.MemFreeFn(ptr);
 }
 
 void*   MemRealloc(void* ptr, size_t sz)
 {
-	return GImGui.IO.MemReallocFn(ptr, sz);
+    return GImGui.IO.MemReallocFn(ptr, sz);
 }
-	
+    
 static ImGuiIniData* FindWindowSettings(const char* name)
 {
     ImGuiState& g = GImGui;
@@ -1255,7 +1255,7 @@ void NewFrame()
     IM_ASSERT(g.IO.DeltaTime > 0.0f);
     IM_ASSERT(g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f);
     IM_ASSERT(g.IO.RenderDrawListsFn != NULL);  // Must be implemented
-	IM_ASSERT(g.IO.FontBaseScale > 0.0f);
+    IM_ASSERT(g.IO.FontBaseScale > 0.0f);
 
     if (!g.Initialized)
     {
@@ -1274,16 +1274,16 @@ void NewFrame()
             g.IO.Font = (ImBitmapFont*)ImGui::MemAlloc(sizeof(ImBitmapFont));
             new(g.IO.Font) ImBitmapFont();
             g.IO.Font->LoadFromMemory(fnt_data, fnt_size);
-			g.IO.FontYOffset = +1;
+            g.IO.FontYOffset = +1;
         }
         g.Initialized = true;
     }
-	IM_ASSERT(g.IO.Font && g.IO.Font->IsLoaded());  // Font not loaded
+    IM_ASSERT(g.IO.Font && g.IO.Font->IsLoaded());  // Font not loaded
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
     g.Tooltip[0] = '\0';
-	g.FontSize = g.IO.FontBaseScale * g.IO.Font->GetFontSize();
+    g.FontSize = g.IO.FontBaseScale * g.IO.Font->GetFontSize();
 
     // Update inputs state
     if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0)
@@ -1757,18 +1757,18 @@ bool IsMouseHoveringWindow()
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-	return g.HoveredWindow == window;
+    return g.HoveredWindow == window;
 }
 
 bool IsMouseHoveringAnyWindow()
 {
     ImGuiState& g = GImGui;
-	return g.HoveredWindow != NULL;
+    return g.HoveredWindow != NULL;
 }
 
 bool IsPosHoveringAnyWindow(const ImVec2& pos)
 {
-	return ImGui::FindHoveredWindow(pos, false) != NULL;
+    return ImGui::FindHoveredWindow(pos, false) != NULL;
 }
 
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
@@ -1963,7 +1963,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
         // Create window the first time, and load settings
         if (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip))
         {
-			// Tooltip and child windows don't store settings
+            // Tooltip and child windows don't store settings
             window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
             new(window) ImGuiWindow(name, ImVec2(0,0), size);
         }
@@ -2141,7 +2141,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
             }
             else if (!(window->Flags & ImGuiWindowFlags_NoResize))
             {
-				// Draw resize grip
+                // Draw resize grip
                 const ImGuiAabb resize_aabb(window->Aabb().GetBR()-ImVec2(18,18), window->Aabb().GetBR());
                 const ImGuiID resize_id = window->GetID("#RESIZE");
                 bool hovered, held;
@@ -2186,7 +2186,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
             if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
                 window->DrawList->AddRectFilled(title_bar_aabb.GetTL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_TitleBg), g.Style.WindowRounding, 1|2);
 
-			// Borders
+            // Borders
             if (window->Flags & ImGuiWindowFlags_ShowBorders)
             {
                 const float rounding = (window->Flags & ImGuiWindowFlags_ComboBox) ? 0.0f : g.Style.WindowRounding;
@@ -2663,7 +2663,7 @@ void TextUnformatted(const char* text, const char* text_end)
     if (window->SkipItems)
         return;
 
-	IM_ASSERT(text != NULL);
+    IM_ASSERT(text != NULL);
     const char* text_begin = text;
     if (text_end == NULL)
         text_end = text + strlen(text);
@@ -3026,7 +3026,7 @@ bool CollapsingHeader(const char* label, const char* str_id, const bool display_
         label = str_id;
     const ImGuiID id = window->GetID(str_id);
 
-	// We only write to the tree storage if the user clicks
+    // We only write to the tree storage if the user clicks
     ImGuiStorage* tree = window->DC.StateStorage;
     bool opened;
     if (window->DC.OpenNextNode != -1)
@@ -3040,7 +3040,7 @@ bool CollapsingHeader(const char* label, const char* str_id, const bool display_
         opened = tree->GetInt(id, default_open) != 0;
     }
 
-	// Framed header expand a little outside the default padding
+    // Framed header expand a little outside the default padding
     const ImVec2 window_padding = window->WindowPadding();
     const ImVec2 text_size = CalcTextSize(label);
     const ImVec2 pos_min = window->DC.CursorPos;
@@ -3077,14 +3077,14 @@ bool CollapsingHeader(const char* label, const char* str_id, const bool display_
     const ImU32 col = window->Color((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
     if (display_frame)
     {
-		// Framed type
+        // Framed type
         RenderFrame(bb.Min, bb.Max, col, true);
         RenderCollapseTriangle(bb.Min + style.FramePadding, opened, 1.0f, true);
         RenderText(bb.Min + style.FramePadding + ImVec2(window->FontSize() + style.FramePadding.x*2,0), label);
     }
     else
     {
-		// Unframed typed for tree nodes
+        // Unframed typed for tree nodes
         if ((held && hovered) || hovered)
             RenderFrame(bb.Min, bb.Max, col, false);
         RenderCollapseTriangle(bb.Min + ImVec2(style.FramePadding.x, window->FontSize()*0.15f), opened, 0.70f, false);
@@ -3477,7 +3477,7 @@ bool SliderFloat(const char* label, float* v, float v_min, float v_max, const ch
         window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, window->Color(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab));
     }
 
-	// Draw value using user-provided display format so user can add prefix/suffix/decorations to the value.
+    // Draw value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
     ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), display_format, *v);
     RenderText(ImVec2(slider_bb.GetCenter().x-CalcTextSize(value_buf).x*0.5f, frame_bb.Min.y + style.FramePadding.y), value_buf);
@@ -3946,14 +3946,14 @@ bool InputFloat(const char* label, float *v, float step, float step_fast, int de
     else
         ImFormatString(buf, IM_ARRAYSIZE(buf), "%.*f", decimal_precision, *v);
     bool value_changed = false;
-	const ImGuiInputTextFlags flags = extra_flags | (ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_AutoSelectAll);
+    const ImGuiInputTextFlags flags = extra_flags | (ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_AutoSelectAll);
     if (ImGui::InputText("", buf, IM_ARRAYSIZE(buf), flags))
     {
         ApplyNumericalTextInput(buf, v);
         value_changed = true;
     }
 
-	// Step buttons
+    // Step buttons
     if (step > 0.0f)
     {
         ImGui::PopItemWidth();
@@ -4054,7 +4054,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
     bool enter_pressed = false;
     if (g.ActiveId == id)
     {
-		// Edit in progress
+        // Edit in progress
         edit_state.BufSize = buf_size < IM_ARRAYSIZE(edit_state.Text) ? buf_size : IM_ARRAYSIZE(edit_state.Text);
         edit_state.Font = window->Font();
         edit_state.FontSize = window->FontSize();
@@ -5272,29 +5272,29 @@ void    ImBitmapFont::Clear()
 
 bool    ImBitmapFont::LoadFromFile(const char* filename)
 {
-	IM_ASSERT(!IsLoaded());		// Call Clear()
+    IM_ASSERT(!IsLoaded());     // Call Clear()
 
     // Load file
     FILE* f;
     if ((f = fopen(filename, "rb")) == NULL)
         return false;
     if (fseek(f, 0, SEEK_END)) 
-	{
-		fclose(f);
+    {
+        fclose(f);
         return false;
-	}
+    }
     const long f_size = ftell(f);
     if (f_size == -1)
-	{
-		fclose(f);
+    {
+        fclose(f);
         return false;
-	}
+    }
     DataSize = (size_t)f_size;
     if (fseek(f, 0, SEEK_SET)) 
-	{
-		fclose(f);
+    {
+        fclose(f);
         return false;
-	}
+    }
     if ((Data = (unsigned char*)ImGui::MemAlloc(DataSize)) == NULL)
     {
         fclose(f);
@@ -5313,9 +5313,9 @@ bool    ImBitmapFont::LoadFromFile(const char* filename)
 
 bool    ImBitmapFont::LoadFromMemory(const void* data, size_t data_size)
 {
-	IM_ASSERT(!IsLoaded());			// Call Clear()
+    IM_ASSERT(!IsLoaded());         // Call Clear()
 
-	Data = (unsigned char*)data;
+    Data = (unsigned char*)data;
     DataSize = data_size;
 
     // Parse data
@@ -5454,7 +5454,7 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
 
     // Align to be pixel perfect
     pos.x = (float)(int)pos.x;
-	pos.y = (float)(int)pos.y + GImGui.IO.FontYOffset;
+    pos.y = (float)(int)pos.y + GImGui.IO.FontYOffset;
 
     const ImVec4 clip_rect = clip_rect_ref;
 
@@ -6088,12 +6088,12 @@ void ShowTestWindow(bool* open)
     if (ImGui::CollapsingHeader("Filtering"))
     {
         static ImGuiTextFilter filter;
-		ImGui::Text("Filter usage:\n"
-			        "  \"\"         display all lines\n"
-			        "  \"xxx\"      display lines containing \"xxx\"\n"
-					"  \"xxx,yyy\"  display lines containing \"xxx\" or \"yyy\"\n"
-					"  \"-xxx\"     hide lines containing \"xxx\"");
-		filter.Draw();
+        ImGui::Text("Filter usage:\n"
+                    "  \"\"         display all lines\n"
+                    "  \"xxx\"      display lines containing \"xxx\"\n"
+                    "  \"xxx,yyy\"  display lines containing \"xxx\" or \"yyy\"\n"
+                    "  \"-xxx\"     hide lines containing \"xxx\"");
+        filter.Draw();
         const char* lines[] = { "aaa1.c", "bbb1.c", "ccc1.c", "aaa2.cpp", "bbb2.cpp", "ccc2.cpp", "abc.h", "hello, world" };
         for (size_t i = 0; i < IM_ARRAYSIZE(lines); i++)
             if (filter.PassFilter(lines[i]))
