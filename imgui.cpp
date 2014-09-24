@@ -136,8 +136,8 @@
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
  - tip: read the ShowTestWindow() code for more example of how to use ImGui!
 
- API CHANGES
- ===========
+ API BREAKING CHANGES
+ ====================
 
   - 2014/09/24 (1.12) renamed SetFontScale() to SetWindowFontScale()
   - 2014/09/24 (1.12) moved IM_MALLOC/IM_REALLOC/IM_FREE preprocessor defines to IO.MemAllocFn/IO.MemReallocFn/IO.MemFreeFn
