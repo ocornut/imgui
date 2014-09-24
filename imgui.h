@@ -260,9 +260,10 @@ namespace ImGui
     bool        IsKeyPressed(int key_index, bool repeat = true);                    // key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry
     bool        IsMouseClicked(int button, bool repeat = false);
     bool        IsMouseDoubleClicked(int button);
-	bool		IsMouseHoveringWindow();                                            // is hovering current window ("window" in API names always refer to current window)
-	bool		IsMouseHoveringAnyWindow();											// is hovering any active imgui window
-    bool        IsMouseHoveringBox(const ImVec2& box_min, const ImVec2& box_max);   // is hovering given bounding box
+	bool		IsMouseHoveringWindow();                                            // is mouse hovering current window ("window" in API names always refer to current window)
+	bool		IsMouseHoveringAnyWindow();											// is mouse hovering any active imgui window
+    bool        IsMouseHoveringBox(const ImVec2& box_min, const ImVec2& box_max);   // is mouse hovering given bounding box
+	bool		IsPosHoveringAnyWindow(const ImVec2& pos);							// is given position hovering any active imgui window
     ImVec2      GetMousePos();                                                      // shortcut to ImGui::GetIO().MousePos provided by user, to be consistent with other calls
     float       GetTime();
     int         GetFrameCount();

@@ -1745,6 +1745,11 @@ bool IsMouseHoveringAnyWindow()
 	return g.HoveredWindow != NULL;
 }
 
+bool IsPosHoveringAnyWindow(const ImVec2& pos)
+{
+	return ImGui::FindHoveredWindow(pos, false) != NULL;
+}
+
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
 {
     ImGuiState& g = GImGui;
