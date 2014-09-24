@@ -10,7 +10,7 @@
 
 static GLFWwindow* window;
 static GLuint fontTex;
-static float content_scale[2] = {1.0f, 1.0f};
+static ImVec2 mousePosScale(1.0f, 1.0f);
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
@@ -150,9 +150,8 @@ void InitImGui()
     int fb_w, fb_h;
     glfwGetWindowSize(window, &w, &h);
     glfwGetFramebufferSize(window, &fb_w, &fb_h);
-
-    content_scale[0] = fb_w / w;
-    content_scale[1] = fb_h / h;
+    mousePosScale.x = (float)fb_w / w;                  // Some screens e.g. Retina display have framebuffer size != from window size, and mouse inputs are given in window/screen coordinates.
+    mousePosScale.y = (float)fb_h / h;
 
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)fb_w, (float)fb_h);  // Display size, in pixels. For clamping windows positions.
@@ -208,7 +207,7 @@ void UpdateImGui()
     // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
     double mouse_x, mouse_y;
     glfwGetCursorPos(window, &mouse_x, &mouse_y);
-    io.MousePos = ImVec2((float)mouse_x * content_scale[0], (float)mouse_y * content_scale[1]); // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+    io.MousePos = ImVec2((float)mouse_x * mousePosScale.x, (float)mouse_y * mousePosScale.y); // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
     io.MouseDown[0] = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != 0;
     io.MouseDown[1] = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) != 0;
 
