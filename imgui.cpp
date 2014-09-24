@@ -139,7 +139,8 @@
  API CHANGES
  ===========
 
-  - 2014/09/24 (1.12) renamed SetFontScale() to SetWindowFontScale().
+  - 2014/09/24 (1.12) renamed SetFontScale() to SetWindowFontScale()
+  - 2014/09/24 (1.12) moved IM_MALLOC/IM_REALLOC/IM_FREE preprocessor defines to IO.MemAllocFn/IO.MemReallocFn/IO.MemFreeFn
   - 2014/08/30 (1.09) removed IO.FontHeight (now computed automatically)
   - 2014/08/30 (1.09) moved IMGUI_FONT_TEX_UV_FOR_WHITE preprocessor define to IO.FontTexUvForWhite
   - 2014/08/28 (1.09) changed the behaviour of IO.PixelCenterOffset following various rendering fixes
@@ -324,7 +325,12 @@ ImGuiIO::ImGuiIO()
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
 
-    // Platform dependant default implementations
+	// Memory management functions, default to posix
+	MemAllocFn = malloc;
+	MemReallocFn = realloc;
+	MemFreeFn = free;
+
+	// Platform dependant default implementations
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
 }
@@ -393,7 +399,7 @@ static int ImStricmp(const char* str1, const char* str2)
 
 static char* ImStrdup(const char *str)
 {
-    char *buff = (char*)IM_MALLOC(strlen(str) + 1);
+    char *buff = (char*)ImGui::MemAlloc(strlen(str) + 1);
     IM_ASSERT(buff);
     strcpy(buff, str);
     return buff;
@@ -641,7 +647,7 @@ struct ImGuiIniData
     bool    Collapsed;
 
     ImGuiIniData() { memset(this, 0, sizeof(*this)); }
-    ~ImGuiIniData() { if (Name) { IM_FREE(Name); Name = NULL; } }
+    ~ImGuiIniData() { if (Name) { ImGui::MemFree(Name); Name = NULL; } }
 };
 
 struct ImGuiState
@@ -998,16 +1004,16 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
     FocusIdxRequestCurrent = IM_INT_MAX;
     FocusIdxRequestNext = IM_INT_MAX;
 
-    DrawList = (ImDrawList*)IM_MALLOC(sizeof(ImDrawList));
+    DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
     new(DrawList) ImDrawList();
 }
 
 ImGuiWindow::~ImGuiWindow()
 {
     DrawList->~ImDrawList();
-    IM_FREE(DrawList);
+    ImGui::MemFree(DrawList);
     DrawList = NULL;
-    IM_FREE(Name);
+    ImGui::MemFree(Name);
     Name = NULL;
 }
 
@@ -1077,6 +1083,21 @@ void ImGuiWindow::AddToRenderList()
 namespace ImGui
 {
 
+void*   MemAlloc(size_t sz)
+{
+	return GImGui.IO.MemAllocFn(sz);
+}
+
+void    MemFree(void* ptr)
+{
+	return GImGui.IO.MemFreeFn(ptr);
+}
+
+void*   MemRealloc(void* ptr, size_t sz)
+{
+	return GImGui.IO.MemReallocFn(ptr, sz);
+}
+	
 static ImGuiIniData* FindWindowSettings(const char* name)
 {
     ImGuiState& g = GImGui;
@@ -1087,7 +1108,7 @@ static ImGuiIniData* FindWindowSettings(const char* name)
         if (ImStricmp(ini->Name, name) == 0)
             return ini;
     }
-    ImGuiIniData* ini = (ImGuiIniData*)IM_MALLOC(sizeof(ImGuiIniData));
+    ImGuiIniData* ini = (ImGuiIniData*)ImGui::MemAlloc(sizeof(ImGuiIniData));
     new(ini) ImGuiIniData();
     ini->Name = ImStrdup(name);
     ini->Collapsed = false;
@@ -1127,12 +1148,12 @@ static void LoadSettings()
        fclose(f); 
        return; 
     }
-    char* f_data = (char*)IM_MALLOC(f_size+1);
+    char* f_data = (char*)ImGui::MemAlloc(f_size+1);
     f_size = fread(f_data, 1, f_size, f); // Text conversion alter read size so let's not be fussy about return value
     fclose(f);
     if (f_size == 0)
     {
-        IM_FREE(f_data);
+        ImGui::MemFree(f_data);
         return;
     }
     f_data[f_size] = 0;
@@ -1166,7 +1187,7 @@ static void LoadSettings()
         line_start = line_end+1;
     }
 
-    IM_FREE(f_data);
+    ImGui::MemFree(f_data);
 }
 
 static void SaveSettings()
@@ -1239,7 +1260,7 @@ void NewFrame()
     if (!g.Initialized)
     {
         // Initialize on first frame
-        g.LogClipboard = (ImGuiTextBuffer*)IM_MALLOC(sizeof(ImGuiTextBuffer));
+        g.LogClipboard = (ImGuiTextBuffer*)ImGui::MemAlloc(sizeof(ImGuiTextBuffer));
         new(g.LogClipboard) ImGuiTextBuffer();
 
         IM_ASSERT(g.Settings.empty());
@@ -1250,7 +1271,7 @@ void NewFrame()
             const void* fnt_data;
             unsigned int fnt_size;
             ImGui::GetDefaultFontData(&fnt_data, &fnt_size, NULL, NULL);
-            g.IO.Font = (ImBitmapFont*)IM_MALLOC(sizeof(ImBitmapFont));
+            g.IO.Font = (ImBitmapFont*)ImGui::MemAlloc(sizeof(ImBitmapFont));
             new(g.IO.Font) ImBitmapFont();
             g.IO.Font->LoadFromMemory(fnt_data, fnt_size);
 			g.IO.FontYOffset = +1;
@@ -1380,7 +1401,7 @@ void Shutdown()
     for (size_t i = 0; i < g.Windows.size(); i++)
     {
         g.Windows[i]->~ImGuiWindow();
-        IM_FREE(g.Windows[i]);
+        ImGui::MemFree(g.Windows[i]);
     }
     g.Windows.clear();
     g.CurrentWindowStack.clear();
@@ -1391,7 +1412,7 @@ void Shutdown()
     for (size_t i = 0; i < g.Settings.size(); i++)
     {
         g.Settings[i]->~ImGuiIniData();
-        IM_FREE(g.Settings[i]);
+        ImGui::MemFree(g.Settings[i]);
     }
     g.Settings.clear();
     g.ColorEditModeStorage.Clear();
@@ -1403,20 +1424,20 @@ void Shutdown()
     if (g.IO.Font)
     {
         g.IO.Font->~ImBitmapFont();
-        IM_FREE(g.IO.Font);
+        ImGui::MemFree(g.IO.Font);
         g.IO.Font = NULL;
     }
 
     if (g.PrivateClipboard)
     {
-        IM_FREE(g.PrivateClipboard);
+        ImGui::MemFree(g.PrivateClipboard);
         g.PrivateClipboard = NULL;
     }
 
     if (g.LogClipboard)
     {
         g.LogClipboard->~ImGuiTextBuffer();
-        IM_FREE(g.LogClipboard);
+        ImGui::MemFree(g.LogClipboard);
     }
 
     g.Initialized = false;
@@ -1938,7 +1959,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
         if (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip))
         {
 			// Tooltip and child windows don't store settings
-            window = (ImGuiWindow*)IM_MALLOC(sizeof(ImGuiWindow));
+            window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
             new(window) ImGuiWindow(name, ImVec2(0,0), size);
         }
         else
@@ -1947,7 +1968,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
             if (settings && ImLength(settings->Size) > 0.0f && !(flags & ImGuiWindowFlags_NoResize))// && ImLengthsize) == 0.0f)
                 size = settings->Size;
 
-            window = (ImGuiWindow*)IM_MALLOC(sizeof(ImGuiWindow));
+            window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
             new(window) ImGuiWindow(name, g.NewWindowDefaultPos, size);
 
             if (settings->Pos.x != FLT_MAX)
@@ -4068,7 +4089,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
                 {
                     // Remove new-line from pasted buffer
                     size_t clipboard_len = strlen(clipboard);
-                    char* clipboard_filtered = (char*)IM_MALLOC(clipboard_len+1);
+                    char* clipboard_filtered = (char*)ImGui::MemAlloc(clipboard_len+1);
                     int clipboard_filtered_len = 0;
                     for (int i = 0; clipboard[i]; i++)
                     {
@@ -4079,7 +4100,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
                     }
                     clipboard_filtered[clipboard_filtered_len] = 0;
                     stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
-                    IM_FREE(clipboard_filtered);
+                    ImGui::MemFree(clipboard_filtered);
                 }
         }
         else if (g.IO.InputCharacters[0])
@@ -5206,7 +5227,7 @@ ImBitmapFont::ImBitmapFont()
 void    ImBitmapFont::Clear()
 {
     if (Data && DataOwned)
-        IM_FREE(Data);
+        ImGui::MemFree(Data);
     Data = NULL;
     DataOwned = false;
     Info = NULL;
@@ -5242,7 +5263,7 @@ bool    ImBitmapFont::LoadFromFile(const char* filename)
 		fclose(f);
         return false;
 	}
-    if ((Data = (unsigned char*)IM_MALLOC(DataSize)) == NULL)
+    if ((Data = (unsigned char*)ImGui::MemAlloc(DataSize)) == NULL)
     {
         fclose(f);
         return false;
@@ -5250,7 +5271,7 @@ bool    ImBitmapFont::LoadFromFile(const char* filename)
     if (fread(Data, 1, DataSize, f) != DataSize)
     {
         fclose(f);
-        IM_FREE(Data);
+        ImGui::MemFree(Data);
         return false;
     }
     fclose(f);
@@ -5493,7 +5514,7 @@ static const char*  GetClipboardTextFn_DefaultImpl()
     static char* buf_local = NULL;
     if (buf_local)
     {
-        IM_FREE(buf_local);
+        ImGui::MemFree(buf_local);
         buf_local = NULL;
     }
     if (!OpenClipboard(NULL)) 
@@ -5541,12 +5562,12 @@ static void SetClipboardTextFn_DefaultImpl(const char* text, const char* text_en
 {
     if (GImGui.PrivateClipboard)
     {
-        IM_FREE(GImGui.PrivateClipboard);
+        ImGui::MemFree(GImGui.PrivateClipboard);
         GImGui.PrivateClipboard = NULL;
     }
     if (!text_end)
         text_end = text + strlen(text);
-    GImGui.PrivateClipboard = (char*)IM_MALLOC((size_t)(text_end - text) + 1);
+    GImGui.PrivateClipboard = (char*)ImGui::MemAlloc((size_t)(text_end - text) + 1);
     memcpy(GImGui.PrivateClipboard, text, (size_t)(text_end - text));
     GImGui.PrivateClipboard[(size_t)(text_end - text)] = 0;
 }

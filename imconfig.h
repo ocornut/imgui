@@ -1,13 +1,10 @@
 //-----------------------------------------------------------------------------
 // USER IMPLEMENTATION
+// This file contains compile-time options for ImGui.
+// Other options (memory allocation overrides, callbacks, etc.) can be set at runtime via the ImGuiIO structure - ImGui::GetIO().
 //-----------------------------------------------------------------------------
 
 #pragma once
-
-//---- Define your own malloc/free/realloc functions if you want to override internal memory allocations for ImGui
-//#define IM_MALLOC(_SIZE)			MyMalloc(_SIZE)			// void* MyMalloc(size_t size);
-//#define IM_FREE(_PTR)				MyFree(_PTR)			// void MyFree(void *ptr);
-//#define IM_REALLOC(_PTR, _SIZE)	MyRealloc(_PTR, _SIZE)	// void* MyRealloc(void *ptr, size_t size);
 
 //---- Define your own ImVector<> type if you don't want to use the provided implementation defined in imgui.h
 //#include <vector>
@@ -17,7 +14,7 @@
 //---- Define assertion handler. Defaults to calling assert().
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)
 
-//---- Don't implement default clipboard handlers for Windows (so as not to link with OpenClipboard(), etc.)
+//---- Don't implement default clipboard handlers for Windows (so as not to link with OpenClipboard() and others Win32 functions)
 //#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS
 
 //---- Include imgui_user.cpp at the end of imgui.cpp so you can include code that extends ImGui using its private data/functions.
@@ -35,6 +32,7 @@
 */
 
 //---- Freely implement extra functions within the ImGui:: namespace.
+//---- Declare helpers or widgets implemented in imgui_user.cpp or elsewhere, so end-user doesn't need to include multiple files.
 //---- e.g. you can create variants of the ImGui::Value() helper for your low-level math types.
 /*
 namespace ImGui
