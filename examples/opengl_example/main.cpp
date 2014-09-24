@@ -10,6 +10,7 @@
 
 static GLFWwindow* window;
 static GLuint fontTex;
+static float content_scale[2] = {1.0f, 1.0f};
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
@@ -146,10 +147,15 @@ void InitGL()
 void InitImGui()
 {
     int w, h;
+    int fb_w, fb_h;
     glfwGetWindowSize(window, &w, &h);
+    glfwGetFramebufferSize(window, &fb_w, &fb_h);
+
+    content_scale[0] = fb_w / w;
+    content_scale[1] = fb_h / h;
 
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)w, (float)h);        // Display size, in pixels. For clamping windows positions.
+    io.DisplaySize = ImVec2((float)fb_w, (float)fb_h);  // Display size, in pixels. For clamping windows positions.
     io.DeltaTime = 1.0f/60.0f;                          // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
     io.PixelCenterOffset = 0.0f;                        // Align OpenGL texels
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;             // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
@@ -202,7 +208,7 @@ void UpdateImGui()
     // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
     double mouse_x, mouse_y;
     glfwGetCursorPos(window, &mouse_x, &mouse_y);
-    io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);                           // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+    io.MousePos = ImVec2((float)mouse_x * content_scale[0], (float)mouse_y * content_scale[1]); // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
     io.MouseDown[0] = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != 0;
     io.MouseDown[1] = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) != 0;
 

@@ -4,7 +4,7 @@
 #    brew install glfw3
 #
 
-CXXFLAGS=-framework OpenGL -framework Cocoa -framework IOKit 
+CXXFLAGS=-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
 CXXFLAGS+=-I/usr/local/Cellar/glew/1.10.0/include -I/usr/local/Cellar/glfw3/3.0.4/include
 CXXFLAGS+=-L/usr/local/Cellar/glew/1.10.0/lib -L/usr/local/Cellar/glfw3/3.0.4/lib
 CXXFLAGS+=-lglew -lglfw3
