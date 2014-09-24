@@ -178,7 +178,7 @@ namespace ImGui
     float       GetColumnOffset(int column_index = -1);
     void        SetColumnOffset(int column_index, float offset);
     float       GetColumnWidth(int column_index = -1);
-    ImVec2      GetCursorPos();                                                     // cursor position relative to window position
+    ImVec2      GetCursorPos();                                                     // cursor position is relative to window position
     void        SetCursorPos(const ImVec2& pos);                                    // "
     void        SetCursorPosX(float x);                                             // "
     void        SetCursorPosY(float y);                                             // "
@@ -260,8 +260,10 @@ namespace ImGui
     bool        IsKeyPressed(int key_index, bool repeat = true);                    // key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry
     bool        IsMouseClicked(int button, bool repeat = false);
     bool        IsMouseDoubleClicked(int button);
-    bool        IsMouseHoveringBox(const ImVec2& box_min, const ImVec2& box_max);
-    ImVec2      GetMousePos();
+	bool		IsMouseHoveringWindow();                                            // is hovering current window ("window" in API names always refer to current window)
+	bool		IsMouseHoveringAnyWindow();											// is hovering any active imgui window
+    bool        IsMouseHoveringBox(const ImVec2& box_min, const ImVec2& box_max);   // is hovering given bounding box
+    ImVec2      GetMousePos();                                                      // shortcut to ImGui::GetIO().MousePos provided by user, to be consistent with other calls
     float       GetTime();
     int         GetFrameCount();
     const char* GetStyleColorName(ImGuiCol idx);

@@ -1313,7 +1313,7 @@ void NewFrame()
     g.HoveredWindow = ImGui::FindHoveredWindow(g.IO.MousePos, false);
     g.HoveredWindowExcludingChilds = ImGui::FindHoveredWindow(g.IO.MousePos, true);
 
-    // Are we snooping input?
+    // Are we using inputs? Tell user so they can capture/discard them.
     g.IO.WantCaptureMouse = (g.HoveredWindow != NULL) || (g.ActiveId != 0);
     g.IO.WantCaptureKeyboard = (g.ActiveId != 0);
 
@@ -1349,7 +1349,7 @@ void NewFrame()
     // NB: Don't discard FocusedWindow if it isn't active, so that a window that go on/off programatically won't lose its keyboard focus.
     if (g.ActiveId == 0 && g.FocusedWindow != NULL && g.FocusedWindow->Visible && IsKeyPressedMap(ImGuiKey_Tab, false))
     {
-        g.FocusedWindow->FocusIdxRequestNext = 0;           
+        g.FocusedWindow->FocusIdxRequestNext = 0;    
     }
 
     // Mark all windows as not visible
@@ -1730,6 +1730,19 @@ static bool IsMouseHoveringBox(const ImGuiAabb& box)
 bool IsMouseHoveringBox(const ImVec2& box_min, const ImVec2& box_max)
 {
     return IsMouseHoveringBox(ImGuiAabb(box_min, box_max));
+}
+
+bool IsMouseHoveringWindow()
+{
+    ImGuiState& g = GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+	return g.HoveredWindow == window;
+}
+
+bool IsMouseHoveringAnyWindow()
+{
+    ImGuiState& g = GImGui;
+	return g.HoveredWindow != NULL;
 }
 
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
