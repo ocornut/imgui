@@ -17,6 +17,7 @@ struct ImGuiWindow;
 #include "imconfig.h"
 #include <float.h>          // FLT_MAX
 #include <stdarg.h>         // va_list
+#include <stddef.h>         // ptrdiff_t
 #include <stdlib.h>         // NULL, malloc
 
 #ifndef IM_ASSERT
