@@ -1,4 +1,4 @@
-// ImGui library v1.12
+// ImGui library v1.12+
 // See .cpp file for commentary.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
@@ -402,7 +402,10 @@ struct ImGuiStyle
 // Read 'Programmer guide' section in .cpp file for general usage.
 struct ImGuiIO
 {
+    //------------------------------------------------------------------
     // Settings (fill once)                 // Default value:
+    //------------------------------------------------------------------
+
     ImVec2      DisplaySize;                // <unset>                  // Display size, in pixels. For clamping windows positions.
     float       DeltaTime;                  // = 1.0f/60.0f             // Time elapsed since last frame, in seconds.
     float       IniSavingRate;              // = 5.0f                   // Maximum time between saving .ini file, in seconds. Set to a negative value to disable .ini saving.
@@ -418,40 +421,53 @@ struct ImGuiIO
     bool        FontAllowUserScaling;       // = false                  // Set to allow scaling text with CTRL+Wheel.
     float       PixelCenterOffset;          // = 0.0f                   // Try to set to 0.5f or 0.375f if rendering is blurry
 
-    // Settings - Rendering function (REQUIRED)
-    // See example code if you are unsure of how to implement this.
-    void        (*RenderDrawListsFn)(ImDrawList** const draw_lists, int count);
+    //------------------------------------------------------------------
+    // User Functions
+    //------------------------------------------------------------------
 
-    // Settings - Clipboard Support
-    // Override to provide your clipboard handlers.
-    // On Windows architecture, defaults to use the native Win32 clipboard, otherwise default to use a ImGui private clipboard. 
-    // NB- for SetClipboardTextFn, the string is *NOT* zero-terminated at 'text_end'
-    const char* (*GetClipboardTextFn)();                                        
-    void        (*SetClipboardTextFn)(const char* text, const char* text_end);
-    
-    // Settings - Memory allocation
-    // Default to posix malloc/realloc/free functions.
+    // REQUIRED: rendering function. 
+    // See example code if you are unsure of how to implement this.
+    void        (*RenderDrawListsFn)(ImDrawList** const draw_lists, int count);      
+
+    // Optional: access OS clipboard (default to use native Win32 clipboard on Windows, otherwise use a ImGui private clipboard)
+    // Override to access OS clipboard on other architectures.
+    const char* (*GetClipboardTextFn)();
+    void        (*SetClipboardTextFn)(const char* text);
+
+    // Optional: override memory allocations (default to posix malloc/realloc/free)
     void*       (*MemAllocFn)(size_t sz);
     void*       (*MemReallocFn)(void* ptr, size_t sz);
     void        (*MemFreeFn)(void* ptr);
 
+    // Optional: notify OS Input Method Editor of text input position (e.g. when using Japanese/Chinese inputs, otherwise this isn't needed)
+    void        (*ImeSetInputScreenPosFn)(int x, int y);
+
+    //------------------------------------------------------------------
     // Input - Fill before calling NewFrame()
+    //------------------------------------------------------------------
+
     ImVec2      MousePos;                   // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
     bool        MouseDown[5];               // Mouse buttons. ImGui itself only uses button 0 (left button) but you can use others as storage for convenience.
     int         MouseWheel;                 // Mouse wheel: -1,0,+1
     bool        KeyCtrl;                    // Keyboard modifier pressed: Control
     bool        KeyShift;                   // Keyboard modifier pressed: Shift
     bool        KeysDown[512];              // Keyboard keys that are pressed (in whatever order user naturally has access to keyboard data)
-    char        InputCharacters[16];        // List of characters input (translated by user from keypress+keyboard state). Fill using AddInputCharacter() helper.
+    ImWchar     InputCharacters[16];        // List of characters input (translated by user from keypress+keyboard state). Fill using AddInputCharacter() helper.
 
+    // Function
+    void        AddInputCharacter(ImWchar); // Helper to add a new character into InputCharacters[]
+
+    //------------------------------------------------------------------
     // Output - Retrieve after calling NewFrame(), you can use them to discard inputs or hide them from the rest of your application
+    //------------------------------------------------------------------
+
     bool        WantCaptureMouse;           // Mouse is hovering a window or widget is active (= ImGui will use your mouse input)
     bool        WantCaptureKeyboard;        // Widget is active (= ImGui will use your keyboard input)
 
-    // Function
-    void        AddInputCharacter(char c);  // Helper to add a new character into InputCharacters[]
-
+    //------------------------------------------------------------------
     // [Internal] ImGui will maintain those fields for you
+    //------------------------------------------------------------------
+
     ImVec2      MousePosPrev;
     ImVec2      MouseDelta;
     bool        MouseClicked[5];
@@ -672,6 +688,7 @@ struct ImBitmapFont
     float                   GetFontSize() const { return (float)Info->FontSize; }
     bool                    IsLoaded() const { return Info != NULL && Common != NULL && Glyphs != NULL; }
 
-    ImVec2                  CalcTextSize(float size, float max_width, const char* text_begin, const char* text_end, const char** remaining = NULL) const;
+    ImVec2                  CalcTextSizeA(float size, float max_width, const char* text_begin, const char* text_end, const char** remaining = NULL) const;            // utf8
+    ImVec2                  CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;  // wchar
     void                    RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices) const;
 };

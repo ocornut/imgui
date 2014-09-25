@@ -1,4 +1,4 @@
-// ImGui library v1.12
+// ImGui library v1.12+
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -139,6 +139,7 @@
  API BREAKING CHANGES
  ====================
 
+  - 2014/09/25 (1.13) removed 'text_end' parameter from IO.SetClipboardTextFn (the string is now always zero-terminated for simplicity)
   - 2014/09/24 (1.12) renamed SetFontScale() to SetWindowFontScale()
   - 2014/09/24 (1.12) moved IM_MALLOC/IM_REALLOC/IM_FREE preprocessor defines to IO.MemAllocFn/IO.MemReallocFn/IO.MemFreeFn
   - 2014/08/30 (1.09) removed IO.FontHeight (now computed automatically)
@@ -246,7 +247,7 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs);
 //-----------------------------------------------------------------------------
 
 static const char*  GetClipboardTextFn_DefaultImpl();
-static void         SetClipboardTextFn_DefaultImpl(const char* text, const char* text_end);
+static void         SetClipboardTextFn_DefaultImpl(const char* text);
 
 //-----------------------------------------------------------------------------
 // User facing structures
@@ -325,22 +326,23 @@ ImGuiIO::ImGuiIO()
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
 
-    // Memory management functions, default to posix
+    // User functions
+    RenderDrawListsFn = NULL;
     MemAllocFn = malloc;
     MemReallocFn = realloc;
     MemFreeFn = free;
-
-    // Platform dependant default implementations
-    GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;
+    GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependant default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
+    ImeSetInputScreenPosFn = NULL;
 }
 
 // Pass in translated ASCII characters for text input.
 // - with glfw you can get those from the callback set in glfwSetCharCallback()
 // - on Windows you can get those using ToAscii+keyboard state, or via the VM_CHAR message
-void ImGuiIO::AddInputCharacter(char c)
+static size_t ImStrlenW(const ImWchar* str);
+void ImGuiIO::AddInputCharacter(ImWchar c)
 {
-    const size_t n = strlen(InputCharacters);
+    const size_t n = ImStrlenW(InputCharacters);
     if (n < sizeof(InputCharacters) / sizeof(InputCharacters[0]))
     {
         InputCharacters[n] = c;
@@ -390,7 +392,10 @@ static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, float t)          
 static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, const ImVec2& t)  { return ImVec2(a.x + (b.x - a.x) * t.x, a.y + (b.y - a.y) * t.y); }
 static inline float  ImLength(const ImVec2& lhs)                                { return sqrt(lhs.x*lhs.x + lhs.y*lhs.y); }
 
-static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);  // return input UTF-8 bytes count
+static int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
+static int ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end);   // return output UTF-8 bytes count
+static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
+static int ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end);    // return input UTF-8 bytes count
 
 static int ImStricmp(const char* str1, const char* str2)
 {
@@ -405,6 +410,14 @@ static char* ImStrdup(const char *str)
     IM_ASSERT(buff);
     strcpy(buff, str);
     return buff;
+}
+
+static size_t ImStrlenW(const ImWchar* str)
+{
+    size_t n = 0;
+    while (*str++)
+        n++;
+    return n;
 }
 
 static const char* ImStristr(const char* haystack, const char* needle, const char* needle_end)
@@ -608,19 +621,20 @@ struct ImGuiDrawContext
 
 struct ImGuiTextEditState;
 #define STB_TEXTEDIT_STRING ImGuiTextEditState
-#define STB_TEXTEDIT_CHARTYPE char
+#define STB_TEXTEDIT_CHARTYPE ImWchar
 #include "stb_textedit.h"
 
 // State of the currently focused/edited text input box
 struct ImGuiTextEditState
 {
-    char                Text[1024];                     // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so own buffer.
-    char                InitialText[1024];              // backup of end-user buffer at focusing time, to ESC key can do a revert. Also used for arithmetic operations (but could use a pre-parsed float there).
+    ImWchar             Text[1024];                     // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
+    char                InitialText[1024*3+1];          // backup of end-user buffer at the time of focus (in UTF-8, unconverted)
     size_t              BufSize;                        // end-user buffer size, <= 1024 (or increase above)
     float               Width;                          // widget width
     float               ScrollX;
     STB_TexteditState   StbState;
     float               CursorAnim;
+    ImVec2              LastCursorPos;
     bool                SelectedAllMouseLock;
     ImFont              Font;
     float               FontSize;
@@ -630,15 +644,16 @@ struct ImGuiTextEditState
     void                CursorAnimReset()               { CursorAnim = -0.30f; }                                                // After a user-input the cursor stays on for a while without blinking
     bool                CursorIsVisible() const         { return CursorAnim <= 0.0f || fmodf(CursorAnim, 1.20f) <= 0.80f; }     // Blinking
     bool                HasSelection() const            { return StbState.select_start != StbState.select_end; }
-    void                SelectAll()                     { StbState.select_start = 0; StbState.select_end = (int)strlen(Text); StbState.cursor = StbState.select_end; StbState.has_preferred_x = false; }
+    void                SelectAll()                     { StbState.select_start = 0; StbState.select_end = (int)ImStrlenW(Text); StbState.cursor = StbState.select_end; StbState.has_preferred_x = false; }
 
     void                OnKeyboardPressed(int key);
     void                UpdateScrollOffset();
     ImVec2              CalcDisplayOffsetFromCharIdx(int i) const;
 
     // Static functions because they are used to render non-focused instances of a text input box
-    static const char*  GetTextPointerClipped(ImFont font, float font_size, const char* text, float width, ImVec2* out_text_size = NULL);
-    static void         RenderTextScrolledClipped(ImFont font, float font_size, const char* text, ImVec2 pos_base, float width, float scroll_x);
+    static const char*      GetTextPointerClippedA(ImFont font, float font_size, const char* text, float width, ImVec2* out_text_size = NULL);
+    static const ImWchar*   GetTextPointerClippedW(ImFont font, float font_size, const ImWchar* text, float width, ImVec2* out_text_size = NULL);
+    static void             RenderTextScrolledClipped(ImFont font, float font_size, const char* text, ImVec2 pos_base, float width, float scroll_x);
 };
 
 struct ImGuiIniData
@@ -1707,7 +1722,7 @@ ImVec2 CalcTextSize(const char* text, const char* text_end, const bool hide_text
     else
         text_display_end = text_end;
 
-    const ImVec2 size = window->Font()->CalcTextSize(window->FontSize(), 0, text, text_display_end, NULL);
+    const ImVec2 size = window->Font()->CalcTextSizeA(window->FontSize(), 0, text, text_display_end, NULL);
     return size;
 }
 
@@ -2375,7 +2390,7 @@ void End()
         {
             g.LogClipboard->append("\n");
             if (g.IO.SetClipboardTextFn)
-                g.IO.SetClipboardTextFn(g.LogClipboard->begin(), g.LogClipboard->end());
+                g.IO.SetClipboardTextFn(g.LogClipboard->begin());
             g.LogClipboard->clear();
         }
     }
@@ -3797,15 +3812,15 @@ bool RadioButton(const char* label, int* v, int v_button)
 }; // namespace ImGui
 
 // Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, ASCII, fixed-width font)
-int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                                  { return (int)strlen(obj->Text); }
-char    STB_TEXTEDIT_GETCHAR(const STB_TEXTEDIT_STRING* obj, int idx)                           { return (char)obj->Text[idx]; }
-float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)       { (void)line_start_idx; return obj->Font->CalcTextSize(obj->FontSize, 0, &obj->Text[char_idx], &obj->Text[char_idx]+1, NULL).x; }
-char    STB_TEXTEDIT_KEYTOTEXT(int key)                                                         { return key >= 0x10000 ? 0 : (char)key; }
-char    STB_TEXTEDIT_NEWLINE = '\n';
+int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                                  { return (int)ImStrlenW(obj->Text); }
+ImWchar STB_TEXTEDIT_GETCHAR(const STB_TEXTEDIT_STRING* obj, int idx)                           { return obj->Text[idx]; }
+float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)       { (void)line_start_idx; return obj->Font->CalcTextSizeW(obj->FontSize, 0, &obj->Text[char_idx], &obj->Text[char_idx]+1, NULL).x; }
+int     STB_TEXTEDIT_KEYTOTEXT(int key)                                                         { return key >= 0x10000 ? 0 : key; }
+ImWchar STB_TEXTEDIT_NEWLINE = '\n';
 void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* obj, int line_start_idx)
 {
-    const char* text_remaining = NULL;
-    const ImVec2 size = obj->Font->CalcTextSize(obj->FontSize, FLT_MAX, obj->Text + line_start_idx, NULL, &text_remaining);
+    const ImWchar* text_remaining = NULL;
+    const ImVec2 size = obj->Font->CalcTextSizeW(obj->FontSize, FLT_MAX, obj->Text + line_start_idx, NULL, &text_remaining);
     r->x0 = 0.0f;
     r->x1 = size.x;
     r->baseline_y_delta = size.y;
@@ -3814,22 +3829,22 @@ void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* obj, int 
     r->num_chars = (int)(text_remaining - (obj->Text + line_start_idx));
 }
 
-static bool is_white(char c)        { return c==0 || c==' ' || c=='\t' || c=='\r' || c=='\n'; }
-static bool is_separator(char c)    { return c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|'; }
+static bool is_white(unsigned int c)        { return c==0 || c==' ' || c=='\t' || c=='\r' || c=='\n'; }
+static bool is_separator(unsigned int c)    { return c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|'; }
 
-#define STB_TEXTEDIT_IS_SPACE(c)                                                                (is_white(c) || is_separator(c))
-void    STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int idx, int n)                      { char* dst = obj->Text+idx; const char* src = obj->Text+idx+n; while (char c = *src++) *dst++ = c; *dst = '\0'; }
+#define STB_TEXTEDIT_IS_SPACE(c)                                                                (is_white((unsigned int)c) || is_separator((unsigned int)c))
+void    STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int idx, int n)                      { ImWchar* dst = obj->Text+idx; const ImWchar* src = obj->Text+idx+n; while (ImWchar c = *src++) *dst++ = c; *dst = '\0'; }
 
-bool    STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int idx, const char* new_text, int new_text_len)
+bool    STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int idx, const ImWchar* new_text, int new_text_len)
 {
-    char* buf_end = obj->Text + obj->BufSize;
-    const size_t text_len = strlen(obj->Text);
+    ImWchar* buf_end = obj->Text + obj->BufSize;
+    const size_t text_len = ImStrlenW(obj->Text);
 
     if (new_text_len > buf_end - (obj->Text + text_len + 1))
         return false;
 
-    memmove(obj->Text + (size_t)idx + new_text_len, obj->Text + (size_t)idx, text_len - (size_t)idx);
-    memcpy(obj->Text + (size_t)idx, new_text, (size_t)new_text_len);
+    memmove(obj->Text + (size_t)idx + new_text_len, obj->Text + (size_t)idx, (text_len - (size_t)idx) * sizeof(ImWchar));
+    memcpy(obj->Text + (size_t)idx, new_text, (size_t)new_text_len * sizeof(ImWchar));
     obj->Text[text_len + (size_t)new_text_len] = 0;
 
     return true;
@@ -3867,7 +3882,7 @@ void ImGuiTextEditState::UpdateScrollOffset()
 {
     // Scroll in chunks of quarter width
     const float scroll_x_increment = Width * 0.25f;
-    const float cursor_offset_x = Font->CalcTextSize(FontSize, 0, Text, Text+StbState.cursor, NULL).x;
+    const float cursor_offset_x = Font->CalcTextSizeW(FontSize, 0, Text, Text+StbState.cursor, NULL).x;
     if (ScrollX > cursor_offset_x)
         ScrollX = ImMax(0.0f, cursor_offset_x - scroll_x_increment);    
     else if (ScrollX < cursor_offset_x - Width)
@@ -3876,22 +3891,35 @@ void ImGuiTextEditState::UpdateScrollOffset()
 
 ImVec2 ImGuiTextEditState::CalcDisplayOffsetFromCharIdx(int i) const
 {
-    const char* text_start = GetTextPointerClipped(Font, FontSize, Text, ScrollX, NULL);
-    const char* text_end = (Text+i >= text_start) ? Text+i : text_start;                    // Clip if requested character is outside of display
+    const ImWchar* text_start = GetTextPointerClippedW(Font, FontSize, Text, ScrollX, NULL);
+    const ImWchar* text_end = (Text+i >= text_start) ? Text+i : text_start;                    // Clip if requested character is outside of display
     IM_ASSERT(text_end >= text_start);
 
-    const ImVec2 offset = Font->CalcTextSize(FontSize, Width, text_start, text_end, NULL);
+    const ImVec2 offset = Font->CalcTextSizeW(FontSize, Width, text_start, text_end, NULL);
     return offset;
 }
 
 // [Static]
-const char* ImGuiTextEditState::GetTextPointerClipped(ImFont font, float font_size, const char* text, float width, ImVec2* out_text_size)
+const char* ImGuiTextEditState::GetTextPointerClippedA(ImFont font, float font_size, const char* text, float width, ImVec2* out_text_size)
 {
     if (width <= 0.0f)
         return text;
 
     const char* text_clipped_end = NULL;
-    const ImVec2 text_size = font->CalcTextSize(font_size, width, text, NULL, &text_clipped_end);
+    const ImVec2 text_size = font->CalcTextSizeA(font_size, width, text, NULL, &text_clipped_end);
+    if (out_text_size)
+        *out_text_size = text_size;
+    return text_clipped_end;
+}
+
+// [Static]
+const ImWchar* ImGuiTextEditState::GetTextPointerClippedW(ImFont font, float font_size, const ImWchar* text, float width, ImVec2* out_text_size)
+{
+    if (width <= 0.0f)
+        return text;
+
+    const ImWchar* text_clipped_end = NULL;
+    const ImVec2 text_size = font->CalcTextSizeW(font_size, width, text, NULL, &text_clipped_end);
     if (out_text_size)
         *out_text_size = text_size;
     return text_clipped_end;
@@ -3902,8 +3930,8 @@ void ImGuiTextEditState::RenderTextScrolledClipped(ImFont font, float font_size,
 {
     // NB- We start drawing at character boundary
     ImVec2 text_size;
-    const char* text_start = GetTextPointerClipped(font, font_size, buf, scroll_x, NULL);
-    const char* text_end = GetTextPointerClipped(font, font_size, text_start, width, &text_size);
+    const char* text_start = GetTextPointerClippedA(font, font_size, buf, scroll_x, NULL);
+    const char* text_end = GetTextPointerClippedA(font, font_size, text_start, width, &text_size);
 
     // Draw a little clip symbol if we've got text on either left or right of the box
     const char symbol_c = '~';
@@ -4030,12 +4058,14 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
         if (g.ActiveId != id)
         {
             // Start edition
-            strcpy(edit_state.Text, buf);
-            strcpy(edit_state.InitialText, buf);
+            // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
+            ImFormatString(edit_state.InitialText, IM_ARRAYSIZE(edit_state.InitialText), "%s", buf);
+            ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), buf, NULL);
             edit_state.ScrollX = 0.0f;
             edit_state.Width = w;
             stb_textedit_initialize_state(&edit_state.StbState, true); 
             edit_state.CursorAnimReset();
+            edit_state.LastCursorPos = ImVec2(-1.f,-1.f);
 
             if (tab_focus_requested || is_ctrl_down)
                 select_all = true;
@@ -4054,7 +4084,8 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
     bool value_changed = false;
     bool cancel_edit = false;
     bool enter_pressed = false;
-    if (g.ActiveId == id)
+    static char text_tmp_utf8[IM_ARRAYSIZE(edit_state.InitialText)];
+	if (g.ActiveId == id)
     {
         // Edit in progress
         edit_state.BufSize = buf_size < IM_ARRAYSIZE(edit_state.Text) ? buf_size : IM_ARRAYSIZE(edit_state.Text);
@@ -4098,40 +4129,45 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
         else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Z))   edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_UNDO);      // I don't want to use shortcuts but we should probably have an Input-catch stack
         else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Y))   edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_REDO);
         else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_A))   edit_state.SelectAll();
-        else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_X))
+        else if (is_ctrl_down && (IsKeyPressedMap(ImGuiKey_X) || IsKeyPressedMap(ImGuiKey_C)))
         {
-            if (!edit_state.HasSelection())
+            // Cut, Copy
+            const bool cut = IsKeyPressedMap(ImGuiKey_X);
+            if (cut && !edit_state.HasSelection())
                 edit_state.SelectAll();
 
-            const int ib = ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end);
-            const int ie = ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end);
             if (g.IO.SetClipboardTextFn)
-                g.IO.SetClipboardTextFn(edit_state.Text+ib, edit_state.Text+ie);
-            stb_textedit_cut(&edit_state, &edit_state.StbState);
-        }
-        else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_C))   
-        {
-            const int ib = edit_state.HasSelection() ? ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end) : 0;
-            const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : (int)strlen(edit_state.Text);
-            if (g.IO.SetClipboardTextFn)
-                g.IO.SetClipboardTextFn(edit_state.Text+ib, edit_state.Text+ie);
+            {
+                const int ib = edit_state.HasSelection() ? ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end) : 0;
+                const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : (int)ImStrlenW(edit_state.Text);
+				ImTextStrToUtf8(text_tmp_utf8, IM_ARRAYSIZE(text_tmp_utf8), edit_state.Text+ib, edit_state.Text+ie);
+                g.IO.SetClipboardTextFn(text_tmp_utf8);
+            }
+
+            if (cut)
+                stb_textedit_cut(&edit_state, &edit_state.StbState);
         }
         else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_V))
         {
+            // Paste
             if (g.IO.GetClipboardTextFn)
             {
                 if (const char* clipboard = g.IO.GetClipboardTextFn())
                 {
                     // Remove new-line from pasted buffer
                     size_t clipboard_len = strlen(clipboard);
-                    char* clipboard_filtered = (char*)ImGui::MemAlloc(clipboard_len+1);
+                    ImWchar* clipboard_filtered = (ImWchar*)ImGui::MemAlloc((clipboard_len+1) * sizeof(ImWchar));
                     int clipboard_filtered_len = 0;
-                    for (int i = 0; clipboard[i]; i++)
+                    for (const char* s = clipboard; *s; )
                     {
-                        const char c = clipboard[i];
+                        unsigned int c;
+                        const int bytes_count = ImTextCharFromUtf8(&c, s, NULL);
+                        if (bytes_count <= 0)
+                            break;
+                        s += bytes_count;
                         if (c == '\n' || c == '\r')
                             continue;
-                        clipboard_filtered[clipboard_filtered_len++] = clipboard[i];
+                        clipboard_filtered[clipboard_filtered_len++] = c;
                     }
                     clipboard_filtered[clipboard_filtered_len] = 0;
                     stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
@@ -4144,11 +4180,11 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
             // Text input
             for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
             {
-                const char c = g.IO.InputCharacters[n];
+                const ImWchar c = g.IO.InputCharacters[n];
                 if (c)
                 {
                     // Filter
-                    if (!isprint(c) && c != ' ')
+                    if (c < 256 && !isprint((char)(c & 0xFF)) && c != ' ')
                         continue;
                     if (flags & ImGuiInputTextFlags_CharsDecimal)
                         if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
@@ -4175,9 +4211,13 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
         else
         {
             // Apply new value immediately - copy modified buffer back
-            if (strcmp(edit_state.Text, buf) != 0)
+            // Note that as soon as we can focus into the input box, the in-widget value gets priority over any underlying modification of the input buffer
+            // FIXME: We actually always render 'buf' in RenderTextScrolledClipped
+            // FIXME-OPT: CPU waste to do this everytime the widget is active, should mark dirty state from the textedit callbacks
+            ImTextStrToUtf8(text_tmp_utf8, IM_ARRAYSIZE(text_tmp_utf8), edit_state.Text, NULL);
+            if (strcmp(text_tmp_utf8, buf) != 0)
             {
-                ImFormatString(buf, buf_size, "%s", edit_state.Text);
+                ImFormatString(buf, buf_size, "%s", text_tmp_utf8);
                 value_changed = true;
             }
         }
@@ -4206,12 +4246,17 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
 
     if (g.ActiveId == id)
     {
+        const ImVec2 cursor_pos = frame_bb.Min + style.FramePadding + edit_state.CalcDisplayOffsetFromCharIdx(edit_state.StbState.cursor);
+
         // Draw blinking cursor
         if (g.InputTextState.CursorIsVisible())
-        {
-            const ImVec2 cursor_pos = frame_bb.Min + style.FramePadding + edit_state.CalcDisplayOffsetFromCharIdx(edit_state.StbState.cursor);
             window->DrawList->AddRect(cursor_pos - font_off_up + ImVec2(0,2), cursor_pos + font_off_dn - ImVec2(0,3), window->Color(ImGuiCol_Text));
-        }
+        
+        // Notify OS of text input position
+        if (io.ImeSetInputScreenPosFn && ImLength(edit_state.LastCursorPos - cursor_pos) > 0.01f)
+            io.ImeSetInputScreenPosFn((int)cursor_pos.x - 1, (int)(cursor_pos.y - window->FontSize()));   // -1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.
+
+        edit_state.LastCursorPos = cursor_pos;
     }
 
     RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
@@ -5450,7 +5495,80 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
     return 0;
 }
 
-ImVec2 ImBitmapFont::CalcTextSize(float size, float max_width, const char* text_begin, const char* text_end, const char** remaining) const
+static int ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end)
+{
+    ImWchar* buf_out = buf;
+    ImWchar* buf_end = buf + buf_size;
+    while (buf_out < buf_end-1 && (!in_text_end || in_text < in_text_end) && *in_text)
+    {
+        unsigned int c;
+        in_text += ImTextCharFromUtf8(&c, in_text, in_text_end);
+        if (c < 0x10000)    // FIXME: Losing characters that don't fit in 2 bytes
+            *buf_out++ = (ImWchar)c;
+    }
+    *buf_out = 0;
+    return buf_out - buf;
+}
+
+// Based on stb_to_utf8() from github.com/nothings/stb/
+static int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int c)
+{
+    if (c)
+    {
+        int i = 0;
+        int n = (size_t)buf_size;
+        if (c < 0x80) 
+        {
+            if (i+1 > n) return 0;
+            buf[i++] = (char)c;
+            return 1;
+        } 
+        else if (c < 0x800) 
+        {
+            if (i+2 > n) return 0;
+            buf[i++] = 0xc0 + (c >> 6);
+            buf[i++] = 0x80 + (c & 0x3f);
+            return 2;
+        }
+        else if (c >= 0xdc00 && c < 0xe000)
+        {
+            return 0;
+        } 
+        else if (c >= 0xd800 && c < 0xdc00) 
+        {
+            if (i+4 > n) return NULL;
+            buf[i++] = 0xf0 + (c >> 18);
+            buf[i++] = 0x80 + ((c >> 12) & 0x3f);
+            buf[i++] = 0x80 + ((c >> 6) & 0x3f);
+            buf[i++] = 0x80 + ((c ) & 0x3f);
+            return 4;
+        }
+        //else if (c < 0x10000)
+        {
+            if (i+3 > n) return 0;
+            buf[i++] = 0xe0 + (c >> 12);
+            buf[i++] = 0x80 + ((c>> 6) & 0x3f);
+            buf[i++] = 0x80 + ((c ) & 0x3f);
+            return 3;
+        }
+    }
+    return 0;
+}
+
+static int ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end)
+{
+    char* buf_out = buf;
+    const char* buf_end = buf + buf_size;
+    while (buf_out < buf_end-1 && (!in_text_end || in_text < in_text_end) && *in_text)
+    {
+        buf_out += ImTextCharToUtf8(buf_out, buf_end-buf_out-1, (unsigned int)*in_text);
+        in_text++;
+    }
+    *buf_out = 0;
+    return buf_out - buf;
+}
+
+ImVec2 ImBitmapFont::CalcTextSizeA(float size, float max_width, const char* text_begin, const char* text_end, const char** remaining) const
 {
     if (max_width == 0.0f)
         max_width = FLT_MAX;
@@ -5469,8 +5587,6 @@ ImVec2 ImBitmapFont::CalcTextSize(float size, float max_width, const char* text_
         unsigned int c;
         const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
         s += bytes_count > 0 ? bytes_count : 1;  // Handle decoding failure by skipping to next byte
-        if (c > 0x10000)
-            continue;
 
         if (c == '\n')
         {
@@ -5489,6 +5605,61 @@ ImVec2 ImBitmapFont::CalcTextSize(float size, float max_width, const char* text_
         }
         else if (c == '\t')
         {
+            // FIXME: Better TAB handling needed.
+            if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
+                line_width += (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
+        }
+    }
+
+    if (line_width > 0 || text_size.y == 0.0f)
+    {
+        if (text_size.x < line_width)
+            text_size.x = line_width;
+        text_size.y += line_height;
+    }
+
+    if (remaining)
+        *remaining = s;
+
+    return text_size;
+}
+
+ImVec2 ImBitmapFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining) const
+{
+    if (max_width == 0.0f)
+        max_width = FLT_MAX;
+    if (!text_end)
+        text_end = text_begin + ImStrlenW(text_begin);
+
+    const float scale = size / (float)Info->FontSize;
+    const float line_height = (float)Info->FontSize * scale;
+
+    ImVec2 text_size = ImVec2(0,0);
+    float line_width = 0.0f;
+
+    const ImWchar* s = text_begin;
+    while (s < text_end)
+    {
+        const unsigned int c = (unsigned int)(*s++);
+
+        if (c == '\n')
+        {
+            if (text_size.x < line_width)
+                text_size.x = line_width;
+            text_size.y += line_height;
+            line_width = 0;
+        }
+        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c))
+        {
+            const float char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
+            //const float char_extend = (glyph->XOffset + glyph->Width * scale);
+            if (line_width + char_width >= max_width)
+                break;
+            line_width += char_width;
+        }
+        else if (c == '\t')
+        {
+            // FIXME: Better TAB handling needed.
             if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
                 line_width += (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
         }
@@ -5633,12 +5804,11 @@ static const char*  GetClipboardTextFn_DefaultImpl()
 }
 
 // Win32 API clipboard implementation
-static void SetClipboardTextFn_DefaultImpl(const char* text, const char* text_end)
+static void SetClipboardTextFn_DefaultImpl(const char* text)
 {
     if (!OpenClipboard(NULL))
         return;
-    if (!text_end)
-        text_end = text + strlen(text);
+    const char* text_end = text + strlen(text);
     const int buf_length = (int)(text_end - text) + 1;
     HGLOBAL buf_handle = GlobalAlloc(GMEM_MOVEABLE, buf_length * sizeof(char)); 
     if (buf_handle == NULL)
@@ -5661,15 +5831,14 @@ static const char*  GetClipboardTextFn_DefaultImpl()
 }
 
 // Local ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers
-static void SetClipboardTextFn_DefaultImpl(const char* text, const char* text_end)
+static void SetClipboardTextFn_DefaultImpl(const char* text)
 {
     if (GImGui.PrivateClipboard)
     {
         ImGui::MemFree(GImGui.PrivateClipboard);
         GImGui.PrivateClipboard = NULL;
     }
-    if (!text_end)
-        text_end = text + strlen(text);
+    const char* text_end = text + strlen(text);
     GImGui.PrivateClipboard = (char*)ImGui::MemAlloc((size_t)(text_end - text) + 1);
     memcpy(GImGui.PrivateClipboard, text, (size_t)(text_end - text));
     GImGui.PrivateClipboard[(size_t)(text_end - text)] = 0;
