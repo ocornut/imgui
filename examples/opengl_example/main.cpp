@@ -1,11 +1,20 @@
-#define GLEW_STATIC
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#ifdef _MSC_VER
+#pragma warning (disable: 4996)         // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
+#include <Windows.h>
+#include <Imm.h>
+#endif
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"                  // for .png loading
 #include "../../imgui.h"
+
+// glew & glfw
+#define GLEW_STATIC
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 #ifdef _MSC_VER
-#pragma warning (disable: 4996)         // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
+#include <GLFW/glfw3native.h>
 #endif
 
 static GLFWwindow* window;
@@ -70,32 +79,32 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     glDisableClientState(GL_VERTEX_ARRAY);
 }
 
+// NB: ImGui already provide OS clipboard support for Windows so this isn't needed if you are using Windows only.
 static const char* ImImpl_GetClipboardTextFn()
 {
     return glfwGetClipboardString(window);
 }
 
-static void ImImpl_SetClipboardTextFn(const char* text, const char* text_end)
+static void ImImpl_SetClipboardTextFn(const char* text)
 {
-    if (!text_end)
-        text_end = text + strlen(text);
-
-    if (*text_end == 0)
-    {
-        // Already got a zero-terminator at 'text_end', we don't need to add one
-        glfwSetClipboardString(window, text);
-    }
-    else
-    {
-        // Add a zero-terminator because glfw function doesn't take a size
-        char* buf = (char*)malloc(text_end - text + 1);
-        memcpy(buf, text, text_end-text);
-        buf[text_end-text] = '\0';
-        glfwSetClipboardString(window, buf);
-        free(buf);
-    }
+    glfwSetClipboardString(window, text);
 }
 
+#ifdef _MSC_VER
+// Notify OS Input Method Editor of text input position (e.g. when using Japanese/Chinese inputs, otherwise this isn't needed)
+static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
+{
+	HWND hwnd = glfwGetWin32Window(window);
+	if (HIMC himc = ImmGetContext(hwnd))
+	{
+		COMPOSITIONFORM cf;
+		cf.ptCurrentPos.x = x;
+		cf.ptCurrentPos.y = y;
+		cf.dwStyle = CFS_FORCE_POSITION;
+		ImmSetCompositionWindow(himc, &cf);
+	}
+}
+#endif
 
 // GLFW callbacks to get events
 static void glfw_error_callback(int error, const char* description)
@@ -122,8 +131,8 @@ static void glfw_key_callback(GLFWwindow* window, int key, int scancode, int act
 
 static void glfw_char_callback(GLFWwindow* window, unsigned int c)
 {
-    if (c > 0 && c <= 255)
-        ImGui::GetIO().AddInputCharacter((char)c);
+    if (c > 0 && c < 0x10000)
+        ImGui::GetIO().AddInputCharacter((unsigned short)c);
 }
 
 // OpenGL code based on http://open.gl tutorials
@@ -178,6 +187,9 @@ void InitImGui()
     io.RenderDrawListsFn = ImImpl_RenderDrawLists;
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
+#ifdef _MSC_VER
+	io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
+#endif
 
     // Load font texture
     glGenTextures(1, &fontTex);
