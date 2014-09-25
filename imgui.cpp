@@ -5442,7 +5442,7 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
     if (*in_text != 0)
     {
         unsigned int c = -1;
-        const char* str = in_text;
+        const unsigned char* str = (const unsigned char*)in_text;
         if (!(*str & 0x80))
         {
             c = (unsigned int)(*str++);
@@ -5451,7 +5451,7 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
         }
         if ((*str & 0xe0) == 0xc0) 
         {
-            if (in_text_end && in_text_end - str < 2) return -1;
+            if (in_text_end && in_text_end - (const char*)str < 2) return -1;
             if (*str < 0xc2) return -1;
             c = (*str++ & 0x1f) << 6;
             if ((*str & 0xc0) != 0x80) return -1;
@@ -5461,7 +5461,7 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
         }
         if ((*str & 0xf0) == 0xe0) 
         {
-            if (in_text_end && in_text_end - str < 3) return -1;
+            if (in_text_end && in_text_end - (const char*)str < 3) return -1;
             if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return -1;
             if (*str == 0xed && str[1] > 0x9f) return -1; // str[1] < 0x80 is checked below
             c = (*str++ & 0x0f) << 12;
@@ -5474,7 +5474,7 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
         }
         if ((*str & 0xf8) == 0xf0) 
         {
-            if (in_text_end && in_text_end - str < 4) return -1;
+            if (in_text_end && in_text_end - (const char*)str < 4) return -1;
             if (*str > 0xf4) return -1;
             if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return -1;
             if (*str == 0xf4 && str[1] > 0x8f) return -1; // str[1] < 0x80 is checked below
