@@ -5536,7 +5536,7 @@ static int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int c)
         } 
         else if (c >= 0xd800 && c < 0xdc00) 
         {
-            if (i+4 > n) return NULL;
+            if (i+4 > n) return 0;
             buf[i++] = 0xf0 + (c >> 18);
             buf[i++] = 0x80 + ((c >> 12) & 0x3f);
             buf[i++] = 0x80 + ((c >> 6) & 0x3f);
