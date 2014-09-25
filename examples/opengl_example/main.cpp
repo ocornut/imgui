@@ -184,13 +184,33 @@ void InitImGui()
     glBindTexture(GL_TEXTURE_2D, fontTex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+#if 1
+	// Default font (embedded in code)
     const void* png_data;
     unsigned int png_size;
     ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
     int tex_x, tex_y, tex_comp;
     void* tex_data = stbi_load_from_memory((const unsigned char*)png_data, (int)png_size, &tex_x, &tex_y, &tex_comp, 0);
+#else
+	// Custom font from filesystem
+	io.Font = new ImBitmapFont();
+	io.Font->LoadFromFile("../../extra_fonts/arial_unicode_ms_18_CJK.fnt");
+    int tex_x, tex_y, tex_comp;
+    void* tex_data = stbi_load("../../extra_fonts/arial_unicode_ms_18_CJK.png", &tex_x, &tex_y, &tex_comp, 4);
+	
+	// Automatically find white pixel from the texture we just loaded
+	// (io.FontTexUvForWhite needs to contains UV coordinates pointing to a white pixel in order to render solid objects)
+	for (int tex_data_off = 0; tex_data_off < tex_x*tex_y; tex_data_off++)
+		if (((unsigned int*)tex_data)[tex_data_off] == 0xffffffff)
+		{
+			io.FontTexUvForWhite = ImVec2((float)(tex_data_off % tex_x)/(tex_x), (float)(tex_data_off / tex_x)/(tex_y));
+			break;
+		}
+#endif
+
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_x, tex_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data);
-    stbi_image_free(tex_data);
+	stbi_image_free(tex_data);
 }
 
 void UpdateImGui()
