@@ -4119,7 +4119,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
         else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_V))
         {
             if (g.IO.GetClipboardTextFn)
-			{
+            {
                 if (const char* clipboard = g.IO.GetClipboardTextFn())
                 {
                     // Remove new-line from pasted buffer
@@ -4137,7 +4137,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
                     stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
                     ImGui::MemFree(clipboard_filtered);
                 }
-			}
+            }
         }
         else if (g.IO.InputCharacters[0])
         {
@@ -5394,60 +5394,60 @@ const ImBitmapFont::FntGlyph* ImBitmapFont::FindGlyph(unsigned short c) const
 // Based on stb_from_utf8() from github.com/nothings/stb/
 static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end)
 {
-	if (*in_text != 0)
-	{
-		unsigned int c = -1;
-		const char* str = in_text;
-		if (!(*str & 0x80))
-		{
-			c = (unsigned int)(*str++);
-			*out_char = c;
-			return 1;
-		}
-		if ((*str & 0xe0) == 0xc0) 
-		{
-			if (in_text_end && in_text_end - str < 2) return -1;
-			if (*str < 0xc2) return -1;
-			c = (*str++ & 0x1f) << 6;
-			if ((*str & 0xc0) != 0x80) return -1;
-			c += (*str++ & 0x3f);
-			*out_char = c;
-			return 2;
-		}
-		if ((*str & 0xf0) == 0xe0) 
-		{
-			if (in_text_end && in_text_end - str < 3) return -1;
-			if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return -1;
-			if (*str == 0xed && str[1] > 0x9f) return -1; // str[1] < 0x80 is checked below
-			c = (*str++ & 0x0f) << 12;
-			if ((*str & 0xc0) != 0x80) return -1;
-			c += (*str++ & 0x3f) << 6;
-			if ((*str & 0xc0) != 0x80) return -1;
-			c += (*str++ & 0x3f);
-			*out_char = c;
-			return 3;
-		}
-		if ((*str & 0xf8) == 0xf0) 
-		{
-			if (in_text_end && in_text_end - str < 4) return -1;
-			if (*str > 0xf4) return -1;
-			if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return -1;
-			if (*str == 0xf4 && str[1] > 0x8f) return -1; // str[1] < 0x80 is checked below
-			c = (*str++ & 0x07) << 18;
-			if ((*str & 0xc0) != 0x80) return -1;
-			c += (*str++ & 0x3f) << 12;
-			if ((*str & 0xc0) != 0x80) return -1;
-			c += (*str++ & 0x3f) << 6;
-			if ((*str & 0xc0) != 0x80) return -1;
-			c += (*str++ & 0x3f);
-			// utf-8 encodings of values used in surrogate pairs are invalid
-			if ((c & 0xFFFFF800) == 0xD800) return -1;
-			*out_char = c;
-			return 4;
-		}
-	}
-	*out_char = 0;
-	return 0;
+    if (*in_text != 0)
+    {
+        unsigned int c = -1;
+        const char* str = in_text;
+        if (!(*str & 0x80))
+        {
+            c = (unsigned int)(*str++);
+            *out_char = c;
+            return 1;
+        }
+        if ((*str & 0xe0) == 0xc0) 
+        {
+            if (in_text_end && in_text_end - str < 2) return -1;
+            if (*str < 0xc2) return -1;
+            c = (*str++ & 0x1f) << 6;
+            if ((*str & 0xc0) != 0x80) return -1;
+            c += (*str++ & 0x3f);
+            *out_char = c;
+            return 2;
+        }
+        if ((*str & 0xf0) == 0xe0) 
+        {
+            if (in_text_end && in_text_end - str < 3) return -1;
+            if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return -1;
+            if (*str == 0xed && str[1] > 0x9f) return -1; // str[1] < 0x80 is checked below
+            c = (*str++ & 0x0f) << 12;
+            if ((*str & 0xc0) != 0x80) return -1;
+            c += (*str++ & 0x3f) << 6;
+            if ((*str & 0xc0) != 0x80) return -1;
+            c += (*str++ & 0x3f);
+            *out_char = c;
+            return 3;
+        }
+        if ((*str & 0xf8) == 0xf0) 
+        {
+            if (in_text_end && in_text_end - str < 4) return -1;
+            if (*str > 0xf4) return -1;
+            if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return -1;
+            if (*str == 0xf4 && str[1] > 0x8f) return -1; // str[1] < 0x80 is checked below
+            c = (*str++ & 0x07) << 18;
+            if ((*str & 0xc0) != 0x80) return -1;
+            c += (*str++ & 0x3f) << 12;
+            if ((*str & 0xc0) != 0x80) return -1;
+            c += (*str++ & 0x3f) << 6;
+            if ((*str & 0xc0) != 0x80) return -1;
+            c += (*str++ & 0x3f);
+            // utf-8 encodings of values used in surrogate pairs are invalid
+            if ((c & 0xFFFFF800) == 0xD800) return -1;
+            *out_char = c;
+            return 4;
+        }
+    }
+    *out_char = 0;
+    return 0;
 }
 
 ImVec2 ImBitmapFont::CalcTextSize(float size, float max_width, const char* text_begin, const char* text_end, const char** remaining) const
@@ -5466,11 +5466,11 @@ ImVec2 ImBitmapFont::CalcTextSize(float size, float max_width, const char* text_
     const char* s = text_begin;
     while (s < text_end)
     {
-		unsigned int c;
-		const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
-		s += bytes_count > 0 ? bytes_count : 1;  // Handle decoding failure by skipping to next byte
-		if (c > 0x10000)
-			continue;
+        unsigned int c;
+        const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
+        s += bytes_count > 0 ? bytes_count : 1;  // Handle decoding failure by skipping to next byte
+        if (c > 0x10000)
+            continue;
 
         if (c == '\n')
         {
@@ -5528,13 +5528,13 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
     float y = pos.y;
     for (const char* s = text_begin; s < text_end; )
     {
-		unsigned int c;
-		const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
-		s += bytes_count > 0 ? bytes_count : 1;  // Handle decoding failure by skipping to next byte
-		if (c >= 0x10000)
-			continue;
+        unsigned int c;
+        const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
+        s += bytes_count > 0 ? bytes_count : 1;  // Handle decoding failure by skipping to next byte
+        if (c >= 0x10000)
+            continue;
 
-		if (c == '\n')
+        if (c == '\n')
         {
             x = pos.x;
             y += line_height * scale;
