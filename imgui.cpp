@@ -390,6 +390,8 @@ static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, float t)          
 static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, const ImVec2& t)  { return ImVec2(a.x + (b.x - a.x) * t.x, a.y + (b.y - a.y) * t.y); }
 static inline float  ImLength(const ImVec2& lhs)                                { return sqrt(lhs.x*lhs.x + lhs.y*lhs.y); }
 
+static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);  // return input UTF-8 bytes count
+
 static int ImStricmp(const char* str1, const char* str2)
 {
     int d;
@@ -4117,6 +4119,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
         else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_V))
         {
             if (g.IO.GetClipboardTextFn)
+			{
                 if (const char* clipboard = g.IO.GetClipboardTextFn())
                 {
                     // Remove new-line from pasted buffer
@@ -4134,6 +4137,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
                     stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
                     ImGui::MemFree(clipboard_filtered);
                 }
+			}
         }
         else if (g.IO.InputCharacters[0])
         {
@@ -5386,6 +5390,66 @@ const ImBitmapFont::FntGlyph* ImBitmapFont::FindGlyph(unsigned short c) const
     return NULL;
 }
 
+// Convert UTF-8 to 32-bits character, process single character input.
+// Based on stb_from_utf8() from github.com/nothings/stb/
+static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end)
+{
+	if (*in_text != 0)
+	{
+		unsigned int c = -1;
+		const char* str = in_text;
+		if (!(*str & 0x80))
+		{
+			c = (unsigned int)(*str++);
+			*out_char = c;
+			return 1;
+		}
+		if ((*str & 0xe0) == 0xc0) 
+		{
+			if (in_text_end && in_text_end - str < 2) return -1;
+			if (*str < 0xc2) return -1;
+			c = (*str++ & 0x1f) << 6;
+			if ((*str & 0xc0) != 0x80) return -1;
+			c += (*str++ & 0x3f);
+			*out_char = c;
+			return 2;
+		}
+		if ((*str & 0xf0) == 0xe0) 
+		{
+			if (in_text_end && in_text_end - str < 3) return -1;
+			if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return -1;
+			if (*str == 0xed && str[1] > 0x9f) return -1; // str[1] < 0x80 is checked below
+			c = (*str++ & 0x0f) << 12;
+			if ((*str & 0xc0) != 0x80) return -1;
+			c += (*str++ & 0x3f) << 6;
+			if ((*str & 0xc0) != 0x80) return -1;
+			c += (*str++ & 0x3f);
+			*out_char = c;
+			return 3;
+		}
+		if ((*str & 0xf8) == 0xf0) 
+		{
+			if (in_text_end && in_text_end - str < 4) return -1;
+			if (*str > 0xf4) return -1;
+			if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return -1;
+			if (*str == 0xf4 && str[1] > 0x8f) return -1; // str[1] < 0x80 is checked below
+			c = (*str++ & 0x07) << 18;
+			if ((*str & 0xc0) != 0x80) return -1;
+			c += (*str++ & 0x3f) << 12;
+			if ((*str & 0xc0) != 0x80) return -1;
+			c += (*str++ & 0x3f) << 6;
+			if ((*str & 0xc0) != 0x80) return -1;
+			c += (*str++ & 0x3f);
+			// utf-8 encodings of values used in surrogate pairs are invalid
+			if ((c & 0xFFFFF800) == 0xD800) return -1;
+			*out_char = c;
+			return 4;
+		}
+	}
+	*out_char = 0;
+	return 0;
+}
+
 ImVec2 ImBitmapFont::CalcTextSize(float size, float max_width, const char* text_begin, const char* text_end, const char** remaining) const
 {
     if (max_width == 0.0f)
@@ -5402,7 +5466,12 @@ ImVec2 ImBitmapFont::CalcTextSize(float size, float max_width, const char* text_
     const char* s = text_begin;
     while (s < text_end)
     {
-        const char c = *s;
+		unsigned int c;
+		const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
+		s += bytes_count > 0 ? bytes_count : 1;  // Handle decoding failure by skipping to next byte
+		if (c > 0x10000)
+			continue;
+
         if (c == '\n')
         {
             if (text_size.x < line_width)
@@ -5414,7 +5483,6 @@ ImVec2 ImBitmapFont::CalcTextSize(float size, float max_width, const char* text_
         {
             const float char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
             //const float char_extend = (glyph->XOffset + glyph->Width * scale);
-
             if (line_width + char_width >= max_width)
                 break;
             line_width += char_width;
@@ -5424,8 +5492,6 @@ ImVec2 ImBitmapFont::CalcTextSize(float size, float max_width, const char* text_
             if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
                 line_width += (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
         }
-
-        s += 1;
     }
 
     if (line_width > 0 || text_size.y == 0.0f)
@@ -5460,10 +5526,15 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
 
     float x = pos.x;
     float y = pos.y;
-    for (const char* s = text_begin; s < text_end; s++)
+    for (const char* s = text_begin; s < text_end; )
     {
-        const char c = *s;
-        if (c == '\n')
+		unsigned int c;
+		const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
+		s += bytes_count > 0 ? bytes_count : 1;  // Handle decoding failure by skipping to next byte
+		if (c >= 0x10000)
+			continue;
+
+		if (c == '\n')
         {
             x = pos.x;
             y += line_height * scale;

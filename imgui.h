@@ -25,6 +25,7 @@ struct ImGuiWindow;
 #endif
 
 typedef unsigned int ImU32;
+typedef unsigned short ImWchar;
 typedef ImU32 ImGuiID;
 typedef int ImGuiCol;               // enum ImGuiCol_
 typedef int ImGuiKey;               // enum ImGuiKey_
