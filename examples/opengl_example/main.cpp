@@ -204,12 +204,16 @@ void InitImGui()
     ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
     int tex_x, tex_y, tex_comp;
     void* tex_data = stbi_load_from_memory((const unsigned char*)png_data, (int)png_size, &tex_x, &tex_y, &tex_comp, 0);
+	IM_ASSERT(tex_data != NULL);
 #else
 	// Custom font from filesystem
 	io.Font = new ImBitmapFont();
-	io.Font->LoadFromFile("../../extra_fonts/arial_unicode_ms_18_CJK.fnt");
+	io.Font->LoadFromFile("../../extra_fonts/mplus-2m-medium_18.fnt");
+	IM_ASSERT(io.Font->IsLoaded());
+
     int tex_x, tex_y, tex_comp;
-    void* tex_data = stbi_load("../../extra_fonts/arial_unicode_ms_18_CJK.png", &tex_x, &tex_y, &tex_comp, 4);
+	void* tex_data = stbi_load("../../extra_fonts/mplus-2m-medium_18.png", &tex_x, &tex_y, &tex_comp, 0);
+	IM_ASSERT(tex_data != NULL);
 	
 	// Automatically find white pixel from the texture we just loaded
 	// (io.FontTexUvForWhite needs to contains UV coordinates pointing to a white pixel in order to render solid objects)
