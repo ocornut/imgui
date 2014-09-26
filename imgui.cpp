@@ -320,6 +320,7 @@ ImGuiIO::ImGuiIO()
     FontTexUvForWhite = ImVec2(0.0f,0.0f);
     FontBaseScale = 1.0f;
     FontAllowUserScaling = false;
+    FontFallbackGlyph = (ImWchar)'?';
     PixelCenterOffset = 0.0f;
     MousePos = ImVec2(-1,-1);
     MousePosPrev = ImVec2(-1,-1);
@@ -4085,7 +4086,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
     bool cancel_edit = false;
     bool enter_pressed = false;
     static char text_tmp_utf8[IM_ARRAYSIZE(edit_state.InitialText)];
-	if (g.ActiveId == id)
+    if (g.ActiveId == id)
     {
         // Edit in progress
         edit_state.BufSize = buf_size < IM_ARRAYSIZE(edit_state.Text) ? buf_size : IM_ARRAYSIZE(edit_state.Text);
@@ -4140,7 +4141,7 @@ bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlag
             {
                 const int ib = edit_state.HasSelection() ? ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end) : 0;
                 const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : (int)ImStrlenW(edit_state.Text);
-				ImTextStrToUtf8(text_tmp_utf8, IM_ARRAYSIZE(text_tmp_utf8), edit_state.Text+ib, edit_state.Text+ie);
+                ImTextStrToUtf8(text_tmp_utf8, IM_ARRAYSIZE(text_tmp_utf8), edit_state.Text+ib, edit_state.Text+ie);
                 g.IO.SetClipboardTextFn(text_tmp_utf8);
             }
 
@@ -5577,6 +5578,7 @@ ImVec2 ImBitmapFont::CalcTextSizeA(float size, float max_width, const char* text
 
     const float scale = size / (float)Info->FontSize;
     const float line_height = (float)Info->FontSize * scale;
+    const FntGlyph* fallback_glyph = FindGlyph(GImGui.IO.FontFallbackGlyph);
 
     ImVec2 text_size = ImVec2(0,0);
     float line_width = 0.0f;
@@ -5595,19 +5597,25 @@ ImVec2 ImBitmapFont::CalcTextSizeA(float size, float max_width, const char* text
             text_size.y += line_height;
             line_width = 0;
         }
-        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c))
-        {
-            const float char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
-            //const float char_extend = (glyph->XOffset + glyph->Width * scale);
-            if (line_width + char_width >= max_width)
-                break;
-            line_width += char_width;
-        }
         else if (c == '\t')
         {
             // FIXME: Better TAB handling needed.
             if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
                 line_width += (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
+        }
+        else
+        {
+            const FntGlyph* glyph = FindGlyph((unsigned short)c);
+            if (!glyph)
+                glyph = fallback_glyph;
+            if (glyph)
+            {
+                const float char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
+                //const float char_extend = (glyph->XOffset + glyph->Width * scale);
+                if (line_width + char_width >= max_width)
+                    break;
+                line_width += char_width;
+            }
         }
     }
 
@@ -5633,6 +5641,7 @@ ImVec2 ImBitmapFont::CalcTextSizeW(float size, float max_width, const ImWchar* t
 
     const float scale = size / (float)Info->FontSize;
     const float line_height = (float)Info->FontSize * scale;
+    const FntGlyph* fallback_glyph = FindGlyph(GImGui.IO.FontFallbackGlyph);
 
     ImVec2 text_size = ImVec2(0,0);
     float line_width = 0.0f;
@@ -5649,19 +5658,25 @@ ImVec2 ImBitmapFont::CalcTextSizeW(float size, float max_width, const ImWchar* t
             text_size.y += line_height;
             line_width = 0;
         }
-        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c))
-        {
-            const float char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
-            //const float char_extend = (glyph->XOffset + glyph->Width * scale);
-            if (line_width + char_width >= max_width)
-                break;
-            line_width += char_width;
-        }
         else if (c == '\t')
         {
             // FIXME: Better TAB handling needed.
             if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
                 line_width += (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
+        }
+        else
+        {
+            const FntGlyph* glyph = FindGlyph((unsigned short)c);
+            if (!glyph)
+                glyph = fallback_glyph;
+            if (glyph)
+            {
+                const float char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
+                //const float char_extend = (glyph->XOffset + glyph->Width * scale);
+                if (line_width + char_width >= max_width)
+                    break;
+                line_width += char_width;
+            }
         }
     }
 
@@ -5688,6 +5703,7 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
     const float tex_scale_x = 1.0f / (float)Common->ScaleW;
     const float tex_scale_y = 1.0f / (float)(Common->ScaleH);
     const float outline = (float)Info->Outline;
+    const FntGlyph* fallback_glyph = FindGlyph(GImGui.IO.FontFallbackGlyph);
 
     // Align to be pixel perfect
     pos.x = (float)(int)pos.x;
@@ -5712,7 +5728,10 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
             continue;
         }
 
-        if (const FntGlyph* glyph = FindGlyph((unsigned short)c))
+        const FntGlyph* glyph = FindGlyph((unsigned short)c);
+        if (!glyph)
+            glyph = fallback_glyph;
+        if (glyph)
         {
             const float char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
             //const float char_extend = (glyph->XOffset + glyph->Width * scale);
@@ -6037,6 +6056,22 @@ void ShowTestWindow(bool* open)
             ImGui::TextColored(ImVec4(1.0f,1.0f,0.0f,1.0f), "Yellow");
             ImGui::TreePop();
         }
+
+        if (ImGui::TreeNode("UTF-8 Text"))
+        {
+            // UTF-8 test (need a suitable font, try extra_fonts/mplus* files for example)
+            // Most compiler appears to support UTF-8 in source code (with Visual Studio you need to save your file as 'UTF-8 without signature')
+            // However for the sake for maximum portability here we are *not* including raw UTF-8 character in this source file, instead we encode the string with with hexadecimal constants.
+            // In your own application please be reasonable and use UTF-8 in the source or get the data from external files. :)
+            //const char* utf8_string = "\xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93\x20\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e"; // Japanese text for "Kakikukeo" (Hiragana) followed by "Nihongo" (kanji)
+            ImGui::Text("(CJK text will only appears if the font supports it. Please check in\nthe extra_fonts/ folder if you intend to use non-ASCII characters.\nNote that characters values are preserved even if the font cannot be\ndisplayed, so you can safely copy & paste garbled characters.)");
+            ImGui::Text("Hiragana: \xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93 (kakikukeko)");
+            ImGui::Text("Kanjis: \xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e (nihongo)");
+            static char buf[32] = "\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e";
+            ImGui::InputText("UTF-8 input", buf, IM_ARRAYSIZE(buf));
+            ImGui::TreePop();
+        }
+
 
         static int e = 0;
         ImGui::RadioButton("radio a", &e, 0); ImGui::SameLine();

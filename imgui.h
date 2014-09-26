@@ -419,6 +419,7 @@ struct ImGuiIO
     ImVec2      FontTexUvForWhite;          // = (0.0f,0.0f)            // Font texture must have a white pixel at this UV coordinate. Adjust if you are using custom texture.
     float       FontBaseScale;              // = 1.0f                   // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
     bool        FontAllowUserScaling;       // = false                  // Set to allow scaling text with CTRL+Wheel.
+	ImWchar     FontFallbackGlyph;          // = '?'                    // Replacement glyph is one isn't found.
     float       PixelCenterOffset;          // = 0.0f                   // Try to set to 0.5f or 0.375f if rendering is blurry
 
     //------------------------------------------------------------------
