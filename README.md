@@ -3,7 +3,7 @@ ImGui
 
 ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and carries minimal amount of dependencies (only 3 files are needed). It is based on an "immediate" graphical user interface paradigm which allows you to build simple user interfaces with ease.
 
-ImGui is designed to enable fast iteration and allow programmers to create "content creation" or "debug" tools (as opposed to tools for the average end-user). It favors simplicity and thus lacks certain features normally found in more high-level libraries, such as string localisation.
+ImGui is designed to enable fast iteration and allow programmers to create "content creation" or "debug" tools (as opposed to tools for the average end-user). It favors simplicity and thus lacks certain features normally found in more high-level libraries.
 
 ImGui is particularly suited to integration in 3D applications, fullscreen applications, embedded applications, games, or any applications on consoles platforms where operating system features are non-standard. 
 
@@ -22,6 +22,10 @@ Gallery
 ![screenshot 2](/web/test_window_02.png?raw=true)
 ![screenshot 3](/web/test_window_03.png?raw=true)
 ![screenshot 4](/web/test_window_04.png?raw=true)
+
+UTF-8 is supported for text display and input. Here using M+ font to display Japanese:
+
+![utf-8 screenshot](/web/utf8_sample_01.png?raw=true)
 
 References
 ----------
