@@ -1,4 +1,4 @@
-// ImGui library v1.12+
+// ImGui library v1.13
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -22,7 +22,6 @@
  Designed for developers and content-creators, not the typical end-user! Some of the weaknesses includes:
  - doesn't look fancy, doesn't animate
  - limited layout features, intricate layouts are typically crafted in code
- - assume ASCII text, using strlen() and [] operators, etc
  - occasionally use statically sized buffers for string manipulations - won't crash, but some long text may be clipped
  
  END-USER GUIDE
