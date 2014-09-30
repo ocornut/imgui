@@ -1,4 +1,4 @@
-// ImGui library v1.13
+// ImGui library v1.14 wip
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -185,8 +185,10 @@
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
- - input: keyboard: full keyboard navigation and focus.
+ - keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing
+ - keyboard: full keyboard navigation and focus.
  - input: support trackpad style scrolling & slider edit.
+ - tooltip: move to fit within screen (e.g. when mouse cursor is right of the screen).
  - misc: not thread-safe
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - style editor: add a button to print C code.
@@ -775,7 +777,7 @@ public:
     ImGuiID     GetID(const void* ptr);
 
     void        AddToRenderList();
-    bool        FocusItemRegister(bool is_active, int* out_idx = NULL); // Return TRUE if focus is requested
+    bool        FocusItemRegister(bool is_active);      // Return true if focus is requested
     void        FocusItemUnregister();
 
     ImGuiAabb   Aabb() const                            { return ImGuiAabb(Pos, Pos+Size); }
@@ -1050,23 +1052,25 @@ ImGuiID ImGuiWindow::GetID(const void* ptr)
     return id;
 }
 
-bool ImGuiWindow::FocusItemRegister(bool is_active, int* out_idx)
+bool ImGuiWindow::FocusItemRegister(bool is_active)
 {
-    FocusIdxCounter++;
-    if (out_idx)
-        *out_idx = FocusIdxCounter;
-
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    if (!window->DC.AllowKeyboardFocus.back())
-        return false;
+
+    const bool allow_keyboard_focus = window->DC.AllowKeyboardFocus.back();
+    if (allow_keyboard_focus)
+        FocusIdxCounter++;
 
     // Process input at this point: TAB, Shift-TAB switch focus
+    // We can always TAB out of a widget that doesn't allow tabbing in.
     if (FocusIdxRequestNext == IM_INT_MAX && is_active && ImGui::IsKeyPressedMap(ImGuiKey_Tab))
     {
         // Modulo on index will be applied at the end of frame once we've got the total counter of items.
-        FocusIdxRequestNext = FocusIdxCounter + (g.IO.KeyShift ? -1 : +1);
+        FocusIdxRequestNext = FocusIdxCounter + (g.IO.KeyShift ? (allow_keyboard_focus ? -1 : 0) : +1);
     }
+
+    if (!allow_keyboard_focus)
+        return false;
 
     const bool focus_requested = (FocusIdxCounter == FocusIdxRequestCurrent);
     return focus_requested;
@@ -1387,7 +1391,7 @@ void NewFrame()
     // NB: Don't discard FocusedWindow if it isn't active, so that a window that go on/off programatically won't lose its keyboard focus.
     if (g.ActiveId == 0 && g.FocusedWindow != NULL && g.FocusedWindow->Visible && IsKeyPressedMap(ImGuiKey_Tab, false))
     {
-        g.FocusedWindow->FocusIdxRequestNext = 0;    
+        g.FocusedWindow->FocusIdxRequestNext = 0;
     }
 
     // Mark all windows as not visible
@@ -2625,6 +2629,12 @@ void SetScrollPosHere()
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->NextScrollY = (window->DC.CursorPos.y + window->ScrollY) - (window->Pos.y + window->SizeFull.y * 0.5f) - (window->TitleBarHeight() + window->WindowPadding().y);
+}
+
+void SetKeyboardFocusHere()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->FocusIdxRequestNext = window->FocusIdxCounter;
 }
 
 void SetTreeStateStorage(ImGuiStorage* tree)
@@ -6021,9 +6031,6 @@ void ShowTestWindow(bool* open)
             ImGui::Text("Thanks for clicking me!");
         }
 
-        static bool check = true;
-        ImGui::Checkbox("checkbox", &check);
-
         if (ImGui::TreeNode("Tree"))
         {
             for (size_t i = 0; i < 5; i++)
@@ -6071,6 +6078,8 @@ void ShowTestWindow(bool* open)
             ImGui::TreePop();
         }
 
+        static bool check = true;
+        ImGui::Checkbox("checkbox", &check);
 
         static int e = 0;
         ImGui::RadioButton("radio a", &e, 0); ImGui::SameLine();
@@ -6372,6 +6381,42 @@ void ShowTestWindow(bool* open)
         for (size_t i = 0; i < IM_ARRAYSIZE(lines); i++)
             if (filter.PassFilter(lines[i]))
                 ImGui::BulletText("%s", lines[i]);
+    }
+
+    if (ImGui::CollapsingHeader("Keyboard & Focus"))
+    {
+        if (ImGui::TreeNode("Tabbing"))
+        {
+            ImGui::Text("Use TAB/SHIFT+TAB to cycle thru keyboard editable fields.");
+            static char buf[32] = "dummy";
+            ImGui::InputText("1", buf, IM_ARRAYSIZE(buf));
+            ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
+            ImGui::InputText("3", buf, IM_ARRAYSIZE(buf));
+            ImGui::PushAllowKeyboardFocus(false);
+            ImGui::InputText("4 (tab skip)", buf, IM_ARRAYSIZE(buf));
+            //ImGui::SameLine(); ImGui::Text("(?)"); if (ImGui::IsHovered()) ImGui::SetTooltip("Use ImGui::PushAllowKeyboardFocus(bool)\nto disable tabbing through certain widgets.");
+            ImGui::PopAllowKeyboardFocus();
+            ImGui::InputText("5", buf, IM_ARRAYSIZE(buf));
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Focus from code"))
+        {
+            bool focus_1 = ImGui::Button("Focus on 1"); ImGui::SameLine();
+            bool focus_2 = ImGui::Button("Focus on 2"); ImGui::SameLine();
+            bool focus_3 = ImGui::Button("Focus on 3");
+            static char buf[128] = "click on a button to set focus";
+            ImGui::InputText("1", buf, IM_ARRAYSIZE(buf));
+            if (focus_1) ImGui::SetKeyboardFocusHere();
+            ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
+            if (focus_2) ImGui::SetKeyboardFocusHere();
+            //ImGui::PushAllowKeyboardFocus(false);
+            //ImGui::InputText("3 (tab skip)", buf, IM_ARRAYSIZE(buf));
+            ImGui::InputText("3", buf, IM_ARRAYSIZE(buf));
+            if (focus_3) ImGui::SetKeyboardFocusHere();
+            //ImGui::PopAllowKeyboardFocus();
+            ImGui::TreePop();
+        }
     }
 
     if (ImGui::CollapsingHeader("Long text"))

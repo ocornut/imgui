@@ -1,4 +1,4 @@
-// ImGui library v1.13
+// ImGui library v1.14 wip
 // See .cpp file for commentary.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
@@ -153,12 +153,13 @@ namespace ImGui
     ImDrawList* GetWindowDrawList();                                                // get rendering command-list if you want to append your own draw primitives.
     void        SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontBaseScale if you want to scale all windows together.
     void        SetScrollPosHere();                                                 // adjust scrolling position to center into the current cursor position.
+    void        SetKeyboardFocusHere();
     void        SetTreeStateStorage(ImGuiStorage* tree);                            // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it).
     ImGuiStorage* GetTreeStateStorage();
     void        PushItemWidth(float item_width);
     void        PopItemWidth();
     float       GetItemWidth();
-    void        PushAllowKeyboardFocus(bool v);
+    void        PushAllowKeyboardFocus(bool v);                                     // allow focusing using TAB/Shift-TAB, enabled by default but you can disable it for certain widgets.
     void        PopAllowKeyboardFocus();
     void        PushStyleColor(ImGuiCol idx, const ImVec4& col);
     void        PopStyleColor();
@@ -419,7 +420,7 @@ struct ImGuiIO
     ImVec2      FontTexUvForWhite;          // = (0.0f,0.0f)            // Font texture must have a white pixel at this UV coordinate. Adjust if you are using custom texture.
     float       FontBaseScale;              // = 1.0f                   // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
     bool        FontAllowUserScaling;       // = false                  // Set to allow scaling text with CTRL+Wheel.
-	ImWchar     FontFallbackGlyph;          // = '?'                    // Replacement glyph is one isn't found.
+    ImWchar     FontFallbackGlyph;          // = '?'                    // Replacement glyph is one isn't found.
     float       PixelCenterOffset;          // = 0.0f                   // Try to set to 0.5f or 0.375f if rendering is blurry
 
     //------------------------------------------------------------------
