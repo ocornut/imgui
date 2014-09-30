@@ -185,13 +185,13 @@
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
- - keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing
+ ! keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing
  - keyboard: full keyboard navigation and focus.
  - input: support trackpad style scrolling & slider edit.
  - tooltip: move to fit within screen (e.g. when mouse cursor is right of the screen).
  - misc: not thread-safe
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
- - style editor: add a button to print C code.
+ - style editor: add a button to output C code.
  - optimisation/render: use indexed rendering
  - optimisation/render: move clip-rect to vertex data? would allow merging all commands
  - optimisation/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
@@ -763,9 +763,12 @@ struct ImGuiWindow
     ImGuiStorage            StateStorage;
     float                   FontWindowScale;                    // Scale multipler per-window
 
-    int                     FocusIdxCounter;                    // Start at -1 and increase as assigned via FocusItemRegister()
-    int                     FocusIdxRequestCurrent;             // Item being requested for focus, rely on layout to be stable between the frame pressing TAB and the next frame
-    int                     FocusIdxRequestNext;                // Item being requested for focus, for next update
+    int                     FocusIdxAllCounter;                 // Start at -1 and increase as assigned via FocusItemRegister()
+    int                     FocusIdxTabCounter;                 // (same, but only include widgets which you can Tab through)
+    int                     FocusIdxAllRequestCurrent;          // Item being requested for focus, rely on layout to be stable between the frame pressing TAB and the next frame
+    int                     FocusIdxTabRequestCurrent;
+    int                     FocusIdxAllRequestNext;             // Item being requested for focus, for next update
+	int                     FocusIdxTabRequestNext;
 
     ImDrawList*             DrawList;
 
@@ -1019,9 +1022,9 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
     if (ImLength(Size) < 0.001f)
         AutoFitFrames = 3;
 
-    FocusIdxCounter = -1;
-    FocusIdxRequestCurrent = IM_INT_MAX;
-    FocusIdxRequestNext = IM_INT_MAX;
+    FocusIdxAllCounter = FocusIdxTabCounter = -1;
+    FocusIdxAllRequestCurrent = FocusIdxTabRequestCurrent = IM_INT_MAX;
+    FocusIdxAllRequestNext = FocusIdxTabRequestNext = IM_INT_MAX;
 
     DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
     new(DrawList) ImDrawList();
@@ -1058,27 +1061,32 @@ bool ImGuiWindow::FocusItemRegister(bool is_active)
     ImGuiWindow* window = GetCurrentWindow();
 
     const bool allow_keyboard_focus = window->DC.AllowKeyboardFocus.back();
+	FocusIdxAllCounter++;
     if (allow_keyboard_focus)
-        FocusIdxCounter++;
+        FocusIdxTabCounter++;
 
-    // Process input at this point: TAB, Shift-TAB switch focus
+    // Process keyboard input at this point: TAB, Shift-TAB switch focus
     // We can always TAB out of a widget that doesn't allow tabbing in.
-    if (FocusIdxRequestNext == IM_INT_MAX && is_active && ImGui::IsKeyPressedMap(ImGuiKey_Tab))
+    if (FocusIdxAllRequestNext == IM_INT_MAX && FocusIdxTabRequestNext == IM_INT_MAX && is_active && ImGui::IsKeyPressedMap(ImGuiKey_Tab))
     {
         // Modulo on index will be applied at the end of frame once we've got the total counter of items.
-        FocusIdxRequestNext = FocusIdxCounter + (g.IO.KeyShift ? (allow_keyboard_focus ? -1 : 0) : +1);
+        FocusIdxTabRequestNext = FocusIdxTabCounter + (g.IO.KeyShift ? (allow_keyboard_focus ? -1 : 0) : +1);
     }
 
-    if (!allow_keyboard_focus)
-        return false;
+	if (FocusIdxAllCounter == FocusIdxAllRequestCurrent)
+		return true;
 
-    const bool focus_requested = (FocusIdxCounter == FocusIdxRequestCurrent);
-    return focus_requested;
+    if (allow_keyboard_focus)
+		if (FocusIdxTabCounter == FocusIdxTabRequestCurrent)
+			return true;
+
+    return false;
 }
 
 void ImGuiWindow::FocusItemUnregister()
 {
-    FocusIdxCounter--;
+	FocusIdxAllCounter--;
+    FocusIdxTabCounter--;
 }
 
 void ImGuiWindow::AddToRenderList()
@@ -1391,7 +1399,7 @@ void NewFrame()
     // NB: Don't discard FocusedWindow if it isn't active, so that a window that go on/off programatically won't lose its keyboard focus.
     if (g.ActiveId == 0 && g.FocusedWindow != NULL && g.FocusedWindow->Visible && IsKeyPressedMap(ImGuiKey_Tab, false))
     {
-        g.FocusedWindow->FocusIdxRequestNext = 0;
+        g.FocusedWindow->FocusIdxTabRequestNext = 0;
     }
 
     // Mark all windows as not visible
@@ -2098,18 +2106,19 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
         else
             window->ItemWidthDefault = 200.0f;
 
-        // Prepare for keyboard focus requests
-        if (window->FocusIdxRequestNext == IM_INT_MAX || window->FocusIdxCounter == -1)
+        // Prepare for keyboard TAB focus requests
+        if (window->FocusIdxTabRequestNext == IM_INT_MAX || window->FocusIdxTabCounter == -1)
         {
-            window->FocusIdxRequestCurrent = IM_INT_MAX;
+            window->FocusIdxTabRequestCurrent = IM_INT_MAX;
         }
         else
         {
-            const int mod = window->FocusIdxCounter+1;
-            window->FocusIdxRequestCurrent = (window->FocusIdxRequestNext + mod) % mod;
+            const int mod = window->FocusIdxTabCounter+1;
+            window->FocusIdxTabRequestCurrent = (window->FocusIdxTabRequestNext + mod) % mod;
         }
-        window->FocusIdxCounter = -1;
-        window->FocusIdxRequestNext = IM_INT_MAX;
+		window->FocusIdxAllRequestCurrent = window->FocusIdxAllRequestNext;
+		window->FocusIdxAllCounter = window->FocusIdxTabCounter = -1;
+        window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = IM_INT_MAX;
 
         ImGuiAabb title_bar_aabb = window->TitleBarAabb();
 
@@ -2634,7 +2643,8 @@ void SetScrollPosHere()
 void SetKeyboardFocusHere()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->FocusIdxRequestNext = window->FocusIdxCounter;
+    window->FocusIdxAllRequestNext = window->FocusIdxAllCounter + 1;
+	window->FocusIdxTabRequestNext = IM_INT_MAX;
 }
 
 void SetTreeStateStorage(ImGuiStorage* tree)
@@ -6406,15 +6416,14 @@ void ShowTestWindow(bool* open)
             bool focus_2 = ImGui::Button("Focus on 2"); ImGui::SameLine();
             bool focus_3 = ImGui::Button("Focus on 3");
             static char buf[128] = "click on a button to set focus";
-            ImGui::InputText("1", buf, IM_ARRAYSIZE(buf));
             if (focus_1) ImGui::SetKeyboardFocusHere();
-            ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
+            ImGui::InputText("1", buf, IM_ARRAYSIZE(buf));
             if (focus_2) ImGui::SetKeyboardFocusHere();
-            //ImGui::PushAllowKeyboardFocus(false);
-            //ImGui::InputText("3 (tab skip)", buf, IM_ARRAYSIZE(buf));
-            ImGui::InputText("3", buf, IM_ARRAYSIZE(buf));
+            ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
+            ImGui::PushAllowKeyboardFocus(false);
             if (focus_3) ImGui::SetKeyboardFocusHere();
-            //ImGui::PopAllowKeyboardFocus();
+            ImGui::InputText("3 (tab skip)", buf, IM_ARRAYSIZE(buf));
+            ImGui::PopAllowKeyboardFocus();
             ImGui::TreePop();
         }
     }
