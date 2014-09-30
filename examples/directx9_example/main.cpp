@@ -168,11 +168,9 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             io.AddInputCharacter((unsigned short)wParam);
         return true;
     case WM_DESTROY:
-        {
-            Cleanup();
-            PostQuitMessage(0);
-            return 0;
-        }
+        Cleanup();
+        PostQuitMessage(0);
+        return 0;
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
@@ -180,14 +178,14 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 // Notify OS Input Method Editor of text input position (e.g. when using Japanese/Chinese inputs, otherwise this isn't needed)
 static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
 {
-	if (HIMC himc = ImmGetContext(hWnd))
-	{
-		COMPOSITIONFORM cf;
-		cf.ptCurrentPos.x = x;
-		cf.ptCurrentPos.y = y;
-		cf.dwStyle = CFS_FORCE_POSITION;
-		ImmSetCompositionWindow(himc, &cf);
-	}
+    if (HIMC himc = ImmGetContext(hWnd))
+    {
+        COMPOSITIONFORM cf;
+        cf.ptCurrentPos.x = x;
+        cf.ptCurrentPos.y = y;
+        cf.dwStyle = CFS_FORCE_POSITION;
+        ImmSetCompositionWindow(himc, &cf);
+    }
 }
 
 void InitImGui()
@@ -218,7 +216,7 @@ void InitImGui()
     io.KeyMap[ImGuiKey_Z] = 'Z';
 
     io.RenderDrawListsFn = ImImpl_RenderDrawLists;
-	io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
+    io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
     
     // Create the vertex buffer
     if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
@@ -310,41 +308,43 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
         
         UpdateImGui();
 
-        // Create a simple window
-        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
         static bool show_test_window = true;
         static bool show_another_window = false;
-        static float f;
-        ImGui::Text("Hello, world!");
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-        show_test_window ^= ImGui::Button("Test Window");
-        show_another_window ^= ImGui::Button("Another Window");
 
-        // Calculate and show framerate
-        static float ms_per_frame[120] = { 0 };
-        static int ms_per_frame_idx = 0;
-        static float ms_per_frame_accum = 0.0f;
-        ms_per_frame_accum -= ms_per_frame[ms_per_frame_idx];
-        ms_per_frame[ms_per_frame_idx] = ImGui::GetIO().DeltaTime * 1000.0f;
-        ms_per_frame_accum += ms_per_frame[ms_per_frame_idx];
-        ms_per_frame_idx = (ms_per_frame_idx + 1) % 120;
-        const float ms_per_frame_avg = ms_per_frame_accum / 120;
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
-
-        // Show the ImGui test window
-        // Most of user example code is in ImGui::ShowTestWindow()
-        if (show_test_window)
+        // 1. Show a simple window
+        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
         {
-            ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));     // Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
-            ImGui::ShowTestWindow(&show_test_window);
+            static float f;
+            ImGui::Text("Hello, world!");
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+            show_test_window ^= ImGui::Button("Test Window");
+            show_another_window ^= ImGui::Button("Another Window");
+
+            // Calculate and show framerate
+            static float ms_per_frame[120] = { 0 };
+            static int ms_per_frame_idx = 0;
+            static float ms_per_frame_accum = 0.0f;
+            ms_per_frame_accum -= ms_per_frame[ms_per_frame_idx];
+            ms_per_frame[ms_per_frame_idx] = ImGui::GetIO().DeltaTime * 1000.0f;
+            ms_per_frame_accum += ms_per_frame[ms_per_frame_idx];
+            ms_per_frame_idx = (ms_per_frame_idx + 1) % 120;
+            const float ms_per_frame_avg = ms_per_frame_accum / 120;
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
         }
 
-        // Show another simple window
+        // 2. Show another simple window, this time using an explicit Begin/End pair
         if (show_another_window)
         {
             ImGui::Begin("Another Window", &show_another_window, ImVec2(200,100));
             ImGui::Text("Hello");
             ImGui::End();
+        }
+
+        // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
+        if (show_test_window)
+        {
+            ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));     // Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
+            ImGui::ShowTestWindow(&show_test_window);
         }
 
         // Rendering

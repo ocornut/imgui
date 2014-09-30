@@ -95,15 +95,15 @@ static void ImImpl_SetClipboardTextFn(const char* text)
 // Notify OS Input Method Editor of text input position (e.g. when using Japanese/Chinese inputs, otherwise this isn't needed)
 static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
 {
-	HWND hwnd = glfwGetWin32Window(window);
-	if (HIMC himc = ImmGetContext(hwnd))
-	{
-		COMPOSITIONFORM cf;
-		cf.ptCurrentPos.x = x;
-		cf.ptCurrentPos.y = y;
-		cf.dwStyle = CFS_FORCE_POSITION;
-		ImmSetCompositionWindow(himc, &cf);
-	}
+    HWND hwnd = glfwGetWin32Window(window);
+    if (HIMC himc = ImmGetContext(hwnd))
+    {
+        COMPOSITIONFORM cf;
+        cf.ptCurrentPos.x = x;
+        cf.ptCurrentPos.y = y;
+        cf.dwStyle = CFS_FORCE_POSITION;
+        ImmSetCompositionWindow(himc, &cf);
+    }
 }
 #endif
 
@@ -115,8 +115,8 @@ static void glfw_error_callback(int error, const char* description)
 
 static void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-	if (action == GLFW_PRESS && button >= 0 && button < 2)
-		mousePressed[button] = true;
+    if (action == GLFW_PRESS && button >= 0 && button < 2)
+        mousePressed[button] = true;
 }
 
 static void glfw_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
@@ -154,7 +154,7 @@ void InitGL()
     window = glfwCreateWindow(1280, 720, "ImGui OpenGL example", NULL, NULL);
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, glfw_key_callback);
-	glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);
+    glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);
     glfwSetScrollCallback(window, glfw_scroll_callback);
     glfwSetCharCallback(window, glfw_char_callback);
 
@@ -196,7 +196,7 @@ void InitImGui()
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
 #ifdef _MSC_VER
-	io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
+    io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
 #endif
 
     // Load font texture
@@ -206,35 +206,35 @@ void InitImGui()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 #if 1
-	// Default font (embedded in code)
+    // Default font (embedded in code)
     const void* png_data;
     unsigned int png_size;
     ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
     int tex_x, tex_y, tex_comp;
     void* tex_data = stbi_load_from_memory((const unsigned char*)png_data, (int)png_size, &tex_x, &tex_y, &tex_comp, 0);
-	IM_ASSERT(tex_data != NULL);
+    IM_ASSERT(tex_data != NULL);
 #else
-	// Custom font from filesystem
-	io.Font = new ImBitmapFont();
-	io.Font->LoadFromFile("../../extra_fonts/mplus-2m-medium_18.fnt");
-	IM_ASSERT(io.Font->IsLoaded());
+    // Custom font from filesystem
+    io.Font = new ImBitmapFont();
+    io.Font->LoadFromFile("../../extra_fonts/mplus-2m-medium_18.fnt");
+    IM_ASSERT(io.Font->IsLoaded());
 
     int tex_x, tex_y, tex_comp;
-	void* tex_data = stbi_load("../../extra_fonts/mplus-2m-medium_18.png", &tex_x, &tex_y, &tex_comp, 0);
-	IM_ASSERT(tex_data != NULL);
-	
-	// Automatically find white pixel from the texture we just loaded
-	// (io.FontTexUvForWhite needs to contains UV coordinates pointing to a white pixel in order to render solid objects)
-	for (int tex_data_off = 0; tex_data_off < tex_x*tex_y; tex_data_off++)
-		if (((unsigned int*)tex_data)[tex_data_off] == 0xffffffff)
-		{
-			io.FontTexUvForWhite = ImVec2((float)(tex_data_off % tex_x)/(tex_x), (float)(tex_data_off / tex_x)/(tex_y));
-			break;
-		}
+    void* tex_data = stbi_load("../../extra_fonts/mplus-2m-medium_18.png", &tex_x, &tex_y, &tex_comp, 0);
+    IM_ASSERT(tex_data != NULL);
+    
+    // Automatically find white pixel from the texture we just loaded
+    // (io.FontTexUvForWhite needs to contains UV coordinates pointing to a white pixel in order to render solid objects)
+    for (int tex_data_off = 0; tex_data_off < tex_x*tex_y; tex_data_off++)
+        if (((unsigned int*)tex_data)[tex_data_off] == 0xffffffff)
+        {
+            io.FontTexUvForWhite = ImVec2((float)(tex_data_off % tex_x)/(tex_x), (float)(tex_data_off / tex_x)/(tex_y));
+            break;
+        }
 #endif
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_x, tex_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data);
-	stbi_image_free(tex_data);
+    stbi_image_free(tex_data);
 }
 
 void UpdateImGui()
@@ -252,7 +252,7 @@ void UpdateImGui()
     double mouse_x, mouse_y;
     glfwGetCursorPos(window, &mouse_x, &mouse_y);
     io.MousePos = ImVec2((float)mouse_x * mousePosScale.x, (float)mouse_y * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
-    io.MouseDown[0] = mousePressed[0] || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != 0;  // If a mouse press event came, always pass it, so we don't miss click-release events that are shorted than our frame.
+    io.MouseDown[0] = mousePressed[0] || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
     io.MouseDown[1] = mousePressed[1] || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) != 0;
 
     // Start the frame
@@ -268,46 +268,48 @@ int main(int argc, char** argv)
     while (!glfwWindowShouldClose(window))
     {
         ImGuiIO& io = ImGui::GetIO();
-		mousePressed[0] = mousePressed[1] = false;
+        mousePressed[0] = mousePressed[1] = false;
         io.MouseWheel = 0;
         glfwPollEvents();
         UpdateImGui();
 
-        // Create a simple window
-        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
         static bool show_test_window = true;
         static bool show_another_window = false;
-        static float f;
-        ImGui::Text("Hello, world!");
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-        show_test_window ^= ImGui::Button("Test Window");
-        show_another_window ^= ImGui::Button("Another Window");
 
-        // Calculate and show framerate
-        static float ms_per_frame[120] = { 0 };
-        static int ms_per_frame_idx = 0;
-        static float ms_per_frame_accum = 0.0f;
-        ms_per_frame_accum -= ms_per_frame[ms_per_frame_idx];
-        ms_per_frame[ms_per_frame_idx] = ImGui::GetIO().DeltaTime * 1000.0f;
-        ms_per_frame_accum += ms_per_frame[ms_per_frame_idx];
-        ms_per_frame_idx = (ms_per_frame_idx + 1) % 120;
-        const float ms_per_frame_avg = ms_per_frame_accum / 120;
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
-
-        // Show the ImGui test window
-        // Most of user example code is in ImGui::ShowTestWindow()
-        if (show_test_window)
+        // 1. Show a simple window
+        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
         {
-            ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));        // Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
-            ImGui::ShowTestWindow(&show_test_window);
+            static float f;
+            ImGui::Text("Hello, world!");
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+            show_test_window ^= ImGui::Button("Test Window");
+            show_another_window ^= ImGui::Button("Another Window");
+
+            // Calculate and show framerate
+            static float ms_per_frame[120] = { 0 };
+            static int ms_per_frame_idx = 0;
+            static float ms_per_frame_accum = 0.0f;
+            ms_per_frame_accum -= ms_per_frame[ms_per_frame_idx];
+            ms_per_frame[ms_per_frame_idx] = ImGui::GetIO().DeltaTime * 1000.0f;
+            ms_per_frame_accum += ms_per_frame[ms_per_frame_idx];
+            ms_per_frame_idx = (ms_per_frame_idx + 1) % 120;
+            const float ms_per_frame_avg = ms_per_frame_accum / 120;
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
         }
 
-        // Show another simple window
+        // 2. Show another simple window, this time using an explicit Begin/End pair
         if (show_another_window)
         {
             ImGui::Begin("Another Window", &show_another_window, ImVec2(200,100));
             ImGui::Text("Hello");
             ImGui::End();
+        }
+
+        // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
+        if (show_test_window)
+        {
+            ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));        // Normally user code doesn't need/want to call this, because positions are saved in .ini file. Here we just want to make the demo initial state a bit more friendly!
+            ImGui::ShowTestWindow(&show_test_window);
         }
 
         // Rendering
