@@ -762,15 +762,15 @@ struct ImGuiWindow
     float                   ItemWidthDefault;
     ImGuiStorage            StateStorage;
     float                   FontWindowScale;                    // Scale multipler per-window
-
-    int                     FocusIdxAllCounter;                 // Start at -1 and increase as assigned via FocusItemRegister()
-    int                     FocusIdxTabCounter;                 // (same, but only include widgets which you can Tab through)
-    int                     FocusIdxAllRequestCurrent;          // Item being requested for focus, rely on layout to be stable between the frame pressing TAB and the next frame
-    int                     FocusIdxTabRequestCurrent;
-    int                     FocusIdxAllRequestNext;             // Item being requested for focus, for next update
-	int                     FocusIdxTabRequestNext;
-
     ImDrawList*             DrawList;
+
+    // Focus
+    int                     FocusIdxAllCounter;                 // Start at -1 and increase as assigned via FocusItemRegister()
+    int                     FocusIdxTabCounter;                 // (same, but only count widgets which you can Tab through)
+    int                     FocusIdxAllRequestCurrent;          // Item being requested for focus
+    int                     FocusIdxTabRequestCurrent;          // Tab-able item being requested for focus
+    int                     FocusIdxAllRequestNext;             // Item being requested for focus, for next update (relies on layout to be stable between the frame pressing TAB and the next frame)
+    int                     FocusIdxTabRequestNext;             // "
 
 public:
     ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_size);
@@ -1022,12 +1022,12 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
     if (ImLength(Size) < 0.001f)
         AutoFitFrames = 3;
 
+    DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
+    new(DrawList) ImDrawList();
+
     FocusIdxAllCounter = FocusIdxTabCounter = -1;
     FocusIdxAllRequestCurrent = FocusIdxTabRequestCurrent = IM_INT_MAX;
     FocusIdxAllRequestNext = FocusIdxTabRequestNext = IM_INT_MAX;
-
-    DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
-    new(DrawList) ImDrawList();
 }
 
 ImGuiWindow::~ImGuiWindow()
@@ -1061,7 +1061,7 @@ bool ImGuiWindow::FocusItemRegister(bool is_active)
     ImGuiWindow* window = GetCurrentWindow();
 
     const bool allow_keyboard_focus = window->DC.AllowKeyboardFocus.back();
-	FocusIdxAllCounter++;
+    FocusIdxAllCounter++;
     if (allow_keyboard_focus)
         FocusIdxTabCounter++;
 
@@ -1073,19 +1073,19 @@ bool ImGuiWindow::FocusItemRegister(bool is_active)
         FocusIdxTabRequestNext = FocusIdxTabCounter + (g.IO.KeyShift ? (allow_keyboard_focus ? -1 : 0) : +1);
     }
 
-	if (FocusIdxAllCounter == FocusIdxAllRequestCurrent)
-		return true;
+    if (FocusIdxAllCounter == FocusIdxAllRequestCurrent)
+        return true;
 
     if (allow_keyboard_focus)
-		if (FocusIdxTabCounter == FocusIdxTabRequestCurrent)
-			return true;
+        if (FocusIdxTabCounter == FocusIdxTabRequestCurrent)
+            return true;
 
     return false;
 }
 
 void ImGuiWindow::FocusItemUnregister()
 {
-	FocusIdxAllCounter--;
+    FocusIdxAllCounter--;
     FocusIdxTabCounter--;
 }
 
@@ -2106,18 +2106,16 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
         else
             window->ItemWidthDefault = 200.0f;
 
-        // Prepare for keyboard TAB focus requests
-        if (window->FocusIdxTabRequestNext == IM_INT_MAX || window->FocusIdxTabCounter == -1)
-        {
-            window->FocusIdxTabRequestCurrent = IM_INT_MAX;
-        }
+        // Prepare for focus requests
+        if (window->FocusIdxAllRequestNext == IM_INT_MAX || window->FocusIdxAllCounter == -1)
+            window->FocusIdxAllRequestCurrent = IM_INT_MAX;
         else
-        {
-            const int mod = window->FocusIdxTabCounter+1;
-            window->FocusIdxTabRequestCurrent = (window->FocusIdxTabRequestNext + mod) % mod;
-        }
-		window->FocusIdxAllRequestCurrent = window->FocusIdxAllRequestNext;
-		window->FocusIdxAllCounter = window->FocusIdxTabCounter = -1;
+            window->FocusIdxAllRequestCurrent = (window->FocusIdxAllRequestNext + (window->FocusIdxAllCounter+1)) % (window->FocusIdxAllCounter+1);
+        if (window->FocusIdxTabRequestNext == IM_INT_MAX || window->FocusIdxTabCounter == -1)
+            window->FocusIdxTabRequestCurrent = IM_INT_MAX;
+        else
+            window->FocusIdxTabRequestCurrent = (window->FocusIdxTabRequestNext + (window->FocusIdxTabCounter+1)) % (window->FocusIdxTabCounter+1);
+        window->FocusIdxAllCounter = window->FocusIdxTabCounter = -1;
         window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = IM_INT_MAX;
 
         ImGuiAabb title_bar_aabb = window->TitleBarAabb();
@@ -2640,11 +2638,11 @@ void SetScrollPosHere()
     window->NextScrollY = (window->DC.CursorPos.y + window->ScrollY) - (window->Pos.y + window->SizeFull.y * 0.5f) - (window->TitleBarHeight() + window->WindowPadding().y);
 }
 
-void SetKeyboardFocusHere()
+void SetKeyboardFocusHere(int offset)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->FocusIdxAllRequestNext = window->FocusIdxAllCounter + 1;
-	window->FocusIdxTabRequestNext = IM_INT_MAX;
+    window->FocusIdxAllRequestNext = window->FocusIdxAllCounter + 1 + offset;
+    window->FocusIdxTabRequestNext = IM_INT_MAX;
 }
 
 void SetTreeStateStorage(ImGuiStorage* tree)

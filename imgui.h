@@ -153,7 +153,7 @@ namespace ImGui
     ImDrawList* GetWindowDrawList();                                                // get rendering command-list if you want to append your own draw primitives.
     void        SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontBaseScale if you want to scale all windows together.
     void        SetScrollPosHere();                                                 // adjust scrolling position to center into the current cursor position.
-    void        SetKeyboardFocusHere();                                             // focus keyboard on the next widget
+    void        SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use 'offset' to access sub components of a multiple component widget.
     void        SetTreeStateStorage(ImGuiStorage* tree);                            // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it).
     ImGuiStorage* GetTreeStateStorage();
     void        PushItemWidth(float item_width);
