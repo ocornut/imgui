@@ -19,6 +19,7 @@
 
 static GLFWwindow* window;
 static GLuint fontTex;
+static bool mousePressed[2] = { false, false };
 static ImVec2 mousePosScale(1.0f, 1.0f);
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
@@ -112,6 +113,12 @@ static void glfw_error_callback(int error, const char* description)
     fputs(description, stderr);
 }
 
+static void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+	if (action == GLFW_PRESS && button >= 0 && button < 2)
+		mousePressed[button] = true;
+}
+
 static void glfw_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -147,6 +154,7 @@ void InitGL()
     window = glfwCreateWindow(1280, 720, "ImGui OpenGL example", NULL, NULL);
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, glfw_key_callback);
+	glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);
     glfwSetScrollCallback(window, glfw_scroll_callback);
     glfwSetCharCallback(window, glfw_char_callback);
 
@@ -243,9 +251,9 @@ void UpdateImGui()
     // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
     double mouse_x, mouse_y;
     glfwGetCursorPos(window, &mouse_x, &mouse_y);
-    io.MousePos = ImVec2((float)mouse_x * mousePosScale.x, (float)mouse_y * mousePosScale.y); // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
-    io.MouseDown[0] = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != 0;
-    io.MouseDown[1] = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) != 0;
+    io.MousePos = ImVec2((float)mouse_x * mousePosScale.x, (float)mouse_y * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+    io.MouseDown[0] = mousePressed[0] || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != 0;  // If a mouse press event came, always pass it, so we don't miss click-release events that are shorted than our frame.
+    io.MouseDown[1] = mousePressed[1] || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) != 0;
 
     // Start the frame
     ImGui::NewFrame();
@@ -260,6 +268,7 @@ int main(int argc, char** argv)
     while (!glfwWindowShouldClose(window))
     {
         ImGuiIO& io = ImGui::GetIO();
+		mousePressed[0] = mousePressed[1] = false;
         io.MouseWheel = 0;
         glfwPollEvents();
         UpdateImGui();
