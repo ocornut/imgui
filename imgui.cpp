@@ -397,9 +397,9 @@ static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, const ImVec2& t)  
 static inline float  ImLength(const ImVec2& lhs)                                { return sqrt(lhs.x*lhs.x + lhs.y*lhs.y); }
 
 static int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
-static int ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end);   // return output UTF-8 bytes count
+static ptrdiff_t ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end);   // return output UTF-8 bytes count
 static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
-static int ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end);    // return input UTF-8 bytes count
+static ptrdiff_t ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end);    // return input UTF-8 bytes count
 
 static int ImStricmp(const char* str1, const char* str2)
 {
@@ -5515,7 +5515,7 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
     return 0;
 }
 
-static int ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end)
+static ptrdiff_t ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end)
 {
     ImWchar* buf_out = buf;
     ImWchar* buf_end = buf + buf_size;
@@ -5535,8 +5535,8 @@ static int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int c)
 {
     if (c)
     {
-        int i = 0;
-        int n = (size_t)buf_size;
+        size_t i = 0;
+        size_t n = buf_size;
         if (c < 0x80) 
         {
             if (i+1 > n) return 0;
@@ -5575,7 +5575,7 @@ static int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int c)
     return 0;
 }
 
-static int ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end)
+static ptrdiff_t ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end)
 {
     char* buf_out = buf;
     const char* buf_end = buf + buf_size;
