@@ -423,12 +423,11 @@ struct ImGuiIO
     ImWchar     FontFallbackGlyph;          // = '?'                    // Replacement glyph is one isn't found.
     float       PixelCenterOffset;          // = 0.0f                   // Try to set to 0.5f or 0.375f if rendering is blurry
 
+    void*       UserData;                   // = NULL                   // Store your own data for retrieval by callbacks.
+
     //------------------------------------------------------------------
     // User Functions
     //------------------------------------------------------------------
-
-    // Store your own data for retrieval by callbacks.
-    void*       UserData;                   // = NULL
 
     // REQUIRED: rendering function. 
     // See example code if you are unsure of how to implement this.
