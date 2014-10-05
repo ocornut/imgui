@@ -333,6 +333,7 @@ ImGuiIO::ImGuiIO()
 
     // User functions
     RenderDrawListsFn = NULL;
+    UserData = NULL;
     MemAllocFn = malloc;
     MemReallocFn = realloc;
     MemFreeFn = free;

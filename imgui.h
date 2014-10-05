@@ -432,6 +432,7 @@ struct ImGuiIO
     // REQUIRED: rendering function. 
     // See example code if you are unsure of how to implement this.
     void        (*RenderDrawListsFn)(ImDrawList** const draw_lists, int count);      
+    void*       UserData;
 
     // Optional: access OS clipboard (default to use native Win32 clipboard on Windows, otherwise use a ImGui private clipboard)
     // Override to access OS clipboard on other architectures.
