@@ -331,6 +331,7 @@ ImGuiIO::ImGuiIO()
     MouseDoubleClickMaxDist = 6.0f;
 
     // User functions
+    UserData = NULL;
     RenderDrawListsFn = NULL;
     MemAllocFn = malloc;
     MemReallocFn = realloc;

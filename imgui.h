@@ -427,6 +427,9 @@ struct ImGuiIO
     // User Functions
     //------------------------------------------------------------------
 
+    // Store your own data for retrieval by callbacks.
+    void*       UserData;                   // = NULL
+
     // REQUIRED: rendering function. 
     // See example code if you are unsure of how to implement this.
     void        (*RenderDrawListsFn)(ImDrawList** const draw_lists, int count);      
