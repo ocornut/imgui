@@ -348,7 +348,7 @@ static size_t ImStrlenW(const ImWchar* str);
 void ImGuiIO::AddInputCharacter(ImWchar c)
 {
     const size_t n = ImStrlenW(InputCharacters);
-    if (n < sizeof(InputCharacters) / sizeof(InputCharacters[0]))
+    if (n + 1 < sizeof(InputCharacters) / sizeof(InputCharacters[0]))
     {
         InputCharacters[n] = c;
         InputCharacters[n+1] = 0;
