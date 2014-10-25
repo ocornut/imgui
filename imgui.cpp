@@ -2,7 +2,7 @@
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
-// Developped by Omar Cornut and contributors.
+// Developed by Omar Cornut and contributors.
 
 /*
  
@@ -10,13 +10,13 @@
  =================
 
  - easy to use to create code-driven and data-driven tools
- - easy to use to create adhoc short-lived tools and long-lived, more elaborate tools
+ - easy to use to create ad hoc short-lived tools and long-lived, more elaborate tools
  - easy to hack and improve
  - minimize screen real-estate usage
  - minimize setup and maintainance
  - minimize state storage on user side
  - portable, minimize dependencies, run on target (consoles, etc.)
- - efficient runtime (nb- we do allocate when "growing" content - creating a window / opening a tree node for the first time, etc. - but a typical frame won't allocate anything)
+ - efficient runtime (NB- we do allocate when "growing" content - creating a window / opening a tree node for the first time, etc. - but a typical frame won't allocate anything)
  - read about immediate-mode GUI principles @ http://mollyrocket.com/861, http://mollyrocket.com/forums/index.html
 
  Designed for developers and content-creators, not the typical end-user! Some of the weaknesses includes:
@@ -2597,6 +2597,18 @@ ImDrawList* GetWindowDrawList()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->DrawList;
+}
+
+ImFont GetWindowFont()
+{
+	ImGuiWindow* window = GetCurrentWindow();
+	return window->Font();
+}
+
+float GetWindowFontSize()
+{
+	ImGuiWindow* window = GetCurrentWindow();
+	return window->FontSize();
 }
 
 void SetWindowFontScale(float scale)

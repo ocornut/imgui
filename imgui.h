@@ -151,6 +151,8 @@ namespace ImGui
     ImVec2      GetWindowContentRegionMin();
     ImVec2      GetWindowContentRegionMax();
     ImDrawList* GetWindowDrawList();                                                // get rendering command-list if you want to append your own draw primitives.
+	ImFont      GetWindowFont();
+	float       GetWindowFontSize();
     void        SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontBaseScale if you want to scale all windows together.
     void        SetScrollPosHere();                                                 // adjust scrolling position to center into the current cursor position.
     void        SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use 'offset' to access sub components of a multiple component widget.
@@ -575,7 +577,6 @@ struct ImDrawCmd
     ImVec4          clip_rect;
 };
 
-// sizeof() == 20
 struct ImDrawVert
 {
     ImVec2  pos;
@@ -584,7 +585,11 @@ struct ImDrawVert
 };
 
 // Draw command list
-// User is responsible for providing a renderer for this in ImGuiIO::RenderDrawListFn
+// This is the low-level list of polygon that ImGui:: functions are filling. At the end of the frame, all command lists are passed to your ImGuiIO::RenderDrawListFn function for rendering.
+// Each ImGui window contains its own ImDrawList.
+// If you want to add custom rendering within a window, you can use ImGui::GetWindowDrawList() to access the current draw list and add your own primitives.
+// You can interleave normal ImGui:: calls and adding primitives to the current draw list.
+// Note that this only gives you access to rendering polygons. If your intent is to create custom widgets and the publicly exposed functions/data aren't sufficient, you can add code in imgui_user.inl
 struct ImDrawList
 {
     // This is what you have to render
