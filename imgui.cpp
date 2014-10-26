@@ -243,7 +243,7 @@ static void         FocusWindow(ImGuiWindow* window);
 static ImGuiWindow* FindWindow(const char* name);
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs);
 
-}; // namespace ImGui
+} // namespace ImGui
 
 //-----------------------------------------------------------------------------
 // Platform dependant default implementations
@@ -3842,7 +3842,7 @@ bool RadioButton(const char* label, int* v, int v_button)
     return pressed;
 }
 
-}; // namespace ImGui
+} // namespace ImGui
 
 // Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, ASCII, fixed-width font)
 int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                                  { return (int)ImStrlenW(obj->Text); }
@@ -5028,7 +5028,7 @@ void Color(const char* prefix, unsigned int v)
     ImGui::ColorButton(col, true);
 }
 
-}; // namespace ImGui
+} // namespace ImGui
 
 //-----------------------------------------------------------------------------
 // ImDrawList
@@ -6464,7 +6464,7 @@ void ShowTestWindow(bool* open)
 }
 // End of Sample code
 
-}; // namespace ImGui
+} // namespace ImGui
 
 //-----------------------------------------------------------------------------
 // Font data
@@ -6673,7 +6673,7 @@ void GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const voi
     if (png_size) *png_size = proggy_clean_13_png_size;
 }
 
-};
+} // namespace ImGui
 
 //-----------------------------------------------------------------------------
 

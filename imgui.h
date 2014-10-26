@@ -63,7 +63,7 @@ namespace ImGui
     void*       MemAlloc(size_t sz);
     void        MemFree(void* ptr);
     void*       MemRealloc(void* ptr, size_t sz);
-};
+}
 
 // std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug). 
 // Use '#define ImVector std::vector' if you want to use the STL type or your own type.
@@ -279,7 +279,7 @@ namespace ImGui
     void        GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size);
     ImVec2      CalcTextSize(const char* text, const char* text_end = NULL, const bool hide_text_after_hash = true);
 
-}; // namespace ImGui
+} // namespace ImGui
 
 // Flags for ImGui::Begin()
 enum ImGuiWindowFlags_
