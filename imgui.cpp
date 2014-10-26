@@ -4645,11 +4645,13 @@ bool ColorEdit4(const char* label, float col[4], bool alpha)
             char* p = buf;
             while (*p == '#' || *p == ' ' || *p == '\t') 
                 p++;
+
+			// Treat at unsigned (%X is unsigned)
             ix = iy = iz = iw = 0;
             if (alpha)
-                sscanf(p, "%02X%02X%02X%02X", &ix, &iy, &iz, &iw);
+                sscanf(p, "%02X%02X%02X%02X", (unsigned int*)&ix, (unsigned int*)&iy, (unsigned int*)&iz, (unsigned int*)&iw);
             else
-                sscanf(p, "%02X%02X%02X", &ix, &iy, &iz);
+                sscanf(p, "%02X%02X%02X", (unsigned int*)&ix, (unsigned int*)&iy, (unsigned int*)&iz);
         }
         break;
     }
