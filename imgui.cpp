@@ -4883,7 +4883,7 @@ float GetColumnOffset(int column_index)
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
     RegisterAliveId(column_id);
     const float default_t = column_index / (float)window->DC.ColumnsCount;
-    const float t = (float)window->StateStorage.GetInt(column_id, (int)(default_t * 8096)) / 8096;      // Cheaply store our floating point value inside the integer (could store an union into the map?)
+    const float t = (float)window->StateStorage.GetInt(column_id, (int)(default_t * 8192)) / 8192;      // Cheaply store our floating point value inside the integer (could store an union into the map?)
 
     const float offset = window->DC.ColumnStartX + t * (window->Size.x - g.Style.ScrollBarWidth - window->DC.ColumnStartX);
     return offset;
@@ -4898,7 +4898,7 @@ void SetColumnOffset(int column_index, float offset)
 
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
     const float t = (offset - window->DC.ColumnStartX) / (window->Size.x - g.Style.ScrollBarWidth - window->DC.ColumnStartX);
-    window->StateStorage.SetInt(column_id, (int)(t*8096));
+    window->StateStorage.SetInt(column_id, (int)(t*8192));
 }
 
 float GetColumnWidth(int column_index)
