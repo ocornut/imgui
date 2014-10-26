@@ -1,4 +1,4 @@
-// ImGui library v1.14
+// ImGui library v1.15 wip
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -3709,24 +3709,24 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
     RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, graph_bb.Min.y), label);
 }
 
-struct ImGuiPlotData
+struct ImGuiPlotArrayGetterData
 {
     const float* Values;
     size_t Stride;
 
-    ImGuiPlotData(const float* values, size_t stride) { Values = values; Stride = stride; }
+    ImGuiPlotArrayGetterData(const float* values, size_t stride) { Values = values; Stride = stride; }
 };
 
-float Plot_ArrayGetter(void* data, int idx)
+static float Plot_ArrayGetter(void* data, int idx)
 {
-    ImGuiPlotData* plot_data = (ImGuiPlotData*)data;
+    ImGuiPlotArrayGetterData* plot_data = (ImGuiPlotArrayGetterData*)data;
     const float v = *(float*)((unsigned char*)plot_data->Values + (size_t)idx * plot_data->Stride);
     return v;
 }
 
 void PlotLines(const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, size_t stride)
 {
-    ImGuiPlotData data(values, stride);
+    ImGuiPlotArrayGetterData data(values, stride);
     ImGui::Plot(ImGuiPlotType_Lines, label, &Plot_ArrayGetter, (void*)&data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
 }
 
@@ -3737,7 +3737,7 @@ void PlotLines(const char* label, float (*values_getter)(void* data, int idx), v
 
 void PlotHistogram(const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, size_t stride)
 {
-    ImGuiPlotData data(values, stride);
+    ImGuiPlotArrayGetterData data(values, stride);
     ImGui::Plot(ImGuiPlotType_Histogram, label, &Plot_ArrayGetter, (void*)&data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
 }
 
