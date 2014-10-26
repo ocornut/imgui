@@ -72,7 +72,7 @@
         io.DeltaTime = 1.0f/60.0f;
         io.IniFilename = "imgui.ini";
 
-        // Application mainloop
+        // Application main loop
         while (true)
         {
             // 1/ get low-level input
@@ -170,37 +170,37 @@
  - combo: turn child handling code into popup helper
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
- - plot: make it easier for user to draw into the graph (e.g: draw basis, highlight certain pointsm, 2d plots, multiple plots)
+ - plot: make it easier for user to draw into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
  - plot: "smooth" automatic scale, user give an input 0.0(full user scale) 1.0(full derived from value)
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms (may or not lead to ImGui changes)
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
- - slider: initial absolute click is unprecise. change to relative movement slider? hide mouse cursor, allow more precise input using less screen-space.
- - text edit: centered text for slider or input text to it matches typical positionning.
+ - slider: initial absolute click is imprecise. change to relative movement slider? hide mouse cursor, allow more precise input using less screen-space.
+ - text edit: centered text for slider or input text to it matches typical positioning.
  - text edit: flag to disable live update of the user buffer. 
- - text edit: field resize behaviour - field could stretch when being edited? hover tooltip shows more text?
+ - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
  - text edit: pasting text into a number box should filter the characters the same way direct input does
  - settings: write more decent code to allow saving/loading new fields
- - settings: api for per-tool simple persistant data (bool,int,float) in .ini file
+ - settings: api for per-tool simple persistent data (bool,int,float) in .ini file
  - log: be able to right-click and log a window or tree-node into tty/file/clipboard?
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
  ! keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing
  - keyboard: full keyboard navigation and focus.
- - input: reowrk IO to be able to pass actual events to fix temporal aliasing issues.
- - input: support trackpad style scrolling & slider edit.
+ - input: rework IO to be able to pass actual events to fix temporal aliasing issues.
+ - input: support track pad style scrolling & slider edit.
  - tooltip: move to fit within screen (e.g. when mouse cursor is right of the screen).
  - misc: not thread-safe
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - style editor: add a button to output C code.
- - optimisation/render: use indexed rendering
- - optimisation/render: move clip-rect to vertex data? would allow merging all commands
- - optimisation/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
- - optimisation/render: font exported by bmfont is not tight fit on vertical axis, incur unneeded pixel-shading cost.
- - optimisation: turn some the various stack vectors into statically-sized arrays
- - optimisation: better clipping for multi-component widgets
- - optimisation: specialize for height based clipping first (assume widgets never go up + height tests before width tests?)
+ - optimization/render: use indexed rendering
+ - optimization/render: move clip-rect to vertex data? would allow merging all commands
+ - optimization/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
+ - optimization/render: font exported by bmfont is not tight fit on vertical axis, incur unneeded pixel-shading cost.
+ - optimization: turn some the various stack vectors into statically-sized arrays
+ - optimization: better clipping for multi-component widgets
+ - optimization: specialize for height based clipping first (assume widgets never go up + height tests before width tests?)
 */
 
 #include "imgui.h"
@@ -2001,6 +2001,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
         }
         else
         {
+            // Normal windows store settings in .ini file
             ImGuiIniData* settings = FindWindowSettings(name);
             if (settings && ImLength(settings->Size) > 0.0f && !(flags & ImGuiWindowFlags_NoResize))// && ImLengthsize) == 0.0f)
                 size = settings->Size;
