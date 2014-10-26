@@ -1023,7 +1023,7 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
     FontWindowScale = 1.0f;
 
     if (ImLength(Size) < 0.001f)
-        AutoFitFrames = 3;
+        AutoFitFrames = 2;
 
     DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
     new(DrawList) ImDrawList();
@@ -2170,15 +2170,8 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
                     window->SizeFull = window->SizeContentsFit + g.Style.WindowPadding - ImVec2(0.0f, g.Style.ItemSpacing.y);
                 }
             }
-            else if (!(window->Flags & ImGuiWindowFlags_NoResize))
+            else
             {
-                // Draw resize grip
-                const ImGuiAabb resize_aabb(window->Aabb().GetBR()-ImVec2(18,18), window->Aabb().GetBR());
-                const ImGuiID resize_id = window->GetID("#RESIZE");
-                bool hovered, held;
-                ButtonBehaviour(resize_aabb, resize_id, &hovered, &held, true);
-                resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
-
                 ImVec2 size_auto_fit = ImClamp(window->SizeContentsFit + style.AutoFitPadding, style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding);
                 if (window->AutoFitFrames > 0)
                 {
@@ -2186,19 +2179,29 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
                     window->SizeFull = ImMax(window->SizeFull, size_auto_fit);
                     MarkSettingsDirty();
                 }
-                else if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0])
+                else if (!(window->Flags & ImGuiWindowFlags_NoResize))
                 {
-                    // Manual auto-fit
-                    window->SizeFull = size_auto_fit;
-                    window->Size = window->SizeFull;
-                    MarkSettingsDirty();
-                }
-                else if (held)
-                {
-                    // Resize
-                    window->SizeFull = ImMax(window->SizeFull + g.IO.MouseDelta, style.WindowMinSize);
-                    window->Size = window->SizeFull;
-                    MarkSettingsDirty();
+                    // Resize grip
+                    const ImGuiAabb resize_aabb(window->Aabb().GetBR()-ImVec2(18,18), window->Aabb().GetBR());
+                    const ImGuiID resize_id = window->GetID("#RESIZE");
+                    bool hovered, held;
+                    ButtonBehaviour(resize_aabb, resize_id, &hovered, &held, true);
+                    resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
+
+                    if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0])
+                    {
+                        // Manual auto-fit
+                        window->SizeFull = size_auto_fit;
+                        window->Size = window->SizeFull;
+                        MarkSettingsDirty();
+                    }
+                    else if (held)
+                    {
+                        // Resize
+                        window->SizeFull = ImMax(window->SizeFull + g.IO.MouseDelta, style.WindowMinSize);
+                        window->Size = window->SizeFull;
+                        MarkSettingsDirty();
+                    }
                 }
 
                 // Update aabb immediately so that the rendering below isn't one frame late
@@ -2565,6 +2568,14 @@ ImVec2 GetWindowSize()
     return window->Size;
 }
 
+void SetWindowSize(const ImVec2& size)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->SizeFull = size;
+    if (ImLength(size) < 0.001f)
+        window->AutoFitFrames = 3;
+}
+
 ImVec2 GetWindowContentRegionMin()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -2601,14 +2612,14 @@ ImDrawList* GetWindowDrawList()
 
 ImFont GetWindowFont()
 {
-	ImGuiWindow* window = GetCurrentWindow();
-	return window->Font();
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->Font();
 }
 
 float GetWindowFontSize()
 {
-	ImGuiWindow* window = GetCurrentWindow();
-	return window->FontSize();
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->FontSize();
 }
 
 void SetWindowFontScale(float scale)
@@ -4666,7 +4677,7 @@ bool ColorEdit4(const char* label, float col[4], bool alpha)
             while (*p == '#' || *p == ' ' || *p == '\t') 
                 p++;
 
-			// Treat at unsigned (%X is unsigned)
+            // Treat at unsigned (%X is unsigned)
             ix = iy = iz = iw = 0;
             if (alpha)
                 sscanf(p, "%02X%02X%02X%02X", (unsigned int*)&ix, (unsigned int*)&iy, (unsigned int*)&iz, (unsigned int*)&iw);
