@@ -122,7 +122,7 @@
      some functions like TreeNode() implicitly creates a scope for you by calling PushID()
    - when dealing with trees, ID are important because you want to preserve the opened/closed state of tree nodes.
      depending on your use cases you may want to use strings, indices or pointers as ID. experiment and see what makes more sense!
-      e.g. When displaying a single object, using a static string as ID will preserve your node open/closed state when the targetted object change
+      e.g. When displaying a single object, using a static string as ID will preserve your node open/closed state when the targeted object change
       e.g. When displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state per object
    - when passing a label you can optionally specify extra unique ID information within the same string using "##". This helps solving the simpler collision cases.
       e.g. "Label" display "Label" and uses "Label" as ID
@@ -144,7 +144,7 @@
   - 2014/09/24 (1.12) moved IM_MALLOC/IM_REALLOC/IM_FREE preprocessor defines to IO.MemAllocFn/IO.MemReallocFn/IO.MemFreeFn
   - 2014/08/30 (1.09) removed IO.FontHeight (now computed automatically)
   - 2014/08/30 (1.09) moved IMGUI_FONT_TEX_UV_FOR_WHITE preprocessor define to IO.FontTexUvForWhite
-  - 2014/08/28 (1.09) changed the behaviour of IO.PixelCenterOffset following various rendering fixes
+  - 2014/08/28 (1.09) changed the behavior of IO.PixelCenterOffset following various rendering fixes
 
  ISSUES & TODO-LIST
  ==================
@@ -225,7 +225,7 @@ namespace ImGui
 static bool         ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
 
-static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, const bool hide_text_after_hash = true);
+static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true, float wrap_width = 0.0f);
 static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
 static void         RenderCollapseTriangle(ImVec2 p_min, bool open, float scale = 1.0f, bool shadow = false);
 
@@ -590,9 +590,11 @@ struct ImGuiDrawContext
     int                     TreeDepth;
     ImGuiAabb               LastItemAabb;
     bool                    LastItemHovered;
+    bool                    LastItemFocused;
     ImVector<ImGuiWindow*>  ChildWindows;
     ImVector<bool>          AllowKeyboardFocus;
     ImVector<float>         ItemWidth;
+    ImVector<float>         TextWrapPos;
     ImVector<ImGuiColMod>   ColorModifiers;
     ImGuiColorEditMode      ColorEditMode;
     ImGuiStorage*           StateStorage;
@@ -613,6 +615,7 @@ struct ImGuiDrawContext
         TreeDepth = 0;
         LastItemAabb = ImGuiAabb(0.0f,0.0f,0.0f,0.0f);
         LastItemHovered = false;
+        LastItemFocused = true;
         StateStorage = NULL;
         OpenNextNode = -1;
 
@@ -1067,6 +1070,9 @@ bool ImGuiWindow::FocusItemRegister(bool is_active)
     FocusIdxAllCounter++;
     if (allow_keyboard_focus)
         FocusIdxTabCounter++;
+
+    if (is_active)
+        window->DC.LastItemFocused = true;
 
     // Process keyboard input at this point: TAB, Shift-TAB switch focus
     // We can always TAB out of a widget that doesn't allow tabbing in.
@@ -1649,8 +1655,24 @@ static void LogText(const ImVec2& ref_pos, const char* text, const char* text_en
     }
 }
 
+static float CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
+{
+    if (wrap_pos_x < 0.0f)
+        return 0.0f;
+
+    ImGuiWindow* window = GetCurrentWindow();
+	if (wrap_pos_x == 0.0f)
+		wrap_pos_x = GetWindowContentRegionMax().x;
+    if (wrap_pos_x > 0.0f)
+        wrap_pos_x += window->Pos.x; // wrap_pos_x is provided is window local space
+    
+    const float wrap_width = wrap_pos_x > 0.0f ? ImMax(wrap_pos_x - pos.x, 0.00001f) : 0.0f;
+    return wrap_width;
+}
+
 // Internal ImGui function to render text (called from ImGui::Text(), ImGui::TextUnformatted(), etc.)
-static void RenderText(ImVec2 pos, const char* text, const char* text_end, const bool hide_text_after_hash)
+// ImGui::RenderText() calls ImDrawList::AddText() calls ImBitmapFont::RenderText()
+static void RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash, float wrap_width)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -1669,13 +1691,12 @@ static void RenderText(ImVec2 pos, const char* text, const char* text_end, const
     }
 
     const int text_len = (int)(text_display_end - text);
-    //IM_ASSERT(text_len >= 0 && text_len < 10000); // Suspicious text length
     if (text_len > 0)
     {
         // Render
-        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text + text_len);
+        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text + text_len, wrap_width);
 
-        // Log as text. We split text into individual lines to add the tree level padding
+        // Log as text. We split text into individual lines to add current tree level padding
         if (g.LogEnabled)
             LogText(pos, text, text_display_end);
     }
@@ -1689,7 +1710,7 @@ static void RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
     window->DrawList->AddRectFilled(p_min, p_max, fill_col, rounding);
     if (border && (window->Flags & ImGuiWindowFlags_ShowBorders))
     {
-        // FIXME: I have no idea how this is working correctly but it is the best I've found that works on multiple rendering
+        // FIXME: This is the best I've found that works on multiple renderer/back ends. Rather dodgy.
         const float offset = GImGui.IO.PixelCenterOffset;
         window->DrawList->AddRect(p_min+ImVec2(1.5f-offset,1.5f-offset), p_max+ImVec2(1.0f-offset*2,1.0f-offset*2), window->Color(ImGuiCol_BorderShadow), rounding);
         window->DrawList->AddRect(p_min+ImVec2(0.5f-offset,0.5f-offset), p_max+ImVec2(0.0f-offset*2,0.0f-offset*2), window->Color(ImGuiCol_Border), rounding);
@@ -1727,7 +1748,7 @@ static void RenderCollapseTriangle(ImVec2 p_min, bool open, float scale, bool sh
 
 // Calculate text size. Text can be multi-line. Optionally ignore text after a ## marker.
 // CalcTextSize("") should return ImVec2(0.0f, GImGui.FontSize)
-ImVec2 CalcTextSize(const char* text, const char* text_end, const bool hide_text_after_hash)
+ImVec2 CalcTextSize(const char* text, const char* text_end, bool hide_text_after_hash, float wrap_width)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
@@ -1737,8 +1758,8 @@ ImVec2 CalcTextSize(const char* text, const char* text_end, const bool hide_text
     else
         text_display_end = text_end;
 
-    const ImVec2 size = window->Font()->CalcTextSizeA(window->FontSize(), 0, text, text_display_end, NULL);
-    return size;
+    const ImVec2 text_size = window->Font()->CalcTextSizeA(window->FontSize(), FLT_MAX, wrap_width, text, text_display_end, NULL);
+    return text_size;
 }
 
 // Find window given position, search front-to-back
@@ -1862,6 +1883,12 @@ bool IsHovered()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->DC.LastItemHovered;
+}
+
+bool IsItemFocused()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->DC.LastItemFocused;
 }
 
 ImVec2 GetItemBoxMin()
@@ -2299,6 +2326,8 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
         window->DC.ItemWidth.push_back(window->ItemWidthDefault);
         window->DC.AllowKeyboardFocus.resize(0);
         window->DC.AllowKeyboardFocus.push_back(true);
+        window->DC.TextWrapPos.resize(0);
+        window->DC.TextWrapPos.push_back(-1.0f); // disabled
         window->DC.ColorModifiers.resize(0);
         window->DC.ColorEditMode = ImGuiColorEditMode_UserSelect;
         window->DC.ColumnCurrent = 0;
@@ -2464,6 +2493,18 @@ void PopAllowKeyboardFocus()
     window->DC.AllowKeyboardFocus.pop_back();
 }
 
+void PushTextWrapPos(float wrap_x)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.TextWrapPos.push_back(wrap_x);
+}
+
+void PopTextWrapPos()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.TextWrapPos.pop_back();
+}
+
 void PushStyleColor(ImGuiCol idx, const ImVec4& col)
 {
     ImGuiState& g = GImGui;
@@ -2583,6 +2624,7 @@ ImVec2 GetWindowContentRegionMin()
     return ImVec2(0, window->TitleBarHeight()) + window->WindowPadding();
 }
 
+// FIXME: Provide an equivalent that gives the min/max region considering columns.
 ImVec2 GetWindowContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -2718,6 +2760,21 @@ void TextColored(const ImVec4& col, const char* fmt, ...)
     va_end(args);
 }
 
+void TextWrappedV(const char* fmt, va_list args)
+{
+    ImGui::PushTextWrapPos(0.0f);
+    TextV(fmt, args);
+    ImGui::PopTextWrapPos();
+}
+
+void TextWrapped(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    TextWrappedV(fmt, args);
+    va_end(args);
+}
+
 void TextUnformatted(const char* text, const char* text_end)
 {
     ImGuiState& g = GImGui;
@@ -2730,11 +2787,14 @@ void TextUnformatted(const char* text, const char* text_end)
     if (text_end == NULL)
         text_end = text + strlen(text);
 
-    if (text_end - text > 2000)
+    const float wrap_pos_x = window->DC.TextWrapPos.back();
+    const bool wrap_enabled = wrap_pos_x >= 0.0f;
+    if (text_end - text > 2000 && !wrap_enabled)
     {
         // Long text!
         // Perform manual coarse clipping to optimize for long multi-line text
         // From this point we will only compute the width of lines that are visible.
+        // Optimization only available when word-wrapping is disabled.
         const char* line = text;
         const float line_height = ImGui::GetTextLineHeight();
         const ImVec2 start_pos = window->DC.CursorPos;
@@ -2804,7 +2864,8 @@ void TextUnformatted(const char* text, const char* text_end)
     }
     else
     {
-        const ImVec2 text_size = CalcTextSize(text_begin, text_end, false);
+        const float wrap_width = wrap_enabled ? CalcWrapWidthForPos(window->DC.CursorPos, wrap_pos_x) : 0.0f;
+        const ImVec2 text_size = CalcTextSize(text_begin, text_end, false, wrap_width);
         ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + text_size);
         ItemSize(bb.GetSize(), &bb.Min);
 
@@ -2813,7 +2874,7 @@ void TextUnformatted(const char* text, const char* text_end)
 
         // Render
         // We don't hide text after ## in this end-user function.
-        RenderText(bb.Min, text_begin, text_end, false);
+        RenderText(bb.Min, text_begin, text_end, false, wrap_width);
     }
 }
 
@@ -3359,8 +3420,6 @@ bool SliderFloat(const char* label, float* v, float v_min, float v_max, const ch
         }
     }
 
-    const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id);
-
     const ImVec2 text_size = CalcTextSize(label);
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, text_size.y) + style.FramePadding*2.0f);
     const ImGuiAabb slider_bb(frame_bb.Min+g.Style.FramePadding, frame_bb.Max-g.Style.FramePadding);
@@ -3372,6 +3431,8 @@ bool SliderFloat(const char* label, float* v, float v_min, float v_max, const ch
         ItemSize(bb);
         return false;
     }
+
+    const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id);
 
     const bool is_unbound = v_min == -FLT_MAX || v_min == FLT_MAX || v_max == -FLT_MAX || v_max == FLT_MAX;
 
@@ -3879,7 +3940,7 @@ bool RadioButton(const char* label, int* v, int v_button)
 // Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, ASCII, fixed-width font)
 int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                                  { return (int)ImStrlenW(obj->Text); }
 ImWchar STB_TEXTEDIT_GETCHAR(const STB_TEXTEDIT_STRING* obj, int idx)                           { return obj->Text[idx]; }
-float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)       { (void)line_start_idx; return obj->Font->CalcTextSizeW(obj->FontSize, 0, &obj->Text[char_idx], &obj->Text[char_idx]+1, NULL).x; }
+float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)       { (void)line_start_idx; return obj->Font->CalcTextSizeW(obj->FontSize, FLT_MAX, &obj->Text[char_idx], &obj->Text[char_idx]+1, NULL).x; }
 int     STB_TEXTEDIT_KEYTOTEXT(int key)                                                         { return key >= 0x10000 ? 0 : key; }
 ImWchar STB_TEXTEDIT_NEWLINE = '\n';
 void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* obj, int line_start_idx)
@@ -3947,7 +4008,7 @@ void ImGuiTextEditState::UpdateScrollOffset()
 {
     // Scroll in chunks of quarter width
     const float scroll_x_increment = Width * 0.25f;
-    const float cursor_offset_x = Font->CalcTextSizeW(FontSize, 0, Text, Text+StbState.cursor, NULL).x;
+    const float cursor_offset_x = Font->CalcTextSizeW(FontSize, FLT_MAX, Text, Text+StbState.cursor, NULL).x;
     if (ScrollX > cursor_offset_x)
         ScrollX = ImMax(0.0f, cursor_offset_x - scroll_x_increment);    
     else if (ScrollX < cursor_offset_x - Width)
@@ -3971,7 +4032,7 @@ const char* ImGuiTextEditState::GetTextPointerClippedA(ImFont font, float font_s
         return text;
 
     const char* text_clipped_end = NULL;
-    const ImVec2 text_size = font->CalcTextSizeA(font_size, width, text, NULL, &text_clipped_end);
+    const ImVec2 text_size = font->CalcTextSizeA(font_size, width, 0.0f, text, NULL, &text_clipped_end);
     if (out_text_size)
         *out_text_size = text_size;
     return text_clipped_end;
@@ -4835,6 +4896,7 @@ static bool ClipAdvance(const ImGuiAabb& bb)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.LastItemAabb = bb;
+    window->DC.LastItemFocused = false;
     if (ImGui::IsClipped(bb))
     {
         window->DC.LastItemHovered = false;
@@ -5331,7 +5393,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
     }
 }
 
-void ImDrawList::AddText(ImFont font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
+void ImDrawList::AddText(ImFont font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width)
 {
     if ((col >> 24) == 0)
         return;
@@ -5345,7 +5407,7 @@ void ImDrawList::AddText(ImFont font, float font_size, const ImVec2& pos, ImU32 
     const size_t vtx_begin = vtx_buffer.size();
     ReserveVertices(vtx_count_max);
 
-    font->RenderText(font_size, pos, col, clip_rect_stack.back(), text_begin, text_end, vtx_write);
+    font->RenderText(font_size, pos, col, clip_rect_stack.back(), text_begin, text_end, vtx_write, wrap_width);
 
     // give back unused vertices
     vtx_buffer.resize((size_t)(vtx_write - &vtx_buffer.front()));
@@ -5491,7 +5553,7 @@ void ImBitmapFont::BuildLookupTable()
         IndexLookup[Glyphs[i].Id] = (int)i;
 }
 
-const ImBitmapFont::FntGlyph* ImBitmapFont::FindGlyph(unsigned short c) const
+const ImBitmapFont::FntGlyph* ImBitmapFont::FindGlyph(unsigned short c, const ImBitmapFont::FntGlyph* fallback) const
 {
     if (c < (int)IndexLookup.size())
     {
@@ -5499,7 +5561,7 @@ const ImBitmapFont::FntGlyph* ImBitmapFont::FindGlyph(unsigned short c) const
         if (i >= 0 && i < (int)GlyphsCount)
             return &Glyphs[i];
     }
-    return NULL;
+    return fallback;
 }
 
 // Convert UTF-8 to 32-bits character, process single character input.
@@ -5635,10 +5697,110 @@ static ptrdiff_t ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_t
     return buf_out - buf;
 }
 
-ImVec2 ImBitmapFont::CalcTextSizeA(float size, float max_width, const char* text_begin, const char* text_end, const char** remaining) const
+const char* ImBitmapFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width, const FntGlyph* fallback_glyph) const
 {
-    if (max_width == 0.0f)
-        max_width = FLT_MAX;
+    // Simple word-wrapping for English, not full-featured. Please submit failing cases!
+    // FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
+
+    // For references, possible wrap point marked with ^
+    //  "aaa bbb, ccc,ddd. eee   fff. ggg!"
+    //      ^    ^    ^   ^   ^__    ^    ^
+
+    // List of hardcoded separators: .,;!?'"
+
+    // Skip extra blanks after a line returns (that includes not counting them in width computation)
+    // e.g. "Hello    world"
+    // -->
+    // "Hello"
+    // "world"
+
+    // Cut words that cannot possibly fit within one line.
+    // e.g.: "The tropical fish" with ~5 characters worth of width
+    // --> 
+    //  "The tr"
+    //  "opical"
+    //  "fish"
+
+    float line_width = 0.0f;
+    float word_width = 0.0f;
+    float blank_width = 0.0f;
+
+    const char* word_end = text;
+    const char* prev_word_end = NULL;
+    bool inside_word = true;
+
+    const char* s = text;
+    while (s < text_end)
+    {
+        unsigned int c;
+        const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
+        const char* next_s = s + (bytes_count > 0 ? bytes_count : 1);
+
+        if (c == '\n')
+        {
+            line_width = word_width = blank_width = 0.0f;
+            inside_word = true;
+            s = next_s;
+            continue;
+        }
+
+        float char_width = 0.0f;
+        if (c == '\t')
+        {
+            if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
+                char_width = (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
+        }
+        else
+        {
+            if (const FntGlyph* glyph = FindGlyph((unsigned short)c, fallback_glyph))
+                char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
+        }
+
+        if (c == ' ' || c == '\t')
+        {
+            if (inside_word)
+            {
+                line_width += blank_width;
+                blank_width = 0.0f;
+            }
+            blank_width += char_width;
+            inside_word = false;
+        }
+        else
+        {
+            word_width += char_width;
+            if (inside_word)
+            {
+                word_end = next_s;
+            }
+            else
+            {
+                prev_word_end = word_end;
+                line_width += word_width + blank_width;
+                word_width = blank_width = 0.0f;
+            }
+
+            // Allow wrapping after punctuation.
+            inside_word = !(c == '.' || c == ',' || c == ';' || c == '!' || c == '?' || c == '\'' || c == '\"');
+        }
+
+        // We ignore blank width at the end of the line (they can be skipped)
+        if (line_width + word_width >= wrap_width)
+        {
+            // Words that cannot possibly fit within an entire line will be cut anywhere.
+            if (word_width < wrap_width)
+                s = prev_word_end ? prev_word_end : word_end;
+            break;
+        }
+
+        s = next_s;
+    }
+
+    return s;
+}
+
+ImVec2 ImBitmapFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining) const
+{
     if (!text_end)
         text_end = text_begin + strlen(text_begin);
 
@@ -5649,40 +5811,70 @@ ImVec2 ImBitmapFont::CalcTextSizeA(float size, float max_width, const char* text
     ImVec2 text_size = ImVec2(0,0);
     float line_width = 0.0f;
 
+    const bool word_wrap_enabled = (wrap_width > 0.0f);
+    const char* word_wrap_eol = NULL;
+
     const char* s = text_begin;
     while (s < text_end)
     {
+        if (word_wrap_enabled)
+        {
+            // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
+            if (!word_wrap_eol)
+            {
+                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - line_width, fallback_glyph);
+                if (word_wrap_eol == s) // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
+                    word_wrap_eol++;    // +1 may not be a character start point in UTF-8 but it's ok because we use s >= word_wrap_eol below
+            }
+
+            if (s >= word_wrap_eol)
+            {
+                if (text_size.x < line_width)
+                    text_size.x = line_width;
+                text_size.y += line_height;
+                line_width = 0.0f;
+                word_wrap_eol = NULL;
+
+                // Wrapping skips upcoming blanks
+                while (s < text_end)
+                {
+                    const char c = *s;
+                    if (c == ' ' || c == '\t') { s++; } else if (c == '\n') { s++; break; } else { break; }
+                }
+                continue;
+            }
+        }
+
+        // Decode and advance source (handle unlikely UTF-8 decoding failure by skipping to the next byte)
         unsigned int c;
         const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
-        s += bytes_count > 0 ? bytes_count : 1;  // Handle decoding failure by skipping to next byte
-
+        s += bytes_count > 0 ? bytes_count : 1;
+        
         if (c == '\n')
         {
             if (text_size.x < line_width)
                 text_size.x = line_width;
             text_size.y += line_height;
-            line_width = 0;
+            line_width = 0.0f;
+            continue;
         }
-        else if (c == '\t')
+        
+        float char_width = 0.0f;
+        if (c == '\t')
         {
-            // FIXME: Better TAB handling needed.
+            // FIXME: Better TAB handling
             if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
-                line_width += (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
+                char_width = (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
         }
-        else
+        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c, fallback_glyph))
         {
-            const FntGlyph* glyph = FindGlyph((unsigned short)c);
-            if (!glyph)
-                glyph = fallback_glyph;
-            if (glyph)
-            {
-                const float char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
-                //const float char_extend = (glyph->XOffset + glyph->Width * scale);
-                if (line_width + char_width >= max_width)
-                    break;
-                line_width += char_width;
-            }
+            char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
         }
+
+        if (line_width + char_width >= max_width)
+            break;
+
+        line_width += char_width;
     }
 
     if (line_width > 0 || text_size.y == 0.0f)
@@ -5700,8 +5892,6 @@ ImVec2 ImBitmapFont::CalcTextSizeA(float size, float max_width, const char* text
 
 ImVec2 ImBitmapFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining) const
 {
-    if (max_width == 0.0f)
-        max_width = FLT_MAX;
     if (!text_end)
         text_end = text_begin + ImStrlenW(text_begin);
 
@@ -5722,28 +5912,27 @@ ImVec2 ImBitmapFont::CalcTextSizeW(float size, float max_width, const ImWchar* t
             if (text_size.x < line_width)
                 text_size.x = line_width;
             text_size.y += line_height;
-            line_width = 0;
+            line_width = 0.0f;
+            continue;
         }
-        else if (c == '\t')
+        
+        float char_width = 0.0f;
+        if (c == '\t')
         {
-            // FIXME: Better TAB handling needed.
+            // FIXME: Better TAB handling
             if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
-                line_width += (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
+                char_width = (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
         }
         else
         {
-            const FntGlyph* glyph = FindGlyph((unsigned short)c);
-            if (!glyph)
-                glyph = fallback_glyph;
-            if (glyph)
-            {
-                const float char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
-                //const float char_extend = (glyph->XOffset + glyph->Width * scale);
-                if (line_width + char_width >= max_width)
-                    break;
-                line_width += char_width;
-            }
+            if (const FntGlyph* glyph = FindGlyph((unsigned short)c, fallback_glyph))
+                char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
         }
+
+        if (line_width + char_width >= max_width)
+            break;
+
+        line_width += char_width;
     }
 
     if (line_width > 0 || text_size.y == 0.0f)
@@ -5759,7 +5948,7 @@ ImVec2 ImBitmapFont::CalcTextSizeW(float size, float max_width, const ImWchar* t
     return text_size;
 }
 
-void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect_ref, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices) const
+void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect_ref, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin);
@@ -5775,17 +5964,46 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
     pos.x = (float)(int)pos.x;
     pos.y = (float)(int)pos.y + GImGui.IO.FontYOffset;
 
-    const ImVec4 clip_rect = clip_rect_ref;
+    const bool word_wrap_enabled = (wrap_width > 0.0f);
+    const char* word_wrap_eol = NULL;
 
+    const ImVec4 clip_rect = clip_rect_ref;
     float x = pos.x;
     float y = pos.y;
-    for (const char* s = text_begin; s < text_end; )
+
+    const char* s = text_begin;
+    while (s < text_end)
     {
+        if (word_wrap_enabled)
+        {
+            // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
+            if (!word_wrap_eol)
+            {
+                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - (x - pos.x), fallback_glyph);
+                if (word_wrap_eol == s) // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
+                    word_wrap_eol++;    // +1 may not be a character start point in UTF-8 but it's ok because we use s >= word_wrap_eol below
+            }
+
+            if (s >= word_wrap_eol)
+            {
+                x = pos.x;
+                y += line_height * scale;
+                word_wrap_eol = NULL;
+
+                // Wrapping skips upcoming blanks
+                while (s < text_end)
+                {
+                    const char c = *s;
+                    if (c == ' ' || c == '\t') { s++; } else if (c == '\n') { s++; break; } else { break; }
+                }
+                continue;
+            }
+        }
+
+        // Decode and advance source (handle unlikely UTF-8 decoding failure by skipping to the next byte)
         unsigned int c;
         const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
-        s += bytes_count > 0 ? bytes_count : 1;  // Handle decoding failure by skipping to next byte
-        if (c >= 0x10000)
-            continue;
+        s += bytes_count > 0 ? bytes_count : 1;
 
         if (c == '\n')
         {
@@ -5794,67 +6012,59 @@ void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& c
             continue;
         }
 
-        const FntGlyph* glyph = FindGlyph((unsigned short)c);
-        if (!glyph)
-            glyph = fallback_glyph;
-        if (glyph)
+        float char_width = 0.0f;
+        if (c == '\t')
         {
-            const float char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
-            //const float char_extend = (glyph->XOffset + glyph->Width * scale);
-
-            if (c != ' ' && c != '\n')
+            // FIXME: Better TAB handling
+            if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
+                char_width += (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
+        }
+        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c, fallback_glyph))
+        {
+            char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
+            if (c != ' ')
             {
-                // Clipping due to Y limits is more likely
+                // Clipping on Y is more likely
                 const float y1 = (float)(y + (glyph->YOffset + outline*2) * scale);
                 const float y2 = (float)(y1 + glyph->Height * scale);
-                if (y1 > clip_rect.w || y2 < clip_rect.y)
+                if (y1 <= clip_rect.w && y2 >= clip_rect.y)
                 {
-                    x += char_width;
-                    continue;
+                    const float x1 = (float)(x + (glyph->XOffset + outline) * scale);
+                    const float x2 = (float)(x1 + glyph->Width * scale);
+                    if (x1 <= clip_rect.z && x2 >= clip_rect.x)
+                    {
+                        // Render a character
+                        const float s1 = (glyph->X) * tex_scale_x;
+                        const float t1 = (glyph->Y) * tex_scale_y;
+                        const float s2 = (glyph->X + glyph->Width) * tex_scale_x;
+                        const float t2 = (glyph->Y + glyph->Height) * tex_scale_y;
+
+                        out_vertices[0].pos = ImVec2(x1, y1);
+                        out_vertices[0].uv  = ImVec2(s1, t1);
+                        out_vertices[0].col = col;
+
+                        out_vertices[1].pos = ImVec2(x2, y1);
+                        out_vertices[1].uv  = ImVec2(s2, t1);
+                        out_vertices[1].col = col;
+
+                        out_vertices[2].pos = ImVec2(x2, y2);
+                        out_vertices[2].uv  = ImVec2(s2, t2);
+                        out_vertices[2].col = col;
+
+                        out_vertices[3] = out_vertices[0];
+                        out_vertices[4] = out_vertices[2];
+
+                        out_vertices[5].pos = ImVec2(x1, y2);
+                        out_vertices[5].uv  = ImVec2(s1, t2);
+                        out_vertices[5].col = col;
+
+                        out_vertices += 6;
+                    }
                 }
-
-                const float x1 = (float)(x + (glyph->XOffset + outline) * scale);
-                const float x2 = (float)(x1 + glyph->Width * scale);
-                if (x1 > clip_rect.z || x2 < clip_rect.x)
-                {
-                    x += char_width;
-                    continue;
-                }
-
-                const float s1 = (glyph->X) * tex_scale_x;
-                const float t1 = (glyph->Y) * tex_scale_y;
-                const float s2 = (glyph->X + glyph->Width) * tex_scale_x;
-                const float t2 = (glyph->Y + glyph->Height) * tex_scale_y;
-
-                out_vertices[0].pos = ImVec2(x1, y1);
-                out_vertices[0].uv  = ImVec2(s1, t1);
-                out_vertices[0].col = col;
-
-                out_vertices[1].pos = ImVec2(x2, y1);
-                out_vertices[1].uv  = ImVec2(s2, t1);
-                out_vertices[1].col = col;
-
-                out_vertices[2].pos = ImVec2(x2, y2);
-                out_vertices[2].uv  = ImVec2(s2, t2);
-                out_vertices[2].col = col;
-
-                out_vertices[3] = out_vertices[0];
-                out_vertices[4] = out_vertices[2];
-
-                out_vertices[5].pos = ImVec2(x1, y2);
-                out_vertices[5].uv  = ImVec2(s1, t2);
-                out_vertices[5].col = col;
-
-                out_vertices += 6;
             }
+        }
 
-            x += char_width;
-        }
-        else if (c == '\t')
-        {
-            if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
-                x += (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
-        }
+        x += char_width;
     }
 }
 
@@ -5948,7 +6158,7 @@ void ShowUserGuide()
     ImGui::BulletText("Mouse Wheel to scroll.");
     if (g.IO.FontAllowUserScaling)
         ImGui::BulletText("CTRL+Mouse Wheel to zoom window contents.");
-    ImGui::BulletText("TAB/SHIFT+TAB to cycle thru keyboard editable fields.");
+    ImGui::BulletText("TAB/SHIFT+TAB to cycle through keyboard editable fields.");
     ImGui::BulletText("CTRL+Click on a slider to input text.");
     ImGui::BulletText(
         "While editing text:\n"
@@ -6114,9 +6324,35 @@ void ShowTestWindow(bool* open)
 
         if (ImGui::TreeNode("Colored Text"))
         {
-            // This is a merely a shortcut, you can use PushStyleColor()/PopStyleColor() for more flexibility.
+            // Using shortcut. You can use PushStyleColor()/PopStyleColor() for more flexibility.
             ImGui::TextColored(ImVec4(1.0f,0.0f,1.0f,1.0f), "Pink");
             ImGui::TextColored(ImVec4(1.0f,1.0f,0.0f,1.0f), "Yellow");
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Word Wrapping"))
+        {
+            // Using shortcut. You can use PushTextWrapPos()/PopTextWrapPos() for more flexibility.
+            ImGui::TextWrapped("This is a long paragraph. The text should automatically wrap on the edge of the window. The current implementation follows simple rules that works for English and possibly other languages.");
+            ImGui::Spacing();
+
+            static float wrap_width = 200.0f;
+            ImGui::SliderFloat("Wrap width", &wrap_width, -20, 600, "%.0f");
+
+            ImGui::Text("Test paragraph 1:");
+            ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetCursorScreenPos() + ImVec2(wrap_width, 0.0f), ImGui::GetCursorScreenPos() + ImVec2(wrap_width+10, ImGui::GetTextLineHeight()), 0xFFFF00FF);
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
+            ImGui::Text("lazy dog. This paragraph is made to fit within %.0f pixels. The quick brown fox jumps over the lazy dog.", wrap_width);
+            ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemBoxMin(), ImGui::GetItemBoxMax(), 0xFF00FFFF);
+            ImGui::PopTextWrapPos();
+
+            ImGui::Text("Test paragraph 2:");
+            ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetCursorScreenPos() + ImVec2(wrap_width, 0.0f), ImGui::GetCursorScreenPos() + ImVec2(wrap_width+10, ImGui::GetTextLineHeight()), 0xFFFF00FF);
+            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
+            ImGui::Text("aaaaaaaa bbbbbbbb, cccccccc,dddddddd. eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
+            ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemBoxMin(), ImGui::GetItemBoxMax(), 0xFF00FFFF);
+            ImGui::PopTextWrapPos();
+
             ImGui::TreePop();
         }
 
@@ -6124,10 +6360,9 @@ void ShowTestWindow(bool* open)
         {
             // UTF-8 test (need a suitable font, try extra_fonts/mplus* files for example)
             // Most compiler appears to support UTF-8 in source code (with Visual Studio you need to save your file as 'UTF-8 without signature')
-            // However for the sake for maximum portability here we are *not* including raw UTF-8 character in this source file, instead we encode the string with with hexadecimal constants.
-            // In your own application please be reasonable and use UTF-8 in the source or get the data from external files. :)
-            //const char* utf8_string = "\xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93\x20\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e"; // Japanese text for "Kakikukeo" (Hiragana) followed by "Nihongo" (kanji)
-            ImGui::Text("(CJK text will only appears if the font supports it. Please check in\nthe extra_fonts/ folder if you intend to use non-ASCII characters.\nNote that characters values are preserved even if the font cannot be\ndisplayed, so you can safely copy & paste garbled characters.)");
+            // However for the sake for maximum portability here we are *not* including raw UTF-8 character in this source file, instead we encode the string with hexadecimal constants.
+            // In your own application please be reasonable and use UTF-8 in the source or get the data from external files! :)
+            ImGui::TextWrapped("(CJK text will only appears if the font supports it. Please check in the extra_fonts/ folder if you intend to use non-ASCII characters. Note that characters values are preserved even if the font cannot be displayed, so you can safely copy & paste garbled characters.)");
             ImGui::Text("Hiragana: \xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93 (kakikukeko)");
             ImGui::Text("Kanjis: \xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e (nihongo)");
             static char buf[32] = "\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e";
@@ -6462,15 +6697,26 @@ void ShowTestWindow(bool* open)
             bool focus_1 = ImGui::Button("Focus on 1"); ImGui::SameLine();
             bool focus_2 = ImGui::Button("Focus on 2"); ImGui::SameLine();
             bool focus_3 = ImGui::Button("Focus on 3");
+            int has_focus = 0;
             static char buf[128] = "click on a button to set focus";
+            
             if (focus_1) ImGui::SetKeyboardFocusHere();
             ImGui::InputText("1", buf, IM_ARRAYSIZE(buf));
+            if (ImGui::IsItemFocused()) has_focus = 1;
+            
             if (focus_2) ImGui::SetKeyboardFocusHere();
             ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
+            if (ImGui::IsItemFocused()) has_focus = 2;
+
             ImGui::PushAllowKeyboardFocus(false);
             if (focus_3) ImGui::SetKeyboardFocusHere();
             ImGui::InputText("3 (tab skip)", buf, IM_ARRAYSIZE(buf));
+            if (ImGui::IsItemFocused()) has_focus = 3;
             ImGui::PopAllowKeyboardFocus();
+            if (has_focus)
+                ImGui::Text("Item with focus: %d", has_focus);
+            else 
+                ImGui::Text("Item with focus: <none>");
             ImGui::TreePop();
         }
     }

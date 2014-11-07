@@ -159,13 +159,16 @@ namespace ImGui
     void        SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use 'offset' to access sub components of a multiple component widget.
     void        SetTreeStateStorage(ImGuiStorage* tree);                            // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it).
     ImGuiStorage* GetTreeStateStorage();
-    void        PushItemWidth(float item_width);
+    
+    void        PushItemWidth(float item_width);                                    // width of items for the common item+label case. default to ~2/3 of windows width.
     void        PopItemWidth();
     float       GetItemWidth();
     void        PushAllowKeyboardFocus(bool v);                                     // allow focusing using TAB/Shift-TAB, enabled by default but you can disable it for certain widgets.
     void        PopAllowKeyboardFocus();
     void        PushStyleColor(ImGuiCol idx, const ImVec4& col);
     void        PopStyleColor();
+    void        PushTextWrapPos(float wrap_pos_x);                                  // word-wrapping for Text*() commands. < 0.0f: no wrapping; 0.0f: wrap to end of window (or column); > 0.0f: wrap at 'wrap_pos_x' position in window local space.
+    void        PopTextWrapPos();
 
     // Tooltip
     void        SetTooltip(const char* fmt, ...);                                   // set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). last call wins.
@@ -200,10 +203,12 @@ namespace ImGui
     // Widgets
     void        Text(const char* fmt, ...);
     void        TextV(const char* fmt, va_list args);
-    void        TextColored(const ImVec4& col, const char* fmt, ...);               // shortcut to doing PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
+    void        TextColored(const ImVec4& col, const char* fmt, ...);               // shortcut for PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
     void        TextColoredV(const ImVec4& col, const char* fmt, va_list args);
-    void        TextUnformatted(const char* text, const char* text_end = NULL);     // doesn't require null terminated string if 'text_end' is specified. no copy done to any bounded stack buffer, better for long chunks of text.
-    void        LabelText(const char* label, const char* fmt, ...);
+    void        TextWrapped(const char* fmt, ...);                                  // shortcut for PushTextWrapPos(0.0f); Text(fmt, ...); PopTextWrapPos();
+    void        TextWrappedV(const char* fmt, va_list args);
+    void        TextUnformatted(const char* text, const char* text_end = NULL);     // doesn't require null terminated string if 'text_end' is specified. no copy done to any bounded stack buffer, recommended for long chunks of text.
+    void        LabelText(const char* label, const char* fmt, ...);                 // display text+label aligned the same way as value+label widgets 
     void        LabelTextV(const char* label, const char* fmt, va_list args);
     void        BulletText(const char* fmt, ...);
     void        BulletTextV(const char* fmt, va_list args);
@@ -265,9 +270,10 @@ namespace ImGui
     // Utilities
     void        SetNewWindowDefaultPos(const ImVec2& pos);                          // set position of window that do
     bool        IsHovered();                                                        // was the last item active area hovered by mouse?
+    bool        IsItemFocused();                                                    // was the last item focused for keyboard input?
     ImVec2      GetItemBoxMin();                                                    // get bounding box of last item
     ImVec2      GetItemBoxMax();                                                    // get bounding box of last item
-    bool        IsClipped(const ImVec2& item_size);                                 // to perform coarse clipping on user's side (as an optimisation)
+    bool        IsClipped(const ImVec2& item_size);                                 // to perform coarse clipping on user's side (as an optimization)
     bool        IsKeyPressed(int key_index, bool repeat = true);                    // key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry
     bool        IsMouseClicked(int button, bool repeat = false);
     bool        IsMouseDoubleClicked(int button);
@@ -280,7 +286,7 @@ namespace ImGui
     int         GetFrameCount();
     const char* GetStyleColorName(ImGuiCol idx);
     void        GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size);
-    ImVec2      CalcTextSize(const char* text, const char* text_end = NULL, const bool hide_text_after_hash = true);
+    ImVec2      CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_hash = true, float wrap_width = -1.0f);
 
 } // namespace ImGui
 
@@ -542,6 +548,7 @@ struct ImGuiTextBuffer
     ImVector<char>      Buf;
 
     ImGuiTextBuffer()   { Buf.push_back(0); }
+    ~ImGuiTextBuffer()  { clear(); }
     const char*         begin() const { return Buf.begin(); }
     const char*         end() const { return Buf.end()-1; }
     size_t              size() const { return Buf.size()-1; }
@@ -619,8 +626,8 @@ struct ImDrawList
     void AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col);
     void AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
     void AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
-    void AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, int a_max, bool tris=false, const ImVec2& third_point_offset = ImVec2(0,0));
-    void AddText(ImFont font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end);
+    void AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, int a_max, bool tris = false, const ImVec2& third_point_offset = ImVec2(0,0));
+    void AddText(ImFont font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width = 0.0f);
 };
 
 // Optional bitmap font data loader & renderer into vertices
@@ -696,11 +703,16 @@ struct ImBitmapFont
     bool                    LoadFromFile(const char* filename);
     void                    Clear();
     void                    BuildLookupTable();
-    const FntGlyph *        FindGlyph(unsigned short c) const;
+    const FntGlyph *        FindGlyph(unsigned short c, const FntGlyph* fallback = NULL) const;
     float                   GetFontSize() const { return (float)Info->FontSize; }
     bool                    IsLoaded() const { return Info != NULL && Common != NULL && Glyphs != NULL; }
 
-    ImVec2                  CalcTextSizeA(float size, float max_width, const char* text_begin, const char* text_end, const char** remaining = NULL) const;            // utf8
-    ImVec2                  CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;  // wchar
-    void                    RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices) const;
+    // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
+    // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
+    ImVec2                  CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining = NULL) const;     // utf8
+    ImVec2                  CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;              // wchar
+    void                    RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width = 0.0f) const;
+
+private:
+    const char*             CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width, const FntGlyph* fallback_glyph) const;
 };
