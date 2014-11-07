@@ -149,7 +149,8 @@ namespace ImGui
     void		SetWindowSize(const ImVec2& size);                                  // set to ImVec2(0,0) to force an auto-fit
     ImVec2      GetWindowPos();                                                     // you should rarely need/care about the window position, but it can be useful if you want to use your own drawing.
     void        SetWindowPos(const ImVec2& pos);                                    // set current window pos.
-    ImVec2      GetWindowContentRegionMin();
+	ImVec2      GetContentRegionMax();                                              // window or current column boundaries
+    ImVec2      GetWindowContentRegionMin();                                        // window boundaries
     ImVec2      GetWindowContentRegionMax();
     ImDrawList* GetWindowDrawList();                                                // get rendering command-list if you want to append your own draw primitives.
     ImFont      GetWindowFont();

@@ -901,7 +901,7 @@ void ImGuiTextFilter::Draw(const char* label, float width)
     if (width < 0.0f)
     {
         ImVec2 label_size = ImGui::CalcTextSize(label, NULL);
-        width = ImMax(window->Pos.x + ImGui::GetWindowContentRegionMax().x - window->DC.CursorPos.x - (label_size.x + GImGui.Style.ItemSpacing.x*4), 10.0f);
+        width = ImMax(window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x - (label_size.x + GImGui.Style.ItemSpacing.x*4), 10.0f);
     }
     ImGui::PushItemWidth(width);
     ImGui::InputText(label, InputBuf, IM_ARRAYSIZE(InputBuf));
@@ -1662,7 +1662,7 @@ static float CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 
     ImGuiWindow* window = GetCurrentWindow();
 	if (wrap_pos_x == 0.0f)
-		wrap_pos_x = GetWindowContentRegionMax().x;
+		wrap_pos_x = GetContentRegionMax().x;
     if (wrap_pos_x > 0.0f)
         wrap_pos_x += window->Pos.x; // wrap_pos_x is provided is window local space
     
@@ -2618,13 +2618,31 @@ void SetWindowSize(const ImVec2& size)
         window->AutoFitFrames = 3;
 }
 
+ImVec2 GetContentRegionMax()
+{
+	ImGuiWindow* window = GetCurrentWindow();
+
+	ImVec2 m = window->Size - window->WindowPadding();
+	if (window->DC.ColumnsCount != 1)
+	{
+		m.x = GetColumnOffset(window->DC.ColumnCurrent + 1);
+		m.x -= GImGui.Style.WindowPadding.x;
+	}
+	else
+	{
+		if (window->ScrollbarY)
+			m.x -= GImGui.Style.ScrollBarWidth;
+	}
+
+	return m;
+}
+
 ImVec2 GetWindowContentRegionMin()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return ImVec2(0, window->TitleBarHeight()) + window->WindowPadding();
 }
 
-// FIXME: Provide an equivalent that gives the min/max region considering columns.
 ImVec2 GetWindowContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -3167,7 +3185,7 @@ bool CollapsingHeader(const char* label, const char* str_id, const bool display_
     const ImVec2 window_padding = window->WindowPadding();
     const ImVec2 text_size = CalcTextSize(label);
     const ImVec2 pos_min = window->DC.CursorPos;
-    const ImVec2 pos_max = window->Pos + GetWindowContentRegionMax();
+    const ImVec2 pos_max = window->Pos + GetContentRegionMax();
     ImGuiAabb bb = ImGuiAabb(pos_min, ImVec2(pos_max.x, pos_min.y + text_size.y));
     if (display_frame)
     {
@@ -6575,6 +6593,8 @@ void ShowTestWindow(bool* open)
 
     if (ImGui::CollapsingHeader("Columns"))
     {
+		ImGui::Text("Note: columns are not well supported by all corners of the API so far. Please fill a report on GitHub if you run into issues.");
+
         ImGui::Columns(4, "data", true);
         ImGui::Text("ID"); ImGui::NextColumn();
         ImGui::Text("Name"); ImGui::NextColumn();
@@ -6590,7 +6610,7 @@ void ShowTestWindow(bool* open)
         ImGui::Text("0001"); ImGui::NextColumn();
         ImGui::Text("Stephanie"); ImGui::NextColumn();
         ImGui::Text("/path/stephanie"); ImGui::NextColumn();
-        ImGui::Text("...."); ImGui::NextColumn();
+		ImGui::Text("line 1\nline 2"); ImGui::NextColumn(); // two lines!
 
         ImGui::Text("0002"); ImGui::NextColumn();
         ImGui::Text("C64"); ImGui::NextColumn();
@@ -6601,9 +6621,12 @@ void ShowTestWindow(bool* open)
         ImGui::Separator();
 
         ImGui::Columns(3, "mixed");
-        ImGui::Text("Hello"); ImGui::NextColumn();
-        ImGui::Text("World"); ImGui::NextColumn();
-        ImGui::Text("Hmm..."); ImGui::NextColumn();
+
+		// NB: it is may be more efficient to fill all contents of a column and then go to the next one.
+		// However for the user it is more likely you want to fill all columns before proceeding to the next item, so this example does that.
+		ImGui::Text("Hello"); ImGui::NextColumn();
+		ImGui::Text("World"); ImGui::NextColumn();
+		ImGui::Text("Hmm..."); ImGui::NextColumn();
 
         ImGui::Button("Banana"); ImGui::NextColumn();
         ImGui::Button("Apple"); ImGui::NextColumn();
@@ -6613,7 +6636,13 @@ void ShowTestWindow(bool* open)
         ImGui::RadioButton("radio a", &e, 0); ImGui::NextColumn();
         ImGui::RadioButton("radio b", &e, 1); ImGui::NextColumn();
         ImGui::RadioButton("radio c", &e, 2); ImGui::NextColumn();
-        ImGui::Columns(1);
+
+		// FIXME: Exhibit bug of CurrentLineHeight bleeding between columns
+		//if (ImGui::CollapsingHeader("Category A")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+		//if (ImGui::CollapsingHeader("Category B")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+		//if (ImGui::CollapsingHeader("Category C")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+
+		ImGui::Columns(1);
 
         ImGui::Separator();
 
@@ -6623,6 +6652,15 @@ void ShowTestWindow(bool* open)
         static float bar = 1.0f;
         ImGui::InputFloat("blue", &bar, 0.05f, 0, 3); ImGui::NextColumn();
         ImGui::Columns(1);
+
+		ImGui::Separator();
+		
+		// FIXME: Exhibit bug of CurrentLineHeight bleeding between columns (notice how dragging the columns far left or far right gets your different vertical alignment on the other side)
+		ImGui::Columns(2, "word wrapping");
+		ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
+		ImGui::NextColumn();
+		ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
+		ImGui::Columns(1);
 
         ImGui::Separator();
 
