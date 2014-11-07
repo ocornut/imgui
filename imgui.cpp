@@ -548,10 +548,16 @@ static void ImConvertColorHSVtoRGB(float h, float s, float v, float& out_r, floa
 
 //-----------------------------------------------------------------------------
 
-struct ImGuiColMod  // Color/style modifier, backup of modified data so we can restore it
+struct ImGuiColMod       // Color modifier, backup of modified data so we can restore it
 {
     ImGuiCol    Col;
     ImVec4      PreviousValue;
+};
+
+struct ImGuiStyleMod    // Style modifier, backup of modified data so we can restore it
+{
+    ImGuiStyleVar Var;
+    ImVec2      PreviousValue;
 };
 
 struct ImGuiAabb    // 2D axis aligned bounding-box
@@ -597,6 +603,7 @@ struct ImGuiDrawContext
     ImVector<float>         ItemWidth;
     ImVector<float>         TextWrapPos;
     ImVector<ImGuiColMod>   ColorModifiers;
+    ImVector<ImGuiStyleMod> StyleModifiers;
     ImGuiColorEditMode      ColorEditMode;
     ImGuiStorage*           StateStorage;
     int                     OpenNextNode;
@@ -1662,8 +1669,8 @@ static float CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
         return 0.0f;
 
     ImGuiWindow* window = GetCurrentWindow();
-	if (wrap_pos_x == 0.0f)
-		wrap_pos_x = GetContentRegionMax().x;
+    if (wrap_pos_x == 0.0f)
+        wrap_pos_x = GetContentRegionMax().x;
     if (wrap_pos_x > 0.0f)
         wrap_pos_x += window->Pos.x; // wrap_pos_x is provided is window local space
     
@@ -1963,17 +1970,19 @@ void BeginChild(const char* str_id, ImVec2 size, bool border, ImGuiWindowFlags e
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_ChildWindow;
 
-    const ImVec2 content_max = window->Pos + ImGui::GetWindowContentRegionMax();
+    const ImVec2 content_max = window->Pos + ImGui::GetContentRegionMax();
     const ImVec2 cursor_pos = window->Pos + ImGui::GetCursorPos();
     if (size.x <= 0.0f)
     {
-        size.x = ImMax(content_max.x - cursor_pos.x, g.Style.WindowMinSize.x);
-        flags |= ImGuiWindowFlags_ChildWindowAutoFitX;
+        if (size.x == 0.0f)
+            flags |= ImGuiWindowFlags_ChildWindowAutoFitX;
+        size.x = ImMax(content_max.x - cursor_pos.x, g.Style.WindowMinSize.x) - fabsf(size.x);
     }
     if (size.y <= 0.0f)
     {
-        size.y = ImMax(content_max.y - cursor_pos.y, g.Style.WindowMinSize.y);
-        flags |= ImGuiWindowFlags_ChildWindowAutoFitY;
+        if (size.y == 0.0f)
+            flags |= ImGuiWindowFlags_ChildWindowAutoFitY;
+        size.y = ImMax(content_max.y - cursor_pos.y, g.Style.WindowMinSize.y) - fabsf(size.y);
     }
     if (border)
         flags |= ImGuiWindowFlags_ShowBorders;
@@ -2330,6 +2339,7 @@ bool Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWin
         window->DC.TextWrapPos.resize(0);
         window->DC.TextWrapPos.push_back(-1.0f); // disabled
         window->DC.ColorModifiers.resize(0);
+        window->DC.StyleModifiers.resize(0);
         window->DC.ColorEditMode = ImGuiColorEditMode_UserSelect;
         window->DC.ColumnCurrent = 0;
         window->DC.ColumnsCount = 1;
@@ -2528,6 +2538,73 @@ void PopStyleColor()
     window->DC.ColorModifiers.pop_back();
 }
 
+static float* GetStyleVarFloatAddr(ImGuiStyleVar idx)
+{
+    ImGuiState& g = GImGui;
+    switch (idx)
+    {
+    case ImGuiStyleVar_Alpha: return &g.Style.Alpha;
+    case ImGuiStyleVar_TreeNodeSpacing: return &g.Style.TreeNodeSpacing;
+    case ImGuiStyleVar_ColumnsMinSpacing: return &g.Style.ColumnsMinSpacing;
+    }
+    return NULL;
+}
+
+static ImVec2* GetStyleVarVec2Addr(ImGuiStyleVar idx)
+{
+    ImGuiState& g = GImGui;
+    switch (idx)
+    {
+    case ImGuiStyleVar_WindowPadding: return &g.Style.WindowPadding;
+    case ImGuiStyleVar_FramePadding: return &g.Style.FramePadding;
+    case ImGuiStyleVar_ItemSpacing: return &g.Style.ItemSpacing;
+    case ImGuiStyleVar_ItemInnerSpacing: return &g.Style.ItemInnerSpacing;
+    }
+    return NULL;
+}
+
+void PushStyleVar(ImGuiStyleVar idx, float val)
+{
+    ImGuiState& g = GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+
+    float* pvar = GetStyleVarFloatAddr(idx);
+    IM_ASSERT(pvar != NULL); // Called wrong function?
+    ImGuiStyleMod backup;
+    backup.Var = idx;
+    backup.PreviousValue = ImVec2(*pvar, 0.0f);
+    window->DC.StyleModifiers.push_back(backup);
+    *pvar = val;
+}
+
+
+void PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
+{
+    ImGuiState& g = GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+
+    ImVec2* pvar = GetStyleVarVec2Addr(idx);
+    IM_ASSERT(pvar != NULL); // Called wrong function?
+    ImGuiStyleMod backup;
+    backup.Var = idx;
+    backup.PreviousValue = *pvar;
+    window->DC.StyleModifiers.push_back(backup);
+    *pvar = val;
+}
+
+void PopStyleVar()
+{
+    ImGuiState& g = GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+
+    ImGuiStyleMod& backup = window->DC.StyleModifiers.back();
+    if (float* pvar = GetStyleVarFloatAddr(backup.Var))
+        *pvar = backup.PreviousValue.x;
+    else if (ImVec2* pvar = GetStyleVarVec2Addr(backup.Var))
+        *pvar = backup.PreviousValue;
+    window->DC.StyleModifiers.pop_back();
+}
+
 const char* GetStyleColorName(ImGuiCol idx)
 {
     // Create switch-case from enum with regexp: ImGuiCol_{.*}, --> case ImGuiCol_\1: return "\1";
@@ -2621,21 +2698,21 @@ void SetWindowSize(const ImVec2& size)
 
 ImVec2 GetContentRegionMax()
 {
-	ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindow();
 
-	ImVec2 m = window->Size - window->WindowPadding();
-	if (window->DC.ColumnsCount != 1)
-	{
-		m.x = GetColumnOffset(window->DC.ColumnCurrent + 1);
-		m.x -= GImGui.Style.WindowPadding.x;
-	}
-	else
-	{
-		if (window->ScrollbarY)
-			m.x -= GImGui.Style.ScrollBarWidth;
-	}
+    ImVec2 m = window->Size - window->WindowPadding();
+    if (window->DC.ColumnsCount != 1)
+    {
+        m.x = GetColumnOffset(window->DC.ColumnCurrent + 1);
+        m.x -= GImGui.Style.WindowPadding.x;
+    }
+    else
+    {
+        if (window->ScrollbarY)
+            m.x -= GImGui.Style.ScrollBarWidth;
+    }
 
-	return m;
+    return m;
 }
 
 ImVec2 GetWindowContentRegionMin()
@@ -6260,6 +6337,8 @@ void ShowStyleEditor(ImGuiStyle* ref)
 // SAMPLE CODE
 //-----------------------------------------------------------------------------
 
+static void ShowExampleConsole(bool* open);
+
 // Demonstrate ImGui features (unfortunately this makes this function a little bloated!)
 void ShowTestWindow(bool* open)
 {
@@ -6594,7 +6673,7 @@ void ShowTestWindow(bool* open)
 
     if (ImGui::CollapsingHeader("Columns"))
     {
-		ImGui::Text("Note: columns are not well supported by all corners of the API so far. Please fill a report on GitHub if you run into issues.");
+        ImGui::Text("Note: columns are not well supported by all corners of the API so far. Please fill a report on GitHub if you run into issues.");
 
         ImGui::Columns(4, "data", true);
         ImGui::Text("ID"); ImGui::NextColumn();
@@ -6611,7 +6690,7 @@ void ShowTestWindow(bool* open)
         ImGui::Text("0001"); ImGui::NextColumn();
         ImGui::Text("Stephanie"); ImGui::NextColumn();
         ImGui::Text("/path/stephanie"); ImGui::NextColumn();
-		ImGui::Text("line 1\nline 2"); ImGui::NextColumn(); // two lines!
+        ImGui::Text("line 1\nline 2"); ImGui::NextColumn(); // two lines!
 
         ImGui::Text("0002"); ImGui::NextColumn();
         ImGui::Text("C64"); ImGui::NextColumn();
@@ -6623,11 +6702,11 @@ void ShowTestWindow(bool* open)
 
         ImGui::Columns(3, "mixed");
 
-		// NB: it is may be more efficient to fill all contents of a column and then go to the next one.
-		// However for the user it is more likely you want to fill all columns before proceeding to the next item, so this example does that.
-		ImGui::Text("Hello"); ImGui::NextColumn();
-		ImGui::Text("World"); ImGui::NextColumn();
-		ImGui::Text("Hmm..."); ImGui::NextColumn();
+        // NB: it is may be more efficient to fill all contents of a column and then go to the next one.
+        // However for the user it is more likely you want to fill all columns before proceeding to the next item, so this example does that.
+        ImGui::Text("Hello"); ImGui::NextColumn();
+        ImGui::Text("World"); ImGui::NextColumn();
+        ImGui::Text("Hmm..."); ImGui::NextColumn();
 
         ImGui::Button("Banana"); ImGui::NextColumn();
         ImGui::Button("Apple"); ImGui::NextColumn();
@@ -6638,12 +6717,12 @@ void ShowTestWindow(bool* open)
         ImGui::RadioButton("radio b", &e, 1); ImGui::NextColumn();
         ImGui::RadioButton("radio c", &e, 2); ImGui::NextColumn();
 
-		// FIXME: Exhibit bug of CurrentLineHeight bleeding between columns
-		//if (ImGui::CollapsingHeader("Category A")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
-		//if (ImGui::CollapsingHeader("Category B")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
-		//if (ImGui::CollapsingHeader("Category C")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+        // FIXME: Exhibit bug of CurrentLineHeight bleeding between columns
+        //if (ImGui::CollapsingHeader("Category A")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+        //if (ImGui::CollapsingHeader("Category B")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+        //if (ImGui::CollapsingHeader("Category C")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
 
-		ImGui::Columns(1);
+        ImGui::Columns(1);
 
         ImGui::Separator();
 
@@ -6654,14 +6733,14 @@ void ShowTestWindow(bool* open)
         ImGui::InputFloat("blue", &bar, 0.05f, 0, 3); ImGui::NextColumn();
         ImGui::Columns(1);
 
-		ImGui::Separator();
-		
-		// FIXME: Exhibit bug of CurrentLineHeight bleeding between columns (notice how dragging the columns far left or far right gets your different vertical alignment on the other side)
-		ImGui::Columns(2, "word wrapping");
-		ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
-		ImGui::NextColumn();
-		ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
-		ImGui::Columns(1);
+        ImGui::Separator();
+        
+        // FIXME: Exhibit bug of CurrentLineHeight bleeding between columns (notice how dragging the columns far left or far right gets your different vertical alignment on the other side)
+        ImGui::Columns(2, "word wrapping");
+        ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
+        ImGui::NextColumn();
+        ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
+        ImGui::Columns(1);
 
         ImGui::Separator();
 
@@ -6760,6 +6839,15 @@ void ShowTestWindow(bool* open)
         }
     }
 
+    if (ImGui::CollapsingHeader("App Examples"))
+    {
+        static bool show_console = false;
+        ImGui::Checkbox("Console", &show_console);
+
+        if (show_console)
+            ShowExampleConsole(&show_console);
+    }
+
     if (ImGui::CollapsingHeader("Long text"))
     {
         static ImGuiTextBuffer log;
@@ -6781,6 +6869,83 @@ void ShowTestWindow(bool* open)
 
     ImGui::End();
 }
+
+static void ShowExampleConsole(bool* open)
+{
+    if (!ImGui::Begin("Example: Console", open, ImVec2(520,600)))
+    {
+        ImGui::End();
+        return;
+    }
+
+    ImGui::TextWrapped("This example implement a simple console. A more elaborate implementation may want to store individual entries along with extra data such as timestamp, emitter, etc. Here we automatically set focus on the text edition fields when hovering them.");
+
+    // TODO: display from bottom
+    // TODO: clip manually
+    // TODO: history
+    // TODO: completion
+
+    static ImVector<char*> items;
+    static char input[256] = "";
+    static bool new_items = false;
+
+    if (ImGui::SmallButton("Add Dummy Text")) { items.push_back(ImStrdup("some text\nsome more text")); new_items = true; }
+    ImGui::SameLine(); 
+    if (ImGui::SmallButton("Add Dummy Error")) { items.push_back(ImStrdup("[error] something went wrong")); new_items = true; }
+    ImGui::SameLine(); 
+    if (ImGui::SmallButton("Clear all")) { for (size_t i = 0; i < items.size(); i++) ImGui::MemFree(items[i]); items.clear(); }
+    ImGui::Separator();
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
+    static ImGuiTextFilter filter;
+    filter.Draw("Filter (\"incl,-excl\") (\"error\")", 180);
+    if (ImGui::IsItemHovered()) ImGui::SetKeyboardFocusHere(-1); // Auto focus on hover
+    ImGui::PopStyleVar();
+    ImGui::Separator();
+
+    ImGui::BeginChild("ScrollingRegion", ImVec2(0,-ImGui::GetTextLineSpacing()*2));
+
+    // Display every line as a separate entry so we can change their color or add custom widgets. If you only want raw text you can use ImGui::TextUnformatted(log.begin(), log.end());
+    // NB- if you have lots of text this approach may be too inefficient. You can seek and display only the lines that are on display using a technique similar to what TextUnformatted() does,
+    // or faster if your entries are already stored into a table.
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,1)); // tighten spacing
+    ImGui::GetStyle().ItemSpacing.y = 1; // tighten spacing
+    for (size_t i = 0; i < items.size(); i++)
+    {
+        const char* item = items[i];
+        if (!filter.PassFilter(item))
+            continue;
+        ImVec4 col(1,1,1,1);
+        if (strstr(item, "[error]")) col = ImVec4(1.0f,0.4f,0.4f,1.0f);
+        else if (strncmp(item, "# ", 2) == 0) col = ImVec4(1.0f,0.8f,0.6f,1.0f);
+        ImGui::PushStyleColor(ImGuiCol_Text, col);
+        ImGui::TextUnformatted(item);
+        ImGui::PopStyleColor();
+    }
+    ImGui::PopStyleVar();
+    if (new_items)
+    {
+        ImGui::SetScrollPosHere();
+        new_items = false;
+    }
+    ImGui::EndChild();
+
+    ImGui::Separator();
+    if (ImGui::InputText("Input", input, IM_ARRAYSIZE(input), ImGuiInputTextFlags_EnterReturnsTrue))
+    {
+        new_items = true;
+        char buf[256];
+        ImFormatString(buf, IM_ARRAYSIZE(buf), "# %s\n", input);
+        items.push_back(ImStrdup(buf));
+        ImFormatString(buf, IM_ARRAYSIZE(buf), "Unknown command '%s'\n", input);
+        items.push_back(ImStrdup(buf));
+        strcpy(input, "");
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetKeyboardFocusHere(-1); // Auto focus on hover
+
+    ImGui::End();
+}
+
 // End of Sample code
 
 } // namespace ImGui

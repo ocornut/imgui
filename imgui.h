@@ -33,6 +33,7 @@ typedef unsigned int ImU32;
 typedef unsigned short ImWchar;
 typedef ImU32 ImGuiID;
 typedef int ImGuiCol;               // enum ImGuiCol_
+typedef int ImGuiStyleVar;          // enum ImGuiStyleVar_
 typedef int ImGuiKey;               // enum ImGuiKey_
 typedef int ImGuiColorEditMode;     // enum ImGuiColorEditMode_
 typedef int ImGuiWindowFlags;       // enum ImGuiWindowFlags_
@@ -145,7 +146,7 @@ namespace ImGui
     // Window
     IMGUI_API bool          Begin(const char* name = "Debug", bool* open = NULL, ImVec2 size = ImVec2(0,0), float fill_alpha = -1.0f, ImGuiWindowFlags flags = 0);    // return false when window is collapsed, so you can early out in your code.
     IMGUI_API void          End();
-    IMGUI_API void          BeginChild(const char* str_id, ImVec2 size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);
+    IMGUI_API void          BeginChild(const char* str_id, ImVec2 size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);                         // size==0.0f: use remaining window size, size<0.0f: use remaining window size minus abs(size). on each axis.
     IMGUI_API void          EndChild();
     IMGUI_API bool          GetWindowIsFocused();
     IMGUI_API ImVec2        GetWindowSize();
@@ -172,6 +173,9 @@ namespace ImGui
     IMGUI_API void          PopAllowKeyboardFocus();
     IMGUI_API void          PushStyleColor(ImGuiCol idx, const ImVec4& col);
     IMGUI_API void          PopStyleColor();
+    IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, float val);
+    IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, const ImVec2& val);
+    IMGUI_API void          PopStyleVar();
     IMGUI_API void          PushTextWrapPos(float wrap_pos_x);                                  // word-wrapping for Text*() commands. < 0.0f: no wrapping; 0.0f: wrap to end of window (or column); > 0.0f: wrap at 'wrap_pos_x' position in window local space.
     IMGUI_API void          PopTextWrapPos();
 
@@ -259,12 +263,12 @@ namespace ImGui
 
     // Value helper output "name: value"
     // Freely declare your own in the ImGui namespace.
-	IMGUI_API void          Value(const char* prefix, bool b);
-	IMGUI_API void          Value(const char* prefix, int v);
-	IMGUI_API void          Value(const char* prefix, unsigned int v);
-	IMGUI_API void          Value(const char* prefix, float v, const char* float_format = NULL);
-	IMGUI_API void          Color(const char* prefix, const ImVec4& v);
-	IMGUI_API void          Color(const char* prefix, unsigned int v);
+    IMGUI_API void          Value(const char* prefix, bool b);
+    IMGUI_API void          Value(const char* prefix, int v);
+    IMGUI_API void          Value(const char* prefix, unsigned int v);
+    IMGUI_API void          Value(const char* prefix, float v, const char* float_format = NULL);
+    IMGUI_API void          Color(const char* prefix, const ImVec4& v);
+    IMGUI_API void          Color(const char* prefix, unsigned int v);
 
     // Logging
     IMGUI_API void          LogButtons();
@@ -345,6 +349,7 @@ enum ImGuiKey_
     ImGuiKey_COUNT,
 };
 
+// Enumeration for PushStyleColor() / PopStyleColor()
 enum ImGuiCol_
 {
     ImGuiCol_Text,
@@ -385,6 +390,19 @@ enum ImGuiCol_
     ImGuiCol_TextSelectedBg,
     ImGuiCol_TooltipBg,
     ImGuiCol_COUNT,
+};
+
+// Enumeration for PushStyleVar() / PopStyleVar()
+// NB: the enum only refers to fields of ImGuiStyle() which makes sense to be pushed/poped in UI code. Feel free to add others.
+enum ImGuiStyleVar_
+{
+    ImGuiStyleVar_Alpha,             // float
+    ImGuiStyleVar_WindowPadding,     // ImVec2
+    ImGuiStyleVar_FramePadding,      // ImVec2
+    ImGuiStyleVar_ItemSpacing,       // ImVec2
+    ImGuiStyleVar_ItemInnerSpacing,  // ImVec2
+    ImGuiStyleVar_TreeNodeSpacing,   // float
+    ImGuiStyleVar_ColumnsMinSpacing, // float 
 };
 
 enum ImGuiColorEditMode_
