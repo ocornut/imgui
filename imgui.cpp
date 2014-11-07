@@ -138,6 +138,7 @@
  API BREAKING CHANGES
  ====================
 
+  - 2014/11/07 (1.15) renamed IsHovered() to IsItemHovered()
   - 2014/10/02 (1.14) renamed IMGUI_INCLUDE_IMGUI_USER_CPP to IMGUI_INCLUDE_IMGUI_USER_INL and imgui_user.cpp to imgui_user.inl (more IDE friendly)
   - 2014/09/25 (1.13) removed 'text_end' parameter from IO.SetClipboardTextFn (the string is now always zero-terminated for simplicity)
   - 2014/09/24 (1.12) renamed SetFontScale() to SetWindowFontScale()
@@ -1879,7 +1880,7 @@ ImVec2 GetMousePos()
     return GImGui.IO.MousePos;
 }
 
-bool IsHovered()
+bool IsItemHovered()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->DC.LastItemHovered;
@@ -6397,12 +6398,12 @@ void ShowTestWindow(bool* open)
         ImGui::RadioButton("radio c", &e, 2);
 
         ImGui::Text("Hover me");
-        if (ImGui::IsHovered())
+        if (ImGui::IsItemHovered())
             ImGui::SetTooltip("I am a tooltip");
 
         ImGui::SameLine();
         ImGui::Text("- or me");
-        if (ImGui::IsHovered())
+        if (ImGui::IsItemHovered())
         {
             ImGui::BeginTooltip();
             ImGui::Text("I am a fancy tooltip");

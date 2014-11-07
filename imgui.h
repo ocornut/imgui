@@ -274,7 +274,7 @@ namespace ImGui
 
     // Utilities
     IMGUI_API void          SetNewWindowDefaultPos(const ImVec2& pos);                          // set position of window that do
-    IMGUI_API bool          IsHovered();                                                        // was the last item active area hovered by mouse?
+    IMGUI_API bool          IsItemHovered();                                                    // was the last item active area hovered by mouse?
     IMGUI_API bool          IsItemFocused();                                                    // was the last item focused for keyboard input?
     IMGUI_API ImVec2        GetItemBoxMin();                                                    // get bounding box of last item
     IMGUI_API ImVec2        GetItemBoxMax();                                                    // get bounding box of last item
