@@ -5292,8 +5292,8 @@ void ImDrawList::AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col)
 {
     const float offset = GImGui.IO.PixelCenterOffset;
     const ImVec2 hn = (b - a) * (0.50f / ImLength(b - a));     // half normal
-    const ImVec2 hp0 = ImVec2(offset - hn.y, offset + hn.x);   // half perpendiculars + user offset
-    const ImVec2 hp1 = ImVec2(offset + hn.y, offset - hn.x);
+    const ImVec2 hp0 = ImVec2(offset + hn.y, offset - hn.x);   // half perpendiculars + user offset
+    const ImVec2 hp1 = ImVec2(offset - hn.y, offset + hn.x);
 
     // Two triangles makes up one line. Using triangles allows us to make draw calls.
     AddVtx(a + hp0, col);
