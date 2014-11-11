@@ -5182,22 +5182,22 @@ void ImGui::TreePop()
     PopID();
 }
 
-void Value(const char* prefix, bool b)
+void ImGui::Value(const char* prefix, bool b)
 {
     ImGui::Text("%s: %s", prefix, (b ? "true" : "false"));
 }
 
-void Value(const char* prefix, int v)
+void ImGui::Value(const char* prefix, int v)
 {
     ImGui::Text("%s: %d", prefix, v);
 }
 
-void Value(const char* prefix, unsigned int v)
+void ImGui::Value(const char* prefix, unsigned int v)
 {
     ImGui::Text("%s: %d", prefix, v);
 }
 
-void Value(const char* prefix, float v, const char* float_format)
+void ImGui::Value(const char* prefix, float v, const char* float_format)
 {
     if (float_format)
     {
@@ -5211,14 +5211,14 @@ void Value(const char* prefix, float v, const char* float_format)
     }
 }
 
-void Color(const char* prefix, const ImVec4& v)
+void ImGui::Color(const char* prefix, const ImVec4& v)
 {
     ImGui::Text("%s: (%.2f,%.2f,%.2f,%.2f)", prefix, v.x, v.y, v.z, v.w);
     ImGui::SameLine();
     ImGui::ColorButton(v, true);
 }
 
-void Color(const char* prefix, unsigned int v)
+void ImGui::Color(const char* prefix, unsigned int v)
 {
     ImGui::Text("%s: %08X", prefix, v);
     ImGui::SameLine();
