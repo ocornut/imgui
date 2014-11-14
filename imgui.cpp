@@ -1333,6 +1333,7 @@ void ImGui::NewFrame()
             g.IO.Font = (ImBitmapFont*)ImGui::MemAlloc(sizeof(ImBitmapFont));
             new(g.IO.Font) ImBitmapFont();
             g.IO.Font->LoadFromMemory(fnt_data, fnt_size);
+			IM_ASSERT(g.IO.Font->IsLoaded());       // Font failed to load
             g.IO.FontYOffset = +1;
         }
         g.Initialized = true;
