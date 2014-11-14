@@ -2038,6 +2038,7 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
 {
     ImGuiState& g = GImGui;
     const ImGuiStyle& style = g.Style;
+    IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
 
     ImGuiWindow* window = FindWindow(name);
     if (!window)
