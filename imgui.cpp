@@ -4866,7 +4866,12 @@ bool	ImBitmapFont::LoadFromMemory(const void* data, int data_size)
 	{
 		const unsigned char block_type = *(unsigned char*)p;
 		p += sizeof(unsigned char);
+#ifdef __EMSCRIPTEN__
+		ImU32 block_size;
+		memcpy(&block_size, p, sizeof(ImU32));
+#else
 		const ImU32 block_size = *(ImU32*)p;
+#endif
 		p += sizeof(ImU32);
 
 		switch (block_type)
