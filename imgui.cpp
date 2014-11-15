@@ -204,6 +204,8 @@
  - input: rework IO to be able to pass actual events to fix temporal aliasing issues.
  - input: support track pad style scrolling & slider edit.
  - tooltip: move to fit within screen (e.g. when mouse cursor is right of the screen).
+ - portability: big-endian test/support (github issue #81)
+ - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL
  - misc: not thread-safe
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - style editor: add a button to output C code.
@@ -233,9 +235,6 @@
 // Forward Declarations
 //-------------------------------------------------------------------------
 
-//namespace ImGui
-//{
-
 static bool         ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
 
@@ -256,8 +255,6 @@ static bool         CloseWindowButton(bool* open = NULL);
 static void         FocusWindow(ImGuiWindow* window);
 static ImGuiWindow* FindWindow(const char* name);
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs);
-
-//} // namespace ImGui
 
 //-----------------------------------------------------------------------------
 // Platform dependent default implementations
@@ -1138,9 +1135,6 @@ void ImGuiWindow::AddToRenderList()
 }
 
 //-----------------------------------------------------------------------------
-
-//namespace ImGui
-//{
 
 void* ImGui::MemAlloc(size_t sz)
 {
@@ -4183,9 +4177,6 @@ void ImGuiTextEditState::RenderTextScrolledClipped(ImFont font, float font_size,
         RenderText(pos+ImVec2(width-clip_end,0.0f), s);
 }
 
-//namespace ImGui
-//{
-
 bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags extra_flags)
 {
     ImGuiState& g = GImGui;
@@ -5230,8 +5221,6 @@ void ImGui::Color(const char* prefix, unsigned int v)
     col.w = (float)((v >> 24) & 0xFF) / 255.0f;
     ImGui::ColorButton(col, true);
 }
-
-//} // namespace ImGui
 
 //-----------------------------------------------------------------------------
 // ImDrawList
