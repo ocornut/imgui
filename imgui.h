@@ -405,6 +405,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_ColumnsMinSpacing, // float 
 };
 
+// Enumeration for ColorEditMode()
 enum ImGuiColorEditMode_
 {
     ImGuiColorEditMode_UserSelect = -1,
@@ -610,12 +611,20 @@ struct ImDrawCmd
     ImVec4          clip_rect;
 };
 
+#ifndef IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT
+// Default vertex layout
 struct ImDrawVert
 {
     ImVec2  pos;
     ImVec2  uv;
     ImU32   col;
 };
+#else
+// You can change the vertex format layout by defining IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT.
+// The code expect ImVec2 pos (8 bytes), ImVec2 uv (8 bytes), ImU32 col (4 bytes), but you can re-order them or add other fields as needed to simplify integration in your engine.
+// The type has to be described by the #define (you can either declare the struct or use a typedef)
+IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
+#endif
 
 // Draw command list
 // This is the low-level list of polygon that ImGui:: functions are filling. At the end of the frame, all command lists are passed to your ImGuiIO::RenderDrawListFn function for rendering.
