@@ -5610,7 +5610,8 @@ bool    ImBitmapFont::LoadFromMemory(const void* data, size_t data_size)
     {
         const unsigned char block_type = *(unsigned char*)p;
         p += sizeof(unsigned char);
-        const ImU32 block_size = *(ImU32*)p;
+        ImU32 block_size;   // use memcpy to read 4-byte because they may be unaligned. This seems to break when compiling for Emscripten.
+        memcpy(&block_size, p, sizeof(ImU32));
         p += sizeof(ImU32);
 
         switch (block_type)
