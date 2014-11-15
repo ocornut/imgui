@@ -34,6 +34,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     // We are using the OpenGL fixed pipeline to make the example code simpler to read!
     // A probable faster way to render would be to collate all vertices from all cmd_lists into a single vertex buffer.
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
+    glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_CULL_FACE);
@@ -51,9 +52,11 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     const float width = ImGui::GetIO().DisplaySize.x;
     const float height = ImGui::GetIO().DisplaySize.y;
     glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
     glLoadIdentity();
     glOrtho(0.0f, width, height, 0.0f, -1.0f, +1.0f);
     glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
     glLoadIdentity();
 
     // Render command lists
@@ -74,10 +77,16 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
             vtx_offset += pcmd->vtx_count;
         }
     }
-    glDisable(GL_SCISSOR_TEST);
     glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
+
+    // Restore modified state
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glPopAttrib();
 }
 
 // NB: ImGui already provide OS clipboard support for Windows so this isn't needed if you are using Windows only.
