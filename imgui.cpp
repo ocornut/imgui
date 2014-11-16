@@ -1066,7 +1066,7 @@ ImGuiWindow::~ImGuiWindow()
 ImGuiID ImGuiWindow::GetID(const char* str)
 {
     const ImGuiID seed = IDStack.empty() ? 0 : IDStack.back();
-    const ImGuiID id = crc32(str, strlen(str), seed);
+    const ImGuiID id = crc32(str, strlen(str), seed); // FIXME-OPT: crc32 function/variant should handle zero-terminated strings
     RegisterAliveId(id);
     return id;
 }
@@ -1702,7 +1702,7 @@ static void RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
     else
     {
         if (!text_end)
-            text_end = text + strlen(text);
+            text_end = text + strlen(text); // FIXME-OPT
         text_display_end = text_end;
     }
 
@@ -2887,7 +2887,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
     IM_ASSERT(text != NULL);
     const char* text_begin = text;
     if (text_end == NULL)
-        text_end = text + strlen(text);
+        text_end = text + strlen(text); // FIXME-OPT
 
     const float wrap_pos_x = window->DC.TextWrapPos.back();
     const bool wrap_enabled = wrap_pos_x >= 0.0f;
@@ -5495,7 +5495,7 @@ void ImDrawList::AddText(ImFont font, float font_size, const ImVec2& pos, ImU32 
         return;
 
     if (text_end == NULL)
-        text_end = text_begin + strlen(text_begin);
+        text_end = text_begin + strlen(text_begin); // FIXME-OPT
 
     // reserve vertices for worse case
     const unsigned int char_count = (unsigned int)(text_end - text_begin);
@@ -5899,7 +5899,7 @@ const char* ImBitmapFont::CalcWordWrapPositionA(float scale, const char* text, c
 ImVec2 ImBitmapFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining) const
 {
     if (!text_end)
-        text_end = text_begin + strlen(text_begin);
+        text_end = text_begin + strlen(text_begin); // FIXME-OPT
 
     const float scale = size / (float)Info->FontSize;
     const float line_height = (float)Info->FontSize * scale;
