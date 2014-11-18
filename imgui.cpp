@@ -218,9 +218,8 @@
  - optimization: specialize for height based clipping first (assume widgets never go up + height tests before width tests?)
 */
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
-#pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
 
 #include "imgui.h"
@@ -230,6 +229,18 @@
 #include <stdio.h>      // vsnprintf
 #include <string.h>     // memset
 #include <new>          // new (ptr)
+
+#ifdef _MSC_VER
+#pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
+#endif
+
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wold-style-cast"         // warning : use of old-style cast                              // yes, they are more terse and not scary looking.
+#pragma clang diagnostic ignored "-Wfloat-equal"            // warning : comparing floating point with == or != is unsafe   // storing and comparing against same constants ok.
+#pragma clang diagnostic ignored "-Wformat-nonliteral"      // warning : format string is not a string literal              // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code, thank you.
+#pragma clang diagnostic ignored "-Wexit-time-destructors"  // warning : declaration requires an exit-time destructor       // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
+#pragma clang diagnostic ignored "-Wglobal-constructors"    // warning : declaration requires a global destructor           // similar to above, not sure what the exact difference it.
+#endif
 
 //-------------------------------------------------------------------------
 // Forward Declarations
@@ -3784,7 +3795,7 @@ bool ImGui::SliderFloat4(const char* label, float v[4], float v_min, float v_max
 enum ImGuiPlotType
 {
     ImGuiPlotType_Lines,
-    ImGuiPlotType_Histogram,
+    ImGuiPlotType_Histogram
 };
 
 static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size)
@@ -3797,9 +3808,9 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
     const ImGuiStyle& style = g.Style;
 
     const ImVec2 text_size = ImGui::CalcTextSize(label);
-    if (graph_size.x == 0)
+    if (graph_size.x == 0.0f)
         graph_size.x = window->DC.ItemWidth.back();
-    if (graph_size.y == 0)
+    if (graph_size.y == 0.0f)
         graph_size.y = text_size.y;
 
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(graph_size.x, graph_size.y) + style.FramePadding*2.0f);
@@ -3895,7 +3906,7 @@ struct ImGuiPlotArrayGetterData
 static float Plot_ArrayGetter(void* data, int idx)
 {
     ImGuiPlotArrayGetterData* plot_data = (ImGuiPlotArrayGetterData*)data;
-    const float v = *(float*)((unsigned char*)plot_data->Values + (size_t)idx * plot_data->Stride);
+    const float v = *(float*)(void*)((unsigned char*)plot_data->Values + (size_t)idx * plot_data->Stride);
     return v;
 }
 
@@ -4093,7 +4104,7 @@ enum
     STB_TEXTEDIT_K_REDO,            // keyboard input to perform redo
     STB_TEXTEDIT_K_WORDLEFT,        // keyboard input to move cursor left one word
     STB_TEXTEDIT_K_WORDRIGHT,       // keyboard input to move cursor right one word
-    STB_TEXTEDIT_K_SHIFT = 1 << 17,
+    STB_TEXTEDIT_K_SHIFT = 1 << 17
 };
 
 #define STB_TEXTEDIT_IMPLEMENTATION
@@ -6204,11 +6215,11 @@ static void SetClipboardTextFn_DefaultImpl(const char* text)
         return;
     const char* text_end = text + strlen(text);
     const int buf_length = (int)(text_end - text) + 1;
-    HGLOBAL buf_handle = GlobalAlloc(GMEM_MOVEABLE, buf_length * sizeof(char)); 
+    HGLOBAL buf_handle = GlobalAlloc(GMEM_MOVEABLE, (SIZE_T)buf_length * sizeof(char)); 
     if (buf_handle == NULL)
         return;
     char* buf_global = (char *)GlobalLock(buf_handle); 
-    memcpy(buf_global, text, text_end - text);
+    memcpy(buf_global, text, (size_t)(text_end - text));
     buf_global[text_end - text] = 0;
     GlobalUnlock(buf_handle); 
     EmptyClipboard();
