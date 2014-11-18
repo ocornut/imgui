@@ -406,7 +406,7 @@ static inline float  ImSaturate(float f)                                        
 static inline float  ImLerp(float a, float b, float t)                          { return a + (b - a) * t; }
 //static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, float t)        { return a + (b - a) * t; }
 static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, const ImVec2& t)  { return ImVec2(a.x + (b.x - a.x) * t.x, a.y + (b.y - a.y) * t.y); }
-static inline float  ImLength(const ImVec2& lhs)                                { return sqrt(lhs.x*lhs.x + lhs.y*lhs.y); }
+static inline float  ImLength(const ImVec2& lhs)                                { return (float)sqrt(lhs.x*lhs.x + lhs.y*lhs.y); }
 
 static int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
 static ptrdiff_t ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end);   // return output UTF-8 bytes count
@@ -2410,8 +2410,8 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
     if (flags & ImGuiWindowFlags_ChildWindow)
     {
         IM_ASSERT((flags & ImGuiWindowFlags_NoTitleBar) != 0);
-        const ImVec4 clip_rect = window->ClipRectStack.back();
-        window->Collapsed = (clip_rect.x >= clip_rect.z || clip_rect.y >= clip_rect.w);
+        const ImVec4 clip_rect_t = window->ClipRectStack.back();
+        window->Collapsed = (clip_rect_t.x >= clip_rect_t.z || clip_rect_t.y >= clip_rect_t.w);
 
         // We also hide the window from rendering because we've already added its border to the command list.
         // (we could perform the check earlier in the function but it is simplier at this point)
@@ -2606,8 +2606,8 @@ void ImGui::PopStyleVar()
     ImGuiStyleMod& backup = window->DC.StyleModifiers.back();
     if (float* pvar = GetStyleVarFloatAddr(backup.Var))
         *pvar = backup.PreviousValue.x;
-    else if (ImVec2* pvar = GetStyleVarVec2Addr(backup.Var))
-        *pvar = backup.PreviousValue;
+    else if (ImVec2* pvar_t = GetStyleVarVec2Addr(backup.Var))
+        *pvar_t = backup.PreviousValue;
     window->DC.StyleModifiers.pop_back();
 }
 
@@ -4043,7 +4043,7 @@ int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                  
 ImWchar STB_TEXTEDIT_GETCHAR(const STB_TEXTEDIT_STRING* obj, int idx)                           { return obj->Text[idx]; }
 float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)       { (void)line_start_idx; return obj->Font->CalcTextSizeW(obj->FontSize, FLT_MAX, &obj->Text[char_idx], &obj->Text[char_idx]+1, NULL).x; }
 int     STB_TEXTEDIT_KEYTOTEXT(int key)                                                         { return key >= 0x10000 ? 0 : key; }
-ImWchar STB_TEXTEDIT_NEWLINE = '\n';
+static ImWchar STB_TEXTEDIT_NEWLINE = '\n';
 void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* obj, int line_start_idx)
 {
     const ImWchar* text_remaining = NULL;
@@ -4391,7 +4391,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                         s += bytes_count;
                         if (c == '\n' || c == '\r')
                             continue;
-                        clipboard_filtered[clipboard_filtered_len++] = c;
+                        clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
                     }
                     clipboard_filtered[clipboard_filtered_len] = 0;
                     stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
@@ -5325,8 +5325,8 @@ void ImDrawList::AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, i
         for (int i = 0; i < IM_ARRAYSIZE(circle_vtx); i++)
         {
             const float a = ((float)i / (float)IM_ARRAYSIZE(circle_vtx)) * 2*PI;
-            circle_vtx[i].x = cos(a + PI);
-            circle_vtx[i].y = sin(a + PI);
+            circle_vtx[i].x = (float)cos(a + PI);
+            circle_vtx[i].y = (float)sin(a + PI);
         }
         circle_vtx_builds = true;
     }
@@ -5464,7 +5464,7 @@ void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int nu
     for (int i = 0; i < num_segments; i++)
     {
         const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        AddVtxLine(centre + offset + ImVec2(cos(a0),sin(a0))*radius, centre + ImVec2(cos(a1),sin(a1))*radius, col);
+        AddVtxLine(centre + offset + ImVec2((float)cos(a0),(float)sin(a0))*radius, centre + ImVec2((float)cos(a1),(float)sin(a1))*radius, col);
         a0 = a1;
     }
 }
@@ -5482,8 +5482,8 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
     for (int i = 0; i < num_segments; i++)
     {
         const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        AddVtx(centre + offset + ImVec2(cos(a0),sin(a0))*radius, col);
-        AddVtx(centre + offset + ImVec2(cos(a1),sin(a1))*radius, col);
+        AddVtx(centre + offset + ImVec2((float)cos(a0),(float)sin(a0))*radius, col);
+        AddVtx(centre + offset + ImVec2((float)cos(a1),(float)sin(a1))*radius, col);
         AddVtx(centre + offset, col);
         a0 = a1;
     }
@@ -5667,7 +5667,7 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
 {
     if (*in_text != 0)
     {
-        unsigned int c = -1;
+        unsigned int c = (unsigned int)-1;
         const unsigned char* str = (const unsigned char*)in_text;
         if (!(*str & 0x80))
         {
@@ -5679,7 +5679,7 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
         {
             if (in_text_end && in_text_end - (const char*)str < 2) return -1;
             if (*str < 0xc2) return -1;
-            c = (*str++ & 0x1f) << 6;
+            c = (unsigned int)((*str++ & 0x1f) << 6);
             if ((*str & 0xc0) != 0x80) return -1;
             c += (*str++ & 0x3f);
             *out_char = c;
@@ -5690,9 +5690,9 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
             if (in_text_end && in_text_end - (const char*)str < 3) return -1;
             if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return -1;
             if (*str == 0xed && str[1] > 0x9f) return -1; // str[1] < 0x80 is checked below
-            c = (*str++ & 0x0f) << 12;
+            c = (unsigned int)((*str++ & 0x0f) << 12);
             if ((*str & 0xc0) != 0x80) return -1;
-            c += (*str++ & 0x3f) << 6;
+            c += (unsigned int)((*str++ & 0x3f) << 6);
             if ((*str & 0xc0) != 0x80) return -1;
             c += (*str++ & 0x3f);
             *out_char = c;
@@ -5704,11 +5704,11 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
             if (*str > 0xf4) return -1;
             if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return -1;
             if (*str == 0xf4 && str[1] > 0x8f) return -1; // str[1] < 0x80 is checked below
-            c = (*str++ & 0x07) << 18;
+            c = (unsigned int)((*str++ & 0x07) << 18);
             if ((*str & 0xc0) != 0x80) return -1;
-            c += (*str++ & 0x3f) << 12;
+            c += (unsigned int)((*str++ & 0x3f) << 12);
             if ((*str & 0xc0) != 0x80) return -1;
-            c += (*str++ & 0x3f) << 6;
+            c += (unsigned int)((*str++ & 0x3f) << 6);
             if ((*str & 0xc0) != 0x80) return -1;
             c += (*str++ & 0x3f);
             // utf-8 encodings of values used in surrogate pairs are invalid
@@ -5752,8 +5752,8 @@ static int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int c)
         else if (c < 0x800) 
         {
             if (i+2 > n) return 0;
-            buf[i++] = 0xc0 + (c >> 6);
-            buf[i++] = 0x80 + (c & 0x3f);
+            buf[i++] = (char)(0xc0 + (c >> 6));
+            buf[i++] = (char)(0x80 + (c & 0x3f));
             return 2;
         }
         else if (c >= 0xdc00 && c < 0xe000)
@@ -5763,18 +5763,18 @@ static int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int c)
         else if (c >= 0xd800 && c < 0xdc00) 
         {
             if (i+4 > n) return 0;
-            buf[i++] = 0xf0 + (c >> 18);
-            buf[i++] = 0x80 + ((c >> 12) & 0x3f);
-            buf[i++] = 0x80 + ((c >> 6) & 0x3f);
-            buf[i++] = 0x80 + ((c ) & 0x3f);
+            buf[i++] = (char)(0xf0 + (c >> 18));
+            buf[i++] = (char)(0x80 + ((c >> 12) & 0x3f));
+            buf[i++] = (char)(0x80 + ((c >> 6) & 0x3f));
+            buf[i++] = (char)(0x80 + ((c ) & 0x3f));
             return 4;
         }
         //else if (c < 0x10000)
         {
             if (i+3 > n) return 0;
-            buf[i++] = 0xe0 + (c >> 12);
-            buf[i++] = 0x80 + ((c>> 6) & 0x3f);
-            buf[i++] = 0x80 + ((c ) & 0x3f);
+            buf[i++] = (char)(0xe0 + (c >> 12));
+            buf[i++] = (char)(0x80 + ((c>> 6) & 0x3f));
+            buf[i++] = (char)(0x80 + ((c ) & 0x3f));
             return 3;
         }
     }
@@ -5787,7 +5787,7 @@ static ptrdiff_t ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_t
     const char* buf_end = buf + buf_size;
     while (buf_out < buf_end-1 && (!in_text_end || in_text < in_text_end) && *in_text)
     {
-        buf_out += ImTextCharToUtf8(buf_out, buf_end-buf_out-1, (unsigned int)*in_text);
+        buf_out += ImTextCharToUtf8(buf_out, (uintptr_t)(buf_end-buf_out-1), (unsigned int)*in_text);
         in_text++;
     }
     *buf_out = 0;
@@ -6566,7 +6566,7 @@ void ImGui::ShowTestWindow(bool* open)
             {
                 refresh_time = ImGui::GetTime();
                 static float phase = 0.0f;
-                values[values_offset] = cos(phase); 
+                values[values_offset] = (float)cos(phase); 
                 values_offset = (values_offset+1)%values.size(); 
                 phase += 0.10f*values_offset; 
             }
