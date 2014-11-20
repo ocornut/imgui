@@ -6353,7 +6353,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         static ImGuiTextFilter filter;
         filter.Draw("Filter colors", 200);
 
-		ImGui::BeginChild("#colors", ImVec2(0, 300), true);
+        ImGui::BeginChild("#colors", ImVec2(0, 300), true);
 
         ImGui::ColorEditMode(edit_mode);
         for (int i = 0; i < ImGuiCol_COUNT; i++)
@@ -6370,7 +6370,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             }
             ImGui::PopID();
         }
-		ImGui::EndChild();
+        ImGui::EndChild();
 
         ImGui::TreePop();
     }
@@ -6887,18 +6887,17 @@ void ImGui::ShowTestWindow(bool* open)
         }
     }
 
+    static bool show_app_console = false;
+    static bool show_app_long_text = false;
     if (ImGui::CollapsingHeader("App Examples"))
     {
-        static bool show_app_console = false;
-        static bool show_app_long_text = false;
         ImGui::Checkbox("Console", &show_app_console);
         ImGui::Checkbox("Long text display", &show_app_long_text);
-
-        if (show_app_console)
-            ShowExampleAppConsole(&show_app_console);
-        if (show_app_long_text)
-            ShowExampleAppLongText(&show_app_long_text);
     }
+    if (show_app_console)
+        ShowExampleAppConsole(&show_app_console);
+    if (show_app_long_text)
+        ShowExampleAppLongText(&show_app_long_text);
 
     ImGui::End();
 }
