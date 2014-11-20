@@ -573,8 +573,8 @@ struct ImGuiTextBuffer
 
     ImGuiTextBuffer()   { Buf.push_back(0); }
     ~ImGuiTextBuffer()  { clear(); }
-    const char*         begin() const { return Buf.begin(); }
-    const char*         end() const { return Buf.end()-1; }
+    const char*         begin() const { return &Buf.front(); }
+    const char*         end() const { return &Buf.back(); }      // Buf is zero-terminated, so end() will point on the zero-terminator
     size_t              size() const { return Buf.size()-1; }
     bool                empty() { return Buf.empty(); }
     void                clear() { Buf.clear(); Buf.push_back(0); }

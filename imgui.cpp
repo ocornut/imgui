@@ -204,6 +204,7 @@
  - input: rework IO to be able to pass actual events to fix temporal aliasing issues.
  - input: support track pad style scrolling & slider edit.
  - tooltip: move to fit within screen (e.g. when mouse cursor is right of the screen).
+ - clipboard: automatically transform \n into \n\r or equivalent for higher compability on windows
  - portability: big-endian test/support (github issue #81)
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL
  - misc: not thread-safe
