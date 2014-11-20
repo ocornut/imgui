@@ -6353,6 +6353,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         static ImGuiTextFilter filter;
         filter.Draw("Filter colors", 200);
 
+		ImGui::BeginChild("#colors", ImVec2(0, 300), true);
+
         ImGui::ColorEditMode(edit_mode);
         for (int i = 0; i < ImGuiCol_COUNT; i++)
         {
@@ -6368,6 +6370,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             }
             ImGui::PopID();
         }
+		ImGui::EndChild();
+
         ImGui::TreePop();
     }
 
