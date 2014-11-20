@@ -38,6 +38,7 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 
 Frequently Asked Question
 -------------------------
+
 <b>How do you use ImGui on a platform that may not have a mouse and keyboard?</b>
 
 I recommend using [Synergy](http://synergy-project.org). With the uSynergy.c micro client running you can seamlessly use your PC input devices from a video game console or a tablet. ImGui was also designed to function with touch inputs if you increase the padding of widgets to compensate for the lack of precision of touch devices, but it is recommended you use a mouse to allow optimising for screen real-estate.
@@ -50,6 +51,17 @@ I recommend using [Synergy](http://synergy-project.org). With the uSynergy.c mic
 <b>Can you create elaborate/serious tools with ImGui?</b>
 
 Yes. I have written data browsers, debuggers, profilers and all sort of non-trivial tools with the library. There's no reason you cannot, and in my experience the simplicity of the API is very empowering. However note that ImGui is programmer centric and the immediate-mode GUI paradigm might requires a bit of adaptation before you can realize its full potential. 
+
+<b>Is ImGui fast?</b>
+
+Down the fundation of its visual design, ImGui is engineered to be fairly performant both in term of CPU and GPU usage. Running elaborate code and creating elaborate UI will of course have a cost but ImGui aims to minimize it.
+
+Mileage may vary but the following screenshot should give you an idea of the cost of running and rendering UI code (In the case of a trivial demo application like this one, your driver/os setup may be a bottleneck and cause higher variation or throttled framerate. Testing performance as part of a real application is recommended).
+
+![performance screenshot](/web/performance_01_close_up.png?raw=true)
+
+This is showing framerate on my 2011 iMac running Windows 7, OpenGL, AMD Radeon HD 6700M. ([click here for the full-size picture](/web/performance_01.png)).
+In contrast, librairies featuring higher-quality rendering and layouting techniques may have a higher resources footprint.
 
 <b>Can you reskin the look of ImGui?</b>
 
