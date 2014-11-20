@@ -630,11 +630,14 @@ struct ImGuiDrawContext
     ImGuiStorage*           StateStorage;
     int                     OpenNextNode;
 
-    float                   ColumnStartX;
-    int                     ColumnCurrent;
+    float                   ColumnsStartX;       // Start position from left of window (increased by TreePush/TreePop, etc.)
+    float                   ColumnsOffsetX;      // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
+    int                     ColumnsCurrent;
     int                     ColumnsCount;
+    ImVec2                  ColumnsStartPos;
+    float                   ColumnsCellMinY;
+    float                   ColumnsCellMaxY;
     bool                    ColumnsShowBorders;
-    ImVec2                  ColumnsStartCursorPos;
     ImGuiID                 ColumnsSetID;
 
     ImGuiDrawContext()
@@ -649,11 +652,14 @@ struct ImGuiDrawContext
         StateStorage = NULL;
         OpenNextNode = -1;
 
-        ColumnStartX = 0.0f;
-        ColumnCurrent = 0;
+        ColumnsStartX = 0.0f;
+        ColumnsOffsetX = 0.0f;
+        ColumnsCurrent = 0;
         ColumnsCount = 1;
+        ColumnsStartPos = ImVec2(0.0f, 0.0f);
+        ColumnsCellMinY = ColumnsCellMaxY = 0.0f;
         ColumnsShowBorders = true;
-        ColumnsStartCursorPos = ImVec2(0,0);
+        ColumnsSetID = 0;
     }
 };
 
@@ -1339,7 +1345,7 @@ void ImGui::NewFrame()
             g.IO.Font = (ImBitmapFont*)ImGui::MemAlloc(sizeof(ImBitmapFont));
             new(g.IO.Font) ImBitmapFont();
             g.IO.Font->LoadFromMemory(fnt_data, fnt_size);
-			IM_ASSERT(g.IO.Font->IsLoaded());       // Font failed to load
+            IM_ASSERT(g.IO.Font->IsLoaded());       // Font failed to load
             g.IO.FontYOffset = +1;
         }
         g.Initialized = true;
@@ -2346,8 +2352,9 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
         }
 
         // Setup drawing context
-        window->DC.ColumnStartX = window->WindowPadding().x;
-        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.ColumnStartX, window->TitleBarHeight() + window->WindowPadding().y) - ImVec2(0.0f, window->ScrollY);
+        window->DC.ColumnsStartX = window->WindowPadding().x;
+        window->DC.ColumnsOffsetX = 0.0f;
+        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.ColumnsStartX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->WindowPadding().y) - ImVec2(0.0f, window->ScrollY);
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CurrentLineHeight = window->DC.PrevLineHeight = 0.0f;
@@ -2362,8 +2369,10 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
         window->DC.ColorModifiers.resize(0);
         window->DC.StyleModifiers.resize(0);
         window->DC.ColorEditMode = ImGuiColorEditMode_UserSelect;
-        window->DC.ColumnCurrent = 0;
+        window->DC.ColumnsCurrent = 0;
         window->DC.ColumnsCount = 1;
+        window->DC.ColumnsStartPos = window->DC.CursorPos;
+        window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.ColumnsStartPos.y;
         window->DC.TreeDepth = 0;
         window->DC.StateStorage = &window->StateStorage;
         window->DC.OpenNextNode = -1;
@@ -2721,7 +2730,7 @@ ImVec2 ImGui::GetContentRegionMax()
     ImVec2 m = window->Size - window->WindowPadding();
     if (window->DC.ColumnsCount != 1)
     {
-        m.x = GetColumnOffset(window->DC.ColumnCurrent + 1);
+        m.x = GetColumnOffset(window->DC.ColumnsCurrent + 1);
         m.x -= GImGui.Style.WindowPadding.x;
     }
     else
@@ -4403,8 +4412,8 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                         s += bytes_count;
                         if (c == '\n' || c == '\r')
                             continue;
-						if (c >= 0x10000)
-							continue;
+                        if (c >= 0x10000)
+                            continue;
                         clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
                     }
                     clipboard_filtered[clipboard_filtered_len] = 0;
@@ -4942,6 +4951,7 @@ void ImGui::Spacing()
     ItemSize(ImVec2(0,0));
 }
 
+// Advance
 static void ItemSize(ImVec2 size, ImVec2* adjust_start_offset)
 {
     ImGuiState& g = GImGui;
@@ -4955,7 +4965,7 @@ static void ItemSize(ImVec2 size, ImVec2* adjust_start_offset)
 
     // Always align ourselves on pixel boundaries
     window->DC.CursorPosPrevLine = ImVec2(window->DC.CursorPos.x + size.x, window->DC.CursorPos.y);
-    window->DC.CursorPos = ImVec2((float)(int)(window->Pos.x + window->DC.ColumnStartX), (float)(int)(window->DC.CursorPos.y + line_height + g.Style.ItemSpacing.y));
+    window->DC.CursorPos = ImVec2((float)(int)(window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX), (float)(int)(window->DC.CursorPos.y + line_height + g.Style.ItemSpacing.y));
 
     window->SizeContentsFit = ImMax(window->SizeContentsFit, ImVec2(window->DC.CursorPosPrevLine.x, window->DC.CursorPos.y) - window->Pos + ImVec2(0.0f, window->ScrollY));
 
@@ -4979,10 +4989,22 @@ void ImGui::NextColumn()
     {
         ImGui::PopItemWidth();
         PopClipRect();
-        if (++window->DC.ColumnCurrent < window->DC.ColumnsCount)
-            SameLine((int)(ImGui::GetColumnOffset(window->DC.ColumnCurrent) + g.Style.ItemSpacing.x));
+
+        window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
+        if (++window->DC.ColumnsCurrent < window->DC.ColumnsCount)
+        {
+            window->DC.ColumnsOffsetX = ImGui::GetColumnOffset(window->DC.ColumnsCurrent) - window->DC.ColumnsStartX + g.Style.ItemSpacing.x;
+        }
         else
-            window->DC.ColumnCurrent = 0;
+        {
+            window->DC.ColumnsCurrent = 0;
+            window->DC.ColumnsOffsetX = 0.0f;
+            window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY;
+        }
+        window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX);
+        window->DC.CursorPos.y = window->DC.ColumnsCellMinY;
+        window->DC.CurrentLineHeight = 0.0f;
+
         PushColumnClipRect();
         ImGui::PushItemWidth(ImGui::GetColumnWidth() * 0.65f);
     }
@@ -5052,14 +5074,14 @@ float ImGui::GetColumnOffset(int column_index)
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (column_index < 0)
-        column_index = window->DC.ColumnCurrent;
+        column_index = window->DC.ColumnsCurrent;
 
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
     RegisterAliveId(column_id);
     const float default_t = column_index / (float)window->DC.ColumnsCount;
     const float t = (float)window->StateStorage.GetInt(column_id, (int)(default_t * 8192)) / 8192;      // Cheaply store our floating point value inside the integer (could store an union into the map?)
 
-    const float offset = window->DC.ColumnStartX + t * (window->Size.x - g.Style.ScrollBarWidth - window->DC.ColumnStartX);
+    const float offset = window->DC.ColumnsStartX + t * (window->Size.x - g.Style.ScrollBarWidth - window->DC.ColumnsStartX);
     return offset;
 }
 
@@ -5068,10 +5090,10 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (column_index < 0)
-        column_index = window->DC.ColumnCurrent;
+        column_index = window->DC.ColumnsCurrent;
 
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
-    const float t = (offset - window->DC.ColumnStartX) / (window->Size.x - g.Style.ScrollBarWidth - window->DC.ColumnStartX);
+    const float t = (offset - window->DC.ColumnsStartX) / (window->Size.x - g.Style.ScrollBarWidth - window->DC.ColumnsStartX);
     window->StateStorage.SetInt(column_id, (int)(t*8192));
 }
 
@@ -5079,7 +5101,7 @@ float ImGui::GetColumnWidth(int column_index)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (column_index < 0)
-        column_index = window->DC.ColumnCurrent;
+        column_index = window->DC.ColumnsCurrent;
 
     const float w = GetColumnOffset(column_index+1) - GetColumnOffset(column_index);
     return w;
@@ -5089,7 +5111,7 @@ static void PushColumnClipRect(int column_index)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (column_index < 0)
-        column_index = window->DC.ColumnCurrent;
+        column_index = window->DC.ColumnsCurrent;
 
     const float x1 = window->Pos.x + ImGui::GetColumnOffset(column_index) - 1;
     const float x2 = window->Pos.x + ImGui::GetColumnOffset(column_index+1) - 1;
@@ -5105,16 +5127,19 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 
     if (window->DC.ColumnsCount != 1)
     {
-        if (window->DC.ColumnCurrent != 0)
+        if (window->DC.ColumnsCurrent != 0)
             ItemSize(ImVec2(0,0));   // Advance to column 0
         ImGui::PopItemWidth();
         PopClipRect();
+
+        window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
+        window->DC.CursorPos.y = window->DC.ColumnsCellMaxY;
     }
 
+    // Draw columns borders and handle resize at the time of "closing" a columns set
     if (window->DC.ColumnsCount != columns_count && window->DC.ColumnsCount != 1 && window->DC.ColumnsShowBorders)
     {
-        // Draw columns and handle resize
-        const float y1 = window->DC.ColumnsStartCursorPos.y;
+        const float y1 = window->DC.ColumnsStartPos.y;
         const float y2 = window->DC.CursorPos.y;
         for (int i = 1; i < window->DC.ColumnsCount; i++)
         {
@@ -5144,11 +5169,15 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
         }
     }
 
+    // Set state for first column
     window->DC.ColumnsSetID = window->GetID(id ? id : "");
-    window->DC.ColumnCurrent = 0;
+    window->DC.ColumnsCurrent = 0;
     window->DC.ColumnsCount = columns_count;
     window->DC.ColumnsShowBorders = border;
-    window->DC.ColumnsStartCursorPos = window->DC.CursorPos;
+    window->DC.ColumnsStartPos = window->DC.CursorPos;
+    window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.CursorPos.y;
+    window->DC.ColumnsOffsetX = 0.0f;
+    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX);
 
     if (window->DC.ColumnsCount != 1)
     {
@@ -5161,8 +5190,8 @@ void ImGui::TreePush(const char* str_id)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ColumnStartX += g.Style.TreeNodeSpacing;
-    window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnStartX;
+    window->DC.ColumnsStartX += g.Style.TreeNodeSpacing;
+    window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
     window->DC.TreeDepth++;
     PushID(str_id ? str_id : "#TreePush");
 }
@@ -5171,8 +5200,8 @@ void ImGui::TreePush(const void* ptr_id)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ColumnStartX += g.Style.TreeNodeSpacing;
-    window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnStartX;
+    window->DC.ColumnsStartX += g.Style.TreeNodeSpacing;
+    window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
     window->DC.TreeDepth++;
     PushID(ptr_id ? ptr_id : (const void*)"#TreePush");
 }
@@ -5181,8 +5210,8 @@ void ImGui::TreePop()
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ColumnStartX -= g.Style.TreeNodeSpacing;
-    window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnStartX;
+    window->DC.ColumnsStartX -= g.Style.TreeNodeSpacing;
+    window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
     window->DC.TreeDepth--;
     PopID();
 }
@@ -6687,8 +6716,6 @@ void ImGui::ShowTestWindow(bool* open)
 
     if (ImGui::CollapsingHeader("Columns"))
     {
-        ImGui::TextWrapped("NB: columns are not well supported by all corners of the API so far. Please fill a report on GitHub if you run into issues.");
-
         ImGui::Columns(4, "data", true);
         ImGui::Text("ID"); ImGui::NextColumn();
         ImGui::Text("Name"); ImGui::NextColumn();
@@ -6704,7 +6731,7 @@ void ImGui::ShowTestWindow(bool* open)
         ImGui::Text("0001"); ImGui::NextColumn();
         ImGui::Text("Stephanie"); ImGui::NextColumn();
         ImGui::Text("/path/stephanie"); ImGui::NextColumn();
-        ImGui::Text("line 1\nline 2"); ImGui::NextColumn(); // two lines!
+        ImGui::Text("line 1"); ImGui::Text("line 2"); ImGui::NextColumn(); // two lines, two items
 
         ImGui::Text("0002"); ImGui::NextColumn();
         ImGui::Text("C64"); ImGui::NextColumn();
@@ -6716,25 +6743,27 @@ void ImGui::ShowTestWindow(bool* open)
 
         ImGui::Columns(3, "mixed");
 
-        // NB: it is may be more efficient to fill all contents of a column and then go to the next one.
-        // However for the user it is more likely you want to fill all columns before proceeding to the next item, so this example does that.
-        ImGui::Text("Hello"); ImGui::NextColumn();
-        ImGui::Text("World"); ImGui::NextColumn();
-        ImGui::Text("Hmm..."); ImGui::NextColumn();
-
-        ImGui::Button("Banana"); ImGui::NextColumn();
-        ImGui::Button("Apple"); ImGui::NextColumn();
-        ImGui::Button("Corniflower"); ImGui::NextColumn();
-
+        // Filling all contents of a column
         static int e = 0;
-        ImGui::RadioButton("radio a", &e, 0); ImGui::NextColumn();
-        ImGui::RadioButton("radio b", &e, 1); ImGui::NextColumn();
-        ImGui::RadioButton("radio c", &e, 2); ImGui::NextColumn();
+        ImGui::Text("Hello"); 
+        ImGui::Button("Banana");
+        ImGui::RadioButton("radio a", &e, 0); 
+        ImGui::NextColumn();
 
-        // FIXME: Exhibit bug of CurrentLineHeight bleeding between columns
-        //if (ImGui::CollapsingHeader("Category A")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
-        //if (ImGui::CollapsingHeader("Category B")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
-        //if (ImGui::CollapsingHeader("Category C")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+        ImGui::Text("ImGui"); 
+        ImGui::Button("Apple");
+        ImGui::RadioButton("radio b", &e, 1);
+        ImGui::Text("An extra line here.");
+        ImGui::NextColumn();
+        
+        ImGui::Text("World!");
+        ImGui::Button("Corniflower");
+        ImGui::RadioButton("radio c", &e, 2);
+        ImGui::NextColumn();
+
+        if (ImGui::CollapsingHeader("Category A")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+        if (ImGui::CollapsingHeader("Category B")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+        if (ImGui::CollapsingHeader("Category C")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
 
         ImGui::Columns(1);
 
@@ -6749,11 +6778,12 @@ void ImGui::ShowTestWindow(bool* open)
 
         ImGui::Separator();
         
-        // FIXME: Exhibit bug of CurrentLineHeight bleeding between columns (notice how dragging the columns far left or far right gets your different vertical alignment on the other side)
         ImGui::Columns(2, "word wrapping");
         ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
+        ImGui::Text("Hello Left");
         ImGui::NextColumn();
         ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
+        ImGui::Text("Hello Right");
         ImGui::Columns(1);
 
         ImGui::Separator();
