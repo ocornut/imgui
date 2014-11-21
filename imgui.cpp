@@ -2633,6 +2633,7 @@ void ImGui::PopStyleVar(int count)
         else if (ImVec2* pvar_v = GetStyleVarVec2Addr(backup.Var))
             *pvar_v = backup.PreviousValue;
         g.StyleModifiers.pop_back();
+		count--;
     }
 }
 
