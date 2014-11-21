@@ -5946,7 +5946,7 @@ const char* ImBitmapFont::CalcWordWrapPositionA(float scale, const char* text, c
             }
 
             // Allow wrapping after punctuation.
-            inside_word = !(c == '.' || c == ',' || c == ';' || c == '!' || c == '?' || c == '\'' || c == '\"');
+            inside_word = !(c == '.' || c == ',' || c == ';' || c == '!' || c == '?' || c == '\"');
         }
 
         // We ignore blank width at the end of the line (they can be skipped)
