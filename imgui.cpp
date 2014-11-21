@@ -624,8 +624,6 @@ struct ImGuiDrawContext
     ImVector<bool>          AllowKeyboardFocus;
     ImVector<float>         ItemWidth;
     ImVector<float>         TextWrapPos;
-    ImVector<ImGuiColMod>   ColorModifiers;
-    ImVector<ImGuiStyleMod> StyleModifiers;
     ImGuiColorEditMode      ColorEditMode;
     ImGuiStorage*           StateStorage;
     int                     OpenNextNode;
@@ -734,6 +732,8 @@ struct ImGuiState
     float                   SettingsDirtyTimer;
     ImVector<ImGuiIniData*> Settings;
     ImVec2                  NewWindowDefaultPos;
+    ImVector<ImGuiColMod>   ColorModifiers;
+    ImVector<ImGuiStyleMod> StyleModifiers;
 
     // Render
     ImVector<ImDrawList*>   RenderDrawLists;
@@ -2366,8 +2366,6 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
         window->DC.AllowKeyboardFocus.push_back(true);
         window->DC.TextWrapPos.resize(0);
         window->DC.TextWrapPos.push_back(-1.0f); // disabled
-        window->DC.ColorModifiers.resize(0);
-        window->DC.StyleModifiers.resize(0);
         window->DC.ColorEditMode = ImGuiColorEditMode_UserSelect;
         window->DC.ColumnsCurrent = 0;
         window->DC.ColumnsCount = 1;
@@ -2549,23 +2547,25 @@ void ImGui::PopTextWrapPos()
 void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
 {
     ImGuiState& g = GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
 
     ImGuiColMod backup;
     backup.Col = idx;
     backup.PreviousValue = g.Style.Colors[idx];
-    window->DC.ColorModifiers.push_back(backup);
+    g.ColorModifiers.push_back(backup);
     g.Style.Colors[idx] = col;
 }
 
-void ImGui::PopStyleColor()
+void ImGui::PopStyleColor(int count)
 {
     ImGuiState& g = GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
 
-    ImGuiColMod& backup = window->DC.ColorModifiers.back();
-    g.Style.Colors[backup.Col] = backup.PreviousValue;
-    window->DC.ColorModifiers.pop_back();
+    while (count > 0)
+    {
+        ImGuiColMod& backup = g.ColorModifiers.back();
+        g.Style.Colors[backup.Col] = backup.PreviousValue;
+        g.ColorModifiers.pop_back();
+        count--;
+    }
 }
 
 static float* GetStyleVarFloatAddr(ImGuiStyleVar idx)
@@ -2595,41 +2595,44 @@ static ImVec2* GetStyleVarVec2Addr(ImGuiStyleVar idx)
 
 void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiState& g = GImGui;
 
     float* pvar = GetStyleVarFloatAddr(idx);
     IM_ASSERT(pvar != NULL); // Called wrong function?
     ImGuiStyleMod backup;
     backup.Var = idx;
     backup.PreviousValue = ImVec2(*pvar, 0.0f);
-    window->DC.StyleModifiers.push_back(backup);
+    g.StyleModifiers.push_back(backup);
     *pvar = val;
 }
 
 
 void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiState& g = GImGui;
 
     ImVec2* pvar = GetStyleVarVec2Addr(idx);
     IM_ASSERT(pvar != NULL); // Called wrong function?
     ImGuiStyleMod backup;
     backup.Var = idx;
     backup.PreviousValue = *pvar;
-    window->DC.StyleModifiers.push_back(backup);
+    g.StyleModifiers.push_back(backup);
     *pvar = val;
 }
 
-void ImGui::PopStyleVar()
+void ImGui::PopStyleVar(int count)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiState& g = GImGui;
 
-    ImGuiStyleMod& backup = window->DC.StyleModifiers.back();
-    if (float* pvar_f = GetStyleVarFloatAddr(backup.Var))
-        *pvar_f = backup.PreviousValue.x;
-    else if (ImVec2* pvar_v = GetStyleVarVec2Addr(backup.Var))
-        *pvar_v = backup.PreviousValue;
-    window->DC.StyleModifiers.pop_back();
+    while (count > 0)
+    {
+        ImGuiStyleMod& backup = g.StyleModifiers.back();
+        if (float* pvar_f = GetStyleVarFloatAddr(backup.Var))
+            *pvar_f = backup.PreviousValue.x;
+        else if (ImVec2* pvar_v = GetStyleVarVec2Addr(backup.Var))
+            *pvar_v = backup.PreviousValue;
+        g.StyleModifiers.pop_back();
+    }
 }
 
 const char* ImGui::GetStyleColorName(ImGuiCol idx)
