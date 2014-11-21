@@ -1,4 +1,4 @@
-// ImGui library v1.16
+// ImGui library v1.17 wip
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -796,6 +796,7 @@ struct ImGuiWindow
     bool                    Collapsed;                          // Set when collapsing window to become only title-bar
     bool                    SkipItems;                          // == Visible && !Collapsed
     int                     AutoFitFrames;
+    bool                    AutoFitOnlyGrows;
 
     ImGuiDrawContext        DC;
     ImVector<ImGuiID>       IDStack;
@@ -1057,12 +1058,16 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
     Collapsed = false;
     SkipItems = false;
     AutoFitFrames = -1;
+    AutoFitOnlyGrows = false;
     LastFrameDrawn = -1;
     ItemWidthDefault = 0.0f;
     FontWindowScale = 1.0f;
 
     if (ImLength(Size) < 0.001f)
+    {
         AutoFitFrames = 2;
+        AutoFitOnlyGrows = true;
+    }
 
     DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
     new(DrawList) ImDrawList();
@@ -2108,6 +2113,7 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
             {
                 // Hide for 1 frame while resizing
                 window->AutoFitFrames = 2;
+                window->AutoFitOnlyGrows = false;
                 window->Visible = false;
             }
         }
@@ -2170,7 +2176,7 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
         window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
 
         // Default item width
-        if (window->Size.x > 0.0f && !(window->Flags & ImGuiWindowFlags_Tooltip))
+        if (window->Size.x > 0.0f && !(window->Flags & ImGuiWindowFlags_Tooltip) && !(window->Flags & ImGuiWindowFlags_AlwaysAutoResize))
             window->ItemWidthDefault = (float)(int)(window->Size.x * 0.65f);
         else
             window->ItemWidthDefault = 200.0f;
@@ -2238,11 +2244,19 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
             }
             else
             {
-                ImVec2 size_auto_fit = ImClamp(window->SizeContentsFit + style.AutoFitPadding, style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding);
-                if (window->AutoFitFrames > 0)
+                const ImVec2 size_auto_fit = ImClamp(window->SizeContentsFit + style.AutoFitPadding, style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding);
+                if ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
+                {
+                    // Don't continously mark settings as dirty, the size of the window doesn't need to be stored.
+                    window->SizeFull = size_auto_fit;
+                }
+                else if (window->AutoFitFrames > 0)
                 {
                     // Auto-fit only grows during the first few frames
-                    window->SizeFull = ImMax(window->SizeFull, size_auto_fit);
+                    if (window->AutoFitOnlyGrows)
+                        window->SizeFull = ImMax(window->SizeFull, size_auto_fit);
+                    else
+                        window->SizeFull = size_auto_fit;
                     MarkSettingsDirty();
                 }
                 else if (!(window->Flags & ImGuiWindowFlags_NoResize))
@@ -2633,7 +2647,7 @@ void ImGui::PopStyleVar(int count)
         else if (ImVec2* pvar_v = GetStyleVarVec2Addr(backup.Var))
             *pvar_v = backup.PreviousValue;
         g.StyleModifiers.pop_back();
-		count--;
+        count--;
     }
 }
 
@@ -2723,9 +2737,15 @@ ImVec2 ImGui::GetWindowSize()
 void ImGui::SetWindowSize(const ImVec2& size)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->SizeFull = size;
     if (ImLength(size) < 0.001f)
-        window->AutoFitFrames = 3;
+    {
+        window->AutoFitFrames = 2;
+        window->AutoFitOnlyGrows = false;
+    }
+    else
+    {
+        window->SizeFull = size;
+    }
 }
 
 ImVec2 ImGui::GetContentRegionMax()
@@ -6389,6 +6409,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
 static void ShowExampleAppConsole(bool* open);
 static void ShowExampleAppLongText(bool* open);
+static void ShowExampleAppAutoResize(bool* open);
 
 // Demonstrate ImGui features (unfortunately this makes this function a little bloated!)
 void ImGui::ShowTestWindow(bool* open)
@@ -6894,15 +6915,36 @@ void ImGui::ShowTestWindow(bool* open)
 
     static bool show_app_console = false;
     static bool show_app_long_text = false;
+    static bool show_app_auto_resize = false;
     if (ImGui::CollapsingHeader("App Examples"))
     {
         ImGui::Checkbox("Console", &show_app_console);
         ImGui::Checkbox("Long text display", &show_app_long_text);
+        ImGui::Checkbox("Auto-resizing window", &show_app_auto_resize);
     }
     if (show_app_console)
         ShowExampleAppConsole(&show_app_console);
     if (show_app_long_text)
         ShowExampleAppLongText(&show_app_long_text);
+    if (show_app_auto_resize)
+        ShowExampleAppAutoResize(&show_app_auto_resize);
+
+    ImGui::End();
+}
+
+static void ShowExampleAppAutoResize(bool* open)
+{
+    if (!ImGui::Begin("Example: Auto-Resizing Window", open, ImVec2(0,0), -1.0f, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::End();
+        return;
+    }
+
+    static int lines = 10;
+    ImGui::TextWrapped("Window will resize every-frame to the size of its content. Note that you don't want to query the window size to output your content because that would create a feedback loop.");
+    ImGui::SliderInt("Number of lines", &lines, 1, 20);
+    for (int i = 0; i < lines; i++)
+        ImGui::Text("%*sThis is line %d", i*4, "", i); // Pad with space to extend size horizontally
 
     ImGui::End();
 }
