@@ -65,14 +65,20 @@ In contrast, librairies featuring higher-quality rendering and layouting techniq
 
 <b>Can you reskin the look of ImGui?</b>
 
-Yes, you can alter the look of the interface to some degree: changing colors, sizes and padding, font. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. The example below uses modified settings to create a more compact UI with different colors:
+Yes, you can alter the look of the interface to some degree: changing colors, sizes and padding, font. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. The example below uses modified settings to create a very compact UI with different colors:
 
 ![skinning screenshot 1](/web/skinning_sample_01.png?raw=true)
 
+Support
+-------
+
 <b>Can you develop features xxxx for ImGui?</b>
 
-Please use GitHub 'Issues' facilities to suggest and discuss improvements. If you are company and would like specific non-trivial features to be implemented, I am available for hire to work on or with ImGui. Donations are also welcome to support further work on the library. 
+Please use GitHub 'Issues' facilities to suggest and discuss improvements. Your question are often helpul to the community of users. If you represent an organization and would like specific non-trivial features to be implemented, I am available for hire to work on or with ImGui. 
 
+<b>Can I donate to support the development of ImGui?</b>
+
+If you have the mean to help, I have setup a [**Patreon page**](http://www.patreon.com/imgui) to enable me to spend more time on the development of the library. One-off donations are also greatly appreciated. Thanks!
 
 Credits
 -------
