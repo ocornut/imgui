@@ -1414,12 +1414,13 @@ void ImGui::NewFrame()
     if (g.HoveredWindow && g.IO.MouseWheel != 0)
     {
         ImGuiWindow* window = g.HoveredWindow;
+        const int mouse_wheel_dir = g.IO.MouseWheel > 0 ? +1 : -1;
         if (g.IO.KeyCtrl)
         {
             if (g.IO.FontAllowUserScaling)
             {
                 // Zoom / Scale window
-                float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
+                float new_font_scale = ImClamp(window->FontWindowScale + mouse_wheel_dir * 0.10f, 0.50f, 2.50f);
                 float scale = new_font_scale / window->FontWindowScale;
                 window->FontWindowScale = new_font_scale;
 
@@ -1434,7 +1435,7 @@ void ImGui::NewFrame()
         {
             // Scroll
             const int scroll_lines = (window->Flags & ImGuiWindowFlags_ComboBox) ? 3 : 5;
-            window->NextScrollY -= g.IO.MouseWheel * window->FontSize() * scroll_lines;
+            window->NextScrollY -= mouse_wheel_dir * window->FontSize() * scroll_lines;
         }
     }
 
