@@ -39,6 +39,7 @@ typedef int ImGuiColorEditMode;     // enum ImGuiColorEditMode_
 typedef int ImGuiWindowFlags;       // enum ImGuiWindowFlags_
 typedef int ImGuiInputTextFlags;    // enum ImGuiInputTextFlags_
 typedef ImBitmapFont* ImFont;
+struct ImGuiTextEditCallbackData;
 
 struct ImVec2
 {
@@ -238,7 +239,7 @@ namespace ImGui
     IMGUI_API bool          CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value);
     IMGUI_API bool          RadioButton(const char* label, bool active);
     IMGUI_API bool          RadioButton(const char* label, int* v, int v_button);
-    IMGUI_API bool          InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0);
+	IMGUI_API bool          InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, void (*callback)(ImGuiTextEditCallbackData*) = NULL, void* user_data = NULL);
     IMGUI_API bool          InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f, int decimal_precision = -1, ImGuiInputTextFlags extra_flags = 0);
     IMGUI_API bool          InputFloat2(const char* label, float v[2], int decimal_precision = -1);
     IMGUI_API bool          InputFloat3(const char* label, float v[3], int decimal_precision = -1);
@@ -323,8 +324,11 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_CharsDecimal        = 1 << 0,   // Allow 0123456789.+-*/
     ImGuiInputTextFlags_CharsHexadecimal    = 1 << 1,   // Allow 0123456789ABCDEFabcdef
     ImGuiInputTextFlags_AutoSelectAll       = 1 << 2,   // Select entire text when first taking focus
-    ImGuiInputTextFlags_EnterReturnsTrue    = 1 << 3    // Return 'true' when Enter is pressed (as opposed to when the value was modified)
-    //ImGuiInputTextFlags_AlignCenter       = 1 << 3,
+    ImGuiInputTextFlags_EnterReturnsTrue    = 1 << 3,   // Return 'true' when Enter is pressed (as opposed to when the value was modified)
+    ImGuiInputTextFlags_CallbackCompletion  = 1 << 4,   // Call user function on pressing TAB (for completion handling)
+	ImGuiInputTextFlags_CallbackHistory     = 1 << 5,   // Call user function on pressing Up/Down arrows (for history handling)
+	ImGuiInputTextFlags_CallbackAlways      = 1 << 6    // Call user function every frame
+    //ImGuiInputTextFlags_AlignCenter       = 1 << 6,
 };
 
 // User fill ImGuiIO.KeyMap[] array with indices into the ImGuiIO.KeysDown[512] array
@@ -599,6 +603,24 @@ struct ImGuiStorage
 
     IMGUI_API int*    Find(ImU32 key);
     IMGUI_API void    Insert(ImU32 key, int val);
+};
+
+// Shared state of InputText(), passed to callback when a ImGuiInputTextFlags_Callback* flag is used.
+struct ImGuiTextEditCallbackData
+{
+	ImGuiKey            EventKey;       // Key pressed (Up/Down/TAB)		// Read-only	
+	char*			    Buf;            // Current text              		// Read-write (pointed data only)
+	size_t				BufSize;		//									// Read-only
+	bool				BufDirty;       // Set if you modify Buf directly   // Write
+	ImGuiInputTextFlags	Flags;			// What user passed to InputText()	// Read-only
+	int					CursorPos;		//									// Read-write
+	int					SelectionStart; //									// Read-write (== to SelectionEnd when no selection)
+	int                 SelectionEnd;   //									// Read-write
+	void*               UserData;		// What user passed to InputText()
+
+	// NB: calling those function loses selection.
+	void DeleteChars(size_t pos, size_t bytes_count);
+	void InsertChars(size_t pos, const char* text, const char* text_end = NULL);
 };
 
 //-----------------------------------------------------------------------------

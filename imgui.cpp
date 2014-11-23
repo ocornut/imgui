@@ -175,7 +175,6 @@
  - input number: optional range min/max
  - input number: holding [-]/[+] buttons should increase the step non-linearly
  - input number: use mouse wheel to step up/down
- - input text: add multi-line text edit
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 horrible layout code. item width should include frame padding, then we can have a generic horizontal layout helper.
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills)
  - columns: columns header to act as button (~sort op) and allow resize/reorder
@@ -189,10 +188,12 @@
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms (may or not lead to ImGui changes)
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider? hide mouse cursor, allow more precise input using less screen-space.
+ - text edit: clean up the horrible mess caused by converting UTF-8 <> wchar
  - text edit: centered text for slider or input text to it matches typical positioning.
  - text edit: flag to disable live update of the user buffer. 
  - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
  - text edit: pasting text into a number box should filter the characters the same way direct input does
+ - text edit: add multi-line text edit
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float) in .ini file
  - log: be able to right-click and log a window or tree-node into tty/file/clipboard?
@@ -420,16 +421,25 @@ static inline float  ImLerp(float a, float b, float t)                          
 static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, const ImVec2& t)  { return ImVec2(a.x + (b.x - a.x) * t.x, a.y + (b.y - a.y) * t.y); }
 static inline float  ImLength(const ImVec2& lhs)                                { return sqrtf(lhs.x*lhs.x + lhs.y*lhs.y); }
 
-static int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
-static ptrdiff_t ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end);   // return output UTF-8 bytes count
-static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
-static ptrdiff_t ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end);    // return input UTF-8 bytes count
+static int           ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
+static ptrdiff_t     ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end);   // return output UTF-8 bytes count
+static int           ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
+static ptrdiff_t     ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end);    // return input UTF-8 bytes count
+static int           ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
+static int           ImTextCountUtf8BytesFromWchar(const ImWchar* in_text, const ImWchar* in_text_end);                 // return number of bytes to express string as UTF-8 code-points
 
 static int ImStricmp(const char* str1, const char* str2)
 {
     int d;
     while ((d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; }
     return d;
+}
+
+static int ImStrnicmp(const char* str1, const char* str2, int count)
+{
+    int d;
+    while (count > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; count--; }
+    return (count == 0) ? 0 : d;
 }
 
 static char* ImStrdup(const char *str)
@@ -666,7 +676,7 @@ struct ImGuiTextEditState;
 #define STB_TEXTEDIT_CHARTYPE ImWchar
 #include "stb_textedit.h"
 
-// State of the currently focused/edited text input box
+// Internal state of the currently focused/edited text input box
 struct ImGuiTextEditState
 {
     ImWchar             Text[1024];                     // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
@@ -676,7 +686,7 @@ struct ImGuiTextEditState
     float               ScrollX;
     STB_TexteditState   StbState;
     float               CursorAnim;
-    ImVec2              LastCursorPos;
+    ImVec2              LastCursorPos;                  // Cursor position in screen space to be used by IME callback.
     bool                SelectedAllMouseLock;
     ImFont              Font;
     float               FontSize;
@@ -823,7 +833,7 @@ public:
     ImGuiID     GetID(const void* ptr);
 
     void        AddToRenderList();
-    bool        FocusItemRegister(bool is_active);      // Return true if focus is requested
+    bool        FocusItemRegister(bool is_active, bool tab_stop = true);      // Return true if focus is requested
     void        FocusItemUnregister();
 
     ImGuiAabb   Aabb() const                            { return ImGuiAabb(Pos, Pos+Size); }
@@ -1102,7 +1112,7 @@ ImGuiID ImGuiWindow::GetID(const void* ptr)
     return id;
 }
 
-bool ImGuiWindow::FocusItemRegister(bool is_active)
+bool ImGuiWindow::FocusItemRegister(bool is_active, bool tab_stop)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -1117,7 +1127,7 @@ bool ImGuiWindow::FocusItemRegister(bool is_active)
 
     // Process keyboard input at this point: TAB, Shift-TAB switch focus
     // We can always TAB out of a widget that doesn't allow tabbing in.
-    if (FocusIdxAllRequestNext == IM_INT_MAX && FocusIdxTabRequestNext == IM_INT_MAX && is_active && IsKeyPressedMap(ImGuiKey_Tab))
+    if (tab_stop && FocusIdxAllRequestNext == IM_INT_MAX && FocusIdxTabRequestNext == IM_INT_MAX && is_active && IsKeyPressedMap(ImGuiKey_Tab))
     {
         // Modulo on index will be applied at the end of frame once we've got the total counter of items.
         FocusIdxTabRequestNext = FocusIdxTabCounter + (g.IO.KeyShift ? (allow_keyboard_focus ? -1 : 0) : +1);
@@ -4084,7 +4094,7 @@ bool ImGui::RadioButton(const char* label, int* v, int v_button)
     return pressed;
 }
 
-// Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, UTF-8)
+// Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, wchar characters. InputText converts between UTF-8 and wchar)
 static int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                             { return (int)ImStrlenW(obj->Text); }
 static ImWchar STB_TEXTEDIT_GETCHAR(const STB_TEXTEDIT_STRING* obj, int idx)                      { return obj->Text[idx]; }
 static float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)  { (void)line_start_idx; return obj->Font->CalcTextSizeW(obj->FontSize, FLT_MAX, &obj->Text[char_idx], &obj->Text[char_idx]+1, NULL).x; }
@@ -4102,23 +4112,22 @@ static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* ob
     r->num_chars = (int)(text_remaining - (obj->Text + line_start_idx));
 }
 
-static bool is_white(unsigned int c)        { return c==0 || c==' ' || c=='\t' || c=='\r' || c=='\n'; }
-static bool is_separator(unsigned int c)    { return c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|'; }
-
-#define STB_TEXTEDIT_IS_SPACE(c)                                                                (is_white((unsigned int)c) || is_separator((unsigned int)c))
-static void    STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int idx, int n)               { ImWchar* dst = obj->Text+idx; const ImWchar* src = obj->Text+idx+n; while (ImWchar c = *src++) *dst++ = c; *dst = '\0'; }
-
-static bool    STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int idx, const ImWchar* new_text, int new_text_len)
+static bool is_white(unsigned int c)                                                              { return c==0 || c==' ' || c=='\t' || c=='\r' || c=='\n'; }
+static bool is_separator(unsigned int c)                                                          { return c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|'; }
+static bool STB_TEXTEDIT_IS_SPACE(ImWchar c)													  { return is_white((unsigned int)c) || is_separator((unsigned int)c); }
+static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)                    { ImWchar* dst = obj->Text+pos; const ImWchar* src = obj->Text+pos+n; while (ImWchar c = *src++) *dst++ = c; *dst = '\0'; }
+static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const ImWchar* new_text, int new_text_len)
 {
     ImWchar* buf_end = obj->Text + obj->BufSize;
     const size_t text_len = ImStrlenW(obj->Text);
 
-    if (new_text_len > buf_end - (obj->Text + text_len + 1))
+    if (new_text_len + text_len + 1 >= obj->BufSize)
         return false;
 
-    memmove(obj->Text + (size_t)idx + new_text_len, obj->Text + (size_t)idx, (text_len - (size_t)idx) * sizeof(ImWchar));
-    memcpy(obj->Text + (size_t)idx, new_text, (size_t)new_text_len * sizeof(ImWchar));
-    obj->Text[text_len + (size_t)new_text_len] = 0;
+    if (pos != text_len)
+        memmove(obj->Text + (size_t)pos + new_text_len, obj->Text + (size_t)pos, (text_len - (size_t)pos) * sizeof(ImWchar));
+    memcpy(obj->Text + (size_t)pos, new_text, (size_t)new_text_len * sizeof(ImWchar));
+    obj->Text[text_len + (size_t)new_text_len] = '\0';
 
     return true;
 }
@@ -4289,7 +4298,47 @@ bool ImGui::InputInt(const char* label, int *v, int step, int step_fast, ImGuiIn
     return value_changed;
 }
 
-bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags)
+// Public API to manipulate text
+// They manipulate UTF-8 chars, which is what is exposed to the user (unlike the STB_TEXTEDIT_* functions which are manipulating wchar)
+void ImGuiTextEditCallbackData::DeleteChars(size_t pos, size_t bytes_count)
+{
+    char* dst = Buf + pos;
+    const char* src = Buf + pos + bytes_count;
+    while (char c = *src++)
+        *dst++ = c;
+    *dst = '\0';
+
+    BufDirty = true;
+    if ((size_t)CursorPos + bytes_count >= pos)
+        CursorPos -= bytes_count;
+    else if ((size_t)CursorPos >= pos)
+        CursorPos = pos;
+    SelectionStart = SelectionEnd = CursorPos;
+}
+
+void ImGuiTextEditCallbackData::InsertChars(size_t pos, const char* new_text, const char* new_text_end)
+{
+    char* buf_end = Buf + BufSize;
+    const size_t text_len = strlen(Buf);
+    if (!new_text_end)
+        new_text_end = new_text + strlen(new_text);
+    const size_t new_text_len = new_text_end - new_text;
+
+    if (new_text_len + text_len + 1 >= BufSize)
+        return;
+
+    if (text_len != pos)
+        memmove(Buf + pos + new_text_len, Buf + pos, text_len - pos);
+    memcpy(Buf + pos, new_text, new_text_len * sizeof(char));
+    Buf[text_len + new_text_len] = '\0';
+
+    BufDirty = true;
+    if ((size_t)CursorPos >= pos)
+        CursorPos += new_text_len;
+    SelectionStart = SelectionEnd = CursorPos;
+}
+
+bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, void (*callback)(ImGuiTextEditCallbackData*), void* user_data)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -4315,7 +4364,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
 
     const bool is_ctrl_down = io.KeyCtrl;
     const bool is_shift_down = io.KeyShift;
-    const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id);
+    const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id, (flags & ImGuiInputTextFlags_CallbackCompletion) == 0);	// Using completion callback disable keyboard tabbing
     //const bool align_center = (bool)(flags & ImGuiInputTextFlags_AlignCenter);    // FIXME: Unsupported
 
     const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(frame_bb);
@@ -4388,8 +4437,8 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
              if (IsKeyPressedMap(ImGuiKey_LeftArrow))           edit_state.OnKeyboardPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask);
         else if (IsKeyPressedMap(ImGuiKey_RightArrow))          edit_state.OnKeyboardPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask);
-        else if (IsKeyPressedMap(ImGuiKey_UpArrow))             edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_UP | k_mask);
-        else if (IsKeyPressedMap(ImGuiKey_DownArrow))           edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_DOWN | k_mask);
+        //else if (IsKeyPressedMap(ImGuiKey_UpArrow))           edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_UP | k_mask);
+        //else if (IsKeyPressedMap(ImGuiKey_DownArrow))         edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_DOWN | k_mask);
         else if (IsKeyPressedMap(ImGuiKey_Home))                edit_state.OnKeyboardPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask);
         else if (IsKeyPressedMap(ImGuiKey_End))                 edit_state.OnKeyboardPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask);
         else if (IsKeyPressedMap(ImGuiKey_Delete))              edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_DELETE | k_mask);
@@ -4485,8 +4534,56 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             // Apply new value immediately - copy modified buffer back
             // Note that as soon as we can focus into the input box, the in-widget value gets priority over any underlying modification of the input buffer
             // FIXME: We actually always render 'buf' in RenderTextScrolledClipped
-            // FIXME-OPT: CPU waste to do this everytime the widget is active, should mark dirty state from the textedit callbacks
+            // FIXME-OPT: CPU waste to do this every time the widget is active, should mark dirty state from the stb_textedit callbacks
             ImTextStrToUtf8(text_tmp_utf8, IM_ARRAYSIZE(text_tmp_utf8), edit_state.Text, NULL);
+
+            // User callback
+            if ((flags & (ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackAlways)) != 0)
+            {
+                IM_ASSERT(callback != NULL);
+
+                // The reason we specify the usage semantic (Completion/History) is that Completion needs to disable keyboard TABBING at the moment.
+                ImGuiKey event_key = ImGuiKey_COUNT;
+                if ((flags & ImGuiInputTextFlags_CallbackCompletion) != 0 && IsKeyPressedMap(ImGuiKey_Tab))
+                    event_key = ImGuiKey_Tab;
+                else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressedMap(ImGuiKey_UpArrow))
+                    event_key = ImGuiKey_UpArrow;
+                else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressedMap(ImGuiKey_DownArrow))
+                    event_key = ImGuiKey_DownArrow;
+
+                if (event_key != ImGuiKey_COUNT || (flags & ImGuiInputTextFlags_CallbackAlways) != 0)
+                {
+                    ImGuiTextEditCallbackData callback_data;
+                    callback_data.EventKey = event_key;
+                    callback_data.Buf = text_tmp_utf8;
+                    callback_data.BufSize = edit_state.BufSize;
+                    callback_data.BufDirty = false;
+                    callback_data.Flags = flags;
+					callback_data.UserData = user_data;
+
+                    // We have to convert from position from wchar to UTF-8 positions
+                    const int utf8_cursor_pos = callback_data.CursorPos = ImTextCountUtf8BytesFromWchar(edit_state.Text, edit_state.Text + edit_state.StbState.cursor);
+                    const int utf8_selection_start = callback_data.SelectionStart = ImTextCountUtf8BytesFromWchar(edit_state.Text, edit_state.Text + edit_state.StbState.select_start);
+                    const int utf8_selection_end = callback_data.SelectionEnd = ImTextCountUtf8BytesFromWchar(edit_state.Text, edit_state.Text + edit_state.StbState.select_end);
+
+					// Call user code
+					callback(&callback_data);
+
+                    // Read back what user may have modified
+                    IM_ASSERT(callback_data.Buf == text_tmp_utf8);             // Invalid to modify those fields
+                    IM_ASSERT(callback_data.BufSize == edit_state.BufSize);
+                    IM_ASSERT(callback_data.Flags == flags);
+                    if (callback_data.CursorPos != utf8_cursor_pos)            edit_state.StbState.cursor = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.CursorPos);
+                    if (callback_data.SelectionStart != utf8_selection_start)  edit_state.StbState.select_start = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionStart);
+                    if (callback_data.SelectionEnd != utf8_selection_end)      edit_state.StbState.select_end = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionEnd);
+                    if (callback_data.BufDirty)
+                    {
+                        ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), text_tmp_utf8, NULL);
+                        edit_state.CursorAnimReset();
+                    }
+                }
+            }
+
             if (strcmp(text_tmp_utf8, buf) != 0)
             {
                 ImFormatString(buf, buf_size, "%s", text_tmp_utf8);
@@ -4495,9 +4592,9 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         }
     }
     
-    RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true);//, style.Rounding);
+    RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true);
 
-    const ImVec2 font_off_up = ImVec2(0.0f,window->FontSize()+1.0f);    // FIXME: this should be part of the font API
+    const ImVec2 font_off_up = ImVec2(0.0f,window->FontSize()+1.0f);    // FIXME: those offsets are part of the style or font API
     const ImVec2 font_off_dn = ImVec2(0.0f,2.0f);
 
     if (g.ActiveId == id)
@@ -5804,6 +5901,19 @@ static ptrdiff_t ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in
     return buf_out - buf;
 }
 
+static int ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end)
+{
+    int char_count = 0;
+    while ((!in_text_end || in_text < in_text_end) && *in_text)
+    {
+        unsigned int c;
+        in_text += ImTextCharFromUtf8(&c, in_text, in_text_end);
+        if (c < 0x10000)
+            char_count++;
+    }
+    return char_count;
+}
+
 // Based on stb_to_utf8() from github.com/nothings/stb/
 static int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int c)
 {
@@ -5860,6 +5970,18 @@ static ptrdiff_t ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_t
     }
     *buf_out = 0;
     return buf_out - buf;
+}
+
+static int ImTextCountUtf8BytesFromWchar(const ImWchar* in_text, const ImWchar* in_text_end)
+{
+    int bytes_count = 0;
+    while ((!in_text_end || in_text < in_text_end) && *in_text)
+    {
+        char dummy[5]; // FIXME-OPT
+        bytes_count += ImTextCharToUtf8(dummy, 5, (unsigned int)*in_text);
+        in_text++;
+    }
+    return bytes_count;
 }
 
 const char* ImBitmapFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width, const FntGlyph* fallback_glyph) const
@@ -6949,6 +7071,109 @@ static void ShowExampleAppAutoResize(bool* open)
     ImGui::End();
 }
 
+struct ExampleAppConsole
+{
+    ImVector<char*> Items;
+    bool			NewItems;
+
+    void	Clear()
+    {
+        for (size_t i = 0; i < Items.size(); i++) 
+            ImGui::MemFree(Items[i]); 
+        Items.clear();
+        NewItems = true;
+    }
+
+    void	AddLog(const char* fmt, ...)
+    {
+        char buf[512];
+        va_list args;
+        va_start(args, fmt);
+        ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
+        va_end(args);
+        Items.push_back(ImStrdup(buf));
+        NewItems = true;
+    }
+
+    void	TextEditCallback(ImGuiTextEditCallbackData* data)
+    {
+        switch (data->EventKey)
+        {
+        case ImGuiKey_Tab:
+            {
+                // Example of TEXT COMPLETION
+
+                // Locate beginning of current word
+                const char* word_end = data->Buf + data->CursorPos;
+                const char* word_start = word_end;
+                while (word_start > data->Buf)
+                {
+                    const char c = word_start[-1];
+                    if (c == ' ' || c == '\t' || c == ',' || c == ';')
+                        break;
+                    word_start--;
+                }
+
+                // Build a list of candidates
+                const char* commands[] = { "HELP", "CLEAR", "CLASSIFY" };
+                ImVector<const char*> candidates;
+                for (size_t i = 0; i < IM_ARRAYSIZE(commands); i++)
+                    if (ImStrnicmp(commands[i], word_start, word_end-word_start) == 0)
+                        candidates.push_back(commands[i]);
+
+                if (candidates.size() == 0)
+                {
+                    // No match
+                    AddLog("No match for \"%.*s\"!\n", word_end-word_start, word_start);
+                }
+                else if (candidates.size() == 1)
+                {
+                    // Single match. Delete the beginning of the word and replace it entirely so we've got nice casing
+                    data->DeleteChars(word_start - data->Buf, word_end-word_start);
+                    data->InsertChars(data->CursorPos, candidates[0]);
+                    data->InsertChars(data->CursorPos, " ");
+                }
+                else
+                {
+                    // Multiple matches. Complete as much as we can, so inputing "C" will complete to "CL" and display "CLEAR" and "CLASSIFY"
+                    int match_len = word_end - word_start;
+                    while (true)
+                    {
+                        char c;
+                        bool all_candidates_matches = true;
+                        for (size_t i = 0; i < candidates.size() && all_candidates_matches; i++)
+                        {
+                            if (i == 0)
+                                c = toupper(candidates[i][match_len]);
+                            else if (c != toupper(candidates[i][match_len]))
+                                all_candidates_matches = false;
+                        }
+                        if (!all_candidates_matches)
+                            break;
+                        match_len++;
+                    }
+
+                    data->DeleteChars(word_start - data->Buf, word_end-word_start);
+                    data->InsertChars(data->CursorPos, candidates[0], candidates[0] + match_len);
+
+                    // List matches
+                    AddLog("Possible matches:\n");
+                    for (size_t i = 0; i < candidates.size(); i++)
+                        AddLog("- %s\n", candidates[i]);
+                }
+
+                break;
+            }
+        }
+    }
+};
+
+static void ShowExampleAppConsole_TextEditCallback(ImGuiTextEditCallbackData* data)
+{
+    ExampleAppConsole* console = (ExampleAppConsole*)data->UserData;
+    console->TextEditCallback(data);
+}
+
 static void ShowExampleAppConsole(bool* open)
 {
     if (!ImGui::Begin("Example: Console", open, ImVec2(520,600)))
@@ -6957,22 +7182,21 @@ static void ShowExampleAppConsole(bool* open)
         return;
     }
 
-    ImGui::TextWrapped("This example implement a simple console. A more elaborate implementation may want to store individual entries along with extra data such as timestamp, emitter, etc. Here we automatically set focus on the text edition fields when hovering them.");
+    ImGui::TextWrapped("This example implement a simple console. A more elaborate implementation may want to store individual entries along with extra data such as timestamp, emitter, etc.");
+	ImGui::TextWrapped("Press TAB to use text completion.");
 
     // TODO: display from bottom
     // TODO: clip manually
     // TODO: history
-    // TODO: completion
 
-    static ImVector<char*> items;
+    static ExampleAppConsole console;
     static char input[256] = "";
-    static bool new_items = false;
 
-    if (ImGui::SmallButton("Add Dummy Text")) { items.push_back(ImStrdup("some text\nsome more text")); new_items = true; }
+    if (ImGui::SmallButton("Add Dummy Text")) console.AddLog("some text\nsome more text");
     ImGui::SameLine(); 
-    if (ImGui::SmallButton("Add Dummy Error")) { items.push_back(ImStrdup("[error] something went wrong")); new_items = true; }
+    if (ImGui::SmallButton("Add Dummy Error")) console.AddLog("[error] something went wrong");
     ImGui::SameLine(); 
-    if (ImGui::SmallButton("Clear all")) { for (size_t i = 0; i < items.size(); i++) ImGui::MemFree(items[i]); items.clear(); }
+    if (ImGui::SmallButton("Clear all")) console.Clear();
     ImGui::Separator();
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
@@ -6989,9 +7213,9 @@ static void ShowExampleAppConsole(bool* open)
     // or faster if your entries are already stored into a table.
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,1)); // tighten spacing
     ImGui::GetStyle().ItemSpacing.y = 1; // tighten spacing
-    for (size_t i = 0; i < items.size(); i++)
+    for (size_t i = 0; i < console.Items.size(); i++)
     {
-        const char* item = items[i];
+        const char* item = console.Items[i];
         if (!filter.PassFilter(item))
             continue;
         ImVec4 col(1,1,1,1);
@@ -7002,22 +7226,24 @@ static void ShowExampleAppConsole(bool* open)
         ImGui::PopStyleColor();
     }
     ImGui::PopStyleVar();
-    if (new_items)
+    if (console.NewItems)
     {
         ImGui::SetScrollPosHere();
-        new_items = false;
+        console.NewItems = false;
     }
     ImGui::EndChild();
 
     ImGui::Separator();
-    if (ImGui::InputText("Input", input, IM_ARRAYSIZE(input), ImGuiInputTextFlags_EnterReturnsTrue))
+    if (ImGui::InputText("Input", input, IM_ARRAYSIZE(input), ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CallbackCompletion, &ShowExampleAppConsole_TextEditCallback, (void*)&console))
     {
-        new_items = true;
-        char buf[256];
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "# %s\n", input);
-        items.push_back(ImStrdup(buf));
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "Unknown command '%s'\n", input);
-        items.push_back(ImStrdup(buf));
+        const char* input_trimmed_end = input+strlen(input);
+        while (input_trimmed_end > input && input_trimmed_end[-1] == ' ')
+            input_trimmed_end--;
+        if (input_trimmed_end > input)
+        {
+            console.AddLog("# %s\n", input);
+            console.AddLog("Unknown command: '%.*s'\n", input_trimmed_end-input, input);	// NB: we don't actually handle any command in this sample code
+        }
         strcpy(input, "");
     }
     if (ImGui::IsItemHovered()) ImGui::SetKeyboardFocusHere(-1); // Auto focus on hover
