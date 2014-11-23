@@ -7094,6 +7094,7 @@ struct ExampleAppConsole
 
     void	TextEditCallback(ImGuiTextEditCallbackData* data)
     {
+		//AddLog("cursor: %d, selection: %d-%d", data->CursorPos, data->SelectionStart, data->SelectionEnd);
         switch (data->EventKey)
         {
         case ImGuiKey_Tab:
@@ -7150,8 +7151,11 @@ struct ExampleAppConsole
                         match_len++;
                     }
 
-                    data->DeleteChars(word_start - data->Buf, word_end-word_start);
-                    data->InsertChars(data->CursorPos, candidates[0], candidates[0] + match_len);
+					if (match_len > 0)
+					{
+						data->DeleteChars(word_start - data->Buf, word_end-word_start);
+						data->InsertChars(data->CursorPos, candidates[0], candidates[0] + match_len);
+					}
 
                     // List matches
                     AddLog("Possible matches:\n");
