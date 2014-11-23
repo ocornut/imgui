@@ -4118,9 +4118,7 @@ static bool STB_TEXTEDIT_IS_SPACE(ImWchar c)													  { return is_white((un
 static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)                    { ImWchar* dst = obj->Text+pos; const ImWchar* src = obj->Text+pos+n; while (ImWchar c = *src++) *dst++ = c; *dst = '\0'; }
 static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const ImWchar* new_text, int new_text_len)
 {
-    ImWchar* buf_end = obj->Text + obj->BufSize;
     const size_t text_len = ImStrlenW(obj->Text);
-
     if (new_text_len + text_len + 1 >= obj->BufSize)
         return false;
 
@@ -4318,7 +4316,6 @@ void ImGuiTextEditCallbackData::DeleteChars(size_t pos, size_t bytes_count)
 
 void ImGuiTextEditCallbackData::InsertChars(size_t pos, const char* new_text, const char* new_text_end)
 {
-    char* buf_end = Buf + BufSize;
     const size_t text_len = strlen(Buf);
     if (!new_text_end)
         new_text_end = new_text + strlen(new_text);
