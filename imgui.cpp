@@ -698,7 +698,7 @@ struct ImGuiTextEditState
     bool                HasSelection() const            { return StbState.select_start != StbState.select_end; }
     void                SelectAll()                     { StbState.select_start = 0; StbState.select_end = (int)ImStrlenW(Text); StbState.cursor = StbState.select_end; StbState.has_preferred_x = false; }
 
-    void                OnKeyboardPressed(int key);
+    void                OnKeyPressed(int key);
     void                UpdateScrollOffset();
     ImVec2              CalcDisplayOffsetFromCharIdx(int i) const;
 
@@ -3563,7 +3563,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     if (!display_format)
         display_format = "%.3f";
 
-    // Dodgily parse display precision back from the display format
+    // Parse display precision back from the display format string
     int decimal_precision = 3;
     if (const char* p = strchr(display_format, '%'))
     {
@@ -3604,7 +3604,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     const float slider_effective_x1 = slider_bb.Min.x + grab_size_in_pixels*0.5f;
     const float slider_effective_x2 = slider_bb.Max.x - grab_size_in_pixels*0.5f;
 
-    // For logarithmic sliders that cross over sign boundary we want the exponential increase to be symetric around 0.0f
+    // For logarithmic sliders that cross over sign boundary we want the exponential increase to be symmetric around 0.0f
     float linear_zero_pos = 0.0f;   // 0.0->1.0f
     if (!is_unbound)
     {
@@ -3648,7 +3648,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 
         g.ActiveId = g.SliderAsInputTextId;
         g.HoveredId = 0;
-        window->FocusItemUnregister();      // Our replacement slider will override the focus ID (that we needed to declare previously to allow for a TAB focus to happen before we got selected)
+        window->FocusItemUnregister();      // Our replacement slider will override the focus ID (registered previously to allow for a TAB focus to happen)
         value_changed = ImGui::InputText(label, text_buf, IM_ARRAYSIZE(text_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
         if (g.SliderAsInputTextId == 0)
         {
@@ -3675,6 +3675,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     ItemSize(bb);
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg));
 
+	// Process clicking on the slider
     if (g.ActiveId == id)
     {
         if (g.IO.MouseDown[0])
@@ -3708,10 +3709,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
                 }
 
                 // Round past decimal precision
-                //  0: 1
-                //  1: 0.1
-                //  2: 0.01
-                //  etc..
+                //    0->1, 1->0.1, 2->0.01, etc.
                 // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
                 const float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
                 const float remainder = fmodf(new_value, min_step);
@@ -3771,9 +3769,9 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 bool ImGui::SliderAngle(const char* label, float* v, float v_degrees_min, float v_degrees_max)
 {
     float v_deg = *v * 360.0f / (2*PI);
-    bool changed = ImGui::SliderFloat(label, &v_deg, v_degrees_min, v_degrees_max, "%.0f deg", 1.0f);
+    bool value_changed = ImGui::SliderFloat(label, &v_deg, v_degrees_min, v_degrees_max, "%.0f deg", 1.0f);
     *v = v_deg * (2*PI) / 360.0f;
-    return changed;
+    return value_changed;
 }
 
 bool ImGui::SliderInt(const char* label, int* v, int v_min, int v_max, const char* display_format)
@@ -3781,11 +3779,12 @@ bool ImGui::SliderInt(const char* label, int* v, int v_min, int v_max, const cha
     if (!display_format)
         display_format = "%.0f";
     float v_f = (float)*v;
-    bool changed = ImGui::SliderFloat(label, &v_f, (float)v_min, (float)v_max, display_format, 1.0f);
+    bool value_changed = ImGui::SliderFloat(label, &v_f, (float)v_min, (float)v_max, display_format, 1.0f);
     *v = (int)v_f;
-    return changed;
+    return value_changed;
 }
 
+// Add multiple sliders on 1 line for compact edition of multiple components
 static bool SliderFloatN(const char* label, float v[3], int components, float v_min, float v_max, const char* display_format, float power)
 {
     ImGuiState& g = GImGui;
@@ -3836,7 +3835,6 @@ bool ImGui::SliderFloat4(const char* label, float v[4], float v_min, float v_max
     return SliderFloatN(label, v, 4, v_min, v_max, display_format, power);
 }
 
-// Enum for ImGui::Plot()
 enum ImGuiPlotType
 {
     ImGuiPlotType_Lines,
@@ -3866,7 +3864,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
     if (ClipAdvance(bb))
         return;
 
-    // Determine scale if not specified
+    // Determine scale from values if not specified
     if (scale_min == FLT_MAX || scale_max == FLT_MAX)
     {
         float v_min = FLT_MAX;
@@ -4152,7 +4150,7 @@ enum
 #define STB_TEXTEDIT_IMPLEMENTATION
 #include "stb_textedit.h"
 
-void ImGuiTextEditState::OnKeyboardPressed(int key)
+void ImGuiTextEditState::OnKeyPressed(int key)
 { 
     stb_textedit_key(this, &StbState, key); 
     CursorAnimReset(); 
@@ -4282,9 +4280,6 @@ bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast,
 
     RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + g.Style.FramePadding.y), label);
 
-    //ImGui::SameLine(0, (int)g.Style.ItemInnerSpacing.x);
-    //ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
-
     return value_changed;
 }
 
@@ -4296,8 +4291,8 @@ bool ImGui::InputInt(const char* label, int *v, int step, int step_fast, ImGuiIn
     return value_changed;
 }
 
-// Public API to manipulate text
-// They manipulate UTF-8 chars, which is what is exposed to the user (unlike the STB_TEXTEDIT_* functions which are manipulating wchar)
+// Public API to manipulate UTF-8 text
+// We expose UTF-8 to the user (unlike the STB_TEXTEDIT_* functions which are manipulating wchar)
 void ImGuiTextEditCallbackData::DeleteChars(size_t pos, size_t bytes_count)
 {
     char* dst = Buf + pos;
@@ -4335,6 +4330,7 @@ void ImGuiTextEditCallbackData::InsertChars(size_t pos, const char* new_text, co
     SelectionStart = SelectionEnd = CursorPos;
 }
 
+// Edit a string of text
 bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, void (*callback)(ImGuiTextEditCallbackData*), void* user_data)
 {
     ImGuiState& g = GImGui;
@@ -4356,7 +4352,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     if (ClipAdvance(frame_bb))
         return false;
 
-    // NB: we can only read/write to 'edit_state' if we are the active widget!
+    // NB: we are only allowed to access it if we are the active widget.
     ImGuiTextEditState& edit_state = g.InputTextState;
 
     const bool is_ctrl_down = io.KeyCtrl;
@@ -4409,7 +4405,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         edit_state.FontSize = window->FontSize();
     
         const float mx = g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x;
-        const float my = window->FontSize()*0.5f;   // Better for single line
+        const float my = window->FontSize()*0.5f;   // Flatten mouse because we are doing a single-line edit
 
         edit_state.UpdateScrollOffset();
         if (select_all || (hovered && io.MouseDoubleClicked[0]))
@@ -4432,19 +4428,17 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
              edit_state.SelectedAllMouseLock = false;
 
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
-             if (IsKeyPressedMap(ImGuiKey_LeftArrow))           edit_state.OnKeyboardPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask);
-        else if (IsKeyPressedMap(ImGuiKey_RightArrow))          edit_state.OnKeyboardPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask);
-        //else if (IsKeyPressedMap(ImGuiKey_UpArrow))           edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_UP | k_mask);
-        //else if (IsKeyPressedMap(ImGuiKey_DownArrow))         edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_DOWN | k_mask);
-        else if (IsKeyPressedMap(ImGuiKey_Home))                edit_state.OnKeyboardPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask);
-        else if (IsKeyPressedMap(ImGuiKey_End))                 edit_state.OnKeyboardPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask);
-        else if (IsKeyPressedMap(ImGuiKey_Delete))              edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_DELETE | k_mask);
-        else if (IsKeyPressedMap(ImGuiKey_Backspace))           edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask);
+		if (IsKeyPressedMap(ImGuiKey_LeftArrow))                { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
+		else if (IsKeyPressedMap(ImGuiKey_RightArrow))          { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
+		else if (IsKeyPressedMap(ImGuiKey_Home))                { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
+		else if (IsKeyPressedMap(ImGuiKey_End))                 { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
+		else if (IsKeyPressedMap(ImGuiKey_Delete))              { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
+		else if (IsKeyPressedMap(ImGuiKey_Backspace))           { edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Enter))               { g.ActiveId = 0; enter_pressed = true; }
         else if (IsKeyPressedMap(ImGuiKey_Escape))              { g.ActiveId = 0; cancel_edit = true; }
-        else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Z))   edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_UNDO);      // I don't want to use shortcuts but we should probably have an Input-catch stack
-        else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Y))   edit_state.OnKeyboardPressed(STB_TEXTEDIT_K_REDO);
-        else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_A))   edit_state.SelectAll();
+		else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Z))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); }
+		else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Y))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); }
+		else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_A))   { edit_state.SelectAll(); }
         else if (is_ctrl_down && (IsKeyPressedMap(ImGuiKey_X) || IsKeyPressedMap(ImGuiKey_C)))
         {
             // Cut, Copy
@@ -4512,7 +4506,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                             continue;
 
                     // Insert character!
-                    edit_state.OnKeyboardPressed(c);
+                    edit_state.OnKeyPressed(c);
                 }
             }
         }
@@ -4700,7 +4694,7 @@ bool ImGui::Combo(const char* label, int* current_item, const char** items, int 
 
 static bool Combo_StringListGetter(void* data, int idx, const char** out_text)
 {
-    // FIXME-OPT: we could precompute the indices but let's not bother now.
+    // FIXME-OPT: we could precompute the indices to fasten this. But only 1 active combo means the waste is limited.
     const char* items_separated_by_zeros = (const char*)data;
     int items_count = 0;
     const char* p = items_separated_by_zeros;
@@ -4797,6 +4791,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         bool combo_item_active = false;
         combo_item_active |= (g.ActiveId == child_window->GetID("#SCROLLY"));
 
+        // Display items
         for (int item_idx = 0; item_idx < items_count; item_idx++)
         {
             const float item_h = child_window->FontSize();
@@ -4807,7 +4802,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
 
             bool item_hovered, item_held;
             bool item_pressed = ButtonBehaviour(item_aabb, item_id, &item_hovered, &item_held, true);
-            bool item_selected = item_idx == *current_item;
+            bool item_selected = (item_idx == *current_item);
 
             if (item_hovered || item_selected)
             {
@@ -4893,7 +4888,7 @@ bool ImGui::ColorEdit3(const char* label, float col[3])
     return value_changed;
 }
 
-// Edit colours components color in 0..1 range
+// Edit colors components (each component in 0.0f..1.0f range
 // Use CTRL-Click to input value and TAB to go to next item.
 bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
 {
@@ -4998,7 +4993,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
         const char* button_titles[3] = { "RGB", "HSV", "HEX" };
         if (ImGui::Button(button_titles[edit_mode]))
         {
-            // Don't set 'edit_mode' right away!
+            // Don't set local copy of 'edit_mode' right away!
             g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3);
         }
     }
@@ -5034,7 +5029,7 @@ void ImGui::ColorEditMode(ImGuiColorEditMode mode)
     window->DC.ColorEditMode = mode;
 }
 
-// Horizontal separator.
+// Horizontal separating line.
 void ImGui::Separator()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -5070,7 +5065,7 @@ void ImGui::Spacing()
     ItemSize(ImVec2(0,0));
 }
 
-// Advance
+// Advance cursor given item size.
 static void ItemSize(ImVec2 size, ImVec2* adjust_start_offset)
 {
     ImGuiState& g = GImGui;
@@ -5457,7 +5452,7 @@ void ImDrawList::AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col)
     const ImVec2 hp0 = ImVec2(offset + hn.y, offset - hn.x);   // half perpendiculars + user offset
     const ImVec2 hp1 = ImVec2(offset - hn.y, offset + hn.x);
 
-    // Two triangles makes up one line. Using triangles allows us to make draw calls.
+    // Two triangles makes up one line. Using triangles allows us to reduce amount of draw calls.
     AddVtx(a + hp0, col);
     AddVtx(b + hp0, col);
     AddVtx(a + hp1, col);
@@ -5516,7 +5511,6 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
     if ((col >> 24) == 0)
         return;
 
-    //const float r = ImMin(rounding, ImMin(fabsf(b.x-a.x), fabsf(b.y-a.y))*0.5f);
     float r = rounding;
     r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ));
     r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ));
@@ -5549,7 +5543,6 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
     if ((col >> 24) == 0)
         return;
 
-    //const float r = ImMin(rounding, ImMin(fabsf(b.x-a.x), fabsf(b.y-a.y))*0.5f);
     float r = rounding;
     r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ));
     r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ));
@@ -6578,8 +6571,6 @@ void ImGui::ShowTestWindow(bool* open)
 
     if (ImGui::CollapsingHeader("Widgets"))
     {
-        //ImGui::PushItemWidth(ImGui::GetWindowWidth() - 220);
-
         static bool a=false;
         if (ImGui::Button("Button")) { printf("Clicked\n"); a ^= 1; }
         if (a)
@@ -6738,8 +6729,6 @@ void ImGui::ShowTestWindow(bool* open)
         static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
         ImGui::ColorEdit3("color 1", col1);
         ImGui::ColorEdit4("color 2", col2);
-
-        //ImGui::PopItemWidth();
     }
 
     if (ImGui::CollapsingHeader("Graphs widgets"))
@@ -6752,7 +6741,7 @@ void ImGui::ShowTestWindow(bool* open)
         static size_t values_offset = 0; 
         if (!pause) 
         { 
-            // create dummy data at 60 hz
+            // create dummy data at fixed 60 hz rate
             static float refresh_time = -1.0f;
             if (ImGui::GetTime() > refresh_time + 1.0f/60.0f)
             {
@@ -6892,7 +6881,7 @@ void ImGui::ShowTestWindow(bool* open)
 
         ImGui::Columns(3, "mixed");
 
-        // Filling all contents of a column
+        // Create multiple items in a same cell because switching to next column
         static int e = 0;
         ImGui::Text("Hello"); 
         ImGui::Button("Banana");
