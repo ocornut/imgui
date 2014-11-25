@@ -39,7 +39,7 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 Frequently Asked Question
 -------------------------
 
-<b>How do you use ImGui on a platform that may not have a mouse and keyboard?</b>
+<b>How do you use ImGui on a platform that may not have a mouse or keyboard?</b>
 
 I recommend using [Synergy](http://synergy-project.org). With the uSynergy.c micro client running you can seamlessly use your PC input devices from a video game console or a tablet. ImGui was also designed to function with touch inputs if you increase the padding of widgets to compensate for the lack of precision of touch devices, but it is recommended you use a mouse to allow optimising for screen real-estate.
 
@@ -68,6 +68,12 @@ In contrast, librairies featuring higher-quality rendering and layouting techniq
 Yes, you can alter the look of the interface to some degree: changing colors, sizes and padding, font. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. The example below uses modified settings to create a very compact UI with different colors:
 
 ![skinning screenshot 1](/web/skinning_sample_01.png?raw=true)
+
+<b>Why using C++ (as opposed to C)?</b>
+
+ImGui takes advantage of a few C++ features for convenience but nothing in the realm of Boost-insanity/quagmire. In particular, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience but could be removed.
+
+Shall someone wants to use ImGui from another language, it should be possible to wrap ImGui to be used from a raw C API in the future.
 
 Support
 -------
