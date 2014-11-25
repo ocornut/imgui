@@ -80,7 +80,7 @@ Support
 
 <b>Can you develop features xxxx for ImGui?</b>
 
-Please use GitHub 'Issues' facilities to suggest and discuss improvements. Your question are often helpul to the community of users. If you represent an organization and would like specific non-trivial features to be implemented, I am available for hire to work on or with ImGui. 
+Please use GitHub 'Issues' facilities to suggest and discuss improvements. Your questions are often helpul to the community of users. If you represent an organization and would like specific non-trivial features to be implemented, I am available for hire to work on or with ImGui. 
 
 <b>Can I donate to support the development of ImGui?</b>
 
