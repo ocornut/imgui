@@ -10,8 +10,8 @@
  - MISSION STATEMENT
  - END-USER GUIDE
  - PROGRAMMER GUIDE
- - TROUBLESHOOTING & FREQUENTLY ASKED QUESTIONS
  - API BREAKING CHANGES
+ - TROUBLESHOOTING & FREQUENTLY ASKED QUESTIONS
  - ISSUES & TODO-LIST
  - CODE
  - SAMPLE CODE
@@ -105,6 +105,22 @@
             // swap video buffer, etc.
         }
 
+ API BREAKING CHANGES
+ ====================
+
+ Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
+ Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
+
+ - 2014/11/26 (1.17) retired IMGUI_ONCE_UPON_A_FRAME helper macro in favor of ImGuiOnceUponAFrame type that works on all compilers.
+ - 2014/11/07 (1.15) renamed IsHovered() to IsItemHovered()
+ - 2014/10/02 (1.14) renamed IMGUI_INCLUDE_IMGUI_USER_CPP to IMGUI_INCLUDE_IMGUI_USER_INL and imgui_user.cpp to imgui_user.inl (more IDE friendly)
+ - 2014/09/25 (1.13) removed 'text_end' parameter from IO.SetClipboardTextFn (the string is now always zero-terminated for simplicity)
+ - 2014/09/24 (1.12) renamed SetFontScale() to SetWindowFontScale()
+ - 2014/09/24 (1.12) moved IM_MALLOC/IM_REALLOC/IM_FREE preprocessor defines to IO.MemAllocFn/IO.MemReallocFn/IO.MemFreeFn
+ - 2014/08/30 (1.09) removed IO.FontHeight (now computed automatically)
+ - 2014/08/30 (1.09) moved IMGUI_FONT_TEX_UV_FOR_WHITE preprocessor define to IO.FontTexUvForWhite
+ - 2014/08/28 (1.09) changed the behavior of IO.PixelCenterOffset following various rendering fixes
+
  TROUBLESHOOTING & FREQUENTLY ASKED QUESTIONS
  ============================================
 
@@ -146,18 +162,6 @@
  - tip: you can call Render() multiple times (e.g for VR renders), up to you to communicate the extra state to your RenderDrawListFn function.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
  - tip: read the ShowTestWindow() code for more example of how to use ImGui!
-
- API BREAKING CHANGES
- ====================
-
-  - 2014/11/07 (1.15) renamed IsHovered() to IsItemHovered()
-  - 2014/10/02 (1.14) renamed IMGUI_INCLUDE_IMGUI_USER_CPP to IMGUI_INCLUDE_IMGUI_USER_INL and imgui_user.cpp to imgui_user.inl (more IDE friendly)
-  - 2014/09/25 (1.13) removed 'text_end' parameter from IO.SetClipboardTextFn (the string is now always zero-terminated for simplicity)
-  - 2014/09/24 (1.12) renamed SetFontScale() to SetWindowFontScale()
-  - 2014/09/24 (1.12) moved IM_MALLOC/IM_REALLOC/IM_FREE preprocessor defines to IO.MemAllocFn/IO.MemReallocFn/IO.MemFreeFn
-  - 2014/08/30 (1.09) removed IO.FontHeight (now computed automatically)
-  - 2014/08/30 (1.09) moved IMGUI_FONT_TEX_UV_FOR_WHITE preprocessor define to IO.FontTexUvForWhite
-  - 2014/08/28 (1.09) changed the behavior of IO.PixelCenterOffset following various rendering fixes
 
  ISSUES & TODO-LIST
  ==================
