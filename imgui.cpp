@@ -142,7 +142,7 @@
       e.g. "##Foobar" display an empty label and uses "##Foobar" as ID
    - read articles about the imgui principles (see web links) to understand the requirement and use of ID.
 
- - tip: the construct 'if (IMGUI_ONCE_UPON_A_FRAME)' will evaluate to true only once a frame, you can use it to add custom UI in the middle of a deep nested inner loop in your code.
+ - tip: the construct 'static ImGuiOnceUponAFrame once; if (once)' will evaluate to 'true' only once a frame, you can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can call Render() multiple times (e.g for VR renders), up to you to communicate the extra state to your RenderDrawListFn function.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
  - tip: read the ShowTestWindow() code for more example of how to use ImGui!
@@ -3675,7 +3675,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     ItemSize(bb);
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg));
 
-	// Process clicking on the slider
+    // Process clicking on the slider
     if (g.ActiveId == id)
     {
         if (g.IO.MouseDown[0])
@@ -4428,17 +4428,17 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
              edit_state.SelectedAllMouseLock = false;
 
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
-		if (IsKeyPressedMap(ImGuiKey_LeftArrow))                { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
-		else if (IsKeyPressedMap(ImGuiKey_RightArrow))          { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
-		else if (IsKeyPressedMap(ImGuiKey_Home))                { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
-		else if (IsKeyPressedMap(ImGuiKey_End))                 { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
-		else if (IsKeyPressedMap(ImGuiKey_Delete))              { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
-		else if (IsKeyPressedMap(ImGuiKey_Backspace))           { edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask); }
+        if (IsKeyPressedMap(ImGuiKey_LeftArrow))                { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_RightArrow))          { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_Home))                { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_End))                 { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_Delete))              { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_Backspace))           { edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Enter))               { g.ActiveId = 0; enter_pressed = true; }
         else if (IsKeyPressedMap(ImGuiKey_Escape))              { g.ActiveId = 0; cancel_edit = true; }
-		else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Z))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); }
-		else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Y))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); }
-		else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_A))   { edit_state.SelectAll(); }
+        else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Z))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); }
+        else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Y))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); }
+        else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_A))   { edit_state.SelectAll(); }
         else if (is_ctrl_down && (IsKeyPressedMap(ImGuiKey_X) || IsKeyPressedMap(ImGuiKey_C)))
         {
             // Cut, Copy
@@ -4550,15 +4550,15 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                     callback_data.BufSize = edit_state.BufSize;
                     callback_data.BufDirty = false;
                     callback_data.Flags = flags;
-					callback_data.UserData = user_data;
+                    callback_data.UserData = user_data;
 
                     // We have to convert from position from wchar to UTF-8 positions
                     const int utf8_cursor_pos = callback_data.CursorPos = ImTextCountUtf8BytesFromWchar(edit_state.Text, edit_state.Text + edit_state.StbState.cursor);
                     const int utf8_selection_start = callback_data.SelectionStart = ImTextCountUtf8BytesFromWchar(edit_state.Text, edit_state.Text + edit_state.StbState.select_start);
                     const int utf8_selection_end = callback_data.SelectionEnd = ImTextCountUtf8BytesFromWchar(edit_state.Text, edit_state.Text + edit_state.StbState.select_end);
 
-					// Call user code
-					callback(&callback_data);
+                    // Call user code
+                    callback(&callback_data);
 
                     // Read back what user may have modified
                     IM_ASSERT(callback_data.Buf == text_tmp_utf8);             // Invalid to modify those fields
@@ -6674,6 +6674,10 @@ void ImGui::ShowTestWindow(bool* open)
             ImGui::EndTooltip();
         }
 
+		//static ImGuiOnceUponAFrame oaf;
+		//if (oaf) ImGui::Text("This will be displayed.");
+		//if (oaf) ImGui::Text("This won't be displayed!");
+
         ImGui::Separator();
         ImGui::Text("^ Horizontal separator");
 
@@ -7083,7 +7087,7 @@ struct ExampleAppConsole
 
     void	TextEditCallback(ImGuiTextEditCallbackData* data)
     {
-		//AddLog("cursor: %d, selection: %d-%d", data->CursorPos, data->SelectionStart, data->SelectionEnd);
+        //AddLog("cursor: %d, selection: %d-%d", data->CursorPos, data->SelectionStart, data->SelectionEnd);
         switch (data->EventKey)
         {
         case ImGuiKey_Tab:
@@ -7140,11 +7144,11 @@ struct ExampleAppConsole
                         match_len++;
                     }
 
-					if (match_len > 0)
-					{
-						data->DeleteChars(word_start - data->Buf, word_end-word_start);
-						data->InsertChars(data->CursorPos, candidates[0], candidates[0] + match_len);
-					}
+                    if (match_len > 0)
+                    {
+                        data->DeleteChars(word_start - data->Buf, word_end-word_start);
+                        data->InsertChars(data->CursorPos, candidates[0], candidates[0] + match_len);
+                    }
 
                     // List matches
                     AddLog("Possible matches:\n");
@@ -7173,7 +7177,7 @@ static void ShowExampleAppConsole(bool* open)
     }
 
     ImGui::TextWrapped("This example implement a simple console. A more elaborate implementation may want to store individual entries along with extra data such as timestamp, emitter, etc.");
-	ImGui::TextWrapped("Press TAB to use text completion.");
+    ImGui::TextWrapped("Press TAB to use text completion.");
 
     // TODO: display from bottom
     // TODO: clip manually
