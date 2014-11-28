@@ -534,7 +534,7 @@ struct ImGuiIO
 //   {
 //      // code block will be executed one per frame
 //   }
-// Attention! the macro expand into 2 statement so make sure you don't use it within e.g. an if() statement without curly braces.
+// Attention! the macro expands into 2 statement so make sure you don't use it within e.g. an if() statement without curly braces.
 #define IMGUI_ONCE_UPON_A_FRAME    static ImGuiOnceUponAFrame imgui_oaf##__LINE__; if (imgui_oaf##__LINE__)
 struct ImGuiOnceUponAFrame
 {
@@ -597,7 +597,7 @@ struct ImGuiTextBuffer
 struct ImGuiStorage
 {
     struct Pair { ImU32 key; int val; };
-    ImVector<Pair>  Data;
+    ImVector<Pair>    Data;
 
     IMGUI_API void    Clear();
     IMGUI_API int     GetInt(ImU32 key, int default_val = 0);
@@ -740,18 +740,18 @@ struct ImFont
     };
 #pragma pack(pop)
 
-    unsigned char*          Data;               // Raw data, content of .fnt file
-    size_t                  DataSize;           //
-    bool                    DataOwned;          // 
-    const FntInfo*          Info;               // (point into raw data)
-    const FntCommon*        Common;             // (point into raw data)
-    const FntGlyph*         Glyphs;             // (point into raw data)
-    size_t                  GlyphsCount;        //
-    const FntKerning*       Kerning;            // (point into raw data)
-    size_t                  KerningCount;       //
-    int                     TabCount;           // FIXME: mishandled (add fixed amount instead of aligning to column)
-    ImVector<const char*>   Filenames;          // (point into raw data)
-    ImVector<int>           IndexLookup;        // (built)
+    unsigned char*              Data;               // Raw data, content of .fnt file
+    size_t                      DataSize;           //
+    bool                        DataOwned;          // 
+    const FntInfo*              Info;               // (point into raw data)
+    const FntCommon*            Common;             // (point into raw data)
+    const FntGlyph*             Glyphs;             // (point into raw data)
+    size_t                      GlyphsCount;        //
+    const FntKerning*           Kerning;            // (point into raw data)
+    size_t                      KerningCount;       //
+    int                         TabCount;           // FIXME: mishandled (add fixed amount instead of aligning to column)
+    ImVector<const char*>       Filenames;          // (point into raw data)
+    ImVector<int>               IndexLookup;        // (built)
 
     IMGUI_API ImFont();
     IMGUI_API ~ImFont()         { Clear(); }
