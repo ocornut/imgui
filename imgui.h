@@ -123,7 +123,7 @@ public:
 #endif // #ifndef ImVector
 
 // Helpers at bottom of the file:
-// - if (IMGUI_ONCE_UPON_A_FRAME)       // Execute a block of code once per frame only
+// - struct ImGuiOnceUponAFrame         // Execute a block of code once per frame only (convenient for creating UI within deep-nested code that runs multiple times)
 // - struct ImGuiTextFilter             // Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
 // - struct ImGuiTextBuffer             // Text buffer for logging/accumulating text
 // - struct ImGuiStorage                // Custom key value storage (if you need to alter open/close states manually)
@@ -239,7 +239,7 @@ namespace ImGui
     IMGUI_API bool          CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value);
     IMGUI_API bool          RadioButton(const char* label, bool active);
     IMGUI_API bool          RadioButton(const char* label, int* v, int v_button);
-	IMGUI_API bool          InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, void (*callback)(ImGuiTextEditCallbackData*) = NULL, void* user_data = NULL);
+    IMGUI_API bool          InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, void (*callback)(ImGuiTextEditCallbackData*) = NULL, void* user_data = NULL);
     IMGUI_API bool          InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f, int decimal_precision = -1, ImGuiInputTextFlags extra_flags = 0);
     IMGUI_API bool          InputFloat2(const char* label, float v[2], int decimal_precision = -1);
     IMGUI_API bool          InputFloat3(const char* label, float v[3], int decimal_precision = -1);
@@ -326,8 +326,8 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_AutoSelectAll       = 1 << 2,   // Select entire text when first taking focus
     ImGuiInputTextFlags_EnterReturnsTrue    = 1 << 3,   // Return 'true' when Enter is pressed (as opposed to when the value was modified)
     ImGuiInputTextFlags_CallbackCompletion  = 1 << 4,   // Call user function on pressing TAB (for completion handling)
-	ImGuiInputTextFlags_CallbackHistory     = 1 << 5,   // Call user function on pressing Up/Down arrows (for history handling)
-	ImGuiInputTextFlags_CallbackAlways      = 1 << 6    // Call user function every frame
+    ImGuiInputTextFlags_CallbackHistory     = 1 << 5,   // Call user function on pressing Up/Down arrows (for history handling)
+    ImGuiInputTextFlags_CallbackAlways      = 1 << 6    // Call user function every frame
     //ImGuiInputTextFlags_AlignCenter       = 1 << 6,
 };
 
@@ -529,15 +529,15 @@ struct ImGuiIO
 //-----------------------------------------------------------------------------
 
 // Helper: execute a block of code once a frame only
-// Usage: if (IMGUI_ONCE_UPON_A_FRAME) {/*do something once a frame*/)
-#define IMGUI_ONCE_UPON_A_FRAME         static ImGuiOncePerFrame im = ImGuiOncePerFrame()
-struct ImGuiOncePerFrame
+// Convenient if you want to quickly create an UI within deep-nested code that runs multiple times every frame.
+// Usage: 
+//   static ImGuiOnceUponAFrame once;
+//   if (once) { ... }
+struct ImGuiOnceUponAFrame
 {
-    ImGuiOncePerFrame() : LastFrame(-1) {}
-    operator bool() const { return TryIsNewFrame(); }
-private:
-    mutable int LastFrame;
-    bool        TryIsNewFrame() const   { const int current_frame = ImGui::GetFrameCount(); if (LastFrame == current_frame) return false; LastFrame = current_frame; return true; }
+    ImGuiOnceUponAFrame() { RefFrame = -1; }
+    mutable int RefFrame;
+    operator bool() const {	const int current_frame = ImGui::GetFrameCount(); if (RefFrame == current_frame) return false; RefFrame = current_frame; return true; }
 };
 
 // Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
@@ -608,19 +608,19 @@ struct ImGuiStorage
 // Shared state of InputText(), passed to callback when a ImGuiInputTextFlags_Callback* flag is used.
 struct ImGuiTextEditCallbackData
 {
-	ImGuiKey            EventKey;       // Key pressed (Up/Down/TAB)		// Read-only	
-	char*			    Buf;            // Current text              		// Read-write (pointed data only)
-	size_t				BufSize;		//									// Read-only
-	bool				BufDirty;       // Set if you modify Buf directly   // Write
-	ImGuiInputTextFlags	Flags;			// What user passed to InputText()	// Read-only
-	int					CursorPos;		//									// Read-write
-	int					SelectionStart; //									// Read-write (== to SelectionEnd when no selection)
-	int                 SelectionEnd;   //									// Read-write
-	void*               UserData;		// What user passed to InputText()
+    ImGuiKey            EventKey;       // Key pressed (Up/Down/TAB)		// Read-only	
+    char*			    Buf;            // Current text              		// Read-write (pointed data only)
+    size_t				BufSize;		//									// Read-only
+    bool				BufDirty;       // Set if you modify Buf directly   // Write
+    ImGuiInputTextFlags	Flags;			// What user passed to InputText()	// Read-only
+    int					CursorPos;		//									// Read-write
+    int					SelectionStart; //									// Read-write (== to SelectionEnd when no selection)
+    int                 SelectionEnd;   //									// Read-write
+    void*               UserData;		// What user passed to InputText()
 
-	// NB: calling those function loses selection.
-	void DeleteChars(size_t pos, size_t bytes_count);
-	void InsertChars(size_t pos, const char* text, const char* text_end = NULL);
+    // NB: calling those function loses selection.
+    void DeleteChars(size_t pos, size_t bytes_count);
+    void InsertChars(size_t pos, const char* text, const char* text_end = NULL);
 };
 
 //-----------------------------------------------------------------------------
