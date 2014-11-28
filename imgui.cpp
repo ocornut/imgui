@@ -111,7 +111,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
 
- - 2014/11/26 (1.17) retired IMGUI_ONCE_UPON_A_FRAME helper macro in favor of ImGuiOnceUponAFrame type that works on all compilers.
+ - 2014/11/26 (1.17) reworked syntax of IMGUI_ONCE_UPON_A_FRAME helper macro to increase compiler compatibility
  - 2014/11/07 (1.15) renamed IsHovered() to IsItemHovered()
  - 2014/10/02 (1.14) renamed IMGUI_INCLUDE_IMGUI_USER_CPP to IMGUI_INCLUDE_IMGUI_USER_INL and imgui_user.cpp to imgui_user.inl (more IDE friendly)
  - 2014/09/25 (1.13) removed 'text_end' parameter from IO.SetClipboardTextFn (the string is now always zero-terminated for simplicity)
@@ -158,7 +158,7 @@
       e.g. "##Foobar" display an empty label and uses "##Foobar" as ID
    - read articles about the imgui principles (see web links) to understand the requirement and use of ID.
 
- - tip: the construct 'static ImGuiOnceUponAFrame once; if (once)' will evaluate to 'true' only once a frame, you can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
+ - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will evaluate to a block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can call Render() multiple times (e.g for VR renders), up to you to communicate the extra state to your RenderDrawListFn function.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
  - tip: read the ShowTestWindow() code for more example of how to use ImGui!
@@ -6687,12 +6687,16 @@ void ImGui::ShowTestWindow(bool* open)
             ImGui::EndTooltip();
         }
 
-        //static ImGuiOnceUponAFrame oaf;
-        //if (oaf) ImGui::Text("This will be displayed.");
-        //if (oaf) ImGui::Text("This won't be displayed!");
+        // Testing IMGUI_ONCE_UPON_A_FRAME macro
+        //for (int i = 0; i < 5; i++)
+        //{
+        //	IMGUI_ONCE_UPON_A_FRAME
+        //	{
+        //		ImGui::Text("This will be displayed only once.");
+        //	}
+        //}
 
         ImGui::Separator();
-        ImGui::Text("^ Horizontal separator");
 
         static int item = 1;
         ImGui::Combo("combo", &item, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");

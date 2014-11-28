@@ -122,7 +122,7 @@ public:
 #endif // #ifndef ImVector
 
 // Helpers at bottom of the file:
-// - struct ImGuiOnceUponAFrame         // Execute a block of code once per frame only (convenient for creating UI within deep-nested code that runs multiple times)
+// - IMGUI_ONCE_UPON_A_FRAME            // Execute a block of code once per frame only (convenient for creating UI within deep-nested code that runs multiple times)
 // - struct ImGuiTextFilter             // Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
 // - struct ImGuiTextBuffer             // Text buffer for logging/accumulating text
 // - struct ImGuiStorage                // Custom key value storage (if you need to alter open/close states manually)
@@ -529,9 +529,13 @@ struct ImGuiIO
 
 // Helper: execute a block of code once a frame only
 // Convenient if you want to quickly create an UI within deep-nested code that runs multiple times every frame.
-// Usage: 
-//   static ImGuiOnceUponAFrame once;
-//   if (once) { ... }
+// Usage:
+//   IMGUI_ONCE_UPON_A_FRAME
+//   {
+//      // code block will be executed one per frame
+//   }
+// Attention! the macro expand into 2 statement so make sure you don't use it within e.g. an if() statement without curly braces.
+#define IMGUI_ONCE_UPON_A_FRAME    static ImGuiOnceUponAFrame imgui_oaf##__LINE__; if (imgui_oaf##__LINE__)
 struct ImGuiOnceUponAFrame
 {
     ImGuiOnceUponAFrame() { RefFrame = -1; }
@@ -750,22 +754,22 @@ struct ImFont
     ImVector<int>           IndexLookup;        // (built)
 
     IMGUI_API ImFont();
-    IMGUI_API ~ImFont()      { Clear(); }
+    IMGUI_API ~ImFont()         { Clear(); }
 
-    IMGUI_API bool                 LoadFromMemory(const void* data, size_t data_size);
-    IMGUI_API bool                 LoadFromFile(const char* filename);
-    IMGUI_API void                 Clear();
-    IMGUI_API void                 BuildLookupTable();
-    IMGUI_API const FntGlyph *     FindGlyph(unsigned short c, const FntGlyph* fallback = NULL) const;
-    IMGUI_API float                GetFontSize() const { return (float)Info->FontSize; }
-    IMGUI_API bool                 IsLoaded() const { return Info != NULL && Common != NULL && Glyphs != NULL; }
+    IMGUI_API bool			    LoadFromMemory(const void* data, size_t data_size);
+    IMGUI_API bool              LoadFromFile(const char* filename);
+    IMGUI_API void              Clear();
+    IMGUI_API void              BuildLookupTable();
+    IMGUI_API const FntGlyph*   FindGlyph(unsigned short c, const FntGlyph* fallback = NULL) const;
+    IMGUI_API float             GetFontSize() const { return (float)Info->FontSize; }
+    IMGUI_API bool              IsLoaded() const { return Info != NULL && Common != NULL && Glyphs != NULL; }
 
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
     // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
-    IMGUI_API ImVec2               CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
-    IMGUI_API ImVec2               CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;                 // wchar
-    IMGUI_API void                 RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width = 0.0f) const;
+    IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
+    IMGUI_API ImVec2            CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;                 // wchar
+    IMGUI_API void              RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width = 0.0f) const;
 
 private:
-    IMGUI_API const char*          CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width, const FntGlyph* fallback_glyph) const;
+    IMGUI_API const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width, const FntGlyph* fallback_glyph) const;
 };
