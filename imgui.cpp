@@ -163,9 +163,10 @@
  ==================
 
  - misc: merge or clarify ImVec4 / ImGuiAabb, they are essentially duplicate containers
- - window: autofit is losing its purpose when user relies on any dynamic layout (window width multiplier, column). maybe just discard autofit?
+ - window: autofit is losing its purpose when user relies on any dynamic layout (window width multiplier, column). maybe just clearly discard autofit?
  - window: add horizontal scroll
  - window: fix resize grip rendering scaling along with Rounding style setting
+ - window: better helpers to set pos/size/collapsed with different options (first-run, session only, current value) (github issue #89)
  - widgets: switching from "widget-label" to "label-widget" would make it more convenient to integrate widgets in trees
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
  - main: make IsHovered() more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
@@ -179,7 +180,7 @@
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills)
  - columns: columns header to act as button (~sort op) and allow resize/reorder
  - columns: user specify columns size
- - combo: turn child handling code into popup helper
+ - combo: turn child handling code into pop up helper
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
  - plot: make it easier for user to draw into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
@@ -205,12 +206,14 @@
  - input: rework IO to be able to pass actual events to fix temporal aliasing issues.
  - input: support track pad style scrolling & slider edit.
  - tooltip: move to fit within screen (e.g. when mouse cursor is right of the screen).
- - clipboard: automatically transform \n into \n\r or equivalent for higher compability on windows
+ - clipboard: automatically transform \n into \n\r or equivalent for higher compatibility on windows
  - portability: big-endian test/support (github issue #81)
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL
  - misc: not thread-safe
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - style editor: add a button to output C code.
+ - examples: integrate dx11 example.
+ - examples: integrate opengl 3/4 programmable pipeline example.
  - optimization/render: use indexed rendering
  - optimization/render: move clip-rect to vertex data? would allow merging all commands
  - optimization/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
@@ -4011,7 +4014,9 @@ bool ImGui::Checkbox(const char* label, bool* v)
     RenderFrame(check_bb.Min, check_bb.Max, window->Color(hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg));
     if (*v)
     {
-        window->DrawList->AddRectFilled(check_bb.Min+ImVec2(3,3), check_bb.Max-ImVec2(3,3), window->Color(ImGuiCol_CheckActive));
+		const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
+		const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
+        window->DrawList->AddRectFilled(check_bb.Min+ImVec2(pad,pad), check_bb.Max-ImVec2(pad,pad), window->Color(ImGuiCol_CheckActive));
     }
 
     if (g.LogEnabled)
@@ -4067,7 +4072,11 @@ bool ImGui::RadioButton(const char* label, bool active)
 
     window->DrawList->AddCircleFilled(center, radius, window->Color(hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg), 16);
     if (active)
-        window->DrawList->AddCircleFilled(center, radius-3.0f, window->Color(ImGuiCol_CheckActive), 16);
+	{
+		const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
+		const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
+        window->DrawList->AddCircleFilled(center, radius-pad, window->Color(ImGuiCol_CheckActive), 16);
+	}
 
     if (window->Flags & ImGuiWindowFlags_ShowBorders)
     {
@@ -7297,9 +7306,9 @@ static void ShowExampleAppLongText(bool* open)
 // SOFTWARE.
 */
 //-----------------------------------------------------------------------------
-// Exported with bmfont (www.angelcode.com/products/bmfont), size 13, no anti-aliasing
+// Fonts exported with BMFont http://www.angelcode.com/products/bmfont
 // We are using bmfont format and you can load your own font from a file by setting up ImGui::GetIO().Font
-// PNG reduced in size with pngout.exe
+// PNG further compressed with pngout.exe http://advsys.net/ken/utils.htm
 // Manually converted to C++ array using the following program:
 /*
 static void binary_to_c(const char* name_in, const char* symbol)
