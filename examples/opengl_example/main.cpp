@@ -224,7 +224,7 @@ void InitImGui()
     IM_ASSERT(tex_data != NULL);
 #else
     // Custom font from filesystem
-    io.Font = new ImBitmapFont();
+    io.Font = new ImFont();
     io.Font->LoadFromFile("../../extra_fonts/mplus-2m-medium_18.fnt");
     IM_ASSERT(io.Font->IsLoaded());
 

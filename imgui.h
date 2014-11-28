@@ -7,7 +7,7 @@
 #pragma once
 
 struct ImDrawList;
-struct ImBitmapFont;
+struct ImFont;
 struct ImGuiAabb;
 struct ImGuiIO;
 struct ImGuiStorage;
@@ -38,7 +38,6 @@ typedef int ImGuiKey;               // enum ImGuiKey_
 typedef int ImGuiColorEditMode;     // enum ImGuiColorEditMode_
 typedef int ImGuiWindowFlags;       // enum ImGuiWindowFlags_
 typedef int ImGuiInputTextFlags;    // enum ImGuiInputTextFlags_
-typedef ImBitmapFont* ImFont;
 struct ImGuiTextEditCallbackData;
 
 struct ImVec2
@@ -159,7 +158,7 @@ namespace ImGui
     IMGUI_API ImVec2        GetWindowContentRegionMin();                                        // window boundaries
     IMGUI_API ImVec2        GetWindowContentRegionMax();
     IMGUI_API ImDrawList*   GetWindowDrawList();                                                // get rendering command-list if you want to append your own draw primitives.
-    IMGUI_API ImFont        GetWindowFont();
+    IMGUI_API ImFont*       GetWindowFont();
     IMGUI_API float         GetWindowFontSize();
     IMGUI_API void          SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontBaseScale if you want to scale all windows together.
     IMGUI_API void          SetScrollPosHere();                                                 // adjust scrolling position to center into the current cursor position.
@@ -455,7 +454,7 @@ struct ImGuiIO
     float       MouseDoubleClickTime;       // = 0.30f                  // Time for a double-click, in seconds.
     float       MouseDoubleClickMaxDist;    // = 6.0f                   // Distance threshold to stay in to validate a double-click, in pixels.
     int         KeyMap[ImGuiKey_COUNT];     // <unset>                  // Map of indices into the KeysDown[512] entries array
-    ImFont      Font;                       // <auto>                   // Gets passed to text functions. Typedef ImFont to the type you want (ImBitmapFont* or your own font).
+    ImFont*     Font;                       // <auto>                   // Font
     float       FontYOffset;                // = 0.0f                   // Offset font rendering by xx pixels in Y axis.
     ImVec2      FontTexUvForWhite;          // = (0.0f,0.0f)            // Font texture must have a white pixel at this UV coordinate. Adjust if you are using custom texture.
     float       FontBaseScale;              // = 1.0f                   // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
@@ -682,18 +681,17 @@ struct ImDrawList
     IMGUI_API void  AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
     IMGUI_API void  AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
     IMGUI_API void  AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, int a_max, bool tris = false, const ImVec2& third_point_offset = ImVec2(0,0));
-    IMGUI_API void  AddText(ImFont font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f);
+    IMGUI_API void  AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f);
 };
 
 // Optional bitmap font data loader & renderer into vertices
-//  #define ImFont to ImBitmapFont to use
 // Using the .fnt format exported by BMFont
 //  - tool: http://www.angelcode.com/products/bmfont
 //  - file-format: http://www.angelcode.com/products/bmfont/doc/file_format.html
 // Assume valid file data (won't handle invalid/malicious data)
 // Handle a subset of parameters.
 //  - kerning pair are not supported (because ImGui code does per-character CalcTextSize calls, need to turn it into something more stateful to allow kerning)
-struct ImBitmapFont
+struct ImFont
 {
 #pragma pack(push, 1)
     struct FntInfo
@@ -751,8 +749,8 @@ struct ImBitmapFont
     ImVector<const char*>   Filenames;          // (point into raw data)
     ImVector<int>           IndexLookup;        // (built)
 
-    IMGUI_API ImBitmapFont();
-    IMGUI_API ~ImBitmapFont()      { Clear(); }
+    IMGUI_API ImFont();
+    IMGUI_API ~ImFont()      { Clear(); }
 
     IMGUI_API bool                 LoadFromMemory(const void* data, size_t data_size);
     IMGUI_API bool                 LoadFromFile(const char* filename);

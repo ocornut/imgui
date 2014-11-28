@@ -39,7 +39,7 @@ Configure bmfont:
   1. Load the .FNT data from 'fnt_data' (NB: this is done for you by default if you don't do anything)
 
     ImGuiIO& io = ImGui::GetIO();
-    io.Font = new ImBitmapFont();
+    io.Font = new ImFont();
     io.Font->LoadFromMemory(fnt_data, fnt_size);
     
   2. Load the .PNG data from 'png_data' into a texture
@@ -66,21 +66,21 @@ Configure bmfont:
     ImGuiIO& io = ImGui::GetIO();
     
     // proggy_clean_13 [default]
-    io.Font = new ImBitmapFont();
+    io.Font = new ImFont();
     io.Font->LoadFromFile("proggy_clean_13.fnt");
     IM_ASSERT(io.Font->IsLoaded());
     io.FontTexUvForWhite = ImVec2(0.0f/256.0f,0.0f/128);
     io.FontYOffset = +1;
 
     // proggy_small_12
-    io.Font = new ImBitmapFont();
+    io.Font = new ImFont();
     io.Font->LoadFromFile("proggy_small_12.fnt");
     IM_ASSERT(io.Font->IsLoaded());
     io.FontTexUvForWhite = ImVec2(84.0f/256.0f,20.0f/64);
     io.FontYOffset = +2;
     
     // proggy_small_14
-    io.Font = new ImBitmapFont();
+    io.Font = new ImFont();
     io.Font->LoadFromFile("proggy_small_14.fnt");
     IM_ASSERT(io.Font->IsLoaded());
     io.FontTexUvForWhite = ImVec2(84.0f/256.0f,20.0f/64);

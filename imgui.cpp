@@ -695,7 +695,7 @@ struct ImGuiTextEditState
     float               CursorAnim;
     ImVec2              LastCursorPos;                  // Cursor position in screen space to be used by IME callback.
     bool                SelectedAllMouseLock;
-    ImFont              Font;
+    ImFont*             Font;
     float               FontSize;
 
     ImGuiTextEditState()                                { memset(this, 0, sizeof(*this)); }
@@ -710,9 +710,9 @@ struct ImGuiTextEditState
     ImVec2              CalcDisplayOffsetFromCharIdx(int i) const;
 
     // Static functions because they are used to render non-focused instances of a text input box
-    static const char*      GetTextPointerClippedA(ImFont font, float font_size, const char* text, float width, ImVec2* out_text_size = NULL);
-    static const ImWchar*   GetTextPointerClippedW(ImFont font, float font_size, const ImWchar* text, float width, ImVec2* out_text_size = NULL);
-    static void             RenderTextScrolledClipped(ImFont font, float font_size, const char* text, ImVec2 pos_base, float width, float scroll_x);
+    static const char*      GetTextPointerClippedA(ImFont* font, float font_size, const char* text, float width, ImVec2* out_text_size = NULL);
+    static const ImWchar*   GetTextPointerClippedW(ImFont* font, float font_size, const ImWchar* text, float width, ImVec2* out_text_size = NULL);
+    static void             RenderTextScrolledClipped(ImFont* font, float font_size, const char* text, ImVec2 pos_base, float width, float scroll_x);
 };
 
 struct ImGuiIniData
@@ -844,7 +844,7 @@ public:
     void        FocusItemUnregister();
 
     ImGuiAabb   Aabb() const                            { return ImGuiAabb(Pos, Pos+Size); }
-    ImFont      Font() const                            { return GImGui.IO.Font; }
+    ImFont*     Font() const                            { return GImGui.IO.Font; }
     float       FontSize() const                        { return GImGui.FontSize * FontWindowScale; }
     ImVec2      CursorPos() const                       { return DC.CursorPos; }
     float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0 : FontSize() + GImGui.Style.FramePadding.y * 2.0f; }
@@ -1364,8 +1364,8 @@ void ImGui::NewFrame()
             const void* fnt_data;
             unsigned int fnt_size;
             ImGui::GetDefaultFontData(&fnt_data, &fnt_size, NULL, NULL);
-            g.IO.Font = (ImBitmapFont*)ImGui::MemAlloc(sizeof(ImBitmapFont));
-            new(g.IO.Font) ImBitmapFont();
+            g.IO.Font = (ImFont*)ImGui::MemAlloc(sizeof(ImFont));
+            new(g.IO.Font) ImFont();
             g.IO.Font->LoadFromMemory(fnt_data, fnt_size);
             IM_ASSERT(g.IO.Font->IsLoaded());       // Font failed to load
             g.IO.FontYOffset = +1;
@@ -1518,7 +1518,7 @@ void ImGui::Shutdown()
     }
     if (g.IO.Font)
     {
-        g.IO.Font->~ImBitmapFont();
+        g.IO.Font->~ImFont();
         ImGui::MemFree(g.IO.Font);
         g.IO.Font = NULL;
     }
@@ -2818,7 +2818,7 @@ ImDrawList* ImGui::GetWindowDrawList()
     return window->DrawList;
 }
 
-ImFont ImGui::GetWindowFont()
+ImFont* ImGui::GetWindowFont()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->Font();
@@ -4018,8 +4018,8 @@ bool ImGui::Checkbox(const char* label, bool* v)
     RenderFrame(check_bb.Min, check_bb.Max, window->Color(hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg));
     if (*v)
     {
-		const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
-		const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
+        const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
+        const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
         window->DrawList->AddRectFilled(check_bb.Min+ImVec2(pad,pad), check_bb.Max-ImVec2(pad,pad), window->Color(ImGuiCol_CheckActive));
     }
 
@@ -4076,11 +4076,11 @@ bool ImGui::RadioButton(const char* label, bool active)
 
     window->DrawList->AddCircleFilled(center, radius, window->Color(hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg), 16);
     if (active)
-	{
-		const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
-		const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
+    {
+        const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
+        const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
         window->DrawList->AddCircleFilled(center, radius-pad, window->Color(ImGuiCol_CheckActive), 16);
-	}
+    }
 
     if (window->Flags & ImGuiWindowFlags_ShowBorders)
     {
@@ -4191,7 +4191,7 @@ ImVec2 ImGuiTextEditState::CalcDisplayOffsetFromCharIdx(int i) const
 }
 
 // [Static]
-const char* ImGuiTextEditState::GetTextPointerClippedA(ImFont font, float font_size, const char* text, float width, ImVec2* out_text_size)
+const char* ImGuiTextEditState::GetTextPointerClippedA(ImFont* font, float font_size, const char* text, float width, ImVec2* out_text_size)
 {
     if (width <= 0.0f)
         return text;
@@ -4204,7 +4204,7 @@ const char* ImGuiTextEditState::GetTextPointerClippedA(ImFont font, float font_s
 }
 
 // [Static]
-const ImWchar* ImGuiTextEditState::GetTextPointerClippedW(ImFont font, float font_size, const ImWchar* text, float width, ImVec2* out_text_size)
+const ImWchar* ImGuiTextEditState::GetTextPointerClippedW(ImFont* font, float font_size, const ImWchar* text, float width, ImVec2* out_text_size)
 {
     if (width <= 0.0f)
         return text;
@@ -4217,7 +4217,7 @@ const ImWchar* ImGuiTextEditState::GetTextPointerClippedW(ImFont font, float fon
 }
 
 // [Static]
-void ImGuiTextEditState::RenderTextScrolledClipped(ImFont font, float font_size, const char* buf, ImVec2 pos, float width, float scroll_x)
+void ImGuiTextEditState::RenderTextScrolledClipped(ImFont* font, float font_size, const char* buf, ImVec2 pos, float width, float scroll_x)
 {
     // NB- We start drawing at character boundary
     ImVec2 text_size;
@@ -5657,7 +5657,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
     }
 }
 
-void ImDrawList::AddText(ImFont font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width)
+void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width)
 {
     if ((col >> 24) == 0)
         return;
@@ -5684,7 +5684,7 @@ void ImDrawList::AddText(ImFont font, float font_size, const ImVec2& pos, ImU32 
 // ImBitmapFont
 //-----------------------------------------------------------------------------
 
-ImBitmapFont::ImBitmapFont()
+ImFont::ImFont()
 {
     Data = NULL;
     DataSize = 0;
@@ -5698,7 +5698,7 @@ ImBitmapFont::ImBitmapFont()
     TabCount = 4;
 }
 
-void    ImBitmapFont::Clear()
+void    ImFont::Clear()
 {
     if (Data && DataOwned)
         ImGui::MemFree(Data);
@@ -5712,7 +5712,7 @@ void    ImBitmapFont::Clear()
     IndexLookup.clear();
 }
 
-bool    ImBitmapFont::LoadFromFile(const char* filename)
+bool    ImFont::LoadFromFile(const char* filename)
 {
     IM_ASSERT(!IsLoaded());     // Call Clear()
 
@@ -5753,7 +5753,7 @@ bool    ImBitmapFont::LoadFromFile(const char* filename)
     return LoadFromMemory(Data, DataSize);
 }
 
-bool    ImBitmapFont::LoadFromMemory(const void* data, size_t data_size)
+bool    ImFont::LoadFromMemory(const void* data, size_t data_size)
 {
     IM_ASSERT(!IsLoaded());         // Call Clear()
 
@@ -5803,7 +5803,7 @@ bool    ImBitmapFont::LoadFromMemory(const void* data, size_t data_size)
     return true;
 }
 
-void ImBitmapFont::BuildLookupTable()
+void ImFont::BuildLookupTable()
 {
     ImU32 max_c = 0;
     for (size_t i = 0; i != GlyphsCount; i++)
@@ -5818,7 +5818,7 @@ void ImBitmapFont::BuildLookupTable()
         IndexLookup[Glyphs[i].Id] = (int)i;
 }
 
-const ImBitmapFont::FntGlyph* ImBitmapFont::FindGlyph(unsigned short c, const ImBitmapFont::FntGlyph* fallback) const
+const ImFont::FntGlyph* ImFont::FindGlyph(unsigned short c, const ImFont::FntGlyph* fallback) const
 {
     if (c < (int)IndexLookup.size())
     {
@@ -5987,7 +5987,7 @@ static int ImTextCountUtf8BytesFromWchar(const ImWchar* in_text, const ImWchar* 
     return bytes_count;
 }
 
-const char* ImBitmapFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width, const FntGlyph* fallback_glyph) const
+const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width, const FntGlyph* fallback_glyph) const
 {
     // Simple word-wrapping for English, not full-featured. Please submit failing cases!
     // FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
@@ -6089,7 +6089,7 @@ const char* ImBitmapFont::CalcWordWrapPositionA(float scale, const char* text, c
     return s;
 }
 
-ImVec2 ImBitmapFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining) const
+ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // FIXME-OPT
@@ -6180,7 +6180,7 @@ ImVec2 ImBitmapFont::CalcTextSizeA(float size, float max_width, float wrap_width
     return text_size;
 }
 
-ImVec2 ImBitmapFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining) const
+ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining) const
 {
     if (!text_end)
         text_end = text_begin + ImStrlenW(text_begin);
@@ -6238,7 +6238,7 @@ ImVec2 ImBitmapFont::CalcTextSizeW(float size, float max_width, const ImWchar* t
     return text_size;
 }
 
-void ImBitmapFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect_ref, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width) const
+void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect_ref, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin);
@@ -6687,9 +6687,9 @@ void ImGui::ShowTestWindow(bool* open)
             ImGui::EndTooltip();
         }
 
-		//static ImGuiOnceUponAFrame oaf;
-		//if (oaf) ImGui::Text("This will be displayed.");
-		//if (oaf) ImGui::Text("This won't be displayed!");
+        //static ImGuiOnceUponAFrame oaf;
+        //if (oaf) ImGui::Text("This will be displayed.");
+        //if (oaf) ImGui::Text("This won't be displayed!");
 
         ImGui::Separator();
         ImGui::Text("^ Horizontal separator");
