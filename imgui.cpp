@@ -5821,7 +5821,7 @@ void ImFont::BuildLookupTable()
         IndexLookup[Glyphs[i].Id] = (int)i;
 }
 
-const ImFont::FntGlyph* ImFont::FindGlyph(unsigned short c, const ImFont::FntGlyph* fallback) const
+const ImFont::FntGlyph* ImFont::FindGlyph(unsigned short c) const
 {
     if (c < (int)IndexLookup.size())
     {
@@ -5829,7 +5829,7 @@ const ImFont::FntGlyph* ImFont::FindGlyph(unsigned short c, const ImFont::FntGly
         if (i >= 0 && i < (int)GlyphsCount)
             return &Glyphs[i];
     }
-    return fallback;
+    return FallbackGlyph;
 }
 
 // Convert UTF-8 to 32-bits character, process single character input.
@@ -6045,7 +6045,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
         }
         else
         {
-            if (const FntGlyph* glyph = FindGlyph((unsigned short)c, FallbackGlyph))
+            if (const FntGlyph* glyph = FindGlyph((unsigned short)c))
                 char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
         }
 
@@ -6158,7 +6158,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
             if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
                 char_width = (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
         }
-        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c, FallbackGlyph))
+        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c))
         {
             char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
         }
@@ -6216,7 +6216,7 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
         }
         else
         {
-            if (const FntGlyph* glyph = FindGlyph((unsigned short)c, FallbackGlyph))
+            if (const FntGlyph* glyph = FindGlyph((unsigned short)c))
                 char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
         }
 
@@ -6309,7 +6309,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
                 char_width += (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
         }
-        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c, FallbackGlyph))
+        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c))
         {
             char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
             if (c != ' ')

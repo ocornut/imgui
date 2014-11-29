@@ -726,7 +726,7 @@ struct ImFont
     IMGUI_API bool              LoadFromFile(const char* filename);
     IMGUI_API void              Clear();
     IMGUI_API void              BuildLookupTable();
-    IMGUI_API const FntGlyph*   FindGlyph(unsigned short c, const FntGlyph* fallback = NULL) const;
+    IMGUI_API const FntGlyph*   FindGlyph(unsigned short c) const;
     IMGUI_API float             GetFontSize() const { return (float)Info->FontSize; } // before scale!
     IMGUI_API bool              IsLoaded() const { return Info != NULL && Common != NULL && Glyphs != NULL; }
 
