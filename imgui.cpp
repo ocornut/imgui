@@ -111,6 +111,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
 
+ - 2014/11/28 (1.17) moved IO.Font*** options to inside the IO.Font-> structure.
  - 2014/11/26 (1.17) reworked syntax of IMGUI_ONCE_UPON_A_FRAME helper macro to increase compiler compatibility
  - 2014/11/07 (1.15) renamed IsHovered() to IsItemHovered()
  - 2014/10/02 (1.14) renamed IMGUI_INCLUDE_IMGUI_USER_CPP to IMGUI_INCLUDE_IMGUI_USER_INL and imgui_user.cpp to imgui_user.inl (more IDE friendly)
@@ -128,17 +129,13 @@
    - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
    - try adjusting ImGui::GetIO().PixelCenterOffset to 0.5f or 0.375f
 
- - if you can only see text but no solid shapes or lines:
-   - make sure io.FontTexUvForWhite is set to the texture coordinates of a pure white pixel in your texture. 
-     (this is done for you if you are using the default font)
-     (ImGui is using this texture coordinate to draw solid objects so text and solid draw calls can be merged into one.)
-
  - if you want to use a different font than the default:
    - create bitmap font data using BMFont, make sure that BMFont is exporting the .fnt file in Binary mode.
        io.Font = new ImBitmapFont();
        io.Font->LoadFromFile("path_to_your_fnt_file.fnt");
-   - load your texture yourself. texture *MUST* have white pixel at UV coordinate io.FontTexUvForWhite. This is used to draw all solid shapes.
+   - load your texture yourself. texture *MUST* have white pixel at UV coordinate io.Font->TexUvForWhite. This is used to draw all solid shapes.
    - the extra_fonts/ folder provides examples of using external fonts.
+   - if you can only see text but no solid shapes or lines, make sure io.Font->TexUvForWhite is set to the texture coordinates of a pure white pixel in your texture!
 
  - if you are confused about the meaning or use of ID in ImGui:
    - some widgets requires state to be carried over multiple frames (most typically ImGui often wants remember what is the "active" widget).
@@ -350,11 +347,8 @@ ImGuiIO::ImGuiIO()
     IniFilename = "imgui.ini";
     LogFilename = "imgui_log.txt";
     Font = NULL;
-    FontYOffset = 0.0f;
-    FontTexUvForWhite = ImVec2(0.0f,0.0f);
-    FontBaseScale = 1.0f;
+    FontGlobalScale = 1.0f;
     FontAllowUserScaling = false;
-    FontFallbackGlyph = (ImWchar)'?';
     PixelCenterOffset = 0.0f;
     MousePos = ImVec2(-1,-1);
     MousePosPrev = ImVec2(-1,-1);
@@ -731,7 +725,8 @@ struct ImGuiState
     bool                    Initialized;
     ImGuiIO                 IO;
     ImGuiStyle              Style;
-    float                   FontSize;                           // == IO.FontBaseScale * IO.Font->GetFontSize(). Vertical distance between two lines of text, aka == CalcTextSize(" ").y
+    float                   FontSize;                           // == IO.FontGlobalScale * IO.Font->Scale * IO.Font->GetFontSize(). Vertical distance between two lines of text, aka == CalcTextSize(" ").y
+    ImVec2                  FontTexUvForWhite;                  // == IO.Font->FontTexUvForWhite (cached copy)
 
     float                   Time;
     int                     FrameCount;
@@ -1348,7 +1343,6 @@ void ImGui::NewFrame()
     IM_ASSERT(g.IO.DeltaTime > 0.0f);
     IM_ASSERT(g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f);
     IM_ASSERT(g.IO.RenderDrawListsFn != NULL);  // Must be implemented
-    IM_ASSERT(g.IO.FontBaseScale > 0.0f);
 
     if (!g.Initialized)
     {
@@ -1368,16 +1362,20 @@ void ImGui::NewFrame()
             new(g.IO.Font) ImFont();
             g.IO.Font->LoadFromMemory(fnt_data, fnt_size);
             IM_ASSERT(g.IO.Font->IsLoaded());       // Font failed to load
-            g.IO.FontYOffset = +1;
+            g.IO.Font->DisplayOffset = ImVec2(0.0f, +1.0f);
         }
         g.Initialized = true;
     }
+
     IM_ASSERT(g.IO.Font && g.IO.Font->IsLoaded());  // Font not loaded
+    IM_ASSERT(g.IO.Font->Scale > 0.0f);
+    g.FontSize = g.IO.FontGlobalScale * g.IO.Font->GetFontSize() * g.IO.Font->Scale;
+    g.FontTexUvForWhite = g.IO.Font->TexUvForWhite;
+    g.IO.Font->FallbackGlyph = g.IO.Font->FindGlyph(g.IO.Font->FallbackChar);
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
     g.Tooltip[0] = '\0';
-    g.FontSize = g.IO.FontBaseScale * g.IO.Font->GetFontSize();
 
     // Update inputs state
     if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0)
@@ -5454,7 +5452,7 @@ void ImDrawList::AddVtx(const ImVec2& pos, ImU32 col)
 {
     vtx_write->pos = pos;
     vtx_write->col = col;
-    vtx_write->uv = GImGui.IO.FontTexUvForWhite;
+    vtx_write->uv = GImGui.FontTexUvForWhite;
     vtx_write++;
 }
 
@@ -5686,6 +5684,11 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
 
 ImFont::ImFont()
 {
+    Scale = 1.0f;
+    DisplayOffset = ImVec2(0.0f,0.0f);
+    TexUvForWhite = ImVec2(0.0f,0.0f);
+    FallbackChar = (ImWchar)'?';
+
     Data = NULL;
     DataSize = 0;
     DataOwned = false;
@@ -5695,7 +5698,6 @@ ImFont::ImFont()
     GlyphsCount = 0;
     Kerning = NULL;
     KerningCount = 0;
-    TabCount = 4;
 }
 
 void    ImFont::Clear()
@@ -5790,10 +5792,11 @@ bool    ImFont::LoadFromMemory(const void* data, size_t data_size)
             Glyphs = (FntGlyph*)p;
             GlyphsCount = block_size / sizeof(FntGlyph);
             break;
-        default:
+        case 5:
             IM_ASSERT(Kerning == NULL && KerningCount == 0);
             Kerning = (FntKerning*)p;
             KerningCount = block_size / sizeof(FntKerning);
+        default:
             break;
         }
         p += block_size;
@@ -5987,7 +5990,7 @@ static int ImTextCountUtf8BytesFromWchar(const ImWchar* in_text, const ImWchar* 
     return bytes_count;
 }
 
-const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width, const FntGlyph* fallback_glyph) const
+const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const
 {
     // Simple word-wrapping for English, not full-featured. Please submit failing cases!
     // FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
@@ -6042,7 +6045,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
         }
         else
         {
-            if (const FntGlyph* glyph = FindGlyph((unsigned short)c, fallback_glyph))
+            if (const FntGlyph* glyph = FindGlyph((unsigned short)c, FallbackGlyph))
                 char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
         }
 
@@ -6096,7 +6099,6 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
 
     const float scale = size / (float)Info->FontSize;
     const float line_height = (float)Info->FontSize * scale;
-    const FntGlyph* fallback_glyph = FindGlyph(GImGui.IO.FontFallbackGlyph);
 
     ImVec2 text_size = ImVec2(0,0);
     float line_width = 0.0f;
@@ -6112,7 +6114,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
             {
-                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - line_width, fallback_glyph);
+                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - line_width);
                 if (word_wrap_eol == s) // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
                     word_wrap_eol++;    // +1 may not be a character start point in UTF-8 but it's ok because we use s >= word_wrap_eol below
             }
@@ -6156,7 +6158,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
             if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
                 char_width = (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
         }
-        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c, fallback_glyph))
+        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c, FallbackGlyph))
         {
             char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
         }
@@ -6187,7 +6189,6 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
 
     const float scale = size / (float)Info->FontSize;
     const float line_height = (float)Info->FontSize * scale;
-    const FntGlyph* fallback_glyph = FindGlyph(GImGui.IO.FontFallbackGlyph);
 
     ImVec2 text_size = ImVec2(0,0);
     float line_width = 0.0f;
@@ -6215,7 +6216,7 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
         }
         else
         {
-            if (const FntGlyph* glyph = FindGlyph((unsigned short)c, fallback_glyph))
+            if (const FntGlyph* glyph = FindGlyph((unsigned short)c, FallbackGlyph))
                 char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
         }
 
@@ -6248,11 +6249,10 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
     const float tex_scale_x = 1.0f / (float)Common->ScaleW;
     const float tex_scale_y = 1.0f / (float)(Common->ScaleH);
     const float outline = (float)Info->Outline;
-    const FntGlyph* fallback_glyph = FindGlyph(GImGui.IO.FontFallbackGlyph);
 
     // Align to be pixel perfect
-    pos.x = (float)(int)pos.x;
-    pos.y = (float)(int)pos.y + GImGui.IO.FontYOffset;
+    pos.x = (float)(int)pos.x + DisplayOffset.x;
+    pos.y = (float)(int)pos.y + DisplayOffset.y;
 
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
@@ -6269,7 +6269,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
             {
-                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - (x - pos.x), fallback_glyph);
+                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - (x - pos.x));
                 if (word_wrap_eol == s) // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
                     word_wrap_eol++;    // +1 may not be a character start point in UTF-8 but it's ok because we use s >= word_wrap_eol below
             }
@@ -6309,7 +6309,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             if (const FntGlyph* glyph = FindGlyph((unsigned short)' '))
                 char_width += (glyph->XAdvance + Info->SpacingHoriz) * 4 * scale;
         }
-        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c, fallback_glyph))
+        else if (const FntGlyph* glyph = FindGlyph((unsigned short)c, FallbackGlyph))
         {
             char_width = (glyph->XAdvance + Info->SpacingHoriz) * scale;
             if (c != ' ')
@@ -6525,6 +6525,20 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::TreePop();
     }
 
+    /*
+    // Font scaling options
+    // Note that those are not actually part of the style.
+    if (ImGui::TreeNode("Font"))
+    {
+        static float window_scale = 1.0f;
+        ImGui::SliderFloat("window scale", &window_scale, 0.3f, 2.0f, "%.1f");                   // scale only this window
+        ImGui::SliderFloat("font scale", &ImGui::GetIO().Font->Scale, 0.3f, 2.0f, "%.1f");       // scale only this font
+        ImGui::SliderFloat("global scale", &ImGui::GetIO().FontGlobalScale, 0.3f, 2.0f, "%.1f"); // scale everything
+        ImGui::SetWindowFontScale(window_scale);
+        ImGui::TreePop();
+    }
+    */
+
     ImGui::PopItemWidth();
 }
 
@@ -6569,6 +6583,7 @@ void ImGui::ShowTestWindow(bool* open)
         ImGui::Checkbox("no move", &no_move); ImGui::SameLine(150);
         ImGui::Checkbox("no scrollbar", &no_scrollbar);
         ImGui::SliderFloat("fill alpha", &fill_alpha, 0.0f, 1.0f);
+
         if (ImGui::TreeNode("Style Editor"))
         {
             ImGui::ShowStyleEditor();

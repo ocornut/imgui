@@ -233,11 +233,11 @@ void InitImGui()
     IM_ASSERT(tex_data != NULL);
     
     // Automatically find white pixel from the texture we just loaded
-    // (io.FontTexUvForWhite needs to contains UV coordinates pointing to a white pixel in order to render solid objects)
+    // (io.Font->TexUvForWhite needs to contains UV coordinates pointing to a white pixel in order to render solid objects)
     for (int tex_data_off = 0; tex_data_off < tex_x*tex_y; tex_data_off++)
         if (((unsigned int*)tex_data)[tex_data_off] == 0xffffffff)
         {
-            io.FontTexUvForWhite = ImVec2((float)(tex_data_off % tex_x)/(tex_x), (float)(tex_data_off / tex_x)/(tex_y));
+            io.Font->TexUvForWhite = ImVec2((float)(tex_data_off % tex_x)/(tex_x), (float)(tex_data_off / tex_x)/(tex_y));
             break;
         }
 #endif

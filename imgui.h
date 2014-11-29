@@ -30,8 +30,8 @@ struct ImGuiWindow;
 #endif
 
 typedef unsigned int ImU32;
-typedef unsigned short ImWchar;
-typedef ImU32 ImGuiID;
+typedef unsigned short ImWchar;     // hold a character for display
+typedef ImU32 ImGuiID;              // hold widget unique ID
 typedef int ImGuiCol;               // enum ImGuiCol_
 typedef int ImGuiStyleVar;          // enum ImGuiStyleVar_
 typedef int ImGuiKey;               // enum ImGuiKey_
@@ -160,7 +160,7 @@ namespace ImGui
     IMGUI_API ImDrawList*   GetWindowDrawList();                                                // get rendering command-list if you want to append your own draw primitives.
     IMGUI_API ImFont*       GetWindowFont();
     IMGUI_API float         GetWindowFontSize();
-    IMGUI_API void          SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontBaseScale if you want to scale all windows together.
+    IMGUI_API void          SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontGlobalScale if you want to scale all windows.
     IMGUI_API void          SetScrollPosHere();                                                 // adjust scrolling position to center into the current cursor position.
     IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use 'offset' to access sub components of a multiple component widget.
     IMGUI_API void          SetTreeStateStorage(ImGuiStorage* tree);                            // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it).
@@ -454,12 +454,9 @@ struct ImGuiIO
     float       MouseDoubleClickTime;       // = 0.30f                  // Time for a double-click, in seconds.
     float       MouseDoubleClickMaxDist;    // = 6.0f                   // Distance threshold to stay in to validate a double-click, in pixels.
     int         KeyMap[ImGuiKey_COUNT];     // <unset>                  // Map of indices into the KeysDown[512] entries array
-    ImFont*     Font;                       // <auto>                   // Font
-    float       FontYOffset;                // = 0.0f                   // Offset font rendering by xx pixels in Y axis.
-    ImVec2      FontTexUvForWhite;          // = (0.0f,0.0f)            // Font texture must have a white pixel at this UV coordinate. Adjust if you are using custom texture.
-    float       FontBaseScale;              // = 1.0f                   // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
-    bool        FontAllowUserScaling;       // = false                  // Set to allow scaling text with CTRL+Wheel.
-    ImWchar     FontFallbackGlyph;          // = '?'                    // Replacement glyph is one isn't found.
+    ImFont*     Font;                       // <auto>                   // Font (also see 'Settings' fields inside ImFont structure for details)
+    float       FontGlobalScale;            // = 1.0f                   // Global scale all fonts
+    bool        FontAllowUserScaling;       // = false                  // Allow user scaling text of individual window with CTRL+Wheel.
     float       PixelCenterOffset;          // = 0.0f                   // Try to set to 0.5f or 0.375f if rendering is blurry
 
     void*       UserData;                   // = NULL                   // Store your own data for retrieval by callbacks.
@@ -693,10 +690,54 @@ struct ImDrawList
 //  - tool: http://www.angelcode.com/products/bmfont
 //  - file-format: http://www.angelcode.com/products/bmfont/doc/file_format.html
 // Assume valid file data (won't handle invalid/malicious data)
-// Handle a subset of parameters.
-//  - kerning pair are not supported (because ImGui code does per-character CalcTextSize calls, need to turn it into something more stateful to allow kerning)
+// Handle a subset of the options, namely:
+//  - kerning pair are not supported (because some ImGui code does per-character CalcTextSize calls, need to turn it into something more state-ful to allow for kerning)
 struct ImFont
 {
+    struct FntInfo;
+    struct FntCommon;
+    struct FntGlyph;
+    struct FntKerning;
+
+    // Settings
+    float                       Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
+    ImVec2                      DisplayOffset;      // = (0.0f,0.0f    // Offset font rendering by xx pixels
+    ImVec2                      TexUvForWhite;      // = (0.0f,0.0f)   // Font texture must have a white pixel at this UV coordinate. Adjust if you are using custom texture.
+    ImWchar                     FallbackChar;       // = '?'           // Replacement glyph is one isn't found.
+
+    // Data
+    unsigned char*              Data;               // Raw data, content of .fnt file
+    size_t                      DataSize;           //
+    bool                        DataOwned;          // 
+    const FntInfo*              Info;               // (point into raw data)
+    const FntCommon*            Common;             // (point into raw data)
+    const FntGlyph*             Glyphs;             // (point into raw data)
+    size_t                      GlyphsCount;        //
+    const FntKerning*           Kerning;            // (point into raw data) - NB: kerning is unsupported
+    size_t                      KerningCount;       //
+    ImVector<const char*>       Filenames;          // (point into raw data)
+    ImVector<int>               IndexLookup;        // (built)
+    const FntGlyph*             FallbackGlyph;      // == FindGlyph(FontFallbackChar)
+
+    IMGUI_API ImFont();
+    IMGUI_API ~ImFont()         { Clear(); }
+
+    IMGUI_API bool			    LoadFromMemory(const void* data, size_t data_size);
+    IMGUI_API bool              LoadFromFile(const char* filename);
+    IMGUI_API void              Clear();
+    IMGUI_API void              BuildLookupTable();
+    IMGUI_API const FntGlyph*   FindGlyph(unsigned short c, const FntGlyph* fallback = NULL) const;
+    IMGUI_API float             GetFontSize() const { return (float)Info->FontSize; } // before scale!
+    IMGUI_API bool              IsLoaded() const { return Info != NULL && Common != NULL && Glyphs != NULL; }
+
+    // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
+    // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
+    IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
+    IMGUI_API ImVec2            CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;                 // wchar
+    IMGUI_API void              RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width = 0.0f) const;
+
+    IMGUI_API const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
+
 #pragma pack(push, 1)
     struct FntInfo
     {
@@ -706,15 +747,13 @@ struct ImFont
         unsigned short  StretchH;
         unsigned char   AA;
         unsigned char   PaddingUp, PaddingRight, PaddingDown, PaddingLeft;
-        unsigned char   SpacingHoriz, SpacingVert;
-        unsigned char   Outline;
+        unsigned char   SpacingHoriz, SpacingVert, Outline;
         //char          FontName[];
     };
 
     struct FntCommon
     {
-        unsigned short  LineHeight;
-        unsigned short  Base;
+        unsigned short  LineHeight, Base;
         unsigned short  ScaleW, ScaleH;
         unsigned short  Pages;
         unsigned char   BitField;
@@ -724,8 +763,7 @@ struct ImFont
     struct FntGlyph
     {
         unsigned int    Id;
-        unsigned short  X, Y;
-        unsigned short  Width, Height;
+        unsigned short  X, Y, Width, Height;
         signed short    XOffset, YOffset;
         signed short    XAdvance;
         unsigned char   Page;
@@ -739,37 +777,4 @@ struct ImFont
         signed short    Amount;
     };
 #pragma pack(pop)
-
-    unsigned char*              Data;               // Raw data, content of .fnt file
-    size_t                      DataSize;           //
-    bool                        DataOwned;          // 
-    const FntInfo*              Info;               // (point into raw data)
-    const FntCommon*            Common;             // (point into raw data)
-    const FntGlyph*             Glyphs;             // (point into raw data)
-    size_t                      GlyphsCount;        //
-    const FntKerning*           Kerning;            // (point into raw data)
-    size_t                      KerningCount;       //
-    int                         TabCount;           // FIXME: mishandled (add fixed amount instead of aligning to column)
-    ImVector<const char*>       Filenames;          // (point into raw data)
-    ImVector<int>               IndexLookup;        // (built)
-
-    IMGUI_API ImFont();
-    IMGUI_API ~ImFont()         { Clear(); }
-
-    IMGUI_API bool			    LoadFromMemory(const void* data, size_t data_size);
-    IMGUI_API bool              LoadFromFile(const char* filename);
-    IMGUI_API void              Clear();
-    IMGUI_API void              BuildLookupTable();
-    IMGUI_API const FntGlyph*   FindGlyph(unsigned short c, const FntGlyph* fallback = NULL) const;
-    IMGUI_API float             GetFontSize() const { return (float)Info->FontSize; }
-    IMGUI_API bool              IsLoaded() const { return Info != NULL && Common != NULL && Glyphs != NULL; }
-
-    // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
-    // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
-    IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
-    IMGUI_API ImVec2            CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;                 // wchar
-    IMGUI_API void              RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width = 0.0f) const;
-
-private:
-    IMGUI_API const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width, const FntGlyph* fallback_glyph) const;
 };

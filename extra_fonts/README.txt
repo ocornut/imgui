@@ -48,16 +48,16 @@ Configure bmfont:
 
 (B) Use fonts from external files
 
-  You need to set io.FontTexUvForWhite to UV coordinates pointing to a white pixel in the texture.
+  You need to set io.Font->TexUvForWhite to UV coordinates pointing to a white pixel in the texture.
   You can either locate a white pixel manually or use code at runtime to find or write one.
   The OpenGL example include sample code to find a white pixel given an uncompressed 32-bits texture:
 
   	  // Automatically find white pixel from the texture we just loaded
-	  // (io.FontTexUvForWhite needs to contains UV coordinates pointing to a white pixel in order to render solid objects)
+	  // (io.Font->TexUvForWhite needs to contains UV coordinates pointing to a white pixel in order to render solid objects)
 	  for (int tex_data_off = 0; tex_data_off < tex_x*tex_y; tex_data_off++)
 	      if (((unsigned int*)tex_data)[tex_data_off] == 0xffffffff)
 	      {
-	          io.FontTexUvForWhite = ImVec2((float)(tex_data_off % tex_x)/(tex_x), (float)(tex_data_off / tex_x)/(tex_y));
+	          io.Font->TexUvForWhite = ImVec2((float)(tex_data_off % tex_x)/(tex_x), (float)(tex_data_off / tex_x)/(tex_y));
 	          break;
 	      }
 
@@ -69,30 +69,30 @@ Configure bmfont:
     io.Font = new ImFont();
     io.Font->LoadFromFile("proggy_clean_13.fnt");
     IM_ASSERT(io.Font->IsLoaded());
-    io.FontTexUvForWhite = ImVec2(0.0f/256.0f,0.0f/128);
-    io.FontYOffset = +1;
+    io.Font->TexUvForWhite = ImVec2(0.0f/256.0f,0.0f/128);
+    io.Font->DisplayOffset = ImVec2(0.0f, +1.0f);
 
     // proggy_small_12
     io.Font = new ImFont();
     io.Font->LoadFromFile("proggy_small_12.fnt");
     IM_ASSERT(io.Font->IsLoaded());
-    io.FontTexUvForWhite = ImVec2(84.0f/256.0f,20.0f/64);
-    io.FontYOffset = +2;
+    io.Font->TexUvForWhite = ImVec2(84.0f/256.0f,20.0f/64);
+    io.Font->DisplayOffset = ImVec2(0.0f, +2.0f);
     
     // proggy_small_14
     io.Font = new ImFont();
     io.Font->LoadFromFile("proggy_small_14.fnt");
     IM_ASSERT(io.Font->IsLoaded());
-    io.FontTexUvForWhite = ImVec2(84.0f/256.0f,20.0f/64);
-    io.FontYOffset = +3;
+    io.Font->TexUvForWhite = ImVec2(84.0f/256.0f,20.0f/64);
+    io.Font->DisplayOffset = ImVec2(0.0f, +3.0f);
     
     // courier_new_16
     io.Font->LoadFromFile("courier_new_16.fnt");
-    io.FontTexUvForWhite = ImVec2(1.0f/256.0f,4.0f/128);
+    io.Font->TexUvForWhite = ImVec2(1.0f/256.0f,4.0f/128);
     
     // courier_new_18
     io.Font->LoadFromFile("courier_new_18.fnt");
-    io.FontTexUvForWhite = ImVec2(4.0f/256.0f,5.0f/256);
+    io.Font->TexUvForWhite = ImVec2(4.0f/256.0f,5.0f/256);
 
 
   2. Load the matching .PNG data into a texture
