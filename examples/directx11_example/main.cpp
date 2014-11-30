@@ -157,15 +157,10 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 
 HRESULT InitD3D(HWND hWnd)
 {
-    IDXGIFactory1* pFactory = NULL;
-    CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&pFactory);
-
+    // Setup swap chain
     DXGI_SWAP_CHAIN_DESC sd;
-    // Setup the swap chain
     {
-        // Setup swap chain
         ZeroMemory(&sd, sizeof(sd));
-
         sd.BufferCount = 2;
         sd.BufferDesc.Width = (UINT)ImGui::GetIO().DisplaySize.x;
         sd.BufferDesc.Height = (UINT)ImGui::GetIO().DisplaySize.y;
@@ -208,41 +203,37 @@ HRESULT InitD3D(HWND hWnd)
         else
             RSDesc.MultisampleEnable = FALSE;
 
-        ID3D11RasterizerState* g_pRState = NULL;
-        g_pd3dDevice->CreateRasterizerState(&RSDesc, &g_pRState);
-        g_pd3dDeviceImmediateContext->RSSetState(g_pRState);
+		ID3D11RasterizerState* pRState = NULL;
+        g_pd3dDevice->CreateRasterizerState(&RSDesc, &pRState);
+        g_pd3dDeviceImmediateContext->RSSetState(pRState);
+		pRState->Release();
     }
 
     // Create the render target
     {
-        ID3D11Texture2D* g_pBackBuffer;				
+        ID3D11Texture2D* pBackBuffer;				
         D3D11_RENDER_TARGET_VIEW_DESC render_target_view_desc;
         ZeroMemory(&render_target_view_desc, sizeof(render_target_view_desc));
         render_target_view_desc.Format = sd.BufferDesc.Format;
         render_target_view_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-
-        g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&g_pBackBuffer);
-        g_pd3dDevice->CreateRenderTargetView(g_pBackBuffer, &render_target_view_desc, &g_mainRenderTargetView);
-
+        g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
+        g_pd3dDevice->CreateRenderTargetView(pBackBuffer, &render_target_view_desc, &g_mainRenderTargetView);
         g_pd3dDeviceImmediateContext->OMSetRenderTargets(1, &g_mainRenderTargetView, NULL);
+        pBackBuffer->Release();
     }
-
 
     // Create the vertex shader
     {
-        ID3D10Blob * pErrorBlob;
+        ID3D10Blob * pErrorBlob = NULL;
         D3DCompile(vertexShader, strlen(vertexShader), NULL, NULL, NULL, "main", "vs_5_0", 0, 0, &g_pVertexShaderBlob, &pErrorBlob);
-
         if (g_pVertexShaderBlob == NULL)
         {
-            const char* pError = (const char*)pErrorBlob->GetBufferPointer();
+            //const char* pError = (const char*)pErrorBlob->GetBufferPointer();
             pErrorBlob->Release();
             return E_FAIL;
         }
-
         if (g_pd3dDevice->CreateVertexShader((DWORD*)g_pVertexShaderBlob->GetBufferPointer(), g_pVertexShaderBlob->GetBufferSize(), NULL, &g_pVertexShader) != S_OK)
             return E_FAIL;
-
         if (pErrorBlob)
             pErrorBlob->Release();
 
@@ -272,17 +263,14 @@ HRESULT InitD3D(HWND hWnd)
     {
         ID3D10Blob * pErrorBlob;
         D3DCompile(pixelShader, strlen(pixelShader), NULL, NULL, NULL, "main", "ps_5_0", 0, 0, &g_pPixelShaderBlob, &pErrorBlob);
-
         if (g_pPixelShaderBlob == NULL)
         {
-            const char* pError = (const char*)pErrorBlob->GetBufferPointer();
+            //const char* pError = (const char*)pErrorBlob->GetBufferPointer();
             pErrorBlob->Release();
             return E_FAIL;
         }
-
         if (g_pd3dDevice->CreatePixelShader((DWORD*)g_pPixelShaderBlob->GetBufferPointer(), g_pPixelShaderBlob->GetBufferSize(), NULL, &g_pPixelShader) != S_OK)
             return E_FAIL;
-
         if (pErrorBlob)
             pErrorBlob->Release();
     }
@@ -304,6 +292,27 @@ HRESULT InitD3D(HWND hWnd)
     }
 
     return S_OK;
+}
+
+void Cleanup()
+{
+    if (g_pd3dDeviceImmediateContext) g_pd3dDeviceImmediateContext->ClearState();
+
+    if (g_pFontSampler) g_pFontSampler->Release();
+    if (g_pFontTextureView) g_pFontTextureView->Release();
+    if (g_pVB) g_pVB->Release();
+
+    if (g_blendState) g_blendState->Release(); 
+    if (g_pPixelShader) g_pPixelShader->Release();
+    if (g_pPixelShaderBlob) g_pPixelShaderBlob->Release();
+    if (g_pVertexConstantBuffer) g_pVertexConstantBuffer->Release();
+    if (g_pInputLayout) g_pInputLayout->Release();
+    if (g_pVertexShader) g_pVertexShader->Release();
+    if (g_pVertexShaderBlob) g_pVertexShaderBlob->Release();
+    if (g_mainRenderTargetView) g_mainRenderTargetView->Release();
+    if (g_pSwapChain) g_pSwapChain->Release();
+    if (g_pd3dDeviceImmediateContext) g_pd3dDeviceImmediateContext->Release();
+    if (g_pd3dDevice) g_pd3dDevice->Release();
 }
 
 LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -337,6 +346,7 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             io.AddInputCharacter((unsigned short)wParam);
         return true;
     case WM_DESTROY:
+        Cleanup();
         PostQuitMessage(0);
         return 0;
     }
@@ -369,7 +379,6 @@ void InitImGui()
     io.KeyMap[ImGuiKey_X] = 'X';
     io.KeyMap[ImGuiKey_Y] = 'Y';
     io.KeyMap[ImGuiKey_Z] = 'Z';
-
     io.RenderDrawListsFn = ImImpl_RenderDrawLists;
 
     // Create the vertex buffer
@@ -427,6 +436,7 @@ void InitImGui()
         srvDesc.Texture2D.MipLevels = desc.MipLevels;
         srvDesc.Texture2D.MostDetailedMip = 0;
         g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &g_pFontTextureView);
+        pTexture->Release();
     }
 
     // create texture sampler
@@ -562,8 +572,8 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
     }
 
     ImGui::Shutdown();
-
     UnregisterClass("ImGui Example", wc.hInstance);
+
     return 0;
 }
 
