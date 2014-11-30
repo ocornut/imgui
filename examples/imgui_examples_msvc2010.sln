@@ -1,7 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "opengl_example", "opengl_example.vcxproj", "{9CDA7840-B7A5-496D-A527-E95571496D18}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "opengl_example", "opengl_example\opengl_example.vcxproj", "{9CDA7840-B7A5-496D-A527-E95571496D18}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "directx9_example", "directx9_example\directx9_example.vcxproj", "{4165A294-21F2-44CA-9B38-E3F935ABADF5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,6 +15,10 @@ Global
 		{9CDA7840-B7A5-496D-A527-E95571496D18}.Debug|Win32.Build.0 = Debug|Win32
 		{9CDA7840-B7A5-496D-A527-E95571496D18}.Release|Win32.ActiveCfg = Release|Win32
 		{9CDA7840-B7A5-496D-A527-E95571496D18}.Release|Win32.Build.0 = Release|Win32
+		{4165A294-21F2-44CA-9B38-E3F935ABADF5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4165A294-21F2-44CA-9B38-E3F935ABADF5}.Debug|Win32.Build.0 = Debug|Win32
+		{4165A294-21F2-44CA-9B38-E3F935ABADF5}.Release|Win32.ActiveCfg = Release|Win32
+		{4165A294-21F2-44CA-9B38-E3F935ABADF5}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
