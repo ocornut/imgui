@@ -69,17 +69,17 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (void*)(vtx_buffer + offsetof(ImDrawVert, col)));
 
         int vtx_offset = 0;
-		for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
+        for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
         {
-			const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
+            const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
             glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
             glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
             vtx_offset += pcmd->vtx_count;
         }
     }
 
-	// Restore modified state
-	glDisableClientState(GL_COLOR_ARRAY);
+    // Restore modified state
+    glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
     glMatrixMode(GL_MODELVIEW);

@@ -4331,7 +4331,7 @@ void ImGuiTextEditCallbackData::InsertChars(int pos, const char* new_text, const
     if (new_text_len + text_len + 1 >= BufSize)
         return;
 
-	size_t upos = (size_t)pos;
+    size_t upos = (size_t)pos;
     if (text_len != upos)
         memmove(Buf + upos + new_text_len, Buf + upos, text_len - upos);
     memcpy(Buf + upos, new_text, new_text_len * sizeof(char));
@@ -5798,7 +5798,7 @@ bool    ImFont::LoadFromMemory(const void* data, size_t data_size)
             IM_ASSERT(Kerning == NULL && KerningCount == 0);
             Kerning = (FntKerning*)p;
             KerningCount = block_size / sizeof(FntKerning);
-			break;
+            break;
         default:
             break;
         }

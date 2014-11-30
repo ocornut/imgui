@@ -18,7 +18,7 @@ struct CUSTOMVERTEX
 {
     D3DXVECTOR3 pos;
     D3DCOLOR    col;
-	D3DXVECTOR2 uv;
+    D3DXVECTOR2 uv;
 };
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
 
@@ -48,8 +48,8 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
             vtx_dst->pos.y = vtx_src->pos.y;
             vtx_dst->pos.z = 0.0f;
             vtx_dst->col = (vtx_src->col & 0xFF00FF00) | ((vtx_src->col & 0xFF0000)>>16) | ((vtx_src->col & 0xFF) << 16);     // RGBA --> ARGB for DirectX9
-			vtx_dst->uv.x = vtx_src->uv.x;
-			vtx_dst->uv.y = vtx_src->uv.y;
+            vtx_dst->uv.x = vtx_src->uv.x;
+            vtx_dst->uv.y = vtx_src->uv.y;
             vtx_dst++;
             vtx_src++;
         }
@@ -93,9 +93,9 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     {
         // Render command list
         const ImDrawList* cmd_list = cmd_lists[n];
-		for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
-		{
-			const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
+        for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
+        {
+            const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
             const RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
             g_pd3dDevice->SetScissorRect(&r);
             g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, vtx_offset, pcmd->vtx_count/3);
