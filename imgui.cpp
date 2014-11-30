@@ -198,6 +198,7 @@
  - text edit: add multi-line text edit
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float) in .ini file
+ - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
  - log: be able to right-click and log a window or tree-node into tty/file/clipboard?
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wildcards (with implicit leading/trailing *), regexps
@@ -212,6 +213,7 @@
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL
  - misc: not thread-safe
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
+ - misc: CalcTextSize() could benefit from having 'hide_text_after_double_hash' false by default for external use?
  - style editor: add a button to output C code.
  - examples: integrate dx11 example.
  - examples: integrate opengl 3/4 programmable pipeline example.
@@ -438,7 +440,7 @@ static int ImStricmp(const char* str1, const char* str2)
 
 static int ImStrnicmp(const char* str1, const char* str2, int count)
 {
-    int d;
+    int d = 0;
     while (count > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; count--; }
     return (count == 0) ? 0 : d;
 }
@@ -725,7 +727,7 @@ struct ImGuiState
     bool                    Initialized;
     ImGuiIO                 IO;
     ImGuiStyle              Style;
-    float                   FontSize;                           // == IO.FontGlobalScale * IO.Font->Scale * IO.Font->GetFontSize(). Vertical distance between two lines of text, aka == CalcTextSize(" ").y
+    float                   FontSize;                           // == IO.FontGlobalScale * IO.Font->Scale * IO.Font->Info->FontSize. Vertical distance between two lines of text, aka == CalcTextSize(" ").y
     ImVec2                  FontTexUvForWhite;                  // == IO.Font->FontTexUvForWhite (cached copy)
 
     float                   Time;
@@ -1369,7 +1371,7 @@ void ImGui::NewFrame()
 
     IM_ASSERT(g.IO.Font && g.IO.Font->IsLoaded());  // Font not loaded
     IM_ASSERT(g.IO.Font->Scale > 0.0f);
-    g.FontSize = g.IO.FontGlobalScale * g.IO.Font->GetFontSize() * g.IO.Font->Scale;
+    g.FontSize = g.IO.FontGlobalScale * (float)g.IO.Font->Info->FontSize * g.IO.Font->Scale;
     g.FontTexUvForWhite = g.IO.Font->TexUvForWhite;
     g.IO.Font->FallbackGlyph = g.IO.Font->FindGlyph(g.IO.Font->FallbackChar);
 
@@ -1803,12 +1805,12 @@ static void RenderCollapseTriangle(ImVec2 p_min, bool open, float scale, bool sh
 
 // Calculate text size. Text can be multi-line. Optionally ignore text after a ## marker.
 // CalcTextSize("") should return ImVec2(0.0f, GImGui.FontSize)
-ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_text_after_hash, float wrap_width)
+ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_text_after_double_hash, float wrap_width)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
     const char* text_display_end;
-    if (hide_text_after_hash)
+    if (hide_text_after_double_hash)
         text_display_end = FindTextDisplayEnd(text, text_end);      // Hide anything after a '##' string
     else
         text_display_end = text_end;
@@ -4128,10 +4130,10 @@ static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)  
 static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const ImWchar* new_text, int new_text_len)
 {
     const size_t text_len = ImStrlenW(obj->Text);
-    if (new_text_len + text_len + 1 >= obj->BufSize)
+    if ((size_t)new_text_len + text_len + 1 >= obj->BufSize)
         return false;
 
-    if (pos != text_len)
+    if (pos != (int)text_len)
         memmove(obj->Text + (size_t)pos + new_text_len, obj->Text + (size_t)pos, (text_len - (size_t)pos) * sizeof(ImWchar));
     memcpy(obj->Text + (size_t)pos, new_text, (size_t)new_text_len * sizeof(ImWchar));
     obj->Text[text_len + (size_t)new_text_len] = '\0';
@@ -4304,7 +4306,7 @@ bool ImGui::InputInt(const char* label, int *v, int step, int step_fast, ImGuiIn
 
 // Public API to manipulate UTF-8 text
 // We expose UTF-8 to the user (unlike the STB_TEXTEDIT_* functions which are manipulating wchar)
-void ImGuiTextEditCallbackData::DeleteChars(size_t pos, size_t bytes_count)
+void ImGuiTextEditCallbackData::DeleteChars(int pos, int bytes_count)
 {
     char* dst = Buf + pos;
     const char* src = Buf + pos + bytes_count;
@@ -4313,31 +4315,32 @@ void ImGuiTextEditCallbackData::DeleteChars(size_t pos, size_t bytes_count)
     *dst = '\0';
 
     BufDirty = true;
-    if ((size_t)CursorPos + bytes_count >= pos)
+    if (CursorPos + bytes_count >= pos)
         CursorPos -= bytes_count;
-    else if ((size_t)CursorPos >= pos)
+    else if (CursorPos >= pos)
         CursorPos = pos;
     SelectionStart = SelectionEnd = CursorPos;
 }
 
-void ImGuiTextEditCallbackData::InsertChars(size_t pos, const char* new_text, const char* new_text_end)
+void ImGuiTextEditCallbackData::InsertChars(int pos, const char* new_text, const char* new_text_end)
 {
     const size_t text_len = strlen(Buf);
     if (!new_text_end)
         new_text_end = new_text + strlen(new_text);
-    const size_t new_text_len = new_text_end - new_text;
+    const size_t new_text_len = (size_t)(new_text_end - new_text);
 
     if (new_text_len + text_len + 1 >= BufSize)
         return;
 
-    if (text_len != pos)
-        memmove(Buf + pos + new_text_len, Buf + pos, text_len - pos);
-    memcpy(Buf + pos, new_text, new_text_len * sizeof(char));
+	size_t upos = (size_t)pos;
+    if (text_len != upos)
+        memmove(Buf + upos + new_text_len, Buf + upos, text_len - upos);
+    memcpy(Buf + upos, new_text, new_text_len * sizeof(char));
     Buf[text_len + new_text_len] = '\0';
 
     BufDirty = true;
-    if ((size_t)CursorPos >= pos)
-        CursorPos += new_text_len;
+    if (CursorPos >= pos)
+        CursorPos += (int)new_text_len;
     SelectionStart = SelectionEnd = CursorPos;
 }
 
@@ -5796,6 +5799,7 @@ bool    ImFont::LoadFromMemory(const void* data, size_t data_size)
             IM_ASSERT(Kerning == NULL && KerningCount == 0);
             Kerning = (FntKerning*)p;
             KerningCount = block_size / sizeof(FntKerning);
+			break;
         default:
             break;
         }
@@ -7152,7 +7156,7 @@ struct ExampleAppConsole
                 else if (candidates.size() == 1)
                 {
                     // Single match. Delete the beginning of the word and replace it entirely so we've got nice casing
-                    data->DeleteChars(word_start - data->Buf, word_end-word_start);
+                    data->DeleteChars(word_start-data->Buf, word_end-word_start);
                     data->InsertChars(data->CursorPos, candidates[0]);
                     data->InsertChars(data->CursorPos, " ");
                 }
@@ -7162,7 +7166,7 @@ struct ExampleAppConsole
                     int match_len = word_end - word_start;
                     while (true)
                     {
-                        char c;
+                        int c = 0;
                         bool all_candidates_matches = true;
                         for (size_t i = 0; i < candidates.size() && all_candidates_matches; i++)
                         {

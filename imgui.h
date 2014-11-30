@@ -295,7 +295,7 @@ namespace ImGui
     IMGUI_API int           GetFrameCount();
     IMGUI_API const char*   GetStyleColorName(ImGuiCol idx);
     IMGUI_API void          GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size);
-    IMGUI_API ImVec2        CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_hash = true, float wrap_width = -1.0f);
+    IMGUI_API ImVec2        CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
 
 } // namespace ImGui
 
@@ -619,8 +619,8 @@ struct ImGuiTextEditCallbackData
     void*               UserData;		// What user passed to InputText()
 
     // NB: calling those function loses selection.
-    void DeleteChars(size_t pos, size_t bytes_count);
-    void InsertChars(size_t pos, const char* text, const char* text_end = NULL);
+    void DeleteChars(int pos, int bytes_count);
+    void InsertChars(int pos, const char* text, const char* text_end = NULL);
 };
 
 //-----------------------------------------------------------------------------
@@ -727,7 +727,6 @@ struct ImFont
     IMGUI_API void              Clear();
     IMGUI_API void              BuildLookupTable();
     IMGUI_API const FntGlyph*   FindGlyph(unsigned short c) const;
-    IMGUI_API float             GetFontSize() const { return (float)Info->FontSize; } // before scale!
     IMGUI_API bool              IsLoaded() const { return Info != NULL && Common != NULL && Glyphs != NULL; }
 
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
