@@ -1,7 +1,7 @@
 #include <windows.h>
 #include "../../imgui.h"
 
-// DirectX
+// DirectX 9
 #include <d3dx9.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
@@ -103,7 +103,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     }
 }
 
-HRESULT InitD3D(HWND hWnd)
+HRESULT InitDeviceD3D(HWND hWnd)
 {
     if (NULL == (g_pD3D = Direct3DCreate9(D3D_SDK_VERSION)))
         return E_FAIL;
@@ -124,16 +124,15 @@ HRESULT InitD3D(HWND hWnd)
     return S_OK;
 }
 
-void Cleanup()
+void CleanupDevice()
 {
-    if (g_pTexture != NULL)
-        g_pTexture->Release();
+    // InitImGui
+    if (g_pVB) g_pVB->Release();
 
-    if (g_pd3dDevice != NULL)
-        g_pd3dDevice->Release();
-
-    if (g_pD3D != NULL)
-        g_pD3D->Release();
+    // InitDeviceD3D
+    if (g_pTexture) g_pTexture->Release();
+    if (g_pd3dDevice) g_pd3dDevice->Release();
+    if (g_pD3D) g_pD3D->Release();
 }
 
 LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -167,7 +166,7 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             io.AddInputCharacter((unsigned short)wParam);
         return true;
     case WM_DESTROY:
-        Cleanup();
+        CleanupDevice();
         PostQuitMessage(0);
         return 0;
     }
@@ -178,12 +177,14 @@ void InitImGui()
 {
     RECT rect;
     GetClientRect(hWnd, &rect);
+    int display_w = (int)(rect.right - rect.left);
+    int display_h = (int)(rect.bottom - rect.top);
 
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));  // Display size, in pixels. For clamping windows positions.
-    io.DeltaTime = 1.0f/60.0f;                                                                  // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
-    io.PixelCenterOffset = 0.0f;                                                                // Align Direct3D Texels
-    io.KeyMap[ImGuiKey_Tab] = VK_TAB;                                                           // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
+    io.DisplaySize = ImVec2((float)display_w, (float)display_h);   // Display size, in pixels. For clamping windows positions.
+    io.DeltaTime = 1.0f/60.0f;                                     // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our time step is variable)
+    io.PixelCenterOffset = 0.0f;                                   // Align Direct3D Texels
+    io.KeyMap[ImGuiKey_Tab] = VK_TAB;                              // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
     io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
@@ -222,17 +223,17 @@ void InitImGui()
 }
 
 INT64 ticks_per_second = 0;
-INT64 time = 0;
+INT64 last_time = 0;
 
 void UpdateImGui()
 {
     ImGuiIO& io = ImGui::GetIO();
 
-    // Setup timestep
+    // Setup time step
     INT64 current_time;
     QueryPerformanceCounter((LARGE_INTEGER *)&current_time); 
-    io.DeltaTime = (float)(current_time - time) / ticks_per_second;
-    time = current_time;
+    io.DeltaTime = (float)(current_time - last_time) / ticks_per_second;
+    last_time = current_time;
 
     // Setup inputs
     // (we already got mouse position, buttons, wheel from the window message callback)
@@ -261,14 +262,13 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
 
     if (!QueryPerformanceFrequency((LARGE_INTEGER *)&ticks_per_second))
         return 1;
-    if (!QueryPerformanceCounter((LARGE_INTEGER *)&time))
+    if (!QueryPerformanceCounter((LARGE_INTEGER *)&last_time))
         return 1;
 
     // Initialize Direct3D
-    if (InitD3D(hWnd) < 0)
+    if (InitDeviceD3D(hWnd) < 0)
     {
-        if (g_pVB)
-            g_pVB->Release();
+        CleanupDevice();
         UnregisterClass(L"ImGui Example", wc.hInstance);
         return 1;
     }
@@ -346,9 +346,6 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
     }
 
     ImGui::Shutdown();
-
-    if (g_pVB)
-        g_pVB->Release();
 
     UnregisterClass(L"ImGui Example", wc.hInstance);
     return 0;

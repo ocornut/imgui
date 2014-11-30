@@ -3,7 +3,7 @@
 #include "../shared/stb_image.h"    // for .png loading
 #include "../../imgui.h"
 
-// DirectX
+// DirectX 11
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #define DIRECTINPUT_VERSION 0x0800
@@ -115,12 +115,12 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     }
 
     // Bind shader and vertex buffers
-    g_pd3dDeviceImmediateContext->IASetInputLayout(g_pInputLayout);
     unsigned int stride = sizeof(CUSTOMVERTEX);
     unsigned int offset = 0;
+    g_pd3dDeviceImmediateContext->IASetInputLayout(g_pInputLayout);
     g_pd3dDeviceImmediateContext->IASetVertexBuffers(0, 1, &g_pVB, &stride, &offset);
     g_pd3dDeviceImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
+    
     g_pd3dDeviceImmediateContext->VSSetShader(g_pVertexShader, NULL, 0);
     g_pd3dDeviceImmediateContext->VSSetConstantBuffers(0, 1, &g_pVertexConstantBuffer);
 
@@ -130,8 +130,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 
     // Setup render state
     const float blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
-    const UINT sampleMask = 0xffffffff;
-    g_pd3dDeviceImmediateContext->OMSetBlendState(g_blendState, blendFactor, sampleMask);
+    g_pd3dDeviceImmediateContext->OMSetBlendState(g_blendState, blendFactor, 0xffffffff);
 
     // Render command lists
     int vtx_offset = 0;
@@ -155,7 +154,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     g_pd3dDeviceImmediateContext->VSSetShader(NULL, NULL, 0);
 }
 
-HRESULT InitD3D(HWND hWnd)
+HRESULT InitDeviceD3D(HWND hWnd)
 {
     // Setup swap chain
     DXGI_SWAP_CHAIN_DESC sd;
@@ -198,10 +197,7 @@ HRESULT InitD3D(HWND hWnd)
         RSDesc.DepthClipEnable = TRUE;
         RSDesc.ScissorEnable = TRUE;
         RSDesc.AntialiasedLineEnable = FALSE;
-        if (sd.SampleDesc.Count > 1)
-            RSDesc.MultisampleEnable = TRUE;
-        else
-            RSDesc.MultisampleEnable = FALSE;
+        RSDesc.MultisampleEnable = (sd.SampleDesc.Count > 1) ? TRUE : FALSE;
 
         ID3D11RasterizerState* pRState = NULL;
         g_pd3dDevice->CreateRasterizerState(&RSDesc, &pRState);
@@ -224,18 +220,11 @@ HRESULT InitD3D(HWND hWnd)
 
     // Create the vertex shader
     {
-        ID3D10Blob * pErrorBlob = NULL;
-        D3DCompile(vertexShader, strlen(vertexShader), NULL, NULL, NULL, "main", "vs_5_0", 0, 0, &g_pVertexShaderBlob, &pErrorBlob);
-        if (g_pVertexShaderBlob == NULL)
-        {
-            //const char* pError = (const char*)pErrorBlob->GetBufferPointer();
-            pErrorBlob->Release();
+        D3DCompile(vertexShader, strlen(vertexShader), NULL, NULL, NULL, "main", "vs_5_0", 0, 0, &g_pVertexShaderBlob, NULL);
+        if (g_pVertexShaderBlob == NULL) // NB: Pass ID3D10Blob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
             return E_FAIL;
-        }
         if (g_pd3dDevice->CreateVertexShader((DWORD*)g_pVertexShaderBlob->GetBufferPointer(), g_pVertexShaderBlob->GetBufferSize(), NULL, &g_pVertexShader) != S_OK)
             return E_FAIL;
-        if (pErrorBlob)
-            pErrorBlob->Release();
 
         // Create the input layout
         D3D11_INPUT_ELEMENT_DESC localLayout[] = {
@@ -261,18 +250,11 @@ HRESULT InitD3D(HWND hWnd)
 
     // Create the pixel shader
     {
-        ID3D10Blob * pErrorBlob;
-        D3DCompile(pixelShader, strlen(pixelShader), NULL, NULL, NULL, "main", "ps_5_0", 0, 0, &g_pPixelShaderBlob, &pErrorBlob);
-        if (g_pPixelShaderBlob == NULL)
-        {
-            //const char* pError = (const char*)pErrorBlob->GetBufferPointer();
-            pErrorBlob->Release();
+        D3DCompile(pixelShader, strlen(pixelShader), NULL, NULL, NULL, "main", "ps_5_0", 0, 0, &g_pPixelShaderBlob, NULL);
+        if (g_pPixelShaderBlob == NULL)  // NB: Pass ID3D10Blob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
             return E_FAIL;
-        }
         if (g_pd3dDevice->CreatePixelShader((DWORD*)g_pPixelShaderBlob->GetBufferPointer(), g_pPixelShaderBlob->GetBufferSize(), NULL, &g_pPixelShader) != S_OK)
             return E_FAIL;
-        if (pErrorBlob)
-            pErrorBlob->Release();
     }
 
     // Create the blending setup
@@ -294,14 +276,16 @@ HRESULT InitD3D(HWND hWnd)
     return S_OK;
 }
 
-void Cleanup()
+void CleanupDevice()
 {
     if (g_pd3dDeviceImmediateContext) g_pd3dDeviceImmediateContext->ClearState();
 
+    // InitImGui
     if (g_pFontSampler) g_pFontSampler->Release();
     if (g_pFontTextureView) g_pFontTextureView->Release();
     if (g_pVB) g_pVB->Release();
 
+    // InitDeviceD3D
     if (g_blendState) g_blendState->Release(); 
     if (g_pPixelShader) g_pPixelShader->Release();
     if (g_pPixelShaderBlob) g_pPixelShaderBlob->Release();
@@ -346,7 +330,7 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             io.AddInputCharacter((unsigned short)wParam);
         return true;
     case WM_DESTROY:
-        Cleanup();
+        CleanupDevice();
         PostQuitMessage(0);
         return 0;
     }
@@ -357,12 +341,14 @@ void InitImGui()
 {
     RECT rect;
     GetClientRect(hWnd, &rect);
+    int display_w = (int)(rect.right - rect.left);
+    int display_h = (int)(rect.bottom - rect.top);
 
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));  // Display size, in pixels. For clamping windows positions.
-    io.DeltaTime = 1.0f/60.0f;                                                                  // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
-    io.PixelCenterOffset = 0.0f;                                                                // Align Direct3D Texels
-    io.KeyMap[ImGuiKey_Tab] = VK_TAB;                                                           // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
+    io.DisplaySize = ImVec2((float)display_w, (float)display_h);    // Display size, in pixels. For clamping windows positions.
+    io.DeltaTime = 1.0f/60.0f;                                      // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our time step is variable)
+    io.PixelCenterOffset = 0.0f;                                    // Align Direct3D Texels
+    io.KeyMap[ImGuiKey_Tab] = VK_TAB;                               // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
     io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
@@ -385,13 +371,11 @@ void InitImGui()
     {
         D3D11_BUFFER_DESC bufferDesc;
         memset(&bufferDesc, 0, sizeof(D3D11_BUFFER_DESC));
-
         bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
         bufferDesc.ByteWidth = 10000 * sizeof(CUSTOMVERTEX);
         bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         bufferDesc.MiscFlags = 0;
-
         if (g_pd3dDevice->CreateBuffer(&bufferDesc, NULL, &g_pVB) < 0)
         {
             IM_ASSERT(0);
@@ -428,7 +412,7 @@ void InitImGui()
         subResource.SysMemSlicePitch = 0;
         g_pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
 
-        // create texture view
+        // Create texture view
         D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
         ZeroMemory(&srvDesc, sizeof(srvDesc));
         srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -439,7 +423,7 @@ void InitImGui()
         pTexture->Release();
     }
 
-    // create texture sampler
+    // Create texture sampler
     {
         D3D11_SAMPLER_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
@@ -456,17 +440,17 @@ void InitImGui()
 }
 
 INT64 ticks_per_second = 0;
-INT64 time = 0;
+INT64 last_time = 0;
 
 void UpdateImGui()
 {
     ImGuiIO& io = ImGui::GetIO();
 
-    // Setup timestep
+    // Setup time step
     INT64 current_time;
     QueryPerformanceCounter((LARGE_INTEGER *)&current_time); 
-    io.DeltaTime = (float)(current_time - time) / ticks_per_second;
-    time = current_time;
+    io.DeltaTime = (float)(current_time - last_time) / ticks_per_second;
+    last_time = current_time;
 
     // Setup inputs
     // (we already got mouse position, buttons, wheel from the window message callback)
@@ -495,12 +479,13 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
 
     if (!QueryPerformanceFrequency((LARGE_INTEGER *)&ticks_per_second))
         return 1;
-    if (!QueryPerformanceCounter((LARGE_INTEGER *)&time))
+    if (!QueryPerformanceCounter((LARGE_INTEGER *)&last_time))
         return 1;
 
     // Initialize Direct3D
-    if (InitD3D(hWnd) < 0)
+    if (InitDeviceD3D(hWnd) < 0)
     {
+        CleanupDevice();
         UnregisterClass("ImGui Example", wc.hInstance);
         return 1;
     }

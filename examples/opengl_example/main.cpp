@@ -156,17 +156,17 @@ void InitGL()
 void InitImGui()
 {
     int w, h;
-    int fb_w, fb_h;
+    int display_w, display_h;
     glfwGetWindowSize(window, &w, &h);
-    glfwGetFramebufferSize(window, &fb_w, &fb_h);
-    mousePosScale.x = (float)fb_w / w;                  // Some screens e.g. Retina display have framebuffer size != from window size, and mouse inputs are given in window/screen coordinates.
-    mousePosScale.y = (float)fb_h / h;
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    mousePosScale.x = (float)display_w / w;                       // Some screens e.g. Retina display have framebuffer size != from window size, and mouse inputs are given in window/screen coordinates.
+    mousePosScale.y = (float)display_h / h;
 
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)fb_w, (float)fb_h);  // Display size, in pixels. For clamping windows positions.
-    io.DeltaTime = 1.0f/60.0f;                          // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
-    io.PixelCenterOffset = 0.0f;                        // Align OpenGL texels
-    io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;             // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
+    io.DisplaySize = ImVec2((float)display_w, (float)display_h);  // Display size, in pixels. For clamping windows positions.
+    io.DeltaTime = 1.0f/60.0f;                                    // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our time step is variable)
+    io.PixelCenterOffset = 0.0f;                                  // Align OpenGL texels
+    io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                       // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
@@ -230,7 +230,7 @@ void UpdateImGui()
 {
     ImGuiIO& io = ImGui::GetIO();
 
-    // Setup timestep
+    // Setup time step
     static double time = 0.0f;
     const double current_time =  glfwGetTime();
     io.DeltaTime = (float)(current_time - time);
