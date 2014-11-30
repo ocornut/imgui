@@ -442,7 +442,7 @@ static int ImStrnicmp(const char* str1, const char* str2, int count)
 {
     int d = 0;
     while (count > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; count--; }
-    return (count == 0) ? 0 : d;
+    return d;
 }
 
 static char* ImStrdup(const char *str)
