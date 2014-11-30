@@ -6568,8 +6568,8 @@ void ImGui::ShowTestWindow(bool* open)
     ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);
 
     ImGui::Text("ImGui says hello.");
-    //ImGui::Text("MousePos (%g, %g)", g.IO.MousePos.x, g.IO.MousePos.y);
-    //ImGui::Text("MouseWheel %d", g.IO.MouseWheel);
+    //ImGui::Text("MousePos (%g, %g)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
+    //ImGui::Text("MouseWheel %d", ImGui::GetIO().MouseWheel);
 
     ImGui::Spacing();
     if (ImGui::CollapsingHeader("Help"))
