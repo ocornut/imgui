@@ -8,6 +8,8 @@
 
 #pragma warning (disable: 4996)     // 'This function or variable may be unsafe': strdup
 
+static bool emulateIndependentWindows = false;
+
 static HWND hWnd;
 static LPDIRECT3D9             g_pD3D = NULL;       // Used to create the D3DDevice
 static LPDIRECT3DDEVICE9       g_pd3dDevice = NULL; // Our rendering device
@@ -267,12 +269,24 @@ void UpdateImGui()
 
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
 {
+    UINT style = emulateIndependentWindows? CS_HREDRAW | CS_VREDRAW : CS_CLASSDC;
     // Register the window class
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, MsgProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"ImGui Example", NULL };
+    WNDCLASSEX wc = { sizeof(WNDCLASSEX), style, MsgProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"ImGui Example", NULL };
     RegisterClassEx(&wc);
 
     // Create the application's window
-    hWnd = CreateWindow(L"ImGui Example", L"ImGui DirectX9 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+	if(emulateIndependentWindows)
+	{
+		int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+		int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+		hWnd = CreateWindowEx(WS_EX_LAYERED | WS_EX_TOPMOST, L"ImGui Example",
+			L"ImGui DirectX9 Example", WS_POPUP, 0, 0, screenWidth, screenHeight, NULL, NULL, wc.hInstance, NULL);
+		SetLayeredWindowAttributes(hWnd, RGB(204, 153, 153), 255, LWA_COLORKEY);
+	}
+	else
+	{
+		hWnd = CreateWindow(L"ImGui Example", L"ImGui DirectX9 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+	}
 
     if (!QueryPerformanceFrequency((LARGE_INTEGER *)&ticks_per_second))
         return 1;
