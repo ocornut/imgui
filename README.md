@@ -93,6 +93,7 @@ Developed by [Omar Cornut](http://www.miracleworld.net). The library was develop
 
 Embeds [proggy_clean](http://upperbounds.net) font by Tristan Grimmer (MIT license).
 Embeds [M+ fonts](http://mplus-fonts.sourceforge.jp/mplus-outline-fonts/index-en.html) font by Coji Morishita (free software license).
+Embeds [stb_textedit.h](https://github.com/nothings/stb/) by Sean Barrett.
 
 Inspiration, feedback, and testing: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. Thanks!
 
