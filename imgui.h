@@ -488,7 +488,7 @@ struct ImGuiIO
 
     ImVec2      MousePos;                   // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
     bool        MouseDown[5];               // Mouse buttons. ImGui itself only uses button 0 (left button) but you can use others as storage for convenience.
-    int         MouseWheel;                 // Mouse wheel: -1,0,+1
+    float       MouseWheel;                 // Mouse wheel: 1 unit scrolls about 3 lines text.  
     bool        KeyCtrl;                    // Keyboard modifier pressed: Control
     bool        KeyShift;                   // Keyboard modifier pressed: Shift
     bool        KeysDown[512];              // Keyboard keys that are pressed (in whatever order user naturally has access to keyboard data)
