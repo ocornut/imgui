@@ -1,5 +1,4 @@
 #include <windows.h>
-#include <imm.h>
 #include "../../imgui.h"
 
 // DirectX
@@ -175,19 +174,6 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-// Notify OS Input Method Editor of text input position (e.g. when using Japanese/Chinese inputs, otherwise this isn't needed)
-static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
-{
-    if (HIMC himc = ImmGetContext(hWnd))
-    {
-        COMPOSITIONFORM cf;
-        cf.ptCurrentPos.x = x;
-        cf.ptCurrentPos.y = y;
-        cf.dwStyle = CFS_FORCE_POSITION;
-        ImmSetCompositionWindow(himc, &cf);
-    }
-}
-
 void InitImGui()
 {
     RECT rect;
@@ -216,7 +202,6 @@ void InitImGui()
     io.KeyMap[ImGuiKey_Z] = 'Z';
 
     io.RenderDrawListsFn = ImImpl_RenderDrawLists;
-    io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
     
     // Create the vertex buffer
     if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)

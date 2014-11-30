@@ -1,7 +1,6 @@
 #ifdef _MSC_VER
 #pragma warning (disable: 4996)         // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #include <Windows.h>
-#include <Imm.h>
 #endif
 #define STB_IMAGE_IMPLEMENTATION
 #include "../shared/stb_image.h"        // for .png loading
@@ -100,22 +99,6 @@ static void ImImpl_SetClipboardTextFn(const char* text)
     glfwSetClipboardString(window, text);
 }
 
-#ifdef _MSC_VER
-// Notify OS Input Method Editor of text input position (e.g. when using Japanese/Chinese inputs, otherwise this isn't needed)
-static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
-{
-    HWND hwnd = glfwGetWin32Window(window);
-    if (HIMC himc = ImmGetContext(hwnd))
-    {
-        COMPOSITIONFORM cf;
-        cf.ptCurrentPos.x = x;
-        cf.ptCurrentPos.y = y;
-        cf.dwStyle = CFS_FORCE_POSITION;
-        ImmSetCompositionWindow(himc, &cf);
-    }
-}
-#endif
-
 // GLFW callbacks to get events
 static void glfw_error_callback(int error, const char* description)
 {
@@ -204,9 +187,6 @@ void InitImGui()
     io.RenderDrawListsFn = ImImpl_RenderDrawLists;
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
-#ifdef _MSC_VER
-    io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
-#endif
 
     // Load font texture
     glGenTextures(1, &fontTex);

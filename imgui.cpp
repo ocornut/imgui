@@ -125,19 +125,11 @@
  TROUBLESHOOTING & FREQUENTLY ASKED QUESTIONS
  ============================================
 
- - if text or lines are blurry when integrating ImGui in your engine:
+ If text or lines are blurry when integrating ImGui in your engine:
    - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
    - try adjusting ImGui::GetIO().PixelCenterOffset to 0.5f or 0.375f
 
- - if you want to use a different font than the default:
-   - create bitmap font data using BMFont, make sure that BMFont is exporting the .fnt file in Binary mode.
-       io.Font = new ImBitmapFont();
-       io.Font->LoadFromFile("path_to_your_fnt_file.fnt");
-   - load your texture yourself. texture *MUST* have white pixel at UV coordinate io.Font->TexUvForWhite. This is used to draw all solid shapes.
-   - the extra_fonts/ folder provides examples of using external fonts.
-   - if you can only see text but no solid shapes or lines, make sure io.Font->TexUvForWhite is set to the texture coordinates of a pure white pixel in your texture!
-
- - if you are confused about the meaning or use of ID in ImGui:
+ If you are confused about the meaning or use of ID in ImGui:
    - some widgets requires state to be carried over multiple frames (most typically ImGui often wants remember what is the "active" widget).
      to do so they need an unique ID. unique ID are typically derived from a string label, an indice or a pointer.
      when you call Button("OK") the button shows "OK" and also use "OK" as an ID.
@@ -154,6 +146,33 @@
       e.g. "Label##Foobar" display "Label" and uses "Label##Foobar" as ID
       e.g. "##Foobar" display an empty label and uses "##Foobar" as ID
    - read articles about the imgui principles (see web links) to understand the requirement and use of ID.
+
+ If you want to use a different font than the default:
+   - read extra_fonts/README.txt for instructions. Examples fonts are also provided.
+   - if you can only see text but no solid shapes or lines, make sure io.Font->TexUvForWhite is set to the texture coordinates of a pure white pixel in your texture!
+
+ If you want to input Japanese/Chinese/Korean in the text input widget:
+    - make sure you are using a font that can display the glyphs you want (see above paragraph about fonts)
+    - to have the Microsoft IME cursor appears at the right location in the screen, setup a handler for the io.ImeSetInputScreenPosFn function:
+
+        #include <Windows.h>
+        #include <Imm.h>
+        static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
+        {
+          // Notify OS Input Method Editor of text input position
+          HWND hwnd = glfwGetWin32Window(window);
+          if (HIMC himc = ImmGetContext(hwnd))
+          {
+            COMPOSITIONFORM cf;
+            cf.ptCurrentPos.x = x;
+            cf.ptCurrentPos.y = y;
+            cf.dwStyle = CFS_FORCE_POSITION;
+            ImmSetCompositionWindow(himc, &cf);
+          }
+        }
+
+        // Set pointer to handler in ImGuiIO structure
+        io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
 
  - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will evaluate to a block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can call Render() multiple times (e.g for VR renders), up to you to communicate the extra state to your RenderDrawListFn function.
