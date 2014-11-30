@@ -153,7 +153,7 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         io.MouseDown[1] = false; 
         return true;
     case WM_MOUSEWHEEL:
-        io.MouseWheel = GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
+        io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
         return true;
     case WM_MOUSEMOVE:
         // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
