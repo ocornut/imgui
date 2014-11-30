@@ -131,7 +131,7 @@ static void glfw_mouse_button_callback(GLFWwindow* window, int button, int actio
 static void glfw_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.MouseWheel = yoffset; // Use fractional mouse wheel, 1.0 unit 3 lines.
+    io.MouseWheel = (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
 }
 
 static void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
