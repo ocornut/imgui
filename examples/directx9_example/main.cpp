@@ -1,23 +1,24 @@
 #include <windows.h>
 #include <imm.h>
-#include <mmsystem.h>
+#include "../../imgui.h"
+
+// DirectX
 #include <d3dx9.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
-#include "../../imgui.h"
 
 #pragma warning (disable: 4996)     // 'This function or variable may be unsafe': strdup
 
-static HWND hWnd;
+static HWND                    hWnd;
 static LPDIRECT3D9             g_pD3D = NULL;       // Used to create the D3DDevice
 static LPDIRECT3DDEVICE9       g_pd3dDevice = NULL; // Our rendering device
 static LPDIRECT3DVERTEXBUFFER9 g_pVB = NULL;        // Buffer to hold vertices
 static LPDIRECT3DTEXTURE9      g_pTexture = NULL;   // Our texture
 struct CUSTOMVERTEX
 {
-    D3DXVECTOR3 position;
-    D3DCOLOR    color;
-    float       tu, tv;
+    D3DXVECTOR3 pos;
+    D3DCOLOR    col;
+	D3DXVECTOR2 uv;
 };
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
 
@@ -43,12 +44,12 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         const ImDrawVert* vtx_src = &cmd_list->vtx_buffer[0];
         for (size_t i = 0; i < cmd_list->vtx_buffer.size(); i++)
         {
-            vtx_dst->position.x = vtx_src->pos.x;
-            vtx_dst->position.y = vtx_src->pos.y;
-            vtx_dst->position.z = 0.0f;
-            vtx_dst->color = (vtx_src->col & 0xFF00FF00) | ((vtx_src->col & 0xFF0000)>>16) | ((vtx_src->col & 0xFF) << 16);     // RGBA --> ARGB for DirectX9
-            vtx_dst->tu = vtx_src->uv.x;
-            vtx_dst->tv = vtx_src->uv.y;
+            vtx_dst->pos.x = vtx_src->pos.x;
+            vtx_dst->pos.y = vtx_src->pos.y;
+            vtx_dst->pos.z = 0.0f;
+            vtx_dst->col = (vtx_src->col & 0xFF00FF00) | ((vtx_src->col & 0xFF0000)>>16) | ((vtx_src->col & 0xFF) << 16);     // RGBA --> ARGB for DirectX9
+			vtx_dst->uv.x = vtx_src->uv.x;
+			vtx_dst->uv.y = vtx_src->uv.y;
             vtx_dst++;
             vtx_src++;
         }
@@ -154,7 +155,6 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         io.MouseDown[1] = false; 
         return true;
     case WM_MOUSEWHEEL:
-        // Mouse wheel uses integer on Windows
         io.MouseWheel = GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
         return true;
     case WM_MOUSEMOVE:
@@ -320,7 +320,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
             show_test_window ^= ImGui::Button("Test Window");
             show_another_window ^= ImGui::Button("Another Window");
 
-            // Calculate and show framerate
+            // Calculate and show frame rate
             static float ms_per_frame[120] = { 0 };
             static int ms_per_frame_idx = 0;
             static float ms_per_frame_accum = 0.0f;

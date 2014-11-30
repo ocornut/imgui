@@ -4,7 +4,7 @@
 #include <Imm.h>
 #endif
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"                  // for .png loading
+#include "../shared/stb_image.h"        // for .png loading
 #include "../../imgui.h"
 
 // glew & glfw
@@ -77,11 +77,11 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
             vtx_offset += pcmd->vtx_count;
         }
     }
-    glDisableClientState(GL_COLOR_ARRAY);
+
+	// Restore modified state
+	glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
-
-    // Restore modified state
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
     glMatrixMode(GL_PROJECTION);
@@ -294,7 +294,7 @@ int main(int argc, char** argv)
             show_test_window ^= ImGui::Button("Test Window");
             show_another_window ^= ImGui::Button("Another Window");
 
-            // Calculate and show framerate
+            // Calculate and show frame rate
             static float ms_per_frame[120] = { 0 };
             static int ms_per_frame_idx = 0;
             static float ms_per_frame_accum = 0.0f;
