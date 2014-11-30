@@ -14,24 +14,24 @@
 extern const char* vertexShader;    // Implemented at the bottom
 extern const char* pixelShader;
 
-static HWND						hWnd;
-static ID3D11Device*			g_pd3dDevice = NULL;
-static ID3D11DeviceContext*		g_pd3dDeviceImmediateContext = NULL;
-static IDXGISwapChain*			g_pSwapChain = NULL;
-static ID3D11Buffer*			g_pVB = NULL;
-static ID3D11RenderTargetView*	g_mainRenderTargetView;
+static HWND                     hWnd;
+static ID3D11Device*            g_pd3dDevice = NULL;
+static ID3D11DeviceContext*     g_pd3dDeviceImmediateContext = NULL;
+static IDXGISwapChain*          g_pSwapChain = NULL;
+static ID3D11Buffer*            g_pVB = NULL;
+static ID3D11RenderTargetView*  g_mainRenderTargetView;
 
-static ID3D10Blob *				g_pVertexShaderBlob = NULL;
-static ID3D11VertexShader*		g_pVertexShader = NULL;
-static ID3D11InputLayout*		g_pInputLayout = NULL;
-static ID3D11Buffer*			g_pVertexConstantBuffer = NULL;
+static ID3D10Blob *             g_pVertexShaderBlob = NULL;
+static ID3D11VertexShader*      g_pVertexShader = NULL;
+static ID3D11InputLayout*       g_pInputLayout = NULL;
+static ID3D11Buffer*            g_pVertexConstantBuffer = NULL;
 
-static ID3D10Blob *				g_pPixelShaderBlob = NULL;
-static ID3D11PixelShader*		g_pPixelShader = NULL;
+static ID3D10Blob *             g_pPixelShaderBlob = NULL;
+static ID3D11PixelShader*       g_pPixelShader = NULL;
 
 static ID3D11ShaderResourceView*g_pFontTextureView = NULL;
-static ID3D11SamplerState*		g_pFontSampler = NULL;
-static ID3D11BlendState*		g_blendState = NULL;
+static ID3D11SamplerState*      g_pFontSampler = NULL;
+static ID3D11BlendState*        g_blendState = NULL;
 
 struct CUSTOMVERTEX
 {
@@ -92,10 +92,10 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         const float T = 0.5f;
         const float mvp[4][4] = 
         {
-            { 2.0f/(R-L),	0.0f,			0.0f,		0.0f},
-            { 0.0f,			2.0f/(T-B),		0.0f,		0.0f,},
-            { 0.0f,			0.0f,			0.5f,	    0.0f },  // -1.0f
-            { (R+L)/(L-R),	(T+B)/(B-T),	0.5f,	    1.0f },  // 0.0f
+            { 2.0f/(R-L),   0.0f,           0.0f,       0.0f},
+            { 0.0f,         2.0f/(T-B),     0.0f,       0.0f,},
+            { 0.0f,         0.0f,           0.5f,       0.0f },
+            { (R+L)/(L-R),  (T+B)/(B-T),    0.5f,       1.0f },
         };
         memcpy(&pConstantBuffer->mvp, mvp, sizeof(mvp));
         g_pd3dDeviceImmediateContext->Unmap(g_pVertexConstantBuffer, 0);
@@ -143,7 +143,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         {
             const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
             const D3D11_RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
-            g_pd3dDeviceImmediateContext->RSSetScissorRects(1, &r);	
+            g_pd3dDeviceImmediateContext->RSSetScissorRects(1, &r); 
             g_pd3dDeviceImmediateContext->Draw(pcmd->vtx_count, vtx_offset);
             vtx_offset += pcmd->vtx_count;
         }
@@ -203,15 +203,15 @@ HRESULT InitD3D(HWND hWnd)
         else
             RSDesc.MultisampleEnable = FALSE;
 
-		ID3D11RasterizerState* pRState = NULL;
+        ID3D11RasterizerState* pRState = NULL;
         g_pd3dDevice->CreateRasterizerState(&RSDesc, &pRState);
         g_pd3dDeviceImmediateContext->RSSetState(pRState);
-		pRState->Release();
+        pRState->Release();
     }
 
     // Create the render target
     {
-        ID3D11Texture2D* pBackBuffer;				
+        ID3D11Texture2D* pBackBuffer;               
         D3D11_RENDER_TARGET_VIEW_DESC render_target_view_desc;
         ZeroMemory(&render_target_view_desc, sizeof(render_target_view_desc));
         render_target_view_desc.Format = sd.BufferDesc.Format;

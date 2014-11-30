@@ -4143,7 +4143,7 @@ static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* ob
 
 static bool is_white(unsigned int c)                                                              { return c==0 || c==' ' || c=='\t' || c=='\r' || c=='\n'; }
 static bool is_separator(unsigned int c)                                                          { return c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|'; }
-#define STB_TEXTEDIT_IS_SPACE(CH)													              ( is_white((unsigned int)CH) || is_separator((unsigned int)CH) )
+#define STB_TEXTEDIT_IS_SPACE(CH)                                                                 ( is_white((unsigned int)CH) || is_separator((unsigned int)CH) )
 static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)                    { ImWchar* dst = obj->Text+pos; const ImWchar* src = obj->Text+pos+n; while (ImWchar c = *src++) *dst++ = c; *dst = '\0'; }
 static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const ImWchar* new_text, int new_text_len)
 {
@@ -4389,7 +4389,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
 
     const bool is_ctrl_down = io.KeyCtrl;
     const bool is_shift_down = io.KeyShift;
-    const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id, (flags & ImGuiInputTextFlags_CallbackCompletion) == 0);	// Using completion callback disable keyboard tabbing
+    const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id, (flags & ImGuiInputTextFlags_CallbackCompletion) == 0);    // Using completion callback disable keyboard tabbing
     //const bool align_center = (bool)(flags & ImGuiInputTextFlags_AlignCenter);    // FIXME: Unsupported
 
     const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(frame_bb);
@@ -6727,10 +6727,10 @@ void ImGui::ShowTestWindow(bool* open)
         // Testing IMGUI_ONCE_UPON_A_FRAME macro
         //for (int i = 0; i < 5; i++)
         //{
-        //	IMGUI_ONCE_UPON_A_FRAME
-        //	{
-        //		ImGui::Text("This will be displayed only once.");
-        //	}
+        //  IMGUI_ONCE_UPON_A_FRAME
+        //  {
+        //      ImGui::Text("This will be displayed only once.");
+        //  }
         //}
 
         ImGui::Separator();
@@ -7118,9 +7118,9 @@ static void ShowExampleAppAutoResize(bool* open)
 struct ExampleAppConsole
 {
     ImVector<char*> Items;
-    bool			NewItems;
+    bool            NewItems;
 
-    void	Clear()
+    void    Clear()
     {
         for (size_t i = 0; i < Items.size(); i++) 
             ImGui::MemFree(Items[i]); 
@@ -7128,7 +7128,7 @@ struct ExampleAppConsole
         NewItems = true;
     }
 
-    void	AddLog(const char* fmt, ...)
+    void    AddLog(const char* fmt, ...)
     {
         char buf[512];
         va_list args;
@@ -7139,7 +7139,7 @@ struct ExampleAppConsole
         NewItems = true;
     }
 
-    void	TextEditCallback(ImGuiTextEditCallbackData* data)
+    void    TextEditCallback(ImGuiTextEditCallbackData* data)
     {
         //AddLog("cursor: %d, selection: %d-%d", data->CursorPos, data->SelectionStart, data->SelectionEnd);
         switch (data->EventKey)
@@ -7290,7 +7290,7 @@ static void ShowExampleAppConsole(bool* open)
         if (input_trimmed_end > input)
         {
             console.AddLog("# %s\n", input);
-            console.AddLog("Unknown command: '%.*s'\n", input_trimmed_end-input, input);	// NB: we don't actually handle any command in this sample code
+            console.AddLog("Unknown command: '%.*s'\n", input_trimmed_end-input, input);    // NB: we don't actually handle any command in this sample code
         }
         strcpy(input, "");
     }

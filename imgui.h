@@ -537,7 +537,7 @@ struct ImGuiOnceUponAFrame
 {
     ImGuiOnceUponAFrame() { RefFrame = -1; }
     mutable int RefFrame;
-    operator bool() const {	const int current_frame = ImGui::GetFrameCount(); if (RefFrame == current_frame) return false; RefFrame = current_frame; return true; }
+    operator bool() const { const int current_frame = ImGui::GetFrameCount(); if (RefFrame == current_frame) return false; RefFrame = current_frame; return true; }
 };
 
 // Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
@@ -608,15 +608,15 @@ struct ImGuiStorage
 // Shared state of InputText(), passed to callback when a ImGuiInputTextFlags_Callback* flag is used.
 struct ImGuiTextEditCallbackData
 {
-    ImGuiKey            EventKey;       // Key pressed (Up/Down/TAB)		// Read-only	
-    char*			    Buf;            // Current text              		// Read-write (pointed data only)
-    size_t				BufSize;		//									// Read-only
-    bool				BufDirty;       // Set if you modify Buf directly   // Write
-    ImGuiInputTextFlags	Flags;			// What user passed to InputText()	// Read-only
-    int					CursorPos;		//									// Read-write
-    int					SelectionStart; //									// Read-write (== to SelectionEnd when no selection)
-    int                 SelectionEnd;   //									// Read-write
-    void*               UserData;		// What user passed to InputText()
+    ImGuiKey            EventKey;       // Key pressed (Up/Down/TAB)        // Read-only    
+    char*               Buf;            // Current text                     // Read-write (pointed data only)
+    size_t              BufSize;        //                                  // Read-only
+    bool                BufDirty;       // Set if you modify Buf directly   // Write
+    ImGuiInputTextFlags Flags;          // What user passed to InputText()  // Read-only
+    int                 CursorPos;      //                                  // Read-write
+    int                 SelectionStart; //                                  // Read-write (== to SelectionEnd when no selection)
+    int                 SelectionEnd;   //                                  // Read-write
+    void*               UserData;       // What user passed to InputText()
 
     // NB: calling those function loses selection.
     void DeleteChars(int pos, int bytes_count);
@@ -722,7 +722,7 @@ struct ImFont
     IMGUI_API ImFont();
     IMGUI_API ~ImFont()         { Clear(); }
 
-    IMGUI_API bool			    LoadFromMemory(const void* data, size_t data_size);
+    IMGUI_API bool              LoadFromMemory(const void* data, size_t data_size);
     IMGUI_API bool              LoadFromFile(const char* filename);
     IMGUI_API void              Clear();
     IMGUI_API void              BuildLookupTable();
