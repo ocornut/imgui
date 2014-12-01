@@ -86,10 +86,10 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
             return;
 
         VERTEX_CONSTANT_BUFFER* pConstantBuffer = (VERTEX_CONSTANT_BUFFER*)mappedResource.pData;
-        const float L = 0.5f;
-        const float R = ImGui::GetIO().DisplaySize.x + 0.5f;
-        const float B = ImGui::GetIO().DisplaySize.y + 0.5f;
-        const float T = 0.5f;
+        const float L = 0.0f;
+        const float R = ImGui::GetIO().DisplaySize.x;
+        const float B = ImGui::GetIO().DisplaySize.y;
+        const float T = 0.0f;
         const float mvp[4][4] = 
         {
             { 2.0f/(R-L),   0.0f,           0.0f,       0.0f},
