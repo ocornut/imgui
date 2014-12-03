@@ -77,7 +77,7 @@ namespace ImGui
 template<typename T>
 class ImVector
 {
-private:
+protected:
     size_t                      Size;
     size_t                      Capacity;
     T*                          Data;
