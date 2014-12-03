@@ -1,20 +1,17 @@
+// ImGui - standalone example application for OpenGL 2, using fixed pipeline
+
 #ifdef _MSC_VER
 #pragma warning (disable: 4996)         // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
-#include <Windows.h>
 #endif
-#define STB_IMAGE_IMPLEMENTATION
-#include "../shared/stb_image.h"        // for .png loading
-#include "../../imgui.h"
 
-// glew & glfw
+#include "../../imgui.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "../shared/stb_image.h"        // stb_image.h for PNG loading
+
+// Glfw/Glew
 #define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#ifdef _MSC_VER
-#define GLFW_EXPOSE_NATIVE_WIN32
-#define GLFW_EXPOSE_NATIVE_WGL
-#include <GLFW/glfw3native.h>
-#endif
 
 static GLFWwindow* window;
 static GLuint fontTex;

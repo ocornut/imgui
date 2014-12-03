@@ -1,19 +1,24 @@
-#define GLEW_STATIC
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#define STB_IMAGE_IMPLEMENTATION
-#include "../shared/stb_image.h"                  // for .png loading
-#include "../../imgui.h"
+// ImGui - standalone example application for OpenGL 3, using programmable pipeline
+
 #ifdef _MSC_VER
 #pragma warning (disable: 4996)         // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
+
+#include "../../imgui.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "../shared/stb_image.h"        // stb_image.h for PNG loading
+
+// Glfw/Glew
+#define GLEW_STATIC
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 
 static GLFWwindow* window;
 static GLuint fontTex;
 static bool mousePressed[2] = { false, false };
 static ImVec2 mousePosScale(1.0f, 1.0f);
 
-//Shader variables
+// Shader variables
 static int shader_handle, vert_handle, frag_handle;
 
 static int texture_location, ortho_location;
@@ -24,7 +29,6 @@ static int position_location, uv_location, colour_location;
 //the buffer will be resized if needed in the rendering code, but it is not a "free" operation.
 static size_t vbo_max_size = 1000000;
 static unsigned int vbo_handle, vao_handle;
-
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:

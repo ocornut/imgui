@@ -1,3 +1,5 @@
+// ImGui - standalone example application for DirectX 11
+
 #include <windows.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "../shared/stb_image.h"    // for .png loading

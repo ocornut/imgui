@@ -1,3 +1,5 @@
+// ImGui - standalone example application for DirectX 9
+
 #include <windows.h>
 #include "../../imgui.h"
 
