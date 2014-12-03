@@ -11,6 +11,9 @@ examples/directx11_example/ipch/*
 examples/opengl_example/Debug/*
 examples/opengl_example/Release/*
 examples/opengl_example/ipch/*
+examples/opengl3_example/Debug/*
+examples/opengl3_example/Release/*
+examples/opengl3_example/ipch/*
 *.opensdf
 *.sdf
 *.suo
