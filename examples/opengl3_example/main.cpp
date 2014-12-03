@@ -10,6 +10,9 @@
 
 static GLFWwindow* window;
 static GLuint fontTex;
+static bool mousePressed[2] = { false, false };
+static ImVec2 mousePosScale(1.0f, 1.0f);
+
 //Shader variables
 static int shader_handle, vert_handle, frag_handle;
 
@@ -19,33 +22,9 @@ static int position_location, uv_location, colour_location;
 //we are going to use the same vertex buffer for all rendering of imgui
 //so we need to use a large enough buffer as default.
 //the buffer will be resized if needed in the rendering code, but it is not a "free" operation.
-static size_t vbo_max_size = 1000000; 
+static size_t vbo_max_size = 1000000;
 static unsigned int vbo_handle, vao_handle;
 
-
-template<typename T>
-unsigned int stream(GLenum target, unsigned int vbo, unsigned int *vbo_cursor, unsigned int *vbo_size, T *start, int elementCount)
-{
-    unsigned int bytes = sizeof(T) *elementCount;
-    unsigned int aligned = bytes + bytes % 64; //align memory
-
-    glBindBuffer(target, vbo);
-    //If there's not enough space left, orphan the buffer object, create a new one and start writing
-    if (vbo_cursor[0] + aligned > vbo_size[0])
-    {
-        assert(aligned < vbo_size[0]);
-        glBufferData(target, vbo_size[0], NULL, GL_DYNAMIC_DRAW);
-        vbo_cursor[0] = 0;
-    }
-
-    void* mapped = glMapBufferRange(target, vbo_cursor[0], aligned, GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
-
-    memcpy(mapped, start, bytes);
-    vbo_cursor[0] += aligned;
-
-    glUnmapBuffer(target);
-    return vbo_cursor[0] - aligned; //return the offset we use for glVertexAttribPointer call
-}
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
@@ -58,9 +37,9 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
     glEnable(GL_BLEND);
-	glBlendEquation(GL_FUNC_ADD);
+    glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glDisable(GL_CULL_FACE);
+    glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
 
@@ -71,46 +50,46 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     // Setup orthographic projection matrix
     const float width = ImGui::GetIO().DisplaySize.x;
     const float height = ImGui::GetIO().DisplaySize.y;
-	const float ortho_projection[4][4] =
-	{
-		{ 2.0f/width,	0.0f,			0.0f,		0.0f },
-		{ 0.0f,			2.0f/-height,	0.0f,		0.0f },
-		{ 0.0f,			0.0f,			-1.0f,		0.0f },
-		{ -1.0f,		1.0f,			0.0f,		1.0f },
-	};
+    const float ortho_projection[4][4] =
+    {
+        { 2.0f/width,	0.0f,			0.0f,		0.0f },
+        { 0.0f,			2.0f/-height,	0.0f,		0.0f },
+        { 0.0f,			0.0f,			-1.0f,		0.0f },
+        { -1.0f,		1.0f,			0.0f,		1.0f },
+    };
     glUseProgram(shader_handle);
     glUniform1i(texture_location, 0);
     glUniformMatrix4fv(ortho_location, 1, GL_FALSE, &ortho_projection[0][0]);
 
-	// we will update the buffer in full, so we need to compute the total size of the buffer.
-	size_t total_vtx_count = 0;
-	for (int n = 0; n < cmd_lists_count; n++)
-		total_vtx_count += cmd_lists[n]->vtx_buffer.size();
-	
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
-	size_t neededBufferSize = total_vtx_count * sizeof(ImDrawVert);
-	if (neededBufferSize > vbo_max_size)
-	{
-		vbo_max_size = neededBufferSize;
-		glBufferData(GL_ARRAY_BUFFER, total_vtx_count * sizeof(ImDrawVert), NULL, GL_STREAM_DRAW);
-	}
+    // we will update the buffer in full, so we need to compute the total size of the buffer.
+    size_t total_vtx_count = 0;
+    for (int n = 0; n < cmd_lists_count; n++)
+        total_vtx_count += cmd_lists[n]->vtx_buffer.size();
 
-	unsigned char* buffer_data = (unsigned char*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-	if (!buffer_data)
-		return;
-	for (int n = 0; n < cmd_lists_count; n++)
-	{
-		const ImDrawList* cmd_list = cmd_lists[n];
-		memcpy(buffer_data, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
-		buffer_data += cmd_list->vtx_buffer.size() * sizeof(ImDrawVert);
-	}
-	glUnmapBuffer(GL_ARRAY_BUFFER);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
+    size_t neededBufferSize = total_vtx_count * sizeof(ImDrawVert);
+    if (neededBufferSize > vbo_max_size)
+    {
+        vbo_max_size = neededBufferSize;
+        glBufferData(GL_ARRAY_BUFFER, total_vtx_count * sizeof(ImDrawVert), NULL, GL_STREAM_DRAW);
+    }
 
-	glBindVertexArray(vao_handle);
-    
-	int cmd_offset = 0;
-	for (int n = 0; n < cmd_lists_count; n++)
+    unsigned char* buffer_data = (unsigned char*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+    if (!buffer_data)
+        return;
+    for (int n = 0; n < cmd_lists_count; n++)
+    {
+        const ImDrawList* cmd_list = cmd_lists[n];
+        memcpy(buffer_data, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
+        buffer_data += cmd_list->vtx_buffer.size() * sizeof(ImDrawVert);
+    }
+    glUnmapBuffer(GL_ARRAY_BUFFER);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glBindVertexArray(vao_handle);
+
+    int cmd_offset = 0;
+    for (int n = 0; n < cmd_lists_count; n++)
     {
         const ImDrawList* cmd_list = cmd_lists[n];
         int vtx_offset = cmd_offset;
@@ -121,13 +100,13 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
             glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
             vtx_offset += pcmd->vtx_count;
         }
-		cmd_offset = vtx_offset;
+        cmd_offset = vtx_offset;
     }
 
-	glBindVertexArray(0);
-	glUseProgram(0);
+    glBindVertexArray(0);
+    glUseProgram(0);
     glDisable(GL_SCISSOR_TEST);
-	glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
 }
 
@@ -147,10 +126,16 @@ static void glfw_error_callback(int error, const char* description)
     fputs(description, stderr);
 }
 
+static void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (action == GLFW_PRESS && button >= 0 && button < 2)
+        mousePressed[button] = true;
+}
+
 static void glfw_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.MouseWheel = (yoffset != 0.0f) ? yoffset > 0.0f ? 1.0f : -1.0f : 0.0f;           // Mouse wheel: -1,0,+1
+    io.MouseWheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
 }
 
 static void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -166,8 +151,8 @@ static void glfw_key_callback(GLFWwindow* window, int key, int scancode, int act
 
 static void glfw_char_callback(GLFWwindow* window, unsigned int c)
 {
-    if (c > 0 && c <= 255)
-        ImGui::GetIO().AddInputCharacter((char)c);
+    if (c > 0 && c < 0x10000)
+        ImGui::GetIO().AddInputCharacter((unsigned short)c);
 }
 
 
@@ -182,7 +167,7 @@ void InitGL()
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     window = glfwCreateWindow(1280, 720, "ImGui OpenGL example", NULL, NULL);
     glfwMakeContextCurrent(window);
@@ -190,49 +175,42 @@ void InitGL()
     glfwSetScrollCallback(window, glfw_scroll_callback);
     glfwSetCharCallback(window, glfw_char_callback);
 
-	glewExperimental = GL_TRUE;
-	
-	GLenum err = glewInit();
-	if (GLEW_OK != err)
-	{
-		fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
-	}
+    glewExperimental = GL_TRUE;
 
-    const GLchar *vertex_shader = \
-        "#version 330\n"
-        "uniform mat4 ortho;\n"
+    GLenum err = glewInit();
+    if (GLEW_OK != err)
+    {
+        fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+    }
 
-        "in vec2 Position;\n"
-        "in vec2 UV;\n"
-        "in vec4 Colour;\n"
+    const GLchar *vertex_shader =   \
+                                    "#version 330\n"
+                                    "uniform mat4 ortho;\n"
+                                    "in vec2 Position;\n"
+                                    "in vec2 UV;\n"
+                                    "in vec4 Colour;\n"
+                                    "out vec2 Frag_UV;\n"
+                                    "out vec4 Frag_Colour;\n"
+                                    "void main()\n"
+                                    "{\n"
+                                    "	Frag_UV = UV;\n"
+                                    "	Frag_Colour = Colour;\n"
+                                    "	gl_Position = ortho*vec4(Position.xy,0,1);\n"
+                                    "}\n";
 
-        "out vec2 Frag_UV;\n"
-        "out vec4 Frag_Colour;\n"
+    const GLchar* fragment_shader = \
+                                    "#version 330\n"
+                                    "uniform sampler2D Texture;\n"
+                                    "in vec2 Frag_UV;\n"
+                                    "in vec4 Frag_Colour;\n"
+                                    "out vec4 FragColor;\n"
+                                    "void main()\n"
+                                    "{\n"
+                                    "	FragColor = Frag_Colour * texture( Texture, Frag_UV.st);\n"
+                                    "}\n";
 
-        "void main()\n"
-        "{\n"
-        "	Frag_UV = UV;\n"
-        "	Frag_Colour = Colour;\n"
-        "\n"
-        "	gl_Position = ortho*vec4(Position.xy,0,1);\n"
-        "}\n";
-
-	const GLchar* fragment_shader = \
-        "#version 330\n"
-        "uniform sampler2D Texture;\n"
-
-        "in vec2 Frag_UV;\n"
-        "in vec4 Frag_Colour;\n"
-
-        "out vec4 FragColor;\n"
-
-        "void main()\n"
-        "{\n"
-        "	FragColor = Frag_Colour * texture( Texture, Frag_UV.st);\n"
-        "}\n";
-
-	shader_handle = glCreateProgram();
-	vert_handle = glCreateShader(GL_VERTEX_SHADER);
+    shader_handle = glCreateProgram();
+    vert_handle = glCreateShader(GL_VERTEX_SHADER);
     frag_handle = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(vert_handle, 1, &vertex_shader, 0);
     glShaderSource(frag_handle, 1, &fragment_shader, 0);
@@ -252,19 +230,19 @@ void InitGL()
     glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
     glBufferData(GL_ARRAY_BUFFER, vbo_max_size, NULL, GL_DYNAMIC_DRAW);
 
-	glGenVertexArrays(1, &vao_handle);
-	glBindVertexArray(vao_handle);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
+    glGenVertexArrays(1, &vao_handle);
+    glBindVertexArray(vao_handle);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
     glEnableVertexAttribArray(position_location);
     glEnableVertexAttribArray(uv_location);
     glEnableVertexAttribArray(colour_location);
 
-	glVertexAttribPointer(position_location, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*) offsetof(ImDrawVert, pos));
-	glVertexAttribPointer(uv_location, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*) offsetof(ImDrawVert, uv));
-	glVertexAttribPointer(colour_location, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*) offsetof(ImDrawVert, col));
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
+    glVertexAttribPointer(position_location, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*) offsetof(ImDrawVert, pos));
+    glVertexAttribPointer(uv_location, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*) offsetof(ImDrawVert, uv));
+    glVertexAttribPointer(colour_location, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*) offsetof(ImDrawVert, col));
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 
 }
 
@@ -392,7 +370,7 @@ int main(int argc, char** argv)
         ImGui::Render();
         glfwSwapBuffers(window);
     }
-	if (vao_handle) glDeleteVertexArrays(1, &vao_handle);
+    if (vao_handle) glDeleteVertexArrays(1, &vao_handle);
     if (vbo_handle) glDeleteBuffers(1, &vbo_handle);
     glDetachShader(shader_handle, vert_handle);
     glDetachShader(shader_handle, frag_handle);
