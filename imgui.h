@@ -1,4 +1,4 @@
-// ImGui library v1.17 wip
+// ImGui library v1.18 wip
 // See .cpp file for commentary.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
@@ -308,12 +308,13 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_NoResize               = 1 << 2,
     ImGuiWindowFlags_NoMove                 = 1 << 3,
     ImGuiWindowFlags_NoScrollbar            = 1 << 4,
-    ImGuiWindowFlags_AlwaysAutoResize       = 1 << 5,
-    ImGuiWindowFlags_ChildWindow            = 1 << 6,   // For internal use by BeginChild()
-    ImGuiWindowFlags_ChildWindowAutoFitX    = 1 << 7,   // For internal use by BeginChild()
-    ImGuiWindowFlags_ChildWindowAutoFitY    = 1 << 8,   // For internal use by BeginChild()
-    ImGuiWindowFlags_ComboBox               = 1 << 9,   // For internal use by ComboBox()
-    ImGuiWindowFlags_Tooltip                = 1 << 10   // For internal use by Render() when using Tooltip
+    ImGuiWindowFlags_NoScrollWithMouse      = 1 << 5,
+    ImGuiWindowFlags_AlwaysAutoResize       = 1 << 6,
+    ImGuiWindowFlags_ChildWindow            = 1 << 7,   // For internal use by BeginChild()
+    ImGuiWindowFlags_ChildWindowAutoFitX    = 1 << 8,   // For internal use by BeginChild()
+    ImGuiWindowFlags_ChildWindowAutoFitY    = 1 << 9,   // For internal use by BeginChild()
+    ImGuiWindowFlags_ComboBox               = 1 << 10,  // For internal use by ComboBox()
+    ImGuiWindowFlags_Tooltip                = 1 << 11   // For internal use by Render() when using Tooltip
 };
 
 // Flags for ImGui::InputText()

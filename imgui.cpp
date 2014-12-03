@@ -1,4 +1,4 @@
-// ImGui library v1.17 wip
+// ImGui library v1.18 wip
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -757,7 +757,7 @@ struct ImGuiState
     ImVector<ImGuiWindow*>  CurrentWindowStack;
     ImGuiWindow*            FocusedWindow;                      // Will catch keyboard inputs
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs
-    ImGuiWindow*            HoveredWindowExcludingChilds;       // Will catch mouse inputs (for focus/move only)
+    ImGuiWindow*            HoveredRootWindow;                  // Will catch mouse inputs (for focus/move only)
     ImGuiID                 HoveredId;
     ImGuiID                 ActiveId;
     ImGuiID                 ActiveIdPreviousFrame;
@@ -794,7 +794,7 @@ struct ImGuiState
         CurrentWindow = NULL;
         FocusedWindow = NULL;
         HoveredWindow = NULL;
-        HoveredWindowExcludingChilds = NULL;
+        HoveredRootWindow = NULL;
         ActiveIdIsAlive = false;
         SettingsDirtyTimer = 0.0f;
         NewWindowDefaultPos = ImVec2(60, 60);
@@ -837,8 +837,9 @@ struct ImGuiWindow
     int                     LastFrameDrawn;
     float                   ItemWidthDefault;
     ImGuiStorage            StateStorage;
-    float                   FontWindowScale;                    // Scale multipler per-window
+    float                   FontWindowScale;                    // Scale multiplier per-window
     ImDrawList*             DrawList;
+    ImGuiWindow*            RootWindow;
 
     // Focus
     int                     FocusIdxAllCounter;                 // Start at -1 and increase as assigned via FocusItemRegister()
@@ -1445,7 +1446,7 @@ void ImGui::NewFrame()
     }
 
     g.HoveredWindow = FindHoveredWindow(g.IO.MousePos, false);
-    g.HoveredWindowExcludingChilds = FindHoveredWindow(g.IO.MousePos, true);
+    g.HoveredRootWindow = FindHoveredWindow(g.IO.MousePos, true);
 
     // Are we using inputs? Tell user so they can capture/discard them.
     g.IO.WantCaptureMouse = (g.HoveredWindow != NULL) || (g.ActiveId != 0);
@@ -1474,8 +1475,11 @@ void ImGui::NewFrame()
         else
         {
             // Scroll
-            const int scroll_lines = (window->Flags & ImGuiWindowFlags_ComboBox) ? 3 : 5;
-            window->NextScrollY -= g.IO.MouseWheel * window->FontSize() * scroll_lines;
+            if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
+            {
+                const int scroll_lines = (window->Flags & ImGuiWindowFlags_ComboBox) ? 3 : 5;
+                window->NextScrollY -= g.IO.MouseWheel * window->FontSize() * scroll_lines;
+            }
         }
     }
 
@@ -1521,7 +1525,7 @@ void ImGui::Shutdown()
     g.RenderDrawLists.clear();
     g.FocusedWindow = NULL;
     g.HoveredWindow = NULL;
-    g.HoveredWindowExcludingChilds = NULL;
+    g.HoveredRootWindow = NULL;
     for (size_t i = 0; i < g.Settings.size(); i++)
     {
         g.Settings[i]->~ImGuiIniData();
@@ -2128,6 +2132,16 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
     g.CurrentWindowStack.push_back(window);
     g.CurrentWindow = window;
 
+    // Find root
+    size_t root_idx = g.CurrentWindowStack.size() - 1;
+    while (root_idx > 0)
+    {
+        if ((g.CurrentWindowStack[root_idx]->Flags & ImGuiWindowFlags_ChildWindow) == 0)
+            break;
+        root_idx--;
+    }
+    window->RootWindow = g.CurrentWindowStack[root_idx];
+
     // Default alpha
     if (fill_alpha < 0.0f)
         fill_alpha = style.WindowFillAlphaDefault;
@@ -2282,7 +2296,7 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
                 const ImVec2 size_auto_fit = ImClamp(window->SizeContentsFit + style.AutoFitPadding, style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding);
                 if ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
                 {
-                    // Don't continously mark settings as dirty, the size of the window doesn't need to be stored.
+                    // Don't continuously mark settings as dirty, the size of the window doesn't need to be stored.
                     window->SizeFull = size_auto_fit;
                 }
                 else if (window->AutoFitFrames > 0)
@@ -2298,7 +2312,7 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
                 {
                     // Resize grip
                     const ImGuiAabb resize_aabb(window->Aabb().GetBR()-ImVec2(18,18), window->Aabb().GetBR());
-                    const ImGuiID resize_id = window->GetID("#RESIZE");
+                    const ImGuiID resize_id = window->GetID("##RESIZE");
                     bool hovered, held;
                     ButtonBehaviour(resize_aabb, resize_id, &hovered, &held, true);
                     resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
@@ -2506,7 +2520,7 @@ void ImGui::End()
 
     // Select window for move/focus when we're done with all our widgets (we only consider non-childs windows here)
     const ImGuiAabb bb(window->Pos, window->Pos+window->Size);
-    if (g.ActiveId == 0 && g.HoveredId == 0 && g.HoveredWindowExcludingChilds == window && IsMouseHoveringBox(bb) && g.IO.MouseClicked[0])
+    if (g.ActiveId == 0 && g.HoveredId == 0 && g.HoveredRootWindow == window && IsMouseHoveringBox(bb) && g.IO.MouseClicked[0])
         g.ActiveId = window->GetID("#MOVE");
 
     // Stop logging
@@ -2532,6 +2546,7 @@ void ImGui::End()
     }
 
     // Pop
+    window->RootWindow = NULL;
     g.CurrentWindowStack.pop_back();
     g.CurrentWindow = g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back();
 }
@@ -3113,7 +3128,7 @@ static bool ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_ho
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(bb);
+    const bool hovered = (g.HoveredRootWindow == window->RootWindow) && (g.HoveredId == 0) && IsMouseHoveringBox(bb);
     bool pressed = false;
     if (hovered)
     {
