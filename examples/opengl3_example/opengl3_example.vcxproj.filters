@@ -28,9 +28,4 @@
       <Filter>imgui</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\LICENSE">
-      <Filter>imgui</Filter>
-    </None>
-  </ItemGroup>
 </Project>

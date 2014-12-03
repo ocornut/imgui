@@ -30,9 +30,4 @@
       <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\LICENSE">
-      <Filter>imgui</Filter>
-    </None>
-  </ItemGroup>
 </Project>

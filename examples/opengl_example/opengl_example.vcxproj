@@ -77,9 +77,6 @@
     <ClInclude Include="..\..\stb_textedit.h" />
     <ClInclude Include="..\shared\stb_image.h" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\LICENSE" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
