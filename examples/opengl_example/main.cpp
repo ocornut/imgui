@@ -305,9 +305,9 @@ int main(int argc, char** argv)
         glfwSwapBuffers(window);
     }
 
-	// Cleanup
+    // Cleanup
     ImGui::Shutdown();
     glfwTerminate();
 
-	return 0;
+    return 0;
 }

@@ -13,9 +13,6 @@
 
 #pragma warning (disable: 4996)     // 'This function or variable may be unsafe': strdup
 
-extern const char* vertexShader;    // Implemented at the bottom
-extern const char* pixelShader;
-
 static HWND                     hWnd;
 static ID3D11Device*            g_pd3dDevice = NULL;
 static ID3D11DeviceContext*     g_pd3dDeviceImmediateContext = NULL;
@@ -222,6 +219,34 @@ HRESULT InitDeviceD3D(HWND hWnd)
 
     // Create the vertex shader
     {
+        static const char* vertexShader = 
+            "cbuffer vertexBuffer : register(c0) \
+            {\
+                float4x4 ProjectionMatrix; \
+            };\
+            struct VS_INPUT\
+            {\
+                float2 pos : POSITION;\
+                float4 col : COLOR0;\
+                float2 uv  : TEXCOORD0;\
+            };\
+            \
+            struct PS_INPUT\
+            {\
+                float4 pos : SV_POSITION;\
+                float4 col : COLOR0;\
+                float2 uv  : TEXCOORD0;\
+            };\
+            \
+            PS_INPUT main(VS_INPUT input)\
+            {\
+                PS_INPUT output;\
+                output.pos = mul( ProjectionMatrix, float4(input.pos.xy, 0.f, 1.f));\
+                output.col = input.col;\
+                output.uv  = input.uv;\
+                return output;\
+            }";
+
         D3DCompile(vertexShader, strlen(vertexShader), NULL, NULL, NULL, "main", "vs_5_0", 0, 0, &g_pVertexShaderBlob, NULL);
         if (g_pVertexShaderBlob == NULL) // NB: Pass ID3D10Blob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
             return E_FAIL;
@@ -252,6 +277,22 @@ HRESULT InitDeviceD3D(HWND hWnd)
 
     // Create the pixel shader
     {
+        static const char* pixelShader = 
+            "struct PS_INPUT\
+            {\
+                float4 pos : SV_POSITION;\
+                float4 col : COLOR0;\
+                float2 uv  : TEXCOORD0;\
+            };\
+            sampler sampler0;\
+            Texture2D texture0;\
+            \
+            float4 main(PS_INPUT input) : SV_Target\
+            {\
+                float4 out_col = texture0.Sample(sampler0, input.uv);\
+                return input.col * out_col;\
+            }";
+
         D3DCompile(pixelShader, strlen(pixelShader), NULL, NULL, NULL, "main", "ps_5_0", 0, 0, &g_pPixelShaderBlob, NULL);
         if (g_pPixelShaderBlob == NULL)  // NB: Pass ID3D10Blob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
             return E_FAIL;
@@ -563,47 +604,3 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
 
     return 0;
 }
-
-static const char* vertexShader = "\
-cbuffer vertexBuffer : register(c0) \
-{\
-    float4x4 ProjectionMatrix; \
-};\
-struct VS_INPUT\
-{\
-    float2 pos : POSITION;\
-    float4 col : COLOR0;\
-    float2 uv  : TEXCOORD0;\
-};\
-\
-struct PS_INPUT\
-{\
-    float4 pos : SV_POSITION;\
-    float4 col : COLOR0;\
-    float2 uv  : TEXCOORD0;\
-};\
-\
-PS_INPUT main(VS_INPUT input)\
-{\
-    PS_INPUT output;\
-    output.pos = mul( ProjectionMatrix, float4(input.pos.xy, 0.f, 1.f));\
-    output.col = input.col;\
-    output.uv  = input.uv;\
-    return output;\
-}";
-
-static const char* pixelShader = "\
-struct PS_INPUT\
-{\
-    float4 pos : SV_POSITION;\
-    float4 col : COLOR0;\
-    float2 uv  : TEXCOORD0;\
-};\
-sampler sampler0;\
-Texture2D texture0;\
-\
-float4 main(PS_INPUT input) : SV_Target\
-{\
-    float4 out_col = texture0.Sample(sampler0, input.uv);\
-    return input.col * out_col;\
-}";

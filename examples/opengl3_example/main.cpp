@@ -60,7 +60,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     glUniform1i(texture_location, 0);
     glUniformMatrix4fv(ortho_location, 1, GL_FALSE, &ortho_projection[0][0]);
 
-	// Grow our buffer according to what we need
+    // Grow our buffer according to what we need
     size_t total_vtx_count = 0;
     for (int n = 0; n < cmd_lists_count; n++)
         total_vtx_count += cmd_lists[n]->vtx_buffer.size();
@@ -72,7 +72,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         glBufferData(GL_ARRAY_BUFFER, neededBufferSize, NULL, GL_STREAM_DRAW);
     }
 
-	// Copy and convert all vertices into a single contiguous buffer
+    // Copy and convert all vertices into a single contiguous buffer
     unsigned char* buffer_data = (unsigned char*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
     if (!buffer_data)
         return;
@@ -101,7 +101,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         cmd_offset = vtx_offset;
     }
 
-	// Restore modified state
+    // Restore modified state
     glBindVertexArray(0);
     glUseProgram(0);
     glDisable(GL_SCISSOR_TEST);
@@ -179,30 +179,30 @@ void InitGL()
         fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
 
     const GLchar *vertex_shader =
-		"#version 330\n"
-		"uniform mat4 ortho;\n"
-		"in vec2 Position;\n"
-		"in vec2 UV;\n"
-		"in vec4 Colour;\n"
-		"out vec2 Frag_UV;\n"
-		"out vec4 Frag_Colour;\n"
-		"void main()\n"
-		"{\n"
-		"	Frag_UV = UV;\n"
-		"	Frag_Colour = Colour;\n"
-		"	gl_Position = ortho*vec4(Position.xy,0,1);\n"
-		"}\n";
+        "#version 330\n"
+        "uniform mat4 ortho;\n"
+        "in vec2 Position;\n"
+        "in vec2 UV;\n"
+        "in vec4 Colour;\n"
+        "out vec2 Frag_UV;\n"
+        "out vec4 Frag_Colour;\n"
+        "void main()\n"
+        "{\n"
+        "	Frag_UV = UV;\n"
+        "	Frag_Colour = Colour;\n"
+        "	gl_Position = ortho*vec4(Position.xy,0,1);\n"
+        "}\n";
 
     const GLchar* fragment_shader =
-		"#version 330\n"
-		"uniform sampler2D Texture;\n"
-		"in vec2 Frag_UV;\n"
-		"in vec4 Frag_Colour;\n"
-		"out vec4 FragColor;\n"
-		"void main()\n"
-		"{\n"
-		"	FragColor = Frag_Colour * texture( Texture, Frag_UV.st);\n"
-		"}\n";
+        "#version 330\n"
+        "uniform sampler2D Texture;\n"
+        "in vec2 Frag_UV;\n"
+        "in vec4 Frag_Colour;\n"
+        "out vec4 FragColor;\n"
+        "void main()\n"
+        "{\n"
+        "	FragColor = Frag_Colour * texture( Texture, Frag_UV.st);\n"
+        "}\n";
 
     shader_handle = glCreateProgram();
     vert_handle = glCreateShader(GL_VERTEX_SHADER);
@@ -241,12 +241,12 @@ void InitGL()
 
 void InitImGui()
 {
-	int w, h;
-	int display_w, display_h;
-	glfwGetWindowSize(window, &w, &h);
-	glfwGetFramebufferSize(window, &display_w, &display_h);
-	mousePosScale.x = (float)display_w / w;                       // Some screens e.g. Retina display have framebuffer size != from window size, and mouse inputs are given in window/screen coordinates.
-	mousePosScale.y = (float)display_h / h;
+    int w, h;
+    int display_w, display_h;
+    glfwGetWindowSize(window, &w, &h);
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    mousePosScale.x = (float)display_w / w;                       // Some screens e.g. Retina display have framebuffer size != from window size, and mouse inputs are given in window/screen coordinates.
+    mousePosScale.y = (float)display_h / h;
 
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)display_w, (float)display_h);  // Display size, in pixels. For clamping windows positions.
@@ -302,9 +302,9 @@ void UpdateImGui()
     // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
     double mouse_x, mouse_y;
     glfwGetCursorPos(window, &mouse_x, &mouse_y);
-	io.MousePos = ImVec2((float)mouse_x * mousePosScale.x, (float)mouse_y * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
-	io.MouseDown[0] = mousePressed[0] || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-	io.MouseDown[1] = mousePressed[1] || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) != 0;
+    io.MousePos = ImVec2((float)mouse_x * mousePosScale.x, (float)mouse_y * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+    io.MouseDown[0] = mousePressed[0] || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+    io.MouseDown[1] = mousePressed[1] || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) != 0;
 
     // Start the frame
     ImGui::NewFrame();
@@ -323,46 +323,46 @@ int main(int argc, char** argv)
         glfwPollEvents();
         UpdateImGui();
 
-		static bool show_test_window = true;
-		static bool show_another_window = false;
+        static bool show_test_window = true;
+        static bool show_another_window = false;
 
-		// 1. Show a simple window
-		// Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
-		{
-			static float f;
-			ImGui::Text("Hello, world!");
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-			show_test_window ^= ImGui::Button("Test Window");
-			show_another_window ^= ImGui::Button("Another Window");
+        // 1. Show a simple window
+        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
+        {
+            static float f;
+            ImGui::Text("Hello, world!");
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+            show_test_window ^= ImGui::Button("Test Window");
+            show_another_window ^= ImGui::Button("Another Window");
 
-			// Calculate and show frame rate
-			static float ms_per_frame[120] = { 0 };
-			static int ms_per_frame_idx = 0;
-			static float ms_per_frame_accum = 0.0f;
-			ms_per_frame_accum -= ms_per_frame[ms_per_frame_idx];
-			ms_per_frame[ms_per_frame_idx] = ImGui::GetIO().DeltaTime * 1000.0f;
-			ms_per_frame_accum += ms_per_frame[ms_per_frame_idx];
-			ms_per_frame_idx = (ms_per_frame_idx + 1) % 120;
-			const float ms_per_frame_avg = ms_per_frame_accum / 120;
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
-		}
+            // Calculate and show frame rate
+            static float ms_per_frame[120] = { 0 };
+            static int ms_per_frame_idx = 0;
+            static float ms_per_frame_accum = 0.0f;
+            ms_per_frame_accum -= ms_per_frame[ms_per_frame_idx];
+            ms_per_frame[ms_per_frame_idx] = ImGui::GetIO().DeltaTime * 1000.0f;
+            ms_per_frame_accum += ms_per_frame[ms_per_frame_idx];
+            ms_per_frame_idx = (ms_per_frame_idx + 1) % 120;
+            const float ms_per_frame_avg = ms_per_frame_accum / 120;
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
+        }
 
-		// 2. Show another simple window, this time using an explicit Begin/End pair
-		if (show_another_window)
-		{
-			ImGui::Begin("Another Window", &show_another_window, ImVec2(200,100));
-			ImGui::Text("Hello");
-			ImGui::End();
-		}
+        // 2. Show another simple window, this time using an explicit Begin/End pair
+        if (show_another_window)
+        {
+            ImGui::Begin("Another Window", &show_another_window, ImVec2(200,100));
+            ImGui::Text("Hello");
+            ImGui::End();
+        }
 
-		// 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
-		if (show_test_window)
-		{
-			ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));        // Normally user code doesn't need/want to call this, because positions are saved in .ini file. Here we just want to make the demo initial state a bit more friendly!
-			ImGui::ShowTestWindow(&show_test_window);
-		}
-		
-		// Rendering
+        // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
+        if (show_test_window)
+        {
+            ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));        // Normally user code doesn't need/want to call this, because positions are saved in .ini file. Here we just want to make the demo initial state a bit more friendly!
+            ImGui::ShowTestWindow(&show_test_window);
+        }
+        
+        // Rendering
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         glClearColor(0.8f, 0.6f, 0.6f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -370,7 +370,7 @@ int main(int argc, char** argv)
         glfwSwapBuffers(window);
     }
 
-	// Cleanup
+    // Cleanup
     if (vao_handle) glDeleteVertexArrays(1, &vao_handle);
     if (vbo_handle) glDeleteBuffers(1, &vbo_handle);
     glDetachShader(shader_handle, vert_handle);
