@@ -261,8 +261,7 @@ namespace ImGui
     IMGUI_API void          TreePop();
     IMGUI_API void          OpenNextNode(bool open);                                            // force open/close the next TreeNode or CollapsingHeader
 
-    // Value helper output "name: value"
-    // Freely declare your own in the ImGui namespace.
+    // Value helper output "name: value". tip: freely declare your own within the ImGui namespace!
     IMGUI_API void          Value(const char* prefix, bool b);
     IMGUI_API void          Value(const char* prefix, int v);
     IMGUI_API void          Value(const char* prefix, unsigned int v);
@@ -327,7 +326,7 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_EnterReturnsTrue    = 1 << 3,   // Return 'true' when Enter is pressed (as opposed to when the value was modified)
     ImGuiInputTextFlags_CallbackCompletion  = 1 << 4,   // Call user function on pressing TAB (for completion handling)
     ImGuiInputTextFlags_CallbackHistory     = 1 << 5,   // Call user function on pressing Up/Down arrows (for history handling)
-    ImGuiInputTextFlags_CallbackAlways      = 1 << 6    // Call user function every frame
+    ImGuiInputTextFlags_CallbackAlways      = 1 << 6    // Call user function every time
     //ImGuiInputTextFlags_AlignCenter       = 1 << 6,
 };
 
@@ -450,8 +449,8 @@ struct ImGuiIO
     ImVec2      DisplaySize;                // <unset>                  // Display size, in pixels. For clamping windows positions.
     float       DeltaTime;                  // = 1.0f/60.0f             // Time elapsed since last frame, in seconds.
     float       IniSavingRate;              // = 5.0f                   // Maximum time between saving .ini file, in seconds. Set to a negative value to disable .ini saving.
-    const char* IniFilename;                // = "imgui.ini"            // Absolute path to .ini file.
-    const char* LogFilename;                // = "imgui_log.txt"        // Absolute path to .log file.
+    const char* IniFilename;                // = "imgui.ini"            // Path to .ini file.
+    const char* LogFilename;                // = "imgui_log.txt"        // Path to .log file.
     float       MouseDoubleClickTime;       // = 0.30f                  // Time for a double-click, in seconds.
     float       MouseDoubleClickMaxDist;    // = 6.0f                   // Distance threshold to stay in to validate a double-click, in pixels.
     int         KeyMap[ImGuiKey_COUNT];     // <unset>                  // Map of indices into the KeysDown[512] entries array
@@ -480,7 +479,7 @@ struct ImGuiIO
     void*       (*MemReallocFn)(void* ptr, size_t sz);
     void        (*MemFreeFn)(void* ptr);
 
-    // Optional: notify OS Input Method Editor of text input position (e.g. when using Japanese/Chinese inputs, otherwise this isn't needed)
+    // Optional: notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese inputs in Windows)
     void        (*ImeSetInputScreenPosFn)(int x, int y);
 
     //------------------------------------------------------------------
@@ -651,8 +650,8 @@ IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
 #endif
 
 // Draw command list
-// This is the low-level list of polygon that ImGui:: functions are filling. At the end of the frame, all command lists are passed to your ImGuiIO::RenderDrawListFn function for rendering.
-// Each ImGui window contains its own ImDrawList.
+// This is the low-level list of polygon that ImGui:: functions are creating. At the end of the frame, all command lists are passed to your ImGuiIO::RenderDrawListFn function for rendering.
+// At the moment, each ImGui window contains its own ImDrawList but they could potentially be merged.
 // If you want to add custom rendering within a window, you can use ImGui::GetWindowDrawList() to access the current draw list and add your own primitives.
 // You can interleave normal ImGui:: calls and adding primitives to the current draw list.
 // Note that this only gives you access to rendering polygons. If your intent is to create custom widgets and the publicly exposed functions/data aren't sufficient, you can add code in imgui_user.inl
@@ -686,7 +685,7 @@ struct ImDrawList
     IMGUI_API void  AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f);
 };
 
-// Optional bitmap font data loader & renderer into vertices
+// Bitmap font data loader & renderer into vertices
 // Using the .fnt format exported by BMFont
 //  - tool: http://www.angelcode.com/products/bmfont
 //  - file-format: http://www.angelcode.com/products/bmfont/doc/file_format.html
