@@ -36,6 +36,7 @@
  - limited layout features, intricate layouts are typically crafted in code
  - occasionally use statically sized buffers for string manipulations - won't crash, but some long text may be clipped
  
+
  END-USER GUIDE
  ==============
 
@@ -57,6 +58,7 @@
    - CTRL+Z,CTRL+Y to undo/redo
    - ESCAPE to revert text to its original value
    - You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract (because - would set a negative value!)
+
 
  PROGRAMMER GUIDE
  ================
@@ -105,6 +107,10 @@
             // swap video buffer, etc.
         }
 
+   - after calling ImGui::NewFrame() you can read back 'ImGui::GetIO().WantCaptureMouse' and 'ImGui::GetIO().WantCaptureKeyboard' to tell
+     if ImGui wants to use your inputs. so typically can hide the mouse inputs from the rest of your application if ImGui is using it.
+
+
  API BREAKING CHANGES
  ====================
 
@@ -121,6 +127,7 @@
  - 2014/08/30 (1.09) removed IO.FontHeight (now computed automatically)
  - 2014/08/30 (1.09) moved IMGUI_FONT_TEX_UV_FOR_WHITE preprocessor define to IO.FontTexUvForWhite
  - 2014/08/28 (1.09) changed the behavior of IO.PixelCenterOffset following various rendering fixes
+
 
  TROUBLESHOOTING & FREQUENTLY ASKED QUESTIONS
  ============================================
@@ -178,6 +185,7 @@
  - tip: you can call Render() multiple times (e.g for VR renders), up to you to communicate the extra state to your RenderDrawListFn function.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
  - tip: read the ShowTestWindow() code for more example of how to use ImGui!
+
 
  ISSUES & TODO-LIST
  ==================
