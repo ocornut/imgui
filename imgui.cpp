@@ -201,7 +201,8 @@
  - main: make IsHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
  - scrollbar: use relative mouse movement when first-clicking inside of scroll grab box.
  - scrollbar: make the grab visible and a minimum size for long scroll regions
- - input number: optional range min/max
+!- input number: very large int not reliably supported because of int<>float conversions.
+ - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons should increase the step non-linearly
  - input number: use mouse wheel to step up/down
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 horrible layout code. item width should include frame padding, then we can have a generic horizontal layout helper.
@@ -4341,7 +4342,8 @@ bool ImGui::InputInt(const char* label, int *v, int step, int step_fast, ImGuiIn
 {
     float f = (float)*v;
     const bool value_changed = ImGui::InputFloat(label, &f, (float)step, (float)step_fast, 0, extra_flags);
-    *v = (int)f;
+    if (value_changed)
+        *v = (int)f;
     return value_changed;
 }
 
