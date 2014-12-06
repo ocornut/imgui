@@ -4,7 +4,7 @@ compiler:
   - gcc
 
 before_install:
-  - if [ $TRAVIS_OS_NAME == linux ]; then sudo apt-get install -y --no-install-recommends libglfw3-dev libglew-dev; fi
+  - if [ $TRAVIS_OS_NAME == linux ]; then sudo apt-get update -qq && apt-get install -y --no-install-recommends libglfw3-dev libglew-dev; fi
 
 script: 
   - cd examples/opengl_example && make
