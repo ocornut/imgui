@@ -1,7 +1,12 @@
 language: cpp
+
 compiler:
   - gcc
-  - clang
-# Change this to your needs
-script: cd examples/opengl_example && make
+
+before_install:
+  - apt-get update && apt-get install -y --no-install-recommends build-essential libglfw3-dev libglew-dev pkg-config libxrandr-dev libxi-dev
+
+script: 
+  - cd examples/opengl_example && make
+  - cd examples/opengl3_example && make
 
