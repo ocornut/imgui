@@ -169,6 +169,7 @@ void InitGL()
     window = glfwCreateWindow(1280, 720, "ImGui OpenGL example", NULL, NULL);
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, glfw_key_callback);
+    glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);
     glfwSetScrollCallback(window, glfw_scroll_callback);
     glfwSetCharCallback(window, glfw_char_callback);
 
