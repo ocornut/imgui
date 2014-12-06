@@ -1,0 +1,7 @@
+language: cpp
+compiler:
+  - gcc
+  - clang
+# Change this to your needs
+script: cd examples/opengl_example && make
+
