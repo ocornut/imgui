@@ -7188,7 +7188,7 @@ struct ExampleAppConsole
                 const char* commands[] = { "HELP", "CLEAR", "CLASSIFY" };
                 ImVector<const char*> candidates;
                 for (size_t i = 0; i < IM_ARRAYSIZE(commands); i++)
-                    if (ImStrnicmp(commands[i], word_start, word_end-word_start) == 0)
+                    if (ImStrnicmp(commands[i], word_start, (int)(word_end-word_start)) == 0)
                         candidates.push_back(commands[i]);
 
                 if (candidates.size() == 0)
@@ -7199,14 +7199,14 @@ struct ExampleAppConsole
                 else if (candidates.size() == 1)
                 {
                     // Single match. Delete the beginning of the word and replace it entirely so we've got nice casing
-                    data->DeleteChars(word_start-data->Buf, word_end-word_start);
+                    data->DeleteChars((int)(word_start-data->Buf), (int)(word_end-word_start));
                     data->InsertChars(data->CursorPos, candidates[0]);
                     data->InsertChars(data->CursorPos, " ");
                 }
                 else
                 {
                     // Multiple matches. Complete as much as we can, so inputing "C" will complete to "CL" and display "CLEAR" and "CLASSIFY"
-                    int match_len = word_end - word_start;
+                    int match_len = (int)(word_end - word_start);
                     while (true)
                     {
                         int c = 0;
@@ -7225,7 +7225,7 @@ struct ExampleAppConsole
 
                     if (match_len > 0)
                     {
-                        data->DeleteChars(word_start - data->Buf, word_end-word_start);
+                        data->DeleteChars((int)(word_start - data->Buf), (int)(word_end-word_start));
                         data->InsertChars(data->CursorPos, candidates[0], candidates[0] + match_len);
                     }
 
