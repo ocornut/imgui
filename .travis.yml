@@ -1,10 +1,14 @@
 language: cpp
 
+os:
+  - osx
+
 compiler:
   - gcc
 
 before_install:
   - if [ $TRAVIS_OS_NAME == linux ]; then sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libglfw3-dev libglew-dev; fi
+  - if [ $TRAVIS_OS_NAME == osx ]; then brew update && brew install glew && brew install glfw3; fi
 
 script: 
   - cd examples/opengl_example && make
