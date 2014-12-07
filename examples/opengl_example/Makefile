@@ -35,7 +35,6 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 
 	CXXFLAGS = -I../../ -I/usr/local/Cellar/glew/1.10.0/include -I/usr/local/include
 	CXXFLAGS += -Wall
-
 #	CXXFLAGS += -D__APPLE__
 endif
 
