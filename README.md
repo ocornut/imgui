@@ -1,5 +1,6 @@
 ImGui
 =====
+[![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 
 ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and carries minimal amount of dependencies. It is based on an "immediate" graphical user interface paradigm which allows you to build user interfaces with ease.
 
