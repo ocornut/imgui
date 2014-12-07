@@ -1,13 +1,21 @@
 ImGui
 =====
 
-ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and carries minimal amount of dependencies (only 3 files are needed). It is based on an "immediate" graphical user interface paradigm which allows you to build user interfaces with ease.
+ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and carries minimal amount of dependencies. It is based on an "immediate" graphical user interface paradigm which allows you to build user interfaces with ease.
 
 ImGui is designed to enable fast iteration and allow programmers to create "content creation" or "debug" tools (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal, and thus lacks certain features normally found in more high-level libraries.
 
 ImGui is particularly suited to integration in 3D applications, fullscreen applications, embedded applications, games, or any applications on consoles platforms where operating system features are non-standard. 
 
-After ImGui is setup in your engine, you can use it like in this example:
+
+ImGui is self-contained within 4 files that you can easily copy and compile into your application/engine:
+
+  - imgui.cpp
+  - imgui.h
+  - imconfig.h (empty by default, user-editable)
+  - stb_textedit.h
+
+Your code passes mouse/keyboard inputs and settings to ImGui (see example applications for more details). After ImGui is setup, you can use it like in this example:
 
 ![screenshot of sample code alongside its output with ImGui](/web/code_sample_01.png?raw=true)
 
