@@ -11,7 +11,7 @@
 #    http://www.glfw.org
 #
 
-CXX = g++
+#CXX = g++
 
 OBJS = main.o
 OBJS += ../../imgui.o
@@ -22,6 +22,7 @@ UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
 	CXXFLAGS = -I../../ `pkg-config --cflags glfw3`
+	CXXFLAGS += -Wall
 	LIBS = `pkg-config --static --libs glfw3` -lGLEW
 endif
 
@@ -32,11 +33,10 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	LIBS += -L/usr/local/Cellar/glew/1.10.0/lib -L/usr/local/lib
 	LIBS += -lglew -lglfw3
 
-	CXXFLAGS = -I/usr/local/Cellar/glew/1.10.0/include -I/usr/local/include
-	CXXFLAGS += -I../../
+	CXXFLAGS = -I../../ -I/usr/local/Cellar/glew/1.10.0/include -I/usr/local/include
+	CXXFLAGS += -Wall
 
 #	CXXFLAGS += -D__APPLE__
-
 endif
 
 .cpp.o:
