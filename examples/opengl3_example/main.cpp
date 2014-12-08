@@ -322,6 +322,7 @@ int main(int argc, char** argv)
     {
         ImGuiIO& io = ImGui::GetIO();
         io.MouseWheel = 0;
+        mousePressed[0] = mousePressed[1] = false;
         glfwPollEvents();
         UpdateImGui();
 
