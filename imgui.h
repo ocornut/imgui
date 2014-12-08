@@ -117,7 +117,7 @@ public:
     inline void                 pop_back()                      { IM_ASSERT(Size > 0); Size--; }
 
     inline iterator             erase(const_iterator it)        { IM_ASSERT(it >= begin() && it < end()); const ptrdiff_t off = it - begin(); memmove(Data + off, Data + off + 1, (Size - (size_t)off - 1) * sizeof(value_type)); Size--; return Data + off; }
-    inline void                 insert(const_iterator it, const value_type& v)  { IM_ASSERT(it >= begin() && it <= end()); const ptrdiff_t off = it - begin(); if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); if (off < (int)Size) memmove(Data + off + 1, Data + off, (Size - (size_t)off) * sizeof(value_type)); Data[off] = v; Size++; }
+    inline iterator             insert(const_iterator it, const value_type& v)  { IM_ASSERT(it >= begin() && it <= end()); const ptrdiff_t off = it - begin(); if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); if (off < (int)Size) memmove(Data + off + 1, Data + off, (Size - (size_t)off) * sizeof(value_type)); Data[off] = v; Size++; return Data + off; }
 };
 #endif // #ifndef ImVector
 
@@ -204,10 +204,13 @@ namespace ImGui
     IMGUI_API float         GetTextLineHeight();
 
     // ID scopes
-    IMGUI_API void          PushID(const char* str_id);
+    // If you are creating repeated widgets in a loop you most likely want to push a unique identifier so ImGui can differentiate them.
+    IMGUI_API void          PushID(const char* str_id);                                         // push identifier into the ID stack. IDs are hash of the *entire* stack!
     IMGUI_API void          PushID(const void* ptr_id);
     IMGUI_API void          PushID(const int int_id);
     IMGUI_API void          PopID();
+    IMGUI_API ImGuiID       GetID(const char* str_id);                                          // calculate unique ID (hash of whole ID stack + given parameter). useful if you want to query into ImGuiStorage yourself. otherwise rarely needed.
+    IMGUI_API ImGuiID       GetID(const void* ptr_id);
 
     // Widgets
     IMGUI_API void          Text(const char* fmt, ...);
@@ -587,22 +590,38 @@ struct ImGuiTextBuffer
 };
 
 // Helper: Key->value storage
-// - Store collapse state for a tree
-// - Store color edit options, etc.
+// - Store collapse state for a tree (Int 0/1)
+// - Store color edit options (Int using values in ImGuiColorEditMode enum).
+// - Custom user storage for temporary values.
 // Typically you don't have to worry about this since a storage is held within each Window.
-// Declare your own storage if you want to manipulate the open/close state of a particular sub-tree in your interface.
+// Declare your own storage if:
+// - You want to manipulate the open/close state of a particular sub-tree in your interface (tree node uses Int 0/1 to store their state).
+// - You want to store custom debug data easily without adding or editing structures in your code.
 struct ImGuiStorage
 {
-    struct Pair { ImU32 key; int val; };
+    struct Pair 
+    { 
+        ImGuiID key; 
+        union { int val_i; float val_f; };        
+        Pair(ImGuiID _key, int _val_i) { key = _key; val_i = _val_i; } 
+        Pair(ImGuiID _key, float _val_f) { key = _key; val_f = _val_f; } 
+    };
     ImVector<Pair>    Data;
 
+    // - Get***() functions find pair, never add/allocate. Pairs are sorted so a query is O(log N)
+    // - Set***() functions find pair, insertion on demand if missing.
+    // - Get***Ptr() functions find pair, insertion on demand if missing, return pointer. Useful if you intend to do Get+Set. 
+    //   A typical use case where this is very convenient:
+    //      ImGui::SliderInt("tmp adjustment", GetIntPtr(key), 0, 100); some_var += *GetIntPtr(key);
+    // - Sorted insertion is costly but should amortize. A typical frame shouldn't need to insert any new pair.
     IMGUI_API void    Clear();
-    IMGUI_API int     GetInt(ImU32 key, int default_val = 0);
-    IMGUI_API void    SetInt(ImU32 key, int val);
-    IMGUI_API void    SetAllInt(int val);
-
-    IMGUI_API int*    Find(ImU32 key);
-    IMGUI_API void    Insert(ImU32 key, int val);
+    IMGUI_API int     GetInt(ImGuiID key, int default_val = 0) const;
+    IMGUI_API void    SetInt(ImGuiID key, int val);
+    IMGUI_API int*    GetIntPtr(ImGuiID key, int default_val = 0);
+    IMGUI_API float   GetFloat(ImGuiID key, float default_val = 0.0f) const;
+    IMGUI_API void    SetFloat(ImGuiID key, float val);
+    IMGUI_API float*  GetFloatPtr(ImGuiID key, float default_val = 0);
+    IMGUI_API void    SetAllInt(int val);    // Use on your own storage if you know only integer are being stored.
 };
 
 // Shared state of InputText(), passed to callback when a ImGuiInputTextFlags_Callback* flag is used.

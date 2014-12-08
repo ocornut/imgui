@@ -924,46 +924,66 @@ static ImVector<ImGuiStorage::Pair>::iterator LowerBound(ImVector<ImGuiStorage::
     return first;
 }
 
-int* ImGuiStorage::Find(ImU32 key)
+int ImGuiStorage::GetInt(ImU32 key, int default_val) const
+{
+    ImVector<Pair>::iterator it = LowerBound(const_cast<ImVector<ImGuiStorage::Pair>&>(Data), key);
+    if (it == Data.end() || it->key != key)
+        return default_val;
+    return it->val_i;
+}
+
+float ImGuiStorage::GetFloat(ImU32 key, float default_val) const
+{
+    ImVector<Pair>::iterator it = LowerBound(const_cast<ImVector<ImGuiStorage::Pair>&>(Data), key);
+    if (it == Data.end() || it->key != key)
+        return default_val;
+    return it->val_f;
+}
+
+int* ImGuiStorage::GetIntPtr(ImGuiID key, int default_val)
 {
     ImVector<Pair>::iterator it = LowerBound(Data, key);
-    if (it == Data.end())
-        return NULL;
-    if (it->key != key)
-        return NULL;
-    return &it->val;
+    if (it == Data.end() || it->key != key)
+        it = Data.insert(it, Pair(key, default_val));
+    return &it->val_i;
 }
 
-int ImGuiStorage::GetInt(ImU32 key, int default_val)
+float* ImGuiStorage::GetFloatPtr(ImGuiID key, float default_val)
 {
-    int* pval = Find(key);
-    if (!pval)
-        return default_val;
-    return *pval;
+    ImVector<Pair>::iterator it = LowerBound(Data, key);
+    if (it == Data.end() || it->key != key)
+        it = Data.insert(it, Pair(key, default_val));
+    return &it->val_f;
 }
 
-// FIXME-OPT: We are wasting time because all SetInt() are preceeded by GetInt() calls so we should have the result from lower_bound already in place.
+// FIXME-OPT: Wasting CPU because all SetInt() are preceeded by GetInt() calls so we should have the result from lower_bound already in place.
 // However we only use SetInt() on explicit user action (so that's maximum once a frame) so the optimisation isn't much needed.
 void ImGuiStorage::SetInt(ImU32 key, int val)
 {
     ImVector<Pair>::iterator it = LowerBound(Data, key);
-    if (it != Data.end() && it->key == key)
+    if (it == Data.end() || it->key != key)
     {
-        it->val = val;
+        Data.insert(it, Pair(key, val));
+        return;
     }
-    else
+    it->val_i = val;
+}
+
+void ImGuiStorage::SetFloat(ImU32 key, float val)
+{
+    ImVector<Pair>::iterator it = LowerBound(Data, key);
+    if (it == Data.end() || it->key != key)
     {
-        Pair pair_key;
-        pair_key.key = key;
-        pair_key.val = val;
-        Data.insert(it, pair_key);
+        Data.insert(it, Pair(key, val));
+        return;
     }
+    it->val_f = val;
 }
 
 void ImGuiStorage::SetAllInt(int v)
 {
     for (size_t i = 0; i < Data.size(); i++)
-        Data[i].val = v;
+        Data[i].val_i = v;
 }
 
 //-----------------------------------------------------------------------------
@@ -3548,6 +3568,18 @@ void ImGui::PopID()
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->IDStack.pop_back();
+}
+
+ImGuiID ImGui::GetID(const char* str_id)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->GetID(str_id);
+}
+
+ImGuiID ImGui::GetID(const void* ptr_id)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->GetID(ptr_id);
 }
 
 // User can input math operators (e.g. +100) to edit a numerical values.
