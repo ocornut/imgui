@@ -612,7 +612,7 @@ struct ImGuiStorage
     // - Set***() functions find pair, insertion on demand if missing.
     // - Get***Ptr() functions find pair, insertion on demand if missing, return pointer. Useful if you intend to do Get+Set. 
     //   A typical use case where this is very convenient:
-    //      ImGui::SliderInt("tmp adjustment", GetIntPtr(key), 0, 100); some_var += *GetIntPtr(key);
+    //      float* pvar = ImGui::GetIntPtr(key); ImGui::SliderInt("var", pvar, 0, 100); some_var += *pvar;
     // - Sorted insertion is costly but should amortize. A typical frame shouldn't need to insert any new pair.
     IMGUI_API void    Clear();
     IMGUI_API int     GetInt(ImGuiID key, int default_val = 0) const;
