@@ -37,6 +37,7 @@ typedef int ImGuiStyleVar;          // enum ImGuiStyleVar_
 typedef int ImGuiKey;               // enum ImGuiKey_
 typedef int ImGuiColorEditMode;     // enum ImGuiColorEditMode_
 typedef int ImGuiWindowFlags;       // enum ImGuiWindowFlags_
+typedef int ImGuiSetCondition;      // enum ImGuiSetCondition_
 typedef int ImGuiInputTextFlags;    // enum ImGuiInputTextFlags_
 struct ImGuiTextEditCallbackData;
 
@@ -127,7 +128,7 @@ public:
 // - struct ImGuiTextBuffer             // Text buffer for logging/accumulating text
 // - struct ImGuiStorage                // Custom key value storage (if you need to alter open/close states manually)
 // - struct ImDrawList                  // Draw command list
-// - struct ImBitmapFont                // Bitmap font loader
+// - struct ImFont                      // Bitmap font loader
 
 // ImGui End-user API
 // In a namespace so that user can add extra functions (e.g. Value() helpers for your vector or common types)
@@ -149,11 +150,6 @@ namespace ImGui
     IMGUI_API void          BeginChild(const char* str_id, ImVec2 size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);                         // size==0.0f: use remaining window size, size<0.0f: use remaining window size minus abs(size). on each axis.
     IMGUI_API void          EndChild();
     IMGUI_API bool          GetWindowIsFocused();
-    IMGUI_API ImVec2        GetWindowSize();
-    IMGUI_API float         GetWindowWidth();
-    IMGUI_API void          SetWindowSize(const ImVec2& size);                                  // set to ImVec2(0,0) to force an auto-fit
-    IMGUI_API ImVec2        GetWindowPos();                                                     // you should rarely need/care about the window position, but it can be useful if you want to use your own drawing.
-    IMGUI_API void          SetWindowPos(const ImVec2& pos);                                    // set current window pos.
     IMGUI_API ImVec2        GetContentRegionMax();                                              // window or current column boundaries
     IMGUI_API ImVec2        GetWindowContentRegionMin();                                        // window boundaries
     IMGUI_API ImVec2        GetWindowContentRegionMax();
@@ -161,11 +157,22 @@ namespace ImGui
     IMGUI_API ImFont*       GetWindowFont();
     IMGUI_API float         GetWindowFontSize();
     IMGUI_API void          SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontGlobalScale if you want to scale all windows.
+    IMGUI_API ImVec2        GetWindowPos();                                                     // you should rarely need/care about the window position, but it can be useful if you want to do your own drawing.
+    IMGUI_API ImVec2        GetWindowSize();                                                    // get current window position.
+    IMGUI_API float         GetWindowWidth();
+    IMGUI_API bool          GetWindowCollapsed();
+    IMGUI_API void          SetWindowPos(const ImVec2& pos, ImGuiSetCondition cond = 0);        // set current window position.
+    IMGUI_API void          SetWindowSize(const ImVec2& size, ImGuiSetCondition cond = 0);      // set current window size. set to ImVec2(0,0) to force an auto-fit
+    IMGUI_API void          SetWindowCollapsed(bool collapsed, ImGuiSetCondition cond = 0);     // set current window collapsed state.
+    IMGUI_API void          SetNextWindowPos(const ImVec2& pos, ImGuiSetCondition cond = 0);    // set next window position.
+    IMGUI_API void          SetNextWindowSize(const ImVec2& size, ImGuiSetCondition cond = 0);  // set next window size. set to ImVec2(0,0) to force an auto-fit
+    IMGUI_API void          SetNextWindowCollapsed(bool collapsed, ImGuiSetCondition cond = 0); // set next window collapsed state.
+
     IMGUI_API void          SetScrollPosHere();                                                 // adjust scrolling position to center into the current cursor position.
-    IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use 'offset' to access sub components of a multiple component widget.
+    IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget.
     IMGUI_API void          SetTreeStateStorage(ImGuiStorage* tree);                            // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it).
     IMGUI_API ImGuiStorage* GetTreeStateStorage();
-    
+
     IMGUI_API void          PushItemWidth(float item_width);                                    // width of items for the common item+label case. default to ~2/3 of windows width.
     IMGUI_API void          PopItemWidth();
     IMGUI_API float         GetItemWidth();
@@ -279,7 +286,6 @@ namespace ImGui
     IMGUI_API void          LogToClipboard(int max_depth = -1);
 
     // Utilities
-    IMGUI_API void          SetNewWindowDefaultPos(const ImVec2& pos);                          // set position of window that do
     IMGUI_API bool          IsItemHovered();                                                    // was the last item active area hovered by mouse?
     IMGUI_API bool          IsItemFocused();                                                    // was the last item focused for keyboard input?
     IMGUI_API ImVec2        GetItemBoxMin();                                                    // get bounding box of last item
@@ -420,6 +426,15 @@ enum ImGuiColorEditMode_
     ImGuiColorEditMode_RGB = 0,
     ImGuiColorEditMode_HSV = 1,
     ImGuiColorEditMode_HEX = 2
+};
+
+// Condition flags for ImGui::SetWindow***() and SetNextWindow***() functions
+// Those functions treat 0 as a shortcut to ImGuiSetCondition_Always
+enum ImGuiSetCondition_
+{
+    ImGuiSetCondition_Always              = 1 << 0, // Set the variable
+    ImGuiSetCondition_FirstUseThisSession = 1 << 1, // Only set the variable on the first call for this window (once per session)
+    ImGuiSetCondition_FirstUseEver        = 1 << 2, // Only set the variable if the window doesn't exist in the .ini file
 };
 
 struct ImGuiStyle

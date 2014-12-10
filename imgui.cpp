@@ -117,6 +117,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
 
+ - 2014/12/10 (1.18) removed SetNewWindowDefaultPos() in favor of new generic API SetNextWindowPos(pos, ImGuiSetCondition_FirstUseEver)
  - 2014/11/28 (1.17) moved IO.Font*** options to inside the IO.Font-> structure.
  - 2014/11/26 (1.17) reworked syntax of IMGUI_ONCE_UPON_A_FRAME helper macro to increase compiler compatibility
  - 2014/11/07 (1.15) renamed IsHovered() to IsItemHovered()
@@ -773,9 +774,14 @@ struct ImGuiState
     bool                    ActiveIdIsAlive;
     float                   SettingsDirtyTimer;
     ImVector<ImGuiIniData*> Settings;
-    ImVec2                  NewWindowDefaultPos;
     ImVector<ImGuiColMod>   ColorModifiers;
     ImVector<ImGuiStyleMod> StyleModifiers;
+    ImVec2                  SetNextWindowPosVal;
+    ImGuiSetCondition       SetNextWindowPosCond;
+    ImVec2                  SetNextWindowSizeVal;
+    ImGuiSetCondition       SetNextWindowSizeCond;
+    bool                    SetNextWindowCollapsedVal;
+    ImGuiSetCondition       SetNextWindowCollapsedCond;
 
     // Render
     ImVector<ImDrawList*>   RenderDrawLists;
@@ -806,7 +812,12 @@ struct ImGuiState
         HoveredRootWindow = NULL;
         ActiveIdIsAlive = false;
         SettingsDirtyTimer = 0.0f;
-        NewWindowDefaultPos = ImVec2(60, 60);
+        SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
+        SetNextWindowPosCond = 0;
+        SetNextWindowSizeVal = ImVec2(0.0f, 0.0f);
+        SetNextWindowSizeCond = 0;
+        SetNextWindowCollapsedVal = false;
+        SetNextWindowCollapsedCond = 0;
         SliderAsInputTextId = 0;
         ActiveComboID = 0;
         memset(Tooltip, 0, sizeof(Tooltip));
@@ -839,6 +850,9 @@ struct ImGuiWindow
     bool                    SkipItems;                          // == Visible && !Collapsed
     int                     AutoFitFrames;
     bool                    AutoFitOnlyGrows;
+    int                     SetWindowPosAllowFlags;             // bit ImGuiSetCondition_*** specify if SetWindowPos() call is allowed with this particular flag. 
+    int                     SetWindowSizeAllowFlags;            // bit ImGuiSetCondition_*** specify if SetWindowSize() call is allowed with this particular flag. 
+    int                     SetWindowCollapsedAllowFlags;       // bit ImGuiSetCondition_*** specify if SetWindowCollapsed() call is allowed with this particular flag. 
 
     ImGuiDrawContext        DC;
     ImVector<ImGuiID>       IDStack;
@@ -859,7 +873,7 @@ struct ImGuiWindow
     int                     FocusIdxTabRequestNext;             // "
 
 public:
-    ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_size);
+    ImGuiWindow(const char* name);
     ~ImGuiWindow();
 
     ImGuiID     GetID(const char* str);
@@ -1103,15 +1117,14 @@ void ImGuiTextBuffer::append(const char* fmt, ...)
 
 //-----------------------------------------------------------------------------
 
-ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_size)
+ImGuiWindow::ImGuiWindow(const char* name)
 {
     Name = ImStrdup(name);
     ID = GetID(name); 
     IDStack.push_back(ID);
 
-    PosFloat = default_pos;
-    Pos = ImVec2((float)(int)PosFloat.x, (float)(int)PosFloat.y);
-    Size = SizeFull = default_size;
+    PosFloat = Pos = ImVec2(0.0f, 0.0f);
+    Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContentsFit = ImVec2(0.0f, 0.0f);
     ScrollY = 0.0f;
     NextScrollY = 0.0f;
@@ -1122,6 +1135,8 @@ ImGuiWindow::ImGuiWindow(const char* name, ImVec2 default_pos, ImVec2 default_si
     SkipItems = false;
     AutoFitFrames = -1;
     AutoFitOnlyGrows = false;
+    SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiSetCondition_Always | ImGuiSetCondition_FirstUseThisSession | ImGuiSetCondition_FirstUseEver;
+
     LastFrameDrawn = -1;
     ItemWidthDefault = 0.0f;
     FontWindowScale = 1.0f;
@@ -1240,20 +1255,24 @@ void* ImGui::MemRealloc(void* ptr, size_t sz)
 static ImGuiIniData* FindWindowSettings(const char* name)
 {
     ImGuiState& g = GImGui;
-
     for (size_t i = 0; i != g.Settings.size(); i++)
     {
         ImGuiIniData* ini = g.Settings[i];
         if (ImStricmp(ini->Name, name) == 0)
             return ini;
     }
+    return NULL;
+}
+
+static ImGuiIniData* AddWindowSettings(const char* name)
+{
     ImGuiIniData* ini = (ImGuiIniData*)ImGui::MemAlloc(sizeof(ImGuiIniData));
     new(ini) ImGuiIniData();
     ini->Name = ImStrdup(name);
     ini->Collapsed = false;
     ini->Pos = ImVec2(FLT_MAX,FLT_MAX);
     ini->Size = ImVec2(0,0);
-    g.Settings.push_back(ini);
+    GImGui.Settings.push_back(ini);
     return ini;
 }
 
@@ -1310,6 +1329,8 @@ static void LoadSettings()
             char name[64];
             ImFormatString(name, IM_ARRAYSIZE(name), "%.*s", line_end-line_start-2, line_start+1);
             settings = FindWindowSettings(name);
+            if (!settings)
+                settings = AddWindowSettings(name);
         }
         else if (settings)
         {
@@ -2026,13 +2047,6 @@ void ImGui::SetTooltip(const char* fmt, ...)
     va_end(args);
 }
 
-// Position new window if they don't have position setting in the .ini file. Rarely useful (used by the sample applications).
-void ImGui::SetNewWindowDefaultPos(const ImVec2& pos)
-{
-    ImGuiState& g = GImGui;
-    g.NewWindowDefaultPos = pos;
-}
-
 float ImGui::GetTime()
 {
     return GImGui.Time;
@@ -2121,7 +2135,10 @@ void ImGui::EndChild()
     }
 }
 
-// Push a new ImGui window to add widgets to. This can be called multiple times with the same window to append contents
+// Push a new ImGui window to add widgets to. 
+// A default window called "Debug" is automatically stacked at the beginning of every frame.
+// This can be called multiple times with the same window name to append content to the same window.
+// Passing non-zero 'size' is roughly equivalent to calling SetNextWindowSize(size, ImGuiSetCondition_FirstUseEver) prior to calling Begin().
 bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWindowFlags flags)
 {
     ImGuiState& g = GImGui;
@@ -2136,17 +2153,30 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
         {
             // Tooltip and child windows don't store settings
             window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
-            new(window) ImGuiWindow(name, ImVec2(0,0), size);
+            new(window) ImGuiWindow(name);
+            
+            window->Size = window->SizeFull = size;
         }
         else
         {
             // Normal windows store settings in .ini file
-            ImGuiIniData* settings = FindWindowSettings(name);
-            if (settings && ImLength(settings->Size) > 0.0f && !(flags & ImGuiWindowFlags_NoResize))// && ImLengthsize) == 0.0f)
-                size = settings->Size;
-
             window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
-            new(window) ImGuiWindow(name, g.NewWindowDefaultPos, size);
+            new(window) ImGuiWindow(name);
+
+            window->PosFloat = ImVec2(60, 60);
+            window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
+
+            ImGuiIniData* settings = FindWindowSettings(name);
+            if (!settings)
+            {
+                settings = AddWindowSettings(name);
+            }
+            else
+            {
+                window->SetWindowPosAllowFlags &= ~ImGuiSetCondition_FirstUseEver;
+                window->SetWindowSizeAllowFlags &= ~ImGuiSetCondition_FirstUseEver;
+                window->SetWindowCollapsedAllowFlags &= ~ImGuiSetCondition_FirstUseEver;
+            }
 
             if (settings->Pos.x != FLT_MAX)
             {
@@ -2154,6 +2184,10 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
                 window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
                 window->Collapsed = settings->Collapsed;
             }
+
+            if (ImLength(settings->Size) > 0.0f && !(flags & ImGuiWindowFlags_NoResize))
+                size = settings->Size;
+            window->Size = window->SizeFull = size;
         }
         g.Windows.push_back(window);
     }
@@ -2161,6 +2195,25 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
 
     g.CurrentWindowStack.push_back(window);
     g.CurrentWindow = window;
+
+    // Process SetNextWindow***() calls
+    if (g.SetNextWindowPosCond)
+    {
+        const ImVec2 backup_cursor_pos = window->DC.CursorPos;
+        ImGui::SetWindowPos(g.SetNextWindowPosVal, g.SetNextWindowPosCond);
+        window->DC.CursorPos = backup_cursor_pos;
+        g.SetNextWindowPosCond = 0;
+    }
+    if (g.SetNextWindowSizeCond)
+    {
+        ImGui::SetWindowSize(g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
+        g.SetNextWindowSizeCond = 0;
+    }
+    if (g.SetNextWindowCollapsedCond)
+    {
+        ImGui::SetWindowCollapsed(g.SetNextWindowCollapsedVal, g.SetNextWindowCollapsedCond);
+        g.SetNextWindowCollapsedCond = 0;
+    }
 
     // Find root
     size_t root_idx = g.CurrentWindowStack.size() - 1;
@@ -2797,15 +2850,20 @@ ImVec2 ImGui::GetWindowPos()
     return window->Pos;
 }
 
-void ImGui::SetWindowPos(const ImVec2& pos)
+void ImGui::SetWindowPos(const ImVec2& pos, ImGuiSetCondition cond)
 {
     ImGuiWindow* window = GetCurrentWindow();
+
+    // Test condition (NB: bit 0 is always true) and clear flags for next time
+    if (cond && (window->SetWindowPosAllowFlags & cond) == 0)
+        return;
+    window->SetWindowPosAllowFlags &= ~(ImGuiSetCondition_FirstUseThisSession | ImGuiSetCondition_FirstUseEver);
+
+    // Set
     const ImVec2 old_pos = window->Pos;
     window->PosFloat = pos;
     window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
-
-    // If we happen to move the window while it is being appended to (which is a bad idea - will smear) let's at least offset the cursor
-    window->DC.CursorPos += (window->Pos - old_pos);
+    window->DC.CursorPos += (window->Pos - old_pos);  // As we happen to move the window while it is being appended to (which is a bad idea - will smear) let's at least offset the cursor
 }
 
 ImVec2 ImGui::GetWindowSize()
@@ -2814,9 +2872,16 @@ ImVec2 ImGui::GetWindowSize()
     return window->Size;
 }
 
-void ImGui::SetWindowSize(const ImVec2& size)
+void ImGui::SetWindowSize(const ImVec2& size, ImGuiSetCondition cond)
 {
     ImGuiWindow* window = GetCurrentWindow();
+
+    // Test condition (NB: bit 0 is always true) and clear flags for next time
+    if (cond && (window->SetWindowSizeAllowFlags & cond) == 0)
+        return;
+    window->SetWindowSizeAllowFlags &= ~(ImGuiSetCondition_FirstUseThisSession | ImGuiSetCondition_FirstUseEver);
+
+    // Set
     if (ImLength(size) < 0.001f)
     {
         window->AutoFitFrames = 2;
@@ -2825,7 +2890,42 @@ void ImGui::SetWindowSize(const ImVec2& size)
     else
     {
         window->SizeFull = size;
+        window->AutoFitFrames = 0;
     }
+}
+
+void ImGui::SetWindowCollapsed(bool collapsed, ImGuiSetCondition cond)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+
+    // Test condition (NB: bit 0 is always true) and clear flags for next time
+    if (cond && (window->SetWindowCollapsedAllowFlags & cond) == 0)
+        return;
+    window->SetWindowCollapsedAllowFlags &= ~(ImGuiSetCondition_FirstUseThisSession | ImGuiSetCondition_FirstUseEver);
+
+    // Set
+    window->Collapsed = collapsed;
+}
+
+void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiSetCondition cond)
+{
+    ImGuiState& g = GImGui;
+    g.SetNextWindowPosVal = pos;
+    g.SetNextWindowPosCond = cond ? cond : ImGuiSetCondition_Always;
+}
+
+void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiSetCondition cond)
+{
+    ImGuiState& g = GImGui;
+    g.SetNextWindowSizeVal = size;
+    g.SetNextWindowSizeCond = cond ? cond : ImGuiSetCondition_Always;
+}
+
+void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiSetCondition cond)
+{
+    ImGuiState& g = GImGui;
+    g.SetNextWindowCollapsedVal = collapsed;
+    g.SetNextWindowCollapsedCond = cond ? cond : ImGuiSetCondition_Always;
 }
 
 ImVec2 ImGui::GetContentRegionMax()
@@ -6555,7 +6655,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             *ref = g.Style;
     }
 
-    ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.55f);
+    ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.55f);
 
     if (ImGui::TreeNode("Sizes"))
     {
@@ -6943,7 +7043,7 @@ void ImGui::ShowTestWindow(bool* open)
         ImGui::PushItemWidth(100);
         goto_line |= ImGui::InputInt("##Line", &line, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::PopItemWidth();
-        ImGui::BeginChild("Sub1", ImVec2(ImGui::GetWindowWidth()*0.5f,300));
+        ImGui::BeginChild("Sub1", ImVec2(ImGui::GetWindowWidth() * 0.5f,300));
         for (int i = 0; i < 100; i++)
         {
             ImGui::Text("%04d: scrollable region", i);
