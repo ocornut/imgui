@@ -312,11 +312,12 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_NoScrollbar            = 1 << 4,
     ImGuiWindowFlags_NoScrollWithMouse      = 1 << 5,
     ImGuiWindowFlags_AlwaysAutoResize       = 1 << 6,
-    ImGuiWindowFlags_ChildWindow            = 1 << 7,   // For internal use by BeginChild()
-    ImGuiWindowFlags_ChildWindowAutoFitX    = 1 << 8,   // For internal use by BeginChild()
-    ImGuiWindowFlags_ChildWindowAutoFitY    = 1 << 9,   // For internal use by BeginChild()
-    ImGuiWindowFlags_ComboBox               = 1 << 10,  // For internal use by ComboBox()
-    ImGuiWindowFlags_Tooltip                = 1 << 11   // For internal use by Render() when using Tooltip
+    ImGuiWindowFlags_NoSavedSettings        = 1 << 7,   // Never load/save settings in .ini file
+    ImGuiWindowFlags_ChildWindow            = 1 << 8,   // For internal use by BeginChild()
+    ImGuiWindowFlags_ChildWindowAutoFitX    = 1 << 9,   // For internal use by BeginChild()
+    ImGuiWindowFlags_ChildWindowAutoFitY    = 1 << 10,  // For internal use by BeginChild()
+    ImGuiWindowFlags_ComboBox               = 1 << 11,  // For internal use by ComboBox()
+    ImGuiWindowFlags_Tooltip                = 1 << 12   // For internal use by Render() when using Tooltip
 };
 
 // Flags for ImGui::InputText()

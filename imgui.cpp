@@ -1340,7 +1340,7 @@ static void SaveSettings()
     for (size_t i = 0; i != g.Windows.size(); i++)
     {
         ImGuiWindow* window = g.Windows[i];
-        if (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip))
+        if (window->Flags & ImGuiWindowFlags_NoSavedSettings)
             continue;
         ImGuiIniData* settings = FindWindowSettings(window->Name);
         settings->Pos = window->Pos;
@@ -2054,7 +2054,7 @@ static ImGuiWindow* FindWindow(const char* name)
 
 void ImGui::BeginTooltip()
 {
-    ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), 0.9f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_Tooltip);
+    ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), 0.9f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_Tooltip);
 }
 
 void ImGui::EndTooltip()
@@ -2068,7 +2068,7 @@ void ImGui::BeginChild(const char* str_id, ImVec2 size, bool border, ImGuiWindow
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_ChildWindow;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_ChildWindow;
 
     const ImVec2 content_max = window->Pos + ImGui::GetContentRegionMax();
     const ImVec2 cursor_pos = window->Pos + ImGui::GetCursorPos();
@@ -2102,6 +2102,7 @@ void ImGui::EndChild()
 {
     ImGuiWindow* window = GetCurrentWindow();
 
+    IM_ASSERT(window->Flags & ImGuiWindowFlags_ChildWindow);
     if (window->Flags & ImGuiWindowFlags_ComboBox)
     {
         ImGui::End();
@@ -2130,8 +2131,8 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
     ImGuiWindow* window = FindWindow(name);
     if (!window)
     {
-        // Create window the first time, and load settings
-        if (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip))
+        // Create window the first time
+        if (flags & ImGuiWindowFlags_NoSavedSettings)
         {
             // Tooltip and child windows don't store settings
             window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
@@ -6628,6 +6629,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 static void ShowExampleAppConsole(bool* open);
 static void ShowExampleAppLongText(bool* open);
 static void ShowExampleAppAutoResize(bool* open);
+static void ShowExampleAppFixedOverlay(bool* open);
 
 // Demonstrate ImGui features (unfortunately this makes this function a little bloated!)
 void ImGui::ShowTestWindow(bool* open)
@@ -7139,11 +7141,13 @@ void ImGui::ShowTestWindow(bool* open)
     static bool show_app_console = false;
     static bool show_app_long_text = false;
     static bool show_app_auto_resize = false;
+    static bool show_app_fixed_overlay = false;
     if (ImGui::CollapsingHeader("App Examples"))
     {
         ImGui::Checkbox("Console", &show_app_console);
         ImGui::Checkbox("Long text display", &show_app_long_text);
         ImGui::Checkbox("Auto-resizing window", &show_app_auto_resize);
+        ImGui::Checkbox("Simple overlay", &show_app_fixed_overlay);
     }
     if (show_app_console)
         ShowExampleAppConsole(&show_app_console);
@@ -7151,6 +7155,8 @@ void ImGui::ShowTestWindow(bool* open)
         ShowExampleAppLongText(&show_app_long_text);
     if (show_app_auto_resize)
         ShowExampleAppAutoResize(&show_app_auto_resize);
+    if (show_app_fixed_overlay)
+        ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
 
     ImGui::End();
 }
@@ -7168,6 +7174,22 @@ static void ShowExampleAppAutoResize(bool* open)
     ImGui::SliderInt("Number of lines", &lines, 1, 20);
     for (int i = 0; i < lines; i++)
         ImGui::Text("%*sThis is line %d", i*4, "", i); // Pad with space to extend size horizontally
+
+    ImGui::End();
+}
+
+static void ShowExampleAppFixedOverlay(bool* open)
+{
+    if (!ImGui::Begin("Example: Fixed Overlay", open, ImVec2(0,0), 0.3f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings))
+    {
+        ImGui::End();
+        return;
+    }
+
+    ImGui::SetWindowPos(ImVec2(10,10));
+    ImGui::Text("Simple overlay\non the top-left side of the screen.");
+    ImGui::Separator();
+    ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y); 
 
     ImGui::End();
 }
