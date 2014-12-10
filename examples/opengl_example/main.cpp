@@ -17,7 +17,6 @@
 static GLFWwindow* window;
 static GLuint fontTex;
 static bool mousePressed[2] = { false, false };
-static ImVec2 mousePosScale(1.0f, 1.0f);
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
@@ -140,7 +139,6 @@ void InitGL()
     if (!glfwInit())
         exit(1);
 
-    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     window = glfwCreateWindow(1280, 720, "ImGui OpenGL example", NULL, NULL);
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, glfw_key_callback);
@@ -153,15 +151,7 @@ void InitGL()
 
 void InitImGui()
 {
-    int w, h;
-    int display_w, display_h;
-    glfwGetWindowSize(window, &w, &h);
-    glfwGetFramebufferSize(window, &display_w, &display_h);
-    mousePosScale.x = (float)display_w / w;                       // Some screens e.g. Retina display have framebuffer size != from window size, and mouse inputs are given in window/screen coordinates.
-    mousePosScale.y = (float)display_h / h;
-
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)display_w, (float)display_h);  // Display size, in pixels. For clamping windows positions.
     io.DeltaTime = 1.0f/60.0f;                                    // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our time step is variable)
     io.PixelCenterOffset = 0.0f;                                  // Align OpenGL texels
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                       // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
@@ -228,6 +218,13 @@ void UpdateImGui()
 {
     ImGuiIO& io = ImGui::GetIO();
 
+    // Setup resolution (every frame to accommodate for window resizing)
+    int w, h;
+    int display_w, display_h;
+    glfwGetWindowSize(window, &w, &h);
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    io.DisplaySize = ImVec2((float)display_w, (float)display_h);                                   // Display size, in pixels. For clamping windows positions.
+
     // Setup time step
     static double time = 0.0f;
     const double current_time =  glfwGetTime();
@@ -238,7 +235,9 @@ void UpdateImGui()
     // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
     double mouse_x, mouse_y;
     glfwGetCursorPos(window, &mouse_x, &mouse_y);
-    io.MousePos = ImVec2((float)mouse_x * mousePosScale.x, (float)mouse_y * mousePosScale.y);      // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+    mouse_x *= (float)display_w / w;                                                               // Convert mouse coordinates to pixels
+    mouse_y *= (float)display_h / h;
+    io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);                                          // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
     io.MouseDown[0] = mousePressed[0] || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
     io.MouseDown[1] = mousePressed[1] || glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) != 0;
 
