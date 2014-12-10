@@ -451,9 +451,9 @@ struct ImGuiIO
 
     ImVec2      DisplaySize;                // <unset>                  // Display size, in pixels. For clamping windows positions.
     float       DeltaTime;                  // = 1.0f/60.0f             // Time elapsed since last frame, in seconds.
-    float       IniSavingRate;              // = 5.0f                   // Maximum time between saving .ini file, in seconds. Set to a negative value to disable .ini saving.
-    const char* IniFilename;                // = "imgui.ini"            // Path to .ini file.
-    const char* LogFilename;                // = "imgui_log.txt"        // Path to .log file.
+    float       IniSavingRate;              // = 5.0f                   // Maximum time between saving .ini file, in seconds.
+    const char* IniFilename;                // = "imgui.ini"            // Path to .ini file. NULL to disable .ini saving.
+    const char* LogFilename;                // = "imgui_log.txt"        // Path to .log file (default parameter to ImGui::LogToFile when no file is specified).
     float       MouseDoubleClickTime;       // = 0.30f                  // Time for a double-click, in seconds.
     float       MouseDoubleClickMaxDist;    // = 6.0f                   // Distance threshold to stay in to validate a double-click, in pixels.
     int         KeyMap[ImGuiKey_COUNT];     // <unset>                  // Map of indices into the KeysDown[512] entries array
