@@ -48,6 +48,10 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 Frequently Asked Question
 -------------------------
 
+<b>Where is example code?</b>
+
+The bulk of actual ImGui usage code is contained within the ImGui::ShowTestWindow() function. It covers most featurse of ImGui so you can read its source code and call the function itself to see its output. Ready-to-go example applications covering different versions of OpenGL/DirectX are provided in the examples/ folder. 
+
 <b>How do you use ImGui on a platform that may not have a mouse or keyboard?</b>
 
 I recommend using [Synergy](http://synergy-project.org). With the uSynergy.c micro client running you can seamlessly use your PC input devices from a video game console or a tablet. ImGui was also designed to function with touch inputs if you increase the padding of widgets to compensate for the lack of precision of touch devices, but it is recommended you use a mouse to allow optimising for screen real-estate.
