@@ -1,4 +1,4 @@
-// ImGui library v1.18
+// ImGui library v1.19 wip
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -195,7 +195,7 @@
  - window: autofit is losing its purpose when user relies on any dynamic layout (window width multiplier, column). maybe just clearly discard autofit?
  - window: add horizontal scroll
  - window: fix resize grip rendering scaling along with Rounding style setting
- - window: better helpers to set pos/size/collapsed with different options (first-run, session only, current value) (github issue #89)
+ - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. 
  - widgets: switching from "widget-label" to "label-widget" would make it more convenient to integrate widgets in trees
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
  - main: make IsHovered() more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
@@ -244,9 +244,7 @@
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - misc: CalcTextSize() could benefit from having 'hide_text_after_double_hash' false by default for external use?
  - style editor: add a button to output C code.
- - examples: integrate dx11 example.
- - examples: integrate opengl 3/4 programmable pipeline example.
- - optimization/render: use indexed rendering
+ - optimization/render: use indexed rendering to reduce vertex data cost (for remote/networked imgui)
  - optimization/render: move clip-rect to vertex data? would allow merging all commands
  - optimization/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
  - optimization/render: font exported by bmfont is not tight fit on vertical axis, incur unneeded pixel-shading cost.
