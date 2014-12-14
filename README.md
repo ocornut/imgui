@@ -50,7 +50,7 @@ Frequently Asked Question
 
 <b>Where is example code?</b>
 
-The bulk of actual ImGui usage code is contained within the ImGui::ShowTestWindow() function. It covers most featurse of ImGui so you can read its source code and call the function itself to see its output. Ready-to-go example applications covering different versions of OpenGL/DirectX are provided in the examples/ folder. 
+The bulk of example  user code is contained within the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. Ready-to-go example applications covering different versions of OpenGL/DirectX are provided in the examples/ folder. 
 
 <b>How do you use ImGui on a platform that may not have a mouse or keyboard?</b>
 
