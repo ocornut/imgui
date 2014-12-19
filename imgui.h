@@ -412,6 +412,7 @@ enum ImGuiStyleVar_
 {
     ImGuiStyleVar_Alpha,             // float
     ImGuiStyleVar_WindowPadding,     // ImVec2
+    ImGuiStyleVar_WindowRounding,    // float
     ImGuiStyleVar_FramePadding,      // ImVec2
     ImGuiStyleVar_ItemSpacing,       // ImVec2
     ImGuiStyleVar_ItemInnerSpacing,  // ImVec2

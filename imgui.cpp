@@ -2720,6 +2720,7 @@ static float* GetStyleVarFloatAddr(ImGuiStyleVar idx)
     switch (idx)
     {
     case ImGuiStyleVar_Alpha: return &g.Style.Alpha;
+    case ImGuiStyleVar_WindowRounding: return &g.Style.WindowRounding;
     case ImGuiStyleVar_TreeNodeSpacing: return &g.Style.TreeNodeSpacing;
     case ImGuiStyleVar_ColumnsMinSpacing: return &g.Style.ColumnsMinSpacing;
     }
