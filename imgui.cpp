@@ -2300,8 +2300,11 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
         if (!(window->Flags & ImGuiWindowFlags_ChildWindow))
         {
             const ImVec2 pad = ImVec2(window->FontSize()*2.0f, window->FontSize()*2.0f);
-            window->PosFloat = ImMax(window->PosFloat + window->Size, pad) - window->Size;
-            window->PosFloat = ImMin(window->PosFloat, ImVec2(g.IO.DisplaySize.x, g.IO.DisplaySize.y) - pad);
+            if (g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
+            {
+                window->PosFloat = ImMax(window->PosFloat + window->Size, pad) - window->Size;
+                window->PosFloat = ImMin(window->PosFloat, ImVec2(g.IO.DisplaySize.x, g.IO.DisplaySize.y) - pad);
+            }
             window->SizeFull = ImMax(window->SizeFull, pad);
         }
         window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
@@ -2375,7 +2378,7 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
             }
             else
             {
-                const ImVec2 size_auto_fit = ImClamp(window->SizeContentsFit + style.AutoFitPadding, style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding);
+                const ImVec2 size_auto_fit = ImClamp(window->SizeContentsFit + style.AutoFitPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding));
                 if ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
                 {
                     // Don't continuously mark settings as dirty, the size of the window doesn't need to be stored.
