@@ -145,7 +145,7 @@ namespace ImGui
     IMGUI_API void          ShowTestWindow(bool* open = NULL);
 
     // Window
-    IMGUI_API bool          Begin(const char* name = "Debug", bool* open = NULL, ImVec2 size = ImVec2(0,0), float fill_alpha = -1.0f, ImGuiWindowFlags flags = 0);    // return false when window is collapsed, so you can early out in your code.
+    IMGUI_API bool          Begin(const char* name = "Debug", bool* p_opened = NULL, ImVec2 size = ImVec2(0,0), float fill_alpha = -1.0f, ImGuiWindowFlags flags = 0);// return false when window is collapsed, so you can early out in your code. passing 'bool* p_opened' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
     IMGUI_API void          End();
     IMGUI_API void          BeginChild(const char* str_id, ImVec2 size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);                         // size==0.0f: use remaining window size, size<0.0f: use remaining window size minus abs(size). on each axis.
     IMGUI_API void          EndChild();

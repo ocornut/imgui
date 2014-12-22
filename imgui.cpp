@@ -41,7 +41,7 @@
  ==============
 
  - double-click title bar to collapse window
- - click upper right corner to close a window, available when 'bool* open' is passed to ImGui::Begin()
+ - click upper right corner to close a window, available when 'bool* p_opened' is passed to ImGui::Begin()
  - click and drag on lower right corner to resize window
  - click and drag on any empty space to move window
  - double-click/double-tap on lower right corner grip to auto-fit to content
@@ -286,7 +286,7 @@ static void         LogText(const ImVec2& ref_pos, const char* text, const char*
 
 static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true, float wrap_width = 0.0f);
 static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
-static void         RenderCollapseTriangle(ImVec2 p_min, bool open, float scale = 1.0f, bool shadow = false);
+static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
 
 static void         ItemSize(ImVec2 size, ImVec2* adjust_start_offset = NULL);
 static void         ItemSize(const ImGuiAabb& aabb, ImVec2* adjust_start_offset = NULL);
@@ -297,7 +297,7 @@ static bool         ClipAdvance(const ImGuiAabb& aabb);
 static bool         IsMouseHoveringBox(const ImGuiAabb& box);
 static bool         IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
-static bool         CloseWindowButton(bool* open = NULL);
+static bool         CloseWindowButton(bool* p_opened = NULL);
 static void         FocusWindow(ImGuiWindow* window);
 static ImGuiWindow* FindWindow(const char* name);
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs);
@@ -1846,7 +1846,7 @@ static void RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
 }
 
 // Render a triangle to denote expanded/collapsed state
-static void RenderCollapseTriangle(ImVec2 p_min, bool open, float scale, bool shadow)
+static void RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale, bool shadow)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
@@ -1855,7 +1855,7 @@ static void RenderCollapseTriangle(ImVec2 p_min, bool open, float scale, bool sh
     ImVec2 center = p_min + ImVec2(h*0.50f, h*0.50f*scale);
 
     ImVec2 a, b, c;
-    if (open)
+    if (opened)
     {
         center.y -= r*0.25f;
         a = center + ImVec2(0,1)*r;
@@ -2135,14 +2135,18 @@ void ImGui::EndChild()
 }
 
 // Push a new ImGui window to add widgets to. 
-// A default window called "Debug" is automatically stacked at the beginning of every frame.
-// This can be called multiple times with the same window name to append content to the same window.
-// Passing non-zero 'size' is roughly equivalent to calling SetNextWindowSize(size, ImGuiSetCondition_FirstUseEver) prior to calling Begin().
-bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, ImGuiWindowFlags flags)
+// - A default window called "Debug" is automatically stacked at the beginning of every frame.
+// - This can be called multiple times during the frame with the same window name to append content to the same window.
+// - The window name is used as a unique identifier to preserve window information across frames (and save rudimentary information to the .ini file). Note that you can use ## to append unique data that isn't displayed, e.g. "My window##1" will use "My window##1" as unique window ID but display "My window" to the user.
+// - Return false when window is collapsed, so you can early out in your code. You always need to call ImGui::End() even if false is returned.
+// - Passing 'bool* p_opened' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
+// - Passing non-zero 'size' is roughly equivalent to calling SetNextWindowSize(size, ImGuiSetCondition_FirstUseEver) prior to calling Begin().
+bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alpha, ImGuiWindowFlags flags)
 {
     ImGuiState& g = GImGui;
     const ImGuiStyle& style = g.Style;
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
+    IM_ASSERT(name != NULL);                        // Must pass a name
 
     ImGuiWindow* window = FindWindow(name);
     if (!window)
@@ -2533,12 +2537,12 @@ bool ImGui::Begin(const char* name, bool* open, ImVec2 size, float fill_alpha, I
         if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
         {
             RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
-            if (open)
-                CloseWindowButton(open);
+            if (p_opened != NULL)
+                CloseWindowButton(p_opened);
 
             const ImVec2 text_size = CalcTextSize(name);
             const ImVec2 text_min = window->Pos + style.FramePadding + ImVec2(window->FontSize() + style.ItemInnerSpacing.x, 0.0f);
-            const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (open ? (title_bar_aabb.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y + text_size.y);
+            const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_aabb.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y + text_size.y);
             const bool clip_title = text_size.x > (text_max.x - text_min.x);    // only push a clip rectangle if we need to, because it may turn into a separate draw call
             if (clip_title)
                 PushClipRect(ImVec4(text_min.x, text_min.y, text_max.x, text_max.y));
@@ -3368,7 +3372,7 @@ bool ImGui::SmallButton(const char* label)
 }
 
 // Upper-right button to close a window.
-static bool CloseWindowButton(bool* open)
+static bool CloseWindowButton(bool* p_opened)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
@@ -3391,8 +3395,8 @@ static bool CloseWindowButton(bool* open)
         window->DrawList->AddLine(center + ImVec2(+cross_extent,-cross_extent), center + ImVec2(-cross_extent,+cross_extent), window->Color(ImGuiCol_Text));
     }
 
-    if (open != NULL && pressed)
-        *open = !*open;
+    if (p_opened != NULL && pressed)
+        *p_opened = !*p_opened;
 
     return pressed;
 }
@@ -6729,13 +6733,13 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 // SAMPLE CODE
 //-----------------------------------------------------------------------------
 
-static void ShowExampleAppConsole(bool* open);
-static void ShowExampleAppLongText(bool* open);
-static void ShowExampleAppAutoResize(bool* open);
-static void ShowExampleAppFixedOverlay(bool* open);
+static void ShowExampleAppConsole(bool* opened);
+static void ShowExampleAppLongText(bool* opened);
+static void ShowExampleAppAutoResize(bool* opened);
+static void ShowExampleAppFixedOverlay(bool* opened);
 
 // Demonstrate ImGui features (unfortunately this makes this function a little bloated!)
-void ImGui::ShowTestWindow(bool* open)
+void ImGui::ShowTestWindow(bool* opened)
 {
     static bool no_titlebar = false;
     static bool no_border = true;
@@ -6745,7 +6749,7 @@ void ImGui::ShowTestWindow(bool* open)
     static float fill_alpha = 0.65f;
 
     const ImGuiWindowFlags layout_flags = (no_titlebar ? ImGuiWindowFlags_NoTitleBar : 0) | (no_border ? 0 : ImGuiWindowFlags_ShowBorders) | (no_resize ? ImGuiWindowFlags_NoResize : 0) | (no_move ? ImGuiWindowFlags_NoMove : 0) | (no_scrollbar ? ImGuiWindowFlags_NoScrollbar : 0);
-    ImGui::Begin("ImGui Test", open, ImVec2(550,680), fill_alpha, layout_flags);
+    ImGui::Begin("ImGui Test", opened, ImVec2(550,680), fill_alpha, layout_flags);
     ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);
 
     ImGui::Text("ImGui says hello.");
@@ -7264,9 +7268,9 @@ void ImGui::ShowTestWindow(bool* open)
     ImGui::End();
 }
 
-static void ShowExampleAppAutoResize(bool* open)
+static void ShowExampleAppAutoResize(bool* opened)
 {
-    if (!ImGui::Begin("Example: Auto-Resizing Window", open, ImVec2(0,0), -1.0f, ImGuiWindowFlags_AlwaysAutoResize))
+    if (!ImGui::Begin("Example: Auto-Resizing Window", opened, ImVec2(0,0), -1.0f, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::End();
         return;
@@ -7281,9 +7285,9 @@ static void ShowExampleAppAutoResize(bool* open)
     ImGui::End();
 }
 
-static void ShowExampleAppFixedOverlay(bool* open)
+static void ShowExampleAppFixedOverlay(bool* opened)
 {
-    if (!ImGui::Begin("Example: Fixed Overlay", open, ImVec2(0,0), 0.3f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings))
+    if (!ImGui::Begin("Example: Fixed Overlay", opened, ImVec2(0,0), 0.3f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings))
     {
         ImGui::End();
         return;
@@ -7404,9 +7408,9 @@ static void ShowExampleAppConsole_TextEditCallback(ImGuiTextEditCallbackData* da
     console->TextEditCallback(data);
 }
 
-static void ShowExampleAppConsole(bool* open)
+static void ShowExampleAppConsole(bool* opened)
 {
-    if (!ImGui::Begin("Example: Console", open, ImVec2(520,600)))
+    if (!ImGui::Begin("Example: Console", opened, ImVec2(520,600)))
     {
         ImGui::End();
         return;
@@ -7481,9 +7485,9 @@ static void ShowExampleAppConsole(bool* open)
     ImGui::End();
 }
 
-static void ShowExampleAppLongText(bool* open)
+static void ShowExampleAppLongText(bool* opened)
 {
-    if (!ImGui::Begin("Example: Long text display", open, ImVec2(520,600)))
+    if (!ImGui::Begin("Example: Long text display", opened, ImVec2(520,600)))
     {
         ImGui::End();
         return;
