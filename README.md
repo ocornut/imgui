@@ -48,9 +48,9 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 Frequently Asked Question
 -------------------------
 
-<b>Where is example code?</b>
+<b>Where are samples?</b>
 
-The bulk of example  user code is contained within the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. Ready-to-go example applications covering different versions of OpenGL/DirectX are provided in the examples/ folder. 
+The bulk of example user code is contained within the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. Ready-to-go example applications covering different versions of OpenGL/DirectX are provided in the examples/ folder. 
 
 <b>How do you use ImGui on a platform that may not have a mouse or keyboard?</b>
 
@@ -93,11 +93,14 @@ Support
 
 <b>Can you develop features xxxx for ImGui?</b>
 
-Please use GitHub 'Issues' facilities to suggest and discuss improvements. Your questions are often helpul to the community of users. If you represent an organization and would like specific non-trivial features to be implemented, I am available for hire to work on or with ImGui. 
+Please use GitHub 'Issues' facilities to suggest and discuss improvements. Your questions are often helpul to the community of users. 
+
+Donate
+------
 
 <b>Can I donate to support the development of ImGui?</b>
 
-If you have the mean to help, I have setup a [**Patreon page**](http://www.patreon.com/imgui) to enable me to spend more time on the development of the library. One-off donations are also greatly appreciated. Thanks!
+Yes please! I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgui) if you want to donate and enable me to spend more time improving the library. If your company uses ImGui on a commercial project please consider making a small contribution. One-off donations are also greatly appreciated. I am also available for hire to work on or with ImGui. Thanks!
 
 Credits
 -------
