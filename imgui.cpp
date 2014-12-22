@@ -371,6 +371,7 @@ ImGuiStyle::ImGuiStyle()
 ImGuiIO::ImGuiIO()
 {
     memset(this, 0, sizeof(*this));
+    DisplaySize = ImVec2(-1.0f, -1.0f);
     DeltaTime = 1.0f/60.0f;
     IniSavingRate = 5.0f;
     IniFilename = "imgui.ini";
@@ -1411,7 +1412,7 @@ void ImGui::NewFrame()
 
     // Check user inputs
     IM_ASSERT(g.IO.DeltaTime > 0.0f);
-    IM_ASSERT(g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f);
+    IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f);
     IM_ASSERT(g.IO.RenderDrawListsFn != NULL);  // Must be implemented
 
     if (!g.Initialized)
