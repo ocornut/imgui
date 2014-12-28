@@ -247,7 +247,6 @@
  - examples: add History support in the demo console application (pertinent to github issue #68).
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
- - misc: CalcTextSize() could benefit from having 'hide_text_after_double_hash' false by default for external use?
  - style editor: add a button to output C code.
  - optimization/render: use indexed rendering to reduce vertex data cost (for remote/networked imgui)
  - optimization/render: move clip-rect to vertex data? would allow merging all commands
@@ -1018,7 +1017,7 @@ void ImGuiTextFilter::Draw(const char* label, float width)
     ImGuiWindow* window = GetCurrentWindow();
     if (width < 0.0f)
     {
-        ImVec2 label_size = ImGui::CalcTextSize(label, NULL);
+        ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
         width = ImMax(window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x - (label_size.x + GImGui.Style.ItemSpacing.x*4), 10.0f);
     }
     ImGui::PushItemWidth(width);
@@ -2545,7 +2544,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
             if (p_opened != NULL)
                 CloseWindowButton(p_opened);
 
-            const ImVec2 text_size = CalcTextSize(name);
+            const ImVec2 text_size = CalcTextSize(name, NULL, true);
             const ImVec2 text_min = window->Pos + style.FramePadding + ImVec2(window->FontSize() + style.ItemInnerSpacing.x, 0.0f);
             const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_aabb.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y + text_size.y);
             const bool clip_title = text_size.x > (text_max.x - text_min.x);    // only push a clip rectangle if we need to, because it may turn into a separate draw call
@@ -3244,7 +3243,7 @@ void ImGui::LabelTextV(const char* label, const char* fmt, va_list args)
     const char* text_begin = &buf[0];
     const char* text_end = text_begin + ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
 
-    const ImVec2 text_size = CalcTextSize(label);
+    const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb value_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2, text_size.y));
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2 + style.ItemInnerSpacing.x, 0.0f) + text_size);
     ItemSize(bb);
@@ -3319,7 +3318,7 @@ bool ImGui::Button(const char* label, ImVec2 size, bool repeat_when_held)
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
 
-    const ImVec2 text_size = CalcTextSize(label);
+    const ImVec2 text_size = CalcTextSize(label, NULL, true);
     if (size.x == 0.0f)
         size.x = text_size.x;
     if (size.y == 0.0f)
@@ -3359,7 +3358,8 @@ bool ImGui::SmallButton(const char* label)
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
 
-    const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos+CalcTextSize(label) + ImVec2(style.FramePadding.x*2,0));
+	const ImVec2 text_size = CalcTextSize(label, NULL, true);
+    const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + text_size + ImVec2(style.FramePadding.x*2,0));
     ItemSize(bb);
 
     if (ClipAdvance(bb))
@@ -3505,7 +3505,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, const bool d
 
     // Framed header expand a little outside the default padding
     const ImVec2 window_padding = window->WindowPadding();
-    const ImVec2 text_size = CalcTextSize(label);
+    const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImVec2 pos_min = window->DC.CursorPos;
     const ImVec2 pos_max = window->Pos + GetContentRegionMax();
     ImGuiAabb bb = ImGuiAabb(pos_min, ImVec2(pos_max.x, pos_min.y + text_size.y));
@@ -3570,7 +3570,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
     const char* text_end = text_begin + ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
 
     const float line_height = window->FontSize();
-    const ImVec2 text_size = CalcTextSize(text_begin, text_end);
+    const ImVec2 text_size = CalcTextSize(text_begin, text_end, true);
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(line_height + (text_size.x > 0.0f ? (g.Style.FramePadding.x*2) : 0.0f),0) + text_size);  // Empty text doesn't add padding
     ItemSize(bb);
 
@@ -3772,7 +3772,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         }
     }
 
-    const ImVec2 text_size = CalcTextSize(label);
+    const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, text_size.y) + style.FramePadding*2.0f);
     const ImGuiAabb slider_bb(frame_bb.Min+g.Style.FramePadding, frame_bb.Max-g.Style.FramePadding);
     const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(style.ItemInnerSpacing.x + text_size.x, 0.0f));
@@ -3953,7 +3953,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     // Draw value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
     ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), display_format, *v);
-    RenderText(ImVec2(slider_bb.GetCenter().x-CalcTextSize(value_buf).x*0.5f, frame_bb.Min.y + style.FramePadding.y), value_buf);
+    RenderText(ImVec2(slider_bb.GetCenter().x-CalcTextSize(value_buf, NULL, true).x*0.5f, frame_bb.Min.y + style.FramePadding.y), value_buf);
 
     RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, slider_bb.Min.y), label);
 
@@ -4044,7 +4044,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
 
     const ImGuiStyle& style = g.Style;
 
-    const ImVec2 text_size = ImGui::CalcTextSize(label);
+    const ImVec2 text_size = ImGui::CalcTextSize(label, NULL, true);
     if (graph_size.x == 0.0f)
         graph_size.x = window->DC.ItemWidth.back();
     if (graph_size.y == 0.0f)
@@ -4127,7 +4127,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
 
     // Text overlay
     if (overlay_text)
-        RenderText(ImVec2(graph_bb.GetCenter().x - ImGui::CalcTextSize(overlay_text).x*0.5f, frame_bb.Min.y + style.FramePadding.y), overlay_text);
+        RenderText(ImVec2(graph_bb.GetCenter().x - ImGui::CalcTextSize(overlay_text, NULL, true).x*0.5f, frame_bb.Min.y + style.FramePadding.y), overlay_text);
 
     RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, graph_bb.Min.y), label);
 }
@@ -4179,7 +4179,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
 
-    const ImVec2 text_size = CalcTextSize(label);
+    const ImVec2 text_size = CalcTextSize(label, NULL, true);
 
     const ImGuiAabb check_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(text_size.y + style.FramePadding.y*2, text_size.y + style.FramePadding.y*2));
     ItemSize(check_bb);
@@ -4238,7 +4238,7 @@ bool ImGui::RadioButton(const char* label, bool active)
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
 
-    const ImVec2 text_size = CalcTextSize(label);
+    const ImVec2 text_size = CalcTextSize(label, NULL, true);
 
     const ImGuiAabb check_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(text_size.y + style.FramePadding.y*2-1, text_size.y + style.FramePadding.y*2-1));
     ItemSize(check_bb);
@@ -4437,7 +4437,7 @@ bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast,
 
     const ImGuiStyle& style = g.Style;
     const float w = window->DC.ItemWidth.back();
-    const ImVec2 text_size = CalcTextSize(label);
+    const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, text_size.y) + style.FramePadding*2.0f);
 
     ImGui::PushID(label);
@@ -4546,7 +4546,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     const ImGuiID id = window->GetID(label);
     const float w = window->DC.ItemWidth.back();
 
-    const ImVec2 text_size = CalcTextSize(label);
+    const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, text_size.y) + style.FramePadding*2.0f);
     const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(style.ItemInnerSpacing.x + text_size.x, 0.0f));
     ItemSize(bb);
@@ -4939,7 +4939,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
 
-    const ImVec2 text_size = CalcTextSize(label);
+    const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(window->DC.ItemWidth.back(), text_size.y) + style.FramePadding*2.0f);
 
     ItemSize(frame_bb);
