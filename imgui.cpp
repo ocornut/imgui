@@ -192,24 +192,29 @@
  ==================
 
  - misc: merge or clarify ImVec4 / ImGuiAabb, they are essentially duplicate containers
- - window: autofit is losing its purpose when user relies on any dynamic layout (window width multiplier, column). maybe just clearly discard autofit?
  - window: add horizontal scroll
  - window: fix resize grip rendering scaling along with Rounding style setting
+ - window: autofit feedback loop when user relies on any dynamic layout (window width multiplier, column). maybe just clearly drop manual autofit?
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. 
  - widgets: switching from "widget-label" to "label-widget" would make it more convenient to integrate widgets in trees
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
+ - widgets: widget-label types of function calls don't play nicely with SameLine (github issue #100) because of how they intentionally not declare the label extent. separate extent for auto-size vs extent for cursor.
  - main: make IsHovered() more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: make IsHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
  - scrollbar: use relative mouse movement when first-clicking inside of scroll grab box.
  - scrollbar: make the grab visible and a minimum size for long scroll regions
 !- input number: very large int not reliably supported because of int<>float conversions.
  - input number: optional range min/max for Input*() functions
- - input number: holding [-]/[+] buttons should increase the step non-linearly
+ - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
- - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 horrible layout code. item width should include frame padding, then we can have a generic horizontal layout helper.
+ - layout: horizontal layout helper (github issue #97)
+ - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 horrible layout code. item width should include frame padding.
+ - columns: separator function or parameter that works within the column (currently Separator() bypass all columns)
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills)
  - columns: columns header to act as button (~sort op) and allow resize/reorder
  - columns: user specify columns size
+ - combo: overlap test beyond parent window bounding box is broken (used to work)
+ - combo: broken visual ordering when window B is focused then click on window A:combo
  - combo: turn child handling code into pop up helper
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
@@ -239,8 +244,8 @@
  - tooltip: move to fit within screen (e.g. when mouse cursor is right of the screen).
  - clipboard: automatically transform \n into \n\r or equivalent for higher compatibility on windows
  - portability: big-endian test/support (github issue #81)
- - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL
- - misc: not thread-safe
+ - examples: add History support in the demo console application (pertinent to github issue #68).
+ - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - misc: CalcTextSize() could benefit from having 'hide_text_after_double_hash' false by default for external use?
  - style editor: add a button to output C code.
