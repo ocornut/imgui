@@ -303,7 +303,6 @@ static bool         IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
 static bool         CloseWindowButton(bool* p_opened = NULL);
 static void         FocusWindow(ImGuiWindow* window);
-static ImGuiWindow* FindWindow(const char* name);
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs);
 
 //-----------------------------------------------------------------------------
@@ -2060,15 +2059,6 @@ int ImGui::GetFrameCount()
     return GImGui.FrameCount;
 }
 
-static ImGuiWindow* FindWindow(const char* name)
-{
-    ImGuiState& g = GImGui;
-    for (size_t i = 0; i != g.Windows.size(); i++)
-        if (strcmp(g.Windows[i]->Name, name) == 0)
-            return g.Windows[i];
-    return NULL;
-}
-
 void ImGui::BeginTooltip()
 {
     ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), 0.9f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_Tooltip);
@@ -2138,6 +2128,64 @@ void ImGui::EndChild()
     }
 }
 
+static ImGuiWindow* FindWindowByName(const char* name)
+{
+    // FIXME-OPT: Consider optimizing this (e.g. sorted hashes to window pointers)
+    ImGuiState& g = GImGui;
+    for (size_t i = 0; i != g.Windows.size(); i++)
+        if (strcmp(g.Windows[i]->Name, name) == 0)
+            return g.Windows[i];
+    return NULL;
+}
+
+static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags)
+{
+    ImGuiState& g = GImGui;
+
+    // Create window the first time
+    ImGuiWindow* window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
+    new(window) ImGuiWindow(name);
+    window->Flags = flags;
+
+    if (flags & ImGuiWindowFlags_NoSavedSettings)
+    {
+		// User can disable loading and saving of settings. Tooltip and child windows also don't store settings.
+        window->Size = window->SizeFull = size;
+    }
+    else
+    {
+        // Retrieve settings from .ini file
+		// Use SetWindowPos() or SetNextWindowPos() with the appropriate condition flag to change the initial position of a window.
+        window->PosFloat = ImVec2(60, 60);
+        window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
+
+        ImGuiIniData* settings = FindWindowSettings(name);
+        if (!settings)
+        {
+            settings = AddWindowSettings(name);
+        }
+        else
+        {
+            window->SetWindowPosAllowFlags &= ~ImGuiSetCondition_FirstUseEver;
+            window->SetWindowSizeAllowFlags &= ~ImGuiSetCondition_FirstUseEver;
+            window->SetWindowCollapsedAllowFlags &= ~ImGuiSetCondition_FirstUseEver;
+        }
+
+        if (settings->Pos.x != FLT_MAX)
+        {
+            window->PosFloat = settings->Pos;
+            window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
+            window->Collapsed = settings->Collapsed;
+        }
+
+        if (ImLength(settings->Size) > 0.0f && !(flags & ImGuiWindowFlags_NoResize))
+            size = settings->Size;
+        window->Size = window->SizeFull = size;
+    }
+    g.Windows.push_back(window);
+    return window;
+}
+
 // Push a new ImGui window to add widgets to. 
 // - A default window called "Debug" is automatically stacked at the beginning of every frame.
 // - This can be called multiple times during the frame with the same window name to append content to the same window.
@@ -2152,54 +2200,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
     IM_ASSERT(name != NULL);                        // Must pass a name
 
-    ImGuiWindow* window = FindWindow(name);
+    // Find or create
+    ImGuiWindow* window = FindWindowByName(name);
     if (!window)
-    {
-        // Create window the first time
-        if (flags & ImGuiWindowFlags_NoSavedSettings)
-        {
-            // Tooltip and child windows don't store settings
-            window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
-            new(window) ImGuiWindow(name);
-            
-            window->Size = window->SizeFull = size;
-        }
-        else
-        {
-            // Normal windows store settings in .ini file
-            window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
-            new(window) ImGuiWindow(name);
-
-            window->PosFloat = ImVec2(60, 60);
-            window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
-
-            ImGuiIniData* settings = FindWindowSettings(name);
-            if (!settings)
-            {
-                settings = AddWindowSettings(name);
-            }
-            else
-            {
-                window->SetWindowPosAllowFlags &= ~ImGuiSetCondition_FirstUseEver;
-                window->SetWindowSizeAllowFlags &= ~ImGuiSetCondition_FirstUseEver;
-                window->SetWindowCollapsedAllowFlags &= ~ImGuiSetCondition_FirstUseEver;
-            }
-
-            if (settings->Pos.x != FLT_MAX)
-            {
-                window->PosFloat = settings->Pos;
-                window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
-                window->Collapsed = settings->Collapsed;
-            }
-
-            if (ImLength(settings->Size) > 0.0f && !(flags & ImGuiWindowFlags_NoResize))
-                size = settings->Size;
-            window->Size = window->SizeFull = size;
-        }
-        g.Windows.push_back(window);
-    }
+        window = CreateNewWindow(name, size, flags);
     window->Flags = (ImGuiWindowFlags)flags;
 
+    // Add to stack
     g.CurrentWindowStack.push_back(window);
     g.CurrentWindow = window;
 
@@ -2222,7 +2229,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
         g.SetNextWindowCollapsedCond = 0;
     }
 
-    // Find root
+    // Find root (if we are a child window)
     size_t root_idx = g.CurrentWindowStack.size() - 1;
     while (root_idx > 0)
     {
@@ -3358,7 +3365,7 @@ bool ImGui::SmallButton(const char* label)
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
 
-	const ImVec2 text_size = CalcTextSize(label, NULL, true);
+    const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + text_size + ImVec2(style.FramePadding.x*2,0));
     ItemSize(bb);
 
@@ -4947,7 +4954,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         return false;
 
     const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(style.ItemInnerSpacing.x + text_size.x,0));
-	const float arrow_size = (window->FontSize() + style.FramePadding.x * 2.0f);
+    const float arrow_size = (window->FontSize() + style.FramePadding.x * 2.0f);
     const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(bb);
 
     bool value_changed = false;
