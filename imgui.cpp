@@ -635,7 +635,7 @@ static void ImConvertColorHSVtoRGB(float h, float s, float v, float& out_r, floa
 static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size, size_t padding_bytes)
 {
     IM_ASSERT(filename && file_open_mode && out_file_data && out_file_size);
-	IM_ASSERT(padding_bytes >= 0);
+    IM_ASSERT(padding_bytes >= 0);
     *out_file_data = NULL;
     *out_file_size = 0;
 
@@ -663,8 +663,8 @@ static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode,
         ImGui::MemFree(file_data);
         return false;
     }
-	if (padding_bytes > 0)
-		memset((void *)(((char*)file_data) + file_size), 0, padding_bytes);
+    if (padding_bytes > 0)
+        memset((void *)(((char*)file_data) + file_size), 0, padding_bytes);
 
     fclose(f);
     *out_file_data = file_data;
@@ -2660,25 +2660,7 @@ void ImGui::End()
 
     // Stop logging
     if (!(window->Flags & ImGuiWindowFlags_ChildWindow))    // FIXME: add more options for scope of logging
-    {
-        g.LogEnabled = false;
-        if (g.LogFile != NULL)
-        {
-            fprintf(g.LogFile, "\n");
-            if (g.LogFile == stdout)
-                fflush(g.LogFile);
-            else
-                fclose(g.LogFile);
-            g.LogFile = NULL;
-        }
-        if (g.LogClipboard->size() > 1)
-        {
-            g.LogClipboard->append("\n");
-            if (g.IO.SetClipboardTextFn)
-                g.IO.SetClipboardTextFn(g.LogClipboard->begin());
-            g.LogClipboard->clear();
-        }
-    }
+        ImGui::LogFinish();
 
     // Pop
     window->RootWindow = NULL;
@@ -3485,6 +3467,30 @@ void ImGui::LogToClipboard(int max_depth)
     g.LogFile = NULL;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
+}
+
+void ImGui::LogFinish()
+{
+    ImGuiState& g = GImGui;
+    if (!g.LogEnabled)
+        return;
+    g.LogEnabled = false;
+    if (g.LogFile != NULL)
+    {
+        fprintf(g.LogFile, "\n");
+        if (g.LogFile == stdout)
+            fflush(g.LogFile);
+        else
+            fclose(g.LogFile);
+        g.LogFile = NULL;
+    }
+    if (g.LogClipboard->size() > 1)
+    {
+        g.LogClipboard->append("\n");
+        if (g.IO.SetClipboardTextFn)
+            g.IO.SetClipboardTextFn(g.LogClipboard->begin());
+        g.LogClipboard->clear();
+    }
 }
 
 // Helper to display logging buttons

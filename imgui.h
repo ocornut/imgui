@@ -212,6 +212,7 @@ namespace ImGui
 
     // ID scopes
     // If you are creating repeated widgets in a loop you most likely want to push a unique identifier so ImGui can differentiate them.
+    // You can also use ## within your widget name to distinguish them from each others (see 'Programmer Guide')
     IMGUI_API void          PushID(const char* str_id);                                         // push identifier into the ID stack. IDs are hash of the *entire* stack!
     IMGUI_API void          PushID(const void* ptr_id);
     IMGUI_API void          PushID(const int int_id);
@@ -271,7 +272,7 @@ namespace ImGui
     IMGUI_API void          TreePop();
     IMGUI_API void          OpenNextNode(bool open);                                            // force open/close the next TreeNode or CollapsingHeader
 
-    // Value helper output "name: value". tip: freely declare your own within the ImGui namespace!
+    // Value() Helpers: output single value in "name: value" format. Tip: freely declare your own within the ImGui namespace!
     IMGUI_API void          Value(const char* prefix, bool b);
     IMGUI_API void          Value(const char* prefix, int v);
     IMGUI_API void          Value(const char* prefix, unsigned int v);
@@ -279,11 +280,12 @@ namespace ImGui
     IMGUI_API void          Color(const char* prefix, const ImVec4& v);
     IMGUI_API void          Color(const char* prefix, unsigned int v);
 
-    // Logging
-    IMGUI_API void          LogButtons();
-    IMGUI_API void          LogToTTY(int max_depth = -1);
-    IMGUI_API void          LogToFile(int max_depth = -1, const char* filename = NULL);
-    IMGUI_API void          LogToClipboard(int max_depth = -1);
+    // Logging: All text output can be redirected to tty/file/clipboard. Tree nodes are automatically opened.
+    IMGUI_API void          LogToTTY(int max_depth = -1);                                       // start logging to tty
+    IMGUI_API void          LogToFile(int max_depth = -1, const char* filename = NULL);         // start logging to file
+    IMGUI_API void          LogToClipboard(int max_depth = -1);                                 // start logging to OS clipboard
+    IMGUI_API void			LogFinish();                                                        // stop logging (close file, etc.)
+    IMGUI_API void          LogButtons();                                                       // helper to display buttons for logging to tty/file/clipboard
 
     // Utilities
     IMGUI_API bool          IsItemHovered();                                                    // was the last item active area hovered by mouse?
