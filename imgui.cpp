@@ -273,10 +273,11 @@
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
 
+// Clang warnings with -Weverything
 #ifdef __clang__
-#pragma clang diagnostic ignored "-Wold-style-cast"         // warning : use of old-style cast                              // yes, they are more terse and not scary looking.
+#pragma clang diagnostic ignored "-Wold-style-cast"         // warning : use of old-style cast                              // yes, they are more terse.
 #pragma clang diagnostic ignored "-Wfloat-equal"            // warning : comparing floating point with == or != is unsafe   // storing and comparing against same constants ok.
-#pragma clang diagnostic ignored "-Wformat-nonliteral"      // warning : format string is not a string literal              // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code, thank you.
+#pragma clang diagnostic ignored "-Wformat-nonliteral"      // warning : format string is not a string literal              // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code.
 #pragma clang diagnostic ignored "-Wexit-time-destructors"  // warning : declaration requires an exit-time destructor       // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
 #pragma clang diagnostic ignored "-Wglobal-constructors"    // warning : declaration requires a global destructor           // similar to above, not sure what the exact difference it.
 #endif
@@ -304,6 +305,32 @@ static bool         IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 static bool         CloseWindowButton(bool* p_opened = NULL);
 static void         FocusWindow(ImGuiWindow* window);
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs);
+
+// Helpers: String
+static int          ImStricmp(const char* str1, const char* str2);
+static int          ImStrnicmp(const char* str1, const char* str2, int count);
+static char*        ImStrdup(const char *str);
+static size_t       ImStrlenW(const ImWchar* str);
+static const char*  ImStristr(const char* haystack, const char* needle, const char* needle_end);
+static size_t       ImFormatString(char* buf, size_t buf_size, const char* fmt, ...);
+static size_t       ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args);
+
+// Helpers: Data
+static ImU32        ImCrc32(const void* data, size_t data_size, ImU32 seed);
+static bool         ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size);
+
+// Helpers: Color Conversion
+static ImU32        ImConvertColorFloat4ToU32(const ImVec4& in);
+static void         ImConvertColorRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v);
+static void         ImConvertColorHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
+
+// Helpers: UTF-8 <> wchar
+static int          ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
+static ptrdiff_t    ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end);   // return output UTF-8 bytes count
+static int          ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
+static ptrdiff_t    ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end);    // return input UTF-8 bytes count
+static int          ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
+static int          ImTextCountUtf8BytesFromWchar(const ImWchar* in_text, const ImWchar* in_text_end);                 // return number of bytes to express string as UTF-8 code-points
 
 //-----------------------------------------------------------------------------
 // Platform dependent default implementations
@@ -394,7 +421,7 @@ ImGuiIO::ImGuiIO()
     MemAllocFn = malloc;
     MemReallocFn = realloc;
     MemFreeFn = free;
-    GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependant default implementations
+    GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
     ImeSetInputScreenPosFn = NULL;
 }
@@ -402,7 +429,6 @@ ImGuiIO::ImGuiIO()
 // Pass in translated ASCII characters for text input.
 // - with glfw you can get those from the callback set in glfwSetCharCallback()
 // - on Windows you can get those using ToAscii+keyboard state, or via the VM_CHAR message
-static size_t ImStrlenW(const ImWchar* str);
 void ImGuiIO::AddInputCharacter(ImWchar c)
 {
     const size_t n = ImStrlenW(InputCharacters);
@@ -451,16 +477,8 @@ static inline float  ImClamp(float f, float mn, float mx)                       
 static inline ImVec2 ImClamp(const ImVec2& f, const ImVec2& mn, ImVec2 mx)      { return ImVec2(ImClamp(f.x,mn.x,mx.x), ImClamp(f.y,mn.y,mx.y)); }
 static inline float  ImSaturate(float f)                                        { return (f < 0.0f) ? 0.0f : (f > 1.0f) ? 1.0f : f; }
 static inline float  ImLerp(float a, float b, float t)                          { return a + (b - a) * t; }
-//static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, float t)        { return a + (b - a) * t; }
 static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, const ImVec2& t)  { return ImVec2(a.x + (b.x - a.x) * t.x, a.y + (b.y - a.y) * t.y); }
-static inline float  ImLength(const ImVec2& lhs)                                { return sqrtf(lhs.x*lhs.x + lhs.y*lhs.y); }
-
-static int           ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
-static ptrdiff_t     ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end);   // return output UTF-8 bytes count
-static int           ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
-static ptrdiff_t     ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end);    // return input UTF-8 bytes count
-static int           ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
-static int           ImTextCountUtf8BytesFromWchar(const ImWchar* in_text, const ImWchar* in_text_end);                 // return number of bytes to express string as UTF-8 code-points
+static inline float  ImLengthSqr(const ImVec2& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y; }
 
 static int ImStricmp(const char* str1, const char* str2)
 {
@@ -514,7 +532,7 @@ static const char* ImStristr(const char* haystack, const char* needle, const cha
     return NULL;
 }
 
-static ImU32 crc32(const void* data, size_t data_size, ImU32 seed = 0) 
+static ImU32 ImCrc32(const void* data, size_t data_size, ImU32 seed = 0) 
 { 
     static ImU32 crc32_lut[256] = { 0 };
     if (!crc32_lut[1])
@@ -610,6 +628,46 @@ static void ImConvertColorHSVtoRGB(float h, float s, float v, float& out_r, floa
     case 4: out_r = t; out_g = p; out_b = v; break;
     case 5: default: out_r = v; out_g = p; out_b = q; break;
     }
+}
+
+// Load file content into memory
+// Memory allocated with ImGui::MemAlloc(), must be freed by user using ImGui::MemFree()
+static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size)
+{
+    IM_ASSERT(filename && file_open_mode && out_file_data && out_file_size);
+    *out_file_data = NULL;
+    *out_file_size = 0;
+
+    FILE* f;
+    if ((f = fopen(filename, file_open_mode)) == NULL)
+        return false;
+
+    long file_size_signed;
+    if (fseek(f, 0, SEEK_END) || (file_size_signed = ftell(f)) == -1 || fseek(f, 0, SEEK_SET))
+    {
+        fclose(f);
+        return false;
+    }
+
+    size_t file_size = (size_t)file_size_signed;
+    void* file_data = ImGui::MemAlloc(file_size);
+    if (file_data == NULL)
+    {
+        fclose(f);
+        return false;
+    }
+    if (fread(file_data, 1, file_size, f) != file_size)
+    {
+        fclose(f);
+        ImGui::MemFree(file_data);
+        return false;
+    }
+
+    fclose(f);
+    *out_file_data = file_data;
+    *out_file_size = file_size;
+
+    return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -1143,7 +1201,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     ItemWidthDefault = 0.0f;
     FontWindowScale = 1.0f;
 
-    if (ImLength(Size) < 0.001f)
+    if (ImLengthSqr(Size) < 0.00001f)
     {
         AutoFitFrames = 2;
         AutoFitOnlyGrows = true;
@@ -1169,7 +1227,7 @@ ImGuiWindow::~ImGuiWindow()
 ImGuiID ImGuiWindow::GetID(const char* str)
 {
     const ImGuiID seed = IDStack.empty() ? 0 : IDStack.back();
-    const ImGuiID id = crc32(str, strlen(str), seed); // FIXME-OPT: crc32 function/variant should handle zero-terminated strings
+    const ImGuiID id = ImCrc32(str, strlen(str), seed); // FIXME-OPT: crc32 function/variant should handle zero-terminated strings
     RegisterAliveId(id);
     return id;
 }
@@ -1177,7 +1235,7 @@ ImGuiID ImGuiWindow::GetID(const char* str)
 ImGuiID ImGuiWindow::GetID(const void* ptr)
 {
     const ImGuiID seed = IDStack.empty() ? 0 : IDStack.back();
-    const ImGuiID id = crc32(&ptr, sizeof(void*), seed);
+    const ImGuiID id = ImCrc32(&ptr, sizeof(void*), seed);
     RegisterAliveId(id);
     return id;
 }
@@ -1287,40 +1345,14 @@ static void LoadSettings()
     if (!filename)
         return;
 
-    // Load file
-    FILE* f;
-    if ((f = fopen(filename, "rt")) == NULL)
+    char* file_data;
+    size_t file_size;
+    if (!ImLoadFileToMemory(filename, "rb", (void**)&file_data, &file_size))
         return;
-    if (fseek(f, 0, SEEK_END)) 
-    {
-       fclose(f); 
-       return; 
-    }
-    const long f_size_signed = ftell(f);
-    if (f_size_signed == -1) 
-    {
-       fclose(f); 
-       return; 
-    }
-    size_t f_size = (size_t)f_size_signed;
-    if (fseek(f, 0, SEEK_SET)) 
-    {
-       fclose(f); 
-       return; 
-    }
-    char* f_data = (char*)ImGui::MemAlloc(f_size+1);
-    f_size = fread(f_data, 1, f_size, f); // Text conversion alter read size so let's not be fussy about return value
-    fclose(f);
-    if (f_size == 0)
-    {
-        ImGui::MemFree(f_data);
-        return;
-    }
-    f_data[f_size] = 0;
 
     ImGuiIniData* settings = NULL;
-    const char* buf_end = f_data + f_size;
-    for (const char* line_start = f_data; line_start < buf_end; )
+    const char* buf_end = file_data + file_size;
+    for (const char* line_start = file_data; line_start < buf_end; )
     {
         const char* line_end = line_start;
         while (line_end < buf_end && *line_end != '\n' && *line_end != '\r')
@@ -1349,7 +1381,7 @@ static void LoadSettings()
         line_start = line_end+1;
     }
 
-    ImGui::MemFree(f_data);
+    ImGui::MemFree(file_data);
 }
 
 static void SaveSettings()
@@ -1468,7 +1500,7 @@ void ImGui::NewFrame()
         {
             if (g.Time - g.IO.MouseClickedTime[i] < g.IO.MouseDoubleClickTime)
             {
-                if (ImLength(g.IO.MousePos - g.IO.MouseClickedPos[i]) < g.IO.MouseDoubleClickMaxDist)
+                if (ImLengthSqr(g.IO.MousePos - g.IO.MouseClickedPos[i]) < g.IO.MouseDoubleClickMaxDist * g.IO.MouseDoubleClickMaxDist)
                     g.IO.MouseDoubleClicked[i] = true;
                 g.IO.MouseClickedTime[i] = -FLT_MAX;    // so the third click isn't turned into a double-click
             }
@@ -2149,13 +2181,13 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 
     if (flags & ImGuiWindowFlags_NoSavedSettings)
     {
-		// User can disable loading and saving of settings. Tooltip and child windows also don't store settings.
+        // User can disable loading and saving of settings. Tooltip and child windows also don't store settings.
         window->Size = window->SizeFull = size;
     }
     else
     {
         // Retrieve settings from .ini file
-		// Use SetWindowPos() or SetNextWindowPos() with the appropriate condition flag to change the initial position of a window.
+        // Use SetWindowPos() or SetNextWindowPos() with the appropriate condition flag to change the initial position of a window.
         window->PosFloat = ImVec2(60, 60);
         window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
 
@@ -2178,7 +2210,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
             window->Collapsed = settings->Collapsed;
         }
 
-        if (ImLength(settings->Size) > 0.0f && !(flags & ImGuiWindowFlags_NoResize))
+        if (ImLengthSqr(settings->Size) > 0.00001f && !(flags & ImGuiWindowFlags_NoResize))
             size = settings->Size;
         window->Size = window->SizeFull = size;
     }
@@ -2900,15 +2932,16 @@ void ImGui::SetWindowSize(const ImVec2& size, ImGuiSetCondition cond)
     window->SetWindowSizeAllowFlags &= ~(ImGuiSetCondition_FirstUseThisSession | ImGuiSetCondition_FirstUseEver);
 
     // Set
-    if (ImLength(size) < 0.001f)
-    {
-        window->AutoFitFrames = 2;
-        window->AutoFitOnlyGrows = false;
-    }
-    else
+    if (ImLengthSqr(size) > 0.00001f)
     {
         window->SizeFull = size;
         window->AutoFitFrames = 0;
+    }
+    else
+    {
+        // Autofit
+        window->AutoFitFrames = 2;
+        window->AutoFitOnlyGrows = false;
     }
 }
 
@@ -4822,7 +4855,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             window->DrawList->AddRect(cursor_pos - font_off_up + ImVec2(0,2), cursor_pos + font_off_dn - ImVec2(0,3), window->Color(ImGuiCol_Text));
         
         // Notify OS of text input position
-        if (io.ImeSetInputScreenPosFn && ImLength(edit_state.LastCursorPos - cursor_pos) > 0.01f)
+        if (io.ImeSetInputScreenPosFn && ImLengthSqr(edit_state.LastCursorPos - cursor_pos) > 0.0001f)
             io.ImeSetInputScreenPosFn((int)cursor_pos.x - 1, (int)(cursor_pos.y - window->FontSize()));   // -1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.
 
         edit_state.LastCursorPos = cursor_pos;
@@ -5657,7 +5690,8 @@ void ImDrawList::AddVtx(const ImVec2& pos, ImU32 col)
 void ImDrawList::AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col)
 {
     const float offset = GImGui.IO.PixelCenterOffset;
-    const ImVec2 hn = (b - a) * (0.50f / ImLength(b - a));     // half normal
+    const float length = sqrtf(ImLengthSqr(b - a));
+    const ImVec2 hn = (b - a) * (0.50f / length);              // half normal
     const ImVec2 hp0 = ImVec2(offset + hn.y, offset - hn.x);   // half perpendiculars + user offset
     const ImVec2 hp1 = ImVec2(offset - hn.y, offset + hn.x);
 
@@ -5916,46 +5950,15 @@ bool    ImFont::LoadFromFile(const char* filename)
 {
     IM_ASSERT(!IsLoaded());     // Call Clear()
 
-    // Load file
-    FILE* f;
-    if ((f = fopen(filename, "rb")) == NULL)
+    if (!ImLoadFileToMemory(filename, "rb", (void**)&Data, &DataSize))
         return false;
-    if (fseek(f, 0, SEEK_END)) 
-    {
-        fclose(f);
-        return false;
-    }
-    const long f_size = ftell(f);
-    if (f_size == -1)
-    {
-        fclose(f);
-        return false;
-    }
-    DataSize = (size_t)f_size;
-    if (fseek(f, 0, SEEK_SET)) 
-    {
-        fclose(f);
-        return false;
-    }
-    if ((Data = (unsigned char*)ImGui::MemAlloc(DataSize)) == NULL)
-    {
-        fclose(f);
-        return false;
-    }
-    if (fread(Data, 1, DataSize, f) != DataSize)
-    {
-        fclose(f);
-        ImGui::MemFree(Data);
-        return false;
-    }
-    fclose(f);
     DataOwned = true;
     return LoadFromMemory(Data, DataSize);
 }
 
 bool    ImFont::LoadFromMemory(const void* data, size_t data_size)
 {
-    IM_ASSERT(!IsLoaded());         // Call Clear()
+    IM_ASSERT(!IsLoaded());     // Call Clear()
 
     Data = (unsigned char*)data;
     DataSize = data_size;
