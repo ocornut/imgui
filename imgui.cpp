@@ -317,7 +317,7 @@ static size_t       ImFormatStringV(char* buf, size_t buf_size, const char* fmt,
 
 // Helpers: Data
 static ImU32        ImCrc32(const void* data, size_t data_size, ImU32 seed);
-static bool         ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size);
+static bool         ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size, size_t padding_bytes = 0);
 
 // Helpers: Color Conversion
 static ImU32        ImConvertColorFloat4ToU32(const ImVec4& in);
@@ -632,9 +632,10 @@ static void ImConvertColorHSVtoRGB(float h, float s, float v, float& out_r, floa
 
 // Load file content into memory
 // Memory allocated with ImGui::MemAlloc(), must be freed by user using ImGui::MemFree()
-static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size)
+static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size, size_t padding_bytes)
 {
     IM_ASSERT(filename && file_open_mode && out_file_data && out_file_size);
+	IM_ASSERT(padding_bytes >= 0);
     *out_file_data = NULL;
     *out_file_size = 0;
 
@@ -650,7 +651,7 @@ static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode,
     }
 
     size_t file_size = (size_t)file_size_signed;
-    void* file_data = ImGui::MemAlloc(file_size);
+    void* file_data = ImGui::MemAlloc(file_size + padding_bytes);
     if (file_data == NULL)
     {
         fclose(f);
@@ -662,6 +663,8 @@ static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode,
         ImGui::MemFree(file_data);
         return false;
     }
+	if (padding_bytes > 0)
+		memset((void *)(((char*)file_data) + file_size), 0, padding_bytes);
 
     fclose(f);
     *out_file_data = file_data;
@@ -1347,7 +1350,7 @@ static void LoadSettings()
 
     char* file_data;
     size_t file_size;
-    if (!ImLoadFileToMemory(filename, "rb", (void**)&file_data, &file_size))
+    if (!ImLoadFileToMemory(filename, "rb", (void**)&file_data, &file_size, 1))
         return;
 
     ImGuiIniData* settings = NULL;
