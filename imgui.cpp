@@ -454,6 +454,13 @@ const float PI = 3.14159265358979323846f;
 #define IM_INT_MAX 2147483647
 #endif
 
+// Play it nice with Windows users. Notepad in 2014 still doesn't display text data with Unix-style \n.
+#ifdef _MSC_VER
+#define STR_NEW_LINE "\r\n"
+#else
+#define STR_NEW_LINE "\n"
+#endif
+
 // Math bits
 // We are keeping those static in the .cpp file so as not to leak them outside, in the case the user has implicit cast operators between ImVec2 and its own types.
 static inline ImVec2 operator*(const ImVec2& lhs, const float rhs)              { return ImVec2(lhs.x*rhs, lhs.y*rhs); }
@@ -1825,7 +1832,7 @@ static void LogText(const ImVec2& ref_pos, const char* text, const char* text_en
         {
             const int char_count = (int)(line_end - text_remaining);
             if (log_new_line || !is_first_line)
-                ImGui::LogText("\n%*s%.*s", tree_depth*4, "", char_count, text_remaining);
+                ImGui::LogText(STR_NEW_LINE "%*s%.*s", tree_depth*4, "", char_count, text_remaining);
             else
                 ImGui::LogText(" %.*s", char_count, text_remaining);
         }
@@ -3471,7 +3478,7 @@ void ImGui::LogToFile(int max_depth, const char* filename)
         filename = g.IO.LogFilename;
 
     g.LogEnabled = true;
-    g.LogFile = fopen(filename, "at");
+    g.LogFile = fopen(filename, "ab");
     g.LogStartDepth = window->DC.TreeDepth;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
@@ -3498,7 +3505,7 @@ void ImGui::LogFinish()
     if (!g.LogEnabled)
         return;
 
-    ImGui::LogText("\n");
+    ImGui::LogText(STR_NEW_LINE);
     g.LogEnabled = false;
     if (g.LogFile != NULL)
     {
