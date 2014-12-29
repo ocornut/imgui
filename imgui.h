@@ -286,6 +286,7 @@ namespace ImGui
     IMGUI_API void          LogToClipboard(int max_depth = -1);                                 // start logging to OS clipboard
     IMGUI_API void          LogFinish();                                                        // stop logging (close file, etc.)
     IMGUI_API void          LogButtons();                                                       // helper to display buttons for logging to tty/file/clipboard
+    IMGUI_API void          LogText(const char* fmt, ...);                                      // pass text data straight to log (without being displayed)
 
     // Utilities
     IMGUI_API bool          IsItemHovered();                                                    // was the last item active area hovered by mouse?
@@ -605,6 +606,7 @@ struct ImGuiTextBuffer
     bool                empty() { return Buf.empty(); }
     void                clear() { Buf.clear(); Buf.push_back(0); }
     IMGUI_API void      append(const char* fmt, ...);
+    IMGUI_API void      appendv(const char* fmt, va_list args);
 };
 
 // Helper: Key->value storage

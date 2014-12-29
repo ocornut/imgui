@@ -861,6 +861,7 @@ struct ImGuiState
     bool                    LogEnabled;
     FILE*                   LogFile;
     ImGuiTextBuffer*        LogClipboard;                       // pointer so our GImGui static constructor doesn't call heap allocators.
+    int                     LogStartDepth;
     int                     LogAutoExpandMaxDepth;
 
     ImGuiState()
@@ -887,6 +888,7 @@ struct ImGuiState
         PrivateClipboard = NULL;
         LogEnabled = false;
         LogFile = NULL;
+        LogStartDepth = 0;
         LogAutoExpandMaxDepth = 2;
         LogClipboard = NULL;
     }
@@ -1158,23 +1160,24 @@ bool ImGuiTextFilter::PassFilter(const char* val) const
 //-----------------------------------------------------------------------------
 
 // Helper: Text buffer for logging/accumulating text
-void ImGuiTextBuffer::append(const char* fmt, ...)
+void ImGuiTextBuffer::appendv(const char* fmt, va_list args)
 {
-    va_list args;
-    va_start(args, fmt);
-    int len = vsnprintf(NULL, 0, fmt, args);
-    va_end(args);
+    int len = vsnprintf(NULL, 0, fmt, args);         // FIXME-OPT: could do a first pass write attempt, likely successful on first pass.
     if (len <= 0)
         return;
-
     const size_t write_off = Buf.size();
     if (write_off + (size_t)len >= Buf.capacity())
         Buf.reserve(Buf.capacity() * 2);
 
     Buf.resize(write_off + (size_t)len);
-
-    va_start(args, fmt);
     ImFormatStringV(&Buf[write_off] - 1, (size_t)len+1, fmt, args);
+}
+
+void ImGuiTextBuffer::append(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    appendv(fmt, args);
     va_end(args);
 }
 
@@ -1764,7 +1767,27 @@ static const char*  FindTextDisplayEnd(const char* text, const char* text_end = 
     return text_display_end;
 }
 
-// Log ImGui display into text output (tty or file or clipboard)
+// Pass text data straight to log (without being displayed)
+void ImGui::LogText(const char* fmt, ...)
+{
+    ImGuiState& g = GImGui;
+    if (!g.LogEnabled)
+        return;
+
+    va_list args;
+    va_start(args, fmt);
+    if (g.LogFile)
+    {
+        vfprintf(g.LogFile, fmt, args);
+    }
+    else
+    {
+        g.LogClipboard->appendv(fmt, args);
+    }
+    va_end(args);
+}
+
+// Internal version that takes a position to decide on newline placement and pad items according to their depth.
 static void LogText(const ImVec2& ref_pos, const char* text, const char* text_end)
 {
     ImGuiState& g = GImGui;
@@ -1777,7 +1800,9 @@ static void LogText(const ImVec2& ref_pos, const char* text, const char* text_en
     window->DC.LogLineHeight = ref_pos.y;
 
     const char* text_remaining = text;
-    const int tree_depth = window->DC.TreeDepth;
+    if (g.LogStartDepth > window->DC.TreeDepth)  // Re-adjust padding if we have popped out of our starting depth
+        g.LogStartDepth = window->DC.TreeDepth;
+    const int tree_depth = (window->DC.TreeDepth - g.LogStartDepth);
     while (true)
     {
         const char* line_end = text_remaining;
@@ -1799,20 +1824,10 @@ static void LogText(const ImVec2& ref_pos, const char* text, const char* text_en
         if (line_end != NULL && !(is_last_line && (line_end - text_remaining)==0))
         {
             const int char_count = (int)(line_end - text_remaining);
-            if (g.LogFile)
-            {
-                if (log_new_line || !is_first_line)
-                    fprintf(g.LogFile, "\n%*s%.*s", tree_depth*4, "", char_count, text_remaining);
-                else
-                    fprintf(g.LogFile, " %.*s", char_count, text_remaining);
-            }
+            if (log_new_line || !is_first_line)
+                ImGui::LogText("\n%*s%.*s", tree_depth*4, "", char_count, text_remaining);
             else
-            {
-                if (log_new_line || !is_first_line)
-                    g.LogClipboard->append("\n%*s%.*s", tree_depth*4, "", char_count, text_remaining);
-                else
-                    g.LogClipboard->append(" %.*s", char_count, text_remaining);
-            }
+                ImGui::LogText(" %.*s", char_count, text_remaining);
         }
 
         if (is_last_line)
@@ -3434,10 +3449,13 @@ static bool CloseWindowButton(bool* p_opened)
 void ImGui::LogToTTY(int max_depth)
 {
     ImGuiState& g = GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
     if (g.LogEnabled)
         return;
+
     g.LogEnabled = true;
     g.LogFile = stdout;
+    g.LogStartDepth = window->DC.TreeDepth;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
 }
@@ -3446,12 +3464,15 @@ void ImGui::LogToTTY(int max_depth)
 void ImGui::LogToFile(int max_depth, const char* filename)
 {
     ImGuiState& g = GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
     if (g.LogEnabled)
         return;
     if (!filename)
         filename = g.IO.LogFilename;
+
     g.LogEnabled = true;
     g.LogFile = fopen(filename, "at");
+    g.LogStartDepth = window->DC.TreeDepth;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
 }
@@ -3459,11 +3480,14 @@ void ImGui::LogToFile(int max_depth, const char* filename)
 // Start logging ImGui output to clipboard
 void ImGui::LogToClipboard(int max_depth)
 {
+    ImGuiWindow* window = GetCurrentWindow();
     ImGuiState& g = GImGui;
     if (g.LogEnabled)
         return;
+
     g.LogEnabled = true;
     g.LogFile = NULL;
+    g.LogStartDepth = window->DC.TreeDepth;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
 }
@@ -3473,10 +3497,11 @@ void ImGui::LogFinish()
     ImGuiState& g = GImGui;
     if (!g.LogEnabled)
         return;
+
+    ImGui::LogText("\n");
     g.LogEnabled = false;
     if (g.LogFile != NULL)
     {
-        fprintf(g.LogFile, "\n");
         if (g.LogFile == stdout)
             fflush(g.LogFile);
         else
@@ -3485,7 +3510,6 @@ void ImGui::LogFinish()
     }
     if (g.LogClipboard->size() > 1)
     {
-        g.LogClipboard->append("\n");
         if (g.IO.SetClipboardTextFn)
             g.IO.SetClipboardTextFn(g.LogClipboard->begin());
         g.LogClipboard->clear();
@@ -3591,7 +3615,18 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, const bool d
         // Framed type
         RenderFrame(bb.Min, bb.Max, col, true);
         RenderCollapseTriangle(bb.Min + style.FramePadding, opened, 1.0f, true);
+        if (g.LogEnabled)
+        {
+            // NB: '##' is normally used to hide text (as a library-wide feature), so we need to specify the text range to make sure the ## aren't stripped out here.
+            const char log_prefix[] = "\n##";
+            LogText(bb.Min + style.FramePadding, log_prefix, log_prefix+3);
+        }
         RenderText(bb.Min + style.FramePadding + ImVec2(window->FontSize() + style.FramePadding.x*2,0), label);
+        if (g.LogEnabled)
+        {
+            const char log_suffix[] = "##";
+            LogText(bb.Min + style.FramePadding, log_suffix, log_suffix+2);
+        }
     }
     else
     {
@@ -3599,6 +3634,8 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, const bool d
         if ((held && hovered) || hovered)
             RenderFrame(bb.Min, bb.Max, col, false);
         RenderCollapseTriangle(bb.Min + ImVec2(style.FramePadding.x, window->FontSize()*0.15f), opened, 0.70f, false);
+        if (g.LogEnabled)
+            LogText(bb.Min, ">");
         RenderText(bb.Min + ImVec2(window->FontSize() + style.FramePadding.x*2,0), label);
     }
 
