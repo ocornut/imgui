@@ -170,8 +170,8 @@ namespace ImGui
 
     IMGUI_API void          SetScrollPosHere();                                                 // adjust scrolling position to center into the current cursor position.
     IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget.
-    IMGUI_API void          SetTreeStateStorage(ImGuiStorage* tree);                            // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it).
-    IMGUI_API ImGuiStorage* GetTreeStateStorage();
+    IMGUI_API void          SetStateStorage(ImGuiStorage* tree);                                // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it).
+    IMGUI_API ImGuiStorage* GetStateStorage();
 
     IMGUI_API void          PushItemWidth(float item_width);                                    // width of items for the common item+label case. default to ~2/3 of windows width.
     IMGUI_API void          PopItemWidth();

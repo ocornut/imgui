@@ -3078,13 +3078,13 @@ void ImGui::SetKeyboardFocusHere(int offset)
     window->FocusIdxTabRequestNext = IM_INT_MAX;
 }
 
-void ImGui::SetTreeStateStorage(ImGuiStorage* tree)
+void ImGui::SetStateStorage(ImGuiStorage* tree)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.StateStorage = tree ? tree : &window->StateStorage;
 }
 
-ImGuiStorage* ImGui::GetTreeStateStorage()
+ImGuiStorage* ImGui::GetStateStorage()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->DC.StateStorage;
@@ -3539,17 +3539,17 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, const bool d
     const ImGuiID id = window->GetID(str_id);
 
     // We only write to the tree storage if the user clicks
-    ImGuiStorage* tree = window->DC.StateStorage;
+    ImGuiStorage* storage = window->DC.StateStorage;
     bool opened;
     if (window->DC.OpenNextNode != -1)
     {
         opened = window->DC.OpenNextNode > 0;
-        tree->SetInt(id, opened);
+        storage->SetInt(id, opened);
         window->DC.OpenNextNode = -1;
     }
     else
     {
-        opened = tree->GetInt(id, default_open) != 0;
+        opened = storage->GetInt(id, default_open) != 0;
     }
 
     // Framed header expand a little outside the default padding
@@ -3582,7 +3582,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, const bool d
     if (pressed)
     {
         opened = !opened;
-        tree->SetInt(id, opened);
+        storage->SetInt(id, opened);
     }
 
     // Render
@@ -5444,7 +5444,7 @@ float ImGui::GetColumnOffset(int column_index)
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
     RegisterAliveId(column_id);
     const float default_t = column_index / (float)window->DC.ColumnsCount;
-    const float t = (float)window->StateStorage.GetInt(column_id, (int)(default_t * 8192)) / 8192;      // Cheaply store our floating point value inside the integer (could store an union into the map?)
+    const float t = window->StateStorage.GetFloat(column_id, default_t);      // Cheaply store our floating point value inside the integer (could store an union into the map?)
 
     const float offset = window->DC.ColumnsStartX + t * (window->Size.x - g.Style.ScrollBarWidth - window->DC.ColumnsStartX);
     return offset;
@@ -5459,7 +5459,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
 
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
     const float t = (offset - window->DC.ColumnsStartX) / (window->Size.x - g.Style.ScrollBarWidth - window->DC.ColumnsStartX);
-    window->StateStorage.SetInt(column_id, (int)(t*8192));
+    window->StateStorage.SetFloat(column_id, t);
 }
 
 float ImGui::GetColumnWidth(int column_index)
