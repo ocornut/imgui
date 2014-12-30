@@ -457,9 +457,9 @@ const float PI = 3.14159265358979323846f;
 
 // Play it nice with Windows users. Notepad in 2014 still doesn't display text data with Unix-style \n.
 #ifdef _MSC_VER
-#define STR_NEW_LINE "\r\n"
+#define STR_NEWLINE "\r\n"
 #else
-#define STR_NEW_LINE "\n"
+#define STR_NEWLINE "\n"
 #endif
 
 // Math bits
@@ -1835,7 +1835,7 @@ static void LogText(const ImVec2& ref_pos, const char* text, const char* text_en
         {
             const int char_count = (int)(line_end - text_remaining);
             if (log_new_line || !is_first_line)
-                ImGui::LogText(STR_NEW_LINE "%*s%.*s", tree_depth*4, "", char_count, text_remaining);
+                ImGui::LogText(STR_NEWLINE "%*s%.*s", tree_depth*4, "", char_count, text_remaining);
             else
                 ImGui::LogText(" %.*s", char_count, text_remaining);
         }
@@ -3508,7 +3508,7 @@ void ImGui::LogFinish()
     if (!g.LogEnabled)
         return;
 
-    ImGui::LogText(STR_NEW_LINE);
+    ImGui::LogText(STR_NEWLINE);
     g.LogEnabled = false;
     if (g.LogFile != NULL)
     {
@@ -6786,7 +6786,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     ImGuiState& g = GImGui;
     ImGuiStyle& style = g.Style;
 
-    const ImGuiStyle def;
+    const ImGuiStyle def; // Default style
 
     if (ImGui::Button("Revert Style"))
         g.Style = ref ? *ref : def;
@@ -6815,6 +6815,27 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
     if (ImGui::TreeNode("Colors"))
     {
+        static int output_dest = 0;
+        static bool output_only_modified = false;
+        if (ImGui::Button("Output Colors"))
+        {
+            if (output_dest == 0)
+                ImGui::LogToClipboard();
+            else
+                ImGui::LogToTTY();
+            ImGui::LogText("ImGuiStyle& style = ImGui::GetStyle();" STR_NEWLINE);
+            for (int i = 0; i < ImGuiCol_COUNT; i++)
+            {
+                const ImVec4& col = style.Colors[i];
+                const char* name = ImGui::GetStyleColName(i);
+                if (!output_only_modified || memcmp(&col, (ref ? &ref->Colors[i] : &def.Colors[i]), sizeof(ImVec4)) != 0)
+                    ImGui::LogText("style.Colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" STR_NEWLINE, name, 22 - strlen(name), "", col.x, col.y, col.z, col.w);
+            }
+            ImGui::LogFinish();
+        }
+        ImGui::SameLine(); ImGui::PushItemWidth(150); ImGui::Combo("##output_type", &output_dest, "To Clipboard\0To TTY"); ImGui::PopItemWidth();
+        ImGui::SameLine(); ImGui::Checkbox("Only Modified Fields", &output_only_modified);
+
         static ImGuiColorEditMode edit_mode = ImGuiColorEditMode_RGB;
         ImGui::RadioButton("RGB", &edit_mode, ImGuiColorEditMode_RGB);
         ImGui::SameLine();
