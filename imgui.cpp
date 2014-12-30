@@ -4124,6 +4124,56 @@ bool ImGui::SliderFloat4(const char* label, float v[4], float v_min, float v_max
     return SliderFloatN(label, v, 4, v_min, v_max, display_format, power);
 }
 
+static bool SliderIntN(const char* label, int v[3], int components, int v_min, int v_max, const char* display_format)
+{
+    ImGuiState& g = GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    const ImGuiStyle& style = g.Style;
+    const float w_full = window->DC.ItemWidth.back();
+    const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)) / (float)components));
+    const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)));
+
+    bool value_changed = false;
+    ImGui::PushID(label);
+    ImGui::PushItemWidth(w_item_one);
+    for (int i = 0; i < components; i++)
+    {
+        ImGui::PushID(i);
+        if (i + 1 == components)
+        {
+            ImGui::PopItemWidth();
+            ImGui::PushItemWidth(w_item_last);
+        }
+        value_changed |= ImGui::SliderInt("##v", &v[i], v_min, v_max, display_format);
+        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        ImGui::PopID();
+    }
+    ImGui::PopItemWidth();
+    ImGui::PopID();
+
+    ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
+
+    return value_changed;
+}
+
+bool ImGui::SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* display_format)
+{
+    return SliderIntN(label, v, 2, v_min, v_max, display_format);
+}
+
+bool ImGui::SliderInt3(const char* label, int v[3], int v_min, int v_max, const char* display_format)
+{
+    return SliderIntN(label, v, 3, v_min, v_max, display_format);
+}
+
+bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* display_format)
+{
+    return SliderIntN(label, v, 4, v_min, v_max, display_format);
+}
+
 enum ImGuiPlotType
 {
     ImGuiPlotType_Lines,
@@ -5243,8 +5293,8 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     case ImGuiColorEditMode_RGB:
     case ImGuiColorEditMode_HSV:
         {
-            // 0: RGB 0..255
-            // 1: HSV 0.255 Sliders
+            // 0: RGB 0..255 Sliders
+            // 1: HSV 0..255 Sliders
             const float w_items_all = w_full - (square_sz + style.ItemInnerSpacing.x);
             const float w_item_one  = ImMax(1.0f, (float)(int)((w_items_all - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)) / (float)components));
             const float w_item_last = ImMax(1.0f, (float)(int)(w_items_all - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)));
@@ -7025,14 +7075,15 @@ void ImGui::ShowTestWindow(bool* opened)
         static float angle = 0.0f;
         ImGui::SliderAngle("angle", &angle);
 
-        //static float vec2b[3] = { 0.10f, 0.20f };
-        //ImGui::SliderFloat2("slider float2", vec2b, 0.0f, 1.0f);
-
-        static float vec3b[3] = { 0.10f, 0.20f, 0.30f };
-        ImGui::SliderFloat3("slider float3", vec3b, 0.0f, 1.0f);
-
-        //static float vec4b[4] = { 0.10f, 0.20f, 0.30f, 0.40f };
+        static float vec4b[4] = { 0.10f, 0.20f, 0.30f, 0.40f };
+        //ImGui::SliderFloat2("slider float2", vec4b, 0.0f, 1.0f);
+        ImGui::SliderFloat3("slider float3", vec4b, 0.0f, 1.0f);
         //ImGui::SliderFloat4("slider float4", vec4b, 0.0f, 1.0f);
+
+        //static int vec4i[4] = { 1, 5, 100, 255 };
+        //ImGui::SliderInt2("slider int2", vec4i, 0, 255);
+        //ImGui::SliderInt3("slider int3", vec4i, 0, 255);
+        //ImGui::SliderInt4("slider int4", vec4i, 0, 255);
 
         static float col1[3] = { 1.0f,0.0f,0.2f };
         static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
