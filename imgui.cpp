@@ -267,7 +267,6 @@
 #include <math.h>       // sqrtf
 #include <stdint.h>     // intptr_t
 #include <stdio.h>      // vsnprintf
-#include <string.h>     // memset
 #include <new>          // new (ptr)
 
 #ifdef _MSC_VER

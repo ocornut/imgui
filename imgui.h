@@ -19,6 +19,7 @@ struct ImGuiWindow;
 #include <stdarg.h>         // va_list
 #include <stddef.h>         // ptrdiff_t
 #include <stdlib.h>         // NULL, malloc
+#include <string.h>         // memset, memmove
 
 #ifndef IM_ASSERT
 #include <assert.h>
