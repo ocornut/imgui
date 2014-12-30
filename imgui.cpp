@@ -7474,26 +7474,154 @@ static void ShowExampleAppFixedOverlay(bool* opened)
 
 struct ExampleAppConsole
 {
-    ImVector<char*> Items;
-    bool            NewItems;
+    char                  InputBuf[256];
+    ImVector<char*>       Items;
+    bool                  ScrollToBottom;
+    ImVector<char*>       History;
+    int                   HistoryPos;    // -1: new line, 0..History.size()-1 browsing history.
+    ImVector<const char*> Commands;
 
-    void    Clear()
+    ExampleAppConsole()
+    {
+        ClearLog();
+        HistoryPos = -1;
+        Commands.push_back("HELP");
+        Commands.push_back("HISTORY");
+        Commands.push_back("CLEAR");
+        Commands.push_back("CLASSIFY");  // "classify" is here to provide an example of "C"+[tab] completing to "CL" and displaying matches.
+    }
+    ~ExampleAppConsole()
+    {
+        ClearLog();
+        for (size_t i = 0; i < Items.size(); i++) 
+            ImGui::MemFree(History[i]); 
+    }
+
+    void    ClearLog()
     {
         for (size_t i = 0; i < Items.size(); i++) 
             ImGui::MemFree(Items[i]); 
         Items.clear();
-        NewItems = true;
+        ScrollToBottom = true;
     }
 
     void    AddLog(const char* fmt, ...)
     {
-        char buf[512];
+        char buf[1024];
         va_list args;
         va_start(args, fmt);
         ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
         va_end(args);
         Items.push_back(ImStrdup(buf));
-        NewItems = true;
+        ScrollToBottom = true;
+    }
+
+    void    Run(const char* title, bool* opened)
+    {
+        if (!ImGui::Begin(title, opened, ImVec2(520,600)))
+        {
+            ImGui::End();
+            return;
+        }
+
+        ImGui::TextWrapped("This example implement a console with basic coloring, completion and history. A more elaborate implementation may want to store entries along with extra data such as timestamp, emitter, etc.");
+        ImGui::TextWrapped("Enter 'HELP' for help, press TAB to use text completion.");
+
+        // TODO: display from bottom
+        // TODO: clip manually
+
+        if (ImGui::SmallButton("Add Dummy Text")) AddLog("some text\nsome more text\ndisplay very important message here!\n"); ImGui::SameLine(); 
+        if (ImGui::SmallButton("Add Dummy Error")) AddLog("[error] something went wrong"); ImGui::SameLine(); 
+        if (ImGui::SmallButton("Clear")) ClearLog();
+        ImGui::Separator();
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
+        static ImGuiTextFilter filter;
+        filter.Draw("Filter (\"incl,-excl\") (\"error\")", 180);
+        if (ImGui::IsItemHovered()) ImGui::SetKeyboardFocusHere(-1); // Auto focus on hover
+        ImGui::PopStyleVar();
+        ImGui::Separator();
+
+        // Display every line as a separate entry so we can change their color or add custom widgets. If you only want raw text you can use ImGui::TextUnformatted(log.begin(), log.end());
+        // NB- if you have lots of text this approach may be too inefficient. You can seek and display only the lines that are on display using a technique similar to what TextUnformatted() does,
+        // or faster if your entries are already stored into a table.
+        ImGui::BeginChild("ScrollingRegion", ImVec2(0,-ImGui::GetTextLineSpacing()*2));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,1)); // Tighten spacing
+        for (size_t i = 0; i < Items.size(); i++)
+        {
+            const char* item = Items[i];
+            if (!filter.PassFilter(item))
+                continue;
+            ImVec4 col(1,1,1,1); // A better implement may store a type per-item. For the sample let's just parse the text.
+            if (strstr(item, "[error]")) col = ImVec4(1.0f,0.4f,0.4f,1.0f);
+            else if (strncmp(item, "# ", 2) == 0) col = ImVec4(1.0f,0.8f,0.6f,1.0f);
+            ImGui::PushStyleColor(ImGuiCol_Text, col);
+            ImGui::TextUnformatted(item);
+            ImGui::PopStyleColor();
+        }
+        if (ScrollToBottom)
+            ImGui::SetScrollPosHere();
+        ScrollToBottom = false;
+        ImGui::PopStyleVar();
+        ImGui::EndChild();
+        ImGui::Separator();
+
+        // Command-line
+        if (ImGui::InputText("Input", InputBuf, IM_ARRAYSIZE(InputBuf), ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_CallbackHistory, &TextEditCallbackStub, (void*)this))
+        {
+            char* input_end = InputBuf+strlen(InputBuf);
+            while (input_end > InputBuf && input_end[-1] == ' ') input_end--; *input_end = 0;
+            if (InputBuf[0])
+                ExecCommand(InputBuf);
+            strcpy(InputBuf, "");
+        }
+
+        if (ImGui::IsItemHovered()) ImGui::SetKeyboardFocusHere(-1); // Auto focus on hover
+
+        ImGui::End();
+    }
+
+    void    ExecCommand(const char* command_line)
+    {
+        AddLog("# %s\n", command_line);
+
+        // Insert into history. First find match and delete it so it can be pushed to the back. This isn't trying to be smart or optimal.
+        HistoryPos = -1;
+        for (int i = (int)History.size()-1; i >= 0; i--)
+            if (ImStricmp(History[i], command_line) == 0)
+            {
+                ImGui::MemFree(History[i]);
+                History.erase(History.begin() + i);
+                break;
+            }
+        History.push_back(ImStrdup(command_line));
+
+        // Process command
+        if (ImStricmp(command_line, "CLEAR") == 0)
+        {
+            ClearLog();
+        }
+        else if (ImStricmp(command_line, "HELP") == 0)
+        {
+            AddLog("Commands:");
+            for (size_t i = 0; i < Commands.size(); i++)
+                AddLog("- %s", Commands[i]);
+        }
+        else if (ImStricmp(command_line, "HISTORY") == 0)
+        {
+            for (size_t i = History.size() >= 10 ? History.size() - 10 : 0; i < History.size(); i++)
+                AddLog("%3d: %s\n", i, History[i]);
+        }
+        else
+        {
+            AddLog("Unknown command: '%s'\n", command_line);
+        }
+    }
+
+    static void TextEditCallbackStub(ImGuiTextEditCallbackData* data)
+    {
+        ExampleAppConsole* console = (ExampleAppConsole*)data->UserData;
+        console->TextEditCallback(data);
     }
 
     void    TextEditCallback(ImGuiTextEditCallbackData* data)
@@ -7517,11 +7645,10 @@ struct ExampleAppConsole
                 }
 
                 // Build a list of candidates
-                const char* commands[] = { "HELP", "CLEAR", "CLASSIFY" };
                 ImVector<const char*> candidates;
-                for (size_t i = 0; i < IM_ARRAYSIZE(commands); i++)
-                    if (ImStrnicmp(commands[i], word_start, (int)(word_end-word_start)) == 0)
-                        candidates.push_back(commands[i]);
+                for (size_t i = 0; i < Commands.size(); i++)
+                    if (ImStrnicmp(Commands[i], word_start, (int)(word_end-word_start)) == 0)
+                        candidates.push_back(Commands[i]);
 
                 if (candidates.size() == 0)
                 {
@@ -7544,12 +7671,10 @@ struct ExampleAppConsole
                         int c = 0;
                         bool all_candidates_matches = true;
                         for (size_t i = 0; i < candidates.size() && all_candidates_matches; i++)
-                        {
                             if (i == 0)
                                 c = toupper(candidates[i][match_len]);
                             else if (c != toupper(candidates[i][match_len]))
                                 all_candidates_matches = false;
-                        }
                         if (!all_candidates_matches)
                             break;
                         match_len++;
@@ -7569,91 +7694,41 @@ struct ExampleAppConsole
 
                 break;
             }
+        case ImGuiKey_UpArrow:
+        case ImGuiKey_DownArrow:
+            {
+                // Example of HISTORY
+                const int prev_history_pos = HistoryPos;
+                if (data->EventKey == ImGuiKey_UpArrow)
+                {
+                    if (HistoryPos == -1)
+                        HistoryPos = History.size() - 1;
+                    else if (HistoryPos > 0)
+                        HistoryPos--;
+                }
+                else if (data->EventKey == ImGuiKey_DownArrow)
+                {
+                    if (HistoryPos != -1)
+                        if (++HistoryPos >= (int)History.size())
+                            HistoryPos = -1;
+                }
+
+                // A better implementation would preserve the data on the current input line along with cursor position.
+                if (prev_history_pos != HistoryPos)
+                {
+                    ImFormatString(data->Buf, data->BufSize, "%s", (HistoryPos >= 0) ? History[HistoryPos] : "");
+                    data->BufDirty = true;
+                    data->CursorPos = data->SelectionStart = data->SelectionEnd = strlen(data->Buf);
+                }
+            }
         }
     }
 };
 
-static void ShowExampleAppConsole_TextEditCallback(ImGuiTextEditCallbackData* data)
-{
-    ExampleAppConsole* console = (ExampleAppConsole*)data->UserData;
-    console->TextEditCallback(data);
-}
-
 static void ShowExampleAppConsole(bool* opened)
 {
-    if (!ImGui::Begin("Example: Console", opened, ImVec2(520,600)))
-    {
-        ImGui::End();
-        return;
-    }
-
-    ImGui::TextWrapped("This example implement a simple console. A more elaborate implementation may want to store individual entries along with extra data such as timestamp, emitter, etc.");
-    ImGui::TextWrapped("Press TAB to use text completion.");
-
-    // TODO: display from bottom
-    // TODO: clip manually
-    // TODO: history
-
     static ExampleAppConsole console;
-    static char input[256] = "";
-
-    if (ImGui::SmallButton("Add Dummy Text")) console.AddLog("some text\nsome more text");
-    ImGui::SameLine(); 
-    if (ImGui::SmallButton("Add Dummy Error")) console.AddLog("[error] something went wrong");
-    ImGui::SameLine(); 
-    if (ImGui::SmallButton("Clear all")) console.Clear();
-    ImGui::Separator();
-
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
-    static ImGuiTextFilter filter;
-    filter.Draw("Filter (\"incl,-excl\") (\"error\")", 180);
-    if (ImGui::IsItemHovered()) ImGui::SetKeyboardFocusHere(-1); // Auto focus on hover
-    ImGui::PopStyleVar();
-    ImGui::Separator();
-
-    ImGui::BeginChild("ScrollingRegion", ImVec2(0,-ImGui::GetTextLineSpacing()*2));
-
-    // Display every line as a separate entry so we can change their color or add custom widgets. If you only want raw text you can use ImGui::TextUnformatted(log.begin(), log.end());
-    // NB- if you have lots of text this approach may be too inefficient. You can seek and display only the lines that are on display using a technique similar to what TextUnformatted() does,
-    // or faster if your entries are already stored into a table.
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,1)); // tighten spacing
-    ImGui::GetStyle().ItemSpacing.y = 1; // tighten spacing
-    for (size_t i = 0; i < console.Items.size(); i++)
-    {
-        const char* item = console.Items[i];
-        if (!filter.PassFilter(item))
-            continue;
-        ImVec4 col(1,1,1,1);
-        if (strstr(item, "[error]")) col = ImVec4(1.0f,0.4f,0.4f,1.0f);
-        else if (strncmp(item, "# ", 2) == 0) col = ImVec4(1.0f,0.8f,0.6f,1.0f);
-        ImGui::PushStyleColor(ImGuiCol_Text, col);
-        ImGui::TextUnformatted(item);
-        ImGui::PopStyleColor();
-    }
-    ImGui::PopStyleVar();
-    if (console.NewItems)
-    {
-        ImGui::SetScrollPosHere();
-        console.NewItems = false;
-    }
-    ImGui::EndChild();
-
-    ImGui::Separator();
-    if (ImGui::InputText("Input", input, IM_ARRAYSIZE(input), ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CallbackCompletion, &ShowExampleAppConsole_TextEditCallback, (void*)&console))
-    {
-        const char* input_trimmed_end = input+strlen(input);
-        while (input_trimmed_end > input && input_trimmed_end[-1] == ' ')
-            input_trimmed_end--;
-        if (input_trimmed_end > input)
-        {
-            console.AddLog("# %s\n", input);
-            console.AddLog("Unknown command: '%.*s'\n", input_trimmed_end-input, input);    // NB: we don't actually handle any command in this sample code
-        }
-        strcpy(input, "");
-    }
-    if (ImGui::IsItemHovered()) ImGui::SetKeyboardFocusHere(-1); // Auto focus on hover
-
-    ImGui::End();
+    console.Run("Example: Console", opened);
 }
 
 static void ShowExampleAppLongText(bool* opened)
