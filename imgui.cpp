@@ -66,6 +66,7 @@
  - your code creates the UI, if your code doesn't run the UI is gone! == dynamic UI, no construction step, less data retention on your side, no state duplication, less sync, less errors.
  - see ImGui::ShowTestWindow() for user-side sample code
  - see examples/ folder for standalone sample applications.
+ - customization: use the style editor to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme), and report values in your code.
 
  - getting started:
    - initialisation: call ImGui::GetIO() and fill the 'Settings' data.
@@ -348,10 +349,10 @@ ImGuiStyle::ImGuiStyle()
     Alpha                   = 1.0f;             // Global alpha applies to everything in ImGui
     WindowPadding           = ImVec2(8,8);      // Padding within a window
     WindowMinSize           = ImVec2(48,48);    // Minimum window size
-    WindowRounding          = 10.0f;            // Radius of window corners rounding. Set to 0.0f to have rectangular windows
-    FramePadding            = ImVec2(5,4);      // Padding within a framed rectangle (used by most widgets)
-    ItemSpacing             = ImVec2(10,5);     // Horizontal and vertical spacing between widgets/lines
-    ItemInnerSpacing        = ImVec2(5,5);      // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
+    WindowRounding          = 9.0f;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
+    FramePadding            = ImVec2(4,3);      // Padding within a framed rectangle (used by most widgets)
+    ItemSpacing             = ImVec2(8,4);      // Horizontal and vertical spacing between widgets/lines
+    ItemInnerSpacing        = ImVec2(4,4);      // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
     TouchExtraPadding       = ImVec2(0,0);      // Expand bounding box for touch-based system where touch position is not accurate enough (unnecessary for mouse inputs). Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget running. So dont grow this too much!
     AutoFitPadding          = ImVec2(8,8);      // Extra space after auto-fit (double-clicking on resize grip)
     WindowFillAlphaDefault  = 0.70f;            // Default alpha of window background, if not specified in ImGui::Begin()
@@ -6739,7 +6740,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::SliderFloat2("FramePadding", (float*)&style.FramePadding, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat2("ItemSpacing", (float*)&style.ItemSpacing, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat2("ItemInnerSpacing", (float*)&style.ItemInnerSpacing, 0.0f, 20.0f, "%.0f");
-        ImGui::SliderFloat2("TouchExtraPadding", (float*)&style.TouchExtraPadding, 0.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat2("TouchExtraPadding", (float*)&style.TouchExtraPadding, 0.0f, 10.0f, "%.0f");
         ImGui::SliderFloat("TreeNodeSpacing", &style.TreeNodeSpacing, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat("ScrollBarWidth", &style.ScrollBarWidth, 0.0f, 20.0f, "%.0f");
         ImGui::TreePop();
