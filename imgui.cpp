@@ -1,4 +1,4 @@
-// ImGui library v1.19
+// ImGui library v1.19 wip
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -540,6 +540,7 @@ static const char* ImStristr(const char* haystack, const char* needle, const cha
     return NULL;
 }
 
+// Pass data_size==0 for zero-terminated string
 static ImU32 ImCrc32(const void* data, size_t data_size, ImU32 seed = 0) 
 { 
     static ImU32 crc32_lut[256] = { 0 };
@@ -555,9 +556,20 @@ static ImU32 ImCrc32(const void* data, size_t data_size, ImU32 seed = 0)
         }
     }
     ImU32 crc = ~seed; 
-    const unsigned char* current = (const unsigned char*)data; 
-    while (data_size--) 
-        crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *current++]; 
+    const unsigned char* current = (const unsigned char*)data;
+
+	if (data_size > 0)
+	{
+		// Known size
+	    while (data_size--) 
+		    crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *current++]; 
+	}
+	else
+	{
+		// Zero-terminated string
+		while (unsigned char c = *current++)
+			crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c]; 
+	}
     return ~crc; 
 } 
 
@@ -1243,7 +1255,7 @@ ImGuiWindow::~ImGuiWindow()
 ImGuiID ImGuiWindow::GetID(const char* str)
 {
     const ImGuiID seed = IDStack.empty() ? 0 : IDStack.back();
-    const ImGuiID id = ImCrc32(str, strlen(str), seed); // FIXME-OPT: crc32 function/variant should handle zero-terminated strings
+    const ImGuiID id = ImCrc32(str, 0, seed);
     RegisterAliveId(id);
     return id;
 }
@@ -7071,13 +7083,9 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::InputInt("input int", &i0);
         ImGui::InputFloat("input float", &f0, 0.01f, 1.0f);
 
-        //static float vec2a[3] = { 0.10f, 0.20f };
-        //ImGui::InputFloat2("input float2", vec2a);
-
-        static float vec3a[3] = { 0.10f, 0.20f, 0.30f };
-        ImGui::InputFloat3("input float3", vec3a);
-
-        //static float vec4a[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+		static float vec4a[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+        //ImGui::InputFloat2("input float2", vec4a);
+        ImGui::InputFloat3("input float3", vec4a);
         //ImGui::InputFloat4("input float4", vec4a);
 
         static int i1=0;

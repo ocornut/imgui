@@ -1,4 +1,4 @@
-// ImGui library v1.19
+// ImGui library v1.19 wip
 // See .cpp file for commentary.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
