@@ -88,13 +88,6 @@ ImGui takes advantage of a few C++ features for convenience but nothing in the r
 
 Shall someone wants to use ImGui from another language, it should be possible to wrap ImGui to be used from a raw C API in the future.
 
-Support
--------
-
-<b>Can you develop features xxxx for ImGui?</b>
-
-Please use GitHub 'Issues' facilities to suggest and discuss improvements. Your questions are often helpul to the community of users. 
-
 Donate
 ------
 
@@ -105,13 +98,23 @@ Yes please! I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgu
 Credits
 -------
 
-Developed by [Omar Cornut](http://www.miracleworld.net). The library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com). 
+Developed by [Omar Cornut](http://www.miracleworld.net) and every direct or indirect contributors to the GitHub. The early version of this library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com). 
 
 Embeds [proggy_clean](http://upperbounds.net) font by Tristan Grimmer (MIT license).
 Embeds [M+ fonts](http://mplus-fonts.sourceforge.jp/mplus-outline-fonts/index-en.html) font by Coji Morishita (free software license).
-Embeds [stb_textedit.h](https://github.com/nothings/stb/) by Sean Barrett.
+Embeds [stb_textedit.h](https://github.com/nothings/stb/) by Sean Barrett (public domain).
 
-Inspiration, feedback, and testing: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. Thanks!
+Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. And everybody posting feedback, questions and patches on the GitHub.
+
+ImGui is financially supported on [**Patreon**](http://www.patreon.com/imgui).
+
+Special supporters 
+- Jetha Chan
+
+Supporters
+- Michel Courtine
+
+And other supporters; thanks!
 
 License
 -------
