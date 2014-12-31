@@ -208,6 +208,7 @@
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
+ - input number: non-decimal input.
  - layout: horizontal layout helper (github issue #97)
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 horrible layout code. item width should include frame padding.
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns)
@@ -215,7 +216,6 @@
  - columns: columns header to act as button (~sort op) and allow resize/reorder
  - columns: user specify columns size
  - combo: overlap test beyond parent window bounding box is broken (used to work)
- - combo: broken visual ordering when window B is focused then click on window A:combo
  - combo: turn child handling code into pop up helper
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
@@ -4870,7 +4870,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                 if (c)
                 {
                     // Filter
-                    if (c < 256 && !isprint((char)(c & 0xFF)) && c != ' ')
+                    if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
                         continue;
                     if (flags & ImGuiInputTextFlags_CharsDecimal)
                         if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
