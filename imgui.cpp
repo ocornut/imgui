@@ -233,8 +233,10 @@
  - text edit: add multi-line text edit
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float) in .ini file
+ - log: LogButtons() options for specifying depth and/orhiding depth slider
+ - log: LogTofile() error handling
  - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
- - log: be able to right-click and log a window or tree-node into tty/file/clipboard?
+ - log: be able to right-click and log a window or tree-node into tty/file/clipboard / generalized context menu?
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
