@@ -4883,6 +4883,9 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                     edit_state.OnKeyPressed(c);
                 }
             }
+
+            // Consume characters
+            memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
         }
 
         edit_state.CursorAnim += g.IO.DeltaTime;
