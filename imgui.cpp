@@ -202,6 +202,7 @@
  - widgets: checkbox/radio active on press, is that standard/correct ?
  - widgets: widget-label types of function calls don't play nicely with SameLine (github issue #100) because of how they intentionally not declare the label extent. separate extent for auto-size vs extent for cursor.
  - widgets: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
+ - widgets: activating widget doesn't move parent to front
  - main: make IsHovered() more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: make IsHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
  - scrollbar: use relative mouse movement when first-clicking inside of scroll grab box.
@@ -2361,7 +2362,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
         window->IDStack.resize(0);
         ImGui::PushID(window);
 
-        // Move window (at the beginning of the frame to avoid lag)
+        // Move window (at the beginning of the frame to avoid input lag or sheering)
         const ImGuiID move_id = window->GetID("#MOVE");
         RegisterAliveId(move_id);
         if (g.ActiveId == move_id)
@@ -2371,7 +2372,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
                 if (!(window->Flags & ImGuiWindowFlags_NoMove))
                 {
                     window->PosFloat += g.IO.MouseDelta;
-                    MarkSettingsDirty();
+                    if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+                        MarkSettingsDirty();
                 }
                 FocusWindow(window);
             }
@@ -2434,7 +2436,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
             if (g.HoveredWindow == window && IsMouseHoveringBox(title_bar_aabb) && g.IO.MouseDoubleClicked[0])
             {
                 window->Collapsed = !window->Collapsed;
-                MarkSettingsDirty();
+                if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+                    MarkSettingsDirty();
                 FocusWindow(window);
             }
         }
@@ -2482,7 +2485,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
                         window->SizeFull = ImMax(window->SizeFull, size_auto_fit);
                     else
                         window->SizeFull = size_auto_fit;
-                    MarkSettingsDirty();
+                    if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+                        MarkSettingsDirty();
                 }
                 else if (!(window->Flags & ImGuiWindowFlags_NoResize))
                 {
@@ -2498,14 +2502,16 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
                         // Manual auto-fit
                         window->SizeFull = size_auto_fit;
                         window->Size = window->SizeFull;
-                        MarkSettingsDirty();
+                        if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+                            MarkSettingsDirty();
                     }
                     else if (held)
                     {
                         // Resize
                         window->SizeFull = ImMax(window->SizeFull + g.IO.MouseDelta, style.WindowMinSize);
                         window->Size = window->SizeFull;
-                        MarkSettingsDirty();
+                        if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+                            MarkSettingsDirty();
                     }
                 }
 
@@ -2709,11 +2715,14 @@ void ImGui::End()
     g.CurrentWindow = g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back();
 }
 
-// Moving window to front
+// Moving window to front of display (which happens to be back of our sorted list)
 static void FocusWindow(ImGuiWindow* window)
 {
     ImGuiState& g = GImGui;
     g.FocusedWindow = window;
+
+    if (g.Windows.back() == window)
+        return;
 
     for (size_t i = 0; i < g.Windows.size(); i++)
         if (g.Windows[i] == window)
