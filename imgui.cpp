@@ -200,9 +200,7 @@
  - widgets: switching from "widget-label" to "label-widget" would make it more convenient to integrate widgets in trees
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
  - widgets: checkbox/radio active on press, is that standard/correct ?
- - widgets: widget-label types of function calls don't play nicely with SameLine (github issue #100) because of how they intentionally not declare the label extent. separate extent for auto-size vs extent for cursor.
  - widgets: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
- - widgets: activating widget doesn't move parent to front
  - main: make IsHovered() more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: make IsHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
  - scrollbar: use relative mouse movement when first-clicking inside of scroll grab box.
@@ -3365,6 +3363,7 @@ static bool ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_ho
             if (g.IO.MouseClicked[0])
             {
                 g.ActiveId = id;
+                FocusWindow(window);
             }
             else if (repeat && g.ActiveId && ImGui::IsMouseClicked(0, true))
             {
@@ -3958,6 +3957,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]))
     {
         g.ActiveId = id;
+        FocusWindow(window);
 
         const bool is_ctrl_down = g.IO.KeyCtrl;
         if (tab_focus_requested || is_ctrl_down || is_unbound)
@@ -4783,6 +4783,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                 select_all = true;
         }
         g.ActiveId = id;
+        FocusWindow(window);
     }
     else if (io.MouseClicked[0])
     {
@@ -5180,6 +5181,8 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         {
             menu_toggled = true;
             g.ActiveComboID = (g.ActiveComboID == id) ? 0 : id;
+            if (g.ActiveComboID)
+                FocusWindow(window);
         }
     }
     
@@ -5221,7 +5224,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
             const char* item_text;
             if (!items_getter(data, item_idx, &item_text))
                 item_text = "*Unknown item*";
-            ImGui::Text("%s", item_text);
+            ImGui::TextUnformatted(item_text);
             
             if (item_selected)
             {
