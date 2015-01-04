@@ -199,7 +199,6 @@
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. 
  - widgets: switching from "widget-label" to "label-widget" would make it more convenient to integrate widgets in trees
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
- - widgets: checkbox/radio active on press, is that standard/correct ?
  - widgets: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
  - main: make IsHovered() more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: make IsHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
@@ -218,7 +217,6 @@
  - columns: user specify columns size
  - combo: overlap test beyond parent window bounding box is broken (used to work)
  - combo: turn child handling code into pop up helper
- - combo: clicking on e.g. checkbox or radio outside combo doesn't close combo because checkbox/radio doesn't set ActiveID (activate on-click)
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
  - plot: make it easier for user to draw into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
@@ -374,8 +372,9 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.40f, 0.40f, 0.80f, 0.40f);
     Colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.80f, 0.50f, 0.50f, 0.40f);
     Colors[ImGuiCol_ComboBg]                = ImVec4(0.20f, 0.20f, 0.20f, 0.99f);
-    Colors[ImGuiCol_CheckHovered]           = ImVec4(0.60f, 0.40f, 0.40f, 0.45f);
-    Colors[ImGuiCol_CheckActive]            = ImVec4(0.90f, 0.90f, 0.90f, 0.50f);
+    Colors[ImGuiCol_CheckBgHovered]         = ImVec4(0.60f, 0.40f, 0.40f, 0.45f);
+    Colors[ImGuiCol_CheckBgActive]          = ImVec4(0.65f, 0.50f, 0.50f, 0.55f);
+    Colors[ImGuiCol_CheckSelected]          = ImVec4(0.90f, 0.90f, 0.90f, 0.50f);
     Colors[ImGuiCol_SliderGrab]             = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
     Colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.80f, 0.50f, 0.50f, 1.00f);
     Colors[ImGuiCol_Button]                 = ImVec4(0.67f, 0.40f, 0.40f, 0.60f);
@@ -2882,8 +2881,9 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     case ImGuiCol_ScrollbarGrabHovered: return "ScrollbarGrabHovered";
     case ImGuiCol_ScrollbarGrabActive: return "ScrollbarGrabActive";
     case ImGuiCol_ComboBg: return "ComboBg";
-    case ImGuiCol_CheckHovered: return "CheckHovered";
-    case ImGuiCol_CheckActive: return "CheckActive";
+    case ImGuiCol_CheckBgHovered: return "CheckBgHovered";
+    case ImGuiCol_CheckBgActive: return "CheckBgActive";
+    case ImGuiCol_CheckSelected: return "CheckSelected";
     case ImGuiCol_SliderGrab: return "SliderGrab";
     case ImGuiCol_SliderGrabActive: return "SliderGrabActive";
     case ImGuiCol_Button: return "Button";
@@ -4379,22 +4379,17 @@ bool ImGui::Checkbox(const char* label, bool* v)
     if (ClipAdvance(total_bb))
         return false;
 
-    const bool hovered = IsHovered(total_bb, id);
-    const bool pressed = hovered && g.IO.MouseClicked[0];
-    if (hovered)
-        g.HoveredId = id;
+    bool hovered, held;
+    bool pressed = ButtonBehaviour(total_bb, id, &hovered, &held, true);
     if (pressed)
-    {
         *v = !(*v);
-        g.ActiveId = 0; // Clear focus
-    }
 
-    RenderFrame(check_bb.Min, check_bb.Max, window->Color(hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg));
+    RenderFrame(check_bb.Min, check_bb.Max, window->Color((held && hovered) ? ImGuiCol_CheckBgActive : hovered ? ImGuiCol_CheckBgHovered : ImGuiCol_FrameBg));
     if (*v)
     {
         const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
         const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
-        window->DrawList->AddRectFilled(check_bb.Min+ImVec2(pad,pad), check_bb.Max-ImVec2(pad,pad), window->Color(ImGuiCol_CheckActive));
+        window->DrawList->AddRectFilled(check_bb.Min+ImVec2(pad,pad), check_bb.Max-ImVec2(pad,pad), window->Color(ImGuiCol_CheckSelected));
     }
 
     if (g.LogEnabled)
@@ -4448,17 +4443,15 @@ bool ImGui::RadioButton(const char* label, bool active)
     center.y = (float)(int)center.y + 0.5f;
     const float radius = check_bb.GetHeight() * 0.5f;
 
-    const bool hovered = IsHovered(total_bb, id);
-    const bool pressed = hovered && g.IO.MouseClicked[0];
-    if (hovered)
-        g.HoveredId = id;
+    bool hovered, held;
+    bool pressed = ButtonBehaviour(total_bb, id, &hovered, &held, true);
 
-    window->DrawList->AddCircleFilled(center, radius, window->Color(hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg), 16);
+    window->DrawList->AddCircleFilled(center, radius, window->Color((held && hovered) ? ImGuiCol_CheckBgActive : hovered ? ImGuiCol_CheckBgHovered : ImGuiCol_FrameBg), 16);
     if (active)
     {
         const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
         const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
-        window->DrawList->AddCircleFilled(center, radius-pad, window->Color(ImGuiCol_CheckActive), 16);
+        window->DrawList->AddCircleFilled(center, radius-pad, window->Color(ImGuiCol_CheckSelected), 16);
     }
 
     if (window->Flags & ImGuiWindowFlags_ShowBorders)
@@ -4731,18 +4724,18 @@ void ImGuiTextEditCallbackData::InsertChars(int pos, const char* new_text, const
 
 static bool InputTextFilterCharacter(ImWchar c, ImGuiInputTextFlags flags)
 {
-	if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
-		return true;
+    if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
+        return true;
 
-	if (flags & ImGuiInputTextFlags_CharsDecimal)
-		if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
-			return true;
+    if (flags & ImGuiInputTextFlags_CharsDecimal)
+        if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
+            return true;
 
-	if (flags & ImGuiInputTextFlags_CharsHexadecimal)
-		if (!(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F'))
-			return true;
+    if (flags & ImGuiInputTextFlags_CharsHexadecimal)
+        if (!(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F'))
+            return true;
 
-	return false;
+    return false;
 }
 
 // Edit a string of text
@@ -4893,13 +4886,13 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                         s += bytes_count;
                         if (c >= 0x10000)
                             continue;
-						if (InputTextFilterCharacter((ImWchar)c, flags))
-							continue;
-						clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
+                        if (InputTextFilterCharacter((ImWchar)c, flags))
+                            continue;
+                        clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
                     }
                     clipboard_filtered[clipboard_filtered_len] = 0;
                     if (clipboard_filtered_len > 0) // If everything was filtered, ignore the pasting operation
-						stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
+                        stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
                     ImGui::MemFree(clipboard_filtered);
                 }
             }
@@ -4912,9 +4905,9 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                 const ImWchar c = g.IO.InputCharacters[n];
                 if (c)
                 {
-					// Insert character if they pass filtering
-					if (InputTextFilterCharacter(c, flags))
-						continue;
+                    // Insert character if they pass filtering
+                    if (InputTextFilterCharacter(c, flags))
+                        continue;
                     edit_state.OnKeyPressed(c);
                 }
             }
