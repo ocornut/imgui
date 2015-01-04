@@ -215,7 +215,6 @@
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills)
  - columns: columns header to act as button (~sort op) and allow resize/reorder
  - columns: user specify columns size
- - combo: overlap test beyond parent window bounding box is broken (used to work)
  - combo: turn child handling code into pop up helper
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
@@ -1557,8 +1556,12 @@ void ImGui::NewFrame()
             SaveSettings();
     }
 
+    // Find the window we are hovering. Child windows can extend beyond the limit of their parent so we need to derive HoveredRootWindow from HoveredWindow
     g.HoveredWindow = FindHoveredWindow(g.IO.MousePos, false);
-    g.HoveredRootWindow = FindHoveredWindow(g.IO.MousePos, true);
+    if (g.HoveredWindow && (g.HoveredWindow->Flags & ImGuiWindowFlags_ChildWindow))
+        g.HoveredRootWindow = g.HoveredWindow->RootWindow;
+    else
+        g.HoveredRootWindow = FindHoveredWindow(g.IO.MousePos, true);
 
     // Are we using inputs? Tell user so they can capture/discard them.
     g.IO.WantCaptureMouse = (g.HoveredWindow != NULL) || (g.ActiveId != 0);
@@ -1603,11 +1606,13 @@ void ImGui::NewFrame()
     }
 
     // Mark all windows as not visible
+    // Clear root windows at this point.
     for (size_t i = 0; i != g.Windows.size(); i++)
     {
         ImGuiWindow* window = g.Windows[i];
         window->Visible = false;
         window->Accessed = false;
+        window->RootWindow = NULL;
     }
 
     // No window should be open at the beginning of the frame.
@@ -2705,7 +2710,7 @@ void ImGui::End()
         ImGui::LogFinish();
 
     // Pop
-    window->RootWindow = NULL;
+    // NB: we don't clear 'window->RootWindow' yet, it will be used then cleared in NewFrame()
     g.CurrentWindowStack.pop_back();
     g.CurrentWindow = g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back();
 }
