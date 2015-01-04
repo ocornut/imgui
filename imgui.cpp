@@ -233,7 +233,6 @@
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float) in .ini file
  - log: LogButtons() options for specifying depth and/orhiding depth slider
- - log: LogTofile() error handling
  - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
  - log: be able to right-click and log a window or tree-node into tty/file/clipboard / generalized context menu?
  - filters: set a current filter that tree node can automatically query to hide themselves
@@ -3515,8 +3514,13 @@ void ImGui::LogToFile(int max_depth, const char* filename)
     if (!filename)
         filename = g.IO.LogFilename;
 
-    g.LogEnabled = true;
     g.LogFile = fopen(filename, "ab");
+    if (!g.LogFile)
+    {
+        IM_ASSERT(g.LogFile != NULL); // Consider this an error
+        return;
+    }
+    g.LogEnabled = true;
     g.LogStartDepth = window->DC.TreeDepth;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
