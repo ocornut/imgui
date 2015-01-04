@@ -5150,7 +5150,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
 
     const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(style.ItemInnerSpacing.x + text_size.x,0));
     const float arrow_size = (window->FontSize() + style.FramePadding.x * 2.0f);
-    const bool hovered = IsHovered(bb, id);
+    const bool hovered = IsHovered(frame_bb, id);
 
     bool value_changed = false;
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg));
