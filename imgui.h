@@ -745,7 +745,7 @@ struct ImFont
 
     // Settings
     float                       Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
-    ImVec2                      DisplayOffset;      // = (0.0f,0.0f    // Offset font rendering by xx pixels
+    ImVec2                      DisplayOffset;      // = (0.0f,0.0f)   // Offset font rendering by xx pixels
     ImVec2                      TexUvForWhite;      // = (0.0f,0.0f)   // Font texture must have a white pixel at this UV coordinate. Adjust if you are using custom texture.
     ImWchar                     FallbackChar;       // = '?'           // Replacement glyph is one isn't found.
 

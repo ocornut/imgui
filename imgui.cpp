@@ -6625,10 +6625,10 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
     if (!text_end)
         text_end = text_begin + strlen(text_begin);
 
-    const float line_height = (float)Info->FontSize;
     const float scale = size / (float)Info->FontSize;
+    const float line_height = (float)Info->FontSize * scale;
     const float tex_scale_x = 1.0f / (float)Common->ScaleW;
-    const float tex_scale_y = 1.0f / (float)(Common->ScaleH);
+    const float tex_scale_y = 1.0f / (float)Common->ScaleH;
     const float outline = (float)Info->Outline;
 
     // Align to be pixel perfect
@@ -6658,7 +6658,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             if (s >= word_wrap_eol)
             {
                 x = pos.x;
-                y += line_height * scale;
+                y += line_height;
                 word_wrap_eol = NULL;
 
                 // Wrapping skips upcoming blanks
@@ -6679,7 +6679,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
         if (c == '\n')
         {
             x = pos.x;
-            y += line_height * scale;
+            y += line_height;
             continue;
         }
 
