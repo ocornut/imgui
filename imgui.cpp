@@ -199,7 +199,9 @@
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. 
  - widgets: switching from "widget-label" to "label-widget" would make it more convenient to integrate widgets in trees
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
+ - widgets: checkbox/radio active on press, is that standard/correct ?
  - widgets: widget-label types of function calls don't play nicely with SameLine (github issue #100) because of how they intentionally not declare the label extent. separate extent for auto-size vs extent for cursor.
+ - widgets: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
  - main: make IsHovered() more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: make IsHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
  - scrollbar: use relative mouse movement when first-clicking inside of scroll grab box.
@@ -217,6 +219,7 @@
  - columns: user specify columns size
  - combo: overlap test beyond parent window bounding box is broken (used to work)
  - combo: turn child handling code into pop up helper
+ - combo: clicking on e.g. checkbox or radio outside combo doesn't close combo because checkbox/radio doesn't set ActiveID (activate on-click)
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
  - plot: make it easier for user to draw into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
@@ -3326,12 +3329,24 @@ void ImGui::LabelText(const char* label, const char* fmt, ...)
     va_end(args);
 }
 
+static bool IsHovered(const ImGuiAabb& bb, const ImGuiID& id)
+{
+    ImGuiState& g = GImGui;
+    if (g.HoveredId == 0)
+    {
+        ImGuiWindow* window = GetCurrentWindow();
+        const bool hovered = (g.HoveredRootWindow == window->RootWindow) && (g.ActiveId == 0 || g.ActiveId == id) && IsMouseHoveringBox(bb);
+        return hovered;
+    }
+    return false;
+}
+
 static bool ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    const bool hovered = (g.HoveredRootWindow == window->RootWindow) && (g.HoveredId == 0) && IsMouseHoveringBox(bb);
+    const bool hovered = IsHovered(bb, id);
     bool pressed = false;
     if (hovered)
     {
@@ -3926,7 +3941,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         }
     }
 
-    const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(slider_bb);
+    const bool hovered = IsHovered(slider_bb, id);
     if (hovered)
         g.HoveredId = id;
 
@@ -4356,7 +4371,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
     if (ClipAdvance(total_bb))
         return false;
 
-    const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(total_bb);
+    const bool hovered = IsHovered(total_bb, id);
     const bool pressed = hovered && g.IO.MouseClicked[0];
     if (hovered)
         g.HoveredId = id;
@@ -4425,7 +4440,7 @@ bool ImGui::RadioButton(const char* label, bool active)
     center.y = (float)(int)center.y + 0.5f;
     const float radius = check_bb.GetHeight() * 0.5f;
 
-    const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(total_bb);
+    const bool hovered = IsHovered(total_bb, id);
     const bool pressed = hovered && g.IO.MouseClicked[0];
     if (hovered)
         g.HoveredId = id;
@@ -4736,7 +4751,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id, (flags & ImGuiInputTextFlags_CallbackCompletion) == 0);    // Using completion callback disable keyboard tabbing
     //const bool align_center = (bool)(flags & ImGuiInputTextFlags_AlignCenter);    // FIXME: Unsupported
 
-    const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(frame_bb);
+    const bool hovered = IsHovered(frame_bb, id);
     if (hovered)
         g.HoveredId = id;
 
@@ -5126,7 +5141,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
 
     const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(style.ItemInnerSpacing.x + text_size.x,0));
     const float arrow_size = (window->FontSize() + style.FramePadding.x * 2.0f);
-    const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(bb);
+    const bool hovered = IsHovered(bb, id);
 
     bool value_changed = false;
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg));
@@ -5242,7 +5257,7 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
     if (ClipAdvance(bb))
         return false;
 
-    const bool hovered = (g.HoveredWindow == window) && (g.HoveredId == 0) && IsMouseHoveringBox(bb);
+    const bool hovered = IsHovered(bb, 0);
     const bool pressed = hovered && g.IO.MouseClicked[0];
     RenderFrame(bb.Min, bb.Max, window->Color(col), outline_border);
 
@@ -7157,7 +7172,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::PlotHistogram("Histogram", arr, IM_ARRAYSIZE(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0,70));
     }
 
-    if (ImGui::CollapsingHeader("Widgets on same line"))
+    if (ImGui::CollapsingHeader("Horizontal Layout"))
     {
         // Text
         ImGui::Text("Hello");
@@ -7172,13 +7187,11 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Button("Corniflower");
 
         // Button
-        ImGui::SmallButton("Banana");
+        ImGui::Text("Small buttons");
         ImGui::SameLine();
-        ImGui::SmallButton("Apple");
+        ImGui::SmallButton("Like this one");
         ImGui::SameLine();
-        ImGui::SmallButton("Corniflower");
-        ImGui::SameLine();
-        ImGui::Text("Small buttons fit in a text block");
+        ImGui::Text("can fit within a text block.");
 
         // Checkbox
         static bool c1=false,c2=false,c3=false,c4=false;
@@ -7193,27 +7206,11 @@ void ImGui::ShowTestWindow(bool* opened)
         // SliderFloat
         static float f0=1.0f, f1=2.0f, f2=3.0f;
         ImGui::PushItemWidth(80);
-        ImGui::SliderFloat("f0", &f0, 0.0f,5.0f);
+        ImGui::SliderFloat("X", &f0, 0.0f,5.0f);
         ImGui::SameLine();
-        ImGui::SliderFloat("f1", &f1, 0.0f,5.0f);
+        ImGui::SliderFloat("Y", &f1, 0.0f,5.0f);
         ImGui::SameLine();
-        ImGui::SliderFloat("f2", &f2, 0.0f,5.0f);
-
-        // InputText
-        static char s0[128] = "one", s1[128] = "two", s2[128] = "three";
-        ImGui::InputText("s0", s0, 128);
-        ImGui::SameLine();
-        ImGui::InputText("s1", s1, 128);
-        ImGui::SameLine();
-        ImGui::InputText("s2", s2, 128);
-
-        // LabelText
-        ImGui::LabelText("l0", "one");
-        ImGui::SameLine();
-        ImGui::LabelText("l0", "two");
-        ImGui::SameLine();
-        ImGui::LabelText("l0", "three");
-        ImGui::PopItemWidth();
+        ImGui::SliderFloat("Z", &f2, 0.0f,5.0f);
     }
 
     if (ImGui::CollapsingHeader("Child regions"))
