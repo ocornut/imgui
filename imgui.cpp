@@ -231,7 +231,6 @@
  - text edit: centered text for slider or input text to it matches typical positioning.
  - text edit: flag to disable live update of the user buffer. 
  - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
- - text edit: pasting text into a number box should filter the characters the same way direct input does
  - text edit: add multi-line text edit
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float) in .ini file
@@ -4730,6 +4729,22 @@ void ImGuiTextEditCallbackData::InsertChars(int pos, const char* new_text, const
     SelectionStart = SelectionEnd = CursorPos;
 }
 
+static bool InputTextFilterCharacter(ImWchar c, ImGuiInputTextFlags flags)
+{
+	if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
+		return true;
+
+	if (flags & ImGuiInputTextFlags_CharsDecimal)
+		if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
+			return true;
+
+	if (flags & ImGuiInputTextFlags_CharsHexadecimal)
+		if (!(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F'))
+			return true;
+
+	return false;
+}
+
 // Edit a string of text
 bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, void (*callback)(ImGuiTextEditCallbackData*), void* user_data)
 {
@@ -4876,14 +4891,15 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                         if (bytes_count <= 0)
                             break;
                         s += bytes_count;
-                        if (c == '\n' || c == '\r')
-                            continue;
                         if (c >= 0x10000)
                             continue;
-                        clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
+						if (InputTextFilterCharacter((ImWchar)c, flags))
+							continue;
+						clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
                     }
                     clipboard_filtered[clipboard_filtered_len] = 0;
-                    stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
+                    if (clipboard_filtered_len > 0) // If everything was filtered, ignore the pasting operation
+						stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
                     ImGui::MemFree(clipboard_filtered);
                 }
             }
@@ -4896,17 +4912,9 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                 const ImWchar c = g.IO.InputCharacters[n];
                 if (c)
                 {
-                    // Filter
-                    if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
-                        continue;
-                    if (flags & ImGuiInputTextFlags_CharsDecimal)
-                        if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
-                            continue;
-                    if (flags & ImGuiInputTextFlags_CharsHexadecimal)
-                        if (!(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F'))
-                            continue;
-
-                    // Insert character!
+					// Insert character if they pass filtering
+					if (InputTextFilterCharacter(c, flags))
+						continue;
                     edit_state.OnKeyPressed(c);
                 }
             }
