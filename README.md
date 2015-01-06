@@ -1,13 +1,21 @@
 ImGui
 =====
+[![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 
-ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and carries minimal amount of dependencies (only 3 files are needed). It is based on an "immediate" graphical user interface paradigm which allows you to build user interfaces with ease.
+ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and carries minimal amount of dependencies. It is based on an "immediate" graphical user interface paradigm which allows you to build user interfaces with ease.
 
 ImGui is designed to enable fast iteration and allow programmers to create "content creation" or "debug" tools (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal, and thus lacks certain features normally found in more high-level libraries.
 
 ImGui is particularly suited to integration in 3D applications, fullscreen applications, embedded applications, games, or any applications on consoles platforms where operating system features are non-standard. 
 
-After ImGui is setup in your engine, you can use it like in this example:
+ImGui is self-contained within 4 files that you can easily copy and compile into your application/engine:
+
+  - imgui.cpp
+  - imgui.h
+  - imconfig.h (empty by default, user-editable)
+  - stb_textedit.h
+
+Your code passes mouse/keyboard inputs and settings to ImGui (see example applications for more details). After ImGui is setup, you can use it like in this example:
 
 ![screenshot of sample code alongside its output with ImGui](/web/code_sample_01.png?raw=true)
 
@@ -39,9 +47,13 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 Frequently Asked Question
 -------------------------
 
+<b>Where are samples?</b>
+
+The bulk of example user code is contained within the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. Ready-to-go example applications covering different versions of OpenGL/DirectX are provided in the examples/ folder. 
+
 <b>How do you use ImGui on a platform that may not have a mouse or keyboard?</b>
 
-I recommend using [Synergy](http://synergy-project.org). With the uSynergy.c micro client running you can seamlessly use your PC input devices from a video game console or a tablet. ImGui was also designed to function with touch inputs if you increase the padding of widgets to compensate for the lack of precision of touch devices, but it is recommended you use a mouse to allow optimising for screen real-estate.
+I recommend using [Synergy](http://synergy-project.org). With the uSynergy.c micro client running on your platform and connecting to your PC, you can seamlessly use your PC input devices from a video game console or a tablet. ImGui allows to increase the hit box of widgets (via the _TouchPadding_ setting) to accomodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.
 
 <b>I integrated ImGui in my engine and the text or lines are blurry..</b>
 
@@ -75,26 +87,33 @@ ImGui takes advantage of a few C++ features for convenience but nothing in the r
 
 Shall someone wants to use ImGui from another language, it should be possible to wrap ImGui to be used from a raw C API in the future.
 
-Support
--------
-
-<b>Can you develop features xxxx for ImGui?</b>
-
-Please use GitHub 'Issues' facilities to suggest and discuss improvements. Your questions are often helpul to the community of users. If you represent an organization and would like specific non-trivial features to be implemented, I am available for hire to work on or with ImGui. 
+Donate
+------
 
 <b>Can I donate to support the development of ImGui?</b>
 
-If you have the mean to help, I have setup a [**Patreon page**](http://www.patreon.com/imgui) to enable me to spend more time on the development of the library. One-off donations are also greatly appreciated. Thanks!
+Yes please! I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgui) if you want to donate and enable me to spend more time improving the library. If your company uses ImGui on a commercial project please consider making a small contribution. One-off donations are also greatly appreciated. I am also available for hire to work on or with ImGui. Thanks!
 
 Credits
 -------
 
-Developed by [Omar Cornut](http://www.miracleworld.net). The library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com). 
+Developed by [Omar Cornut](http://www.miracleworld.net) and every direct or indirect contributors to the GitHub. The early version of this library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com). 
 
 Embeds [proggy_clean](http://upperbounds.net) font by Tristan Grimmer (MIT license).
 Embeds [M+ fonts](http://mplus-fonts.sourceforge.jp/mplus-outline-fonts/index-en.html) font by Coji Morishita (free software license).
+Embeds [stb_textedit.h](https://github.com/nothings/stb/) by Sean Barrett (public domain).
 
-Inspiration, feedback, and testing: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. Thanks!
+Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. And everybody posting feedback, questions and patches on the GitHub.
+
+ImGui is financially supported on [**Patreon**](http://www.patreon.com/imgui).
+
+Special supporters 
+- Jetha Chan
+
+Supporters
+- Michel Courtine
+
+And other supporters; thanks!
 
 License
 -------

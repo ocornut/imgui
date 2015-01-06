@@ -1,23 +1,25 @@
+// ImGui - standalone example application for DirectX 9
+
 #include <windows.h>
-#include <imm.h>
-#include <mmsystem.h>
+#include "../../imgui.h"
+
+// DirectX 9
 #include <d3dx9.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
-#include "../../imgui.h"
 
 #pragma warning (disable: 4996)     // 'This function or variable may be unsafe': strdup
 
-static HWND hWnd;
+static HWND                    hWnd;
 static LPDIRECT3D9             g_pD3D = NULL;       // Used to create the D3DDevice
 static LPDIRECT3DDEVICE9       g_pd3dDevice = NULL; // Our rendering device
 static LPDIRECT3DVERTEXBUFFER9 g_pVB = NULL;        // Buffer to hold vertices
 static LPDIRECT3DTEXTURE9      g_pTexture = NULL;   // Our texture
 struct CUSTOMVERTEX
 {
-    D3DXVECTOR3 position;
-    D3DCOLOR    color;
-    float       tu, tv;
+    D3DXVECTOR3 pos;
+    D3DCOLOR    col;
+    D3DXVECTOR2 uv;
 };
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
 
@@ -43,12 +45,12 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         const ImDrawVert* vtx_src = &cmd_list->vtx_buffer[0];
         for (size_t i = 0; i < cmd_list->vtx_buffer.size(); i++)
         {
-            vtx_dst->position.x = vtx_src->pos.x;
-            vtx_dst->position.y = vtx_src->pos.y;
-            vtx_dst->position.z = 0.0f;
-            vtx_dst->color = (vtx_src->col & 0xFF00FF00) | ((vtx_src->col & 0xFF0000)>>16) | ((vtx_src->col & 0xFF) << 16);     // RGBA --> ARGB for DirectX9
-            vtx_dst->tu = vtx_src->uv.x;
-            vtx_dst->tv = vtx_src->uv.y;
+            vtx_dst->pos.x = vtx_src->pos.x;
+            vtx_dst->pos.y = vtx_src->pos.y;
+            vtx_dst->pos.z = 0.0f;
+            vtx_dst->col = (vtx_src->col & 0xFF00FF00) | ((vtx_src->col & 0xFF0000)>>16) | ((vtx_src->col & 0xFF) << 16);     // RGBA --> ARGB for DirectX9
+            vtx_dst->uv.x = vtx_src->uv.x;
+            vtx_dst->uv.y = vtx_src->uv.y;
             vtx_dst++;
             vtx_src++;
         }
@@ -92,9 +94,9 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     {
         // Render command list
         const ImDrawList* cmd_list = cmd_lists[n];
-		for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
-		{
-			const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
+        for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
+        {
+            const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
             const RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
             g_pd3dDevice->SetScissorRect(&r);
             g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, vtx_offset, pcmd->vtx_count/3);
@@ -103,7 +105,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     }
 }
 
-HRESULT InitD3D(HWND hWnd)
+HRESULT InitDeviceD3D(HWND hWnd)
 {
     if (NULL == (g_pD3D = Direct3DCreate9(D3D_SDK_VERSION)))
         return E_FAIL;
@@ -124,19 +126,18 @@ HRESULT InitD3D(HWND hWnd)
     return S_OK;
 }
 
-void Cleanup()
+void CleanupDevice()
 {
-    if (g_pTexture != NULL)
-        g_pTexture->Release();
+    // InitImGui
+    if (g_pVB) g_pVB->Release();
 
-    if (g_pd3dDevice != NULL)
-        g_pd3dDevice->Release();
-
-    if (g_pD3D != NULL)
-        g_pD3D->Release();
+    // InitDeviceD3D
+    if (g_pTexture) g_pTexture->Release();
+    if (g_pd3dDevice) g_pd3dDevice->Release();
+    if (g_pD3D) g_pD3D->Release();
 }
 
-LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
@@ -154,8 +155,7 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         io.MouseDown[1] = false; 
         return true;
     case WM_MOUSEWHEEL:
-        // Mouse wheel: -1,0,+1
-        io.MouseWheel = GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1 : -1;
+        io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
         return true;
     case WM_MOUSEMOVE:
         // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
@@ -168,36 +168,25 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             io.AddInputCharacter((unsigned short)wParam);
         return true;
     case WM_DESTROY:
-        Cleanup();
+        CleanupDevice();
         PostQuitMessage(0);
         return 0;
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-// Notify OS Input Method Editor of text input position (e.g. when using Japanese/Chinese inputs, otherwise this isn't needed)
-static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
-{
-    if (HIMC himc = ImmGetContext(hWnd))
-    {
-        COMPOSITIONFORM cf;
-        cf.ptCurrentPos.x = x;
-        cf.ptCurrentPos.y = y;
-        cf.dwStyle = CFS_FORCE_POSITION;
-        ImmSetCompositionWindow(himc, &cf);
-    }
-}
-
 void InitImGui()
 {
     RECT rect;
     GetClientRect(hWnd, &rect);
+    int display_w = (int)(rect.right - rect.left);
+    int display_h = (int)(rect.bottom - rect.top);
 
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));  // Display size, in pixels. For clamping windows positions.
-    io.DeltaTime = 1.0f/60.0f;                                                                  // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
-    io.PixelCenterOffset = 0.0f;                                                                // Align Direct3D Texels
-    io.KeyMap[ImGuiKey_Tab] = VK_TAB;                                                           // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
+    io.DisplaySize = ImVec2((float)display_w, (float)display_h);   // Display size, in pixels. For clamping windows positions.
+    io.DeltaTime = 1.0f/60.0f;                                     // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our time step is variable)
+    io.PixelCenterOffset = 0.0f;                                   // Align Direct3D Texels
+    io.KeyMap[ImGuiKey_Tab] = VK_TAB;                              // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
     io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
@@ -216,7 +205,6 @@ void InitImGui()
     io.KeyMap[ImGuiKey_Z] = 'Z';
 
     io.RenderDrawListsFn = ImImpl_RenderDrawLists;
-    io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
     
     // Create the vertex buffer
     if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
@@ -237,17 +225,17 @@ void InitImGui()
 }
 
 INT64 ticks_per_second = 0;
-INT64 time = 0;
+INT64 last_time = 0;
 
 void UpdateImGui()
 {
     ImGuiIO& io = ImGui::GetIO();
 
-    // Setup timestep
+    // Setup time step
     INT64 current_time;
     QueryPerformanceCounter((LARGE_INTEGER *)&current_time); 
-    io.DeltaTime = (float)(current_time - time) / ticks_per_second;
-    time = current_time;
+    io.DeltaTime = (float)(current_time - last_time) / ticks_per_second;
+    last_time = current_time;
 
     // Setup inputs
     // (we already got mouse position, buttons, wheel from the window message callback)
@@ -268,7 +256,7 @@ void UpdateImGui()
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
 {
     // Register the window class
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, MsgProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"ImGui Example", NULL };
+    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, LoadCursor(NULL, IDC_ARROW), NULL, NULL, L"ImGui Example", NULL };
     RegisterClassEx(&wc);
 
     // Create the application's window
@@ -276,14 +264,13 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
 
     if (!QueryPerformanceFrequency((LARGE_INTEGER *)&ticks_per_second))
         return 1;
-    if (!QueryPerformanceCounter((LARGE_INTEGER *)&time))
+    if (!QueryPerformanceCounter((LARGE_INTEGER *)&last_time))
         return 1;
 
     // Initialize Direct3D
-    if (InitD3D(hWnd) < 0)
+    if (InitDeviceD3D(hWnd) < 0)
     {
-        if (g_pVB)
-            g_pVB->Release();
+        CleanupDevice();
         UnregisterClass(L"ImGui Example", wc.hInstance);
         return 1;
     }
@@ -320,7 +307,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
             show_test_window ^= ImGui::Button("Test Window");
             show_another_window ^= ImGui::Button("Another Window");
 
-            // Calculate and show framerate
+            // Calculate and show frame rate
             static float ms_per_frame[120] = { 0 };
             static int ms_per_frame_idx = 0;
             static float ms_per_frame_accum = 0.0f;
@@ -343,7 +330,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
         // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
         if (show_test_window)
         {
-            ImGui::SetNewWindowDefaultPos(ImVec2(650, 20));     // Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
+			ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCondition_FirstUseEver);
             ImGui::ShowTestWindow(&show_test_window);
         }
 
@@ -361,9 +348,6 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
     }
 
     ImGui::Shutdown();
-
-    if (g_pVB)
-        g_pVB->Release();
 
     UnregisterClass(L"ImGui Example", wc.hInstance);
     return 0;

@@ -1,10 +1,19 @@
 ## Visual Studio files
+examples/Debug/*
+examples/Release/*
+examples/ipch/*
 examples/directx9_example/Debug/*
 examples/directx9_example/Release/*
 examples/directx9_example/ipch/*
+examples/directx11_example/Debug/*
+examples/directx11_example/Release/*
+examples/directx11_example/ipch/*
 examples/opengl_example/Debug/*
 examples/opengl_example/Release/*
 examples/opengl_example/ipch/*
+examples/opengl3_example/Debug/*
+examples/opengl3_example/Release/*
+examples/opengl3_example/ipch/*
 *.opensdf
 *.sdf
 *.suo
