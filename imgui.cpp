@@ -5891,9 +5891,9 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         const ImVec2& v0 = points[i];
         const ImVec2& v1 = points[ni];
         ImVec2 diff = v1 - v0;
-        float d = ImLength(diff);
+        float d = ImLengthSqr(diff);
         if (d > 0)
-            diff *= 1.0f/d;
+            diff *= 1.0f/sqrtf(d);
         temp_normals[i].x = diff.y;
         temp_normals[i].y = -diff.x;
     }
@@ -5923,10 +5923,6 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         dm *= aa_size;
         temp_outer[ni] = points[ni] + dm;
         temp_inner[ni] = points[ni] - dm;
-    }
-
-    if (!closed)
-    {
     }
 
     const ImU32 col_trans = col & 0x00ffffff;
@@ -5972,9 +5968,9 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         const ImVec2& v0 = points[j];
         const ImVec2& v1 = points[i];
         ImVec2 diff = v1 - v0;
-        float d = ImLength(diff);
+        float d = ImLengthSqr(diff);
         if (d > 0)
-            diff *= 1.0f/d;
+            diff *= 1.0f/sqrtf(d);
         temp_normals[j].x = diff.y;
         temp_normals[j].y = -diff.x;
     }
