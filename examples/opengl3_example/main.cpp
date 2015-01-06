@@ -1,7 +1,10 @@
 // ImGui - standalone example application for OpenGL 3, using programmable pipeline
 
 #ifdef _MSC_VER
-#pragma warning (disable: 4996)         // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
+#pragma warning (disable: 4996)                        // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
+#endif
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wunused-function"   // warning: unused function
 #endif
 
 #include "../../imgui.h"
