@@ -5,6 +5,7 @@
 #endif
 
 #include "../../imgui.h"
+#define STB_IMAGE_STATIC
 #define STB_IMAGE_IMPLEMENTATION
 #include "../shared/stb_image.h"        // stb_image.h for PNG loading
 
