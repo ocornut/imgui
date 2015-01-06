@@ -665,6 +665,11 @@ struct ImDrawList
     ImVector<ImVec4>        clip_rect_stack;    // [internal] clip rect stack while building the command-list (so text command can perform clipping early on)
     ImDrawVert*             vtx_write;          // [internal] point within vtx_buffer after each add command (to avoid using the ImVector<> operators too much)
 
+    ImVector<ImVec2>        path;
+    ImVector<ImVec2>        temp_inner;
+    ImVector<ImVec2>        temp_outer;
+    ImVector<ImVec2>        temp_normals;
+
     ImDrawList() { Clear(); }
 
     IMGUI_API void  Clear();
@@ -672,16 +677,26 @@ struct ImDrawList
     IMGUI_API void  PopClipRect();
     IMGUI_API void  ReserveVertices(unsigned int vtx_count);
     IMGUI_API void  AddVtx(const ImVec2& pos, ImU32 col);
-    IMGUI_API void  AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col);
 
-    // Primitives   
+    IMGUI_API void  AddPolyline(const ImVec2* points, const int npoints, ImU32 col, bool closed);
+    IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, const int npoints, ImU32 col);
+
+    // Path API
+    IMGUI_API void  ClearPath();
+    IMGUI_API void  LineTo(const ImVec2& p);
+    IMGUI_API void  ArcToFast(const ImVec2& centre, float radius, int amin, int amax);
+    IMGUI_API void  ArcTo(const ImVec2& centre, float radius, float amin, float amax, int num_segments = 12);
+    IMGUI_API void  Rect(const ImVec2& a, const ImVec2& b, float rounding = 0.0f, int rounding_corners=0x0F);
+    IMGUI_API void  Fill(ImU32 col);
+    IMGUI_API void  Stroke(ImU32 col, bool closed = false);
+
+    // Primitives
     IMGUI_API void  AddLine(const ImVec2& a, const ImVec2& b, ImU32 col);
     IMGUI_API void  AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding = 0.0f, int rounding_corners=0x0F);
     IMGUI_API void  AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding = 0.0f, int rounding_corners=0x0F);
-    IMGUI_API void  AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col);
     IMGUI_API void  AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
     IMGUI_API void  AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
-    IMGUI_API void  AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, int a_max, bool tris = false, const ImVec2& third_point_offset = ImVec2(0,0));
+
     IMGUI_API void  AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f);
 };
 
