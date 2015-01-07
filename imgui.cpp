@@ -1504,6 +1504,7 @@ void ImGui::NewFrame()
     IM_ASSERT(g.IO.Font->Scale > 0.0f);
     g.FontSize = g.IO.FontGlobalScale * (float)g.IO.Font->Info->FontSize * g.IO.Font->Scale;
     g.FontTexUvForWhite = g.IO.Font->TexUvForWhite;
+    g.IO.Font->FallbackGlyph = NULL; // Because subsequent FindGlyph may return the fallback itself.
     g.IO.Font->FallbackGlyph = g.IO.Font->FindGlyph(g.IO.Font->FallbackChar);
 
     g.Time += g.IO.DeltaTime;
@@ -1649,6 +1650,8 @@ void ImGui::Shutdown()
         ImGui::MemFree(g.Settings[i]);
     }
     g.Settings.clear();
+    g.ColorModifiers.clear();
+    g.StyleModifiers.clear();
     g.ColorEditModeStorage.Clear();
     if (g.LogFile && g.LogFile != stdout)
     {
@@ -6109,6 +6112,7 @@ ImFont::ImFont()
     GlyphsCount = 0;
     Kerning = NULL;
     KerningCount = 0;
+    FallbackGlyph = NULL;
 }
 
 void    ImFont::Clear()
@@ -6123,6 +6127,7 @@ void    ImFont::Clear()
     GlyphsCount = 0;
     Filenames.clear();
     IndexLookup.clear();
+    FallbackGlyph = NULL;
 }
 
 bool    ImFont::LoadFromFile(const char* filename)
