@@ -161,8 +161,8 @@ HRESULT InitDeviceD3D(HWND hWnd)
     {
         ZeroMemory(&sd, sizeof(sd));
         sd.BufferCount = 2;
-        sd.BufferDesc.Width = (UINT)ImGui::GetIO().DisplaySize.x;
-        sd.BufferDesc.Height = (UINT)ImGui::GetIO().DisplaySize.y;
+        sd.BufferDesc.Width = 0;
+        sd.BufferDesc.Height = 0;
         sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
         sd.BufferDesc.RefreshRate.Numerator = 60;
         sd.BufferDesc.RefreshRate.Denominator = 1;
