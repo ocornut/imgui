@@ -118,6 +118,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
 
+ - 2015/01/08 (1.30) XXXXXXXX
  - 2014/12/10 (1.18) removed SetNewWindowDefaultPos() in favor of new generic API SetNextWindowPos(pos, ImGuiSetCondition_FirstUseEver)
  - 2014/11/28 (1.17) moved IO.Font*** options to inside the IO.Font-> structure.
  - 2014/11/26 (1.17) reworked syntax of IMGUI_ONCE_UPON_A_FRAME helper macro to increase compiler compatibility
@@ -156,12 +157,13 @@
       e.g. "##Foobar" display an empty label and uses "##Foobar" as ID
    - read articles about the imgui principles (see web links) to understand the requirement and use of ID.
 
- If you want to use a different font than the default:
-   - read extra_fonts/README.txt for instructions. Examples fonts are also provided.
-   - if you can only see text but no solid shapes or lines, make sure io.Font->TexUvForWhite is set to the texture coordinates of a pure white pixel in your texture!
+ If you want to use a different font than the default embedded copy of ProggyClean.ttf (size 13):
+     ImGuiIO& io = ImGui::GetIO();
+     io.Font = new Font();
+     io.Font->LoadFromFileTTF("myfontfile.ttf", size_pixels);
 
  If you want to input Japanese/Chinese/Korean in the text input widget:
-    - make sure you are using a font that can display the glyphs you want (see above paragraph about fonts)
+    - when loading the font, pass a range that contains the characters you need, e.g.: ImFont::GetGlyphRangesJapanese()
     - to have the Microsoft IME cursor appears at the right location in the screen, setup a handler for the io.ImeSetInputScreenPosFn function:
 
         #include <Windows.h>
@@ -1489,7 +1491,7 @@ void ImGui::NewFrame()
     IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f);
     IM_ASSERT(g.IO.RenderDrawListsFn != NULL);  // Must be implemented
     IM_ASSERT(g.IO.Font);                       // Font not created
-	IM_ASSERT(g.IO.Font->IsLoaded());           // Font not loaded
+    IM_ASSERT(g.IO.Font->IsLoaded());           // Font not loaded
 
     if (!g.Initialized)
     {
