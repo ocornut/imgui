@@ -771,7 +771,7 @@ struct ImFont
     IMGUI_API bool                  IsLoaded() const { return TexPixels != NULL && !Glyphs.empty(); }
 
     // Retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
-    static IMGUI_API const ImWchar* GetGlyphRangesDefault();    // Basic Latin, Extended Latin + a few more
+    static IMGUI_API const ImWchar* GetGlyphRangesDefault();    // Basic Latin, Extended Latin
     static IMGUI_API const ImWchar* GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
     static IMGUI_API const ImWchar* GetGlyphRangesChinese();    // Japanese + full set of about 21000 CJK Unified Ideographs
 

@@ -218,7 +218,6 @@ void InitImGui()
     io.Font = new ImFont();
     io.Font->LoadDefault();
     //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
-	io.Font->LoadFromFileTTF("../../extra_fonts/ArialUni.ttf", 20.0f, ImFont::GetGlyphRangesDefault());
     //io.Font->DisplayOffset.y += 0.0f;
     IM_ASSERT(io.Font->IsLoaded());
 
