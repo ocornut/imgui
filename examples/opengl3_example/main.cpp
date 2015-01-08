@@ -8,9 +8,7 @@
 #endif
 
 #include "../../imgui.h"
-#define STB_IMAGE_STATIC
-#define STB_IMAGE_IMPLEMENTATION
-#include "../shared/stb_image.h"        // stb_image.h for PNG loading
+#include <stdio.h>
 
 // Glfw/Glew
 #define GLEW_STATIC
@@ -24,7 +22,7 @@ static bool mousePressed[2] = { false, false };
 
 // Shader variables
 static int shader_handle, vert_handle, frag_handle;
-static int texture_location, ortho_location;
+static int texture_location, proj_mtx_location;
 static int position_location, uv_location, colour_location;
 static size_t vbo_max_size = 20000;
 static unsigned int vbo_handle, vao_handle;
@@ -62,7 +60,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     };
     glUseProgram(shader_handle);
     glUniform1i(texture_location, 0);
-    glUniformMatrix4fv(ortho_location, 1, GL_FALSE, &ortho_projection[0][0]);
+    glUniformMatrix4fv(proj_mtx_location, 1, GL_FALSE, &ortho_projection[0][0]);
 
     // Grow our buffer according to what we need
     size_t total_vtx_count = 0;
@@ -184,28 +182,29 @@ void InitGL()
 
     const GLchar *vertex_shader =
         "#version 330\n"
-        "uniform mat4 ortho;\n"
+        "uniform mat4 ProjMtx;\n"
         "in vec2 Position;\n"
         "in vec2 UV;\n"
-        "in vec4 Colour;\n"
+        "in vec4 Color;\n"
         "out vec2 Frag_UV;\n"
-        "out vec4 Frag_Colour;\n"
+        "out vec4 Frag_Color;\n"
         "void main()\n"
         "{\n"
         "	Frag_UV = UV;\n"
-        "	Frag_Colour = Colour;\n"
-        "	gl_Position = ortho*vec4(Position.xy,0,1);\n"
+        "	Frag_Color = Color;\n"
+        "	gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
         "}\n";
 
     const GLchar* fragment_shader =
         "#version 330\n"
         "uniform sampler2D Texture;\n"
         "in vec2 Frag_UV;\n"
-        "in vec4 Frag_Colour;\n"
-        "out vec4 FragColor;\n"
+        "in vec4 Frag_Color;\n"
+        "out vec4 Out_Color;\n"
         "void main()\n"
         "{\n"
-        "	FragColor = Frag_Colour * texture( Texture, Frag_UV.st);\n"
+        "	Out_Color = Frag_Color;\n"
+        "   Out_Color.w *= texture( Texture, Frag_UV.st).x;\n"
         "}\n";
 
     shader_handle = glCreateProgram();
@@ -220,10 +219,10 @@ void InitGL()
     glLinkProgram(shader_handle);
 
     texture_location = glGetUniformLocation(shader_handle, "Texture");
-    ortho_location = glGetUniformLocation(shader_handle, "ortho");
+    proj_mtx_location = glGetUniformLocation(shader_handle, "ProjMtx");
     position_location = glGetAttribLocation(shader_handle, "Position");
     uv_location = glGetAttribLocation(shader_handle, "UV");
-    colour_location = glGetAttribLocation(shader_handle, "Colour");
+    colour_location = glGetAttribLocation(shader_handle, "Color");
 
     glGenBuffers(1, &vbo_handle);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
@@ -270,18 +269,20 @@ void InitImGui()
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
 
-    // Load font texture
+    // Load font
+    io.Font = new ImFont();
+    io.Font->LoadDefault();
+    //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
+    //io.Font->DisplayOffset.y += 0.0f;
+    IM_ASSERT(io.Font->IsLoaded());
+
+    // Copy font texture
     glGenTextures(1, &fontTex);
     glBindTexture(GL_TEXTURE_2D, fontTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    const void* png_data;
-    unsigned int png_size;
-    ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
-    int tex_x, tex_y, tex_comp;
-    void* tex_data = stbi_load_from_memory((const unsigned char*)png_data, (int)png_size, &tex_x, &tex_y, &tex_comp, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_x, tex_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data);
-    stbi_image_free(tex_data);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    IM_ASSERT(io.Font->IsLoaded());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, io.Font->TexWidth, io.Font->TexHeight, 0, GL_RED, GL_UNSIGNED_BYTE, io.Font->TexPixels);
 }
 
 void UpdateImGui()
@@ -364,7 +365,7 @@ int main(int argc, char** argv)
         // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
         if (show_test_window)
         {
-			ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCondition_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCondition_FirstUseEver);
             ImGui::ShowTestWindow(&show_test_window);
         }
         

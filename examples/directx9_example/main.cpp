@@ -73,12 +73,13 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 
     // Setup texture
     g_pd3dDevice->SetTexture( 0, g_pTexture );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_MODULATE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_TEXTURE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
+    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_SELECTARG1 );
+    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_DIFFUSE );
     g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
     g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
     g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
+    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
+    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
 
     // Setup orthographic projection matrix
     D3DXMATRIXA16 mat;
@@ -213,15 +214,21 @@ void InitImGui()
         return;
     }
 
-    // Load font texture
-    const void* png_data;
-    unsigned int png_size;
-    ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
-    if (D3DXCreateTextureFromFileInMemory(g_pd3dDevice, png_data, png_size, &g_pTexture) < 0)
-    {
-        IM_ASSERT(0);
-        return;
-    }
+    // Load font
+    io.Font = new ImFont();
+    io.Font->LoadDefault();
+    //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
+	io.Font->LoadFromFileTTF("../../extra_fonts/ArialUni.ttf", 20.0f, ImFont::GetGlyphRangesDefault());
+    //io.Font->DisplayOffset.y += 0.0f;
+    IM_ASSERT(io.Font->IsLoaded());
+
+    // Copy font texture
+    if (D3DXCreateTexture(g_pd3dDevice, io.Font->TexWidth, io.Font->TexHeight, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &g_pTexture) < 0) { IM_ASSERT(0); return; }
+    D3DLOCKED_RECT tex_locked_rect;
+    if (g_pTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK) {	IM_ASSERT(0); return; }
+    for (int y = 0; y < io.Font->TexHeight; y++)
+        memcpy((unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, io.Font->TexPixels + io.Font->TexWidth * y, io.Font->TexWidth);
+    g_pTexture->UnlockRect(0);
 }
 
 INT64 ticks_per_second = 0;
@@ -330,7 +337,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
         // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
         if (show_test_window)
         {
-			ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCondition_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCondition_FirstUseEver);
             ImGui::ShowTestWindow(&show_test_window);
         }
 

@@ -1,9 +1,6 @@
 // ImGui - standalone example application for DirectX 11
 
 #include <windows.h>
-#define STB_IMAGE_STATIC
-#define STB_IMAGE_IMPLEMENTATION
-#include "../shared/stb_image.h"    // for .png loading
 #include "../../imgui.h"
 
 // DirectX 11
@@ -290,8 +287,9 @@ HRESULT InitDeviceD3D(HWND hWnd)
             \
             float4 main(PS_INPUT input) : SV_Target\
             {\
-                float4 out_col = texture0.Sample(sampler0, input.uv);\
-                return input.col * out_col;\
+                float4 out_col = input.col; \
+                out_col.w *= texture0.Sample(sampler0, input.uv).w; \
+                return out_col; \
             }";
 
         D3DCompile(pixelShader, strlen(pixelShader), NULL, NULL, NULL, "main", "ps_5_0", 0, 0, &g_pPixelShaderBlob, NULL);
@@ -427,23 +425,22 @@ void InitImGui()
         }
     }
 
-    // Load font texture
-    // Default font (embedded in code)
-    const void* png_data;
-    unsigned int png_size;
-    ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
-    int tex_x, tex_y, tex_comp;
-    void* tex_data = stbi_load_from_memory((const unsigned char*)png_data, (int)png_size, &tex_x, &tex_y, &tex_comp, 0);
-    IM_ASSERT(tex_data != NULL);
+    // Load font
+    io.Font = new ImFont();
+    io.Font->LoadDefault();
+    //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
+    //io.Font->DisplayOffset.y += 0.0f;
+	IM_ASSERT(io.Font->IsLoaded());
 
+    // Copy font texture
     {
         D3D11_TEXTURE2D_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
-        desc.Width = tex_x;
-        desc.Height = tex_y;
+        desc.Width = io.Font->TexWidth;
+        desc.Height = io.Font->TexHeight;
         desc.MipLevels = 1;
         desc.ArraySize = 1;
-        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.Format = DXGI_FORMAT_A8_UNORM;
         desc.SampleDesc.Count = 1;
         desc.Usage = D3D11_USAGE_DEFAULT;
         desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -451,15 +448,15 @@ void InitImGui()
 
         ID3D11Texture2D *pTexture = NULL;
         D3D11_SUBRESOURCE_DATA subResource;
-        subResource.pSysMem = tex_data;
-        subResource.SysMemPitch = tex_x * 4;
+        subResource.pSysMem = io.Font->TexPixels;
+        subResource.SysMemPitch = desc.Width * 1;
         subResource.SysMemSlicePitch = 0;
         g_pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
 
         // Create texture view
         D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
         ZeroMemory(&srvDesc, sizeof(srvDesc));
-        srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        srvDesc.Format = DXGI_FORMAT_A8_UNORM;
         srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         srvDesc.Texture2D.MipLevels = desc.MipLevels;
         srvDesc.Texture2D.MostDetailedMip = 0;
@@ -471,7 +468,7 @@ void InitImGui()
     {
         D3D11_SAMPLER_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
-        desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+        desc.Filter = D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
         desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
         desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
         desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;

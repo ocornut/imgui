@@ -1,4 +1,4 @@
-// ImGui library v1.20
+// ImGui library v1.30 wip
 // See .cpp file for commentary.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
@@ -129,7 +129,7 @@ public:
 // - struct ImGuiTextBuffer             // Text buffer for logging/accumulating text
 // - struct ImGuiStorage                // Custom key value storage (if you need to alter open/close states manually)
 // - struct ImDrawList                  // Draw command list
-// - struct ImFont                      // Bitmap font loader
+// - struct ImFont                      // TTF font loader, bake glyphs into bitmap
 
 // ImGui End-user API
 // In a namespace so that user can add extra functions (e.g. Value() helpers for your vector or common types)
@@ -309,7 +309,6 @@ namespace ImGui
     IMGUI_API float         GetTime();
     IMGUI_API int           GetFrameCount();
     IMGUI_API const char*   GetStyleColName(ImGuiCol idx);
-    IMGUI_API void          GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size);
     IMGUI_API ImVec2        CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
 
 } // namespace ImGui
@@ -729,97 +728,59 @@ struct ImDrawList
     IMGUI_API void  AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f);
 };
 
-// Bitmap font data loader & renderer into vertices
-// Using the .fnt format exported by BMFont
-//  - tool: http://www.angelcode.com/products/bmfont
-//  - file-format: http://www.angelcode.com/products/bmfont/doc/file_format.html
-// Assume valid file data (won't handle invalid/malicious data)
-// Handle a subset of the options, namely:
-//  - kerning pair are not supported (because some ImGui code does per-character CalcTextSize calls, need to turn it into something more state-ful to allow for kerning)
+// TTF font loading and rendering
+// NB: kerning pair are not supported (because some ImGui code does per-character CalcTextSize calls, need to turn it into something more state-ful to allow for kerning)
 struct ImFont
 {
-    struct FntInfo;
-    struct FntCommon;
-    struct FntGlyph;
-    struct FntKerning;
-
     // Settings
-    float                       Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
-    ImVec2                      DisplayOffset;      // = (0.0f,0.0f)   // Offset font rendering by xx pixels
-    ImVec2                      TexUvForWhite;      // = (0.0f,0.0f)   // Font texture must have a white pixel at this UV coordinate. Adjust if you are using custom texture.
-    ImWchar                     FallbackChar;       // = '?'           // Replacement glyph is one isn't found.
+    float               Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
+    ImVec2              DisplayOffset;      // = (0.0f,0.0f)   // Offset font rendering by xx pixels
+    ImWchar             FallbackChar;       // = '?'           // Replacement glyph if one isn't found.
 
-    // Data
-    unsigned char*              Data;               // Raw data, content of .fnt file
-    size_t                      DataSize;           //
-    bool                        DataOwned;          // 
-    const FntInfo*              Info;               // (point into raw data)
-    const FntCommon*            Common;             // (point into raw data)
-    const FntGlyph*             Glyphs;             // (point into raw data)
-    size_t                      GlyphsCount;        //
-    const FntKerning*           Kerning;            // (point into raw data) - NB: kerning is unsupported
-    size_t                      KerningCount;       //
-    ImVector<const char*>       Filenames;          // (point into raw data)
-    ImVector<int>               IndexLookup;        // (built)
-    const FntGlyph*             FallbackGlyph;      // == FindGlyph(FontFallbackChar)
+    // Texture data
+    unsigned char*      TexPixels;          // 1 byte, 1 component per pixel. Total byte size of TexWidth * TexHeight
+    int                 TexWidth;
+    int                 TexHeight;
+    ImVec2              TexExtraDataPos;    // Position of our rectangle where we draw non-font graphics
+    ImVec2              TexUvWhitePixel;    // Texture coordinates to a white pixel (part of the TexExtraData block)
 
+    struct Glyph
+    {
+        ImWchar         Codepoint;
+        signed short    XAdvance;
+        signed short    Width, Height;
+        signed short    XOffset, YOffset;
+        float           U0, V0, U1, V1;     // Texture coordinates
+    };
+
+    // Runtime data
+    float               FontSize;           // Height of characters
+    ImVector<Glyph>     Glyphs;
+    ImVector<int>       IndexLookup;
+    const Glyph*        FallbackGlyph;      // == FindGlyph(FontFallbackChar)
+
+    // Methods
     IMGUI_API ImFont();
-    IMGUI_API ~ImFont()         { Clear(); }
+    IMGUI_API ~ImFont();
+    IMGUI_API bool                  LoadDefault();
+    IMGUI_API bool                  LoadFromFileTTF(const char* filename, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0);
+    IMGUI_API bool                  LoadFromMemoryTTF(const void* data, size_t data_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0);
+    IMGUI_API void                  Clear();
+    IMGUI_API void                  BuildLookupTable();
+    IMGUI_API const Glyph*          FindGlyph(unsigned short c) const;
+    IMGUI_API bool                  IsLoaded() const { return TexPixels != NULL && !Glyphs.empty(); }
 
-    IMGUI_API bool              LoadFromMemory(const void* data, size_t data_size);
-    IMGUI_API bool              LoadFromFile(const char* filename);
-    IMGUI_API void              Clear();
-    IMGUI_API void              BuildLookupTable();
-    IMGUI_API const FntGlyph*   FindGlyph(unsigned short c) const;
-    IMGUI_API bool              IsLoaded() const { return Info != NULL && Common != NULL && Glyphs != NULL; }
+    // Retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
+    static IMGUI_API const ImWchar* GetGlyphRangesDefault();    // Basic Latin, Extended Latin + a few more
+    static IMGUI_API const ImWchar* GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
+    static IMGUI_API const ImWchar* GetGlyphRangesChinese();    // Japanese + full set of about 21000 CJK Unified Ideographs
 
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
     // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
-    IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
-    IMGUI_API ImVec2            CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;                 // wchar
-    IMGUI_API void              RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width = 0.0f) const;
-
-    IMGUI_API const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
-
-#pragma pack(push, 1)
-    struct FntInfo
-    {
-        signed short    FontSize;
-        unsigned char   BitField;       // bit 0: smooth, bit 1: unicode, bit 2: italic, bit 3: bold, bit 4: fixedHeight, bits 5-7: reserved
-        unsigned char   CharSet;
-        unsigned short  StretchH;
-        unsigned char   AA;
-        unsigned char   PaddingUp, PaddingRight, PaddingDown, PaddingLeft;
-        unsigned char   SpacingHoriz, SpacingVert, Outline;
-        //char          FontName[];
-    };
-
-    struct FntCommon
-    {
-        unsigned short  LineHeight, Base;
-        unsigned short  ScaleW, ScaleH;
-        unsigned short  Pages;
-        unsigned char   BitField;
-        unsigned char   Channels[4];
-    };
-
-    struct FntGlyph
-    {
-        unsigned int    Id;
-        unsigned short  X, Y, Width, Height;
-        signed short    XOffset, YOffset;
-        signed short    XAdvance;
-        unsigned char   Page;
-        unsigned char   Channel;
-    };
-
-    struct FntKerning
-    {
-        unsigned int    IdFirst;
-        unsigned int    IdSecond;
-        signed short    Amount;
-    };
-#pragma pack(pop)
+    IMGUI_API ImVec2                CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
+    IMGUI_API ImVec2                CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;                 // wchar
+    IMGUI_API void                  RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width = 0.0f) const;
+    IMGUI_API const char*           CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
 };
 
 //---- Include imgui_user.h at the end of imgui.h

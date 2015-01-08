@@ -8,9 +8,7 @@
 #endif
 
 #include "../../imgui.h"
-#define STB_IMAGE_STATIC
-#define STB_IMAGE_IMPLEMENTATION
-#include "../shared/stb_image.h"        // stb_image.h for PNG loading
+#include <stdio.h>
 
 // Glfw/Glew
 #define GLEW_STATIC
@@ -180,42 +178,20 @@ void InitImGui()
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
 
-    // Load font texture
-    glGenTextures(1, &fontTex);
-    glBindTexture(GL_TEXTURE_2D, fontTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-#if 1
-    // Default font (embedded in code)
-    const void* png_data;
-    unsigned int png_size;
-    ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
-    int tex_x, tex_y, tex_comp;
-    void* tex_data = stbi_load_from_memory((const unsigned char*)png_data, (int)png_size, &tex_x, &tex_y, &tex_comp, 0);
-    IM_ASSERT(tex_data != NULL);
-#else
-    // Custom font from filesystem
+    // Load font
     io.Font = new ImFont();
-    io.Font->LoadFromFile("../../extra_fonts/mplus-2m-medium_18.fnt");
+    io.Font->LoadDefault();
+    //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
+    //io.Font->DisplayOffset.y += 0.0f;
     IM_ASSERT(io.Font->IsLoaded());
 
-    int tex_x, tex_y, tex_comp;
-    void* tex_data = stbi_load("../../extra_fonts/mplus-2m-medium_18.png", &tex_x, &tex_y, &tex_comp, 0);
-    IM_ASSERT(tex_data != NULL);
-    
-    // Automatically find white pixel from the texture we just loaded
-    // (io.Font->TexUvForWhite needs to contains UV coordinates pointing to a white pixel in order to render solid objects)
-    for (int tex_data_off = 0; tex_data_off < tex_x*tex_y; tex_data_off++)
-        if (((unsigned int*)tex_data)[tex_data_off] == 0xffffffff)
-        {
-            io.Font->TexUvForWhite = ImVec2((float)(tex_data_off % tex_x)/(tex_x), (float)(tex_data_off / tex_x)/(tex_y));
-            break;
-        }
-#endif
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_x, tex_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data);
-    stbi_image_free(tex_data);
+    // Copy font texture
+    glGenTextures(1, &fontTex);
+    glBindTexture(GL_TEXTURE_2D, fontTex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    IM_ASSERT(io.Font->IsLoaded());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, io.Font->TexWidth, io.Font->TexHeight, 0, GL_ALPHA, GL_UNSIGNED_BYTE, io.Font->TexPixels);
 }
 
 void UpdateImGui()
