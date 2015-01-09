@@ -2888,9 +2888,9 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     case ImGuiCol_ScrollbarGrabHovered: return "ScrollbarGrabHovered";
     case ImGuiCol_ScrollbarGrabActive: return "ScrollbarGrabActive";
     case ImGuiCol_ComboBg: return "ComboBg";
-    case ImGuiCol_CheckHovered: return "CheckBgHovered";
-    case ImGuiCol_CheckActive: return "CheckBgActive";
-    case ImGuiCol_CheckMark: return "CheckSelected";
+    case ImGuiCol_CheckHovered: return "CheckHovered";
+    case ImGuiCol_CheckActive: return "CheckActive";
+    case ImGuiCol_CheckMark: return "CheckMark";
     case ImGuiCol_SliderGrab: return "SliderGrab";
     case ImGuiCol_SliderGrabActive: return "SliderGrabActive";
     case ImGuiCol_Button: return "Button";
