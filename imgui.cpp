@@ -6213,19 +6213,24 @@ const ImWchar*  ImFont::GetGlyphRangesJapanese()
     return &ranges[0];
 }
 
-extern const unsigned int proggy_clean_ttf_compressed_size;
-extern const unsigned int proggy_clean_ttf_compressed_data[9584/4];
-extern unsigned int stb_decompress_length(unsigned char *input);
-extern unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length);
+static void GetDefaultCompressedFontDataTTF(const void** ttf_compressed_data, unsigned int* ttf_compressed_size);
+static unsigned int stb_decompress_length(unsigned char *input);
+static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length);
 
 // Load embedded ProggyClean.ttf at size 13
 bool    ImFont::LoadDefault()
 {
-    unsigned int buf_compressed_size = (int)proggy_clean_ttf_compressed_size;
-    unsigned char* buf_compressed = (unsigned char*)proggy_clean_ttf_compressed_data;
-    const size_t buf_decompressed_size = stb_decompress_length(buf_compressed);
+    // Get compressed data
+    unsigned int ttf_compressed_size;
+    const void* ttf_compressed;
+    GetDefaultCompressedFontDataTTF(&ttf_compressed, &ttf_compressed_size);
+
+    // Decompress
+    const size_t buf_decompressed_size = stb_decompress_length((unsigned char*)ttf_compressed);
     unsigned char* buf_decompressed = (unsigned char *)ImGui::MemAlloc(buf_decompressed_size);
-    stb_decompress(buf_decompressed, buf_compressed, buf_compressed_size);
+    stb_decompress(buf_decompressed, (unsigned char*)ttf_compressed, ttf_compressed_size);
+
+    // Load TTF
     const bool ret = LoadFromMemoryTTF((void *)buf_decompressed, buf_decompressed_size, 13.0f, ImFont::GetGlyphRangesDefault(), 0);
     ImGui::MemFree(buf_decompressed);
     DisplayOffset.y += 1;
@@ -8335,6 +8340,12 @@ static const unsigned int proggy_clean_ttf_compressed_data[9584/4] =
     0x3820ec8d, 0x200ddc41, 0x0ddc4139, 0xef8d3920, 0xef8d3920, 0xef8d3920, 0xef8d3920, 0xef8d3920, 0xef8d3920, 0xef8d3920, 0xef8d3920, 0xef8d3920, 
     0xef8d3920, 0xef8d3920, 0xef8d3920, 0xef8d3920, 0xef8d3920, 0x00663923, 0x48fa0500, 0x00f762f9, 
 };
+
+static void GetDefaultCompressedFontDataTTF(const void** ttf_compressed_data, unsigned int* ttf_compressed_size)
+{
+    *ttf_compressed_data = proggy_clean_ttf_compressed_data;
+    *ttf_compressed_size = proggy_clean_ttf_compressed_size;
+}
 
 //-----------------------------------------------------------------------------
 
