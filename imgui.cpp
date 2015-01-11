@@ -6421,9 +6421,9 @@ bool    ImFont::LoadFromMemoryTTF(const void* data, size_t data_size, float size
     // Setup ranges
     int glyph_count = 0;
     int glyph_ranges_count = 0;
-    for (const ImWchar* p = glyph_ranges; p[0] && p[1]; p += 2)
+    for (const ImWchar* in_range = glyph_ranges; in_range[0] && in_range[1]; in_range += 2)
     {
-        glyph_count += p[1];
+        glyph_count += (in_range[1] - in_range[0]) + 1;
         glyph_ranges_count++;
     }
 
@@ -6433,8 +6433,9 @@ bool    ImFont::LoadFromMemoryTTF(const void* data, size_t data_size, float size
     {
         stbtt_pack_range& range = ranges[i];
         range.font_size = size_pixels;
-        range.first_unicode_char_in_range = glyph_ranges[i*2];
-        range.num_chars_in_range = (glyph_ranges[i*2+1] - range.first_unicode_char_in_range) + 1;
+        const ImWchar* in_range = &glyph_ranges[i * 2];
+        range.first_unicode_char_in_range = in_range[0];
+        range.num_chars_in_range = (in_range[1] - in_range[0]) + 1;
         range.chardata_for_range = (stbtt_packedchar*)ImGui::MemAlloc(range.num_chars_in_range * sizeof(stbtt_packedchar));
     }
 
