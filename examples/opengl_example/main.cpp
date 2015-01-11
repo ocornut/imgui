@@ -130,15 +130,13 @@ static void glfw_char_callback(GLFWwindow* window, unsigned int c)
         ImGui::GetIO().AddInputCharacter((unsigned short)c);
 }
 
-// OpenGL code based on http://open.gl tutorials
 void InitGL()
 {
     glfwSetErrorCallback(glfw_error_callback);
-
     if (!glfwInit())
         exit(1);
 
-    window = glfwCreateWindow(1280, 720, "ImGui OpenGL example", NULL, NULL);
+    window = glfwCreateWindow(1280, 720, "ImGui OpenGL2 example", NULL, NULL);
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, glfw_key_callback);
     glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);
