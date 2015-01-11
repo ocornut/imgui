@@ -26,7 +26,6 @@ static ID3D11Buffer*            g_pVertexConstantBuffer = NULL;
 static ID3D10Blob *             g_pPixelShaderBlob = NULL;
 static ID3D11PixelShader*       g_pPixelShader = NULL;
 
-static ID3D11ShaderResourceView*g_pFontTextureView = NULL;
 static ID3D11SamplerState*      g_pFontSampler = NULL;
 static ID3D11BlendState*        g_blendState = NULL;
 
@@ -122,7 +121,6 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     g_pd3dDeviceImmediateContext->VSSetConstantBuffers(0, 1, &g_pVertexConstantBuffer);
 
     g_pd3dDeviceImmediateContext->PSSetShader(g_pPixelShader, NULL, 0);
-    g_pd3dDeviceImmediateContext->PSSetShaderResources(0, 1, &g_pFontTextureView);
     g_pd3dDeviceImmediateContext->PSSetSamplers(0, 1, &g_pFontSampler);
 
     // Setup render state
@@ -139,6 +137,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         {
             const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
             const D3D11_RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
+			g_pd3dDeviceImmediateContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->texture_id);
             g_pd3dDeviceImmediateContext->RSSetScissorRects(1, &r); 
             g_pd3dDeviceImmediateContext->Draw(pcmd->vtx_count, vtx_offset);
             vtx_offset += pcmd->vtx_count;
@@ -324,7 +323,8 @@ void CleanupDevice()
 
     // InitImGui
     if (g_pFontSampler) g_pFontSampler->Release();
-    if (g_pFontTextureView) g_pFontTextureView->Release();
+	if (ID3D11ShaderResourceView* font_texture_view = (ID3D11ShaderResourceView*)ImGui::GetIO().Font->TexID)
+		font_texture_view->Release();
     if (g_pVB) g_pVB->Release();
 
     // InitDeviceD3D
@@ -379,6 +379,45 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
+void LoadFontTexture(ImFont* font)
+{
+	IM_ASSERT(font && font->IsLoaded());
+
+	// Create texture
+	D3D11_TEXTURE2D_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.Width = font->TexWidth;
+	desc.Height = font->TexHeight;
+	desc.MipLevels = 1;
+	desc.ArraySize = 1;
+	desc.Format = DXGI_FORMAT_A8_UNORM;
+	desc.SampleDesc.Count = 1;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = 0;
+
+	ID3D11Texture2D *pTexture = NULL;
+	D3D11_SUBRESOURCE_DATA subResource;
+	subResource.pSysMem = font->TexPixels;
+	subResource.SysMemPitch = desc.Width * 1;
+	subResource.SysMemSlicePitch = 0;
+	g_pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
+
+	// Create texture view
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
+	srvDesc.Format = DXGI_FORMAT_A8_UNORM;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = desc.MipLevels;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	ID3D11ShaderResourceView* font_texture_view = NULL;
+	g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &font_texture_view);
+	pTexture->Release();
+
+	// Store ID
+	font->TexID = (void *)font_texture_view;
+}
+
 void InitImGui()
 {
     RECT rect;
@@ -430,39 +469,7 @@ void InitImGui()
     io.Font->LoadDefault();
     //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
     //io.Font->DisplayOffset.y += 0.0f;
-	IM_ASSERT(io.Font->IsLoaded());
-
-    // Copy font texture
-    {
-        D3D11_TEXTURE2D_DESC desc;
-        ZeroMemory(&desc, sizeof(desc));
-        desc.Width = io.Font->TexWidth;
-        desc.Height = io.Font->TexHeight;
-        desc.MipLevels = 1;
-        desc.ArraySize = 1;
-        desc.Format = DXGI_FORMAT_A8_UNORM;
-        desc.SampleDesc.Count = 1;
-        desc.Usage = D3D11_USAGE_DEFAULT;
-        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        desc.CPUAccessFlags = 0;
-
-        ID3D11Texture2D *pTexture = NULL;
-        D3D11_SUBRESOURCE_DATA subResource;
-        subResource.pSysMem = io.Font->TexPixels;
-        subResource.SysMemPitch = desc.Width * 1;
-        subResource.SysMemSlicePitch = 0;
-        g_pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
-
-        // Create texture view
-        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-        ZeroMemory(&srvDesc, sizeof(srvDesc));
-        srvDesc.Format = DXGI_FORMAT_A8_UNORM;
-        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Texture2D.MipLevels = desc.MipLevels;
-        srvDesc.Texture2D.MostDetailedMip = 0;
-        g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &g_pFontTextureView);
-        pTexture->Release();
-    }
+	LoadFontTexture(io.Font);
 
     // Create texture sampler
     {
@@ -562,6 +569,11 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
             show_test_window ^= ImGui::Button("Test Window");
             show_another_window ^= ImGui::Button("Another Window");
+
+			static ImFont* font2 = NULL;
+			if (!font2) { font2 = new ImFont(); font2->LoadFromFileTTF("../../extra_fonts/ArialUni.ttf", 30.0f); LoadFontTexture(font2); }
+			ImGui::Image(font2->TexID, ImVec2((float)font2->TexWidth, (FLOAT)font2->TexHeight));
+			//ImGui::GetWindowDrawList()->AddText(font2, 30.0f, ImGui::GetCursorScreenPos(), 0xFFFFFFFF, "Another font");
 
             // Calculate and show frame rate
             static float ms_per_frame[120] = { 0 };

@@ -17,7 +17,6 @@
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
 static GLFWwindow* window;
-static GLuint fontTex;
 static bool mousePressed[2] = { false, false };
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
@@ -41,9 +40,6 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
-
-    // Setup texture
-    glBindTexture(GL_TEXTURE_2D, fontTex);
     glEnable(GL_TEXTURE_2D);
 
     // Setup orthographic projection matrix
@@ -70,6 +66,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
+            glBindTexture(GL_TEXTURE_2D, (GLuint)pcmd->texture_id);
             glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
             glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
             vtx_offset += pcmd->vtx_count;
@@ -151,6 +148,19 @@ void InitGL()
     glewInit();
 }
 
+void LoadFontTexture(ImFont* font)
+{
+    IM_ASSERT(font && font->IsLoaded());
+
+    GLuint tex_id;
+    glGenTextures(1, &tex_id);
+    glBindTexture(GL_TEXTURE_2D, tex_id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, font->TexWidth, font->TexHeight, 0, GL_ALPHA, GL_UNSIGNED_BYTE, font->TexPixels);
+    font->TexID = (void *)tex_id;
+}
+
 void InitImGui()
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -183,15 +193,7 @@ void InitImGui()
     io.Font->LoadDefault();
     //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
     //io.Font->DisplayOffset.y += 0.0f;
-    IM_ASSERT(io.Font->IsLoaded());
-
-    // Copy font texture
-    glGenTextures(1, &fontTex);
-    glBindTexture(GL_TEXTURE_2D, fontTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    IM_ASSERT(io.Font->IsLoaded());
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, io.Font->TexWidth, io.Font->TexHeight, 0, GL_ALPHA, GL_UNSIGNED_BYTE, io.Font->TexPixels);
+    LoadFontTexture(io.Font);
 }
 
 void UpdateImGui()
@@ -249,6 +251,11 @@ int main(int argc, char** argv)
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
             show_test_window ^= ImGui::Button("Test Window");
             show_another_window ^= ImGui::Button("Another Window");
+
+			static ImFont* font2 = NULL;
+			if (!font2) { font2 = new ImFont(); font2->LoadFromFileTTF("../../extra_fonts/ArialUni.ttf", 30.0f); LoadFontTexture(font2); }
+			ImGui::Image(font2->TexID, ImVec2((float)font2->TexWidth, (float)font2->TexHeight));
+			//ImGui::GetWindowDrawList()->AddText(font2, 30.0f, ImGui::GetCursorScreenPos(), 0xFFFFFFFF, "Another font");
 
             // Calculate and show frame rate
             static float ms_per_frame[120] = { 0 };
