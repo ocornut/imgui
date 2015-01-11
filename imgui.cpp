@@ -6144,7 +6144,11 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
         return;
 
     if (text_end == NULL)
-        text_end = text_begin + strlen(text_begin); // FIXME-OPT
+        text_end = text_begin + strlen(text_begin);
+
+	const bool push_texture_id = font->TexID != texture_id_stack.back();
+	if (push_texture_id)
+		PushTextureID(font->TexID);
 
     // reserve vertices for worse case
     const unsigned int char_count = (unsigned int)(text_end - text_begin);
@@ -6159,6 +6163,9 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
     const size_t vtx_count = vtx_buffer.size() - vtx_begin;
     commands.back().vtx_count -= (unsigned int)(vtx_count_max - vtx_count);
     vtx_write -= (vtx_count_max - vtx_count);
+
+	if (push_texture_id)
+		PopTextureID();
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
@@ -6461,7 +6468,7 @@ bool    ImFont::LoadFromMemoryTTF(const void* data, size_t data_size, float size
 
     // Draw white pixel and make UV points to it
     TexPixels[0] = TexPixels[1] = TexPixels[TexWidth+0] = TexPixels[TexWidth+1] = 0xFF;
-    TexUvWhitePixel = ImVec2(TexExtraDataPos.x + 0.5f / TexWidth, TexExtraDataPos.y + 0.5f / TexHeight);
+    TexUvWhitePixel = ImVec2((TexExtraDataPos.x + 0.5f) / TexWidth, (TexExtraDataPos.y + 0.5f) / TexHeight);
 
     return true;
 }
