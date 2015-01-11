@@ -6439,9 +6439,9 @@ bool    ImFont::LoadFromMemoryTTF(const void* data, size_t data_size, float size
     }
 
     {
-        TexWidth = 512;
+        TexWidth = (glyph_count > 1000) ? 1024 : 512;  // Width doesn't really matters.
         TexHeight = 0;
-        const int max_tex_height = 1024*16;
+        const int max_tex_height = 1024*32;
         stbtt_pack_context spc;
         int ret = stbtt_PackBegin(&spc, NULL, TexWidth, max_tex_height, 0, 1, NULL);
         IM_ASSERT(ret);
