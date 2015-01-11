@@ -80,12 +80,18 @@
    - a typical application skeleton may be:
 
         // Application init
-        // TODO: Fill all settings fields of the io structure
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize.x = 1920.0f;
         io.DisplaySize.y = 1280.0f;
         io.DeltaTime = 1.0f/60.0f;
         io.IniFilename = "imgui.ini";
+        // TODO: Fill others settings of the io structure
+
+        // Load texture
+        unsigned char* pixels;
+        int width, height;
+        io.Font->GetTextureData(&pixels, &width, &height);
+        // TODO: copy texture to graphics memory. Store texture identifier for your engine in io.Font->TexID
 
         // Application main loop
         while (true)
@@ -118,7 +124,9 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
 
- - 2015/01/08 (1.30) XXXXXXXX
+ - 2015/01/11 (1.30) big font/image API change. now loads TTF file. allow for multiple fonts. no need for a PNG loader.
+                     removed GetDefaultFontData(). uses io.Font->GetTextureData*() API to retrieve uncompressed pixels.
+                     added texture identifier in ImDrawCmd passed to your render function.
  - 2014/12/10 (1.18) removed SetNewWindowDefaultPos() in favor of new generic API SetNextWindowPos(pos, ImGuiSetCondition_FirstUseEver)
  - 2014/11/28 (1.17) moved IO.Font*** options to inside the IO.Font-> structure.
  - 2014/11/26 (1.17) reworked syntax of IMGUI_ONCE_UPON_A_FRAME helper macro to increase compiler compatibility
@@ -157,9 +165,9 @@
       e.g. "##Foobar" display an empty label and uses "##Foobar" as ID
    - read articles about the imgui principles (see web links) to understand the requirement and use of ID.
 
- If you want to use a different font than the default embedded copy of ProggyClean.ttf (size 13):
+ If you want to use a different font than the default embedded copy of ProggyClean.ttf (size 13), before calling io.Font->GetTextureData():
+
      ImGuiIO& io = ImGui::GetIO();
-     io.Font = new Font();
      io.Font->LoadFromFileTTF("myfontfile.ttf", size_pixels);
 
  If you want to input Japanese/Chinese/Korean in the text input widget:
@@ -420,7 +428,7 @@ ImGuiStyle::ImGuiStyle()
 // We statically allocate a default font storage for the user.
 // This allows the user to avoid newing the default font, while keeping IO.Font a pointer which is easy to swap if needed.
 // We cannot new() the font because user may override MemAllocFn after the ImGuiIO() constructor is called.
-// For the same reason we cannot call LoadDefault() on the font.
+// For the same reason we cannot call LoadDefault() on the font by default, but it is called by GetTextureData*() API.
 static ImFont GDefaultStaticFont;
 
 ImGuiIO::ImGuiIO()
