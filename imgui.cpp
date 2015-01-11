@@ -2332,6 +2332,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
     if (first_begin_of_the_frame)
     {
         window->DrawList->Clear();
+        window->DrawList->PushTextureID(g.IO.Font->TexID);
         window->Visible = true;
 
         // New windows appears in front
@@ -2652,6 +2653,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
     }
     else
     {
+        // Short path when we do multiple Begin in the same frame.
+        window->DrawList->PushTextureID(g.IO.Font->TexID);
+
         // Outer clipping rectangle
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
         {
@@ -2705,6 +2709,7 @@ void ImGui::End()
     ImGui::Columns(1, "#CloseColumns");
     PopClipRect();   // inner window clip rectangle
     PopClipRect();   // outer window clip rectangle
+    window->DrawList->PopTextureID();
 
     // Select window for move/focus when we're done with all our widgets (we only consider non-childs windows here)
     const ImGuiAabb bb(window->Pos, window->Pos+window->Size);
@@ -3402,7 +3407,7 @@ static bool ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_ho
     return pressed;
 }
 
-bool ImGui::Button(const char* label, ImVec2 size, bool repeat_when_held)
+bool ImGui::Button(const char* label, const ImVec2& size_arg, bool repeat_when_held)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -3413,10 +3418,7 @@ bool ImGui::Button(const char* label, ImVec2 size, bool repeat_when_held)
     const ImGuiID id = window->GetID(label);
     const ImVec2 text_size = CalcTextSize(label, NULL, true);
 
-    if (size.x == 0.0f)
-        size.x = text_size.x;
-    if (size.y == 0.0f)
-        size.y = text_size.y;
+    const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : text_size.x, size_arg.y != 0.0f ? size_arg.y : text_size.y);
 
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + size + style.FramePadding*2.0f);
     ItemSize(bb);
@@ -3498,6 +3500,31 @@ static bool CloseWindowButton(bool* p_opened)
         *p_opened = !*p_opened;
 
     return pressed;
+}
+
+void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, ImU32 tint_col, ImU32 border_col)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + size);
+    if (border_col != 0)
+        bb.Max += ImVec2(2,2);
+    ItemSize(bb.GetSize(), &bb.Min);
+
+    if (ClipAdvance(bb))
+        return;
+
+    if (border_col != 0)
+    {
+        window->DrawList->AddRect(bb.Min, bb.Max, border_col, 0.0f);
+        window->DrawList->AddImage(user_texture_id, bb.Min+ImVec2(1,1), bb.Max-ImVec2(1,1), uv0, uv1, tint_col);
+    }
+    else
+    {
+        window->DrawList->AddImage(user_texture_id, bb.Min, bb.Max, uv0, uv1, tint_col);
+    }
 }
 
 // Start logging ImGui output to TTY
@@ -5810,19 +5837,24 @@ void ImGui::Color(const char* prefix, unsigned int v)
 // ImDrawList
 //-----------------------------------------------------------------------------
 
+static ImVec4 GNullClipRect(-9999.0f,-9999.0f, +9999.0f, +9999.0f);
+static ImTextureID GNullTextureID = NULL;
+
 void ImDrawList::Clear()
 {
     commands.resize(0);
     vtx_buffer.resize(0);
     vtx_write = NULL;
     clip_rect_stack.resize(0);
+    texture_id_stack.resize(0);
 }
 
-void ImDrawList::PushClipRect(const ImVec4& clip_rect)
+void ImDrawList::SetClipRect(const ImVec4& clip_rect)
 {
     if (!commands.empty() && commands.back().vtx_count == 0)
     {
-        // Reuse empty command because high-level clipping may have discarded the other vertices already
+        // Reuse existing command (high-level clipping may have discarded vertices submitted earlier)
+        // FIXME-OPT: Possibly even reuse previous command.
         commands.back().clip_rect = clip_rect;
     }
     else
@@ -5830,27 +5862,53 @@ void ImDrawList::PushClipRect(const ImVec4& clip_rect)
         ImDrawCmd draw_cmd;
         draw_cmd.vtx_count = 0;
         draw_cmd.clip_rect = clip_rect;
+        draw_cmd.texture_id = texture_id_stack.back();
         commands.push_back(draw_cmd);
     }
+}
+
+void ImDrawList::PushClipRect(const ImVec4& clip_rect)
+{
+    SetClipRect(clip_rect);
     clip_rect_stack.push_back(clip_rect);
 }
 
 void ImDrawList::PopClipRect()
 {
     clip_rect_stack.pop_back();
-    const ImVec4 clip_rect = clip_rect_stack.empty() ? ImVec4(-9999.0f,-9999.0f, +9999.0f, +9999.0f) : clip_rect_stack.back();
+    const ImVec4 clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
+    SetClipRect(clip_rect);
+}
+
+void ImDrawList::SetTextureID(const ImTextureID& texture_id)
+{
     if (!commands.empty() && commands.back().vtx_count == 0)
     {
-        // Reuse empty command because high-level clipping may have discarded the other vertices already
-        commands.back().clip_rect = clip_rect;
+        // Reuse existing command (high-level clipping may have discarded vertices submitted earlier)
+        // FIXME-OPT: Possibly even reuse previous command.
+        commands.back().texture_id = texture_id;
     }
     else
     {
         ImDrawCmd draw_cmd;
         draw_cmd.vtx_count = 0;
-        draw_cmd.clip_rect = clip_rect;
+        draw_cmd.clip_rect = clip_rect_stack.empty() ? GNullClipRect: clip_rect_stack.back();
+        draw_cmd.texture_id = texture_id;
         commands.push_back(draw_cmd);
     }
+}
+
+void ImDrawList::PushTextureID(const ImTextureID& texture_id)
+{
+    SetTextureID(texture_id);
+    texture_id_stack.push_back(texture_id);
+}
+
+void ImDrawList::PopTextureID()
+{
+    texture_id_stack.pop_back();
+    const ImTextureID texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
+    SetTextureID(texture_id);
 }
 
 void ImDrawList::ReserveVertices(unsigned int vtx_count)
@@ -5869,6 +5927,14 @@ void ImDrawList::AddVtx(const ImVec2& pos, ImU32 col)
     vtx_write->pos = pos;
     vtx_write->col = col;
     vtx_write->uv = GImGui.FontTexUvWhitePixel;
+    vtx_write++;
+}
+
+void ImDrawList::AddVtxUV(const ImVec2& pos, ImU32 col, const ImVec2& uv)
+{
+    vtx_write->pos = pos;
+    vtx_write->col = col;
+    vtx_write->uv = uv;
     vtx_write++;
 }
 
@@ -6095,6 +6161,27 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
     vtx_write -= (vtx_count_max - vtx_count);
 }
 
+void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
+{
+    if ((col >> 24) == 0)
+        return;
+
+    const bool push_texture_id = user_texture_id != texture_id_stack.back();
+    if (push_texture_id)
+        PushTextureID(user_texture_id);
+
+    ReserveVertices(6);
+    AddVtxUV(ImVec2(a.x,a.y), col, uv0);
+    AddVtxUV(ImVec2(b.x,a.y), col, ImVec2(uv1.x,uv0.y));
+    AddVtxUV(ImVec2(b.x,b.y), col, uv1);
+    AddVtxUV(ImVec2(a.x,a.y), col, ImVec2(uv0.x,uv0.y));
+    AddVtxUV(ImVec2(b.x,b.y), col, uv1);
+    AddVtxUV(ImVec2(a.x,b.y), col, ImVec2(uv0.x,uv1.y));
+
+    if (push_texture_id)
+        PopTextureID();
+}
+
 //-----------------------------------------------------------------------------
 // ImBitmapFont
 //-----------------------------------------------------------------------------
@@ -6120,13 +6207,16 @@ void    ImFont::Clear()
         ImGui::MemFree(TexPixels);
 
     DisplayOffset = ImVec2(0.5f, 0.5f);
+
+    TexID = NULL;
+    TexPixels = NULL;
+    TexWidth = TexHeight = 0;
+    TexExtraDataPos = TexUvWhitePixel = ImVec2(0, 0);
+
     FontSize = 0.0f;
     Glyphs.clear();
     IndexLookup.clear();
     FallbackGlyph = NULL;
-    TexPixels = NULL;
-    TexWidth = TexHeight = 0;
-    TexExtraDataPos = ImVec2(0, 0);
 }
 
 // Retrieve list of range (2 int per range, values are inclusive)
@@ -7256,6 +7346,29 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::Text("Kanjis: \xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e (nihongo)");
             static char buf[32] = "\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e";
             ImGui::InputText("UTF-8 input", buf, IM_ARRAYSIZE(buf));
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Images"))
+        {
+            ImGui::TextWrapped("Below we are displaying the font texture (which is the only texture we have access to in this demo). Use the 'ImTextureID' type as storage to pass pointers or identifier to your own texture data.\nHover the texture for a zoomed view.");
+            ImVec2 tex_screen_pos = ImGui::GetCursorScreenPos();
+            float tex_w = (float)ImGui::GetIO().Font->TexWidth;
+            float tex_h = (float)ImGui::GetIO().Font->TexHeight;
+            ImGui::Image(ImGui::GetIO().Font->TexID, ImVec2(tex_w, tex_h), ImVec2(0,0), ImVec2(1,1), 0xFFFFFFFF, 0x999999FF);
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                float focus_sz = 32.0f;
+                float focus_x = ImClamp(ImGui::GetMousePos().x - tex_screen_pos.x - focus_sz * 0.5f, 0.0f, tex_w - focus_sz);
+                float focus_y = ImClamp(ImGui::GetMousePos().y - tex_screen_pos.y - focus_sz * 0.5f, 0.0f, tex_h - focus_sz);
+                ImGui::Text("Min: (%.2f, %.2f)", focus_x, focus_y);
+                ImGui::Text("Max: (%.2f, %.2f)", focus_x + focus_sz, focus_y + focus_sz);
+                ImVec2 uv0 = ImVec2((focus_x) / tex_w, (focus_y) / tex_h);
+                ImVec2 uv1 = ImVec2((focus_x + focus_sz) / tex_w, (focus_y + focus_sz) / tex_h);
+                ImGui::Image(ImGui::GetIO().Font->TexID, ImVec2(128,128), uv0, uv1, 0xFFFFFFFF, 0x999999FF);
+                ImGui::EndTooltip();
+            }
             ImGui::TreePop();
         }
 

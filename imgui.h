@@ -32,6 +32,7 @@ struct ImGuiWindow;
 
 typedef unsigned int ImU32;
 typedef unsigned short ImWchar;     // character for display
+typedef void* ImTextureID;          // user data to refer to a texture (e.g. store your texture handle/id)
 typedef ImU32 ImGuiID;              // unique ID used by widgets (typically hashed from a stack of string)
 typedef int ImGuiCol;               // enum ImGuiCol_
 typedef int ImGuiStyleVar;          // enum ImGuiStyleVar_
@@ -233,8 +234,9 @@ namespace ImGui
     IMGUI_API void          LabelTextV(const char* label, const char* fmt, va_list args);
     IMGUI_API void          BulletText(const char* fmt, ...);
     IMGUI_API void          BulletTextV(const char* fmt, va_list args);
-    IMGUI_API bool          Button(const char* label, ImVec2 size = ImVec2(0,0), bool repeat_when_held = false);
+    IMGUI_API bool          Button(const char* label, const ImVec2& size = ImVec2(0,0), bool repeat_when_held = false);
     IMGUI_API bool          SmallButton(const char* label);
+    IMGUI_API void          Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0,0), const ImVec2& uv1 = ImVec2(1,1), ImU32 tint_col = 0xFFFFFFFF, ImU32 border_col = 0x00000000);
     IMGUI_API bool          CollapsingHeader(const char* label, const char* str_id = NULL, const bool display_frame = true, const bool default_open = false);
     IMGUI_API bool          SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);     // adjust display_format to decorate the value with a prefix or a suffix. Use power!=1.0 for logarithmic sliders.
     IMGUI_API bool          SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
@@ -675,6 +677,7 @@ struct ImDrawCmd
 {
     unsigned int    vtx_count;
     ImVec4          clip_rect;
+    ImTextureID     texture_id;     // Copy of user-provided 'TexID' from ImFont or passed to Image*() functions. Ignore if not using images or multiple fonts.
 };
 
 #ifndef IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT
@@ -705,16 +708,22 @@ struct ImDrawList
     ImVector<ImDrawVert>    vtx_buffer;         // each command consume ImDrawCmd::vtx_count of those
 
     // [Internal to ImGui]
-    ImVector<ImVec4>        clip_rect_stack;    // [internal] clip rect stack while building the command-list (so text command can perform clipping early on)
+    ImVector<ImVec4>        clip_rect_stack;    // [internal]
+    ImVector<ImTextureID>   texture_id_stack;   // [internal] 
     ImDrawVert*             vtx_write;          // [internal] point within vtx_buffer after each add command (to avoid using the ImVector<> operators too much)
 
     ImDrawList() { Clear(); }
 
     IMGUI_API void  Clear();
+    IMGUI_API void  SetClipRect(const ImVec4& clip_rect);
     IMGUI_API void  PushClipRect(const ImVec4& clip_rect);
     IMGUI_API void  PopClipRect();
+    IMGUI_API void  SetTextureID(const ImTextureID& texture_id);
+    IMGUI_API void  PushTextureID(const ImTextureID& texture_id);
+    IMGUI_API void  PopTextureID();
     IMGUI_API void  ReserveVertices(unsigned int vtx_count);
     IMGUI_API void  AddVtx(const ImVec2& pos, ImU32 col);
+    IMGUI_API void  AddVtxUV(const ImVec2& pos, ImU32 col, const ImVec2& uv);
     IMGUI_API void  AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col);
 
     // Primitives   
@@ -726,6 +735,7 @@ struct ImDrawList
     IMGUI_API void  AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
     IMGUI_API void  AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, int a_max, bool tris = false, const ImVec2& third_point_offset = ImVec2(0,0));
     IMGUI_API void  AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f);
+    IMGUI_API void  AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col);
 };
 
 // TTF font loading and rendering
@@ -736,8 +746,11 @@ struct ImFont
     float               Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
     ImVec2              DisplayOffset;      // = (0.0f,0.0f)   // Offset font rendering by xx pixels
     ImWchar             FallbackChar;       // = '?'           // Replacement glyph if one isn't found.
+    ImTextureID         TexID;              // = NULL          // User reference to texture used by the font (ignore if you aren't using multiple fonts/textures)
 
     // Texture data
+    // User is in charge of copying the pixels into a GPU texture. 
+    // You can set 'TexID' to uniquely identify your texture. TexId is copied to the ImDrawCmd structure which you receive during rendering.
     unsigned char*      TexPixels;          // 1 byte, 1 component per pixel. Total byte size of TexWidth * TexHeight
     int                 TexWidth;
     int                 TexHeight;
