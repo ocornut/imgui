@@ -31,8 +31,8 @@ struct ImGuiWindow;
 #endif
 
 typedef unsigned int ImU32;
-typedef unsigned short ImWchar;     // hold a character for display
-typedef ImU32 ImGuiID;              // hold widget unique ID
+typedef unsigned short ImWchar;     // character for display
+typedef ImU32 ImGuiID;              // unique ID used by widgets (typically hashed from a stack of string)
 typedef int ImGuiCol;               // enum ImGuiCol_
 typedef int ImGuiStyleVar;          // enum ImGuiStyleVar_
 typedef int ImGuiKey;               // enum ImGuiKey_
@@ -40,7 +40,7 @@ typedef int ImGuiColorEditMode;     // enum ImGuiColorEditMode_
 typedef int ImGuiWindowFlags;       // enum ImGuiWindowFlags_
 typedef int ImGuiSetCondition;      // enum ImGuiSetCondition_
 typedef int ImGuiInputTextFlags;    // enum ImGuiInputTextFlags_
-struct ImGuiTextEditCallbackData;
+struct ImGuiTextEditCallbackData;   // for advanced uses of InputText() 
 
 struct ImVec2
 {
@@ -106,10 +106,10 @@ public:
     inline const_iterator       begin() const                   { return Data; }
     inline iterator             end()                           { return Data + Size; }
     inline const_iterator       end() const                     { return Data + Size; }
-    inline value_type&          front()                         { return at(0); }
-    inline const value_type&    front() const                   { return at(0); }
-    inline value_type&          back()                          { IM_ASSERT(Size > 0); return at(Size-1); }
-    inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return at(Size-1); }
+    inline value_type&          front()                         { IM_ASSERT(Size > 0); return Data[0]; }
+    inline const value_type&    front() const                   { IM_ASSERT(Size > 0); return Data[0]; }
+    inline value_type&          back()                          { IM_ASSERT(Size > 0); return Data[Size-1]; }
+    inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size-1]; }
     inline void                 swap(ImVector<T>& rhs)          { const size_t rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; const size_t rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
 
     inline void                 reserve(size_t new_capacity)    { Data = (value_type*)ImGui::MemRealloc(Data, new_capacity * sizeof(value_type)); Capacity = new_capacity; }
@@ -668,7 +668,7 @@ struct ImGuiTextEditCallbackData
 
 //-----------------------------------------------------------------------------
 // Draw List
-// Hold a series of drawing commands. The user provide a renderer for ImDrawList
+// Hold a series of drawing commands. The user provides a renderer for ImDrawList
 //-----------------------------------------------------------------------------
 
 struct ImDrawCmd
