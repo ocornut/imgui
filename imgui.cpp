@@ -417,6 +417,12 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_TooltipBg]              = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
 }
 
+// We statically allocate a default font storage for the user.
+// This allows the user to avoid newing the default font, while keeping IO.Font a pointer which is easy to swap if needed.
+// We cannot new() the font because user may override MemAllocFn after the ImGuiIO() constructor is called.
+// For the same reason we cannot call LoadDefault() on the font.
+static ImFont GDefaultStaticFont;
+
 ImGuiIO::ImGuiIO()
 {
     memset(this, 0, sizeof(*this));
@@ -425,7 +431,7 @@ ImGuiIO::ImGuiIO()
     IniSavingRate = 5.0f;
     IniFilename = "imgui.ini";
     LogFilename = "imgui_log.txt";
-    Font = NULL;
+    Font = &GDefaultStaticFont;
     FontGlobalScale = 1.0f;
     FontAllowUserScaling = false;
     PixelCenterOffset = 0.0f;
@@ -1663,8 +1669,11 @@ void ImGui::Shutdown()
     }
     if (g.IO.Font)
     {
-        g.IO.Font->~ImFont();
-        ImGui::MemFree(g.IO.Font);
+        if (g.IO.Font != &GDefaultStaticFont)
+        {
+            g.IO.Font->~ImFont();
+            ImGui::MemFree(g.IO.Font);
+        }
         g.IO.Font = NULL;
     }
 
@@ -6146,9 +6155,9 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
     if (text_end == NULL)
         text_end = text_begin + strlen(text_begin);
 
-	const bool push_texture_id = font->TexID != texture_id_stack.back();
-	if (push_texture_id)
-		PushTextureID(font->TexID);
+    const bool push_texture_id = font->TexID != texture_id_stack.back();
+    if (push_texture_id)
+        PushTextureID(font->TexID);
 
     // reserve vertices for worse case
     const unsigned int char_count = (unsigned int)(text_end - text_begin);
@@ -6164,8 +6173,8 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
     commands.back().vtx_count -= (unsigned int)(vtx_count_max - vtx_count);
     vtx_write -= (vtx_count_max - vtx_count);
 
-	if (push_texture_id)
-		PopTextureID();
+    if (push_texture_id)
+        PopTextureID();
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)

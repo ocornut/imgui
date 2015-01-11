@@ -187,7 +187,6 @@ void InitImGui()
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
 
     // Load font
-    io.Font = new ImFont();
     io.Font->LoadDefault();
     //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
     //io.Font->DisplayOffset.y += 0.0f;

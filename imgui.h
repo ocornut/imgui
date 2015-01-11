@@ -746,14 +746,15 @@ struct ImFont
     float               Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
     ImVec2              DisplayOffset;      // = (0.0f,0.0f)   // Offset font rendering by xx pixels
     ImWchar             FallbackChar;       // = '?'           // Replacement glyph if one isn't found.
-    ImTextureID         TexID;              // = NULL          // User reference to texture used by the font (ignore if you aren't using multiple fonts/textures)
 
-    // Texture data
-    // User is in charge of copying the pixels into a GPU texture. 
+    // Texture data: user is in charge of copying the pixels into a GPU texture. 
     // You can set 'TexID' to uniquely identify your texture. TexId is copied to the ImDrawCmd structure which you receive during rendering.
+    ImTextureID         TexID;              // User reference to texture used by the font (ignore if you aren't using multiple fonts/textures)
     unsigned char*      TexPixels;          // 1 byte, 1 component per pixel. Total byte size of TexWidth * TexHeight
     int                 TexWidth;
     int                 TexHeight;
+
+    // [Internal]
     ImVec2              TexExtraDataPos;    // Position of our rectangle where we draw non-font graphics
     ImVec2              TexUvWhitePixel;    // Texture coordinates to a white pixel (part of the TexExtraData block)
 
