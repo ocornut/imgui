@@ -286,8 +286,7 @@ HRESULT InitDeviceD3D(HWND hWnd)
             \
             float4 main(PS_INPUT input) : SV_Target\
             {\
-                float4 out_col = input.col; \
-                out_col.w *= texture0.Sample(sampler0, input.uv).w; \
+                float4 out_col = input.col * texture0.Sample(sampler0, input.uv); \
                 return out_col; \
             }";
 
@@ -381,16 +380,18 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 void LoadFontTexture(ImFont* font)
 {
-    IM_ASSERT(font && font->IsLoaded());
+    unsigned char* pixels;
+    int width, height;
+    font->GetTextureDataRGBA32(&pixels, &width, &height);
 
     // Create texture
     D3D11_TEXTURE2D_DESC desc;
     ZeroMemory(&desc, sizeof(desc));
-    desc.Width = font->TexWidth;
-    desc.Height = font->TexHeight;
+    desc.Width = width;
+    desc.Height = height;
     desc.MipLevels = 1;
     desc.ArraySize = 1;
-    desc.Format = DXGI_FORMAT_A8_UNORM;
+    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     desc.SampleDesc.Count = 1;
     desc.Usage = D3D11_USAGE_DEFAULT;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -398,15 +399,15 @@ void LoadFontTexture(ImFont* font)
 
     ID3D11Texture2D *pTexture = NULL;
     D3D11_SUBRESOURCE_DATA subResource;
-    subResource.pSysMem = font->TexPixels;
-    subResource.SysMemPitch = desc.Width * 1;
+    subResource.pSysMem = pixels;
+    subResource.SysMemPitch = desc.Width * 4;
     subResource.SysMemSlicePitch = 0;
     g_pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
 
     // Create texture view
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
     ZeroMemory(&srvDesc, sizeof(srvDesc));
-    srvDesc.Format = DXGI_FORMAT_A8_UNORM;
+    srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Texture2D.MipLevels = desc.MipLevels;
     srvDesc.Texture2D.MostDetailedMip = 0;
@@ -464,10 +465,9 @@ void InitImGui()
         }
     }
 
-    // Load font
-    io.Font->LoadDefault();
+    // Load font (optionally load a custom TTF font)
     //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
-    //io.Font->DisplayOffset.y += 0.0f;
+    //io.Font->DisplayOffset.y += 1.0f;
     LoadFontTexture(io.Font);
 
     // Create texture sampler
@@ -568,11 +568,6 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
             show_test_window ^= ImGui::Button("Test Window");
             show_another_window ^= ImGui::Button("Another Window");
-
-            static ImFont* font2 = NULL;
-            if (!font2) { font2 = new ImFont(); font2->LoadFromFileTTF("../../extra_fonts/ArialUni.ttf", 30.0f); LoadFontTexture(font2); }
-            ImGui::Image(font2->TexID, ImVec2((float)font2->TexWidth, (FLOAT)font2->TexHeight));
-            //ImGui::GetWindowDrawList()->AddText(font2, 30.0f, ImGui::GetCursorScreenPos(), 0xFFFFFFFF, "Another font");
 
             // Calculate and show frame rate
             static float ms_per_frame[120] = { 0 };

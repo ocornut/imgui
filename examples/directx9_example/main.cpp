@@ -176,10 +176,13 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 void LoadFontTexture(ImFont* font)
 {
-    IM_ASSERT(font && font->IsLoaded());
+    unsigned char* pixels;
+    int width, height;
+	int bytes_per_pixel;
+    font->GetTextureDataAlpha8(&pixels, &width, &height, &bytes_per_pixel);
 
     LPDIRECT3DTEXTURE9 pTexture = NULL;
-    if (D3DXCreateTexture(g_pd3dDevice, font->TexWidth, font->TexHeight, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &pTexture) < 0)
+    if (D3DXCreateTexture(g_pd3dDevice, width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &pTexture) < 0)
     {
         IM_ASSERT(0);
         return;
@@ -192,8 +195,8 @@ void LoadFontTexture(ImFont* font)
         IM_ASSERT(0); 
         return; 
     }
-    for (int y = 0; y < font->TexHeight; y++)
-        memcpy((unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, font->TexPixels + font->TexWidth * y, font->TexWidth);
+    for (int y = 0; y < height; y++)
+        memcpy((unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
     pTexture->UnlockRect(0);
 
     font->TexID = (void *)pTexture;
@@ -237,10 +240,9 @@ void InitImGui()
         return;
     }
 
-    // Load font
-    io.Font->LoadDefault();
+    // Load font (optionally load a custom TTF font)
     //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
-    //io.Font->DisplayOffset.y += 0.0f;
+    //io.Font->DisplayOffset.y += 1.0f;
     LoadFontTexture(io.Font);
 }
 
@@ -326,11 +328,6 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
             show_test_window ^= ImGui::Button("Test Window");
             show_another_window ^= ImGui::Button("Another Window");
-
-            static ImFont* font2 = NULL;
-            if (!font2) { font2 = new ImFont(); font2->LoadFromFileTTF("../../extra_fonts/ArialUni.ttf", 30.0f); LoadFontTexture(font2); }
-            ImGui::Image(font2->TexID, ImVec2((float)font2->TexWidth, (FLOAT)font2->TexHeight));
-            //ImGui::GetWindowDrawList()->AddText(font2, 30.0f, ImGui::GetCursorScreenPos(), 0xFFFFFFFF, "Another font");
 
             // Calculate and show frame rate
             static float ms_per_frame[120] = { 0 };

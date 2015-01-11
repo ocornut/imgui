@@ -198,8 +198,7 @@ void InitGL()
         "out vec4 Out_Color;\n"
         "void main()\n"
         "{\n"
-        "	Out_Color = Frag_Color;\n"
-        "   Out_Color.w *= texture( Texture, Frag_UV.st).x;\n"
+        "	Out_Color = Frag_Color * texture( Texture, Frag_UV.st);\n"
         "}\n";
 
     shader_handle = glCreateProgram();
@@ -239,14 +238,17 @@ void InitGL()
 
 void LoadFontTexture(ImFont* font)
 {
-    IM_ASSERT(font && font->IsLoaded());
+    unsigned char* pixels;
+    int width, height;
+    font->GetTextureDataRGBA32(&pixels, &width, &height);
 
     GLuint tex_id;
     glGenTextures(1, &tex_id);
     glBindTexture(GL_TEXTURE_2D, tex_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, font->TexWidth, font->TexHeight, 0, GL_RED, GL_UNSIGNED_BYTE, font->TexPixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
     font->TexID = (void *)(intptr_t)tex_id;
 }
 
@@ -277,10 +279,9 @@ void InitImGui()
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
 
-    // Load font
-    io.Font->LoadDefault();
+    // Load font (optionally load a custom TTF font)
     //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
-    //io.Font->DisplayOffset.y += 0.0f;
+    //io.Font->DisplayOffset.y += 1.0f;
     LoadFontTexture(io.Font);
 }
 
@@ -340,11 +341,6 @@ int main(int argc, char** argv)
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
             show_test_window ^= ImGui::Button("Test Window");
             show_another_window ^= ImGui::Button("Another Window");
-
-            static ImFont* font2 = NULL;
-            if (!font2) { font2 = new ImFont(); font2->LoadFromFileTTF("../../extra_fonts/ArialUni.ttf", 30.0f); LoadFontTexture(font2); }
-            ImGui::Image(font2->TexID, ImVec2((float)font2->TexWidth, (float)font2->TexHeight));
-            //ImGui::GetWindowDrawList()->AddText(font2, 30.0f, ImGui::GetCursorScreenPos(), 0xFFFFFFFF, "Another font");
 
             // Calculate and show frame rate
             static float ms_per_frame[120] = { 0 };

@@ -6208,7 +6208,8 @@ ImFont::ImFont()
     DisplayOffset = ImVec2(0.5f, 0.5f);
     FallbackChar = (ImWchar)'?';
 
-    TexPixels = NULL;
+    TexPixelsAlpha8 = NULL;
+    TexPixelsRGBA32 = NULL;
     Clear();
 }
 
@@ -6217,15 +6218,55 @@ ImFont::~ImFont()
     Clear();
 }
 
+void    ImFont::GetTextureDataAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
+{
+    // Lazily load default font
+    if (!IsLoaded())
+        LoadDefault();
+
+    *out_pixels = TexPixelsAlpha8;
+    if (out_width) *out_width = TexWidth;
+    if (out_height) *out_height = TexHeight;
+    if (out_bytes_per_pixel) *out_bytes_per_pixel = 1;
+}
+
+void    ImFont::GetTextureDataRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
+{
+    // Lazily convert to RGBA32 format
+    // Although it is likely to be the most commonly used format, our font rendering is 8 bpp
+    if (!TexPixelsRGBA32)
+    {
+        unsigned char* pixels;
+        GetTextureDataAlpha8(&pixels, NULL, NULL);
+        TexPixelsRGBA32 = (unsigned int*)ImGui::MemAlloc(TexWidth * TexHeight * 4);
+        const unsigned char* src = pixels;
+        unsigned int* dst = TexPixelsRGBA32;
+        for (int n = TexWidth * TexHeight; n > 0; n--)
+            *dst++ = ((*src++) << 24) | 0x00FFFFFF;
+    }
+
+    *out_pixels = (unsigned char*)TexPixelsRGBA32;
+    if (out_width) *out_width = TexWidth;
+    if (out_height) *out_height = TexHeight;
+    if (out_bytes_per_pixel) *out_bytes_per_pixel = 4;
+}
+
+void    ImFont::ClearTextureData()
+{
+    if (TexPixelsAlpha8)
+        ImGui::MemFree(TexPixelsAlpha8);
+    if (TexPixelsRGBA32)
+        ImGui::MemFree(TexPixelsRGBA32);
+    TexPixelsAlpha8 = NULL;
+    TexPixelsRGBA32 = NULL;
+}
+
 void    ImFont::Clear()
 {
-    if (TexPixels)
-        ImGui::MemFree(TexPixels);
-
     DisplayOffset = ImVec2(0.5f, 0.5f);
 
+    ClearTextureData();
     TexID = NULL;
-    TexPixels = NULL;
     TexWidth = TexHeight = 0;
     TexExtraDataPos = TexUvWhitePixel = ImVec2(0, 0);
 
@@ -6392,7 +6433,6 @@ bool    ImFont::LoadFromMemoryTTF(const void* data, size_t data_size, float size
     {
         TexWidth = 512;
         TexHeight = 0;
-        TexPixels = NULL;
         const int max_tex_height = 1024*16;
         stbtt_pack_context spc;
         int ret = stbtt_PackBegin(&spc, NULL, TexWidth, max_tex_height, 0, 1, NULL);
@@ -6423,11 +6463,11 @@ bool    ImFont::LoadFromMemoryTTF(const void* data, size_t data_size, float size
             if (rects[i].was_packed)
                 tex_h = ImMax(tex_h, rects[i].y + rects[i].h);
         TexHeight = ImUpperPowerOfTwo(tex_h);
-        TexPixels = (unsigned char*)ImGui::MemRealloc(TexPixels, TexWidth * TexHeight);
-        memset(TexPixels, 0, TexWidth * TexHeight);
+        TexPixelsAlpha8 = (unsigned char*)ImGui::MemRealloc(TexPixelsAlpha8, TexWidth * TexHeight);
+        memset(TexPixelsAlpha8, 0, TexWidth * TexHeight);
 
         // Render characters
-        spc.pixels = TexPixels;
+        spc.pixels = TexPixelsAlpha8;
         spc.height = TexHeight;
         ret = stbtt_PackFontRangesRenderIntoRects(&spc, &ttf_info, ranges.begin(), ranges.size(), rects);
         stbtt_PackEnd(&spc);
@@ -6476,7 +6516,7 @@ bool    ImFont::LoadFromMemoryTTF(const void* data, size_t data_size, float size
         ImGui::MemFree(ranges[i].chardata_for_range);
 
     // Draw white pixel and make UV points to it
-    TexPixels[0] = TexPixels[1] = TexPixels[TexWidth+0] = TexPixels[TexWidth+1] = 0xFF;
+    TexPixelsAlpha8[0] = TexPixelsAlpha8[1] = TexPixelsAlpha8[TexWidth+0] = TexPixelsAlpha8[TexWidth+1] = 0xFF;
     TexUvWhitePixel = ImVec2((TexExtraDataPos.x + 0.5f) / TexWidth, (TexExtraDataPos.y + 0.5f) / TexHeight);
 
     return true;
