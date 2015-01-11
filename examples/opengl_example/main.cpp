@@ -252,10 +252,10 @@ int main(int argc, char** argv)
             show_test_window ^= ImGui::Button("Test Window");
             show_another_window ^= ImGui::Button("Another Window");
 
-			static ImFont* font2 = NULL;
-			if (!font2) { font2 = new ImFont(); font2->LoadFromFileTTF("../../extra_fonts/ArialUni.ttf", 30.0f); LoadFontTexture(font2); }
-			ImGui::Image(font2->TexID, ImVec2((float)font2->TexWidth, (float)font2->TexHeight));
-			//ImGui::GetWindowDrawList()->AddText(font2, 30.0f, ImGui::GetCursorScreenPos(), 0xFFFFFFFF, "Another font");
+            static ImFont* font2 = NULL;
+            if (!font2) { font2 = new ImFont(); font2->LoadFromFileTTF("../../extra_fonts/ArialUni.ttf", 30.0f); LoadFontTexture(font2); }
+            ImGui::Image(font2->TexID, ImVec2((float)font2->TexWidth, (float)font2->TexHeight));
+            //ImGui::GetWindowDrawList()->AddText(font2, 30.0f, ImGui::GetCursorScreenPos(), 0xFFFFFFFF, "Another font");
 
             // Calculate and show frame rate
             static float ms_per_frame[120] = { 0 };

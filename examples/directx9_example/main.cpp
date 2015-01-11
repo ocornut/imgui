@@ -69,11 +69,11 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     g_pd3dDevice->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
     g_pd3dDevice->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
     g_pd3dDevice->SetRenderState( D3DRS_SCISSORTESTENABLE, true );
-	g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_SELECTARG1 );
-	g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_DIFFUSE );
-	g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
-	g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
-	g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
+    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_SELECTARG1 );
+    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_DIFFUSE );
+    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
+    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
+    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
     g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_POINT );
     g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
 
@@ -95,7 +95,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         {
             const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
             const RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
-			g_pd3dDevice->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->texture_id );
+            g_pd3dDevice->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->texture_id );
             g_pd3dDevice->SetScissorRect(&r);
             g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, vtx_offset, pcmd->vtx_count/3);
             vtx_offset += pcmd->vtx_count;
@@ -130,8 +130,8 @@ void CleanupDevice()
     if (g_pVB) g_pVB->Release();
 
     // InitDeviceD3D
-	if (LPDIRECT3DTEXTURE9 tex = (LPDIRECT3DTEXTURE9)ImGui::GetIO().Font->TexID)
-		tex->Release();
+    if (LPDIRECT3DTEXTURE9 tex = (LPDIRECT3DTEXTURE9)ImGui::GetIO().Font->TexID)
+        tex->Release();
     if (g_pd3dDevice) g_pd3dDevice->Release();
     if (g_pD3D) g_pD3D->Release();
 }
@@ -176,27 +176,27 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 void LoadFontTexture(ImFont* font)
 {
-	IM_ASSERT(font && font->IsLoaded());
+    IM_ASSERT(font && font->IsLoaded());
 
-	LPDIRECT3DTEXTURE9 pTexture = NULL;
-	if (D3DXCreateTexture(g_pd3dDevice, font->TexWidth, font->TexHeight, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &pTexture) < 0)
-	{
-		IM_ASSERT(0);
-		return;
-	}
+    LPDIRECT3DTEXTURE9 pTexture = NULL;
+    if (D3DXCreateTexture(g_pd3dDevice, font->TexWidth, font->TexHeight, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &pTexture) < 0)
+    {
+        IM_ASSERT(0);
+        return;
+    }
 
-	// Copy pixels
-	D3DLOCKED_RECT tex_locked_rect;
-	if (pTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK) 
-	{	
-		IM_ASSERT(0); 
-		return; 
-	}
-	for (int y = 0; y < font->TexHeight; y++)
-		memcpy((unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, font->TexPixels + font->TexWidth * y, font->TexWidth);
-	pTexture->UnlockRect(0);
+    // Copy pixels
+    D3DLOCKED_RECT tex_locked_rect;
+    if (pTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK) 
+    {	
+        IM_ASSERT(0); 
+        return; 
+    }
+    for (int y = 0; y < font->TexHeight; y++)
+        memcpy((unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, font->TexPixels + font->TexWidth * y, font->TexWidth);
+    pTexture->UnlockRect(0);
 
-	font->TexID = (void *)pTexture;
+    font->TexID = (void *)pTexture;
 }
 
 void InitImGui()
@@ -242,7 +242,7 @@ void InitImGui()
     io.Font->LoadDefault();
     //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
     //io.Font->DisplayOffset.y += 0.0f;
-	LoadFontTexture(io.Font);
+    LoadFontTexture(io.Font);
 }
 
 INT64 ticks_per_second = 0;
@@ -328,10 +328,10 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
             show_test_window ^= ImGui::Button("Test Window");
             show_another_window ^= ImGui::Button("Another Window");
 
-			static ImFont* font2 = NULL;
-			if (!font2) { font2 = new ImFont(); font2->LoadFromFileTTF("../../extra_fonts/ArialUni.ttf", 30.0f); LoadFontTexture(font2); }
-			ImGui::Image(font2->TexID, ImVec2((float)font2->TexWidth, (FLOAT)font2->TexHeight));
-			//ImGui::GetWindowDrawList()->AddText(font2, 30.0f, ImGui::GetCursorScreenPos(), 0xFFFFFFFF, "Another font");
+            static ImFont* font2 = NULL;
+            if (!font2) { font2 = new ImFont(); font2->LoadFromFileTTF("../../extra_fonts/ArialUni.ttf", 30.0f); LoadFontTexture(font2); }
+            ImGui::Image(font2->TexID, ImVec2((float)font2->TexWidth, (FLOAT)font2->TexHeight));
+            //ImGui::GetWindowDrawList()->AddText(font2, 30.0f, ImGui::GetCursorScreenPos(), 0xFFFFFFFF, "Another font");
 
             // Calculate and show frame rate
             static float ms_per_frame[120] = { 0 };

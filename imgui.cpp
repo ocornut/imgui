@@ -7358,7 +7358,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Images"))
         {
-            ImGui::TextWrapped("Below we are displaying the font texture (which is the only texture we have access to in this demo). Use the 'ImTextureID' type as storage to pass pointers or identifier to your own texture data.\nHover the texture for a zoomed view.");
+            ImGui::TextWrapped("Below we are displaying the font texture (which is the only texture we have access to in this demo). Use the 'ImTextureID' type as storage to pass pointers or identifier to your own texture data. Hover the texture for a zoomed view!");
             ImVec2 tex_screen_pos = ImGui::GetCursorScreenPos();
             float tex_w = (float)ImGui::GetIO().Font->TexWidth;
             float tex_h = (float)ImGui::GetIO().Font->TexHeight;
