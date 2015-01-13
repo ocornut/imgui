@@ -2395,13 +2395,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
         // Clamp into view
         if (!(window->Flags & ImGuiWindowFlags_ChildWindow))
         {
-            const ImVec2 pad = ImVec2(window->FontSize()*2.0f, window->FontSize()*2.0f);
+            const ImVec2 pad = ImVec2(window->FontSize()*2.0f, window->FontSize()*2.0f); // FIXME: Parametrize of clarify this behavior.
             if (g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
             {
                 window->PosFloat = ImMax(window->PosFloat + window->Size, pad) - window->Size;
                 window->PosFloat = ImMin(window->PosFloat, ImVec2(g.IO.DisplaySize.x, g.IO.DisplaySize.y) - pad);
             }
-            window->SizeFull = ImMax(window->SizeFull, pad);
+            window->SizeFull = ImMax(window->SizeFull, style.WindowMinSize);
         }
         window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
 
