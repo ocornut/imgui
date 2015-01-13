@@ -7730,7 +7730,7 @@ struct ExampleAppConsole
                 if (data->EventKey == ImGuiKey_UpArrow)
                 {
                     if (HistoryPos == -1)
-                        HistoryPos = History.size() - 1;
+                        HistoryPos = (int)(History.size() - 1);
                     else if (HistoryPos > 0)
                         HistoryPos--;
                 }
@@ -7746,7 +7746,7 @@ struct ExampleAppConsole
                 {
                     ImFormatString(data->Buf, data->BufSize, "%s", (HistoryPos >= 0) ? History[HistoryPos] : "");
                     data->BufDirty = true;
-                    data->CursorPos = data->SelectionStart = data->SelectionEnd = strlen(data->Buf);
+                    data->CursorPos = data->SelectionStart = data->SelectionEnd = (int)strlen(data->Buf);
                 }
             }
         }
