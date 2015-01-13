@@ -2330,8 +2330,8 @@ int stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, stbtt_fontinfo *inf
             rects[k].w = (stbrp_coord) (x1-x0 + spc->padding + spc->h_oversample-1);
             rects[k].h = (stbrp_coord) (y1-y0 + spc->padding + spc->v_oversample-1);
 		 } else {
-			 rects[k].was_packed = false;
-		 }
+            rects[k].w = rects[k].h = 0;
+         }
 		 ++k;
       }
    }
