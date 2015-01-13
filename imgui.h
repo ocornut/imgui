@@ -604,11 +604,11 @@ struct ImGuiTextBuffer
     ImVector<char>      Buf;
 
     ImGuiTextBuffer()   { Buf.push_back(0); }
-    ~ImGuiTextBuffer()  { clear(); }
+    ~ImGuiTextBuffer()  { }
     const char*         begin() const { return &Buf.front(); }
     const char*         end() const { return &Buf.back(); }      // Buf is zero-terminated, so end() will point on the zero-terminator
     size_t              size() const { return Buf.size()-1; }
-    bool                empty() { return Buf.empty(); }
+    bool                empty() { return size() >= 1; }
     void                clear() { Buf.clear(); Buf.push_back(0); }
     IMGUI_API void      append(const char* fmt, ...);
     IMGUI_API void      appendv(const char* fmt, va_list args);
