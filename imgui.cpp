@@ -348,7 +348,7 @@ ImGuiStyle::ImGuiStyle()
 {
     Alpha                   = 1.0f;             // Global alpha applies to everything in ImGui
     WindowPadding           = ImVec2(8,8);      // Padding within a window
-    WindowMinSize           = ImVec2(48,48);    // Minimum window size
+    WindowMinSize           = ImVec2(32,32);    // Minimum window size
     WindowRounding          = 9.0f;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
     FramePadding            = ImVec2(4,3);      // Padding within a framed rectangle (used by most widgets)
     ItemSpacing             = ImVec2(8,4);      // Horizontal and vertical spacing between widgets/lines
@@ -2158,7 +2158,8 @@ int ImGui::GetFrameCount()
 
 void ImGui::BeginTooltip()
 {
-    ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), 0.9f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_Tooltip);
+    ImGuiState& g = GImGui;
+    ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), g.Style.Colors[ImGuiCol_TooltipBg].w, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_Tooltip);
 }
 
 void ImGui::EndTooltip()
@@ -2410,7 +2411,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
         }
 
         // Clamp into view
-        if (!(window->Flags & ImGuiWindowFlags_ChildWindow))
+        if (!(window->Flags & ImGuiWindowFlags_ChildWindow) && !(window->Flags & ImGuiWindowFlags_Tooltip))
         {
             const ImVec2 pad = ImVec2(window->FontSize()*2.0f, window->FontSize()*2.0f); // FIXME: Parametrize of clarify this behavior.
             if (g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
@@ -2544,6 +2545,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
             {
                 if ((window->Flags & ImGuiWindowFlags_ComboBox) != 0)
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_ComboBg, fill_alpha), 0);
+                else if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_TooltipBg, fill_alpha), style.WindowRounding);
                 else
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, fill_alpha), style.WindowRounding);
             }
