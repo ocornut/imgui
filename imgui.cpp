@@ -1,4 +1,4 @@
-// ImGui library v1.20
+// ImGui library v1.21 wip
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -1180,9 +1180,18 @@ bool ImGuiTextFilter::PassFilter(const char* val) const
 
 //-----------------------------------------------------------------------------
 
+// On some platform vsnprintf() takes va_list by reference and modifies it. 
+// va_copy is the 'correct' way to copy a va_list but Visual Studio prior to 2013 doesn't have it.
+#ifndef va_copy
+#define va_copy(dest, src) (dest = src)
+#endif
+
 // Helper: Text buffer for logging/accumulating text
 void ImGuiTextBuffer::appendv(const char* fmt, va_list args)
 {
+    va_list args_copy;
+    va_copy(args_copy, args);
+
     int len = vsnprintf(NULL, 0, fmt, args);         // FIXME-OPT: could do a first pass write attempt, likely successful on first pass.
     if (len <= 0)
         return;
@@ -1191,7 +1200,7 @@ void ImGuiTextBuffer::appendv(const char* fmt, va_list args)
         Buf.reserve(Buf.capacity() * 2);
 
     Buf.resize(write_off + (size_t)len);
-    ImFormatStringV(&Buf[write_off] - 1, (size_t)len+1, fmt, args);
+    ImFormatStringV(&Buf[write_off] - 1, (size_t)len+1, fmt, args_copy);
 }
 
 void ImGuiTextBuffer::append(const char* fmt, ...)
