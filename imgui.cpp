@@ -6550,7 +6550,8 @@ const ImFont::Glyph* ImFont::FindGlyph(unsigned short c) const
     if (c < (int)IndexLookup.size())
     {
         const int i = IndexLookup[c];
-        return &Glyphs[i];
+        if (i != -1)
+            return &Glyphs[i];
     }
     return FallbackGlyph;
 }
