@@ -1195,11 +1195,16 @@ void ImGuiTextBuffer::appendv(const char* fmt, va_list args)
     int len = vsnprintf(NULL, 0, fmt, args);         // FIXME-OPT: could do a first pass write attempt, likely successful on first pass.
     if (len <= 0)
         return;
-    const size_t write_off = Buf.size();
-    if (write_off + (size_t)len >= Buf.capacity())
-        Buf.reserve(Buf.capacity() * 2);
 
-    Buf.resize(write_off + (size_t)len);
+    const size_t write_off = Buf.size();
+    const size_t needed_sz = write_off + (size_t)len;
+    if (write_off + (size_t)len >= Buf.capacity())
+    {
+        const size_t double_capacity = Buf.capacity() * 2;
+        Buf.reserve(needed_sz > double_capacity ? needed_sz : double_capacity);
+    }
+
+    Buf.resize(needed_sz);
     ImFormatStringV(&Buf[write_off] - 1, (size_t)len+1, fmt, args_copy);
 }
 
@@ -1844,6 +1849,7 @@ static void LogText(const ImVec2& ref_pos, const char* text, const char* text_en
     const int tree_depth = (window->DC.TreeDepth - g.LogStartDepth);
     while (true)
     {
+        // Split the string. Each new line (after a '\n') is followed by spacing corresponding to the current depth of our log entry.
         const char* line_end = text_remaining;
         while (line_end < text_end)
             if (*line_end == '\n')
