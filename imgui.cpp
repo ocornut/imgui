@@ -3693,7 +3693,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, const bool d
     if (display_frame)
     {
         // Framed type
-        RenderFrame(bb.Min, bb.Max, col, true);
+        RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
         RenderCollapseTriangle(bb.Min + style.FramePadding, opened, 1.0f, true);
         if (g.LogEnabled)
         {
