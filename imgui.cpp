@@ -3111,6 +3111,8 @@ void ImGui::SetWindowFontScale(float scale)
     window->FontWindowScale = scale;
 }
 
+// NB: internally we store CursorPos in absolute screen coordinates because it is more convenient.
+// Conversion happens as we pass the value to user, but it makes our naming convention dodgy. May want to rename 'DC.CursorPos'.
 ImVec2 ImGui::GetCursorPos()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -3139,6 +3141,12 @@ ImVec2 ImGui::GetCursorScreenPos()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->DC.CursorPos;
+}
+
+void ImGui::SetCursorScreenPos(const ImVec2& screen_pos)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.CursorPos = screen_pos;
 }
 
 void ImGui::SetScrollPosHere()
