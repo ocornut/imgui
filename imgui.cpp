@@ -2311,11 +2311,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
     g.CurrentWindow = window;
 
     // Process SetNextWindow***() calls
+    bool window_pos_set_by_api = false;
     if (g.SetNextWindowPosCond)
     {
         const ImVec2 backup_cursor_pos = window->DC.CursorPos;
         ImGui::SetWindowPos(g.SetNextWindowPosVal, g.SetNextWindowPosCond);
         window->DC.CursorPos = backup_cursor_pos;
+        window_pos_set_by_api = true;
         g.SetNextWindowPosCond = 0;
     }
     if (g.SetNextWindowSizeCond)
@@ -2406,8 +2408,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
             }
         }
 
-        // Tooltips always follow mouse
-        if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
+        // Tooltips always follows mouse
+        if (!window_pos_set_by_api && (window->Flags & ImGuiWindowFlags_Tooltip) != 0)
         {
             window->PosFloat = g.IO.MousePos + ImVec2(32,16) - style.FramePadding*2;
         }
@@ -2425,7 +2427,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
         }
         window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
 
-        // Default item width
+        // Default item width. Make it proportional to window size if window manually resizes
         if (window->Size.x > 0.0f && !(window->Flags & ImGuiWindowFlags_Tooltip) && !(window->Flags & ImGuiWindowFlags_AlwaysAutoResize))
             window->ItemWidthDefault = (float)(int)(window->Size.x * 0.65f);
         else
@@ -2513,7 +2515,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
                 }
                 else if (!(window->Flags & ImGuiWindowFlags_NoResize))
                 {
-                    // Resize grip
+                    // Manual resize grip
                     const ImGuiAabb resize_aabb(window->Aabb().GetBR()-ImVec2(18,18), window->Aabb().GetBR());
                     const ImGuiID resize_id = window->GetID("##RESIZE");
                     bool hovered, held;
@@ -2522,7 +2524,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
 
                     if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0])
                     {
-                        // Manual auto-fit
+                        // Manual auto-fit when double-clicking
                         window->SizeFull = size_auto_fit;
                         window->Size = window->SizeFull;
                         if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
@@ -2538,7 +2540,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
                     }
                 }
 
-                // Update aabb immediately so that the rendering below isn't one frame late
+                // Update aabb immediately so that rendering right below us isn't one frame late
                 title_bar_aabb = window->TitleBarAabb();
             }
 
