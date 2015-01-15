@@ -2161,7 +2161,8 @@ int ImGui::GetFrameCount()
 void ImGui::BeginTooltip()
 {
     ImGuiState& g = GImGui;
-    ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), g.Style.Colors[ImGuiCol_TooltipBg].w, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_Tooltip);
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_Tooltip;
+    ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), g.Style.Colors[ImGuiCol_TooltipBg].w, window_flags);
 }
 
 void ImGui::EndTooltip()
@@ -2355,16 +2356,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
 
         // New windows appears in front
         if (window->LastFrameDrawn < current_frame - 1)
-        {
             FocusWindow(window);
-            if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
-            {
-                // Hide for 1 frame while resizing
-                window->AutoFitFrames = 2;
-                window->AutoFitOnlyGrows = false;
-                window->Visible = false;
-            }
-        }
 
         window->LastFrameDrawn = current_frame;
         window->ClipRectStack.resize(0);
@@ -2489,11 +2481,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
             ImU32 resize_col = 0;
             if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
             {
-                // Tooltip always resize
-                if (window->AutoFitFrames > 0)
-                {
-                    window->SizeFull = window->SizeContentsFit + style.WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
-                }
+                // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
+                const ImVec2 size_auto_fit = window->SizeContentsFit + style.WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
+                window->SizeFull = size_auto_fit;
             }
             else
             {
