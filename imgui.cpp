@@ -5298,6 +5298,7 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
         return false;
 
     const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID("##colorbutton");
     const float square_size = window->FontSize();
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(square_size + style.FramePadding.x*2, square_size + (small_height ? 0 : style.FramePadding.y*2)));
     ItemSize(bb);
@@ -5305,8 +5306,8 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
     if (ClipAdvance(bb))
         return false;
 
-    const bool hovered = IsHovered(bb, 0);
-    const bool pressed = hovered && g.IO.MouseClicked[0];
+    bool hovered, held;
+    bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
     RenderFrame(bb.Min, bb.Max, window->Color(col), outline_border, style.FrameRounding);
 
     if (hovered)
@@ -5350,7 +5351,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     const float square_sz = (window->FontSize() + style.FramePadding.x * 2.0f);
 
     ImGuiColorEditMode edit_mode = window->DC.ColorEditMode;
-    if (edit_mode == ImGuiColorEditMode_UserSelect)
+    if (edit_mode == ImGuiColorEditMode_UserSelect || edit_mode == ImGuiColorEditMode_UserSelectShowButton)
         edit_mode = g.ColorEditModeStorage.GetInt(id, 0) % 3;
 
     float fx = col[0];
@@ -5432,9 +5433,13 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     }
 
     ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
-    ImGui::ColorButton(col_display);
+    if (ImGui::ColorButton(col_display))
+    {
+        // Don't set local copy of 'edit_mode' right away!
+        g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3);
+    }
 
-    if (window->DC.ColorEditMode == ImGuiColorEditMode_UserSelect)
+    if (window->DC.ColorEditMode == ImGuiColorEditMode_UserSelectShowButton)
     {
         ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
         const char* button_titles[3] = { "RGB", "HSV", "HEX" };
@@ -6930,6 +6935,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::RadioButton("HSV", &edit_mode, ImGuiColorEditMode_HSV);
         ImGui::SameLine();
         ImGui::RadioButton("HEX", &edit_mode, ImGuiColorEditMode_HEX);
+        //ImGui::Text("Tip: Click on colored square to change edit mode.");
 
         static ImGuiTextFilter filter;
         filter.Draw("Filter colors", 200);

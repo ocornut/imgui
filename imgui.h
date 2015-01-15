@@ -431,7 +431,8 @@ enum ImGuiStyleVar_
 // Enumeration for ColorEditMode()
 enum ImGuiColorEditMode_
 {
-    ImGuiColorEditMode_UserSelect = -1,
+    ImGuiColorEditMode_UserSelect = -2,
+    ImGuiColorEditMode_UserSelectShowButton = -1,
     ImGuiColorEditMode_RGB = 0,
     ImGuiColorEditMode_HSV = 1,
     ImGuiColorEditMode_HEX = 2
