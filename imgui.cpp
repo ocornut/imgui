@@ -248,6 +248,7 @@
  - tooltip: move to fit within screen (e.g. when mouse cursor is right of the screen).
  - clipboard: automatically transform \n into \n\r or equivalent for higher compatibility on windows
  - portability: big-endian test/support (github issue #81)
+ - misc: rounded triangle fail to draw correctly on OpenGL3 example.
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - style editor: color child window height expressed in multiple of line height.
@@ -351,6 +352,7 @@ ImGuiStyle::ImGuiStyle()
     WindowMinSize           = ImVec2(32,32);    // Minimum window size
     WindowRounding          = 9.0f;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
     FramePadding            = ImVec2(4,3);      // Padding within a framed rectangle (used by most widgets)
+    FrameRounding           = 0.0f;             // Radius of frame corners rounding. Set to 0.0f to have rectangular frames (used by most widgets).
     ItemSpacing             = ImVec2(8,4);      // Horizontal and vertical spacing between widgets/lines
     ItemInnerSpacing        = ImVec2(4,4);      // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
     TouchExtraPadding       = ImVec2(0,0);      // Expand bounding box for touch-based system where touch position is not accurate enough (unnecessary for mouse inputs). Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget running. So dont grow this too much!
@@ -2830,6 +2832,7 @@ static float* GetStyleVarFloatAddr(ImGuiStyleVar idx)
     {
     case ImGuiStyleVar_Alpha: return &g.Style.Alpha;
     case ImGuiStyleVar_WindowRounding: return &g.Style.WindowRounding;
+    case ImGuiStyleVar_FrameRounding: return &g.Style.FrameRounding;
     case ImGuiStyleVar_TreeNodeSpacing: return &g.Style.TreeNodeSpacing;
     }
     return NULL;
@@ -3446,7 +3449,7 @@ bool ImGui::Button(const char* label, ImVec2 size, bool repeat_when_held)
 
     // Render
     const ImU32 col = window->Color((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-    RenderFrame(bb.Min, bb.Max, col);
+    RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
 
     if (size.x < text_size.x || size.y < text_size.y)
         PushClipRect(ImVec4(bb.Min.x+style.FramePadding.x, bb.Min.y+style.FramePadding.y, bb.Max.x, bb.Max.y-style.FramePadding.y));        // Allow extra to draw over the horizontal padding to make it visible that text doesn't fit
@@ -4032,7 +4035,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     }
 
     ItemSize(bb);
-    RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg));
+    RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
     // Process clicking on the slider
     if (g.ActiveId == id)
@@ -4290,7 +4293,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
             scale_max = v_max;
     }
 
-    RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg));
+    RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
     int res_w = ImMin((int)graph_size.x, values_count);
     if (plot_type == ImGuiPlotType_Lines)
@@ -4416,12 +4419,12 @@ bool ImGui::Checkbox(const char* label, bool* v)
     if (pressed)
         *v = !(*v);
 
-    RenderFrame(check_bb.Min, check_bb.Max, window->Color((held && hovered) ? ImGuiCol_CheckActive : hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg));
+    RenderFrame(check_bb.Min, check_bb.Max, window->Color((held && hovered) ? ImGuiCol_CheckActive : hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
     if (*v)
     {
         const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
         const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
-        window->DrawList->AddRectFilled(check_bb.Min+ImVec2(pad,pad), check_bb.Max-ImVec2(pad,pad), window->Color(ImGuiCol_CheckMark));
+        window->DrawList->AddRectFilled(check_bb.Min+ImVec2(pad,pad), check_bb.Max-ImVec2(pad,pad), window->Color(ImGuiCol_CheckMark), style.FrameRounding);
     }
 
     if (g.LogEnabled)
@@ -5020,7 +5023,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         }
     }
     
-    RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true);
+    RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
     const ImVec2 font_off_up = ImVec2(0.0f,window->FontSize()+1.0f);    // FIXME: those offsets are part of the style or font API
     const ImVec2 font_off_dn = ImVec2(0.0f,2.0f);
@@ -5187,8 +5190,8 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     const bool hovered = IsHovered(frame_bb, id);
 
     bool value_changed = false;
-    RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg));
-    RenderFrame(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y), frame_bb.Max, window->Color(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button));
+    RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
+    RenderFrame(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y), frame_bb.Max, window->Color(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button), true, style.FrameRounding);	// FIXME-ROUNDING
     RenderCollapseTriangle(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y) + style.FramePadding, true);
 
     if (*current_item >= 0 && *current_item < items_count)
@@ -5304,7 +5307,7 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
 
     const bool hovered = IsHovered(bb, 0);
     const bool pressed = hovered && g.IO.MouseClicked[0];
-    RenderFrame(bb.Min, bb.Max, window->Color(col), outline_border);
+    RenderFrame(bb.Min, bb.Max, window->Color(col), outline_border, style.FrameRounding);
 
     if (hovered)
     {
@@ -6889,6 +6892,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::SliderFloat2("WindowPadding", (float*)&style.WindowPadding, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat("WindowRounding", &style.WindowRounding, 0.0f, 16.0f, "%.0f");
         ImGui::SliderFloat2("FramePadding", (float*)&style.FramePadding, 0.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 16.0f, "%.0f");
         ImGui::SliderFloat2("ItemSpacing", (float*)&style.ItemSpacing, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat2("ItemInnerSpacing", (float*)&style.ItemInnerSpacing, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat2("TouchExtraPadding", (float*)&style.TouchExtraPadding, 0.0f, 10.0f, "%.0f");
