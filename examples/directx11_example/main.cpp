@@ -543,6 +543,10 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
 
     InitImGui();
 
+    bool show_test_window = true;
+    bool show_another_window = false;
+    ImVec4 clear_col(0.8f, 0.6f, 0.6f, 1.0f);
+
     // Enter the message loop
     MSG msg;
     ZeroMemory(&msg, sizeof(msg));
@@ -554,11 +558,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
             DispatchMessage(&msg);
             continue;
         }
-        
         UpdateImGui();
-
-        static bool show_test_window = true;
-        static bool show_another_window = false;
 
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
@@ -566,8 +566,9 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
             static float f;
             ImGui::Text("Hello, world!");
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-            show_test_window ^= ImGui::Button("Test Window");
-            show_another_window ^= ImGui::Button("Another Window");
+            ImGui::ColorEdit3("clear color", (float*)&clear_col);
+            if (ImGui::Button("Test Window")) show_test_window ^= 1;
+            if (ImGui::Button("Another Window")) show_another_window ^= 1;
 
             // Calculate and show frame rate
             static float ms_per_frame[120] = { 0 };
@@ -597,8 +598,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
         }
 
         // Rendering
-        float clearColor[4] = { 204 / 255.f, 153 / 255.f, 153 / 255.f };
-        g_pd3dDeviceImmediateContext->ClearRenderTargetView(g_mainRenderTargetView, clearColor);
+        g_pd3dDeviceImmediateContext->ClearRenderTargetView(g_mainRenderTargetView, (float*)&clear_col);
         ImGui::Render();
         g_pSwapChain->Present(0, 0);
     }

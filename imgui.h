@@ -207,7 +207,8 @@ namespace ImGui
     IMGUI_API void          SetCursorPos(const ImVec2& pos);                                    // "
     IMGUI_API void          SetCursorPosX(float x);                                             // "
     IMGUI_API void          SetCursorPosY(float y);                                             // "
-    IMGUI_API ImVec2        GetCursorScreenPos();                                               // cursor position in screen space
+    IMGUI_API ImVec2        GetCursorScreenPos();                                               // cursor position in absolute screen coordinates (0..io.DisplaySize)
+    IMGUI_API void          SetCursorScreenPos(const ImVec2& pos);                              // cursor position in absolute screen coordinates (0..io.DisplaySize)
     IMGUI_API void          AlignFirstTextHeightToWidgets();                                    // call once if the first item on the line is a Text() item and you want to vertically lower it to match subsequent (bigger) widgets.
     IMGUI_API float         GetTextLineSpacing();
     IMGUI_API float         GetTextLineHeight();
@@ -423,6 +424,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_WindowPadding,     // ImVec2
     ImGuiStyleVar_WindowRounding,    // float
     ImGuiStyleVar_FramePadding,      // ImVec2
+    ImGuiStyleVar_FrameRounding,     // float
     ImGuiStyleVar_ItemSpacing,       // ImVec2
     ImGuiStyleVar_ItemInnerSpacing,  // ImVec2
     ImGuiStyleVar_TreeNodeSpacing,   // float
@@ -431,7 +433,8 @@ enum ImGuiStyleVar_
 // Enumeration for ColorEditMode()
 enum ImGuiColorEditMode_
 {
-    ImGuiColorEditMode_UserSelect = -1,
+    ImGuiColorEditMode_UserSelect = -2,
+    ImGuiColorEditMode_UserSelectShowButton = -1,
     ImGuiColorEditMode_RGB = 0,
     ImGuiColorEditMode_HSV = 1,
     ImGuiColorEditMode_HEX = 2
@@ -453,6 +456,7 @@ struct ImGuiStyle
     ImVec2      WindowMinSize;              // Minimum window size
     float       WindowRounding;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
     ImVec2      FramePadding;               // Padding within a framed rectangle (used by most widgets)
+    float       FrameRounding;              // Radius of frame corners rounding. Set to 0.0f to have rectangular frame (used by most widgets).
     ImVec2      ItemSpacing;                // Horizontal and vertical spacing between widgets/lines
     ImVec2      ItemInnerSpacing;           // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
     ImVec2      TouchExtraPadding;          // Expand bounding box for touch-based system where touch position is not accurate enough (unnecessary for mouse inputs). Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget running. So dont grow this too much!
@@ -605,11 +609,11 @@ struct ImGuiTextBuffer
     ImVector<char>      Buf;
 
     ImGuiTextBuffer()   { Buf.push_back(0); }
-    ~ImGuiTextBuffer()  { clear(); }
+    ~ImGuiTextBuffer()  { }
     const char*         begin() const { return &Buf.front(); }
     const char*         end() const { return &Buf.back(); }      // Buf is zero-terminated, so end() will point on the zero-terminator
     size_t              size() const { return Buf.size()-1; }
-    bool                empty() { return Buf.empty(); }
+    bool                empty() { return size() >= 1; }
     void                clear() { Buf.clear(); Buf.push_back(0); }
     IMGUI_API void      append(const char* fmt, ...);
     IMGUI_API void      appendv(const char* fmt, va_list args);

@@ -322,6 +322,10 @@ int main(int argc, char** argv)
     InitGL();
     InitImGui();
 
+    bool show_test_window = true;
+    bool show_another_window = false;
+    ImVec4 clear_col(0.8f, 0.6f, 0.6f, 1.0f);
+
     while (!glfwWindowShouldClose(window))
     {
         ImGuiIO& io = ImGui::GetIO();
@@ -330,17 +334,15 @@ int main(int argc, char** argv)
         glfwPollEvents();
         UpdateImGui();
 
-        static bool show_test_window = true;
-        static bool show_another_window = false;
-
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
         {
             static float f;
             ImGui::Text("Hello, world!");
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-            show_test_window ^= ImGui::Button("Test Window");
-            show_another_window ^= ImGui::Button("Another Window");
+            ImGui::ColorEdit3("clear color", (float*)&clear_col);
+            if (ImGui::Button("Test Window")) show_test_window ^= 1;
+            if (ImGui::Button("Another Window")) show_another_window ^= 1;
 
             // Calculate and show frame rate
             static float ms_per_frame[120] = { 0 };
@@ -371,7 +373,7 @@ int main(int argc, char** argv)
         
         // Rendering
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-        glClearColor(0.8f, 0.6f, 0.6f, 1.0f);
+        glClearColor(clear_col.x, clear_col.y, clear_col.z, clear_col.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui::Render();
         glfwSwapBuffers(window);
