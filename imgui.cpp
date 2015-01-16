@@ -201,6 +201,7 @@
  - window: resizing from any sides? + mouse cursor directives for app.
  - widgets: switching from "widget-label" to "label-widget" would make it more convenient to integrate widgets in trees
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
+ - main: considering adding EndFrame() - optional, else done in Render(). and Init()
  - main: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
@@ -1751,6 +1752,10 @@ void ImGui::Render()
             g.CurrentWindow->Visible = false;
         ImGui::End();
 
+        // Select window for move/focus when we're done with all our widgets (we only consider non-childs windows here)
+        if (g.ActiveId == 0 && g.HoveredId == 0 && g.HoveredRootWindow != NULL && g.IO.MouseClicked[0])
+            g.ActiveId = g.HoveredRootWindow->GetID("#MOVE");
+
         // Sort the window list so that all child windows are after their parent
         // We cannot do that on FocusWindow() because childs may not exist yet
         ImVector<ImGuiWindow*> sorted_windows;
@@ -2716,11 +2721,6 @@ void ImGui::End()
     ImGui::Columns(1, "#CloseColumns");
     PopClipRect();   // inner window clip rectangle
     PopClipRect();   // outer window clip rectangle
-
-    // Select window for move/focus when we're done with all our widgets (we only consider non-childs windows here)
-    const ImGuiAabb bb(window->Pos, window->Pos+window->Size);
-    if (g.ActiveId == 0 && g.HoveredId == 0 && g.HoveredRootWindow == window && IsMouseHoveringBox(bb) && g.IO.MouseClicked[0])
-        g.ActiveId = window->GetID("#MOVE");
 
     // Stop logging
     if (!(window->Flags & ImGuiWindowFlags_ChildWindow))    // FIXME: add more options for scope of logging
