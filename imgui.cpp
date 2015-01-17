@@ -1688,7 +1688,7 @@ void ImGui::Shutdown()
     g.Settings.clear();
     g.ColorModifiers.clear();
     g.StyleModifiers.clear();
-	g.FontStack.clear();
+    g.FontStack.clear();
     g.ColorEditModeStorage.Clear();
     if (g.LogFile && g.LogFile != stdout)
     {
@@ -2812,16 +2812,16 @@ void ImGui::PushFont(ImFont* font)
 {
     ImGuiState& g = GImGui;
 
-	SetFont(font);
-	g.FontStack.push_back(font);
-	g.CurrentWindow->DrawList->PushTextureID(font->TexID);
+    SetFont(font);
+    g.FontStack.push_back(font);
+    g.CurrentWindow->DrawList->PushTextureID(font->TexID);
 }
 
 void  ImGui::PopFont()
 {
     ImGuiState& g = GImGui;
 
-	g.CurrentWindow->DrawList->PopTextureID();
+    g.CurrentWindow->DrawList->PopTextureID();
     g.FontStack.pop_back();
     SetFont(g.FontStack.empty() ? g.IO.Font : g.FontStack.back());
 }
@@ -5928,11 +5928,12 @@ void ImDrawList::Clear()
 
 void ImDrawList::SetClipRect(const ImVec4& clip_rect)
 {
-    if (!commands.empty() && commands.back().vtx_count == 0)
+    ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
+    if (current_cmd && current_cmd->vtx_count == 0)
     {
         // Reuse existing command (high-level clipping may have discarded vertices submitted earlier)
         // FIXME-OPT: Possibly even reuse previous command.
-        commands.back().clip_rect = clip_rect;
+        current_cmd->clip_rect = clip_rect;
     }
     else
     {
@@ -5959,11 +5960,12 @@ void ImDrawList::PopClipRect()
 
 void ImDrawList::SetTextureID(const ImTextureID& texture_id)
 {
-    if (!commands.empty() && commands.back().vtx_count == 0)
+    ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
+    if (current_cmd && (current_cmd->vtx_count == 0 || current_cmd->texture_id == texture_id))
     {
-        // Reuse existing command (high-level clipping may have discarded vertices submitted earlier)
+        // Reuse existing command
         // FIXME-OPT: Possibly even reuse previous command.
-        commands.back().texture_id = texture_id;
+        current_cmd->texture_id = texture_id;
     }
     else
     {
