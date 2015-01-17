@@ -129,7 +129,7 @@ enum
 {
    STBRP_HEURISTIC_Skyline_default=0,
    STBRP_HEURISTIC_Skyline_BL_sortHeight = STBRP_HEURISTIC_Skyline_default,
-   STBRP_HEURISTIC_Skyline_BF_sortHeight,
+   STBRP_HEURISTIC_Skyline_BF_sortHeight
 };
 
 
@@ -178,7 +178,7 @@ struct stbrp_context
 
 enum
 {
-   STBRP__INIT_skyline = 1,
+   STBRP__INIT_skyline = 1
 };
 
 STBRP_DEF void stbrp_setup_heuristic(stbrp_context *context, int heuristic)
@@ -248,6 +248,7 @@ STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, 
 // find minimum y position if it starts at x1
 static int stbrp__skyline_find_min_y(stbrp_context *c, stbrp_node *first, int x0, int width, int *pwaste)
 {
+   (void)c;
    stbrp_node *node = first;
    int x1 = x0 + width;
    int min_y, visited_width, waste_area;

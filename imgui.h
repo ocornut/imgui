@@ -433,7 +433,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_FrameRounding,     // float
     ImGuiStyleVar_ItemSpacing,       // ImVec2
     ImGuiStyleVar_ItemInnerSpacing,  // ImVec2
-    ImGuiStyleVar_TreeNodeSpacing,   // float
+    ImGuiStyleVar_TreeNodeSpacing    // float
 };
 
 // Enumeration for ColorEditMode()
@@ -452,7 +452,7 @@ enum ImGuiSetCondition_
 {
     ImGuiSetCondition_Always              = 1 << 0, // Set the variable
     ImGuiSetCondition_FirstUseThisSession = 1 << 1, // Only set the variable on the first call for this window (once per session)
-    ImGuiSetCondition_FirstUseEver        = 1 << 2, // Only set the variable if the window doesn't exist in the .ini file
+    ImGuiSetCondition_FirstUseEver        = 1 << 2  // Only set the variable if the window doesn't exist in the .ini file
 };
 
 struct ImGuiStyle

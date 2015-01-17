@@ -321,22 +321,22 @@
 #pragma clang diagnostic ignored "-Wformat-nonliteral"      // warning : format string is not a string literal              // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code.
 #pragma clang diagnostic ignored "-Wexit-time-destructors"  // warning : declaration requires an exit-time destructor       // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
 #pragma clang diagnostic ignored "-Wglobal-constructors"    // warning : declaration requires a global destructor           // similar to above, not sure what the exact difference it.
+#pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion chanjges signedness            // 
 #endif
 
 //-------------------------------------------------------------------------
 // STB libraries implementation
 //-------------------------------------------------------------------------
 
-#define STBRP_STATIC
-#define STB_RECT_PACK_IMPLEMENTATION
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
 #endif
+
+#define STBRP_STATIC
+#define STB_RECT_PACK_IMPLEMENTATION
 #include "stb_rect_pack.h"
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_malloc(x,u)  ((void)(u), ImGui::MemAlloc(x))
@@ -347,6 +347,10 @@ struct ImGuiTextEditState;
 #define STB_TEXTEDIT_STRING ImGuiTextEditState
 #define STB_TEXTEDIT_CHARTYPE ImWchar
 #include "stb_textedit.h"
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 //-------------------------------------------------------------------------
 // Forward Declarations
@@ -6376,11 +6380,11 @@ void    ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_wid
     {
         unsigned char* pixels;
         GetTexDataAsAlpha8(&pixels, NULL, NULL);
-        TexPixelsRGBA32 = (unsigned int*)ImGui::MemAlloc(TexWidth * TexHeight * 4);
+        TexPixelsRGBA32 = (unsigned int*)ImGui::MemAlloc((size_t)(TexWidth * TexHeight * 4));
         const unsigned char* src = pixels;
         unsigned int* dst = TexPixelsRGBA32;
         for (int n = TexWidth * TexHeight; n > 0; n--)
-            *dst++ = ((*src++) << 24) | 0x00FFFFFF;
+            *dst++ = ((unsigned int)(*src++) << 24) | 0x00FFFFFF;
     }
 
     *out_pixels = (unsigned char*)TexPixelsRGBA32;
@@ -6440,7 +6444,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* in_ttf_data, size_t in_ttf_data_
     data->TTFDataSize = in_ttf_data_size;
     data->SizePixels = size_pixels;
     data->GlyphRanges = glyph_ranges;
-    data->FontNo = 0;
+    data->FontNo = font_no;
     InputData.push_back(data);
 
     // Invalidate texture
@@ -6497,7 +6501,7 @@ bool    ImFontAtlas::Build()
 
         // Setup ranges
         int glyph_count = 0;
-        int glyph_ranges_count = 0;
+        size_t glyph_ranges_count = 0;
         for (const ImWchar* in_range = data.GlyphRanges; in_range[0] && in_range[1]; in_range += 2)
         {
             glyph_count += (in_range[1] - in_range[0]) + 1;
@@ -6577,10 +6581,10 @@ bool    ImFontAtlas::Build()
                 data.OutFont->Glyphs.resize(data.OutFont->Glyphs.size() + 1);
                 ImFont::Glyph& glyph = data.OutFont->Glyphs.back();
                 glyph.Codepoint = (ImWchar)codepoint;
-                glyph.Width = pc.x1 - pc.x0 + 1;
-                glyph.Height = pc.y1 - pc.y0 + 1;
+                glyph.Width = (signed short)pc.x1 - pc.x0 + 1;
+                glyph.Height = (signed short)pc.y1 - pc.y0 + 1;
                 glyph.XOffset = (signed short)(pc.xoff);
-                glyph.YOffset = (signed short)(pc.yoff) + (int)(font_ascent * font_scale);
+                glyph.YOffset = (signed short)(pc.yoff + (int)(font_ascent * font_scale));
                 glyph.XAdvance = (signed short)(pc.xadvance + character_spacing_x);  // Bake spacing into XAdvance
                 glyph.U0 = ((float)pc.x0 - 0.5f) * uv_scale_x;
                 glyph.V0 = ((float)pc.y0 - 0.5f) * uv_scale_y;
