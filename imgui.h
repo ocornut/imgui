@@ -8,6 +8,7 @@
 
 struct ImDrawList;
 struct ImFont;
+struct ImFontAtlas;
 struct ImGuiAabb;
 struct ImGuiIO;
 struct ImGuiStorage;
@@ -176,7 +177,7 @@ namespace ImGui
     IMGUI_API ImGuiStorage* GetStateStorage();
 
     // Parameters stacks (shared)
-    IMGUI_API void          PushFont(ImFont* font);
+    IMGUI_API void          PushFont(ImFont* font);                                             // use NULL as a shortcut to push default font
     IMGUI_API void          PopFont();
     IMGUI_API void          PushStyleColor(ImGuiCol idx, const ImVec4& col);
     IMGUI_API void          PopStyleColor(int count = 1);
@@ -483,19 +484,19 @@ struct ImGuiIO
     // Settings (fill once)                 // Default value:
     //------------------------------------------------------------------
 
-    ImVec2      DisplaySize;                // <unset>                  // Display size, in pixels. For clamping windows positions.
-    float       DeltaTime;                  // = 1.0f/60.0f             // Time elapsed since last frame, in seconds.
-    float       IniSavingRate;              // = 5.0f                   // Maximum time between saving .ini file, in seconds.
-    const char* IniFilename;                // = "imgui.ini"            // Path to .ini file. NULL to disable .ini saving.
-    const char* LogFilename;                // = "imgui_log.txt"        // Path to .log file (default parameter to ImGui::LogToFile when no file is specified).
-    float       MouseDoubleClickTime;       // = 0.30f                  // Time for a double-click, in seconds.
-    float       MouseDoubleClickMaxDist;    // = 6.0f                   // Distance threshold to stay in to validate a double-click, in pixels.
-    int         KeyMap[ImGuiKey_COUNT];     // <unset>                  // Map of indices into the KeysDown[512] entries array
-    ImFont*     Font;                       // <auto>                   // Font (also see 'Settings' fields inside ImFont structure for details)
-    float       FontGlobalScale;            // = 1.0f                   // Global scale all fonts
-    bool        FontAllowUserScaling;       // = false                  // Allow user scaling text of individual window with CTRL+Wheel.
+    ImVec2        DisplaySize;              // <unset>              // Display size, in pixels. For clamping windows positions.
+    float         DeltaTime;                // = 1.0f/60.0f         // Time elapsed since last frame, in seconds.
+    float         IniSavingRate;            // = 5.0f               // Maximum time between saving .ini file, in seconds.
+    const char*   IniFilename;              // = "imgui.ini"        // Path to .ini file. NULL to disable .ini saving.
+    const char*   LogFilename;              // = "imgui_log.txt"    // Path to .log file (default parameter to ImGui::LogToFile when no file is specified).
+    float         MouseDoubleClickTime;     // = 0.30f              // Time for a double-click, in seconds.
+    float         MouseDoubleClickMaxDist;  // = 6.0f               // Distance threshold to stay in to validate a double-click, in pixels.
+    int           KeyMap[ImGuiKey_COUNT];   // <unset>              // Map of indices into the KeysDown[512] entries array
+    void*         UserData;                 // = NULL               // Store your own data for retrieval by callbacks.
 
-    void*       UserData;                   // = NULL                   // Store your own data for retrieval by callbacks.
+    ImFontAtlas*  FontAtlas;                // <auto>               // Load and assemble one or more fonts into a single tightly packed texture. Output to Fonts array.
+    float         FontGlobalScale;          // = 1.0f               // Global scale all fonts
+    bool          FontAllowUserScaling;     // = false              // Allow user scaling text of individual window with CTRL+Wheel.
 
     //------------------------------------------------------------------
     // User Functions
@@ -553,7 +554,7 @@ struct ImGuiIO
     float       MouseDownTime[5];
     float       KeysDownTime[512];
 
-    IMGUI_API ImGuiIO();
+    IMGUI_API   ImGuiIO();
 };
 
 //-----------------------------------------------------------------------------
@@ -746,6 +747,57 @@ struct ImDrawList
     IMGUI_API void  AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col);
 };
 
+// Load and rasterize multiple TTF fonts into a same texture.
+// We also add custom graphic data into the texture that serves for ImGui.
+// Sharing a texture for multiple fonts allows us to reduce the number of draw calls during rendering.
+// The simple use case, if you don't intent to load custom or multiple fonts, is:
+//   1. GetTexDataAsRGBA32() or GetTexDataAsAlpha8()    // to obtain pixels
+//   2. <upload the texture to graphics memory>
+//   3. SetTexID(my_engine_id);                         // use the pointer/id to your texture in your engine format
+//   4. ClearPixelsData()                               // to save memory
+struct ImFontAtlas
+{
+    // Methods
+    IMGUI_API ImFontAtlas();
+    IMGUI_API ~ImFontAtlas();
+    IMGUI_API ImFont*   AddFontDefault();
+    IMGUI_API ImFont*   AddFontFromFileTTF(const char* filename, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0);
+    IMGUI_API ImFont*   AddFontFromMemoryTTF(void* in_ttf_data, size_t in_ttf_data_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0); // Pass ownership of 'in_ttf_data' memory.
+    IMGUI_API bool      Build();
+    IMGUI_API void      ClearInputData();
+    IMGUI_API void      ClearFonts();
+    IMGUI_API void      ClearTexData();     // Saves RAM once the texture has been copied to graphics memory.
+    IMGUI_API void      Clear()             { ClearInputData(); ClearTexData(); ClearFonts(); }
+    IMGUI_API bool      IsBuilt() const     { return !Fonts.empty(); }
+
+    // Methods: Retrieve texture data
+    // User is in charge of copying the pixels into graphics memory, then call SetTextureUserID()
+    // After loading the texture into your graphic system, store your texture handle in 'TexID' (ignore if you aren't using multiple fonts nor images)
+    // RGBA32 format is provided for convenience and high compatibility, but note that all RGB pixels are white, so 75% of the memory is wasted.
+    IMGUI_API void      GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 4 bytes-per-pixel
+    IMGUI_API void      GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 1 byte per-pixel
+    IMGUI_API void      SetTexID(void* id)  { TexID = id; }
+
+    // Static helper: Retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
+    static IMGUI_API const ImWchar* GetGlyphRangesDefault();    // Basic Latin, Extended Latin
+    static IMGUI_API const ImWchar* GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
+    static IMGUI_API const ImWchar* GetGlyphRangesChinese();    // Japanese + full set of about 21000 CJK Unified Ideographs
+
+    // Members
+    // Access texture data via GetTextureData*() calls which will setup a default font for you.
+    void*               TexID;              // User data to refer to the texture once it has been uploaded to user's graphic systems. It ia passed back to you during rendering.
+    unsigned char*      TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
+    unsigned int*       TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
+    int                 TexWidth;
+    int                 TexHeight;
+    ImVec2              TexExtraDataPos;    // Position of our rectangle where we draw non-font graphics
+    ImVec2              TexUvWhitePixel;    // Texture coordinates to a white pixel (part of the TexExtraData block)
+    ImVector<ImFont*>   Fonts;
+
+    struct ImFontAtlasData;
+    ImVector<ImFontAtlasData*> InputData;   // Internal data
+};
+
 // TTF font loading and rendering
 // - ImGui automatically loads a default embedded font for you
 // - Call GetTextureData() to retrieve pixels data so you can upload the texture to your graphics system.
@@ -753,55 +805,13 @@ struct ImDrawList
 // (NB: kerning isn't supported. At the moment some ImGui code does per-character CalcTextSize calls, need something more state-ful)
 struct ImFont
 {
-    // Settings
+    // Members: Settings
     float               FontSize;           // <user set>      // Height of characters, set during loading (don't change after loading)
     float               Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
     ImVec2              DisplayOffset;      // = (0.0f,0.0f)   // Offset font rendering by xx pixels
     ImWchar             FallbackChar;       // = '?'           // Replacement glyph if one isn't found.
-    ImTextureID         TexID;              // = 0             // After loading texture, store your texture handle here (ignore if you aren't using multiple fonts/textures)
 
-    // Retrieve texture data
-    // User is in charge of copying the pixels into graphics memory, then set 'TexID'.
-    // RGBA32 format is provided for convenience and high compatibility, but note that all RGB pixels are white.
-    // If you intend to use large font it may be pref
-    // NB: the data is invalidated as soon as you call a Load* function.
-    IMGUI_API void                  GetTextureDataRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 4 bytes-per-pixel
-    IMGUI_API void                  GetTextureDataAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 1 byte per-pixel
-    IMGUI_API void                  ClearTextureData();        // Save RAM once the texture has been copied to graphics memory.
-
-    // Methods
-    IMGUI_API ImFont();
-    IMGUI_API ~ImFont();
-    IMGUI_API bool                  LoadDefault();
-    IMGUI_API bool                  LoadFromFileTTF(const char* filename, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0);
-    IMGUI_API bool                  LoadFromMemoryTTF(const void* data, size_t data_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0);
-    IMGUI_API void                  Clear();
-    IMGUI_API void                  BuildLookupTable();
-    struct Glyph;
-    IMGUI_API const Glyph*          FindGlyph(unsigned short c) const;
-    IMGUI_API bool                  IsLoaded() const { return !Glyphs.empty(); }
-
-    // Retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
-    static IMGUI_API const ImWchar* GetGlyphRangesDefault();    // Basic Latin, Extended Latin
-    static IMGUI_API const ImWchar* GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
-    static IMGUI_API const ImWchar* GetGlyphRangesChinese();    // Japanese + full set of about 21000 CJK Unified Ideographs
-
-    // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
-    // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
-    IMGUI_API ImVec2                CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
-    IMGUI_API ImVec2                CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;                 // wchar
-    IMGUI_API void                  RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width = 0.0f) const;
-    IMGUI_API const char*           CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
-
-    // Texture data
-    // Access via GetTextureData() which will load the font if not loaded
-    unsigned char*      TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
-    unsigned int*       TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
-    int                 TexWidth;
-    int                 TexHeight;
-    ImVec2              TexExtraDataPos;    // Position of our rectangle where we draw non-font graphics
-    ImVec2              TexUvWhitePixel;    // Texture coordinates to a white pixel (part of the TexExtraData block)
-
+    // Members: Runtime data
     struct Glyph
     {
         ImWchar         Codepoint;
@@ -810,11 +820,29 @@ struct ImFont
         signed short    XOffset, YOffset;
         float           U0, V0, U1, V1;     // Texture coordinates
     };
-
-    // Runtime data
+    ImFontAtlas*        ContainerAtlas;     // What we has been loaded into
     ImVector<Glyph>     Glyphs;
     ImVector<int>       IndexLookup;
     const Glyph*        FallbackGlyph;      // == FindGlyph(FontFallbackChar)
+
+    // Methods
+    IMGUI_API ImFont();
+    IMGUI_API ~ImFont();
+    IMGUI_API void                  Clear();
+    IMGUI_API void                  BuildLookupTable();
+    IMGUI_API const Glyph*          FindGlyph(unsigned short c) const;
+
+    IMGUI_API bool                  IsLoaded() const        { return ContainerAtlas != NULL; }
+    IMGUI_API ImTextureID           GetTexID() const        { IM_ASSERT(ContainerAtlas != NULL); return ContainerAtlas->TexID; }
+    IMGUI_API int                   GetTexWidth() const     { IM_ASSERT(ContainerAtlas != NULL); return ContainerAtlas->TexWidth; }
+    IMGUI_API int                   GetTexHeight() const    { IM_ASSERT(ContainerAtlas != NULL); return ContainerAtlas->TexHeight; }
+
+    // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
+    // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
+    IMGUI_API ImVec2                CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
+    IMGUI_API ImVec2                CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;                 // wchar
+    IMGUI_API void                  RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width = 0.0f) const;
+    IMGUI_API const char*           CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
 };
 
 //---- Include imgui_user.h at the end of imgui.h

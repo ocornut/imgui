@@ -321,7 +321,7 @@ void CleanupDevice()
 
     // InitImGui
     if (g_pFontSampler) g_pFontSampler->Release();
-    if (ID3D11ShaderResourceView* font_texture_view = (ID3D11ShaderResourceView*)ImGui::GetIO().Font->TexID)
+    if (ID3D11ShaderResourceView* font_texture_view = (ID3D11ShaderResourceView*)ImGui::GetIO().FontAtlas->TexID)
         font_texture_view->Release();
     if (g_pVB) g_pVB->Release();
 
@@ -377,11 +377,17 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-void LoadFontTexture(ImFont* font)
+void LoadFontTexture()
 {
+    // Load one or more font
+    ImGuiIO& io = ImGui::GetIO();
+    //ImFont* my_font = io.FontAtlas->AddFontDefault();
+    //ImFont* my_font2 = io.FontAtlas->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, ImFontAtlas::GetGlyphRangesJapanese());
+
+    // Build
     unsigned char* pixels;
     int width, height;
-    font->GetTextureDataRGBA32(&pixels, &width, &height);
+    io.FontAtlas->GetTexDataAsRGBA32(&pixels, &width, &height);
 
     // Create texture
     D3D11_TEXTURE2D_DESC desc;
@@ -414,8 +420,8 @@ void LoadFontTexture(ImFont* font)
     g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &font_texture_view);
     pTexture->Release();
 
-    // Store ID
-    font->TexID = (void *)font_texture_view;
+    // Store our identifier
+    io.FontAtlas->TexID = (void *)font_texture_view;
 }
 
 void InitImGui()
@@ -463,10 +469,8 @@ void InitImGui()
         }
     }
 
-    // Load font (optionally load a custom TTF font)
-    //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
-    //io.Font->DisplayOffset.y += 1.0f;
-    LoadFontTexture(io.Font);
+    // Load fonts
+    LoadFontTexture();
 
     // Create texture sampler
     {

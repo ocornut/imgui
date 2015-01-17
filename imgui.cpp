@@ -432,11 +432,9 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_TooltipBg]              = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
 }
 
-// We statically allocate a default font storage for the user.
-// This allows the user to avoid newing the default font, while keeping IO.Font a pointer which is easy to swap if needed.
-// We cannot new() the font because user may override MemAllocFn after the ImGuiIO() constructor is called.
-// For the same reason we cannot call LoadDefault() on the font by default, but it is called by GetTextureData*() API.
-static ImFont GDefaultStaticFont;
+// Statically allocated font atlas. This is merely a maneuver to keep its definition at the bottom of the .H file.
+// Because we cannot new() at this point (before users may define IO.MemAllocFn)
+static ImFontAtlas GDefaultFontAtlas;
 
 ImGuiIO::ImGuiIO()
 {
@@ -446,7 +444,7 @@ ImGuiIO::ImGuiIO()
     IniSavingRate = 5.0f;
     IniFilename = "imgui.ini";
     LogFilename = "imgui_log.txt";
-    Font = &GDefaultStaticFont;
+    FontAtlas = &GDefaultFontAtlas;
     FontGlobalScale = 1.0f;
     FontAllowUserScaling = false;
     MousePos = ImVec2(-1,-1);
@@ -1525,9 +1523,9 @@ void ImGui::NewFrame()
     // Check user data
     IM_ASSERT(g.IO.DeltaTime > 0.0f);
     IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f);
-    IM_ASSERT(g.IO.RenderDrawListsFn != NULL);  // Must be implemented
-    IM_ASSERT(g.IO.Font);                       // Font not created
-    IM_ASSERT(g.IO.Font->IsLoaded());           // Font not loaded
+    IM_ASSERT(g.IO.RenderDrawListsFn != NULL);       // Must be implemented
+    IM_ASSERT(g.IO.FontAtlas->IsBuilt());            // Font not created. Did you call io.FontAtlas->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
+    IM_ASSERT(g.IO.FontAtlas->Fonts[0]->IsLoaded()); // Font not created. Did you call io.FontAtlas->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
 
     if (!g.Initialized)
     {
@@ -1540,7 +1538,7 @@ void ImGui::NewFrame()
         g.Initialized = true;
     }
 
-    SetFont(g.IO.Font);
+    SetFont(g.IO.FontAtlas->Fonts[0]);
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
@@ -1694,15 +1692,7 @@ void ImGui::Shutdown()
         fclose(g.LogFile);
         g.LogFile = NULL;
     }
-    if (g.IO.Font)
-    {
-        if (g.IO.Font != &GDefaultStaticFont)
-        {
-            g.IO.Font->~ImFont();
-            ImGui::MemFree(g.IO.Font);
-        }
-        g.IO.Font = NULL;
-    }
+    g.IO.FontAtlas->Clear();
 
     if (g.PrivateClipboard)
     {
@@ -2372,7 +2362,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
     if (first_begin_of_the_frame)
     {
         window->DrawList->Clear();
-        window->DrawList->PushTextureID(g.Font->TexID);
+        window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
         window->Visible = true;
 
         // New windows appears in front
@@ -2685,7 +2675,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
     else
     {
         // Short path when we do multiple Begin in the same frame.
-        window->DrawList->PushTextureID(g.Font->TexID);
+        window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
 
         // Outer clipping rectangle
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
@@ -2798,10 +2788,11 @@ static void SetFont(ImFont* font)
 {
     ImGuiState& g = GImGui;
 
+    IM_ASSERT(font && font->IsLoaded());
     IM_ASSERT(font->Scale > 0.0f);
     g.Font = font;
     g.FontSize = g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale;
-    g.FontTexUvWhitePixel = g.Font->TexUvWhitePixel;
+    g.FontTexUvWhitePixel = g.Font->ContainerAtlas->TexUvWhitePixel;
     g.Font->FallbackGlyph = NULL;
     g.Font->FallbackGlyph = g.Font->FindGlyph(g.Font->FallbackChar);
 }
@@ -2810,9 +2801,12 @@ void ImGui::PushFont(ImFont* font)
 {
     ImGuiState& g = GImGui;
 
+    if (!font)
+        font = g.IO.FontAtlas->Fonts[0];
+
     SetFont(font);
     g.FontStack.push_back(font);
-    g.CurrentWindow->DrawList->PushTextureID(font->TexID);
+    g.CurrentWindow->DrawList->PushTextureID(font->ContainerAtlas->TexID);
 }
 
 void  ImGui::PopFont()
@@ -2821,7 +2815,7 @@ void  ImGui::PopFont()
 
     g.CurrentWindow->DrawList->PopTextureID();
     g.FontStack.pop_back();
-    SetFont(g.FontStack.empty() ? g.IO.Font : g.FontStack.back());
+    SetFont(g.FontStack.empty() ? g.IO.FontAtlas->Fonts[0] : g.FontStack.back());
 }
 
 void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus)
@@ -6216,7 +6210,7 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
     if (text_end == NULL)
         text_end = text_begin + strlen(text_begin);
 
-    IM_ASSERT(font->TexID == texture_id_stack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
+    IM_ASSERT(font->ContainerAtlas->TexID == texture_id_stack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
     // reserve vertices for worse case
     const unsigned int char_count = (unsigned int)(text_end - text_begin);
@@ -6255,29 +6249,80 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
 }
 
 //-----------------------------------------------------------------------------
-// ImBitmapFont
+// ImFontAtlias
 //-----------------------------------------------------------------------------
 
-ImFont::ImFont()
+struct ImFontAtlas::ImFontAtlasData
 {
-    Scale = 1.0f;
-    FallbackChar = (ImWchar)'?';
+    // Input
+    ImFont*         OutFont;        // Load into this font
+    void*           TTFData;        // TTF data, we own the memory
+    size_t          TTFDataSize;    // TTF data size, in bytes
+    float           SizePixels;     // Desired output size, in pixels
+    const ImWchar*  GlyphRanges;    // List of Unicode range (2 value per range, values are inclusive, zero-terminated list)
+    int             FontNo;         // Index of font within .TTF file (0)
 
+    // Temporary Build Data
+    stbtt_fontinfo              FontInfo;
+    stbrp_rect*                 Rects;
+    ImVector<stbtt_pack_range>  Ranges;
+};
+
+ImFontAtlas::ImFontAtlas()
+{
+    TexID = NULL;
     TexPixelsAlpha8 = NULL;
     TexPixelsRGBA32 = NULL;
-    Clear();
+    TexWidth = TexHeight = 0;
+    TexExtraDataPos = TexUvWhitePixel = ImVec2(0, 0);
 }
 
-ImFont::~ImFont()
+ImFontAtlas::~ImFontAtlas()
 {
-    Clear();
+    ClearInputData();
+    ClearTexData();
 }
 
-void    ImFont::GetTextureDataAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
+void    ImFontAtlas::ClearInputData()
 {
-    // Lazily load default font
-    if (!IsLoaded())
-        LoadDefault();
+    for (size_t i = 0; i < InputData.size(); i++)
+    {
+        if (InputData[i]->TTFData)
+            ImGui::MemFree(InputData[i]->TTFData);
+        ImGui::MemFree(InputData[i]);
+    }
+    InputData.clear();
+}
+
+void    ImFontAtlas::ClearTexData()
+{
+    if (TexPixelsAlpha8)
+        ImGui::MemFree(TexPixelsAlpha8);
+    if (TexPixelsRGBA32)
+        ImGui::MemFree(TexPixelsRGBA32);
+    TexPixelsAlpha8 = NULL;
+    TexPixelsRGBA32 = NULL;
+}
+
+void    ImFontAtlas::ClearFonts()
+{
+    for (size_t i = 0; i < Fonts.size(); i++)
+    {
+        Fonts[i]->~ImFont();
+        ImGui::MemFree(Fonts[i]);
+    }
+    Fonts.clear();
+}
+
+void    ImFontAtlas::GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
+{
+    // Lazily build
+    if (TexPixelsAlpha8 == NULL)
+    {
+        if (InputData.empty())
+            AddFontDefault();
+        Build();
+    }
 
     *out_pixels = TexPixelsAlpha8;
     if (out_width) *out_width = TexWidth;
@@ -6285,14 +6330,14 @@ void    ImFont::GetTextureDataAlpha8(unsigned char** out_pixels, int* out_width,
     if (out_bytes_per_pixel) *out_bytes_per_pixel = 1;
 }
 
-void    ImFont::GetTextureDataRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
+void    ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
 {
     // Lazily convert to RGBA32 format
     // Although it is likely to be the most commonly used format, our font rendering is 8 bpp
     if (!TexPixelsRGBA32)
     {
         unsigned char* pixels;
-        GetTextureDataAlpha8(&pixels, NULL, NULL);
+        GetTexDataAsAlpha8(&pixels, NULL, NULL);
         TexPixelsRGBA32 = (unsigned int*)ImGui::MemAlloc(TexWidth * TexHeight * 4);
         const unsigned char* src = pixels;
         unsigned int* dst = TexPixelsRGBA32;
@@ -6306,33 +6351,251 @@ void    ImFont::GetTextureDataRGBA32(unsigned char** out_pixels, int* out_width,
     if (out_bytes_per_pixel) *out_bytes_per_pixel = 4;
 }
 
-void    ImFont::ClearTextureData()
+static void GetDefaultCompressedFontDataTTF(const void** ttf_compressed_data, unsigned int* ttf_compressed_size);
+static unsigned int stb_decompress_length(unsigned char *input);
+static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length);
+
+// Load embedded ProggyClean.ttf at size 13
+ImFont* ImFontAtlas::AddFontDefault()
 {
-    if (TexPixelsAlpha8)
-        ImGui::MemFree(TexPixelsAlpha8);
-    if (TexPixelsRGBA32)
-        ImGui::MemFree(TexPixelsRGBA32);
-    TexPixelsAlpha8 = NULL;
-    TexPixelsRGBA32 = NULL;
+    // Get compressed data
+    unsigned int ttf_compressed_size;
+    const void* ttf_compressed;
+    GetDefaultCompressedFontDataTTF(&ttf_compressed, &ttf_compressed_size);
+
+    // Decompress
+    const size_t buf_decompressed_size = stb_decompress_length((unsigned char*)ttf_compressed);
+    unsigned char* buf_decompressed = (unsigned char *)ImGui::MemAlloc(buf_decompressed_size);
+    stb_decompress(buf_decompressed, (unsigned char*)ttf_compressed, ttf_compressed_size);
+
+    // Add
+    ImFont* font = AddFontFromMemoryTTF(buf_decompressed, buf_decompressed_size, 13.0f, ImFontAtlas::GetGlyphRangesDefault(), 0);
+    font->DisplayOffset.y += 1;
+    return font;
+}
+
+ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels, const ImWchar* glyph_ranges, int font_no)
+{
+    void* data = NULL;
+    size_t data_size = 0;
+    if (!ImLoadFileToMemory(filename, "rb", (void**)&data, &data_size))
+        return NULL;
+
+    // Add
+    ImFont* font = AddFontFromMemoryTTF(data, data_size, size_pixels, glyph_ranges, font_no);
+    return font;
+}
+
+// NB: ownership of 'data' is given to ImFontAtlas which will clear it.
+ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* in_ttf_data, size_t in_ttf_data_size, float size_pixels, const ImWchar* glyph_ranges, int font_no)
+{
+    // Create new font
+    ImFont* font = (ImFont*)ImGui::MemAlloc(sizeof(ImFont));
+    new (font) ImFont();
+    Fonts.push_back(font);
+
+    // Add to build list
+    ImFontAtlasData* data = (ImFontAtlasData*)ImGui::MemAlloc(sizeof(ImFontAtlasData));
+    memset(data, 0, sizeof(ImFontAtlasData));
+    data->OutFont = font;
+    data->TTFData = in_ttf_data;
+    data->TTFDataSize = in_ttf_data_size;
+    data->SizePixels = size_pixels;
+    data->GlyphRanges = glyph_ranges;
+    data->FontNo = 0;
+    InputData.push_back(data);
+
+    // Invalidate texture
+    ClearTexData();
+
+    return font;
+}
+
+bool    ImFontAtlas::Build()
+{
+    IM_ASSERT(InputData.size() > 0);
+
+    TexID = NULL;
+    TexWidth = TexHeight = 0;
+    TexExtraDataPos = TexUvWhitePixel = ImVec2(0, 0);
+    ClearTexData();
+
+    // Initialize font information early (so we can error without any cleanup) + count glyphs
+    int total_glyph_count = 0;
+    for (size_t input_i = 0; input_i < InputData.size(); input_i++)
+    {
+        ImFontAtlasData& data = *InputData[input_i];
+        const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)data.TTFData, data.FontNo);
+        IM_ASSERT(font_offset >= 0);
+        if (!stbtt_InitFont(&data.FontInfo, (unsigned char*)data.TTFData, font_offset)) 
+            return false;
+        for (const ImWchar* in_range = InputData[input_i]->GlyphRanges; in_range[0] && in_range[1]; in_range += 2)
+            total_glyph_count += (in_range[1] - in_range[0]) + 1;
+    }
+
+    // Start packing
+    TexWidth = (total_glyph_count > 3000) ? 2048 : (total_glyph_count > 1000) ? 1024 : 512;  // Width doesn't actually matters.
+    TexHeight = 0;
+    const int max_tex_height = 1024*32;
+    stbtt_pack_context spc;
+    int ret = stbtt_PackBegin(&spc, NULL, TexWidth, max_tex_height, 0, 1, NULL);
+    IM_ASSERT(ret);
+    stbtt_PackSetOversampling(&spc, 1, 1);
+
+    // Pack our extra data rectangle first, so it will be on the upper-left corner of our texture (UV will have small values).
+    stbrp_rect extra_rect;
+    extra_rect.w = 16;
+    extra_rect.h = 16;
+    stbrp_pack_rects((stbrp_context*)spc.pack_info, &extra_rect, 1);
+    TexExtraDataPos = ImVec2(extra_rect.x, extra_rect.y);
+
+    // First pass: pack all glyphs (no rendering at this point, we are working with glyph sizes only)
+    int tex_height = extra_rect.y + extra_rect.h;
+    for (size_t input_i = 0; input_i < InputData.size(); input_i++)
+    {
+        ImFontAtlasData& data = *InputData[input_i];
+        if (!data.GlyphRanges)
+            data.GlyphRanges = ImFontAtlas::GetGlyphRangesDefault();
+
+        // Setup ranges
+        int glyph_count = 0;
+        int glyph_ranges_count = 0;
+        for (const ImWchar* in_range = data.GlyphRanges; in_range[0] && in_range[1]; in_range += 2)
+        {
+            glyph_count += (in_range[1] - in_range[0]) + 1;
+            glyph_ranges_count++;
+        }
+        data.Ranges.resize(glyph_ranges_count);
+        for (size_t i = 0; i < data.Ranges.size(); i++)
+        {
+            stbtt_pack_range& range = data.Ranges[i];
+            range.font_size = data.SizePixels;
+            const ImWchar* in_range = &data.GlyphRanges[i * 2];
+            range.first_unicode_char_in_range = in_range[0];
+            range.num_chars_in_range = (in_range[1] - in_range[0]) + 1;
+
+            // Allocate characters and flag as not packed
+            // FIXME-OPT: Loose ranges will incur lots of allocations. Allocate all contiguous in loop above.
+            range.chardata_for_range = (stbtt_packedchar*)ImGui::MemAlloc(range.num_chars_in_range * sizeof(stbtt_packedchar));
+            for (int j = 0; j < range.num_chars_in_range; ++j)
+                range.chardata_for_range[j].x0 = range.chardata_for_range[j].y0 = range.chardata_for_range[j].x1 = range.chardata_for_range[j].y1 = 0;
+        }
+
+        // Pack
+        data.Rects = (stbrp_rect*)ImGui::MemAlloc(sizeof(stbrp_rect) * glyph_count);
+        IM_ASSERT(data.Rects);
+        const int n = stbtt_PackFontRangesGatherRects(&spc, &data.FontInfo, data.Ranges.begin(), data.Ranges.size(), data.Rects);
+        stbrp_pack_rects((stbrp_context*)spc.pack_info, data.Rects, n);
+
+        // Extend texture height
+        for (int i = 0; i < n; i++)
+            if (data.Rects[i].was_packed)
+                tex_height = ImMax(tex_height, data.Rects[i].y + data.Rects[i].h);
+    }
+
+    // Create texture
+    TexHeight = ImUpperPowerOfTwo(tex_height);
+    TexPixelsAlpha8 = (unsigned char*)ImGui::MemRealloc(TexPixelsAlpha8, TexWidth * TexHeight);
+    memset(TexPixelsAlpha8, 0, TexWidth * TexHeight);
+    spc.pixels = TexPixelsAlpha8;
+    spc.height = TexHeight;
+
+    // Second pass: render characters
+    for (size_t input_i = 0; input_i < InputData.size(); input_i++)
+    {
+        ImFontAtlasData& data = *InputData[input_i];
+        ret = stbtt_PackFontRangesRenderIntoRects(&spc, &data.FontInfo, data.Ranges.begin(), data.Ranges.size(), data.Rects);
+        ImGui::MemFree(data.Rects);
+        data.Rects = NULL;
+    }
+
+    // End packing
+    stbtt_PackEnd(&spc);
+
+    // Third pass: setup ImFont and glyphs for runtime
+    for (size_t input_i = 0; input_i < InputData.size(); input_i++)
+    {
+        ImFontAtlasData& data = *InputData[input_i];
+        data.OutFont->ContainerAtlas = this;
+        data.OutFont->FontSize = data.SizePixels;
+
+        const float font_scale = stbtt_ScaleForPixelHeight(&data.FontInfo, data.SizePixels);
+        int font_ascent, font_descent, font_line_gap;
+        stbtt_GetFontVMetrics(&data.FontInfo, &font_ascent, &font_descent, &font_line_gap);
+
+        const float uv_scale_x = 1.0f / TexWidth;
+        const float uv_scale_y = 1.0f / TexHeight;
+        const int character_spacing_x = 1;
+        for (size_t i = 0; i < data.Ranges.size(); i++)
+        {
+            stbtt_pack_range& range = data.Ranges[i];
+            for (int char_idx = 0; char_idx < range.num_chars_in_range; char_idx += 1)
+            {
+                const int codepoint = range.first_unicode_char_in_range + char_idx;
+                const stbtt_packedchar& pc = range.chardata_for_range[char_idx];
+                if (!pc.x0 && !pc.x1 && !pc.y0 && !pc.y1)
+                    continue;
+
+                data.OutFont->Glyphs.resize(data.OutFont->Glyphs.size() + 1);
+                ImFont::Glyph& glyph = data.OutFont->Glyphs.back();
+                glyph.Codepoint = (ImWchar)codepoint;
+                glyph.Width = pc.x1 - pc.x0 + 1;
+                glyph.Height = pc.y1 - pc.y0 + 1;
+                glyph.XOffset = (signed short)(pc.xoff);
+                glyph.YOffset = (signed short)(pc.yoff) + (int)(font_ascent * font_scale);
+                glyph.XAdvance = (signed short)(pc.xadvance + character_spacing_x);  // Bake spacing into XAdvance
+                glyph.U0 = ((float)pc.x0 - 0.5f) * uv_scale_x;
+                glyph.V0 = ((float)pc.y0 - 0.5f) * uv_scale_y;
+                glyph.U1 = ((float)pc.x0 - 0.5f + glyph.Width) * uv_scale_x;
+                glyph.V1 = ((float)pc.y0 - 0.5f + glyph.Height) * uv_scale_y;
+            }
+        }
+
+        data.OutFont->BuildLookupTable();
+
+        // Cleanup temporary
+        for (size_t i = 0; i < data.Ranges.size(); i++)
+            ImGui::MemFree(data.Ranges[i].chardata_for_range);
+        data.Ranges.clear();
+    }
+
+    // Draw white pixel into texture and make UV points to it
+    TexPixelsAlpha8[0] = TexPixelsAlpha8[1] = TexPixelsAlpha8[TexWidth+0] = TexPixelsAlpha8[TexWidth+1] = 0xFF;
+    TexUvWhitePixel = ImVec2((TexExtraDataPos.x + 0.5f) / TexWidth, (TexExtraDataPos.y + 0.5f) / TexHeight);
+
+    ClearInputData();
+
+    return true;
+}
+
+//-----------------------------------------------------------------------------
+// ImFont
+//-----------------------------------------------------------------------------
+
+ImFont::ImFont()
+{
+    Scale = 1.0f;
+    FallbackChar = (ImWchar)'?';
+    Clear();
+}
+
+ImFont::~ImFont()
+{
+    Clear();
 }
 
 void    ImFont::Clear()
 {
     FontSize = 0.0f;
     DisplayOffset = ImVec2(-0.5f, 0.5f);
-
-    ClearTextureData();
-    TexID = NULL;
-    TexWidth = TexHeight = 0;
-    TexExtraDataPos = TexUvWhitePixel = ImVec2(0, 0);
-
+    ContainerAtlas = NULL;
     Glyphs.clear();
     IndexLookup.clear();
     FallbackGlyph = NULL;
 }
 
 // Retrieve list of range (2 int per range, values are inclusive)
-const ImWchar*   ImFont::GetGlyphRangesDefault()
+const ImWchar*   ImFontAtlas::GetGlyphRangesDefault()
 {
     static const ImWchar ranges[] =
     {
@@ -6342,7 +6605,7 @@ const ImWchar*   ImFont::GetGlyphRangesDefault()
     return &ranges[0];
 }
 
-const ImWchar*  ImFont::GetGlyphRangesChinese()
+const ImWchar*  ImFontAtlas::GetGlyphRangesChinese()
 {
     static const ImWchar ranges[] =
     {
@@ -6355,7 +6618,7 @@ const ImWchar*  ImFont::GetGlyphRangesChinese()
     return &ranges[0];
 }
 
-const ImWchar*  ImFont::GetGlyphRangesJapanese()
+const ImWchar*  ImFontAtlas::GetGlyphRangesJapanese()
 {
     // Store the 1946 ideograms code points as successive offsets from the initial unicode codepoint 0x4E00. Each offset has an implicit +1.
     // This encoding helps us reduce the source code size.
@@ -6413,167 +6676,6 @@ const ImWchar*  ImFont::GetGlyphRangesJapanese()
         ranges_unpacked = true;
     }
     return &ranges[0];
-}
-
-static void GetDefaultCompressedFontDataTTF(const void** ttf_compressed_data, unsigned int* ttf_compressed_size);
-static unsigned int stb_decompress_length(unsigned char *input);
-static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length);
-
-// Load embedded ProggyClean.ttf at size 13
-bool    ImFont::LoadDefault()
-{
-    // Get compressed data
-    unsigned int ttf_compressed_size;
-    const void* ttf_compressed;
-    GetDefaultCompressedFontDataTTF(&ttf_compressed, &ttf_compressed_size);
-
-    // Decompress
-    const size_t buf_decompressed_size = stb_decompress_length((unsigned char*)ttf_compressed);
-    unsigned char* buf_decompressed = (unsigned char *)ImGui::MemAlloc(buf_decompressed_size);
-    stb_decompress(buf_decompressed, (unsigned char*)ttf_compressed, ttf_compressed_size);
-
-    // Load TTF
-    const bool ret = LoadFromMemoryTTF((void *)buf_decompressed, buf_decompressed_size, 13.0f, ImFont::GetGlyphRangesDefault(), 0);
-    ImGui::MemFree(buf_decompressed);
-    DisplayOffset.y += 1;
-    return ret;
-}
-
-bool    ImFont::LoadFromFileTTF(const char* filename, float size_pixels, const ImWchar* glyph_ranges, int font_no)
-{
-    void* data = NULL;
-    size_t data_size = 0;
-    if (!ImLoadFileToMemory(filename, "rb", (void**)&data, &data_size))
-        return false;
-    const bool ret = LoadFromMemoryTTF(data, data_size, size_pixels, glyph_ranges, font_no);
-    ImGui::MemFree(data);
-    return ret;
-}
-
-bool    ImFont::LoadFromMemoryTTF(const void* data, size_t data_size, float size_pixels, const ImWchar* glyph_ranges, int font_no)
-{
-    Clear();
-    if (!glyph_ranges)
-        glyph_ranges = GetGlyphRangesDefault();
-
-    // Initialize font information
-    stbtt_fontinfo ttf_info;
-    const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)data, font_no);
-    IM_ASSERT(font_offset >= 0);
-    if (!stbtt_InitFont(&ttf_info, (unsigned char*)data, font_offset)) 
-        return false;
-
-    // Setup ranges
-    int glyph_count = 0;
-    int glyph_ranges_count = 0;
-    for (const ImWchar* in_range = glyph_ranges; in_range[0] && in_range[1]; in_range += 2)
-    {
-        glyph_count += (in_range[1] - in_range[0]) + 1;
-        glyph_ranges_count++;
-    }
-
-    ImVector<stbtt_pack_range> ranges;
-    ranges.resize(glyph_ranges_count);
-    for (size_t i = 0; i < ranges.size(); i++)
-    {
-        stbtt_pack_range& range = ranges[i];
-        range.font_size = size_pixels;
-        const ImWchar* in_range = &glyph_ranges[i * 2];
-        range.first_unicode_char_in_range = in_range[0];
-        range.num_chars_in_range = (in_range[1] - in_range[0]) + 1;
-        range.chardata_for_range = (stbtt_packedchar*)ImGui::MemAlloc(range.num_chars_in_range * sizeof(stbtt_packedchar));
-    }
-
-    {
-        TexWidth = (glyph_count > 1000) ? 1024 : 512;  // Width doesn't really matters.
-        TexHeight = 0;
-        const int max_tex_height = 1024*32;
-        stbtt_pack_context spc;
-        int ret = stbtt_PackBegin(&spc, NULL, TexWidth, max_tex_height, 0, 1, NULL);
-        IM_ASSERT(ret);
-        stbtt_PackSetOversampling(&spc, 1, 1);
-
-        // Flag all characters as not packed
-        for (size_t i = 0; i < ranges.size(); ++i)
-            for (int j = 0; j < ranges[i].num_chars_in_range; ++j)
-                ranges[i].chardata_for_range[j].x0 = ranges[i].chardata_for_range[j].y0 = ranges[i].chardata_for_range[j].x1 = ranges[i].chardata_for_range[j].y1 = 0;
-    
-        // Pack our extra data rectangle first, so it will be on the upper-left corner of our texture (UV will have small values).
-        stbrp_rect extra_rect;
-        extra_rect.w = 16;
-        extra_rect.h = 16;
-        stbrp_pack_rects((stbrp_context*)spc.pack_info, &extra_rect, 1);
-        TexExtraDataPos = ImVec2(extra_rect.x, extra_rect.y);
-
-        // Pack
-        stbrp_rect* rects = (stbrp_rect*)ImGui::MemAlloc(sizeof(*rects) * glyph_count);
-        IM_ASSERT(rects);
-        const int n = stbtt_PackFontRangesGatherRects(&spc, &ttf_info, ranges.begin(), ranges.size(), rects);
-        stbrp_pack_rects((stbrp_context*)spc.pack_info, rects, n);
-
-        // Create texture
-        int tex_h = 0;
-        for (int i = 0; i < n; i++)
-            if (rects[i].was_packed)
-                tex_h = ImMax(tex_h, rects[i].y + rects[i].h);
-        TexHeight = ImUpperPowerOfTwo(tex_h);
-        TexPixelsAlpha8 = (unsigned char*)ImGui::MemRealloc(TexPixelsAlpha8, TexWidth * TexHeight);
-        memset(TexPixelsAlpha8, 0, TexWidth * TexHeight);
-
-        // Render characters
-        spc.pixels = TexPixelsAlpha8;
-        spc.height = TexHeight;
-        ret = stbtt_PackFontRangesRenderIntoRects(&spc, &ttf_info, ranges.begin(), ranges.size(), rects);
-        stbtt_PackEnd(&spc);
-        ImGui::MemFree(rects);
-    }
-
-    // Setup glyphs for runtime
-    FontSize = size_pixels;
-
-    const float font_scale = stbtt_ScaleForPixelHeight(&ttf_info, size_pixels);
-    int font_ascent, font_descent, font_line_gap;
-    stbtt_GetFontVMetrics(&ttf_info, &font_ascent, &font_descent, &font_line_gap);
-
-    const float uv_scale_x = 1.0f / TexWidth;
-    const float uv_scale_y = 1.0f / TexHeight;
-    const int character_spacing_x = 1;
-    for (size_t i = 0; i < ranges.size(); i++)
-    {
-        stbtt_pack_range& range = ranges[i];
-        for (int char_idx = 0; char_idx < range.num_chars_in_range; char_idx += 1)
-        {
-            const int codepoint = range.first_unicode_char_in_range + char_idx;
-            const stbtt_packedchar& pc = range.chardata_for_range[char_idx];
-            if (!pc.x0 && !pc.x1 && !pc.y0 && !pc.y1)
-                continue;
-
-            Glyphs.resize(Glyphs.size() + 1);
-            ImFont::Glyph& glyph = Glyphs.back();
-            glyph.Codepoint = (ImWchar)codepoint;
-            glyph.Width = pc.x1 - pc.x0 + 1;
-            glyph.Height = pc.y1 - pc.y0 + 1;
-            glyph.XOffset = (signed short)(pc.xoff);
-            glyph.YOffset = (signed short)(pc.yoff) + (int)(font_ascent * font_scale);
-            glyph.XAdvance = (signed short)(pc.xadvance + character_spacing_x);  // Bake spacing into XAdvance
-            glyph.U0 = ((float)pc.x0 - 0.5f) * uv_scale_x;
-            glyph.V0 = ((float)pc.y0 - 0.5f) * uv_scale_y;
-            glyph.U1 = ((float)pc.x0 - 0.5f + glyph.Width) * uv_scale_x;
-            glyph.V1 = ((float)pc.y0 - 0.5f + glyph.Height) * uv_scale_y;
-        }
-    }
-
-    BuildLookupTable();
-
-    // Cleanup temporary
-    for (size_t i = 0; i < ranges.size(); i++)
-        ImGui::MemFree(ranges[i].chardata_for_range);
-
-    // Draw white pixel and make UV points to it
-    TexPixelsAlpha8[0] = TexPixelsAlpha8[1] = TexPixelsAlpha8[TexWidth+0] = TexPixelsAlpha8[TexWidth+1] = 0xFF;
-    TexUvWhitePixel = ImVec2((TexExtraDataPos.x + 0.5f) / TexWidth, (TexExtraDataPos.y + 0.5f) / TexHeight);
-
-    return true;
 }
 
 void ImFont::BuildLookupTable()
@@ -7315,20 +7417,6 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::TreePop();
     }
 
-    // Font scaling options
-    // Note that those are not actually part of the style.
-    if (ImGui::TreeNode("Font"))
-    {
-        static float window_scale = 1.0f;
-        ImFont* font = ImGui::GetIO().Font;
-        ImGui::Text("Base Font Size: %.2f", font->FontSize);
-        ImGui::SliderFloat("window scale", &window_scale, 0.3f, 2.0f, "%.1f");                   // scale only this window
-        ImGui::SliderFloat("font scale", &font->Scale, 0.3f, 2.0f, "%.1f");                      // scale only this font
-        ImGui::SliderFloat("global scale", &ImGui::GetIO().FontGlobalScale, 0.3f, 2.0f, "%.1f"); // scale everything
-        ImGui::SetWindowFontScale(window_scale);
-        ImGui::TreePop();
-    }
-
     ImGui::PopItemWidth();
 }
 
@@ -7375,9 +7463,35 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Checkbox("no scrollbar", &no_scrollbar);
         ImGui::SliderFloat("fill alpha", &fill_alpha, 0.0f, 1.0f);
 
-        if (ImGui::TreeNode("Style Editor"))
+        if (ImGui::TreeNode("Style"))
         {
             ImGui::ShowStyleEditor();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Fonts"))
+        {
+            ImGui::TextWrapped("Tip: Load fonts with GetIO().FontAtlas->AddFontFromFileTTF().");
+            for (size_t i = 0; i < ImGui::GetIO().FontAtlas->Fonts.size(); i++)
+            {
+                ImFont* font = ImGui::GetIO().FontAtlas->Fonts[i];
+                ImGui::BulletText("Font %d: %.2f pixels, %d glyphs", i, font->FontSize, font->Glyphs.size());
+                ImGui::TreePush((void*)i);
+                ImGui::PushFont(font);
+                ImGui::Text("The quick brown fox jumps over the lazy dog");
+                ImGui::PopFont();
+                if (i > 0 && ImGui::Button("Set as default"))
+                {
+                    ImGui::GetIO().FontAtlas->Fonts[i] = ImGui::GetIO().FontAtlas->Fonts[0];
+                    ImGui::GetIO().FontAtlas->Fonts[0] = font;
+                }
+                ImGui::SliderFloat("font scale", &font->Scale, 0.3f, 2.0f, "%.1f");             // scale only this font
+                ImGui::TreePop();
+            }
+            static float window_scale = 1.0f;
+            ImGui::SliderFloat("this window scale", &window_scale, 0.3f, 2.0f, "%.1f");                   // scale only this window
+            ImGui::SliderFloat("global scale", &ImGui::GetIO().FontGlobalScale, 0.3f, 2.0f, "%.1f"); // scale everything
+            ImGui::SetWindowFontScale(window_scale);
             ImGui::TreePop();
         }
 
@@ -7475,9 +7589,10 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             ImGui::TextWrapped("Below we are displaying the font texture (which is the only texture we have access to in this demo). Use the 'ImTextureID' type as storage to pass pointers or identifier to your own texture data. Hover the texture for a zoomed view!");
             ImVec2 tex_screen_pos = ImGui::GetCursorScreenPos();
-            float tex_w = (float)ImGui::GetIO().Font->TexWidth;
-            float tex_h = (float)ImGui::GetIO().Font->TexHeight;
-            ImGui::Image(ImGui::GetIO().Font->TexID, ImVec2(tex_w, tex_h), ImVec2(0,0), ImVec2(1,1), 0xFFFFFFFF, 0x999999FF);
+            float tex_w = (float)ImGui::GetIO().FontAtlas->TexWidth;
+            float tex_h = (float)ImGui::GetIO().FontAtlas->TexHeight;
+            ImTextureID tex_id = ImGui::GetIO().FontAtlas->TexID;
+            ImGui::Image(tex_id, ImVec2(tex_w, tex_h), ImVec2(0,0), ImVec2(1,1), 0xFFFFFFFF, 0x999999FF);
             if (ImGui::IsItemHovered())
             {
                 ImGui::BeginTooltip();
@@ -7488,7 +7603,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::Text("Max: (%.2f, %.2f)", focus_x + focus_sz, focus_y + focus_sz);
                 ImVec2 uv0 = ImVec2((focus_x) / tex_w, (focus_y) / tex_h);
                 ImVec2 uv1 = ImVec2((focus_x + focus_sz) / tex_w, (focus_y + focus_sz) / tex_h);
-                ImGui::Image(ImGui::GetIO().Font->TexID, ImVec2(128,128), uv0, uv1, 0xFFFFFFFF, 0x999999FF);
+                ImGui::Image(tex_id, ImVec2(128,128), uv0, uv1, 0xFFFFFFFF, 0x999999FF);
                 ImGui::EndTooltip();
             }
             ImGui::TreePop();

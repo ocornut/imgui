@@ -235,20 +235,25 @@ void InitGL()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void LoadFontTexture(ImFont* font)
+void LoadFontTexture()
 {
+    ImGuiIO& io = ImGui::GetIO();
+    //ImFont* my_font = io.FontAtlas->AddFontDefault();
+    //ImFont* my_font2 = io.FontAtlas->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, ImFontAtlas::GetGlyphRangesJapanese());
+
     unsigned char* pixels;
     int width, height;
-    font->GetTextureDataRGBA32(&pixels, &width, &height);
+    io.FontAtlas->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bits for OpenGL3 demo because it is more likely to be compatible with user's existing shader.
 
     GLuint tex_id;
     glGenTextures(1, &tex_id);
     glBindTexture(GL_TEXTURE_2D, tex_id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
-    font->TexID = (void *)(intptr_t)tex_id;
+    // Store our identifier
+    io.FontAtlas->TexID = (void *)(intptr_t)tex_id;
 }
 
 void InitImGui()
@@ -277,10 +282,7 @@ void InitImGui()
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
 
-    // Load font (optionally load a custom TTF font)
-    //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
-    //io.Font->DisplayOffset.y += 1.0f;
-    LoadFontTexture(io.Font);
+    LoadFontTexture();
 }
 
 void UpdateImGui()

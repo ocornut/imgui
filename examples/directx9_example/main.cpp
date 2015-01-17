@@ -73,8 +73,8 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
     g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
     g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
-    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_POINT );
-    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
+    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
+    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
 
     // Setup orthographic projection matrix
     D3DXMATRIXA16 mat;
@@ -129,7 +129,7 @@ void CleanupDevice()
     if (g_pVB) g_pVB->Release();
 
     // InitDeviceD3D
-    if (LPDIRECT3DTEXTURE9 tex = (LPDIRECT3DTEXTURE9)ImGui::GetIO().Font->TexID)
+    if (LPDIRECT3DTEXTURE9 tex = (LPDIRECT3DTEXTURE9)ImGui::GetIO().FontAtlas->TexID)
         tex->Release();
     if (g_pd3dDevice) g_pd3dDevice->Release();
     if (g_pD3D) g_pD3D->Release();
@@ -173,13 +173,19 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-void LoadFontTexture(ImFont* font)
+void LoadFontTexture()
 {
-    unsigned char* pixels;
-    int width, height;
-	int bytes_per_pixel;
-    font->GetTextureDataAlpha8(&pixels, &width, &height, &bytes_per_pixel);
+    // Load one or more font
+    ImGuiIO& io = ImGui::GetIO();
+    //ImFont* my_font = io.FontAtlas->AddFontDefault();
+    //ImFont* my_font2 = io.FontAtlas->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, ImFontAtlas::GetGlyphRangesJapanese());
 
+    // Build
+    unsigned char* pixels;
+    int width, height, bytes_per_pixel;
+    io.FontAtlas->GetTexDataAsAlpha8(&pixels, &width, &height, &bytes_per_pixel);
+
+    // Create texture
     LPDIRECT3DTEXTURE9 pTexture = NULL;
     if (D3DXCreateTexture(g_pd3dDevice, width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &pTexture) < 0)
     {
@@ -198,7 +204,8 @@ void LoadFontTexture(ImFont* font)
         memcpy((unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
     pTexture->UnlockRect(0);
 
-    font->TexID = (void *)pTexture;
+    // Store our identifier
+    io.FontAtlas->TexID = (void *)pTexture;
 }
 
 void InitImGui()
@@ -238,10 +245,7 @@ void InitImGui()
         return;
     }
 
-    // Load font (optionally load a custom TTF font)
-    //io.Font->LoadFromFileTTF("myfont.ttf", font_size_px, ImFont::GetGlyphRangesDefault());
-    //io.Font->DisplayOffset.y += 1.0f;
-    LoadFontTexture(io.Font);
+    LoadFontTexture();
 }
 
 INT64 ticks_per_second = 0;
