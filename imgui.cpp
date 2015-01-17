@@ -329,7 +329,14 @@
 
 #define STBRP_STATIC
 #define STB_RECT_PACK_IMPLEMENTATION
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
 #include "stb_rect_pack.h"
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_malloc(x,u)  ((void)(u), ImGui::MemAlloc(x))
@@ -5939,7 +5946,6 @@ void ImGui::Color(const char* prefix, unsigned int v)
 //-----------------------------------------------------------------------------
 
 static ImVec4 GNullClipRect(-9999.0f,-9999.0f, +9999.0f, +9999.0f);
-static ImTextureID GNullTextureID = NULL;
 
 void ImDrawList::Clear()
 {
