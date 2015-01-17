@@ -214,6 +214,7 @@
  - main: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
+!- drawlist: handling of PixelCenterOffset is badly inconsistent (sometimes in callee, sometimes in caller).
  - scrollbar: use relative mouse movement when first-clicking inside of scroll grab box.
  - scrollbar: make the grab visible and a minimum size for long scroll regions
 !- input number: very large int not reliably supported because of int<>float conversions.
@@ -2629,10 +2630,11 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
                 }
                 else
                 {
-                    // FIXME: We should draw 4 triangles and decide on a size that's not dependant on the rounding size (previously used 18)
+                    // FIXME: We should draw 4 triangles and decide on a size that's not dependent on the rounding size (previously used 18)
+                    const ImVec2 offset(GImGui.IO.PixelCenterOffset,GImGui.IO.PixelCenterOffset);
                     window->DrawList->AddArc(br - ImVec2(r,r), r, resize_col, 6, 9, true);
-                    window->DrawList->AddTriangleFilled(br+ImVec2(0,-2*r),br+ImVec2(0,-r),br+ImVec2(-r,-r), resize_col);
-                    window->DrawList->AddTriangleFilled(br+ImVec2(-r,-r), br+ImVec2(-r,0),br+ImVec2(-2*r,0), resize_col);
+                    window->DrawList->AddTriangleFilled(br-offset+ImVec2(0,-2*r),br-offset+ImVec2(0,-r),br-offset+ImVec2(-r,-r), resize_col);
+                    window->DrawList->AddTriangleFilled(br-offset+ImVec2(-r,-r), br-offset+ImVec2(-r,0),br-offset+ImVec2(-2*r,0), resize_col);
                 }
             }
         }
