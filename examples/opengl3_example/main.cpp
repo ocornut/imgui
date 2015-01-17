@@ -28,7 +28,6 @@ static unsigned int vbo_handle, vao_handle;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
-// - try adjusting ImGui::GetIO().PixelCenterOffset to 0.0f or 0.5f
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
@@ -256,7 +255,6 @@ void InitImGui()
 {
     ImGuiIO& io = ImGui::GetIO();
     io.DeltaTime = 1.0f / 60.0f;                                  // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
-    io.PixelCenterOffset = 0.5f;                                  // Align OpenGL texels
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                       // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;

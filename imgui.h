@@ -494,7 +494,6 @@ struct ImGuiIO
     ImFont*     Font;                       // <auto>                   // Font (also see 'Settings' fields inside ImFont structure for details)
     float       FontGlobalScale;            // = 1.0f                   // Global scale all fonts
     bool        FontAllowUserScaling;       // = false                  // Allow user scaling text of individual window with CTRL+Wheel.
-    float       PixelCenterOffset;          // = 0.0f                   // Try to set to 0.5f or 0.375f if rendering is blurry
 
     void*       UserData;                   // = NULL                   // Store your own data for retrieval by callbacks.
 

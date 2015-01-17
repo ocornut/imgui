@@ -127,6 +127,7 @@
  - 2015/01/11 (1.30) big font/image API change. now loads TTF file. allow for multiple fonts. no need for a PNG loader.
                      removed GetDefaultFontData(). uses io.Font->GetTextureData*() API to retrieve uncompressed pixels.
                      added texture identifier in ImDrawCmd passed to your render function.
+                     removed IO.PixelCenterOffset (unnecessary, can be handled in user projection matrix)
  - 2014/12/10 (1.18) removed SetNewWindowDefaultPos() in favor of new generic API SetNextWindowPos(pos, ImGuiSetCondition_FirstUseEver)
  - 2014/11/28 (1.17) moved IO.Font*** options to inside the IO.Font-> structure.
  - 2014/11/26 (1.17) reworked syntax of IMGUI_ONCE_UPON_A_FRAME helper macro to increase compiler compatibility
@@ -145,7 +146,6 @@
 
  If text or lines are blurry when integrating ImGui in your engine:
    - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-   - try adjusting ImGui::GetIO().PixelCenterOffset to 0.5f or 0.375f
 
  If you are confused about the meaning or use of ID in ImGui:
    - some widgets requires state to be carried over multiple frames (most typically ImGui often wants remember what is the "active" widget).
@@ -214,7 +214,6 @@
  - main: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
-!- drawlist: handling of PixelCenterOffset is badly inconsistent (sometimes in callee, sometimes in caller).
  - scrollbar: use relative mouse movement when first-clicking inside of scroll grab box.
  - scrollbar: make the grab visible and a minimum size for long scroll regions
 !- input number: very large int not reliably supported because of int<>float conversions.
@@ -450,7 +449,6 @@ ImGuiIO::ImGuiIO()
     Font = &GDefaultStaticFont;
     FontGlobalScale = 1.0f;
     FontAllowUserScaling = false;
-    PixelCenterOffset = 0.0f;
     MousePos = ImVec2(-1,-1);
     MousePosPrev = ImVec2(-1,-1);
     MouseDoubleClickTime = 0.30f;
@@ -1963,10 +1961,9 @@ static void RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
     window->DrawList->AddRectFilled(p_min, p_max, fill_col, rounding);
     if (border && (window->Flags & ImGuiWindowFlags_ShowBorders))
     {
-        // FIXME: This is the best I've found that works on multiple renderer/back ends. Rather dodgy.
-        const float offset = GImGui.IO.PixelCenterOffset;
-        window->DrawList->AddRect(p_min+ImVec2(1.5f-offset,1.5f-offset), p_max+ImVec2(1.0f-offset*2,1.0f-offset*2), window->Color(ImGuiCol_BorderShadow), rounding);
-        window->DrawList->AddRect(p_min+ImVec2(0.5f-offset,0.5f-offset), p_max+ImVec2(0.0f-offset*2,0.0f-offset*2), window->Color(ImGuiCol_Border), rounding);
+        // FIXME: This is the best I've found that works on multiple renderer/back ends. Bit dodgy.
+        window->DrawList->AddRect(p_min+ImVec2(1.5f,1.5f), p_max+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), rounding);
+        window->DrawList->AddRect(p_min+ImVec2(0.5f,0.5f), p_max+ImVec2(0,0), window->Color(ImGuiCol_Border), rounding);
     }
 }
 
@@ -2631,10 +2628,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
                 else
                 {
                     // FIXME: We should draw 4 triangles and decide on a size that's not dependent on the rounding size (previously used 18)
-                    const ImVec2 offset(GImGui.IO.PixelCenterOffset,GImGui.IO.PixelCenterOffset);
                     window->DrawList->AddArc(br - ImVec2(r,r), r, resize_col, 6, 9, true);
-                    window->DrawList->AddTriangleFilled(br-offset+ImVec2(0,-2*r),br-offset+ImVec2(0,-r),br-offset+ImVec2(-r,-r), resize_col);
-                    window->DrawList->AddTriangleFilled(br-offset+ImVec2(-r,-r), br-offset+ImVec2(-r,0),br-offset+ImVec2(-2*r,0), resize_col);
+                    window->DrawList->AddTriangleFilled(br+ImVec2(0,-2*r),br+ImVec2(0,-r),br+ImVec2(-r,-r), resize_col);
+                    window->DrawList->AddTriangleFilled(br+ImVec2(-r,-r), br+ImVec2(-r,0),br+ImVec2(-2*r,0), resize_col);
                 }
             }
         }
@@ -6021,11 +6017,10 @@ void ImDrawList::AddVtxUV(const ImVec2& pos, ImU32 col, const ImVec2& uv)
 
 void ImDrawList::AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col)
 {
-    const float offset = GImGui.IO.PixelCenterOffset;
     const float length = sqrtf(ImLengthSqr(b - a));
-    const ImVec2 hn = (b - a) * (0.50f / length);              // half normal
-    const ImVec2 hp0 = ImVec2(offset + hn.y, offset - hn.x);   // half perpendiculars + user offset
-    const ImVec2 hp1 = ImVec2(offset - hn.y, offset + hn.x);
+    const ImVec2 hn = (b - a) * (0.50f / length);       // half normal
+    const ImVec2 hp0 = ImVec2(+hn.y, -hn.x);            // half perpendiculars + user offset
+    const ImVec2 hp1 = ImVec2(-hn.y, +hn.x);
 
     // Two triangles makes up one line. Using triangles allows us to reduce amount of draw calls.
     AddVtx(a + hp0, col);
@@ -6173,12 +6168,10 @@ void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec
     if ((col >> 24) == 0)
         return;
 
-    const ImVec2 offset(GImGui.IO.PixelCenterOffset,GImGui.IO.PixelCenterOffset);
-
     ReserveVertices(3);
-    AddVtx(a + offset, col);
-    AddVtx(b + offset, col);
-    AddVtx(c + offset, col);
+    AddVtx(a, col);
+    AddVtx(b, col);
+    AddVtx(c, col);
 }
 
 void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments)
@@ -6186,15 +6179,13 @@ void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int nu
     if ((col >> 24) == 0)
         return;
 
-    const ImVec2 offset(GImGui.IO.PixelCenterOffset,GImGui.IO.PixelCenterOffset);
-
     ReserveVertices((unsigned int)num_segments*6);
     const float a_step = 2*PI/(float)num_segments;
     float a0 = 0.0f;
     for (int i = 0; i < num_segments; i++)
     {
         const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        AddVtxLine(centre + offset + ImVec2(cosf(a0), sinf(a0))*radius, centre + ImVec2(cosf(a1), sinf(a1))*radius, col);
+        AddVtxLine(centre + ImVec2(cosf(a0), sinf(a0))*radius, centre + ImVec2(cosf(a1), sinf(a1))*radius, col);
         a0 = a1;
     }
 }
@@ -6204,17 +6195,15 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
     if ((col >> 24) == 0)
         return;
 
-    const ImVec2 offset(GImGui.IO.PixelCenterOffset,GImGui.IO.PixelCenterOffset);
-
     ReserveVertices((unsigned int)num_segments*3);
     const float a_step = 2*PI/(float)num_segments;
     float a0 = 0.0f;
     for (int i = 0; i < num_segments; i++)
     {
         const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        AddVtx(centre + offset + ImVec2(cosf(a0), sinf(a0))*radius, col);
-        AddVtx(centre + offset + ImVec2(cosf(a1), sinf(a1))*radius, col);
-        AddVtx(centre + offset, col);
+        AddVtx(centre + ImVec2(cosf(a0), sinf(a0))*radius, col);
+        AddVtx(centre + ImVec2(cosf(a1), sinf(a1))*radius, col);
+        AddVtx(centre, col);
         a0 = a1;
     }
 }
