@@ -6718,6 +6718,18 @@ void ImFont::BuildLookupTable()
         IndexLookup[i] = -1;
     for (size_t i = 0; i < Glyphs.size(); i++)
         IndexLookup[(int)Glyphs[i].Codepoint] = (int)i;
+
+    // Create a glyph to handle TAB
+    // FIXME: Needs proper TAB handling but it needs to be contextualized (can arbitrary say that each string starts at "column 0"
+    if (const ImFont::Glyph* space_glyph = FindGlyph((unsigned short)' '))
+    {
+        Glyphs.resize(Glyphs.size() + 1);
+        ImFont::Glyph& tab_glyph = Glyphs.back();
+        tab_glyph = *space_glyph;
+        tab_glyph.Codepoint = '\t';
+        tab_glyph.XAdvance *= 4;
+        IndexLookup[(int)tab_glyph.Codepoint] = (int)(Glyphs.size()-1);
+    }
 }
 
 const ImFont::Glyph* ImFont::FindGlyph(unsigned short c) const
@@ -6930,16 +6942,8 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
         }
 
         float char_width = 0.0f;
-        if (c == '\t')
-        {
-            if (const Glyph* glyph = FindGlyph((unsigned short)' '))
-                char_width = (glyph->XAdvance * 4) * scale;
-        }
-        else
-        {
-            if (const Glyph* glyph = FindGlyph((unsigned short)c))
-                char_width = glyph->XAdvance * scale;
-        }
+        if (const Glyph* glyph = FindGlyph((unsigned short)c))
+            char_width = glyph->XAdvance * scale;
 
         if (c == ' ' || c == '\t')
         {
@@ -7043,16 +7047,8 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         }
         
         float char_width = 0.0f;
-        if (c == '\t')
-        {
-            // FIXME: Better TAB handling
-            if (const Glyph* glyph = FindGlyph((unsigned short)' '))
-                char_width = (glyph->XAdvance * 4) * scale;
-        }
-        else if (const Glyph* glyph = FindGlyph((unsigned short)c))
-        {
+        if (const Glyph* glyph = FindGlyph((unsigned short)c))
             char_width = glyph->XAdvance * scale;
-        }
 
         if (line_width + char_width >= max_width)
             break;
@@ -7103,17 +7099,8 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
         }
         
         float char_width = 0.0f;
-        if (c == '\t')
-        {
-            // FIXME: Better TAB handling
-            if (const Glyph* glyph = FindGlyph((unsigned short)' '))
-                char_width = (glyph->XAdvance * 4) * scale;
-        }
-        else
-        {
-            if (const Glyph* glyph = FindGlyph((unsigned short)c))
-                char_width = glyph->XAdvance * scale;
-        }
+        if (const Glyph* glyph = FindGlyph((unsigned short)c))
+            char_width = glyph->XAdvance * scale;
 
         if (line_width + char_width >= max_width)
             break;
@@ -7200,16 +7187,10 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
         }
 
         float char_width = 0.0f;
-        if (c == '\t')
-        {
-            // FIXME: Better TAB handling
-            if (const Glyph* glyph = FindGlyph((unsigned short)' '))
-                char_width += (glyph->XAdvance * 4) * scale;
-        }
-        else if (const Glyph* glyph = FindGlyph((unsigned short)c))
+        if (const Glyph* glyph = FindGlyph((unsigned short)c))
         {
             char_width = glyph->XAdvance * scale;
-            if (c != ' ')
+            if (c != ' ' && c != '\t')
             {
                 // Clipping on Y is more likely
                 const float y1 = (float)(y + glyph->YOffset * scale);
