@@ -5448,9 +5448,13 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
             // Don't set local copy of 'edit_mode' right away!
             g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3);
         }
+        ImGui::SameLine();
+    }
+    else
+    {
+        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
     }
 
-    ImGui::SameLine();
     ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
 
     // Convert back
