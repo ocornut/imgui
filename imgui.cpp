@@ -64,7 +64,7 @@
  ================
 
  - your code creates the UI, if your code doesn't run the UI is gone! == dynamic UI, no construction step, less data retention on your side, no state duplication, less sync, less errors.
- - see ImGui::ShowTestWindow() for user-side sample code
+ - call and read ImGui::ShowTestWindow() for user-side sample code
  - see examples/ folder for standalone sample applications.
  - customization: use the style editor to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme), and report values in your code.
 
@@ -90,31 +90,35 @@
         // Load texture
         unsigned char* pixels;
         int width, height;
-        io.Font->GetTextureDataAlpha8(&pixels, &width, &height); // or use GetTextureDataRGBA32()
-        // TODO: copy texture to graphics memory. Store texture identifier for your engine in io.Font->TexID
+        io.FontAtlas->GetTexDataAsRGBA32(pixels, &width, &height);
+        // TODO: copy texture to graphics memory. 
+        // TODO: store your texture pointer/identifier in 'io.FontAtlas->TexID'
 
         // Application main loop
         while (true)
         {
-            // 1/ get low-level input
+            // 1) get low-level input
             // e.g. on Win32, GetKeyboardState(), or poll your events, etc.
             
-            // 2/ TODO: Fill all 'Input' fields of io structure and call NewFrame
+            // 2) TODO: fill all fields of IO structure and call NewFrame
             ImGuiIO& io = ImGui::GetIO();
             io.MousePos = ...
             io.KeysDown[i] = ...
             ImGui::NewFrame();
 
-            // 3/ most of your application code here - you can use any of ImGui::* functions between NewFrame() and Render() calls
+            // 3) most of your application code here - you can use any of ImGui::* functions at any point in the frame
+            ImGui::Begin("My window");
+            ImGui::Text("Hello, world.");
+            ImGui::End();
             GameUpdate();
             GameRender();
 
-            // 4/ render & swap video buffers
+            // 4) render & swap video buffers
             ImGui::Render();
             // swap video buffer, etc.
         }
 
-   - after calling ImGui::NewFrame() you can read back 'ImGui::GetIO().WantCaptureMouse' and 'ImGui::GetIO().WantCaptureKeyboard' to tell
+   - after calling ImGui::NewFrame() you can read back 'io.WantCaptureMouse' and 'io.WantCaptureKeyboard' to tell
      if ImGui wants to use your inputs. so typically can hide the mouse inputs from the rest of your application if ImGui is using it.
 
 
@@ -124,21 +128,33 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
 
- - 2015/01/11 (1.30) big font/image API change. now loads TTF file. allow for multiple fonts. no need for a PNG loader.
-                     removed GetDefaultFontData(). uses io.Font->GetTextureData*() API to retrieve uncompressed pixels.
-                     added texture identifier in ImDrawCmd passed to your render function.
-                     removed IO.PixelCenterOffset (unnecessary, can be handled in user projection matrix)
- - 2014/12/10 (1.18) removed SetNewWindowDefaultPos() in favor of new generic API SetNextWindowPos(pos, ImGuiSetCondition_FirstUseEver)
- - 2014/11/28 (1.17) moved IO.Font*** options to inside the IO.Font-> structure.
- - 2014/11/26 (1.17) reworked syntax of IMGUI_ONCE_UPON_A_FRAME helper macro to increase compiler compatibility
- - 2014/11/07 (1.15) renamed IsHovered() to IsItemHovered()
- - 2014/10/02 (1.14) renamed IMGUI_INCLUDE_IMGUI_USER_CPP to IMGUI_INCLUDE_IMGUI_USER_INL and imgui_user.cpp to imgui_user.inl (more IDE friendly)
- - 2014/09/25 (1.13) removed 'text_end' parameter from IO.SetClipboardTextFn (the string is now always zero-terminated for simplicity)
- - 2014/09/24 (1.12) renamed SetFontScale() to SetWindowFontScale()
- - 2014/09/24 (1.12) moved IM_MALLOC/IM_REALLOC/IM_FREE preprocessor defines to IO.MemAllocFn/IO.MemReallocFn/IO.MemFreeFn
- - 2014/08/30 (1.09) removed IO.FontHeight (now computed automatically)
- - 2014/08/30 (1.09) moved IMGUI_FONT_TEX_UV_FOR_WHITE preprocessor define to IO.FontTexUvForWhite
- - 2014/08/28 (1.09) changed the behavior of IO.PixelCenterOffset following various rendering fixes
+ - 2015/01/11 (1.30) - big font/image API change! now loads TTF file. allow for multiple fonts. no need for a PNG loader.
+              (1.30) - removed GetDefaultFontData(). uses io.FontAtlas->GetTextureData*() API to retrieve uncompressed pixels.
+                       this sequence:
+                           const void* png_data;
+                           unsigned int png_size;
+                           ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
+                           // <Copy to GPU>
+                       became:
+                           unsigned char* pixels;
+                           int width, height;
+                           io.FontAtlas->GetTexDataAsRGBA32(&pixels, &width, &height);
+                           // <Copy to GPU>
+                           io.FontAtlas->TexID = (your_texture_identifier);
+                       but we now have much more flexibility to load multiple TTF fonts and manage the texture buffer with the FontAtlas.
+              (1.30) - added texture identifier in ImDrawCmd passed to your render function (we can now render images). make sure to set io.FontAtlas->TexID.
+              (1.30) - removed IO.PixelCenterOffset (unnecessary, can be handled in user projection matrix)
+ - 2014/12/10 (1.18) - removed SetNewWindowDefaultPos() in favor of new generic API SetNextWindowPos(pos, ImGuiSetCondition_FirstUseEver)
+ - 2014/11/28 (1.17) - moved IO.Font*** options to inside the IO.Font-> structure.
+ - 2014/11/26 (1.17) - reworked syntax of IMGUI_ONCE_UPON_A_FRAME helper macro to increase compiler compatibility
+ - 2014/11/07 (1.15) - renamed IsHovered() to IsItemHovered()
+ - 2014/10/02 (1.14) - renamed IMGUI_INCLUDE_IMGUI_USER_CPP to IMGUI_INCLUDE_IMGUI_USER_INL and imgui_user.cpp to imgui_user.inl (more IDE friendly)
+ - 2014/09/25 (1.13) - removed 'text_end' parameter from IO.SetClipboardTextFn (the string is now always zero-terminated for simplicity)
+ - 2014/09/24 (1.12) - renamed SetFontScale() to SetWindowFontScale()
+ - 2014/09/24 (1.12) - moved IM_MALLOC/IM_REALLOC/IM_FREE preprocessor defines to IO.MemAllocFn/IO.MemReallocFn/IO.MemFreeFn
+ - 2014/08/30 (1.09) - removed IO.FontHeight (now computed automatically)
+ - 2014/08/30 (1.09) - moved IMGUI_FONT_TEX_UV_FOR_WHITE preprocessor define to IO.FontTexUvForWhite
+ - 2014/08/28 (1.09) - changed the behavior of IO.PixelCenterOffset following various rendering fixes
 
 
  TROUBLESHOOTING & FREQUENTLY ASKED QUESTIONS
@@ -165,12 +181,24 @@
       e.g. "##Foobar" display an empty label and uses "##Foobar" as ID
    - read articles about the imgui principles (see web links) to understand the requirement and use of ID.
 
- If you want to use a different font than the default embedded copy of ProggyClean.ttf (size 13), before calling io.Font->GetTextureData():
+ If you want to load a different font than the default (ProggyClean.ttf, size 13)
 
-     ImGuiIO& io = ImGui::GetIO();
-     io.Font->LoadFromFileTTF("myfontfile.ttf", size_pixels);
+     io.FontAtlas.AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
+     io.FontAtlas.GetTexDataAs****()
+
+ If you want to load multiple fonts, use the FontAtlas to pack them into a single texture!
+
+     ImFont* font0 = io.FontAtlas.AddFontDefault();
+     ImFont* font1 = io.FontAtlas.AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
+     io.FontAtlas.GetTexDataAs****()
+
+ If you want to display Chinese, Japanese, Korean characters, pass custom Unicode ranges when loading a font:
+
+     io.FontAtlas.AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, ImFontAtlas::GetGlyphRangesJapanese());  // Load Japanese characters
+     io.FontAtlas.GetTexDataAs****()
 
  If you want to input Japanese/Chinese/Korean in the text input widget:
+
     - when loading the font, pass a range that contains the characters you need, e.g.: ImFont::GetGlyphRangesJapanese()
     - to have the Microsoft IME cursor appears at the right location in the screen, setup a handler for the io.ImeSetInputScreenPosFn function:
 
@@ -196,7 +224,7 @@
  - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will evaluate to a block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can call Render() multiple times (e.g for VR renders), up to you to communicate the extra state to your RenderDrawListFn function.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
- - tip: read the ShowTestWindow() code for more example of how to use ImGui!
+ - tip: call and read the ShowTestWindow() code for more example of how to use ImGui!
 
 
  ISSUES & TODO-LIST
