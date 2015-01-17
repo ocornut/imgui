@@ -755,6 +755,7 @@ struct ImDrawList
 struct ImFont
 {
     // Settings
+    float               FontSize;           // <user set>      // Height of characters, set during loading (don't change after loading)
     float               Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
     ImVec2              DisplayOffset;      // = (0.0f,0.0f)   // Offset font rendering by xx pixels
     ImWchar             FallbackChar;       // = '?'           // Replacement glyph if one isn't found.
@@ -812,7 +813,6 @@ struct ImFont
     };
 
     // Runtime data
-    float               FontSize;           // Height of characters
     ImVector<Glyph>     Glyphs;
     ImVector<int>       IndexLookup;
     const Glyph*        FallbackGlyph;      // == FindGlyph(FontFallbackChar)

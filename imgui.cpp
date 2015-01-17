@@ -876,7 +876,7 @@ struct ImGuiState
     ImGuiIO                 IO;
     ImGuiStyle              Style;
     ImFont*                 Font;                               // (Shortcut) == FontStack.empty() ? IO.Font : FontStack.back()
-    float                   FontSize;                           // (Shortcut) == IO.FontGlobalScale * (Font->Scale * Font->FontSize). Vertical distance between two lines of text, aka == CalcTextSize(" ").y
+    float                   FontSize;                           // (Shortcut) == IO.FontGlobalScale * Font->Scale * Font->FontSize. Size of characters.
     ImVec2                  FontTexUvWhitePixel;                // (Shortcut) == Font->TexUvForWhite
 
     float                   Time;
@@ -2025,7 +2025,7 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
             continue;
         if (excluding_childs && (window->Flags & ImGuiWindowFlags_ChildWindow) != 0)
             continue;
-        ImGuiAabb bb(window->Pos - g.Style.TouchExtraPadding, window->Pos+window->Size + g.Style.TouchExtraPadding);
+        ImGuiAabb bb(window->Pos - g.Style.TouchExtraPadding, window->Pos + window->Size + g.Style.TouchExtraPadding);
         if (bb.Contains(pos))
             return window;
     }
@@ -6270,7 +6270,6 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
 ImFont::ImFont()
 {
     Scale = 1.0f;
-    DisplayOffset = ImVec2(0.5f, 0.5f);
     FallbackChar = (ImWchar)'?';
 
     TexPixelsAlpha8 = NULL;
@@ -6328,14 +6327,14 @@ void    ImFont::ClearTextureData()
 
 void    ImFont::Clear()
 {
-    DisplayOffset = ImVec2(0.5f, 0.5f);
+    FontSize = 0.0f;
+    DisplayOffset = ImVec2(-0.5f, 0.5f);
 
     ClearTextureData();
     TexID = NULL;
     TexWidth = TexHeight = 0;
     TexExtraDataPos = TexUvWhitePixel = ImVec2(0, 0);
 
-    FontSize = 0.0f;
     Glyphs.clear();
     IndexLookup.clear();
     FallbackGlyph = NULL;
@@ -6947,6 +6946,11 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         text_size.y += line_height;
     }
 
+    // Cancel out character spacing for the last character of a line (it is baked into glyph->XAdvance field)
+    const float character_spacing_x = 1.0f * scale;
+    if (text_size.x > 0.0f)
+        text_size.x -= character_spacing_x;
+
     if (remaining)
         *remaining = s;
 
@@ -7002,6 +7006,11 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
             text_size.x = line_width;
         text_size.y += line_height;
     }
+
+    // Cancel out character spacing for the last character of a line (it is baked into glyph->XAdvance field)
+    const float character_spacing_x = 1.0f * scale;
+    if (text_size.x > 0.0f)
+        text_size.x -= character_spacing_x;
 
     if (remaining)
         *remaining = s;
@@ -7321,7 +7330,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     {
         static float window_scale = 1.0f;
         ImFont* font = ImGui::GetIO().Font;
-        ImGui::Text("Font Size: %.2f", font->FontSize);
+        ImGui::Text("Base Font Size: %.2f", font->FontSize);
         ImGui::SliderFloat("window scale", &window_scale, 0.3f, 2.0f, "%.1f");                   // scale only this window
         ImGui::SliderFloat("font scale", &font->Scale, 0.3f, 2.0f, "%.1f");                      // scale only this font
         ImGui::SliderFloat("global scale", &ImGui::GetIO().FontGlobalScale, 0.3f, 2.0f, "%.1f"); // scale everything
