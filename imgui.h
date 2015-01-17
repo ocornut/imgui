@@ -175,18 +175,21 @@ namespace ImGui
     IMGUI_API void          SetStateStorage(ImGuiStorage* tree);                                // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it).
     IMGUI_API ImGuiStorage* GetStateStorage();
 
-    IMGUI_API void          PushItemWidth(float item_width);                                    // width of items for the common item+label case. default to ~2/3 of windows width.
-    IMGUI_API void          PopItemWidth();
-    IMGUI_API float         GetItemWidth();
+    // Parameters stacks (shared)
     IMGUI_API void          PushFont(ImFont* font);
     IMGUI_API void          PopFont();
-    IMGUI_API void          PushAllowKeyboardFocus(bool v);                                     // allow focusing using TAB/Shift-TAB, enabled by default but you can disable it for certain widgets.
-    IMGUI_API void          PopAllowKeyboardFocus();
     IMGUI_API void          PushStyleColor(ImGuiCol idx, const ImVec4& col);
     IMGUI_API void          PopStyleColor(int count = 1);
     IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, float val);
     IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, const ImVec2& val);
     IMGUI_API void          PopStyleVar(int count = 1);
+
+    // Parameters stacks (current window)
+    IMGUI_API void          PushItemWidth(float item_width);                                    // width of items for the common item+label case. default to ~2/3 of windows width.
+    IMGUI_API void          PopItemWidth();
+    IMGUI_API float         GetItemWidth();
+    IMGUI_API void          PushAllowKeyboardFocus(bool v);                                     // allow focusing using TAB/Shift-TAB, enabled by default but you can disable it for certain widgets.
+    IMGUI_API void          PopAllowKeyboardFocus();
     IMGUI_API void          PushTextWrapPos(float wrap_pos_x = 0.0f);                           // word-wrapping for Text*() commands. < 0.0f: no wrapping; 0.0f: wrap to end of window (or column); > 0.0f: wrap at 'wrap_pos_x' position in window local space.
     IMGUI_API void          PopTextWrapPos();
 
@@ -802,7 +805,7 @@ struct ImFont
     struct Glyph
     {
         ImWchar         Codepoint;
-		signed short    XAdvance;
+        signed short    XAdvance;
         signed short    Width, Height;
         signed short    XOffset, YOffset;
         float           U0, V0, U1, V1;     // Texture coordinates

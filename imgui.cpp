@@ -90,7 +90,7 @@
         // Load texture
         unsigned char* pixels;
         int width, height;
-        io.Font->GetTextureData(&pixels, &width, &height);
+        io.Font->GetTextureDataAlpha8(&pixels, &width, &height); // or use GetTextureDataRGBA32()
         // TODO: copy texture to graphics memory. Store texture identifier for your engine in io.Font->TexID
 
         // Application main loop
@@ -1688,6 +1688,7 @@ void ImGui::Shutdown()
     g.Settings.clear();
     g.ColorModifiers.clear();
     g.StyleModifiers.clear();
+	g.FontStack.clear();
     g.ColorEditModeStorage.Clear();
     if (g.LogFile && g.LogFile != stdout)
     {
@@ -2373,7 +2374,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
     if (first_begin_of_the_frame)
     {
         window->DrawList->Clear();
-        window->DrawList->PushTextureID(g.IO.Font->TexID);
+        window->DrawList->PushTextureID(g.Font->TexID);
         window->Visible = true;
 
         // New windows appears in front
@@ -2686,7 +2687,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
     else
     {
         // Short path when we do multiple Begin in the same frame.
-        window->DrawList->PushTextureID(g.IO.Font->TexID);
+        window->DrawList->PushTextureID(g.Font->TexID);
 
         // Outer clipping rectangle
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
@@ -2811,14 +2812,16 @@ void ImGui::PushFont(ImFont* font)
 {
     ImGuiState& g = GImGui;
 
-    g.FontStack.push_back(font);
-    SetFont(font);
+	SetFont(font);
+	g.FontStack.push_back(font);
+	g.CurrentWindow->DrawList->PushTextureID(font->TexID);
 }
 
 void  ImGui::PopFont()
 {
     ImGuiState& g = GImGui;
 
+	g.CurrentWindow->DrawList->PopTextureID();
     g.FontStack.pop_back();
     SetFont(g.FontStack.empty() ? g.IO.Font : g.FontStack.back());
 }
@@ -6220,9 +6223,7 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
     if (text_end == NULL)
         text_end = text_begin + strlen(text_begin);
 
-    const bool push_texture_id = font->TexID != texture_id_stack.back();
-    if (push_texture_id)
-        PushTextureID(font->TexID);
+    IM_ASSERT(font->TexID == texture_id_stack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
     // reserve vertices for worse case
     const unsigned int char_count = (unsigned int)(text_end - text_begin);
@@ -6237,9 +6238,6 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
     const size_t vtx_count = vtx_buffer.size() - vtx_begin;
     commands.back().vtx_count -= (unsigned int)(vtx_count_max - vtx_count);
     vtx_write -= (vtx_count_max - vtx_count);
-
-    if (push_texture_id)
-        PopTextureID();
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
