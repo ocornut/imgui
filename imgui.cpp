@@ -2848,7 +2848,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
     ImGuiState& g = GImGui;
 
     float* pvar = GetStyleVarFloatAddr(idx);
-    IM_ASSERT(pvar != NULL); // Called wrong function?
+    IM_ASSERT(pvar != NULL); // Called function with wrong-type? Variable is not a float.
     ImGuiStyleMod backup;
     backup.Var = idx;
     backup.PreviousValue = ImVec2(*pvar, 0.0f);
@@ -2862,7 +2862,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
     ImGuiState& g = GImGui;
 
     ImVec2* pvar = GetStyleVarVec2Addr(idx);
-    IM_ASSERT(pvar != NULL); // Called wrong function?
+    IM_ASSERT(pvar != NULL); // Called function with wrong-type? Varialble is not a ImVec2.
     ImGuiStyleMod backup;
     backup.Var = idx;
     backup.PreviousValue = *pvar;
