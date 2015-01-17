@@ -239,6 +239,7 @@
  - window: resizing from any sides? + mouse cursor directives for app.
  - widgets: switching from "widget-label" to "label-widget" would make it more convenient to integrate widgets in trees
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
+ - main: considering adding EndFrame() - optional, else done in Render(). and Init()
  - main: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
@@ -1790,6 +1791,10 @@ void ImGui::Render()
             g.CurrentWindow->Visible = false;
         ImGui::End();
 
+        // Select window for move/focus when we're done with all our widgets (we only consider non-childs windows here)
+        if (g.ActiveId == 0 && g.HoveredId == 0 && g.HoveredRootWindow != NULL && g.IO.MouseClicked[0])
+            g.ActiveId = g.HoveredRootWindow->GetID("#MOVE");
+
         // Sort the window list so that all child windows are after their parent
         // We cannot do that on FocusWindow() because childs may not exist yet
         ImVector<ImGuiWindow*> sorted_windows;
@@ -2760,11 +2765,6 @@ void ImGui::End()
     PopClipRect();   // outer window clip rectangle
     window->DrawList->PopTextureID();
 
-    // Select window for move/focus when we're done with all our widgets (we only consider non-childs windows here)
-    const ImGuiAabb bb(window->Pos, window->Pos+window->Size);
-    if (g.ActiveId == 0 && g.HoveredId == 0 && g.HoveredRootWindow == window && IsMouseHoveringBox(bb) && g.IO.MouseClicked[0])
-        g.ActiveId = window->GetID("#MOVE");
-
     // Stop logging
     if (!(window->Flags & ImGuiWindowFlags_ChildWindow))    // FIXME: add more options for scope of logging
         ImGui::LogFinish();
@@ -2925,7 +2925,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
     ImGuiState& g = GImGui;
 
     float* pvar = GetStyleVarFloatAddr(idx);
-    IM_ASSERT(pvar != NULL); // Called wrong function?
+    IM_ASSERT(pvar != NULL); // Called function with wrong-type? Variable is not a float.
     ImGuiStyleMod backup;
     backup.Var = idx;
     backup.PreviousValue = ImVec2(*pvar, 0.0f);
@@ -2939,7 +2939,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
     ImGuiState& g = GImGui;
 
     ImVec2* pvar = GetStyleVarVec2Addr(idx);
-    IM_ASSERT(pvar != NULL); // Called wrong function?
+    IM_ASSERT(pvar != NULL); // Called function with wrong-type? Varialble is not a ImVec2.
     ImGuiStyleMod backup;
     backup.Var = idx;
     backup.PreviousValue = *pvar;
@@ -5547,9 +5547,13 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
             // Don't set local copy of 'edit_mode' right away!
             g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3);
         }
+        ImGui::SameLine();
+    }
+    else
+    {
+        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
     }
 
-    ImGui::SameLine();
     ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
 
     // Convert back
