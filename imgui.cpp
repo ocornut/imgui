@@ -323,6 +323,7 @@ static void         RenderText(ImVec2 pos, const char* text, const char* text_en
 static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
 static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
 
+static void         SetFont(ImFont* font);
 static void         ItemSize(ImVec2 size, ImVec2* adjust_start_offset = NULL);
 static void         ItemSize(const ImGuiAabb& aabb, ImVec2* adjust_start_offset = NULL);
 static void         PushColumnClipRect(int column_index = -1);
@@ -345,9 +346,10 @@ static const char*  ImStristr(const char* haystack, const char* needle, const ch
 static size_t       ImFormatString(char* buf, size_t buf_size, const char* fmt, ...);
 static size_t       ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args);
 
-// Helpers: Data
+// Helpers: Misc
 static ImU32        ImCrc32(const void* data, size_t data_size, ImU32 seed);
 static bool         ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size, size_t padding_bytes = 0);
+static int          ImUpperPowerOfTwo(int v) { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 
 // Helpers: Color Conversion
 static ImU32        ImConvertColorFloat4ToU32(const ImVec4& in);
@@ -873,8 +875,9 @@ struct ImGuiState
     bool                    Initialized;
     ImGuiIO                 IO;
     ImGuiStyle              Style;
-    float                   FontSize;                           // == IO.FontGlobalScale * IO.Font->Scale * IO.Font->Info->FontSize. Vertical distance between two lines of text, aka == CalcTextSize(" ").y
-    ImVec2                  FontTexUvWhitePixel;                // == IO.Font->TexUvForWhite (cached copy)
+    ImFont*                 Font;                               // (Shortcut) == FontStack.empty() ? IO.Font : FontStack.back()
+    float                   FontSize;                           // (Shortcut) == IO.FontGlobalScale * (Font->Scale * Font->FontSize). Vertical distance between two lines of text, aka == CalcTextSize(" ").y
+    ImVec2                  FontTexUvWhitePixel;                // (Shortcut) == Font->TexUvForWhite
 
     float                   Time;
     int                     FrameCount;
@@ -893,6 +896,7 @@ struct ImGuiState
     ImVector<ImGuiIniData*> Settings;
     ImVector<ImGuiColMod>   ColorModifiers;
     ImVector<ImGuiStyleMod> StyleModifiers;
+    ImVector<ImFont*>       FontStack;
     ImVec2                  SetNextWindowPosVal;
     ImGuiSetCondition       SetNextWindowPosCond;
     ImVec2                  SetNextWindowSizeVal;
@@ -1003,7 +1007,7 @@ public:
     void        FocusItemUnregister();
 
     ImGuiAabb   Aabb() const                            { return ImGuiAabb(Pos, Pos+Size); }
-    ImFont*     Font() const                            { return GImGui.IO.Font; }
+    ImFont*     Font() const                            { return GImGui.Font; }
     float       FontSize() const                        { return GImGui.FontSize * FontWindowScale; }
     ImVec2      CursorPos() const                       { return DC.CursorPos; }
     float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0 : FontSize() + GImGui.Style.FramePadding.y * 2.0f; }
@@ -1537,11 +1541,7 @@ void ImGui::NewFrame()
         g.Initialized = true;
     }
 
-    IM_ASSERT(g.IO.Font->Scale > 0.0f);
-    g.FontSize = g.IO.FontGlobalScale * g.IO.Font->FontSize * g.IO.Font->Scale;
-    g.FontTexUvWhitePixel = g.IO.Font->TexUvWhitePixel;
-    g.IO.Font->FallbackGlyph = NULL;
-    g.IO.Font->FallbackGlyph = g.IO.Font->FindGlyph(g.IO.Font->FallbackChar);
+    SetFont(g.IO.Font);
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
@@ -2793,6 +2793,34 @@ float ImGui::GetItemWidth()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->DC.ItemWidth.back();
+}
+
+static void SetFont(ImFont* font)
+{
+    ImGuiState& g = GImGui;
+
+    IM_ASSERT(font->Scale > 0.0f);
+    g.Font = font;
+    g.FontSize = g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale;
+    g.FontTexUvWhitePixel = g.Font->TexUvWhitePixel;
+    g.Font->FallbackGlyph = NULL;
+    g.Font->FallbackGlyph = g.Font->FindGlyph(g.Font->FallbackChar);
+}
+
+void ImGui::PushFont(ImFont* font)
+{
+    ImGuiState& g = GImGui;
+
+    g.FontStack.push_back(font);
+    SetFont(font);
+}
+
+void  ImGui::PopFont()
+{
+    ImGuiState& g = GImGui;
+
+    g.FontStack.pop_back();
+    SetFont(g.FontStack.empty() ? g.IO.Font : g.FontStack.back());
 }
 
 void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus)
@@ -6432,8 +6460,6 @@ bool    ImFont::LoadFromFileTTF(const char* filename, float size_pixels, const I
     return ret;
 }
 
-static int ImUpperPowerOfTwo(int v) { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
-
 bool    ImFont::LoadFromMemoryTTF(const void* data, size_t data_size, float size_pixels, const ImWchar* glyph_ranges, int font_no)
 {
     Clear();
@@ -6841,7 +6867,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
 ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining) const
 {
     if (!text_end)
-        text_end = text_begin + strlen(text_begin); // FIXME-OPT
+        text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
 
     const float scale = size / FontSize;
     const float line_height = FontSize * scale;
@@ -6890,8 +6916,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         
         if (c == '\n')
         {
-            if (text_size.x < line_width)
-                text_size.x = line_width;
+            text_size.x = ImMax(text_size.x, line_width);
             text_size.y += line_height;
             line_width = 0.0f;
             continue;
@@ -6946,8 +6971,7 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
 
         if (c == '\n')
         {
-            if (text_size.x < line_width)
-                text_size.x = line_width;
+            text_size.x = ImMax(text_size.x, line_width);
             text_size.y += line_height;
             line_width = 0.0f;
             continue;
@@ -7435,7 +7459,7 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::TreeNode("UTF-8 Text"))
         {
             // UTF-8 test with Japanese characters
-			// (needs a suitable font, try Arial Unicode or M+ fonts http://mplus-fonts.sourceforge.jp/mplus-outline-fonts/index-en.html)
+            // (needs a suitable font, try Arial Unicode or M+ fonts http://mplus-fonts.sourceforge.jp/mplus-outline-fonts/index-en.html)
             // Most compiler appears to support UTF-8 in source code (with Visual Studio you need to save your file as 'UTF-8 without signature')
             // However for the sake for maximum portability here we are *not* including raw UTF-8 character in this source file, instead we encode the string with hexadecimal constants.
             // In your own application be reasonable and use UTF-8 in source or retrieve the data from file system!

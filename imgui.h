@@ -178,6 +178,8 @@ namespace ImGui
     IMGUI_API void          PushItemWidth(float item_width);                                    // width of items for the common item+label case. default to ~2/3 of windows width.
     IMGUI_API void          PopItemWidth();
     IMGUI_API float         GetItemWidth();
+    IMGUI_API void          PushFont(ImFont* font);
+    IMGUI_API void          PopFont();
     IMGUI_API void          PushAllowKeyboardFocus(bool v);                                     // allow focusing using TAB/Shift-TAB, enabled by default but you can disable it for certain widgets.
     IMGUI_API void          PopAllowKeyboardFocus();
     IMGUI_API void          PushStyleColor(ImGuiCol idx, const ImVec4& col);
@@ -753,16 +755,16 @@ struct ImFont
     float               Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
     ImVec2              DisplayOffset;      // = (0.0f,0.0f)   // Offset font rendering by xx pixels
     ImWchar             FallbackChar;       // = '?'           // Replacement glyph if one isn't found.
-	ImTextureID         TexID;              // = 0             // After loading texture, store your texture handle here (ignore if you aren't using multiple fonts/textures)
+    ImTextureID         TexID;              // = 0             // After loading texture, store your texture handle here (ignore if you aren't using multiple fonts/textures)
 
-	// Retrieve texture data
+    // Retrieve texture data
     // User is in charge of copying the pixels into graphics memory, then set 'TexID'.
-	// RGBA32 format is provided for convenience and high compatibility, but note that all RGB pixels are white.
-	// If you intend to use large font it may be pref
-	// NB: the data is invalidated as soon as you call a Load* function.
-	IMGUI_API void                  GetTextureDataRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 4 bytes-per-pixel
-	IMGUI_API void                  GetTextureDataAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 1 byte per-pixel
-	IMGUI_API void                  ClearTextureData();        // Save RAM once the texture has been copied to graphics memory.
+    // RGBA32 format is provided for convenience and high compatibility, but note that all RGB pixels are white.
+    // If you intend to use large font it may be pref
+    // NB: the data is invalidated as soon as you call a Load* function.
+    IMGUI_API void                  GetTextureDataRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 4 bytes-per-pixel
+    IMGUI_API void                  GetTextureDataAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 1 byte per-pixel
+    IMGUI_API void                  ClearTextureData();        // Save RAM once the texture has been copied to graphics memory.
 
     // Methods
     IMGUI_API ImFont();
@@ -772,7 +774,7 @@ struct ImFont
     IMGUI_API bool                  LoadFromMemoryTTF(const void* data, size_t data_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0);
     IMGUI_API void                  Clear();
     IMGUI_API void                  BuildLookupTable();
-	struct Glyph;
+    struct Glyph;
     IMGUI_API const Glyph*          FindGlyph(unsigned short c) const;
     IMGUI_API bool                  IsLoaded() const { return !Glyphs.empty(); }
 
@@ -788,29 +790,29 @@ struct ImFont
     IMGUI_API void                  RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width = 0.0f) const;
     IMGUI_API const char*           CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
 
-	// Texture data
-	// Access via GetTextureData() which will load the font if not loaded
-	unsigned char*      TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
-	unsigned int*       TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
-	int                 TexWidth;
-	int                 TexHeight;
-	ImVec2              TexExtraDataPos;    // Position of our rectangle where we draw non-font graphics
-	ImVec2              TexUvWhitePixel;    // Texture coordinates to a white pixel (part of the TexExtraData block)
+    // Texture data
+    // Access via GetTextureData() which will load the font if not loaded
+    unsigned char*      TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
+    unsigned int*       TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
+    int                 TexWidth;
+    int                 TexHeight;
+    ImVec2              TexExtraDataPos;    // Position of our rectangle where we draw non-font graphics
+    ImVec2              TexUvWhitePixel;    // Texture coordinates to a white pixel (part of the TexExtraData block)
 
-	struct Glyph
-	{
-		ImWchar         Codepoint;
+    struct Glyph
+    {
+        ImWchar         Codepoint;
 		signed short    XAdvance;
-		signed short    Width, Height;
-		signed short    XOffset, YOffset;
-		float           U0, V0, U1, V1;     // Texture coordinates
-	};
+        signed short    Width, Height;
+        signed short    XOffset, YOffset;
+        float           U0, V0, U1, V1;     // Texture coordinates
+    };
 
-	// Runtime data
-	float               FontSize;           // Height of characters
-	ImVector<Glyph>     Glyphs;
-	ImVector<int>       IndexLookup;
-	const Glyph*        FallbackGlyph;      // == FindGlyph(FontFallbackChar)
+    // Runtime data
+    float               FontSize;           // Height of characters
+    ImVector<Glyph>     Glyphs;
+    ImVector<int>       IndexLookup;
+    const Glyph*        FallbackGlyph;      // == FindGlyph(FontFallbackChar)
 };
 
 //---- Include imgui_user.h at the end of imgui.h
