@@ -8,12 +8,14 @@ ImGui is designed to enable fast iteration and allow programmers to create "cont
 
 ImGui is particularly suited to integration in 3D applications, fullscreen applications, embedded applications, games, or any applications on consoles platforms where operating system features are non-standard. 
 
-ImGui is self-contained within 4 files that you can easily copy and compile into your application/engine:
+ImGui is self-contained within 6 files that you can easily copy and compile into your application/engine:
 
   - imgui.cpp
   - imgui.h
   - imconfig.h (empty by default, user-editable)
+  - stb_rect_pack.h
   - stb_textedit.h
+  - stb_truetype.h
 
 Your code passes mouse/keyboard inputs and settings to ImGui (see example applications for more details). After ImGui is setup, you can use it like in this example:
 
@@ -31,7 +33,7 @@ Gallery
 ![screenshot 3](/web/test_window_03.png?raw=true)
 ![screenshot 4](/web/test_window_04.png?raw=true)
 
-UTF-8 is supported for text display and input. Here using M+ font to display Japanese:
+ImGui can load TTF fonts. UTF-8 is supported for text display and input. Here using M+ font to display Japanese:
 
 ![utf-8 screenshot](/web/utf8_sample_01.png?raw=true)
 
@@ -57,8 +59,7 @@ I recommend using [Synergy](http://synergy-project.org). With the uSynergy.c mic
 
 <b>I integrated ImGui in my engine and the text or lines are blurry..</b>
 
-- Try adjusting ImGui::GetIO().PixelCenterOffset to 0.0f or 0.5f.
-- In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
+In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
 
 <b>Can you create elaborate/serious tools with ImGui?</b>
 
@@ -100,6 +101,7 @@ Credits
 Developed by [Omar Cornut](http://www.miracleworld.net) and every direct or indirect contributors to the GitHub. The early version of this library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com). 
 
 Embeds [ProggyClean.ttf](http://upperbounds.net) font by Tristan Grimmer (MIT license).
+
 Embeds [stb_textedit.h, stb_truetype.h, stb_rectpack.h](https://github.com/nothings/stb/) by Sean Barrett (public domain).
 
 Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. And everybody posting feedback, questions and patches on the GitHub.
