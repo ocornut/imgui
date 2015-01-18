@@ -320,6 +320,9 @@ namespace ImGui
     IMGUI_API const char*   GetStyleColName(ImGuiCol idx);
     IMGUI_API ImVec2        CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
 
+    // Obsolete (will be removed)
+    IMGUI_API void          GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size);
+
 } // namespace ImGui
 
 // Flags for ImGui::Begin()

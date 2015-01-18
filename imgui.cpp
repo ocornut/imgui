@@ -185,18 +185,18 @@
  If you want to load a different font than the default (ProggyClean.ttf, size 13)
 
      io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
-     io.Fonts->GetTexDataAs****()
+     io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
 
  If you want to load multiple fonts, use the font atlas to pack them into a single texture!
 
      ImFont* font0 = io.Fonts->AddFontDefault();
      ImFont* font1 = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
-     io.Fonts->GetTexDataAs****()
+     io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
 
  If you want to display Chinese, Japanese, Korean characters, pass custom Unicode ranges when loading a font:
 
      io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, io.Fonts->GetGlyphRangesJapanese());  // Load Japanese characters
-     io.Fonts->GetTexDataAs****()
+     io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
 
  If you want to input Japanese/Chinese/Korean in the text input widget:
 
@@ -6357,6 +6357,17 @@ void    ImFontAtlas::Clear()
         ImGui::MemFree(Fonts[i]);
     }
     Fonts.clear();
+}
+
+void ImGui::GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size)
+{
+    printf("GetDefaultFontData() is obsoleted in ImGui 1.30.\n");
+    printf("Please use ImGui::GetIO().Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8() functions to retrieve uncompressed texture data.\n");
+    if (fnt_data) *fnt_data = NULL;
+    if (fnt_size) *fnt_size = 0;
+    if (png_data) *png_data = NULL;
+    if (png_size) *png_size = 0;
+    IM_ASSERT(false);
 }
 
 void    ImFontAtlas::GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
