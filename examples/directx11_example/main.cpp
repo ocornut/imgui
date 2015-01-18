@@ -381,8 +381,11 @@ void LoadFontsTexture()
 {
     // Load one or more font
     ImGuiIO& io = ImGui::GetIO();
-    //ImFont* my_font = io.Fonts->AddFontDefault();
-    //ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, io.Fonts->GetGlyphRangesJapanese());
+    //ImFont* my_font1 = io.Fonts->AddFontDefault();
+    //ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("extra_fonts/Karla-Regular.ttf", 15.0f);
+    //ImFont* my_font3 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyClean.ttf", 13.0f); my_font3->DisplayOffset.y += 1;
+    //ImFont* my_font4 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyTiny.ttf", 10.0f); my_font4->DisplayOffset.y += 1;
+    //ImFont* my_font5 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, io.Fonts->GetGlyphRangesJapanese());
 
     // Build
     unsigned char* pixels;
