@@ -145,15 +145,15 @@ void InitGL()
     glewInit();
 }
 
-void LoadFontTexture()
+void LoadFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
-    //ImFont* my_font = io.FontAtlas->AddFontDefault();
-    //ImFont* my_font2 = io.FontAtlas->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, ImFontAtlas::GetGlyphRangesJapanese());
+    //ImFont* my_font = io.Fonts->AddFontDefault();
+    //ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, io.Fonts->GetGlyphRangesJapanese());
 
     unsigned char* pixels;
     int width, height;
-    io.FontAtlas->GetTexDataAsAlpha8(&pixels, &width, &height);
+    io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
 
     GLuint tex_id;
     glGenTextures(1, &tex_id);
@@ -163,7 +163,7 @@ void LoadFontTexture()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier
-    io.FontAtlas->TexID = (void *)(intptr_t)tex_id;
+    io.Fonts->TexID = (void *)(intptr_t)tex_id;
 }
 
 void InitImGui()
@@ -191,6 +191,8 @@ void InitImGui()
     io.RenderDrawListsFn = ImImpl_RenderDrawLists;
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
+
+    LoadFontsTexture();
 }
 
 void UpdateImGui()

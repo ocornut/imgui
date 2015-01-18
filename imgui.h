@@ -494,7 +494,7 @@ struct ImGuiIO
     int           KeyMap[ImGuiKey_COUNT];   // <unset>              // Map of indices into the KeysDown[512] entries array
     void*         UserData;                 // = NULL               // Store your own data for retrieval by callbacks.
 
-    ImFontAtlas*  FontAtlas;                // <auto>               // Load and assemble one or more fonts into a single tightly packed texture. Output to Fonts array.
+    ImFontAtlas*  Fonts;                    // <auto>               // Load and assemble one or more fonts into a single tightly packed texture. Output to Fonts array.
     float         FontGlobalScale;          // = 1.0f               // Global scale all fonts
     bool          FontAllowUserScaling;     // = false              // Allow user scaling text of individual window with CTRL+Wheel.
 
@@ -748,61 +748,58 @@ struct ImDrawList
 };
 
 // Load and rasterize multiple TTF fonts into a same texture.
-// We also add custom graphic data into the texture that serves for ImGui.
 // Sharing a texture for multiple fonts allows us to reduce the number of draw calls during rendering.
-// The simple use case, if you don't intent to load custom or multiple fonts, is:
-//   1. GetTexDataAsRGBA32() or GetTexDataAsAlpha8()    // to obtain pixels
-//   2. <upload the texture to graphics memory>
-//   3. SetTexID(my_engine_id);                         // use the pointer/id to your texture in your engine format
-//   4. ClearPixelsData()                               // to save memory
+// We also add custom graphic data into the texture that serves for ImGui.
+//  1. (Optional) Call AddFont*** functions. If you don't call any, the default font will be loaded for you.
+//  2. Call GetTexDataAsAlpha8() or GetTexDataAsRGBA32() to build and retrieve pixels data.
+//  3. Upload the pixels data into a texture within your graphics system.
+//  4. Call SetTexID(my_tex_id); and pass the pointer/identifier to your texture. This value will be passed back to you during rendering to identify the texture.
+//  5. Call ClearPixelsData() to free textures memory on the heap.
 struct ImFontAtlas
 {
-    // Methods
     IMGUI_API ImFontAtlas();
     IMGUI_API ~ImFontAtlas();
-    IMGUI_API ImFont*   AddFontDefault();
-    IMGUI_API ImFont*   AddFontFromFileTTF(const char* filename, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0);
-    IMGUI_API ImFont*   AddFontFromMemoryTTF(void* in_ttf_data, size_t in_ttf_data_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0); // Pass ownership of 'in_ttf_data' memory.
-    IMGUI_API bool      Build();
-    IMGUI_API void      ClearInputData();
-    IMGUI_API void      ClearFonts();
-    IMGUI_API void      ClearTexData();     // Saves RAM once the texture has been copied to graphics memory.
-    IMGUI_API void      Clear()             { ClearInputData(); ClearTexData(); ClearFonts(); }
-    IMGUI_API bool      IsBuilt() const     { return !Fonts.empty(); }
+    IMGUI_API ImFont*           AddFontDefault();
+    IMGUI_API ImFont*           AddFontFromFileTTF(const char* filename, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0);
+    IMGUI_API ImFont*           AddFontFromMemoryTTF(void* in_ttf_data, size_t in_ttf_data_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0); // Pass ownership of 'in_ttf_data' memory.
+    IMGUI_API void              ClearTexData();             // Saves RAM once the texture has been copied to graphics memory.
+    IMGUI_API void              Clear();
 
-    // Methods: Retrieve texture data
+    // Retrieve texture data
     // User is in charge of copying the pixels into graphics memory, then call SetTextureUserID()
     // After loading the texture into your graphic system, store your texture handle in 'TexID' (ignore if you aren't using multiple fonts nor images)
     // RGBA32 format is provided for convenience and high compatibility, but note that all RGB pixels are white, so 75% of the memory is wasted.
-    IMGUI_API void      GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 4 bytes-per-pixel
-    IMGUI_API void      GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 1 byte per-pixel
-    IMGUI_API void      SetTexID(void* id)  { TexID = id; }
+    IMGUI_API void              GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 1 byte per-pixel
+    IMGUI_API void              GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 4 bytes-per-pixel
+    IMGUI_API void              SetTexID(void* id)  { TexID = id; }
 
-    // Static helper: Retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
-    static IMGUI_API const ImWchar* GetGlyphRangesDefault();    // Basic Latin, Extended Latin
-    static IMGUI_API const ImWchar* GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
-    static IMGUI_API const ImWchar* GetGlyphRangesChinese();    // Japanese + full set of about 21000 CJK Unified Ideographs
+    // Helpers to retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
+    // (Those functions could be static, aren't so simple use case doesn't have to refer to the ImFontAtlas:: type ever if in their code)
+    IMGUI_API const ImWchar*    GetGlyphRangesDefault();    // Basic Latin, Extended Latin
+    IMGUI_API const ImWchar*    GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
+    IMGUI_API const ImWchar*    GetGlyphRangesChinese();    // Japanese + full set of about 21000 CJK Unified Ideographs
 
     // Members
-    // Access texture data via GetTextureData*() calls which will setup a default font for you.
-    void*               TexID;              // User data to refer to the texture once it has been uploaded to user's graphic systems. It ia passed back to you during rendering.
-    unsigned char*      TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
-    unsigned int*       TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
-    int                 TexWidth;
-    int                 TexHeight;
-    ImVec2              TexExtraDataPos;    // Position of our rectangle where we draw non-font graphics
-    ImVec2              TexUvWhitePixel;    // Texture coordinates to a white pixel (part of the TexExtraData block)
-    ImVector<ImFont*>   Fonts;
+    // (Access texture data via GetTexData*() calls which will setup a default font for you.)
+    void*                       TexID;              // User data to refer to the texture once it has been uploaded to user's graphic systems. It ia passed back to you during rendering.
+    unsigned char*              TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
+    unsigned int*               TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
+    int                         TexWidth;
+    int                         TexHeight;
+    ImVec2                      TexExtraDataPos;    // Position of our rectangle where we draw non-font graphics
+    ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel (part of the TexExtraData block)
+    ImVector<ImFont*>           Fonts;
 
+    // Private
     struct ImFontAtlasData;
-    ImVector<ImFontAtlasData*> InputData;   // Internal data
+    ImVector<ImFontAtlasData*>  InputData;          // Internal data
+    IMGUI_API bool              Build();            // Build pixels data. This is automatically for you by the GetTexData*** functions.
+    IMGUI_API void              ClearInputData();   // Clear the input TTF data.
 };
 
 // TTF font loading and rendering
-// - ImGui automatically loads a default embedded font for you
-// - Call GetTextureData() to retrieve pixels data so you can upload the texture to your graphics system.
-// - Store your texture handle in 'TexID'. It will be passed back to you when rendering ('texture_id' field in ImDrawCmd)
-// (NB: kerning isn't supported. At the moment some ImGui code does per-character CalcTextSize calls, need something more state-ful)
+// ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
+// Kerning isn't supported. At the moment some ImGui code does per-character CalcTextSize calls, need something more state-ful.
 struct ImFont
 {
     // Members: Settings
@@ -822,20 +819,16 @@ struct ImFont
     };
     ImFontAtlas*        ContainerAtlas;     // What we has been loaded into
     ImVector<Glyph>     Glyphs;
-    ImVector<int>       IndexLookup;
+    ImVector<int>       IndexLookup;        // Index glyphs by Unicode code-point
     const Glyph*        FallbackGlyph;      // == FindGlyph(FontFallbackChar)
 
     // Methods
     IMGUI_API ImFont();
-    IMGUI_API ~ImFont();
+    IMGUI_API ~ImFont() { Clear(); }
     IMGUI_API void                  Clear();
     IMGUI_API void                  BuildLookupTable();
     IMGUI_API const Glyph*          FindGlyph(unsigned short c) const;
-
     IMGUI_API bool                  IsLoaded() const        { return ContainerAtlas != NULL; }
-    IMGUI_API ImTextureID           GetTexID() const        { IM_ASSERT(ContainerAtlas != NULL); return ContainerAtlas->TexID; }
-    IMGUI_API int                   GetTexWidth() const     { IM_ASSERT(ContainerAtlas != NULL); return ContainerAtlas->TexWidth; }
-    IMGUI_API int                   GetTexHeight() const    { IM_ASSERT(ContainerAtlas != NULL); return ContainerAtlas->TexHeight; }
 
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
     // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.

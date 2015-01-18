@@ -90,9 +90,9 @@
         // Load texture
         unsigned char* pixels;
         int width, height;
-        io.FontAtlas->GetTexDataAsRGBA32(pixels, &width, &height);
+        io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height);
         // TODO: copy texture to graphics memory. 
-        // TODO: store your texture pointer/identifier in 'io.FontAtlas->TexID'
+        // TODO: store your texture pointer/identifier in 'io.Fonts->TexID'
 
         // Application main loop
         while (true)
@@ -129,7 +129,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
 
  - 2015/01/11 (1.30) - big font/image API change! now loads TTF file. allow for multiple fonts. no need for a PNG loader.
-              (1.30) - removed GetDefaultFontData(). uses io.FontAtlas->GetTextureData*() API to retrieve uncompressed pixels.
+              (1.30) - removed GetDefaultFontData(). uses io.Fonts->GetTextureData*() API to retrieve uncompressed pixels.
                        this sequence:
                            const void* png_data;
                            unsigned int png_size;
@@ -138,11 +138,11 @@
                        became:
                            unsigned char* pixels;
                            int width, height;
-                           io.FontAtlas->GetTexDataAsRGBA32(&pixels, &width, &height);
+                           io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
                            // <Copy to GPU>
-                           io.FontAtlas->TexID = (your_texture_identifier);
-                       but we now have much more flexibility to load multiple TTF fonts and manage the texture buffer with the FontAtlas.
-              (1.30) - added texture identifier in ImDrawCmd passed to your render function (we can now render images). make sure to set io.FontAtlas->TexID.
+                           io.Fonts->TexID = (your_texture_identifier);
+                       but we now have much more flexibility to load multiple TTF fonts and manage the texture buffer for internal needs.
+              (1.30) - added texture identifier in ImDrawCmd passed to your render function (we can now render images). make sure to set io.Fonts->TexID.
               (1.30) - removed IO.PixelCenterOffset (unnecessary, can be handled in user projection matrix)
  - 2014/12/10 (1.18) - removed SetNewWindowDefaultPos() in favor of new generic API SetNextWindowPos(pos, ImGuiSetCondition_FirstUseEver)
  - 2014/11/28 (1.17) - moved IO.Font*** options to inside the IO.Font-> structure.
@@ -183,23 +183,23 @@
 
  If you want to load a different font than the default (ProggyClean.ttf, size 13)
 
-     io.FontAtlas.AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
-     io.FontAtlas.GetTexDataAs****()
+     io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
+     io.Fonts->GetTexDataAs****()
 
- If you want to load multiple fonts, use the FontAtlas to pack them into a single texture!
+ If you want to load multiple fonts, use the font atlas to pack them into a single texture!
 
-     ImFont* font0 = io.FontAtlas.AddFontDefault();
-     ImFont* font1 = io.FontAtlas.AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
-     io.FontAtlas.GetTexDataAs****()
+     ImFont* font0 = io.Fonts->AddFontDefault();
+     ImFont* font1 = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
+     io.Fonts->GetTexDataAs****()
 
  If you want to display Chinese, Japanese, Korean characters, pass custom Unicode ranges when loading a font:
 
-     io.FontAtlas.AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, ImFontAtlas::GetGlyphRangesJapanese());  // Load Japanese characters
-     io.FontAtlas.GetTexDataAs****()
+     io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, io.Fonts->GetGlyphRangesJapanese());  // Load Japanese characters
+     io.Fonts->GetTexDataAs****()
 
  If you want to input Japanese/Chinese/Korean in the text input widget:
 
-    - when loading the font, pass a range that contains the characters you need, e.g.: ImFont::GetGlyphRangesJapanese()
+    - when loading the font, pass a range that contains the characters you need, e.g.: io.Fonts->GetGlyphRangesJapanese()
     - to have the Microsoft IME cursor appears at the right location in the screen, setup a handler for the io.ImeSetInputScreenPosFn function:
 
         #include <Windows.h>
@@ -484,7 +484,7 @@ ImGuiIO::ImGuiIO()
     IniSavingRate = 5.0f;
     IniFilename = "imgui.ini";
     LogFilename = "imgui_log.txt";
-    FontAtlas = &GDefaultFontAtlas;
+    Fonts = &GDefaultFontAtlas;
     FontGlobalScale = 1.0f;
     FontAllowUserScaling = false;
     MousePos = ImVec2(-1,-1);
@@ -1564,8 +1564,8 @@ void ImGui::NewFrame()
     IM_ASSERT(g.IO.DeltaTime > 0.0f);
     IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f);
     IM_ASSERT(g.IO.RenderDrawListsFn != NULL);       // Must be implemented
-    IM_ASSERT(g.IO.FontAtlas->IsBuilt());            // Font not created. Did you call io.FontAtlas->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
-    IM_ASSERT(g.IO.FontAtlas->Fonts[0]->IsLoaded()); // Font not created. Did you call io.FontAtlas->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
+    IM_ASSERT(g.IO.Fonts->Fonts.size() > 0);         // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
+    IM_ASSERT(g.IO.Fonts->Fonts[0]->IsLoaded());     // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
 
     if (!g.Initialized)
     {
@@ -1578,7 +1578,7 @@ void ImGui::NewFrame()
         g.Initialized = true;
     }
 
-    SetFont(g.IO.FontAtlas->Fonts[0]);
+    SetFont(g.IO.Fonts->Fonts[0]);
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
@@ -1732,7 +1732,7 @@ void ImGui::Shutdown()
         fclose(g.LogFile);
         g.LogFile = NULL;
     }
-    g.IO.FontAtlas->Clear();
+    g.IO.Fonts->Clear();
 
     if (g.PrivateClipboard)
     {
@@ -2841,7 +2841,7 @@ void ImGui::PushFont(ImFont* font)
     ImGuiState& g = GImGui;
 
     if (!font)
-        font = g.IO.FontAtlas->Fonts[0];
+        font = g.IO.Fonts->Fonts[0];
 
     SetFont(font);
     g.FontStack.push_back(font);
@@ -2854,7 +2854,7 @@ void  ImGui::PopFont()
 
     g.CurrentWindow->DrawList->PopTextureID();
     g.FontStack.pop_back();
-    SetFont(g.FontStack.empty() ? g.IO.FontAtlas->Fonts[0] : g.FontStack.back());
+    SetFont(g.FontStack.empty() ? g.IO.Fonts->Fonts[0] : g.FontStack.back());
 }
 
 void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus)
@@ -6321,8 +6321,7 @@ ImFontAtlas::ImFontAtlas()
 
 ImFontAtlas::~ImFontAtlas()
 {
-    ClearInputData();
-    ClearTexData();
+    Clear();
 }
 
 void    ImFontAtlas::ClearInputData()
@@ -6346,8 +6345,10 @@ void    ImFontAtlas::ClearTexData()
     TexPixelsRGBA32 = NULL;
 }
 
-void    ImFontAtlas::ClearFonts()
+void    ImFontAtlas::Clear()
 {
+    ClearInputData(); 
+    ClearTexData();
     for (size_t i = 0; i < Fonts.size(); i++)
     {
         Fonts[i]->~ImFont();
@@ -6411,7 +6412,7 @@ ImFont* ImFontAtlas::AddFontDefault()
     stb_decompress(buf_decompressed, (unsigned char*)ttf_compressed, ttf_compressed_size);
 
     // Add
-    ImFont* font = AddFontFromMemoryTTF(buf_decompressed, buf_decompressed_size, 13.0f, ImFontAtlas::GetGlyphRangesDefault(), 0);
+    ImFont* font = AddFontFromMemoryTTF(buf_decompressed, buf_decompressed_size, 13.0f, GetGlyphRangesDefault(), 0);
     font->DisplayOffset.y += 1;
     return font;
 }
@@ -6467,6 +6468,7 @@ bool    ImFontAtlas::Build()
     for (size_t input_i = 0; input_i < InputData.size(); input_i++)
     {
         ImFontAtlasData& data = *InputData[input_i];
+        IM_ASSERT(data.OutFont && !data.OutFont->IsLoaded());
         const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)data.TTFData, data.FontNo);
         IM_ASSERT(font_offset >= 0);
         if (!stbtt_InitFont(&data.FontInfo, (unsigned char*)data.TTFData, font_offset)) 
@@ -6497,7 +6499,7 @@ bool    ImFontAtlas::Build()
     {
         ImFontAtlasData& data = *InputData[input_i];
         if (!data.GlyphRanges)
-            data.GlyphRanges = ImFontAtlas::GetGlyphRangesDefault();
+            data.GlyphRanges = GetGlyphRangesDefault();
 
         // Setup ranges
         int glyph_count = 0;
@@ -6618,11 +6620,6 @@ ImFont::ImFont()
 {
     Scale = 1.0f;
     FallbackChar = (ImWchar)'?';
-    Clear();
-}
-
-ImFont::~ImFont()
-{
     Clear();
 }
 
@@ -7494,10 +7491,10 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Fonts"))
         {
-            ImGui::TextWrapped("Tip: Load fonts with GetIO().FontAtlas->AddFontFromFileTTF().");
-            for (size_t i = 0; i < ImGui::GetIO().FontAtlas->Fonts.size(); i++)
+            ImGui::TextWrapped("Tip: Load fonts with GetIO().Fonts->AddFontFromFileTTF().");
+            for (size_t i = 0; i < ImGui::GetIO().Fonts->Fonts.size(); i++)
             {
-                ImFont* font = ImGui::GetIO().FontAtlas->Fonts[i];
+                ImFont* font = ImGui::GetIO().Fonts->Fonts[i];
                 ImGui::BulletText("Font %d: %.2f pixels, %d glyphs", i, font->FontSize, font->Glyphs.size());
                 ImGui::TreePush((void*)i);
                 ImGui::PushFont(font);
@@ -7505,8 +7502,8 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::PopFont();
                 if (i > 0 && ImGui::Button("Set as default"))
                 {
-                    ImGui::GetIO().FontAtlas->Fonts[i] = ImGui::GetIO().FontAtlas->Fonts[0];
-                    ImGui::GetIO().FontAtlas->Fonts[0] = font;
+                    ImGui::GetIO().Fonts->Fonts[i] = ImGui::GetIO().Fonts->Fonts[0];
+                    ImGui::GetIO().Fonts->Fonts[0] = font;
                 }
                 ImGui::SliderFloat("font scale", &font->Scale, 0.3f, 2.0f, "%.1f");             // scale only this font
                 ImGui::TreePop();
@@ -7612,9 +7609,9 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             ImGui::TextWrapped("Below we are displaying the font texture (which is the only texture we have access to in this demo). Use the 'ImTextureID' type as storage to pass pointers or identifier to your own texture data. Hover the texture for a zoomed view!");
             ImVec2 tex_screen_pos = ImGui::GetCursorScreenPos();
-            float tex_w = (float)ImGui::GetIO().FontAtlas->TexWidth;
-            float tex_h = (float)ImGui::GetIO().FontAtlas->TexHeight;
-            ImTextureID tex_id = ImGui::GetIO().FontAtlas->TexID;
+            float tex_w = (float)ImGui::GetIO().Fonts->TexWidth;
+            float tex_h = (float)ImGui::GetIO().Fonts->TexHeight;
+            ImTextureID tex_id = ImGui::GetIO().Fonts->TexID;
             ImGui::Image(tex_id, ImVec2(tex_w, tex_h), ImVec2(0,0), ImVec2(1,1), 0xFFFFFFFF, 0x999999FF);
             if (ImGui::IsItemHovered())
             {

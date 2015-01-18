@@ -129,7 +129,7 @@ void CleanupDevice()
     if (g_pVB) g_pVB->Release();
 
     // InitDeviceD3D
-    if (LPDIRECT3DTEXTURE9 tex = (LPDIRECT3DTEXTURE9)ImGui::GetIO().FontAtlas->TexID)
+    if (LPDIRECT3DTEXTURE9 tex = (LPDIRECT3DTEXTURE9)ImGui::GetIO().Fonts->TexID)
         tex->Release();
     if (g_pd3dDevice) g_pd3dDevice->Release();
     if (g_pD3D) g_pD3D->Release();
@@ -173,17 +173,17 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-void LoadFontTexture()
+void LoadFontsTexture()
 {
     // Load one or more font
     ImGuiIO& io = ImGui::GetIO();
-    //ImFont* my_font = io.FontAtlas->AddFontDefault();
-    //ImFont* my_font2 = io.FontAtlas->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, ImFontAtlas::GetGlyphRangesJapanese());
+    //ImFont* my_font = io.Fonts->AddFontDefault();
+    //ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, io.Fonts->GetGlyphRangesJapanese());
 
     // Build
     unsigned char* pixels;
     int width, height, bytes_per_pixel;
-    io.FontAtlas->GetTexDataAsAlpha8(&pixels, &width, &height, &bytes_per_pixel);
+    io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height, &bytes_per_pixel);
 
     // Create texture
     LPDIRECT3DTEXTURE9 pTexture = NULL;
@@ -205,7 +205,7 @@ void LoadFontTexture()
     pTexture->UnlockRect(0);
 
     // Store our identifier
-    io.FontAtlas->TexID = (void *)pTexture;
+    io.Fonts->TexID = (void *)pTexture;
 }
 
 void InitImGui()
@@ -245,7 +245,7 @@ void InitImGui()
         return;
     }
 
-    LoadFontTexture();
+    LoadFontsTexture();
 }
 
 INT64 ticks_per_second = 0;
