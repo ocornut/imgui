@@ -8331,75 +8331,26 @@ static void ShowExampleAppLongText(bool* opened)
 // End of Sample code
 
 //-----------------------------------------------------------------------------
-// Font data
-// Bitmap exported from proggy_clean.fon (c) by Tristan Grimmer http://upperbounds.net/
-// Also available on unofficial ProggyFonts mirror http://www.proggyfonts.net
+// FONT DATA
 //-----------------------------------------------------------------------------
-/*
+
+//-----------------------------------------------------------------------------
+// ProggyClean.ttf
 // Copyright (c) 2004, 2005 Tristan Grimmer
-
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-// copies of the Software, and to permit persons to whom the Software is 
-// furnished to do so, subject to the following conditions:
-
-// The above copyright notice and this permission notice shall be included in all 
-// copies or substantial portions of the Software.
-
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
-// SOFTWARE.
-*/
+// MIT license (see License.txt in http://www.upperbounds.net/download/ProggyClean.ttf.zip)
+// Download and more information at http://upperbounds.net
 //-----------------------------------------------------------------------------
-// Fonts exported with BMFont http://www.angelcode.com/products/bmfont
-// We are using bmfont format and you can load your own font from a file by setting up ImGui::GetIO().Font
-// PNG further compressed with pngout.exe http://advsys.net/ken/utils.htm
-// Manually converted to C++ array using the following program:
-/*
-#include <stdio.h>
-static void binary_to_c(const char* name_in, const char* symbol)
-{
-    FILE* fi = fopen(name_in, "rb"); fseek(fi, 0, SEEK_END); long sz = ftell(fi); fseek(fi, 0, SEEK_SET);
-    fprintf(stdout, "static const unsigned int %s_size = %d;\n", symbol, sz);
-    fprintf(stdout, "static const unsigned int %s_data[%d/4] =\n{", symbol, ((sz+3)/4)*4);
-    int column = 0;
-    for (unsigned int data = 0; fread(&data, 1, 4, fi); data = 0)
-        if ((column++ % 12) == 0)
-            fprintf(stdout, "\n    0x%08x, ", data);
-        else
-            fprintf(stdout, "0x%08x, ", data);
-    fprintf(stdout, "\n};\n\n");
-    fclose(fi);
-}
-
-int main(int argc, char** argv)
-{
-    binary_to_c("proggy_clean_13.png", "proggy_clean_13_png");
-    binary_to_c("proggy_clean_13.fnt", "proggy_clean_13_fnt");
-    return 1;
-}
-*/
-
-//-----------------------------------------------------------------------------
-
+// Compressed with stb_compress() then converted to a C array.
 // Decompressor from stb.h (public domain) by Sean Barrett
 // https://github.com/nothings/stb/blob/master/stb.h
+//-----------------------------------------------------------------------------
 
 static unsigned int stb_decompress_length(unsigned char *input)
 {
     return (input[8] << 24) + (input[9] << 16) + (input[10] << 8) + input[11];
 }
 
-static unsigned char *stb__barrier;
-static unsigned char *stb__barrier2;
-static unsigned char *stb__barrier3;
-static unsigned char *stb__barrier4;
+static unsigned char *stb__barrier, *stb__barrier2, *stb__barrier3, *stb__barrier4;
 
 static unsigned char *stb__dout;
 static void stb__match(unsigned char *data, unsigned int length)
