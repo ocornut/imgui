@@ -141,7 +141,8 @@
                            io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
                            // <Copy to GPU>
                            io.Fonts->TexID = (your_texture_identifier);
-                       but we now have much more flexibility to load multiple TTF fonts and manage the texture buffer for internal needs.
+                       you now have much more flexibility to load multiple TTF fonts and manage the texture buffer for internal needs.
+                       it is now recommended your sample the font texture with bilinear interpolation.
               (1.30) - added texture identifier in ImDrawCmd passed to your render function (we can now render images). make sure to set io.Fonts->TexID.
               (1.30) - removed IO.PixelCenterOffset (unnecessary, can be handled in user projection matrix)
  - 2014/12/10 (1.18) - removed SetNewWindowDefaultPos() in favor of new generic API SetNextWindowPos(pos, ImGuiSetCondition_FirstUseEver)
