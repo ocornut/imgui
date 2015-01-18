@@ -6422,7 +6422,10 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
     void* data = NULL;
     size_t data_size = 0;
     if (!ImLoadFileToMemory(filename, "rb", (void**)&data, &data_size))
+    {
+        IM_ASSERT(0); // Could not load file.
         return NULL;
+    }
 
     // Add
     ImFont* font = AddFontFromMemoryTTF(data, data_size, size_pixels, glyph_ranges, font_no);
@@ -6473,7 +6476,10 @@ bool    ImFontAtlas::Build()
         IM_ASSERT(font_offset >= 0);
         if (!stbtt_InitFont(&data.FontInfo, (unsigned char*)data.TTFData, font_offset)) 
             return false;
-        for (const ImWchar* in_range = InputData[input_i]->GlyphRanges; in_range[0] && in_range[1]; in_range += 2)
+
+        if (!data.GlyphRanges)
+            data.GlyphRanges = GetGlyphRangesDefault();
+        for (const ImWchar* in_range = data.GlyphRanges; in_range[0] && in_range[1]; in_range += 2)
             total_glyph_count += (in_range[1] - in_range[0]) + 1;
     }
 
@@ -6498,8 +6504,6 @@ bool    ImFontAtlas::Build()
     for (size_t input_i = 0; input_i < InputData.size(); input_i++)
     {
         ImFontAtlasData& data = *InputData[input_i];
-        if (!data.GlyphRanges)
-            data.GlyphRanges = GetGlyphRangesDefault();
 
         // Setup ranges
         int glyph_count = 0;
