@@ -8,9 +8,7 @@
 #endif
 
 #include "../../imgui.h"
-#define STB_IMAGE_STATIC
-#define STB_IMAGE_IMPLEMENTATION
-#include "../shared/stb_image.h"        // stb_image.h for PNG loading
+#include <stdio.h>
 
 // Glfw/Glew
 #define GLEW_STATIC
@@ -19,19 +17,17 @@
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
 static GLFWwindow* window;
-static GLuint fontTex;
 static bool mousePressed[2] = { false, false };
 
 // Shader variables
 static int shader_handle, vert_handle, frag_handle;
-static int texture_location, ortho_location;
+static int texture_location, proj_mtx_location;
 static int position_location, uv_location, colour_location;
 static size_t vbo_max_size = 20000;
 static unsigned int vbo_handle, vao_handle;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
-// - try adjusting ImGui::GetIO().PixelCenterOffset to 0.0f or 0.5f
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
@@ -45,10 +41,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
-
-    // Setup texture
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, fontTex);
 
     // Setup orthographic projection matrix
     const float width = ImGui::GetIO().DisplaySize.x;
@@ -62,7 +55,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     };
     glUseProgram(shader_handle);
     glUniform1i(texture_location, 0);
-    glUniformMatrix4fv(ortho_location, 1, GL_FALSE, &ortho_projection[0][0]);
+    glUniformMatrix4fv(proj_mtx_location, 1, GL_FALSE, &ortho_projection[0][0]);
 
     // Grow our buffer according to what we need
     size_t total_vtx_count = 0;
@@ -98,6 +91,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         const ImDrawCmd* pcmd_end = cmd_list->commands.end();
         for (const ImDrawCmd* pcmd = cmd_list->commands.begin(); pcmd != pcmd_end; pcmd++)
         {
+            glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->texture_id);
             glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
             glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
             vtx_offset += pcmd->vtx_count;
@@ -157,11 +151,9 @@ static void glfw_char_callback(GLFWwindow* window, unsigned int c)
         ImGui::GetIO().AddInputCharacter((unsigned short)c);
 }
 
-// OpenGL code based on http://open.gl tutorials
 void InitGL()
 {
     glfwSetErrorCallback(glfw_error_callback);
-
     if (!glfwInit())
         exit(1);
 
@@ -184,28 +176,28 @@ void InitGL()
 
     const GLchar *vertex_shader =
         "#version 330\n"
-        "uniform mat4 ortho;\n"
+        "uniform mat4 ProjMtx;\n"
         "in vec2 Position;\n"
         "in vec2 UV;\n"
-        "in vec4 Colour;\n"
+        "in vec4 Color;\n"
         "out vec2 Frag_UV;\n"
-        "out vec4 Frag_Colour;\n"
+        "out vec4 Frag_Color;\n"
         "void main()\n"
         "{\n"
         "	Frag_UV = UV;\n"
-        "	Frag_Colour = Colour;\n"
-        "	gl_Position = ortho*vec4(Position.xy,0,1);\n"
+        "	Frag_Color = Color;\n"
+        "	gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
         "}\n";
 
     const GLchar* fragment_shader =
         "#version 330\n"
         "uniform sampler2D Texture;\n"
         "in vec2 Frag_UV;\n"
-        "in vec4 Frag_Colour;\n"
-        "out vec4 FragColor;\n"
+        "in vec4 Frag_Color;\n"
+        "out vec4 Out_Color;\n"
         "void main()\n"
         "{\n"
-        "	FragColor = Frag_Colour * texture( Texture, Frag_UV.st);\n"
+        "	Out_Color = Frag_Color * texture( Texture, Frag_UV.st);\n"
         "}\n";
 
     shader_handle = glCreateProgram();
@@ -220,10 +212,10 @@ void InitGL()
     glLinkProgram(shader_handle);
 
     texture_location = glGetUniformLocation(shader_handle, "Texture");
-    ortho_location = glGetUniformLocation(shader_handle, "ortho");
+    proj_mtx_location = glGetUniformLocation(shader_handle, "ProjMtx");
     position_location = glGetAttribLocation(shader_handle, "Position");
     uv_location = glGetAttribLocation(shader_handle, "UV");
-    colour_location = glGetAttribLocation(shader_handle, "Colour");
+    colour_location = glGetAttribLocation(shader_handle, "Color");
 
     glGenBuffers(1, &vbo_handle);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
@@ -243,11 +235,34 @@ void InitGL()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
+void LoadFontsTexture()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    //ImFont* my_font1 = io.Fonts->AddFontDefault();
+    //ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("extra_fonts/Karla-Regular.ttf", 15.0f);
+    //ImFont* my_font3 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyClean.ttf", 13.0f); my_font3->DisplayOffset.y += 1;
+    //ImFont* my_font4 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyTiny.ttf", 10.0f); my_font4->DisplayOffset.y += 1;
+    //ImFont* my_font5 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, io.Fonts->GetGlyphRangesJapanese());
+
+    unsigned char* pixels;
+    int width, height;
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bits for OpenGL3 demo because it is more likely to be compatible with user's existing shader.
+
+    GLuint tex_id;
+    glGenTextures(1, &tex_id);
+    glBindTexture(GL_TEXTURE_2D, tex_id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+    // Store our identifier
+    io.Fonts->TexID = (void *)(intptr_t)tex_id;
+}
+
 void InitImGui()
 {
     ImGuiIO& io = ImGui::GetIO();
     io.DeltaTime = 1.0f / 60.0f;                                  // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our timestep is variable)
-    io.PixelCenterOffset = 0.5f;                                  // Align OpenGL texels
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                       // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
@@ -270,18 +285,7 @@ void InitImGui()
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
 
-    // Load font texture
-    glGenTextures(1, &fontTex);
-    glBindTexture(GL_TEXTURE_2D, fontTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    const void* png_data;
-    unsigned int png_size;
-    ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
-    int tex_x, tex_y, tex_comp;
-    void* tex_data = stbi_load_from_memory((const unsigned char*)png_data, (int)png_size, &tex_x, &tex_y, &tex_comp, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_x, tex_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data);
-    stbi_image_free(tex_data);
+    LoadFontsTexture();
 }
 
 void UpdateImGui()

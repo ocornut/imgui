@@ -1,9 +1,6 @@
 // ImGui - standalone example application for DirectX 11
 
 #include <windows.h>
-#define STB_IMAGE_STATIC
-#define STB_IMAGE_IMPLEMENTATION
-#include "../shared/stb_image.h"    // for .png loading
 #include "../../imgui.h"
 
 // DirectX 11
@@ -29,7 +26,6 @@ static ID3D11Buffer*            g_pVertexConstantBuffer = NULL;
 static ID3D10Blob *             g_pPixelShaderBlob = NULL;
 static ID3D11PixelShader*       g_pPixelShader = NULL;
 
-static ID3D11ShaderResourceView*g_pFontTextureView = NULL;
 static ID3D11SamplerState*      g_pFontSampler = NULL;
 static ID3D11BlendState*        g_blendState = NULL;
 
@@ -48,7 +44,6 @@ struct VERTEX_CONSTANT_BUFFER
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-// - try adjusting ImGui::GetIO().PixelCenterOffset to 0.5f or 0.375f
 static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
     size_t total_vtx_count = 0;
@@ -125,7 +120,6 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     g_pd3dDeviceImmediateContext->VSSetConstantBuffers(0, 1, &g_pVertexConstantBuffer);
 
     g_pd3dDeviceImmediateContext->PSSetShader(g_pPixelShader, NULL, 0);
-    g_pd3dDeviceImmediateContext->PSSetShaderResources(0, 1, &g_pFontTextureView);
     g_pd3dDeviceImmediateContext->PSSetSamplers(0, 1, &g_pFontSampler);
 
     // Setup render state
@@ -142,6 +136,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         {
             const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
             const D3D11_RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
+            g_pd3dDeviceImmediateContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->texture_id);
             g_pd3dDeviceImmediateContext->RSSetScissorRects(1, &r); 
             g_pd3dDeviceImmediateContext->Draw(pcmd->vtx_count, vtx_offset);
             vtx_offset += pcmd->vtx_count;
@@ -290,8 +285,8 @@ HRESULT InitDeviceD3D(HWND hWnd)
             \
             float4 main(PS_INPUT input) : SV_Target\
             {\
-                float4 out_col = texture0.Sample(sampler0, input.uv);\
-                return input.col * out_col;\
+                float4 out_col = input.col * texture0.Sample(sampler0, input.uv); \
+                return out_col; \
             }";
 
         D3DCompile(pixelShader, strlen(pixelShader), NULL, NULL, NULL, "main", "ps_5_0", 0, 0, &g_pPixelShaderBlob, NULL);
@@ -326,7 +321,8 @@ void CleanupDevice()
 
     // InitImGui
     if (g_pFontSampler) g_pFontSampler->Release();
-    if (g_pFontTextureView) g_pFontTextureView->Release();
+    if (ID3D11ShaderResourceView* font_texture_view = (ID3D11ShaderResourceView*)ImGui::GetIO().Fonts->TexID)
+        font_texture_view->Release();
     if (g_pVB) g_pVB->Release();
 
     // InitDeviceD3D
@@ -381,6 +377,56 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
+void LoadFontsTexture()
+{
+    // Load one or more font
+    ImGuiIO& io = ImGui::GetIO();
+    //ImFont* my_font1 = io.Fonts->AddFontDefault();
+    //ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("extra_fonts/Karla-Regular.ttf", 15.0f);
+    //ImFont* my_font3 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyClean.ttf", 13.0f); my_font3->DisplayOffset.y += 1;
+    //ImFont* my_font4 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyTiny.ttf", 10.0f); my_font4->DisplayOffset.y += 1;
+    //ImFont* my_font5 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, io.Fonts->GetGlyphRangesJapanese());
+
+    // Build
+    unsigned char* pixels;
+    int width, height;
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+
+    // Create texture
+    D3D11_TEXTURE2D_DESC desc;
+    ZeroMemory(&desc, sizeof(desc));
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    desc.CPUAccessFlags = 0;
+
+    ID3D11Texture2D *pTexture = NULL;
+    D3D11_SUBRESOURCE_DATA subResource;
+    subResource.pSysMem = pixels;
+    subResource.SysMemPitch = desc.Width * 4;
+    subResource.SysMemSlicePitch = 0;
+    g_pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
+
+    // Create texture view
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    ZeroMemory(&srvDesc, sizeof(srvDesc));
+    srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = desc.MipLevels;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    ID3D11ShaderResourceView* font_texture_view = NULL;
+    g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &font_texture_view);
+    pTexture->Release();
+
+    // Store our identifier
+    io.Fonts->TexID = (void *)font_texture_view;
+}
+
 void InitImGui()
 {
     RECT rect;
@@ -391,7 +437,6 @@ void InitImGui()
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)display_w, (float)display_h);    // Display size, in pixels. For clamping windows positions.
     io.DeltaTime = 1.0f/60.0f;                                      // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our time step is variable)
-    io.PixelCenterOffset = 0.0f;                                    // Align Direct3D Texels
     io.KeyMap[ImGuiKey_Tab] = VK_TAB;                               // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
     io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
@@ -427,51 +472,14 @@ void InitImGui()
         }
     }
 
-    // Load font texture
-    // Default font (embedded in code)
-    const void* png_data;
-    unsigned int png_size;
-    ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
-    int tex_x, tex_y, tex_comp;
-    void* tex_data = stbi_load_from_memory((const unsigned char*)png_data, (int)png_size, &tex_x, &tex_y, &tex_comp, 0);
-    IM_ASSERT(tex_data != NULL);
-
-    {
-        D3D11_TEXTURE2D_DESC desc;
-        ZeroMemory(&desc, sizeof(desc));
-        desc.Width = tex_x;
-        desc.Height = tex_y;
-        desc.MipLevels = 1;
-        desc.ArraySize = 1;
-        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        desc.SampleDesc.Count = 1;
-        desc.Usage = D3D11_USAGE_DEFAULT;
-        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        desc.CPUAccessFlags = 0;
-
-        ID3D11Texture2D *pTexture = NULL;
-        D3D11_SUBRESOURCE_DATA subResource;
-        subResource.pSysMem = tex_data;
-        subResource.SysMemPitch = tex_x * 4;
-        subResource.SysMemSlicePitch = 0;
-        g_pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
-
-        // Create texture view
-        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-        ZeroMemory(&srvDesc, sizeof(srvDesc));
-        srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Texture2D.MipLevels = desc.MipLevels;
-        srvDesc.Texture2D.MostDetailedMip = 0;
-        g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &g_pFontTextureView);
-        pTexture->Release();
-    }
+    // Load fonts
+    LoadFontsTexture();
 
     // Create texture sampler
     {
         D3D11_SAMPLER_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
-        desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+        desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
         desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
         desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
         desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;

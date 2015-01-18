@@ -14,7 +14,6 @@ static HWND                    hWnd;
 static LPDIRECT3D9             g_pD3D = NULL;       // Used to create the D3DDevice
 static LPDIRECT3DDEVICE9       g_pd3dDevice = NULL; // Our rendering device
 static LPDIRECT3DVERTEXBUFFER9 g_pVB = NULL;        // Buffer to hold vertices
-static LPDIRECT3DTEXTURE9      g_pTexture = NULL;   // Our texture
 struct CUSTOMVERTEX
 {
     D3DXVECTOR3 pos;
@@ -26,7 +25,6 @@ struct CUSTOMVERTEX
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-// - try adjusting ImGui::GetIO().PixelCenterOffset to 0.5f or 0.375f
 static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
     size_t total_vtx_count = 0;
@@ -70,15 +68,13 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     g_pd3dDevice->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
     g_pd3dDevice->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
     g_pd3dDevice->SetRenderState( D3DRS_SCISSORTESTENABLE, true );
-
-    // Setup texture
-    g_pd3dDevice->SetTexture( 0, g_pTexture );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_MODULATE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_TEXTURE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
+    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_SELECTARG1 );
+    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_DIFFUSE );
     g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
     g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
     g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
+    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
+    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
 
     // Setup orthographic projection matrix
     D3DXMATRIXA16 mat;
@@ -98,6 +94,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         {
             const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
             const RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
+            g_pd3dDevice->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->texture_id );
             g_pd3dDevice->SetScissorRect(&r);
             g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, vtx_offset, pcmd->vtx_count/3);
             vtx_offset += pcmd->vtx_count;
@@ -132,7 +129,8 @@ void CleanupDevice()
     if (g_pVB) g_pVB->Release();
 
     // InitDeviceD3D
-    if (g_pTexture) g_pTexture->Release();
+    if (LPDIRECT3DTEXTURE9 tex = (LPDIRECT3DTEXTURE9)ImGui::GetIO().Fonts->TexID)
+        tex->Release();
     if (g_pd3dDevice) g_pd3dDevice->Release();
     if (g_pD3D) g_pD3D->Release();
 }
@@ -175,6 +173,44 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
+void LoadFontsTexture()
+{
+    // Load one or more font
+    ImGuiIO& io = ImGui::GetIO();
+    //ImFont* my_font1 = io.Fonts->AddFontDefault();
+    //ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("extra_fonts/Karla-Regular.ttf", 15.0f);
+    //ImFont* my_font3 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyClean.ttf", 13.0f); my_font3->DisplayOffset.y += 1;
+    //ImFont* my_font4 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyTiny.ttf", 10.0f); my_font4->DisplayOffset.y += 1;
+    //ImFont* my_font5 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, io.Fonts->GetGlyphRangesJapanese());
+
+    // Build
+    unsigned char* pixels;
+    int width, height, bytes_per_pixel;
+    io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height, &bytes_per_pixel);
+
+    // Create texture
+    LPDIRECT3DTEXTURE9 pTexture = NULL;
+    if (D3DXCreateTexture(g_pd3dDevice, width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &pTexture) < 0)
+    {
+        IM_ASSERT(0);
+        return;
+    }
+
+    // Copy pixels
+    D3DLOCKED_RECT tex_locked_rect;
+    if (pTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK) 
+    {	
+        IM_ASSERT(0); 
+        return; 
+    }
+    for (int y = 0; y < height; y++)
+        memcpy((unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
+    pTexture->UnlockRect(0);
+
+    // Store our identifier
+    io.Fonts->TexID = (void *)pTexture;
+}
+
 void InitImGui()
 {
     RECT rect;
@@ -185,7 +221,6 @@ void InitImGui()
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)display_w, (float)display_h);   // Display size, in pixels. For clamping windows positions.
     io.DeltaTime = 1.0f/60.0f;                                     // Time elapsed since last frame, in seconds (in this sample app we'll override this every frame because our time step is variable)
-    io.PixelCenterOffset = 0.0f;                                   // Align Direct3D Texels
     io.KeyMap[ImGuiKey_Tab] = VK_TAB;                              // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
     io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
@@ -213,15 +248,7 @@ void InitImGui()
         return;
     }
 
-    // Load font texture
-    const void* png_data;
-    unsigned int png_size;
-    ImGui::GetDefaultFontData(NULL, NULL, &png_data, &png_size);
-    if (D3DXCreateTextureFromFileInMemory(g_pd3dDevice, png_data, png_size, &g_pTexture) < 0)
-    {
-        IM_ASSERT(0);
-        return;
-    }
+    LoadFontsTexture();
 }
 
 INT64 ticks_per_second = 0;
