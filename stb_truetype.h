@@ -1,3 +1,6 @@
+// [ImGui] this is a slightly modified version of stb_truetype.h 1.02
+// [ImGui] we added stbtt_PackFontRangesGatherRects() and stbtt_PackFontRangesRenderIntoRects() and modified stbtt_PackBegin()
+
 // stb_truetype.h - v1.02 - public domain
 // authored from 2009-2014 by Sean Barrett / RAD Game Tools
 //
