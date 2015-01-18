@@ -6484,7 +6484,7 @@ bool    ImFontAtlas::Build()
     }
 
     // Start packing
-    TexWidth = (total_glyph_count > 3000) ? 2048 : (total_glyph_count > 1000) ? 1024 : 512;  // Width doesn't actually matters.
+    TexWidth = (total_glyph_count > 1000) ? 1024 : 512;  // Width doesn't actually matters.
     TexHeight = 0;
     const int max_tex_height = 1024*32;
     stbtt_pack_context spc;
@@ -6498,6 +6498,14 @@ bool    ImFontAtlas::Build()
     extra_rect.h = 16;
     stbrp_pack_rects((stbrp_context*)spc.pack_info, &extra_rect, 1);
     TexExtraDataPos = ImVec2(extra_rect.x, extra_rect.y);
+
+    // Allocate packing character data and flag as non-packed (x0=y0=x1=y1=0)
+    stbtt_packedchar* packed_chardata = (stbtt_packedchar*)ImGui::MemAlloc(total_glyph_count * sizeof(stbtt_packedchar));
+    int packed_chardata_n = 0;
+    memset(packed_chardata, 0, total_glyph_count * sizeof(stbtt_packedchar));
+
+    stbrp_rect* rectdata = (stbrp_rect*)ImGui::MemAlloc(total_glyph_count * sizeof(stbrp_rect));
+    int rectdata_n = 0;
 
     // First pass: pack all glyphs (no rendering at this point, we are working with glyph sizes only)
     int tex_height = extra_rect.y + extra_rect.h;
@@ -6521,17 +6529,13 @@ bool    ImFontAtlas::Build()
             const ImWchar* in_range = &data.GlyphRanges[i * 2];
             range.first_unicode_char_in_range = in_range[0];
             range.num_chars_in_range = (in_range[1] - in_range[0]) + 1;
-
-            // Allocate characters and flag as not packed
-            // FIXME-OPT: Loose ranges will incur lots of allocations. Allocate all contiguous in loop above.
-            range.chardata_for_range = (stbtt_packedchar*)ImGui::MemAlloc(range.num_chars_in_range * sizeof(stbtt_packedchar));
-            for (int j = 0; j < range.num_chars_in_range; ++j)
-                range.chardata_for_range[j].x0 = range.chardata_for_range[j].y0 = range.chardata_for_range[j].x1 = range.chardata_for_range[j].y1 = 0;
+            range.chardata_for_range = packed_chardata + packed_chardata_n;
+            packed_chardata_n += range.num_chars_in_range;
         }
 
         // Pack
-        data.Rects = (stbrp_rect*)ImGui::MemAlloc(sizeof(stbrp_rect) * glyph_count);
-        IM_ASSERT(data.Rects);
+        data.Rects = rectdata + rectdata_n;
+        rectdata_n += glyph_count;
         const int n = stbtt_PackFontRangesGatherRects(&spc, &data.FontInfo, data.Ranges.begin(), data.Ranges.size(), data.Rects);
         stbrp_pack_rects((stbrp_context*)spc.pack_info, data.Rects, n);
 
@@ -6540,6 +6544,7 @@ bool    ImFontAtlas::Build()
             if (data.Rects[i].was_packed)
                 tex_height = ImMax(tex_height, data.Rects[i].y + data.Rects[i].h);
     }
+    IM_ASSERT(packed_chardata_n == total_glyph_count);
 
     // Create texture
     TexHeight = ImUpperPowerOfTwo(tex_height);
@@ -6553,12 +6558,13 @@ bool    ImFontAtlas::Build()
     {
         ImFontAtlasData& data = *InputData[input_i];
         ret = stbtt_PackFontRangesRenderIntoRects(&spc, &data.FontInfo, data.Ranges.begin(), data.Ranges.size(), data.Rects);
-        ImGui::MemFree(data.Rects);
         data.Rects = NULL;
     }
 
     // End packing
     stbtt_PackEnd(&spc);
+    ImGui::MemFree(rectdata);
+    rectdata = NULL;
 
     // Third pass: setup ImFont and glyphs for runtime
     for (size_t input_i = 0; input_i < InputData.size(); input_i++)
@@ -6601,17 +6607,18 @@ bool    ImFontAtlas::Build()
 
         data.OutFont->BuildLookupTable();
 
-        // Cleanup temporary
-        for (size_t i = 0; i < data.Ranges.size(); i++)
-            ImGui::MemFree(data.Ranges[i].chardata_for_range);
+        // Cleanup temporaries
         data.Ranges.clear();
     }
+
+    // Cleanup temporaries
+    ClearInputData();
+    ImGui::MemFree(packed_chardata);
+    packed_chardata = NULL;
 
     // Draw white pixel into texture and make UV points to it
     TexPixelsAlpha8[0] = TexPixelsAlpha8[1] = TexPixelsAlpha8[TexWidth+0] = TexPixelsAlpha8[TexWidth+1] = 0xFF;
     TexUvWhitePixel = ImVec2((TexExtraDataPos.x + 0.5f) / TexWidth, (TexExtraDataPos.y + 0.5f) / TexHeight);
-
-    ClearInputData();
 
     return true;
 }
