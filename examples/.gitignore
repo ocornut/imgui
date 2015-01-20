@@ -1,0 +1,28 @@
+## Visual Studio files
+Debug/*
+Release/*
+ipch/*
+x64/*
+directx9_example/Debug/*
+directx9_example/Release/*
+directx9_example/ipch/*
+directx9_example/x64/*
+directx11_example/Debug/*
+directx11_example/Release/*
+directx11_example/ipch/*
+directx11_example/x64/*
+opengl_example/Debug/*
+opengl_example/Release/*
+opengl_example/ipch/*
+opengl_example/x64/*
+opengl3_example/Debug/*
+opengl3_example/Release/*
+opengl3_example/ipch/*
+opengl3_example/x64/*
+*.opensdf
+*.sdf
+*.suo
+*.vcxproj.user
+
+## Ini files
+imgui.ini
