@@ -6532,7 +6532,7 @@ bool    ImFontAtlas::Build()
 
         // Setup ranges
         int glyph_count = 0;
-        size_t glyph_ranges_count = 0;
+        int glyph_ranges_count = 0;
         for (const ImWchar* in_range = data.GlyphRanges; in_range[0] && in_range[1]; in_range += 2)
         {
             glyph_count += (in_range[1] - in_range[0]) + 1;
@@ -6541,7 +6541,7 @@ bool    ImFontAtlas::Build()
         data.Ranges = buf_ranges + buf_ranges_n;
         data.RangesCount = glyph_ranges_count;
         buf_ranges_n += glyph_ranges_count;
-        for (size_t i = 0; i < glyph_ranges_count; i++)
+        for (int i = 0; i < glyph_ranges_count; i++)
         {
             const ImWchar* in_range = &data.GlyphRanges[i * 2];
             stbtt_pack_range& range = data.Ranges[i];

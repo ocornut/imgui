@@ -35,7 +35,7 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
 
     // Copy and convert all vertices into a single contiguous buffer
     CUSTOMVERTEX* vtx_dst;
-    if (g_pVB->Lock(0, total_vtx_count, (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
+    if (g_pVB->Lock(0, (UINT)total_vtx_count, (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
         return;
     for (int n = 0; n < cmd_lists_count; n++)
     {
