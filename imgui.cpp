@@ -238,7 +238,7 @@
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. 
  - window: allow resizing of child windows (possibly given min/max for each axis?)
  - window: resizing from any sides? + mouse cursor directives for app.
- - widgets: switching from "widget-label" to "label-widget" would make it more convenient to integrate widgets in trees
+ - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
  - main: considering adding EndFrame() - optional, else done in Render(). and Init()
  - main: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
@@ -260,6 +260,7 @@
  - combo: turn child handling code into pop up helper
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
+ - color: better color editor.
  - plot: make it easier for user to draw into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
  - plot: "smooth" automatic scale, user give an input 0.0(full user scale) 1.0(full derived from value)
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
@@ -273,9 +274,10 @@
  - text edit: add multi-line text edit
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float) in .ini file
+ ! style: store rounded corners in texture to use 1 quad per corner (filled and wireframe).
  - style: checkbox: padding for "active" color should be a multiplier of the 
  - style: colorbox not always square?
- - log: LogButtons() options for specifying depth and/orhiding depth slider
+ - log: LogButtons() options for specifying depth and/or hiding depth slider
  - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
  - log: be able to right-click and log a window or tree-node into tty/file/clipboard / generalized context menu?
  - filters: set a current filter that tree node can automatically query to hide themselves
