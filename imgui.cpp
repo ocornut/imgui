@@ -331,6 +331,15 @@
 // STB libraries implementation
 //-------------------------------------------------------------------------
 
+struct ImGuiTextEditState;
+
+//#define IMGUI_STB_NAMESPACE     ImStb
+
+#ifdef IMGUI_STB_NAMESPACE
+namespace IMGUI_STB_NAMESPACE
+{
+#endif
+
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
@@ -338,21 +347,27 @@
 #endif
 
 #define STBRP_STATIC
+#define STBRP_ASSERT(x)    IM_ASSERT(x)
 #define STB_RECT_PACK_IMPLEMENTATION
 #include "stb_rect_pack.h"
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_malloc(x,u)  ((void)(u), ImGui::MemAlloc(x))
 #define STBTT_free(x,u)    ((void)(u), ImGui::MemFree(x))
+#define STBTT_assert(x)    IM_ASSERT(x)
 #include "stb_truetype.h"
 
-struct ImGuiTextEditState;
 #define STB_TEXTEDIT_STRING ImGuiTextEditState
 #define STB_TEXTEDIT_CHARTYPE ImWchar
 #include "stb_textedit.h"
 
 #ifdef __clang__
 #pragma clang diagnostic pop
+#endif
+
+#ifdef IMGUI_STB_NAMESPACE
+} // namespace ImStb
+using namespace IMGUI_STB_NAMESPACE;
 #endif
 
 //-------------------------------------------------------------------------
