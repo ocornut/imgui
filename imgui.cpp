@@ -3599,6 +3599,29 @@ bool ImGui::SmallButton(const char* label)
     return pressed;
 }
 
+// Tip: use ImGui::PushID()/PopID() to push indices or pointers in the ID stack.
+// Then you can keep 'str_id' empty or the same for all your buttons (instead of creating a string based on a non-string id)
+bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size)
+{
+    ImGuiState& g = GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + size);
+    ItemSize(bb);
+
+    if (ClipAdvance(bb))
+        return false;
+
+    const ImGuiID id = window->GetID(str_id);
+
+	bool hovered, held;
+    bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
+
+    return pressed;
+}
+
 // Upper-right button to close a window.
 static bool CloseWindowButton(bool* p_opened)
 {
