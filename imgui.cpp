@@ -237,10 +237,12 @@
  - window: autofit feedback loop when user relies on any dynamic layout (window width multiplier, column). maybe just clearly drop manual autofit?
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. 
  - window: allow resizing of child windows (possibly given min/max for each axis?)
+ - window: background options for child windows, border option (disable ronuding)
  - window: resizing from any sides? + mouse cursor directives for app.
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
  - main: considering adding EndFrame() - optional, else done in Render(). and Init()
+ - main: add IsItemActive()
  - main: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
@@ -260,6 +262,7 @@
  - combo: turn child handling code into pop up helper
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
+ - gauge: various forms of gauge/loading bars widgets
  - color: better color editor.
  - plot: make it easier for user to draw into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
  - plot: "smooth" automatic scale, user give an input 0.0(full user scale) 1.0(full derived from value)
@@ -359,6 +362,7 @@ namespace IMGUI_STB_NAMESPACE
 #define STBTT_free(x,u)    ((void)(u), ImGui::MemFree(x))
 #define STBTT_assert(x)    IM_ASSERT(x)
 #ifndef IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
+#define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
 #endif
 #include "stb_truetype.h"
