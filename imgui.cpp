@@ -334,6 +334,8 @@
 struct ImGuiTextEditState;
 
 //#define IMGUI_STB_NAMESPACE     ImStb
+//#define IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
+//#define IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
 
 #ifdef IMGUI_STB_NAMESPACE
 namespace IMGUI_STB_NAMESPACE
@@ -346,15 +348,19 @@ namespace IMGUI_STB_NAMESPACE
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
 #endif
 
-#define STBRP_STATIC
 #define STBRP_ASSERT(x)    IM_ASSERT(x)
+#ifndef IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
+#define STBRP_STATIC
 #define STB_RECT_PACK_IMPLEMENTATION
+#endif
 #include "stb_rect_pack.h"
 
-#define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_malloc(x,u)  ((void)(u), ImGui::MemAlloc(x))
 #define STBTT_free(x,u)    ((void)(u), ImGui::MemFree(x))
 #define STBTT_assert(x)    IM_ASSERT(x)
+#ifndef IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
+#define STB_TRUETYPE_IMPLEMENTATION
+#endif
 #include "stb_truetype.h"
 
 #define STB_TEXTEDIT_STRING ImGuiTextEditState
@@ -4695,8 +4701,15 @@ enum
     STB_TEXTEDIT_K_SHIFT = 1 << 17
 };
 
+#ifdef IMGUI_STB_NAMESPACE
+namespace IMGUI_STB_NAMESPACE
+{
+#endif
 #define STB_TEXTEDIT_IMPLEMENTATION
 #include "stb_textedit.h"
+#ifdef IMGUI_STB_NAMESPACE
+}
+#endif
 
 void ImGuiTextEditState::OnKeyPressed(int key)
 { 
