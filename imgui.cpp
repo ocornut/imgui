@@ -89,8 +89,8 @@
 
         // Load texture
         unsigned char* pixels;
-        int width, height;
-        io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height);
+        int width, height, bytes_per_pixels;
+        io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height, &bytes_per_pixels);
         // TODO: copy texture to graphics memory. 
         // TODO: store your texture pointer/identifier in 'io.Fonts->TexID'
 
