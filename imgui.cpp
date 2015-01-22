@@ -232,7 +232,6 @@
  ISSUES & TODO-LIST
  ==================
 
- ! input: mouse click on scrolling text input broken?
  - misc: merge or clarify ImVec4 / ImGuiAabb, they are essentially duplicate containers
  - window: add horizontal scroll
  - window: fix resize grip rendering scaling along with Rounding style setting
@@ -2069,7 +2068,16 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
     else
         text_display_end = text_end;
 
-    const ImVec2 text_size = window->Font()->CalcTextSizeA(window->FontSize(), FLT_MAX, wrap_width, text, text_display_end, NULL);
+    ImFont* font = window->Font();
+    const float font_size = window->FontSize();
+    ImVec2 text_size = font->CalcTextSizeA(font_size, FLT_MAX, wrap_width, text, text_display_end, NULL);
+
+    // Cancel out character spacing for the last character of a line (it is baked into glyph->XAdvance field)
+    const float font_scale = font_size / font->FontSize; 
+    const float character_spacing_x = 1.0f * font_scale;
+    if (text_size.x > 0.0f)
+        text_size.x -= character_spacing_x;
+
     return text_size;
 }
 
@@ -7153,11 +7161,6 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         text_size.y += line_height;
     }
 
-    // Cancel out character spacing for the last character of a line (it is baked into glyph->XAdvance field)
-    const float character_spacing_x = 1.0f * scale;
-    if (text_size.x > 0.0f)
-        text_size.x -= character_spacing_x;
-
     if (remaining)
         *remaining = s;
 
@@ -7204,11 +7207,6 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
             text_size.x = line_width;
         text_size.y += line_height;
     }
-
-    // Cancel out character spacing for the last character of a line (it is baked into glyph->XAdvance field)
-    const float character_spacing_x = 1.0f * scale;
-    if (text_size.x > 0.0f)
-        text_size.x -= character_spacing_x;
 
     if (remaining)
         *remaining = s;
