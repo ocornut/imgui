@@ -303,8 +303,8 @@ namespace ImGui
     IMGUI_API void          LogText(const char* fmt, ...);                                      // pass text data straight to log (without being displayed)
 
     // Utilities
-    IMGUI_API bool          IsItemHovered();                                                    // was the last item active area hovered by mouse?
-    IMGUI_API bool          IsItemFocused();                                                    // was the last item focused for keyboard input?
+    IMGUI_API bool          IsItemHovered();                                                    // was the last item hovered by mouse?
+    IMGUI_API bool          IsItemActive();                                                     // was the last item active? (e.g. button being held, text field being edited- items that don't interact will always return false)
     IMGUI_API ImVec2        GetItemBoxMin();                                                    // get bounding box of last item
     IMGUI_API ImVec2        GetItemBoxMax();                                                    // get bounding box of last item
     IMGUI_API bool          IsClipped(const ImVec2& item_size);                                 // to perform coarse clipping on user's side (as an optimization)

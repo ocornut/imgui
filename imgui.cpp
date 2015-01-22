@@ -145,6 +145,7 @@
                        it is now recommended your sample the font texture with bilinear interpolation.
               (1.30) - added texture identifier in ImDrawCmd passed to your render function (we can now render images). make sure to set io.Fonts->TexID.
               (1.30) - removed IO.PixelCenterOffset (unnecessary, can be handled in user projection matrix)
+              (1.30) - removed ImGui::IsItemFocused() in favor of ImGui::IsItemActive() which handles all widgets
  - 2014/12/10 (1.18) - removed SetNewWindowDefaultPos() in favor of new generic API SetNextWindowPos(pos, ImGuiSetCondition_FirstUseEver)
  - 2014/11/28 (1.17) - moved IO.Font*** options to inside the IO.Font-> structure (FontYOffset, FontTexUvForWhite, FontBaseScale, FontFallbackGlyph)
  - 2014/11/26 (1.17) - reworked syntax of IMGUI_ONCE_UPON_A_FRAME helper macro to increase compiler compatibility
@@ -231,18 +232,18 @@
  ISSUES & TODO-LIST
  ==================
 
+ ! input: mouse click on scrolling text input broken?
  - misc: merge or clarify ImVec4 / ImGuiAabb, they are essentially duplicate containers
  - window: add horizontal scroll
  - window: fix resize grip rendering scaling along with Rounding style setting
  - window: autofit feedback loop when user relies on any dynamic layout (window width multiplier, column). maybe just clearly drop manual autofit?
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. 
  - window: allow resizing of child windows (possibly given min/max for each axis?)
- - window: background options for child windows, border option (disable ronuding)
+ - window: background options for child windows, border option (disable rounding)
  - window: resizing from any sides? + mouse cursor directives for app.
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
  - main: considering adding EndFrame() - optional, else done in Render(). and Init()
- - main: add IsItemActive()
  - main: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
@@ -262,6 +263,7 @@
  - combo: turn child handling code into pop up helper
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  - menubar, menus
+ - tabs
  - gauge: various forms of gauge/loading bars widgets
  - color: better color editor.
  - plot: make it easier for user to draw into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
@@ -275,6 +277,7 @@
  - text edit: flag to disable live update of the user buffer. 
  - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
  - text edit: add multi-line text edit
+ - tree: add treenode/treepush int variants? because (void*) cast from int warns on some platforms/settings
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float) in .ini file
  ! style: store rounded corners in texture to use 1 quad per corner (filled and wireframe).
@@ -291,9 +294,8 @@
  - input: rework IO to be able to pass actual events to fix temporal aliasing issues.
  - input: support track pad style scrolling & slider edit.
  - tooltip: move to fit within screen (e.g. when mouse cursor is right of the screen).
- - clipboard: automatically transform \n into \n\r or equivalent for higher compatibility on windows
  - portability: big-endian test/support (github issue #81)
- - misc: rounded triangle fail to draw correctly on OpenGL3 example.
+ - misc: mark printf compiler attributes on relevant functions
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - style editor: color child window height expressed in multiple of line height.
@@ -392,11 +394,11 @@ static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool
 static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
 
 static void         SetFont(ImFont* font);
+static bool         ItemAdd(const ImGuiAabb& aabb, const ImGuiID* id);
 static void         ItemSize(ImVec2 size, ImVec2* adjust_start_offset = NULL);
 static void         ItemSize(const ImGuiAabb& aabb, ImVec2* adjust_start_offset = NULL);
 static void         PushColumnClipRect(int column_index = -1);
 static bool         IsClipped(const ImGuiAabb& aabb);
-static bool         ClipAdvance(const ImGuiAabb& aabb);
 
 static bool         IsMouseHoveringBox(const ImGuiAabb& box);
 static bool         IsKeyPressedMap(ImGuiKey key, bool repeat = true);
@@ -848,9 +850,9 @@ struct ImGuiDrawContext
     float                   PrevLineHeight;
     float                   LogLineHeight;
     int                     TreeDepth;
+    ImGuiID                 LastItemID;
     ImGuiAabb               LastItemAabb;
     bool                    LastItemHovered;
-    bool                    LastItemFocused;
     ImVector<ImGuiWindow*>  ChildWindows;
     ImVector<bool>          AllowKeyboardFocus;
     ImVector<float>         ItemWidth;
@@ -875,9 +877,9 @@ struct ImGuiDrawContext
         CurrentLineHeight = PrevLineHeight = 0.0f;
         LogLineHeight = -1.0f;
         TreeDepth = 0;
+        LastItemID = 0;
         LastItemAabb = ImGuiAabb(0.0f,0.0f,0.0f,0.0f);
         LastItemHovered = false;
-        LastItemFocused = true;
         StateStorage = NULL;
         OpenNextNode = -1;
 
@@ -1392,9 +1394,6 @@ bool ImGuiWindow::FocusItemRegister(bool is_active, bool tab_stop)
     FocusIdxAllCounter++;
     if (allow_keyboard_focus)
         FocusIdxTabCounter++;
-
-    if (is_active)
-        window->DC.LastItemFocused = true;
 
     // Process keyboard input at this point: TAB, Shift-TAB switch focus
     // We can always TAB out of a widget that doesn't allow tabbing in.
@@ -2197,10 +2196,15 @@ bool ImGui::IsItemHovered()
     return window->DC.LastItemHovered;
 }
 
-bool ImGui::IsItemFocused()
+bool ImGui::IsItemActive()
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    return window->DC.LastItemFocused;
+    ImGuiState& g = GImGui;
+    if (g.ActiveId)
+    {
+        ImGuiWindow* window = GetCurrentWindow();
+        return g.ActiveId == window->DC.LastItemID;
+    }
+    return false;
 }
 
 ImVec2 ImGui::GetItemBoxMin()
@@ -3416,7 +3420,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         }
         const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + text_size);
         ItemSize(bb);
-        ClipAdvance(bb);
+        ItemAdd(bb, NULL);
     }
     else
     {
@@ -3424,8 +3428,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         const ImVec2 text_size = CalcTextSize(text_begin, text_end, false, wrap_width);
         ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + text_size);
         ItemSize(bb.GetSize(), &bb.Min);
-
-        if (ClipAdvance(bb))
+        if (!ItemAdd(bb, NULL))
             return;
 
         // Render
@@ -3464,8 +3467,7 @@ void ImGui::LabelTextV(const char* label, const char* fmt, va_list args)
     const ImGuiAabb value_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2, text_size.y));
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2 + (text_size.x > 0.0f ? style.ItemInnerSpacing.x : 0.0f), 0.0f) + text_size);
     ItemSize(bb);
-
-    if (ClipAdvance(value_bb))
+    if (!ItemAdd(value_bb, NULL))
         return;
 
     // Render
@@ -3553,8 +3555,7 @@ bool ImGui::Button(const char* label, const ImVec2& size_arg, bool repeat_when_h
 
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + size + style.FramePadding*2.0f);
     ItemSize(bb);
-
-    if (ClipAdvance(bb))
+    if (!ItemAdd(bb, &id))
         return false;
 
     bool hovered, held;
@@ -3588,8 +3589,7 @@ bool ImGui::SmallButton(const char* label)
 
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + text_size + ImVec2(style.FramePadding.x*2,0));
     ItemSize(bb);
-
-    if (ClipAdvance(bb))
+    if (!ItemAdd(bb, &id))
         return false;
 
     bool hovered, held;
@@ -3612,13 +3612,11 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size)
     if (window->SkipItems)
         return false;
 
+    const ImGuiID id = window->GetID(str_id);
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + size);
     ItemSize(bb);
-
-    if (ClipAdvance(bb))
+    if (!ItemAdd(bb, &id))
         return false;
-
-    const ImGuiID id = window->GetID(str_id);
 
 	bool hovered, held;
     bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
@@ -3666,8 +3664,7 @@ void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2&
     if (border_col != 0)
         bb.Max += ImVec2(2,2);
     ItemSize(bb.GetSize(), &bb.Min);
-
-    if (ClipAdvance(bb))
+    if (!ItemAdd(bb, NULL))
         return;
 
     if (border_col != 0)
@@ -3838,7 +3835,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, const bool d
         if (g.LogEnabled && window->DC.TreeDepth < g.LogAutoExpandMaxDepth)
             opened = true;
 
-    if (ClipAdvance(bb))
+    if (!ItemAdd(bb, &id))
         return opened;
 
     bool hovered, held;
@@ -3901,8 +3898,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
     const ImVec2 text_size = CalcTextSize(text_begin, text_end, true);
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(line_height + (text_size.x > 0.0f ? (style.FramePadding.x*2) : 0.0f),0) + text_size);  // Empty text doesn't add padding
     ItemSize(bb);
-
-    if (ClipAdvance(bb))
+    if (!ItemAdd(bb, NULL))
         return;
 
     // Render
@@ -4105,9 +4101,9 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     const ImGuiAabb slider_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
     const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(text_size.x > 0.0f ? style.ItemInnerSpacing.x + text_size.x : 0.0f, 0.0f));
 
-    if (IsClipped(slider_bb))
+    // NB- we don't call ItemSize() yet becausae we may turn into a text edit box later in the function
+    if (!ItemAdd(slider_bb, &id))
     {
-        // NB- we don't use ClipAdvance() in the if() statement because we don't want to submit ItemSize() because we may change into a text edit later which may submit an ItemSize itself
         ItemSize(bb);
         return false;
     }
@@ -4433,8 +4429,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
     const ImGuiAabb graph_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
     const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(text_size.x > 0.0f ? style.ItemInnerSpacing.x + text_size.x : 0.0f, 0));
     ItemSize(bb);
-
-    if (ClipAdvance(bb))
+    if (!ItemAdd(bb, NULL))
         return;
 
     // Determine scale from values if not specified
@@ -4572,7 +4567,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
         total_bb = ImGuiAabb(ImMin(check_bb.Min, text_bb.Min), ImMax(check_bb.Max, text_bb.Max));
     }
 
-    if (ClipAdvance(total_bb))
+    if (!ItemAdd(total_bb, &id))
         return false;
 
     bool hovered, held;
@@ -4631,7 +4626,7 @@ bool ImGui::RadioButton(const char* label, bool active)
         total_bb.Add(text_bb);
     }
 
-    if (ClipAdvance(total_bb))
+    if (!ItemAdd(total_bb, &id))
         return false;
 
     ImVec2 center = check_bb.GetCenter();
@@ -4959,8 +4954,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, text_size.y) + style.FramePadding*2.0f);
     const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(text_size.x > 0.0f ? (style.ItemInnerSpacing.x + text_size.x) : 0.0f, 0.0f));
     ItemSize(bb);
-
-    if (ClipAdvance(frame_bb))
+    if (!ItemAdd(frame_bb, &id))
         return false;
 
     // NB: we are only allowed to access 'edit_state' if we are the active widget.
@@ -5348,9 +5342,8 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
 
     const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, text_size.y) + style.FramePadding*2.0f);
-
     ItemSize(frame_bb);
-    if (ClipAdvance(frame_bb))
+    if (!ItemAdd(frame_bb, &id))
         return false;
 
     const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(style.ItemInnerSpacing.x + text_size.x,0));
@@ -5470,8 +5463,7 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
     const float square_size = window->FontSize();
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(square_size + style.FramePadding.x*2, square_size + (small_height ? 0 : style.FramePadding.y*2)));
     ItemSize(bb);
-
-    if (ClipAdvance(bb))
+    if (!ItemAdd(bb, &id))
         return false;
 
     bool hovered, held;
@@ -5665,8 +5657,7 @@ void ImGui::Separator()
 
     const ImGuiAabb bb(ImVec2(window->Pos.x, window->DC.CursorPos.y), ImVec2(window->Pos.x + window->Size.x, window->DC.CursorPos.y));
     ItemSize(ImVec2(0.0f, bb.GetSize().y)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit
-
-    if (ClipAdvance(bb))
+    if (!ItemAdd(bb, NULL))
     {
         if (window->DC.ColumnsCount > 1)
             PushColumnClipRect();
@@ -5716,6 +5707,65 @@ static void ItemSize(const ImGuiAabb& aabb, ImVec2* adjust_start_offset)
     ItemSize(aabb.GetSize(), adjust_start_offset); 
 }
 
+static bool IsClipped(const ImGuiAabb& bb)
+{
+    ImGuiState& g = GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+
+    if (!bb.Overlaps(ImGuiAabb(window->ClipRectStack.back())) && !g.LogEnabled)
+        return true;
+    return false;
+}
+
+bool ImGui::IsClipped(const ImVec2& item_size)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return IsClipped(ImGuiAabb(window->DC.CursorPos, window->DC.CursorPos + item_size));
+}
+
+static bool ItemAdd(const ImGuiAabb& bb, const ImGuiID* id)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.LastItemID = id ? *id : 0;
+    window->DC.LastItemAabb = bb;
+    if (IsClipped(bb))
+    {
+        window->DC.LastItemHovered = false;
+        return false;
+    }
+    window->DC.LastItemHovered = IsMouseHoveringBox(bb);     // this is a sensible default but widgets are free to override it after calling ItemAdd()
+    return true;
+}
+
+// Gets back to previous line and continue with horizontal layout
+//      column_x == 0   : follow on previous item
+//      columm_x != 0   : align to specified column
+//      spacing_w < 0   : use default spacing if column_x==0, no spacing if column_x!=0
+//      spacing_w >= 0  : enforce spacing
+void ImGui::SameLine(int column_x, int spacing_w)
+{
+    ImGuiState& g = GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+    
+    float x, y;
+    if (column_x != 0)
+    {
+        if (spacing_w < 0) spacing_w = 0;
+        x = window->Pos.x + (float)column_x + (float)spacing_w;
+        y = window->DC.CursorPosPrevLine.y;
+    }
+    else
+    {
+        if (spacing_w < 0) spacing_w = (int)g.Style.ItemSpacing.x;
+        x = window->DC.CursorPosPrevLine.x + (float)spacing_w;
+        y = window->DC.CursorPosPrevLine.y;
+    }
+    window->DC.CurrentLineHeight = window->DC.PrevLineHeight;
+    window->DC.CursorPos = ImVec2(x, y);
+}
+
 void ImGui::NextColumn()
 {
     ImGuiState& g = GImGui;
@@ -5746,65 +5796,6 @@ void ImGui::NextColumn()
         PushColumnClipRect();
         ImGui::PushItemWidth(ImGui::GetColumnWidth() * 0.65f);
     }
-}
-
-static bool IsClipped(const ImGuiAabb& bb)
-{
-    ImGuiState& g = GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
-
-    if (!bb.Overlaps(ImGuiAabb(window->ClipRectStack.back())) && !g.LogEnabled)
-        return true;
-    return false;
-}
-
-bool ImGui::IsClipped(const ImVec2& item_size)
-{
-    ImGuiWindow* window = GetCurrentWindow();
-    return IsClipped(ImGuiAabb(window->DC.CursorPos, window->DC.CursorPos + item_size));
-}
-
-static bool ClipAdvance(const ImGuiAabb& bb)
-{
-    ImGuiWindow* window = GetCurrentWindow();
-    window->DC.LastItemAabb = bb;
-    window->DC.LastItemFocused = false;
-    if (IsClipped(bb))
-    {
-        window->DC.LastItemHovered = false;
-        return true;
-    }
-    window->DC.LastItemHovered = IsMouseHoveringBox(bb);     // this is a sensible default but widgets are free to override it after calling ClipAdvance
-    return false;
-}
-
-// Gets back to previous line and continue with horizontal layout
-//      column_x == 0   : follow on previous item
-//      columm_x != 0   : align to specified column
-//      spacing_w < 0   : use default spacing if column_x==0, no spacing if column_x!=0
-//      spacing_w >= 0  : enforce spacing
-void ImGui::SameLine(int column_x, int spacing_w)
-{
-    ImGuiState& g = GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return;
-    
-    float x, y;
-    if (column_x != 0)
-    {
-        if (spacing_w < 0) spacing_w = 0;
-        x = window->Pos.x + (float)column_x + (float)spacing_w;
-        y = window->DC.CursorPosPrevLine.y;
-    }
-    else
-    {
-        if (spacing_w < 0) spacing_w = (int)g.Style.ItemSpacing.x;
-        x = window->DC.CursorPosPrevLine.x + (float)spacing_w;
-        y = window->DC.CursorPosPrevLine.y;
-    }
-    window->DC.CurrentLineHeight = window->DC.PrevLineHeight;
-    window->DC.CursorPos = ImVec2(x, y);
 }
 
 float ImGui::GetColumnOffset(int column_index)
@@ -8055,16 +8046,16 @@ void ImGui::ShowTestWindow(bool* opened)
             
             if (focus_1) ImGui::SetKeyboardFocusHere();
             ImGui::InputText("1", buf, IM_ARRAYSIZE(buf));
-            if (ImGui::IsItemFocused()) has_focus = 1;
+            if (ImGui::IsItemActive()) has_focus = 1;
             
             if (focus_2) ImGui::SetKeyboardFocusHere();
             ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
-            if (ImGui::IsItemFocused()) has_focus = 2;
+            if (ImGui::IsItemActive()) has_focus = 2;
 
             ImGui::PushAllowKeyboardFocus(false);
             if (focus_3) ImGui::SetKeyboardFocusHere();
             ImGui::InputText("3 (tab skip)", buf, IM_ARRAYSIZE(buf));
-            if (ImGui::IsItemFocused()) has_focus = 3;
+            if (ImGui::IsItemActive()) has_focus = 3;
             ImGui::PopAllowKeyboardFocus();
             if (has_focus)
                 ImGui::Text("Item with focus: %d", has_focus);
