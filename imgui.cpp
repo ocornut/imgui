@@ -7525,6 +7525,7 @@ static void ShowExampleAppConsole(bool* opened);
 static void ShowExampleAppLongText(bool* opened);
 static void ShowExampleAppAutoResize(bool* opened);
 static void ShowExampleAppFixedOverlay(bool* opened);
+static void ShowExampleAppCustomRendering(bool* opened);
 
 // Demonstrate ImGui features (unfortunately this makes this function a little bloated!)
 void ImGui::ShowTestWindow(bool* opened)
@@ -8067,12 +8068,14 @@ void ImGui::ShowTestWindow(bool* opened)
     static bool show_app_long_text = false;
     static bool show_app_auto_resize = false;
     static bool show_app_fixed_overlay = false;
+    static bool show_app_custom_rendering = false;
     if (ImGui::CollapsingHeader("App Examples"))
     {
         ImGui::Checkbox("Console", &show_app_console);
         ImGui::Checkbox("Long text display", &show_app_long_text);
         ImGui::Checkbox("Auto-resizing window", &show_app_auto_resize);
         ImGui::Checkbox("Simple overlay", &show_app_fixed_overlay);
+        ImGui::Checkbox("Custom rendering", &show_app_custom_rendering);
     }
     if (show_app_console)
         ShowExampleAppConsole(&show_app_console);
@@ -8082,6 +8085,8 @@ void ImGui::ShowTestWindow(bool* opened)
         ShowExampleAppAutoResize(&show_app_auto_resize);
     if (show_app_fixed_overlay)
         ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
+    if (show_app_custom_rendering)
+        ShowExampleAppCustomRendering(&show_app_custom_rendering);
 
     ImGui::End();
 }
@@ -8116,6 +8121,67 @@ static void ShowExampleAppFixedOverlay(bool* opened)
     ImGui::Separator();
     ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y); 
 
+    ImGui::End();
+}
+
+static void ShowExampleAppCustomRendering(bool* opened)
+{
+    if (!ImGui::Begin("Example: Custom Rendering", opened))
+    {
+        ImGui::End();
+        return;
+    }
+
+    // Tip: If you do a lot of custom rendering, you probably want to use your own geometrical types and benefit of overloaded operators, etc.
+    // Define IM_VEC2_CLASS_EXTRA in imconfig.h to create implicit conversions between your types and ImVec2/ImVec4.
+    // ImGui defines overloaded operators but they are internal to imgui.cpp and not exposed outside (to avoid messing with your types)
+    // In this example we aren't using the operators.
+
+    static ImVector<ImVec2> points;
+    static bool adding_line = false;
+    if (ImGui::Button("Clear")) points.clear();
+    if (points.size() > 2) { ImGui::SameLine(); if (ImGui::Button("Undo")) points.pop_back(); }
+    ImGui::Text("Left-click and drag to add lines");
+    ImGui::Text("Right-click to undo");
+
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+    // Here we are using InvisibleButton() as a convenience to 1) advance the cursor and 2) allows us to use IsItemHovered()
+    // However you can draw directly and poll mouse/keyboard by yourself. You can manipulate the cursor using GetCursorPos() and SetCursorPos().
+    // If you only use the ImDrawList API, you can notify the owner window of its extends by using SetCursorPos(max) followed by an empty Text("") statement.
+    ImVec2 canvas_pos = ImGui::GetCursorScreenPos();            // ImDrawList API uses screen coordinates!
+    ImVec2 canvas_size = ImVec2(ImMin(50.0f,ImGui::GetWindowContentRegionMax().x-ImGui::GetCursorPos().x), ImMin(50.0f,ImGui::GetWindowContentRegionMax().y-ImGui::GetCursorPos().y));    // Resize canvas what's available
+    draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), 0xFFFFFFFF);
+    bool adding_preview = false;
+    ImGui::InvisibleButton("canvas", canvas_size);
+    if (ImGui::IsItemHovered())
+    {
+        ImVec2 mouse_pos_in_canvas = ImVec2(ImGui::GetIO().MousePos.x - canvas_pos.x, ImGui::GetIO().MousePos.y - canvas_pos.y);
+        if (!adding_line && ImGui::GetIO().MouseClicked[0])
+        {
+            points.push_back(mouse_pos_in_canvas);
+            adding_line = true;
+        }
+        if (adding_line)
+        {
+            adding_preview = true;
+            points.push_back(mouse_pos_in_canvas);
+            if (!ImGui::GetIO().MouseDown[0])
+                adding_line = adding_preview = false;
+        }
+        if (ImGui::GetIO().MouseClicked[1] && !points.empty())
+        {
+            adding_line = false;
+            points.pop_back();
+            points.pop_back();
+        }
+    }
+    draw_list->PushClipRect(ImVec4(canvas_pos.x, canvas_pos.y, canvas_pos.x+canvas_size.x, canvas_pos.y+canvas_size.y));      // clip lines within the canvas (if we resize it, etc.)
+    for (int i = 0; i < (int)points.size() - 1; i += 2)
+        draw_list->AddLine(ImVec2(canvas_pos.x + points[i].x, canvas_pos.y + points[i].y), ImVec2(canvas_pos.x + points[i+1].x, canvas_pos.y + points[i+1].y), 0xFF00FFFF);
+    draw_list->PopClipRect();
+    if (adding_preview)
+        points.pop_back();
     ImGui::End();
 }
 
