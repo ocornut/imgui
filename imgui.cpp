@@ -233,6 +233,7 @@
  ==================
 
  - misc: merge or clarify ImVec4 / ImGuiAabb, they are essentially duplicate containers
+!- i/o: avoid requesting mouse capture if button held and initial click was out of reach for imgui
  - window: add horizontal scroll
  - window: fix resize grip rendering scaling along with Rounding style setting
  - window: autofit feedback loop when user relies on any dynamic layout (window width multiplier, column). maybe just clearly drop manual autofit?
@@ -328,7 +329,7 @@
 #pragma clang diagnostic ignored "-Wformat-nonliteral"      // warning : format string is not a string literal              // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code.
 #pragma clang diagnostic ignored "-Wexit-time-destructors"  // warning : declaration requires an exit-time destructor       // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
 #pragma clang diagnostic ignored "-Wglobal-constructors"    // warning : declaration requires a global destructor           // similar to above, not sure what the exact difference it.
-#pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion chanjges signedness            // 
+#pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion changes signedness             // 
 #endif
 
 //-------------------------------------------------------------------------
@@ -350,6 +351,10 @@ namespace IMGUI_STB_NAMESPACE
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
 #define STBRP_ASSERT(x)    IM_ASSERT(x)
@@ -374,6 +379,9 @@ namespace IMGUI_STB_NAMESPACE
 
 #ifdef __clang__
 #pragma clang diagnostic pop
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
 #endif
 
 #ifdef IMGUI_STB_NAMESPACE
@@ -3615,7 +3623,6 @@ bool ImGui::SmallButton(const char* label)
 // Then you can keep 'str_id' empty or the same for all your buttons (instead of creating a string based on a non-string id)
 bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size)
 {
-    ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
