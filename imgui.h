@@ -641,9 +641,10 @@ struct ImGuiStorage
     struct Pair 
     { 
         ImGuiID key; 
-        union { int val_i; float val_f; };        
+        union { int val_i; float val_f; void* val_p; };        
         Pair(ImGuiID _key, int _val_i) { key = _key; val_i = _val_i; } 
         Pair(ImGuiID _key, float _val_f) { key = _key; val_f = _val_f; } 
+        Pair(ImGuiID _key, void* _val_p) { key = _key; val_p = _val_p; } 
     };
     ImVector<Pair>    Data;
 
@@ -660,6 +661,8 @@ struct ImGuiStorage
     IMGUI_API float   GetFloat(ImGuiID key, float default_val = 0.0f) const;
     IMGUI_API void    SetFloat(ImGuiID key, float val);
     IMGUI_API float*  GetFloatPtr(ImGuiID key, float default_val = 0);
+    IMGUI_API void    SetVoidPtr(ImGuiID key, void* val);
+    IMGUI_API void*   GetVoidPtr(ImGuiID key);
     IMGUI_API void    SetAllInt(int val);    // Use on your own storage if you know only integer are being stored.
 };
 
