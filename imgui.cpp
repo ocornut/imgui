@@ -2451,6 +2451,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
         g.SetNextWindowCollapsedCond = 0;
     }
 
+    // Find parent
+    ImGuiWindow* parent_window = (flags & ImGuiWindowFlags_ChildWindow) != 0 ? g.CurrentWindowStack[g.CurrentWindowStack.size()-2] : NULL;
+
     // Find root (if we are a child window)
     size_t root_idx = g.CurrentWindowStack.size() - 1;
     while (root_idx > 0)
@@ -2483,7 +2486,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
 
         if (flags & ImGuiWindowFlags_ChildWindow)
         {
-            ImGuiWindow* parent_window = g.CurrentWindowStack[g.CurrentWindowStack.size()-2];
             parent_window->DC.ChildWindows.push_back(window);
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
             window->SizeFull = size;
@@ -2491,7 +2493,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
 
         // Outer clipping rectangle
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
-            PushClipRect(g.CurrentWindowStack[g.CurrentWindowStack.size()-2]->ClipRectStack.back());
+            PushClipRect(parent_window->ClipRectStack.back());
         else
             PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
 
@@ -2788,14 +2790,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
 
         // Outer clipping rectangle
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
-        {
-            ImGuiWindow* parent_window = g.CurrentWindowStack[g.CurrentWindowStack.size()-2];
             PushClipRect(parent_window->ClipRectStack.back());
-        }
         else
-        {
             PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
-        }
     }
 
     // Inner clipping rectangle
@@ -6068,6 +6065,7 @@ void ImDrawList::PushClipRect(const ImVec4& clip_rect)
 
 void ImDrawList::PopClipRect()
 {
+    IM_ASSERT(clip_rect_stack.size() > 0);
     clip_rect_stack.pop_back();
     const ImVec4 clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
     SetClipRect(clip_rect);
@@ -6100,6 +6098,7 @@ void ImDrawList::PushTextureID(const ImTextureID& texture_id)
 
 void ImDrawList::PopTextureID()
 {
+    IM_ASSERT(texture_id_stack.size() > 0);
     texture_id_stack.pop_back();
     const ImTextureID texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
     SetTextureID(texture_id);
