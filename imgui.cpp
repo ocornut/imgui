@@ -6602,6 +6602,7 @@ bool    ImFontAtlas::Build()
     stbrp_rect* buf_rects = (stbrp_rect*)ImGui::MemAlloc(total_glyph_count * sizeof(stbrp_rect));
     stbtt_pack_range* buf_ranges = (stbtt_pack_range*)ImGui::MemAlloc(total_glyph_range_count * sizeof(stbtt_pack_range));
     memset(buf_packedchars, 0, total_glyph_count * sizeof(stbtt_packedchar));
+    memset(buf_rects, 0, total_glyph_count * sizeof(stbrp_rect));              // Unnessary but let's clear this for the sake of sanity.
     memset(buf_ranges, 0, total_glyph_range_count * sizeof(stbtt_pack_range));
 
     // First pass: pack all glyphs (no rendering at this point, we are working with glyph sizes only)
