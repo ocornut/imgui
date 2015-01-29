@@ -650,20 +650,25 @@ struct ImGuiStorage
 
     // - Get***() functions find pair, never add/allocate. Pairs are sorted so a query is O(log N)
     // - Set***() functions find pair, insertion on demand if missing.
-    // - Get***Ptr() functions find pair, insertion on demand if missing, return pointer. Useful if you intend to do Get+Set. 
-    //   A typical use case where this is very convenient:
-    //      float* pvar = ImGui::GetIntPtr(key); ImGui::SliderInt("var", pvar, 0, 100); some_var += *pvar;
     // - Sorted insertion is costly but should amortize. A typical frame shouldn't need to insert any new pair.
     IMGUI_API void    Clear();
     IMGUI_API int     GetInt(ImGuiID key, int default_val = 0) const;
     IMGUI_API void    SetInt(ImGuiID key, int val);
-    IMGUI_API int*    GetIntPtr(ImGuiID key, int default_val = 0);
     IMGUI_API float   GetFloat(ImGuiID key, float default_val = 0.0f) const;
     IMGUI_API void    SetFloat(ImGuiID key, float val);
-    IMGUI_API float*  GetFloatPtr(ImGuiID key, float default_val = 0);
+    IMGUI_API void*   GetVoidPtr(ImGuiID key) const; // default_val is NULL
     IMGUI_API void    SetVoidPtr(ImGuiID key, void* val);
-    IMGUI_API void*   GetVoidPtr(ImGuiID key);
-    IMGUI_API void    SetAllInt(int val);    // Use on your own storage if you know only integer are being stored.
+
+    // - Get***Ref() functions finds pair, insert on demand if missing, return pointer. Useful if you intend to do Get+Set. 
+    // - References are only valid until a new value is added to the storage. Calling a Set***() function or a Get***Ref() function invalidates the pointer.
+    // - A typical use case where this is convenient:
+    //      float* pvar = ImGui::GetFloatRef(key); ImGui::SliderFloat("var", pvar, 0, 100.0f); some_var += *pvar;
+    // - You can also use this to quickly create temporary editable values during a session of using Edit&Continue, without restarting your application.
+    IMGUI_API int*    GetIntRef(ImGuiID key, int default_val = 0);
+    IMGUI_API float*  GetFloatRef(ImGuiID key, float default_val = 0);
+
+    // Use on your own storage if you know only integer are being stored (open/close all tree nodes)
+    IMGUI_API void    SetAllInt(int val);
 };
 
 // Shared state of InputText(), passed to callback when a ImGuiInputTextFlags_Callback* flag is used.

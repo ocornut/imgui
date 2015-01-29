@@ -127,7 +127,8 @@
 
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
-
+ 
+ - 2015/01/19 (1.30) - renamed ImGuiStorage::GetIntPtr()/GetFloatPtr() to GetIntRef()/GetIntRef() because Ptr was conflicting with actual pointer storage functions.
  - 2015/01/11 (1.30) - big font/image API change! now loads TTF file. allow for multiple fonts. no need for a PNG loader.
               (1.30) - removed GetDefaultFontData(). uses io.Fonts->GetTextureData*() API to retrieve uncompressed pixels.
                        this sequence:
@@ -1147,7 +1148,16 @@ float ImGuiStorage::GetFloat(ImU32 key, float default_val) const
     return it->val_f;
 }
 
-int* ImGuiStorage::GetIntPtr(ImGuiID key, int default_val)
+void* ImGuiStorage::GetVoidPtr(ImGuiID key) const
+{
+    ImVector<Pair>::iterator it = LowerBound(const_cast<ImVector<ImGuiStorage::Pair>&>(Data), key);
+    if (it == Data.end() || it->key != key)
+        return NULL;
+    return it->val_p;
+}
+
+// References are only valid until a new value is added to the storage. Calling a Set***() function or a Get***Ref() function invalidates the pointer.
+int* ImGuiStorage::GetIntRef(ImGuiID key, int default_val)
 {
     ImVector<Pair>::iterator it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
@@ -1155,20 +1165,12 @@ int* ImGuiStorage::GetIntPtr(ImGuiID key, int default_val)
     return &it->val_i;
 }
 
-float* ImGuiStorage::GetFloatPtr(ImGuiID key, float default_val)
+float* ImGuiStorage::GetFloatRef(ImGuiID key, float default_val)
 {
     ImVector<Pair>::iterator it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
         it = Data.insert(it, Pair(key, default_val));
     return &it->val_f;
-}
-
-void* ImGuiStorage::GetVoidPtr(ImGuiID key)
-{
-    ImVector<Pair>::iterator it = LowerBound(Data, key);
-    if (it == Data.end() || it->key != key)
-        it = Data.insert(it, Pair(key, (void*)0));
-    return it->val_p;
 }
 
 // FIXME-OPT: Wasting CPU because all SetInt() are preceeded by GetInt() calls so we should have the result from lower_bound already in place.
