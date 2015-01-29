@@ -525,6 +525,7 @@ ImGuiIO::ImGuiIO()
     MousePosPrev = ImVec2(-1,-1);
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
+    DisplayVisibleMin = DisplayVisibleMax = ImVec2(0.0f, 0.0f);
     UserData = NULL;
 
     // User functions
@@ -2474,7 +2475,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
     if (first_begin_of_the_frame)
     {
         window->DrawList->Clear();
-        window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
         window->Visible = true;
 
         // New windows appears in front
@@ -2490,13 +2490,22 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
             window->SizeFull = size;
         }
+    }
 
-        // Outer clipping rectangle
-        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
-            PushClipRect(parent_window->ClipRectStack.back());
-        else
-            PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
+    // Setup texture
+    window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
 
+    // Setup outer clipping rectangle
+    if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
+        PushClipRect(parent_window->ClipRectStack.back());
+    else if (g.IO.DisplayVisibleMin.x != g.IO.DisplayVisibleMax.x && g.IO.DisplayVisibleMin.y != g.IO.DisplayVisibleMax.y)
+        PushClipRect(ImVec4(g.IO.DisplayVisibleMin.x, g.IO.DisplayVisibleMin.y, g.IO.DisplayVisibleMax.x, g.IO.DisplayVisibleMax.y));
+    else
+        PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
+
+    // Setup and draw window
+    if (first_begin_of_the_frame)
+    {
         // Seed ID stack with our window pointer
         window->IDStack.resize(0);
         ImGui::PushID(window);
@@ -2531,11 +2540,14 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
         // Clamp into view
         if (!(window->Flags & ImGuiWindowFlags_ChildWindow) && !(window->Flags & ImGuiWindowFlags_Tooltip))
         {
+            // FIXME: Parameterize padding.
             const ImVec2 pad = ImVec2(window->FontSize()*2.0f, window->FontSize()*2.0f); // FIXME: Parametrize of clarify this behavior.
             if (g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
             {
-                window->PosFloat = ImMax(window->PosFloat + window->Size, pad) - window->Size;
-                window->PosFloat = ImMin(window->PosFloat, ImVec2(g.IO.DisplaySize.x, g.IO.DisplaySize.y) - pad);
+                ImVec2 clip_min = pad;
+                ImVec2 clip_max = g.IO.DisplaySize - pad;
+                window->PosFloat = ImMax(window->PosFloat + window->Size, clip_min) - window->Size;
+                window->PosFloat = ImMin(window->PosFloat, clip_max);
             }
             window->SizeFull = ImMax(window->SizeFull, style.WindowMinSize);
         }
@@ -2782,17 +2794,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
             if (clip_title)
                 PopClipRect();
         }
-    }
-    else
-    {
-        // Short path when we do multiple Begin in the same frame.
-        window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
-
-        // Outer clipping rectangle
-        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
-            PushClipRect(parent_window->ClipRectStack.back());
-        else
-            PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
     }
 
     // Inner clipping rectangle
@@ -3647,7 +3648,7 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size)
     if (!ItemAdd(bb, &id))
         return false;
 
-	bool hovered, held;
+    bool hovered, held;
     bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
 
     return pressed;
