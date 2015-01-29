@@ -1163,6 +1163,14 @@ float* ImGuiStorage::GetFloatPtr(ImGuiID key, float default_val)
     return &it->val_f;
 }
 
+void* ImGuiStorage::GetVoidPtr(ImGuiID key)
+{
+    ImVector<Pair>::iterator it = LowerBound(Data, key);
+    if (it == Data.end() || it->key != key)
+        it = Data.insert(it, Pair(key, (void*)0));
+    return it->val_p;
+}
+
 // FIXME-OPT: Wasting CPU because all SetInt() are preceeded by GetInt() calls so we should have the result from lower_bound already in place.
 // However we only use SetInt() on explicit user action (so that's maximum once a frame) so the optimisation isn't much needed.
 void ImGuiStorage::SetInt(ImU32 key, int val)
@@ -1185,6 +1193,17 @@ void ImGuiStorage::SetFloat(ImU32 key, float val)
         return;
     }
     it->val_f = val;
+}
+
+void ImGuiStorage::SetVoidPtr(ImU32 key, void* val)
+{
+    ImVector<Pair>::iterator it = LowerBound(Data, key);
+    if (it == Data.end() || it->key != key)
+    {
+        Data.insert(it, Pair(key, val));
+        return;
+    }
+    it->val_p = val;
 }
 
 void ImGuiStorage::SetAllInt(int v)
