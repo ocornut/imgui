@@ -109,6 +109,7 @@ Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Bin
 ImGui is financially supported on [**Patreon**](http://www.patreon.com/imgui).
 
 Special supporters 
+- Wild Sheep Studio
 - Jetha Chan
 
 Supporters
