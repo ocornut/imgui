@@ -6039,6 +6039,17 @@ void ImDrawList::Clear()
     texture_id_stack.resize(0);
 }
 
+// This is useful if you need to force-create a new draw call (to allow for depending rendering / blending).
+// Otherwise primitives are merged into the same draw-call as much as possible.
+void ImDrawList::SplitDrawCmd()
+{
+    ImDrawCmd draw_cmd;
+    draw_cmd.vtx_count = 0;
+    draw_cmd.clip_rect = clip_rect_stack.back();
+    draw_cmd.texture_id = texture_id_stack.back();
+    commands.push_back(draw_cmd);
+}
+
 void ImDrawList::SetClipRect(const ImVec4& clip_rect)
 {
     ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
@@ -6060,8 +6071,8 @@ void ImDrawList::SetClipRect(const ImVec4& clip_rect)
 
 void ImDrawList::PushClipRect(const ImVec4& clip_rect)
 {
-    SetClipRect(clip_rect);
     clip_rect_stack.push_back(clip_rect);
+    SetClipRect(clip_rect);
 }
 
 void ImDrawList::PopClipRect()
@@ -6093,8 +6104,8 @@ void ImDrawList::SetTextureID(const ImTextureID& texture_id)
 
 void ImDrawList::PushTextureID(const ImTextureID& texture_id)
 {
-    SetTextureID(texture_id);
     texture_id_stack.push_back(texture_id);
+    SetTextureID(texture_id);
 }
 
 void ImDrawList::PopTextureID()

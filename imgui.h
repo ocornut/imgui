@@ -696,11 +696,12 @@ struct ImGuiTextEditCallbackData
 // Hold a series of drawing commands. The user provides a renderer for ImDrawList
 //-----------------------------------------------------------------------------
 
+// Typically, One ImDrawCmd = One GPU draw call
 struct ImDrawCmd
 {
-    unsigned int    vtx_count;
-    ImVec4          clip_rect;
-    ImTextureID     texture_id;     // Copy of user-provided 'TexID' from ImFont or passed to Image*() functions. Ignore if not using images or multiple fonts.
+    unsigned int    vtx_count;      // Number of vertices (multiple of 3) to be drawn. The vertices are stored in the callee ImDrawList's vtx_buffer[] array
+    ImVec4          clip_rect;      // Clipping rectangle (x1, y1, x2, y2)
+    ImTextureID     texture_id;     // Copy of user-provided 'TexID' from ImFont or passed to Image*() functions. Ignore if not using images or multiple fonts
 };
 
 #ifndef IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT
@@ -719,16 +720,16 @@ IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
 #endif
 
 // Draw command list
-// This is the low-level list of polygon that ImGui:: functions are creating. At the end of the frame, all command lists are passed to your ImGuiIO::RenderDrawListFn function for rendering.
-// At the moment, each ImGui window contains its own ImDrawList but they could potentially be merged.
+// This is the low-level list of polygons that ImGui functions are filling. At the end of the frame, all command lists are passed to your ImGuiIO::RenderDrawListFn function for rendering.
+// At the moment, each ImGui window contains its own ImDrawList but they could potentially be merged in the future.
 // If you want to add custom rendering within a window, you can use ImGui::GetWindowDrawList() to access the current draw list and add your own primitives.
 // You can interleave normal ImGui:: calls and adding primitives to the current draw list.
 // Note that this only gives you access to rendering polygons. If your intent is to create custom widgets and the publicly exposed functions/data aren't sufficient, you can add code in imgui_user.inl
 struct ImDrawList
 {
     // This is what you have to render
-    ImVector<ImDrawCmd>     commands;           // commands
-    ImVector<ImDrawVert>    vtx_buffer;         // each command consume ImDrawCmd::vtx_count of those
+    ImVector<ImDrawCmd>     commands;           // Commands. Typically 1 command = 1 draw call.
+    ImVector<ImDrawVert>    vtx_buffer;         // Vertex buffer. Each command consume ImDrawCmd::vtx_count of those
 
     // [Internal to ImGui]
     ImVector<ImVec4>        clip_rect_stack;    // [internal]
@@ -748,6 +749,7 @@ struct ImDrawList
     IMGUI_API void  AddVtx(const ImVec2& pos, ImU32 col);
     IMGUI_API void  AddVtxUV(const ImVec2& pos, ImU32 col, const ImVec2& uv);
     IMGUI_API void  AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col);
+    IMGUI_API void  SplitDrawCmd();             // This is useful if you need to force-create a new draw call (to allow for depending rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
 
     // Primitives   
     IMGUI_API void  AddLine(const ImVec2& a, const ImVec2& b, ImU32 col);
