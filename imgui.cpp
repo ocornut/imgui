@@ -6039,81 +6039,84 @@ void ImDrawList::Clear()
     texture_id_stack.resize(0);
 }
 
-// This is useful if you need to force-create a new draw call (to allow for depending rendering / blending).
-// Otherwise primitives are merged into the same draw-call as much as possible.
-void ImDrawList::SplitDrawCmd()
+void ImDrawList::AddDrawCmd()
 {
     ImDrawCmd draw_cmd;
     draw_cmd.vtx_count = 0;
-    draw_cmd.clip_rect = clip_rect_stack.back();
-    draw_cmd.texture_id = texture_id_stack.back();
+    draw_cmd.clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
+    draw_cmd.texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
+    draw_cmd.user_callback = NULL;
+    draw_cmd.user_callback_data = NULL;
     commands.push_back(draw_cmd);
 }
 
-void ImDrawList::SetClipRect(const ImVec4& clip_rect)
+void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
 {
     ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
-    if (current_cmd && current_cmd->vtx_count == 0)
+    if (!current_cmd || current_cmd->vtx_count != 0 || current_cmd->user_callback != NULL)
     {
-        // Reuse existing command (high-level clipping may have discarded vertices submitted earlier)
-        // FIXME-OPT: Possibly even reuse previous command.
-        current_cmd->clip_rect = clip_rect;
+        AddDrawCmd();
+        current_cmd = &commands.back();
+    }
+    current_cmd->user_callback = callback;
+    current_cmd->user_callback_data = callback_data;
+
+    // Force a new command after us
+    // We function this way so that the most common calls (AddLine, AddRect..) always have a command to add to without doing any check.
+    AddDrawCmd();
+}
+
+void ImDrawList::UpdateClipRect()
+{
+    ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
+    if (!current_cmd || (current_cmd->vtx_count != 0) || current_cmd->user_callback != NULL)
+    {
+        AddDrawCmd();
     }
     else
     {
-        ImDrawCmd draw_cmd;
-        draw_cmd.vtx_count = 0;
-        draw_cmd.clip_rect = clip_rect;
-        draw_cmd.texture_id = texture_id_stack.back();
-        commands.push_back(draw_cmd);
+        current_cmd->clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
     }
 }
 
 void ImDrawList::PushClipRect(const ImVec4& clip_rect)
 {
     clip_rect_stack.push_back(clip_rect);
-    SetClipRect(clip_rect);
+    UpdateClipRect();
 }
 
 void ImDrawList::PopClipRect()
 {
     IM_ASSERT(clip_rect_stack.size() > 0);
     clip_rect_stack.pop_back();
-    const ImVec4 clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
-    SetClipRect(clip_rect);
+    UpdateClipRect();
 }
 
-void ImDrawList::SetTextureID(const ImTextureID& texture_id)
+void ImDrawList::UpdateTextureID()
 {
     ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
-    if (current_cmd && (current_cmd->vtx_count == 0 || current_cmd->texture_id == texture_id))
+    const ImTextureID texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
+    if (!current_cmd || (current_cmd->vtx_count != 0 && current_cmd->texture_id != texture_id) || current_cmd->user_callback != NULL)
     {
-        // Reuse existing command
-        // FIXME-OPT: Possibly even reuse previous command.
-        current_cmd->texture_id = texture_id;
+        AddDrawCmd();
     }
     else
     {
-        ImDrawCmd draw_cmd;
-        draw_cmd.vtx_count = 0;
-        draw_cmd.clip_rect = clip_rect_stack.empty() ? GNullClipRect: clip_rect_stack.back();
-        draw_cmd.texture_id = texture_id;
-        commands.push_back(draw_cmd);
+        current_cmd->texture_id = texture_id;
     }
 }
 
 void ImDrawList::PushTextureID(const ImTextureID& texture_id)
 {
     texture_id_stack.push_back(texture_id);
-    SetTextureID(texture_id);
+    UpdateTextureID();
 }
 
 void ImDrawList::PopTextureID()
 {
     IM_ASSERT(texture_id_stack.size() > 0);
     texture_id_stack.pop_back();
-    const ImTextureID texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
-    SetTextureID(texture_id);
+    UpdateTextureID();
 }
 
 void ImDrawList::ReserveVertices(unsigned int vtx_count)
@@ -6143,6 +6146,7 @@ void ImDrawList::AddVtxUV(const ImVec2& pos, ImU32 col, const ImVec2& uv)
     vtx_write++;
 }
 
+// NB: memory should be reserved for 6 vertices by the caller.
 void ImDrawList::AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col)
 {
     const float length = sqrtf(ImLengthSqr(b - a));
