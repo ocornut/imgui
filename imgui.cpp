@@ -425,11 +425,6 @@ static ImU32        ImCrc32(const void* data, size_t data_size, ImU32 seed);
 static bool         ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size, size_t padding_bytes = 0);
 static int          ImUpperPowerOfTwo(int v) { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 
-// Helpers: Color Conversion
-static ImU32        ImConvertColorFloat4ToU32(const ImVec4& in);
-static void         ImConvertColorRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v);
-static void         ImConvertColorHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
-
 // Helpers: UTF-8 <> wchar
 static int          ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
 static ptrdiff_t    ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end);   // return output UTF-8 bytes count
@@ -701,7 +696,7 @@ static size_t ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_li
     return (w == -1) ? buf_size : (size_t)w;
 }
 
-static ImU32 ImConvertColorFloat4ToU32(const ImVec4& in)
+ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in)
 {
     ImU32 out  = ((ImU32)(ImSaturate(in.x)*255.f));
     out |= ((ImU32)(ImSaturate(in.y)*255.f) << 8);
@@ -712,7 +707,7 @@ static ImU32 ImConvertColorFloat4ToU32(const ImVec4& in)
 
 // Convert rgb floats ([0-1],[0-1],[0-1]) to hsv floats ([0-1],[0-1],[0-1]), from Foley & van Dam p592
 // Optimized http://lolengine.net/blog/2013/01/13/fast-rgb-to-hsv
-static void ImConvertColorRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v)
+void ImGui::ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v)
 {
     float K = 0.f;
     if (g < b)
@@ -734,7 +729,7 @@ static void ImConvertColorRGBtoHSV(float r, float g, float b, float& out_h, floa
 
 // Convert hsv floats ([0-1],[0-1],[0-1]) to rgb floats ([0-1],[0-1],[0-1]), from Foley & van Dam p593
 // also http://en.wikipedia.org/wiki/HSL_and_HSV
-static void ImConvertColorHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b)
+void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b)
 {   
     if (s == 0.0f)
     {
@@ -1085,8 +1080,8 @@ public:
     float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0 : FontSize() + GImGui.Style.FramePadding.y * 2.0f; }
     ImGuiAabb   TitleBarAabb() const                    { return ImGuiAabb(Pos, Pos + ImVec2(SizeFull.x, TitleBarHeight())); }
     ImVec2      WindowPadding() const                   { return ((Flags & ImGuiWindowFlags_ChildWindow) && !(Flags & ImGuiWindowFlags_ShowBorders)) ? ImVec2(1,1) : GImGui.Style.WindowPadding; }
-    ImU32       Color(ImGuiCol idx, float a=1.f) const  { ImVec4 c = GImGui.Style.Colors[idx]; c.w *= GImGui.Style.Alpha * a; return ImConvertColorFloat4ToU32(c); }
-    ImU32       Color(const ImVec4& col) const          { ImVec4 c = col; c.w *= GImGui.Style.Alpha; return ImConvertColorFloat4ToU32(c); }
+    ImU32       Color(ImGuiCol idx, float a=1.f) const  { ImVec4 c = GImGui.Style.Colors[idx]; c.w *= GImGui.Style.Alpha * a; return ImGui::ColorConvertFloat4ToU32(c); }
+    ImU32       Color(const ImVec4& col) const          { ImVec4 c = col; c.w *= GImGui.Style.Alpha; return ImGui::ColorConvertFloat4ToU32(c); }
 };
 
 static ImGuiWindow* GetCurrentWindow()
@@ -5591,7 +5586,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     const ImVec4 col_display(fx, fy, fz, 1.0f);
 
     if (edit_mode == ImGuiColorEditMode_HSV)
-        ImConvertColorRGBtoHSV(fx, fy, fz, fx, fy, fz);
+        ImGui::ColorConvertRGBtoHSV(fx, fy, fz, fx, fy, fz);
 
     int ix = (int)(fx * 255.0f + 0.5f);
     int iy = (int)(fy * 255.0f + 0.5f);
@@ -5693,7 +5688,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     fz = iz / 255.0f;
     fw = iw / 255.0f;
     if (edit_mode == 1)
-        ImConvertColorHSVtoRGB(fx, fy, fz, fx, fy, fz);
+        ImGui::ColorConvertHSVtoRGB(fx, fy, fz, fx, fy, fz);
 
     if (value_changed)
     {
