@@ -5132,6 +5132,25 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         if (edit_state.SelectedAllMouseLock && !io.MouseDown[0])
              edit_state.SelectedAllMouseLock = false;
 
+        if (g.IO.InputCharacters[0])
+        {
+            // Process text input (before we check for Return because using some IME will effectively send a Return?)
+            for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
+            {
+                const ImWchar c = g.IO.InputCharacters[n];
+                if (c)
+                {
+                    // Insert character if they pass filtering
+                    if (InputTextFilterCharacter(c, flags))
+                        continue;
+                    edit_state.OnKeyPressed(c);
+                }
+            }
+
+            // Consume characters
+            memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
+        }
+
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_RightArrow))          { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
@@ -5192,24 +5211,6 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                     ImGui::MemFree(clipboard_filtered);
                 }
             }
-        }
-        else if (g.IO.InputCharacters[0])
-        {
-            // Text input
-            for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
-            {
-                const ImWchar c = g.IO.InputCharacters[n];
-                if (c)
-                {
-                    // Insert character if they pass filtering
-                    if (InputTextFilterCharacter(c, flags))
-                        continue;
-                    edit_state.OnKeyPressed(c);
-                }
-            }
-
-            // Consume characters
-            memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
         }
 
         edit_state.CursorAnim += g.IO.DeltaTime;
