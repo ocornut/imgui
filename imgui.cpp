@@ -1102,6 +1102,11 @@ static ImGuiWindow* GetCurrentWindow()
     return GImGui.CurrentWindow;
 }
 
+static void SetActiveId(ImGuiID id) 
+{
+    GImGui.ActiveId = id; 
+}
+
 static void RegisterAliveId(const ImGuiID& id)
 {
     if (GImGui.ActiveId == id)
@@ -1676,7 +1681,7 @@ void ImGui::NewFrame()
     // Clear reference to active widget if the widget isn't alive anymore
     g.HoveredId = 0;
     if (!g.ActiveIdIsAlive && g.ActiveIdPreviousFrame == g.ActiveId && g.ActiveId != 0)
-        g.ActiveId = 0;
+        SetActiveId(0);
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = false;
 
@@ -1862,7 +1867,7 @@ void ImGui::Render()
 
         // Select window for move/focus when we're done with all our widgets (we only consider non-childs windows here)
         if (g.ActiveId == 0 && g.HoveredId == 0 && g.HoveredRootWindow != NULL && g.IO.MouseClicked[0])
-            g.ActiveId = g.HoveredRootWindow->GetID("#MOVE");
+            SetActiveId(g.HoveredRootWindow->GetID("#MOVE"));
 
         // Sort the window list so that all child windows are after their parent
         // We cannot do that on FocusWindow() because childs may not exist yet
@@ -2548,7 +2553,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
             }
             else
             {
-                g.ActiveId = 0;
+                SetActiveId(0);
             }
         }
 
@@ -3561,7 +3566,7 @@ static bool ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_ho
         {
             if (g.IO.MouseClicked[0])
             {
-                g.ActiveId = id;
+                SetActiveId(id);
                 FocusWindow(window);
             }
             else if (repeat && g.ActiveId && ImGui::IsMouseClicked(0, true))
@@ -3582,7 +3587,7 @@ static bool ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_ho
         {
             if (hovered)
                 pressed = true;
-            g.ActiveId = 0;
+            SetActiveId(0);
         }
     }
 
@@ -4238,7 +4243,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     bool start_text_input = false;
     if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]))
     {
-        g.ActiveId = id;
+        SetActiveId(id);
         FocusWindow(window);
 
         const bool is_ctrl_down = g.IO.KeyCtrl;
@@ -4256,7 +4261,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         char text_buf[64];
         ImFormatString(text_buf, IM_ARRAYSIZE(text_buf), "%.*f", decimal_precision, *v);
 
-        g.ActiveId = g.SliderAsInputTextId;
+        SetActiveId(g.SliderAsInputTextId);
         g.HoveredId = 0;
         window->FocusItemUnregister();      // Our replacement slider will override the focus ID (registered previously to allow for a TAB focus to happen)
         value_changed = ImGui::InputText(label, text_buf, IM_ARRAYSIZE(text_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
@@ -4265,15 +4270,18 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
             // First frame
             IM_ASSERT(g.ActiveId == id);    // InputText ID should match the Slider ID (else we'd need to store them both which is also possible)
             g.SliderAsInputTextId = g.ActiveId;
-            g.ActiveId = id;
+            SetActiveId(id);
             g.HoveredId = id;
         }
         else
         {
             if (g.ActiveId == g.SliderAsInputTextId)
-                g.ActiveId = id;
+                SetActiveId(id);
             else
-                g.ActiveId = g.SliderAsInputTextId = 0;
+            {
+                SetActiveId(0);
+                g.SliderAsInputTextId = 0;
+            }
         }
         if (value_changed)
         {
@@ -4337,7 +4345,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         }
         else
         {
-            g.ActiveId = 0;
+            SetActiveId(0);
         }
     }
 
@@ -5078,7 +5086,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             if (tab_focus_requested || is_ctrl_down)
                 select_all = true;
         }
-        g.ActiveId = id;
+        SetActiveId(id);
         FocusWindow(window);
     }
     else if (io.MouseClicked[0])
@@ -5086,7 +5094,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         // Release focus when we click outside
         if (g.ActiveId == id)
         {
-            g.ActiveId = 0;
+            SetActiveId(0);
         }
     }
 
@@ -5131,8 +5139,8 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         else if (IsKeyPressedMap(ImGuiKey_End))                 { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Delete))              { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Backspace))           { edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Enter))               { g.ActiveId = 0; enter_pressed = true; }
-        else if (IsKeyPressedMap(ImGuiKey_Escape))              { g.ActiveId = 0; cancel_edit = true; }
+        else if (IsKeyPressedMap(ImGuiKey_Enter))               { SetActiveId(0); enter_pressed = true; }
+        else if (IsKeyPressedMap(ImGuiKey_Escape))              { SetActiveId(0); cancel_edit = true; }
         else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Z))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); }
         else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_Y))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); }
         else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_A))   { edit_state.SelectAll(); }
@@ -5521,7 +5529,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
             }
             if (item_pressed)
             {
-                g.ActiveId = 0;
+                SetActiveId(0);
                 g.ActiveComboID = 0;
                 value_changed = true;
                 *current_item = item_idx;
