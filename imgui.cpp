@@ -7887,7 +7887,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::PopID();
         }
 
-        ImGui::Text("Hover me");
+        ImGui::Text("Hover over me");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("I am a tooltip");
 
