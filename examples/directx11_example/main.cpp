@@ -46,12 +46,6 @@ struct VERTEX_CONSTANT_BUFFER
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
-    size_t total_vtx_count = 0;
-    for (int n = 0; n < cmd_lists_count; n++)
-        total_vtx_count += cmd_lists[n]->vtx_buffer.size();
-    if (total_vtx_count == 0)
-        return;
-
     // Copy and convert all vertices into a single contiguous buffer
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     if (g_pd3dDeviceImmediateContext->Map(g_pVB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource) != S_OK)
@@ -461,7 +455,7 @@ void InitImGui()
         D3D11_BUFFER_DESC bufferDesc;
         memset(&bufferDesc, 0, sizeof(D3D11_BUFFER_DESC));
         bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-        bufferDesc.ByteWidth = 10000 * sizeof(CUSTOMVERTEX);
+        bufferDesc.ByteWidth = 100000 * sizeof(CUSTOMVERTEX); // Maybe we should handle that more dynamically?
         bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         bufferDesc.MiscFlags = 0;
