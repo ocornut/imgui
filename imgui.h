@@ -245,8 +245,8 @@ namespace ImGui
     IMGUI_API bool          Button(const char* label, const ImVec2& size = ImVec2(0,0), bool repeat_when_held = false);
     IMGUI_API bool          SmallButton(const char* label);
     IMGUI_API bool          InvisibleButton(const char* str_id, const ImVec2& size);
-    IMGUI_API void          Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0,0), const ImVec2& uv1 = ImVec2(1,1), ImU32 tint_col = 0xFFFFFFFF, ImU32 border_col = 0x00000000);
-    IMGUI_API bool          ImageButton(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0,0),  const ImVec2& uv1 = ImVec2(1,1), int frame_padding = -1, ImU32 bg_col = 0xFF000000);    // <0 frame_padding uses default frame padding settings. 0 for no paddnig.
+    IMGUI_API void          Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0,0), const ImVec2& uv1 = ImVec2(1,1), const ImVec4& tint_col = ImVec4(1,1,1,1), const ImVec4& border_col = ImVec4(0,0,0,0));
+    IMGUI_API bool          ImageButton(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0,0),  const ImVec2& uv1 = ImVec2(1,1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0,0,0,1));    // <0 frame_padding uses default frame padding settings. 0 for no paddnig.
     IMGUI_API bool          CollapsingHeader(const char* label, const char* str_id = NULL, const bool display_frame = true, const bool default_open = false);
     IMGUI_API bool          SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);     // adjust display_format to decorate the value with a prefix or a suffix. Use power!=1.0 for logarithmic sliders.
     IMGUI_API bool          SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
@@ -695,6 +695,19 @@ struct ImGuiTextEditCallbackData
     // NB: calling those function loses selection.
     void DeleteChars(int pos, int bytes_count);
     void InsertChars(int pos, const char* text, const char* text_end = NULL);
+};
+
+// ImColor() is just a helper that implicity converts to either ImU32 (packed 4x1 byte) or ImVec4 (4x1 float)
+// None of the ImGui API are using ImColor directly but you can use it as a convenience to pass colors in either formats.
+struct ImColor
+{
+    ImVec4              Value;
+
+    ImColor(int r, int g, int b, int a = 255)           { Value.x = r / 255.0f; Value.y = g / 255.0f; Value.z = b / 255.0f; Value.w = a / 255.0f; }
+    ImColor(const ImVec4& col)                          { Value = col; }
+    ImColor(float r, float g, float b, float a = 1.0f)  { Value.x = r; Value.y = g; Value.z = b; Value.w = a; }
+    operator ImU32() const                              { return ImGui::ColorConvertFloat4ToU32(Value); }
+    operator ImVec4() const                             { return Value; }
 };
 
 //-----------------------------------------------------------------------------

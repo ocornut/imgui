@@ -3679,27 +3679,27 @@ static bool CloseWindowButton(bool* p_opened)
     return pressed;
 }
 
-void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, ImU32 tint_col, ImU32 border_col)
+void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
 
     ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + size);
-    if (border_col != 0)
+    if (border_col.w > 0.0f)
         bb.Max += ImVec2(2,2);
     ItemSize(bb);
     if (!ItemAdd(bb, NULL))
         return;
 
-    if (border_col != 0)
+    if (border_col.w > 0.0f)
     {
-        window->DrawList->AddRect(bb.Min, bb.Max, border_col, 0.0f);
-        window->DrawList->AddImage(user_texture_id, bb.Min+ImVec2(1,1), bb.Max-ImVec2(1,1), uv0, uv1, tint_col);
+        window->DrawList->AddRect(bb.Min, bb.Max, window->Color(border_col), 0.0f);
+        window->DrawList->AddImage(user_texture_id, bb.Min+ImVec2(1,1), bb.Max-ImVec2(1,1), uv0, uv1, window->Color(tint_col));
     }
     else
     {
-        window->DrawList->AddImage(user_texture_id, bb.Min, bb.Max, uv0, uv1, tint_col);
+        window->DrawList->AddImage(user_texture_id, bb.Min, bb.Max, uv0, uv1, window->Color(tint_col));
     }
 }
 
@@ -3707,7 +3707,7 @@ void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2&
 // frame_padding = 0: no framing
 // frame_padding > 0: set framing size
 // The color used are the button colors.
-bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, int frame_padding, ImU32 bg_col)
+bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, int frame_padding, const ImVec4& bg_col)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -3736,8 +3736,8 @@ bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const I
     const ImU32 col = window->Color((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     if (padding.x > 0.0f || padding.y > 0.0f)
         RenderFrame(bb.Min, bb.Max, col);
-    if ((bg_col >> 24) != 0)
-        window->DrawList->AddRectFilled(image_bb.Min, image_bb.Max, bg_col);
+    if (bg_col.w > 0.0f)
+        window->DrawList->AddRectFilled(image_bb.Min, image_bb.Max, window->Color(bg_col));
     window->DrawList->AddImage(user_texture_id, image_bb.Min, image_bb.Max, uv0, uv1);
 
     return pressed;
@@ -7770,7 +7770,7 @@ void ImGui::ShowTestWindow(bool* opened)
             float tex_w = (float)ImGui::GetIO().Fonts->TexWidth;
             float tex_h = (float)ImGui::GetIO().Fonts->TexHeight;
             ImTextureID tex_id = ImGui::GetIO().Fonts->TexID;
-            ImGui::Image(tex_id, ImVec2(tex_w, tex_h), ImVec2(0,0), ImVec2(1,1), 0xFFFFFFFF, 0x80808080);
+            ImGui::Image(tex_id, ImVec2(tex_w, tex_h), ImVec2(0,0), ImVec2(1,1), ImColor(255,255,255,255), ImColor(255,255,255,128));
             if (ImGui::IsItemHovered())
             {
                 ImGui::BeginTooltip();
@@ -7781,7 +7781,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::Text("Max: (%.2f, %.2f)", focus_x + focus_sz, focus_y + focus_sz);
                 ImVec2 uv0 = ImVec2((focus_x) / tex_w, (focus_y) / tex_h);
                 ImVec2 uv1 = ImVec2((focus_x + focus_sz) / tex_w, (focus_y + focus_sz) / tex_h);
-                ImGui::Image(tex_id, ImVec2(128,128), uv0, uv1, 0xFFFFFFFF, 0x80808080);
+                ImGui::Image(tex_id, ImVec2(128,128), uv0, uv1, ImColor(255,255,255,255), ImColor(255,255,255,128));
                 ImGui::EndTooltip();
             }
             ImGui::TextWrapped("And now some textured buttons..");
