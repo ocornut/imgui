@@ -703,11 +703,14 @@ struct ImColor
 {
     ImVec4              Value;
 
-    ImColor(int r, int g, int b, int a = 255)           { Value.x = r / 255.0f; Value.y = g / 255.0f; Value.z = b / 255.0f; Value.w = a / 255.0f; }
-    ImColor(const ImVec4& col)                          { Value = col; }
-    ImColor(float r, float g, float b, float a = 1.0f)  { Value.x = r; Value.y = g; Value.z = b; Value.w = a; }
-    operator ImU32() const                              { return ImGui::ColorConvertFloat4ToU32(Value); }
-    operator ImVec4() const                             { return Value; }
+    ImColor(int r, int g, int b, int a = 255)                       { Value.x = r / 255.0f; Value.y = g / 255.0f; Value.z = b / 255.0f; Value.w = a / 255.0f; }
+    ImColor(float r, float g, float b, float a = 1.0f)              { Value.x = r; Value.y = g; Value.z = b; Value.w = a; }
+    ImColor(const ImVec4& col)                                      { Value = col; }
+
+    operator ImU32() const                                          { return ImGui::ColorConvertFloat4ToU32(Value); }
+    operator ImVec4() const                                         { return Value; }
+
+    static ImColor HSV(float h, float s, float v, float a = 1.0f)   { float r,g,b; ImGui::ColorConvertHSVtoRGB(h, s, v, r, g, b); return ImColor(r,g,b,a); }
 };
 
 //-----------------------------------------------------------------------------
