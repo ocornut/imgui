@@ -7574,7 +7574,12 @@ void ImGui::ShowTestWindow(bool* opened)
     static float fill_alpha = 0.65f;
 
     const ImGuiWindowFlags layout_flags = (no_titlebar ? ImGuiWindowFlags_NoTitleBar : 0) | (no_border ? 0 : ImGuiWindowFlags_ShowBorders) | (no_resize ? ImGuiWindowFlags_NoResize : 0) | (no_move ? ImGuiWindowFlags_NoMove : 0) | (no_scrollbar ? ImGuiWindowFlags_NoScrollbar : 0);
-    ImGui::Begin("ImGui Test", opened, ImVec2(550,680), fill_alpha, layout_flags);
+    if (!ImGui::Begin("ImGui Test", opened, ImVec2(550,680), fill_alpha, layout_flags))
+    {
+        // Early out if the window is collapsed, as an optimization.
+        ImGui::End();
+        return;
+    }
     ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);
 
     ImGui::Text("ImGui says hello.");
@@ -7923,10 +7928,11 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Columns(2);
         for (int i = 0; i < 100; i++)
         {
+            if (i == 50)
+                ImGui::NextColumn();
             char buf[32];
             ImFormatString(buf, IM_ARRAYSIZE(buf), "%08x", i*5731);
             ImGui::Button(buf);
-            ImGui::NextColumn();
         }
         ImGui::EndChild();
     }
