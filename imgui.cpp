@@ -3693,7 +3693,7 @@ void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2&
     ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + size);
     if (border_col != 0)
         bb.Max += ImVec2(2,2);
-    ItemSize(bb.GetSize(), &bb.Min);
+    ItemSize(bb);
     if (!ItemAdd(bb, NULL))
         return;
 
@@ -3706,6 +3706,46 @@ void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2&
     {
         window->DrawList->AddImage(user_texture_id, bb.Min, bb.Max, uv0, uv1, tint_col);
     }
+}
+
+// frame_padding < 0: uses FramePadding from style (default)
+// frame_padding = 0: no framing
+// frame_padding > 0: set framing size
+// The color used are the button colors.
+bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, int frame_padding, ImU32 bg_col)
+{
+    ImGuiState& g = GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    const ImGuiStyle& style = g.Style;
+
+    // Default to using texture ID as ID. User can still push string/integer prefixes.
+    // We could hash the size/uv to create a unique ID but that would prevent the user from animating buttons.
+    ImGui::PushID((void *)user_texture_id);
+    const ImGuiID id = window->GetID("#image");
+    ImGui::PopID();
+
+    const ImVec2 padding = (frame_padding >= 0) ? ImVec2((float)frame_padding, (float)frame_padding) : style.FramePadding;
+    const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + size + padding*2);
+    const ImGuiAabb image_bb(window->DC.CursorPos + padding, window->DC.CursorPos + padding + size); 
+    ItemSize(bb);
+    if (!ItemAdd(bb, &id))
+        return false;
+
+    bool hovered, held;
+    bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
+
+    // Render
+    const ImU32 col = window->Color((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+    if (padding.x > 0.0f || padding.y > 0.0f)
+        RenderFrame(bb.Min, bb.Max, col);
+    if ((bg_col >> 24) != 0)
+        window->DrawList->AddRectFilled(image_bb.Min, image_bb.Max, bg_col);
+    window->DrawList->AddImage(user_texture_id, image_bb.Min, image_bb.Max, uv0, uv1);
+
+    return pressed;
 }
 
 // Start logging ImGui output to TTY
@@ -5711,7 +5751,7 @@ void ImGui::Spacing()
 }
 
 // Advance cursor given item size.
-static void ItemSize(ImVec2 size, ImVec2* adjust_start_offset)
+static void ItemSize(ImVec2 size, ImVec2* adjust_vertical_offset)
 {
     ImGuiState& g = GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5719,8 +5759,8 @@ static void ItemSize(ImVec2 size, ImVec2* adjust_start_offset)
         return;
 
     const float line_height = ImMax(window->DC.CurrentLineHeight, size.y);
-    if (adjust_start_offset)
-        adjust_start_offset->y = adjust_start_offset->y + (line_height - size.y) * 0.5f;
+    if (adjust_vertical_offset)
+        adjust_vertical_offset->y = adjust_vertical_offset->y + (line_height - size.y) * 0.5f;
 
     // Always align ourselves on pixel boundaries
     window->DC.CursorPosPrevLine = ImVec2(window->DC.CursorPos.x + size.x, window->DC.CursorPos.y);
@@ -7735,7 +7775,7 @@ void ImGui::ShowTestWindow(bool* opened)
             float tex_w = (float)ImGui::GetIO().Fonts->TexWidth;
             float tex_h = (float)ImGui::GetIO().Fonts->TexHeight;
             ImTextureID tex_id = ImGui::GetIO().Fonts->TexID;
-            ImGui::Image(tex_id, ImVec2(tex_w, tex_h), ImVec2(0,0), ImVec2(1,1), 0xFFFFFFFF, 0x999999FF);
+            ImGui::Image(tex_id, ImVec2(tex_w, tex_h), ImVec2(0,0), ImVec2(1,1), 0xFFFFFFFF, 0x80808080);
             if (ImGui::IsItemHovered())
             {
                 ImGui::BeginTooltip();
@@ -7746,9 +7786,22 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::Text("Max: (%.2f, %.2f)", focus_x + focus_sz, focus_y + focus_sz);
                 ImVec2 uv0 = ImVec2((focus_x) / tex_w, (focus_y) / tex_h);
                 ImVec2 uv1 = ImVec2((focus_x + focus_sz) / tex_w, (focus_y + focus_sz) / tex_h);
-                ImGui::Image(tex_id, ImVec2(128,128), uv0, uv1, 0xFFFFFFFF, 0x999999FF);
+                ImGui::Image(tex_id, ImVec2(128,128), uv0, uv1, 0xFFFFFFFF, 0x80808080);
                 ImGui::EndTooltip();
             }
+            ImGui::TextWrapped("And now some textured buttons..");
+            static int pressed_count = 0;
+            for (int i = 0; i < 8; i++)
+            {
+                if (i > 0)
+                    ImGui::SameLine();
+                ImGui::PushID(i);
+                int frame_padding = -1 + i;     // -1 padding uses default padding
+                if (ImGui::ImageButton(tex_id, ImVec2(32,32), ImVec2(0,0), ImVec2(32.0f/tex_w,32/tex_h), frame_padding))
+                    pressed_count += 1;
+                ImGui::PopID();
+            }
+            ImGui::Text("Pressed %d times.", pressed_count);
             ImGui::TreePop();
         }
 
