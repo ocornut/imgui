@@ -310,7 +310,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
 
     bool show_test_window = true;
     bool show_another_window = false;
-    ImVec4 clear_col(0.8f, 0.6f, 0.6f, 1.0f);
+    ImVec4 clear_col = ImColor(114, 144, 154);
 
     // Enter the message loop
     MSG msg;
