@@ -537,7 +537,8 @@ struct ImGuiIO
 
     ImVec2      MousePos;                   // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
     bool        MouseDown[5];               // Mouse buttons. ImGui itself only uses button 0 (left button) but you can use others as storage for convenience.
-    float       MouseWheel;                 // Mouse wheel: 1 unit scrolls about 5 lines text.  
+    float       MouseWheel;                 // Mouse wheel: 1 unit scrolls about 5 lines text. 
+    bool        MouseDrawCursor;            // Request ImGui to draw a mouse cursor for you (if you are on a platform without a mouse cursor).
     bool        KeyCtrl;                    // Keyboard modifier pressed: Control
     bool        KeyShift;                   // Keyboard modifier pressed: Shift
     bool        KeysDown[512];              // Keyboard keys that are pressed (in whatever order user naturally has access to keyboard data)
@@ -851,6 +852,7 @@ struct ImFontAtlas
     ImVector<ImFontAtlasData*>  InputData;          // Internal data
     IMGUI_API bool              Build();            // Build pixels data. This is automatically for you by the GetTexData*** functions.
     IMGUI_API void              ClearInputData();   // Clear the input TTF data.
+    IMGUI_API void              RenderCustomTexData();
 };
 
 // TTF font loading and rendering

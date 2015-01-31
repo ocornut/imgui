@@ -441,6 +441,17 @@ static const char*  GetClipboardTextFn_DefaultImpl();
 static void         SetClipboardTextFn_DefaultImpl(const char* text);
 
 //-----------------------------------------------------------------------------
+// Texture Atlas data
+//-----------------------------------------------------------------------------
+
+// Technically we should use the rect pack API for that, but it's just simpler to hard-core the positions for now.
+// As we start using more of the texture atlas (for rounded corners) we can change that.
+static const ImVec2 TEX_ATLAS_SIZE(32, 32);
+static const ImVec2 TEX_ATLAS_POS_MOUSE_CURSOR_BLACK(1, 3);
+static const ImVec2 TEX_ATLAS_POS_MOUSE_CURSOR_WHITE(14, 3);
+static const ImVec2 TEX_ATLAS_SIZE_MOUSE_CURSOR(12, 19);
+
+//-----------------------------------------------------------------------------
 // User facing structures
 //-----------------------------------------------------------------------------
 
@@ -507,7 +518,9 @@ static ImFontAtlas GDefaultFontAtlas;
 
 ImGuiIO::ImGuiIO()
 {
+    // Most fields are initialized with zero
     memset(this, 0, sizeof(*this));
+
     DisplaySize = ImVec2(-1.0f, -1.0f);
     DeltaTime = 1.0f/60.0f;
     IniSavingRate = 5.0f;
@@ -515,12 +528,10 @@ ImGuiIO::ImGuiIO()
     LogFilename = "imgui_log.txt";
     Fonts = &GDefaultFontAtlas;
     FontGlobalScale = 1.0f;
-    FontAllowUserScaling = false;
     MousePos = ImVec2(-1,-1);
     MousePosPrev = ImVec2(-1,-1);
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
-    DisplayVisibleMin = DisplayVisibleMax = ImVec2(0.0f, 0.0f);
     UserData = NULL;
 
     // User functions
@@ -1899,6 +1910,21 @@ void ImGui::Render()
             ImGuiWindow* window = g.Windows[i];
             if (window->Visible && (window->Flags & ImGuiWindowFlags_Tooltip))
                 window->AddToRenderList();
+        }
+
+        if (g.IO.MouseDrawCursor)
+        {
+            const ImVec2 pos = g.IO.MousePos;
+            const ImVec2 size = TEX_ATLAS_SIZE_MOUSE_CURSOR;
+            const ImTextureID tex_id = g.IO.Fonts->TexID;
+            const ImVec2 tex_uv_scale(1.0f/g.IO.Fonts->TexWidth, 1.0f/g.IO.Fonts->TexHeight);
+            static ImDrawList draw_list;
+            draw_list.Clear();
+            draw_list.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
+            draw_list.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
+            draw_list.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0xFF000000); // Black border
+            draw_list.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_WHITE * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_WHITE + size) * tex_uv_scale, 0xFFFFFFFF); // White fill
+            g.RenderDrawLists.push_back(&draw_list);
         }
 
         // Render
@@ -6405,7 +6431,7 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
     if ((col >> 24) == 0)
         return;
 
-    const bool push_texture_id = user_texture_id != texture_id_stack.back();
+    const bool push_texture_id = texture_id_stack.empty() || user_texture_id != texture_id_stack.back();
     if (push_texture_id)
         PushTextureID(user_texture_id);
 
@@ -6641,8 +6667,8 @@ bool    ImFontAtlas::Build()
 
     // Pack our extra data rectangle first, so it will be on the upper-left corner of our texture (UV will have small values).
     stbrp_rect extra_rect;
-    extra_rect.w = 16;
-    extra_rect.h = 16;
+    extra_rect.w = (int)TEX_ATLAS_SIZE.x;
+    extra_rect.h = (int)TEX_ATLAS_SIZE.y;
     stbrp_pack_rects((stbrp_context*)spc.pack_info, &extra_rect, 1);
     TexExtraDataPos = ImVec2(extra_rect.x, extra_rect.y);
 
@@ -6767,11 +6793,51 @@ bool    ImFontAtlas::Build()
     buf_ranges = NULL;
     ClearInputData();
 
+    // Render into our custom data block
+    RenderCustomTexData();
+
+    return true;
+}
+
+void ImFontAtlas::RenderCustomTexData()
+{
+    IM_ASSERT(TexExtraDataPos.x == 0.0f && TexExtraDataPos.y == 0.0f);
+
     // Draw white pixel into texture and make UV points to it
     TexPixelsAlpha8[0] = TexPixelsAlpha8[1] = TexPixelsAlpha8[TexWidth+0] = TexPixelsAlpha8[TexWidth+1] = 0xFF;
     TexUvWhitePixel = ImVec2((TexExtraDataPos.x + 0.5f) / TexWidth, (TexExtraDataPos.y + 0.5f) / TexHeight);
 
-    return true;
+    // Draw a mouse cursor into texture
+    // Because our font uses an alpha texture, we have to spread the cursor in 2 parts (black/white) which will be rendered separately.
+    const char cursor_pixels[] =
+    {
+        "X           "
+        "XX          "
+        "X.X         "
+        "X..X        "
+        "X...X       "
+        "X....X      "
+        "X.....X     "
+        "X......X    "
+        "X.......X   "
+        "X........X  "
+        "X.........X "
+        "X..........X"
+        "X......XXXXX"
+        "X...X..X    "
+        "X..X X..X   "
+        "X.X  X..X   "
+        "XX    X..X  "
+        "      X..X  "
+        "       XX   "
+    };
+    IM_ASSERT(sizeof(cursor_pixels)-1 == (int)TEX_ATLAS_SIZE_MOUSE_CURSOR.x * (int)TEX_ATLAS_SIZE_MOUSE_CURSOR.y);
+    for (int y = 0, n = 0; y < 19; y++)
+        for (int x = 0; x < 12; x++, n++)
+        {
+            TexPixelsAlpha8[((int)TEX_ATLAS_POS_MOUSE_CURSOR_BLACK.x + x) + ((int)TEX_ATLAS_POS_MOUSE_CURSOR_BLACK.y + y) * TexWidth] = (cursor_pixels[n] == 'X') ? 0xFF : 0x00;
+            TexPixelsAlpha8[((int)TEX_ATLAS_POS_MOUSE_CURSOR_WHITE.x + x) + ((int)TEX_ATLAS_POS_MOUSE_CURSOR_WHITE.y + y) * TexWidth] = (cursor_pixels[n] == '.') ? 0xFF : 0x00;
+        }
 }
 
 //-----------------------------------------------------------------------------
