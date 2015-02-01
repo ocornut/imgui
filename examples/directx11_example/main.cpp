@@ -517,11 +517,11 @@ void UpdateImGui()
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
 {
     // Register the window class
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, LoadCursor(NULL, IDC_ARROW), NULL, NULL, "ImGui Example", NULL };
+    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, LoadCursor(NULL, IDC_ARROW), NULL, NULL, L"ImGui Example", NULL };
     RegisterClassEx(&wc);
 
     // Create the application's window
-    hWnd = CreateWindow("ImGui Example", "ImGui DirectX11 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+    hWnd = CreateWindow(L"ImGui Example", L"ImGui DirectX11 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
 
     if (!QueryPerformanceFrequency((LARGE_INTEGER *)&ticks_per_second))
         return 1;
@@ -532,7 +532,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
     if (InitDeviceD3D(hWnd) < 0)
     {
         CleanupDevice();
-        UnregisterClass("ImGui Example", wc.hInstance);
+        UnregisterClass(L"ImGui Example", wc.hInstance);
         return 1;
     }
 
@@ -603,7 +603,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
     }
 
     ImGui::Shutdown();
-    UnregisterClass("ImGui Example", wc.hInstance);
+    UnregisterClass(L"ImGui Example", wc.hInstance);
 
     return 0;
 }

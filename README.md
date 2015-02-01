@@ -2,6 +2,8 @@ ImGui
 =====
 [![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 
+[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui)
+
 ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and carries minimal amount of dependencies. It is based on an "immediate" graphical user interface paradigm which allows you to build user interfaces with ease.
 
 ImGui is designed to enable fast iteration and allow programmers to create "content creation" or "debug" tools (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal, and thus lacks certain features normally found in more high-level libraries.
@@ -32,6 +34,7 @@ Gallery
 ![screenshot 2](/web/test_window_02.png?raw=true)
 ![screenshot 3](/web/test_window_03.png?raw=true)
 ![screenshot 4](/web/test_window_04.png?raw=true)
+![screenshot 4](/web/examples_02.png?raw=true)
 
 ImGui can load TTF fonts. UTF-8 is supported for text display and input. Here using M+ font to display Japanese:
 
