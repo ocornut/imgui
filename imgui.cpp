@@ -5024,6 +5024,9 @@ static bool InputTextFilterCharacter(ImWchar c, ImGuiInputTextFlags flags)
     if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
         return true;
 
+    if (c >= 0xE000 && c <= 0xF8FF) // Filter private Unicode range. I don't imagine anybody would want to input them. GLFW on OSX seems to send private characters for special keys like arrow keys.
+        return true;
+
     if (flags & ImGuiInputTextFlags_CharsDecimal)
         if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
             return true;
