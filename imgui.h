@@ -1,4 +1,4 @@
-// ImGui library v1.30
+// ImGui library v1.31 wip
 // See .cpp file for commentary.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
@@ -69,7 +69,7 @@ struct ImVec4
 
 namespace ImGui
 {
-    // Proxy functions to access the MemAllocFn/MemFreeFn/MemReallocFn pointers in ImGui::GetIO(). The only reason they exist here is to allow ImVector<> to compile inline.
+    // Proxy functions to access the MemAllocFn/MemFreeFn pointers in ImGui::GetIO(). The only reason they exist here is to allow ImVector<> to compile inline.
     IMGUI_API void*       MemAlloc(size_t sz);
     IMGUI_API void        MemFree(void* ptr);
 }
@@ -113,14 +113,17 @@ public:
     inline value_type&          back()                          { IM_ASSERT(Size > 0); return Data[Size-1]; }
     inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size-1]; }
     inline void                 swap(ImVector<T>& rhs)          { const size_t rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; const size_t rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
-    inline void                 reserve(size_t new_capacity)    { if( new_capacity <= Capacity )
-																		return;
-																	T* NewData = (value_type*)ImGui::MemAlloc(new_capacity * sizeof(value_type));
-																	memcpy(NewData, Data, Size * sizeof(value_type));
-																	ImGui::MemFree(Data);
-																	Data = NewData;
-																	Capacity = new_capacity; }
+
     inline void                 resize(size_t new_size)         { if (new_size > Capacity) reserve(new_size); Size = new_size; }
+    inline void                 reserve(size_t new_capacity)    
+    { 
+        if (new_capacity <= Capacity) return;
+        T* new_data = (value_type*)ImGui::MemAlloc(new_capacity * sizeof(value_type));
+        memcpy(new_data, Data, Size * sizeof(value_type));
+        ImGui::MemFree(Data);
+        Data = new_data;
+        Capacity = new_capacity; 
+    }
 
     inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); Data[Size++] = v; }
     inline void                 pop_back()                      { IM_ASSERT(Size > 0); Size--; }
@@ -530,7 +533,7 @@ struct ImGuiIO
     const char* (*GetClipboardTextFn)();
     void        (*SetClipboardTextFn)(const char* text);
 
-    // Optional: override memory allocations (default to posix malloc/free)
+    // Optional: override memory allocations (default to posix malloc/free). MemFreeFn() may be called with a NULL pointer.
     void*       (*MemAllocFn)(size_t sz);
     void        (*MemFreeFn)(void* ptr);
 
@@ -710,7 +713,7 @@ struct ImColor
 {
     ImVec4              Value;
 
-    ImColor(int r, int g, int b, int a = 255)                       { Value.x = r / 255.0f; Value.y = g / 255.0f; Value.z = b / 255.0f; Value.w = a / 255.0f; }
+    ImColor(int r, int g, int b, int a = 255)                       { Value.x = (float)r / 255.0f; Value.y = (float)g / 255.0f; Value.z = (float)b / 255.0f; Value.w = (float)a / 255.0f; }
     ImColor(float r, float g, float b, float a = 1.0f)              { Value.x = r; Value.y = g; Value.z = b; Value.w = a; }
     ImColor(const ImVec4& col)                                      { Value = col; }
 

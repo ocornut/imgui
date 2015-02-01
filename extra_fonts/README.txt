@@ -5,6 +5,11 @@
  EXTRA FONTS FOR IMGUI
 ---------------------------------
 
+ DroidSans.ttf
+   Copyright (c) Steve Matteson
+   Apache License, version 2.0
+   http://www.google.com/fonts/specimen/Droid+Sans
+
  ProggyClean.ttf
    Copyright (c) 2004, 2005 Tristan Grimmer
    MIT License
