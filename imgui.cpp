@@ -1104,7 +1104,7 @@ static ImGuiWindow* GetCurrentWindow()
 
 static void SetActiveId(ImGuiID id) 
 {
-    GImGui.ActiveId = id; 
+    GImGui->ActiveId = id; 
 }
 
 static void RegisterAliveId(const ImGuiID& id)
