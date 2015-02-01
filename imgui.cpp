@@ -537,7 +537,6 @@ ImGuiIO::ImGuiIO()
     // User functions
     RenderDrawListsFn = NULL;
     MemAllocFn = malloc;
-    MemReallocFn = realloc;
     MemFreeFn = free;
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
@@ -1478,11 +1477,6 @@ void* ImGui::MemAlloc(size_t sz)
 void ImGui::MemFree(void* ptr)
 {
     return GImGui.IO.MemFreeFn(ptr);
-}
-
-void* ImGui::MemRealloc(void* ptr, size_t sz)
-{
-    return GImGui.IO.MemReallocFn(ptr, sz);
 }
     
 static ImGuiIniData* FindWindowSettings(const char* name)
