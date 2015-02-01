@@ -984,6 +984,7 @@ struct ImGuiState
 
     // Render
     ImVector<ImDrawList*>   RenderDrawLists;
+    ImVector<ImGuiWindow*>  RenderSortedWindows;
 
     // Widget state
     ImGuiTextEditState      InputTextState;
@@ -1866,18 +1867,18 @@ void ImGui::Render()
 
         // Sort the window list so that all child windows are after their parent
         // We cannot do that on FocusWindow() because childs may not exist yet
-        ImVector<ImGuiWindow*> sorted_windows;
-        sorted_windows.reserve(g.Windows.size());
+        g.RenderSortedWindows.resize(0);
+        g.RenderSortedWindows.reserve(g.Windows.size());
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
-            if (window->Flags & ImGuiWindowFlags_ChildWindow)           // if a child is visible its parent will add it
+            if (window->Flags & ImGuiWindowFlags_ChildWindow)               // if a child is visible its parent will add it
                 if (window->Visible)
                     continue;
-            AddWindowToSortedBuffer(window, sorted_windows);
+            AddWindowToSortedBuffer(window, g.RenderSortedWindows);
         }
-        IM_ASSERT(g.Windows.size() == sorted_windows.size());           // We done something wrong
-        g.Windows.swap(sorted_windows);
+        IM_ASSERT(g.Windows.size() == g.RenderSortedWindows.size());    // We done something wrong
+        g.Windows.swap(g.RenderSortedWindows);
 
         // Clear data for next frame
         g.IO.MouseWheel = 0.0f;
