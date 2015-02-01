@@ -32,6 +32,7 @@ Gallery
 ![screenshot 2](/web/test_window_02.png?raw=true)
 ![screenshot 3](/web/test_window_03.png?raw=true)
 ![screenshot 4](/web/test_window_04.png?raw=true)
+![screenshot 4](/web/examples_02.png?raw=true)
 
 ImGui can load TTF fonts. UTF-8 is supported for text display and input. Here using M+ font to display Japanese:
 
