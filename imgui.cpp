@@ -1609,8 +1609,16 @@ void* ImGui::GetInternalState()
 	return GImGui;
 }
 
-void ImGui::SetInternalState(void* state)
+unsigned ImGui::GetInternalStateSize()
 {
+	return sizeof(ImGuiState);
+}
+
+void ImGui::SetInternalState(void* state, bool construct)
+{
+	if( construct )
+		new (state) ImGuiState;
+	
 	GImGui = (ImGuiState*)state;
 }
 
