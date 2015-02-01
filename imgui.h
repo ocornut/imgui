@@ -72,7 +72,6 @@ namespace ImGui
     // Proxy functions to access the MemAllocFn/MemFreeFn/MemReallocFn pointers in ImGui::GetIO(). The only reason they exist here is to allow ImVector<> to compile inline.
     IMGUI_API void*       MemAlloc(size_t sz);
     IMGUI_API void        MemFree(void* ptr);
-    IMGUI_API void*       MemRealloc(void* ptr, size_t sz);
 }
 
 // std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug). 
@@ -114,8 +113,13 @@ public:
     inline value_type&          back()                          { IM_ASSERT(Size > 0); return Data[Size-1]; }
     inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size-1]; }
     inline void                 swap(ImVector<T>& rhs)          { const size_t rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; const size_t rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
-
-    inline void                 reserve(size_t new_capacity)    { Data = (value_type*)ImGui::MemRealloc(Data, new_capacity * sizeof(value_type)); Capacity = new_capacity; }
+    inline void                 reserve(size_t new_capacity)    { if( new_capacity <= Capacity )
+																		return;
+																	T* NewData = (value_type*)ImGui::MemAlloc(new_capacity * sizeof(value_type));
+																	memcpy(NewData, Data, Size * sizeof(value_type));
+																	ImGui::MemFree(Data);
+																	Data = NewData;
+																	Capacity = new_capacity; }
     inline void                 resize(size_t new_size)         { if (new_size > Capacity) reserve(new_size); Size = new_size; }
 
     inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); Data[Size++] = v; }
@@ -139,6 +143,9 @@ public:
 namespace ImGui
 {
     // Main
+	IMGUI_API void*         GetInternalState();
+	IMGUI_API unsigned      GetInternalStateSize();
+	IMGUI_API void          SetInternalState(void* state, bool construct = false);
     IMGUI_API ImGuiIO&      GetIO();
     IMGUI_API ImGuiStyle&   GetStyle();
     IMGUI_API void          NewFrame();
@@ -523,9 +530,8 @@ struct ImGuiIO
     const char* (*GetClipboardTextFn)();
     void        (*SetClipboardTextFn)(const char* text);
 
-    // Optional: override memory allocations (default to posix malloc/realloc/free)
+    // Optional: override memory allocations (default to posix malloc/free)
     void*       (*MemAllocFn)(size_t sz);
-    void*       (*MemReallocFn)(void* ptr, size_t sz);
     void        (*MemFreeFn)(void* ptr);
 
     // Optional: notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese inputs in Windows)
