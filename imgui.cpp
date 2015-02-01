@@ -128,6 +128,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/02/01 (1.31) - removed IO.MemReallocFn (unused)
  - 2015/01/19 (1.30) - renamed ImGuiStorage::GetIntPtr()/GetFloatPtr() to GetIntRef()/GetIntRef() because Ptr was conflicting with actual pointer storage functions.
  - 2015/01/11 (1.30) - big font/image API change! now loads TTF file. allow for multiple fonts. no need for a PNG loader.
               (1.30) - removed GetDefaultFontData(). uses io.Fonts->GetTextureData*() API to retrieve uncompressed pixels.
@@ -537,7 +538,6 @@ ImGuiIO::ImGuiIO()
     // User functions
     RenderDrawListsFn = NULL;
     MemAllocFn = malloc;
-    MemReallocFn = realloc;
     MemFreeFn = free;
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
@@ -1484,11 +1484,6 @@ void ImGui::MemFree(void* ptr)
 {
     return GImGui.IO.MemFreeFn(ptr);
 }
-
-void* ImGui::MemRealloc(void* ptr, size_t sz)
-{
-    return GImGui.IO.MemReallocFn(ptr, sz);
-}
     
 static ImGuiIniData* FindWindowSettings(const char* name)
 {
@@ -1754,7 +1749,7 @@ void ImGui::NewFrame()
 
     // No window should be open at the beginning of the frame.
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
-    g.CurrentWindowStack.clear();
+    g.CurrentWindowStack.resize(0);
 
     // Create implicit window - we will only render it if the user has added something to it.
     ImGui::Begin("Debug", NULL, ImVec2(400,400));

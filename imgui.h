@@ -69,10 +69,9 @@ struct ImVec4
 
 namespace ImGui
 {
-    // Proxy functions to access the MemAllocFn/MemFreeFn/MemReallocFn pointers in ImGui::GetIO(). The only reason they exist here is to allow ImVector<> to compile inline.
+    // Proxy functions to access the MemAllocFn/MemFreeFn pointers in ImGui::GetIO(). The only reason they exist here is to allow ImVector<> to compile inline.
     IMGUI_API void*       MemAlloc(size_t sz);
     IMGUI_API void        MemFree(void* ptr);
-    IMGUI_API void*       MemRealloc(void* ptr, size_t sz);
 }
 
 // std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug). 
@@ -115,8 +114,16 @@ public:
     inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size-1]; }
     inline void                 swap(ImVector<T>& rhs)          { const size_t rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; const size_t rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
 
-    inline void                 reserve(size_t new_capacity)    { Data = (value_type*)ImGui::MemRealloc(Data, new_capacity * sizeof(value_type)); Capacity = new_capacity; }
     inline void                 resize(size_t new_size)         { if (new_size > Capacity) reserve(new_size); Size = new_size; }
+    inline void                 reserve(size_t new_capacity)    
+    { 
+        if (new_capacity <= Capacity) return;
+        T* new_data = (value_type*)ImGui::MemAlloc(new_capacity * sizeof(value_type));
+        memcpy(new_data, Data, Size * sizeof(value_type));
+        ImGui::MemFree(Data);
+        Data = new_data;
+        Capacity = new_capacity; 
+    }
 
     inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); Data[Size++] = v; }
     inline void                 pop_back()                      { IM_ASSERT(Size > 0); Size--; }
@@ -523,9 +530,8 @@ struct ImGuiIO
     const char* (*GetClipboardTextFn)();
     void        (*SetClipboardTextFn)(const char* text);
 
-    // Optional: override memory allocations (default to posix malloc/realloc/free). MemFreeFn() may be called with a NULL pointer.
+    // Optional: override memory allocations (default to posix malloc/free). MemFreeFn() may be called with a NULL pointer.
     void*       (*MemAllocFn)(size_t sz);
-    void*       (*MemReallocFn)(void* ptr, size_t sz);
     void        (*MemFreeFn)(void* ptr);
 
     // Optional: notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese inputs in Windows)
