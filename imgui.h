@@ -523,7 +523,7 @@ struct ImGuiIO
     const char* (*GetClipboardTextFn)();
     void        (*SetClipboardTextFn)(const char* text);
 
-    // Optional: override memory allocations (default to posix malloc/realloc/free)
+    // Optional: override memory allocations (default to posix malloc/realloc/free). MemFreeFn() may be called with a NULL pointer.
     void*       (*MemAllocFn)(size_t sz);
     void*       (*MemReallocFn)(void* ptr, size_t sz);
     void        (*MemFreeFn)(void* ptr);
