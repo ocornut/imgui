@@ -2607,7 +2607,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
         // Collapse window by double-clicking on title bar
         if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
         {
-            if (g.HoveredWindow == window && IsMouseHoveringBox(title_bar_aabb) && g.IO.MouseDoubleClicked[0])
+            if (!(window->Flags & ImGuiWindowFlags_NoCollapse) && g.HoveredWindow == window && IsMouseHoveringBox(title_bar_aabb) && g.IO.MouseDoubleClicked[0])
             {
                 window->Collapsed = !window->Collapsed;
                 if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
@@ -2803,12 +2803,17 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
         // Title bar
         if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
         {
-            RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
             if (p_opened != NULL)
                 CloseWindowButton(p_opened);
 
+            ImVec2 text_min = window->Pos + style.FramePadding;
+            if (!(window->Flags & ImGuiWindowFlags_NoCollapse))
+            {
+                RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
+                text_min.x += window->FontSize() + style.ItemInnerSpacing.x;
+            }
+
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
-            const ImVec2 text_min = window->Pos + style.FramePadding + ImVec2(window->FontSize() + style.ItemInnerSpacing.x, 0.0f);
             const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_aabb.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y + text_size.y);
             const bool clip_title = text_size.x > (text_max.x - text_min.x);    // only push a clip rectangle if we need to, because it may turn into a separate draw call
             if (clip_title)
@@ -7685,10 +7690,18 @@ void ImGui::ShowTestWindow(bool* opened)
     static bool no_resize = false;
     static bool no_move = false;
     static bool no_scrollbar = false;
+    static bool no_collapse = false;
     static float fill_alpha = 0.65f;
 
-    const ImGuiWindowFlags layout_flags = (no_titlebar ? ImGuiWindowFlags_NoTitleBar : 0) | (no_border ? 0 : ImGuiWindowFlags_ShowBorders) | (no_resize ? ImGuiWindowFlags_NoResize : 0) | (no_move ? ImGuiWindowFlags_NoMove : 0) | (no_scrollbar ? ImGuiWindowFlags_NoScrollbar : 0);
-    if (!ImGui::Begin("ImGui Test", opened, ImVec2(550,680), fill_alpha, layout_flags))
+    // Demonstrate the various window flags. Typically you would just use the default.
+    ImGuiWindowFlags window_flags = 0;
+    if (no_titlebar)  window_flags |= ImGuiWindowFlags_NoTitleBar;
+    if (!no_border)   window_flags |= ImGuiWindowFlags_ShowBorders;
+    if (no_resize)    window_flags |= ImGuiWindowFlags_NoResize;
+    if (no_move)      window_flags |= ImGuiWindowFlags_NoMove;
+    if (no_scrollbar) window_flags |= ImGuiWindowFlags_NoScrollbar;
+    if (no_collapse)  window_flags |= ImGuiWindowFlags_NoCollapse;
+    if (!ImGui::Begin("ImGui Test", opened, ImVec2(550,680), fill_alpha, window_flags))
     {
         // Early out if the window is collapsed, as an optimization.
         ImGui::End();
@@ -7713,7 +7726,8 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Checkbox("no border", &no_border); ImGui::SameLine(300);
         ImGui::Checkbox("no resize", &no_resize); 
         ImGui::Checkbox("no move", &no_move); ImGui::SameLine(150);
-        ImGui::Checkbox("no scrollbar", &no_scrollbar);
+        ImGui::Checkbox("no scrollbar", &no_scrollbar); ImGui::SameLine(300);
+        ImGui::Checkbox("no collapse", &no_collapse);
         ImGui::SliderFloat("fill alpha", &fill_alpha, 0.0f, 1.0f);
 
         if (ImGui::TreeNode("Style"))

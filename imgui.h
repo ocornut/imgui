@@ -343,19 +343,21 @@ namespace ImGui
 enum ImGuiWindowFlags_
 {
     // Default: 0
-    ImGuiWindowFlags_ShowBorders            = 1 << 0,
-    ImGuiWindowFlags_NoTitleBar             = 1 << 1,
-    ImGuiWindowFlags_NoResize               = 1 << 2,
-    ImGuiWindowFlags_NoMove                 = 1 << 3,
-    ImGuiWindowFlags_NoScrollbar            = 1 << 4,
-    ImGuiWindowFlags_NoScrollWithMouse      = 1 << 5,
-    ImGuiWindowFlags_AlwaysAutoResize       = 1 << 6,
-    ImGuiWindowFlags_NoSavedSettings        = 1 << 7,   // Never load/save settings in .ini file
-    ImGuiWindowFlags_ChildWindow            = 1 << 8,   // For internal use by BeginChild()
-    ImGuiWindowFlags_ChildWindowAutoFitX    = 1 << 9,   // For internal use by BeginChild()
-    ImGuiWindowFlags_ChildWindowAutoFitY    = 1 << 10,  // For internal use by BeginChild()
-    ImGuiWindowFlags_ComboBox               = 1 << 11,  // For internal use by ComboBox()
-    ImGuiWindowFlags_Tooltip                = 1 << 12   // For internal use by Render() when using Tooltip
+    ImGuiWindowFlags_NoTitleBar             = 1 << 0,   // Disable title-bar
+    ImGuiWindowFlags_NoResize               = 1 << 1,   // Disable user resizing with the lower-right grip
+    ImGuiWindowFlags_NoMove                 = 1 << 2,   // Disable user moving the window
+    ImGuiWindowFlags_NoScrollbar            = 1 << 3,   // Disable scroll bar (window can still scroll with mouse or programatically)
+    ImGuiWindowFlags_NoScrollWithMouse      = 1 << 4,   // Disable user scrolling with mouse wheel
+    ImGuiWindowFlags_NoCollapse             = 1 << 5,   // Disable user collapsing window by double-clicking on it
+    ImGuiWindowFlags_AlwaysAutoResize       = 1 << 6,   // Resize every window to its content every frame
+    ImGuiWindowFlags_ShowBorders            = 1 << 7,   // Show borders around windows and items
+    ImGuiWindowFlags_NoSavedSettings        = 1 << 8,   // Never load/save settings in .ini file
+    // [Internal]
+    ImGuiWindowFlags_ChildWindow            = 1 << 9,   // For internal use by BeginChild()
+    ImGuiWindowFlags_ChildWindowAutoFitX    = 1 << 10,  // For internal use by BeginChild()
+    ImGuiWindowFlags_ChildWindowAutoFitY    = 1 << 11,  // For internal use by BeginChild()
+    ImGuiWindowFlags_ComboBox               = 1 << 12,  // For internal use by ComboBox()
+    ImGuiWindowFlags_Tooltip                = 1 << 13   // For internal use by BeginTooltip()
 };
 
 // Flags for ImGui::InputText()
