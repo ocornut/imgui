@@ -321,6 +321,7 @@
 #include <new>          // new (ptr)
 
 #ifdef _MSC_VER
+#pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
 
@@ -1980,7 +1981,7 @@ static void LogText(const ImVec2& ref_pos, const char* text, const char* text_en
     if (g.LogStartDepth > window->DC.TreeDepth)  // Re-adjust padding if we have popped out of our starting depth
         g.LogStartDepth = window->DC.TreeDepth;
     const int tree_depth = (window->DC.TreeDepth - g.LogStartDepth);
-    while (true)
+    for (;;)
     {
         // Split the string. Each new line (after a '\n') is followed by spacing corresponding to the current depth of our log entry.
         const char* line_end = text_remaining;
@@ -8561,7 +8562,7 @@ struct ExampleAppConsole
                 {
                     // Multiple matches. Complete as much as we can, so inputing "C" will complete to "CL" and display "CLEAR" and "CLASSIFY"
                     int match_len = (int)(word_end - word_start);
-                    while (true)
+                    for (;;)
                     {
                         int c = 0;
                         bool all_candidates_matches = true;
@@ -8761,7 +8762,7 @@ static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsi
     i += 16;
 
     stb__dout = output;
-    while (1) {
+    for (;;) {
         unsigned char *old_i = i;
         i = stb_decompress_token(i);
         if (i == old_i) {
