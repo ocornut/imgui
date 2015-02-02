@@ -6675,8 +6675,8 @@ bool    ImFontAtlas::Build()
 
     // Pack our extra data rectangle first, so it will be on the upper-left corner of our texture (UV will have small values).
     stbrp_rect extra_rect;
-    extra_rect.w = (int)TEX_ATLAS_SIZE.x;
-    extra_rect.h = (int)TEX_ATLAS_SIZE.y;
+    extra_rect.w = (stbrp_coord)TEX_ATLAS_SIZE.x;
+    extra_rect.h = (stbrp_coord)TEX_ATLAS_SIZE.y;
     stbrp_pack_rects((stbrp_context*)spc.pack_info, &extra_rect, 1);
     TexExtraDataPos = ImVec2(extra_rect.x, extra_rect.y);
 
@@ -8745,7 +8745,7 @@ static unsigned int stb_adler32(unsigned int adler32, unsigned char *buffer, uns
         buflen -= blocklen;
         blocklen = 5552;
     }
-    return (s2 << 16) + s1;
+    return (unsigned int)(s2 << 16) + (unsigned int)s1;
 }
 
 static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length)
