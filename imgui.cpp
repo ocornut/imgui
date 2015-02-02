@@ -257,6 +257,7 @@
  - input number: use mouse wheel to step up/down
  - input number: non-decimal input.
  - layout: horizontal layout helper (github issue #97)
+ - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns)
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills)
@@ -300,6 +301,7 @@
  - misc: mark printf compiler attributes on relevant functions
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
+ - style editor: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space?
  - style editor: color child window height expressed in multiple of line height.
  - optimization/render: use indexed rendering to reduce vertex data cost (for remote/networked imgui)
  - optimization/render: move clip-rect to vertex data? would allow merging all commands
@@ -1059,7 +1061,7 @@ struct ImGuiWindow
 
     ImGuiDrawContext        DC;
     ImVector<ImGuiID>       IDStack;
-    ImVector<ImVec4>        ClipRectStack;
+    ImVector<ImVec4>        ClipRectStack;                      // Scissoring / clipping rectangle. x1, y1, x2, y2.
     int                     LastFrameDrawn;
     float                   ItemWidthDefault;
     ImGuiStorage            StateStorage;
@@ -1830,7 +1832,7 @@ static void PushClipRect(const ImVec4& clip_rect, bool clipped = true)
     ImVec4 cr = clip_rect;
     if (clipped && !window->ClipRectStack.empty())
     {
-        // Clip to new clip rect
+        // Clip with existing clip rect
         const ImVec4 cur_cr = window->ClipRectStack.back();
         cr = ImVec4(ImMax(cr.x, cur_cr.x), ImMax(cr.y, cur_cr.y), ImMin(cr.z, cur_cr.z), ImMin(cr.w, cur_cr.w));
     }
@@ -2815,7 +2817,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
 
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
             const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_aabb.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y + text_size.y);
-            const bool clip_title = text_size.x > (text_max.x - text_min.x);    // only push a clip rectangle if we need to, because it may turn into a separate draw call
+            const bool clip_title = text_size.x > (text_max.x - text_min.x);    // only push a clip rectangle if we need to, because it may turn into a separate draw call  // FIXME-OPT: CPU side clipping would work well for this kind of case.
             if (clip_title)
                 PushClipRect(ImVec4(text_min.x, text_min.y, text_max.x, text_max.y));
             RenderText(text_min, name);
@@ -6154,6 +6156,7 @@ void ImDrawList::UpdateClipRect()
     }
 }
 
+// Scissoring. The values in clip_rect are x1, y1, x2, y2.
 void ImDrawList::PushClipRect(const ImVec4& clip_rect)
 {
     clip_rect_stack.push_back(clip_rect);
