@@ -235,7 +235,6 @@
  ==================
 
  - misc: merge or clarify ImVec4 / ImGuiAabb, they are essentially duplicate containers
-!- i/o: avoid requesting mouse capture if button held and initial click was out of reach for imgui
  - window: add horizontal scroll
  - window: fix resize grip rendering scaling along with Rounding style setting
  - window: autofit feedback loop when user relies on any dynamic layout (window width multiplier, column). maybe just clearly drop manual autofit?
@@ -1699,8 +1698,20 @@ void ImGui::NewFrame()
     else
         g.HoveredRootWindow = FindHoveredWindow(g.IO.MousePos, true);
 
-    // Are we using inputs? Tell user so they can capture/discard them.
-    g.IO.WantCaptureMouse = (g.HoveredWindow != NULL) || (g.ActiveId != 0);
+    // Are we using inputs? Tell user so they can capture/discard the inputs away from the rest of their application.
+    // When clicking outside of a window we assume the click is owned by the application and won't request capture.
+    // FIXME: For completeness we should completely disregard the mouse when 'mouse_owned_by_application' is set.
+    int mouse_earliest_button_down = -1;
+    for (size_t i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
+    {
+        if (g.IO.MouseClicked[i])
+            g.IO.MouseDownOwned[i] = (g.HoveredWindow != NULL);
+        if (g.IO.MouseDown[i])
+            if (mouse_earliest_button_down == -1 || g.IO.MouseClickedTime[mouse_earliest_button_down] > g.IO.MouseClickedTime[i])
+                mouse_earliest_button_down = i;
+    }
+    bool mouse_owned_by_application = mouse_earliest_button_down != -1 && !g.IO.MouseDownOwned[mouse_earliest_button_down];
+    g.IO.WantCaptureMouse = (!mouse_owned_by_application && g.HoveredWindow != NULL) || (g.ActiveId != 0);
     g.IO.WantCaptureKeyboard = (g.ActiveId != 0);
 
     // Scale & Scrolling
@@ -7715,6 +7726,8 @@ void ImGui::ShowTestWindow(bool* opened)
     ImGui::Text("ImGui says hello.");
     //ImGui::Text("MousePos (%g, %g)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
     //ImGui::Text("MouseWheel %d", ImGui::GetIO().MouseWheel);
+    //ImGui::Text("WantCaptureMouse: %d", ImGui::GetIO().WantCaptureMouse);
+    //ImGui::Text("WantCaptureKeyboard: %d", ImGui::GetIO().WantCaptureKeyboard);
 
     ImGui::Spacing();
     if (ImGui::CollapsingHeader("Help"))

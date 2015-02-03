@@ -566,14 +566,15 @@ struct ImGuiIO
     // [Internal] ImGui will maintain those fields for you
     //------------------------------------------------------------------
 
-    ImVec2      MousePosPrev;
-    ImVec2      MouseDelta;
-    bool        MouseClicked[5];
-    ImVec2      MouseClickedPos[5];
-    float       MouseClickedTime[5];
-    bool        MouseDoubleClicked[5];
-    float       MouseDownTime[5];
-    float       KeysDownTime[512];
+    ImVec2      MousePosPrev;               //
+    ImVec2      MouseDelta;                 // Mouse delta. Note that this is zero if either current or previous position are negative to allow mouse enabling/disabling.
+    bool        MouseClicked[5];            // Mouse button went from !Down to Down
+    ImVec2      MouseClickedPos[5];         // Position at time of clicking
+    float       MouseClickedTime[5];        // Time of last click (used to figure out double-click)
+    bool        MouseDoubleClicked[5];      // Has mouse button been double-clicked?
+    bool        MouseDownOwned[5];          // Track if button was clicked inside a window. We don't request mouse capture from the application if click started outside ImGui bounds.
+    float       MouseDownTime[5];           // Time the mouse button has been down
+    float       KeysDownTime[512];          // Time the keyboard key has been down
 
     IMGUI_API   ImGuiIO();
 };
