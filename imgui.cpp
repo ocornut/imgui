@@ -1700,7 +1700,6 @@ void ImGui::NewFrame()
 
     // Are we using inputs? Tell user so they can capture/discard the inputs away from the rest of their application.
     // When clicking outside of a window we assume the click is owned by the application and won't request capture.
-    // FIXME: For completeness we should completely disregard the mouse when 'mouse_owned_by_application' is set.
     int mouse_earliest_button_down = -1;
     for (size_t i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
     {
@@ -1713,6 +1712,10 @@ void ImGui::NewFrame()
     bool mouse_owned_by_application = mouse_earliest_button_down != -1 && !g.IO.MouseDownOwned[mouse_earliest_button_down];
     g.IO.WantCaptureMouse = (!mouse_owned_by_application && g.HoveredWindow != NULL) || (g.ActiveId != 0);
     g.IO.WantCaptureKeyboard = (g.ActiveId != 0);
+
+    // If mouse was first clicked outside of ImGui bounds we also cancel out hovering.
+    if (mouse_owned_by_application)
+        g.HoveredWindow = g.HoveredRootWindow = NULL;
 
     // Scale & Scrolling
     if (g.HoveredWindow && g.IO.MouseWheel != 0.0f)
