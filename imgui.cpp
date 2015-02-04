@@ -66,7 +66,8 @@
  - your code creates the UI, if your code doesn't run the UI is gone! == dynamic UI, no construction step, less data retention on your side, no state duplication, less sync, less errors.
  - call and read ImGui::ShowTestWindow() for user-side sample code
  - see examples/ folder for standalone sample applications.
- - customization: use the style editor to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme), and report values in your code.
+ - customization: use the style editor or PushStyleColor/PushStyleVar to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme).
+
 
  - getting started:
    - initialisation: call ImGui::GetIO() and fill the 'Settings' data.
@@ -102,7 +103,8 @@
             
             // 2) TODO: fill all fields of IO structure and call NewFrame
             ImGuiIO& io = ImGui::GetIO();
-            io.MousePos = ...
+            io.MousePos = mouse_pos;
+            io.MouseDown[0] = mouse_button_0;
             io.KeysDown[i] = ...
             ImGui::NewFrame();
 
@@ -118,9 +120,8 @@
             // swap video buffer, etc.
         }
 
-   - after calling ImGui::NewFrame() you can read back 'io.WantCaptureMouse' and 'io.WantCaptureKeyboard' to tell
-     if ImGui wants to use your inputs. so typically can hide the mouse inputs from the rest of your application if ImGui is using it.
-
+   - after calling ImGui::NewFrame() you can read back 'io.WantCaptureMouse' and 'io.WantCaptureKeyboard' to tell if ImGui 
+     wants to use your inputs. if it does you can discard/hide the inputs from the rest of your application.
 
  API BREAKING CHANGES
  ====================
@@ -168,7 +169,7 @@
    - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 
  If you are confused about the meaning or use of ID in ImGui:
-   - some widgets requires state to be carried over multiple frames (most typically ImGui often wants remember what is the "active" widget).
+   - many widgets requires state to be carried over multiple frames (most typically ImGui often wants remember what is the "active" widget).
      to do so they need an unique ID. unique ID are typically derived from a string label, an indice or a pointer.
      when you call Button("OK") the button shows "OK" and also use "OK" as an ID.
    - ID are uniquely scoped within Windows so no conflict can happen if you have two buttons called "OK" in two different Windows.
@@ -177,13 +178,13 @@
      some functions like TreeNode() implicitly creates a scope for you by calling PushID()
    - when dealing with trees, ID are important because you want to preserve the opened/closed state of tree nodes.
      depending on your use cases you may want to use strings, indices or pointers as ID. experiment and see what makes more sense!
-      e.g. When displaying a single object, using a static string as ID will preserve your node open/closed state when the targeted object change
+      e.g. When displaying a single object that may change over time, using a static string as ID will preserve your node open/closed state when the targeted object change
       e.g. When displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state per object
    - when passing a label you can optionally specify extra unique ID information within the same string using "##". This helps solving the simpler collision cases.
       e.g. "Label" display "Label" and uses "Label" as ID
       e.g. "Label##Foobar" display "Label" and uses "Label##Foobar" as ID
       e.g. "##Foobar" display an empty label and uses "##Foobar" as ID
-   - read articles about the imgui principles (see web links) to understand the requirement and use of ID.
+   - read articles about immediate-mode ui principles (see web links) to understand the requirement and use of ID.
 
  If you want to load a different font than the default (ProggyClean.ttf, size 13)
 
@@ -194,6 +195,7 @@
 
      ImFont* font0 = io.Fonts->AddFontDefault();
      ImFont* font1 = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
+     ImFont* font2 = io.Fonts->AddFontFromFileTTF("myfontfile2.ttf", size_in_pixels);
      io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
 
  If you want to display Chinese, Japanese, Korean characters, pass custom Unicode ranges when loading a font:
@@ -225,9 +227,10 @@
         // Set pointer to handler in ImGuiIO structure
         io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
 
- - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will evaluate to a block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
- - tip: you can call Render() multiple times (e.g for VR renders), up to you to communicate the extra state to your RenderDrawListFn function.
+ - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will run the block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
+ - tip: you can call Begin() multiple times with the same name during the same frame, it will keep appending to the same window.
+ - tip: you can call Render() multiple times (e.g for VR renders).
  - tip: call and read the ShowTestWindow() code for more example of how to use ImGui!
 
 
@@ -244,7 +247,7 @@
  - window: resizing from any sides? + mouse cursor directives for app.
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
- - main: considering adding EndFrame() - optional, else done in Render(). and Init()
+ - main: considering adding EndFrame()/Init(). some constructs are awkward in the implementation because of the lack of them.
  - main: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
@@ -264,25 +267,25 @@
  - columns: user specify columns size
  - combo: turn child handling code into pop up helper
  - list selection, concept of a selectable "block" (that can be multiple widgets)
- - menubar, menus
+ ! menubar, menus
  - tabs
  - gauge: various forms of gauge/loading bars widgets
  - color: better color editor.
- - plot: make it easier for user to draw into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
- - plot: "smooth" automatic scale, user give an input 0.0(full user scale) 1.0(full derived from value)
+ - plot: make it easier for user to draw extra stuff into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
+ - plot: "smooth" automatic scale over time, user give an input 0.0(full user scale) 1.0(full derived from value)
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
- - file selection widget -> build the tool in our codebase to improve model-dialog idioms (may or not lead to ImGui changes)
+ - file selection widget -> build the tool in our codebase to improve model-dialog idioms
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider? hide mouse cursor, allow more precise input using less screen-space.
- - text edit: clean up the mess caused by converting UTF-8 <> wchar
- - text edit: centered text for slider or input text to it matches typical positioning.
+ - text edit: clean up the mess caused by converting UTF-8 <> wchar. the code is rather ineficient right now.
+ - text edit: centered text for slider as input text so it matches typical positioning.
  - text edit: flag to disable live update of the user buffer. 
  - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
  - text edit: add multi-line text edit
  - tree: add treenode/treepush int variants? because (void*) cast from int warns on some platforms/settings
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float) in .ini file
- ! style: store rounded corners in texture to use 1 quad per corner (filled and wireframe).
+ ! style: store rounded corners in texture to use 1 quad per corner (filled and wireframe). so rounding have minor cost.
  - style: checkbox: padding for "active" color should be a multiplier of the 
  - style: colorbox not always square?
  - log: LogButtons() options for specifying depth and/or hiding depth slider
@@ -302,8 +305,8 @@
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - style editor: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space?
  - style editor: color child window height expressed in multiple of line height.
+ - optimization/render: could use optional CPU-side clipping in some instances instead of messing up with clip_rect (start with text which is the most common).
  - optimization/render: use indexed rendering to reduce vertex data cost (for remote/networked imgui)
- - optimization/render: move clip-rect to vertex data? would allow merging all commands
  - optimization/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
  - optimization: turn some the various stack vectors into statically-sized arrays
  - optimization: better clipping for multi-component widgets
