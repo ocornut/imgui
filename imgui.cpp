@@ -3783,7 +3783,7 @@ void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2&
 // frame_padding = 0: no framing
 // frame_padding > 0: set framing size
 // The color used are the button colors.
-bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, int frame_padding, const ImVec4& bg_col)
+bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, int frame_padding, const ImVec4& bg_col, const ImVec4& tint_col)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -3814,7 +3814,7 @@ bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const I
         RenderFrame(bb.Min, bb.Max, col);
     if (bg_col.w > 0.0f)
         window->DrawList->AddRectFilled(image_bb.Min, image_bb.Max, window->Color(bg_col));
-    window->DrawList->AddImage(user_texture_id, image_bb.Min, image_bb.Max, uv0, uv1);
+    window->DrawList->AddImage(user_texture_id, image_bb.Min, image_bb.Max, uv0, uv1, window->Color(tint_col));
 
     return pressed;
 }
