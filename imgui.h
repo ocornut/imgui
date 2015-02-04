@@ -146,6 +146,9 @@ public:
 namespace ImGui
 {
     // Main
+    IMGUI_API void*         GetInternalState();
+    IMGUI_API unsigned      GetInternalStateSize();
+    IMGUI_API void          SetInternalState(void* state, bool construct = false);
     IMGUI_API ImGuiIO&      GetIO();
     IMGUI_API ImGuiStyle&   GetStyle();
     IMGUI_API void          NewFrame();
