@@ -1036,8 +1036,8 @@ struct ImGuiState
     }
 };
 
-static ImGuiState	GImDefaultState;
-static ImGuiState*  GImGui = &GImDefaultState;
+static ImGuiState   GImDefaultState;                            // Internal state storage
+static ImGuiState*  GImGui = &GImDefaultState;                  // We access everything through this pointer. NB: this pointer is always assumed to be != NULL
 
 struct ImGuiWindow
 {
@@ -1104,20 +1104,23 @@ public:
 
 static ImGuiWindow* GetCurrentWindow()
 {
-    IM_ASSERT(GImGui->CurrentWindow != NULL);    // ImGui::NewFrame() hasn't been called yet?
-    GImGui->CurrentWindow->Accessed = true;
-    return GImGui->CurrentWindow;
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(g.CurrentWindow != NULL);    // ImGui::NewFrame() hasn't been called yet?
+    g.CurrentWindow->Accessed = true;
+    return g.CurrentWindow;
 }
 
 static void SetActiveId(ImGuiID id) 
 {
-    GImGui->ActiveId = id; 
+    ImGuiState& g = *GImGui;
+    g.ActiveId = id; 
 }
 
 static void RegisterAliveId(const ImGuiID& id)
 {
-    if (GImGui->ActiveId == id)
-        GImGui->ActiveIdIsAlive = true;
+    ImGuiState& g = *GImGui;
+    if (g.ActiveId == id)
+        g.ActiveIdIsAlive = true;
 }
 
 //-----------------------------------------------------------------------------
@@ -1611,24 +1614,25 @@ static void MarkSettingsDirty()
         g.SettingsDirtyTimer = g.IO.IniSavingRate;
 }
 
+// Internal state access - if you want to share ImGui state between modules (e.g. DLL) or allocate it yourself
+// Note that we still point to some static data and members (such as GFontAtlas), so the state instance you end up using will point to the static data within its module
 void* ImGui::GetInternalState()
 {
     return GImGui;
 }
 
-unsigned ImGui::GetInternalStateSize()
+size_t ImGui::GetInternalStateSize()
 {
     return sizeof(ImGuiState);
 }
 
 void ImGui::SetInternalState(void* state, bool construct)
 {
-    if( construct )
-        new (state) ImGuiState;
+    if (construct)
+        new (state) ImGuiState();
     
     GImGui = (ImGuiState*)state;
 }
-
 
 ImGuiIO& ImGui::GetIO()
 {
@@ -7579,15 +7583,16 @@ static const char*  GetClipboardTextFn_DefaultImpl()
 // Local ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers
 static void SetClipboardTextFn_DefaultImpl(const char* text)
 {
-    if (GImGui->PrivateClipboard)
+    ImGuiState& g = *GImGui;
+    if (g.PrivateClipboard)
     {
-        ImGui::MemFree(GImGui->PrivateClipboard);
-        GImGui->PrivateClipboard = NULL;
+        ImGui::MemFree(g.PrivateClipboard);
+        g.PrivateClipboard = NULL;
     }
     const char* text_end = text + strlen(text);
-    GImGui->PrivateClipboard = (char*)ImGui::MemAlloc((size_t)(text_end - text) + 1);
-    memcpy(GImGui->PrivateClipboard, text, (size_t)(text_end - text));
-    GImGui->PrivateClipboard[(size_t)(text_end - text)] = 0;
+    g.PrivateClipboard = (char*)ImGui::MemAlloc((size_t)(text_end - text) + 1);
+    memcpy(g.PrivateClipboard, text, (size_t)(text_end - text));
+    g.PrivateClipboard[(size_t)(text_end - text)] = 0;
 }
 
 #endif

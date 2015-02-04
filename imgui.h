@@ -146,9 +146,6 @@ public:
 namespace ImGui
 {
     // Main
-    IMGUI_API void*         GetInternalState();
-    IMGUI_API unsigned      GetInternalStateSize();
-    IMGUI_API void          SetInternalState(void* state, bool construct = false);
     IMGUI_API ImGuiIO&      GetIO();
     IMGUI_API ImGuiStyle&   GetStyle();
     IMGUI_API void          NewFrame();
@@ -336,6 +333,11 @@ namespace ImGui
     IMGUI_API ImU32         ColorConvertFloat4ToU32(const ImVec4& in);
     IMGUI_API void          ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v);
     IMGUI_API void          ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
+
+    // Internal state access - if you want to share ImGui state between modules (e.g. DLL) or allocate it yourself
+    IMGUI_API void*         GetInternalState();
+    IMGUI_API size_t        GetInternalStateSize();
+    IMGUI_API void          SetInternalState(void* state, bool construct = false);
 
     // Obsolete (will be removed)
     IMGUI_API void          GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size);
