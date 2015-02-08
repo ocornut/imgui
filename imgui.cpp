@@ -267,7 +267,6 @@
  - columns: columns header to act as button (~sort op) and allow resize/reorder
  - columns: user specify columns size
  - combo: turn child handling code into pop up helper
- - combo: layer conflict with other child windows
  - combo: contents should extends to fit label if combo widget is small
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  ! menubar, menus
@@ -1485,7 +1484,7 @@ void ImGuiWindow::AddToRenderList()
     for (size_t i = 0; i < DC.ChildWindows.size(); i++)
     {
         ImGuiWindow* child = DC.ChildWindows[i];
-        if (child->Visible)                 // clipped childs may have been marked not Visible
+        if (child->Visible)                 // clipped children may have been marked not Visible
             child->AddToRenderList();
     }
 }
@@ -1859,12 +1858,27 @@ void ImGui::Shutdown()
     g.Initialized = false;
 }
 
+// FIXME: Add a more explicit sort order in the window structure.
+static int ChildWindowComparer(const void* lhs, const void* rhs)
+{
+    const ImGuiWindow* a = *(const ImGuiWindow**)lhs;
+    const ImGuiWindow* b = *(const ImGuiWindow**)rhs;
+    if (int d = (a->Flags & ImGuiWindowFlags_Tooltip) - (b->Flags & ImGuiWindowFlags_Tooltip))
+        return d;
+    if (int d = (a->Flags & ImGuiWindowFlags_ComboBox) - (b->Flags & ImGuiWindowFlags_ComboBox))
+        return d;
+    return 0;
+}
+
 static void AddWindowToSortedBuffer(ImGuiWindow* window, ImVector<ImGuiWindow*>& sorted_windows)
 {
     sorted_windows.push_back(window);
     if (window->Visible)
     {
-        for (size_t i = 0; i < window->DC.ChildWindows.size(); i++)
+        const size_t count = window->DC.ChildWindows.size();
+        if (count > 1)
+            qsort(window->DC.ChildWindows.begin(), count, sizeof(ImGuiWindow*), ChildWindowComparer);
+        for (size_t i = 0; i < count; i++)
         {
             ImGuiWindow* child = window->DC.ChildWindows[i];
             if (child->Visible)
@@ -1912,7 +1926,7 @@ void ImGui::Render()
             g.CurrentWindow->Visible = false;
         ImGui::End();
 
-        // Select window for move/focus when we're done with all our widgets (we only consider non-childs windows here)
+        // Select window for move/focus when we're done with all our widgets (we only consider non-child windows here)
         if (g.ActiveId == 0 && g.HoveredId == 0 && g.HoveredRootWindow != NULL && g.IO.MouseClicked[0])
             SetActiveId(g.HoveredRootWindow->GetID("#MOVE"));
 
@@ -1923,12 +1937,12 @@ void ImGui::Render()
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
-            if (window->Flags & ImGuiWindowFlags_ChildWindow)               // if a child is visible its parent will add it
+            if (window->Flags & ImGuiWindowFlags_ChildWindow)           // if a child is visible its parent will add it
                 if (window->Visible)
                     continue;
             AddWindowToSortedBuffer(window, g.RenderSortedWindows);
         }
-        IM_ASSERT(g.Windows.size() == g.RenderSortedWindows.size());    // We done something wrong
+        IM_ASSERT(g.Windows.size() == g.RenderSortedWindows.size());    // we done something wrong
         g.Windows.swap(g.RenderSortedWindows);
 
         // Clear data for next frame
