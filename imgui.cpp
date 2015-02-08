@@ -8749,9 +8749,11 @@ static void ShowExampleAppLongText(bool* opened)
         return;
     }
 
+    static int test_type = 0;
     static ImGuiTextBuffer log;
     static int lines = 0;
     ImGui::Text("Printing unusually long amount of text.");
+    ImGui::Combo("Test type", &test_type, "Single call to TextUnformatted()\0Individual calls to Text(), clipped manually\0Individual calls to Text(), not clipped"); 
     ImGui::Text("Buffer contents: %d lines, %d bytes", lines, log.size());
     if (ImGui::Button("Clear")) { log.clear(); lines = 0; }
     ImGui::SameLine();
@@ -8762,9 +8764,32 @@ static void ShowExampleAppLongText(bool* opened)
         lines += 1000;
     }
     ImGui::BeginChild("Log");
-    ImGui::TextUnformatted(log.begin(), log.end());
+    switch (test_type)
+    {
+    case 0:
+        // Single call to TextUnformatted() with a big buffer
+        ImGui::TextUnformatted(log.begin(), log.end());
+        break;
+    case 1:
+        // Individual calls to Text(), manually clipped - demonstrate how to use the CalcListClipping() helper.
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+        int display_start, display_end;
+        ImGui::CalcListClipping(lines, ImGui::GetTextLineHeight(), &display_start, &display_end);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (display_start) * ImGui::GetTextLineHeight());
+        for (int i = display_start; i < display_end; i++)
+            ImGui::Text("%i The quick brown fox jumps over the lazy dog\n", i);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (lines - display_end) * ImGui::GetTextLineHeight());
+        ImGui::PopStyleVar();
+        break;
+    case 2:
+        // Individual calls to Text(), not clipped
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+        for (int i = 0; i < lines; i++)
+            ImGui::Text("%i The quick brown fox jumps over the lazy dog\n", i);
+        ImGui::PopStyleVar();
+        break;
+    }
     ImGui::EndChild();
-
     ImGui::End();
 }
 
