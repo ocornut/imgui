@@ -3648,8 +3648,8 @@ void ImGui::LabelTextV(const char* label, const char* fmt, va_list args)
     const float w = window->DC.ItemWidth.back();
 
     static char buf[1024];
-    const char* text_begin = &buf[0];
-    const char* text_end = text_begin + ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
+    const char* value_text_begin = &buf[0];
+    const char* value_text_end = value_text_begin + ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
 
     const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb value_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2, text_size.y));
@@ -3659,7 +3659,7 @@ void ImGui::LabelTextV(const char* label, const char* fmt, va_list args)
         return;
 
     // Render
-    RenderText(value_bb.Min, text_begin, text_end);
+    RenderTextClipped(value_bb.Min, value_text_begin, value_text_end, NULL, value_bb);
     RenderText(ImVec2(value_bb.Max.x + style.ItemInnerSpacing.x, value_bb.Min.y), label);
 }
 
