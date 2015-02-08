@@ -129,6 +129,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/02/08 (1.31) - renamed GetTextLineSpacing() to GetTextLineHeightWithSpacing()
  - 2015/02/01 (1.31) - removed IO.MemReallocFn (unused)
  - 2015/01/19 (1.30) - renamed ImGuiStorage::GetIntPtr()/GetFloatPtr() to GetIntRef()/GetIntRef() because Ptr was conflicting with actual pointer storage functions.
  - 2015/01/11 (1.30) - big font/image API change! now loads TTF file. allow for multiple fonts. no need for a PNG loader.
@@ -3294,7 +3295,7 @@ float ImGui::GetTextLineHeight()
     return window->FontSize();
 }
 
-float ImGui::GetTextLineSpacing()
+float ImGui::GetTextLineHeightWithSpacing()
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -3331,6 +3332,16 @@ ImVec2 ImGui::GetCursorPos()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->DC.CursorPos - window->Pos;
+}
+
+float ImGui::GetCursorPosX()
+{
+    return ImGui::GetCursorPos().x;
+}
+
+float ImGui::GetCursorPosY()
+{
+    return ImGui::GetCursorPos().y;
 }
 
 void ImGui::SetCursorPos(const ImVec2& pos)
@@ -8502,7 +8513,7 @@ struct ExampleAppConsole
         // Display every line as a separate entry so we can change their color or add custom widgets. If you only want raw text you can use ImGui::TextUnformatted(log.begin(), log.end());
         // NB- if you have lots of text this approach may be too inefficient. You can seek and display only the lines that are on display using a technique similar to what TextUnformatted() does,
         // or faster if your entries are already stored into a table.
-        ImGui::BeginChild("ScrollingRegion", ImVec2(0,-ImGui::GetTextLineSpacing()*2));
+        ImGui::BeginChild("ScrollingRegion", ImVec2(0,-ImGui::GetTextLineHeightWithSpacing()*2));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,1)); // Tighten spacing
         for (size_t i = 0; i < Items.size(); i++)
         {

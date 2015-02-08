@@ -166,7 +166,7 @@ namespace ImGui
     IMGUI_API ImVec2        GetWindowContentRegionMax();
     IMGUI_API ImDrawList*   GetWindowDrawList();                                                // get rendering command-list if you want to append your own draw primitives.
     IMGUI_API ImFont*       GetWindowFont();
-    IMGUI_API float         GetWindowFontSize();
+    IMGUI_API float         GetWindowFontSize();                                                // size (also height in pixels) of current font with current scale applied
     IMGUI_API void          SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontGlobalScale if you want to scale all windows.
     IMGUI_API ImVec2        GetWindowPos();                                                     // you should rarely need/care about the window position, but it can be useful if you want to do your own drawing.
     IMGUI_API ImVec2        GetWindowSize();                                                    // get current window position.
@@ -218,14 +218,16 @@ namespace ImGui
     IMGUI_API void          SetColumnOffset(int column_index, float offset);
     IMGUI_API float         GetColumnWidth(int column_index = -1);
     IMGUI_API ImVec2        GetCursorPos();                                                     // cursor position is relative to window position
+    IMGUI_API float         GetCursorPosX();                                                    // "
+    IMGUI_API float         GetCursorPosY();                                                    // "
     IMGUI_API void          SetCursorPos(const ImVec2& pos);                                    // "
     IMGUI_API void          SetCursorPosX(float x);                                             // "
     IMGUI_API void          SetCursorPosY(float y);                                             // "
     IMGUI_API ImVec2        GetCursorScreenPos();                                               // cursor position in absolute screen coordinates (0..io.DisplaySize)
     IMGUI_API void          SetCursorScreenPos(const ImVec2& pos);                              // cursor position in absolute screen coordinates (0..io.DisplaySize)
     IMGUI_API void          AlignFirstTextHeightToWidgets();                                    // call once if the first item on the line is a Text() item and you want to vertically lower it to match subsequent (bigger) widgets.
-    IMGUI_API float         GetTextLineSpacing();
-    IMGUI_API float         GetTextLineHeight();
+    IMGUI_API float         GetTextLineHeight();                                                // height of font == GetWindowFontSize()
+    IMGUI_API float         GetTextLineHeightWithSpacing();                                     // spacing (in pixels) between 2 consecutive lines of text == GetWindowFontSize() + GetStyle().ItemSpacing.y
 
     // ID scopes
     // If you are creating repeated widgets in a loop you most likely want to push a unique identifier so ImGui can differentiate them.
