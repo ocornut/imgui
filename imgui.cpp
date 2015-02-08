@@ -2781,7 +2781,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
                     {
                         g.HoveredId = scrollbar_id;
                         const float pos_y_norm = ImSaturate((g.IO.MousePos.y - (scrollbar_bb.Min.y + grab_size_y*0.5f)) / (scrollbar_bb.GetHeight() - grab_size_y)) * (1.0f - grab_size_y_norm);
-                        window->ScrollY = pos_y_norm * window->SizeContentsFit.y;
+                        window->ScrollY = (float)(int)(pos_y_norm * window->SizeContentsFit.y);
                         window->NextScrollY = window->ScrollY;
                     }
                 }
