@@ -604,7 +604,8 @@ static inline float  ImMin(float lhs, float rhs)                                
 static inline float  ImMax(float lhs, float rhs)                                { return lhs >= rhs ? lhs : rhs; }
 static inline ImVec2 ImMin(const ImVec2& lhs, const ImVec2& rhs)                { return ImVec2(ImMin(lhs.x,rhs.x), ImMin(lhs.y,rhs.y)); }
 static inline ImVec2 ImMax(const ImVec2& lhs, const ImVec2& rhs)                { return ImVec2(ImMax(lhs.x,rhs.x), ImMax(lhs.y,rhs.y)); }
-static inline float  ImClamp(float f, float mn, float mx)                       { return (f < mn) ? mn : (f > mx) ? mx : f; }
+static inline int    ImClamp(int v, int mn, int mx)                             { return (v < mn) ? mn : (v > mx) ? mx : v; }
+static inline float  ImClamp(float v, float mn, float mx)                       { return (v < mn) ? mn : (v > mx) ? mx : v; }
 static inline ImVec2 ImClamp(const ImVec2& f, const ImVec2& mn, ImVec2 mx)      { return ImVec2(ImClamp(f.x,mn.x,mx.x), ImClamp(f.y,mn.y,mx.y)); }
 static inline float  ImSaturate(float f)                                        { return (f < 0.0f) ? 0.0f : (f > 1.0f) ? 1.0f : f; }
 static inline float  ImLerp(float a, float b, float t)                          { return a + (b - a) * t; }
@@ -2172,6 +2173,44 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
         text_size.x -= character_spacing_x;
 
     return text_size;
+}
+
+// Helper to calculate clipping of large list of evenly sized items. 
+// If you are displaying thousands of items and you have a random access to the list, you can perform clipping yourself to save on CPU.
+// {
+//    float item_height = ImGui::GetTextLineHeightWithSpacing();
+//    int display_start, display_end;
+//    ImGui::CalcListClipping(count, item_height, &display_start, &display_end);            // calculate how many to clip/display
+//    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (display_start) * item_height);         // advance cursor
+//    for (int i = display_start; i < display_end; i++)                                     // display only visible items
+//        // TODO: display visible item
+//    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (count - display_end) * item_height);   // advance cursor
+// }
+void ImGui::CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+
+    if (g.LogEnabled)
+    {
+        // If logging is active, do not perform any clipping
+        *out_items_display_start = 0;
+        *out_items_display_end = items_count;
+        return;
+    }
+
+    const ImVec2 pos = window->DC.CursorPos;
+    const ImVec4 clip_rect = window->ClipRectStack.back();
+    const float clip_y1 = clip_rect.y;
+    const float clip_y2 = clip_rect.w;
+
+    int start = (int)((clip_y1 - pos.y) / items_height);
+    int end = (int)((clip_y2 - pos.y) / items_height);
+    start = ImClamp(start, 0, items_count);
+    end = ImClamp(end + 1, start, items_count);
+
+    *out_items_display_start = start;
+    *out_items_display_end = end;
 }
 
 // Find window given position, search front-to-back
