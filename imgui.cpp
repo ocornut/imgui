@@ -268,6 +268,7 @@
  - columns: user specify columns size
  - combo: turn child handling code into pop up helper
  - combo: layer conflict with other child windows
+ - combo: contents should extends to fit label if combo widget is small
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  ! menubar, menus
  - tabs
@@ -403,7 +404,8 @@ struct ImGuiAabb;
 static bool         ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
 
-static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true, float wrap_width = 0.0f);
+static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
+static void         RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width);
 static void         RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size, const ImGuiAabb& clip_aabb);
 static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
 static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
@@ -2015,6 +2017,7 @@ void ImGui::LogText(const char* fmt, ...)
 }
 
 // Internal version that takes a position to decide on newline placement and pad items according to their depth.
+// We split text into individual lines to add current tree level padding
 static void LogText(const ImVec2& ref_pos, const char* text, const char* text_end)
 {
     ImGuiState& g = *GImGui;
@@ -2079,9 +2082,9 @@ static float CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
     return wrap_width;
 }
 
-// Internal ImGui function to render text (called from ImGui::Text(), ImGui::TextUnformatted(), etc.)
-// RenderText() calls ImDrawList::AddText() calls ImBitmapFont::RenderText()
-static void RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash, float wrap_width)
+// Internal ImGui functions to render text
+// RenderText***() functions calls ImDrawList::AddText() calls ImBitmapFont::RenderText()
+static void RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -2103,15 +2106,35 @@ static void RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
     if (text_len > 0)
     {
         // Render
-        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text_display_end, wrap_width);
+        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text_display_end);
 
-        // Log as text. We split text into individual lines to add current tree level padding
+        // Log as text
         if (g.LogEnabled)
             LogText(pos, text, text_display_end);
     }
 }
 
-static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_arg, const ImGuiAabb& clip_rect)
+static void RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+
+    if (!text_end)
+        text_end = text + strlen(text); // FIXME-OPT
+
+    const int text_len = (int)(text_end - text);
+    if (text_len > 0)
+    {
+        // Render
+        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text_end, wrap_width);
+
+        // Log as text
+        if (g.LogEnabled)
+            LogText(pos, text, text_end);
+    }
+}
+
+static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImGuiAabb& clip_rect)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -2121,7 +2144,7 @@ static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end
     const int text_len = (int)(text_display_end - text);
     if (text_len > 0)
     {
-        const ImVec2 text_size = text_size_arg ? *text_size_arg : ImGui::CalcTextSize(text, text_display_end, false, 0.0f);
+        const ImVec2 text_size = text_size_if_known ? *text_size_if_known : ImGui::CalcTextSize(text, text_display_end, false, 0.0f);
 
         // FIMXE-OPT: Perform software clipping at this point instead of pushing a clipping rectangle
         const bool need_clipping = clip_rect.GetWidth() < text_size.x || clip_rect.GetHeight() < text_size.y;
@@ -2134,7 +2157,7 @@ static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end
         if (need_clipping)
             PopClipRect();
 
-        // Log as text. We split text into individual lines to add current tree level padding
+        // Log as text
         if (g.LogEnabled)
             LogText(pos, text, text_display_end);
     }
@@ -3619,9 +3642,8 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         if (!ItemAdd(bb, NULL))
             return;
 
-        // Render
-        // We don't hide text after ## in this end-user function.
-        RenderText(bb.Min, text_begin, text_end, false, wrap_width);
+        // Render (we don't hide text after ## in this end-user function)
+        RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width);
     }
 }
 
