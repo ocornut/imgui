@@ -308,7 +308,6 @@
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - style editor: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space?
  - style editor: color child window height expressed in multiple of line height.
- - optimization/render: could use optional CPU-side clipping in some instances instead of messing up with clip_rect (start with text which is the most common).
  - optimization/render: use indexed rendering to reduce vertex data cost (for remote/networked imgui)
  - optimization/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
  - optimization: turn some the various stack vectors into statically-sized arrays
@@ -406,7 +405,7 @@ static void         LogText(const ImVec2& ref_pos, const char* text, const char*
 
 static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
 static void         RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width);
-static void         RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size, const ImGuiAabb& clip_aabb);
+static void         RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& clip_max);
 static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
 static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
 
@@ -2134,7 +2133,7 @@ static void RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
     }
 }
 
-static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImGuiAabb& clip_rect)
+static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& clip_max)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -2146,16 +2145,11 @@ static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end
     {
         const ImVec2 text_size = text_size_if_known ? *text_size_if_known : ImGui::CalcTextSize(text, text_display_end, false, 0.0f);
 
-        // FIMXE-OPT: Perform software clipping at this point instead of pushing a clipping rectangle
-        const bool need_clipping = clip_rect.GetWidth() < text_size.x || clip_rect.GetHeight() < text_size.y;
-        if (need_clipping)
-            PushClipRect(ImVec4(clip_rect.Min.x, clip_rect.Min.y, clip_rect.Max.x, clip_rect.Max.y));   // Caller usually pass a non-padding frame - so extraneous text draw over the padding region which gives an indication that it is being clipped.
+        // Perform CPU side clipping for single clipped element to avoid using scissor state
+        const bool need_clipping = (pos.x + text_size.x >= clip_max.x) || (pos.y + text_size.y >= clip_max.y);
 
         // Render
-        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text_display_end, 0.0f);
-
-        if (need_clipping)
-            PopClipRect();
+        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text_display_end, 0.0f, need_clipping ? &clip_max : NULL);
 
         // Log as text
         if (g.LogEnabled)
@@ -3681,7 +3675,7 @@ void ImGui::LabelTextV(const char* label, const char* fmt, va_list args)
         return;
 
     // Render
-    RenderTextClipped(value_bb.Min, value_text_begin, value_text_end, NULL, value_bb);
+    RenderTextClipped(value_bb.Min, value_text_begin, value_text_end, NULL, value_bb.Max);
     RenderText(ImVec2(value_bb.Max.x + style.ItemInnerSpacing.x, value_bb.Min.y), label);
 }
 
@@ -3776,7 +3770,7 @@ bool ImGui::Button(const char* label, const ImVec2& size_arg, bool repeat_when_h
     RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
 
     const ImVec2 off = ImVec2(ImMax(0.0f, size.x - text_size.x) * 0.5f, ImMax(0.0f, size.y - text_size.y) * 0.5f);  // Center (only applies if we explicitly gave a size bigger than the text size, which isn't the common path)
-    RenderTextClipped(bb.Min + style.FramePadding + off, label, NULL, &text_size, bb);                              // Render clip (only applies if we explicitly gave a size smaller than the text size, which isn't the commmon path)
+    RenderTextClipped(bb.Min + style.FramePadding + off, label, NULL, &text_size, bb.Max);                          // Render clip (only applies if we explicitly gave a size smaller than the text size, which isn't the commmon path)
 
     return pressed;
 }
@@ -5612,7 +5606,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     {
         const char* item_text;
         if (items_getter(data, *current_item, &item_text))
-            RenderTextClipped(frame_bb.Min + style.FramePadding, item_text, NULL, NULL, value_bb);
+            RenderTextClipped(frame_bb.Min + style.FramePadding, item_text, NULL, NULL, value_bb.Max);
     }
 
     // Empty text doesn't add padding
@@ -6564,7 +6558,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
     }
 }
 
-void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width)
+void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec2* cpu_clip_max)
 {
     if ((col >> 24) == 0)
         return;
@@ -6580,7 +6574,7 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
     const size_t vtx_begin = vtx_buffer.size();
     ReserveVertices(vtx_count_max);
 
-    font->RenderText(font_size, pos, col, clip_rect_stack.back(), text_begin, text_end, vtx_write, wrap_width);
+    font->RenderText(font_size, pos, col, clip_rect_stack.back(), text_begin, text_end, vtx_write, wrap_width, cpu_clip_max);
 
     // give back unused vertices
     vtx_buffer.resize((size_t)(vtx_write - &vtx_buffer.front()));
@@ -7518,7 +7512,7 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
     return text_size;
 }
 
-void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect_ref, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width) const
+void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect_ref, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width, const ImVec2* cpu_clip_max) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin);
@@ -7533,7 +7527,12 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
 
-    const ImVec4 clip_rect = clip_rect_ref;
+    ImVec4 clip_rect = clip_rect_ref;
+    if (cpu_clip_max)
+    {
+        clip_rect.z = ImMin(clip_rect.z, cpu_clip_max->x);
+        clip_rect.w = ImMin(clip_rect.w, cpu_clip_max->y);
+    }
     float x = pos.x;
     float y = pos.y;
 
@@ -7585,37 +7584,54 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             if (c != ' ' && c != '\t')
             {
                 // Clipping on Y is more likely
-                const float y1 = (float)(y + glyph->YOffset * scale);
-                const float y2 = (float)(y1 + glyph->Height * scale);
+                float y1 = (float)(y + glyph->YOffset * scale);
+                float y2 = (float)(y1 + glyph->Height * scale);
                 if (y1 <= clip_rect.w && y2 >= clip_rect.y)
                 {
-                    const float x1 = (float)(x + glyph->XOffset * scale);
-                    const float x2 = (float)(x1 + glyph->Width * scale);
+                    float x1 = (float)(x + glyph->XOffset * scale);
+                    float x2 = (float)(x1 + glyph->Width * scale);
                     if (x1 <= clip_rect.z && x2 >= clip_rect.x)
                     {
                         // Render a character
-                        const float u0 = glyph->U0;
-                        const float v0 = glyph->V0;
-                        const float u1 = glyph->U1;
-                        const float v1 = glyph->V1;
+                        float u1 = glyph->U0;
+                        float v1 = glyph->V0;
+                        float u2 = glyph->U1;
+                        float v2 = glyph->V1;
+
+                        // CPU side clipping used to fit text in their frame when the frame is too small. Only does clipping for axis aligned quad and in the "max" direction (bottom-right)
+                        if (cpu_clip_max)
+                        {
+                            if (x2 > cpu_clip_max->x)
+                            {
+                                const float clip_tx = (cpu_clip_max->x - x1) / (x2 - x1);
+                                x2 = cpu_clip_max->x;
+                                u2 = u1 + clip_tx * (u2 - u1);
+                            }
+                            if (y2 > cpu_clip_max->y)
+                            {
+                                const float clip_ty = (cpu_clip_max->y - y1) / (y2 - y1);
+                                y2 = cpu_clip_max->y;
+                                v2 = v1 + clip_ty * (v2 - v1);
+                            }
+                        }
 
                         out_vertices[0].pos = ImVec2(x1, y1);
-                        out_vertices[0].uv  = ImVec2(u0, v0);
+                        out_vertices[0].uv  = ImVec2(u1, v1);
                         out_vertices[0].col = col;
 
                         out_vertices[1].pos = ImVec2(x2, y1);
-                        out_vertices[1].uv  = ImVec2(u1, v0);
+                        out_vertices[1].uv  = ImVec2(u2, v1);
                         out_vertices[1].col = col;
 
                         out_vertices[2].pos = ImVec2(x2, y2);
-                        out_vertices[2].uv  = ImVec2(u1, v1);
+                        out_vertices[2].uv  = ImVec2(u2, v2);
                         out_vertices[2].col = col;
 
                         out_vertices[3] = out_vertices[0];
                         out_vertices[4] = out_vertices[2];
 
                         out_vertices[5].pos = ImVec2(x1, y2);
-                        out_vertices[5].uv  = ImVec2(u0, v1);
+                        out_vertices[5].uv  = ImVec2(u1, v2);
                         out_vertices[5].col = col;
 
                         out_vertices += 6;
@@ -8002,6 +8018,16 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::Text("Kanjis: \xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e (nihongo)");
             static char buf[32] = "\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e";
             ImGui::InputText("UTF-8 input", buf, IM_ARRAYSIZE(buf));
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Clipping"))
+        {
+            static ImVec2 size(80, 20);
+            ImGui::TextWrapped("On a per-widget basis we are occasionally clipping text if it won't fit in its frame.");
+            ImGui::SliderFloat2("size", (float*)&size, 5.0f, 200.0f);
+            ImGui::Button("Line 1 hello\nLine 2 clip me!", size);
+            ImGui::TextWrapped("Otherwise we are doing coarser clipping + passing a scissor rectangle to the renderer. The system is designed to try minimizing both execution and rendering cost.");
             ImGui::TreePop();
         }
 
