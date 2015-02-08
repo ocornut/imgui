@@ -3387,18 +3387,21 @@ void ImGui::SetCursorPos(const ImVec2& pos)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos = window->Pos + pos;
+    window->SizeContentsFit = ImMax(window->SizeContentsFit, pos + ImVec2(0.0f, window->ScrollY));
 }
 
 void ImGui::SetCursorPosX(float x)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos.x = window->Pos.x + x;
+    window->SizeContentsFit.x = ImMax(window->SizeContentsFit.x, x);
 }
 
 void ImGui::SetCursorPosY(float y)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos.y = window->Pos.y + y;
+    window->SizeContentsFit.y = ImMax(window->SizeContentsFit.y, y + window->ScrollY);
 }
 
 ImVec2 ImGui::GetCursorScreenPos()
@@ -8442,7 +8445,7 @@ static void ShowExampleAppCustomRendering(bool* opened)
 
     // Here we are using InvisibleButton() as a convenience to 1) advance the cursor and 2) allows us to use IsItemHovered()
     // However you can draw directly and poll mouse/keyboard by yourself. You can manipulate the cursor using GetCursorPos() and SetCursorPos().
-    // If you only use the ImDrawList API, you can notify the owner window of its extends by using SetCursorPos(max) followed by an empty Text("") statement.
+    // If you only use the ImDrawList API, you can notify the owner window of its extends by using SetCursorPos(max).
     ImVec2 canvas_pos = ImGui::GetCursorScreenPos();            // ImDrawList API uses screen coordinates!
     ImVec2 canvas_size = ImVec2(ImMax(50.0f,ImGui::GetWindowContentRegionMax().x-ImGui::GetCursorPos().x), ImMax(50.0f,ImGui::GetWindowContentRegionMax().y-ImGui::GetCursorPos().y));    // Resize canvas what's available
     draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), 0xFFFFFFFF);
@@ -8537,7 +8540,7 @@ struct ExampleAppConsole
         // TODO: display from bottom
         // TODO: clip manually
 
-        if (ImGui::SmallButton("Add Dummy Text")) AddLog("some text\nsome more text\ndisplay very important message here!\n"); ImGui::SameLine(); 
+        if (ImGui::SmallButton("Add Dummy Text")) { AddLog("%d some text", Items.size()); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine(); 
         if (ImGui::SmallButton("Add Dummy Error")) AddLog("[error] something went wrong"); ImGui::SameLine(); 
         if (ImGui::SmallButton("Clear")) ClearLog();
         ImGui::Separator();
@@ -8550,8 +8553,8 @@ struct ExampleAppConsole
         ImGui::Separator();
 
         // Display every line as a separate entry so we can change their color or add custom widgets. If you only want raw text you can use ImGui::TextUnformatted(log.begin(), log.end());
-        // NB- if you have lots of text this approach may be too inefficient. You can seek and display only the lines that are on display using a technique similar to what TextUnformatted() does,
-        // or faster if your entries are already stored into a table.
+        // NB- if you have thousands of entries this approach may be too inefficient. You can seek and display only the lines that are visible - CalcListClipping() is a helper to compute this information.
+        // If your items are of variable size you may want to implement code similar to what CalcListClipping() does. Or split your data into fixed height items to allow random-seeking into your list.
         ImGui::BeginChild("ScrollingRegion", ImVec2(0,-ImGui::GetTextLineHeightWithSpacing()*2));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,1)); // Tighten spacing
         for (size_t i = 0; i < Items.size(); i++)
