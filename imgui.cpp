@@ -2225,7 +2225,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
     return text_size;
 }
 
-// Helper to calculate clipping of large list of evenly sized items. 
+// Helper to calculate coarse clipping of large list of evenly sized items. 
 // If you are displaying thousands of items and you have a random access to the list, you can perform clipping yourself to save on CPU.
 // {
 //    float item_height = ImGui::GetTextLineHeightWithSpacing();
@@ -2948,12 +2948,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
 
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
             const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_aabb.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y + text_size.y);
-            const bool clip_title = text_size.x > (text_max.x - text_min.x);    // only push a clip rectangle if we need to, because it may turn into a separate draw call  // FIXME-OPT: CPU side clipping would work well for this kind of case.
-            if (clip_title)
-                PushClipRect(ImVec4(text_min.x, text_min.y, text_max.x, text_max.y));
-            RenderText(text_min, name);
-            if (clip_title)
-                PopClipRect();
+            RenderTextClipped(text_min, name, NULL, &text_size, text_max);
         }
     }
 
@@ -8831,7 +8826,7 @@ static void ShowExampleAppLongText(bool* opened)
     static ImGuiTextBuffer log;
     static int lines = 0;
     ImGui::Text("Printing unusually long amount of text.");
-    ImGui::Combo("Test type", &test_type, "Single call to TextUnformatted()\0Individual calls to Text(), clipped manually\0Individual calls to Text(), not clipped"); 
+    ImGui::Combo("Test type", &test_type, "Single call to TextUnformatted()\0Multiple calls to Text(), clipped manually\0Multiple calls to Text(), not clipped"); 
     ImGui::Text("Buffer contents: %d lines, %d bytes", lines, log.size());
     if (ImGui::Button("Clear")) { log.clear(); lines = 0; }
     ImGui::SameLine();
@@ -8849,7 +8844,7 @@ static void ShowExampleAppLongText(bool* opened)
         ImGui::TextUnformatted(log.begin(), log.end());
         break;
     case 1:
-        // Individual calls to Text(), manually clipped - demonstrate how to use the CalcListClipping() helper.
+        // Multiple calls to Text(), manually coarsely clipped - demonstrate how to use the CalcListClipping() helper.
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
         int display_start, display_end;
         ImGui::CalcListClipping(lines, ImGui::GetTextLineHeight(), &display_start, &display_end);
@@ -8860,7 +8855,7 @@ static void ShowExampleAppLongText(bool* opened)
         ImGui::PopStyleVar();
         break;
     case 2:
-        // Individual calls to Text(), not clipped
+        // Multiple calls to Text(), not clipped
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
         for (int i = 0; i < lines; i++)
             ImGui::Text("%i The quick brown fox jumps over the lazy dog\n", i);
