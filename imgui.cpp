@@ -1,4 +1,4 @@
-// ImGui library v1.31 wip
+// ImGui library v1.31
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -246,6 +246,7 @@
  - window: allow resizing of child windows (possibly given min/max for each axis?)
  - window: background options for child windows, border option (disable rounding)
  - window: resizing from any sides? + mouse cursor directives for app.
+ - widgets: clicking on widget b while widget a should activate widget b (doesn't anymore because of hover capture)
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
  - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
  - main: considering adding EndFrame()/Init(). some constructs are awkward in the implementation because of the lack of them.
