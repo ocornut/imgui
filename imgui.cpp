@@ -267,6 +267,7 @@
  - columns: columns header to act as button (~sort op) and allow resize/reorder
  - columns: user specify columns size
  - combo: turn child handling code into pop up helper
+ - combo: layer conflict with other child windows
  - list selection, concept of a selectable "block" (that can be multiple widgets)
  ! menubar, menus
  - tabs
@@ -397,10 +398,13 @@ using namespace IMGUI_STB_NAMESPACE;
 // Forward Declarations
 //-------------------------------------------------------------------------
 
+struct ImGuiAabb;
+
 static bool         ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
 
 static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true, float wrap_width = 0.0f);
+static void         RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size, const ImGuiAabb& clip_aabb);
 static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
 static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
 
@@ -2099,7 +2103,36 @@ static void RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
     if (text_len > 0)
     {
         // Render
-        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text + text_len, wrap_width);
+        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text_display_end, wrap_width);
+
+        // Log as text. We split text into individual lines to add current tree level padding
+        if (g.LogEnabled)
+            LogText(pos, text, text_display_end);
+    }
+}
+
+static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_arg, const ImGuiAabb& clip_rect)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+
+    // Hide anything after a '##' string
+    const char* text_display_end = FindTextDisplayEnd(text, text_end);
+    const int text_len = (int)(text_display_end - text);
+    if (text_len > 0)
+    {
+        const ImVec2 text_size = text_size_arg ? *text_size_arg : ImGui::CalcTextSize(text, text_display_end, false, 0.0f);
+
+        // FIMXE-OPT: Perform software clipping at this point instead of pushing a clipping rectangle
+        const bool need_clipping = clip_rect.GetWidth() < text_size.x || clip_rect.GetHeight() < text_size.y;
+        if (need_clipping)
+            PushClipRect(ImVec4(clip_rect.Min.x, clip_rect.Min.y, clip_rect.Max.x, clip_rect.Max.y));   // Caller usually pass a non-padding frame - so extraneous text draw over the padding region which gives an indication that it is being clipped.
+
+        // Render
+        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text_display_end, 0.0f);
+
+        if (need_clipping)
+            PopClipRect();
 
         // Log as text. We split text into individual lines to add current tree level padding
         if (g.LogEnabled)
@@ -3720,12 +3753,8 @@ bool ImGui::Button(const char* label, const ImVec2& size_arg, bool repeat_when_h
     const ImU32 col = window->Color((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
 
-    if (size.x < text_size.x || size.y < text_size.y)
-        PushClipRect(ImVec4(bb.Min.x+style.FramePadding.x, bb.Min.y+style.FramePadding.y, bb.Max.x, bb.Max.y-style.FramePadding.y));        // Allow extra to draw over the horizontal padding to make it visible that text doesn't fit
-    const ImVec2 off = ImVec2(ImMax(0.0f, size.x - text_size.x) * 0.5f, ImMax(0.0f, size.y - text_size.y) * 0.5f);
-    RenderText(bb.Min + style.FramePadding + off, label);
-    if (size.x < text_size.x || size.y < text_size.y)
-        PopClipRect();
+    const ImVec2 off = ImVec2(ImMax(0.0f, size.x - text_size.x) * 0.5f, ImMax(0.0f, size.y - text_size.y) * 0.5f);  // Center (only applies if we explicitly gave a size bigger than the text size, which isn't the common path)
+    RenderTextClipped(bb.Min + style.FramePadding + off, label, NULL, &text_size, bb);                              // Render clip (only applies if we explicitly gave a size smaller than the text size, which isn't the commmon path)
 
     return pressed;
 }
@@ -4998,7 +5027,7 @@ void ImGuiTextEditState::RenderTextScrolledClipped(ImFont* font, float font_size
     const float clip_end = (text_end[0] != '\0' && text_end > text_start) ? symbol_w : 0.0f;
 
     // Draw text
-    RenderText(pos+ImVec2(clip_begin,0), text_start+(clip_begin>0.0f?1:0), text_end-(clip_end>0.0f?1:0), false);//, &text_params_with_clipping);
+    RenderText(pos+ImVec2(clip_begin,0), text_start+(clip_begin>0.0f?1:0), text_end-(clip_end>0.0f?1:0), false);
 
     // Draw the clip symbol
     const char s[2] = {symbol_c,'\0'};
@@ -5552,6 +5581,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     const bool hovered = IsHovered(frame_bb, id);
 
     bool value_changed = false;
+    const ImGuiAabb value_bb(frame_bb.Min, frame_bb.Max - ImVec2(arrow_size, 0.0f));
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
     RenderFrame(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y), frame_bb.Max, window->Color(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button), true, style.FrameRounding);	// FIXME-ROUNDING
     RenderCollapseTriangle(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y) + style.FramePadding, true);
@@ -5560,7 +5590,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     {
         const char* item_text;
         if (items_getter(data, *current_item, &item_text))
-            RenderText(frame_bb.Min + style.FramePadding, item_text, NULL, false);
+            RenderTextClipped(frame_bb.Min + style.FramePadding, item_text, NULL, NULL, value_bb);
     }
 
     // Empty text doesn't add padding
