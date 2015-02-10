@@ -2464,6 +2464,13 @@ void ImGui::EndTooltip()
     ImGui::End();
 }
 
+void ImGui::BeginChild(ImGuiID id, ImVec2 size, bool border, ImGuiWindowFlags extra_flags)
+{
+    char str_id[32];
+    ImFormatString(str_id, IM_ARRAYSIZE(str_id), "child_%x", id);
+    ImGui::BeginChild(str_id, size, border, extra_flags);
+}
+
 void ImGui::BeginChild(const char* str_id, ImVec2 size, bool border, ImGuiWindowFlags extra_flags)
 {
     ImGuiState& g = *GImGui;
