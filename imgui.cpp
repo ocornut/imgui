@@ -129,6 +129,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/02/10 (1.32) - renamed GetItemWidth() to CalcItemWidth() to clarify its evolving behavior
  - 2015/02/08 (1.31) - renamed GetTextLineSpacing() to GetTextLineHeightWithSpacing()
  - 2015/02/01 (1.31) - removed IO.MemReallocFn (unused)
  - 2015/01/19 (1.30) - renamed ImGuiStorage::GetIntPtr()/GetFloatPtr() to GetIntRef()/GetIntRef() because Ptr was conflicting with actual pointer storage functions.
@@ -880,11 +881,11 @@ struct ImGuiDrawContext
     bool                    LastItemHovered;
     ImVector<ImGuiWindow*>  ChildWindows;
     ImVector<bool>          AllowKeyboardFocus;
-    ImVector<float>         ItemWidth;
+    ImVector<float>         ItemWidth;           // 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
     ImVector<float>         TextWrapPos;
     ImGuiColorEditMode      ColorEditMode;
     ImGuiStorage*           StateStorage;
-    int                     OpenNextNode;
+    int                     OpenNextNode;        // FIXME: Reformulate this feature like SetNextWindowCollapsed() API
 
     float                   ColumnsStartX;       // Start position from left of window (increased by TreePush/TreePop, etc.)
     float                   ColumnsOffsetX;      // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
@@ -3056,7 +3057,7 @@ void ImGui::PushItemWidth(float item_width)
 {
     ImGuiWindow* window = GetCurrentWindow();
     item_width = (float)(int)item_width;
-    window->DC.ItemWidth.push_back(item_width > 0.0f ? item_width : window->ItemWidthDefault);
+    window->DC.ItemWidth.push_back(item_width == 0.0f ? window->ItemWidthDefault : item_width);
 }
 
 void ImGui::PopItemWidth()
@@ -3065,10 +3066,18 @@ void ImGui::PopItemWidth()
     window->DC.ItemWidth.pop_back();
 }
 
-float ImGui::GetItemWidth()
+float ImGui::CalcItemWidth()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    return window->DC.ItemWidth.back();
+    float w = window->DC.ItemWidth.back();
+    if (w < 0.0f)
+    {
+        // Align to a right-side limit
+        w = -w;
+        float width_to_right_edge = window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x;
+        w = ImMax(1.0f, width_to_right_edge - w);
+    }
+    return w;
 }
 
 static void SetFont(ImFont* font)
@@ -3373,20 +3382,18 @@ void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiSetCondition cond)
 ImVec2 ImGui::GetContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindow();
-
-    ImVec2 m = window->Size - window->WindowPadding();
+    ImVec2 mx = window->Size - window->WindowPadding();
     if (window->DC.ColumnsCount != 1)
     {
-        m.x = GetColumnOffset(window->DC.ColumnsCurrent + 1);
-        m.x -= GImGui->Style.WindowPadding.x;
+        mx.x = ImGui::GetColumnOffset(window->DC.ColumnsCurrent + 1);
+        mx.x -= GImGui->Style.WindowPadding.x;
     }
     else
     {
         if (window->ScrollbarY)
-            m.x -= GImGui->Style.ScrollBarWidth;
+            mx.x -= GImGui->Style.ScrollBarWidth;
     }
-
-    return m;
+    return mx;
 }
 
 ImVec2 ImGui::GetWindowContentRegionMin()
@@ -3687,7 +3694,7 @@ void ImGui::LabelTextV(const char* label, const char* fmt, va_list args)
     if (window->SkipItems)
         return;
     const ImGuiStyle& style = g.Style;
-    const float w = window->DC.ItemWidth.back();
+    const float w = ImGui::CalcItemWidth();
 
     static char buf[1024];
     const char* value_text_begin = &buf[0];
@@ -4348,7 +4355,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-    const float w = window->DC.ItemWidth.back();
+    const float w = ImGui::CalcItemWidth();
 
     if (!display_format)
         display_format = "%.3f";
@@ -4587,7 +4594,7 @@ static bool SliderFloatN(const char* label, float v[3], int components, float v_
         return false;
 
     const ImGuiStyle& style = g.Style;
-    const float w_full = window->DC.ItemWidth.back();
+    const float w_full = ImGui::CalcItemWidth();
     const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)) / (float)components));
     const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)));
 
@@ -4637,7 +4644,7 @@ static bool SliderIntN(const char* label, int v[3], int components, int v_min, i
         return false;
 
     const ImGuiStyle& style = g.Style;
-    const float w_full = window->DC.ItemWidth.back();
+    const float w_full = ImGui::CalcItemWidth();
     const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)) / (float)components));
     const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)));
 
@@ -4696,7 +4703,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
 
     const ImVec2 text_size = ImGui::CalcTextSize(label, NULL, true);
     if (graph_size.x == 0.0f)
-        graph_size.x = window->DC.ItemWidth.back();
+        graph_size.x = ImGui::CalcItemWidth();
     if (graph_size.y == 0.0f)
         graph_size.y = text_size.y;
 
@@ -5094,7 +5101,7 @@ bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast,
         return false;
 
     const ImGuiStyle& style = g.Style;
-    const float w = window->DC.ItemWidth.back();
+    const float w = ImGui::CalcItemWidth();
     const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, text_size.y) + style.FramePadding*2.0f);
 
@@ -5226,7 +5233,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     const ImGuiStyle& style = g.Style;
 
     const ImGuiID id = window->GetID(label);
-    const float w = window->DC.ItemWidth.back();
+    const float w = ImGui::CalcItemWidth();
 
     const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, text_size.y) + style.FramePadding*2.0f);
@@ -5516,7 +5523,7 @@ static bool InputFloatN(const char* label, float* v, int components, int decimal
         return false;
 
     const ImGuiStyle& style = g.Style;
-    const float w_full = window->DC.ItemWidth.back();
+    const float w_full = ImGui::CalcItemWidth();
     const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)) / (float)components));
     const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)));
 
@@ -5617,7 +5624,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
 
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-    const float w = window->DC.ItemWidth.back();
+    const float w = ImGui::CalcItemWidth();
 
     const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, text_size.y) + style.FramePadding*2.0f);
@@ -5679,19 +5686,19 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         combo_item_active |= (g.ActiveId == GetCurrentWindow()->GetID("#SCROLLY"));
 
         // Display items
-        for (int item_idx = 0; item_idx < items_count; item_idx++)
+        for (int i = 0; i < items_count; i++)
         {
-            ImGui::PushID((void*)(intptr_t)item_idx);
-            const bool item_selected = (item_idx == *current_item);
+            ImGui::PushID((void*)(intptr_t)i);
+            const bool item_selected = (i == *current_item);
             const char* item_text;
-            if (!items_getter(data, item_idx, &item_text))
+            if (!items_getter(data, i, &item_text))
                 item_text = "*Unknown item*";
             if (ImGui::Selectable(item_text, item_selected))
             {
                 SetActiveId(0);
                 g.ActiveComboID = 0;
                 value_changed = true;
-                *current_item = item_idx;
+                *current_item = i;
             }
             if (item_selected)
             {
@@ -5827,7 +5834,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
 
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-    const float w_full = window->DC.ItemWidth.back();
+    const float w_full = ImGui::CalcItemWidth();
     const float square_sz = (window->FontSize() + style.FramePadding.x * 2.0f);
 
     ImGuiColorEditMode edit_mode = window->DC.ColorEditMode;
@@ -6118,6 +6125,7 @@ void ImGui::NextColumn()
     }
 }
 
+// FIMXE-OPT: This is called too often. We need to cache offset for active columns set.
 float ImGui::GetColumnOffset(int column_index)
 {
     ImGuiState& g = *GImGui;
