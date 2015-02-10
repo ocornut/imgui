@@ -5781,7 +5781,7 @@ bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
     }
 
     //const ImVec2 off = ImVec2(ImMax(0.0f, size.x - text_size.x) * 0.5f, ImMax(0.0f, size.y - text_size.y) * 0.5f);
-    RenderTextClipped(bb.Min, label, NULL, &text_size, bb.Max);
+    RenderTextClipped(bb.Min, label, NULL, &text_size, bb_with_spacing.Max);
 
     return pressed;
 }
