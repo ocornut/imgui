@@ -410,6 +410,7 @@ enum ImGuiCol_
 {
     ImGuiCol_Text,
     ImGuiCol_WindowBg,
+    ImGuiCol_ChildWindowBg,
     ImGuiCol_Border,
     ImGuiCol_BorderShadow,
     ImGuiCol_FrameBg,               // Background of checkbox, radio button, plot, slider, text input
@@ -453,14 +454,15 @@ enum ImGuiCol_
 // NB: the enum only refers to fields of ImGuiStyle() which makes sense to be pushed/poped in UI code. Feel free to add others.
 enum ImGuiStyleVar_
 {
-    ImGuiStyleVar_Alpha,             // float
-    ImGuiStyleVar_WindowPadding,     // ImVec2
-    ImGuiStyleVar_WindowRounding,    // float
-    ImGuiStyleVar_FramePadding,      // ImVec2
-    ImGuiStyleVar_FrameRounding,     // float
-    ImGuiStyleVar_ItemSpacing,       // ImVec2
-    ImGuiStyleVar_ItemInnerSpacing,  // ImVec2
-    ImGuiStyleVar_TreeNodeSpacing    // float
+    ImGuiStyleVar_Alpha,               // float
+    ImGuiStyleVar_WindowPadding,       // ImVec2
+    ImGuiStyleVar_WindowRounding,      // float
+    ImGuiStyleVar_ChildWindowRounding, // float
+    ImGuiStyleVar_FramePadding,        // ImVec2
+    ImGuiStyleVar_FrameRounding,       // float
+    ImGuiStyleVar_ItemSpacing,         // ImVec2
+    ImGuiStyleVar_ItemInnerSpacing,    // ImVec2
+    ImGuiStyleVar_TreeNodeSpacing      // float
 };
 
 // Enumeration for ColorEditMode()
@@ -488,6 +490,7 @@ struct ImGuiStyle
     ImVec2      WindowPadding;              // Padding within a window
     ImVec2      WindowMinSize;              // Minimum window size
     float       WindowRounding;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
+    float       ChildWindowRounding;        // Radius of child window corners rounding. Set to 0.0f to have rectangular windows
     ImVec2      FramePadding;               // Padding within a framed rectangle (used by most widgets)
     float       FrameRounding;              // Radius of frame corners rounding. Set to 0.0f to have rectangular frame (used by most widgets).
     ImVec2      ItemSpacing;                // Horizontal and vertical spacing between widgets/lines

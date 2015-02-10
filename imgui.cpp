@@ -473,6 +473,7 @@ ImGuiStyle::ImGuiStyle()
     WindowPadding           = ImVec2(8,8);      // Padding within a window
     WindowMinSize           = ImVec2(32,32);    // Minimum window size
     WindowRounding          = 9.0f;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
+    ChildWindowRounding     = 0.0f;             // Radius of child window corners rounding. Set to 0.0f to have rectangular windows
     FramePadding            = ImVec2(4,3);      // Padding within a framed rectangle (used by most widgets)
     FrameRounding           = 0.0f;             // Radius of frame corners rounding. Set to 0.0f to have rectangular frames (used by most widgets).
     ItemSpacing             = ImVec2(8,4);      // Horizontal and vertical spacing between widgets/lines
@@ -486,6 +487,7 @@ ImGuiStyle::ImGuiStyle()
 
     Colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
     Colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    Colors[ImGuiCol_ChildWindowBg]          = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     Colors[ImGuiCol_Border]                 = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
     Colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.60f);
     Colors[ImGuiCol_FrameBg]                = ImVec4(0.80f, 0.80f, 0.80f, 0.30f);   // Background of checkbox, radio button, plot, slider, text input
@@ -2490,7 +2492,7 @@ void ImGui::BeginChild(const char* str_id, ImVec2 size, bool border, ImGuiWindow
     char title[256];
     ImFormatString(title, IM_ARRAYSIZE(title), "%s.%s", window->Name, str_id);
 
-    const float alpha = (flags & ImGuiWindowFlags_ComboBox) ? 1.0f : 0.0f;
+    const float alpha = 1.0f;
     ImGui::Begin(title, NULL, size, alpha, flags);
 
     if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
@@ -2768,15 +2770,16 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
             window->Collapsed = false;
         }
 
+        const float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
         if (window->Collapsed)
         {
             // Draw title bar only
             window->Size = title_bar_aabb.GetSize();
-            window->DrawList->AddRectFilled(title_bar_aabb.GetTL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_TitleBgCollapsed), style.WindowRounding);
+            window->DrawList->AddRectFilled(title_bar_aabb.GetTL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_TitleBgCollapsed), window_rounding);
             if (window->Flags & ImGuiWindowFlags_ShowBorders)
             {
-                window->DrawList->AddRect(title_bar_aabb.GetTL()+ImVec2(1,1), title_bar_aabb.GetBR()+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), style.WindowRounding);
-                window->DrawList->AddRect(title_bar_aabb.GetTL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_Border), style.WindowRounding);
+                window->DrawList->AddRect(title_bar_aabb.GetTL()+ImVec2(1,1), title_bar_aabb.GetBR()+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
+                window->DrawList->AddRect(title_bar_aabb.GetTL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_Border), window_rounding);
             }
         }
         else
@@ -2839,32 +2842,38 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
                 title_bar_aabb = window->TitleBarAabb();
             }
 
-            // Title bar + Window box
+            // Scrollbar
+            window->ScrollbarY = (window->SizeContentsFit.y > window->Size.y) && !(window->Flags & ImGuiWindowFlags_NoScrollbar);
+
+            // Window background
             if (fill_alpha > 0.0f)
             {
                 if ((window->Flags & ImGuiWindowFlags_ComboBox) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_ComboBg, fill_alpha), 0);
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_ComboBg, fill_alpha), window_rounding);
                 else if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_TooltipBg, fill_alpha), style.WindowRounding);
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_TooltipBg, fill_alpha), window_rounding);
+                else if ((window->Flags & ImGuiWindowFlags_ChildWindow) != 0)
+                {
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size-ImVec2(window->ScrollbarY?style.ScrollBarWidth:0.0f,0.0f), window->Color(ImGuiCol_ChildWindowBg, fill_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
+                }
                 else
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, fill_alpha), style.WindowRounding);
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, fill_alpha), window_rounding);
             }
 
+            // Title bar
             if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
-                window->DrawList->AddRectFilled(title_bar_aabb.GetTL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_TitleBg), style.WindowRounding, 1|2);
+                window->DrawList->AddRectFilled(title_bar_aabb.GetTL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_TitleBg), window_rounding, 1|2);
 
             // Borders
             if (window->Flags & ImGuiWindowFlags_ShowBorders)
             {
-                const float rounding = (window->Flags & ImGuiWindowFlags_ComboBox) ? 0.0f : style.WindowRounding;
-                window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), rounding);
-                window->DrawList->AddRect(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_Border), rounding);
+                window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
+                window->DrawList->AddRect(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_Border), window_rounding);
                 if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
                     window->DrawList->AddLine(title_bar_aabb.GetBL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_Border));
             }
 
             // Scrollbar
-            window->ScrollbarY = (window->SizeContentsFit.y > window->Size.y) && !(window->Flags & ImGuiWindowFlags_NoScrollbar);
             if (window->ScrollbarY)
             {
                 ImGuiAabb scrollbar_bb(window->Aabb().Max.x - style.ScrollBarWidth, title_bar_aabb.Max.y+1, window->Aabb().Max.x, window->Aabb().Max.y-1);
@@ -2903,7 +2912,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
             // (after the input handling so we don't have a frame of latency)
             if (!(window->Flags & ImGuiWindowFlags_NoResize))
             {
-                const float r = style.WindowRounding;
+                const float r = window_rounding;
                 const ImVec2 br = window->Aabb().GetBR();
                 if (r == 0.0f)
                 {
@@ -3146,6 +3155,7 @@ static float* GetStyleVarFloatAddr(ImGuiStyleVar idx)
     {
     case ImGuiStyleVar_Alpha: return &g.Style.Alpha;
     case ImGuiStyleVar_WindowRounding: return &g.Style.WindowRounding;
+    case ImGuiStyleVar_ChildWindowRounding: return &g.Style.ChildWindowRounding;
     case ImGuiStyleVar_FrameRounding: return &g.Style.FrameRounding;
     case ImGuiStyleVar_TreeNodeSpacing: return &g.Style.TreeNodeSpacing;
     }
@@ -3215,6 +3225,7 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     {
     case ImGuiCol_Text: return "Text";
     case ImGuiCol_WindowBg: return "WindowBg";
+    case ImGuiCol_ChildWindowBg: return "ChildWindowBg";
     case ImGuiCol_Border: return "Border";
     case ImGuiCol_BorderShadow: return "BorderShadow";
     case ImGuiCol_FrameBg: return "FrameBg";
@@ -7779,6 +7790,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::SliderFloat("Alpha", &style.Alpha, 0.20f, 1.0f, "%.2f");                 // Not exposing zero here so user doesn't "lose" the UI. But application code could have a toggle to switch between zero and non-zero.
         ImGui::SliderFloat2("WindowPadding", (float*)&style.WindowPadding, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat("WindowRounding", &style.WindowRounding, 0.0f, 16.0f, "%.0f");
+        ImGui::SliderFloat("ChildWindowRounding", &style.ChildWindowRounding, 0.0f, 16.0f, "%.0f");
         ImGui::SliderFloat2("FramePadding", (float*)&style.FramePadding, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 16.0f, "%.0f");
         ImGui::SliderFloat2("ItemSpacing", (float*)&style.ItemSpacing, 0.0f, 20.0f, "%.0f");
@@ -8266,6 +8278,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
         ImGui::SameLine();
 
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, 5.0f);
         ImGui::BeginChild("Sub2", ImVec2(0,300), true);
         ImGui::Text("With border");
         ImGui::Columns(2);
@@ -8278,6 +8291,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::Button(buf);
         }
         ImGui::EndChild();
+        ImGui::PopStyleVar();
     }
 
     if (ImGui::CollapsingHeader("Columns"))
