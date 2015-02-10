@@ -116,6 +116,7 @@ Special supporters
 - Jetha Chan
 
 Supporters
+- Dale Kim
 - Michel Courtine
 
 And other supporters; thanks!
