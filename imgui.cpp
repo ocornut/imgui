@@ -8343,7 +8343,13 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Columns(1);
 
         ImGui::Separator();
-        
+
+        ImGui::Columns(2, "tree items");
+        if (ImGui::TreeNode("Hello")) { ImGui::BulletText("World"); ImGui::TreePop(); } ImGui::NextColumn();
+        if (ImGui::TreeNode("Bonjour")) { ImGui::BulletText("Monde"); ImGui::TreePop(); }
+        ImGui::Columns(1);
+        ImGui::Separator();
+
         ImGui::Columns(2, "word wrapping");
         ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
         ImGui::Text("Hello Left");
