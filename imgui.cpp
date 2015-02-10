@@ -2530,6 +2530,23 @@ void ImGui::EndChild()
     }
 }
 
+// Helper to create a child window / scrolling region that looks like a normal widget frame.
+void ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size)
+{
+    ImGuiState& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.Colors[ImGuiCol_FrameBg]);
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, style.FrameRounding);
+    ImGui::BeginChild(id, size);
+}
+
+void ImGui::EndChildFrame()
+{
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor();
+}
+
 static ImGuiWindow* FindWindowByName(const char* name)
 {
     // FIXME-OPT: Consider optimizing this (e.g. sorted hashes to window pointers)
