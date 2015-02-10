@@ -400,7 +400,7 @@ using namespace IMGUI_STB_NAMESPACE;
 
 struct ImGuiAabb;
 
-static bool         ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false);
+static bool         ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false, bool pressed_on_click = false);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
 
 static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
@@ -3718,7 +3718,7 @@ static bool IsHovered(const ImGuiAabb& bb, const ImGuiID& id)
     return false;
 }
 
-static bool ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat)
+static bool ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat, bool pressed_on_click)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -3732,7 +3732,15 @@ static bool ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_ho
         {
             if (g.IO.MouseClicked[0])
             {
-                SetActiveId(id);
+                if (pressed_on_click)
+                {
+                    pressed = true;
+                    SetActiveId(0);
+                }
+                else
+                {
+                    SetActiveId(id);
+                }
                 FocusWindow(window);
             }
             else if (repeat && g.ActiveId && ImGui::IsMouseClicked(0, true))
@@ -5543,7 +5551,7 @@ bool ImGui::InputFloat4(const char* label, float v[4], int decimal_precision)
     return InputFloatN(label, v, 4, decimal_precision);
 }
 
-static bool Combo_ArrayGetter(void* data, int idx, const char** out_text)
+static bool Items_ArrayGetter(void* data, int idx, const char** out_text)
 {
     const char** items = (const char**)data;
     if (out_text)
@@ -5551,16 +5559,9 @@ static bool Combo_ArrayGetter(void* data, int idx, const char** out_text)
     return true;
 }
 
-// Combo box helper allowing to pass an array of strings.
-bool ImGui::Combo(const char* label, int* current_item, const char** items, int items_count, int popup_height_items)
+static bool Items_SingleStringGetter(void* data, int idx, const char** out_text)
 {
-    const bool value_changed = Combo(label, current_item, Combo_ArrayGetter, (void*)items, items_count, popup_height_items);
-    return value_changed;
-}
-
-static bool Combo_StringListGetter(void* data, int idx, const char** out_text)
-{
-    // FIXME-OPT: we could precompute the indices to fasten this. But only 1 active combo means the waste is limited.
+    // FIXME-OPT: we could pre-compute the indices to fasten this. But only 1 active combo means the waste is limited.
     const char* items_separated_by_zeros = (const char*)data;
     int items_count = 0;
     const char* p = items_separated_by_zeros;
@@ -5578,17 +5579,24 @@ static bool Combo_StringListGetter(void* data, int idx, const char** out_text)
     return true;
 }
 
+// Combo box helper allowing to pass an array of strings.
+bool ImGui::Combo(const char* label, int* current_item, const char** items, int items_count, int popup_height_items)
+{
+    const bool value_changed = Combo(label, current_item, Items_ArrayGetter, (void*)items, items_count, popup_height_items);
+    return value_changed;
+}
+
 // Combo box helper allowing to pass all items in a single string.
 bool ImGui::Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int popup_height_items)
 {
     int items_count = 0;
-    const char* p = items_separated_by_zeros;
+    const char* p = items_separated_by_zeros;       // FIXME-OPT: Avoid computing this
     while (*p)
     {
         p += strlen(p) + 1;
         items_count++;
     }
-    bool value_changed = Combo(label, current_item, Combo_StringListGetter, (void*)items_separated_by_zeros, items_count, popup_height_items);
+    bool value_changed = Combo(label, current_item, Items_SingleStringGetter, (void*)items_separated_by_zeros, items_count, popup_height_items);
     return value_changed;
 }
 
