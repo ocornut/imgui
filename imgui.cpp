@@ -5784,6 +5784,7 @@ bool ImGui::Selectable(const char* label, bool* p_selected, const ImVec2& size_a
         *p_selected = !*p_selected;
         return true;
     }
+    return false;
 }
 
 // A little colored square. Return true when clicked.
