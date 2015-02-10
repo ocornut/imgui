@@ -5673,50 +5673,33 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
 
         const ImGuiWindowFlags flags = ImGuiWindowFlags_ComboBox | ((window->Flags & ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
         ImGui::BeginChild("#ComboBox", popup_aabb.GetSize(), false, flags);
-        ImGuiWindow* child_window = GetCurrentWindow();
         ImGui::Spacing();
 
         bool combo_item_active = false;
-        combo_item_active |= (g.ActiveId == child_window->GetID("#SCROLLY"));
+        combo_item_active |= (g.ActiveId == GetCurrentWindow()->GetID("#SCROLLY"));
 
         // Display items
         for (int item_idx = 0; item_idx < items_count; item_idx++)
         {
-            const float item_h = child_window->FontSize();
-            const float spacing_up = (float)(int)(style.ItemSpacing.y/2);
-            const float spacing_dn = style.ItemSpacing.y - spacing_up;
-            const ImGuiAabb item_aabb(ImVec2(popup_aabb.Min.x, child_window->DC.CursorPos.y - spacing_up), ImVec2(popup_aabb.Max.x, child_window->DC.CursorPos.y + item_h + spacing_dn));
-            const ImGuiID item_id = child_window->GetID((void*)(intptr_t)item_idx);
-
-            bool item_hovered, item_held;
-            bool item_pressed = ButtonBehaviour(item_aabb, item_id, &item_hovered, &item_held, true);
-            bool item_selected = (item_idx == *current_item);
-
-            if (item_hovered || item_selected)
-            {
-                const ImU32 col = window->Color((item_held && item_hovered) ? ImGuiCol_HeaderActive : item_hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
-                RenderFrame(item_aabb.Min, item_aabb.Max, col, false);
-            }
-
+            ImGui::PushID((void*)(intptr_t)item_idx);
+            const bool item_selected = (item_idx == *current_item);
             const char* item_text;
             if (!items_getter(data, item_idx, &item_text))
                 item_text = "*Unknown item*";
-            ImGui::TextUnformatted(item_text);
-            
-            if (item_selected)
-            {
-                if (menu_toggled)
-                    ImGui::SetScrollPosHere();
-            }
-            if (item_pressed)
+            if (ImGui::Selectable(item_text, item_selected))
             {
                 SetActiveId(0);
                 g.ActiveComboID = 0;
                 value_changed = true;
                 *current_item = item_idx;
             }
-
-            combo_item_active |= (g.ActiveId == item_id);
+            if (item_selected)
+            {
+                if (menu_toggled)
+                    ImGui::SetScrollPosHere();
+            }
+            combo_item_active |= ImGui::IsItemActive();
+            ImGui::PopID();
         }
         ImGui::EndChild();
         ImGui::SetCursorPos(backup_pos);
