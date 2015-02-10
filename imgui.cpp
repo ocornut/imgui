@@ -3073,7 +3073,6 @@ static void FocusWindow(ImGuiWindow* window)
 void ImGui::PushItemWidth(float item_width)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    item_width = (float)(int)item_width;
     window->DC.ItemWidth.push_back(item_width == 0.0f ? window->ItemWidthDefault : item_width);
 }
 
@@ -3089,11 +3088,13 @@ float ImGui::CalcItemWidth()
     float w = window->DC.ItemWidth.back();
     if (w < 0.0f)
     {
-        // Align to a right-side limit
+        // Align to a right-side limit. We include 1 frame padding in the calculation because this is how the width is always used (we add 2 frame padding to it), but we could move that responsibility to the widget as well.
+        ImGuiState& g = *GImGui;
         w = -w;
         float width_to_right_edge = window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x;
-        w = ImMax(1.0f, width_to_right_edge - w);
+        w = ImMax(1.0f, width_to_right_edge - w - g.Style.FramePadding.x * 2.0f);
     }
+    w = (float)(int)w;
     return w;
 }
 
