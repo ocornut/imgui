@@ -508,7 +508,7 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_ButtonActive]           = ImVec4(0.80f, 0.50f, 0.50f, 1.00f);
     Colors[ImGuiCol_Header]                 = ImVec4(0.40f, 0.40f, 0.90f, 0.45f);
     Colors[ImGuiCol_HeaderHovered]          = ImVec4(0.45f, 0.45f, 0.90f, 0.80f);
-    Colors[ImGuiCol_HeaderActive]           = ImVec4(0.60f, 0.60f, 0.80f, 1.00f);
+    Colors[ImGuiCol_HeaderActive]           = ImVec4(0.53f, 0.53f, 0.87f, 0.80f);
     Colors[ImGuiCol_Column]                 = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
     Colors[ImGuiCol_ColumnHovered]          = ImVec4(0.60f, 0.40f, 0.40f, 1.00f);
     Colors[ImGuiCol_ColumnActive]           = ImVec4(0.80f, 0.50f, 0.50f, 1.00f);
@@ -2853,9 +2853,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
                 else if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_TooltipBg, fill_alpha), window_rounding);
                 else if ((window->Flags & ImGuiWindowFlags_ChildWindow) != 0)
-                {
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size-ImVec2(window->ScrollbarY?style.ScrollBarWidth:0.0f,0.0f), window->Color(ImGuiCol_ChildWindowBg, fill_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
-                }
                 else
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, fill_alpha), window_rounding);
             }
@@ -3777,7 +3775,6 @@ bool ImGui::Button(const char* label, const ImVec2& size_arg, bool repeat_when_h
     const ImVec2 text_size = CalcTextSize(label, NULL, true);
 
     const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : text_size.x, size_arg.y != 0.0f ? size_arg.y : text_size.y);
-
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + size + style.FramePadding*2.0f);
     ItemSize(bb);
     if (!ItemAdd(bb, &id))
