@@ -5723,6 +5723,62 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     return value_changed;
 }
 
+// Tip: pass an empty label (e.g. "##dummy") then you can use the space to draw other text or image.
+// But you need to make sure the ID is unique, e.g. enclose calls in PushID/PopID.
+bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID(label);
+    const ImVec2 text_size = CalcTextSize(label, NULL, true);
+    
+    const float w = window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x;
+    const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : w, size_arg.y != 0.0f ? size_arg.y : text_size.y);
+    const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + size);
+    ItemSize(bb);
+
+    // Selectables are meant to be tightly packed together. But for both rendering and collision we extend to compensate for spacing.
+    ImGuiAabb bb_with_spacing = bb;
+    const float spacing_U = (float)(int)(style.ItemSpacing.y * 0.5f);
+    const float spacing_D = style.ItemSpacing.y - spacing_U;
+    const float spacing_L = (float)(int)(style.ItemSpacing.x * 0.5f);
+    const float spacing_R = style.ItemSpacing.x - spacing_L;
+    bb_with_spacing.Min.y -= spacing_U;
+    bb_with_spacing.Min.x -= spacing_L;
+    bb_with_spacing.Max.y += spacing_D;
+    bb_with_spacing.Max.x += spacing_R;
+    if (!ItemAdd(bb_with_spacing, &id))
+        return false;
+
+    bool hovered, held;
+    bool pressed = ButtonBehaviour(bb_with_spacing, id, &hovered, &held, true, false, false);
+
+    // Render
+    if (hovered || selected)
+    {
+        const ImU32 col = window->Color((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
+        RenderFrame(bb_with_spacing.Min, bb_with_spacing.Max, col, false, style.FrameRounding);
+    }
+
+    //const ImVec2 off = ImVec2(ImMax(0.0f, size.x - text_size.x) * 0.5f, ImMax(0.0f, size.y - text_size.y) * 0.5f);
+    RenderTextClipped(bb.Min, label, NULL, &text_size, bb.Max);
+
+    return pressed;
+}
+
+bool ImGui::Selectable(const char* label, bool* p_selected, const ImVec2& size_arg)
+{
+    if (ImGui::Selectable(label, *p_selected, size_arg))
+    {
+        *p_selected = !*p_selected;
+        return true;
+    }
+}
+
 // A little colored square. Return true when clicked.
 bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_border)
 {
@@ -8092,6 +8148,47 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::PopID();
             }
             ImGui::Text("Pressed %d times.", pressed_count);
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Selectables"))
+        {
+            if (ImGui::TreeNode("Basic"))
+            {
+                static bool selected[3] = { false, true, false };
+                ImGui::Selectable("1. I am selectable", &selected[0]);
+                ImGui::Selectable("2. I am selectable", &selected[1]);
+                ImGui::Text("3. I am normal text");
+                ImGui::Selectable("4. I am selectable", &selected[2]);
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Rendering more text into the same block"))
+            {
+                static bool selected[3] = { false, false, false };
+                ImGui::Selectable("main.c", &selected[0]);    ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");
+                ImGui::Selectable("Hello.cpp", &selected[1]); ImGui::SameLine(300); ImGui::Text("12,345 bytes");
+                ImGui::Selectable("Hello.h", &selected[2]);   ImGui::SameLine(300); ImGui::Text(" 2,345 bytes");
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Grid"))
+            {
+                static bool selected[16] = { true, false, false, false, false, true, false, false, false, false, true, false, false, false, false, true };
+                for (int i = 0; i < 16; i++)
+                {
+                    ImGui::PushID(i);
+                    if (ImGui::Selectable("Me", &selected[i], ImVec2(50,50)))
+                    {
+                        int x = i % 4, y = i / 4;
+                        if (x > 0) selected[i - 1] ^= 1;
+                        if (x < 3) selected[i + 1] ^= 1;
+                        if (y > 0) selected[i - 4] ^= 1;
+                        if (y < 3) selected[i + 4] ^= 1;
+                    }
+                    if ((i % 4) < 3) ImGui::SameLine();
+                    ImGui::PopID();
+                }
+                ImGui::TreePop();
+            }
             ImGui::TreePop();
         }
 
