@@ -3609,8 +3609,8 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
     {
         // Long text!
         // Perform manual coarse clipping to optimize for long multi-line text
-        // From this point we will only compute the width of lines that are visible.
-        // Optimization only available when word-wrapping is disabled.
+        // From this point we will only compute the width of lines that are visible. Optimization only available when word-wrapping is disabled. 
+        // We also don't vertically center the text within the line full height, which is unlikely to matter because we are likely the biggest and only item on the line.
         const char* line = text;
         const float line_height = ImGui::GetTextLineHeight();
         const ImVec2 start_pos = window->DC.CursorPos;
@@ -5612,14 +5612,14 @@ static bool Items_SingleStringGetter(void* data, int idx, const char** out_text)
 }
 
 // Combo box helper allowing to pass an array of strings.
-bool ImGui::Combo(const char* label, int* current_item, const char** items, int items_count, int popup_height_items)
+bool ImGui::Combo(const char* label, int* current_item, const char** items, int items_count, int height_in_items)
 {
-    const bool value_changed = Combo(label, current_item, Items_ArrayGetter, (void*)items, items_count, popup_height_items);
+    const bool value_changed = Combo(label, current_item, Items_ArrayGetter, (void*)items, items_count, height_in_items);
     return value_changed;
 }
 
 // Combo box helper allowing to pass all items in a single string.
-bool ImGui::Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int popup_height_items)
+bool ImGui::Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int height_in_items)
 {
     int items_count = 0;
     const char* p = items_separated_by_zeros;       // FIXME-OPT: Avoid computing this
@@ -5628,12 +5628,12 @@ bool ImGui::Combo(const char* label, int* current_item, const char* items_separa
         p += strlen(p) + 1;
         items_count++;
     }
-    bool value_changed = Combo(label, current_item, Items_SingleStringGetter, (void*)items_separated_by_zeros, items_count, popup_height_items);
+    bool value_changed = Combo(label, current_item, Items_SingleStringGetter, (void*)items_separated_by_zeros, items_count, height_in_items);
     return value_changed;
 }
 
 // Combo box function.
-bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int popup_height_items)
+bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5690,9 +5690,13 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     
     if (g.ActiveComboID == id)
     {
+        // Size default to hold ~7 items
+        if (height_in_items < 0)
+            height_in_items = 7;
+
         const ImVec2 backup_pos = ImGui::GetCursorPos();
         const float popup_off_x = 0.0f;//style.ItemInnerSpacing.x;
-        const float popup_height = (text_size.y + style.ItemSpacing.y) * ImMin(items_count, popup_height_items) + style.WindowPadding.y;
+        const float popup_height = (text_size.y + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + style.WindowPadding.y;
         const ImGuiAabb popup_aabb(ImVec2(frame_bb.Min.x+popup_off_x, frame_bb.Max.y), ImVec2(frame_bb.Max.x+popup_off_x, frame_bb.Max.y + popup_height));
         ImGui::SetCursorPos(popup_aabb.Min - window->Pos);
 
@@ -5718,11 +5722,8 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
                 value_changed = true;
                 *current_item = i;
             }
-            if (item_selected)
-            {
-                if (menu_toggled)
-                    ImGui::SetScrollPosHere();
-            }
+            if (item_selected && menu_toggled)
+                ImGui::SetScrollPosHere();
             combo_item_active |= ImGui::IsItemActive();
             ImGui::PopID();
         }
@@ -5756,16 +5757,16 @@ bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + size);
     ItemSize(bb);
 
-    // Selectables are meant to be tightly packed together. But for both rendering and collision we extend to compensate for spacing.
+    // Selectables are meant to be tightly packed together. So for both rendering and collision we extend to compensate for spacing.
     ImGuiAabb bb_with_spacing = bb;
-    const float spacing_U = (float)(int)(style.ItemSpacing.y * 0.5f);
-    const float spacing_D = style.ItemSpacing.y - spacing_U;
     const float spacing_L = (float)(int)(style.ItemSpacing.x * 0.5f);
+    const float spacing_U = (float)(int)(style.ItemSpacing.y * 0.5f);
     const float spacing_R = style.ItemSpacing.x - spacing_L;
-    bb_with_spacing.Min.y -= spacing_U;
+    const float spacing_D = style.ItemSpacing.y - spacing_U;
     bb_with_spacing.Min.x -= spacing_L;
-    bb_with_spacing.Max.y += spacing_D;
+    bb_with_spacing.Min.y -= spacing_U;
     bb_with_spacing.Max.x += spacing_R;
+    bb_with_spacing.Max.y += spacing_D;
     if (!ItemAdd(bb_with_spacing, &id))
         return false;
 
