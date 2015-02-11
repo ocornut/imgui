@@ -1,4 +1,4 @@
-// ImGui library v1.32 wip
+// ImGui library v1.32
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -8131,7 +8131,9 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::End();
         return;
     }
-    ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);
+
+    ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);    // 2/3 of the space for widget and 1/3 for labels
+    //ImGui::PushItemWidth(-140);                             // Right align, keep 140 pixels for labels
 
     ImGui::Text("ImGui says hello.");
     //ImGui::Text("MousePos (%g, %g)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
