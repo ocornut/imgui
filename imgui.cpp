@@ -268,6 +268,7 @@
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills)
  - columns: columns header to act as button (~sort op) and allow resize/reorder
  - columns: user specify columns size
+ - columns: tree node example actually has a small bug (opening node in right column extends the column different from opening node in left column) 
  - combo: turn child handling code into pop up helper
  - combo: contents should extends to fit label if combo widget is small
  - listbox: multiple selection
@@ -282,7 +283,7 @@
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider? hide mouse cursor, allow more precise input using less screen-space.
- - text edit: clean up the mess caused by converting UTF-8 <> wchar. the code is rather ineficient right now.
+ - text edit: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now.
  - text edit: centered text for slider as input text so it matches typical positioning.
  - text edit: flag to disable live update of the user buffer. 
  - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
@@ -7211,6 +7212,7 @@ void    ImFont::Clear()
     DisplayOffset = ImVec2(-0.5f, 0.5f);
     ContainerAtlas = NULL;
     Glyphs.clear();
+    IndexXAdvance.clear();
     IndexLookup.clear();
     FallbackGlyph = NULL;
 }
@@ -7305,12 +7307,21 @@ void ImFont::BuildLookupTable()
     for (size_t i = 0; i != Glyphs.size(); i++)
         max_codepoint = ImMax(max_codepoint, (int)Glyphs[i].Codepoint);
 
+    IndexXAdvance.clear();
+    IndexXAdvance.resize((size_t)max_codepoint + 1);
     IndexLookup.clear();
     IndexLookup.resize((size_t)max_codepoint + 1);
-    for (size_t i = 0; i < IndexLookup.size(); i++)
+    for (size_t i = 0; i < (size_t)max_codepoint + 1; i++)
+    {
+        IndexXAdvance[i] = 0.0f;
         IndexLookup[i] = -1;
+    }
     for (size_t i = 0; i < Glyphs.size(); i++)
-        IndexLookup[(int)Glyphs[i].Codepoint] = (int)i;
+    {
+        const size_t codepoint = (int)Glyphs[i].Codepoint;
+        IndexXAdvance[codepoint] = Glyphs[i].XAdvance;
+        IndexLookup[codepoint] = (int)i;
+    }
 
     // Create a glyph to handle TAB
     // FIXME: Needs proper TAB handling but it needs to be contextualized (can arbitrary say that each string starts at "column 0"
@@ -7321,7 +7332,8 @@ void ImFont::BuildLookupTable()
         tab_glyph = *space_glyph;
         tab_glyph.Codepoint = '\t';
         tab_glyph.XAdvance *= 4;
-        IndexLookup[(int)tab_glyph.Codepoint] = (int)(Glyphs.size()-1);
+        IndexXAdvance[(size_t)tab_glyph.Codepoint] = (float)tab_glyph.XAdvance;
+        IndexLookup[(size_t)tab_glyph.Codepoint] = (int)(Glyphs.size()-1);
     }
 }
 
@@ -7534,10 +7546,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             continue;
         }
 
-        float char_width = 0.0f;
-        if (const Glyph* glyph = FindGlyph((unsigned short)c))
-            char_width = glyph->XAdvance * scale;
-
+        const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : 0.0f;
         if (c == ' ' || c == '\t')
         {
             if (inside_word)
@@ -7639,10 +7648,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
             continue;
         }
         
-        float char_width = 0.0f;
-        if (const Glyph* glyph = FindGlyph((unsigned short)c))
-            char_width = glyph->XAdvance * scale;
-
+        const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : 0.0f;
         if (line_width + char_width >= max_width)
             break;
 
@@ -7686,10 +7692,7 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
             continue;
         }
         
-        float char_width = 0.0f;
-        if (const Glyph* glyph = FindGlyph((unsigned short)c))
-            char_width = glyph->XAdvance * scale;
-
+        const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : 0.0f;
         if (line_width + char_width >= max_width)
             break;
 

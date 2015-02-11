@@ -910,6 +910,7 @@ struct ImFont
     };
     ImFontAtlas*        ContainerAtlas;     // What we has been loaded into
     ImVector<Glyph>     Glyphs;
+    ImVector<float>     IndexXAdvance;      // Glyphs->XAdvance directly indexable (for CalcTextSize functions which are often bottleneck in large UI)
     ImVector<int>       IndexLookup;        // Index glyphs by Unicode code-point
     const Glyph*        FallbackGlyph;      // == FindGlyph(FontFallbackChar)
 
