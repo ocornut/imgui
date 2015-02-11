@@ -5402,10 +5402,9 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                     for (const char* s = clipboard; *s; )
                     {
                         unsigned int c;
-                        const int bytes_count = ImTextCharFromUtf8(&c, s, NULL);
-                        if (bytes_count <= 0)
+                        s += ImTextCharFromUtf8(&c, s, NULL);
+                        if (c == 0)
                             break;
-                        s += bytes_count;
                         if (c >= 0x10000)
                             continue;
                         if (InputTextFilterCharacter((ImWchar)c, flags))
@@ -7352,57 +7351,54 @@ const ImFont::Glyph* ImFont::FindGlyph(unsigned short c) const
 // Based on stb_from_utf8() from github.com/nothings/stb/
 static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end)
 {
-    if (*in_text != 0)
+    unsigned int c = (unsigned int)-1;
+    const unsigned char* str = (const unsigned char*)in_text;
+    if (!(*str & 0x80))
     {
-        unsigned int c = (unsigned int)-1;
-        const unsigned char* str = (const unsigned char*)in_text;
-        if (!(*str & 0x80))
-        {
-            c = (unsigned int)(*str++);
-            *out_char = c;
-            return 1;
-        }
-        if ((*str & 0xe0) == 0xc0) 
-        {
-            if (in_text_end && in_text_end - (const char*)str < 2) return -1;
-            if (*str < 0xc2) return -1;
-            c = (unsigned int)((*str++ & 0x1f) << 6);
-            if ((*str & 0xc0) != 0x80) return -1;
-            c += (*str++ & 0x3f);
-            *out_char = c;
-            return 2;
-        }
-        if ((*str & 0xf0) == 0xe0) 
-        {
-            if (in_text_end && in_text_end - (const char*)str < 3) return -1;
-            if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return -1;
-            if (*str == 0xed && str[1] > 0x9f) return -1; // str[1] < 0x80 is checked below
-            c = (unsigned int)((*str++ & 0x0f) << 12);
-            if ((*str & 0xc0) != 0x80) return -1;
-            c += (unsigned int)((*str++ & 0x3f) << 6);
-            if ((*str & 0xc0) != 0x80) return -1;
-            c += (*str++ & 0x3f);
-            *out_char = c;
-            return 3;
-        }
-        if ((*str & 0xf8) == 0xf0) 
-        {
-            if (in_text_end && in_text_end - (const char*)str < 4) return -1;
-            if (*str > 0xf4) return -1;
-            if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return -1;
-            if (*str == 0xf4 && str[1] > 0x8f) return -1; // str[1] < 0x80 is checked below
-            c = (unsigned int)((*str++ & 0x07) << 18);
-            if ((*str & 0xc0) != 0x80) return -1;
-            c += (unsigned int)((*str++ & 0x3f) << 12);
-            if ((*str & 0xc0) != 0x80) return -1;
-            c += (unsigned int)((*str++ & 0x3f) << 6);
-            if ((*str & 0xc0) != 0x80) return -1;
-            c += (*str++ & 0x3f);
-            // utf-8 encodings of values used in surrogate pairs are invalid
-            if ((c & 0xFFFFF800) == 0xD800) return -1;
-            *out_char = c;
-            return 4;
-        }
+        c = (unsigned int)(*str++);
+        *out_char = c;
+        return 1;
+    }
+    if ((*str & 0xe0) == 0xc0) 
+    {
+        if (in_text_end && in_text_end - (const char*)str < 2) return -1;
+        if (*str < 0xc2) return -1;
+        c = (unsigned int)((*str++ & 0x1f) << 6);
+        if ((*str & 0xc0) != 0x80) return -1;
+        c += (*str++ & 0x3f);
+        *out_char = c;
+        return 2;
+    }
+    if ((*str & 0xf0) == 0xe0) 
+    {
+        if (in_text_end && in_text_end - (const char*)str < 3) return -1;
+        if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return -1;
+        if (*str == 0xed && str[1] > 0x9f) return -1; // str[1] < 0x80 is checked below
+        c = (unsigned int)((*str++ & 0x0f) << 12);
+        if ((*str & 0xc0) != 0x80) return -1;
+        c += (unsigned int)((*str++ & 0x3f) << 6);
+        if ((*str & 0xc0) != 0x80) return -1;
+        c += (*str++ & 0x3f);
+        *out_char = c;
+        return 3;
+    }
+    if ((*str & 0xf8) == 0xf0) 
+    {
+        if (in_text_end && in_text_end - (const char*)str < 4) return -1;
+        if (*str > 0xf4) return -1;
+        if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return -1;
+        if (*str == 0xf4 && str[1] > 0x8f) return -1; // str[1] < 0x80 is checked below
+        c = (unsigned int)((*str++ & 0x07) << 18);
+        if ((*str & 0xc0) != 0x80) return -1;
+        c += (unsigned int)((*str++ & 0x3f) << 12);
+        if ((*str & 0xc0) != 0x80) return -1;
+        c += (unsigned int)((*str++ & 0x3f) << 6);
+        if ((*str & 0xc0) != 0x80) return -1;
+        c += (*str++ & 0x3f);
+        // utf-8 encodings of values used in surrogate pairs are invalid
+        if ((c & 0xFFFFF800) == 0xD800) return -1;
+        *out_char = c;
+        return 4;
     }
     *out_char = 0;
     return 0;
@@ -7535,8 +7531,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
     while (s < text_end)
     {
         unsigned int c;
-        const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
-        const char* next_s = s + (bytes_count > 0 ? bytes_count : 1);
+        const char* next_s = s + ImTextCharFromUtf8(&c, s, text_end);
 
         if (c == '\n')
         {
@@ -7637,8 +7632,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
 
         // Decode and advance source (handle unlikely UTF-8 decoding failure by skipping to the next byte)
         unsigned int c;
-        const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
-        s += bytes_count > 0 ? bytes_count : 1;
+        s += ImTextCharFromUtf8(&c, s, text_end);
         
         if (c == '\n')
         {
@@ -7767,8 +7761,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
 
         // Decode and advance source (handle unlikely UTF-8 decoding failure by skipping to the next byte)
         unsigned int c;
-        const int bytes_count = ImTextCharFromUtf8(&c, s, text_end);
-        s += bytes_count > 0 ? bytes_count : 1;
+        s += ImTextCharFromUtf8(&c, s, text_end);
 
         if (c == '\n')
         {
