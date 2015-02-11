@@ -270,7 +270,8 @@
  - columns: user specify columns size
  - combo: turn child handling code into pop up helper
  - combo: contents should extends to fit label if combo widget is small
- - list selection, concept of a selectable "block" (that can be multiple widgets)
+ - listbox: multiple selection
+ - listbox: user may want to initial scroll to focus on the one selected value?
  ! menubar, menus
  - tabs
  - gauge: various forms of gauge/loading bars widgets
@@ -5796,6 +5797,85 @@ bool ImGui::Selectable(const char* label, bool* p_selected, const ImVec2& size_a
     return false;
 }
 
+// Helper to calculate the size of a listbox and display a label on the right.
+// Tip: To have a list filling the entire window width, PushItemWidth(-1) and pass an empty label "##empty"
+bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const ImGuiID id = ImGui::GetID(label);
+    const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
+
+    // Size default to hold ~7 items. Fractional number of items helps seeing that we can scroll down/up without looking at scrollbar.
+    ImVec2 size;
+    size.x = (size_arg.x != 0.0f) ? size_arg.x : ImGui::CalcItemWidth() + style.FramePadding.x * 2.0f;
+    size.y = (size_arg.y != 0.0f) ? size_arg.y : ImGui::GetTextLineHeightWithSpacing() * 7.4f + style.ItemSpacing.y;
+    const ImVec2 frame_size = ImVec2(size.x, ImMax(size.y, label_size.y));
+    const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + frame_size);
+
+    if (label_size.x > 0)
+        RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
+
+    ImGui::BeginChildFrame(id, frame_bb.GetSize());
+    return true;
+}
+
+bool ImGui::ListBoxHeader(const char* label, int items_count, int height_in_items)
+{
+    // Size default to hold ~7 items. Fractional number of items helps seeing that we can scroll down/up without looking at scrollbar.
+    // However we don't add +0.40f if items_count <= height_in_items. It is slightly dodgy, because it means a dynamic list of items will make the widget resize occasionally when it crosses that size.
+    // I am expecting that someone will come and complain about this behavior in a remote future, then we can advise on a better solution.
+    if (height_in_items < 0)
+        height_in_items = ImMin(items_count, 7);
+    float height_in_items_f = height_in_items < items_count ? (height_in_items + 0.40f) : (height_in_items + 0.00f);
+
+    // We include ItemSpacing.y so that a list sized for the exact number of items doesn't make a scrollbar appears. We could also enforce that by passing a flag to BeginChild().
+    ImVec2 size;
+    size.x = 0.0f;
+    size.y = ImGui::GetTextLineHeightWithSpacing() * height_in_items_f + ImGui::GetStyle().ItemSpacing.y;
+    return ImGui::ListBoxHeader(label, size);
+}
+
+void ImGui::ListBoxFooter()
+{
+    ImGui::EndChildFrame();
+}
+
+bool ImGui::ListBox(const char* label, int* current_item, const char** items, int items_count, int height_items)
+{
+    const bool value_changed = ListBox(label, current_item, Items_ArrayGetter, (void*)items, items_count, height_items);
+    return value_changed;
+}
+
+bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+{
+    if (!ImGui::ListBoxHeader(label, items_count, height_in_items))
+        return false;
+
+    bool value_changed = false;
+    for (int i = 0; i < items_count; i++)
+    {
+        const bool item_selected = (i == *current_item);
+        const char* item_text;
+        if (!items_getter(data, i, &item_text))
+            item_text = "*Unknown item*";
+
+        ImGui::PushID(i);
+        if (ImGui::Selectable(item_text, item_selected))
+        {
+            *current_item = i;
+            value_changed = true;
+        }
+        ImGui::PopID();
+    }
+
+    ImGui::ListBoxFooter();
+    return value_changed;
+}
+
 // A little colored square. Return true when clicked.
 bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_border)
 {
@@ -8306,6 +8386,14 @@ void ImGui::ShowTestWindow(bool* opened)
         static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
         ImGui::ColorEdit3("color 1", col1);
         ImGui::ColorEdit4("color 2", col2);
+
+        const char* listbox_items[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
+        static int listbox_item_current = 1, listbox_item_current2 = 2;
+        ImGui::ListBox("listbox\n(single select)", &listbox_item_current, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
+
+        //ImGui::PushItemWidth(-1);
+        //ImGui::ListBox("##listbox2", &listbox_item_current2, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
+        //ImGui::PopItemWidth();
     }
 
     if (ImGui::CollapsingHeader("Graphs widgets"))
