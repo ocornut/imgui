@@ -129,6 +129,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/02/11 (1.32) - changed text input callback ImGuiTextEditCallback return type from void-->int. reserved for future use, return 0 for now.
  - 2015/02/10 (1.32) - renamed GetItemWidth() to CalcItemWidth() to clarify its evolving behavior
  - 2015/02/08 (1.31) - renamed GetTextLineSpacing() to GetTextLineHeightWithSpacing()
  - 2015/02/01 (1.31) - removed IO.MemReallocFn (unused)
@@ -5223,27 +5224,44 @@ void ImGuiTextEditCallbackData::InsertChars(int pos, const char* new_text, const
     SelectionStart = SelectionEnd = CursorPos;
 }
 
-static bool InputTextFilterCharacter(ImWchar c, ImGuiInputTextFlags flags)
+// Return false to discard a character.
+static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
+    unsigned int c = *p_char;
+
     if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
-        return true;
+        return false;
 
     if (c >= 0xE000 && c <= 0xF8FF) // Filter private Unicode range. I don't imagine anybody would want to input them. GLFW on OSX seems to send private characters for special keys like arrow keys.
-        return true;
+        return false;
 
     if (flags & ImGuiInputTextFlags_CharsDecimal)
         if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
-            return true;
+            return false;
 
     if (flags & ImGuiInputTextFlags_CharsHexadecimal)
         if (!(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F'))
-            return true;
+            return false;
 
-    return false;
+    if (flags & ImGuiInputTextFlags_CallbackCharFilter)
+    {
+        ImGuiTextEditCallbackData callback_data;
+        memset(&callback_data, 0, sizeof(ImGuiTextEditCallbackData));
+        callback_data.EventFlag = ImGuiInputTextFlags_CallbackCharFilter; 
+        callback_data.EventChar = c;
+        callback_data.Flags = flags;
+        callback_data.UserData = user_data;
+        callback(&callback_data);
+        *p_char = callback_data.EventChar;
+        if (!callback_data.EventChar)
+            return false;
+    }
+
+    return true;
 }
 
 // Edit a string of text
-bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, void (*callback)(ImGuiTextEditCallbackData*), void* user_data)
+bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5344,13 +5362,13 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             // Process text input (before we check for Return because using some IME will effectively send a Return?)
             for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
             {
-                const ImWchar c = g.IO.InputCharacters[n];
+                unsigned int c = (unsigned int)g.IO.InputCharacters[n];
                 if (c)
                 {
                     // Insert character if they pass filtering
-                    if (InputTextFilterCharacter(c, flags))
+                    if (!InputTextFilterCharacter(&c, flags, callback, user_data))
                         continue;
-                    edit_state.OnKeyPressed(c);
+                    edit_state.OnKeyPressed((int)c);
                 }
             }
 
@@ -5407,7 +5425,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                             break;
                         if (c >= 0x10000)
                             continue;
-                        if (InputTextFilterCharacter((ImWchar)c, flags))
+                        if (!InputTextFilterCharacter(&c, flags, callback, user_data))
                             continue;
                         clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
                     }
@@ -5442,17 +5460,28 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                 IM_ASSERT(callback != NULL);
 
                 // The reason we specify the usage semantic (Completion/History) is that Completion needs to disable keyboard TABBING at the moment.
+                ImGuiInputTextFlags event_flag = 0;
                 ImGuiKey event_key = ImGuiKey_COUNT;
                 if ((flags & ImGuiInputTextFlags_CallbackCompletion) != 0 && IsKeyPressedMap(ImGuiKey_Tab))
+                {
+                    event_flag = ImGuiInputTextFlags_CallbackCompletion;
                     event_key = ImGuiKey_Tab;
+                }
                 else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressedMap(ImGuiKey_UpArrow))
+                {
+                    event_flag = ImGuiInputTextFlags_CallbackHistory;
                     event_key = ImGuiKey_UpArrow;
+                }
                 else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressedMap(ImGuiKey_DownArrow))
+                {
+                    event_flag = ImGuiInputTextFlags_CallbackHistory;
                     event_key = ImGuiKey_DownArrow;
+                }
 
                 if (event_key != ImGuiKey_COUNT || (flags & ImGuiInputTextFlags_CallbackAlways) != 0)
                 {
                     ImGuiTextEditCallbackData callback_data;
+                    callback_data.EventFlag = event_flag; 
                     callback_data.EventKey = event_key;
                     callback_data.Buf = text_tmp_utf8;
                     callback_data.BufSize = edit_state.BufSize;
@@ -8313,6 +8342,33 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
+        if (ImGui::TreeNode("Filtered Text Input"))
+        {
+            static char buf1[64] = ""; ImGui::InputText("default", buf1, 64);
+            static char buf2[64] = ""; ImGui::InputText("decimal", buf2, 64, ImGuiInputTextFlags_CharsDecimal);
+            static char buf3[64] = ""; ImGui::InputText("hexadecimal", buf3, 64, ImGuiInputTextFlags_CharsHexadecimal);
+            struct TextFilters
+            {
+                static int FilterAZ(ImGuiTextEditCallbackData* data)
+                {
+                    const ImWchar c = data->EventChar;
+                    if (!((c >= 'a' && c <= 'z') || c >= 'A' && c <= 'Z'))
+                        data->EventChar = 0;
+                    return 0;
+                }
+                static int FilterUppercase(ImGuiTextEditCallbackData* data)
+                {
+                    const ImWchar c = data->EventChar;
+                    if (c >= 'a' && c <= 'z')
+                        data->EventChar += 'A'-'a';
+                    return 0;
+                }
+            };
+            static char buf4[64] = ""; ImGui::InputText("a-z only", buf4, 64, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterAZ);
+            static char buf5[64] = ""; ImGui::InputText("uppercase", buf5, 64, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterUppercase);
+            ImGui::TreePop();
+        }
+
         static bool check = true;
         ImGui::Checkbox("checkbox", &check);
 
@@ -8967,18 +9023,18 @@ struct ExampleAppConsole
         }
     }
 
-    static void TextEditCallbackStub(ImGuiTextEditCallbackData* data)
+    static int TextEditCallbackStub(ImGuiTextEditCallbackData* data)
     {
         ExampleAppConsole* console = (ExampleAppConsole*)data->UserData;
-        console->TextEditCallback(data);
+        return console->TextEditCallback(data);
     }
 
-    void    TextEditCallback(ImGuiTextEditCallbackData* data)
+    int     TextEditCallback(ImGuiTextEditCallbackData* data)
     {
         //AddLog("cursor: %d, selection: %d-%d", data->CursorPos, data->SelectionStart, data->SelectionEnd);
-        switch (data->EventKey)
+        switch (data->EventFlag)
         {
-        case ImGuiKey_Tab:
+        case ImGuiInputTextFlags_CallbackCompletion:
             {
                 // Example of TEXT COMPLETION
 
@@ -9043,8 +9099,7 @@ struct ExampleAppConsole
 
                 break;
             }
-        case ImGuiKey_UpArrow:
-        case ImGuiKey_DownArrow:
+        case ImGuiInputTextFlags_CallbackHistory:
             {
                 // Example of HISTORY
                 const int prev_history_pos = HistoryPos;
@@ -9071,6 +9126,7 @@ struct ExampleAppConsole
                 }
             }
         }
+        return 0;
     }
 };
 
