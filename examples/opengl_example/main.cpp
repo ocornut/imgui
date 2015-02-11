@@ -255,17 +255,7 @@ int main(int argc, char** argv)
             ImGui::ColorEdit3("clear color", (float*)&clear_col);
             if (ImGui::Button("Test Window")) show_test_window ^= 1;
             if (ImGui::Button("Another Window")) show_another_window ^= 1;
-
-            // Calculate and show frame rate
-            static int   ms_per_frame_idx = 0;
-            static float ms_per_frame[60] = { 0 };
-            static float ms_per_frame_accum = 0.0f;
-            ms_per_frame_accum -= ms_per_frame[ms_per_frame_idx];
-            ms_per_frame[ms_per_frame_idx] = ImGui::GetIO().DeltaTime * 1000.0f;
-            ms_per_frame_accum += ms_per_frame[ms_per_frame_idx];
-            ms_per_frame_idx = (ms_per_frame_idx + 1) % 60;
-            const float ms_per_frame_avg = ms_per_frame_accum / 60;
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", ms_per_frame_avg, 1000.0f / ms_per_frame_avg);
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         }
 
         // 2. Show another simple window, this time using an explicit Begin/End pair

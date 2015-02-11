@@ -1022,6 +1022,11 @@ struct ImGuiState
     int                     LogStartDepth;
     int                     LogAutoExpandMaxDepth;
 
+    // Misc
+    float                   FramerateSecPerFrame[120];          // calculate estimate of framerate for user
+    int                     FramerateSecPerFrameIdx;
+    float                   FramerateSecPerFrameAccum;
+
     ImGuiState()
     {
         Initialized = false;
@@ -1718,6 +1723,12 @@ void ImGui::NewFrame()
     }
     for (size_t i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
         g.IO.KeysDownTime[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownTime[i] < 0.0f ? 0.0f : g.IO.KeysDownTime[i] + g.IO.DeltaTime) : -1.0f;
+
+    // Calculate frame-rate for the user, as a purely luxurious feature
+    g.FramerateSecPerFrameAccum += g.IO.DeltaTime - g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx];
+    g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx] = g.IO.DeltaTime;
+    g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_ARRAYSIZE(g.FramerateSecPerFrame);
+    g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
 
     // Clear reference to active widget if the widget isn't alive anymore
     g.HoveredId = 0;
