@@ -81,9 +81,7 @@ In contrast, librairies featuring higher-quality rendering and layouting techniq
 
 <b>Can you reskin the look of ImGui?</b>
 
-Yes, you can alter the look of the interface to some degree: changing colors, sizes and padding, font. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. The example below uses modified settings to create a very compact UI with different colors:
-
-![skinning screenshot 1](/web/skinning_sample_01.png?raw=true)
+Yes, you can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. 
 
 <b>Why using C++ (as opposed to C)?</b>
 
@@ -96,7 +94,9 @@ Donate
 
 <b>Can I donate to support the development of ImGui?</b>
 
-Yes please! I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgui) if you want to donate and enable me to spend more time improving the library. If your company uses ImGui on a commercial project please consider making a small contribution. One-off donations are also greatly appreciated. I am also available for hire to work on or with ImGui. Thanks!
+[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui)
+
+I'm currently an independant developer and your contributions are very meaningful to me. I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgui) if you want to donate and enable me to spend more time improving the library. If your company uses ImGui please consider making a contribution. One-off donations are also greatly appreciated. I am also available for hire to work on or with ImGui. Thanks!
 
 Credits
 -------
