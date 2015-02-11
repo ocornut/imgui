@@ -394,7 +394,7 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_CallbackCompletion  = 1 << 5,   // Call user function on pressing TAB (for completion handling)
     ImGuiInputTextFlags_CallbackHistory     = 1 << 6,   // Call user function on pressing Up/Down arrows (for history handling)
     ImGuiInputTextFlags_CallbackAlways      = 1 << 7,   // Call user function every time
-    ImGuiInputTextFlags_CallbackCharFilter  = 1 << 8    // Call user function to filter character. Modify data->EventChar to replace/filter input.
+    ImGuiInputTextFlags_CallbackCharFilter  = 1 << 8    // Call user function to filter character. Modify data->EventChar to replace/filter input, or return 1 to discard character.
     //ImGuiInputTextFlags_AlignCenter       = 1 << 6,
 };
 

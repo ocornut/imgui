@@ -5255,7 +5255,8 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
         callback_data.EventChar = c;
         callback_data.Flags = flags;
         callback_data.UserData = user_data;
-        callback(&callback_data);
+        if (callback(&callback_data) != 0)
+            return false;
         *p_char = callback_data.EventChar;
         if (!callback_data.EventChar)
             return false;
@@ -8352,7 +8353,7 @@ void ImGui::ShowTestWindow(bool* opened)
             static char buf2[64] = ""; ImGui::InputText("decimal", buf2, 64, ImGuiInputTextFlags_CharsDecimal);
             static char buf3[64] = ""; ImGui::InputText("hexadecimal", buf3, 64, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
             static char buf4[64] = ""; ImGui::InputText("uppercase", buf4, 64, ImGuiInputTextFlags_CharsUppercase);
-            struct TextFilters { static int FilterNoSpace(ImGuiTextEditCallbackData* data) { if (data->EventChar == ' ') data->EventChar = 0; return 0; } };
+            struct TextFilters { static int FilterNoSpace(ImGuiTextEditCallbackData* data) { if (data->EventChar == ' ') return 1; return 0; } };
             static char buf5[64] = ""; ImGui::InputText("custom: no spaces", buf5, 64, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterNoSpace);
             ImGui::TreePop();
         }
