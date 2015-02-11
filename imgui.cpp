@@ -5243,6 +5243,10 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
         if (!(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F'))
             return false;
 
+    if (flags & ImGuiInputTextFlags_CharsUppercase)
+        if (c >= 'a' && c <= 'z')
+            *p_char = (c += 'A'-'a');
+
     if (flags & ImGuiInputTextFlags_CallbackCharFilter)
     {
         ImGuiTextEditCallbackData callback_data;
@@ -8346,26 +8350,10 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             static char buf1[64] = ""; ImGui::InputText("default", buf1, 64);
             static char buf2[64] = ""; ImGui::InputText("decimal", buf2, 64, ImGuiInputTextFlags_CharsDecimal);
-            static char buf3[64] = ""; ImGui::InputText("hexadecimal", buf3, 64, ImGuiInputTextFlags_CharsHexadecimal);
-            struct TextFilters
-            {
-                static int FilterAZ(ImGuiTextEditCallbackData* data)
-                {
-                    const ImWchar c = data->EventChar;
-                    if (!((c >= 'a' && c <= 'z') || c >= 'A' && c <= 'Z'))
-                        data->EventChar = 0;
-                    return 0;
-                }
-                static int FilterUppercase(ImGuiTextEditCallbackData* data)
-                {
-                    const ImWchar c = data->EventChar;
-                    if (c >= 'a' && c <= 'z')
-                        data->EventChar += 'A'-'a';
-                    return 0;
-                }
-            };
-            static char buf4[64] = ""; ImGui::InputText("a-z only", buf4, 64, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterAZ);
-            static char buf5[64] = ""; ImGui::InputText("uppercase", buf5, 64, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterUppercase);
+            static char buf3[64] = ""; ImGui::InputText("hexadecimal", buf3, 64, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
+            static char buf4[64] = ""; ImGui::InputText("uppercase", buf4, 64, ImGuiInputTextFlags_CharsUppercase);
+            struct TextFilters { static int FilterNoSpace(ImGuiTextEditCallbackData* data) { if (data->EventChar == ' ') data->EventChar = 0; return 0; } };
+            static char buf5[64] = ""; ImGui::InputText("custom: no spaces", buf5, 64, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterNoSpace);
             ImGui::TreePop();
         }
 
