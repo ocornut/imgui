@@ -7530,8 +7530,12 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
     const char* s = text;
     while (s < text_end)
     {
-        unsigned int c;
-        const char* next_s = s + ImTextCharFromUtf8(&c, s, text_end);
+        unsigned int c = (unsigned int)*s;
+        const char* next_s;
+        if (c < 0x80)
+            next_s = s + 1;
+        else
+            next_s = s + ImTextCharFromUtf8(&c, s, text_end);
 
         if (c == '\n')
         {
@@ -7631,8 +7635,11 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         }
 
         // Decode and advance source (handle unlikely UTF-8 decoding failure by skipping to the next byte)
-        unsigned int c;
-        s += ImTextCharFromUtf8(&c, s, text_end);
+        unsigned int c = (unsigned int)*s;
+        if (c < 0x80)
+            s += 1;
+        else
+            s += ImTextCharFromUtf8(&c, s, text_end);
         
         if (c == '\n')
         {
@@ -7760,8 +7767,11 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
         }
 
         // Decode and advance source (handle unlikely UTF-8 decoding failure by skipping to the next byte)
-        unsigned int c;
-        s += ImTextCharFromUtf8(&c, s, text_end);
+        unsigned int c = (unsigned int)*s;
+        if (c < 0x80)
+            s += 1;
+        else
+            s += ImTextCharFromUtf8(&c, s, text_end);
 
         if (c == '\n')
         {
