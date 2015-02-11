@@ -956,6 +956,7 @@ struct ImGuiTextEditState
     static void             RenderTextScrolledClipped(ImFont* font, float font_size, const char* text, ImVec2 pos_base, float width, float scroll_x);
 };
 
+// Data saved in imgui.ini file
 struct ImGuiIniData
 {
     char*   Name;
@@ -967,6 +968,7 @@ struct ImGuiIniData
     ~ImGuiIniData() { if (Name) { ImGui::MemFree(Name); Name = NULL; } }
 };
 
+// Main state for ImGui
 struct ImGuiState
 {
     bool                    Initialized;
