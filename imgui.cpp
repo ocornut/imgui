@@ -5235,17 +5235,24 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
     if (c >= 0xE000 && c <= 0xF8FF) // Filter private Unicode range. I don't imagine anybody would want to input them. GLFW on OSX seems to send private characters for special keys like arrow keys.
         return false;
 
-    if (flags & ImGuiInputTextFlags_CharsDecimal)
-        if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
-            return false;
+    if (flags & (ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_CharsNoBlank))
+    {
+        if (flags & ImGuiInputTextFlags_CharsDecimal)
+            if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
+                return false;
 
-    if (flags & ImGuiInputTextFlags_CharsHexadecimal)
-        if (!(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F'))
-            return false;
+        if (flags & ImGuiInputTextFlags_CharsHexadecimal)
+            if (!(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F'))
+                return false;
 
-    if (flags & ImGuiInputTextFlags_CharsUppercase)
-        if (c >= 'a' && c <= 'z')
-            *p_char = (c += 'A'-'a');
+        if (flags & ImGuiInputTextFlags_CharsUppercase)
+            if (c >= 'a' && c <= 'z')
+                *p_char = (c += 'A'-'a');
+
+        if (flags & ImGuiInputTextFlags_CharsNoBlank)
+            if (c == ' ' || c == '\t')
+                return false;
+    }
 
     if (flags & ImGuiInputTextFlags_CallbackCharFilter)
     {
@@ -8353,8 +8360,9 @@ void ImGui::ShowTestWindow(bool* opened)
             static char buf2[64] = ""; ImGui::InputText("decimal", buf2, 64, ImGuiInputTextFlags_CharsDecimal);
             static char buf3[64] = ""; ImGui::InputText("hexadecimal", buf3, 64, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
             static char buf4[64] = ""; ImGui::InputText("uppercase", buf4, 64, ImGuiInputTextFlags_CharsUppercase);
-            struct TextFilters { static int FilterNoSpace(ImGuiTextEditCallbackData* data) { if (data->EventChar == ' ') return 1; return 0; } };
-            static char buf5[64] = ""; ImGui::InputText("custom: no spaces", buf5, 64, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterNoSpace);
+            static char buf5[64] = ""; ImGui::InputText("no blank", buf5, 64, ImGuiInputTextFlags_CharsNoBlank);
+            struct TextFilters { static int FilterImGuiLetters(ImGuiTextEditCallbackData* data) { if (data->EventChar < 256 && strchr("imgui", (char)data->EventChar)) return 0; return 1; } };
+            static char buf6[64] = ""; ImGui::InputText("\"imgui\" letters", buf6, 64, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterImGuiLetters);
             ImGui::TreePop();
         }
 
