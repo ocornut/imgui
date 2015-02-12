@@ -1269,14 +1269,11 @@ ImGuiTextFilter::ImGuiTextFilter()
 void ImGuiTextFilter::Draw(const char* label, float width)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    if (width < 0.0f)
-    {
-        ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
-        width = ImMax(window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x - (label_size.x + GImGui->Style.ItemSpacing.x*4), 10.0f);
-    }
-    ImGui::PushItemWidth(width);
+    if (width > 0.0f)
+        ImGui::PushItemWidth(width);
     ImGui::InputText(label, InputBuf, IM_ARRAYSIZE(InputBuf));
-    ImGui::PopItemWidth();
+    if (width > 0.0f)
+        ImGui::PopItemWidth();
     Build();
 }
 
