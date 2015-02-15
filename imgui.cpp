@@ -1260,10 +1260,18 @@ void ImGuiStorage::SetAllInt(int v)
 //-----------------------------------------------------------------------------
 
 // Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
-ImGuiTextFilter::ImGuiTextFilter()
+ImGuiTextFilter::ImGuiTextFilter(const char* default_filter)
 {
-    InputBuf[0] = 0;
-    CountGrep = 0;
+    if (default_filter)
+    {
+        ImFormatString(InputBuf, IM_ARRAYSIZE(InputBuf), "%s", default_filter);
+        Build();
+    }
+    else
+    {
+        InputBuf[0] = 0;
+        CountGrep = 0;
+    }
 }
 
 void ImGuiTextFilter::Draw(const char* label, float width)
