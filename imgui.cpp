@@ -295,6 +295,7 @@
  ! style: store rounded corners in texture to use 1 quad per corner (filled and wireframe). so rounding have minor cost.
  - style: checkbox: padding for "active" color should be a multiplier of the 
  - style: colorbox not always square?
+ - text: simple markup language for color change?
  - log: LogButtons() options for specifying depth and/or hiding depth slider
  - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
  - log: be able to right-click and log a window or tree-node into tty/file/clipboard / generalized context menu?
@@ -1260,10 +1261,18 @@ void ImGuiStorage::SetAllInt(int v)
 //-----------------------------------------------------------------------------
 
 // Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
-ImGuiTextFilter::ImGuiTextFilter()
+ImGuiTextFilter::ImGuiTextFilter(const char* default_filter)
 {
-    InputBuf[0] = 0;
-    CountGrep = 0;
+    if (default_filter)
+    {
+        ImFormatString(InputBuf, IM_ARRAYSIZE(InputBuf), "%s", default_filter);
+        Build();
+    }
+    else
+    {
+        InputBuf[0] = 0;
+        CountGrep = 0;
+    }
 }
 
 void ImGuiTextFilter::Draw(const char* label, float width)
@@ -2427,6 +2436,12 @@ bool ImGui::IsItemActive()
         return g.ActiveId == window->DC.LastItemID;
     }
     return false;
+}
+
+bool ImGui::IsAnyItemActive()
+{
+    ImGuiState& g = *GImGui;
+    return g.ActiveId != 0;
 }
 
 ImVec2 ImGui::GetItemBoxMin()

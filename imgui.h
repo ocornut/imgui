@@ -327,6 +327,7 @@ namespace ImGui
     // Utilities
     IMGUI_API bool          IsItemHovered();                                                    // was the last item hovered by mouse?
     IMGUI_API bool          IsItemActive();                                                     // was the last item active? (e.g. button being held, text field being edited- items that don't interact will always return false)
+    IMGUI_API bool          IsAnyItemActive();                                                  // 
     IMGUI_API ImVec2        GetItemBoxMin();                                                    // get bounding box of last item
     IMGUI_API ImVec2        GetItemBoxMax();                                                    // get bounding box of last item
     IMGUI_API bool          IsClipped(const ImVec2& item_size);                                 // to perform coarse clipping on user's side (as an optimization)
@@ -651,7 +652,7 @@ struct ImGuiTextFilter
     ImVector<TextRange> Filters;
     int                 CountGrep;
 
-    ImGuiTextFilter();
+    ImGuiTextFilter(const char* default_filter = "");
     void Clear() { InputBuf[0] = 0; Build(); }
     void Draw(const char* label = "Filter (inc,-exc)", float width = -1.0f);    // Helper calling InputText+Build
     bool PassFilter(const char* val) const;
