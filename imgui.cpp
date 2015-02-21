@@ -992,6 +992,7 @@ struct ImGuiState
     ImGuiID                 ActiveId;
     ImGuiID                 ActiveIdPreviousFrame;
     bool                    ActiveIdIsAlive;
+    bool                    ActiveIdIsFocusedOnly;              // Set only by active widget. Denote focus but no active interaction.
     float                   SettingsDirtyTimer;
     ImVector<ImGuiIniData*> Settings;
     ImVector<ImGuiColMod>   ColorModifiers;
@@ -1046,6 +1047,7 @@ struct ImGuiState
         ActiveId = 0;
         ActiveIdPreviousFrame = 0;
         ActiveIdIsAlive = false;
+        ActiveIdIsFocusedOnly = false;
         SettingsDirtyTimer = 0.0f;
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
         SetNextWindowPosCond = 0;
@@ -1149,6 +1151,7 @@ static void SetActiveId(ImGuiID id)
 {
     ImGuiState& g = *GImGui;
     g.ActiveId = id; 
+    g.ActiveIdIsFocusedOnly = false;
 }
 
 static void RegisterAliveId(const ImGuiID& id)
@@ -3791,8 +3794,11 @@ static bool IsHovered(const ImGuiAabb& bb, const ImGuiID& id)
     if (g.HoveredId == 0)
     {
         ImGuiWindow* window = GetCurrentWindow();
-        const bool hovered = (g.HoveredRootWindow == window->RootWindow) && (g.ActiveId == 0 || g.ActiveId == id) && IsMouseHoveringBox(bb);
-        return hovered;
+        if (g.HoveredRootWindow == window->RootWindow)
+        {
+            bool hovered = (g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && IsMouseHoveringBox(bb);
+            return hovered;
+        }
     }
     return false;
 }
@@ -4516,20 +4522,14 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         if (g.SliderAsInputTextId == 0)
         {
             // First frame
-            IM_ASSERT(g.ActiveId == id);    // InputText ID should match the Slider ID (else we'd need to store them both which is also possible)
+            IM_ASSERT(g.ActiveId == id);    // InputText ID expected to match the Slider ID (else we'd need to store them both, which is also possible)
             g.SliderAsInputTextId = g.ActiveId;
-            SetActiveId(id);
             g.HoveredId = id;
         }
-        else
+        else if (g.ActiveId != g.SliderAsInputTextId)
         {
-            if (g.ActiveId == g.SliderAsInputTextId)
-                SetActiveId(id);
-            else
-            {
-                SetActiveId(0);
-                g.SliderAsInputTextId = 0;
-            }
+            // Release
+            g.SliderAsInputTextId = 0;
         }
         if (value_changed)
         {
@@ -5378,6 +5378,11 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             SetActiveId(0);
         }
     }
+
+    // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
+    // Down the line we should have a cleaner concept of focused vs active in the library.
+    if (g.ActiveId == id)
+        g.ActiveIdIsFocusedOnly = !io.MouseDown[0];
 
     bool value_changed = false;
     bool cancel_edit = false;
