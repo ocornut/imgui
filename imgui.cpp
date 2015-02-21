@@ -289,6 +289,7 @@
  - text edit: flag to disable live update of the user buffer. 
  - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
  - text edit: add multi-line text edit
+ - tree: reformulate OpenNextNode() into SetNextWindowCollapsed() api
  - tree: add treenode/treepush int variants? because (void*) cast from int warns on some platforms/settings
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float) in .ini file
@@ -531,8 +532,8 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_TooltipBg]              = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
 }
 
-// Statically allocated font atlas. This is merely a maneuver to keep its definition at the bottom of the .H file.
-// Because we cannot new() at this point (before users may define IO.MemAllocFn)
+// Statically allocated font atlas. This is merely a maneuver to keep ImFontAtlas definition at the bottom of the .h file (otherwise it'd be inside ImGuiIO)
+// Also we wouldn't be able to new() one at this point, before users may define IO.MemAllocFn.
 static ImFontAtlas GDefaultFontAtlas;
 
 ImGuiIO::ImGuiIO()
@@ -564,7 +565,7 @@ ImGuiIO::ImGuiIO()
 
 // Pass in translated ASCII characters for text input.
 // - with glfw you can get those from the callback set in glfwSetCharCallback()
-// - on Windows you can get those using ToAscii+keyboard state, or via the VM_CHAR message
+// - on Windows you can get those using ToAscii+keyboard state, or via the WM_CHAR message
 void ImGuiIO::AddInputCharacter(ImWchar c)
 {
     const size_t n = ImStrlenW(InputCharacters);
@@ -590,7 +591,7 @@ const float PI = 3.14159265358979323846f;
 #define IM_INT_MAX 2147483647
 #endif
 
-// Play it nice with Windows users. Notepad in 2014 still doesn't display text data with Unix-style \n.
+// Play it nice with Windows users. Notepad in 2015 still doesn't display text data with Unix-style \n.
 #ifdef _MSC_VER
 #define STR_NEWLINE "\r\n"
 #else
@@ -649,8 +650,7 @@ static char* ImStrdup(const char *str)
 static size_t ImStrlenW(const ImWchar* str)
 {
     size_t n = 0;
-    while (*str++)
-        n++;
+    while (*str++) n++;
     return n;
 }
 
@@ -843,7 +843,7 @@ struct ImGuiStyleMod    // Style modifier, backup of modified data so we can res
     ImVec2      PreviousValue;
 };
 
-struct ImGuiAabb    // 2D axis aligned bounding-box
+struct ImGuiAabb        // 2D axis aligned bounding-box
 {
     ImVec2      Min;
     ImVec2      Max;
@@ -935,7 +935,7 @@ struct ImGuiTextEditState
     float               ScrollX;
     STB_TexteditState   StbState;
     float               CursorAnim;
-    ImVec2              LastCursorPos;                  // Cursor position in screen space to be used by IME callback.
+    ImVec2              InputCursorScreenPos;           // Cursor position in screen space to be used by IME callback.
     bool                SelectedAllMouseLock;
     ImFont*             Font;
     float               FontSize;
@@ -5362,7 +5362,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             edit_state.Width = w;
             stb_textedit_initialize_state(&edit_state.StbState, true); 
             edit_state.CursorAnimReset();
-            edit_state.LastCursorPos = ImVec2(-1.f,-1.f);
+            edit_state.InputCursorScreenPos = ImVec2(-1.f,-1.f);
 
             if (tab_focus_requested || is_ctrl_down)
                 select_all = true;
@@ -5610,11 +5610,11 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         if (g.InputTextState.CursorIsVisible())
             window->DrawList->AddRect(cursor_pos - font_off_up + ImVec2(0,2), cursor_pos + font_off_dn - ImVec2(0,3), window->Color(ImGuiCol_Text));
         
-        // Notify OS of text input position
-        if (io.ImeSetInputScreenPosFn && ImLengthSqr(edit_state.LastCursorPos - cursor_pos) > 0.0001f)
+        // Notify OS of text input position for advanced IME
+        if (io.ImeSetInputScreenPosFn && ImLengthSqr(edit_state.InputCursorScreenPos - cursor_pos) > 0.0001f)
             io.ImeSetInputScreenPosFn((int)cursor_pos.x - 1, (int)(cursor_pos.y - window->FontSize()));   // -1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.
 
-        edit_state.LastCursorPos = cursor_pos;
+        edit_state.InputCursorScreenPos = cursor_pos;
     }
 
     RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);

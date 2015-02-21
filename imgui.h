@@ -391,7 +391,7 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_CharsHexadecimal    = 1 << 1,   // Allow 0123456789ABCDEFabcdef
     ImGuiInputTextFlags_CharsUppercase      = 1 << 2,   // Turn a..z into A..Z
     ImGuiInputTextFlags_CharsNoBlank        = 1 << 3,   // Filter out spaces, tabs
-    ImGuiInputTextFlags_AutoSelectAll       = 1 << 4,   // Select entire text when first taking focus
+    ImGuiInputTextFlags_AutoSelectAll       = 1 << 4,   // Select entire text when first taking mouse focus
     ImGuiInputTextFlags_EnterReturnsTrue    = 1 << 5,   // Return 'true' when Enter is pressed (as opposed to when the value was modified)
     ImGuiInputTextFlags_CallbackCompletion  = 1 << 6,   // Call user function on pressing TAB (for completion handling)
     ImGuiInputTextFlags_CallbackHistory     = 1 << 7,   // Call user function on pressing Up/Down arrows (for history handling)
@@ -498,7 +498,7 @@ enum ImGuiColorEditMode_
 enum ImGuiSetCondition_
 {
     ImGuiSetCondition_Always              = 1 << 0, // Set the variable
-    ImGuiSetCondition_FirstUseThisSession = 1 << 1, // Only set the variable on the first call for this window (once per session)
+    ImGuiSetCondition_FirstUseThisSession = 1 << 1, // Only set the variable on the first call per runtime session
     ImGuiSetCondition_FirstUseEver        = 1 << 2  // Only set the variable if the window doesn't exist in the .ini file
 };
 
@@ -534,7 +534,7 @@ struct ImGuiIO
 
     ImVec2        DisplaySize;              // <unset>              // Display size, in pixels. For clamping windows positions.
     float         DeltaTime;                // = 1.0f/60.0f         // Time elapsed since last frame, in seconds.
-    float         IniSavingRate;            // = 5.0f               // Maximum time between saving .ini file, in seconds.
+    float         IniSavingRate;            // = 5.0f               // Maximum time between saving positions/sizes to .ini file, in seconds.
     const char*   IniFilename;              // = "imgui.ini"        // Path to .ini file. NULL to disable .ini saving.
     const char*   LogFilename;              // = "imgui_log.txt"    // Path to .log file (default parameter to ImGui::LogToFile when no file is specified).
     float         MouseDoubleClickTime;     // = 0.30f              // Time for a double-click, in seconds.
@@ -556,8 +556,8 @@ struct ImGuiIO
     // See example code if you are unsure of how to implement this.
     void        (*RenderDrawListsFn)(ImDrawList** const draw_lists, int count);      
 
-    // Optional: access OS clipboard (default to use native Win32 clipboard on Windows, otherwise use a ImGui private clipboard)
-    // Override to access OS clipboard on other architectures.
+    // Optional: access OS clipboard
+    // (default to use native Win32 clipboard on Windows, otherwise uses a private clipboard. Override to access OS clipboard on other architectures)
     const char* (*GetClipboardTextFn)();
     void        (*SetClipboardTextFn)(const char* text);
 
@@ -565,7 +565,7 @@ struct ImGuiIO
     void*       (*MemAllocFn)(size_t sz);
     void        (*MemFreeFn)(void* ptr);
 
-    // Optional: notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese inputs in Windows)
+    // Optional: notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME in Windows)
     void        (*ImeSetInputScreenPosFn)(int x, int y);
 
     //------------------------------------------------------------------
@@ -573,12 +573,12 @@ struct ImGuiIO
     //------------------------------------------------------------------
 
     ImVec2      MousePos;                   // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
-    bool        MouseDown[5];               // Mouse buttons. ImGui itself only uses button 0 (left button) but you can use others as storage for convenience.
+    bool        MouseDown[5];               // Mouse buttons. ImGui itself only uses button 0 (left button). Others buttons allows to track if mouse is being used by your application + available to user as a convenience via IsMouse** API.
     float       MouseWheel;                 // Mouse wheel: 1 unit scrolls about 5 lines text. 
     bool        MouseDrawCursor;            // Request ImGui to draw a mouse cursor for you (if you are on a platform without a mouse cursor).
     bool        KeyCtrl;                    // Keyboard modifier pressed: Control
     bool        KeyShift;                   // Keyboard modifier pressed: Shift
-    bool        KeysDown[512];              // Keyboard keys that are pressed (in whatever order user naturally has access to keyboard data)
+    bool        KeysDown[512];              // Keyboard keys that are pressed (in whatever storage order you naturally have access to keyboard data)
     ImWchar     InputCharacters[16+1];      // List of characters input (translated by user from keypress+keyboard state). Fill using AddInputCharacter() helper.
 
     // Function
@@ -596,7 +596,7 @@ struct ImGuiIO
     // [Internal] ImGui will maintain those fields for you
     //------------------------------------------------------------------
 
-    ImVec2      MousePosPrev;               //
+    ImVec2      MousePosPrev;               // Previous mouse position
     ImVec2      MouseDelta;                 // Mouse delta. Note that this is zero if either current or previous position are negative to allow mouse enabling/disabling.
     bool        MouseClicked[5];            // Mouse button went from !Down to Down
     ImVec2      MouseClickedPos[5];         // Position at time of clicking
@@ -752,7 +752,6 @@ struct ImColor
     ImColor(int r, int g, int b, int a = 255)                       { Value.x = (float)r / 255.0f; Value.y = (float)g / 255.0f; Value.z = (float)b / 255.0f; Value.w = (float)a / 255.0f; }
     ImColor(float r, float g, float b, float a = 1.0f)              { Value.x = r; Value.y = g; Value.z = b; Value.w = a; }
     ImColor(const ImVec4& col)                                      { Value = col; }
-
     operator ImU32() const                                          { return ImGui::ColorConvertFloat4ToU32(Value); }
     operator ImVec4() const                                         { return Value; }
 
@@ -775,7 +774,7 @@ struct ImColor
 // It is up to you to decide if your rendering loop or the callback should be responsible for backup/restoring rendering state.
 typedef void (*ImDrawCallback)(const ImDrawList* parent_list, const ImDrawCmd* cmd);
 
-// Typically, 1 command = 1 gpu draw call
+// Typically, 1 command = 1 gpu draw call (unless command is a callback)
 struct ImDrawCmd
 {
     unsigned int    vtx_count;                  // Number of vertices (multiple of 3) to be drawn as triangles. The vertices are stored in the callee ImDrawList's vtx_buffer[] array.
