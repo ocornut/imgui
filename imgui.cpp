@@ -2494,7 +2494,7 @@ void ImGui::EndTooltip()
     ImGui::End();
 }
 
-void ImGui::BeginChild(const char* str_id, ImVec2 size, bool border, ImGuiWindowFlags extra_flags)
+bool ImGui::BeginChild(const char* str_id, ImVec2 size, bool border, ImGuiWindowFlags extra_flags)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -2523,17 +2523,20 @@ void ImGui::BeginChild(const char* str_id, ImVec2 size, bool border, ImGuiWindow
     ImFormatString(title, IM_ARRAYSIZE(title), "%s.%s", window->Name, str_id);
 
     const float alpha = 1.0f;
-    ImGui::Begin(title, NULL, size, alpha, flags);
+    bool ret = ImGui::Begin(title, NULL, size, alpha, flags);
 
     if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
         g.CurrentWindow->Flags &= ~ImGuiWindowFlags_ShowBorders;
+
+    return ret;
 }
 
-void ImGui::BeginChild(ImGuiID id, ImVec2 size, bool border, ImGuiWindowFlags extra_flags)
+bool ImGui::BeginChild(ImGuiID id, ImVec2 size, bool border, ImGuiWindowFlags extra_flags)
 {
     char str_id[32];
     ImFormatString(str_id, IM_ARRAYSIZE(str_id), "child_%x", id);
-    ImGui::BeginChild(str_id, size, border, extra_flags);
+    bool ret = ImGui::BeginChild(str_id, size, border, extra_flags);
+    return ret;
 }
 
 void ImGui::EndChild()
