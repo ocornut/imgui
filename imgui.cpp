@@ -928,6 +928,7 @@ struct ImGuiDrawContext
 // Internal state of the currently focused/edited text input box
 struct ImGuiTextEditState
 {
+    ImGuiID             Id;                             // widget id owning the text state
     ImWchar             Text[1024];                     // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
     char                InitialText[1024*3+1];          // backup of end-user buffer at the time of focus (in UTF-8, unconverted)
     size_t              BufSize;                        // end-user buffer size, <= 1024 (or increase above)
@@ -5343,6 +5344,8 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     const bool is_ctrl_down = io.KeyCtrl;
     const bool is_shift_down = io.KeyShift;
     const bool focus_requested = window->FocusItemRegister(g.ActiveId == id, (flags & ImGuiInputTextFlags_CallbackCompletion) == 0);    // Using completion callback disable keyboard tabbing
+    const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
+    const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
 
     const bool hovered = IsHovered(frame_bb, id);
     if (hovered)
@@ -5357,14 +5360,28 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             // Start edition
             // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
             ImFormatString(edit_state.InitialText, IM_ARRAYSIZE(edit_state.InitialText), "%s", buf);
-            ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), buf, NULL);
-            edit_state.ScrollX = 0.0f;
+            size_t buf_len = ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), buf, NULL);
             edit_state.Width = w;
-            stb_textedit_initialize_state(&edit_state.StbState, true); 
-            edit_state.CursorAnimReset();
             edit_state.InputCursorScreenPos = ImVec2(-1.f,-1.f);
+            edit_state.CursorAnimReset();
 
-            if (focus_requested || is_ctrl_down)
+            if (edit_state.Id != id)
+            {
+                edit_state.Id = id;
+                edit_state.ScrollX = 0.0f;
+                stb_textedit_initialize_state(&edit_state.StbState, true); 
+                if (focus_requested_by_code)
+                    select_all = true;
+            }
+            else
+            {
+                // Recycle existing cursor/selection/undo stack but clamp position
+                // Note a single mouse click will override the cursor/position immediately by calling stb_textedit_click handler.
+                edit_state.StbState.cursor = ImMin(edit_state.StbState.cursor, buf_len);
+                edit_state.StbState.select_start = ImMin(edit_state.StbState.select_start, buf_len);
+                edit_state.StbState.select_end = ImMin(edit_state.StbState.select_end, buf_len);
+            }
+            if (focus_requested_by_tab || (user_clicked && is_ctrl_down))
                 select_all = true;
         }
         SetActiveId(id);
@@ -8797,6 +8814,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::Text("Item with focus: %d", has_focus);
             else 
                 ImGui::Text("Item with focus: <none>");
+            ImGui::TextWrapped("Cursor & selection are preserved when refocusing last used item in code.");
             ImGui::TreePop();
         }
     }
