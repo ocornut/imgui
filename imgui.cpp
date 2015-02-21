@@ -5342,15 +5342,15 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
 
     const bool is_ctrl_down = io.KeyCtrl;
     const bool is_shift_down = io.KeyShift;
-    const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id, (flags & ImGuiInputTextFlags_CallbackCompletion) == 0);    // Using completion callback disable keyboard tabbing
-    //const bool align_center = (bool)(flags & ImGuiInputTextFlags_AlignCenter);    // FIXME: Unsupported
+    const bool focus_requested = window->FocusItemRegister(g.ActiveId == id, (flags & ImGuiInputTextFlags_CallbackCompletion) == 0);    // Using completion callback disable keyboard tabbing
 
     const bool hovered = IsHovered(frame_bb, id);
     if (hovered)
         g.HoveredId = id;
+    const bool user_clicked = hovered && io.MouseClicked[0];
 
     bool select_all = (g.ActiveId != id) && (flags & ImGuiInputTextFlags_AutoSelectAll) != 0;
-    if (tab_focus_requested || (hovered && io.MouseClicked[0]))
+    if (focus_requested || user_clicked)
     {
         if (g.ActiveId != id)
         {
@@ -5364,7 +5364,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             edit_state.CursorAnimReset();
             edit_state.InputCursorScreenPos = ImVec2(-1.f,-1.f);
 
-            if (tab_focus_requested || is_ctrl_down)
+            if (focus_requested || is_ctrl_down)
                 select_all = true;
         }
         SetActiveId(id);
@@ -5599,7 +5599,6 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         }
     }
 
-    // FIXME: 'align_center' unsupported
     ImGuiTextEditState::RenderTextScrolledClipped(window->Font(), window->FontSize(), buf, frame_bb.Min + style.FramePadding, w, (g.ActiveId == id) ? edit_state.ScrollX : 0.0f);
 
     if (g.ActiveId == id)
