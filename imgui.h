@@ -232,8 +232,8 @@ namespace ImGui
     IMGUI_API float         GetTextLineHeightWithSpacing();                                     // spacing (in pixels) between 2 consecutive lines of text == GetWindowFontSize() + GetStyle().ItemSpacing.y
 
     // ID scopes
-    // If you are creating repeated widgets in a loop you most likely want to push a unique identifier so ImGui can differentiate them.
-    // You can also use ## within your widget name to distinguish them from each others (see 'Programmer Guide')
+    // If you are creating widgets in a loop you most likely want to push a unique identifier so ImGui can differentiate them.
+    // You can also use "##extra" within your widget name to distinguish them from each others (see 'Programmer Guide')
     IMGUI_API void          PushID(const char* str_id);                                         // push identifier into the ID stack. IDs are hash of the *entire* stack!
     IMGUI_API void          PushID(const void* ptr_id);
     IMGUI_API void          PushID(const int int_id);

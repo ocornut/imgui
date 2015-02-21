@@ -6258,6 +6258,7 @@ bool ImGui::IsClipped(const ImVec2& item_size)
 
 static bool ItemAdd(const ImGuiAabb& bb, const ImGuiID* id)
 {
+    //ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.LastItemID = id ? *id : 0;
     window->DC.LastItemAabb = bb;
@@ -6266,7 +6267,11 @@ static bool ItemAdd(const ImGuiAabb& bb, const ImGuiID* id)
         window->DC.LastItemHovered = false;
         return false;
     }
-    window->DC.LastItemHovered = IsMouseHoveringBox(bb);     // this is a sensible default but widgets are free to override it after calling ItemAdd()
+
+    // This is a sensible default, but widgets are free to override it after calling ItemAdd()
+    const bool hovered = IsMouseHoveringBox(bb);
+    //const bool hovered = (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly) && IsMouseHoveringBox(bb);  // matching the behaviour of IsHovered(), not always what the user wants?
+    window->DC.LastItemHovered = hovered;
     return true;
 }
 
