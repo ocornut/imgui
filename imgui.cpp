@@ -1124,7 +1124,7 @@ public:
     ImU32       Color(const ImVec4& col) const          { ImVec4 c = col; c.w *= GImGui->Style.Alpha; return ImGui::ColorConvertFloat4ToU32(c); }
 };
 
-static ImGuiWindow* GetCurrentWindow()
+static inline ImGuiWindow* GetCurrentWindow()
 {
     ImGuiState& g = *GImGui;
     IM_ASSERT(g.CurrentWindow != NULL);    // ImGui::NewFrame() hasn't been called yet?
@@ -6347,8 +6347,6 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return;
 
     if (window->DC.ColumnsCount != 1)
     {
@@ -6362,7 +6360,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     }
 
     // Draw columns borders and handle resize at the time of "closing" a columns set
-    if (window->DC.ColumnsCount != columns_count && window->DC.ColumnsCount != 1 && window->DC.ColumnsShowBorders)
+    if (window->DC.ColumnsCount != columns_count && window->DC.ColumnsCount != 1 && window->DC.ColumnsShowBorders && !window->SkipItems)
     {
         const float y1 = window->DC.ColumnsStartPos.y;
         const float y2 = window->DC.CursorPos.y;
