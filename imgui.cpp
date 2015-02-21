@@ -1031,6 +1031,10 @@ struct ImGuiState
     ImGuiState()
     {
         Initialized = false;
+        Font = NULL;
+        FontSize = 0.0f;
+        FontTexUvWhitePixel = ImVec2(0.0f, 0.0f);
+
         Time = 0.0f;
         FrameCount = 0;
         FrameCountRendered = -1;
@@ -1038,6 +1042,9 @@ struct ImGuiState
         FocusedWindow = NULL;
         HoveredWindow = NULL;
         HoveredRootWindow = NULL;
+        HoveredId = 0;
+        ActiveId = 0;
+        ActiveIdPreviousFrame = 0;
         ActiveIdIsAlive = false;
         SettingsDirtyTimer = 0.0f;
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
@@ -1046,15 +1053,21 @@ struct ImGuiState
         SetNextWindowSizeCond = 0;
         SetNextWindowCollapsedVal = false;
         SetNextWindowCollapsedCond = 0;
+
         SliderAsInputTextId = 0;
         ActiveComboID = 0;
         memset(Tooltip, 0, sizeof(Tooltip));
         PrivateClipboard = NULL;
+
         LogEnabled = false;
         LogFile = NULL;
+        LogClipboard = NULL;
         LogStartDepth = 0;
         LogAutoExpandMaxDepth = 2;
-        LogClipboard = NULL;
+
+        memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
+        FramerateSecPerFrameIdx = 0;
+        FramerateSecPerFrameAccum = 0.0f;
     }
 };
 
