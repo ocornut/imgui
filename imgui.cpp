@@ -6362,7 +6362,7 @@ float ImGui::GetColumnOffset(int column_index)
     const float t = window->DC.ColumnsOffsetsT[column_index];
 
     const float min_x = window->DC.ColumnsStartX;
-    const float max_x = window->Size.x - (g.Style.ScrollBarWidth) - window->WindowPadding().x;
+    const float max_x = window->Size.x - (g.Style.ScrollBarWidth);// - window->WindowPadding().x;
     const float offset = min_x + t * (max_x - min_x);
     return offset;
 }
@@ -6378,7 +6378,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
 
     const float min_x = window->DC.ColumnsStartX;
-    const float max_x = window->Size.x - (g.Style.ScrollBarWidth) - window->WindowPadding().x;
+    const float max_x = window->Size.x - (window->ScrollbarY);// - window->WindowPadding().x;
     const float t = (offset - min_x) / (max_x - min_x);
     window->StateStorage.SetFloat(column_id, t);
     window->DC.ColumnsOffsetsT[column_index] = t;
@@ -8691,6 +8691,32 @@ void ImGui::ShowTestWindow(bool* opened)
 
         ImGui::Separator();
         ImGui::Spacing();
+
+        // Scrolling columns
+		/*
+        ImGui::Text("Scrolling:");
+        ImGui::BeginChild("##header", ImVec2(0, ImGui::GetTextLineHeightWithSpacing()+ImGui::GetStyle().ItemSpacing.y));
+        ImGui::Columns(3);
+        ImGui::Text("ID"); ImGui::NextColumn();
+        ImGui::Text("Name"); ImGui::NextColumn();
+        ImGui::Text("Path"); ImGui::NextColumn();
+        ImGui::Columns(1);
+        ImGui::Separator();
+        ImGui::EndChild();
+        ImGui::BeginChild("##scrollingregion", ImVec2(0, 60));
+        ImGui::Columns(3);
+        for (int i = 0; i < 10; i++)
+        {
+            ImGui::Text("%04d", i); ImGui::NextColumn();
+            ImGui::Text("Foobar"); ImGui::NextColumn();
+            ImGui::Text("/path/foobar/%04d/", i); ImGui::NextColumn();
+        }
+        ImGui::Columns(1);
+        ImGui::EndChild();
+
+        ImGui::Separator();
+        ImGui::Spacing();
+		*/
 
         // Create multiple items in a same cell before switching to next column
         ImGui::Text("Mixed items:");
