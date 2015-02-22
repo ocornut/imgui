@@ -8670,6 +8670,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
     if (ImGui::CollapsingHeader("Columns"))
     {
+        // Basic columns
         ImGui::Text("Basic:");
         ImGui::Columns(4, "mycolumns");
         ImGui::Text("ID"); ImGui::NextColumn();
@@ -8725,6 +8726,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Separator();
         ImGui::Spacing();
 
+        // Tree items
         ImGui::Text("Tree items:");
         ImGui::Columns(2, "tree items");
         ImGui::Separator();
@@ -8735,6 +8737,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Separator();
         ImGui::Spacing();
 
+        // Word-wrapping
         ImGui::Text("Word-wrapping:");
         ImGui::Columns(2, "word-wrapping");
         ImGui::Separator();
@@ -8753,28 +8756,22 @@ void ImGui::ShowTestWindow(bool* opened)
             if (ImGui::TreeNode("node 1 (with borders)"))
             {
                 ImGui::Columns(4);
-                ImGui::Text("aaa"); ImGui::NextColumn();
-                ImGui::Text("bbb"); ImGui::NextColumn();
-                ImGui::Text("ccc"); ImGui::NextColumn();
-                ImGui::Text("ddd"); ImGui::NextColumn();
-                ImGui::Text("eee"); ImGui::NextColumn();
-                ImGui::Text("fff"); ImGui::NextColumn();
-                ImGui::Text("ggg"); ImGui::NextColumn();
-                ImGui::Text("hhh"); ImGui::NextColumn();
+                for (int i = 0; i < 8; i++)
+                {
+                    ImGui::Text("%c%c%c", 'a'+i, 'a'+i, 'a'+i);
+                    ImGui::NextColumn();
+                }
                 ImGui::Columns(1);
                 ImGui::TreePop();
             }
             if (ImGui::TreeNode("node 2 (without borders)"))
             {
                 ImGui::Columns(4, NULL, false);
-                ImGui::Text("aaa"); ImGui::NextColumn();
-                ImGui::Text("bbb"); ImGui::NextColumn();
-                ImGui::Text("ccc"); ImGui::NextColumn();
-                ImGui::Text("ddd"); ImGui::NextColumn();
-                ImGui::Text("eee"); ImGui::NextColumn();
-                ImGui::Text("fff"); ImGui::NextColumn();
-                ImGui::Text("ggg"); ImGui::NextColumn();
-                ImGui::Text("hhh"); ImGui::NextColumn();
+                for (int i = 0; i < 8; i++)
+                {
+                    ImGui::Text("%c%c%c", 'a'+i, 'a'+i, 'a'+i);
+                    ImGui::NextColumn();
+                }
                 ImGui::Columns(1);
                 ImGui::TreePop();
             }
