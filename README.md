@@ -72,20 +72,22 @@ Yes. I have written data browsers, debuggers, profilers and all sort of non-triv
 
 Down the fundation of its visual design, ImGui is engineered to be fairly performant both in term of CPU and GPU usage. Running elaborate code and creating elaborate UI will of course have a cost but ImGui aims to minimize it.
 
-Mileage may vary but the following screenshot should give you an idea of the cost of running and rendering UI code (In the case of a trivial demo application like this one, your driver/os setup may be a bottleneck and cause higher variation or throttled framerate. Testing performance as part of a real application is recommended).
+Mileage may vary but the following screenshot may give you a rough idea of the cost of running and rendering UI code (In the case of a trivial demo application like this one, your driver/os setup may be a bottleneck and cause higher variation or throttled framerate. Testing performance as part of a real application is recommended).
 
 ![performance screenshot](/web/performance_01_close_up.png?raw=true)
 
-This is showing framerate on my 2011 iMac running Windows 7, OpenGL, AMD Radeon HD 6700M. ([click here for the full-size picture](/web/performance_01.png)).
+This is showing framerate for the full application loop on my 2011 iMac running Windows 7, OpenGL, AMD Radeon HD 6700M with an optimized executable. ([click here for the full-size picture](/web/performance_01.png)).
 In contrast, librairies featuring higher-quality rendering and layouting techniques may have a higher resources footprint.
+
+If you intend to display large lists of items (say, 1000+) it can be beneficial for your code to perform clipping manually - using helpers such as CalcListClipping() - in order to avoid submitting them to ImGui in the first place. Even though ImGui will discard your clipped items it still needs to calculate their size and that overhead will add up if you have thousands of items.
 
 <b>Can you reskin the look of ImGui?</b>
 
-Yes, you can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. 
+You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. 
 
 <b>Why using C++ (as opposed to C)?</b>
 
-ImGui takes advantage of a few C++ features for convenience but nothing in the realm of Boost-insanity/quagmire. In particular, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience but could be removed.
+ImGui takes advantage of a few C++ features for convenience but nothing anywhere Boost-insanity/quagmire. In particular, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience but could be removed.
 
 Shall someone wants to use ImGui from another language, it should be possible to wrap ImGui to be used from a raw C API in the future.
 
