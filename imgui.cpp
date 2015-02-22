@@ -2515,7 +2515,7 @@ void ImGui::EndTooltip()
     ImGui::End();
 }
 
-bool ImGui::BeginChild(const char* str_id, ImVec2 size, bool border, ImGuiWindowFlags extra_flags)
+bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -2524,6 +2524,7 @@ bool ImGui::BeginChild(const char* str_id, ImVec2 size, bool border, ImGuiWindow
 
     const ImVec2 content_max = window->Pos + ImGui::GetContentRegionMax();
     const ImVec2 cursor_pos = window->Pos + ImGui::GetCursorPos();
+    ImVec2 size = size_arg;
     if (size.x <= 0.0f)
     {
         if (size.x == 0.0f)
@@ -2552,7 +2553,7 @@ bool ImGui::BeginChild(const char* str_id, ImVec2 size, bool border, ImGuiWindow
     return ret;
 }
 
-bool ImGui::BeginChild(ImGuiID id, ImVec2 size, bool border, ImGuiWindowFlags extra_flags)
+bool ImGui::BeginChild(ImGuiID id, const ImVec2& size, bool border, ImGuiWindowFlags extra_flags)
 {
     char str_id[32];
     ImFormatString(str_id, IM_ARRAYSIZE(str_id), "child_%x", id);
@@ -2659,13 +2660,14 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 }
 
 // Push a new ImGui window to add widgets to. 
-// - A default window called "Debug" is automatically stacked at the beginning of every frame.
-// - This can be called multiple times during the frame with the same window name to append content to the same window.
+// - 'size' for a regular window denote the initial size for first-time creation (no saved data) and isn't that useful. Use SetNextWindowSize() prior to calling Begin() for more flexible window manipulation.
+// - A default window called "Debug" is automatically stacked at the beginning of every frame so you can use widgets without explicitly calling a Begin/End pair.
+// - Begin/End can be called multiple times during the frame with the same window name to append content.
 // - The window name is used as a unique identifier to preserve window information across frames (and save rudimentary information to the .ini file). Note that you can use ## to append unique data that isn't displayed, e.g. "My window##1" will use "My window##1" as unique window ID but display "My window" to the user.
 // - Return false when window is collapsed, so you can early out in your code. You always need to call ImGui::End() even if false is returned.
 // - Passing 'bool* p_opened' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
 // - Passing non-zero 'size' is roughly equivalent to calling SetNextWindowSize(size, ImGuiSetCondition_FirstUseEver) prior to calling Begin().
-bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alpha, ImGuiWindowFlags flags)
+bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg_alpha, ImGuiWindowFlags flags)
 {
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
@@ -2717,8 +2719,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
     window->RootWindow = g.CurrentWindowStack[root_idx];
 
     // Default alpha
-    if (fill_alpha < 0.0f)
-        fill_alpha = style.WindowFillAlphaDefault;
+    if (bg_alpha < 0.0f)
+        bg_alpha = style.WindowFillAlphaDefault;
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     const int current_frame = ImGui::GetFrameCount();
@@ -2924,16 +2926,16 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
             window->ScrollbarY = (window->SizeContentsFit.y > window->Size.y) && !(window->Flags & ImGuiWindowFlags_NoScrollbar);
 
             // Window background
-            if (fill_alpha > 0.0f)
+            if (bg_alpha > 0.0f)
             {
                 if ((window->Flags & ImGuiWindowFlags_ComboBox) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_ComboBg, fill_alpha), window_rounding);
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_ComboBg, bg_alpha), window_rounding);
                 else if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_TooltipBg, fill_alpha), window_rounding);
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_TooltipBg, bg_alpha), window_rounding);
                 else if ((window->Flags & ImGuiWindowFlags_ChildWindow) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size-ImVec2(window->ScrollbarY?style.ScrollBarWidth:0.0f,0.0f), window->Color(ImGuiCol_ChildWindowBg, fill_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size-ImVec2(window->ScrollbarY?style.ScrollBarWidth:0.0f,0.0f), window->Color(ImGuiCol_ChildWindowBg, bg_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
                 else
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, fill_alpha), window_rounding);
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, bg_alpha), window_rounding);
             }
 
             // Title bar
@@ -8178,7 +8180,7 @@ void ImGui::ShowTestWindow(bool* opened)
     static bool no_move = false;
     static bool no_scrollbar = false;
     static bool no_collapse = false;
-    static float fill_alpha = 0.65f;
+    static float bg_alpha = 0.65f;
 
     // Demonstrate the various window flags. Typically you would just use the default.
     ImGuiWindowFlags window_flags = 0;
@@ -8188,7 +8190,7 @@ void ImGui::ShowTestWindow(bool* opened)
     if (no_move)      window_flags |= ImGuiWindowFlags_NoMove;
     if (no_scrollbar) window_flags |= ImGuiWindowFlags_NoScrollbar;
     if (no_collapse)  window_flags |= ImGuiWindowFlags_NoCollapse;
-    if (!ImGui::Begin("ImGui Test", opened, ImVec2(550,680), fill_alpha, window_flags))
+    if (!ImGui::Begin("ImGui Test", opened, ImVec2(550,680), bg_alpha, window_flags))
     {
         // Early out if the window is collapsed, as an optimization.
         ImGui::End();
@@ -8219,7 +8221,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Checkbox("no move", &no_move); ImGui::SameLine(150);
         ImGui::Checkbox("no scrollbar", &no_scrollbar); ImGui::SameLine(300);
         ImGui::Checkbox("no collapse", &no_collapse);
-        ImGui::SliderFloat("fill alpha", &fill_alpha, 0.0f, 1.0f);
+        ImGui::SliderFloat("bg alpha", &bg_alpha, 0.0f, 1.0f);
 
         if (ImGui::TreeNode("Style"))
         {
