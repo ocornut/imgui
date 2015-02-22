@@ -1103,6 +1103,7 @@ struct ImGuiWindow
     ImGuiDrawContext        DC;
     ImVector<ImGuiID>       IDStack;
     ImVector<ImVec4>        ClipRectStack;                      // Scissoring / clipping rectangle. x1, y1, x2, y2.
+    ImGuiAabb               ClippedAabb;                        // = ClipRectStack.front() after setup in Begin()
     int                     LastFrameDrawn;
     float                   ItemWidthDefault;
     ImGuiStorage            StateStorage;
@@ -1416,8 +1417,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
 {
     Name = ImStrdup(name);
     ID = GetID(name); 
-    IDStack.push_back(ID);
-
+    Flags = 0;
     PosFloat = Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContentsFit = ImVec2(0.0f, 0.0f);
@@ -1432,6 +1432,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     AutoFitOnlyGrows = false;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiSetCondition_Always | ImGuiSetCondition_FirstUseThisSession | ImGuiSetCondition_FirstUseEver;
 
+    IDStack.push_back(ID);
     LastFrameDrawn = -1;
     ItemWidthDefault = 0.0f;
     FontWindowScale = 1.0f;
@@ -1444,6 +1445,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
 
     DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
     new(DrawList) ImDrawList();
+    RootWindow = NULL;
 
     FocusIdxAllCounter = FocusIdxTabCounter = -1;
     FocusIdxAllRequestCurrent = FocusIdxTabRequestCurrent = IM_INT_MAX;
@@ -2332,7 +2334,9 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
             continue;
         if (excluding_childs && (window->Flags & ImGuiWindowFlags_ChildWindow) != 0)
             continue;
-        ImGuiAabb bb(window->Pos - g.Style.TouchExtraPadding, window->Pos + window->Size + g.Style.TouchExtraPadding);
+
+        // Using the clipped AABB so a child window will typically be clipped by its parent.
+        ImGuiAabb bb(window->ClippedAabb.Min - g.Style.TouchExtraPadding, window->ClippedAabb.Max + g.Style.TouchExtraPadding);
         if (bb.Contains(pos))
             return window;
     }
@@ -3046,6 +3050,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, ImVec2 size, float fill_alph
             const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_aabb.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y*2 + text_size.y);
             RenderTextClipped(text_min, name, NULL, &text_size, text_max);
         }
+
+        // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
+        window->ClippedAabb = window->Aabb();
+        window->ClippedAabb.Clip(window->ClipRectStack.front());
     }
 
     // Inner clipping rectangle
