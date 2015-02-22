@@ -269,7 +269,7 @@
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills)
  - columns: columns header to act as button (~sort op) and allow resize/reorder
  - columns: user specify columns size
- - columns: tree node example actually has a small bug (opening node in right column extends the column different from opening node in left column) 
+ - columns: tree node example, removing the last NextColumn() makes a padding difference (it should not)
  - combo: turn child handling code into pop up helper
  - combo: contents should extends to fit label if combo widget is small
  - listbox: multiple selection
@@ -8663,34 +8663,32 @@ void ImGui::ShowTestWindow(bool* opened)
 
     if (ImGui::CollapsingHeader("Columns"))
     {
-        ImGui::Columns(4, "data", true);
+        ImGui::Text("Basic:");
+        ImGui::Columns(4, "mycolumns");
         ImGui::Text("ID"); ImGui::NextColumn();
         ImGui::Text("Name"); ImGui::NextColumn();
         ImGui::Text("Path"); ImGui::NextColumn();
         ImGui::Text("Flags"); ImGui::NextColumn();
         ImGui::Separator();
-
-        ImGui::Text("0000"); ImGui::NextColumn();
-        ImGui::Text("Robert"); ImGui::NextColumn();
-        ImGui::Text("/path/robert"); ImGui::NextColumn();
-        ImGui::Text("...."); ImGui::NextColumn();
-
-        ImGui::Text("0001"); ImGui::NextColumn();
-        ImGui::Text("Stephanie"); ImGui::NextColumn();
-        ImGui::Text("/path/stephanie"); ImGui::NextColumn();
-        ImGui::Text("line 1"); ImGui::Text("line 2"); ImGui::NextColumn(); // two lines, two items
-
-        ImGui::Text("0002"); ImGui::NextColumn();
-        ImGui::Text("C64"); ImGui::NextColumn();
-        ImGui::Text("/path/computer"); ImGui::NextColumn();
-        ImGui::Text("...."); ImGui::NextColumn();
+        const char* names[3] = { "Robert", "Stephanie", "C64" };
+        const char* paths[3] = { "/path/robert", "/path/stephanie", "/path/computer" };
+        for (int i = 0; i < 3; i++)
+        {
+            ImGui::Text("%04d", i); ImGui::NextColumn();
+            ImGui::Text(names[i]); ImGui::NextColumn();
+            ImGui::Text(paths[i]); ImGui::NextColumn(); 
+            ImGui::Text("...."); ImGui::NextColumn();
+        }
         ImGui::Columns(1);
 
         ImGui::Separator();
+        ImGui::Spacing();
 
+        // Create multiple items in a same cell before switching to next column
+        ImGui::Text("Mixed items:");
         ImGui::Columns(3, "mixed");
+        ImGui::Separator();
 
-        // Create multiple items in a same cell because switching to next column
         static int e = 0;
         ImGui::Text("Hello"); 
         ImGui::Button("Banana");
@@ -8700,38 +8698,39 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Text("ImGui"); 
         ImGui::Button("Apple");
         ImGui::RadioButton("radio b", &e, 1);
+        static float foo = 1.0f;
+        ImGui::InputFloat("red", &foo, 0.05f, 0, 3); 
         ImGui::Text("An extra line here.");
         ImGui::NextColumn();
         
         ImGui::Text("World!");
         ImGui::Button("Corniflower");
         ImGui::RadioButton("radio c", &e, 2);
+        static float bar = 1.0f;
+        ImGui::InputFloat("blue", &bar, 0.05f, 0, 3); 
         ImGui::NextColumn();
 
         if (ImGui::CollapsingHeader("Category A")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
         if (ImGui::CollapsingHeader("Category B")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
         if (ImGui::CollapsingHeader("Category C")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
-
         ImGui::Columns(1);
 
         ImGui::Separator();
+        ImGui::Spacing();
 
-        ImGui::Columns(2, "multiple components");
-        static float foo = 1.0f;
-        ImGui::InputFloat("red", &foo, 0.05f, 0, 3); ImGui::NextColumn();
-        static float bar = 1.0f;
-        ImGui::InputFloat("blue", &bar, 0.05f, 0, 3); ImGui::NextColumn();
-        ImGui::Columns(1);
-
-        ImGui::Separator();
-
+        ImGui::Text("Tree items:");
         ImGui::Columns(2, "tree items");
-        if (ImGui::TreeNode("Hello")) { ImGui::BulletText("World"); ImGui::TreePop(); } ImGui::NextColumn();
-        if (ImGui::TreeNode("Bonjour")) { ImGui::BulletText("Monde"); ImGui::TreePop(); }
-        ImGui::Columns(1);
         ImGui::Separator();
+        if (ImGui::TreeNode("Hello")) { ImGui::BulletText("World"); ImGui::TreePop(); } ImGui::NextColumn();
+        if (ImGui::TreeNode("Bonjour")) { ImGui::BulletText("Monde"); ImGui::TreePop(); } ImGui::NextColumn();
+        ImGui::Columns(1);
 
-        ImGui::Columns(2, "word wrapping");
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::Text("Word-wrapping:");
+        ImGui::Columns(2, "word-wrapping");
+        ImGui::Separator();
         ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
         ImGui::Text("Hello Left");
         ImGui::NextColumn();
@@ -8740,6 +8739,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Columns(1);
 
         ImGui::Separator();
+        ImGui::Spacing();
 
         if (ImGui::TreeNode("Inside a tree.."))
         {
