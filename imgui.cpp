@@ -3461,11 +3461,12 @@ void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiSetCondition cond)
 ImVec2 ImGui::GetContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    ImVec2 mx = window->Size - window->WindowPadding();
+    ImVec2 window_padding = window->WindowPadding();
+    ImVec2 mx = window->Size - window_padding;
     if (window->DC.ColumnsCount != 1)
     {
         mx.x = ImGui::GetColumnOffset(window->DC.ColumnsCurrent + 1);
-        mx.x -= GImGui->Style.WindowPadding.x;
+        mx.x -= window_padding.x;
     }
     else
     {
@@ -6359,7 +6360,10 @@ float ImGui::GetColumnOffset(int column_index)
     // Read from cache
     IM_ASSERT(column_index < (int)window->DC.ColumnsOffsetsT.size());
     const float t = window->DC.ColumnsOffsetsT[column_index];
-    const float offset = window->DC.ColumnsStartX + t * (window->Size.x - g.Style.ScrollBarWidth - window->DC.ColumnsStartX);
+
+    const float min_x = window->DC.ColumnsStartX;
+    const float max_x = window->Size.x - (g.Style.ScrollBarWidth) - window->WindowPadding().x;
+    const float offset = min_x + t * (max_x - min_x);
     return offset;
 }
 
@@ -6372,7 +6376,10 @@ void ImGui::SetColumnOffset(int column_index, float offset)
 
     IM_ASSERT(column_index < (int)window->DC.ColumnsOffsetsT.size());
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
-    const float t = (offset - window->DC.ColumnsStartX) / (window->Size.x - g.Style.ScrollBarWidth - window->DC.ColumnsStartX);
+
+    const float min_x = window->DC.ColumnsStartX;
+    const float max_x = window->Size.x - (g.Style.ScrollBarWidth) - window->WindowPadding().x;
+    const float t = (offset - min_x) / (max_x - min_x);
     window->StateStorage.SetFloat(column_id, t);
     window->DC.ColumnsOffsetsT[column_index] = t;
 }
