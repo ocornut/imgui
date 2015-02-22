@@ -6210,7 +6210,10 @@ void ImGui::Separator()
     window->DrawList->AddLine(bb.Min, bb.Max, window->Color(ImGuiCol_Border));
 
     if (window->DC.ColumnsCount > 1)
+    {
         PushColumnClipRect();
+        window->DC.ColumnsCellMinY = window->DC.CursorPos.y;
+    }
 }
 
 // A little vertical spacing.
