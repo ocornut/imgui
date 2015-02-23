@@ -4242,6 +4242,28 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, const bool d
     return opened;
 }
 
+void ImGui::Bullet()
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    const ImGuiStyle& style = g.Style;
+    const float line_height = window->FontSize();
+    const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(line_height, line_height));
+    ItemSize(bb);
+    if (!ItemAdd(bb, NULL))
+        return;
+
+    // Render
+    const float bullet_size = line_height*0.15f;
+    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + line_height*0.5f, line_height*0.5f), bullet_size, window->Color(ImGuiCol_Text));
+
+    // Stay on same line
+    ImGui::SameLine(0, -1);
+}
+
 // Text with a little bullet aligned to the typical tree node.
 void ImGui::BulletTextV(const char* fmt, va_list args)
 {
@@ -4250,12 +4272,11 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
     if (window->SkipItems)
         return;
     
-    const ImGuiStyle& style = g.Style;
-
     static char buf[1024];
     const char* text_begin = buf;
     const char* text_end = text_begin + ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
 
+    const ImGuiStyle& style = g.Style;
     const float line_height = window->FontSize();
     const ImVec2 text_size = CalcTextSize(text_begin, text_end, true);
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(line_height + (text_size.x > 0.0f ? (style.FramePadding.x*2) : 0.0f),0) + text_size);  // Empty text doesn't add padding
@@ -8302,7 +8323,9 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             ImGui::BulletText("Bullet point 1");
             ImGui::BulletText("Bullet point 2\nOn multiple lines");
-            ImGui::BulletText("Bullet point 3");
+            ImGui::Bullet(); ImGui::Text("Bullet point 3 (two calls)");
+            ImGui::Bullet(); ImGui::SmallButton("Button 1");
+            ImGui::Bullet(); ImGui::SmallButton("Button 2");
             ImGui::TreePop();
         }
 

@@ -252,6 +252,7 @@ namespace ImGui
     IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL);     // doesn't require null terminated string if 'text_end' is specified. no copy done to any bounded stack buffer, recommended for long chunks of text.
     IMGUI_API void          LabelText(const char* label, const char* fmt, ...);                 // display text+label aligned the same way as value+label widgets 
     IMGUI_API void          LabelTextV(const char* label, const char* fmt, va_list args);
+    IMGUI_API void          Bullet();
     IMGUI_API void          BulletText(const char* fmt, ...);
     IMGUI_API void          BulletTextV(const char* fmt, va_list args);
     IMGUI_API bool          Button(const char* label, const ImVec2& size = ImVec2(0,0), bool repeat_when_held = false);
