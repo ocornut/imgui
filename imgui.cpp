@@ -416,13 +416,13 @@ static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool
 static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
 
 static void         SetFont(ImFont* font);
-static bool         ItemAdd(const ImGuiAabb& aabb, const ImGuiID* id);
+static bool         ItemAdd(const ImGuiAabb& bb, const ImGuiID* id);
 static void         ItemSize(ImVec2 size, ImVec2* adjust_start_offset = NULL);
-static void         ItemSize(const ImGuiAabb& aabb, ImVec2* adjust_start_offset = NULL);
+static void         ItemSize(const ImGuiAabb& bb, ImVec2* adjust_start_offset = NULL);
 static void         PushColumnClipRect(int column_index = -1);
-static bool         IsClipped(const ImGuiAabb& aabb);
+static bool         IsClipped(const ImGuiAabb& bb);
 
-static bool         IsMouseHoveringBox(const ImGuiAabb& box);
+static bool         IsMouseHoveringBox(const ImGuiAabb& bb);
 static bool         IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
 static bool         CloseWindowButton(bool* p_opened = NULL);
@@ -2346,13 +2346,13 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 // Test if mouse cursor is hovering given aabb
 // NB- Box is clipped by our current clip setting
 // NB- Expand the aabb to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
-static bool IsMouseHoveringBox(const ImGuiAabb& box)
+static bool IsMouseHoveringBox(const ImGuiAabb& bb)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
     // Clip
-    ImGuiAabb box_clipped = box;
+    ImGuiAabb box_clipped = bb;
     if (!window->ClipRectStack.empty())
     {
         const ImVec4 clip_rect = window->ClipRectStack.back();
@@ -6270,9 +6270,9 @@ static void ItemSize(ImVec2 size, ImVec2* adjust_vertical_offset)
     window->DC.CurrentLineHeight = 0.0f;
 }
 
-static void ItemSize(const ImGuiAabb& aabb, ImVec2* adjust_start_offset) 
+static void ItemSize(const ImGuiAabb& bb, ImVec2* adjust_start_offset) 
 { 
-    ItemSize(aabb.GetSize(), adjust_start_offset); 
+    ItemSize(bb.GetSize(), adjust_start_offset); 
 }
 
 static bool IsClipped(const ImGuiAabb& bb)
