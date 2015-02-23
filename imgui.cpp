@@ -6378,7 +6378,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
 
     const float min_x = window->DC.ColumnsStartX;
-    const float max_x = window->Size.x - (window->ScrollbarY);// - window->WindowPadding().x;
+    const float max_x = window->Size.x - (g.Style.ScrollBarWidth);// - window->WindowPadding().x;
     const float t = (offset - min_x) / (max_x - min_x);
     window->StateStorage.SetFloat(column_id, t);
     window->DC.ColumnsOffsetsT[column_index] = t;
