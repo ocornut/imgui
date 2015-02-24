@@ -6401,7 +6401,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     const float min_x = window->DC.ColumnsStartX;
     const float max_x = window->Size.x - (g.Style.ScrollBarWidth);// - window->WindowPadding().x;
     const float t = (offset - min_x) / (max_x - min_x);
-    window->StateStorage.SetFloat(column_id, t);
+    window->DC.StateStorage->SetFloat(column_id, t);
     window->DC.ColumnsOffsetsT[column_index] = t;
 }
 
@@ -6494,7 +6494,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
             RegisterAliveId(column_id);
             const float default_t = column_index / (float)window->DC.ColumnsCount;
-            const float t = window->StateStorage.GetFloat(column_id, default_t);      // Cheaply store our floating point value inside the integer (could store an union into the map?)
+            const float t = window->DC.StateStorage->GetFloat(column_id, default_t);      // Cheaply store our floating point value inside the integer (could store an union into the map?)
             window->DC.ColumnsOffsetsT[column_index] = t;
         }
 
