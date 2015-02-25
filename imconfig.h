@@ -14,6 +14,10 @@
 //---- Define assertion handler. Defaults to calling assert().
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)
 
+//---- Define attributes of all API symbols declarations, e.g. for DLL under Windows.
+//#define IMGUI_API __declspec( dllexport )
+//#define IMGUI_API __declspec( dllimport )
+
 //---- Don't implement default clipboard handlers for Windows (so as not to link with OpenClipboard() and others Win32 functions)
 //#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS
 
@@ -36,7 +40,7 @@
 
 //---- Freely implement extra functions within the ImGui:: namespace.
 //---- Declare helpers or widgets implemented in imgui_user.inl or elsewhere, so end-user doesn't need to include multiple files.
-//---- e.g. you can create variants of the ImGui::Value() helper for your low-level math types.
+//---- e.g. you can create variants of the ImGui::Value() helper for your low-level math types, or your own widgets/helpers.
 /*
 namespace ImGui
 {

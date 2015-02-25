@@ -23,11 +23,13 @@ struct ImGuiWindow;
 #include <stdlib.h>         // NULL, malloc
 #include <string.h>         // memset, memmove
 
+// Define assertion handler.
 #ifndef IM_ASSERT
 #include <assert.h>
 #define IM_ASSERT(_EXPR)    assert(_EXPR)
 #endif
 
+// Define attributes of all API symbols declarations, e.g. for DLL under Windows.
 #ifndef IMGUI_API
 #define IMGUI_API
 #endif
