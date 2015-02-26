@@ -7379,7 +7379,7 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesChinese()
     static const ImWchar ranges[] =
     {
         0x0020, 0x00FF, // Basic Latin + Latin Supplement
-        0x3040, 0x309F, // Hiragana, Katakana
+        0x3040, 0x30FF, // Hiragana, Katakana
         0xFF00, 0xFFEF, // Half-width characters
         0x4e00, 0x9FAF, // CJK Ideograms
         0,
@@ -7430,7 +7430,7 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesJapanese()
     static ImWchar ranges[6 + 1 + IM_ARRAYSIZE(offsets_from_0x4E00)*2] =
     {
         0x0020, 0x00FF, // Basic Latin + Latin Supplement
-        0x3040, 0x309F, // Hiragana, Katakana
+        0x3040, 0x30FF, // Hiragana, Katakana
         0xFF00, 0xFFEF, // Half-width characters
         0, 
     };
