@@ -39,13 +39,11 @@ Gallery
 ImGui can load TTF fonts. UTF-8 is supported for text display and input. Here using Arial Unicode font to display Japanese. Initialize custom font with:
 
 ```
-    ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->AddFontFromFileTTF("ArialUni.ttf", 18.0f, io.Fonts->GetGlyphRangesJapanese());
+ImGuiIO& io = ImGui::GetIO();
+io.Fonts->AddFontFromFileTTF("ArialUni.ttf", 18.0f, io.Fonts->GetGlyphRangesJapanese());
 
 ```
 ![Japanese screenshot](/web/code_sample_01_jp.png?raw=true)
-
-![utf-8 screenshot](/web/utf8_sample_01.png?raw=true)
 
 References
 ----------
