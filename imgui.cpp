@@ -1005,6 +1005,7 @@ struct ImGuiState
     ImGuiSetCondition       SetNextWindowSizeCond;
     bool                    SetNextWindowCollapsedVal;
     ImGuiSetCondition       SetNextWindowCollapsedCond;
+    bool                    SetNextWindowFocus;
 
     // Render
     ImVector<ImDrawList*>   RenderDrawLists;
@@ -1056,6 +1057,7 @@ struct ImGuiState
         SetNextWindowSizeCond = 0;
         SetNextWindowCollapsedVal = false;
         SetNextWindowCollapsedCond = 0;
+        SetNextWindowFocus = false;
 
         SliderAsInputTextId = 0;
         ActiveComboID = 0;
@@ -2704,6 +2706,11 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         ImGui::SetWindowCollapsed(g.SetNextWindowCollapsedVal, g.SetNextWindowCollapsedCond);
         g.SetNextWindowCollapsedCond = 0;
     }
+    if (g.SetNextWindowFocus)
+    {
+        ImGui::SetWindowFocus();
+        g.SetNextWindowFocus = false;
+    }
 
     // Find parent
     ImGuiWindow* parent_window = (flags & ImGuiWindowFlags_ChildWindow) != 0 ? g.CurrentWindowStack[g.CurrentWindowStack.size()-2] : NULL;
@@ -3437,6 +3444,19 @@ void ImGui::SetWindowCollapsed(bool collapsed, ImGuiSetCondition cond)
     window->Collapsed = collapsed;
 }
 
+void ImGui::SetWindowFocus()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    FocusWindow(window);
+}
+
+void ImGui::SetWindowFocus(const char* name)
+{
+    ImGuiWindow* window = FindWindowByName(name);
+    if (window)
+        FocusWindow(window);
+}
+
 void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiSetCondition cond)
 {
     ImGuiState& g = *GImGui;
@@ -3456,6 +3476,12 @@ void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiSetCondition cond)
     ImGuiState& g = *GImGui;
     g.SetNextWindowCollapsedVal = collapsed;
     g.SetNextWindowCollapsedCond = cond ? cond : ImGuiSetCondition_Always;
+}
+
+void ImGui::SetNextWindowFocus()
+{
+    ImGuiState& g = *GImGui;
+    g.SetNextWindowFocus = true;
 }
 
 ImVec2 ImGui::GetContentRegionMax()
