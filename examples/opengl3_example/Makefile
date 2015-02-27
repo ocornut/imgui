@@ -20,14 +20,15 @@ UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
+	LIBS = `pkg-config --static --libs glfw3`
+
 	CXXFLAGS = -I../../ -I../opengl_example/gl3w `pkg-config --cflags glfw3`
 	CXXFLAGS += -Wall
-	LIBS = `pkg-config --static --libs glfw3`
+	CFLAGS = CXXFLAGS
 endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
-
 	LIBS = -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
 	LIBS += -L/usr/local/lib
 	LIBS += -lglfw3
@@ -35,6 +36,7 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	CXXFLAGS = -I../../ -I../opengl_example/gl3w -I/usr/local/Cellar/glew/1.10.0/include -I/usr/local/include
 	CXXFLAGS += -Wall
 #	CXXFLAGS += -D__APPLE__
+	CFLAGS = CXXFLAGS
 endif
 
 .cpp.o:
