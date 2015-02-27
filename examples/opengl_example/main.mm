@@ -4,6 +4,7 @@
 #include "../../imgui.h"
 
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
+static float highDpiScale = 1.0;
 static bool g_mousePressed[2] = { false, false };
 static float g_mouseCoords[2] {0,0};
 static clock_t g_lastClock;
@@ -35,18 +36,16 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
     // Setup orthographic projection matrix
     const float width = ImGui::GetIO().DisplaySize.x;
     const float height = ImGui::GetIO().DisplaySize.y;
-    const float retinaScaleX = g_backingWidth/g_windowWidth;
-    const float retinaScaleY = g_backingHeight/g_windowHeight;
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
     float transX = 0.0;
     float transY = 0.0;
-    glOrtho(0.0f + transX, width/retinaScaleX + transX, height/retinaScaleY + transY,  transY, -1.0f, +1.0f);
+    glOrtho(0.0f + transX, width/highDpiScale + transX, height/highDpiScale + transY,  transY, -1.0f, +1.0f);
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
-    //glScaled(fx,fy,1);
+    
     // Render command lists
     for (int n = 0; n < cmd_lists_count; n++)
     {
@@ -61,10 +60,10 @@ static void ImImpl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_c
         {
             const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
             glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->texture_id);
-            glScissor((int)pcmd->clip_rect.x*retinaScaleX,
-                    (int)(height - pcmd->clip_rect.w*retinaScaleY),
-                    (int)((pcmd->clip_rect.z - pcmd->clip_rect.x)*retinaScaleX),
-                    (int)((pcmd->clip_rect.w - pcmd->clip_rect.y)*retinaScaleY));
+            glScissor((int)pcmd->clip_rect.x*highDpiScale,
+                    (int)(height - pcmd->clip_rect.w*highDpiScale),
+                    (int)((pcmd->clip_rect.z - pcmd->clip_rect.x)*highDpiScale),
+                    (int)((pcmd->clip_rect.w - pcmd->clip_rect.y)*highDpiScale));
             glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
             vtx_offset += pcmd->vtx_count;
         }
@@ -150,7 +149,7 @@ void IMGUIExample_Draw(double elapsedMilliseconds)
     display_h = g_backingHeight;
     w = g_windowWidth;
     h = g_windowHeight;
-    
+    highDpiScale = g_backingWidth / g_windowWidth;
     // Display size, in pixels. For clamping windows positions.
     io.DisplaySize = ImVec2((float)display_w, (float)display_h);
     
@@ -198,7 +197,7 @@ void IMGUIExample_Draw(double elapsedMilliseconds)
     // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
     if (show_test_window)
     {
-        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCondition_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
         ImGui::ShowTestWindow(&show_test_window);
     }
 
