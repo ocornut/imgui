@@ -10,9 +10,8 @@
 #include "../../imgui.h"
 #include <stdio.h>
 
-// Glfw/Glew
-#define GLEW_STATIC
-#include <GL/glew.h>
+// Gl3w/Glfw
+#include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
@@ -168,11 +167,7 @@ void InitGL()
     glfwSetScrollCallback(window, glfw_scroll_callback);
     glfwSetCharCallback(window, glfw_char_callback);
 
-    glewExperimental = GL_TRUE;
-
-    GLenum err = glewInit();
-    if (GLEW_OK != err)
-        fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+    gl3wInit();
 
     const GLchar *vertex_shader =
         "#version 330\n"
