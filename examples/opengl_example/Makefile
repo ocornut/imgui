@@ -23,7 +23,7 @@ ifeq ($(UNAME_S), Linux) #LINUX
 
 	CXXFLAGS = -I../../ `pkg-config --cflags glfw3`
 	CXXFLAGS += -Wall
-	CFLAGS = CXXFLAGS
+	CFLAGS = $(CXXFLAGS)
 endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
@@ -35,7 +35,7 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	CXXFLAGS = -I../../ -I/usr/local/include
 	CXXFLAGS += -Wall
 #	CXXFLAGS += -D__APPLE__
-	CFLAGS = CXXFLAGS
+	CFLAGS = $(CXXFLAGS)
 endif
 
 .cpp.o:
