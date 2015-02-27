@@ -10,9 +10,7 @@
 #include "../../imgui.h"
 #include <stdio.h>
 
-// Glfw/Glew
-#define GLEW_STATIC
-#include <GL/glew.h>
+// Glfw
 #include <GLFW/glfw3.h>
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
@@ -141,8 +139,6 @@ void InitGL()
     glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);
     glfwSetScrollCallback(window, glfw_scroll_callback);
     glfwSetCharCallback(window, glfw_char_callback);
-
-    glewInit();
 }
 
 void LoadFontsTexture()
@@ -269,7 +265,7 @@ int main(int argc, char** argv)
         // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
         if (show_test_window)
         {
-            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCondition_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
             ImGui::ShowTestWindow(&show_test_window);
         }
 

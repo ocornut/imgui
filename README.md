@@ -2,7 +2,7 @@ ImGui
 =====
 [![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 
-[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui)
+[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui) [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
 ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and carries minimal amount of dependencies. It is based on an "immediate" graphical user interface paradigm which allows you to build user interfaces with ease.
 
@@ -36,9 +36,13 @@ Gallery
 ![screenshot 4](/web/test_window_04.png?raw=true)
 ![screenshot 4](/web/examples_02.png?raw=true)
 
-ImGui can load TTF fonts. UTF-8 is supported for text display and input. Here using Arial Unicode font to display Japanese:
+ImGui can load TTF fonts. UTF-8 is supported for text display and input. Here using Arial Unicode font to display Japanese. Initialize custom font with:
 
-![utf-8 screenshot](/web/utf8_sample_01.png?raw=true)
+```
+ImGuiIO& io = ImGui::GetIO();
+io.Fonts->AddFontFromFileTTF("ArialUni.ttf", 18.0f, io.Fonts->GetGlyphRangesJapanese());
+```
+![Japanese screenshot](/web/code_sample_01_jp.png?raw=true)
 
 References
 ----------
@@ -72,20 +76,22 @@ Yes. I have written data browsers, debuggers, profilers and all sort of non-triv
 
 Down the fundation of its visual design, ImGui is engineered to be fairly performant both in term of CPU and GPU usage. Running elaborate code and creating elaborate UI will of course have a cost but ImGui aims to minimize it.
 
-Mileage may vary but the following screenshot should give you an idea of the cost of running and rendering UI code (In the case of a trivial demo application like this one, your driver/os setup may be a bottleneck and cause higher variation or throttled framerate. Testing performance as part of a real application is recommended).
+Mileage may vary but the following screenshot may give you a rough idea of the cost of running and rendering UI code (In the case of a trivial demo application like this one, your driver/os setup may be a bottleneck and cause higher variation or throttled framerate. Testing performance as part of a real application is recommended).
 
 ![performance screenshot](/web/performance_01_close_up.png?raw=true)
 
-This is showing framerate on my 2011 iMac running Windows 7, OpenGL, AMD Radeon HD 6700M. ([click here for the full-size picture](/web/performance_01.png)).
+This is showing framerate for the full application loop on my 2011 iMac running Windows 7, OpenGL, AMD Radeon HD 6700M with an optimized executable. ([click here for the full-size picture](/web/performance_01.png)).
 In contrast, librairies featuring higher-quality rendering and layouting techniques may have a higher resources footprint.
+
+If you intend to display large lists of items (say, 1000+) it can be beneficial for your code to perform clipping manually - using helpers such as CalcListClipping() - in order to avoid submitting them to ImGui in the first place. Even though ImGui will discard your clipped items it still needs to calculate their size and that overhead will add up if you have thousands of items.
 
 <b>Can you reskin the look of ImGui?</b>
 
-Yes, you can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. 
+You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. 
 
 <b>Why using C++ (as opposed to C)?</b>
 
-ImGui takes advantage of a few C++ features for convenience but nothing in the realm of Boost-insanity/quagmire. In particular, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience but could be removed.
+ImGui takes advantage of a few C++ features for convenience but nothing anywhere Boost-insanity/quagmire. In particular, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience but could be removed.
 
 Shall someone wants to use ImGui from another language, it should be possible to wrap ImGui to be used from a raw C API in the future.
 
@@ -94,9 +100,9 @@ Donate
 
 <b>Can I donate to support the development of ImGui?</b>
 
-[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui)
+[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui) [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
-I'm currently an independant developer and your contributions are very meaningful to me. I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgui) if you want to donate and enable me to spend more time improving the library. If your company uses ImGui please consider making a contribution. One-off donations are also greatly appreciated. I am also available for hire to work on or with ImGui. Thanks!
+I'm currently an independant developer and your contributions are very meaningful to me. I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgui) if you want to donate and enable me to spend more time improving the library. If your company uses ImGui please consider making a contribution. One-off donations are also greatly appreciated (PayPal link above). I am also available for hire to work on or with ImGui. Thanks!
 
 Credits
 -------

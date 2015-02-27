@@ -10,9 +10,8 @@
 #include "../../imgui.h"
 #include <stdio.h>
 
-// Glfw/Glew
-#define GLEW_STATIC
-#include <GL/glew.h>
+// Gl3w/Glfw
+#include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
 #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
@@ -168,11 +167,7 @@ void InitGL()
     glfwSetScrollCallback(window, glfw_scroll_callback);
     glfwSetCharCallback(window, glfw_char_callback);
 
-    glewExperimental = GL_TRUE;
-
-    GLenum err = glewInit();
-    if (GLEW_OK != err)
-        fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+    gl3wInit();
 
     const GLchar *vertex_shader =
         "#version 330\n"
@@ -360,7 +355,7 @@ int main(int argc, char** argv)
         // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
         if (show_test_window)
         {
-            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCondition_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
             ImGui::ShowTestWindow(&show_test_window);
         }
         
