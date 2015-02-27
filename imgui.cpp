@@ -3386,10 +3386,8 @@ ImVec2 ImGui::GetWindowPos()
     return window->Pos;
 }
 
-void ImGui::SetWindowPos(const ImVec2& pos, ImGuiSetCondition cond)
+static void SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiSetCondition cond)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowPosAllowFlags & cond) == 0)
         return;
@@ -3402,16 +3400,27 @@ void ImGui::SetWindowPos(const ImVec2& pos, ImGuiSetCondition cond)
     window->DC.CursorPos += (window->Pos - old_pos);  // As we happen to move the window while it is being appended to (which is a bad idea - will smear) let's at least offset the cursor
 }
 
+void ImGui::SetWindowPos(const ImVec2& pos, ImGuiSetCondition cond)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    SetWindowPos(window, pos, cond);
+}
+
+void ImGui::SetWindowPos(const char* name, const ImVec2& pos, ImGuiSetCondition cond)
+{
+    ImGuiWindow* window = FindWindowByName(name);
+    if (window)
+        SetWindowPos(window, pos, cond);
+}
+
 ImVec2 ImGui::GetWindowSize()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->Size;
 }
 
-void ImGui::SetWindowSize(const ImVec2& size, ImGuiSetCondition cond)
+static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiSetCondition cond)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowSizeAllowFlags & cond) == 0)
         return;
@@ -3431,10 +3440,21 @@ void ImGui::SetWindowSize(const ImVec2& size, ImGuiSetCondition cond)
     }
 }
 
-void ImGui::SetWindowCollapsed(bool collapsed, ImGuiSetCondition cond)
+void ImGui::SetWindowSize(const ImVec2& size, ImGuiSetCondition cond)
 {
     ImGuiWindow* window = GetCurrentWindow();
+    SetWindowSize(window, size, cond);
+}
 
+void ImGui::SetWindowSize(const char* name, const ImVec2& size, ImGuiSetCondition cond)
+{
+    ImGuiWindow* window = FindWindowByName(name);
+    if (window)
+        SetWindowSize(window, size, cond);
+}
+
+static void SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiSetCondition cond)
+{
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowCollapsedAllowFlags & cond) == 0)
         return;
@@ -3442,6 +3462,19 @@ void ImGui::SetWindowCollapsed(bool collapsed, ImGuiSetCondition cond)
 
     // Set
     window->Collapsed = collapsed;
+}
+
+void ImGui::SetWindowCollapsed(bool collapsed, ImGuiSetCondition cond)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    SetWindowCollapsed(window);
+}
+
+void ImGui::SetWindowCollapsed(const char* name, bool collapsed, ImGuiSetCondition cond)
+{
+    ImGuiWindow* window = FindWindowByName(name);
+    if (window)
+        SetWindowCollapsed(window);
 }
 
 void ImGui::SetWindowFocus()
