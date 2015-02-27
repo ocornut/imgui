@@ -43,7 +43,7 @@ typedef int ImGuiStyleVar;          // enum ImGuiStyleVar_
 typedef int ImGuiKey;               // enum ImGuiKey_
 typedef int ImGuiColorEditMode;     // enum ImGuiColorEditMode_
 typedef int ImGuiWindowFlags;       // enum ImGuiWindowFlags_
-typedef int ImGuiSetCondition;      // enum ImGuiSetCondition_
+typedef int ImGuiSetCond;           // enum ImGuiSetCondition_
 typedef int ImGuiInputTextFlags;    // enum ImGuiInputTextFlags_
 struct ImGuiTextEditCallbackData;   // for advanced uses of InputText() 
 typedef int (*ImGuiTextEditCallback)(ImGuiTextEditCallbackData *data);
@@ -178,18 +178,18 @@ namespace ImGui
     IMGUI_API float         GetWindowWidth();
     IMGUI_API bool          GetWindowCollapsed();
 
-    IMGUI_API void          SetNextWindowPos(const ImVec2& pos, ImGuiSetCondition cond = 0);                    // set next window position - call before Begin().
-    IMGUI_API void          SetNextWindowSize(const ImVec2& size, ImGuiSetCondition cond = 0);                  // set next window size. set to ImVec2(0,0) to force an auto-fit.
-    IMGUI_API void          SetNextWindowCollapsed(bool collapsed, ImGuiSetCondition cond = 0);                 // set next window collapsed state.
-    IMGUI_API void          SetNextWindowFocus();                                                               // set next window to be focused / front-most
-    IMGUI_API void          SetWindowPos(const ImVec2& pos, ImGuiSetCondition cond = 0);                        // set current window position - call within Begin()/End(). may incur tearing.
-    IMGUI_API void          SetWindowSize(const ImVec2& size, ImGuiSetCondition cond = 0);                      // set current window size. set to ImVec2(0,0) to force an auto-fit. may incur tearing.
-    IMGUI_API void          SetWindowCollapsed(bool collapsed, ImGuiSetCondition cond = 0);                     // set current window collapsed state.
-    IMGUI_API void          SetWindowFocus();                                                                   // set current window to be focused / front-most
-    IMGUI_API void          SetWindowPos(const char* name, const ImVec2& pos, ImGuiSetCondition cond = 0);      // set named window position - call within Begin()/End(). may incur tearing.
-    IMGUI_API void          SetWindowSize(const char* name, const ImVec2& size, ImGuiSetCondition cond = 0);    // set named window size. set to ImVec2(0,0) to force an auto-fit. may incur tearing.
-    IMGUI_API void          SetWindowCollapsed(const char* name, bool collapsed, ImGuiSetCondition cond = 0);   // set named window collapsed state.
-    IMGUI_API void          SetWindowFocus(const char* name);                                                   // set named window to be focused / front-most
+    IMGUI_API void          SetNextWindowPos(const ImVec2& pos, ImGuiSetCond cond = 0);         // set next window position - call before Begin().
+    IMGUI_API void          SetNextWindowSize(const ImVec2& size, ImGuiSetCond cond = 0);       // set next window size. set to ImVec2(0,0) to force an auto-fit.
+    IMGUI_API void          SetNextWindowCollapsed(bool collapsed, ImGuiSetCond cond = 0);      // set next window collapsed state.
+    IMGUI_API void          SetNextWindowFocus();                                               // set next window to be focused / front-most
+    IMGUI_API void          SetWindowPos(const ImVec2& pos, ImGuiSetCond cond = 0);             // set current window position - call within Begin()/End(). may incur tearing.
+    IMGUI_API void          SetWindowSize(const ImVec2& size, ImGuiSetCond cond = 0);           // set current window size. set to ImVec2(0,0) to force an auto-fit. may incur tearing.
+    IMGUI_API void          SetWindowCollapsed(bool collapsed, ImGuiSetCond cond = 0);          // set current window collapsed state.
+    IMGUI_API void          SetWindowFocus();                                                   // set current window to be focused / front-most
+    IMGUI_API void          SetWindowPos(const char* name, const ImVec2& pos, ImGuiSetCond cond = 0);      // set named window position - call within Begin()/End(). may incur tearing.
+    IMGUI_API void          SetWindowSize(const char* name, const ImVec2& size, ImGuiSetCond cond = 0);    // set named window size. set to ImVec2(0,0) to force an auto-fit. may incur tearing.
+    IMGUI_API void          SetWindowCollapsed(const char* name, bool collapsed, ImGuiSetCond cond = 0);   // set named window collapsed state.
+    IMGUI_API void          SetWindowFocus(const char* name);                                              // set named window to be focused / front-most
 
     IMGUI_API void          SetScrollPosHere();                                                 // adjust scrolling position to center into the current cursor position.
     IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget.
@@ -310,7 +310,7 @@ namespace ImGui
     IMGUI_API void          TreePush(const char* str_id = NULL);                                // already called by TreeNode(), but you can call Push/Pop yourself for layouting purpose
     IMGUI_API void          TreePush(const void* ptr_id = NULL);                                // "
     IMGUI_API void          TreePop();
-    IMGUI_API void          SetNextTreeNodeOpened(bool opened, ImGuiSetCondition cond = 0);     // set next tree node to be opened.
+    IMGUI_API void          SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond = 0);          // set next tree node to be opened.
 
     // Selectable / Lists
     IMGUI_API bool          Selectable(const char* label, bool selected, const ImVec2& size = ImVec2(0,0));
@@ -506,13 +506,13 @@ enum ImGuiColorEditMode_
     ImGuiColorEditMode_HEX = 2
 };
 
-// Condition flags for ImGui::SetWindow***() and SetNextWindow***() functions
-// Those functions treat 0 as a shortcut to ImGuiSetCondition_Always
-enum ImGuiSetCondition_
+// Condition flags for ImGui::SetWindow***(), SetNextWindow***(), SetNextTreeNode***() functions
+// All those functions treat 0 as a shortcut to ImGuiSetCond_Always
+enum ImGuiSetCond_
 {
-    ImGuiSetCondition_Always              = 1 << 0, // Set the variable
-    ImGuiSetCondition_FirstUseThisSession = 1 << 1, // Only set the variable on the first call per runtime session
-    ImGuiSetCondition_FirstUseEver        = 1 << 2  // Only set the variable if the window doesn't exist in the .ini file
+    ImGuiSetCond_Always        = 1 << 0, // Set the variable
+    ImGuiSetCond_Once          = 1 << 1, // Only set the variable on the first call per runtime session
+    ImGuiSetCond_FirstUseEver  = 1 << 2  // Only set the variable if the window doesn't exist in the .ini file
 };
 
 struct ImGuiStyle

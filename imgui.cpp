@@ -129,7 +129,8 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
- - 2015/02/27 (1.34) - renamed OpenNextNode(bool) to SetNextTreeNodeOpened(bool, ImGuiSetCondition), kept inline redirection function
+ - 2015/02/27 (1.34) - renamed OpenNextNode(bool) to SetNextTreeNodeOpened(bool, ImGuiSetCond), kept inline redirection function.
+ - 2015/02/27 (1.34) - renamed ImGuiSetCondition_*** to ImGuiSetCond_***, and _FirstUseThisSession becomes _Once.
  - 2015/02/11 (1.32) - changed text input callback ImGuiTextEditCallback return type from void-->int. reserved for future use, return 0 for now.
  - 2015/02/10 (1.32) - renamed GetItemWidth() to CalcItemWidth() to clarify its evolving behavior
  - 2015/02/08 (1.31) - renamed GetTextLineSpacing() to GetTextLineHeightWithSpacing()
@@ -999,14 +1000,14 @@ struct ImGuiState
     ImVector<ImFont*>       FontStack;
 
     ImVec2                  SetNextWindowPosVal;
-    ImGuiSetCondition       SetNextWindowPosCond;
+    ImGuiSetCond            SetNextWindowPosCond;
     ImVec2                  SetNextWindowSizeVal;
-    ImGuiSetCondition       SetNextWindowSizeCond;
+    ImGuiSetCond            SetNextWindowSizeCond;
     bool                    SetNextWindowCollapsedVal;
-    ImGuiSetCondition       SetNextWindowCollapsedCond;
+    ImGuiSetCond            SetNextWindowCollapsedCond;
     bool                    SetNextWindowFocus;
     bool                    SetNextTreeNodeOpenedVal;
-    ImGuiSetCondition       SetNextTreeNodeOpenedCond;
+    ImGuiSetCond            SetNextTreeNodeOpenedCond;
 
     // Render
     ImVector<ImDrawList*>   RenderDrawLists;
@@ -1102,9 +1103,9 @@ struct ImGuiWindow
     bool                    SkipItems;                          // == Visible && !Collapsed
     int                     AutoFitFrames;
     bool                    AutoFitOnlyGrows;
-    int                     SetWindowPosAllowFlags;             // bit ImGuiSetCondition_*** specify if SetWindowPos() call is allowed with this particular flag. 
-    int                     SetWindowSizeAllowFlags;            // bit ImGuiSetCondition_*** specify if SetWindowSize() call is allowed with this particular flag. 
-    int                     SetWindowCollapsedAllowFlags;       // bit ImGuiSetCondition_*** specify if SetWindowCollapsed() call is allowed with this particular flag. 
+    int                     SetWindowPosAllowFlags;             // bit ImGuiSetCond_*** specify if SetWindowPos() call is allowed with this particular flag. 
+    int                     SetWindowSizeAllowFlags;            // bit ImGuiSetCond_*** specify if SetWindowSize() call is allowed with this particular flag. 
+    int                     SetWindowCollapsedAllowFlags;       // bit ImGuiSetCond_*** specify if SetWindowCollapsed() call is allowed with this particular flag. 
 
     ImGuiDrawContext        DC;
     ImVector<ImGuiID>       IDStack;
@@ -1436,7 +1437,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     SkipItems = false;
     AutoFitFrames = -1;
     AutoFitOnlyGrows = false;
-    SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiSetCondition_Always | ImGuiSetCondition_FirstUseThisSession | ImGuiSetCondition_FirstUseEver;
+    SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiSetCond_Always | ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver;
 
     IDStack.push_back(ID);
     LastFrameDrawn = -1;
@@ -2645,9 +2646,9 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
         }
         else
         {
-            window->SetWindowPosAllowFlags &= ~ImGuiSetCondition_FirstUseEver;
-            window->SetWindowSizeAllowFlags &= ~ImGuiSetCondition_FirstUseEver;
-            window->SetWindowCollapsedAllowFlags &= ~ImGuiSetCondition_FirstUseEver;
+            window->SetWindowPosAllowFlags &= ~ImGuiSetCond_FirstUseEver;
+            window->SetWindowSizeAllowFlags &= ~ImGuiSetCond_FirstUseEver;
+            window->SetWindowCollapsedAllowFlags &= ~ImGuiSetCond_FirstUseEver;
         }
 
         if (settings->Pos.x != FLT_MAX)
@@ -2672,7 +2673,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 // - The window name is used as a unique identifier to preserve window information across frames (and save rudimentary information to the .ini file). Note that you can use ## to append unique data that isn't displayed, e.g. "My window##1" will use "My window##1" as unique window ID but display "My window" to the user.
 // - Return false when window is collapsed, so you can early out in your code. You always need to call ImGui::End() even if false is returned.
 // - Passing 'bool* p_opened' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
-// - Passing non-zero 'size' is roughly equivalent to calling SetNextWindowSize(size, ImGuiSetCondition_FirstUseEver) prior to calling Begin().
+// - Passing non-zero 'size' is roughly equivalent to calling SetNextWindowSize(size, ImGuiSetCond_FirstUseEver) prior to calling Begin().
 bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg_alpha, ImGuiWindowFlags flags)
 {
     ImGuiState& g = *GImGui;
@@ -3389,12 +3390,12 @@ ImVec2 ImGui::GetWindowPos()
     return window->Pos;
 }
 
-static void SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiSetCondition cond)
+static void SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiSetCond cond)
 {
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowPosAllowFlags & cond) == 0)
         return;
-    window->SetWindowPosAllowFlags &= ~(ImGuiSetCondition_FirstUseThisSession | ImGuiSetCondition_FirstUseEver);
+    window->SetWindowPosAllowFlags &= ~(ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver);
 
     // Set
     const ImVec2 old_pos = window->Pos;
@@ -3403,13 +3404,13 @@ static void SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiSetConditi
     window->DC.CursorPos += (window->Pos - old_pos);  // As we happen to move the window while it is being appended to (which is a bad idea - will smear) let's at least offset the cursor
 }
 
-void ImGui::SetWindowPos(const ImVec2& pos, ImGuiSetCondition cond)
+void ImGui::SetWindowPos(const ImVec2& pos, ImGuiSetCond cond)
 {
     ImGuiWindow* window = GetCurrentWindow();
     SetWindowPos(window, pos, cond);
 }
 
-void ImGui::SetWindowPos(const char* name, const ImVec2& pos, ImGuiSetCondition cond)
+void ImGui::SetWindowPos(const char* name, const ImVec2& pos, ImGuiSetCond cond)
 {
     ImGuiWindow* window = FindWindowByName(name);
     if (window)
@@ -3422,12 +3423,12 @@ ImVec2 ImGui::GetWindowSize()
     return window->Size;
 }
 
-static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiSetCondition cond)
+static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiSetCond cond)
 {
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowSizeAllowFlags & cond) == 0)
         return;
-    window->SetWindowSizeAllowFlags &= ~(ImGuiSetCondition_FirstUseThisSession | ImGuiSetCondition_FirstUseEver);
+    window->SetWindowSizeAllowFlags &= ~(ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver);
 
     // Set
     if (ImLengthSqr(size) > 0.00001f)
@@ -3443,37 +3444,37 @@ static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiSetCondi
     }
 }
 
-void ImGui::SetWindowSize(const ImVec2& size, ImGuiSetCondition cond)
+void ImGui::SetWindowSize(const ImVec2& size, ImGuiSetCond cond)
 {
     ImGuiWindow* window = GetCurrentWindow();
     SetWindowSize(window, size, cond);
 }
 
-void ImGui::SetWindowSize(const char* name, const ImVec2& size, ImGuiSetCondition cond)
+void ImGui::SetWindowSize(const char* name, const ImVec2& size, ImGuiSetCond cond)
 {
     ImGuiWindow* window = FindWindowByName(name);
     if (window)
         SetWindowSize(window, size, cond);
 }
 
-static void SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiSetCondition cond)
+static void SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiSetCond cond)
 {
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowCollapsedAllowFlags & cond) == 0)
         return;
-    window->SetWindowCollapsedAllowFlags &= ~(ImGuiSetCondition_FirstUseThisSession | ImGuiSetCondition_FirstUseEver);
+    window->SetWindowCollapsedAllowFlags &= ~(ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver);
 
     // Set
     window->Collapsed = collapsed;
 }
 
-void ImGui::SetWindowCollapsed(bool collapsed, ImGuiSetCondition cond)
+void ImGui::SetWindowCollapsed(bool collapsed, ImGuiSetCond cond)
 {
     ImGuiWindow* window = GetCurrentWindow();
     SetWindowCollapsed(window, collapsed, cond);
 }
 
-void ImGui::SetWindowCollapsed(const char* name, bool collapsed, ImGuiSetCondition cond)
+void ImGui::SetWindowCollapsed(const char* name, bool collapsed, ImGuiSetCond cond)
 {
     ImGuiWindow* window = FindWindowByName(name);
     if (window)
@@ -3493,25 +3494,25 @@ void ImGui::SetWindowFocus(const char* name)
         FocusWindow(window);
 }
 
-void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiSetCondition cond)
+void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiSetCond cond)
 {
     ImGuiState& g = *GImGui;
     g.SetNextWindowPosVal = pos;
-    g.SetNextWindowPosCond = cond ? cond : ImGuiSetCondition_Always;
+    g.SetNextWindowPosCond = cond ? cond : ImGuiSetCond_Always;
 }
 
-void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiSetCondition cond)
+void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiSetCond cond)
 {
     ImGuiState& g = *GImGui;
     g.SetNextWindowSizeVal = size;
-    g.SetNextWindowSizeCond = cond ? cond : ImGuiSetCondition_Always;
+    g.SetNextWindowSizeCond = cond ? cond : ImGuiSetCond_Always;
 }
 
-void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiSetCondition cond)
+void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiSetCond cond)
 {
     ImGuiState& g = *GImGui;
     g.SetNextWindowCollapsedVal = collapsed;
-    g.SetNextWindowCollapsedCond = cond ? cond : ImGuiSetCondition_Always;
+    g.SetNextWindowCollapsedCond = cond ? cond : ImGuiSetCond_Always;
 }
 
 void ImGui::SetNextWindowFocus()
@@ -4228,14 +4229,14 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     bool opened;
     if (g.SetNextTreeNodeOpenedCond != 0)
     {
-        if (g.SetNextTreeNodeOpenedCond & ImGuiSetCondition_Always)
+        if (g.SetNextTreeNodeOpenedCond & ImGuiSetCond_Always)
         {
             opened = g.SetNextTreeNodeOpenedVal;
             storage->SetInt(id, opened);
         }
         else
         {
-            // We thread ImGuiSetCondition_FirstUseThisSession and ImGuiSetCondition_FirstUseEver the same because tree node state are not saved persistently.
+            // We treat ImGuiSetCondition_Once and ImGuiSetCondition_FirstUseEver the same because tree node state are not saved persistently.
             const int stored_value = storage->GetInt(id, -1);
             if (stored_value == -1)
             {
@@ -4438,11 +4439,11 @@ bool ImGui::TreeNode(const char* str_label_id)
     return TreeNode(str_label_id, "%s", str_label_id);
 }
 
-void ImGui::SetNextTreeNodeOpened(bool opened, ImGuiSetCondition cond)
+void ImGui::SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond)
 {
     ImGuiState& g = *GImGui;
     g.SetNextTreeNodeOpenedVal = opened;
-    g.SetNextTreeNodeOpenedCond = cond ? cond : ImGuiSetCondition_Always;
+    g.SetNextTreeNodeOpenedCond = cond ? cond : ImGuiSetCond_Always;
 }
 
 void ImGui::PushID(const char* str_id)

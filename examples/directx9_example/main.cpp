@@ -348,7 +348,7 @@ int main(int argc, char** argv)
         // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
         if (show_test_window)
         {
-            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCondition_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
             ImGui::ShowTestWindow(&show_test_window);
         }
 
