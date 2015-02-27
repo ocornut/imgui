@@ -129,6 +129,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/02/27 (1.34) - renamed OpenNextNode(bool) to SetNextTreeNodeOpened(bool, ImGuiSetCondition), kept inline redirection function
  - 2015/02/11 (1.32) - changed text input callback ImGuiTextEditCallback return type from void-->int. reserved for future use, return 0 for now.
  - 2015/02/10 (1.32) - renamed GetItemWidth() to CalcItemWidth() to clarify its evolving behavior
  - 2015/02/08 (1.31) - renamed GetTextLineSpacing() to GetTextLineHeightWithSpacing()
@@ -289,7 +290,6 @@
  - text edit: flag to disable live update of the user buffer. 
  - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
  - text edit: add multi-line text edit
- - tree: reformulate OpenNextNode() into SetNextWindowCollapsed() api
  - tree: add treenode/treepush int variants? because (void*) cast from int warns on some platforms/settings
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float) in .ini file
@@ -889,7 +889,6 @@ struct ImGuiDrawContext
     ImVector<float>         TextWrapPos;
     ImGuiColorEditMode      ColorEditMode;
     ImGuiStorage*           StateStorage;
-    int                     OpenNextNode;        // FIXME: Reformulate this feature like SetNextWindowCollapsed() API
 
     float                   ColumnsStartX;       // Start position from left of window (increased by TreePush/TreePop, etc.)
     float                   ColumnsOffsetX;      // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
@@ -912,7 +911,6 @@ struct ImGuiDrawContext
         LastItemAabb = ImGuiAabb(0.0f,0.0f,0.0f,0.0f);
         LastItemHovered = false;
         StateStorage = NULL;
-        OpenNextNode = -1;
 
         ColumnsStartX = 0.0f;
         ColumnsOffsetX = 0.0f;
@@ -999,6 +997,7 @@ struct ImGuiState
     ImVector<ImGuiColMod>   ColorModifiers;
     ImVector<ImGuiStyleMod> StyleModifiers;
     ImVector<ImFont*>       FontStack;
+
     ImVec2                  SetNextWindowPosVal;
     ImGuiSetCondition       SetNextWindowPosCond;
     ImVec2                  SetNextWindowSizeVal;
@@ -1006,6 +1005,8 @@ struct ImGuiState
     bool                    SetNextWindowCollapsedVal;
     ImGuiSetCondition       SetNextWindowCollapsedCond;
     bool                    SetNextWindowFocus;
+    bool                    SetNextTreeNodeOpenedVal;
+    ImGuiSetCondition       SetNextTreeNodeOpenedCond;
 
     // Render
     ImVector<ImDrawList*>   RenderDrawLists;
@@ -1051,6 +1052,7 @@ struct ImGuiState
         ActiveIdIsAlive = false;
         ActiveIdIsFocusedOnly = false;
         SettingsDirtyTimer = 0.0f;
+
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
         SetNextWindowPosCond = 0;
         SetNextWindowSizeVal = ImVec2(0.0f, 0.0f);
@@ -1058,6 +1060,8 @@ struct ImGuiState
         SetNextWindowCollapsedVal = false;
         SetNextWindowCollapsedCond = 0;
         SetNextWindowFocus = false;
+        SetNextTreeNodeOpenedVal = false;
+        SetNextTreeNodeOpenedCond = 0;
 
         SliderAsInputTextId = 0;
         ActiveComboID = 0;
@@ -3035,7 +3039,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.ColumnsStartPos.y;
         window->DC.TreeDepth = 0;
         window->DC.StateStorage = &window->StateStorage;
-        window->DC.OpenNextNode = -1;
 
         // Reset contents size for auto-fitting
         window->SizeContentsFit = ImVec2(0.0f, 0.0f);
@@ -4204,7 +4207,7 @@ void ImGui::LogButtons()
         LogToClipboard(g.LogAutoExpandMaxDepth);
 }
 
-bool ImGui::CollapsingHeader(const char* label, const char* str_id, const bool display_frame, const bool default_open)
+bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display_frame, bool default_open)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -4220,14 +4223,31 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, const bool d
         label = str_id;
     const ImGuiID id = window->GetID(str_id);
 
-    // We only write to the tree storage if the user clicks
+    // We only write to the tree storage if the user clicks (or explicitely use SetNextTreeNode*** functions)
     ImGuiStorage* storage = window->DC.StateStorage;
     bool opened;
-    if (window->DC.OpenNextNode != -1)
+    if (g.SetNextTreeNodeOpenedCond != 0)
     {
-        opened = window->DC.OpenNextNode > 0;
-        storage->SetInt(id, opened);
-        window->DC.OpenNextNode = -1;
+        if (g.SetNextTreeNodeOpenedCond & ImGuiSetCondition_Always)
+        {
+            opened = g.SetNextTreeNodeOpenedVal;
+            storage->SetInt(id, opened);
+        }
+        else
+        {
+            // We thread ImGuiSetCondition_FirstUseThisSession and ImGuiSetCondition_FirstUseEver the same because tree node state are not saved persistently.
+            const int stored_value = storage->GetInt(id, -1);
+            if (stored_value == -1)
+            {
+                opened = g.SetNextTreeNodeOpenedVal;
+                storage->SetInt(id, opened);
+            }
+            else
+            {
+                opened = stored_value != 0;
+            }
+        }
+        g.SetNextTreeNodeOpenedCond = 0;
     }
     else
     {
@@ -4418,10 +4438,11 @@ bool ImGui::TreeNode(const char* str_label_id)
     return TreeNode(str_label_id, "%s", str_label_id);
 }
 
-void ImGui::OpenNextNode(bool open)
+void ImGui::SetNextTreeNodeOpened(bool opened, ImGuiSetCondition cond)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    window->DC.OpenNextNode = open ? 1 : 0;
+    ImGuiState& g = *GImGui;
+    g.SetNextTreeNodeOpenedVal = opened;
+    g.SetNextTreeNodeOpenedCond = cond ? cond : ImGuiSetCondition_Always;
 }
 
 void ImGui::PushID(const char* str_id)
