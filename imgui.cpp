@@ -2774,7 +2774,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->IDStack.resize(0);
         ImGui::PushID(window);
 
-        // Move window (at the beginning of the frame to avoid input lag or sheering)
+        // Move window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
         const ImGuiID move_id = window->GetID("#MOVE");
         RegisterAliveId(move_id);
         if (g.ActiveId == move_id)
@@ -3127,6 +3127,12 @@ void ImGui::End()
 static void FocusWindow(ImGuiWindow* window)
 {
     ImGuiState& g = *GImGui;
+
+    // Always focus the root window
+    // FIXME: RootWindow is set as we do Begin() on the window, so this won't work if called SetWindowFocus(const char* name) on a child window prior to window calling Begin(). Bit of an edge.
+    if (window->RootWindow)
+        window = window->RootWindow;
+
     g.FocusedWindow = window;
 
     if (g.Windows.back() == window)
