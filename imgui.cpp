@@ -3127,6 +3127,17 @@ void ImGui::End()
 static void FocusWindow(ImGuiWindow* window)
 {
     ImGuiState& g = *GImGui;
+
+    // Find root (if we are a child window)
+    size_t root_idx = g.CurrentWindowStack.size() - 1;
+    while (root_idx > 0)
+    {
+        if ((g.CurrentWindowStack[root_idx]->Flags & ImGuiWindowFlags_ChildWindow) == 0)
+            break;
+        root_idx--;
+    }
+    window = g.CurrentWindowStack[root_idx];
+
     g.FocusedWindow = window;
 
     if (g.Windows.back() == window)
