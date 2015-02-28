@@ -993,6 +993,7 @@ struct ImGuiState
     ImGuiID                 ActiveIdPreviousFrame;
     bool                    ActiveIdIsAlive;
     bool                    ActiveIdIsFocusedOnly;              // Set only by active widget. Denote focus but no active interaction.
+    ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window. Only valid if ActiveID is the "#MOVE" identifier of a window.
     float                   SettingsDirtyTimer;
     ImVector<ImGuiIniData*> Settings;
     ImVector<ImGuiColMod>   ColorModifiers;
@@ -1052,6 +1053,7 @@ struct ImGuiState
         ActiveIdPreviousFrame = 0;
         ActiveIdIsAlive = false;
         ActiveIdIsFocusedOnly = false;
+        MovedWindow = NULL;
         SettingsDirtyTimer = 0.0f;
 
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
@@ -1767,6 +1769,8 @@ void ImGui::NewFrame()
         SetActiveId(0);
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = false;
+    if (!g.ActiveId)
+        g.MovedWindow = NULL;
 
     // Delay saving settings so we don't spam disk too much
     if (g.SettingsDirtyTimer > 0.0f)
@@ -1978,9 +1982,13 @@ void ImGui::Render()
             g.CurrentWindow->Visible = false;
         ImGui::End();
 
-        // Select window for move/focus when we're done with all our widgets (we only consider non-child windows here)
+        // Select window for move/focus when we're done with all our widgets (we use the root window ID here)
         if (g.ActiveId == 0 && g.HoveredId == 0 && g.HoveredRootWindow != NULL && g.IO.MouseClicked[0])
+        {
+            IM_ASSERT(g.MovedWindow == NULL);
+            g.MovedWindow = g.HoveredWindow;
             SetActiveId(g.HoveredRootWindow->GetID("#MOVE"));
+        }
 
         // Sort the window list so that all child windows are after their parent
         // We cannot do that on FocusWindow() because childs may not exist yet
@@ -2787,11 +2795,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                     if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkSettingsDirty();
                 }
-                FocusWindow(window);
+                IM_ASSERT(g.MovedWindow != NULL);
+                FocusWindow(g.MovedWindow);
             }
             else
             {
                 SetActiveId(0);
+                g.MovedWindow = NULL;   // Not strictly necessary but doing it for sanity.
             }
         }
 
@@ -3128,12 +3138,13 @@ static void FocusWindow(ImGuiWindow* window)
 {
     ImGuiState& g = *GImGui;
 
-    // Always focus the root window
+    // Always mark the window we passed as focused. This is used for keyboard interactions such as tabbing.
+    g.FocusedWindow = window;
+
+    // And move its root window to the top of the pile 
     // FIXME: RootWindow is set as we do Begin() on the window, so this won't work if called SetWindowFocus(const char* name) on a child window prior to window calling Begin(). Bit of an edge.
     if (window->RootWindow)
         window = window->RootWindow;
-
-    g.FocusedWindow = window;
 
     if (g.Windows.back() == window)
         return;
