@@ -1845,13 +1845,11 @@ void ImGui::NewFrame()
     }
 
     // Mark all windows as not visible
-    // Clear root windows at this point.
     for (size_t i = 0; i != g.Windows.size(); i++)
     {
         ImGuiWindow* window = g.Windows[i];
         window->Visible = false;
         window->Accessed = false;
-        window->RootWindow = NULL;
     }
 
     // No window should be open at the beginning of the frame.
@@ -2727,7 +2725,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
     // Find parent
     ImGuiWindow* parent_window = (flags & ImGuiWindowFlags_ChildWindow) != 0 ? g.CurrentWindowStack[g.CurrentWindowStack.size()-2] : NULL;
 
-    // Find root (if we are a child window)
+    // Update known root window (if we are a child window, otherwise window == window->RootWindow)
     size_t root_idx = g.CurrentWindowStack.size() - 1;
     while (root_idx > 0)
     {
@@ -3128,7 +3126,7 @@ void ImGui::End()
         ImGui::LogFinish();
 
     // Pop
-    // NB: we don't clear 'window->RootWindow' yet, it will be used then cleared in NewFrame()
+    // NB: we don't clear 'window->RootWindow'. The pointer is allowed to live until the next call to Begin().
     g.CurrentWindowStack.pop_back();
     g.CurrentWindow = g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back();
 }
@@ -3142,7 +3140,6 @@ static void FocusWindow(ImGuiWindow* window)
     g.FocusedWindow = window;
 
     // And move its root window to the top of the pile 
-    // FIXME: RootWindow is set as we do Begin() on the window, so this won't work if called SetWindowFocus(const char* name) on a child window prior to window calling Begin(). Bit of an edge.
     if (window->RootWindow)
         window = window->RootWindow;
 
