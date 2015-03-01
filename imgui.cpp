@@ -3487,6 +3487,12 @@ void ImGui::SetWindowCollapsed(bool collapsed, ImGuiSetCond cond)
     SetWindowCollapsed(window, collapsed, cond);
 }
 
+bool ImGui::GetWindowCollapsed()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->Collapsed;
+}
+
 void ImGui::SetWindowCollapsed(const char* name, bool collapsed, ImGuiSetCond cond)
 {
     ImGuiWindow* window = FindWindowByName(name);
