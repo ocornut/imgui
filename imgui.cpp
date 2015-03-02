@@ -2615,10 +2615,11 @@ void ImGui::EndChildFrame()
 
 static ImGuiWindow* FindWindowByName(const char* name)
 {
-    // FIXME-OPT: Consider optimizing this (e.g. sorted hashes to window pointers)
+    // FIXME-OPT: Store sorted hashes -> pointers.
+    ImGuiID id = ImCrc32(name, 0, 0);
     ImGuiState& g = *GImGui;
-    for (size_t i = 0; i != g.Windows.size(); i++)
-        if (strcmp(g.Windows[i]->Name, name) == 0)
+    for (size_t i = 0; i < g.Windows.size(); i++)
+        if (g.Windows[i]->ID == id)
             return g.Windows[i];
     return NULL;
 }
