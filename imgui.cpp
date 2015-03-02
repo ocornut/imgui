@@ -5888,11 +5888,11 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
 
     const ImVec2 text_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, text_size.y) + style.FramePadding*2.0f);
-    ItemSize(frame_bb);
+    const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(style.ItemInnerSpacing.x + text_size.x,0));
+    ItemSize(bb);
     if (!ItemAdd(frame_bb, &id))
         return false;
 
-    const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(style.ItemInnerSpacing.x + text_size.x,0));
     const float arrow_size = (window->FontSize() + style.FramePadding.x * 2.0f);
     const bool hovered = IsHovered(frame_bb, id);
 
@@ -8748,6 +8748,10 @@ void ImGui::ShowTestWindow(bool* opened)
         // SliderFloat
         static float f0=1.0f, f1=2.0f, f2=3.0f;
         ImGui::PushItemWidth(80);
+        const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD" };
+        static int item = -1;
+        ImGui::Combo("Combo", &item, items, IM_ARRAYSIZE(items));
+        ImGui::SameLine(); 
         ImGui::SliderFloat("X", &f0, 0.0f,5.0f);
         ImGui::SameLine();
         ImGui::SliderFloat("Y", &f1, 0.0f,5.0f);
