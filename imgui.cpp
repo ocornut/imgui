@@ -1,4 +1,4 @@
-// ImGui library v1.34
+// ImGui library v1.35 wip
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -8751,6 +8751,10 @@ void ImGui::ShowTestWindow(bool* opened)
         const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD" };
         static int item = -1;
         ImGui::Combo("Combo", &item, items, IM_ARRAYSIZE(items));
+        //ImGui::SameLine();
+        //ImGui::ListBox("Listbox", &item, items, IM_ARRAYSIZE(items));
+        //if (ImGui::IsItemHovered())
+        //    ImGui::SetTooltip("Hovered"); 
         ImGui::SameLine(); 
         ImGui::SliderFloat("X", &f0, 0.0f,5.0f);
         ImGui::SameLine();
