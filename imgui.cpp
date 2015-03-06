@@ -3002,17 +3002,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
             {
                 const float r = window_rounding;
                 const ImVec2 br = window->Aabb().GetBR();
-                if (r == 0.0f)
-                {
-                    window->DrawList->AddTriangleFilled(br, br-ImVec2(0,14), br-ImVec2(14,0), resize_col);
-                }
-                else
-                {
-                    // FIXME: We should draw 4 triangles and decide on a size that's not dependent on the rounding size (previously used 18)
-                    window->DrawList->AddArc(br - ImVec2(r,r), r, resize_col, 6, 9, true);
-                    window->DrawList->AddTriangleFilled(br+ImVec2(0,-2*r),br+ImVec2(0,-r),br+ImVec2(-r,-r), resize_col);
-                    window->DrawList->AddTriangleFilled(br+ImVec2(-r,-r), br+ImVec2(-r,0),br+ImVec2(-2*r,0), resize_col);
-                }
+                window->DrawList->LineTo(br + ImVec2(-2*r,0));
+                window->DrawList->LineTo(br + ImVec2(0,-2*r));
+                window->DrawList->ArcToFast(ImVec2(br.x-r,br.y-r), r, 6, 9);
+                window->DrawList->Fill(resize_col);
             }
         }
 
@@ -6805,198 +6798,300 @@ void ImDrawList::AddVtxUV(const ImVec2& pos, ImU32 col, const ImVec2& uv)
     vtx_write++;
 }
 
-// NB: memory should be reserved for 6 vertices by the caller.
-void ImDrawList::AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col)
-{
-    const float length = sqrtf(ImLengthSqr(b - a));
-    const ImVec2 hn = (b - a) * (0.50f / length);       // half normal
-    const ImVec2 hp0 = ImVec2(+hn.y, -hn.x);            // half perpendiculars + user offset
-    const ImVec2 hp1 = ImVec2(-hn.y, +hn.x);
+static ImVector<ImVec2> temp_inner;
+static ImVector<ImVec2> temp_outer;
+static ImVector<ImVec2> temp_normals;
 
-    // Two triangles makes up one line. Using triangles allows us to reduce amount of draw calls.
-    AddVtx(a + hp0, col);
-    AddVtx(b + hp0, col);
-    AddVtx(a + hp1, col);
-    AddVtx(b + hp0, col);
-    AddVtx(b + hp1, col);
-    AddVtx(a + hp1, col);
+void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed)
+{
+    if (points_count < 2)
+        return;
+
+    const float aa_size = 1.0f;
+
+    temp_inner.resize(points_count);
+    temp_outer.resize(points_count);
+    temp_normals.resize(points_count);
+
+    int start = 0, count = points_count;
+    if (!closed)
+    {
+        start = 1;
+        count = points_count-1;
+    }
+
+    for (int i = 0; i < count; i++)
+    {
+        const int ni = (i+1) < points_count ? i+1 : 0; 
+        const ImVec2& v0 = points[i];
+        const ImVec2& v1 = points[ni];
+        ImVec2 diff = v1 - v0;
+        float d = ImLengthSqr(diff);
+        if (d > 0)
+            diff *= 1.0f/sqrtf(d);
+        temp_normals[i].x = diff.y;
+        temp_normals[i].y = -diff.x;
+    }
+
+    if (!closed)
+    {
+        temp_normals[points_count-1] = temp_normals[points_count-2];
+        temp_outer[0] = points[0] + temp_normals[0]*aa_size;
+        temp_inner[0] = points[0] - temp_normals[0]*aa_size;
+        temp_outer[points_count-1] = points[points_count-1] + temp_normals[points_count-1]*aa_size;
+        temp_inner[points_count-1] = points[points_count-1] - temp_normals[points_count-1]*aa_size;
+    }
+
+    for (int i = start; i < count; i++)
+    {
+        const int ni = (i+1) < points_count ? i+1 : 0;
+        const ImVec2& dl0 = temp_normals[i];
+        const ImVec2& dl1 = temp_normals[ni];
+        ImVec2 dm = (dl0 + dl1) * 0.5f;
+        float dmr2 = dm.x*dm.x + dm.y*dm.y;
+        if (dmr2 > 0.000001f)
+        {
+            float scale = 1.0f / dmr2;
+            if (scale > 100.0f) scale = 100.0f;
+            dm *= scale;
+        }
+        dm *= aa_size;
+        temp_outer[ni] = points[ni] + dm;
+        temp_inner[ni] = points[ni] - dm;
+    }
+
+    const ImU32 col_trans = col & 0x00ffffff;
+
+    int vertex_count = count*12;
+    ReserveVertices(vertex_count);
+
+    // Stroke
+    for (int i = 0; i < count; i++)
+    {
+        const int ni = (i+1) < points_count ? i+1 : 0;
+        AddVtx(points[ni], col);
+        AddVtx(points[i], col);
+        AddVtx(temp_outer[i], col_trans);
+
+        AddVtx(temp_outer[i], col_trans);
+        AddVtx(temp_outer[ni], col_trans);
+        AddVtx(points[ni], col);
+
+        AddVtx(temp_inner[ni], col_trans);
+        AddVtx(temp_inner[i], col_trans);
+        AddVtx(points[i], col);
+
+        AddVtx(points[i], col);
+        AddVtx(points[ni], col);
+        AddVtx(temp_inner[ni], col_trans);
+    }
+}
+
+void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col)
+{
+    if (points_count < 3)
+        return;
+
+    const float aa_size = 1.0f;
+
+    temp_inner.resize(points_count);
+    temp_outer.resize(points_count);
+    temp_normals.resize(points_count);
+
+    for (int i = 0, j = points_count-1; i < points_count; j=i++)
+    {
+        const ImVec2& v0 = points[j];
+        const ImVec2& v1 = points[i];
+        ImVec2 diff = v1 - v0;
+        float d = ImLengthSqr(diff);
+        if (d > 0)
+            diff *= 1.0f/sqrtf(d);
+        temp_normals[j].x = diff.y;
+        temp_normals[j].y = -diff.x;
+    }
+
+    for (int i = 0, j = points_count-1; i < points_count; j=i++)
+    {
+        const ImVec2& dl0 = temp_normals[j];
+        const ImVec2& dl1 = temp_normals[i];
+        ImVec2 dm = (dl0 + dl1) * 0.5f;
+        float dmr2 = dm.x*dm.x + dm.y*dm.y;
+        if (dmr2 > 0.000001f)
+        {
+            float scale = 1.0f / dmr2;
+            if (scale > 100.0f) scale = 100.0f;
+            dm *= scale;
+        }
+        dm *= aa_size*0.5f;
+        temp_outer[i] = points[i] + dm;
+        temp_inner[i] = points[i] - dm;
+    }
+
+    const ImU32 col_trans = col & 0x00ffffff;
+
+    int vertex_count = (points_count-2)*3 + points_count*6;
+    ReserveVertices(vertex_count);
+
+    // Fill
+    for (int i = 2; i < points_count; i++)
+    {
+        AddVtx(temp_inner[0], col);
+        AddVtx(temp_inner[i-1], col);
+        AddVtx(temp_inner[i], col);
+    }
+
+    // AA fringe
+    for (int i = 0, j = points_count-1; i < points_count; j=i++)
+    {
+        AddVtx(temp_inner[i], col);
+        AddVtx(temp_inner[j], col);
+        AddVtx(temp_outer[j], col_trans);
+
+        AddVtx(temp_outer[j], col_trans);
+        AddVtx(temp_outer[i], col_trans);
+        AddVtx(temp_inner[i], col);
+    }
+}
+
+void ImDrawList::ClearPath()
+{
+    path.resize(0);
+}
+
+void ImDrawList::LineTo(const ImVec2& p)
+{
+    path.push_back(p);
+}
+
+void ImDrawList::ArcToFast(const ImVec2& centre, float radius, int amin, int amax)
+{
+    static ImVec2 circle_vtx[12];
+    static bool circle_vtx_builds = false;
+    static const int circle_vtx_count = IM_ARRAYSIZE(circle_vtx);
+    if (!circle_vtx_builds)
+    {
+        for (int i = 0; i < circle_vtx_count; i++)
+        {
+            const float a = ((float)i / (float)circle_vtx_count) * 2*PI;
+            circle_vtx[i].x = cosf(a + PI);
+            circle_vtx[i].y = sinf(a + PI);
+        }
+        circle_vtx_builds = true;
+    }
+    if (amin > amax) return;
+
+    if (radius == 0.0f)
+    {
+        path.push_back(centre);
+    }
+    else
+    {
+        for (int a = amin; a <= amax; a++)
+            path.push_back(centre + circle_vtx[a % circle_vtx_count] * radius);
+    }
+}
+
+void ImDrawList::ArcTo(const ImVec2& centre, float radius, float amin, float amax, int num_segments)
+{
+    if (radius == 0.0f)
+    {
+        path.push_back(centre);
+    }
+    for (int i = 0; i <= num_segments; i++)
+    {
+        const float a = amin + ((float)i / (float)num_segments) * (amax - amin);
+        path.push_back(centre + ImVec2(cosf(a + PI) * radius, sinf(a + PI) * radius));
+    }
+}
+
+void ImDrawList::Fill(ImU32 col)
+{
+    AddConvexPolyFilled(&path[0], path.size(), col);
+    ClearPath();
+}
+
+void ImDrawList::Stroke(ImU32 col, bool closed)
+{
+    // Remove duplicates
+    AddPolyline(&path[0], path.size(), col, closed);
+    ClearPath();
+}
+
+void ImDrawList::Rect(const ImVec2& a, const ImVec2& b, float rounding, int rounding_corners)
+{
+    float r = rounding;
+    r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ));
+    r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ));
+
+    if (r == 0.0f || rounding_corners == 0)
+    {
+        LineTo(ImVec2(a.x,a.y));
+        LineTo(ImVec2(b.x,a.y));
+        LineTo(ImVec2(b.x,b.y));
+        LineTo(ImVec2(a.x,b.y));
+    }
+    else
+    {
+        const float r0 = (rounding_corners & 1) ? r : 0.0f;
+        const float r1 = (rounding_corners & 2) ? r : 0.0f;
+        const float r2 = (rounding_corners & 4) ? r : 0.0f;
+        const float r3 = (rounding_corners & 8) ? r : 0.0f;
+        ArcToFast(ImVec2(a.x+r0,a.y+r0), r0, 0, 3);
+        ArcToFast(ImVec2(b.x-r1,a.y+r1), r1, 3, 6);
+        ArcToFast(ImVec2(b.x-r2,b.y-r2), r2, 6, 9);
+        ArcToFast(ImVec2(a.x+r3,b.y-r3), r3, 9, 12);
+    }
 }
 
 void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col)
 {
     if ((col >> 24) == 0)
         return;
-
-    ReserveVertices(6);
-    AddVtxLine(a, b, col);
-}
-
-void ImDrawList::AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, int a_max, bool tris, const ImVec2& third_point_offset)
-{
-    if ((col >> 24) == 0)
-        return;
-
-    static ImVec2 circle_vtx[12];
-    static bool circle_vtx_builds = false;
-    if (!circle_vtx_builds)
-    {
-        for (int i = 0; i < IM_ARRAYSIZE(circle_vtx); i++)
-        {
-            const float a = ((float)i / (float)IM_ARRAYSIZE(circle_vtx)) * 2*PI;
-            circle_vtx[i].x = cosf(a + PI);
-            circle_vtx[i].y = sinf(a + PI);
-        }
-        circle_vtx_builds = true;
-    }
-    
-    if (tris)
-    {
-        ReserveVertices((unsigned int)(a_max-a_min) * 3);
-        for (int a = a_min; a < a_max; a++)
-        {
-            AddVtx(center + circle_vtx[a % IM_ARRAYSIZE(circle_vtx)] * rad, col);
-            AddVtx(center + circle_vtx[(a+1) % IM_ARRAYSIZE(circle_vtx)] * rad, col);
-            AddVtx(center + third_point_offset, col);
-        }
-    }
-    else
-    {
-        ReserveVertices((unsigned int)(a_max-a_min) * 6);
-        for (int a = a_min; a < a_max; a++)
-            AddVtxLine(center + circle_vtx[a % IM_ARRAYSIZE(circle_vtx)] * rad, center + circle_vtx[(a+1) % IM_ARRAYSIZE(circle_vtx)] * rad, col);
-    }
+    LineTo(a);
+    LineTo(b);
+    Stroke(col);
 }
 
 void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
 {
     if ((col >> 24) == 0)
         return;
-
-    float r = rounding;
-    r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ));
-    r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ));
-
-    if (r == 0.0f || rounding_corners == 0)
-    {
-        ReserveVertices(4*6);
-        AddVtxLine(ImVec2(a.x,a.y), ImVec2(b.x,a.y), col);
-        AddVtxLine(ImVec2(b.x,a.y), ImVec2(b.x,b.y), col);
-        AddVtxLine(ImVec2(b.x,b.y), ImVec2(a.x,b.y), col);
-        AddVtxLine(ImVec2(a.x,b.y), ImVec2(a.x,a.y), col);
-    }
-    else
-    {
-        ReserveVertices(4*6);
-        AddVtxLine(ImVec2(a.x + ((rounding_corners & 1)?r:0), a.y), ImVec2(b.x - ((rounding_corners & 2)?r:0), a.y), col);
-        AddVtxLine(ImVec2(b.x, a.y + ((rounding_corners & 2)?r:0)), ImVec2(b.x, b.y - ((rounding_corners & 4)?r:0)), col);
-        AddVtxLine(ImVec2(b.x - ((rounding_corners & 4)?r:0), b.y), ImVec2(a.x + ((rounding_corners & 8)?r:0), b.y), col);
-        AddVtxLine(ImVec2(a.x, b.y - ((rounding_corners & 8)?r:0)), ImVec2(a.x, a.y + ((rounding_corners & 1)?r:0)), col);
-
-        if (rounding_corners & 1) AddArc(ImVec2(a.x+r,a.y+r), r, col, 0, 3);
-        if (rounding_corners & 2) AddArc(ImVec2(b.x-r,a.y+r), r, col, 3, 6);
-        if (rounding_corners & 4) AddArc(ImVec2(b.x-r,b.y-r), r, col, 6, 9);
-        if (rounding_corners & 8) AddArc(ImVec2(a.x+r,b.y-r), r, col, 9, 12);
-    }
+    Rect(a, b, rounding, rounding_corners);
+    Stroke(col, true);
 }
 
 void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
 {
     if ((col >> 24) == 0)
         return;
-
-    float r = rounding;
-    r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ));
-    r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ));
-
-    if (r == 0.0f || rounding_corners == 0)
-    {
-        // Use triangle so we can merge more draw calls together (at the cost of extra vertices)
-        ReserveVertices(6);
-        AddVtx(ImVec2(a.x,a.y), col);
-        AddVtx(ImVec2(b.x,a.y), col);
-        AddVtx(ImVec2(b.x,b.y), col);
-        AddVtx(ImVec2(a.x,a.y), col);
-        AddVtx(ImVec2(b.x,b.y), col);
-        AddVtx(ImVec2(a.x,b.y), col);
-    }
-    else
-    {
-        ReserveVertices(6+6*2);
-        AddVtx(ImVec2(a.x+r,a.y), col);
-        AddVtx(ImVec2(b.x-r,a.y), col);
-        AddVtx(ImVec2(b.x-r,b.y), col);
-        AddVtx(ImVec2(a.x+r,a.y), col);
-        AddVtx(ImVec2(b.x-r,b.y), col);
-        AddVtx(ImVec2(a.x+r,b.y), col);
-        
-        float top_y = (rounding_corners & 1) ? a.y+r : a.y;
-        float bot_y = (rounding_corners & 8) ? b.y-r : b.y;
-        AddVtx(ImVec2(a.x,top_y), col);
-        AddVtx(ImVec2(a.x+r,top_y), col);
-        AddVtx(ImVec2(a.x+r,bot_y), col);
-        AddVtx(ImVec2(a.x,top_y), col);
-        AddVtx(ImVec2(a.x+r,bot_y), col);
-        AddVtx(ImVec2(a.x,bot_y), col);
-
-        top_y = (rounding_corners & 2) ? a.y+r : a.y;
-        bot_y = (rounding_corners & 4) ? b.y-r : b.y;
-        AddVtx(ImVec2(b.x-r,top_y), col);
-        AddVtx(ImVec2(b.x,top_y), col);
-        AddVtx(ImVec2(b.x,bot_y), col);
-        AddVtx(ImVec2(b.x-r,top_y), col);
-        AddVtx(ImVec2(b.x,bot_y), col);
-        AddVtx(ImVec2(b.x-r,bot_y), col);
-
-        if (rounding_corners & 1) AddArc(ImVec2(a.x+r,a.y+r), r, col, 0, 3, true);
-        if (rounding_corners & 2) AddArc(ImVec2(b.x-r,a.y+r), r, col, 3, 6, true);
-        if (rounding_corners & 4) AddArc(ImVec2(b.x-r,b.y-r), r, col, 6, 9, true);
-        if (rounding_corners & 8) AddArc(ImVec2(a.x+r,b.y-r), r, col, 9, 12,true);
-    }
+    Rect(a, b, rounding, rounding_corners);
+    Fill(col);
 }
 
 void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col)
 {
     if ((col >> 24) == 0)
         return;
-
-    ReserveVertices(3);
-    AddVtx(a, col);
-    AddVtx(b, col);
-    AddVtx(c, col);
+    LineTo(a);
+    LineTo(b);
+    LineTo(c);
+    Fill(col);
 }
 
 void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments)
 {
     if ((col >> 24) == 0)
         return;
-
-    ReserveVertices((unsigned int)num_segments*6);
-    const float a_step = 2*PI/(float)num_segments;
-    float a0 = 0.0f;
-    for (int i = 0; i < num_segments; i++)
-    {
-        const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        AddVtxLine(centre + ImVec2(cosf(a0), sinf(a0))*radius, centre + ImVec2(cosf(a1), sinf(a1))*radius, col);
-        a0 = a1;
-    }
+    ArcTo(centre, radius, 0.0f, PI*2, num_segments);
+    Stroke(col, true);
 }
 
 void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments)
 {
     if ((col >> 24) == 0)
         return;
-
-    ReserveVertices((unsigned int)num_segments*3);
-    const float a_step = 2*PI/(float)num_segments;
-    float a0 = 0.0f;
-    for (int i = 0; i < num_segments; i++)
-    {
-        const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        AddVtx(centre + ImVec2(cosf(a0), sinf(a0))*radius, col);
-        AddVtx(centre + ImVec2(cosf(a1), sinf(a1))*radius, col);
-        AddVtx(centre, col);
-        a0 = a1;
-    }
+    ArcTo(centre, radius, 0.0f, PI*2, num_segments);
+    Fill(col);
 }
 
 void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec2* cpu_clip_max)
