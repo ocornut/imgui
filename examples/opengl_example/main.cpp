@@ -10,12 +10,19 @@
 #include "../../imgui.h"
 #include <stdio.h>
 
-// Glfw
+// GLFW
 #include <GLFW/glfw3.h>
-#define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
+#ifdef _MSC_VER
+#undef APIENTRY
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
+#include <GLFW/glfw3native.h>
+#endif
 
 static GLFWwindow* window;
 static bool mousePressed[2] = { false, false };
+
+#define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
@@ -92,7 +99,7 @@ static void ImImpl_SetClipboardTextFn(const char* text)
     glfwSetClipboardString(window, text);
 }
 
-// GLFW callbacks to get events
+// GLFW callbacks
 static void glfw_error_callback(int error, const char* description)
 {
     fputs(description, stderr);
@@ -190,6 +197,9 @@ void InitImGui()
     io.RenderDrawListsFn = ImImpl_RenderDrawLists;
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
+#ifdef _MSC_VER
+    io.ImeWindowHandle = glfwGetWin32Window(window);
+#endif
 
     LoadFontsTexture();
 }

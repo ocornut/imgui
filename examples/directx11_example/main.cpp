@@ -448,7 +448,9 @@ void InitImGui()
     io.KeyMap[ImGuiKey_X] = 'X';
     io.KeyMap[ImGuiKey_Y] = 'Y';
     io.KeyMap[ImGuiKey_Z] = 'Z';
+
     io.RenderDrawListsFn = ImImpl_RenderDrawLists;
+    io.ImeWindowHandle = hWnd;
 
     // Create the vertex buffer
     {

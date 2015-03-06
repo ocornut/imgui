@@ -10,13 +10,20 @@
 #include "../../imgui.h"
 #include <stdio.h>
 
-// Gl3w/Glfw
+// Gl3W / GLFW
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
-#define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
+#ifdef _MSC_VER
+#undef APIENTRY
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
+#include <GLFW/glfw3native.h>
+#endif
 
 static GLFWwindow* window;
 static bool mousePressed[2] = { false, false };
+
+#define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
 
 // Shader variables
 static int shader_handle, vert_handle, frag_handle;
@@ -279,6 +286,9 @@ void InitImGui()
     io.RenderDrawListsFn = ImImpl_RenderDrawLists;
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
     io.GetClipboardTextFn = ImImpl_GetClipboardTextFn;
+#ifdef _MSC_VER
+    io.ImeWindowHandle = glfwGetWin32Window(window);
+#endif
 
     LoadFontsTexture();
 }

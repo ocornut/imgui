@@ -574,12 +574,15 @@ struct ImGuiIO
     const char* (*GetClipboardTextFn)();
     void        (*SetClipboardTextFn)(const char* text);
 
-    // Optional: override memory allocations (default to posix malloc/free). MemFreeFn() may be called with a NULL pointer.
+    // Optional: override memory allocations. MemFreeFn() may be called with a NULL pointer.
+    // (default to posix malloc/free)
     void*       (*MemAllocFn)(size_t sz);
     void        (*MemFreeFn)(void* ptr);
 
     // Optional: notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME in Windows)
+    // (default to use native imm32 api on Windows)
     void        (*ImeSetInputScreenPosFn)(int x, int y);
+    void*       ImeWindowHandle;            // (Windows) Set this to your HWND to get automatic IME cursor positioning.
 
     //------------------------------------------------------------------
     // Input - Fill before calling NewFrame()

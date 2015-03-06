@@ -207,30 +207,7 @@
 
      io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, io.Fonts->GetGlyphRangesJapanese());  // Load Japanese characters
      io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
-
- If you want to input Japanese/Chinese/Korean in the text input widget:
-
-    - when loading the font, pass a range that contains the characters you need, e.g.: io.Fonts->GetGlyphRangesJapanese()
-    - to have the Microsoft IME cursor appears at the right location in the screen, setup a handler for the io.ImeSetInputScreenPosFn function:
-
-        #include <Windows.h>
-        #include <Imm.h>
-        static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
-        {
-          // Notify OS Input Method Editor of text input position
-          HWND hwnd = glfwGetWin32Window(window);
-          if (HIMC himc = ImmGetContext(hwnd))
-          {
-            COMPOSITIONFORM cf;
-            cf.ptCurrentPos.x = x;
-            cf.ptCurrentPos.y = y;
-            cf.dwStyle = CFS_FORCE_POSITION;
-            ImmSetCompositionWindow(himc, &cf);
-          }
-        }
-
-        // Set pointer to handler in ImGuiIO structure
-        io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
+     io.ImeWindowHandle = MY_HWND;      // To input using Microsoft IME, give ImGui the hwnd of your application
 
  - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will run the block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
@@ -459,6 +436,7 @@ static int          ImTextCountUtf8BytesFromWchar(const ImWchar* in_text, const 
 
 static const char*  GetClipboardTextFn_DefaultImpl();
 static void         SetClipboardTextFn_DefaultImpl(const char* text);
+static void         ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 
 //-----------------------------------------------------------------------------
 // Texture Atlas data
@@ -562,7 +540,7 @@ ImGuiIO::ImGuiIO()
     MemFreeFn = free;
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
-    ImeSetInputScreenPosFn = NULL;
+    ImeSetInputScreenPosFn = ImeSetInputScreenPosFn_DefaultImpl;
 }
 
 // Pass in translated ASCII characters for text input.
@@ -8117,11 +8095,13 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
 
 #if defined(_MSC_VER) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS)
 
+#ifndef _WINDOWS_
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#endif
 
 // Win32 API clipboard implementation
-static const char*  GetClipboardTextFn_DefaultImpl()
+static const char* GetClipboardTextFn_DefaultImpl()
 {
     static char* buf_local = NULL;
     if (buf_local)
@@ -8163,7 +8143,7 @@ static void SetClipboardTextFn_DefaultImpl(const char* text)
 #else
 
 // Local ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers
-static const char*  GetClipboardTextFn_DefaultImpl()
+static const char* GetClipboardTextFn_DefaultImpl()
 {
     return GImGui->PrivateClipboard;
 }
@@ -8181,6 +8161,37 @@ static void SetClipboardTextFn_DefaultImpl(const char* text)
     g.PrivateClipboard = (char*)ImGui::MemAlloc((size_t)(text_end - text) + 1);
     memcpy(g.PrivateClipboard, text, (size_t)(text_end - text));
     g.PrivateClipboard[(size_t)(text_end - text)] = 0;
+}
+
+#endif
+
+#if defined(_MSC_VER) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS)
+
+#ifndef _WINDOWS_
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+#include <Imm.h>
+#pragma comment(lib, "imm32")
+
+static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
+{
+    // Notify OS Input Method Editor of text input position
+    if (HWND hwnd = (HWND)GImGui->IO.ImeWindowHandle)
+        if (HIMC himc = ImmGetContext(hwnd))
+        {
+            COMPOSITIONFORM cf;
+            cf.ptCurrentPos.x = x;
+            cf.ptCurrentPos.y = y;
+            cf.dwStyle = CFS_FORCE_POSITION;
+            ImmSetCompositionWindow(himc, &cf);
+        }
+}
+
+#else
+
+static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
+{
 }
 
 #endif
