@@ -2571,6 +2571,10 @@ void ImGui::EndChild()
             sz.y = 0;
         
         ImGui::End();
+
+        window = GetCurrentWindow();
+        ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + sz);
+        ItemAdd(bb, NULL);
         ItemSize(sz);
     }
 }
