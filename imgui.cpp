@@ -442,7 +442,8 @@ static size_t       ImFormatStringV(char* buf, size_t buf_size, const char* fmt,
 // Helpers: Misc
 static ImU32        ImCrc32(const void* data, size_t data_size, ImU32 seed);
 static bool         ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size, size_t padding_bytes = 0);
-static int          ImUpperPowerOfTwo(int v) { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
+static inline int   ImUpperPowerOfTwo(int v) { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
+static inline bool  ImCharIsSpace(int c) { return c == ' ' || c == '\t' || c == 0x3000; }
 
 // Helpers: UTF-8 <> wchar
 static int          ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
@@ -4507,7 +4508,7 @@ ImGuiID ImGui::GetID(const void* ptr_id)
 // NB: only call right after InputText because we are using its InitialValue storage
 static void ApplyNumericalTextInput(const char* buf, float *v)
 {
-    while (*buf == ' ' || *buf == '\t')
+    while (ImCharIsSpace(*buf))
         buf++;
 
     // We don't support '-' op because it would conflict with inputing negative value.
@@ -4516,7 +4517,7 @@ static void ApplyNumericalTextInput(const char* buf, float *v)
     if (op == '+' || op == '*' || op == '/')
     {
         buf++;
-        while (*buf == ' ' || *buf == '\t')
+        while (ImCharIsSpace(*buf))
             buf++;
     }
     else
@@ -5168,9 +5169,8 @@ static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* ob
     r->num_chars = (int)(text_remaining - (obj->Text + line_start_idx));
 }
 
-static bool is_white(unsigned int c)                                                              { return c==0 || c==' ' || c=='\t' || c=='\r' || c=='\n'; }
 static bool is_separator(unsigned int c)                                                          { return c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|'; }
-#define STB_TEXTEDIT_IS_SPACE(CH)                                                                 ( is_white((unsigned int)CH) || is_separator((unsigned int)CH) )
+#define STB_TEXTEDIT_IS_SPACE(CH)                                                                 ( ImCharIsSpace((unsigned int)CH) || is_separator((unsigned int)CH) )
 static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)                    { ImWchar* dst = obj->Text+pos; const ImWchar* src = obj->Text+pos+n; while (ImWchar c = *src++) *dst++ = c; *dst = '\0'; }
 static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const ImWchar* new_text, int new_text_len)
 {
@@ -5428,7 +5428,7 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
                 *p_char = (c += 'A'-'a');
 
         if (flags & ImGuiInputTextFlags_CharsNoBlank)
-            if (c == ' ' || c == '\t')
+            if (ImCharIsSpace(c))
                 return false;
     }
 
@@ -6242,7 +6242,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
             value_changed |= ImGui::InputText("##Text", buf, IM_ARRAYSIZE(buf), ImGuiInputTextFlags_CharsHexadecimal);
             ImGui::PopItemWidth();
             char* p = buf;
-            while (*p == '#' || *p == ' ' || *p == '\t') 
+            while (*p == '#' || ImCharIsSpace(*p)) 
                 p++;
 
             // Treat at unsigned (%X is unsigned)
@@ -7797,7 +7797,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
         }
 
         const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : 0.0f;
-        if (c == ' ' || c == '\t')
+        if (ImCharIsSpace(c))
         {
             if (inside_word)
             {
@@ -7879,7 +7879,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 while (s < text_end)
                 {
                     const char c = *s;
-                    if (c == ' ' || c == '\t') { s++; } else if (c == '\n') { s++; break; } else { break; }
+                    if (ImCharIsSpace(c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
                 }
                 continue;
             }
@@ -8011,7 +8011,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                 while (s < text_end)
                 {
                     const char c = *s;
-                    if (c == ' ' || c == '\t') { s++; } else if (c == '\n') { s++; break; } else { break; }
+                    if (ImCharIsSpace(c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
                 }
                 continue;
             }
@@ -9288,7 +9288,7 @@ struct ExampleAppConsole
                 while (word_start > data->Buf)
                 {
                     const char c = word_start[-1];
-                    if (c == ' ' || c == '\t' || c == ',' || c == ';')
+                    if (ImCharIsSpace(c) || c == ',' || c == ';')
                         break;
                     word_start--;
                 }
