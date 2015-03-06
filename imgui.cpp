@@ -8805,8 +8805,8 @@ void ImGui::ShowTestWindow(bool* opened)
 
         ImGui::PushItemWidth(80);
         ImGui::Text("Lists:");
-        static int selection[5] = { -1, 0, 1, 2, 3 };
-        for (int i = 0; i < 5; i++)
+        static int selection[4] = { 0, 1, 2, 3 };
+        for (int i = 0; i < 4; i++)
         {
             if (i > 0) ImGui::SameLine();
             ImGui::PushID(i);
