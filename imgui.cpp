@@ -3194,8 +3194,6 @@ static void SetFont(ImFont* font)
     g.Font = font;
     g.FontSize = g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale;
     g.FontTexUvWhitePixel = g.Font->ContainerAtlas->TexUvWhitePixel;
-    g.Font->FallbackGlyph = NULL;
-    g.Font->FallbackGlyph = g.Font->FindGlyph(g.Font->FallbackChar);
 }
 
 void ImGui::PushFont(ImFont* font)
@@ -7459,9 +7457,10 @@ void    ImFont::Clear()
     DisplayOffset = ImVec2(-0.5f, 0.5f);
     ContainerAtlas = NULL;
     Glyphs.clear();
+    FallbackGlyph = NULL;
+    FallbackXAdvance = 0.0f;
     IndexXAdvance.clear();
     IndexLookup.clear();
-    FallbackGlyph = NULL;
 }
 
 // Retrieve list of range (2 int per range, values are inclusive)
@@ -7563,7 +7562,7 @@ void ImFont::BuildLookupTable()
     IndexLookup.resize((size_t)max_codepoint + 1);
     for (size_t i = 0; i < (size_t)max_codepoint + 1; i++)
     {
-        IndexXAdvance[i] = 0.0f;
+        IndexXAdvance[i] = -1.0f;
         IndexLookup[i] = -1;
     }
     for (size_t i = 0; i < Glyphs.size(); i++)
@@ -7577,7 +7576,8 @@ void ImFont::BuildLookupTable()
     // FIXME: Needs proper TAB handling but it needs to be contextualized (can arbitrary say that each string starts at "column 0"
     if (FindGlyph((unsigned short)' '))
     {
-        Glyphs.resize(Glyphs.size() + 1);
+        if (Glyphs.back().Codepoint != '\t')   // So we can call this function multiple times
+            Glyphs.resize(Glyphs.size() + 1);
         ImFont::Glyph& tab_glyph = Glyphs.back();
         tab_glyph = *FindGlyph((unsigned short)' ');
         tab_glyph.Codepoint = '\t';
@@ -7585,6 +7585,19 @@ void ImFont::BuildLookupTable()
         IndexXAdvance[(size_t)tab_glyph.Codepoint] = (float)tab_glyph.XAdvance;
         IndexLookup[(size_t)tab_glyph.Codepoint] = (int)(Glyphs.size()-1);
     }
+
+    FallbackGlyph = NULL;
+    FallbackGlyph = FindGlyph(FallbackChar);
+    FallbackXAdvance = FallbackGlyph ? FallbackGlyph->XAdvance : 0.0f;
+    for (size_t i = 0; i < (size_t)max_codepoint + 1; i++)
+        if (IndexXAdvance[i] < 0.0f)
+            IndexXAdvance[i] = FallbackXAdvance;
+}
+
+void ImFont::SetFallbackChar(ImWchar c)
+{
+    FallbackChar = c;
+    BuildLookupTable();
 }
 
 const ImFont::Glyph* ImFont::FindGlyph(unsigned short c) const
@@ -7796,7 +7809,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             continue;
         }
 
-        const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : 0.0f;
+        const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : FallbackXAdvance;
         if (ImCharIsSpace(c))
         {
             if (inside_word)
@@ -7900,7 +7913,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
             continue;
         }
         
-        const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : 0.0f;
+        const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : FallbackXAdvance;
         if (line_width + char_width >= max_width)
             break;
 
@@ -7944,7 +7957,7 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
             continue;
         }
         
-        const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : 0.0f;
+        const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : FallbackXAdvance;
         if (line_width + char_width >= max_width)
             break;
 

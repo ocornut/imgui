@@ -921,7 +921,7 @@ struct ImFont
     float               FontSize;           // <user set>      // Height of characters, set during loading (don't change after loading)
     float               Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
     ImVec2              DisplayOffset;      // = (0.0f,0.0f)   // Offset font rendering by xx pixels
-    ImWchar             FallbackChar;       // = '?'           // Replacement glyph if one isn't found.
+    ImWchar             FallbackChar;       // = '?'           // Replacement glyph if one isn't found. Only set via SetFallbackChar()
 
     // Members: Runtime data
     struct Glyph
@@ -934,9 +934,10 @@ struct ImFont
     };
     ImFontAtlas*        ContainerAtlas;     // What we has been loaded into
     ImVector<Glyph>     Glyphs;
+    const Glyph*        FallbackGlyph;      // == FindGlyph(FontFallbackChar)
+    float               FallbackXAdvance;   //
     ImVector<float>     IndexXAdvance;      // Glyphs->XAdvance directly indexable (for CalcTextSize functions which are often bottleneck in large UI)
     ImVector<int>       IndexLookup;        // Index glyphs by Unicode code-point
-    const Glyph*        FallbackGlyph;      // == FindGlyph(FontFallbackChar)
 
     // Methods
     IMGUI_API ImFont();
@@ -944,6 +945,7 @@ struct ImFont
     IMGUI_API void                  Clear();
     IMGUI_API void                  BuildLookupTable();
     IMGUI_API const Glyph*          FindGlyph(unsigned short c) const;
+    IMGUI_API void                  SetFallbackChar(ImWchar c);
     IMGUI_API bool                  IsLoaded() const        { return ContainerAtlas != NULL; }
 
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
