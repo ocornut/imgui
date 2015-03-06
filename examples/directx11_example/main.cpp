@@ -358,6 +358,14 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         io.MousePos.x = (signed short)(lParam);
         io.MousePos.y = (signed short)(lParam >> 16); 
         return true;
+    case WM_KEYDOWN:
+        if (wParam >= 0 && wParam < 256)
+            io.KeysDown[wParam] = 1;
+        return true;
+    case WM_KEYUP:
+        if (wParam >= 0 && wParam < 256)
+            io.KeysDown[wParam] = 0;
+        return true;
     case WM_CHAR:
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
         if (wParam > 0 && wParam < 0x10000)
@@ -379,7 +387,7 @@ void LoadFontsTexture()
     //ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("extra_fonts/Karla-Regular.ttf", 15.0f);
     //ImFont* my_font3 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyClean.ttf", 13.0f); my_font3->DisplayOffset.y += 1;
     //ImFont* my_font4 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyTiny.ttf", 10.0f); my_font4->DisplayOffset.y += 1;
-    //ImFont* my_font5 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 20.0f, io.Fonts->GetGlyphRangesJapanese());
+    //ImFont* my_font5 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, io.Fonts->GetGlyphRangesJapanese());
 
     // Build
     unsigned char* pixels;
@@ -500,15 +508,11 @@ void UpdateImGui()
     io.DeltaTime = (float)(current_time - last_time) / ticks_per_second;
     last_time = current_time;
 
-    // Setup inputs
-    // (we already got mouse position, buttons, wheel from the window message callback)
-    BYTE keystate[256];
-    GetKeyboardState(keystate);
-    for (int i = 0; i < 256; i++)
-        io.KeysDown[i] = (keystate[i] & 0x80) != 0;
-    io.KeyCtrl = (keystate[VK_CONTROL] & 0x80) != 0;
-    io.KeyShift = (keystate[VK_SHIFT] & 0x80) != 0;
-    // io.MousePos : filled by WM_MOUSEMOVE event
+    // Read keyboard modifiers inputs
+    io.KeyCtrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+    io.KeyShift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+    // io.KeysDown : filled by WM_KEYDOWN/WM_KEYUP events
+    // io.MousePos : filled by WM_MOUSEMOVE events
     // io.MouseDown : filled by WM_*BUTTON* events
     // io.MouseWheel : filled by WM_MOUSEWHEEL events
 

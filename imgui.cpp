@@ -3289,7 +3289,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
     ImGuiState& g = *GImGui;
 
     ImVec2* pvar = GetStyleVarVec2Addr(idx);
-    IM_ASSERT(pvar != NULL); // Called function with wrong-type? Varialble is not a ImVec2.
+    IM_ASSERT(pvar != NULL); // Called function with wrong-type? Variable is not a ImVec2.
     ImGuiStyleMod backup;
     backup.Var = idx;
     backup.PreviousValue = *pvar;
