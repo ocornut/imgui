@@ -1137,6 +1137,13 @@ static inline ImGuiWindow* GetCurrentWindow()
     return g.CurrentWindow;
 }
 
+static inline ImGuiWindow* GetParentWindow()
+{
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(g.CurrentWindowStack.size() >= 2);
+    return g.CurrentWindowStack[g.CurrentWindowStack.size() - 2];
+}
+
 static void SetActiveId(ImGuiID id) 
 {
     ImGuiState& g = *GImGui;
@@ -2574,8 +2581,8 @@ void ImGui::EndChild()
 
         window = GetCurrentWindow();
         ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + sz);
-        ItemAdd(bb, NULL);
         ItemSize(sz);
+        ItemAdd(bb, NULL);
     }
 }
 
@@ -6018,8 +6025,6 @@ bool ImGui::Selectable(const char* label, bool* p_selected, const ImVec2& size_a
 bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return false;
 
     const ImGuiStyle& style = ImGui::GetStyle();
     const ImGuiID id = ImGui::GetID(label);
@@ -6031,6 +6036,8 @@ bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
     size.y = (size_arg.y != 0.0f) ? size_arg.y : ImGui::GetTextLineHeightWithSpacing() * 7.4f + style.ItemSpacing.y;
     const ImVec2 frame_size = ImVec2(size.x, ImMax(size.y, label_size.y));
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + frame_size);
+    const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
+    window->DC.LastItemAabb = bb;
 
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
@@ -6057,7 +6064,13 @@ bool ImGui::ListBoxHeader(const char* label, int items_count, int height_in_item
 
 void ImGui::ListBoxFooter()
 {
+    ImGuiWindow* parent_window = GetParentWindow();
+    const ImGuiAabb bb = parent_window->DC.LastItemAabb;
+    
     ImGui::EndChildFrame();
+
+    parent_window->DC.CursorPos = bb.Min;
+    ItemSize(bb, NULL);
 }
 
 bool ImGui::ListBox(const char* label, int* current_item, const char** items, int items_count, int height_items)
@@ -6068,6 +6081,10 @@ bool ImGui::ListBox(const char* label, int* current_item, const char** items, in
 
 bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
 {
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
     if (!ImGui::ListBoxHeader(label, items_count, height_in_items))
         return false;
 
@@ -8772,22 +8789,32 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::SameLine();
         ImGui::Checkbox("Rich", &c4);
 
-        // SliderFloat
+        // Various
         static float f0=1.0f, f1=2.0f, f2=3.0f;
         ImGui::PushItemWidth(80);
         const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD" };
         static int item = -1;
         ImGui::Combo("Combo", &item, items, IM_ARRAYSIZE(items));
-        //ImGui::SameLine();
-        //ImGui::ListBox("Listbox", &item, items, IM_ARRAYSIZE(items));
-        //if (ImGui::IsItemHovered())
-        //    ImGui::SetTooltip("Hovered"); 
-        ImGui::SameLine(); 
+        ImGui::SameLine();
         ImGui::SliderFloat("X", &f0, 0.0f,5.0f);
         ImGui::SameLine();
         ImGui::SliderFloat("Y", &f1, 0.0f,5.0f);
         ImGui::SameLine();
         ImGui::SliderFloat("Z", &f2, 0.0f,5.0f);
+        ImGui::PopItemWidth();
+
+        ImGui::PushItemWidth(80);
+        ImGui::Text("Lists:");
+        static int selection[5] = { -1, 0, 1, 2, 3 };
+        for (int i = 0; i < 5; i++)
+        {
+            if (i > 0) ImGui::SameLine();
+            ImGui::PushID(i);
+            ImGui::ListBox("", &selection[i], items, IM_ARRAYSIZE(items));
+            ImGui::PopID();
+            //if (ImGui::IsItemHovered()) ImGui::SetTooltip("ListBox %d hovered", i); 
+        }
+        ImGui::PopItemWidth();
     }
 
     if (ImGui::CollapsingHeader("Child regions"))
