@@ -6798,9 +6798,7 @@ void ImDrawList::AddVtxUV(const ImVec2& pos, ImU32 col, const ImVec2& uv)
     vtx_write++;
 }
 
-static ImVector<ImVec2> temp_inner;
-static ImVector<ImVec2> temp_outer;
-static ImVector<ImVec2> temp_normals;
+static ImVector<ImVec2> GTempPolyData;
 
 void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed)
 {
@@ -6809,9 +6807,11 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
     const float aa_size = 1.0f;
 
-    temp_inner.resize(points_count);
-    temp_outer.resize(points_count);
-    temp_normals.resize(points_count);
+    // Temporary buffer
+    GTempPolyData.resize(points_count * 3);
+    ImVec2* temp_inner = &GTempPolyData[0];
+    ImVec2* temp_outer = &GTempPolyData[points_count];
+    ImVec2* temp_normals = &GTempPolyData[points_count * 2];
 
     int start = 0, count = points_count;
     if (!closed)
@@ -6894,10 +6894,11 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
 
     const float aa_size = 1.0f;
 
-    temp_inner.resize(points_count);
-    temp_outer.resize(points_count);
-    temp_normals.resize(points_count);
-
+    // Temporary buffer
+    GTempPolyData.resize(points_count * 3);
+    ImVec2* temp_inner = &GTempPolyData[0];
+    ImVec2* temp_outer = &GTempPolyData[points_count];
+    ImVec2* temp_normals = &GTempPolyData[points_count * 2];
     for (int i = 0, j = points_count-1; i < points_count; j=i++)
     {
         const ImVec2& v0 = points[j];
