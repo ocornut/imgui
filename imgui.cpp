@@ -7459,7 +7459,7 @@ void ImFontAtlas::RenderCustomTexData()
     TexUvWhitePixel = ImVec2((TexExtraDataPos.x + 0.5f) / TexWidth, (TexExtraDataPos.y + 0.5f) / TexHeight);
 
     // Draw a mouse cursor into texture
-    // Because our font uses an alpha texture, we have to spread the cursor in 2 parts (black/white) which will be rendered separately.
+    // Because our font uses a single color channel, we have to spread the cursor in 2 layers (black/white) which will be rendered separately.
     const char cursor_pixels[] =
     {
         "X           "
