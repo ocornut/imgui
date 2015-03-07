@@ -445,7 +445,7 @@ static size_t       ImFormatString(char* buf, size_t buf_size, const char* fmt, 
 static size_t       ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args);
 
 // Helpers: Misc
-static ImU32        ImCrc32(const void* data, size_t data_size, ImU32 seed);
+static ImU32        ImHash(const void* data, size_t data_size, ImU32 seed);
 static bool         ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size, size_t padding_bytes = 0);
 static inline int   ImUpperPowerOfTwo(int v) { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 static inline bool  ImCharIsSpace(int c) { return c == ' ' || c == '\t' || c == 0x3000; }
@@ -686,7 +686,7 @@ static const char* ImStristr(const char* haystack, const char* needle, const cha
 
 // Pass data_size==0 for zero-terminated string
 // Try to replace with FNV1a hash?
-static ImU32 ImCrc32(const void* data, size_t data_size, ImU32 seed = 0) 
+static ImU32 ImHash(const void* data, size_t data_size, ImU32 seed = 0) 
 { 
     static ImU32 crc32_lut[256] = { 0 };
     if (!crc32_lut[1])
@@ -1451,7 +1451,7 @@ void ImGuiTextBuffer::append(const char* fmt, ...)
 ImGuiWindow::ImGuiWindow(const char* name)
 {
     Name = ImStrdup(name);
-    ID = ImCrc32(name, 0); 
+    ID = ImHash(name, 0); 
     IDStack.push_back(ID);
 
     Flags = 0;
@@ -1500,7 +1500,7 @@ ImGuiWindow::~ImGuiWindow()
 ImGuiID ImGuiWindow::GetID(const char* str)
 {
     ImGuiID seed = IDStack.back();
-    const ImGuiID id = ImCrc32(str, 0, seed);
+    const ImGuiID id = ImHash(str, 0, seed);
     RegisterAliveId(id);
     return id;
 }
@@ -1508,7 +1508,7 @@ ImGuiID ImGuiWindow::GetID(const char* str)
 ImGuiID ImGuiWindow::GetID(const void* ptr)
 {
     ImGuiID seed = IDStack.back();
-    const ImGuiID id = ImCrc32(&ptr, sizeof(void*), seed);
+    const ImGuiID id = ImHash(&ptr, sizeof(void*), seed);
     RegisterAliveId(id);
     return id;
 }
@@ -1580,7 +1580,7 @@ void ImGui::MemFree(void* ptr)
 static ImGuiIniData* FindWindowSettings(const char* name)
 {
     ImGuiState& g = *GImGui;
-    ImGuiID id = ImCrc32(name, 0);
+    ImGuiID id = ImHash(name, 0);
     for (size_t i = 0; i != g.Settings.size(); i++)
     {
         ImGuiIniData* ini = g.Settings[i];
@@ -1595,7 +1595,7 @@ static ImGuiIniData* AddWindowSettings(const char* name)
     ImGuiIniData* ini = (ImGuiIniData*)ImGui::MemAlloc(sizeof(ImGuiIniData));
     new(ini) ImGuiIniData();
     ini->Name = ImStrdup(name);
-    ini->ID = ImCrc32(name, 0);
+    ini->ID = ImHash(name, 0);
     ini->Collapsed = false;
     ini->Pos = ImVec2(FLT_MAX,FLT_MAX);
     ini->Size = ImVec2(0,0);
@@ -2656,7 +2656,7 @@ static ImGuiWindow* FindWindowByName(const char* name)
 {
     // FIXME-OPT: Store sorted hashes -> pointers.
     ImGuiState& g = *GImGui;
-    ImGuiID id = ImCrc32(name, 0);
+    ImGuiID id = ImHash(name, 0);
     for (size_t i = 0; i < g.Windows.size(); i++)
         if (g.Windows[i]->ID == id)
             return g.Windows[i];
