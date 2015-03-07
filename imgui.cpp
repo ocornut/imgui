@@ -2048,7 +2048,9 @@ void ImGui::Render()
 static const char*  FindTextDisplayEnd(const char* text, const char* text_end = NULL)
 {
     const char* text_display_end = text;
-    while ((!text_end || text_display_end < text_end) && *text_display_end != '\0' && (text_display_end[0] != '#' || text_display_end[1] != '#'))
+    if (!text_end)
+        text_end = (const char*)-1;
+    while (text_display_end < text_end && *text_display_end != '\0' && (text_display_end[0] != '#' || text_display_end[1] != '#'))
         text_display_end++;
     return text_display_end;
 }
