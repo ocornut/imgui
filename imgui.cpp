@@ -980,6 +980,7 @@ struct ImGuiTextEditState
 struct ImGuiIniData
 {
     char*   Name;
+    ImGuiID ID;
     ImVec2  Pos;
     ImVec2  Size;
     bool    Collapsed;
@@ -1578,10 +1579,11 @@ void ImGui::MemFree(void* ptr)
 static ImGuiIniData* FindWindowSettings(const char* name)
 {
     ImGuiState& g = *GImGui;
+    ImGuiID id = ImCrc32(name, 0);
     for (size_t i = 0; i != g.Settings.size(); i++)
     {
         ImGuiIniData* ini = g.Settings[i];
-        if (ImStricmp(ini->Name, name) == 0)
+        if (ini->ID == id)
             return ini;
     }
     return NULL;
@@ -1592,6 +1594,7 @@ static ImGuiIniData* AddWindowSettings(const char* name)
     ImGuiIniData* ini = (ImGuiIniData*)ImGui::MemAlloc(sizeof(ImGuiIniData));
     new(ini) ImGuiIniData();
     ini->Name = ImStrdup(name);
+    ini->ID = ImCrc32(name, 0);
     ini->Collapsed = false;
     ini->Pos = ImVec2(FLT_MAX,FLT_MAX);
     ini->Size = ImVec2(0,0);
@@ -1676,7 +1679,10 @@ static void SaveSettings()
         const ImGuiIniData* settings = g.Settings[i];
         if (settings->Pos.x == FLT_MAX)
             continue;
-        fprintf(f, "[%s]\n", settings->Name);
+        const char* name = settings->Name;
+        if (const char* p = strstr(name, "###"))  // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
+            name = p;
+        fprintf(f, "[%s]\n", name);
         fprintf(f, "Pos=%d,%d\n", (int)settings->Pos.x, (int)settings->Pos.y);
         fprintf(f, "Size=%d,%d\n", (int)settings->Size.x, (int)settings->Size.y);
         fprintf(f, "Collapsed=%d\n", settings->Collapsed);
@@ -2648,8 +2654,8 @@ void ImGui::EndChildFrame()
 static ImGuiWindow* FindWindowByName(const char* name)
 {
     // FIXME-OPT: Store sorted hashes -> pointers.
-    ImGuiID id = ImCrc32(name, 0, 0);
     ImGuiState& g = *GImGui;
+    ImGuiID id = ImCrc32(name, 0);
     for (size_t i = 0; i < g.Windows.size(); i++)
         if (g.Windows[i]->ID == id)
             return g.Windows[i];
