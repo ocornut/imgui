@@ -6465,6 +6465,18 @@ void ImGui::NextColumn()
     }
 }
 
+int ImGui::GetColumnIndex()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->DC.ColumnsCurrent;
+}
+
+int ImGui::GetColumnsCount()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->DC.ColumnsCount;
+}
+
 float ImGui::GetColumnOffset(int column_index)
 {
     ImGuiState& g = *GImGui;

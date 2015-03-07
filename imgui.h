@@ -226,9 +226,11 @@ namespace ImGui
     IMGUI_API void          Spacing();
     IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border=true);    // setup number of columns
     IMGUI_API void          NextColumn();                                                       // next column
-    IMGUI_API float         GetColumnOffset(int column_index = -1);
-    IMGUI_API void          SetColumnOffset(int column_index, float offset);
-    IMGUI_API float         GetColumnWidth(int column_index = -1);
+    IMGUI_API int           GetColumnIndex();                                                   // get current column index
+    IMGUI_API float         GetColumnOffset(int column_index = -1);                             // get position of column line (in pixels, from the left side of the contents region). pass -1 to use current column, otherwise 0..GetcolumnsCount() inclusive. column 0 is usually 0.0f and not resizable unless you call this.
+    IMGUI_API void          SetColumnOffset(int column_index, float offset_x);                  // set position of column line (in pixels, from the left side of the contents region). pass -1 to use current column.
+    IMGUI_API float         GetColumnWidth(int column_index = -1);                              // column width (== GetColumnOffset(GetColumnIndex()+1) - GetColumnOffset(GetColumnOffset())
+    IMGUI_API int           GetColumnsCount();                                                  // number of columns (what was passed to Columns())
     IMGUI_API ImVec2        GetCursorPos();                                                     // cursor position is relative to window position
     IMGUI_API float         GetCursorPosX();                                                    // "
     IMGUI_API float         GetCursorPosY();                                                    // "
