@@ -5736,7 +5736,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
 
         // Draw blinking cursor
         if (g.InputTextState.CursorIsVisible())
-            window->DrawList->AddRect(cursor_pos - font_off_up + ImVec2(0,2), cursor_pos + font_off_dn - ImVec2(0,3), window->Color(ImGuiCol_Text));
+            window->DrawList->AddLine(cursor_pos - font_off_up + ImVec2(0.5f,2.0f), cursor_pos + font_off_dn + ImVec2(0.5f,-3.0f), window->Color(ImGuiCol_Text));
         
         // Notify OS of text input position for advanced IME
         if (io.ImeSetInputScreenPosFn && ImLengthSqr(edit_state.InputCursorScreenPos - cursor_pos) > 0.0001f)
