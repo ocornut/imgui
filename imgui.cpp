@@ -1451,7 +1451,9 @@ void ImGuiTextBuffer::append(const char* fmt, ...)
 ImGuiWindow::ImGuiWindow(const char* name)
 {
     Name = ImStrdup(name);
-    ID = GetID(name); 
+    ID = ImCrc32(name, 0); 
+    IDStack.push_back(ID);
+
     Flags = 0;
     PosFloat = Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
@@ -1467,7 +1469,6 @@ ImGuiWindow::ImGuiWindow(const char* name)
     AutoFitOnlyGrows = false;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiSetCond_Always | ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver;
 
-    IDStack.push_back(ID);
     LastFrameDrawn = -1;
     ItemWidthDefault = 0.0f;
     FontWindowScale = 1.0f;
@@ -1498,7 +1499,7 @@ ImGuiWindow::~ImGuiWindow()
 
 ImGuiID ImGuiWindow::GetID(const char* str)
 {
-    const ImGuiID seed = IDStack.empty() ? 0 : IDStack.back();
+    ImGuiID seed = IDStack.back();
     const ImGuiID id = ImCrc32(str, 0, seed);
     RegisterAliveId(id);
     return id;
@@ -1506,7 +1507,7 @@ ImGuiID ImGuiWindow::GetID(const char* str)
 
 ImGuiID ImGuiWindow::GetID(const void* ptr)
 {
-    const ImGuiID seed = IDStack.empty() ? 0 : IDStack.back();
+    ImGuiID seed = IDStack.back();
     const ImGuiID id = ImCrc32(&ptr, sizeof(void*), seed);
     RegisterAliveId(id);
     return id;
@@ -2816,9 +2817,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
     // Setup and draw window
     if (first_begin_of_the_frame)
     {
-        // Seed ID stack with our window pointer
-        window->IDStack.resize(0);
-        ImGui::PushID(window);
+        // Reset ID stack
+        window->IDStack.resize(1);
 
         // Move window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
         const ImGuiID move_id = window->GetID("#MOVE");
