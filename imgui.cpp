@@ -6550,7 +6550,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             // Draw before resize so our items positioning are in sync with the line being drawn
             const ImU32 col = window->Color(held ? ImGuiCol_ColumnActive : hovered ? ImGuiCol_ColumnHovered : ImGuiCol_Column);
             const float xi = (float)(int)x;
-            window->DrawList->AddLine(ImVec2(xi, y1), ImVec2(xi, y2), col);
+            window->DrawList->AddLine(ImVec2(xi+0.5f, y1+1.0f), ImVec2(xi+0.5f, y2), col);
 
             if (held)
             {
