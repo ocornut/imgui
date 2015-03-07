@@ -11,7 +11,7 @@
  - END-USER GUIDE
  - PROGRAMMER GUIDE (read me!)
  - API BREAKING CHANGES (read me when you update!)
- - FREQUENTLY ASKED QUESTIONS & TROUBLESHOOTING (read me!)
+ - FREQUENTLY ASKED QUESTIONS (FAQ) & TROUBLESHOOTING (read me!)
  - ISSUES & TODO-LIST
  - CODE
  - SAMPLE CODE
@@ -167,8 +167,8 @@
  - 2014/08/28 (1.09) - changed the behavior of IO.PixelCenterOffset following various rendering fixes
 
 
- FREQUENTLY ASKED QUESTIONS & TROUBLESHOOTING
- ============================================
+ FREQUENTLY ASKED QUESTIONS (FAQ) & TROUBLESHOOTING
+ ==================================================
 
  If text or lines are blurry when integrating ImGui in your engine:
 
@@ -8398,6 +8398,7 @@ static void ShowExampleAppConsole(bool* opened);
 static void ShowExampleAppLongText(bool* opened);
 static void ShowExampleAppAutoResize(bool* opened);
 static void ShowExampleAppFixedOverlay(bool* opened);
+static void ShowExampleAppManipulatingWindowTitle(bool* opened);
 static void ShowExampleAppCustomRendering(bool* opened);
 
 // Demonstrate ImGui features (unfortunately this makes this function a little bloated!)
@@ -9112,12 +9113,14 @@ void ImGui::ShowTestWindow(bool* opened)
     static bool show_app_auto_resize = false;
     static bool show_app_fixed_overlay = false;
     static bool show_app_custom_rendering = false;
+    static bool show_app_manipulating_window_title = false;
     if (ImGui::CollapsingHeader("App Examples"))
     {
         ImGui::Checkbox("Console", &show_app_console);
         ImGui::Checkbox("Long text display", &show_app_long_text);
         ImGui::Checkbox("Auto-resizing window", &show_app_auto_resize);
         ImGui::Checkbox("Simple overlay", &show_app_fixed_overlay);
+        ImGui::Checkbox("Manipulating window title", &show_app_manipulating_window_title);
         ImGui::Checkbox("Custom rendering", &show_app_custom_rendering);
     }
     if (show_app_console)
@@ -9128,6 +9131,8 @@ void ImGui::ShowTestWindow(bool* opened)
         ShowExampleAppAutoResize(&show_app_auto_resize);
     if (show_app_fixed_overlay)
         ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
+    if (show_app_manipulating_window_title)
+        ShowExampleAppManipulatingWindowTitle(&show_app_manipulating_window_title);
     if (show_app_custom_rendering)
         ShowExampleAppCustomRendering(&show_app_custom_rendering);
 
@@ -9164,6 +9169,31 @@ static void ShowExampleAppFixedOverlay(bool* opened)
     ImGui::Separator();
     ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y); 
 
+    ImGui::End();
+}
+
+static void ShowExampleAppManipulatingWindowTitle(bool* opened)
+{
+    // By default, Windows are uniquely identified by their title.
+    // You can use the "##" and "###" markers to manipulate the display/ID. Read FAQ at the top of this file!
+
+    // Using "##" to display same title but have unique identifier.
+    ImGui::SetNextWindowPos(ImVec2(100,100), ImGuiSetCond_FirstUseEver);
+    ImGui::Begin("Same title as another window##1");
+    ImGui::Text("This is window 1.\nMy title is the same as window 2, but my identifier is unique.");
+    ImGui::End();
+
+    ImGui::SetNextWindowPos(ImVec2(100,200), ImGuiSetCond_FirstUseEver);
+    ImGui::Begin("Same title as another window##2");
+    ImGui::Text("This is window 2.\nMy title is the same as window 1, but my identifier is unique.");
+    ImGui::End();
+
+    // Using "###" to display a changing title but keep a static identifier "MyWindow"
+    char buf[128];
+    ImFormatString(buf, IM_ARRAYSIZE(buf), "Animated title %c %d###MyWindow", "|/-\\"[(int)(ImGui::GetTime()/0.25f)&3], rand());
+    ImGui::SetNextWindowPos(ImVec2(100,300), ImGuiSetCond_FirstUseEver);
+    ImGui::Begin(buf);
+    ImGui::Text("This window has a changing title.");
     ImGui::End();
 }
 
