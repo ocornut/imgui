@@ -217,7 +217,7 @@
    - when working with trees, ID are used to preserve the opened/closed state of tree nodes.
      depending on your use cases you may want to use strings, indices or pointers as ID. 
       e.g. when displaying a single object that may change over time (1-1 relationship), using a static string as ID will preserve your node open/closed state when the targeted object change.
-      e.g. when displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state differerently. experiment and see what makes more sense!
+      e.g. when displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state differently. experiment and see what makes more sense!
 
  If you want to load a different font than the default (ProggyClean.ttf, size 13)
 
