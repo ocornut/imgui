@@ -9,9 +9,9 @@
  Index
  - MISSION STATEMENT
  - END-USER GUIDE
- - PROGRAMMER GUIDE
- - API BREAKING CHANGES
- - TROUBLESHOOTING & FREQUENTLY ASKED QUESTIONS
+ - PROGRAMMER GUIDE (read me!)
+ - API BREAKING CHANGES (read me when you update!)
+ - FREQUENTLY ASKED QUESTIONS & TROUBLESHOOTING (read me!)
  - ISSUES & TODO-LIST
  - CODE
  - SAMPLE CODE
@@ -27,15 +27,15 @@
  - minimize screen real-estate usage
  - minimize setup and maintenance
  - minimize state storage on user side
- - portable, minimize dependencies, run on target (consoles, etc.)
+ - portable, minimize dependencies, run on target (consoles, phones, etc.)
  - efficient runtime (NB- we do allocate when "growing" content - creating a window / opening a tree node for the first time, etc. - but a typical frame won't allocate anything)
- - read about immediate-mode GUI principles @ http://mollyrocket.com/861, http://mollyrocket.com/forums/index.html
+ - read about immediate-mode gui principles @ http://mollyrocket.com/861, http://mollyrocket.com/forums/index.html
 
  Designed for developers and content-creators, not the typical end-user! Some of the weaknesses includes:
  - doesn't look fancy, doesn't animate
  - limited layout features, intricate layouts are typically crafted in code
- - occasionally use statically sized buffers for string manipulations - won't crash, but some long text may be clipped
- 
+ - occasionally uses statically sized buffers for string manipulations - won't crash, but some long text may be clipped. functions like ImGui::TextUnformatted() don't have such restriction.
+
 
  END-USER GUIDE
  ==============
@@ -63,11 +63,11 @@
  PROGRAMMER GUIDE
  ================
 
- - your code creates the UI, if your code doesn't run the UI is gone! == dynamic UI, no construction step, less data retention on your side, no state duplication, less sync, less errors.
- - call and read ImGui::ShowTestWindow() for user-side sample code
+ - read the FAQ below this section!
+ - your code creates the UI, if your code doesn't run the UI is gone! == very dynamic UI, no construction/destructions steps, less data retention on your side, no state duplication, less sync, less bugs.
+ - call and read ImGui::ShowTestWindow() for sample code demonstrating most features.
  - see examples/ folder for standalone sample applications.
  - customization: use the style editor or PushStyleColor/PushStyleVar to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme).
-
 
  - getting started:
    - initialisation: call ImGui::GetIO() and fill the 'Settings' data.
@@ -167,29 +167,57 @@
  - 2014/08/28 (1.09) - changed the behavior of IO.PixelCenterOffset following various rendering fixes
 
 
- TROUBLESHOOTING & FREQUENTLY ASKED QUESTIONS
+ FREQUENTLY ASKED QUESTIONS & TROUBLESHOOTING
  ============================================
 
  If text or lines are blurry when integrating ImGui in your engine:
+
    - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 
- If you are confused about the meaning or use of ID in ImGui:
-   - many widgets requires state to be carried over multiple frames (most typically ImGui often wants remember what is the "active" widget).
-     to do so they need an unique ID. unique ID are typically derived from a string label, an indice or a pointer.
-     when you call Button("OK") the button shows "OK" and also use "OK" as an ID.
+ A primer on the meaning and use of ID in ImGui:
+ 
+   - widgets require state to be carried over multiple frames (most typically ImGui often needs to remember what is the "active" widget).
+     to do so they need an unique ID. unique ID are typically derived from a string label, an integer index or a pointer.
+     
+       Button("OK");        // Label = "OK",     ID = hash of "OK"
+       Button("Cancel");    // Label = "Cancel", ID = hash of "Cancel"
+
    - ID are uniquely scoped within Windows so no conflict can happen if you have two buttons called "OK" in two different Windows.
-     within a same Window, use PushID() / PopID() to easily create scopes and avoid ID conflicts. 
-     so if you have a loop creating "multiple" items, you can use PushID() / PopID() with the index of each item, or their pointer, etc.
-     some functions like TreeNode() implicitly creates a scope for you by calling PushID()
-   - when dealing with trees, ID are important because you want to preserve the opened/closed state of tree nodes.
-     depending on your use cases you may want to use strings, indices or pointers as ID. experiment and see what makes more sense!
-      e.g. When displaying a single object that may change over time, using a static string as ID will preserve your node open/closed state when the targeted object change
-      e.g. When displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state per object
-   - when passing a label you can optionally specify extra unique ID information within the same string using "##". This helps solving the simpler collision cases.
-      e.g. "Label" display "Label" and uses "Label" as ID
-      e.g. "Label##Foobar" display "Label" and uses "Label##Foobar" as ID
-      e.g. "##Foobar" display an empty label and uses "##Foobar" as ID
-   - read articles about immediate-mode ui principles (see web links) to understand the requirement and use of ID.
+
+   - when passing a label you can optionally specify extra unique ID information within string itself. This helps solving the simpler collision cases.
+     use "##" to pass a complement to the ID that won't be visible to the end-user:
+
+       Button("Play##0");   // Label = "Play",   ID = hash of "Play##0"
+       Button("Play##1");   // Label = "Play",   ID = hash of "Play##1" (different from above)
+
+     use "###" to pass a label that isn't part of ID. You can use that to change labels while preserving a constant ID.
+
+       Button("Hello###ID"; // Label = "Hello",  ID = hash of "ID"
+       Button("World###ID"; // Label = "World",  ID = hash of "ID" (same as above)
+
+   - use PushID() / PopID() to create scopes and avoid ID conflicts within the same Window:
+
+       Button("Click");     // Label = "Click",  ID = hash of "Click"
+       PushID("node");
+       Button("Click");     // Label = "Click",  ID = hash of "node" and "Click"
+       for (int i = 0; i < 100; i++)
+       {
+          PushID(i);
+          Button("Click");  // Label = "Click",  ID = hash of "node" and i and "label"
+          PopID();
+       }
+       PopID();
+       PushID(my_ptr);
+       Button("Click");     // Label = "Click",  ID = hash of ptr and "Click"
+       PopID();
+      
+     so if you have a loop creating multiple items, you can use PushID() / PopID() with the index of each item, or their pointer, etc.
+     some functions like TreeNode() implicitly creates a scope for you by calling PushID().
+
+   - when working with trees, ID are used to preserve the opened/closed state of tree nodes.
+     depending on your use cases you may want to use strings, indices or pointers as ID. 
+      e.g. when displaying a single object that may change over time (1-1 relationship), using a static string as ID will preserve your node open/closed state when the targeted object change.
+      e.g. when displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state differerently. experiment and see what makes more sense!
 
  If you want to load a different font than the default (ProggyClean.ttf, size 13)
 
