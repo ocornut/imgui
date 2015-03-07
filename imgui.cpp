@@ -2708,7 +2708,8 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 // - 'size' for a regular window denote the initial size for first-time creation (no saved data) and isn't that useful. Use SetNextWindowSize() prior to calling Begin() for more flexible window manipulation.
 // - A default window called "Debug" is automatically stacked at the beginning of every frame so you can use widgets without explicitly calling a Begin/End pair.
 // - Begin/End can be called multiple times during the frame with the same window name to append content.
-// - The window name is used as a unique identifier to preserve window information across frames (and save rudimentary information to the .ini file). Note that you can use ## to append unique data that isn't displayed, e.g. "My window##1" will use "My window##1" as unique window ID but display "My window" to the user.
+// - The window name is used as a unique identifier to preserve window information across frames (and save rudimentary information to the .ini file). 
+//   You can use the "##" or "###" markers to use the same label with different id, or same id with different label. See documentation at the top of this file.
 // - Return false when window is collapsed, so you can early out in your code. You always need to call ImGui::End() even if false is returned.
 // - Passing 'bool* p_opened' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
 // - Passing non-zero 'size' is roughly equivalent to calling SetNextWindowSize(size, ImGuiSetCond_FirstUseEver) prior to calling Begin().
@@ -2947,7 +2948,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                 {
                     // Manual resize grip
                     const ImGuiAabb resize_aabb(window->Aabb().GetBR()-ImVec2(18,18), window->Aabb().GetBR());
-                    const ImGuiID resize_id = window->GetID("##RESIZE");
+                    const ImGuiID resize_id = window->GetID("#RESIZE");
                     bool hovered, held;
                     ButtonBehaviour(resize_aabb, resize_id, &hovered, &held, true);
                     resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
@@ -4064,7 +4065,7 @@ static bool CloseWindowButton(bool* p_opened)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
-    const ImGuiID id = window->GetID("##CLOSE");
+    const ImGuiID id = window->GetID("#CLOSE");
     const float size = window->TitleBarHeight() - 4.0f;
     const ImGuiAabb bb(window->Aabb().GetTR() + ImVec2(-3.0f-size,2.0f), window->Aabb().GetTR() + ImVec2(-3.0f,2.0f+size));
 
@@ -6159,7 +6160,7 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
         return false;
 
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID("##colorbutton");
+    const ImGuiID id = window->GetID("#colorbutton");
     const float square_size = window->FontSize();
     const ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(square_size + style.FramePadding.x*2, square_size + (small_height ? 0 : style.FramePadding.y*2)));
     ItemSize(bb);
