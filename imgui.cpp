@@ -2255,7 +2255,7 @@ static void RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale, bool 
     
     if (shadow && (window->Flags & ImGuiWindowFlags_ShowBorders) != 0)
         window->DrawList->AddTriangleFilled(a+ImVec2(2,2), b+ImVec2(2,2), c+ImVec2(2,2), window->Color(ImGuiCol_BorderShadow));
-    window->DrawList->AddTriangleFilled(a, b, c, window->Color(ImGuiCol_Border));
+    window->DrawList->AddTriangleFilled(a, b, c, window->Color(ImGuiCol_Text));
 }
 
 // Calculate text size. Text can be multi-line. Optionally ignore text after a ## marker.
