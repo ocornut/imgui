@@ -2222,9 +2222,8 @@ static void RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
     window->DrawList->AddRectFilled(p_min, p_max, fill_col, rounding);
     if (border && (window->Flags & ImGuiWindowFlags_ShowBorders))
     {
-        // FIXME: This is the best I've found that works on multiple renderer/back ends. Bit dodgy.
-        window->DrawList->AddRect(p_min+ImVec2(1.5f,1.5f), p_max+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), rounding);
-        window->DrawList->AddRect(p_min+ImVec2(0.5f,0.5f), p_max+ImVec2(0,0), window->Color(ImGuiCol_Border), rounding);
+        window->DrawList->AddRect(p_min+ImVec2(1,1), p_max+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), rounding);
+        window->DrawList->AddRect(p_min, p_max, window->Color(ImGuiCol_Border), rounding);
     }
 }
 
@@ -2957,7 +2956,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                 window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
                 window->DrawList->AddRect(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_Border), window_rounding);
                 if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
-                    window->DrawList->AddLine(title_bar_aabb.GetBL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_Border));
+                    window->DrawList->AddLine(title_bar_aabb.GetBL()+ImVec2(0.5f,0.5f), title_bar_aabb.GetBR()+ImVec2(0.5f,0.5f), window->Color(ImGuiCol_Border));
             }
 
             // Scrollbar
@@ -6317,7 +6316,7 @@ void ImGui::Separator()
         return;
     }
 
-    window->DrawList->AddLine(bb.Min, bb.Max, window->Color(ImGuiCol_Border));
+    window->DrawList->AddLine(bb.Min+ImVec2(0.0f,0.5f), bb.Max+ImVec2(0.0f,0.5f), window->Color(ImGuiCol_Border));
 
     if (window->DC.ColumnsCount > 1)
     {
@@ -7058,7 +7057,7 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
 {
     if ((col >> 24) == 0)
         return;
-    Rect(a, b, rounding, rounding_corners);
+    Rect(a + ImVec2(0.5f,0.5f), b + ImVec2(0.5f,0.5f), rounding, rounding_corners);
     Stroke(col, true);
 }
 
