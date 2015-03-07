@@ -657,6 +657,7 @@ static const char* ImStristr(const char* haystack, const char* needle, const cha
 }
 
 // Pass data_size==0 for zero-terminated string
+// Try to replace with FNV1a hash?
 static ImU32 ImCrc32(const void* data, size_t data_size, ImU32 seed = 0) 
 { 
     static ImU32 crc32_lut[256] = { 0 };
@@ -671,7 +672,9 @@ static ImU32 ImCrc32(const void* data, size_t data_size, ImU32 seed = 0)
             crc32_lut[i] = crc; 
         }
     }
-    ImU32 crc = ~seed; 
+
+    seed = ~seed;
+    ImU32 crc = seed; 
     const unsigned char* current = (const unsigned char*)data;
 
     if (data_size > 0)
@@ -684,7 +687,16 @@ static ImU32 ImCrc32(const void* data, size_t data_size, ImU32 seed = 0)
     {
         // Zero-terminated string
         while (unsigned char c = *current++)
-            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c]; 
+        {
+            // We support a syntax of "label###id" where only "###id" is included in the hash, and only "label" gets displayed.
+            // Because this syntax is rarely used we are optimizing for the common case.
+            // - If we reach ### in the string we discard the hash so far and reset to the seed. 
+            // - We don't do 'current += 2; continue;' after handling ### to keep the code smaller.
+            if (c == '#' && current[0] == '#' && current[1] == '#')
+                crc = seed;
+
+            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
+        }
     }
     return ~crc; 
 } 
@@ -4283,9 +4295,8 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
 
     // When logging is enabled, if automatically expand tree nodes (but *NOT* collapsing headers.. seems like sensible behaviour).
     // NB- If we are above max depth we still allow manually opened nodes to be logged.
-    if (!display_frame) 
-        if (g.LogEnabled && window->DC.TreeDepth < g.LogAutoExpandMaxDepth)
-            opened = true;
+    if (g.LogEnabled && !display_frame && window->DC.TreeDepth < g.LogAutoExpandMaxDepth)
+        opened = true;
 
     if (!ItemAdd(bb, &id))
         return opened;
@@ -6389,7 +6400,6 @@ bool ImGui::IsClipped(const ImVec2& item_size)
 
 static bool ItemAdd(const ImGuiAabb& bb, const ImGuiID* id)
 {
-    //ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.LastItemID = id ? *id : 0;
     window->DC.LastItemAabb = bb;
