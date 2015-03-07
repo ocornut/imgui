@@ -221,7 +221,6 @@
 
  - misc: merge or clarify ImVec4 / ImGuiAabb, they are essentially duplicate containers
  - window: add horizontal scroll
- - window: fix resize grip rendering scaling along with Rounding style setting
  - window: autofit feedback loop when user relies on any dynamic layout (window width multiplier, column). maybe just clearly drop manual autofit?
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. 
  - window: allow resizing of child windows (possibly given min/max for each axis?)
@@ -3000,11 +2999,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
             // (after the input handling so we don't have a frame of latency)
             if (!(window->Flags & ImGuiWindowFlags_NoResize))
             {
-                const float r = window_rounding;
+                const float base_size = window->FontSize() * 1.35f;
+                const float min_size = window_rounding + 1.0f + window->FontSize() * 0.2f;
+                const float corner_size = ImMax(base_size, min_size);
                 const ImVec2 br = window->Aabb().GetBR();
-                window->DrawList->LineTo(br + ImVec2(-2*r,0));
-                window->DrawList->LineTo(br + ImVec2(0,-2*r));
-                window->DrawList->ArcToFast(ImVec2(br.x-r,br.y-r), r, 6, 9);
+                window->DrawList->LineTo(br + ImVec2(-corner_size, 0.0f));
+                window->DrawList->LineTo(br + ImVec2(0.0f, -corner_size));
+                window->DrawList->ArcToFast(ImVec2(br.x - window_rounding, br.y - window_rounding), window_rounding, 6, 9);
                 window->DrawList->Fill(resize_col);
             }
         }
