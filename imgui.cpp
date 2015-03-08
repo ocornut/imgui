@@ -263,7 +263,6 @@
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
  - scrollbar: use relative mouse movement when first-clicking inside of scroll grab box.
- - scrollbar: make the grab visible and a minimum size for long scroll regions
 !- input number: very large int not reliably supported because of int<>float conversions.
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
@@ -3014,35 +3013,35 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
             if (window->ScrollbarY)
             {
                 ImGuiAabb scrollbar_bb(window->Aabb().Max.x - style.ScrollBarWidth, title_bar_aabb.Max.y+1, window->Aabb().Max.x, window->Aabb().Max.y-1);
-                //window->DrawList->AddLine(scrollbar_bb.GetTL(), scrollbar_bb.GetBL(), g.Colors[ImGuiCol_Border]);
                 window->DrawList->AddRectFilled(scrollbar_bb.Min, scrollbar_bb.Max, window->Color(ImGuiCol_ScrollbarBg));
                 scrollbar_bb.Expand(ImVec2(-3,-3));
-
+                const float scrollbar_height = scrollbar_bb.GetHeight();
+                
                 const float grab_size_y_norm = ImSaturate(window->Size.y / ImMax(window->SizeContentsFit.y, window->Size.y));
-                const float grab_size_y = scrollbar_bb.GetHeight() * grab_size_y_norm;
+                const float grab_size_y_pixels = ImMax(10.0f, scrollbar_height * grab_size_y_norm);
 
                 // Handle input right away (none of the code above is relying on scrolling position)
                 bool held = false;
                 bool hovered = false;
-                if (grab_size_y_norm < 1.0f)
+                if (grab_size_y_pixels < scrollbar_height)
                 {
                     const ImGuiID scrollbar_id = window->GetID("#SCROLLY");
                     ButtonBehaviour(scrollbar_bb, scrollbar_id, &hovered, &held, true);
                     if (held)
                     {
                         g.HoveredId = scrollbar_id;
-                        const float pos_y_norm = ImSaturate((g.IO.MousePos.y - (scrollbar_bb.Min.y + grab_size_y*0.5f)) / (scrollbar_bb.GetHeight() - grab_size_y)) * (1.0f - grab_size_y_norm);
-                        window->ScrollY = (float)(int)(pos_y_norm * window->SizeContentsFit.y);
+                        const float pos_y_norm = ImSaturate((g.IO.MousePos.y - (scrollbar_bb.Min.y + grab_size_y_pixels*0.5f)) / (scrollbar_height - grab_size_y_pixels));
+                        window->ScrollY = (float)(int)(pos_y_norm * (window->SizeContentsFit.y - window->Size.y));
                         window->NextScrollY = window->ScrollY;
                     }
                 }
 
                 // Normalized height of the grab
-                const float pos_y_norm = ImSaturate(window->ScrollY / ImMax(0.0f, window->SizeContentsFit.y));
+                const float pos_y_norm = ImSaturate(window->ScrollY / ImMax(0.0f, window->SizeContentsFit.y - window->Size.y));
                 const ImU32 grab_col = window->Color(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
                 window->DrawList->AddRectFilled(
-                    ImVec2(scrollbar_bb.Min.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y, pos_y_norm)), 
-                    ImVec2(scrollbar_bb.Max.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y, pos_y_norm + grab_size_y_norm)), grab_col);
+                    ImVec2(scrollbar_bb.Min.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y - grab_size_y_pixels, pos_y_norm)), 
+                    ImVec2(scrollbar_bb.Max.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y - grab_size_y_pixels, pos_y_norm) + grab_size_y_pixels), grab_col);
             }
 
             // Render resize grip
@@ -4637,7 +4636,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     if (decimal_precision > 0 || is_unbound)
         grab_size_in_pixels = 10.0f;
     else
-        grab_size_in_pixels = ImMax(grab_size_in_units * (w / (v_max-v_min+1.0f)), 8.0f);               // Integer sliders
+        grab_size_in_pixels = ImMax(grab_size_in_units * (w / (v_max-v_min+1.0f)), 10.0f);              // Integer sliders
     const float slider_effective_w = slider_bb.GetWidth() - grab_size_in_pixels;
     const float slider_effective_x1 = slider_bb.Min.x + grab_size_in_pixels*0.5f;
     const float slider_effective_x2 = slider_bb.Max.x - grab_size_in_pixels*0.5f;
