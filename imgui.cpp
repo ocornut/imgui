@@ -437,6 +437,7 @@ static bool         IsClipped(const ImGuiAabb& bb);
 static bool         IsMouseHoveringBox(const ImGuiAabb& bb);
 static bool         IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
+static void         Scrollbar(ImGuiWindow* window);
 static bool         CloseWindowButton(bool* p_opened = NULL);
 static void         FocusWindow(ImGuiWindow* window);
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs);
@@ -3026,71 +3027,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
 
             // Scrollbar
             if (window->ScrollbarY)
-            {
-                // Render background
-                ImGuiAabb scrollbar_bb(window->Aabb().Max.x - style.ScrollbarWidth, title_bar_aabb.Max.y+1, window->Aabb().Max.x, window->Aabb().Max.y-1);
-                window->DrawList->AddRectFilled(scrollbar_bb.Min, scrollbar_bb.Max, window->Color(ImGuiCol_ScrollbarBg));
-                scrollbar_bb.Expand(ImVec2(-3,-3));
-
-                // The entire piece of code below is rather confusing because:
-                // - The grabable box size generally represent the amount visible (vs the total scrollable amount)
-                // - But we maintain a minimum size in pixel to allow for the user to still aim inside.
-                // - We handle absolute seeking (when first clicking outside the grab) and relative manipulation (afterward or when clicking inside the grab)
-                // - We store values as ratio and in a form that allows the window content to change while we are holding on a scrollbar
-                const float scroll_max = ImMax(1.0f, window->SizeContents.y - window->Size.y);
-                const float scrollbar_height = scrollbar_bb.GetHeight();
-                const float grab_size_y_pixels = ImMax(style.GrabMinSize, scrollbar_height * ImSaturate(window->Size.y / ImMax(window->SizeContents.y, window->Size.y)));
-                const float grab_size_y_norm = grab_size_y_pixels / scrollbar_height;
-
-                // Handle input right away (none of the code of Begin() above is relying on scrolling position)
-                bool held = false;
-                bool hovered = false;
-                const ImGuiID scrollbar_id = window->GetID("#SCROLLY");
-                const bool previously_held = (g.ActiveId == scrollbar_id);
-                ButtonBehaviour(scrollbar_bb, scrollbar_id, &hovered, &held, true);
-
-                float scroll_ratio = ImSaturate(window->ScrollY / scroll_max);
-                float grab_pos_y_norm = scroll_ratio * (scrollbar_height - grab_size_y_pixels) / scrollbar_height;
-                if (held)
-                {
-                    const float clicked_y_norm = ImSaturate((g.IO.MousePos.y - scrollbar_bb.Min.y) / scrollbar_height);     // Click position in scrollbar space (0.0f->1.0f)
-                    g.HoveredId = scrollbar_id;
-
-                    bool seek_absolute = false;
-                    if (!previously_held)
-                    {
-                        // On initial click calculate the distance between mouse and the center of the grab
-                        if (clicked_y_norm >= grab_pos_y_norm && clicked_y_norm <= grab_pos_y_norm + grab_size_y_norm)
-                        {
-                            g.ScrollbarClickDeltaToGrabCenter = clicked_y_norm - grab_pos_y_norm - grab_size_y_norm*0.5f;
-                        }
-                        else
-                        {
-                            seek_absolute = true;
-                            g.ScrollbarClickDeltaToGrabCenter = 0;
-                        }
-                    }
-
-                    // Apply scroll
-                    const float scroll_y_norm = ImSaturate((clicked_y_norm - g.ScrollbarClickDeltaToGrabCenter - grab_size_y_norm*0.5f) / (1.0f - grab_size_y_norm));
-                    window->ScrollY = (float)(int)(0.5f + scroll_y_norm * (window->SizeContents.y - window->Size.y));
-                    window->NextScrollY = window->ScrollY;
-
-                    // Update values for rendering
-                    scroll_ratio = ImSaturate(window->ScrollY / scroll_max);
-                    grab_pos_y_norm = scroll_ratio * (scrollbar_height - grab_size_y_pixels) / scrollbar_height;
-
-                    // Update distance to grab now that we have seeked and saturated
-                    if (seek_absolute)
-                        g.ScrollbarClickDeltaToGrabCenter = clicked_y_norm - grab_pos_y_norm - grab_size_y_norm*0.5f;
-                }
-
-                // Render
-                const ImU32 grab_col = window->Color(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
-                window->DrawList->AddRectFilled(
-                    ImVec2(scrollbar_bb.Min.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y, grab_pos_y_norm)), 
-                    ImVec2(scrollbar_bb.Max.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y, grab_pos_y_norm) + grab_size_y_pixels), grab_col);
-            }
+                Scrollbar(window);
 
             // Render resize grip
             // (after the input handling so we don't have a frame of latency)
@@ -3214,6 +3151,75 @@ void ImGui::End()
     // NB: we don't clear 'window->RootWindow'. The pointer is allowed to live until the next call to Begin().
     g.CurrentWindowStack.pop_back();
     g.CurrentWindow = g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back();
+}
+
+// Vertical scrollbar
+// The entire piece of code below is rather confusing because:
+// - We handle absolute seeking (when first clicking outside the grab) and relative manipulation (afterward or when clicking inside the grab)
+// - We store values as ratio and in a form that allows the window content to change while we are holding on a scrollbar
+static void Scrollbar(ImGuiWindow* window)
+{
+    ImGuiState& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID("#SCROLLY");
+
+    // Render background
+    ImGuiAabb bb(window->Aabb().Max.x - style.ScrollbarWidth, window->Pos.y + window->TitleBarHeight()+1, window->Aabb().Max.x, window->Aabb().Max.y-1);
+    window->DrawList->AddRectFilled(bb.Min, bb.Max, window->Color(ImGuiCol_ScrollbarBg));
+    bb.Expand(ImVec2(-3,-3));
+    const float scrollbar_height = bb.GetHeight();
+
+    // The grabable box size generally represent the amount visible (vs the total scrollable amount)
+    // But we maintain a minimum size in pixel to allow for the user to still aim inside.
+    const float grab_h_pixels = ImMax(style.GrabMinSize, scrollbar_height * ImSaturate(window->Size.y / ImMax(window->SizeContents.y, window->Size.y)));
+    const float grab_h_norm = grab_h_pixels / scrollbar_height;
+
+    // Handle input right away. None of the code of Begin() is relying on scrolling position before calling Scrollbar().
+    bool held = false;
+    bool hovered = false;
+    const bool previously_held = (g.ActiveId == id);
+    ButtonBehaviour(bb, id, &hovered, &held, true);
+
+    const float scroll_max = ImMax(1.0f, window->SizeContents.y - window->Size.y);
+    float scroll_ratio = ImSaturate(window->ScrollY / scroll_max);
+    float grab_y_norm = scroll_ratio * (scrollbar_height - grab_h_pixels) / scrollbar_height;
+    if (held)
+    {
+        const float clicked_y_norm = ImSaturate((g.IO.MousePos.y - bb.Min.y) / scrollbar_height);     // Click position in scrollbar space (0.0f->1.0f)
+        g.HoveredId = id;
+
+        bool seek_absolute = false;
+        if (!previously_held)
+        {
+            // On initial click calculate the distance between mouse and the center of the grab
+            if (clicked_y_norm >= grab_y_norm && clicked_y_norm <= grab_y_norm + grab_h_norm)
+            {
+                g.ScrollbarClickDeltaToGrabCenter = clicked_y_norm - grab_y_norm - grab_h_norm*0.5f;
+            }
+            else
+            {
+                seek_absolute = true;
+                g.ScrollbarClickDeltaToGrabCenter = 0;
+            }
+        }
+
+        // Apply scroll
+        const float scroll_y_norm = ImSaturate((clicked_y_norm - g.ScrollbarClickDeltaToGrabCenter - grab_h_norm*0.5f) / (1.0f - grab_h_norm));
+        window->ScrollY = (float)(int)(0.5f + scroll_y_norm * (window->SizeContents.y - window->Size.y));
+        window->NextScrollY = window->ScrollY;
+
+        // Update values for rendering
+        scroll_ratio = ImSaturate(window->ScrollY / scroll_max);
+        grab_y_norm = scroll_ratio * (scrollbar_height - grab_h_pixels) / scrollbar_height;
+
+        // Update distance to grab now that we have seeked and saturated
+        if (seek_absolute)
+            g.ScrollbarClickDeltaToGrabCenter = clicked_y_norm - grab_y_norm - grab_h_norm*0.5f;
+    }
+
+    // Render
+    const ImU32 grab_col = window->Color(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
+    window->DrawList->AddRectFilled(ImVec2(bb.Min.x, ImLerp(bb.Min.y, bb.Max.y, grab_y_norm)), ImVec2(bb.Max.x, ImLerp(bb.Min.y, bb.Max.y, grab_y_norm) + grab_h_pixels), grab_col);
 }
 
 // Moving window to front of display (which happens to be back of our sorted list)
