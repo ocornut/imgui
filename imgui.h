@@ -6,17 +6,7 @@
 
 #pragma once
 
-struct ImDrawCmd;
-struct ImDrawList;
-struct ImFont;
-struct ImFontAtlas;
-struct ImGuiAabb;
-struct ImGuiIO;
-struct ImGuiStorage;
-struct ImGuiStyle;
-struct ImGuiWindow;
-
-#include "imconfig.h"
+#include "imconfig.h"       // User-editable configuration file
 #include <float.h>          // FLT_MAX
 #include <stdarg.h>         // va_list
 #include <stddef.h>         // ptrdiff_t
@@ -33,6 +23,15 @@ struct ImGuiWindow;
 #ifndef IMGUI_API
 #define IMGUI_API
 #endif
+
+// Forward declarations
+struct ImDrawCmd;
+struct ImDrawList;
+struct ImFont;
+struct ImFontAtlas;
+struct ImGuiIO;
+struct ImGuiStorage;
+struct ImGuiStyle;
 
 typedef unsigned int ImU32;
 typedef unsigned short ImWchar;     // character for display

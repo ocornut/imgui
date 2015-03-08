@@ -392,8 +392,8 @@ namespace IMGUI_STB_NAMESPACE
 #endif
 #include "stb_truetype.h"
 
-#define STB_TEXTEDIT_STRING ImGuiTextEditState
-#define STB_TEXTEDIT_CHARTYPE ImWchar
+#define STB_TEXTEDIT_STRING    ImGuiTextEditState
+#define STB_TEXTEDIT_CHARTYPE  ImWchar
 #include "stb_textedit.h"
 
 #ifdef __clang__
@@ -409,7 +409,14 @@ using namespace IMGUI_STB_NAMESPACE;
 // Forward Declarations
 //-------------------------------------------------------------------------
 
+struct ImGuiColMod;
+struct ImGuiStyleMod;
 struct ImGuiAabb;
+struct ImGuiDrawContext;
+struct ImGuiTextEditState;
+struct ImGuiIniData;
+struct ImGuiState;
+struct ImGuiWindow;
 
 static bool         ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false, bool pressed_on_click = false);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
