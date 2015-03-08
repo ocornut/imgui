@@ -263,7 +263,6 @@
  - main: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
- - scrollbar: use relative mouse movement when first-clicking inside of scroll grab box.
 !- input number: very large int not reliably supported because of int<>float conversions.
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
@@ -290,7 +289,7 @@
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
- - slider: initial absolute click is imprecise. change to relative movement slider? hide mouse cursor, allow more precise input using less screen-space.
+ - slider: initial absolute click is imprecise. change to relative movement slider? hide mouse cursor, allow more precise input using less screen-space. same as scrollbar.
  - text edit: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now.
  - text edit: centered text for slider as input text so it matches typical positioning.
  - text edit: flag to disable live update of the user buffer. 
@@ -1047,6 +1046,7 @@ struct ImGuiState
     ImGuiID                 SliderAsInputTextId;
     ImGuiStorage            ColorEditModeStorage;               // for user selection
     ImGuiID                 ActiveComboID;
+    float                   ScrollbarClickDeltaToGrabCenter;    // distance between mouse and center of grab box, normalized in parent space
     char                    Tooltip[1024];
     char*                   PrivateClipboard;                   // if no custom clipboard handler is defined
 
@@ -1096,6 +1096,7 @@ struct ImGuiState
 
         SliderAsInputTextId = 0;
         ActiveComboID = 0;
+        ScrollbarClickDeltaToGrabCenter = 0.0f;
         memset(Tooltip, 0, sizeof(Tooltip));
         PrivateClipboard = NULL;
 
@@ -2902,7 +2903,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->ScrollY = window->NextScrollY;
         window->ScrollY = ImMax(window->ScrollY, 0.0f);
         if (!window->Collapsed && !window->SkipItems)
-            window->ScrollY = ImMin(window->ScrollY, ImMax(0.0f, (float)window->SizeContents.y - window->SizeFull.y));
+            window->ScrollY = ImMin(window->ScrollY, ImMax(0.0f, window->SizeContents.y - window->SizeFull.y));
         window->NextScrollY = window->ScrollY;
 
         // At this point we don't have a clipping rectangle setup yet, so we can test and draw in title bar
@@ -3026,37 +3027,69 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
             // Scrollbar
             if (window->ScrollbarY)
             {
+                // Render background
                 ImGuiAabb scrollbar_bb(window->Aabb().Max.x - style.ScrollbarWidth, title_bar_aabb.Max.y+1, window->Aabb().Max.x, window->Aabb().Max.y-1);
                 window->DrawList->AddRectFilled(scrollbar_bb.Min, scrollbar_bb.Max, window->Color(ImGuiCol_ScrollbarBg));
                 scrollbar_bb.Expand(ImVec2(-3,-3));
-                const float scrollbar_height = scrollbar_bb.GetHeight();
-                
-                const float grab_size_y_norm = ImSaturate(window->Size.y / ImMax(window->SizeContents.y, window->Size.y));
-                const float grab_size_y_pixels = ImMax(style.GrabMinSize, scrollbar_height * grab_size_y_norm);
 
-                // Handle input right away (none of the code above is relying on scrolling position)
+                // The entire piece of code below is rather confusing because:
+                // - The grabable box size generally represent the amount visible (vs the total scrollable amount)
+                // - But we maintain a minimum size in pixel to allow for the user to still aim inside.
+                // - We handle absolute seeking (when first clicking outside the grab) and relative manipulation (afterward or when clicking inside the grab)
+                // - We store values as ratio and in a form that allows the window content to change while we are holding on a scrollbar
+                const float scroll_max = ImMax(1.0f, window->SizeContents.y - window->Size.y);
+                const float scrollbar_height = scrollbar_bb.GetHeight();
+                const float grab_size_y_pixels = ImMax(style.GrabMinSize, scrollbar_height * ImSaturate(window->Size.y / ImMax(window->SizeContents.y, window->Size.y)));
+                const float grab_size_y_norm = grab_size_y_pixels / scrollbar_height;
+
+                // Handle input right away (none of the code of Begin() above is relying on scrolling position)
                 bool held = false;
                 bool hovered = false;
-                if (grab_size_y_pixels < scrollbar_height)
+                const ImGuiID scrollbar_id = window->GetID("#SCROLLY");
+                const bool previously_held = (g.ActiveId == scrollbar_id);
+                ButtonBehaviour(scrollbar_bb, scrollbar_id, &hovered, &held, true);
+
+                float scroll_ratio = ImSaturate(window->ScrollY / scroll_max);
+                float grab_pos_y_norm = scroll_ratio * (scrollbar_height - grab_size_y_pixels) / scrollbar_height;
+                if (held)
                 {
-                    const ImGuiID scrollbar_id = window->GetID("#SCROLLY");
-                    ButtonBehaviour(scrollbar_bb, scrollbar_id, &hovered, &held, true);
-                    if (held)
+                    const float clicked_y_norm = ImSaturate((g.IO.MousePos.y - scrollbar_bb.Min.y) / scrollbar_height);     // Click position in scrollbar space (0.0f->1.0f)
+                    g.HoveredId = scrollbar_id;
+
+                    bool seek_absolute = false;
+                    if (!previously_held)
                     {
-                        // Absolute seeking
-                        g.HoveredId = scrollbar_id;
-                        const float clicked_y_norm = ImSaturate((g.IO.MousePos.y - (scrollbar_bb.Min.y + grab_size_y_pixels*0.5f)) / (scrollbar_height - grab_size_y_pixels));
-                        window->ScrollY = (float)(int)(clicked_y_norm * (window->SizeContents.y - window->Size.y));
-                        window->NextScrollY = window->ScrollY;
+                        // On initial click calculate the distance between mouse and the center of the grab
+                        if (clicked_y_norm >= grab_pos_y_norm && clicked_y_norm <= grab_pos_y_norm + grab_size_y_norm)
+                        {
+                            g.ScrollbarClickDeltaToGrabCenter = clicked_y_norm - grab_pos_y_norm - grab_size_y_norm*0.5f;
+                        }
+                        else
+                        {
+                            seek_absolute = true;
+                            g.ScrollbarClickDeltaToGrabCenter = 0;
+                        }
                     }
+
+                    // Apply scroll
+                    const float scroll_y_norm = ImSaturate((clicked_y_norm - g.ScrollbarClickDeltaToGrabCenter - grab_size_y_norm*0.5f) / (1.0f - grab_size_y_norm));
+                    window->ScrollY = (float)(int)(0.5f + scroll_y_norm * (window->SizeContents.y - window->Size.y));
+                    window->NextScrollY = window->ScrollY;
+
+                    // Update values for rendering
+                    scroll_ratio = ImSaturate(window->ScrollY / scroll_max);
+                    grab_pos_y_norm = scroll_ratio * (scrollbar_height - grab_size_y_pixels) / scrollbar_height;
+
+                    // Update distance to grab now that we have seeked and saturated
+                    if (seek_absolute)
+                        g.ScrollbarClickDeltaToGrabCenter = clicked_y_norm - grab_pos_y_norm - grab_size_y_norm*0.5f;
                 }
 
                 // Render
-                const float scroll_y_norm = ImSaturate(window->ScrollY / ImMax(0.0f, window->SizeContents.y - window->Size.y));
                 const ImU32 grab_col = window->Color(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
                 window->DrawList->AddRectFilled(
-                    ImVec2(scrollbar_bb.Min.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y - grab_size_y_pixels, scroll_y_norm)), 
-                    ImVec2(scrollbar_bb.Max.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y - grab_size_y_pixels, scroll_y_norm) + grab_size_y_pixels), grab_col);
+                    ImVec2(scrollbar_bb.Min.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y, grab_pos_y_norm)), 
+                    ImVec2(scrollbar_bb.Max.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y, grab_pos_y_norm) + grab_size_y_pixels), grab_col);
             }
 
             // Render resize grip
@@ -9351,6 +9384,8 @@ struct ExampleAppConsole
         if (ImGui::SmallButton("Add Dummy Text")) { AddLog("%d some text", Items.size()); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine(); 
         if (ImGui::SmallButton("Add Dummy Error")) AddLog("[error] something went wrong"); ImGui::SameLine(); 
         if (ImGui::SmallButton("Clear")) ClearLog();
+        //static float t = 0.0f; if (ImGui::GetTime() - t > 0.02f) { t = ImGui::GetTime(); AddLog("Spam %f", t); }
+
         ImGui::Separator();
 
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
