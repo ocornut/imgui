@@ -504,6 +504,7 @@ ImGuiStyle::ImGuiStyle()
     TreeNodeSpacing         = 22.0f;            // Horizontal spacing when entering a tree node
     ColumnsMinSpacing       = 6.0f;             // Minimum horizontal spacing between two columns
     ScrollBarWidth          = 16.0f;            // Width of the vertical scroll bar
+    GrabMinSize             = 10.0f;            // Minimum width/height of a slider or scroll bar grab
 
     Colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
     Colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
@@ -3025,7 +3026,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                 const float scrollbar_height = scrollbar_bb.GetHeight();
                 
                 const float grab_size_y_norm = ImSaturate(window->Size.y / ImMax(window->SizeContentsFit.y, window->Size.y));
-                const float grab_size_y_pixels = ImMax(10.0f, scrollbar_height * grab_size_y_norm);
+                const float grab_size_y_pixels = ImMax(style.GrabMinSize, scrollbar_height * grab_size_y_norm);
 
                 // Handle input right away (none of the code above is relying on scrolling position)
                 bool held = false;
@@ -4641,9 +4642,9 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     const float grab_size_in_units = 1.0f;                                                              // In 'v' units. Probably needs to be parametrized, based on a 'v_step' value? decimal precision?
     float grab_size_in_pixels;
     if (decimal_precision > 0 || is_unbound)
-        grab_size_in_pixels = 10.0f;
+        grab_size_in_pixels = style.GrabMinSize;
     else
-        grab_size_in_pixels = ImMax(grab_size_in_units * (w / (v_max-v_min+1.0f)), 10.0f);              // Integer sliders
+        grab_size_in_pixels = ImMax(grab_size_in_units * (w / (v_max-v_min+1.0f)), style.GrabMinSize);  // Integer sliders
     const float slider_effective_w = slider_bb.GetWidth() - grab_size_in_pixels;
     const float slider_effective_x1 = slider_bb.Min.x + grab_size_in_pixels*0.5f;
     const float slider_effective_x2 = slider_bb.Max.x - grab_size_in_pixels*0.5f;
@@ -8339,7 +8340,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::SliderFloat2("ItemInnerSpacing", (float*)&style.ItemInnerSpacing, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat2("TouchExtraPadding", (float*)&style.TouchExtraPadding, 0.0f, 10.0f, "%.0f");
         ImGui::SliderFloat("TreeNodeSpacing", &style.TreeNodeSpacing, 0.0f, 20.0f, "%.0f");
-        ImGui::SliderFloat("ScrollBarWidth", &style.ScrollBarWidth, 0.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat("ScrollBarWidth", &style.ScrollBarWidth, 1.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat("GrabMinSize", &style.GrabMinSize, 1.0f, 20.0f, "%.0f");
         ImGui::TreePop();
     }
 

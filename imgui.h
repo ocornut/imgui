@@ -533,6 +533,7 @@ struct ImGuiStyle
     float       TreeNodeSpacing;            // Horizontal spacing when entering a tree node
     float       ColumnsMinSpacing;          // Minimum horizontal spacing between two columns
     float       ScrollBarWidth;             // Width of the vertical scroll bar
+    float       GrabMinSize;                // Minimum width/height of a slider or scroll bar grab
     ImVec4      Colors[ImGuiCol_COUNT];
 
     IMGUI_API ImGuiStyle();
