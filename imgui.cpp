@@ -7731,6 +7731,7 @@ const ImFont::Glyph* ImFont::FindGlyph(unsigned short c) const
 
 // Convert UTF-8 to 32-bits character, process single character input.
 // Based on stb_from_utf8() from github.com/nothings/stb/
+// We handle UTF-8 decoding error by skipping forward.
 static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end)
 {
     unsigned int c = (unsigned int)-1;
@@ -7743,47 +7744,50 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
     }
     if ((*str & 0xe0) == 0xc0) 
     {
-        if (in_text_end && in_text_end - (const char*)str < 2) return -1;
-        if (*str < 0xc2) return -1;
+        *out_char = 0;
+        if (in_text_end && in_text_end - (const char*)str < 2) return (in_text_end - (const char*)str); // Decode error 
+        if (*str < 0xc2) return 2;
         c = (unsigned int)((*str++ & 0x1f) << 6);
-        if ((*str & 0xc0) != 0x80) return -1;
+        if ((*str & 0xc0) != 0x80) return 2;
         c += (*str++ & 0x3f);
         *out_char = c;
         return 2;
     }
     if ((*str & 0xf0) == 0xe0) 
     {
-        if (in_text_end && in_text_end - (const char*)str < 3) return -1;
-        if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return -1;
-        if (*str == 0xed && str[1] > 0x9f) return -1; // str[1] < 0x80 is checked below
+        *out_char = 0;
+        if (in_text_end && in_text_end - (const char*)str < 3) return (in_text_end - (const char*)str); // Decode error
+        if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return 3;
+        if (*str == 0xed && str[1] > 0x9f) return 3; // str[1] < 0x80 is checked below
         c = (unsigned int)((*str++ & 0x0f) << 12);
-        if ((*str & 0xc0) != 0x80) return -1;
+        if ((*str & 0xc0) != 0x80) return 3;
         c += (unsigned int)((*str++ & 0x3f) << 6);
-        if ((*str & 0xc0) != 0x80) return -1;
+        if ((*str & 0xc0) != 0x80) return 3;
         c += (*str++ & 0x3f);
         *out_char = c;
         return 3;
     }
     if ((*str & 0xf8) == 0xf0) 
     {
-        if (in_text_end && in_text_end - (const char*)str < 4) return -1;
-        if (*str > 0xf4) return -1;
-        if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return -1;
-        if (*str == 0xf4 && str[1] > 0x8f) return -1; // str[1] < 0x80 is checked below
+        *out_char = 0;
+        if (in_text_end && in_text_end - (const char*)str < 4) return (in_text_end - (const char*)str); // Decode error
+        if (*str > 0xf4) return 4;
+        if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return 4;
+        if (*str == 0xf4 && str[1] > 0x8f) return 4; // str[1] < 0x80 is checked below
         c = (unsigned int)((*str++ & 0x07) << 18);
-        if ((*str & 0xc0) != 0x80) return -1;
+        if ((*str & 0xc0) != 0x80) return 4;
         c += (unsigned int)((*str++ & 0x3f) << 12);
-        if ((*str & 0xc0) != 0x80) return -1;
+        if ((*str & 0xc0) != 0x80) return 4;
         c += (unsigned int)((*str++ & 0x3f) << 6);
-        if ((*str & 0xc0) != 0x80) return -1;
+        if ((*str & 0xc0) != 0x80) return 4;
         c += (*str++ & 0x3f);
         // utf-8 encodings of values used in surrogate pairs are invalid
-        if ((c & 0xFFFFF800) == 0xD800) return -1;
+        if ((c & 0xFFFFF800) == 0xD800) return 4;
         *out_char = c;
         return 4;
     }
     *out_char = 0;
-    return 0;
+    return 1;
 }
 
 static ptrdiff_t ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end)
