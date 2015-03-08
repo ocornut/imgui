@@ -129,6 +129,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/03/08 (1.35) - renamed style.ScrollBarWidth to style.ScrollbarWidth
  - 2015/02/27 (1.34) - renamed OpenNextNode(bool) to SetNextTreeNodeOpened(bool, ImGuiSetCond), kept inline redirection function.
  - 2015/02/27 (1.34) - renamed ImGuiSetCondition_*** to ImGuiSetCond_***, and _FirstUseThisSession becomes _Once.
  - 2015/02/11 (1.32) - changed text input callback ImGuiTextEditCallback return type from void-->int. reserved for future use, return 0 for now.
@@ -503,8 +504,8 @@ ImGuiStyle::ImGuiStyle()
     WindowFillAlphaDefault  = 0.70f;            // Default alpha of window background, if not specified in ImGui::Begin()
     TreeNodeSpacing         = 22.0f;            // Horizontal spacing when entering a tree node
     ColumnsMinSpacing       = 6.0f;             // Minimum horizontal spacing between two columns
-    ScrollBarWidth          = 16.0f;            // Width of the vertical scroll bar
-    GrabMinSize             = 10.0f;            // Minimum width/height of a slider or scroll bar grab
+    ScrollbarWidth          = 16.0f;            // Width of the vertical scrollbar
+    GrabMinSize             = 10.0f;            // Minimum width/height of a slider or scrollbar grab
 
     Colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
     Colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
@@ -3004,7 +3005,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                 else if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_TooltipBg, bg_alpha), window_rounding);
                 else if ((window->Flags & ImGuiWindowFlags_ChildWindow) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size-ImVec2(window->ScrollbarY?style.ScrollBarWidth:0.0f,0.0f), window->Color(ImGuiCol_ChildWindowBg, bg_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size-ImVec2(window->ScrollbarY?style.ScrollbarWidth:0.0f,0.0f), window->Color(ImGuiCol_ChildWindowBg, bg_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
                 else
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, bg_alpha), window_rounding);
             }
@@ -3025,7 +3026,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
             // Scrollbar
             if (window->ScrollbarY)
             {
-                ImGuiAabb scrollbar_bb(window->Aabb().Max.x - style.ScrollBarWidth, title_bar_aabb.Max.y+1, window->Aabb().Max.x, window->Aabb().Max.y-1);
+                ImGuiAabb scrollbar_bb(window->Aabb().Max.x - style.ScrollbarWidth, title_bar_aabb.Max.y+1, window->Aabb().Max.x, window->Aabb().Max.y-1);
                 window->DrawList->AddRectFilled(scrollbar_bb.Min, scrollbar_bb.Max, window->Color(ImGuiCol_ScrollbarBg));
                 scrollbar_bb.Expand(ImVec2(-3,-3));
                 const float scrollbar_height = scrollbar_bb.GetHeight();
@@ -3132,7 +3133,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
     const ImGuiAabb title_bar_aabb = window->TitleBarAabb();
     ImVec4 clip_rect(title_bar_aabb.Min.x+0.5f+window->WindowPadding().x*0.5f, title_bar_aabb.Max.y+0.5f, window->Aabb().Max.x+0.5f-window->WindowPadding().x*0.5f, window->Aabb().Max.y-1.5f);
     if (window->ScrollbarY)
-        clip_rect.z -= style.ScrollBarWidth;
+        clip_rect.z -= style.ScrollbarWidth;
     PushClipRect(clip_rect);
 
     // Clear 'accessed' flag last thing
@@ -3602,7 +3603,7 @@ ImVec2 ImGui::GetContentRegionMax()
     else
     {
         if (window->ScrollbarY)
-            mx.x -= GImGui->Style.ScrollBarWidth;
+            mx.x -= GImGui->Style.ScrollbarWidth;
     }
     return mx;
 }
@@ -3618,7 +3619,7 @@ ImVec2 ImGui::GetWindowContentRegionMax()
     ImGuiWindow* window = GetCurrentWindow();
     ImVec2 m = window->Size - window->WindowPadding();
     if (window->ScrollbarY)
-        m.x -= GImGui->Style.ScrollBarWidth;
+        m.x -= GImGui->Style.ScrollbarWidth;
     return m;
 }
 
@@ -6559,7 +6560,7 @@ float ImGui::GetColumnOffset(int column_index)
     const float t = window->DC.ColumnsOffsetsT[column_index];
 
     const float min_x = window->DC.ColumnsStartX;
-    const float max_x = window->Size.x - (g.Style.ScrollBarWidth);// - window->WindowPadding().x;
+    const float max_x = window->Size.x - (g.Style.ScrollbarWidth);// - window->WindowPadding().x;
     const float offset = min_x + t * (max_x - min_x);
     return offset;
 }
@@ -6575,7 +6576,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
 
     const float min_x = window->DC.ColumnsStartX;
-    const float max_x = window->Size.x - (g.Style.ScrollBarWidth);// - window->WindowPadding().x;
+    const float max_x = window->Size.x - (g.Style.ScrollbarWidth);// - window->WindowPadding().x;
     const float t = (offset - min_x) / (max_x - min_x);
     window->DC.StateStorage->SetFloat(column_id, t);
     window->DC.ColumnsOffsetsT[column_index] = t;
@@ -8354,7 +8355,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::SliderFloat2("ItemInnerSpacing", (float*)&style.ItemInnerSpacing, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat2("TouchExtraPadding", (float*)&style.TouchExtraPadding, 0.0f, 10.0f, "%.0f");
         ImGui::SliderFloat("TreeNodeSpacing", &style.TreeNodeSpacing, 0.0f, 20.0f, "%.0f");
-        ImGui::SliderFloat("ScrollBarWidth", &style.ScrollBarWidth, 1.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat("ScrollBarWidth", &style.ScrollbarWidth, 1.0f, 20.0f, "%.0f");
         ImGui::SliderFloat("GrabMinSize", &style.GrabMinSize, 1.0f, 20.0f, "%.0f");
         ImGui::TreePop();
     }

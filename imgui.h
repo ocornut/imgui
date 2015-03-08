@@ -386,7 +386,7 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_NoTitleBar             = 1 << 0,   // Disable title-bar
     ImGuiWindowFlags_NoResize               = 1 << 1,   // Disable user resizing with the lower-right grip
     ImGuiWindowFlags_NoMove                 = 1 << 2,   // Disable user moving the window
-    ImGuiWindowFlags_NoScrollbar            = 1 << 3,   // Disable scroll bar (window can still scroll with mouse or programatically)
+    ImGuiWindowFlags_NoScrollbar            = 1 << 3,   // Disable scrollbar (window can still scroll with mouse or programatically)
     ImGuiWindowFlags_NoScrollWithMouse      = 1 << 4,   // Disable user scrolling with mouse wheel
     ImGuiWindowFlags_NoCollapse             = 1 << 5,   // Disable user collapsing window by double-clicking on it
     ImGuiWindowFlags_AlwaysAutoResize       = 1 << 6,   // Resize every window to its content every frame
@@ -534,8 +534,8 @@ struct ImGuiStyle
     float       WindowFillAlphaDefault;     // Default alpha of window background, if not specified in ImGui::Begin()
     float       TreeNodeSpacing;            // Horizontal spacing when entering a tree node
     float       ColumnsMinSpacing;          // Minimum horizontal spacing between two columns
-    float       ScrollBarWidth;             // Width of the vertical scroll bar
-    float       GrabMinSize;                // Minimum width/height of a slider or scroll bar grab
+    float       ScrollbarWidth;             // Width of the vertical scrollbar
+    float       GrabMinSize;                // Minimum width/height of a slider or scrollbar grab
     ImVec4      Colors[ImGuiCol_COUNT];
 
     IMGUI_API ImGuiStyle();
