@@ -461,9 +461,9 @@ static inline bool  ImCharIsSpace(int c) { return c == ' ' || c == '\t' || c == 
 static int          ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
 static ptrdiff_t    ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end);   // return output UTF-8 bytes count
 static int          ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
-static ptrdiff_t    ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end);    // return input UTF-8 bytes count
+static ptrdiff_t    ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end, const char** in_remaining = NULL);   // return input UTF-8 bytes count
 static int          ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
-static int          ImTextCountUtf8BytesFromWchar(const ImWchar* in_text, const ImWchar* in_text_end);                 // return number of bytes to express string as UTF-8 code-points
+static int          ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string as UTF-8 code-points
 
 //-----------------------------------------------------------------------------
 // Platform dependent default implementations
@@ -956,8 +956,9 @@ struct ImGuiTextEditState
 {
     ImGuiID             Id;                             // widget id owning the text state
     ImWchar             Text[1024];                     // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
-    char                InitialText[1024*3+1];          // backup of end-user buffer at the time of focus (in UTF-8, unconverted)
-    size_t              BufSize;                        // end-user buffer size, <= 1024 (or increase above)
+    char                InitialText[1024*4+1];          // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
+    size_t              CurLenA, CurLenW;               // we need to maintain our buffer length in both UTF-8 and wchar format.
+    size_t              BufSizeA;                       // end-user buffer size, <= 1024 (or increase above)
     float               Width;                          // widget width
     float               ScrollX;
     STB_TexteditState   StbState;
@@ -5268,17 +5269,38 @@ static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* ob
 
 static bool is_separator(unsigned int c)                                                          { return c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|'; }
 #define STB_TEXTEDIT_IS_SPACE(CH)                                                                 ( ImCharIsSpace((unsigned int)CH) || is_separator((unsigned int)CH) )
-static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)                    { ImWchar* dst = obj->Text+pos; const ImWchar* src = obj->Text+pos+n; while (ImWchar c = *src++) *dst++ = c; *dst = '\0'; }
+static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)
+{
+    ImWchar* dst = obj->Text + pos;
+
+    // We maintain our buffer length in both UTF-8 and wchar formats
+    obj->CurLenA -= ImTextCountUtf8BytesFromStr(dst, dst + n);
+    obj->CurLenW -= n;
+
+    // Offset remaining text
+    const ImWchar* src = obj->Text + pos + n; 
+    while (ImWchar c = *src++)
+        *dst++ = c; 
+    *dst = '\0';
+}
+
 static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const ImWchar* new_text, int new_text_len)
 {
-    const size_t text_len = ImStrlenW(obj->Text);
-    if ((size_t)new_text_len + text_len + 1 > obj->BufSize)
+    const size_t text_len = obj->CurLenW;
+    if ((size_t)new_text_len + text_len + 1 > IM_ARRAYSIZE(obj->Text))
+        return false;
+
+    const int new_text_len_utf8 = ImTextCountUtf8BytesFromStr(new_text, new_text + new_text_len);
+    if ((size_t)new_text_len_utf8 + obj->CurLenA + 1 > obj->BufSizeA)
         return false;
 
     if (pos != (int)text_len)
         memmove(obj->Text + (size_t)pos + new_text_len, obj->Text + (size_t)pos, (text_len - (size_t)pos) * sizeof(ImWchar));
     memcpy(obj->Text + (size_t)pos, new_text, (size_t)new_text_len * sizeof(ImWchar));
-    obj->Text[text_len + (size_t)new_text_len] = '\0';
+
+    obj->CurLenW += new_text_len;
+    obj->CurLenA += new_text_len_utf8;
+    obj->Text[obj->CurLenW] = '\0';
 
     return true;
 }
@@ -5373,11 +5395,15 @@ void ImGuiTextEditState::RenderTextScrolledClipped(ImFont* font, float font_size
     const char* text_start = GetTextPointerClippedA(font, font_size, buf, scroll_x, NULL);
     const char* text_end = GetTextPointerClippedA(font, font_size, text_start, width, &text_size);
 
+    // We need to test for the possibility of malformed UTF-8 (instead of just text_end[0] != 0)
+    unsigned int text_end_char = 0;
+    ImTextCharFromUtf8(&text_end_char, text_end, NULL);
+
     // Draw a little clip symbol if we've got text on either left or right of the box
     const char symbol_c = '~';
     const float symbol_w = font_size*0.40f;     // FIXME: compute correct width
     const float clip_begin = (text_start > buf && text_start < text_end) ? symbol_w : 0.0f;
-    const float clip_end = (text_end[0] != '\0' && text_end > text_start) ? symbol_w : 0.0f;
+    const float clip_end = (text_end_char != 0 && text_end > text_start) ? symbol_w : 0.0f;
 
     // Draw text
     RenderText(pos+ImVec2(clip_begin,0), text_start+(clip_begin>0.0f?1:0), text_end-(clip_end>0.0f?1:0), false);
@@ -5589,8 +5615,11 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         {
             // Start edition
             // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
+            // From the moment we focused we are ignoring the content of 'buf'
             ImFormatString(edit_state.InitialText, IM_ARRAYSIZE(edit_state.InitialText), "%s", buf);
-            size_t buf_len = ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), buf, NULL);
+            const char* buf_end = NULL;
+            edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), buf, NULL, &buf_end);
+            edit_state.CurLenA = buf_end - buf; // We can't get the result from ImFormatString() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
             edit_state.Width = w;
             edit_state.InputCursorScreenPos = ImVec2(-1.f,-1.f);
             edit_state.CursorAnimReset();
@@ -5607,9 +5636,9 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             {
                 // Recycle existing cursor/selection/undo stack but clamp position
                 // Note a single mouse click will override the cursor/position immediately by calling stb_textedit_click handler.
-                edit_state.StbState.cursor = ImMin(edit_state.StbState.cursor, buf_len);
-                edit_state.StbState.select_start = ImMin(edit_state.StbState.select_start, buf_len);
-                edit_state.StbState.select_end = ImMin(edit_state.StbState.select_end, buf_len);
+                edit_state.StbState.cursor = ImMin(edit_state.StbState.cursor, edit_state.CurLenW);
+                edit_state.StbState.select_start = ImMin(edit_state.StbState.select_start, edit_state.CurLenW);
+                edit_state.StbState.select_end = ImMin(edit_state.StbState.select_end, edit_state.CurLenW);
             }
             if (focus_requested_by_tab || (user_clicked && is_ctrl_down))
                 select_all = true;
@@ -5638,10 +5667,10 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     if (g.ActiveId == id)
     {
         // Edit in progress
-        edit_state.BufSize = buf_size < IM_ARRAYSIZE(edit_state.Text) ? buf_size : IM_ARRAYSIZE(edit_state.Text);
+        edit_state.BufSizeA = buf_size;
         edit_state.Font = window->Font();
         edit_state.FontSize = window->FontSize();
-    
+
         const float mx = g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x;
         const float my = window->FontSize()*0.5f;   // Flatten mouse because we are doing a single-line edit
 
@@ -5706,7 +5735,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             if (g.IO.SetClipboardTextFn)
             {
                 const int ib = edit_state.HasSelection() ? ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end) : 0;
-                const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : (int)ImStrlenW(edit_state.Text);
+                const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : edit_state.CurLenW;
                 ImTextStrToUtf8(text_tmp_utf8, IM_ARRAYSIZE(text_tmp_utf8), edit_state.Text+ib, edit_state.Text+ie);
                 g.IO.SetClipboardTextFn(text_tmp_utf8);
             }
@@ -5722,7 +5751,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                 if (const char* clipboard = g.IO.GetClipboardTextFn())
                 {
                     // Remove new-line from pasted buffer
-                    size_t clipboard_len = strlen(clipboard);
+                    const size_t clipboard_len = strlen(clipboard);
                     ImWchar* clipboard_filtered = (ImWchar*)ImGui::MemAlloc((clipboard_len+1) * sizeof(ImWchar));
                     int clipboard_filtered_len = 0;
                     for (const char* s = clipboard; *s; )
@@ -5792,22 +5821,22 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                     callback_data.EventFlag = event_flag; 
                     callback_data.EventKey = event_key;
                     callback_data.Buf = text_tmp_utf8;
-                    callback_data.BufSize = edit_state.BufSize;
+                    callback_data.BufSize = edit_state.BufSizeA;
                     callback_data.BufDirty = false;
                     callback_data.Flags = flags;
                     callback_data.UserData = user_data;
 
                     // We have to convert from position from wchar to UTF-8 positions
-                    const int utf8_cursor_pos = callback_data.CursorPos = ImTextCountUtf8BytesFromWchar(edit_state.Text, edit_state.Text + edit_state.StbState.cursor);
-                    const int utf8_selection_start = callback_data.SelectionStart = ImTextCountUtf8BytesFromWchar(edit_state.Text, edit_state.Text + edit_state.StbState.select_start);
-                    const int utf8_selection_end = callback_data.SelectionEnd = ImTextCountUtf8BytesFromWchar(edit_state.Text, edit_state.Text + edit_state.StbState.select_end);
+                    const int utf8_cursor_pos = callback_data.CursorPos = ImTextCountUtf8BytesFromStr(edit_state.Text, edit_state.Text + edit_state.StbState.cursor);
+                    const int utf8_selection_start = callback_data.SelectionStart = ImTextCountUtf8BytesFromStr(edit_state.Text, edit_state.Text + edit_state.StbState.select_start);
+                    const int utf8_selection_end = callback_data.SelectionEnd = ImTextCountUtf8BytesFromStr(edit_state.Text, edit_state.Text + edit_state.StbState.select_end);
 
                     // Call user code
                     callback(&callback_data);
 
                     // Read back what user may have modified
                     IM_ASSERT(callback_data.Buf == text_tmp_utf8);             // Invalid to modify those fields
-                    IM_ASSERT(callback_data.BufSize == edit_state.BufSize);
+                    IM_ASSERT(callback_data.BufSize == edit_state.BufSizeA);
                     IM_ASSERT(callback_data.Flags == flags);
                     if (callback_data.CursorPos != utf8_cursor_pos)            edit_state.StbState.cursor = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.CursorPos);
                     if (callback_data.SelectionStart != utf8_selection_start)  edit_state.StbState.select_start = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionStart);
@@ -7745,10 +7774,10 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
     if ((*str & 0xe0) == 0xc0) 
     {
         *out_char = 0;
-        if (in_text_end && in_text_end - (const char*)str < 2) return (in_text_end - (const char*)str); // Decode error 
-        if (*str < 0xc2) return 2;
+        if (in_text_end && in_text_end - (const char*)str < 2) return 0; 
+        if (*str < 0xc2) return 0;
         c = (unsigned int)((*str++ & 0x1f) << 6);
-        if ((*str & 0xc0) != 0x80) return 2;
+        if ((*str & 0xc0) != 0x80) return 0;
         c += (*str++ & 0x3f);
         *out_char = c;
         return 2;
@@ -7756,13 +7785,13 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
     if ((*str & 0xf0) == 0xe0) 
     {
         *out_char = 0;
-        if (in_text_end && in_text_end - (const char*)str < 3) return (in_text_end - (const char*)str); // Decode error
-        if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return 3;
-        if (*str == 0xed && str[1] > 0x9f) return 3; // str[1] < 0x80 is checked below
+        if (in_text_end && in_text_end - (const char*)str < 3) return 0;
+        if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return 0;
+        if (*str == 0xed && str[1] > 0x9f) return 0; // str[1] < 0x80 is checked below
         c = (unsigned int)((*str++ & 0x0f) << 12);
-        if ((*str & 0xc0) != 0x80) return 3;
+        if ((*str & 0xc0) != 0x80) return 0;
         c += (unsigned int)((*str++ & 0x3f) << 6);
-        if ((*str & 0xc0) != 0x80) return 3;
+        if ((*str & 0xc0) != 0x80) return 0;
         c += (*str++ & 0x3f);
         *out_char = c;
         return 3;
@@ -7770,27 +7799,27 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
     if ((*str & 0xf8) == 0xf0) 
     {
         *out_char = 0;
-        if (in_text_end && in_text_end - (const char*)str < 4) return (in_text_end - (const char*)str); // Decode error
-        if (*str > 0xf4) return 4;
-        if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return 4;
-        if (*str == 0xf4 && str[1] > 0x8f) return 4; // str[1] < 0x80 is checked below
+        if (in_text_end && in_text_end - (const char*)str < 4) return 0;
+        if (*str > 0xf4) return 0;
+        if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return 0;
+        if (*str == 0xf4 && str[1] > 0x8f) return 0; // str[1] < 0x80 is checked below
         c = (unsigned int)((*str++ & 0x07) << 18);
-        if ((*str & 0xc0) != 0x80) return 4;
+        if ((*str & 0xc0) != 0x80) return 0;
         c += (unsigned int)((*str++ & 0x3f) << 12);
-        if ((*str & 0xc0) != 0x80) return 4;
+        if ((*str & 0xc0) != 0x80) return 0;
         c += (unsigned int)((*str++ & 0x3f) << 6);
-        if ((*str & 0xc0) != 0x80) return 4;
+        if ((*str & 0xc0) != 0x80) return 0;
         c += (*str++ & 0x3f);
         // utf-8 encodings of values used in surrogate pairs are invalid
-        if ((c & 0xFFFFF800) == 0xD800) return 4;
+        if ((c & 0xFFFFF800) == 0xD800) return 0;
         *out_char = c;
         return 4;
     }
     *out_char = 0;
-    return 1;
+    return 0;
 }
 
-static ptrdiff_t ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end)
+static ptrdiff_t ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end, const char** in_text_remaining)
 {
     ImWchar* buf_out = buf;
     ImWchar* buf_end = buf + buf_size;
@@ -7798,10 +7827,14 @@ static ptrdiff_t ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in
     {
         unsigned int c;
         in_text += ImTextCharFromUtf8(&c, in_text, in_text_end);
+        if (c == 0)
+            break;
         if (c < 0x10000)    // FIXME: Losing characters that don't fit in 2 bytes
             *buf_out++ = (ImWchar)c;
     }
     *buf_out = 0;
+    if (in_text_remaining)
+        *in_text_remaining = in_text;
     return buf_out - buf;
 }
 
@@ -7812,6 +7845,8 @@ static int ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end
     {
         unsigned int c;
         in_text += ImTextCharFromUtf8(&c, in_text, in_text_end);
+        if (c == 0)
+            break;
         if (c < 0x10000)
             char_count++;
     }
@@ -7876,7 +7911,7 @@ static ptrdiff_t ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_t
     return buf_out - buf;
 }
 
-static int ImTextCountUtf8BytesFromWchar(const ImWchar* in_text, const ImWchar* in_text_end)
+static int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end)
 {
     int bytes_count = 0;
     while ((!in_text_end || in_text < in_text_end) && *in_text)
@@ -7922,6 +7957,8 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             next_s = s + 1;
         else
             next_s = s + ImTextCharFromUtf8(&c, s, text_end);
+        if (c == 0)
+            break;
 
         if (c == '\n')
         {
@@ -8023,9 +8060,15 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         // Decode and advance source (handle unlikely UTF-8 decoding failure by skipping to the next byte)
         unsigned int c = (unsigned int)*s;
         if (c < 0x80)
+        {
             s += 1;
+        }
         else
+        {
             s += ImTextCharFromUtf8(&c, s, text_end);
+            if (c == 0)
+                break;
+        }
         
         if (c == '\n')
         {
@@ -8155,9 +8198,15 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
         // Decode and advance source (handle unlikely UTF-8 decoding failure by skipping to the next byte)
         unsigned int c = (unsigned int)*s;
         if (c < 0x80)
+        {
             s += 1;
+        }
         else
+        {
             s += ImTextCharFromUtf8(&c, s, text_end);
+            if (c == 0)
+                break;
+        }
 
         if (c == '\n')
         {
@@ -8260,7 +8309,7 @@ static const char* GetClipboardTextFn_DefaultImpl()
         return NULL;
     if (ImWchar* wbuf_global = (ImWchar*)GlobalLock(wbuf_handle))
     {
-        int buf_len = ImTextCountUtf8BytesFromWchar(wbuf_global, NULL) + 1;
+        int buf_len = ImTextCountUtf8BytesFromStr(wbuf_global, NULL) + 1;
         buf_local = (char*)ImGui::MemAlloc(buf_len * sizeof(char));
         ImTextStrToUtf8(buf_local, buf_len, wbuf_global, NULL);
     }
