@@ -8251,12 +8251,16 @@ static const char* GetClipboardTextFn_DefaultImpl()
     }
     if (!OpenClipboard(NULL)) 
         return NULL;
-    HANDLE buf_handle = GetClipboardData(CF_TEXT); 
-    if (buf_handle == NULL)
+    HANDLE wbuf_handle = GetClipboardData(CF_UNICODETEXT); 
+    if (wbuf_handle == NULL)
         return NULL;
-    if (char* buf_global = (char*)GlobalLock(buf_handle))
-        buf_local = ImStrdup(buf_global);
-    GlobalUnlock(buf_handle); 
+    if (ImWchar* wbuf_global = (ImWchar*)GlobalLock(wbuf_handle))
+    {
+        int buf_len = ImTextCountUtf8BytesFromWchar(wbuf_global, NULL) + 1;
+        buf_local = (char*)ImGui::MemAlloc(buf_len * sizeof(char));
+        ImTextStrToUtf8(buf_local, buf_len, wbuf_global, NULL);
+    }
+    GlobalUnlock(wbuf_handle); 
     CloseClipboard(); 
     return buf_local;
 }
@@ -8266,17 +8270,16 @@ static void SetClipboardTextFn_DefaultImpl(const char* text)
 {
     if (!OpenClipboard(NULL))
         return;
-    const char* text_end = text + strlen(text);
-    const int buf_length = (int)(text_end - text) + 1;
-    HGLOBAL buf_handle = GlobalAlloc(GMEM_MOVEABLE, (SIZE_T)buf_length * sizeof(char)); 
-    if (buf_handle == NULL)
+
+    const int wbuf_length = ImTextCountCharsFromUtf8(text, NULL) + 1;
+    HGLOBAL wbuf_handle = GlobalAlloc(GMEM_MOVEABLE, (SIZE_T)wbuf_length * sizeof(ImWchar)); 
+    if (wbuf_handle == NULL)
         return;
-    char* buf_global = (char *)GlobalLock(buf_handle); 
-    memcpy(buf_global, text, (size_t)(text_end - text));
-    buf_global[text_end - text] = 0;
-    GlobalUnlock(buf_handle); 
+    ImWchar* wbuf_global = (ImWchar*)GlobalLock(wbuf_handle); 
+    ImTextStrFromUtf8(wbuf_global, wbuf_length, text, NULL);
+    GlobalUnlock(wbuf_handle); 
     EmptyClipboard();
-    SetClipboardData(CF_TEXT, buf_handle);
+    SetClipboardData(CF_UNICODETEXT, wbuf_handle);
     CloseClipboard();
 }
 
