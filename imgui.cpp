@@ -8410,6 +8410,26 @@ static void ShowExampleAppCustomRendering(bool* opened);
 // Demonstrate ImGui features (unfortunately this makes this function a little bloated!)
 void ImGui::ShowTestWindow(bool* opened)
 {
+    // Examples apps
+    static bool show_app_console = false;
+    static bool show_app_long_text = false;
+    static bool show_app_auto_resize = false;
+    static bool show_app_fixed_overlay = false;
+    static bool show_app_custom_rendering = false;
+    static bool show_app_manipulating_window_title = false;
+    if (show_app_console)
+        ShowExampleAppConsole(&show_app_console);
+    if (show_app_long_text)
+        ShowExampleAppLongText(&show_app_long_text);
+    if (show_app_auto_resize)
+        ShowExampleAppAutoResize(&show_app_auto_resize);
+    if (show_app_fixed_overlay)
+        ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
+    if (show_app_manipulating_window_title)
+        ShowExampleAppManipulatingWindowTitle(&show_app_manipulating_window_title);
+    if (show_app_custom_rendering)
+        ShowExampleAppCustomRendering(&show_app_custom_rendering);
+
     static bool no_titlebar = false;
     static bool no_border = true;
     static bool no_resize = false;
@@ -9114,12 +9134,6 @@ void ImGui::ShowTestWindow(bool* opened)
         }
     }
 
-    static bool show_app_console = false;
-    static bool show_app_long_text = false;
-    static bool show_app_auto_resize = false;
-    static bool show_app_fixed_overlay = false;
-    static bool show_app_custom_rendering = false;
-    static bool show_app_manipulating_window_title = false;
     if (ImGui::CollapsingHeader("App Examples"))
     {
         ImGui::Checkbox("Console", &show_app_console);
@@ -9129,18 +9143,6 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Checkbox("Manipulating window title", &show_app_manipulating_window_title);
         ImGui::Checkbox("Custom rendering", &show_app_custom_rendering);
     }
-    if (show_app_console)
-        ShowExampleAppConsole(&show_app_console);
-    if (show_app_long_text)
-        ShowExampleAppLongText(&show_app_long_text);
-    if (show_app_auto_resize)
-        ShowExampleAppAutoResize(&show_app_auto_resize);
-    if (show_app_fixed_overlay)
-        ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
-    if (show_app_manipulating_window_title)
-        ShowExampleAppManipulatingWindowTitle(&show_app_manipulating_window_title);
-    if (show_app_custom_rendering)
-        ShowExampleAppCustomRendering(&show_app_custom_rendering);
 
     ImGui::End();
 }
