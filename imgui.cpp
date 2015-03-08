@@ -1122,7 +1122,8 @@ struct ImGuiWindow
     ImVec2                  Pos;                                // Position rounded-up to nearest pixel
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
     ImVec2                  SizeFull;                           // Size when non collapsed
-    ImVec2                  SizeContentsFit;                    // Size of contents (extents reach by the drawing cursor) - may not fit within Size.
+    ImVec2                  SizeContents;                       // Size of contents (== extents reach of the drawing cursor) from previous frame
+    ImVec2                  SizeContentsCurrent;                // Size of contents, currently extending
     float                   ScrollY;
     float                   NextScrollY;
     bool                    ScrollbarY;
@@ -1464,7 +1465,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Flags = 0;
     PosFloat = Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
-    SizeContentsFit = ImVec2(0.0f, 0.0f);
+    SizeContents = SizeContentsCurrent = ImVec2(0.0f, 0.0f);
     ScrollY = 0.0f;
     NextScrollY = 0.0f;
     ScrollbarY = false;
@@ -2802,6 +2803,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->LastFrameDrawn = current_frame;
         window->ClipRectStack.resize(0);
 
+        // Reset contents size for auto-fitting
+        window->SizeContents = window->SizeContentsCurrent;
+        window->SizeContentsCurrent = ImVec2(0.0f, 0.0f);
+
         if (flags & ImGuiWindowFlags_ChildWindow)
         {
             parent_window->DC.ChildWindows.push_back(window);
@@ -2896,7 +2901,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->ScrollY = window->NextScrollY;
         window->ScrollY = ImMax(window->ScrollY, 0.0f);
         if (!window->Collapsed && !window->SkipItems)
-            window->ScrollY = ImMin(window->ScrollY, ImMax(0.0f, (float)window->SizeContentsFit.y - window->SizeFull.y));
+            window->ScrollY = ImMin(window->ScrollY, ImMax(0.0f, (float)window->SizeContents.y - window->SizeFull.y));
         window->NextScrollY = window->ScrollY;
 
         // At this point we don't have a clipping rectangle setup yet, so we can test and draw in title bar
@@ -2936,12 +2941,12 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
             if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
             {
                 // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
-                const ImVec2 size_auto_fit = window->SizeContentsFit + style.WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
+                const ImVec2 size_auto_fit = window->SizeContents + style.WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
                 window->SizeFull = size_auto_fit;
             }
             else
             {
-                const ImVec2 size_auto_fit = ImClamp(window->SizeContentsFit + style.AutoFitPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding));
+                const ImVec2 size_auto_fit = ImClamp(window->SizeContents + style.AutoFitPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding));
                 if ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
                 {
                     // Don't continuously mark settings as dirty, the size of the window doesn't need to be stored.
@@ -2989,7 +2994,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
             }
 
             // Scrollbar
-            window->ScrollbarY = (window->SizeContentsFit.y > window->Size.y) && !(window->Flags & ImGuiWindowFlags_NoScrollbar);
+            window->ScrollbarY = (window->SizeContents.y > window->Size.y) && !(window->Flags & ImGuiWindowFlags_NoScrollbar);
 
             // Window background
             if (bg_alpha > 0.0f)
@@ -3025,7 +3030,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                 scrollbar_bb.Expand(ImVec2(-3,-3));
                 const float scrollbar_height = scrollbar_bb.GetHeight();
                 
-                const float grab_size_y_norm = ImSaturate(window->Size.y / ImMax(window->SizeContentsFit.y, window->Size.y));
+                const float grab_size_y_norm = ImSaturate(window->Size.y / ImMax(window->SizeContents.y, window->Size.y));
                 const float grab_size_y_pixels = ImMax(style.GrabMinSize, scrollbar_height * grab_size_y_norm);
 
                 // Handle input right away (none of the code above is relying on scrolling position)
@@ -3039,13 +3044,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                     {
                         g.HoveredId = scrollbar_id;
                         const float pos_y_norm = ImSaturate((g.IO.MousePos.y - (scrollbar_bb.Min.y + grab_size_y_pixels*0.5f)) / (scrollbar_height - grab_size_y_pixels));
-                        window->ScrollY = (float)(int)(pos_y_norm * (window->SizeContentsFit.y - window->Size.y));
+                        window->ScrollY = (float)(int)(pos_y_norm * (window->SizeContents.y - window->Size.y));
                         window->NextScrollY = window->ScrollY;
                     }
                 }
 
                 // Normalized height of the grab
-                const float pos_y_norm = ImSaturate(window->ScrollY / ImMax(0.0f, window->SizeContentsFit.y - window->Size.y));
+                const float pos_y_norm = ImSaturate(window->ScrollY / ImMax(0.0f, window->SizeContents.y - window->Size.y));
                 const ImU32 grab_col = window->Color(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
                 window->DrawList->AddRectFilled(
                     ImVec2(scrollbar_bb.Min.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y - grab_size_y_pixels, pos_y_norm)), 
@@ -3095,8 +3100,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->DC.TreeDepth = 0;
         window->DC.StateStorage = &window->StateStorage;
 
-        // Reset contents size for auto-fitting
-        window->SizeContentsFit = ImVec2(0.0f, 0.0f);
         if (window->AutoFitFrames > 0)
             window->AutoFitFrames--;
 
@@ -3677,21 +3680,21 @@ void ImGui::SetCursorPos(const ImVec2& pos)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos = window->Pos + pos;
-    window->SizeContentsFit = ImMax(window->SizeContentsFit, pos + ImVec2(0.0f, window->ScrollY));
+    window->SizeContentsCurrent = ImMax(window->SizeContentsCurrent, pos + ImVec2(0.0f, window->ScrollY));
 }
 
 void ImGui::SetCursorPosX(float x)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos.x = window->Pos.x + x;
-    window->SizeContentsFit.x = ImMax(window->SizeContentsFit.x, x);
+    window->SizeContentsCurrent.x = ImMax(window->SizeContentsCurrent.x, x);
 }
 
 void ImGui::SetCursorPosY(float y)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos.y = window->Pos.y + y;
-    window->SizeContentsFit.y = ImMax(window->SizeContentsFit.y, y + window->ScrollY);
+    window->SizeContentsCurrent.y = ImMax(window->SizeContentsCurrent.y, y + window->ScrollY);
 }
 
 ImVec2 ImGui::GetCursorScreenPos()
@@ -3704,6 +3707,18 @@ void ImGui::SetCursorScreenPos(const ImVec2& screen_pos)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos = screen_pos;
+}
+
+float ImGui::GetScrollPosY()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->ScrollY;
+}
+
+float ImGui::GetScrollMaxY()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->SizeContents.y - window->SizeFull.y;
 }
 
 void ImGui::SetScrollPosHere()
@@ -6413,7 +6428,7 @@ static void ItemSize(ImVec2 size, ImVec2* adjust_vertical_offset)
     window->DC.CursorPosPrevLine = ImVec2(window->DC.CursorPos.x + size.x, window->DC.CursorPos.y);
     window->DC.CursorPos = ImVec2((float)(int)(window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX), (float)(int)(window->DC.CursorPos.y + line_height + g.Style.ItemSpacing.y));
 
-    window->SizeContentsFit = ImMax(window->SizeContentsFit, ImVec2(window->DC.CursorPosPrevLine.x - window->Pos.x, window->DC.CursorPos.y + window->ScrollY - window->Pos.y));
+    window->SizeContentsCurrent = ImMax(window->SizeContentsCurrent, ImVec2(window->DC.CursorPosPrevLine.x - window->Pos.x, window->DC.CursorPos.y + window->ScrollY - window->Pos.y));
 
     window->DC.PrevLineHeight = line_height;
     window->DC.CurrentLineHeight = 0.0f;
