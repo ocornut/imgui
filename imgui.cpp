@@ -7612,7 +7612,7 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesJapanese()
     static ImWchar ranges[10 + IM_ARRAYSIZE(offsets_from_0x4E00)*2 + 1] =
     {
         0x0020, 0x00FF, // Basic Latin + Latin Supplement
-        0x3000, 0x3000, // Ideographic Space
+        0x3000, 0x303F, // Ideographic Space, Japanese Punctuations
         0x3040, 0x30FF, // Hiragana, Katakana
         0x31F0, 0x31FF, // Katakana Phonetic Extensions
         0xFF00, 0xFFEF, // Half-width characters
