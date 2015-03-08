@@ -9230,6 +9230,7 @@ static void ShowExampleAppManipulatingWindowTitle(bool* opened)
 
 static void ShowExampleAppCustomRendering(bool* opened)
 {
+    ImGui::SetNextWindowSize(ImVec2(300,350), ImGuiSetCond_FirstUseEver);
     if (!ImGui::Begin("Example: Custom Rendering", opened))
     {
         ImGui::End();
@@ -9244,7 +9245,7 @@ static void ShowExampleAppCustomRendering(bool* opened)
     static ImVector<ImVec2> points;
     static bool adding_line = false;
     if (ImGui::Button("Clear")) points.clear();
-    if (points.size() > 2) { ImGui::SameLine(); if (ImGui::Button("Undo")) points.pop_back(); }
+    if (points.size() >= 2) { ImGui::SameLine(); if (ImGui::Button("Undo")) { points.pop_back(); points.pop_back(); } }
     ImGui::Text("Left-click and drag to add lines");
     ImGui::Text("Right-click to undo");
 
