@@ -3042,19 +3042,20 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                     ButtonBehaviour(scrollbar_bb, scrollbar_id, &hovered, &held, true);
                     if (held)
                     {
+                        // Absolute seeking
                         g.HoveredId = scrollbar_id;
-                        const float pos_y_norm = ImSaturate((g.IO.MousePos.y - (scrollbar_bb.Min.y + grab_size_y_pixels*0.5f)) / (scrollbar_height - grab_size_y_pixels));
-                        window->ScrollY = (float)(int)(pos_y_norm * (window->SizeContents.y - window->Size.y));
+                        const float clicked_y_norm = ImSaturate((g.IO.MousePos.y - (scrollbar_bb.Min.y + grab_size_y_pixels*0.5f)) / (scrollbar_height - grab_size_y_pixels));
+                        window->ScrollY = (float)(int)(clicked_y_norm * (window->SizeContents.y - window->Size.y));
                         window->NextScrollY = window->ScrollY;
                     }
                 }
 
-                // Normalized height of the grab
-                const float pos_y_norm = ImSaturate(window->ScrollY / ImMax(0.0f, window->SizeContents.y - window->Size.y));
+                // Render
+                const float scroll_y_norm = ImSaturate(window->ScrollY / ImMax(0.0f, window->SizeContents.y - window->Size.y));
                 const ImU32 grab_col = window->Color(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
                 window->DrawList->AddRectFilled(
-                    ImVec2(scrollbar_bb.Min.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y - grab_size_y_pixels, pos_y_norm)), 
-                    ImVec2(scrollbar_bb.Max.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y - grab_size_y_pixels, pos_y_norm) + grab_size_y_pixels), grab_col);
+                    ImVec2(scrollbar_bb.Min.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y - grab_size_y_pixels, scroll_y_norm)), 
+                    ImVec2(scrollbar_bb.Max.x, ImLerp(scrollbar_bb.Min.y, scrollbar_bb.Max.y - grab_size_y_pixels, scroll_y_norm) + grab_size_y_pixels), grab_col);
             }
 
             // Render resize grip
