@@ -90,7 +90,6 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
     int vtx_offset = 0;
     for (int n = 0; n < cmd_lists_count; n++)
     {
-        // Render command list
         const ImDrawList* cmd_list = cmd_lists[n];
         for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
         {
@@ -184,7 +183,7 @@ bool    ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device)
     if (!QueryPerformanceCounter((LARGE_INTEGER *)&g_Time))
         return false;
 
-    // FIXME
+    // FIXME: resizing
     RECT rect;
     GetClientRect((HWND)hwnd, &rect);
     int display_w = (int)(rect.right - rect.left);

@@ -15,12 +15,18 @@
     <ClInclude Include="..\..\imgui.h">
       <Filter>imgui</Filter>
     </ClInclude>
+    <ClInclude Include="imgui_impl_dx11.h">
+      <Filter>sources</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\imgui.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_dx11.cpp">
       <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,7 +1,6 @@
 // ImGui - standalone example application for DirectX 9
 // TODO: Allow resizing the application window.
 
-#include <windows.h>
 #include <imgui.h>
 #include "imgui_impl_dx9.h"
 #include <d3dx9.h>
@@ -25,11 +24,9 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int main(int argc, char** argv)
 {
-    // Register the window class
+    // Create application window
     WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, LoadCursor(NULL, IDC_ARROW), NULL, NULL, L"ImGui Example", NULL };
     RegisterClassEx(&wc);
-
-    // Create the application's window
     HWND hwnd = CreateWindow(L"ImGui Example", L"ImGui DirectX9 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
 
     // Initialize Direct3D
@@ -60,7 +57,7 @@ int main(int argc, char** argv)
     ShowWindow(hwnd, SW_SHOWDEFAULT);
     UpdateWindow(hwnd);
 
-    // ImGui
+    // Setup ImGui binding
     ImGui_ImplDX9_Init(hwnd, pd3dDevice);
     //ImGuiIO& io = ImGui::GetIO();
     //ImFont* my_font1 = io.Fonts->AddFontDefault();
@@ -129,7 +126,6 @@ int main(int argc, char** argv)
     }
 
     ImGui_ImplDX9_Shutdown();
-
     if (pd3dDevice) pd3dDevice->Release();
     if (pD3D) pD3D->Release();
     UnregisterClass(L"ImGui Example", wc.hInstance);
