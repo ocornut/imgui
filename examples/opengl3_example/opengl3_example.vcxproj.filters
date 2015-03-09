@@ -8,6 +8,9 @@
       <UniqueIdentifier>{f18ab499-84e1-499f-8eff-9754361e0e52}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="gl3w">
+      <UniqueIdentifier>{42f99867-3108-43b8-99d0-fabefaf1f2e3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -16,11 +19,11 @@
     <ClCompile Include="..\..\imgui.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\opengl_example\gl3w\GL\gl3w.c">
-      <Filter>sources</Filter>
-    </ClCompile>
     <ClCompile Include="imgui_impl_glfw_gl3.cpp">
       <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="gl3w\GL\gl3w.c">
+      <Filter>gl3w</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -32,6 +35,12 @@
     </ClInclude>
     <ClInclude Include="imgui_impl_glfw_gl3.h">
       <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="gl3w\GL\gl3w.h">
+      <Filter>gl3w</Filter>
+    </ClInclude>
+    <ClInclude Include="gl3w\GL\glcorearb.h">
+      <Filter>gl3w</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
