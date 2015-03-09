@@ -3,7 +3,7 @@
 
 struct IDirect3DDevice9;
 
-bool        ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device, bool install_callbacks);
+bool        ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device);
 void        ImGui_ImplDX9_InitFontsTexture();
 void        ImGui_ImplDX9_Shutdown();
 void        ImGui_ImplDX9_NewFrame();

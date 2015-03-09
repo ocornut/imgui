@@ -176,7 +176,7 @@ void ImGui_ImplDX9_InitFontsTexture()
     g_FontTextureLoaded = true;
 }
 
-bool    ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device, bool install_callbacks)
+bool    ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device)
 {
     g_pd3dDevice = device;
     if (!QueryPerformanceFrequency((LARGE_INTEGER *)&g_TicksPerSecond)) 

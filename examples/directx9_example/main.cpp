@@ -61,7 +61,7 @@ int main(int argc, char** argv)
     UpdateWindow(hwnd);
 
     // ImGui
-    ImGui_ImplDX9_Init(hwnd, pd3dDevice, true);
+    ImGui_ImplDX9_Init(hwnd, pd3dDevice);
     //ImGuiIO& io = ImGui::GetIO();
     //ImFont* my_font1 = io.Fonts->AddFontDefault();
     //ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("extra_fonts/Karla-Regular.ttf", 15.0f);
