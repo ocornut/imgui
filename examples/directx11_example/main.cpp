@@ -1,5 +1,4 @@
 // ImGui - standalone example application for DirectX 11
-// TODO: Allow resizing the application window.
 
 #include <imgui.h>
 #include "imgui_impl_dx11.h"
@@ -14,7 +13,29 @@ static ID3D11DeviceContext*     g_pd3dDeviceContext = NULL;
 static IDXGISwapChain*          g_pSwapChain = NULL;
 static ID3D11RenderTargetView*  g_mainRenderTargetView = NULL;
 
-HRESULT InitDeviceD3D(HWND hWnd)
+void CreateRenderTarget()
+{
+    DXGI_SWAP_CHAIN_DESC sd;
+    g_pSwapChain->GetDesc(&sd);
+
+    // Create the render target
+    ID3D11Texture2D* pBackBuffer;               
+    D3D11_RENDER_TARGET_VIEW_DESC render_target_view_desc;
+    ZeroMemory(&render_target_view_desc, sizeof(render_target_view_desc));
+    render_target_view_desc.Format = sd.BufferDesc.Format;
+    render_target_view_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+    g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
+    g_pd3dDevice->CreateRenderTargetView(pBackBuffer, &render_target_view_desc, &g_mainRenderTargetView);
+    g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, NULL);
+    pBackBuffer->Release();
+}
+
+void CleanupRenderTarget()
+{
+    if (g_mainRenderTargetView) { g_mainRenderTargetView->Release(); g_mainRenderTargetView = NULL; }
+}
+
+HRESULT CreateDeviceD3D(HWND hWnd)
 {
     // Setup swap chain
     DXGI_SWAP_CHAIN_DESC sd;
@@ -65,28 +86,17 @@ HRESULT InitDeviceD3D(HWND hWnd)
         pRState->Release();
     }
 
-    // Create the render target
-    {
-        ID3D11Texture2D* pBackBuffer;               
-        D3D11_RENDER_TARGET_VIEW_DESC render_target_view_desc;
-        ZeroMemory(&render_target_view_desc, sizeof(render_target_view_desc));
-        render_target_view_desc.Format = sd.BufferDesc.Format;
-        render_target_view_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-        g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
-        g_pd3dDevice->CreateRenderTargetView(pBackBuffer, &render_target_view_desc, &g_mainRenderTargetView);
-        g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, NULL);
-        pBackBuffer->Release();
-    }
+    CreateRenderTarget();
 
     return S_OK;
 }
 
 void CleanupDeviceD3D()
 {
-    if (g_mainRenderTargetView) g_mainRenderTargetView->Release();
-    if (g_pSwapChain) g_pSwapChain->Release();
-    if (g_pd3dDeviceContext) g_pd3dDeviceContext->Release();
-    if (g_pd3dDevice) g_pd3dDevice->Release();
+    CleanupRenderTarget();
+    if (g_pSwapChain) { g_pSwapChain->Release(); g_pSwapChain = NULL; }
+    if (g_pd3dDeviceContext) { g_pd3dDeviceContext->Release(); g_pd3dDeviceContext = NULL; }
+    if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = NULL; }
 }
 
 extern LRESULT ImGui_ImplDX11_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -97,6 +107,16 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     switch (msg)
     {
+    case WM_SIZE:
+        if (g_pd3dDevice != NULL && wParam != SIZE_MINIMIZED)
+        {
+            ImGui_ImplDX11_InvalidateDeviceObjects();
+            CleanupRenderTarget();
+            g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), DXGI_FORMAT_UNKNOWN, 0);
+            CreateRenderTarget();
+            ImGui_ImplDX11_CreateDeviceObjects();
+        }
+        return 0;
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
@@ -112,7 +132,7 @@ int main(int argc, char** argv)
     HWND hwnd = CreateWindow(L"ImGui Example", L"ImGui DirectX11 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
 
     // Initialize Direct3D
-    if (InitDeviceD3D(hwnd) < 0)
+    if (CreateDeviceD3D(hwnd) < 0)
     {
         CleanupDeviceD3D();
         UnregisterClass(L"ImGui Example", wc.hInstance);
@@ -131,7 +151,6 @@ int main(int argc, char** argv)
     //ImFont* my_font3 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyClean.ttf", 13.0f); my_font3->DisplayOffset.y += 1;
     //ImFont* my_font4 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyTiny.ttf", 10.0f); my_font4->DisplayOffset.y += 1;
     //ImFont* my_font5 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, io.Fonts->GetGlyphRangesJapanese());
-    ImGui_ImplDX11_InitFontsTexture();
 
     bool show_test_window = true;
     bool show_another_window = false;

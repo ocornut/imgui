@@ -13,7 +13,6 @@
 // Data
 static INT64                    g_Time = 0;
 static INT64                    g_TicksPerSecond = 0;
-static bool                     g_FontTextureLoaded = false;
 
 static HWND                     g_hWnd = 0;
 static ID3D11Device*            g_pd3dDevice = NULL;
@@ -26,6 +25,7 @@ static ID3D11Buffer*            g_pVertexConstantBuffer = NULL;
 static ID3D10Blob *             g_pPixelShaderBlob = NULL;
 static ID3D11PixelShader*       g_pPixelShader = NULL;
 static ID3D11SamplerState*      g_pFontSampler = NULL;
+static ID3D11ShaderResourceView*g_pFontTextureView = NULL;
 static ID3D11BlendState*        g_blendState = NULL;
 
 struct CUSTOMVERTEX
@@ -180,7 +180,7 @@ LRESULT ImGui_ImplDX11_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
     return 0;
 }
 
-void ImGui_ImplDX11_InitFontsTexture()
+static void ImGui_ImplDX11_InitFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
 
@@ -190,55 +190,63 @@ void ImGui_ImplDX11_InitFontsTexture()
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
     // Create DX11 texture
-    D3D11_TEXTURE2D_DESC texDesc;
-    ZeroMemory(&texDesc, sizeof(texDesc));
-    texDesc.Width = width;
-    texDesc.Height = height;
-    texDesc.MipLevels = 1;
-    texDesc.ArraySize = 1;
-    texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    texDesc.SampleDesc.Count = 1;
-    texDesc.Usage = D3D11_USAGE_DEFAULT;
-    texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    texDesc.CPUAccessFlags = 0;
+    {
+        D3D11_TEXTURE2D_DESC texDesc;
+        ZeroMemory(&texDesc, sizeof(texDesc));
+        texDesc.Width = width;
+        texDesc.Height = height;
+        texDesc.MipLevels = 1;
+        texDesc.ArraySize = 1;
+        texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        texDesc.SampleDesc.Count = 1;
+        texDesc.Usage = D3D11_USAGE_DEFAULT;
+        texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        texDesc.CPUAccessFlags = 0;
 
-    ID3D11Texture2D *pTexture = NULL;
-    D3D11_SUBRESOURCE_DATA subResource;
-    subResource.pSysMem = pixels;
-    subResource.SysMemPitch = texDesc.Width * 4;
-    subResource.SysMemSlicePitch = 0;
-    g_pd3dDevice->CreateTexture2D(&texDesc, &subResource, &pTexture);
+        ID3D11Texture2D *pTexture = NULL;
+        D3D11_SUBRESOURCE_DATA subResource;
+        subResource.pSysMem = pixels;
+        subResource.SysMemPitch = texDesc.Width * 4;
+        subResource.SysMemSlicePitch = 0;
+        g_pd3dDevice->CreateTexture2D(&texDesc, &subResource, &pTexture);
 
-    // Create texture view
-    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-    ZeroMemory(&srvDesc, sizeof(srvDesc));
-    srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    srvDesc.Texture2D.MipLevels = texDesc.MipLevels;
-    srvDesc.Texture2D.MostDetailedMip = 0;
-    ID3D11ShaderResourceView* font_texture_view = NULL;
-    g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &font_texture_view);
-    pTexture->Release();
+        // Create texture view
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+        ZeroMemory(&srvDesc, sizeof(srvDesc));
+        srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MipLevels = texDesc.MipLevels;
+        srvDesc.Texture2D.MostDetailedMip = 0;
+        g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &g_pFontTextureView);
+        pTexture->Release();
+    }
 
     // Store our identifier
-    io.Fonts->TexID = (void *)font_texture_view;
+    io.Fonts->TexID = (void *)g_pFontTextureView;
 
     // Create texture sampler
-    D3D11_SAMPLER_DESC samplerDesc;
-    ZeroMemory(&samplerDesc, sizeof(samplerDesc));
-    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-    samplerDesc.MipLODBias = 0.f;
-    samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-    samplerDesc.MinLOD = 0.f;
-    samplerDesc.MaxLOD = 0.f;
-    g_pd3dDevice->CreateSamplerState(&samplerDesc, &g_pFontSampler);
+    {
+        D3D11_SAMPLER_DESC samplerDesc;
+        ZeroMemory(&samplerDesc, sizeof(samplerDesc));
+        samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+        samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+        samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+        samplerDesc.MipLODBias = 0.f;
+        samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+        samplerDesc.MinLOD = 0.f;
+        samplerDesc.MaxLOD = 0.f;
+        g_pd3dDevice->CreateSamplerState(&samplerDesc, &g_pFontSampler);
+    }
 }
 
-static bool InitDirect3DState()
+bool    ImGui_ImplDX11_CreateDeviceObjects()
 {
+    if (!g_pd3dDevice)
+        return false;
+    if (g_pVB)
+        ImGui_ImplDX11_InvalidateDeviceObjects();
+
     // Create the vertex shader
     {
         static const char* vertexShader = 
@@ -351,7 +359,27 @@ static bool InitDirect3DState()
             return false;
     }
 
+    ImGui_ImplDX11_InitFontsTexture();
+
     return true;
+}
+
+void    ImGui_ImplDX11_InvalidateDeviceObjects()
+{
+    if (!g_pd3dDevice)
+        return;
+
+    if (g_pFontSampler) { g_pFontSampler->Release(); g_pFontSampler = NULL; }
+    if (g_pFontTextureView) { g_pFontTextureView->Release(); ImGui::GetIO().Fonts->TexID = 0; }
+    if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
+
+    if (g_blendState) { g_blendState->Release(); g_blendState = NULL; }
+    if (g_pPixelShader) { g_pPixelShader->Release(); g_pPixelShader = NULL; }
+    if (g_pPixelShaderBlob) { g_pPixelShaderBlob->Release(); g_pPixelShaderBlob = NULL; }
+    if (g_pVertexConstantBuffer) { g_pVertexConstantBuffer->Release(); g_pVertexConstantBuffer = NULL; }
+    if (g_pInputLayout) { g_pInputLayout->Release(); g_pInputLayout = NULL; }
+    if (g_pVertexShader) { g_pVertexShader->Release(); g_pVertexShader = NULL; }
+    if (g_pVertexShaderBlob) { g_pVertexShaderBlob->Release(); g_pVertexShaderBlob = NULL; }
 }
 
 bool    ImGui_ImplDX11_Init(void* hwnd, ID3D11Device* device, ID3D11DeviceContext* device_context)
@@ -359,12 +387,6 @@ bool    ImGui_ImplDX11_Init(void* hwnd, ID3D11Device* device, ID3D11DeviceContex
     g_hWnd = (HWND)hwnd;
     g_pd3dDevice = device;
     g_pd3dDeviceContext = device_context;
-
-    if (!InitDirect3DState())
-    {
-        IM_ASSERT(0);
-        return false;
-    }
 
     if (!QueryPerformanceFrequency((LARGE_INTEGER *)&g_TicksPerSecond)) 
         return false;
@@ -398,28 +420,17 @@ bool    ImGui_ImplDX11_Init(void* hwnd, ID3D11Device* device, ID3D11DeviceContex
 
 void ImGui_ImplDX11_Shutdown()
 {
-    if (g_pd3dDeviceContext) g_pd3dDeviceContext->ClearState();
-
-    if (g_pFontSampler) g_pFontSampler->Release();
-    if (ID3D11ShaderResourceView* font_texture_view = (ID3D11ShaderResourceView*)ImGui::GetIO().Fonts->TexID)
-        font_texture_view->Release();
-    if (g_pVB) g_pVB->Release();
-
-    if (g_blendState) g_blendState->Release(); 
-    if (g_pPixelShader) g_pPixelShader->Release();
-    if (g_pPixelShaderBlob) g_pPixelShaderBlob->Release();
-    if (g_pVertexConstantBuffer) g_pVertexConstantBuffer->Release();
-    if (g_pInputLayout) g_pInputLayout->Release();
-    if (g_pVertexShader) g_pVertexShader->Release();
-    if (g_pVertexShaderBlob) g_pVertexShaderBlob->Release();
-
+    ImGui_ImplDX11_InvalidateDeviceObjects();
     ImGui::Shutdown();
+    g_pd3dDevice = NULL;
+    g_pd3dDeviceContext = NULL;
+    g_hWnd = (HWND)0;
 }
 
 void ImGui_ImplDX11_NewFrame()
 {
-    if (!g_FontTextureLoaded)
-        ImGui_ImplDX11_InitFontsTexture();
+    if (!g_pVB)
+        ImGui_ImplDX11_CreateDeviceObjects();
 
     ImGuiIO& io = ImGui::GetIO();
 
