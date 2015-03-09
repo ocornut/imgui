@@ -19,6 +19,9 @@
     <ClCompile Include="..\opengl_example\gl3w\GL\gl3w.c">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="imgui_impl_glfw_gl3.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\imconfig.h">
@@ -26,6 +29,9 @@
     </ClInclude>
     <ClInclude Include="..\..\imgui.h">
       <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_glfw_gl3.h">
+      <Filter>sources</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

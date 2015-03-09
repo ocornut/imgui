@@ -1,4 +1,4 @@
-// ImGui GLFW bindings
+// ImGui GLFW binding with OpenGL
 // https://github.com/ocornut/imgui
 
 #include <imgui.h>
@@ -15,8 +15,9 @@
 
 static GLFWwindow*  GWindow = NULL;
 static bool         GMousePressed[3] = { false, false, false };
+static float        GMouseWheel = 0.0f;
 static double       GTime = 0.0f;
-static bool         GFontTextureLoaded;
+static bool         GFontTextureLoaded = false;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
@@ -102,8 +103,7 @@ void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int acti
 
 void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    ImGuiIO& io = ImGui::GetIO();
-    io.MouseWheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
+    GMouseWheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
 }
 
 void ImGui_ImplGlFw_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -230,6 +230,9 @@ void ImGui_ImplGlfw_NewFrame()
     GMousePressed[0] = false;
     GMousePressed[1] = false;
     GMousePressed[2] = false;
+
+    io.MouseWheel = GMouseWheel;
+    GMouseWheel = 0.0f;
 
     // Start the frame
     ImGui::NewFrame();

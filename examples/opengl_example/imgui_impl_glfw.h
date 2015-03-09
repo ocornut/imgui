@@ -1,4 +1,4 @@
-// ImGui GLFW bindings
+// ImGui GLFW binding with OpenGL
 // https://github.com/ocornut/imgui
 
 struct GLFWwindow;
