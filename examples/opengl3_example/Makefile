@@ -10,7 +10,7 @@
 
 #CXX = g++
 
-OBJS = main.o
+OBJS = main.o imgui_impl_glfw_gl3.o
 OBJS += ../../imgui.o
 OBJS += ../opengl_example/gl3w/GL/gl3w.o
 
