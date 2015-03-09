@@ -233,9 +233,8 @@ static void InitGL()
 
 bool    ImGui_ImplGlfwGL3_Init(GLFWwindow* window, bool install_callbacks)
 {
-    InitGL();
-
     g_Window = window;
+    InitGL();
 
     ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                 // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
@@ -292,7 +291,7 @@ void ImGui_ImplGlfwGL3_Shutdown()
     glDeleteProgram(g_ShaderHandle);
     g_ShaderHandle = 0;
 
-    if (GLuint tex_id = (GLuint)ImGui::GetIO().Fonts->TexID)
+    if (GLuint tex_id = (GLuint)(intptr_t)ImGui::GetIO().Fonts->TexID)
     {
         glDeleteTextures(1, &tex_id);
         ImGui::GetIO().Fonts->TexID = 0;
