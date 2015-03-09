@@ -13,11 +13,11 @@
 #include <GLFW/glfw3native.h>
 #endif
 
-static GLFWwindow*  GWindow = NULL;
-static bool         GMousePressed[3] = { false, false, false };
-static float        GMouseWheel = 0.0f;
-static double       GTime = 0.0f;
-static bool         GFontTextureLoaded = false;
+static GLFWwindow*  g_window = NULL;
+static bool         g_mouse_pressed[3] = { false, false, false };
+static float        g_mouse_wheel = 0.0f;
+static double       g_time = 0.0f;
+static bool         g_font_texture_loaded = false;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
@@ -87,23 +87,23 @@ static void ImGui_ImplGlfw_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
 
 static const char* ImGui_ImplGlfw_GetClipboardText()
 {
-    return glfwGetClipboardString(GWindow);
+    return glfwGetClipboardString(g_window);
 }
 
 static void ImGui_ImplGlfw_SetClipboardText(const char* text)
 {
-    glfwSetClipboardString(GWindow, text);
+    glfwSetClipboardString(g_window, text);
 }
 
 void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
     if (action == GLFW_PRESS && button >= 0 && button < 3)
-        GMousePressed[button] = true;
+        g_mouse_pressed[button] = true;
 }
 
 void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    GMouseWheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
+    g_mouse_wheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
 }
 
 void ImGui_ImplGlFw_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -142,12 +142,12 @@ void ImGui_ImplGlfw_LoadFontsTexture()
     // Store our identifier
     io.Fonts->TexID = (void *)(intptr_t)tex_id;
 
-    GFontTextureLoaded = true;
+    g_font_texture_loaded = true;
 }
 
 bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
 {
-    GWindow = window;
+    g_window = window;
 
     ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                 // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
@@ -172,7 +172,7 @@ bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
     io.SetClipboardTextFn = ImGui_ImplGlfw_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplGlfw_GetClipboardText;
 #ifdef _MSC_VER
-    io.ImeWindowHandle = glfwGetWin32Window(GWindow);
+    io.ImeWindowHandle = glfwGetWin32Window(g_window);
 #endif
 
     if (install_callbacks)
@@ -199,7 +199,7 @@ void ImGui_ImplGlfw_Shutdown()
 
 void ImGui_ImplGlfw_NewFrame()
 {
-    if (!GFontTextureLoaded)
+    if (!g_font_texture_loaded)
         ImGui_ImplGlfw_LoadFontsTexture();
 
     ImGuiIO& io = ImGui::GetIO();
@@ -207,32 +207,32 @@ void ImGui_ImplGlfw_NewFrame()
     // Setup display size (every frame to accommodate for window resizing)
     int w, h;
     int display_w, display_h;
-    glfwGetWindowSize(GWindow, &w, &h);
-    glfwGetFramebufferSize(GWindow, &display_w, &display_h);
+    glfwGetWindowSize(g_window, &w, &h);
+    glfwGetFramebufferSize(g_window, &display_w, &display_h);
     io.DisplaySize = ImVec2((float)display_w, (float)display_h);
 
     // Setup time step
     double current_time =  glfwGetTime();
-    io.DeltaTime = GTime > 0.0 ? (float)(current_time - GTime) : (float)(1.0f/60.0f);
-    GTime = current_time;
+    io.DeltaTime = g_time > 0.0 ? (float)(current_time - g_time) : (float)(1.0f/60.0f);
+    g_time = current_time;
 
     // Setup inputs
     // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
     double mouse_x, mouse_y;
-    glfwGetCursorPos(GWindow, &mouse_x, &mouse_y);
+    glfwGetCursorPos(g_window, &mouse_x, &mouse_y);
     mouse_x *= (float)display_w / w;                                                                    // Convert mouse coordinates to pixels
     mouse_y *= (float)display_h / h;
     io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);                                               // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
 
-    io.MouseDown[0] = GMousePressed[0] || glfwGetMouseButton(GWindow, GLFW_MOUSE_BUTTON_LEFT) != 0;     // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-    io.MouseDown[1] = GMousePressed[1] || glfwGetMouseButton(GWindow, GLFW_MOUSE_BUTTON_RIGHT) != 0;
-    io.MouseDown[2] = GMousePressed[2] || glfwGetMouseButton(GWindow, GLFW_MOUSE_BUTTON_MIDDLE) != 0;
-    GMousePressed[0] = false;
-    GMousePressed[1] = false;
-    GMousePressed[2] = false;
+    io.MouseDown[0] = g_mouse_pressed[0] || glfwGetMouseButton(g_window, GLFW_MOUSE_BUTTON_LEFT) != 0;     // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+    io.MouseDown[1] = g_mouse_pressed[1] || glfwGetMouseButton(g_window, GLFW_MOUSE_BUTTON_RIGHT) != 0;
+    io.MouseDown[2] = g_mouse_pressed[2] || glfwGetMouseButton(g_window, GLFW_MOUSE_BUTTON_MIDDLE) != 0;
+    g_mouse_pressed[0] = false;
+    g_mouse_pressed[1] = false;
+    g_mouse_pressed[2] = false;
 
-    io.MouseWheel = GMouseWheel;
-    GMouseWheel = 0.0f;
+    io.MouseWheel = g_mouse_wheel;
+    g_mouse_wheel = 0.0f;
 
     // Start the frame
     ImGui::NewFrame();
