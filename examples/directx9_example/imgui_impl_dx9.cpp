@@ -10,6 +10,7 @@
 #include <dinput.h>
 
 // Data
+static HWND                     g_hWnd = 0;
 static INT64                    g_Time = 0;
 static INT64                    g_TicksPerSecond = 0;
 static bool                     g_FontTextureLoaded = false;
@@ -177,20 +178,15 @@ void ImGui_ImplDX9_InitFontsTexture()
 
 bool    ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device)
 {
+    g_hWnd = (HWND)hwnd;
     g_pd3dDevice = device;
+
     if (!QueryPerformanceFrequency((LARGE_INTEGER *)&g_TicksPerSecond)) 
         return false;
     if (!QueryPerformanceCounter((LARGE_INTEGER *)&g_Time))
         return false;
 
-    // FIXME: resizing
-    RECT rect;
-    GetClientRect((HWND)hwnd, &rect);
-    int display_w = (int)(rect.right - rect.left);
-    int display_h = (int)(rect.bottom - rect.top);
-
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)display_w, (float)display_h);   // Display size, in pixels. For clamping windows positions.
     io.KeyMap[ImGuiKey_Tab] = VK_TAB;                              // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
     io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
@@ -210,17 +206,18 @@ bool    ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device)
     io.KeyMap[ImGuiKey_Z] = 'Z';
 
     io.RenderDrawListsFn = ImGui_ImplDX9_RenderDrawLists;
-    io.ImeWindowHandle = hwnd;
+    io.ImeWindowHandle = g_hWnd;
 
-    // Create the vertex buffer
     if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
         return false;
 
     return true;
 }
 
-void ImGui_ImplDX9_Shutdown()
+void ImGui_ImplDX9_InvalidateDeviceObjects()
 {
+    if (!g_pd3dDevice)
+        return;
     if (g_pVB)
     {
         g_pVB->Release();
@@ -231,8 +228,24 @@ void ImGui_ImplDX9_Shutdown()
         tex->Release();
         ImGui::GetIO().Fonts->TexID = 0;
     }
+}
 
+void ImGui_ImplDX9_CreateDeviceObjects()
+{
+    if (!g_pd3dDevice)
+        return;
+    if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
+        return;
+
+    ImGui_ImplDX9_InitFontsTexture();
+}
+
+void ImGui_ImplDX9_Shutdown()
+{
+    ImGui_ImplDX9_InvalidateDeviceObjects();
     ImGui::Shutdown();
+    g_pd3dDevice = NULL;
+    g_hWnd = 0;
 }
 
 void ImGui_ImplDX9_NewFrame()
@@ -241,6 +254,11 @@ void ImGui_ImplDX9_NewFrame()
         ImGui_ImplDX9_InitFontsTexture();
 
     ImGuiIO& io = ImGui::GetIO();
+
+    // Setup display size (every frame to accommodate for window resizing)
+    RECT rect;
+    GetClientRect(g_hWnd, &rect);
+    io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
 
     // Setup time step
     INT64 current_time;

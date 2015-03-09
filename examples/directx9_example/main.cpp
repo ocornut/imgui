@@ -1,11 +1,14 @@
 // ImGui - standalone example application for DirectX 9
-// TODO: Allow resizing the application window.
 
 #include <imgui.h>
 #include "imgui_impl_dx9.h"
 #include <d3dx9.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
+
+// Data
+static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
+static D3DPRESENT_PARAMETERS    g_d3dpp;
 
 extern LRESULT ImGui_ImplDX9_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -15,6 +18,18 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     switch (msg)
     {
+    case WM_SIZE:
+        if (g_pd3dDevice != NULL && wParam != SIZE_MINIMIZED)
+        {
+            ImGui_ImplDX9_InvalidateDeviceObjects();
+            g_d3dpp.BackBufferWidth  = LOWORD(lParam);
+            g_d3dpp.BackBufferHeight = HIWORD(lParam);
+            HRESULT hr = g_pd3dDevice->Reset(&g_d3dpp);
+            if (hr == D3DERR_INVALIDCALL)
+                IM_ASSERT(0);
+            ImGui_ImplDX9_CreateDeviceObjects();
+        }
+        return 0;
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
@@ -36,29 +51,24 @@ int main(int argc, char** argv)
         UnregisterClass(L"ImGui Example", wc.hInstance);
         return 0;
     }
-    D3DPRESENT_PARAMETERS d3dpp;
-    ZeroMemory(&d3dpp, sizeof(d3dpp));
-    d3dpp.Windowed = TRUE;
-    d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
-    d3dpp.EnableAutoDepthStencil = TRUE;
-    d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
-    d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+    ZeroMemory(&g_d3dpp, sizeof(g_d3dpp));
+    g_d3dpp.Windowed = TRUE;
+    g_d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+    g_d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
+    g_d3dpp.EnableAutoDepthStencil = TRUE;
+    g_d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
+    g_d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
 
     // Create the D3DDevice
-    LPDIRECT3DDEVICE9 pd3dDevice = NULL;
-    if (pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hwnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &d3dpp, &pd3dDevice) < 0)
+    if (pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hwnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &g_d3dpp, &g_pd3dDevice) < 0)
     {
         pD3D->Release();
         UnregisterClass(L"ImGui Example", wc.hInstance);
         return 0;
     }
 
-    ShowWindow(hwnd, SW_SHOWDEFAULT);
-    UpdateWindow(hwnd);
-
     // Setup ImGui binding
-    ImGui_ImplDX9_Init(hwnd, pd3dDevice);
+    ImGui_ImplDX9_Init(hwnd, g_pd3dDevice);
     //ImGuiIO& io = ImGui::GetIO();
     //ImFont* my_font1 = io.Fonts->AddFontDefault();
     //ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("extra_fonts/Karla-Regular.ttf", 15.0f);
@@ -66,6 +76,9 @@ int main(int argc, char** argv)
     //ImFont* my_font4 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyTiny.ttf", 10.0f); my_font4->DisplayOffset.y += 1;
     //ImFont* my_font5 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, io.Fonts->GetGlyphRangesJapanese());
     ImGui_ImplDX9_InitFontsTexture();
+
+    ShowWindow(hwnd, SW_SHOWDEFAULT);
+    UpdateWindow(hwnd);
 
     bool show_test_window = true;
     bool show_another_window = false;
@@ -112,21 +125,21 @@ int main(int argc, char** argv)
         }
 
         // Rendering
-        pd3dDevice->SetRenderState(D3DRS_ZENABLE, false);
-        pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
-        pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
+        g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, false);
+        g_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
+        g_pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
         D3DCOLOR clear_col_dx = D3DCOLOR_RGBA((int)(clear_col.x*255.0f), (int)(clear_col.y*255.0f), (int)(clear_col.z*255.0f), (int)(clear_col.w*255.0f));
-        pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, clear_col_dx, 1.0f, 0);
-        if (pd3dDevice->BeginScene() >= 0)
+        g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, clear_col_dx, 1.0f, 0);
+        if (g_pd3dDevice->BeginScene() >= 0)
         {
             ImGui::Render();
-            pd3dDevice->EndScene();
+            g_pd3dDevice->EndScene();
         }
-        pd3dDevice->Present(NULL, NULL, NULL, NULL);
+        g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
     }
 
     ImGui_ImplDX9_Shutdown();
-    if (pd3dDevice) pd3dDevice->Release();
+    if (g_pd3dDevice) g_pd3dDevice->Release();
     if (pD3D) pD3D->Release();
     UnregisterClass(L"ImGui Example", wc.hInstance);
 

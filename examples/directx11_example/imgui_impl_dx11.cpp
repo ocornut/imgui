@@ -15,6 +15,7 @@ static INT64                    g_Time = 0;
 static INT64                    g_TicksPerSecond = 0;
 static bool                     g_FontTextureLoaded = false;
 
+static HWND                     g_hWnd = 0;
 static ID3D11Device*            g_pd3dDevice = NULL;
 static ID3D11DeviceContext*     g_pd3dDeviceContext = NULL;
 static ID3D11Buffer*            g_pVB = NULL;
@@ -355,6 +356,7 @@ static bool InitDirect3DState()
 
 bool    ImGui_ImplDX11_Init(void* hwnd, ID3D11Device* device, ID3D11DeviceContext* device_context)
 {
+    g_hWnd = (HWND)hwnd;
     g_pd3dDevice = device;
     g_pd3dDeviceContext = device_context;
 
@@ -369,14 +371,7 @@ bool    ImGui_ImplDX11_Init(void* hwnd, ID3D11Device* device, ID3D11DeviceContex
     if (!QueryPerformanceCounter((LARGE_INTEGER *)&g_Time))
         return false;
 
-    // FIXME: resizing
-    RECT rect;
-    GetClientRect((HWND)hwnd, &rect);
-    int display_w = (int)(rect.right - rect.left);
-    int display_h = (int)(rect.bottom - rect.top);
-
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)display_w, (float)display_h);   // Display size, in pixels. For clamping windows positions.
     io.KeyMap[ImGuiKey_Tab] = VK_TAB;                              // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
     io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
@@ -396,7 +391,7 @@ bool    ImGui_ImplDX11_Init(void* hwnd, ID3D11Device* device, ID3D11DeviceContex
     io.KeyMap[ImGuiKey_Z] = 'Z';
 
     io.RenderDrawListsFn = ImGui_ImplDX11_RenderDrawLists;
-    io.ImeWindowHandle = hwnd;
+    io.ImeWindowHandle = g_hWnd;
 
     return true;
 }
@@ -427,6 +422,11 @@ void ImGui_ImplDX11_NewFrame()
         ImGui_ImplDX11_InitFontsTexture();
 
     ImGuiIO& io = ImGui::GetIO();
+
+    // Setup display size (every frame to accommodate for window resizing)
+    RECT rect;
+    GetClientRect(g_hWnd, &rect);
+    io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
 
     // Setup time step
     INT64 current_time;
