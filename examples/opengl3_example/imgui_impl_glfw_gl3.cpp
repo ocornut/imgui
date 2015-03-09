@@ -91,9 +91,16 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
         const ImDrawCmd* pcmd_end = cmd_list->commands.end();
         for (const ImDrawCmd* pcmd = cmd_list->commands.begin(); pcmd != pcmd_end; pcmd++)
         {
-            glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->texture_id);
-            glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
-            glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
+            if (pcmd->user_callback)
+            {
+                pcmd->user_callback(cmd_list, pcmd);
+            }
+            else
+            {
+                glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->texture_id);
+                glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
+                glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
+            }
             vtx_offset += pcmd->vtx_count;
         }
         cmd_offset = vtx_offset;
@@ -323,16 +330,15 @@ void ImGui_ImplGlfwGL3_NewFrame()
     // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
     double mouse_x, mouse_y;
     glfwGetCursorPos(g_Window, &mouse_x, &mouse_y);
-    mouse_x *= (float)display_w / w;                                                                    // Convert mouse coordinates to pixels
+    mouse_x *= (float)display_w / w;                                                    // Convert mouse coordinates to pixels
     mouse_y *= (float)display_h / h;
-    io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);                                               // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+    io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);                               // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
 
-    io.MouseDown[0] = g_MousePressed[0] || glfwGetMouseButton(g_Window, GLFW_MOUSE_BUTTON_LEFT) != 0;     // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-    io.MouseDown[1] = g_MousePressed[1] || glfwGetMouseButton(g_Window, GLFW_MOUSE_BUTTON_RIGHT) != 0;
-    io.MouseDown[2] = g_MousePressed[2] || glfwGetMouseButton(g_Window, GLFW_MOUSE_BUTTON_MIDDLE) != 0;
-    g_MousePressed[0] = false;
-    g_MousePressed[1] = false;
-    g_MousePressed[2] = false;
+    for (int i = 0; i < 3; i++)
+    {
+        io.MouseDown[i] = g_MousePressed[i] || glfwGetMouseButton(g_Window, i) != 0;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+        g_MousePressed[i] = false;
+    }
 
     io.MouseWheel = g_MouseWheel;
     g_MouseWheel = 0.0f;
