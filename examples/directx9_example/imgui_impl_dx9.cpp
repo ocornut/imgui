@@ -13,7 +13,6 @@
 static HWND                     g_hWnd = 0;
 static INT64                    g_Time = 0;
 static INT64                    g_TicksPerSecond = 0;
-static bool                     g_FontTextureLoaded = false;
 static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
 static LPDIRECT3DVERTEXBUFFER9  g_pVB = NULL;
 
@@ -145,37 +144,6 @@ LRESULT ImGui_ImplDX9_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM 
     return 0;
 }
 
-void ImGui_ImplDX9_InitFontsTexture()
-{
-    ImGuiIO& io = ImGui::GetIO();
-
-    // Build
-    unsigned char* pixels;
-    int width, height, bytes_per_pixel;
-    io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height, &bytes_per_pixel);
-
-    // Create DX9 texture
-    LPDIRECT3DTEXTURE9 pTexture = NULL;
-    if (D3DXCreateTexture(g_pd3dDevice, width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &pTexture) < 0)
-    {
-        IM_ASSERT(0);
-        return;
-    }
-    D3DLOCKED_RECT tex_locked_rect;
-    if (pTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK) 
-    {	
-        IM_ASSERT(0); 
-        return; 
-    }
-    for (int y = 0; y < height; y++)
-        memcpy((unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
-    pTexture->UnlockRect(0);
-
-    // Store our identifier
-    io.Fonts->TexID = (void *)pTexture;
-    g_FontTextureLoaded = true;
-}
-
 bool    ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device)
 {
     g_hWnd = (HWND)hwnd;
@@ -214,6 +182,56 @@ bool    ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device)
     return true;
 }
 
+void ImGui_ImplDX9_Shutdown()
+{
+    ImGui_ImplDX9_InvalidateDeviceObjects();
+    ImGui::Shutdown();
+    g_pd3dDevice = NULL;
+    g_hWnd = 0;
+}
+
+static void ImGui_ImplDX9_CreateFontsTexture()
+{
+    ImGuiIO& io = ImGui::GetIO();
+
+    // Build
+    unsigned char* pixels;
+    int width, height, bytes_per_pixel;
+    io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height, &bytes_per_pixel);
+
+    // Create DX9 texture
+    LPDIRECT3DTEXTURE9 pTexture = NULL;
+    if (D3DXCreateTexture(g_pd3dDevice, width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &pTexture) < 0)
+    {
+        IM_ASSERT(0);
+        return;
+    }
+    D3DLOCKED_RECT tex_locked_rect;
+    if (pTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK) 
+    {	
+        IM_ASSERT(0); 
+        return; 
+    }
+    for (int y = 0; y < height; y++)
+        memcpy((unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
+    pTexture->UnlockRect(0);
+
+    // Store our identifier
+    io.Fonts->TexID = (void *)pTexture;
+}
+
+bool ImGui_ImplDX9_CreateDeviceObjects()
+{
+    if (!g_pd3dDevice)
+        return false;
+
+    if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
+        return false;
+
+    ImGui_ImplDX9_CreateFontsTexture();
+    return true;
+}
+
 void ImGui_ImplDX9_InvalidateDeviceObjects()
 {
     if (!g_pd3dDevice)
@@ -230,28 +248,10 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
     }
 }
 
-void ImGui_ImplDX9_CreateDeviceObjects()
-{
-    if (!g_pd3dDevice)
-        return;
-    if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
-        return;
-
-    ImGui_ImplDX9_InitFontsTexture();
-}
-
-void ImGui_ImplDX9_Shutdown()
-{
-    ImGui_ImplDX9_InvalidateDeviceObjects();
-    ImGui::Shutdown();
-    g_pd3dDevice = NULL;
-    g_hWnd = 0;
-}
-
 void ImGui_ImplDX9_NewFrame()
 {
-    if (!g_FontTextureLoaded)
-        ImGui_ImplDX9_InitFontsTexture();
+    if (!g_pVB)
+        ImGui_ImplDX9_CreateDeviceObjects();
 
     ImGuiIO& io = ImGui::GetIO();
 

@@ -180,7 +180,7 @@ LRESULT ImGui_ImplDX11_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
     return 0;
 }
 
-static void ImGui_ImplDX11_InitFontsTexture()
+static void ImGui_ImplDX11_CreateFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
 
@@ -359,7 +359,7 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
             return false;
     }
 
-    ImGui_ImplDX11_InitFontsTexture();
+    ImGui_ImplDX11_CreateFontsTexture();
 
     return true;
 }
