@@ -189,7 +189,7 @@ bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
 
 void ImGui_ImplGlfw_Shutdown()
 {
-    if (GLuint tex_id = (GLuint)ImGui::GetIO().Fonts->TexID)
+    if (GLuint tex_id = (GLuint)(intptr_t)ImGui::GetIO().Fonts->TexID)
     {
         glDeleteTextures(1, &tex_id);
         ImGui::GetIO().Fonts->TexID = 0;
