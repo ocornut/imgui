@@ -13,10 +13,11 @@
 #include <GLFW/glfw3native.h>
 #endif
 
+// Data
 static GLFWwindow*  g_Window = NULL;
+static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
 static float        g_MouseWheel = 0.0f;
-static double       g_Time = 0.0f;
 static bool         g_FontTextureLoaded = false;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
@@ -124,7 +125,7 @@ void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
         io.AddInputCharacter((unsigned short)c);
 }
 
-void ImGui_ImplGlfw_LoadFontsTexture()
+void ImGui_ImplGlfw_InitFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
 
@@ -188,8 +189,7 @@ bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
 
 void ImGui_ImplGlfw_Shutdown()
 {
-    GLuint tex_id = (GLuint)ImGui::GetIO().Fonts->TexID;
-    if (tex_id)
+    if (GLuint tex_id = (GLuint)ImGui::GetIO().Fonts->TexID)
     {
         glDeleteTextures(1, &tex_id);
         ImGui::GetIO().Fonts->TexID = 0;
@@ -200,7 +200,7 @@ void ImGui_ImplGlfw_Shutdown()
 void ImGui_ImplGlfw_NewFrame()
 {
     if (!g_FontTextureLoaded)
-        ImGui_ImplGlfw_LoadFontsTexture();
+        ImGui_ImplGlfw_InitFontsTexture();
 
     ImGuiIO& io = ImGui::GetIO();
 

@@ -4,8 +4,8 @@
 struct GLFWwindow;
 
 bool        ImGui_ImplGlfwGL3_Init(GLFWwindow* window, bool install_callbacks);
+void        ImGui_ImplGlfwGL3_InitFontsTexture();
 void        ImGui_ImplGlfwGL3_Shutdown();
-void        ImGui_ImplGlfwGL3_LoadFontsTexture();
 void        ImGui_ImplGlfwGL3_NewFrame();
 
 // GLFW callbacks (installed by default if you enable 'install_callbacks' during initialization)

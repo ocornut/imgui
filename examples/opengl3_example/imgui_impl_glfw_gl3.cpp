@@ -14,13 +14,12 @@
 #include <GLFW/glfw3native.h>
 #endif
 
+// Data
 static GLFWwindow*  g_Window = NULL;
+static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
 static float        g_MouseWheel = 0.0f;
-static double       g_Time = 0.0f;
 static bool         g_FontTextureLoaded = false;
-
-// Handles for OpenGL3 rendering
 static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
 static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
@@ -146,7 +145,7 @@ void ImGui_ImplGlfwGL3_CharCallback(GLFWwindow* window, unsigned int c)
         io.AddInputCharacter((unsigned short)c);
 }
 
-void ImGui_ImplGlfwGL3_LoadFontsTexture()
+void ImGui_ImplGlfwGL3_InitFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
 
@@ -293,8 +292,7 @@ void ImGui_ImplGlfwGL3_Shutdown()
     glDeleteProgram(g_ShaderHandle);
     g_ShaderHandle = 0;
 
-    GLuint tex_id = (GLuint)ImGui::GetIO().Fonts->TexID;
-    if (tex_id)
+    if (GLuint tex_id = (GLuint)ImGui::GetIO().Fonts->TexID)
     {
         glDeleteTextures(1, &tex_id);
         ImGui::GetIO().Fonts->TexID = 0;
@@ -305,7 +303,7 @@ void ImGui_ImplGlfwGL3_Shutdown()
 void ImGui_ImplGlfwGL3_NewFrame()
 {
     if (!g_FontTextureLoaded)
-        ImGui_ImplGlfwGL3_LoadFontsTexture();
+        ImGui_ImplGlfwGL3_InitFontsTexture();
 
     ImGuiIO& io = ImGui::GetIO();
 

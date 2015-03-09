@@ -12,13 +12,14 @@ static void error_callback(int error, const char* description)
 
 int main(int argc, char** argv)
 {
+    // Setup window
     glfwSetErrorCallback(error_callback);
     if (!glfwInit())
         exit(1);
-
     GLFWwindow* window = glfwCreateWindow(1280, 720, "ImGui OpenGL2 example", NULL, NULL);
     glfwMakeContextCurrent(window);
 
+    // Setup ImGui binding
     ImGui_ImplGlfw_Init(window, true);
     //ImGuiIO& io = ImGui::GetIO();
     //ImFont* my_font1 = io.Fonts->AddFontDefault();
@@ -26,12 +27,13 @@ int main(int argc, char** argv)
     //ImFont* my_font3 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyClean.ttf", 13.0f); my_font3->DisplayOffset.y += 1;
     //ImFont* my_font4 = io.Fonts->AddFontFromFileTTF("extra_fonts/ProggyTiny.ttf", 10.0f); my_font4->DisplayOffset.y += 1;
     //ImFont* my_font5 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, io.Fonts->GetGlyphRangesJapanese());
-    ImGui_ImplGlfw_LoadFontsTexture();
+    ImGui_ImplGlfw_InitFontsTexture();
 
     bool show_test_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImColor(114, 144, 154);
 
+    // Main loop
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
