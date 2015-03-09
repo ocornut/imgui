@@ -18,7 +18,7 @@ static GLFWwindow*  g_Window = NULL;
 static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
 static float        g_MouseWheel = 0.0f;
-static bool         g_FontTextureLoaded = false;
+static GLuint       g_FontTexture = 0;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
@@ -125,25 +125,36 @@ void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
         io.AddInputCharacter((unsigned short)c);
 }
 
-void ImGui_ImplGlfw_InitFontsTexture()
+bool ImGui_ImplGlfw_CreateDeviceObjects()
 {
     ImGuiIO& io = ImGui::GetIO();
 
+    // Build texture
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
 
-    GLuint tex_id;
-    glGenTextures(1, &tex_id);
-    glBindTexture(GL_TEXTURE_2D, tex_id);
+    // Create texture
+    glGenTextures(1, &g_FontTexture);
+    glBindTexture(GL_TEXTURE_2D, g_FontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier
-    io.Fonts->TexID = (void *)(intptr_t)tex_id;
+    io.Fonts->TexID = (void *)(intptr_t)g_FontTexture;
 
-    g_FontTextureLoaded = true;
+    return true;
+}
+
+void    ImGui_ImplGlfw_InvalidateDeviceObjects()
+{
+    if (g_FontTexture)
+    {
+        glDeleteTextures(1, &g_FontTexture);
+        ImGui::GetIO().Fonts->TexID = 0;
+        g_FontTexture = 0;
+    }
 }
 
 bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
@@ -189,18 +200,14 @@ bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
 
 void ImGui_ImplGlfw_Shutdown()
 {
-    if (GLuint tex_id = (GLuint)(intptr_t)ImGui::GetIO().Fonts->TexID)
-    {
-        glDeleteTextures(1, &tex_id);
-        ImGui::GetIO().Fonts->TexID = 0;
-    }
+    ImGui_ImplGlfw_InvalidateDeviceObjects();
     ImGui::Shutdown();
 }
 
 void ImGui_ImplGlfw_NewFrame()
 {
-    if (!g_FontTextureLoaded)
-        ImGui_ImplGlfw_InitFontsTexture();
+    if (!g_FontTexture)
+        ImGui_ImplGlfw_CreateDeviceObjects();
 
     ImGuiIO& io = ImGui::GetIO();
 

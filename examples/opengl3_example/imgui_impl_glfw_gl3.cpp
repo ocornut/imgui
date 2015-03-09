@@ -19,7 +19,7 @@ static GLFWwindow*  g_Window = NULL;
 static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
 static float        g_MouseWheel = 0.0f;
-static bool         g_FontTextureLoaded = false;
+static GLuint       g_FontTexture = 0;
 static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
 static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
@@ -145,7 +145,7 @@ void ImGui_ImplGlfwGL3_CharCallback(GLFWwindow* window, unsigned int c)
         io.AddInputCharacter((unsigned short)c);
 }
 
-void ImGui_ImplGlfwGL3_InitFontsTexture()
+void ImGui_ImplGlfwGL3_CreateFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
 
@@ -153,20 +153,17 @@ void ImGui_ImplGlfwGL3_InitFontsTexture()
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bits for OpenGL3 demo because it is more likely to be compatible with user's existing shader.
 
-    GLuint tex_id;
-    glGenTextures(1, &tex_id);
-    glBindTexture(GL_TEXTURE_2D, tex_id);
+    glGenTextures(1, &g_FontTexture);
+    glBindTexture(GL_TEXTURE_2D, g_FontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier
-    io.Fonts->TexID = (void *)(intptr_t)tex_id;
-
-    g_FontTextureLoaded = true;
+    io.Fonts->TexID = (void *)(intptr_t)g_FontTexture;
 }
 
-static void InitGL()
+bool ImGui_ImplGlfwGL3_CreateDeviceObjects()
 {
     const GLchar *vertex_shader =
         "#version 330\n"
@@ -229,12 +226,15 @@ static void InitGL()
 #undef OFFSETOF
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    ImGui_ImplGlfwGL3_CreateFontsTexture();
+
+    return true;
 }
 
 bool    ImGui_ImplGlfwGL3_Init(GLFWwindow* window, bool install_callbacks)
 {
     g_Window = window;
-    InitGL();
 
     ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                 // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
@@ -291,18 +291,19 @@ void ImGui_ImplGlfwGL3_Shutdown()
     glDeleteProgram(g_ShaderHandle);
     g_ShaderHandle = 0;
 
-    if (GLuint tex_id = (GLuint)(intptr_t)ImGui::GetIO().Fonts->TexID)
+    if (g_FontTexture)
     {
-        glDeleteTextures(1, &tex_id);
+        glDeleteTextures(1, &g_FontTexture);
         ImGui::GetIO().Fonts->TexID = 0;
+        g_FontTexture = 0;
     }
     ImGui::Shutdown();
 }
 
 void ImGui_ImplGlfwGL3_NewFrame()
 {
-    if (!g_FontTextureLoaded)
-        ImGui_ImplGlfwGL3_InitFontsTexture();
+    if (!g_FontTexture)
+        ImGui_ImplGlfwGL3_CreateDeviceObjects();
 
     ImGuiIO& io = ImGui::GetIO();
 

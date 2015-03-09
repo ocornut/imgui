@@ -4,9 +4,12 @@
 struct GLFWwindow;
 
 bool        ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks);
-void        ImGui_ImplGlfw_InitFontsTexture();
 void        ImGui_ImplGlfw_Shutdown();
 void        ImGui_ImplGlfw_NewFrame();
+
+// Use if you want to reset your rendering device without losing ImGui state.
+void        ImGui_ImplGlfw_InvalidateDeviceObjects();
+bool        ImGui_ImplGlfw_CreateDeviceObjects();
 
 // GLFW callbacks (installed by default if you enable 'install_callbacks' during initialization)
 // Provided here if you want to chain callbacks.
