@@ -1,6 +1,5 @@
 #
-# Cross Platform Make file
-#
+# Cross Platform Makefile
 # Compatible with Ubuntu 14.04.1 and Mac OS X
 #
 #
