@@ -1,6 +1,5 @@
 #
-# Cross Platform Make file
-#
+# Cross Platform Makefile
 # Compatible with Ubuntu 14.04.1 and Mac OS X
 #
 #
@@ -11,7 +10,7 @@
 
 #CXX = g++
 
-OBJS = main.o
+OBJS = main.o imgui_impl_glfw.o
 OBJS += ../../imgui.o
 
 UNAME_S := $(shell uname -s)

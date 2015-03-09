@@ -1,4 +1,4 @@
-// ImGui library v1.35 wip
+// ImGui library v1.35
 // See .cpp file for documentation.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
@@ -6,17 +6,7 @@
 
 #pragma once
 
-struct ImDrawCmd;
-struct ImDrawList;
-struct ImFont;
-struct ImFontAtlas;
-struct ImGuiAabb;
-struct ImGuiIO;
-struct ImGuiStorage;
-struct ImGuiStyle;
-struct ImGuiWindow;
-
-#include "imconfig.h"
+#include "imconfig.h"       // User-editable configuration file
 #include <float.h>          // FLT_MAX
 #include <stdarg.h>         // va_list
 #include <stddef.h>         // ptrdiff_t
@@ -33,6 +23,15 @@ struct ImGuiWindow;
 #ifndef IMGUI_API
 #define IMGUI_API
 #endif
+
+// Forward declarations
+struct ImDrawCmd;
+struct ImDrawList;
+struct ImFont;
+struct ImFontAtlas;
+struct ImGuiIO;
+struct ImGuiStorage;
+struct ImGuiStyle;
 
 typedef unsigned int ImU32;
 typedef unsigned short ImWchar;     // character for display
@@ -191,6 +190,8 @@ namespace ImGui
     IMGUI_API void          SetWindowCollapsed(const char* name, bool collapsed, ImGuiSetCond cond = 0);   // set named window collapsed state.
     IMGUI_API void          SetWindowFocus(const char* name);                                              // set named window to be focused / front-most
 
+    IMGUI_API float         GetScrollPosY();                                                    // get scrolling position (0..GetScrollMaxY())
+    IMGUI_API float         GetScrollMaxY();                                                    // get maximum scrolling position == ContentSize.Y - WindowSize.Y
     IMGUI_API void          SetScrollPosHere();                                                 // adjust scrolling position to center into the current cursor position.
     IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget.
     IMGUI_API void          SetStateStorage(ImGuiStorage* tree);                                // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it).
@@ -226,9 +227,11 @@ namespace ImGui
     IMGUI_API void          Spacing();
     IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border=true);    // setup number of columns
     IMGUI_API void          NextColumn();                                                       // next column
-    IMGUI_API float         GetColumnOffset(int column_index = -1);
-    IMGUI_API void          SetColumnOffset(int column_index, float offset);
-    IMGUI_API float         GetColumnWidth(int column_index = -1);
+    IMGUI_API int           GetColumnIndex();                                                   // get current column index
+    IMGUI_API float         GetColumnOffset(int column_index = -1);                             // get position of column line (in pixels, from the left side of the contents region). pass -1 to use current column, otherwise 0..GetcolumnsCount() inclusive. column 0 is usually 0.0f and not resizable unless you call this.
+    IMGUI_API void          SetColumnOffset(int column_index, float offset_x);                  // set position of column line (in pixels, from the left side of the contents region). pass -1 to use current column.
+    IMGUI_API float         GetColumnWidth(int column_index = -1);                              // column width (== GetColumnOffset(GetColumnIndex()+1) - GetColumnOffset(GetColumnOffset())
+    IMGUI_API int           GetColumnsCount();                                                  // number of columns (what was passed to Columns())
     IMGUI_API ImVec2        GetCursorPos();                                                     // cursor position is relative to window position
     IMGUI_API float         GetCursorPosX();                                                    // "
     IMGUI_API float         GetCursorPosY();                                                    // "
@@ -383,7 +386,7 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_NoTitleBar             = 1 << 0,   // Disable title-bar
     ImGuiWindowFlags_NoResize               = 1 << 1,   // Disable user resizing with the lower-right grip
     ImGuiWindowFlags_NoMove                 = 1 << 2,   // Disable user moving the window
-    ImGuiWindowFlags_NoScrollbar            = 1 << 3,   // Disable scroll bar (window can still scroll with mouse or programatically)
+    ImGuiWindowFlags_NoScrollbar            = 1 << 3,   // Disable scrollbar (window can still scroll with mouse or programatically)
     ImGuiWindowFlags_NoScrollWithMouse      = 1 << 4,   // Disable user scrolling with mouse wheel
     ImGuiWindowFlags_NoCollapse             = 1 << 5,   // Disable user collapsing window by double-clicking on it
     ImGuiWindowFlags_AlwaysAutoResize       = 1 << 6,   // Resize every window to its content every frame
@@ -531,7 +534,8 @@ struct ImGuiStyle
     float       WindowFillAlphaDefault;     // Default alpha of window background, if not specified in ImGui::Begin()
     float       TreeNodeSpacing;            // Horizontal spacing when entering a tree node
     float       ColumnsMinSpacing;          // Minimum horizontal spacing between two columns
-    float       ScrollBarWidth;             // Width of the vertical scroll bar
+    float       ScrollbarWidth;             // Width of the vertical scrollbar
+    float       GrabMinSize;                // Minimum width/height of a slider or scrollbar grab
     ImVec4      Colors[ImGuiCol_COUNT];
 
     IMGUI_API ImGuiStyle();
