@@ -1,4 +1,4 @@
-// ImGui library v1.35
+// ImGui library v1.36 wip
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -1711,6 +1711,11 @@ static void MarkSettingsDirty()
 
     if (g.SettingsDirtyTimer <= 0.0f)
         g.SettingsDirtyTimer = g.IO.IniSavingRate;
+}
+
+const char* ImGui::GetVersion()
+{
+    return IMGUI_VERSION;
 }
 
 // Internal state access - if you want to share ImGui state between modules (e.g. DLL) or allocate it yourself

@@ -1,4 +1,4 @@
-// ImGui library v1.35
+// ImGui library v1.36 wip
 // See .cpp file for documentation.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
@@ -12,6 +12,8 @@
 #include <stddef.h>         // ptrdiff_t
 #include <stdlib.h>         // NULL, malloc
 #include <string.h>         // memset, memmove
+
+#define IMGUI_VERSION       "1.36 wip"
 
 // Define assertion handler.
 #ifndef IM_ASSERT
@@ -369,6 +371,7 @@ namespace ImGui
     IMGUI_API void          ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
 
     // Internal state access - if you want to share ImGui state between modules (e.g. DLL) or allocate it yourself
+    IMGUI_API const char*   GetVersion();
     IMGUI_API void*         GetInternalState();
     IMGUI_API size_t        GetInternalStateSize();
     IMGUI_API void          SetInternalState(void* state, bool construct = false);
