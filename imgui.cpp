@@ -3105,6 +3105,15 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
         window->ClippedAabb = window->Aabb();
         window->ClippedAabb.Clip(window->ClipRectStack.front());
+
+        // Pressing CTRL+C while holding on a window copy its content to the clipboard
+        // This works but 1. doesn't handle multiple Begin/End pairs, 2. recursing into another Begin/End pair - so we need to work that out and add better logging scope.
+        // Maybe we can support CTRL+C on every element?
+        /*
+        if (g.ActiveId == move_id)
+            if (g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_C))
+                ImGui::LogToClipboard();
+        */
     }
 
     // Inner clipping rectangle
@@ -6530,7 +6539,7 @@ static void ItemSize(ImVec2 size, ImVec2* adjust_vertical_offset)
     window->DC.CurrentLineHeight = 0.0f;
 }
 
-static void ItemSize(const ImGuiAabb& bb, ImVec2* adjust_start_offset) 
+static inline void ItemSize(const ImGuiAabb& bb, ImVec2* adjust_start_offset) 
 { 
     ItemSize(bb.GetSize(), adjust_start_offset); 
 }
