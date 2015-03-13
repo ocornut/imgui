@@ -4763,6 +4763,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id);
 
     const bool is_unbound = v_min == -FLT_MAX || v_min == FLT_MAX || v_max == -FLT_MAX || v_max == FLT_MAX;
+    const bool is_logarithmic = abs(power - 1.0f) > 0.0001f;
 
     const float grab_size_in_units = 1.0f;                                                              // In 'v' units. Probably needs to be parametrized, based on a 'v_step' value? decimal precision?
     float grab_size_in_pixels;
@@ -4830,28 +4831,33 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
             {
                 const float normalized_pos = ImClamp((g.IO.MousePos.x - slider_effective_x1) / slider_effective_w, 0.0f, 1.0f);
                 
-                // Linear slider
-                //float new_value = ImLerp(v_min, v_max, normalized_pos);
-
-                // Account for logarithmic scale on both sides of the zero
                 float new_value;
-                if (normalized_pos < linear_zero_pos)
+                if (is_logarithmic)
                 {
-                    // Negative: rescale to the negative range before powering
-                    float a = 1.0f - (normalized_pos / linear_zero_pos);
-                    a = powf(a, power);
-                    new_value = ImLerp(ImMin(v_max,0.f), v_min, a);
+                    // Account for logarithmic scale on both sides of the zero
+                    if (normalized_pos < linear_zero_pos)
+                    {
+                        // Negative: rescale to the negative range before powering
+                        float a = 1.0f - (normalized_pos / linear_zero_pos);
+                        a = powf(a, power);
+                        new_value = ImLerp(ImMin(v_max,0.f), v_min, a);
+                    }
+                    else
+                    {
+                        // Positive: rescale to the positive range before powering
+                        float a;
+                        if (fabsf(linear_zero_pos - 1.0f) > 1.e-6)
+                            a = (normalized_pos - linear_zero_pos) / (1.0f - linear_zero_pos);
+                        else
+                            a = normalized_pos;
+                        a = powf(a, power);
+                        new_value = ImLerp(ImMax(v_min,0.0f), v_max, a);
+                    }
                 }
                 else
                 {
-                    // Positive: rescale to the positive range before powering
-                    float a;
-                    if (fabsf(linear_zero_pos - 1.0f) > 1.e-6)
-                        a = (normalized_pos - linear_zero_pos) / (1.0f - linear_zero_pos);
-                    else
-                        a = normalized_pos;
-                    a = powf(a, power);
-                    new_value = ImLerp(ImMax(v_min,0.0f), v_max, a);
+                    // Linear slider
+                    new_value = ImLerp(v_min, v_max, normalized_pos);
                 }
 
                 // Round past decimal precision
@@ -4879,21 +4885,26 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 
     if (!is_unbound)
     {
-        // Linear slider
-        // const float grab_t = (ImClamp(*v, v_min, v_max) - v_min) / (v_max - v_min);
-
         // Calculate slider grab positioning
         float grab_t;
-        float v_clamped = ImClamp(*v, v_min, v_max);
-        if (v_clamped < 0.0f)
+        if (is_logarithmic)
         {
-            const float f = 1.0f - (v_clamped - v_min) / (ImMin(0.0f,v_max) - v_min);
-            grab_t = (1.0f - powf(f, 1.0f/power)) * linear_zero_pos;
+            float v_clamped = ImClamp(*v, v_min, v_max);
+            if (v_clamped < 0.0f)
+            {
+                const float f = 1.0f - (v_clamped - v_min) / (ImMin(0.0f,v_max) - v_min);
+                grab_t = (1.0f - powf(f, 1.0f/power)) * linear_zero_pos;
+            }
+            else
+            {
+                const float f = (v_clamped - ImMax(0.0f,v_min)) / (v_max - ImMax(0.0f,v_min));
+                grab_t = linear_zero_pos + powf(f, 1.0f/power) * (1.0f - linear_zero_pos);
+            }
         }
         else
         {
-            const float f = (v_clamped - ImMax(0.0f,v_min)) / (v_max - ImMax(0.0f,v_min));
-            grab_t = linear_zero_pos + powf(f, 1.0f/power) * (1.0f - linear_zero_pos);
+            // Linear slider
+            grab_t = (ImClamp(*v, v_min, v_max) - v_min) / (v_max - v_min);
         }
 
         // Draw
