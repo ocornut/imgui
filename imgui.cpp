@@ -2807,8 +2807,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->Visible = true;
 
         // New windows appears in front
-        if (window->LastFrameDrawn < current_frame - 1)
-            FocusWindow(window);
+        if (!(flags & ImGuiWindowFlags_ChildWindow))
+            if (window->LastFrameDrawn < current_frame - 1)
+                FocusWindow(window);
 
         window->LastFrameDrawn = current_frame;
         window->ClipRectStack.resize(0);
@@ -8583,7 +8584,7 @@ void ImGui::ShowTestWindow(bool* opened)
     ImGui::Text("ImGui says hello.");
     //ImGui::Text("MousePos (%g, %g)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
     //ImGui::Text("MouseWheel %d", ImGui::GetIO().MouseWheel);
-    ImGui::Text("KeyMods %s%s%s", ImGui::GetIO().KeyCtrl ? "CTRL" : "", ImGui::GetIO().KeyShift ? "SHIFT" : "", ImGui::GetIO().KeyAlt? "ALT" : "");
+    //ImGui::Text("KeyMods %s%s%s", ImGui::GetIO().KeyCtrl ? "CTRL" : "", ImGui::GetIO().KeyShift ? "SHIFT" : "", ImGui::GetIO().KeyAlt? "ALT" : "");
     //ImGui::Text("WantCaptureMouse: %d", ImGui::GetIO().WantCaptureMouse);
     //ImGui::Text("WantCaptureKeyboard: %d", ImGui::GetIO().WantCaptureKeyboard);
 
