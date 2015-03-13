@@ -6487,6 +6487,10 @@ void ImGui::Separator()
 
     window->DrawList->AddLine(bb.Min, bb.Max, window->Color(ImGuiCol_Border));
 
+    ImGuiState& g = *GImGui;
+    if (g.LogEnabled)
+        ImGui::LogText(STR_NEWLINE "--------------------------------");
+
     if (window->DC.ColumnsCount > 1)
     {
         PushColumnClipRect();
