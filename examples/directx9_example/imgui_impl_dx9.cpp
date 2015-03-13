@@ -276,6 +276,7 @@ void ImGui_ImplDX9_NewFrame()
     // Read keyboard modifiers inputs
     io.KeyCtrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     io.KeyShift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+    io.KeyAlt = (GetKeyState(VK_MENU) & 0x8000) != 0;
     // io.KeysDown : filled by WM_KEYDOWN/WM_KEYUP events
     // io.MousePos : filled by WM_MOUSEMOVE events
     // io.MouseDown : filled by WM_*BUTTON* events

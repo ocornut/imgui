@@ -123,6 +123,7 @@ void ImGui_ImplGlFw_KeyCallback(GLFWwindow* window, int key, int scancode, int a
         io.KeysDown[key] = false;
     io.KeyCtrl = (mods & GLFW_MOD_CONTROL) != 0;
     io.KeyShift = (mods & GLFW_MOD_SHIFT) != 0;
+    io.KeyAlt = (mods & GLFW_MOD_ALT) != 0;
 }
 
 void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)

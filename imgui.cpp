@@ -314,6 +314,7 @@
  - input: support track pad style scrolling & slider edit.
  - tooltip: move to fit within screen (e.g. when mouse cursor is right of the screen).
  - portability: big-endian test/support (github issue #81)
+ - misc: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?)
  - misc: mark printf compiler attributes on relevant functions
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
@@ -4014,7 +4015,7 @@ static bool ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_ho
     if (hovered)
     {
         g.HoveredId = id;
-        if (allow_key_modifiers || (!g.IO.KeyCtrl && !g.IO.KeyShift))
+        if (allow_key_modifiers || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
             if (g.IO.MouseClicked[0])
             {
@@ -8582,6 +8583,7 @@ void ImGui::ShowTestWindow(bool* opened)
     ImGui::Text("ImGui says hello.");
     //ImGui::Text("MousePos (%g, %g)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
     //ImGui::Text("MouseWheel %d", ImGui::GetIO().MouseWheel);
+    ImGui::Text("KeyMods %s%s%s", ImGui::GetIO().KeyCtrl ? "CTRL" : "", ImGui::GetIO().KeyShift ? "SHIFT" : "", ImGui::GetIO().KeyAlt? "ALT" : "");
     //ImGui::Text("WantCaptureMouse: %d", ImGui::GetIO().WantCaptureMouse);
     //ImGui::Text("WantCaptureKeyboard: %d", ImGui::GetIO().WantCaptureKeyboard);
 

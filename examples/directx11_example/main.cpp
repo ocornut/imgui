@@ -117,6 +117,10 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             ImGui_ImplDX11_CreateDeviceObjects();
         }
         return 0;
+    case WM_SYSCOMMAND:
+        if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
+            return 0;
+        break;
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
