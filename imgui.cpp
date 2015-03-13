@@ -4735,9 +4735,10 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 
     // Parse display precision back from the display format string
     int decimal_precision = 3;
-    if (const char* p = strchr(display_format, '%'))
+    for (const char* p = display_format; p = strchr(p, '%'); )
     {
         p++;
+        if (p[0] == '%') { p ++; continue; } // Ignore "%%"
         while (*p >= '0' && *p <= '9')
             p++;
         if (*p == '.')
@@ -4746,6 +4747,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
             if (decimal_precision < 0 || decimal_precision > 10)
                 decimal_precision = 3;
         }
+        break;
     }
 
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
