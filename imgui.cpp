@@ -4680,8 +4680,45 @@ static void ApplyNumericalTextInput(const char* buf, float *v)
         *v = op_v;
 }
 
+static bool SliderFloatAsInputText(const char* label, float* v, const ImGuiID& id, int decimal_precision)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+
+    char text_buf[64];
+    ImFormatString(text_buf, IM_ARRAYSIZE(text_buf), "%.*f", decimal_precision, *v);
+
+    SetActiveId(g.SliderAsInputTextId);
+    g.HoveredId = 0;
+
+    // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
+    window->FocusItemUnregister();
+
+    bool value_changed = ImGui::InputText(label, text_buf, IM_ARRAYSIZE(text_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
+    if (g.SliderAsInputTextId == 0)
+    {
+        // First frame
+        IM_ASSERT(g.ActiveId == id);    // InputText ID expected to match the Slider ID (else we'd need to store them both, which is also possible)
+        g.SliderAsInputTextId = g.ActiveId;
+        g.HoveredId = id;
+    }
+    else if (g.ActiveId != g.SliderAsInputTextId)
+    {
+        // Release
+        g.SliderAsInputTextId = 0;
+    }
+    if (value_changed)
+    {
+        ApplyNumericalTextInput(text_buf, v);
+    }
+    return value_changed;
+}
+
 // Use power!=1.0 for logarithmic sliders.
 // Adjust display_format to decorate the value with a prefix or a suffix.
+//   "%.3f"         1.234
+//   "%5.2f secs"   01.23 secs
+//   "Gold: %.0f"   Gold: 1
 bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format, float power)
 {
     ImGuiState& g = *GImGui;
@@ -4777,29 +4814,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     bool value_changed = false;
     if (start_text_input || (g.ActiveId == id && id == g.SliderAsInputTextId))
     {
-        char text_buf[64];
-        ImFormatString(text_buf, IM_ARRAYSIZE(text_buf), "%.*f", decimal_precision, *v);
-
-        SetActiveId(g.SliderAsInputTextId);
-        g.HoveredId = 0;
-        window->FocusItemUnregister();      // Our replacement slider will override the focus ID (registered previously to allow for a TAB focus to happen)
-        value_changed = ImGui::InputText(label, text_buf, IM_ARRAYSIZE(text_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
-        if (g.SliderAsInputTextId == 0)
-        {
-            // First frame
-            IM_ASSERT(g.ActiveId == id);    // InputText ID expected to match the Slider ID (else we'd need to store them both, which is also possible)
-            g.SliderAsInputTextId = g.ActiveId;
-            g.HoveredId = id;
-        }
-        else if (g.ActiveId != g.SliderAsInputTextId)
-        {
-            // Release
-            g.SliderAsInputTextId = 0;
-        }
-        if (value_changed)
-        {
-            ApplyNumericalTextInput(text_buf, v);
-        }
+        value_changed = SliderFloatAsInputText(label, v, id, decimal_precision);
         return value_changed;
     }
 
