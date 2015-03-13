@@ -693,7 +693,6 @@ struct ImGuiTextBuffer
     ImVector<char>      Buf;
 
     ImGuiTextBuffer()   { Buf.push_back(0); }
-    ~ImGuiTextBuffer()  { }
     const char*         begin() const { return &Buf.front(); }
     const char*         end() const { return &Buf.back(); }      // Buf is zero-terminated, so end() will point on the zero-terminator
     size_t              size() const { return Buf.size()-1; }
@@ -902,7 +901,7 @@ struct ImFontAtlas
     IMGUI_API void              SetTexID(void* id)  { TexID = id; }
 
     // Helpers to retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
-    // (Those functions could be static, aren't so simple use case doesn't have to refer to the ImFontAtlas:: type ever if in their code)
+    // (Those functions could be static but aren't so most users don't have to refer to the ImFontAtlas:: name ever if in their code; just using io.Fonts->)
     IMGUI_API const ImWchar*    GetGlyphRangesDefault();    // Basic Latin, Extended Latin
     IMGUI_API const ImWchar*    GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
     IMGUI_API const ImWchar*    GetGlyphRangesChinese();    // Japanese + full set of about 21000 CJK Unified Ideographs

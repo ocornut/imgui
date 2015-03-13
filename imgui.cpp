@@ -958,7 +958,7 @@ struct ImGuiTextEditState
 {
     ImGuiID             Id;                             // widget id owning the text state
     ImWchar             Text[1024];                     // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
-    char                InitialText[1024*4+1];          // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
+    char                InitialText[1024*3+1];          // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
     size_t              CurLenA, CurLenW;               // we need to maintain our buffer length in both UTF-8 and wchar format.
     size_t              BufSizeA;                       // end-user buffer size, <= 1024 (or increase above)
     float               Width;                          // widget width
