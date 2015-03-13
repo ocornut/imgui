@@ -129,8 +129,9 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/03/13 (1.36) - renamed GetWindowIsFocused() to IsWindowFocused(). Kept inline redirection function.
  - 2015/03/08 (1.35) - renamed style.ScrollBarWidth to style.ScrollbarWidth
- - 2015/02/27 (1.34) - renamed OpenNextNode(bool) to SetNextTreeNodeOpened(bool, ImGuiSetCond), kept inline redirection function.
+ - 2015/02/27 (1.34) - renamed OpenNextNode(bool) to SetNextTreeNodeOpened(bool, ImGuiSetCond). Kept inline redirection function.
  - 2015/02/27 (1.34) - renamed ImGuiSetCondition_*** to ImGuiSetCond_***, and _FirstUseThisSession becomes _Once.
  - 2015/02/11 (1.32) - changed text input callback ImGuiTextEditCallback return type from void-->int. reserved for future use, return 0 for now.
  - 2015/02/10 (1.32) - renamed GetItemWidth() to CalcItemWidth() to clarify its evolving behavior
@@ -1138,12 +1139,12 @@ struct ImGuiWindow
     bool                    SkipItems;                          // == Visible && !Collapsed
     int                     AutoFitFrames;
     bool                    AutoFitOnlyGrows;
-    int                     SetWindowPosAllowFlags;             // bit ImGuiSetCond_*** specify if SetWindowPos() call is allowed with this particular flag. 
-    int                     SetWindowSizeAllowFlags;            // bit ImGuiSetCond_*** specify if SetWindowSize() call is allowed with this particular flag. 
-    int                     SetWindowCollapsedAllowFlags;       // bit ImGuiSetCond_*** specify if SetWindowCollapsed() call is allowed with this particular flag. 
+    int                     SetWindowPosAllowFlags;             // bit ImGuiSetCond_*** specify if SetWindowPos() call will succeed with this particular flag. 
+    int                     SetWindowSizeAllowFlags;            // bit ImGuiSetCond_*** specify if SetWindowSize() call will succeed with this particular flag. 
+    int                     SetWindowCollapsedAllowFlags;       // bit ImGuiSetCond_*** specify if SetWindowCollapsed() call will succeed with this particular flag. 
 
-    ImGuiDrawContext        DC;
-    ImVector<ImGuiID>       IDStack;
+    ImGuiDrawContext        DC;                                 // Temporary per-window data, reset at the beginning of the frame
+    ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
     ImVector<ImVec4>        ClipRectStack;                      // Scissoring / clipping rectangle. x1, y1, x2, y2.
     ImGuiAabb               ClippedAabb;                        // = ClipRectStack.front() after setup in Begin()
     int                     LastFrameDrawn;
@@ -3481,11 +3482,25 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     return "Unknown";
 }
 
-bool ImGui::GetWindowIsFocused()
+bool ImGui::IsWindowFocused()
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     return g.FocusedWindow == window;
+}
+
+bool ImGui::IsRootWindowFocused()
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* root_window = GetCurrentWindow()->RootWindow;
+    return g.FocusedWindow == root_window;
+}
+
+bool ImGui::IsRootWindowOrAnyChildFocused()
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* root_window = GetCurrentWindow()->RootWindow;
+    return g.FocusedWindow->RootWindow == root_window;
 }
 
 float ImGui::GetWindowWidth()
