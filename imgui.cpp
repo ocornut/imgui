@@ -4680,6 +4680,7 @@ static void ApplyNumericalTextInput(const char* buf, float *v)
         *v = op_v;
 }
 
+// Create text input in place of a slider (when CTRL+Clicking on slider)
 static bool SliderFloatAsInputText(const char* label, float* v, const ImGuiID& id, int decimal_precision)
 {
     ImGuiState& g = *GImGui;
@@ -4749,11 +4750,6 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     const ImGuiID id = window->GetID(label);
     const float w = ImGui::CalcItemWidth();
 
-    if (!display_format)
-        display_format = "%.3f";
-    int decimal_precision = 3;
-    ParseFormat(display_format, decimal_precision);
-
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
     const ImGuiAabb slider_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
@@ -4766,10 +4762,37 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         return false;
     }
 
-    const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id);
+    const bool hovered = IsHovered(slider_bb, id);
+    if (hovered)
+        g.HoveredId = id;
 
-    const bool is_unbound = v_min == -FLT_MAX || v_min == FLT_MAX || v_max == -FLT_MAX || v_max == FLT_MAX;
-    const bool is_logarithmic = abs(power - 1.0f) > 0.0001f;
+    if (!display_format)
+        display_format = "%.3f";
+    int decimal_precision = 3;
+    ParseFormat(display_format, decimal_precision);
+
+    const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id);
+    const bool is_unbound = (v_min == -FLT_MAX || v_min == FLT_MAX || v_max == -FLT_MAX || v_max == FLT_MAX);
+
+    bool start_text_input = false;
+    if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]))
+    {
+        SetActiveId(id);
+        FocusWindow(window);
+
+        const bool is_ctrl_down = g.IO.KeyCtrl;
+        if (tab_focus_requested || is_ctrl_down || is_unbound)
+        {
+            start_text_input = true;
+            g.SliderAsInputTextId = 0;
+        }
+    }
+
+    // Tabbing or CTRL-clicking through slider turns into an input box
+    if (start_text_input || (g.ActiveId == id && id == g.SliderAsInputTextId))
+        return SliderFloatAsInputText(label, v, id, decimal_precision);
+
+    ItemSize(bb);
 
     const float grab_size_in_units = 1.0f;                                                              // In 'v' units. Probably needs to be parametrized, based on a 'v_step' value? decimal precision?
     float grab_size_in_pixels;
@@ -4799,95 +4822,70 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         }
     }
 
-    const bool hovered = IsHovered(slider_bb, id);
-    if (hovered)
-        g.HoveredId = id;
-
-    bool start_text_input = false;
-    if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]))
-    {
-        SetActiveId(id);
-        FocusWindow(window);
-
-        const bool is_ctrl_down = g.IO.KeyCtrl;
-        if (tab_focus_requested || is_ctrl_down || is_unbound)
-        {
-            start_text_input = true;
-            g.SliderAsInputTextId = 0;
-        }
-    }
-
-    // Tabbing or CTRL-clicking through slider turns into an input box
-    bool value_changed = false;
-    if (start_text_input || (g.ActiveId == id && id == g.SliderAsInputTextId))
-    {
-        value_changed = SliderFloatAsInputText(label, v, id, decimal_precision);
-        return value_changed;
-    }
-
-    ItemSize(bb);
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
-    // Process clicking on the slider
-    if (g.ActiveId == id)
+    const bool is_logarithmic = abs(power - 1.0f) > 0.0001f;
+    bool value_changed = false;
+    if (!is_unbound)
     {
-        if (!is_unbound && g.IO.MouseDown[0])
+        // Process clicking on the slider
+        if (g.ActiveId == id)
         {
-            const float normalized_pos = ImClamp((g.IO.MousePos.x - slider_effective_x1) / slider_effective_w, 0.0f, 1.0f);
-                
-            float new_value;
-            if (is_logarithmic)
+            if (g.IO.MouseDown[0])
             {
-                // Account for logarithmic scale on both sides of the zero
-                if (normalized_pos < linear_zero_pos)
+                const float normalized_pos = ImClamp((g.IO.MousePos.x - slider_effective_x1) / slider_effective_w, 0.0f, 1.0f);
+                
+                float new_value;
+                if (is_logarithmic)
                 {
-                    // Negative: rescale to the negative range before powering
-                    float a = 1.0f - (normalized_pos / linear_zero_pos);
-                    a = powf(a, power);
-                    new_value = ImLerp(ImMin(v_max,0.f), v_min, a);
+                    // Account for logarithmic scale on both sides of the zero
+                    if (normalized_pos < linear_zero_pos)
+                    {
+                        // Negative: rescale to the negative range before powering
+                        float a = 1.0f - (normalized_pos / linear_zero_pos);
+                        a = powf(a, power);
+                        new_value = ImLerp(ImMin(v_max,0.f), v_min, a);
+                    }
+                    else
+                    {
+                        // Positive: rescale to the positive range before powering
+                        float a;
+                        if (fabsf(linear_zero_pos - 1.0f) > 1.e-6)
+                            a = (normalized_pos - linear_zero_pos) / (1.0f - linear_zero_pos);
+                        else
+                            a = normalized_pos;
+                        a = powf(a, power);
+                        new_value = ImLerp(ImMax(v_min,0.0f), v_max, a);
+                    }
                 }
                 else
                 {
-                    // Positive: rescale to the positive range before powering
-                    float a;
-                    if (fabsf(linear_zero_pos - 1.0f) > 1.e-6)
-                        a = (normalized_pos - linear_zero_pos) / (1.0f - linear_zero_pos);
-                    else
-                        a = normalized_pos;
-                    a = powf(a, power);
-                    new_value = ImLerp(ImMax(v_min,0.0f), v_max, a);
+                    // Linear slider
+                    new_value = ImLerp(v_min, v_max, normalized_pos);
+                }
+
+                // Round past decimal precision
+                //    0->1, 1->0.1, 2->0.01, etc.
+                // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
+                const float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
+                const float remainder = fmodf(new_value, min_step);
+                if (remainder <= min_step*0.5f)
+                    new_value -= remainder;
+                else
+                    new_value += (min_step - remainder);
+
+                if (*v != new_value)
+                {
+                    *v = new_value;
+                    value_changed = true;
                 }
             }
             else
             {
-                // Linear slider
-                new_value = ImLerp(v_min, v_max, normalized_pos);
-            }
-
-            // Round past decimal precision
-            //    0->1, 1->0.1, 2->0.01, etc.
-            // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
-            const float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
-            const float remainder = fmodf(new_value, min_step);
-            if (remainder <= min_step*0.5f)
-                new_value -= remainder;
-            else
-                new_value += (min_step - remainder);
-
-            if (*v != new_value)
-            {
-                *v = new_value;
-                value_changed = true;
+                SetActiveId(0);
             }
         }
-        else
-        {
-            SetActiveId(0);
-        }
-    }
 
-    if (!is_unbound)
-    {
         // Calculate slider grab positioning
         float grab_t;
         if (is_logarithmic)
