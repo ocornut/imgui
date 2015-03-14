@@ -4734,80 +4734,34 @@ static void ParseFormat(const char* fmt, int& decimal_precision)
     }
 }
 
-// Use power!=1.0 for logarithmic sliders.
-// Adjust display_format to decorate the value with a prefix or a suffix.
-//   "%.3f"         1.234
-//   "%5.2f secs"   01.23 secs
-//   "Gold: %.0f"   Gold: 1
-bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format, float power)
+static bool SliderBehaviour(const ImGuiAabb& frame_bb, const ImGuiAabb& slider_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return false;
-
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID(label);
-    const float w = ImGui::CalcItemWidth();
 
-    const ImVec2 label_size = CalcTextSize(label, NULL, true);
-    const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
-    const ImGuiAabb slider_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
-    const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
+    // Draw frame
+    RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
-    // NB- we don't call ItemSize() yet becausae we may turn into a text edit box later in the function
-    if (!ItemAdd(slider_bb, &id))
-    {
-        ItemSize(bb);
-        return false;
-    }
+    const bool is_finite = (v_min != -FLT_MAX && v_min != FLT_MAX && v_max != -FLT_MAX && v_max != FLT_MAX);
+    const bool is_non_linear = abs(power - 1.0f) > 0.0001f;
 
-    const bool hovered = IsHovered(slider_bb, id);
-    if (hovered)
-        g.HoveredId = id;
-
-    if (!display_format)
-        display_format = "%.3f";
-    int decimal_precision = 3;
-    ParseFormat(display_format, decimal_precision);
-
-    const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id);
-    const bool is_unbound = (v_min == -FLT_MAX || v_min == FLT_MAX || v_max == -FLT_MAX || v_max == FLT_MAX);
-
-    bool start_text_input = false;
-    if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]))
-    {
-        SetActiveId(id);
-        FocusWindow(window);
-
-        const bool is_ctrl_down = g.IO.KeyCtrl;
-        if (tab_focus_requested || is_ctrl_down || is_unbound)
-        {
-            start_text_input = true;
-            g.SliderAsInputTextId = 0;
-        }
-    }
-
-    // Tabbing or CTRL-clicking through slider turns into an input box
-    if (start_text_input || (g.ActiveId == id && id == g.SliderAsInputTextId))
-        return SliderFloatAsInputText(label, v, id, decimal_precision);
-
-    ItemSize(bb);
-
-    const float grab_size_in_units = 1.0f;                                                              // In 'v' units. Probably needs to be parametrized, based on a 'v_step' value? decimal precision?
+    const float slider_w = slider_bb.GetWidth();
     float grab_size_in_pixels;
-    if (decimal_precision > 0 || is_unbound)
+    if (decimal_precision > 0 || !is_finite)
         grab_size_in_pixels = style.GrabMinSize;
     else
-        grab_size_in_pixels = ImMax(grab_size_in_units * (w / (v_max-v_min+1.0f)), style.GrabMinSize);  // Integer sliders
+        grab_size_in_pixels = ImMax(1.0f * (slider_w / (v_max-v_min+1.0f)), style.GrabMinSize); // Integer sliders, if possible have the grab size represent 1 unit
     const float slider_effective_w = slider_bb.GetWidth() - grab_size_in_pixels;
     const float slider_effective_x1 = slider_bb.Min.x + grab_size_in_pixels*0.5f;
     const float slider_effective_x2 = slider_bb.Max.x - grab_size_in_pixels*0.5f;
 
-    // For logarithmic sliders that cross over sign boundary we want the exponential increase to be symmetric around 0.0f
-    float linear_zero_pos = 0.0f;   // 0.0->1.0f
-    if (!is_unbound)
+    bool value_changed = false;
+
+    if (is_finite)
     {
+        // For logarithmic sliders that cross over sign boundary we want the exponential increase to be symmetric around 0.0f
+        float linear_zero_pos = 0.0f;   // 0.0->1.0f
         if (v_min * v_max < 0.0f)
         {
             // Different sign
@@ -4820,23 +4774,16 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
             // Same sign
             linear_zero_pos = v_min < 0.0f ? 1.0f : 0.0f;
         }
-    }
 
-    RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
-
-    const bool is_logarithmic = abs(power - 1.0f) > 0.0001f;
-    bool value_changed = false;
-    if (!is_unbound)
-    {
         // Process clicking on the slider
         if (g.ActiveId == id)
         {
             if (g.IO.MouseDown[0])
             {
                 const float normalized_pos = ImClamp((g.IO.MousePos.x - slider_effective_x1) / slider_effective_w, 0.0f, 1.0f);
-                
+
                 float new_value;
-                if (is_logarithmic)
+                if (is_non_linear)
                 {
                     // Account for logarithmic scale on both sides of the zero
                     if (normalized_pos < linear_zero_pos)
@@ -4888,7 +4835,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 
         // Calculate slider grab positioning
         float grab_t;
-        if (is_logarithmic)
+        if (is_non_linear)
         {
             float v_clamped = ImClamp(*v, v_min, v_max);
             if (v_clamped < 0.0f)
@@ -4913,6 +4860,71 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         const ImGuiAabb grab_bb(ImVec2(grab_x-grab_size_in_pixels*0.5f,frame_bb.Min.y+2.0f), ImVec2(grab_x+grab_size_in_pixels*0.5f,frame_bb.Max.y-2.0f));
         window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, window->Color(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab));
     }
+
+    return value_changed;
+}
+
+// Use power!=1.0 for logarithmic sliders.
+// Adjust display_format to decorate the value with a prefix or a suffix.
+//   "%.3f"         1.234
+//   "%5.2f secs"   01.23 secs
+//   "Gold: %.0f"   Gold: 1
+bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format, float power)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID(label);
+    const float w = ImGui::CalcItemWidth();
+
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
+    const ImGuiAabb slider_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
+    const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
+
+    // NB- we don't call ItemSize() yet becausae we may turn into a text edit box below
+    if (!ItemAdd(slider_bb, &id))
+    {
+        ItemSize(bb);
+        return false;
+    }
+
+    const bool hovered = IsHovered(slider_bb, id);
+    if (hovered)
+        g.HoveredId = id;
+
+    if (!display_format)
+        display_format = "%.3f";
+    int decimal_precision = 3;
+    ParseFormat(display_format, decimal_precision);
+
+    const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id);
+    const bool is_finite = (v_min != -FLT_MAX && v_min != FLT_MAX && v_max != -FLT_MAX && v_max != FLT_MAX);
+
+    // Tabbing or CTRL-clicking through slider turns into an input box
+    bool start_text_input = false;
+    if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]))
+    {
+        SetActiveId(id);
+        FocusWindow(window);
+
+        const bool is_ctrl_down = g.IO.KeyCtrl;
+        if (tab_focus_requested || is_ctrl_down || !is_finite)
+        {
+            start_text_input = true;
+            g.SliderAsInputTextId = 0;
+        }
+    }
+    if (start_text_input || (g.ActiveId == id && id == g.SliderAsInputTextId))
+        return SliderFloatAsInputText(label, v, id, decimal_precision);
+
+    ItemSize(bb);
+
+    // Actual slider behavior + render grab
+    bool value_changed = SliderBehaviour(frame_bb, slider_bb, id, v, v_min, v_max, power, decimal_precision);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
