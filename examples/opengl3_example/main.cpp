@@ -8,10 +8,10 @@
 
 static void error_callback(int error, const char* description)
 {
-    fprintf(stderr, "Error: %s\n", description);
+    fprintf(stderr, "Error %d: %s\n", error, description);
 }
 
-int main(int argc, char** argv)
+int main(int, char**)
 {
     // Setup window
     glfwSetErrorCallback(error_callback);
