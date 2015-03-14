@@ -420,7 +420,7 @@ struct ImGuiIniData;
 struct ImGuiState;
 struct ImGuiWindow;
 
-static bool         ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false, bool pressed_on_click = false);
+static bool         ButtonBehaviour(const ImGuiAabb& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false, bool pressed_on_click = false);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
 
 static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
@@ -1206,7 +1206,7 @@ static void SetActiveId(ImGuiID id)
     g.ActiveIdIsFocusedOnly = false;
 }
 
-static void RegisterAliveId(const ImGuiID& id)
+static void RegisterAliveId(ImGuiID id)
 {
     ImGuiState& g = *GImGui;
     if (g.ActiveId == id)
@@ -4015,7 +4015,7 @@ void ImGui::LabelText(const char* label, const char* fmt, ...)
     va_end(args);
 }
 
-static bool IsHovered(const ImGuiAabb& bb, const ImGuiID& id)
+static bool IsHovered(const ImGuiAabb& bb, ImGuiID id)
 {
     ImGuiState& g = *GImGui;
     if (g.HoveredId == 0)
@@ -4030,7 +4030,7 @@ static bool IsHovered(const ImGuiAabb& bb, const ImGuiID& id)
     return false;
 }
 
-static bool ButtonBehaviour(const ImGuiAabb& bb, const ImGuiID& id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat, bool pressed_on_click)
+static bool ButtonBehaviour(const ImGuiAabb& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat, bool pressed_on_click)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -4681,7 +4681,7 @@ static void ApplyNumericalTextInput(const char* buf, float *v)
 }
 
 // Create text input in place of a slider (when CTRL+Clicking on slider)
-static bool SliderFloatAsInputText(const char* label, float* v, const ImGuiID& id, int decimal_precision)
+static bool SliderFloatAsInputText(const char* label, float* v, ImGuiID id, int decimal_precision)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
