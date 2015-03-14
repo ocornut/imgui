@@ -171,11 +171,11 @@ LRESULT ImGui_ImplDX11_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lPar
         io.MousePos.y = (signed short)(lParam >> 16); 
         return true;
     case WM_KEYDOWN:
-        if (wParam >= 0 && wParam < 256)
+        if (wParam < 256)
             io.KeysDown[wParam] = 1;
         return true;
     case WM_KEYUP:
-        if (wParam >= 0 && wParam < 256)
+        if (wParam < 256)
             io.KeysDown[wParam] = 0;
         return true;
     case WM_CHAR:
