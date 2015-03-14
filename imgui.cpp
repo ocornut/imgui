@@ -4827,56 +4827,53 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     // Process clicking on the slider
     if (g.ActiveId == id)
     {
-        if (g.IO.MouseDown[0])
+        if (!is_unbound && g.IO.MouseDown[0])
         {
-            if (!is_unbound)
-            {
-                const float normalized_pos = ImClamp((g.IO.MousePos.x - slider_effective_x1) / slider_effective_w, 0.0f, 1.0f);
+            const float normalized_pos = ImClamp((g.IO.MousePos.x - slider_effective_x1) / slider_effective_w, 0.0f, 1.0f);
                 
-                float new_value;
-                if (is_logarithmic)
+            float new_value;
+            if (is_logarithmic)
+            {
+                // Account for logarithmic scale on both sides of the zero
+                if (normalized_pos < linear_zero_pos)
                 {
-                    // Account for logarithmic scale on both sides of the zero
-                    if (normalized_pos < linear_zero_pos)
-                    {
-                        // Negative: rescale to the negative range before powering
-                        float a = 1.0f - (normalized_pos / linear_zero_pos);
-                        a = powf(a, power);
-                        new_value = ImLerp(ImMin(v_max,0.f), v_min, a);
-                    }
+                    // Negative: rescale to the negative range before powering
+                    float a = 1.0f - (normalized_pos / linear_zero_pos);
+                    a = powf(a, power);
+                    new_value = ImLerp(ImMin(v_max,0.f), v_min, a);
+                }
+                else
+                {
+                    // Positive: rescale to the positive range before powering
+                    float a;
+                    if (fabsf(linear_zero_pos - 1.0f) > 1.e-6)
+                        a = (normalized_pos - linear_zero_pos) / (1.0f - linear_zero_pos);
                     else
-                    {
-                        // Positive: rescale to the positive range before powering
-                        float a;
-                        if (fabsf(linear_zero_pos - 1.0f) > 1.e-6)
-                            a = (normalized_pos - linear_zero_pos) / (1.0f - linear_zero_pos);
-                        else
-                            a = normalized_pos;
-                        a = powf(a, power);
-                        new_value = ImLerp(ImMax(v_min,0.0f), v_max, a);
-                    }
+                        a = normalized_pos;
+                    a = powf(a, power);
+                    new_value = ImLerp(ImMax(v_min,0.0f), v_max, a);
                 }
-                else
-                {
-                    // Linear slider
-                    new_value = ImLerp(v_min, v_max, normalized_pos);
-                }
+            }
+            else
+            {
+                // Linear slider
+                new_value = ImLerp(v_min, v_max, normalized_pos);
+            }
 
-                // Round past decimal precision
-                //    0->1, 1->0.1, 2->0.01, etc.
-                // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
-                const float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
-                const float remainder = fmodf(new_value, min_step);
-                if (remainder <= min_step*0.5f)
-                    new_value -= remainder;
-                else
-                    new_value += (min_step - remainder);
+            // Round past decimal precision
+            //    0->1, 1->0.1, 2->0.01, etc.
+            // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
+            const float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
+            const float remainder = fmodf(new_value, min_step);
+            if (remainder <= min_step*0.5f)
+                new_value -= remainder;
+            else
+                new_value += (min_step - remainder);
 
-                if (*v != new_value)
-                {
-                    *v = new_value;
-                    value_changed = true;
-                }
+            if (*v != new_value)
+            {
+                *v = new_value;
+                value_changed = true;
             }
         }
         else
@@ -4915,7 +4912,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, window->Color(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab));
     }
 
-    // Draw value using user-provided display format so user can add prefix/suffix/decorations to the value.
+    // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
     char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), display_format, *v);
     const ImVec2 value_text_size = CalcTextSize(value_buf, value_buf_end, true);
