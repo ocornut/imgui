@@ -4714,6 +4714,25 @@ static bool SliderFloatAsInputText(const char* label, float* v, const ImGuiID& i
     return value_changed;
 }
 
+// Parse display precision back from the display format string
+static void ParseFormat(const char* fmt, int& decimal_precision)
+{
+    while ((fmt = strchr(fmt, '%')) != NULL)
+    {
+        fmt++;
+        if (fmt[0] == '%') { fmt++; continue; } // Ignore "%%"
+        while (*fmt >= '0' && *fmt <= '9')
+            fmt++;
+        if (*fmt == '.')
+        {
+            decimal_precision = atoi(fmt + 1);
+            if (decimal_precision < 0 || decimal_precision > 10)
+                decimal_precision = 3;
+        }
+        break;
+    }
+}
+
 // Use power!=1.0 for logarithmic sliders.
 // Adjust display_format to decorate the value with a prefix or a suffix.
 //   "%.3f"         1.234
@@ -4732,23 +4751,8 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 
     if (!display_format)
         display_format = "%.3f";
-
-    // Parse display precision back from the display format string
     int decimal_precision = 3;
-    for (const char* p = display_format; p = strchr(p, '%'); )
-    {
-        p++;
-        if (p[0] == '%') { p ++; continue; } // Ignore "%%"
-        while (*p >= '0' && *p <= '9')
-            p++;
-        if (*p == '.')
-        {
-            decimal_precision = atoi(p+1);
-            if (decimal_precision < 0 || decimal_precision > 10)
-                decimal_precision = 3;
-        }
-        break;
-    }
+    ParseFormat(display_format, decimal_precision);
 
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
