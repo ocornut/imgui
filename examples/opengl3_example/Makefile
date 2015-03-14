@@ -21,7 +21,7 @@ ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
 	LIBS = `pkg-config --static --libs glfw3`
 
-	CXXFLAGS = -I../../ -Igl3w `pkg-config --cflags glfw3`
+	CXXFLAGS = -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
 	CXXFLAGS += -Wall
 	CFLAGS = $(CXXFLAGS)
 endif
