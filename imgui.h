@@ -300,6 +300,9 @@ namespace ImGui
     IMGUI_API bool          InputFloat3(const char* label, float v[3], int decimal_precision = -1);
     IMGUI_API bool          InputFloat4(const char* label, float v[4], int decimal_precision = -1);
     IMGUI_API bool          InputInt(const char* label, int* v, int step = 1, int step_fast = 100, ImGuiInputTextFlags extra_flags = 0);
+    IMGUI_API bool          InputInt2(const char* label, int v[2]);
+    IMGUI_API bool          InputInt3(const char* label, int v[3]);
+    IMGUI_API bool          InputInt4(const char* label, int v[4]);
     IMGUI_API bool          Combo(const char* label, int* current_item, const char** items, int items_count, int height_in_items = -1);
     IMGUI_API bool          Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int height_in_items = -1);      // separate items with \0, end item-list with \0\0
     IMGUI_API bool          Combo(const char* label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);

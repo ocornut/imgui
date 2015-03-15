@@ -6084,6 +6084,56 @@ bool ImGui::InputFloat4(const char* label, float v[4], int decimal_precision)
     return InputFloatN(label, v, 4, decimal_precision);
 }
 
+static bool InputIntN(const char* label, int* v, int components)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    const ImGuiStyle& style = g.Style;
+    const float w_full = ImGui::CalcItemWidth();
+    const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)) / (float)components));
+    const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)));
+
+    bool value_changed = false;
+    ImGui::PushID(label);
+    ImGui::PushItemWidth(w_item_one);
+    for (int i = 0; i < components; i++)
+    {
+        ImGui::PushID(i);
+        if (i + 1 == components)
+        {
+            ImGui::PopItemWidth();
+            ImGui::PushItemWidth(w_item_last);
+        }
+        value_changed |= ImGui::InputInt("##v", &v[i], 0, 0);
+        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        ImGui::PopID();
+    }
+    ImGui::PopItemWidth();
+    ImGui::PopID();
+
+    ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
+
+    return value_changed;
+}
+
+bool ImGui::InputInt2(const char* label, int v[2])
+{
+    return InputIntN(label, v, 2);
+}
+
+bool ImGui::InputInt3(const char* label, int v[3])
+{
+    return InputIntN(label, v, 3);
+}
+
+bool ImGui::InputInt4(const char* label, int v[4])
+{
+    return InputIntN(label, v, 4);
+}
+
 static bool Items_ArrayGetter(void* data, int idx, const char** out_text)
 {
     const char** items = (const char**)data;
@@ -9067,18 +9117,26 @@ void ImGui::ShowTestWindow(bool* opened)
         //ImGui::ListBox("##listbox2", &listbox_item_current2, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
         //ImGui::PopItemWidth();
 
-        if (ImGui::TreeNode("Multi-component Sliders"))
+        if (ImGui::TreeNode("Multi-component Widgets"))
         {
             ImGui::Unindent();
 
-            static float vec4b[4] = { 0.10f, 0.20f, 0.30f, 0.40f };
-            ImGui::SliderFloat2("slider float2", vec4b, 0.0f, 1.0f);
-            ImGui::SliderFloat3("slider float3", vec4b, 0.0f, 1.0f);
-            ImGui::SliderFloat4("slider float4", vec4b, 0.0f, 1.0f);
-
+            static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
             static int vec4i[4] = { 1, 5, 100, 255 };
+
+            ImGui::InputFloat2("input float2", vec4f);
+            ImGui::SliderFloat2("slider float2", vec4f, 0.0f, 1.0f);
+            ImGui::InputInt2("input int2", vec4i);
             ImGui::SliderInt2("slider int2", vec4i, 0, 255);
+
+            ImGui::InputFloat3("input float3", vec4f);
+            ImGui::SliderFloat3("slider float3", vec4f, 0.0f, 1.0f);
+            ImGui::InputInt3("input int3", vec4i);
             ImGui::SliderInt3("slider int3", vec4i, 0, 255);
+
+            ImGui::InputFloat4("input float4", vec4f);
+            ImGui::SliderFloat4("slider float4", vec4f, 0.0f, 1.0f);
+            ImGui::InputInt4("input int4", vec4i);
             ImGui::SliderInt4("slider int4", vec4i, 0, 255);
 
             ImGui::Indent();
