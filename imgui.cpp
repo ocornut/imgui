@@ -8706,9 +8706,9 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::End();
         return;
     }
-
-    ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);    // 2/3 of the space for widget and 1/3 for labels
-    //ImGui::PushItemWidth(-140);                             // Right align, keep 140 pixels for labels
+    
+    //ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);    // 2/3 of the space for widget and 1/3 for labels
+    ImGui::PushItemWidth(-140);                                 // Right align, keep 140 pixels for labels
 
     ImGui::Text("ImGui says hello.");
     //ImGui::Text("MousePos (%g, %g)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
@@ -9041,16 +9041,6 @@ void ImGui::ShowTestWindow(bool* opened)
         static float angle = 0.0f;
         ImGui::SliderAngle("angle", &angle);
 
-        static float vec4b[4] = { 0.10f, 0.20f, 0.30f, 0.40f };
-        //ImGui::SliderFloat2("slider float2", vec4b, 0.0f, 1.0f);
-        ImGui::SliderFloat3("slider float3", vec4b, 0.0f, 1.0f);
-        //ImGui::SliderFloat4("slider float4", vec4b, 0.0f, 1.0f);
-
-        //static int vec4i[4] = { 1, 5, 100, 255 };
-        //ImGui::SliderInt2("slider int2", vec4i, 0, 255);
-        //ImGui::SliderInt3("slider int3", vec4i, 0, 255);
-        //ImGui::SliderInt4("slider int4", vec4i, 0, 255);
-
         static float col1[3] = { 1.0f,0.0f,0.2f };
         static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
         ImGui::ColorEdit3("color 1", col1);
@@ -9065,15 +9055,30 @@ void ImGui::ShowTestWindow(bool* opened)
         //ImGui::ListBox("##listbox2", &listbox_item_current2, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
         //ImGui::PopItemWidth();
 
+        if (ImGui::TreeNode("Multi-component Sliders"))
+        {
+            ImGui::TreePop(); // Intentionally undo the tree-node tab early on
+
+            static float vec4b[4] = { 0.10f, 0.20f, 0.30f, 0.40f };
+            ImGui::SliderFloat2("slider float2", vec4b, 0.0f, 1.0f);
+            ImGui::SliderFloat3("slider float3", vec4b, 0.0f, 1.0f);
+            ImGui::SliderFloat4("slider float4", vec4b, 0.0f, 1.0f);
+
+            static int vec4i[4] = { 1, 5, 100, 255 };
+            ImGui::SliderInt2("slider int2", vec4i, 0, 255);
+            ImGui::SliderInt3("slider int3", vec4i, 0, 255);
+            ImGui::SliderInt4("slider int4", vec4i, 0, 255);
+        }
+
         if (ImGui::TreeNode("Vertical Sliders"))
         {
-            const int spacing = 4;
+            ImGui::TreePop(); // Intentionally undo the tree-node tab early on
 
             static float values[7] = { 0.0f, 0.60f, 0.35f, 0.9f, 0.70f, 0.20f, 0.0f };
             ImGui::PushID("set1");
             for (int i = 0; i < 7; i++)
             {
-                if (i > 0) ImGui::SameLine(0, spacing);
+                if (i > 0) ImGui::SameLine(0, 4);
                 ImGui::PushID(i);
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor::HSV(i/7.0f, 0.5f, 0.5f));
                 ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImColor::HSV(i/7.0f, 0.9f, 0.9f));
@@ -9091,7 +9096,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::PushID("set2");
             for (size_t i = 0; i < 4; i++)
             {
-                if (i > 0) ImGui::SameLine(0, spacing);
+                if (i > 0) ImGui::SameLine(0, 4);
                 ImGui::PushID(i);
                 ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 40);
                 ImGui::VSliderFloat("##v", ImVec2(40,160), &values[i], 0.0f, 1.0f, "%.2f");
@@ -9099,8 +9104,6 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::PopID();
             }
             ImGui::PopID();
-
-            ImGui::TreePop();
         }
     }
 
