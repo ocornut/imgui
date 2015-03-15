@@ -269,6 +269,8 @@
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
  - input number: non-decimal input.
+ - text: vertical alignment (e.g. for Text after a large widget)
+ - text: proper horizontal centering
  - layout: horizontal layout helper (github issue #97)
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
@@ -9067,28 +9069,35 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             const int spacing = 4;
 
+            static float values[7] = { 0.0f, 0.60f, 0.35f, 0.9f, 0.70f, 0.20f, 0.0f };
             ImGui::PushID("set1");
-            static float values[4] = { 0.0f, 0.60f, 0.35f, 0.9f };
-            for (size_t i = 0; i < IM_ARRAYSIZE(values); i++)
+            for (int i = 0; i < 7; i++)
             {
                 if (i > 0) ImGui::SameLine(0, spacing);
                 ImGui::PushID(i);
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor::HSV(i/7.0f, 0.5f, 0.5f));
+                ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImColor::HSV(i/7.0f, 0.9f, 0.9f));
+                ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImColor::HSV(i/7.0f, 1.0f, 1.0f));
                 ImGui::VSliderFloat("##v", ImVec2(18,160), &values[i], 0.0f, 1.0f, "");
+                if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+                    ImGui::SetTooltip("%.3f", values[i]);
+                ImGui::PopStyleColor(3);
                 ImGui::PopID();
             }
             ImGui::PopID();
 
             ImGui::SameLine();
+
             ImGui::PushID("set2");
-            ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 40);
-            for (size_t i = 0; i < IM_ARRAYSIZE(values); i++)
+            for (size_t i = 0; i < 4; i++)
             {
                 if (i > 0) ImGui::SameLine(0, spacing);
                 ImGui::PushID(i);
+                ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 40);
                 ImGui::VSliderFloat("##v", ImVec2(40,160), &values[i], 0.0f, 1.0f, "%.2f");
+                ImGui::PopStyleVar();
                 ImGui::PopID();
             }
-            ImGui::PopStyleVar();
             ImGui::PopID();
 
             ImGui::TreePop();
