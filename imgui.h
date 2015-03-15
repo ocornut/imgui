@@ -502,7 +502,8 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_FrameRounding,       // float
     ImGuiStyleVar_ItemSpacing,         // ImVec2
     ImGuiStyleVar_ItemInnerSpacing,    // ImVec2
-    ImGuiStyleVar_TreeNodeSpacing      // float
+    ImGuiStyleVar_TreeNodeSpacing,     // float
+    ImGuiStyleVar_GrabMinSize          // float
 };
 
 // Enumeration for ColorEditMode()
