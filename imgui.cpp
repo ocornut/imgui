@@ -5074,11 +5074,11 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
 
     const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
     if (graph_size.x == 0.0f)
-        graph_size.x = ImGui::CalcItemWidth();
+        graph_size.x = ImGui::CalcItemWidth() + (style.FramePadding.x * 2);
     if (graph_size.y == 0.0f)
-        graph_size.y = label_size.y;
+        graph_size.y = label_size.y + (style.FramePadding.y * 2);
 
-    const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(graph_size.x, graph_size.y) + style.FramePadding*2.0f);
+    const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(graph_size.x, graph_size.y));
     const ImGuiAabb graph_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
     const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0));
     ItemSize(bb);
@@ -9026,10 +9026,10 @@ void ImGui::ShowTestWindow(bool* opened)
                 phase += 0.10f*values_offset; 
             }
         }
-        ImGui::PlotLines("Frame Times", &values.front(), (int)values.size(), (int)values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,70));
+        ImGui::PlotLines("Frame Times", &values.front(), (int)values.size(), (int)values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
 
         ImGui::SameLine(); ImGui::Checkbox("pause", &pause);
-        ImGui::PlotHistogram("Histogram", arr, IM_ARRAYSIZE(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0,70));
+        ImGui::PlotHistogram("Histogram", arr, IM_ARRAYSIZE(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0,80));
     }
 
     if (ImGui::CollapsingHeader("Horizontal Layout"))
