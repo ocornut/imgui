@@ -4735,7 +4735,7 @@ static void ParseFormat(const char* fmt, int& decimal_precision)
     }
 }
 
-static bool SliderBehaviour(const ImGuiAabb& frame_bb, const ImGuiAabb& slider_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision)
+static bool SliderBehaviour(const ImGuiAabb& frame_bb, const ImGuiAabb& slider_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, bool horizontal)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -4747,15 +4747,15 @@ static bool SliderBehaviour(const ImGuiAabb& frame_bb, const ImGuiAabb& slider_b
     const bool is_finite = (v_min != -FLT_MAX && v_min != FLT_MAX && v_max != -FLT_MAX && v_max != FLT_MAX);
     const bool is_non_linear = abs(power - 1.0f) > 0.0001f;
 
-    const float slider_w = slider_bb.GetWidth();
-    float grab_size_in_pixels;
+    const float slider_sz = horizontal ? slider_bb.GetWidth() : slider_bb.GetHeight();
+    float grab_sz;
     if (decimal_precision > 0 || !is_finite)
-        grab_size_in_pixels = style.GrabMinSize;
+        grab_sz = style.GrabMinSize;
     else
-        grab_size_in_pixels = ImMax(1.0f * (slider_w / (v_max-v_min+1.0f)), style.GrabMinSize); // Integer sliders, if possible have the grab size represent 1 unit
-    const float slider_effective_w = slider_bb.GetWidth() - grab_size_in_pixels;
-    const float slider_effective_x1 = slider_bb.Min.x + grab_size_in_pixels*0.5f;
-    const float slider_effective_x2 = slider_bb.Max.x - grab_size_in_pixels*0.5f;
+        grab_sz = ImMax(1.0f * (slider_sz / (v_max-v_min+1.0f)), style.GrabMinSize);    // Integer sliders, if possible have the grab size represent 1 unit
+    const float slider_usable_sz = slider_sz - grab_sz;
+    const float slider_usable_pos_min = (horizontal ? slider_bb.Min.x : slider_bb.Min.y) + grab_sz*0.5f;
+    const float slider_usable_pos_max = (horizontal ? slider_bb.Max.x : slider_bb.Max.y) - grab_sz*0.5f;
 
     bool value_changed = false;
 
@@ -4781,7 +4781,10 @@ static bool SliderBehaviour(const ImGuiAabb& frame_bb, const ImGuiAabb& slider_b
         {
             if (g.IO.MouseDown[0])
             {
-                const float normalized_pos = ImClamp((g.IO.MousePos.x - slider_effective_x1) / slider_effective_w, 0.0f, 1.0f);
+                const float mouse_abs_pos = horizontal ? g.IO.MousePos.x : g.IO.MousePos.y;
+                float normalized_pos = ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f);
+                if (!horizontal)
+                    normalized_pos = 1.0f - normalized_pos;
 
                 float new_value;
                 if (is_non_linear)
@@ -4857,8 +4860,14 @@ static bool SliderBehaviour(const ImGuiAabb& frame_bb, const ImGuiAabb& slider_b
         }
 
         // Draw
-        const float grab_x = ImLerp(slider_effective_x1, slider_effective_x2, grab_t);
-        const ImGuiAabb grab_bb(ImVec2(grab_x-grab_size_in_pixels*0.5f,frame_bb.Min.y+2.0f), ImVec2(grab_x+grab_size_in_pixels*0.5f,frame_bb.Max.y-2.0f));
+        if (!horizontal)
+            grab_t = 1.0f - grab_t;
+        const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
+        ImGuiAabb grab_bb;
+        if (horizontal)
+            grab_bb = ImGuiAabb(ImVec2(grab_pos - grab_sz*0.5f, frame_bb.Min.y + 2.0f), ImVec2(grab_pos + grab_sz*0.5f, frame_bb.Max.y - 2.0f));
+        else
+            grab_bb = ImGuiAabb(ImVec2(frame_bb.Min.x + 2.0f, grab_pos - grab_sz*0.5f), ImVec2(frame_bb.Max.x - 2.0f, grab_pos + grab_sz*0.5f));
         window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, window->Color(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab));
     }
 
@@ -4925,7 +4934,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     ItemSize(bb);
 
     // Actual slider behavior + render grab
-    bool value_changed = SliderBehaviour(frame_bb, slider_bb, id, v, v_min, v_max, power, decimal_precision);
+    bool value_changed = SliderBehaviour(frame_bb, slider_bb, id, v, v_min, v_max, power, decimal_precision, true);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
