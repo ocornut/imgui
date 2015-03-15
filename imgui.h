@@ -503,7 +503,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_FrameRounding,       // float
     ImGuiStyleVar_ItemSpacing,         // ImVec2
     ImGuiStyleVar_ItemInnerSpacing,    // ImVec2
-    ImGuiStyleVar_TreeNodeSpacing,     // float
+    ImGuiStyleVar_IndentSpacing,       // float
     ImGuiStyleVar_GrabMinSize          // float
 };
 
@@ -540,7 +540,7 @@ struct ImGuiStyle
     ImVec2      TouchExtraPadding;          // Expand bounding box for touch-based system where touch position is not accurate enough (unnecessary for mouse inputs). Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget running. So dont grow this too much!
     ImVec2      AutoFitPadding;             // Extra space after auto-fit (double-clicking on resize grip)
     float       WindowFillAlphaDefault;     // Default alpha of window background, if not specified in ImGui::Begin()
-    float       TreeNodeSpacing;            // Horizontal spacing when entering a tree node
+    float       IndentSpacing;              // Horizontal indentation when e.g. entering a tree node
     float       ColumnsMinSpacing;          // Minimum horizontal spacing between two columns
     float       ScrollbarWidth;             // Width of the vertical scrollbar
     float       GrabMinSize;                // Minimum width/height of a slider or scrollbar grab

@@ -129,6 +129,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/03/15 (1.36) - renamed style.TreeNodeSpacing to style.IndentSpacing, ImGuiStyleVar_TreeNodeSpacing to ImGuiStyleVar_IndentSpacing
  - 2015/03/13 (1.36) - renamed GetWindowIsFocused() to IsWindowFocused(). Kept inline redirection function.
  - 2015/03/08 (1.35) - renamed style.ScrollBarWidth to style.ScrollbarWidth
  - 2015/02/27 (1.34) - renamed OpenNextNode(bool) to SetNextTreeNodeOpened(bool, ImGuiSetCond). Kept inline redirection function.
@@ -506,7 +507,7 @@ ImGuiStyle::ImGuiStyle()
     TouchExtraPadding       = ImVec2(0,0);      // Expand bounding box for touch-based system where touch position is not accurate enough (unnecessary for mouse inputs). Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget running. So dont grow this too much!
     AutoFitPadding          = ImVec2(8,8);      // Extra space after auto-fit (double-clicking on resize grip)
     WindowFillAlphaDefault  = 0.70f;            // Default alpha of window background, if not specified in ImGui::Begin()
-    TreeNodeSpacing         = 22.0f;            // Horizontal spacing when entering a tree node
+    IndentSpacing           = 22.0f;            // Horizontal spacing when e.g. entering a tree node
     ColumnsMinSpacing       = 6.0f;             // Minimum horizontal spacing between two columns
     ScrollbarWidth          = 16.0f;            // Width of the vertical scrollbar
     GrabMinSize             = 10.0f;            // Minimum width/height of a slider or scrollbar grab
@@ -3383,7 +3384,7 @@ static float* GetStyleVarFloatAddr(ImGuiStyleVar idx)
     case ImGuiStyleVar_WindowRounding: return &g.Style.WindowRounding;
     case ImGuiStyleVar_ChildWindowRounding: return &g.Style.ChildWindowRounding;
     case ImGuiStyleVar_FrameRounding: return &g.Style.FrameRounding;
-    case ImGuiStyleVar_TreeNodeSpacing: return &g.Style.TreeNodeSpacing;
+    case ImGuiStyleVar_IndentSpacing: return &g.Style.IndentSpacing;
     case ImGuiStyleVar_GrabMinSize: return &g.Style.GrabMinSize;
     }
     return NULL;
@@ -4542,7 +4543,7 @@ bool ImGui::TreeNodeV(const char* str_id, const char* fmt, va_list args)
         str_id = fmt;
 
     ImGui::PushID(str_id);
-    const bool opened = ImGui::CollapsingHeader(buf, "", false);        // do not add to the ID so that TreeNodeSetOpen can access
+    const bool opened = ImGui::CollapsingHeader(buf, "", false);
     ImGui::PopID();
 
     if (opened)
@@ -6894,7 +6895,7 @@ void ImGui::TreePush(const char* str_id)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ColumnsStartX += g.Style.TreeNodeSpacing;
+    window->DC.ColumnsStartX += g.Style.IndentSpacing;
     window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
     window->DC.TreeDepth++;
     PushID(str_id ? str_id : "#TreePush");
@@ -6904,7 +6905,7 @@ void ImGui::TreePush(const void* ptr_id)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ColumnsStartX += g.Style.TreeNodeSpacing;
+    window->DC.ColumnsStartX += g.Style.IndentSpacing;
     window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
     window->DC.TreeDepth++;
     PushID(ptr_id ? ptr_id : (const void*)"#TreePush");
@@ -6914,7 +6915,7 @@ void ImGui::TreePop()
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ColumnsStartX -= g.Style.TreeNodeSpacing;
+    window->DC.ColumnsStartX -= g.Style.IndentSpacing;
     window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
     window->DC.TreeDepth--;
     PopID();
@@ -8585,7 +8586,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::SliderFloat2("ItemSpacing", (float*)&style.ItemSpacing, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat2("ItemInnerSpacing", (float*)&style.ItemInnerSpacing, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat2("TouchExtraPadding", (float*)&style.TouchExtraPadding, 0.0f, 10.0f, "%.0f");
-        ImGui::SliderFloat("TreeNodeSpacing", &style.TreeNodeSpacing, 0.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat("IndentSpacing", &style.IndentSpacing, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat("ScrollBarWidth", &style.ScrollbarWidth, 1.0f, 20.0f, "%.0f");
         ImGui::SliderFloat("GrabMinSize", &style.GrabMinSize, 1.0f, 20.0f, "%.0f");
         ImGui::TreePop();
