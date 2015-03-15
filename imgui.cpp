@@ -6891,32 +6891,43 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     }
 }
 
-void ImGui::TreePush(const char* str_id)
+
+inline void ImGui::Indent()
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.ColumnsStartX += g.Style.IndentSpacing;
     window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
+}
+
+inline void ImGui::Unindent()
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.ColumnsStartX -= g.Style.IndentSpacing;
+    window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
+}
+
+void ImGui::TreePush(const char* str_id)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    ImGui::Indent();
     window->DC.TreeDepth++;
     PushID(str_id ? str_id : "#TreePush");
 }
 
 void ImGui::TreePush(const void* ptr_id)
 {
-    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ColumnsStartX += g.Style.IndentSpacing;
-    window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
+    ImGui::Indent();
     window->DC.TreeDepth++;
     PushID(ptr_id ? ptr_id : (const void*)"#TreePush");
 }
 
 void ImGui::TreePop()
 {
-    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ColumnsStartX -= g.Style.IndentSpacing;
-    window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
+    ImGui::Unindent();
     window->DC.TreeDepth--;
     PopID();
 }

@@ -225,7 +225,9 @@ namespace ImGui
     // Layout
     IMGUI_API void          Separator();                                                        // horizontal line
     IMGUI_API void          SameLine(int column_x = 0, int spacing_w = -1);                     // call between widgets to layout them horizontally
-    IMGUI_API void          Spacing();
+    IMGUI_API void          Spacing();                                                          // add vertical spacing
+    IMGUI_API void          Indent();                                                           // move content position toward the right by style.IndentSpacing pixels
+    IMGUI_API void          Unindent();                                                         // move content position back to the left (cancel Indent)
     IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border=true);    // setup number of columns
     IMGUI_API void          NextColumn();                                                       // next column
     IMGUI_API int           GetColumnIndex();                                                   // get current column index
