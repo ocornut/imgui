@@ -420,7 +420,7 @@ struct ImGuiIniData;
 struct ImGuiState;
 struct ImGuiWindow;
 
-static bool         ButtonBehaviour(const ImGuiAabb& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false, bool pressed_on_click = false);
+static bool         ButtonBehavior(const ImGuiAabb& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false, bool pressed_on_click = false);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
 
 static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
@@ -1912,7 +1912,7 @@ void ImGui::NewFrame()
     ImGui::Begin("Debug", NULL, ImVec2(400,400));
 }
 
-// NB: behaviour of ImGui after Shutdown() is not tested/guaranteed at the moment. This function is merely here to free heap allocations.
+// NB: behavior of ImGui after Shutdown() is not tested/guaranteed at the moment. This function is merely here to free heap allocations.
 void ImGui::Shutdown()
 {
     ImGuiState& g = *GImGui;
@@ -2980,7 +2980,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                     const ImGuiAabb resize_aabb(window->Aabb().GetBR()-ImVec2(18,18), window->Aabb().GetBR());
                     const ImGuiID resize_id = window->GetID("#RESIZE");
                     bool hovered, held;
-                    ButtonBehaviour(resize_aabb, resize_id, &hovered, &held, true);
+                    ButtonBehavior(resize_aabb, resize_id, &hovered, &held, true);
                     resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
                     if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0])
@@ -3196,7 +3196,7 @@ static void Scrollbar(ImGuiWindow* window)
     bool held = false;
     bool hovered = false;
     const bool previously_held = (g.ActiveId == id);
-    ButtonBehaviour(bb, id, &hovered, &held, true);
+    ButtonBehavior(bb, id, &hovered, &held, true);
 
     const float scroll_max = ImMax(1.0f, window->SizeContents.y - window->Size.y);
     float scroll_ratio = ImSaturate(window->ScrollY / scroll_max);
@@ -4031,7 +4031,7 @@ static bool IsHovered(const ImGuiAabb& bb, ImGuiID id)
     return false;
 }
 
-static bool ButtonBehaviour(const ImGuiAabb& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat, bool pressed_on_click)
+static bool ButtonBehavior(const ImGuiAabb& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat, bool pressed_on_click)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -4102,7 +4102,7 @@ bool ImGui::Button(const char* label, const ImVec2& size_arg, bool repeat_when_h
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true, repeat_when_held);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true, repeat_when_held);
 
     // Render
     const ImU32 col = window->Color((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
@@ -4132,7 +4132,7 @@ bool ImGui::SmallButton(const char* label)
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true);
 
     // Render
     const ImU32 col = window->Color((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
@@ -4157,7 +4157,7 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size)
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true);
 
     return pressed;
 }
@@ -4172,7 +4172,7 @@ static bool CloseWindowButton(bool* p_opened)
     const ImGuiAabb bb(window->Aabb().GetTR() + ImVec2(-3.0f-size,2.0f), window->Aabb().GetTR() + ImVec2(-3.0f,2.0f+size));
 
     bool hovered, held;
-    bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true);
 
     // Render
     const ImU32 col = window->Color((held && hovered) ? ImGuiCol_CloseButtonActive : hovered ? ImGuiCol_CloseButtonHovered : ImGuiCol_CloseButton);
@@ -4243,7 +4243,7 @@ bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const I
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true);
 
     // Render
     const ImU32 col = window->Color((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
@@ -4424,7 +4424,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     const ImGuiAabb text_bb(bb.Min, bb.Min + ImVec2(window->FontSize() + style.FramePadding.x*2*2,0) + label_size);
     ItemSize(ImVec2(text_bb.GetSize().x, bb.GetSize().y));  // NB: we don't provide our width so that it doesn't get feed back into AutoFit
 
-    // When logging is enabled, if automatically expand tree nodes (but *NOT* collapsing headers.. seems like sensible behaviour).
+    // When logging is enabled, if automatically expand tree nodes (but *NOT* collapsing headers.. seems like sensible behavior).
     // NB- If we are above max depth we still allow manually opened nodes to be logged.
     if (g.LogEnabled && !display_frame && window->DC.TreeDepth < g.LogAutoExpandMaxDepth)
         opened = true;
@@ -4433,7 +4433,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
         return opened;
 
     bool hovered, held;
-    bool pressed = ButtonBehaviour(display_frame ? bb : text_bb, id, &hovered, &held, false);
+    bool pressed = ButtonBehavior(display_frame ? bb : text_bb, id, &hovered, &held, false);
     if (pressed)
     {
         opened = !opened;
@@ -4735,7 +4735,7 @@ static void ParseFormat(const char* fmt, int& decimal_precision)
     }
 }
 
-static bool SliderBehaviour(const ImGuiAabb& frame_bb, const ImGuiAabb& slider_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, bool horizontal)
+static bool SliderBehavior(const ImGuiAabb& frame_bb, const ImGuiAabb& slider_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, bool horizontal)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -4934,7 +4934,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     ItemSize(bb);
 
     // Actual slider behavior + render grab
-    bool value_changed = SliderBehaviour(frame_bb, slider_bb, id, v, v_min, v_max, power, decimal_precision, true);
+    bool value_changed = SliderBehavior(frame_bb, slider_bb, id, v, v_min, v_max, power, decimal_precision, true);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
@@ -5233,7 +5233,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehaviour(total_bb, id, &hovered, &held, true);
+    bool pressed = ButtonBehavior(total_bb, id, &hovered, &held, true);
     if (pressed)
         *v = !(*v);
 
@@ -5296,7 +5296,7 @@ bool ImGui::RadioButton(const char* label, bool active)
     const float radius = check_bb.GetHeight() * 0.5f;
 
     bool hovered, held;
-    bool pressed = ButtonBehaviour(total_bb, id, &hovered, &held, true);
+    bool pressed = ButtonBehavior(total_bb, id, &hovered, &held, true);
 
     window->DrawList->AddCircleFilled(center, radius, window->Color((held && hovered) ? ImGuiCol_CheckActive : hovered ? ImGuiCol_CheckHovered : ImGuiCol_FrameBg), 16);
     if (active)
@@ -6215,7 +6215,7 @@ bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehaviour(bb_with_spacing, id, &hovered, &held, true, false, false);
+    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true, false, false);
 
     // Render
     if (hovered || selected)
@@ -6346,7 +6346,7 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehaviour(bb, id, &hovered, &held, true);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true);
     RenderFrame(bb.Min, bb.Max, window->Color(col), outline_border, style.FrameRounding);
 
     if (hovered)
@@ -6622,7 +6622,7 @@ static bool ItemAdd(const ImGuiAabb& bb, const ImGuiID* id)
 
     // This is a sensible default, but widgets are free to override it after calling ItemAdd()
     const bool hovered = IsMouseHoveringBox(bb);
-    //const bool hovered = (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly) && IsMouseHoveringBox(bb);  // matching the behaviour of IsHovered(), not always what the user wants?
+    //const bool hovered = (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly) && IsMouseHoveringBox(bb);  // matching the behavior of IsHovered(), not always what the user wants?
     window->DC.LastItemHovered = hovered;
     return true;
 }
@@ -6787,7 +6787,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
                 continue;
 
             bool hovered, held;
-            ButtonBehaviour(column_aabb, column_id, &hovered, &held, true);
+            ButtonBehavior(column_aabb, column_id, &hovered, &held, true);
 
             // Draw before resize so our items positioning are in sync with the line being drawn
             const ImU32 col = window->Color(held ? ImGuiCol_ColumnActive : hovered ? ImGuiCol_ColumnHovered : ImGuiCol_Column);
