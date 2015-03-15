@@ -4887,13 +4887,13 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
 
     // NB- we don't call ItemSize() yet becausae we may turn into a text edit box below
-    if (!ItemAdd(slider_bb, &id))
+    if (!ItemAdd(frame_bb, &id))
     {
         ItemSize(bb);
         return false;
     }
 
-    const bool hovered = IsHovered(slider_bb, id);
+    const bool hovered = IsHovered(frame_bb, id);
     if (hovered)
         g.HoveredId = id;
 
