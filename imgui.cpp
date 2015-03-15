@@ -9069,7 +9069,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Multi-component Sliders"))
         {
-            ImGui::TreePop(); // Intentionally undo the tree-node tab early on
+            ImGui::Unindent();
 
             static float vec4b[4] = { 0.10f, 0.20f, 0.30f, 0.40f };
             ImGui::SliderFloat2("slider float2", vec4b, 0.0f, 1.0f);
@@ -9080,11 +9080,14 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::SliderInt2("slider int2", vec4i, 0, 255);
             ImGui::SliderInt3("slider int3", vec4i, 0, 255);
             ImGui::SliderInt4("slider int4", vec4i, 0, 255);
+
+            ImGui::Indent();
+            ImGui::TreePop();
         }
 
         if (ImGui::TreeNode("Vertical Sliders"))
         {
-            ImGui::TreePop(); // Intentionally undo the tree-node tab early on
+            ImGui::Unindent();
 
             static float values[7] = { 0.0f, 0.60f, 0.35f, 0.9f, 0.70f, 0.20f, 0.0f };
             ImGui::PushID("set1");
@@ -9116,6 +9119,9 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::PopID();
             }
             ImGui::PopID();
+
+            ImGui::Indent();
+            ImGui::TreePop();
         }
     }
 
