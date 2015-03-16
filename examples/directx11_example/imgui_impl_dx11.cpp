@@ -27,6 +27,7 @@ static ID3D11PixelShader*       g_pPixelShader = NULL;
 static ID3D11SamplerState*      g_pFontSampler = NULL;
 static ID3D11ShaderResourceView*g_pFontTextureView = NULL;
 static ID3D11BlendState*        g_blendState = NULL;
+static int                      VERTEX_BUFFER_SIZE = 30000;     // TODO: Make vertex buffer smaller and grow dynamically as needed.
 
 struct CUSTOMVERTEX
 {
@@ -358,7 +359,7 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
         D3D11_BUFFER_DESC bufferDesc;
         memset(&bufferDesc, 0, sizeof(D3D11_BUFFER_DESC));
         bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-        bufferDesc.ByteWidth = 100000 * sizeof(CUSTOMVERTEX); // Maybe we should handle that more dynamically?
+        bufferDesc.ByteWidth = VERTEX_BUFFER_SIZE * sizeof(CUSTOMVERTEX);
         bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         bufferDesc.MiscFlags = 0;
