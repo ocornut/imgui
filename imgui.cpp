@@ -1068,7 +1068,6 @@ struct ImGuiState
     float                   FramerateSecPerFrame[120];          // calculate estimate of framerate for user
     int                     FramerateSecPerFrameIdx;
     float                   FramerateSecPerFrameAccum;
-    bool                    TempBufferLocked;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
 
     ImGuiState()
@@ -1216,26 +1215,6 @@ static void RegisterAliveId(ImGuiID id)
     ImGuiState& g = *GImGui;
     if (g.ActiveId == id)
         g.ActiveIdIsAlive = true;
-}
-
-static char* TempBufferLock()
-{
-    ImGuiState& g = *GImGui;
-    IM_ASSERT(!g.TempBufferLocked);
-    g.TempBufferLocked = true;
-    return g.TempBuffer;
-}
-
-static void TempBufferUnlock()
-{
-    ImGuiState& g = *GImGui;
-    IM_ASSERT(g.TempBufferLocked);
-    g.TempBufferLocked = false;
-}
-
-static size_t TempBufferSize()
-{
-    return sizeof(GImGui->TempBuffer);
 }
 
 //-----------------------------------------------------------------------------
@@ -3847,13 +3826,13 @@ ImGuiStorage* ImGui::GetStateStorage()
 
 void ImGui::TextV(const char* fmt, va_list args)
 {
+    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
 
-    static char buf[1024];
-    const char* text_end = buf + ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
-    TextUnformatted(buf, text_end);
+    const char* text_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
+    TextUnformatted(g.TempBuffer, text_end);
 }
 
 void ImGui::Text(const char* fmt, ...)
@@ -4018,9 +3997,8 @@ void ImGui::LabelTextV(const char* label, const char* fmt, va_list args)
     const ImGuiStyle& style = g.Style;
     const float w = ImGui::CalcItemWidth();
 
-    static char buf[1024];
-    const char* value_text_begin = &buf[0];
-    const char* value_text_end = value_text_begin + ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
+    const char* value_text_begin = &g.TempBuffer[0];
+    const char* value_text_end = value_text_begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
 
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImGuiAabb value_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2, label_size.y));
@@ -4530,9 +4508,8 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
     if (window->SkipItems)
         return;
     
-    static char buf[1024];
-    const char* text_begin = buf;
-    const char* text_end = text_begin + ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
+    const char* text_begin = g.TempBuffer;
+    const char* text_end = text_begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
 
     const ImGuiStyle& style = g.Style;
     const float line_height = window->FontSize();
@@ -4559,18 +4536,18 @@ void ImGui::BulletText(const char* fmt, ...)
 // If returning 'true' the node is open and the user is responsible for calling TreePop
 bool ImGui::TreeNodeV(const char* str_id, const char* fmt, va_list args)
 {
+    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
 
-    static char buf[1024];
-    ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
+    ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
 
     if (!str_id || !str_id[0])
         str_id = fmt;
 
     ImGui::PushID(str_id);
-    const bool opened = ImGui::CollapsingHeader(buf, "", false);
+    const bool opened = ImGui::CollapsingHeader(g.TempBuffer, "", false);
     ImGui::PopID();
 
     if (opened)
@@ -4591,18 +4568,18 @@ bool ImGui::TreeNode(const char* str_id, const char* fmt, ...)
 // If returning 'true' the node is open and the user is responsible for calling TreePop
 bool ImGui::TreeNodeV(const void* ptr_id, const char* fmt, va_list args)
 {
+    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
 
-    static char buf[1024];
-    ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
+    ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
 
     if (!ptr_id)
         ptr_id = fmt;
 
     ImGui::PushID(ptr_id);
-    const bool opened = ImGui::CollapsingHeader(buf, "", false);
+    const bool opened = ImGui::CollapsingHeader(g.TempBuffer, "", false);
     ImGui::PopID();
 
     if (opened)
@@ -5899,10 +5876,8 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             {
                 const int ib = edit_state.HasSelection() ? ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end) : 0;
                 const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : (int)edit_state.CurLenW;
-                char* tmp_buf = TempBufferLock();
-                ImTextStrToUtf8(tmp_buf, TempBufferSize(), edit_state.Text+ib, edit_state.Text+ie);
-                g.IO.SetClipboardTextFn(tmp_buf);
-                TempBufferUnlock();
+                ImTextStrToUtf8(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), edit_state.Text+ib, edit_state.Text+ie);
+                g.IO.SetClipboardTextFn(g.TempBuffer);
             }
 
             if (cut)
@@ -5954,8 +5929,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             // Note that as soon as we can focus into the input box, the in-widget value gets priority over any underlying modification of the input buffer
             // FIXME: We actually always render 'buf' in RenderTextScrolledClipped
             // FIXME-OPT: CPU waste to do this every time the widget is active, should mark dirty state from the stb_textedit callbacks
-            char* tmp_buf = TempBufferLock();
-            ImTextStrToUtf8(tmp_buf, TempBufferSize(), edit_state.Text, NULL);
+            ImTextStrToUtf8(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), edit_state.Text, NULL);
 
             // User callback
             if ((flags & (ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackAlways)) != 0)
@@ -5986,7 +5960,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                     ImGuiTextEditCallbackData callback_data;
                     callback_data.EventFlag = event_flag; 
                     callback_data.EventKey = event_key;
-                    callback_data.Buf = tmp_buf;
+                    callback_data.Buf = g.TempBuffer;
                     callback_data.BufSize = edit_state.BufSizeA;
                     callback_data.BufDirty = false;
                     callback_data.Flags = flags;
@@ -6001,7 +5975,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                     callback(&callback_data);
 
                     // Read back what user may have modified
-                    IM_ASSERT(callback_data.Buf == tmp_buf);                   // Invalid to modify those fields
+                    IM_ASSERT(callback_data.Buf == g.TempBuffer);              // Invalid to modify those fields
                     IM_ASSERT(callback_data.BufSize == edit_state.BufSizeA);
                     IM_ASSERT(callback_data.Flags == flags);
                     if (callback_data.CursorPos != utf8_cursor_pos)            edit_state.StbState.cursor = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.CursorPos);
@@ -6009,18 +5983,17 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                     if (callback_data.SelectionEnd != utf8_selection_end)      edit_state.StbState.select_end = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionEnd);
                     if (callback_data.BufDirty)
                     {
-                        ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), tmp_buf, NULL);
+                        ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), g.TempBuffer, NULL);
                         edit_state.CursorAnimReset();
                     }
                 }
             }
 
-            if (strcmp(tmp_buf, buf) != 0)
+            if (strcmp(g.TempBuffer, buf) != 0)
             {
-                ImFormatString(buf, buf_size, "%s", tmp_buf);
+                ImFormatString(buf, buf_size, "%s", g.TempBuffer);
                 value_changed = true;
             }
-            TempBufferUnlock();
         }
     }
     
