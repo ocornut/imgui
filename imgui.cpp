@@ -3992,6 +3992,7 @@ void ImGui::LabelTextV(const char* label, const char* fmt, va_list args)
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
+
     const ImGuiStyle& style = g.Style;
     const float w = ImGui::CalcItemWidth();
 
@@ -4536,6 +4537,10 @@ void ImGui::BulletText(const char* fmt, ...)
 // If returning 'true' the node is open and the user is responsible for calling TreePop
 bool ImGui::TreeNodeV(const char* str_id, const char* fmt, va_list args)
 {
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
     static char buf[1024];
     ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
 
@@ -4564,6 +4569,10 @@ bool ImGui::TreeNode(const char* str_id, const char* fmt, ...)
 // If returning 'true' the node is open and the user is responsible for calling TreePop
 bool ImGui::TreeNodeV(const void* ptr_id, const char* fmt, va_list args)
 {
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
     static char buf[1024];
     ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
 
