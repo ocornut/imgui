@@ -1068,6 +1068,8 @@ struct ImGuiState
     float                   FramerateSecPerFrame[120];          // calculate estimate of framerate for user
     int                     FramerateSecPerFrameIdx;
     float                   FramerateSecPerFrameAccum;
+    bool                    TempBufferLocked;
+    char                    TempBuffer[1024*3+1];               // temporary text buffer
 
     ImGuiState()
     {
@@ -1214,6 +1216,26 @@ static void RegisterAliveId(ImGuiID id)
     ImGuiState& g = *GImGui;
     if (g.ActiveId == id)
         g.ActiveIdIsAlive = true;
+}
+
+static char* TempBufferLock()
+{
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(!g.TempBufferLocked);
+    g.TempBufferLocked = true;
+    return g.TempBuffer;
+}
+
+static void TempBufferUnlock()
+{
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(g.TempBufferLocked);
+    g.TempBufferLocked = false;
+}
+
+static size_t TempBufferSize()
+{
+    return sizeof(GImGui->TempBuffer);
 }
 
 //-----------------------------------------------------------------------------
@@ -5805,7 +5827,6 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     bool value_changed = false;
     bool cancel_edit = false;
     bool enter_pressed = false;
-    static char text_tmp_utf8[IM_ARRAYSIZE(edit_state.InitialText)];
     if (g.ActiveId == id)
     {
         // Edit in progress
@@ -5878,8 +5899,10 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             {
                 const int ib = edit_state.HasSelection() ? ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end) : 0;
                 const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : (int)edit_state.CurLenW;
-                ImTextStrToUtf8(text_tmp_utf8, IM_ARRAYSIZE(text_tmp_utf8), edit_state.Text+ib, edit_state.Text+ie);
-                g.IO.SetClipboardTextFn(text_tmp_utf8);
+                char* tmp_buf = TempBufferLock();
+                ImTextStrToUtf8(tmp_buf, TempBufferSize(), edit_state.Text+ib, edit_state.Text+ie);
+                g.IO.SetClipboardTextFn(tmp_buf);
+                TempBufferUnlock();
             }
 
             if (cut)
@@ -5931,7 +5954,8 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             // Note that as soon as we can focus into the input box, the in-widget value gets priority over any underlying modification of the input buffer
             // FIXME: We actually always render 'buf' in RenderTextScrolledClipped
             // FIXME-OPT: CPU waste to do this every time the widget is active, should mark dirty state from the stb_textedit callbacks
-            ImTextStrToUtf8(text_tmp_utf8, IM_ARRAYSIZE(text_tmp_utf8), edit_state.Text, NULL);
+            char* tmp_buf = TempBufferLock();
+            ImTextStrToUtf8(tmp_buf, TempBufferSize(), edit_state.Text, NULL);
 
             // User callback
             if ((flags & (ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackAlways)) != 0)
@@ -5962,7 +5986,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                     ImGuiTextEditCallbackData callback_data;
                     callback_data.EventFlag = event_flag; 
                     callback_data.EventKey = event_key;
-                    callback_data.Buf = text_tmp_utf8;
+                    callback_data.Buf = tmp_buf;
                     callback_data.BufSize = edit_state.BufSizeA;
                     callback_data.BufDirty = false;
                     callback_data.Flags = flags;
@@ -5977,7 +6001,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                     callback(&callback_data);
 
                     // Read back what user may have modified
-                    IM_ASSERT(callback_data.Buf == text_tmp_utf8);             // Invalid to modify those fields
+                    IM_ASSERT(callback_data.Buf == tmp_buf);                   // Invalid to modify those fields
                     IM_ASSERT(callback_data.BufSize == edit_state.BufSizeA);
                     IM_ASSERT(callback_data.Flags == flags);
                     if (callback_data.CursorPos != utf8_cursor_pos)            edit_state.StbState.cursor = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.CursorPos);
@@ -5985,17 +6009,18 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                     if (callback_data.SelectionEnd != utf8_selection_end)      edit_state.StbState.select_end = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionEnd);
                     if (callback_data.BufDirty)
                     {
-                        ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), text_tmp_utf8, NULL);
+                        ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), tmp_buf, NULL);
                         edit_state.CursorAnimReset();
                     }
                 }
             }
 
-            if (strcmp(text_tmp_utf8, buf) != 0)
+            if (strcmp(tmp_buf, buf) != 0)
             {
-                ImFormatString(buf, buf_size, "%s", text_tmp_utf8);
+                ImFormatString(buf, buf_size, "%s", tmp_buf);
                 value_changed = true;
             }
+            TempBufferUnlock();
         }
     }
     
