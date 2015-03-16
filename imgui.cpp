@@ -9174,7 +9174,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::SameLine();
 
             ImGui::PushID("set2");
-            for (size_t i = 0; i < 4; i++)
+            for (int i = 0; i < 4; i++)
             {
                 if (i > 0) ImGui::SameLine(0, 4);
                 ImGui::PushID(i);
