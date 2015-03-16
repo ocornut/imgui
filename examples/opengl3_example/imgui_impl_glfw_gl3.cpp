@@ -329,11 +329,18 @@ void ImGui_ImplGlfwGL3_NewFrame()
 
     // Setup inputs
     // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
-    double mouse_x, mouse_y;
-    glfwGetCursorPos(g_Window, &mouse_x, &mouse_y);
-    mouse_x *= (float)display_w / w;                                                    // Convert mouse coordinates to pixels
-    mouse_y *= (float)display_h / h;
-    io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);                               // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+    if (glfwGetWindowAttrib(g_Window, GLFW_FOCUSED))
+    {
+    	double mouse_x, mouse_y;
+    	glfwGetCursorPos(g_Window, &mouse_x, &mouse_y);
+    	mouse_x *= (float)display_w / w;                                                    // Convert mouse coordinates to pixels
+    	mouse_y *= (float)display_h / h;
+    	io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);                               // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+    }
+    else
+    {
+    	io.MousePos = ImVec2(-1,-1);
+    }
 
     for (int i = 0; i < 3; i++)
     {
