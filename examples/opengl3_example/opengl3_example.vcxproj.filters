@@ -22,7 +22,7 @@
     <ClCompile Include="imgui_impl_glfw_gl3.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="gl3w\GL\gl3w.c">
+    <ClCompile Include="..\libs\gl3w\GL\gl3w.c">
       <Filter>gl3w</Filter>
     </ClCompile>
   </ItemGroup>
@@ -36,10 +36,10 @@
     <ClInclude Include="imgui_impl_glfw_gl3.h">
       <Filter>sources</Filter>
     </ClInclude>
-    <ClInclude Include="gl3w\GL\gl3w.h">
+    <ClInclude Include="..\libs\gl3w\GL\gl3w.h">
       <Filter>gl3w</Filter>
     </ClInclude>
-    <ClInclude Include="gl3w\GL\glcorearb.h">
+    <ClInclude Include="..\libs\gl3w\GL\glcorearb.h">
       <Filter>gl3w</Filter>
     </ClInclude>
   </ItemGroup>

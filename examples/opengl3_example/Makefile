@@ -10,8 +10,9 @@
 
 #CXX = g++
 
-OBJS = main.o imgui_impl_glfw_gl3.o gl3w/GL/gl3w.o
+OBJS = main.o imgui_impl_glfw_gl3.o
 OBJS += ../../imgui.o
+OBJS += ../libs/gl3w/GL/gl3w.o
 
 UNAME_S := $(shell uname -s)
 
@@ -20,7 +21,7 @@ ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
 	LIBS = `pkg-config --static --libs glfw3`
 
-	CXXFLAGS = -I../../ -Igl3w `pkg-config --cflags glfw3`
+	CXXFLAGS = -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
 	CXXFLAGS += -Wall
 	CFLAGS = $(CXXFLAGS)
 endif
@@ -31,7 +32,7 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	LIBS += -L/usr/local/lib
 	LIBS += -lglfw3
 
-	CXXFLAGS = -I../../ -Igl3w -I/usr/local/Cellar/glew/1.10.0/include -I/usr/local/include
+	CXXFLAGS = -I../../ -I../libs/gl3w -I/usr/local/Cellar/glew/1.10.0/include -I/usr/local/include
 	CXXFLAGS += -Wall
 #	CXXFLAGS += -D__APPLE__
 	CFLAGS = $(CXXFLAGS)

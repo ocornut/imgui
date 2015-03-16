@@ -123,18 +123,18 @@ static void ImGui_ImplGlfwGL3_SetClipboardText(const char* text)
     glfwSetClipboardString(g_Window, text);
 }
 
-void ImGui_ImplGlfwGL3_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+void ImGui_ImplGlfwGL3_MouseButtonCallback(GLFWwindow*, int button, int action, int /*mods*/)
 {
     if (action == GLFW_PRESS && button >= 0 && button < 3)
         g_MousePressed[button] = true;
 }
 
-void ImGui_ImplGlfwGL3_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+void ImGui_ImplGlfwGL3_ScrollCallback(GLFWwindow*, double /*xoffset*/, double yoffset)
 {
     g_MouseWheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
 }
 
-void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
 {
     ImGuiIO& io = ImGui::GetIO();
     if (action == GLFW_PRESS)
@@ -143,9 +143,10 @@ void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow* window, int key, int scancode, in
         io.KeysDown[key] = false;
     io.KeyCtrl = (mods & GLFW_MOD_CONTROL) != 0;
     io.KeyShift = (mods & GLFW_MOD_SHIFT) != 0;
+    io.KeyAlt = (mods & GLFW_MOD_ALT) != 0;
 }
 
-void ImGui_ImplGlfwGL3_CharCallback(GLFWwindow* window, unsigned int c)
+void ImGui_ImplGlfwGL3_CharCallback(GLFWwindow*, unsigned int c)
 {
     ImGuiIO& io = ImGui::GetIO();
     if (c > 0 && c < 0x10000)

@@ -27,6 +27,7 @@ static ID3D11PixelShader*       g_pPixelShader = NULL;
 static ID3D11SamplerState*      g_pFontSampler = NULL;
 static ID3D11ShaderResourceView*g_pFontTextureView = NULL;
 static ID3D11BlendState*        g_blendState = NULL;
+static int                      VERTEX_BUFFER_SIZE = 30000;     // TODO: Make vertex buffer smaller and grow dynamically as needed.
 
 struct CUSTOMVERTEX
 {
@@ -146,7 +147,7 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
     g_pd3dDeviceContext->VSSetShader(NULL, NULL, 0);
 }
 
-LRESULT ImGui_ImplDX11_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT ImGui_ImplDX11_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
@@ -171,11 +172,11 @@ LRESULT ImGui_ImplDX11_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
         io.MousePos.y = (signed short)(lParam >> 16); 
         return true;
     case WM_KEYDOWN:
-        if (wParam >= 0 && wParam < 256)
+        if (wParam < 256)
             io.KeysDown[wParam] = 1;
         return true;
     case WM_KEYUP:
-        if (wParam >= 0 && wParam < 256)
+        if (wParam < 256)
             io.KeysDown[wParam] = 0;
         return true;
     case WM_CHAR:
@@ -358,7 +359,7 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
         D3D11_BUFFER_DESC bufferDesc;
         memset(&bufferDesc, 0, sizeof(D3D11_BUFFER_DESC));
         bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-        bufferDesc.ByteWidth = 100000 * sizeof(CUSTOMVERTEX); // Maybe we should handle that more dynamically?
+        bufferDesc.ByteWidth = VERTEX_BUFFER_SIZE * sizeof(CUSTOMVERTEX);
         bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         bufferDesc.MiscFlags = 0;
@@ -455,6 +456,7 @@ void ImGui_ImplDX11_NewFrame()
     // Read keyboard modifiers inputs
     io.KeyCtrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     io.KeyShift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+    io.KeyAlt = (GetKeyState(VK_MENU) & 0x8000) != 0;
     // io.KeysDown : filled by WM_KEYDOWN/WM_KEYUP events
     // io.MousePos : filled by WM_MOUSEMOVE events
     // io.MouseDown : filled by WM_*BUTTON* events

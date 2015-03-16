@@ -15,6 +15,7 @@ static INT64                    g_Time = 0;
 static INT64                    g_TicksPerSecond = 0;
 static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
 static LPDIRECT3DVERTEXBUFFER9  g_pVB = NULL;
+static int                      VERTEX_BUFFER_SIZE = 30000;     // TODO: Make vertex buffer smaller and grow dynamically as needed.
 
 struct CUSTOMVERTEX
 {
@@ -110,7 +111,7 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
     }
 }
 
-LRESULT ImGui_ImplDX9_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT ImGui_ImplDX9_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
@@ -135,11 +136,11 @@ LRESULT ImGui_ImplDX9_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM 
         io.MousePos.y = (signed short)(lParam >> 16); 
         return true;
     case WM_KEYDOWN:
-        if (wParam >= 0 && wParam < 256)
+        if (wParam < 256)
             io.KeysDown[wParam] = 1;
         return true;
     case WM_KEYUP:
-        if (wParam >= 0 && wParam < 256)
+        if (wParam < 256)
             io.KeysDown[wParam] = 0;
         return true;
     case WM_CHAR:
@@ -182,9 +183,6 @@ bool    ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device)
 
     io.RenderDrawListsFn = ImGui_ImplDX9_RenderDrawLists;
     io.ImeWindowHandle = g_hWnd;
-
-    if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
-        return false;
 
     return true;
 }
@@ -232,7 +230,7 @@ bool ImGui_ImplDX9_CreateDeviceObjects()
     if (!g_pd3dDevice)
         return false;
 
-    if (g_pd3dDevice->CreateVertexBuffer(10000 * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
+    if (g_pd3dDevice->CreateVertexBuffer(VERTEX_BUFFER_SIZE * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
         return false;
 
     ImGui_ImplDX9_CreateFontsTexture();
@@ -276,6 +274,7 @@ void ImGui_ImplDX9_NewFrame()
     // Read keyboard modifiers inputs
     io.KeyCtrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     io.KeyShift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+    io.KeyAlt = (GetKeyState(VK_MENU) & 0x8000) != 0;
     // io.KeysDown : filled by WM_KEYDOWN/WM_KEYUP events
     // io.MousePos : filled by WM_MOUSEMOVE events
     // io.MouseDown : filled by WM_*BUTTON* events
