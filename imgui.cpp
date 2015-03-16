@@ -9545,13 +9545,13 @@ static void ShowExampleAppAutoResize(bool* opened)
 
 static void ShowExampleAppFixedOverlay(bool* opened)
 {
+    ImGui::SetNextWindowPos(ImVec2(10,10));
     if (!ImGui::Begin("Example: Fixed Overlay", opened, ImVec2(0,0), 0.3f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings))
     {
         ImGui::End();
         return;
     }
 
-    ImGui::SetWindowPos(ImVec2(10,10));
     ImGui::Text("Simple overlay\non the top-left side of the screen.");
     ImGui::Separator();
     ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y); 
