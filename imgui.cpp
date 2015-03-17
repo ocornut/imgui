@@ -904,6 +904,16 @@ struct ImGuiAabb        // 2D axis aligned bounding-box
     void        Clip(const ImGuiAabb& clip)             { Min.x = ImMax(Min.x, clip.Min.x); Min.y = ImMax(Min.y, clip.Min.y); Max.x = ImMin(Max.x, clip.Max.x); Max.y = ImMin(Max.y, clip.Max.y); }
 };
 
+struct ImGuiGroupData
+{
+    ImVec2 BackupCursorPos;
+    ImVec2 BackupCursorMaxPos;
+    float  BackupColumnsStartX;
+    float  BackupCurrentLineHeight;
+    float  BackupCurrentLineTextBaseOffset;
+    float  BackupLogLinePosY;
+};
+
 // Temporary per-window data, reset at the beginning of the frame
 struct ImGuiDrawContext
 {
@@ -924,6 +934,7 @@ struct ImGuiDrawContext
     ImVector<bool>          AllowKeyboardFocus;
     ImVector<float>         ItemWidth;           // 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
     ImVector<float>         TextWrapPos;
+    ImVector<ImGuiGroupData> GroupStack;
     ImGuiColorEditMode      ColorEditMode;
     ImGuiStorage*           StateStorage;
 
@@ -3096,6 +3107,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.ColumnsStartPos.y;
         window->DC.TreeDepth = 0;
         window->DC.StateStorage = &window->StateStorage;
+        window->DC.GroupStack.resize(0);
 
         if (window->AutoFitFrames > 0)
             window->AutoFitFrames--;
@@ -6383,8 +6395,8 @@ bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
 
     // Size default to hold ~7 items. Fractional number of items helps seeing that we can scroll down/up without looking at scrollbar.
     ImVec2 size;
-    size.x = (size_arg.x != 0.0f) ? size_arg.x : ImGui::CalcItemWidth() + style.FramePadding.x * 2.0f;
-    size.y = (size_arg.y != 0.0f) ? size_arg.y : ImGui::GetTextLineHeightWithSpacing() * 7.4f + style.ItemSpacing.y;
+    size.x = (size_arg.x != 0.0f) ? (size_arg.x) : ImGui::CalcItemWidth() + style.FramePadding.x * 2.0f;
+    size.y = (size_arg.y != 0.0f) ? (size_arg.y) : ImGui::GetTextLineHeightWithSpacing() * 7.4f + style.ItemSpacing.y;
     const ImVec2 frame_size = ImVec2(size.x, ImMax(size.y, label_size.y));
     const ImGuiAabb frame_bb(window->DC.CursorPos, window->DC.CursorPos + frame_size);
     const ImGuiAabb bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
@@ -6421,6 +6433,9 @@ void ImGui::ListBoxFooter()
     
     ImGui::EndChildFrame();
 
+    // Redeclare item size so that it includes the label (we have stored the full size in LastItemAabb)
+    // We call SameLine() to restore DC.CurrentLine* data
+    ImGui::SameLine();
     parent_window->DC.CursorPos = bb.Min;
     ItemSize(bb, style.FramePadding.y);
 }
@@ -6758,6 +6773,52 @@ static bool ItemAdd(const ImGuiAabb& bb, const ImGuiID* id)
     //const bool hovered = (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly) && IsMouseHoveringBox(bb);  // matching the behavior of IsHovered(), not always what the user wants?
     window->DC.LastItemHovered = hovered;
     return true;
+}
+
+void ImGui::BeginGroup()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+
+    window->DC.GroupStack.resize(window->DC.GroupStack.size() + 1);
+    ImGuiGroupData& group_data = window->DC.GroupStack.back();
+    group_data.BackupCursorPos = window->DC.CursorPos;
+    group_data.BackupCursorMaxPos = window->DC.CursorMaxPos;
+    group_data.BackupColumnsStartX = window->DC.ColumnsStartX;
+    group_data.BackupCurrentLineHeight = window->DC.CurrentLineHeight;
+    group_data.BackupCurrentLineTextBaseOffset = window->DC.CurrentLineTextBaseOffset;
+    group_data.BackupLogLinePosY = window->DC.LogLinePosY;
+
+    window->DC.ColumnsStartX = window->DC.CursorPos.x - window->Pos.x;
+    window->DC.CursorMaxPos = window->DC.CursorPos;
+    window->DC.CurrentLineHeight = 0.0f;
+    window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
+}
+
+void ImGui::EndGroup()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    IM_ASSERT(!window->DC.GroupStack.empty());
+
+    ImGuiGroupData& group_data = window->DC.GroupStack.back();
+
+    ImGuiAabb group_bb(group_data.BackupCursorPos, window->DC.CursorMaxPos);
+    group_bb.Max.y -= style.ItemSpacing.y;
+
+    window->DC.CursorPos = group_data.BackupCursorPos;
+    window->DC.CursorMaxPos = ImMax(group_data.BackupCursorMaxPos, window->DC.CursorMaxPos);
+    window->DC.CurrentLineHeight = group_data.BackupCurrentLineHeight;
+    window->DC.CurrentLineTextBaseOffset = group_data.BackupCurrentLineTextBaseOffset;      // FIXME: Ideally we'll grab the base offset from the first line of the group.
+    window->DC.ColumnsStartX = group_data.BackupColumnsStartX;
+    window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
+
+    ItemSize(group_bb.GetSize(), group_data.BackupCurrentLineTextBaseOffset);
+    ItemAdd(group_bb, NULL);
+
+    window->DC.GroupStack.pop_back();
+
+    //window->DrawList->AddRect(group_bb.Min, group_bb.Max, 0xFFFF00FF);   // Debug
 }
 
 // Gets back to previous line and continue with horizontal layout
@@ -9251,7 +9312,7 @@ void ImGui::ShowTestWindow(bool* opened)
     {
         if (ImGui::TreeNode("Text Baseline Alignment"))
         {
-            ImGui::TextWrapped("This is testing the vertical alignment that occurs on text to keep it at the same baseline as widgets. Lines only composed of text or \"small\" widgets fit in less vertical spaces than lines with normal widgets."); 
+            ImGui::TextWrapped("(This is testing the vertical alignment that occurs on text to keep it at the same baseline as widgets. Lines only composed of text or \"small\" widgets fit in less vertical spaces than lines with normal widgets)"); 
 
             ImGui::Text("One\nTwo\nThree"); ImGui::SameLine();            
             ImGui::Text("Hello\nWorld"); ImGui::SameLine();
@@ -9283,8 +9344,10 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Horizontal Layout using SameLine()"))
+        if (ImGui::TreeNode("Basic Horizontal Layout"))
         {
+            ImGui::TextWrapped("(Use ImGui::SameLine() to keep adding items to the right of the preceeding item)");
+
             // Text
             ImGui::Text("Hello");
             ImGui::SameLine();
@@ -9332,6 +9395,50 @@ void ImGui::ShowTestWindow(bool* opened)
                 //if (ImGui::IsItemHovered()) ImGui::SetTooltip("ListBox %d hovered", i); 
             }
             ImGui::PopItemWidth();
+
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Groups"))
+        {
+            ImGui::TextWrapped("(Using ImGui::BeginGroup()/EndGroup() to layout items)");
+
+            ImVec2 size;
+            ImGui::BeginGroup();
+            {
+                ImGui::BeginGroup();
+                ImGui::Button("AAA");
+                ImGui::SameLine();
+                ImGui::Button("BBB");
+                ImGui::SameLine();
+                ImGui::BeginGroup();
+                ImGui::Button("CCC");
+                ImGui::Button("DDD");
+                ImGui::EndGroup();
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Group hovered");
+                ImGui::SameLine();
+                ImGui::Button("EEE");
+                ImGui::EndGroup();
+
+                // Capture the group size and create widgets using the same size
+                size = ImGui::GetItemRectSize();
+                const float values[5] = { 0.5f, 0.20f, 0.80f, 0.60f, 0.25f };
+                ImGui::PlotHistogram("##values", values, IM_ARRAYSIZE(values), 0, NULL, 0.0f, 1.0f, size);
+            }
+            ImGui::Button("ACTION", ImVec2((size.x - ImGui::GetStyle().ItemSpacing.x)*0.5f,size.y));
+            ImGui::SameLine();
+            ImGui::Button("REACTION", ImVec2((size.x - ImGui::GetStyle().ItemSpacing.x)*0.5f,size.y));
+            ImGui::EndGroup();
+            ImGui::SameLine();
+
+            ImGui::Button("LEVERAGE\nBUZZWORD", size);
+            ImGui::SameLine();
+
+            ImGui::ListBoxHeader("List", size);
+            ImGui::Selectable("Selected", true);
+            ImGui::Selectable("Not Selected", false);
+            ImGui::ListBoxFooter();
 
             ImGui::TreePop();
         }

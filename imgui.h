@@ -223,8 +223,10 @@ namespace ImGui
     IMGUI_API void          EndTooltip();
 
     // Layout
+    IMGUI_API void          BeginGroup();
+    IMGUI_API void          EndGroup();
     IMGUI_API void          Separator();                                                        // horizontal line
-    IMGUI_API void          SameLine(int column_x = 0, int spacing_w = -1);                     // call between widgets to layout them horizontally
+    IMGUI_API void          SameLine(int column_x = 0, int spacing_w = -1);                     // call between widgets or groups to layout them horizontally
     IMGUI_API void          Spacing();                                                          // add vertical spacing
     IMGUI_API void          Indent();                                                           // move content position toward the right by style.IndentSpacing pixels
     IMGUI_API void          Unindent();                                                         // move content position back to the left (cancel Indent)
