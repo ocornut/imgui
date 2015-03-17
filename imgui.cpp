@@ -1193,12 +1193,12 @@ public:
     bool        FocusItemRegister(bool is_active, bool tab_stop = true);      // Return true if focus is requested
     void        FocusItemUnregister();
 
-    ImRect      Aabb() const                            { return ImRect(Pos, Pos+Size); }
+    ImRect      Rect() const                            { return ImRect(Pos, Pos+Size); }
     ImFont*     Font() const                            { return GImGui->Font; }
     float       FontSize() const                        { return GImGui->FontSize * FontWindowScale; }
     ImVec2      CursorPos() const                       { return DC.CursorPos; }
     float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0 : FontSize() + GImGui->Style.FramePadding.y * 2.0f; }
-    ImRect      TitleBarAabb() const                    { return ImRect(Pos, Pos + ImVec2(SizeFull.x, TitleBarHeight())); }
+    ImRect      TitleBarRect() const                    { return ImRect(Pos, Pos + ImVec2(SizeFull.x, TitleBarHeight())); }
     ImVec2      WindowPadding() const                   { return ((Flags & ImGuiWindowFlags_ChildWindow) && !(Flags & ImGuiWindowFlags_ShowBorders)) ? ImVec2(0,0) : GImGui->Style.WindowPadding; }
     ImU32       Color(ImGuiCol idx, float a=1.f) const  { ImVec4 c = GImGui->Style.Colors[idx]; c.w *= GImGui->Style.Alpha * a; return ImGui::ColorConvertFloat4ToU32(c); }
     ImU32       Color(const ImVec4& col) const          { ImVec4 c = col; c.w *= GImGui->Style.Alpha; return ImGui::ColorConvertFloat4ToU32(c); }
@@ -2933,7 +2933,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->FocusIdxAllCounter = window->FocusIdxTabCounter = -1;
         window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = IM_INT_MAX;
 
-        ImRect title_bar_aabb = window->TitleBarAabb();
+        ImRect title_bar_rect = window->TitleBarRect();
 
         // Apply and ImClamp scrolling
         window->ScrollY = window->NextScrollY;
@@ -2946,7 +2946,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         // Collapse window by double-clicking on title bar
         if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
         {
-            if (!(window->Flags & ImGuiWindowFlags_NoCollapse) && g.HoveredWindow == window && IsMouseHoveringRect(title_bar_aabb) && g.IO.MouseDoubleClicked[0])
+            if (!(window->Flags & ImGuiWindowFlags_NoCollapse) && g.HoveredWindow == window && IsMouseHoveringRect(title_bar_rect) && g.IO.MouseDoubleClicked[0])
             {
                 window->Collapsed = !window->Collapsed;
                 if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
@@ -2963,12 +2963,12 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         if (window->Collapsed)
         {
             // Draw title bar only
-            window->Size = title_bar_aabb.GetSize();
-            window->DrawList->AddRectFilled(title_bar_aabb.GetTL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_TitleBgCollapsed), window_rounding);
+            window->Size = title_bar_rect.GetSize();
+            window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_TitleBgCollapsed), window_rounding);
             if (window->Flags & ImGuiWindowFlags_ShowBorders)
             {
-                window->DrawList->AddRect(title_bar_aabb.GetTL()+ImVec2(1,1), title_bar_aabb.GetBR()+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
-                window->DrawList->AddRect(title_bar_aabb.GetTL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_Border), window_rounding);
+                window->DrawList->AddRect(title_bar_rect.GetTL()+ImVec2(1,1), title_bar_rect.GetBR()+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
+                window->DrawList->AddRect(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_Border), window_rounding);
             }
         }
         else
@@ -3003,10 +3003,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                 else if (!(window->Flags & ImGuiWindowFlags_NoResize))
                 {
                     // Manual resize grip
-                    const ImRect resize_aabb(window->Aabb().GetBR()-ImVec2(18,18), window->Aabb().GetBR());
+                    const ImRect resize_rect(window->Rect().GetBR()-ImVec2(18,18), window->Rect().GetBR());
                     const ImGuiID resize_id = window->GetID("#RESIZE");
                     bool hovered, held;
-                    ButtonBehavior(resize_aabb, resize_id, &hovered, &held, true);
+                    ButtonBehavior(resize_rect, resize_id, &hovered, &held, true);
                     resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
                     if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0])
@@ -3027,8 +3027,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                     }
                 }
 
-                // Update aabb immediately so that rendering right below us isn't one frame late
-                title_bar_aabb = window->TitleBarAabb();
+                // Update rectangle immediately so that rendering right below us isn't one frame late
+                title_bar_rect = window->TitleBarRect();
             }
 
             // Scrollbar
@@ -3049,7 +3049,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
 
             // Title bar
             if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
-                window->DrawList->AddRectFilled(title_bar_aabb.GetTL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_TitleBg), window_rounding, 1|2);
+                window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_TitleBg), window_rounding, 1|2);
 
             // Borders
             if (window->Flags & ImGuiWindowFlags_ShowBorders)
@@ -3057,7 +3057,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                 window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
                 window->DrawList->AddRect(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_Border), window_rounding);
                 if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
-                    window->DrawList->AddLine(title_bar_aabb.GetBL(), title_bar_aabb.GetBR(), window->Color(ImGuiCol_Border));
+                    window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_Border));
             }
 
             // Scrollbar
@@ -3069,7 +3069,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
             if (!(window->Flags & ImGuiWindowFlags_NoResize))
             {
                 const float r = window_rounding;
-                const ImVec2 br = window->Aabb().GetBR();
+                const ImVec2 br = window->Rect().GetBR();
                 if (r == 0.0f)
                 {
                     window->DrawList->AddTriangleFilled(br, br-ImVec2(0,14), br-ImVec2(14,0), resize_col);
@@ -3127,12 +3127,12 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
             }
 
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
-            const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_aabb.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y*2 + text_size.y);
+            const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_rect.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y*2 + text_size.y);
             RenderTextClipped(text_min, name, NULL, &text_size, text_max);
         }
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
-        window->ClippedRect = window->Aabb();
+        window->ClippedRect = window->Rect();
         window->ClippedRect.Clip(window->ClipRectStack.front());
 
         // Pressing CTRL+C while holding on a window copy its content to the clipboard
@@ -3147,8 +3147,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
 
     // Inner clipping rectangle
     // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
-    const ImRect title_bar_aabb = window->TitleBarAabb();
-    ImVec4 clip_rect(title_bar_aabb.Min.x+0.5f+window->WindowPadding().x*0.5f, title_bar_aabb.Max.y+0.5f, window->Aabb().Max.x+0.5f-window->WindowPadding().x*0.5f, window->Aabb().Max.y-1.5f);
+    const ImRect title_bar_rect = window->TitleBarRect();
+    ImVec4 clip_rect(title_bar_rect.Min.x+0.5f+window->WindowPadding().x*0.5f, title_bar_rect.Max.y+0.5f, window->Rect().Max.x+0.5f-window->WindowPadding().x*0.5f, window->Rect().Max.y-1.5f);
     if (window->ScrollbarY)
         clip_rect.z -= style.ScrollbarWidth;
     PushClipRect(clip_rect);
@@ -3211,7 +3211,7 @@ static void Scrollbar(ImGuiWindow* window)
     const ImGuiID id = window->GetID("#SCROLLY");
 
     // Render background
-    ImRect bb(window->Aabb().Max.x - style.ScrollbarWidth, window->Pos.y + window->TitleBarHeight()+1, window->Aabb().Max.x, window->Aabb().Max.y-1);
+    ImRect bb(window->Rect().Max.x - style.ScrollbarWidth, window->Pos.y + window->TitleBarHeight()+1, window->Rect().Max.x, window->Rect().Max.y-1);
     window->DrawList->AddRectFilled(bb.Min, bb.Max, window->Color(ImGuiCol_ScrollbarBg));
     bb.Expand(ImVec2(-3,-3));
     const float scrollbar_height = bb.GetHeight();
@@ -4206,7 +4206,7 @@ static bool CloseWindowButton(bool* p_opened)
 
     const ImGuiID id = window->GetID("#CLOSE");
     const float size = window->TitleBarHeight() - 4.0f;
-    const ImRect bb(window->Aabb().GetTR() + ImVec2(-3.0f-size,2.0f), window->Aabb().GetTR() + ImVec2(-3.0f,2.0f+size));
+    const ImRect bb(window->Rect().GetTR() + ImVec2(-3.0f-size,2.0f), window->Rect().GetTR() + ImVec2(-3.0f,2.0f+size));
 
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, true);
@@ -6285,11 +6285,11 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         const ImVec2 backup_pos = ImGui::GetCursorPos();
         const float popup_off_x = 0.0f;//style.ItemInnerSpacing.x;
         const float popup_height = (label_size.y + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + style.WindowPadding.y;
-        const ImRect popup_aabb(ImVec2(frame_bb.Min.x+popup_off_x, frame_bb.Max.y), ImVec2(frame_bb.Max.x+popup_off_x, frame_bb.Max.y + popup_height));
-        ImGui::SetCursorPos(popup_aabb.Min - window->Pos);
+        const ImRect popup_rect(ImVec2(frame_bb.Min.x+popup_off_x, frame_bb.Max.y), ImVec2(frame_bb.Max.x+popup_off_x, frame_bb.Max.y + popup_height));
+        ImGui::SetCursorPos(popup_rect.Min - window->Pos);
 
         const ImGuiWindowFlags flags = ImGuiWindowFlags_ComboBox | ((window->Flags & ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
-        ImGui::BeginChild("#ComboBox", popup_aabb.GetSize(), false, flags);
+        ImGui::BeginChild("#ComboBox", popup_rect.GetSize(), false, flags);
         ImGui::Spacing();
 
         bool combo_item_active = false;
@@ -6434,7 +6434,7 @@ void ImGui::ListBoxFooter()
     
     ImGui::EndChildFrame();
 
-    // Redeclare item size so that it includes the label (we have stored the full size in LastItemAabb)
+    // Redeclare item size so that it includes the label (we have stored the full size in LastItemRect)
     // We call SameLine() to restore DC.CurrentLine* data
     ImGui::SameLine();
     parent_window->DC.CursorPos = bb.Min;
@@ -6978,13 +6978,13 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             float x = window->Pos.x + GetColumnOffset(i);
             
             const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(i);
-            const ImRect column_aabb(ImVec2(x-4,y1),ImVec2(x+4,y2));
+            const ImRect column_rect(ImVec2(x-4,y1),ImVec2(x+4,y2));
 
-            if (IsClipped(column_aabb))
+            if (IsClipped(column_rect))
                 continue;
 
             bool hovered, held;
-            ButtonBehavior(column_aabb, column_id, &hovered, &held, true);
+            ButtonBehavior(column_rect, column_id, &hovered, &held, true);
 
             // Draw before resize so our items positioning are in sync with the line being drawn
             const ImU32 col = window->Color(held ? ImGuiCol_ColumnActive : hovered ? ImGuiCol_ColumnHovered : ImGuiCol_Column);
