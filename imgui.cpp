@@ -2597,13 +2597,13 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
     ImVec2 size = size_arg;
     if (size.x <= 0.0f)
     {
-        if (size.x == 0.0f)
+        if (size.x == 0.0f && !(extra_flags & ImGuiWindowFlags_AlwaysAutoResize))
             flags |= ImGuiWindowFlags_ChildWindowAutoFitX;
         size.x = ImMax(content_max.x - cursor_pos.x, g.Style.WindowMinSize.x) - fabsf(size.x);
     }
     if (size.y <= 0.0f)
     {
-        if (size.y == 0.0f)
+        if (size.y == 0.0f && !(extra_flags & ImGuiWindowFlags_AlwaysAutoResize))
             flags |= ImGuiWindowFlags_ChildWindowAutoFitY;
         size.y = ImMax(content_max.y - cursor_pos.y, g.Style.WindowMinSize.y) - fabsf(size.y);
     }
@@ -2827,7 +2827,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         {
             parent_window->DC.ChildWindows.push_back(window);
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
-            window->SizeFull = size;
+            if (!(flags & ImGuiWindowFlags_AlwaysAutoResize))
+            {
+            	window->SizeFull = size;
+            }
         }
     }
 
