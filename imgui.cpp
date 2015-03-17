@@ -9242,12 +9242,14 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::TreeNode("Vertical Sliders"))
         {
             ImGui::Unindent();
+            const float spacing = 4;
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, spacing));
 
             static float values[7] = { 0.0f, 0.60f, 0.35f, 0.9f, 0.70f, 0.20f, 0.0f };
             ImGui::PushID("set1");
             for (int i = 0; i < 7; i++)
             {
-                if (i > 0) ImGui::SameLine(0, 4);
+                if (i > 0) ImGui::SameLine();
                 ImGui::PushID(i);
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor::HSV(i/7.0f, 0.5f, 0.5f));
                 ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImColor::HSV(i/7.0f, 0.9f, 0.9f));
@@ -9261,11 +9263,31 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::PopID();
 
             ImGui::SameLine();
-
             ImGui::PushID("set2");
+            static float values2[4] = { 0.20f, 0.80f, 0.40f, 0.25f };
+            const int rows = 3;
+            const ImVec2 small_slider_size(18, (160.0f-(rows-1)*spacing)/rows);
+            for (int nx = 0; nx < 4; nx++)
+            {
+                if (nx > 0) ImGui::SameLine();
+                ImGui::BeginGroup();
+                for (int ny = 0; ny < rows; ny++)
+                {
+                    ImGui::PushID(nx*rows+ny);
+                    ImGui::VSliderFloat("##v", small_slider_size, &values2[nx], 0.0f, 1.0f, "");
+                    if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+                        ImGui::SetTooltip("%.3f", values2[nx]);
+                    ImGui::PopID();
+                }
+                ImGui::EndGroup();
+            }
+            ImGui::PopID();
+
+            ImGui::SameLine();
+            ImGui::PushID("set3");
             for (int i = 0; i < 4; i++)
             {
-                if (i > 0) ImGui::SameLine(0, 4);
+                if (i > 0) ImGui::SameLine();
                 ImGui::PushID(i);
                 ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 40);
                 ImGui::VSliderFloat("##v", ImVec2(40,160), &values[i], 0.0f, 1.0f, "%.2f");
@@ -9273,9 +9295,6 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::PopID();
             }
             ImGui::PopID();
-
-            ImGui::SameLine();
-            ImGui::Text("Label");
 
             ImGui::Indent();
             ImGui::TreePop();
@@ -9288,7 +9307,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::PlotLines("Frame Times", arr, IM_ARRAYSIZE(arr));
 
         static bool pause;
-        static ImVector<float> values; if (values.empty()) { values.resize(100); memset(&values.front(), 0, values.size()*sizeof(float)); } 
+        static ImVector<float> values; if (values.empty()) { values.resize(90); memset(&values.front(), 0, values.size()*sizeof(float)); } 
         static size_t values_offset = 0; 
         if (!pause) 
         { 
@@ -9488,6 +9507,7 @@ void ImGui::ShowTestWindow(bool* opened)
         // Basic columns
         ImGui::Text("Basic:");
         ImGui::Columns(4, "mycolumns");
+        ImGui::Separator();
         ImGui::Text("ID"); ImGui::NextColumn();
         ImGui::Text("Name"); ImGui::NextColumn();
         ImGui::Text("Path"); ImGui::NextColumn();
