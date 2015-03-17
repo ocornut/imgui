@@ -909,6 +909,7 @@ struct ImGuiDrawContext
     ImVec2                  CursorPos;
     ImVec2                  CursorPosPrevLine;
     ImVec2                  CursorStartPos;
+    ImVec2                  CursorMaxPos;        // Implicitly calculate the size of our contents, always extending. Saved into window->SizeContents at the end of the frame
     float                   CurrentLineHeight;
     float                   CurrentLineTextBaseOffset;
     float                   PrevLineHeight;
@@ -925,7 +926,7 @@ struct ImGuiDrawContext
     ImGuiColorEditMode      ColorEditMode;
     ImGuiStorage*           StateStorage;
 
-    float                   ColumnsStartX;       // Start position from left of window (increased by TreePush/TreePop, etc.)
+    float                   ColumnsStartX;       // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
     float                   ColumnsOffsetX;      // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
     int                     ColumnsCurrent;
     int                     ColumnsCount;
@@ -938,7 +939,7 @@ struct ImGuiDrawContext
 
     ImGuiDrawContext()
     {
-        CursorPos = CursorPosPrevLine = CursorStartPos = ImVec2(0.0f, 0.0f);
+        CursorPos = CursorPosPrevLine = CursorStartPos = CursorMaxPos = ImVec2(0.0f, 0.0f);
         CurrentLineHeight = PrevLineHeight = 0.0f;
         CurrentLineTextBaseOffset = PrevLineTextBaseOffset = 0.0f;
         LogLinePosY = -1.0f;
@@ -1136,7 +1137,6 @@ struct ImGuiWindow
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
     ImVec2                  SizeFull;                           // Size when non collapsed
     ImVec2                  SizeContents;                       // Size of contents (== extents reach of the drawing cursor) from previous frame
-    ImVec2                  SizeContentsCurrent;                // Size of contents, currently extending
     float                   ScrollY;
     float                   NextScrollY;
     bool                    ScrollbarY;
@@ -1478,7 +1478,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Flags = 0;
     PosFloat = Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
-    SizeContents = SizeContentsCurrent = ImVec2(0.0f, 0.0f);
+    SizeContents = ImVec2(0.0f, 0.0f);
     ScrollY = 0.0f;
     NextScrollY = 0.0f;
     ScrollbarY = false;
@@ -2823,8 +2823,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->ClipRectStack.resize(0);
 
         // Reset contents size for auto-fitting
-        window->SizeContents = window->SizeContentsCurrent;
-        window->SizeContentsCurrent = ImVec2(0.0f, 0.0f);
+        window->SizeContents = window->DC.CursorMaxPos - window->Pos;
+        window->SizeContents.y += window->ScrollY;
 
         if (flags & ImGuiWindowFlags_ChildWindow)
         {
@@ -3071,6 +3071,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.ColumnsStartX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->WindowPadding().y) - ImVec2(0.0f, window->ScrollY);
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
+        window->DC.CursorMaxPos = window->DC.CursorStartPos;
         window->DC.CurrentLineHeight = window->DC.PrevLineHeight = 0.0f;
         window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset = 0.0f;
         window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
@@ -3762,21 +3763,21 @@ void ImGui::SetCursorPos(const ImVec2& pos)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos = window->Pos + pos;
-    window->SizeContentsCurrent = ImMax(window->SizeContentsCurrent, pos + ImVec2(0.0f, window->ScrollY));
+    window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos);
 }
 
 void ImGui::SetCursorPosX(float x)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos.x = window->Pos.x + x;
-    window->SizeContentsCurrent.x = ImMax(window->SizeContentsCurrent.x, x);
+    window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, window->DC.CursorPos.x);
 }
 
 void ImGui::SetCursorPosY(float y)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.CursorPos.y = window->Pos.y + y;
-    window->SizeContentsCurrent.y = ImMax(window->SizeContentsCurrent.y, y + window->ScrollY);
+    window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y);
 }
 
 ImVec2 ImGui::GetCursorScreenPos()
@@ -6703,8 +6704,10 @@ static void ItemSize(ImVec2 size, float text_offset_y)
     const float text_base_offset = ImMax(window->DC.CurrentLineTextBaseOffset, text_offset_y);
     window->DC.CursorPosPrevLine = ImVec2(window->DC.CursorPos.x + size.x, window->DC.CursorPos.y);
     window->DC.CursorPos = ImVec2((float)(int)(window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX), (float)(int)(window->DC.CursorPos.y + line_height + g.Style.ItemSpacing.y));
+    window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, window->DC.CursorPosPrevLine.x);
+    window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y);
 
-    window->SizeContentsCurrent = ImMax(window->SizeContentsCurrent, ImVec2(window->DC.CursorPosPrevLine.x - window->Pos.x, window->DC.CursorPos.y + window->ScrollY - window->Pos.y));
+    //window->DrawList->AddCircle(window->DC.CursorMaxPos, 3.0f, 0xFF0000FF, 4);
 
     window->DC.PrevLineHeight = line_height;
     window->DC.PrevLineTextBaseOffset = text_base_offset;
