@@ -129,10 +129,11 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/03/17 (1.36) - renamed GetItemRectMin()/GetItemRectMax()/IsMouseHoveringBox() to GetItemRectMin()/GetItemRectMax()/IsMouseHoveringRect(). Kept inline redirection function (will obsolete).
  - 2015/03/15 (1.36) - renamed style.TreeNodeSpacing to style.IndentSpacing, ImGuiStyleVar_TreeNodeSpacing to ImGuiStyleVar_IndentSpacing
- - 2015/03/13 (1.36) - renamed GetWindowIsFocused() to IsWindowFocused(). Kept inline redirection function.
+ - 2015/03/13 (1.36) - renamed GetWindowIsFocused() to IsWindowFocused(). Kept inline redirection function (will obsolete).
  - 2015/03/08 (1.35) - renamed style.ScrollBarWidth to style.ScrollbarWidth
- - 2015/02/27 (1.34) - renamed OpenNextNode(bool) to SetNextTreeNodeOpened(bool, ImGuiSetCond). Kept inline redirection function.
+ - 2015/02/27 (1.34) - renamed OpenNextNode(bool) to SetNextTreeNodeOpened(bool, ImGuiSetCond). Kept inline redirection function (will obsolete).
  - 2015/02/27 (1.34) - renamed ImGuiSetCondition_*** to ImGuiSetCond_***, and _FirstUseThisSession becomes _Once.
  - 2015/02/11 (1.32) - changed text input callback ImGuiTextEditCallback return type from void-->int. reserved for future use, return 0 for now.
  - 2015/02/10 (1.32) - renamed GetItemWidth() to CalcItemWidth() to clarify its evolving behavior
@@ -439,7 +440,7 @@ static void         ItemSize(const ImGuiAabb& bb, float text_offset_y = 0.0f);
 static void         PushColumnClipRect(int column_index = -1);
 static bool         IsClipped(const ImGuiAabb& bb);
 
-static bool         IsMouseHoveringBox(const ImGuiAabb& bb);
+static bool         IsMouseHoveringRect(const ImGuiAabb& bb);
 static bool         IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
 static void         Scrollbar(ImGuiWindow* window);
@@ -2419,7 +2420,7 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 // Test if mouse cursor is hovering given aabb
 // NB- Box is clipped by our current clip setting
 // NB- Expand the aabb to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
-static bool IsMouseHoveringBox(const ImGuiAabb& bb)
+static bool IsMouseHoveringRect(const ImGuiAabb& bb)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -2437,9 +2438,9 @@ static bool IsMouseHoveringBox(const ImGuiAabb& bb)
     return box_for_touch.Contains(g.IO.MousePos);
 }
 
-bool ImGui::IsMouseHoveringBox(const ImVec2& box_min, const ImVec2& box_max)
+bool ImGui::IsMouseHoveringRect(const ImVec2& box_min, const ImVec2& box_max)
 {
-    return IsMouseHoveringBox(ImGuiAabb(box_min, box_max));
+    return IsMouseHoveringRect(ImGuiAabb(box_min, box_max));
 }
 
 bool ImGui::IsMouseHoveringWindow()
@@ -2538,16 +2539,22 @@ bool ImGui::IsAnyItemActive()
     return g.ActiveId != 0;
 }
 
-ImVec2 ImGui::GetItemBoxMin()
+ImVec2 ImGui::GetItemRectMin()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->DC.LastItemAabb.Min;
 }
 
-ImVec2 ImGui::GetItemBoxMax()
+ImVec2 ImGui::GetItemRectMax()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->DC.LastItemAabb.Max;
+}
+
+ImVec2 ImGui::GetItemRectSize()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->DC.LastItemAabb.GetSize();
 }
 
 // Tooltip is stored and turned into a BeginTooltip()/EndTooltip() sequence at the end of the frame. Each call override previous value.
@@ -2927,7 +2934,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         // Collapse window by double-clicking on title bar
         if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
         {
-            if (!(window->Flags & ImGuiWindowFlags_NoCollapse) && g.HoveredWindow == window && IsMouseHoveringBox(title_bar_aabb) && g.IO.MouseDoubleClicked[0])
+            if (!(window->Flags & ImGuiWindowFlags_NoCollapse) && g.HoveredWindow == window && IsMouseHoveringRect(title_bar_aabb) && g.IO.MouseDoubleClicked[0])
             {
                 window->Collapsed = !window->Collapsed;
                 if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
@@ -4039,7 +4046,7 @@ static bool IsHovered(const ImGuiAabb& bb, ImGuiID id)
         ImGuiWindow* window = GetCurrentWindow();
         if (g.HoveredRootWindow == window->RootWindow)
         {
-            bool hovered = (g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && IsMouseHoveringBox(bb);
+            bool hovered = (g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && IsMouseHoveringRect(bb);
             return hovered;
         }
     }
@@ -5194,7 +5201,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
 
     // Tooltip on hover
     int v_hovered = -1;
-    if (IsMouseHoveringBox(graph_bb))
+    if (IsMouseHoveringRect(graph_bb))
     {
         const float t = ImClamp((g.IO.MousePos.x - graph_bb.Min.x) / (graph_bb.Max.x - graph_bb.Min.x), 0.0f, 0.9999f);
         const int v_idx = (int)(t * (values_count + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0)));
@@ -6747,7 +6754,7 @@ static bool ItemAdd(const ImGuiAabb& bb, const ImGuiID* id)
     }
 
     // This is a sensible default, but widgets are free to override it after calling ItemAdd()
-    const bool hovered = IsMouseHoveringBox(bb);
+    const bool hovered = IsMouseHoveringRect(bb);
     //const bool hovered = (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly) && IsMouseHoveringBox(bb);  // matching the behavior of IsHovered(), not always what the user wants?
     window->DC.LastItemHovered = hovered;
     return true;
@@ -8917,14 +8924,14 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetCursorScreenPos() + ImVec2(wrap_width, 0.0f), ImGui::GetCursorScreenPos() + ImVec2(wrap_width+10, ImGui::GetTextLineHeight()), 0xFFFF00FF);
             ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
             ImGui::Text("lazy dog. This paragraph is made to fit within %.0f pixels. The quick brown fox jumps over the lazy dog.", wrap_width);
-            ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemBoxMin(), ImGui::GetItemBoxMax(), 0xFF00FFFF);
+            ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF00FFFF);
             ImGui::PopTextWrapPos();
 
             ImGui::Text("Test paragraph 2:");
             ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetCursorScreenPos() + ImVec2(wrap_width, 0.0f), ImGui::GetCursorScreenPos() + ImVec2(wrap_width+10, ImGui::GetTextLineHeight()), 0xFFFF00FF);
             ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
             ImGui::Text("aaaaaaaa bbbbbbbb, cccccccc,dddddddd. eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
-            ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemBoxMin(), ImGui::GetItemBoxMax(), 0xFF00FFFF);
+            ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF00FFFF);
             ImGui::PopTextWrapPos();
 
             ImGui::TreePop();

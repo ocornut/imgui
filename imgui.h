@@ -354,15 +354,16 @@ namespace ImGui
     IMGUI_API bool          IsWindowFocused();                                                  // is current window focused (differentiate child windows from each others)
     IMGUI_API bool          IsRootWindowFocused();                                              // is current root window focused
     IMGUI_API bool          IsRootWindowOrAnyChildFocused();                                    // is current root window or any of its child (including current window) focused
-    IMGUI_API ImVec2        GetItemBoxMin();                                                    // get bounding box of last item
-    IMGUI_API ImVec2        GetItemBoxMax();                                                    // get bounding box of last item
+    IMGUI_API ImVec2        GetItemRectMin();                                                   // get bounding rect of last item
+    IMGUI_API ImVec2        GetItemRectMax();                                                   // "
+    IMGUI_API ImVec2        GetItemRectSize();                                                  // "
     IMGUI_API bool          IsClipped(const ImVec2& item_size);                                 // to perform coarse clipping on user's side (as an optimization)
     IMGUI_API bool          IsKeyPressed(int key_index, bool repeat = true);                    // key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry
     IMGUI_API bool          IsMouseClicked(int button, bool repeat = false);
     IMGUI_API bool          IsMouseDoubleClicked(int button);
     IMGUI_API bool          IsMouseHoveringWindow();                                            // is mouse hovering current window ("window" in API names always refer to current window)
     IMGUI_API bool          IsMouseHoveringAnyWindow();                                         // is mouse hovering any active imgui window
-    IMGUI_API bool          IsMouseHoveringBox(const ImVec2& box_min, const ImVec2& box_max);   // is mouse hovering given bounding box
+    IMGUI_API bool          IsMouseHoveringRect(const ImVec2& rect_min, const ImVec2& rect_max);// is mouse hovering given bounding rect
     IMGUI_API bool          IsPosHoveringAnyWindow(const ImVec2& pos);                          // is given position hovering any active imgui window
     IMGUI_API ImVec2        GetMousePos();                                                      // shortcut to ImGui::GetIO().MousePos provided by user, to be consistent with other calls
     IMGUI_API float         GetTime();
@@ -385,9 +386,12 @@ namespace ImGui
     IMGUI_API void          SetInternalState(void* state, bool construct = false);
 
     // Obsolete (will be removed)
-    IMGUI_API void          GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size);
-    static inline void      OpenNextNode(bool open) { ImGui::SetNextTreeNodeOpened(open, 0); }
-    static inline bool      GetWindowIsFocused() { return ImGui::IsWindowFocused(); }
+    IMGUI_API void          GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size);   // OBSOLETE
+    static inline void      OpenNextNode(bool open) { ImGui::SetNextTreeNodeOpened(open, 0); }  // OBSOLETE
+    static inline bool      GetWindowIsFocused() { return ImGui::IsWindowFocused(); }   // OBSOLETE
+    static inline ImVec2    GetItemBoxMin() { return GetItemRectMin(); }    // OBSOLETE
+    static inline ImVec2    GetItemBoxMax() { return GetItemRectMin(); }    // OBSOLETE
+    static inline bool      IsMouseHoveringBox(const ImVec2& rect_min, const ImVec2& rect_max) { return IsMouseHoveringRect(rect_min, rect_max); }  // OBSOLETE
 
 } // namespace ImGui
 
