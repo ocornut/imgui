@@ -505,7 +505,7 @@ ImGuiStyle::ImGuiStyle()
     FrameRounding           = 0.0f;             // Radius of frame corners rounding. Set to 0.0f to have rectangular frames (used by most widgets).
     ItemSpacing             = ImVec2(8,4);      // Horizontal and vertical spacing between widgets/lines
     ItemInnerSpacing        = ImVec2(4,4);      // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
-    TouchExtraPadding       = ImVec2(0,0);      // Expand bounding box for touch-based system where touch position is not accurate enough (unnecessary for mouse inputs). Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget running. So dont grow this too much!
+    TouchExtraPadding       = ImVec2(0,0);      // Expand reactive bounding box for touch-based system where touch position is not accurate enough. Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget. So don't grow this too much!
     AutoFitPadding          = ImVec2(8,8);      // Extra space after auto-fit (double-clicking on resize grip)
     WindowFillAlphaDefault  = 0.70f;            // Default alpha of window background, if not specified in ImGui::Begin()
     IndentSpacing           = 22.0f;            // Horizontal spacing when e.g. entering a tree node
@@ -2430,29 +2430,29 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 }
 
 // Test if mouse cursor is hovering given rectangle
-// NB- Box is clipped by our current clip setting
-// NB- Expand the AABB to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
-static bool IsMouseHoveringRect(const ImRect& bb)
+// NB- Rectangle is clipped by our current clip setting
+// NB- Expand the rectangle to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
+static bool IsMouseHoveringRect(const ImRect& rect)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
     // Clip
-    ImRect box_clipped = bb;
+    ImRect rect_clipped = rect;
     if (!window->ClipRectStack.empty())
     {
         const ImVec4 clip_rect = window->ClipRectStack.back();
-        box_clipped.Clip(ImRect(ImVec2(clip_rect.x, clip_rect.y), ImVec2(clip_rect.z, clip_rect.w)));
+        rect_clipped.Clip(ImRect(ImVec2(clip_rect.x, clip_rect.y), ImVec2(clip_rect.z, clip_rect.w)));
     }
 
     // Expand for touch input
-    const ImRect box_for_touch(box_clipped.Min - g.Style.TouchExtraPadding, box_clipped.Max + g.Style.TouchExtraPadding);
-    return box_for_touch.Contains(g.IO.MousePos);
+    const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
+    return rect_for_touch.Contains(g.IO.MousePos);
 }
 
-bool ImGui::IsMouseHoveringRect(const ImVec2& box_min, const ImVec2& box_max)
+bool ImGui::IsMouseHoveringRect(const ImVec2& rect_min, const ImVec2& rect_max)
 {
-    return IsMouseHoveringRect(ImRect(box_min, box_max));
+    return IsMouseHoveringRect(ImRect(rect_min, rect_max));
 }
 
 bool ImGui::IsMouseHoveringWindow()
@@ -3948,11 +3948,11 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
             // Lines to render
             if (line < text_end)
             {
-                ImRect line_box(pos, pos + ImVec2(ImGui::GetWindowWidth(), line_height));
+                ImRect line_rect(pos, pos + ImVec2(ImGui::GetWindowWidth(), line_height));
                 while (line < text_end)
                 {
                     const char* line_end = strchr(line, '\n');
-                    if (IsClipped(line_box))
+                    if (IsClipped(line_rect))
                         break;
 
                     const ImVec2 line_size = CalcTextSize(line, line_end, false);
@@ -3961,8 +3961,8 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                     if (!line_end)
                         line_end = text_end;
                     line = line_end + 1;
-                    line_box.Min.y += line_height;
-                    line_box.Max.y += line_height;
+                    line_rect.Min.y += line_height;
+                    line_rect.Max.y += line_height;
                     pos.y += line_height;
                 }
 
@@ -6771,7 +6771,7 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
 
     // This is a sensible default, but widgets are free to override it after calling ItemAdd()
     const bool hovered = IsMouseHoveringRect(bb);
-    //const bool hovered = (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly) && IsMouseHoveringBox(bb);  // matching the behavior of IsHovered(), not always what the user wants?
+    //const bool hovered = (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly) && IsMouseHoveringRect(bb);  // matching the behavior of IsHovered(), not always what the user wants?
     window->DC.LastItemHovered = hovered;
     return true;
 }
