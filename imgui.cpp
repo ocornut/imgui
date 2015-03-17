@@ -434,7 +434,7 @@ static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scal
 
 static void         SetFont(ImFont* font);
 static bool         ItemAdd(const ImGuiAabb& bb, const ImGuiID* id);
-static void         ItemSize(ImVec2 size, ImVec2* adjust_start_offset = NULL);
+static void         ItemSize(ImVec2 size);
 static void         ItemSize(const ImGuiAabb& bb);
 static void         PushColumnClipRect(int column_index = -1);
 static bool         IsClipped(const ImGuiAabb& bb);
@@ -3964,8 +3964,15 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
     {
         const float wrap_width = wrap_enabled ? CalcWrapWidthForPos(window->DC.CursorPos, wrap_pos_x) : 0.0f;
         const ImVec2 text_size = CalcTextSize(text_begin, text_end, false, wrap_width);
-        ImGuiAabb bb(window->DC.CursorPos, window->DC.CursorPos + text_size);
-        ItemSize(bb.GetSize(), &bb.Min);
+        ImVec2 text_pos = window->DC.CursorPos;
+
+        // Vertical centering over our line height
+        // FIXME
+        const float line_height = ImMax(window->DC.CurrentLineHeight, text_size.y);
+        text_pos.y += (line_height - text_size.y) * 0.5f;
+
+        ImGuiAabb bb(text_pos, window->DC.CursorPos + text_size);
+        ItemSize(bb.GetSize());
         if (!ItemAdd(bb, NULL))
             return;
 
@@ -6677,18 +6684,15 @@ void ImGui::Spacing()
 }
 
 // Advance cursor given item size.
-static void ItemSize(ImVec2 size, ImVec2* adjust_vertical_offset)
+static void ItemSize(ImVec2 size)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
 
-    const float line_height = ImMax(window->DC.CurrentLineHeight, size.y);
-    if (adjust_vertical_offset)
-        adjust_vertical_offset->y = adjust_vertical_offset->y + (line_height - size.y) * 0.5f;
-
     // Always align ourselves on pixel boundaries
+    const float line_height = ImMax(window->DC.CurrentLineHeight, size.y);
     window->DC.CursorPosPrevLine = ImVec2(window->DC.CursorPos.x + size.x, window->DC.CursorPos.y);
     window->DC.CursorPos = ImVec2((float)(int)(window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX), (float)(int)(window->DC.CursorPos.y + line_height + g.Style.ItemSpacing.y));
 
