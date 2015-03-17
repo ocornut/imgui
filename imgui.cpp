@@ -435,7 +435,7 @@ static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scal
 static void         SetFont(ImFont* font);
 static bool         ItemAdd(const ImGuiAabb& bb, const ImGuiID* id);
 static void         ItemSize(ImVec2 size, ImVec2* adjust_start_offset = NULL);
-static void         ItemSize(const ImGuiAabb& bb, ImVec2* adjust_start_offset = NULL);
+static void         ItemSize(const ImGuiAabb& bb);
 static void         PushColumnClipRect(int column_index = -1);
 static bool         IsClipped(const ImGuiAabb& bb);
 
@@ -911,7 +911,7 @@ struct ImGuiDrawContext
     ImVec2                  CursorStartPos;
     float                   CurrentLineHeight;
     float                   PrevLineHeight;
-    float                   LogLineHeight;
+    float                   LogLinePosY;
     int                     TreeDepth;
     ImGuiID                 LastItemID;
     ImGuiAabb               LastItemAabb;
@@ -938,7 +938,7 @@ struct ImGuiDrawContext
     {
         CursorPos = CursorPosPrevLine = CursorStartPos = ImVec2(0.0f, 0.0f);
         CurrentLineHeight = PrevLineHeight = 0.0f;
-        LogLineHeight = -1.0f;
+        LogLinePosY = -1.0f;
         TreeDepth = 0;
         LastItemID = 0;
         LastItemAabb = ImGuiAabb(0.0f,0.0f,0.0f,0.0f);
@@ -2155,8 +2155,8 @@ static void LogText(const ImVec2& ref_pos, const char* text, const char* text_en
     if (!text_end)
         text_end = FindTextDisplayEnd(text, text_end);
 
-    const bool log_new_line = ref_pos.y > window->DC.LogLineHeight+1;
-    window->DC.LogLineHeight = ref_pos.y;
+    const bool log_new_line = ref_pos.y > window->DC.LogLinePosY+1;
+    window->DC.LogLinePosY = ref_pos.y;
 
     const char* text_remaining = text;
     if (g.LogStartDepth > window->DC.TreeDepth)  // Re-adjust padding if we have popped out of our starting depth
@@ -3069,7 +3069,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CurrentLineHeight = window->DC.PrevLineHeight = 0.0f;
-        window->DC.LogLineHeight = window->DC.CursorPos.y - 9999.0f;
+        window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
         window->DC.ChildWindows.resize(0);
         window->DC.ItemWidth.resize(0); 
         window->DC.ItemWidth.push_back(window->ItemWidthDefault);
@@ -6400,7 +6400,7 @@ void ImGui::ListBoxFooter()
     ImGui::EndChildFrame();
 
     parent_window->DC.CursorPos = bb.Min;
-    ItemSize(bb, NULL);
+    ItemSize(bb);
 }
 
 bool ImGui::ListBox(const char* label, int* current_item, const char** items, int items_count, int height_items)
@@ -6698,9 +6698,9 @@ static void ItemSize(ImVec2 size, ImVec2* adjust_vertical_offset)
     window->DC.CurrentLineHeight = 0.0f;
 }
 
-static inline void ItemSize(const ImGuiAabb& bb, ImVec2* adjust_start_offset) 
+static inline void ItemSize(const ImGuiAabb& bb)
 { 
-    ItemSize(bb.GetSize(), adjust_start_offset); 
+    ItemSize(bb.GetSize()); 
 }
 
 static bool IsClipped(const ImGuiAabb& bb)
@@ -9225,6 +9225,9 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Text("World");
 
         // Button
+        ImGui::AlignFirstTextHeightToWidgets();
+        ImGui::Text("Normal buttons");
+        ImGui::SameLine();
         if (ImGui::Button("Banana")) printf("Pressed!\n");
         ImGui::SameLine();
         ImGui::Button("Apple");
