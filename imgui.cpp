@@ -900,8 +900,19 @@ struct ImRect           // 2D axis aligned bounding-box
     bool        Overlaps(const ImRect& r) const     { return r.Min.y <= Max.y && r.Max.y >= Min.y && r.Min.x <= Max.x && r.Max.x >= Min.x; }
     void        Add(const ImVec2& rhs)              { Min.x = ImMin(Min.x, rhs.x); Min.y = ImMin(Min.y, rhs.y); Max.x = ImMax(Max.x, rhs.x); Max.y = ImMax(Max.x, rhs.x); }
     void        Add(const ImRect& rhs)              { Min.x = ImMin(Min.x, rhs.Min.x); Min.y = ImMin(Min.y, rhs.Min.y); Max.x = ImMax(Max.x, rhs.Max.x); Max.y = ImMax(Max.y, rhs.Max.y); }
-    void        Expand(const ImVec2& sz)            { Min -= sz; Max += sz; }
+    void        Expand(const float amount)          { Min.x -= amount; Min.y -= amount; Max.x += amount; Max.y += amount; }
+    void        Expand(const ImVec2& amount)        { Min -= amount; Max += amount; }
     void        Clip(const ImRect& clip)            { Min.x = ImMax(Min.x, clip.Min.x); Min.y = ImMax(Min.y, clip.Min.y); Max.x = ImMin(Max.x, clip.Max.x); Max.y = ImMin(Max.y, clip.Max.y); }
+    ImVec2      GetClosestPoint(ImVec2 p, bool on_edge) const
+    {
+        if (!on_edge && Contains(p))
+            return p;
+        if (p.x > Max.x) p.x = Max.x;
+        else if (p.x < Min.x) p.x = Min.x;
+        if (p.y > Max.y) p.y = Max.y;
+        else if (p.y < Min.y) p.y = Min.y;
+        return p;
+    }
 };
 typedef ImRect ImGuiAabb;   // FIXME-OBSOLETE
 
@@ -2589,6 +2600,14 @@ ImVec2 ImGui::GetItemRectSize()
     return window->DC.LastItemRect.GetSize();
 }
 
+ImVec2 ImGui::CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge, float outward)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    ImRect rect = window->DC.LastItemRect;
+    rect.Expand(outward);
+    return rect.GetClosestPoint(pos, on_edge);
+}
+
 // Tooltip is stored and turned into a BeginTooltip()/EndTooltip() sequence at the end of the frame. Each call override previous value.
 void ImGui::SetTooltipV(const char* fmt, va_list args)
 {
@@ -3232,7 +3251,7 @@ static void Scrollbar(ImGuiWindow* window)
     // Render background
     ImRect bb(window->Rect().Max.x - style.ScrollbarWidth, window->Pos.y + window->TitleBarHeight()+1, window->Rect().Max.x, window->Rect().Max.y-1);
     window->DrawList->AddRectFilled(bb.Min, bb.Max, window->Color(ImGuiCol_ScrollbarBg));
-    bb.Expand(ImVec2(-3,-3));
+    bb.Expand(-3.0f);
     const float scrollbar_height = bb.GetHeight();
 
     // The grabable box size generally represent the amount visible (vs the total scrollable amount)
