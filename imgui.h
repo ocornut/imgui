@@ -1,4 +1,4 @@
-// ImGui library v1.36
+// ImGui library v1.37 WIP
 // See .cpp file for documentation.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
@@ -13,7 +13,7 @@
 #include <stdlib.h>         // NULL, malloc
 #include <string.h>         // memset, memmove
 
-#define IMGUI_VERSION       "1.36"
+#define IMGUI_VERSION       "1.37 WIP"
 
 // Define assertion handler.
 #ifndef IM_ASSERT
