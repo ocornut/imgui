@@ -5060,6 +5060,16 @@ bool ImGui::SliderInt(const char* label, int* v, int v_min, int v_max, const cha
     return value_changed;
 }
 
+bool ImGui::VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* display_format)
+{
+    if (!display_format)
+        display_format = "%.0f";
+    float v_f = (float)*v;
+    bool value_changed = ImGui::VSliderFloat(label, size, &v_f, (float)v_min, (float)v_max, display_format, 1.0f);
+    *v = (int)v_f;
+    return value_changed;
+}
+
 // Add multiple sliders on 1 line for compact edition of multiple components
 static bool SliderFloatN(const char* label, float v[3], int components, float v_min, float v_max, const char* display_format, float power)
 {
@@ -9244,6 +9254,10 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::Unindent();
             const float spacing = 4;
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, spacing));
+
+            static int int_value = 0;
+            ImGui::VSliderInt("##int", ImVec2(18,160), &int_value, 0, 5);
+            ImGui::SameLine();
 
             static float values[7] = { 0.0f, 0.60f, 0.35f, 0.9f, 0.70f, 0.20f, 0.0f };
             ImGui::PushID("set1");
