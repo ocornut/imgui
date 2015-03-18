@@ -930,7 +930,8 @@ struct ImGuiDrawContext
     int                     TreeDepth;
     ImGuiID                 LastItemID;
     ImRect                  LastItemRect;
-    bool                    LastItemHovered;
+    bool                    LastItemHoveredAndUsable;
+    bool                    LastItemHoveredRectOnly;
     ImVector<ImGuiWindow*>  ChildWindows;
     ImVector<bool>          AllowKeyboardFocus;
     ImVector<float>         ItemWidth;           // 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
@@ -959,7 +960,7 @@ struct ImGuiDrawContext
         TreeDepth = 0;
         LastItemID = 0;
         LastItemRect = ImRect(0.0f,0.0f,0.0f,0.0f);
-        LastItemHovered = false;
+        LastItemHoveredAndUsable = LastItemHoveredRectOnly = false;
         StateStorage = NULL;
 
         ColumnsStartX = 0.0f;
@@ -1150,6 +1151,7 @@ struct ImGuiWindow
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
     ImVec2                  SizeFull;                           // Size when non collapsed
     ImVec2                  SizeContents;                       // Size of contents (== extents reach of the drawing cursor) from previous frame
+    ImGuiID                 MoveID;                             // == window->GetID("#MOVE")
     float                   ScrollY;
     float                   NextScrollY;
     bool                    ScrollbarY;
@@ -1487,6 +1489,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Name = ImStrdup(name);
     ID = ImHash(name, 0); 
     IDStack.push_back(ID);
+    MoveID = GetID("#MOVE");
 
     Flags = 0;
     PosFloat = Pos = ImVec2(0.0f, 0.0f);
@@ -2057,7 +2060,7 @@ void ImGui::Render()
         {
             IM_ASSERT(g.MovedWindow == NULL);
             g.MovedWindow = g.HoveredWindow;
-            SetActiveId(g.HoveredRootWindow->GetID("#MOVE"));
+            SetActiveId(g.HoveredRootWindow->MoveID);
         }
 
         // Sort the window list so that all child windows are after their parent
@@ -2531,7 +2534,13 @@ ImVec2 ImGui::GetMousePos()
 bool ImGui::IsItemHovered()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    return window->DC.LastItemHovered;
+    return window->DC.LastItemHoveredAndUsable;
+}
+
+bool ImGui::IsItemHoveredRectOnly()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->DC.LastItemHoveredRectOnly;
 }
 
 bool ImGui::IsItemActive()
@@ -2882,9 +2891,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->IDStack.resize(1);
 
         // Move window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
-        const ImGuiID move_id = window->GetID("#MOVE");
-        RegisterAliveId(move_id);
-        if (g.ActiveId == move_id)
+        RegisterAliveId(window->MoveID);
+        if (g.ActiveId == window->MoveID)
         {
             if (g.IO.MouseDown[0])
             {
@@ -6786,14 +6794,27 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
     window->DC.LastItemRect = bb;
     if (IsClipped(bb))
     {
-        window->DC.LastItemHovered = false;
+        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRectOnly = false;
         return false;
     }
 
     // This is a sensible default, but widgets are free to override it after calling ItemAdd()
-    const bool hovered = IsMouseHoveringRect(bb);
-    //const bool hovered = (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly) && IsMouseHoveringRect(bb);  // matching the behavior of IsHovered(), not always what the user wants?
-    window->DC.LastItemHovered = hovered;
+    ImGuiState& g = *GImGui;
+    if (IsMouseHoveringRect(bb))
+    {
+        // Matching the behavior of IsHovered() but ignore if ActiveId==window->MoveID (we clicked on the window background)
+        // So that clicking on items with no active id such as Text() still returns true with IsItemHovered()
+        window->DC.LastItemHoveredRectOnly = true;
+        if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly || (g.ActiveId == window->MoveID))
+            window->DC.LastItemHoveredAndUsable = true;
+        else
+            window->DC.LastItemHoveredAndUsable = false;
+    }
+    else
+    {
+        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRectOnly = false;
+    }
+
     return true;
 }
 
