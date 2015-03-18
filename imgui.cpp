@@ -9376,6 +9376,26 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::Indent();
             ImGui::TreePop();
         }
+
+        if (ImGui::TreeNode("Dragging"))
+        {
+            // You can use ImGui::GetItemActiveDragDelta() to query for the dragged amount on any widget.
+            static ImVec2 value(0.0f, 0.0f);
+            ImGui::Button("Drag Me");
+            if (ImGui::IsItemActive())
+            {
+                value = ImGui::GetItemActiveDragDelta();
+                //ImGui::SetTooltip("Delta: %.1f, %.1f", value.x, value.y);
+
+                // Draw a line between the button and the mouse cursor
+                ImDrawList* draw_list = ImGui::GetWindowDrawList();
+                draw_list->PushClipRectFullScreen();
+                draw_list->AddLine(ImGui::CalcItemRectClosestPoint(ImGui::GetIO().MousePos, true, -2.0f), ImGui::GetIO().MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]), 2.0f);
+                draw_list->PopClipRect();
+            }
+            ImGui::SameLine(); ImGui::Text("Value: %.1f, %.1f", value.x, value.y);
+            ImGui::TreePop();
+        }
     }
 
     if (ImGui::CollapsingHeader("Graphs widgets"))
