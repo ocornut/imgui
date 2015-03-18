@@ -34,7 +34,7 @@
  Designed for developers and content-creators, not the typical end-user! Some of the weaknesses includes:
  - doesn't look fancy, doesn't animate
  - limited layout features, intricate layouts are typically crafted in code
- - occasionally uses statically sized buffers for string manipulations - won't crash, but some long text may be clipped. functions like ImGui::TextUnformatted() don't have such restriction.
+ - occasionally uses statically sized buffers for string manipulations - won't crash, but some very long pieces of text may be clipped. functions like ImGui::TextUnformatted() don't have such restriction.
 
 
  END-USER GUIDE
@@ -66,16 +66,17 @@
  - read the FAQ below this section!
  - your code creates the UI, if your code doesn't run the UI is gone! == very dynamic UI, no construction/destructions steps, less data retention on your side, no state duplication, less sync, less bugs.
  - call and read ImGui::ShowTestWindow() for sample code demonstrating most features.
- - see examples/ folder for standalone sample applications.
- - customization: use the style editor or PushStyleColor/PushStyleVar to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme).
+ - see examples/ folder for standalone sample applications. e.g. examples/opengl_example/
+ - customization: PushStyleColor()/PushStyleVar() or the style editor to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme).
 
  - getting started:
-   - initialisation: call ImGui::GetIO() and fill the 'Settings' data.
+   - initialisation: call ImGui::GetIO() to retrieve the ImGuiIO structure and fill the 'Settings' data.
    - every frame: 
       1/ in your mainloop or right after you got your keyboard/mouse info, call ImGui::GetIO() and fill the 'Input' data, then call ImGui::NewFrame().
       2/ use any ImGui function you want between NewFrame() and Render()
       3/ ImGui::Render() to render all the accumulated command-lists. it will call your RenderDrawListFn handler that you set in the IO structure.
-   - all rendering information are stored into command-lists until ImGui::Render() is called.
+   - all rendering information are stored into command-lists until ImGui::Render() is called. 
+   - ImGui never touches or know about your GPU state. the only function that knows about GPU is the RenderDrawListFn handler that you must provide.
    - effectively it means you can create widgets at any time in your code, regardless of "update" vs "render" considerations.
    - refer to the examples applications in the examples/ folder for instruction on how to setup your code.
    - a typical application skeleton may be:
@@ -178,13 +179,15 @@
 
    - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 
- A primer on the meaning and use of ID in ImGui:
+ A primer on the meaning and use of IDs in ImGui:
  
    - widgets require state to be carried over multiple frames (most typically ImGui often needs to remember what is the "active" widget).
      to do so they need an unique ID. unique ID are typically derived from a string label, an integer index or a pointer.
      
        Button("OK");        // Label = "OK",     ID = hash of "OK"
        Button("Cancel");    // Label = "Cancel", ID = hash of "Cancel"
+
+   - element that are not interactive, such as Text() items don't need an ID.
 
    - ID are uniquely scoped within Windows so no conflict can happen if you have two buttons called "OK" in two different Windows.
 
@@ -203,16 +206,16 @@
 
        Button("Click");     // Label = "Click",  ID = hash of "Click"
        PushID("node");
-       Button("Click");     // Label = "Click",  ID = hash of "node" and "Click"
+       Button("Click");     // Label = "Click",  ID = hash of "node" + "Click"
        for (int i = 0; i < 100; i++)
        {
           PushID(i);
-          Button("Click");  // Label = "Click",  ID = hash of "node" and i and "label"
+          Button("Click");  // Label = "Click",  ID = hash of "node" + i + "label"
           PopID();
        }
        PopID();
        PushID(my_ptr);
-       Button("Click");     // Label = "Click",  ID = hash of ptr and "Click"
+       Button("Click");     // Label = "Click",  ID = hash of ptr + "Click"
        PopID();
       
      so if you have a loop creating multiple items, you can use PushID() / PopID() with the index of each item, or their pointer, etc.
@@ -234,6 +237,8 @@
      ImFont* font1 = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
      ImFont* font2 = io.Fonts->AddFontFromFileTTF("myfontfile2.ttf", size_in_pixels);
      io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
+     // the first loaded font gets used by default
+     // use ImGui::PushFont()/ImGui::PopFont() to change the font at runtime
 
  If you want to display Chinese, Japanese, Korean characters, pass custom Unicode ranges when loading a font:
 
@@ -251,7 +256,7 @@
  ISSUES & TODO-LIST
  ==================
 
- - misc: merge or clarify ImVec4 / ImRect, they are essentially duplicate containers
+ - misc: merge or clarify ImVec4 vs ImRect?
  - window: add horizontal scroll
  - window: fix resize grip rendering scaling along with Rounding style setting
  - window: autofit feedback loop when user relies on any dynamic layout (window width multiplier, column). maybe just clearly drop manual autofit?
@@ -259,20 +264,17 @@
  - window: allow resizing of child windows (possibly given min/max for each axis?)
  - window: background options for child windows, border option (disable rounding)
  - window: resizing from any sides? + mouse cursor directives for app.
- - widgets: clicking on widget b while widget a should activate widget b (doesn't anymore because of hover capture)
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
- - widgets: clip text? hover clipped text shows it in a tooltip or in-place overlay
+ - widgets: clean up widgets internal toward exposing everything.
  - main: considering adding EndFrame()/Init(). some constructs are awkward in the implementation because of the lack of them.
- - main: IsItemHovered() returns true even if mouse is active on another widget (e.g. dragging outside of sliders). Maybe not a sensible default? Add parameter or alternate function?
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
-!- input number: very large int not reliably supported because of int<>float conversions.
+!- input number: large int not reliably supported because of int<>float conversions.
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
  - input number: non-decimal input.
- - text: vertical alignment (e.g. for Text after a large widget)
- - text: proper horizontal centering
+ - text: proper alignment options
  - layout: horizontal layout helper (github issue #97)
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
@@ -294,7 +296,8 @@
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
- - slider: initial absolute click is imprecise. change to relative movement slider? hide mouse cursor, allow more precise input using less screen-space. same as scrollbar.
+ - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar).
+ - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
  - text edit: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now.
  - text edit: centered text for slider as input text so it matches typical positioning.
  - text edit: flag to disable live update of the user buffer. 
@@ -302,14 +305,15 @@
  - text edit: add multi-line text edit
  - tree: add treenode/treepush int variants? because (void*) cast from int warns on some platforms/settings
  - settings: write more decent code to allow saving/loading new fields
- - settings: api for per-tool simple persistent data (bool,int,float) in .ini file
+ - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file
  ! style: store rounded corners in texture to use 1 quad per corner (filled and wireframe). so rounding have minor cost.
  - style: checkbox: padding for "active" color should be a multiplier of the 
  - style: colorbox not always square?
  - text: simple markup language for color change?
  - log: LogButtons() options for specifying depth and/or hiding depth slider
  - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
- - log: be able to right-click and log a window or tree-node into tty/file/clipboard / generalized context menu?
+ - log: be able to log anything (e.g. right-click on a window/tree-node, shows context menu? log into tty/file/clipboard)
+ - log: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?). code is commented because it fails with multiple Begin/End pairs.
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
@@ -319,17 +323,15 @@
  - input: support track pad style scrolling & slider edit.
  - tooltip: move to fit within screen (e.g. when mouse cursor is right of the screen).
  - portability: big-endian test/support (github issue #81)
- - misc: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?)
  - misc: mark printf compiler attributes on relevant functions
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - style editor: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space?
  - style editor: color child window height expressed in multiple of line height.
- - optimization/render: use indexed rendering to reduce vertex data cost (for remote/networked imgui)
+ - optimization/render: use indexed rendering to reduce vertex data cost (e.g. for remote/networked imgui)
  - optimization/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
  - optimization: turn some the various stack vectors into statically-sized arrays
  - optimization: better clipping for multi-component widgets
- - optimization: specialize for height based clipping first (assume widgets never go up + height tests before width tests?)
 */
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
