@@ -514,6 +514,7 @@ ImGuiStyle::ImGuiStyle()
     ColumnsMinSpacing       = 6.0f;             // Minimum horizontal spacing between two columns
     ScrollbarWidth          = 16.0f;            // Width of the vertical scrollbar
     GrabMinSize             = 10.0f;            // Minimum width/height of a slider or scrollbar grab
+    DisplaySafeAreaPadding  = ImVec2(22,22);    // Window positions are clamped to be visible within the display area. If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding
 
     Colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
     Colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
@@ -2942,12 +2943,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         // Clamp into view
         if (!(window->Flags & ImGuiWindowFlags_ChildWindow) && !(window->Flags & ImGuiWindowFlags_Tooltip))
         {
-            // FIXME: Parameterize padding.
-            const ImVec2 pad = ImVec2(window->FontSize()*2.0f, window->FontSize()*2.0f); // FIXME: Parametrize of clarify this behavior.
             if (window->AutoFitFrames == 0 && g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
             {
-                ImVec2 clip_min = pad;
-                ImVec2 clip_max = g.IO.DisplaySize - pad;
+                ImVec2 clip_min = style.DisplaySafeAreaPadding;
+                ImVec2 clip_max = g.IO.DisplaySize - style.DisplaySafeAreaPadding;
                 window->PosFloat = ImMax(window->PosFloat + window->Size, clip_min) - window->Size;
                 window->PosFloat = ImMin(window->PosFloat, clip_max);
             }
