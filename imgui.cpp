@@ -2551,6 +2551,17 @@ bool ImGui::IsAnyItemActive()
     return g.ActiveId != 0;
 }
 
+ImVec2 ImGui::GetItemActiveDragDelta()
+{
+    if (ImGui::IsItemActive())
+    {
+        ImGuiState& g = *GImGui;
+        if (g.IO.MouseDown[0])
+            return g.IO.MousePos - g.IO.MouseClickedPos[0];     // Assume we can only get active with left-mouse button (at the moment).
+    }
+    return ImVec2(0.0f, 0.0f);
+}
+
 ImVec2 ImGui::GetItemRectMin()
 {
     ImGuiWindow* window = GetCurrentWindow();

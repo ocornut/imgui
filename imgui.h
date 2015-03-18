@@ -354,12 +354,13 @@ namespace ImGui
     IMGUI_API bool          IsItemHovered();                                                    // was the last item hovered by mouse?
     IMGUI_API bool          IsItemActive();                                                     // was the last item active? (e.g. button being held, text field being edited- items that don't interact will always return false)
     IMGUI_API bool          IsAnyItemActive();                                                  // 
-    IMGUI_API bool          IsWindowFocused();                                                  // is current window focused (differentiate child windows from each others)
-    IMGUI_API bool          IsRootWindowFocused();                                              // is current root window focused
-    IMGUI_API bool          IsRootWindowOrAnyChildFocused();                                    // is current root window or any of its child (including current window) focused
+    IMGUI_API ImVec2        GetItemActiveDragDelta();                                           // mouse delta from the time the item first got active
     IMGUI_API ImVec2        GetItemRectMin();                                                   // get bounding rect of last item
     IMGUI_API ImVec2        GetItemRectMax();                                                   // "
     IMGUI_API ImVec2        GetItemRectSize();                                                  // "
+    IMGUI_API bool          IsWindowFocused();                                                  // is current window focused (differentiate child windows from each others)
+    IMGUI_API bool          IsRootWindowFocused();                                              // is current root window focused
+    IMGUI_API bool          IsRootWindowOrAnyChildFocused();                                    // is current root window or any of its child (including current window) focused
     IMGUI_API bool          IsClipped(const ImVec2& item_size);                                 // to perform coarse clipping on user's side (as an optimization)
     IMGUI_API bool          IsKeyPressed(int key_index, bool repeat = true);                    // key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry
     IMGUI_API bool          IsMouseClicked(int button, bool repeat = false);
