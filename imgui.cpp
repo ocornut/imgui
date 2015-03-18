@@ -9369,8 +9369,13 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TextWrapped("(Use ImGui::SameLine() to keep adding items to the right of the preceeding item)");
 
             // Text
-            ImGui::Text("Hello");
+            ImGui::Text("Two items: Hello");
             ImGui::SameLine();
+            ImGui::TextColored(ImVec4(1,1,0,1), "World");
+
+            // Adjust spacing
+            ImGui::Text("More spacing: Hello");
+            ImGui::SameLine(0, 20);
             ImGui::TextColored(ImVec4(1,1,0,1), "World");
 
             // Button
@@ -9384,6 +9389,14 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::Text("Small buttons"); ImGui::SameLine();
             ImGui::SmallButton("Like this one"); ImGui::SameLine();
             ImGui::Text("can fit within a text block.");
+
+            // Aligned to arbitrary position. Easy/cheap column.
+            ImGui::Text("Aligned"); 
+            ImGui::SameLine(150); ImGui::Text("x=150");
+            ImGui::SameLine(300); ImGui::Text("x=300");
+            ImGui::Text("Aligned");
+            ImGui::SameLine(150); ImGui::SmallButton("x=150");
+            ImGui::SameLine(300); ImGui::SmallButton("x=300");
 
             // Checkbox
             static bool c1=false,c2=false,c3=false,c4=false;
