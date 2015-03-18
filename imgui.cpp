@@ -2944,7 +2944,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         {
             // FIXME: Parameterize padding.
             const ImVec2 pad = ImVec2(window->FontSize()*2.0f, window->FontSize()*2.0f); // FIXME: Parametrize of clarify this behavior.
-            if (g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
+            if (window->AutoFitFrames == 0 && g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
             {
                 ImVec2 clip_min = pad;
                 ImVec2 clip_max = g.IO.DisplaySize - pad;
@@ -3013,14 +3013,12 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         }
         else
         {
-            window->Size = window->SizeFull;
-
             ImU32 resize_col = 0;
             if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
             {
                 // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
                 const ImVec2 size_auto_fit = window->SizeContents + style.WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
-                window->SizeFull = size_auto_fit;
+                window->Size = window->SizeFull = size_auto_fit;
             }
             else
             {
@@ -3053,7 +3051,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                     {
                         // Manual auto-fit when double-clicking
                         window->SizeFull = size_auto_fit;
-                        window->Size = window->SizeFull;
                         if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
                             MarkSettingsDirty();
                     }
@@ -3061,13 +3058,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                     {
                         // Resize
                         window->SizeFull = ImMax(window->SizeFull + g.IO.MouseDelta, style.WindowMinSize);
-                        window->Size = window->SizeFull;
                         if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
                             MarkSettingsDirty();
                     }
                 }
 
                 // Update rectangle immediately so that rendering right below us isn't one frame late
+                window->Size = window->SizeFull;
                 title_bar_rect = window->TitleBarRect();
             }
 
