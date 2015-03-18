@@ -394,7 +394,7 @@ namespace ImGui
     static inline void      OpenNextNode(bool open) { ImGui::SetNextTreeNodeOpened(open, 0); }  // OBSOLETE
     static inline bool      GetWindowIsFocused() { return ImGui::IsWindowFocused(); }   // OBSOLETE
     static inline ImVec2    GetItemBoxMin() { return GetItemRectMin(); }    // OBSOLETE
-    static inline ImVec2    GetItemBoxMax() { return GetItemRectMin(); }    // OBSOLETE
+    static inline ImVec2    GetItemBoxMax() { return GetItemRectMax(); }    // OBSOLETE
     static inline bool      IsMouseHoveringBox(const ImVec2& rect_min, const ImVec2& rect_max) { return IsMouseHoveringRect(rect_min, rect_max); }  // OBSOLETE
 
 } // namespace ImGui
