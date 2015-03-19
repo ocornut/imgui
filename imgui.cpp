@@ -9433,9 +9433,12 @@ void ImGui::ShowTestWindow(bool* opened)
                 phase += 0.10f*values_offset; 
             }
         }
-        ImGui::PlotLines("Frame Times", &values.front(), (int)values.size(), (int)values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
-
-        ImGui::SameLine(); ImGui::Checkbox("pause", &pause);
+        ImGui::PlotLines("##Graph", &values.front(), (int)values.size(), (int)values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
+        ImGui::SameLine(0, (int)ImGui::GetStyle().ItemInnerSpacing.x); 
+        ImGui::BeginGroup();
+        ImGui::Text("Graph");
+        ImGui::Checkbox("pause", &pause);
+        ImGui::EndGroup();
         ImGui::PlotHistogram("Histogram", arr, IM_ARRAYSIZE(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0,80));
     }
 
