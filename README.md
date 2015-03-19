@@ -65,7 +65,7 @@ The bulk of example user code is contained within the ImGui::ShowTestWindow() fu
 
 <b>How do you use ImGui on a platform that may not have a mouse or keyboard?</b>
 
-I recommend using [Synergy](http://synergy-project.org). With the uSynergy.c micro client running on your platform and connecting to your PC, you can seamlessly use your PC input devices from a video game console or a tablet. ImGui allows to increase the hit box of widgets (via the _TouchPadding_ setting) to accomodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.
+I recommend using [Synergy](http://synergy-project.org) ([sources](https://github.com/synergy/synergy)). With the uSynergy.c micro client running on your platform and connecting to your PC, you can seamlessly use your PC input devices from a video game console or a tablet. ImGui allows to increase the hit box of widgets (via the _TouchPadding_ setting) to accomodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.
 
 <b>I integrated ImGui in my engine and the text or lines are blurry..</b>
 
