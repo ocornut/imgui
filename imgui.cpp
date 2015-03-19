@@ -7363,14 +7363,14 @@ void ImDrawList::ArcTo(const ImVec2& centre, float radius, float amin, float ama
 
 void ImDrawList::Fill(ImU32 col)
 {
-    AddConvexPolyFilled(&path[0], path.size(), col);
+    AddConvexPolyFilled(&path[0], (int)path.size(), col);
     ClearPath();
 }
 
 void ImDrawList::Stroke(ImU32 col, bool closed)
 {
     // Remove duplicates
-    AddPolyline(&path[0], path.size(), col, closed);
+    AddPolyline(&path[0], (int)path.size(), col, closed);
     ClearPath();
 }
 
@@ -9270,7 +9270,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::SameLine();
 
             ImGui::PushID("set2");
-            for (size_t i = 0; i < 4; i++)
+            for (int i = 0; i < 4; i++)
             {
                 if (i > 0) ImGui::SameLine(0, 4);
                 ImGui::PushID(i);
