@@ -9437,36 +9437,23 @@ void ImGui::ShowTestWindow(bool* opened)
 
     if (ImGui::CollapsingHeader("Layout"))
     {
-        if (ImGui::TreeNode("Text Baseline Alignment"))
+        if (ImGui::TreeNode("Widgets Alignment"))
         {
-            ImGui::TextWrapped("(This is testing the vertical alignment that occurs on text to keep it at the same baseline as widgets. Lines only composed of text or \"small\" widgets fit in less vertical spaces than lines with normal widgets)"); 
+            static float f = 0.0f;
+            ImGui::Text("Fixed: 100 pixels");
+            ImGui::PushItemWidth(100);
+            ImGui::InputFloat("float##1", &f);
+            ImGui::PopItemWidth();
 
-            ImGui::Text("One\nTwo\nThree"); ImGui::SameLine();            
-            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
-            ImGui::Text("Banana");
+            ImGui::Text("Proportional: 50%% of window width");
+            ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.5f);
+            ImGui::InputFloat("float##2", &f);
+            ImGui::PopItemWidth();
 
-            ImGui::Text("Banana"); ImGui::SameLine();
-            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
-            ImGui::Text("One\nTwo\nThree");
-
-            ImGui::Button("HOP"); ImGui::SameLine();
-            ImGui::Text("Banana"); ImGui::SameLine();
-            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
-            ImGui::Text("Banana");
-
-            ImGui::Button("HOP"); ImGui::SameLine();
-            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
-            ImGui::Text("Banana");
-
-            ImGui::Button("TEST"); ImGui::SameLine();
-            ImGui::Text("TEST"); ImGui::SameLine();
-            ImGui::SmallButton("TEST");
-
-            ImGui::AlignFirstTextHeightToWidgets(); // If your line starts with text, call this to align it to upcoming widgets.
-            ImGui::Text("Text aligned to Widget"); ImGui::SameLine();
-            ImGui::Button("Widget"); ImGui::SameLine();
-            ImGui::Text("Widget"); ImGui::SameLine();
-            ImGui::SmallButton("Widget");
+            ImGui::Text("Right-aligned: Leave 100 pixels for label");
+            ImGui::PushItemWidth(-100);
+            ImGui::InputFloat("float##3", &f);
+            ImGui::PopItemWidth();
 
             ImGui::TreePop();
         }
@@ -9579,6 +9566,40 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::Selectable("Selected", true);
             ImGui::Selectable("Not Selected", false);
             ImGui::ListBoxFooter();
+
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Text Baseline Alignment"))
+        {
+            ImGui::TextWrapped("(This is testing the vertical alignment that occurs on text to keep it at the same baseline as widgets. Lines only composed of text or \"small\" widgets fit in less vertical spaces than lines with normal widgets)"); 
+
+            ImGui::Text("One\nTwo\nThree"); ImGui::SameLine();            
+            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
+            ImGui::Text("Banana");
+
+            ImGui::Text("Banana"); ImGui::SameLine();
+            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
+            ImGui::Text("One\nTwo\nThree");
+
+            ImGui::Button("HOP"); ImGui::SameLine();
+            ImGui::Text("Banana"); ImGui::SameLine();
+            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
+            ImGui::Text("Banana");
+
+            ImGui::Button("HOP"); ImGui::SameLine();
+            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
+            ImGui::Text("Banana");
+
+            ImGui::Button("TEST"); ImGui::SameLine();
+            ImGui::Text("TEST"); ImGui::SameLine();
+            ImGui::SmallButton("TEST");
+
+            ImGui::AlignFirstTextHeightToWidgets(); // If your line starts with text, call this to align it to upcoming widgets.
+            ImGui::Text("Text aligned to Widget"); ImGui::SameLine();
+            ImGui::Button("Widget"); ImGui::SameLine();
+            ImGui::Text("Widget"); ImGui::SameLine();
+            ImGui::SmallButton("Widget");
 
             ImGui::TreePop();
         }
