@@ -4,6 +4,13 @@
 // Get latest version at https://github.com/ocornut/imgui
 // Developed by Omar Cornut and contributors.
 
+// ANTI-ALIASED PRIMITIVES BRANCH
+// TODO
+// - settle on where to the 0.5f offset for lines
+// - checkbox, slider grabs are not centered properly if you enable border (relate to point above)
+// - fix circles
+// - thick lines? recently been added to the ImDrawList API as a convenience.
+
 /*
 
  Index
