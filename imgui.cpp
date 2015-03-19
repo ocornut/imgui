@@ -4826,7 +4826,7 @@ static bool SliderBehavior(const ImRect& frame_bb, const ImRect& slider_bb, ImGu
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
     const bool is_finite = (v_min != -FLT_MAX && v_min != FLT_MAX && v_max != -FLT_MAX && v_max != FLT_MAX);
-    const bool is_non_linear = abs(power - 1.0f) > 0.0001f;
+    const bool is_non_linear = fabsf(power - 1.0f) > 0.0001f;
 
     const float slider_sz = horizontal ? slider_bb.GetWidth() : slider_bb.GetHeight();
     float grab_sz;
