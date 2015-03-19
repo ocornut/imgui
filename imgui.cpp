@@ -5562,9 +5562,9 @@ void ImGuiTextEditState::UpdateScrollOffset()
     // Scroll in chunks of quarter width
     const float scroll_x_increment = Width * 0.25f;
     const float cursor_offset_x = Font->CalcTextSizeW(FontSize, FLT_MAX, Text, Text+StbState.cursor, NULL).x;
-    if (ScrollX > cursor_offset_x)
+    if (cursor_offset_x < ScrollX)
         ScrollX = ImMax(0.0f, cursor_offset_x - scroll_x_increment);    
-    else if (ScrollX < cursor_offset_x - Width)
+    else if (cursor_offset_x - Width >= ScrollX)
         ScrollX = cursor_offset_x - Width + scroll_x_increment;
 }
 
@@ -5574,7 +5574,7 @@ ImVec2 ImGuiTextEditState::CalcDisplayOffsetFromCharIdx(int i) const
     const ImWchar* text_end = (Text+i >= text_start) ? Text+i : text_start;                    // Clip if requested character is outside of display
     IM_ASSERT(text_end >= text_start);
 
-    const ImVec2 offset = Font->CalcTextSizeW(FontSize, Width, text_start, text_end, NULL);
+    const ImVec2 offset = Font->CalcTextSizeW(FontSize, Width+1, text_start, text_end, NULL);
     return offset;
 }
 
@@ -5607,30 +5607,19 @@ const ImWchar* ImGuiTextEditState::GetTextPointerClippedW(ImFont* font, float fo
 // [Static]
 void ImGuiTextEditState::RenderTextScrolledClipped(ImFont* font, float font_size, const char* buf, ImVec2 pos, float width, float scroll_x)
 {
-    // NB- We start drawing at character boundary
-    ImVec2 text_size;
-    const char* text_start = GetTextPointerClippedA(font, font_size, buf, scroll_x, NULL);
-    const char* text_end = GetTextPointerClippedA(font, font_size, text_start, width, &text_size);
+    ImGuiWindow* window = GetCurrentWindow();
+    const ImU32 font_color = window->Color(ImGuiCol_Text);
+    //window->DrawList->AddLine(pos, pos+ImVec2(width,0), 0xFF00FFFF);
 
-    // We need to test for the possibility of malformed UTF-8 (instead of just text_end[0] != 0)
-    unsigned int text_end_char = 0;
-    ImTextCharFromUtf8(&text_end_char, text_end, NULL);
+    // Determine start and end of visible string
+    // FIXME-OPT: This is pretty slow for what it does.
+    const char* text_start = scroll_x <= 0.0f ? buf : GetTextPointerClippedA(font, font_size, buf, scroll_x, NULL);
+    const char* text_end = GetTextPointerClippedA(font, font_size, text_start, width + 1, NULL); // +1 to allow character spacing to fit outside the allowed width
+    window->DrawList->AddText(font, font_size, pos, font_color, text_start, text_end);
 
-    // Draw a little clip symbol if we've got text on either left or right of the box
-    const char symbol_c = '~';
-    const float symbol_w = font_size*0.40f;     // FIXME: compute correct width
-    const float clip_begin = (text_start > buf && text_start < text_end) ? symbol_w : 0.0f;
-    const float clip_end = (text_end_char != 0 && text_end > text_start) ? symbol_w : 0.0f;
-
-    // Draw text
-    RenderText(pos+ImVec2(clip_begin,0), text_start+(clip_begin>0.0f?1:0), text_end-(clip_end>0.0f?1:0), false);
-
-    // Draw the clip symbol
-    const char s[2] = {symbol_c,'\0'};
-    if (clip_begin > 0.0f)
-        RenderText(pos, s);
-    if (clip_end > 0.0f)
-        RenderText(pos+ImVec2(width-clip_end,0.0f), s);
+    // Log as text
+    if (GImGui->LogEnabled)
+        LogText(pos, buf, NULL);
 }
 
 bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags extra_flags)
@@ -5840,7 +5829,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             const char* buf_end = NULL;
             edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), buf, NULL, &buf_end);
             edit_state.CurLenA = buf_end - buf; // We can't get the result from ImFormatString() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
-            edit_state.Width = w;
+            edit_state.Width = w + style.FramePadding.x;
             edit_state.InputCursorScreenPos = ImVec2(-1.f,-1.f);
             edit_state.CursorAnimReset();
 
@@ -6094,7 +6083,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         }
     }
 
-    ImGuiTextEditState::RenderTextScrolledClipped(window->Font(), window->FontSize(), buf, frame_bb.Min + style.FramePadding, w, (g.ActiveId == id) ? edit_state.ScrollX : 0.0f);
+    ImGuiTextEditState::RenderTextScrolledClipped(window->Font(), window->FontSize(), buf, frame_bb.Min + style.FramePadding, w + style.FramePadding.x, (g.ActiveId == id) ? edit_state.ScrollX : 0.0f);
 
     if (g.ActiveId == id)
     {
@@ -8430,6 +8419,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         }
 
         // Decode and advance source (handle unlikely UTF-8 decoding failure by skipping to the next byte)
+        const char* prev_s = s;
         unsigned int c = (unsigned int)*s;
         if (c < 0x80)
         {
@@ -8452,7 +8442,10 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         
         const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : FallbackXAdvance;
         if (line_width + char_width >= max_width)
+        {
+            s = prev_s;
             break;
+        }
 
         line_width += char_width;
     }
@@ -8496,7 +8489,10 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
         
         const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : FallbackXAdvance;
         if (line_width + char_width >= max_width)
+        {
+            s--;
             break;
+        }
 
         line_width += char_width;
     }
