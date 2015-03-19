@@ -2064,8 +2064,9 @@ void ImGui::Render()
     {
         // Hide implicit window if it hasn't been used
         IM_ASSERT(g.CurrentWindowStack.size() == 1);    // Mismatched Begin/End 
-        if (g.CurrentWindow && !g.CurrentWindow->Accessed)
-            g.CurrentWindow->Visible = false;
+        if (ImGuiWindow* window = g.CurrentWindow)
+            if (ImLengthSqr(window->DC.CursorMaxPos - window->DC.CursorStartPos) < 0.001f)
+                g.CurrentWindow->Visible = false;
         ImGui::End();
 
         // Select window for move/focus when we're done with all our widgets (we use the root window ID here)
