@@ -5562,6 +5562,18 @@ void ImGuiTextEditState::UpdateScrollOffset()
     // Scroll in chunks of quarter width
     const float scroll_x_increment = Width * 0.25f;
     const float cursor_offset_x = Font->CalcTextSizeW(FontSize, FLT_MAX, Text, Text+StbState.cursor, NULL).x;
+
+    // If widget became bigger than text (because of a resize), reset horizontal scrolling
+    if (ScrollX > 0.0f)
+    {
+        const float text_width = cursor_offset_x + Font->CalcTextSizeW(FontSize, FLT_MAX, Text+StbState.cursor, NULL, NULL).x;
+        if (text_width < Width)
+        {
+            ScrollX = 0.0f;
+            return;
+        }
+    }
+
     if (cursor_offset_x < ScrollX)
         ScrollX = ImMax(0.0f, cursor_offset_x - scroll_x_increment);    
     else if (cursor_offset_x - Width >= ScrollX)
@@ -5873,14 +5885,18 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     bool cancel_edit = false;
     bool enter_pressed = false;
     if (g.ActiveId == id)
+    //if (edit_state.Id == id)  // Works, but double-click to select-all sets cursors to end which in turn tends to scroll toward the right when shrinking widget.
     {
-        // Edit in progress
+        // Update some data if we are active or last active
         edit_state.Width = w + style.FramePadding.x;
         edit_state.BufSizeA = buf_size;
         edit_state.Font = window->Font();
         edit_state.FontSize = window->FontSize();
         edit_state.UpdateScrollOffset();
-
+    }
+    if (g.ActiveId == id)
+    {
+        // Edit in progress
         const float mx = g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x;
         const float my = window->FontSize()*0.5f;   // Flatten mouse because we are doing a single-line edit
 
@@ -6083,8 +6099,8 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         }
     }
 
-    const float render_scroll_x = (g.ActiveId == id) ? edit_state.ScrollX : 0.0f;
-    //const float render_scroll_x = (edit_state.Id == id) ? edit_state.ScrollX : 0.0f;
+    //const float render_scroll_x = (g.ActiveId == id) ? edit_state.ScrollX : 0.0f;
+    const float render_scroll_x = (edit_state.Id == id) ? edit_state.ScrollX : 0.0f;
     ImGuiTextEditState::RenderTextScrolledClipped(window->Font(), window->FontSize(), buf, frame_bb.Min + style.FramePadding, w + style.FramePadding.x, render_scroll_x);
 
     if (g.ActiveId == id)
