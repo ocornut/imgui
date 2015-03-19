@@ -5875,14 +5875,15 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     if (g.ActiveId == id)
     {
         // Edit in progress
+        edit_state.Width = w + style.FramePadding.x;
         edit_state.BufSizeA = buf_size;
         edit_state.Font = window->Font();
         edit_state.FontSize = window->FontSize();
+        edit_state.UpdateScrollOffset();
 
         const float mx = g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x;
         const float my = window->FontSize()*0.5f;   // Flatten mouse because we are doing a single-line edit
 
-        edit_state.UpdateScrollOffset();
         if (select_all || (hovered && io.MouseDoubleClicked[0]))
         {
             edit_state.SelectAll();
@@ -5892,7 +5893,6 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         {
             stb_textedit_click(&edit_state, &edit_state.StbState, mx + edit_state.ScrollX, my);
             edit_state.CursorAnimReset();
-
         }
         else if (io.MouseDown[0] && !edit_state.SelectedAllMouseLock)
         {
@@ -6083,7 +6083,9 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         }
     }
 
-    ImGuiTextEditState::RenderTextScrolledClipped(window->Font(), window->FontSize(), buf, frame_bb.Min + style.FramePadding, w + style.FramePadding.x, (g.ActiveId == id) ? edit_state.ScrollX : 0.0f);
+    const float render_scroll_x = (g.ActiveId == id) ? edit_state.ScrollX : 0.0f;
+    //const float render_scroll_x = (edit_state.Id == id) ? edit_state.ScrollX : 0.0f;
+    ImGuiTextEditState::RenderTextScrolledClipped(window->Font(), window->FontSize(), buf, frame_bb.Min + style.FramePadding, w + style.FramePadding.x, render_scroll_x);
 
     if (g.ActiveId == id)
     {
