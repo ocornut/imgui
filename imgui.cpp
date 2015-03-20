@@ -400,6 +400,8 @@ namespace IMGUI_STB_NAMESPACE
 #endif
 #include "stb_truetype.h"
 
+#undef STB_TEXTEDIT_STRING
+#undef STB_TEXTEDIT_CHARTYPE
 #define STB_TEXTEDIT_STRING    ImGuiTextEditState
 #define STB_TEXTEDIT_CHARTYPE  ImWchar
 #include "stb_textedit.h"
@@ -5546,24 +5548,22 @@ static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const Im
     return true;
 }
 
-enum
-{
-    STB_TEXTEDIT_K_LEFT = 1 << 16,  // keyboard input to move cursor left
-    STB_TEXTEDIT_K_RIGHT,           // keyboard input to move cursor right
-    STB_TEXTEDIT_K_UP,              // keyboard input to move cursor up
-    STB_TEXTEDIT_K_DOWN,            // keyboard input to move cursor down
-    STB_TEXTEDIT_K_LINESTART,       // keyboard input to move cursor to start of line
-    STB_TEXTEDIT_K_LINEEND,         // keyboard input to move cursor to end of line
-    STB_TEXTEDIT_K_TEXTSTART,       // keyboard input to move cursor to start of text
-    STB_TEXTEDIT_K_TEXTEND,         // keyboard input to move cursor to end of text
-    STB_TEXTEDIT_K_DELETE,          // keyboard input to delete selection or character under cursor
-    STB_TEXTEDIT_K_BACKSPACE,       // keyboard input to delete selection or character left of cursor
-    STB_TEXTEDIT_K_UNDO,            // keyboard input to perform undo
-    STB_TEXTEDIT_K_REDO,            // keyboard input to perform redo
-    STB_TEXTEDIT_K_WORDLEFT,        // keyboard input to move cursor left one word
-    STB_TEXTEDIT_K_WORDRIGHT,       // keyboard input to move cursor right one word
-    STB_TEXTEDIT_K_SHIFT = 1 << 17
-};
+// We don't use an enum so we can build even with conflicting symbols (if another user of stb_textedit.h leak their STB_TEXTEDIT_K_* symbols)
+#define STB_TEXTEDIT_K_LEFT         0x10000 // keyboard input to move cursor left
+#define STB_TEXTEDIT_K_RIGHT        0x10001 // keyboard input to move cursor right
+#define STB_TEXTEDIT_K_UP           0x10002 // keyboard input to move cursor up
+#define STB_TEXTEDIT_K_DOWN         0x10003 // keyboard input to move cursor down
+#define STB_TEXTEDIT_K_LINESTART    0x10004 // keyboard input to move cursor to start of line
+#define STB_TEXTEDIT_K_LINEEND      0x10005 // keyboard input to move cursor to end of line
+#define STB_TEXTEDIT_K_TEXTSTART    0x10006 // keyboard input to move cursor to start of text
+#define STB_TEXTEDIT_K_TEXTEND      0x10007 // keyboard input to move cursor to end of text
+#define STB_TEXTEDIT_K_DELETE       0x10008 // keyboard input to delete selection or character under cursor
+#define STB_TEXTEDIT_K_BACKSPACE    0x10009 // keyboard input to delete selection or character left of cursor
+#define STB_TEXTEDIT_K_UNDO         0x1000A // keyboard input to perform undo
+#define STB_TEXTEDIT_K_REDO         0x1000B // keyboard input to perform redo
+#define STB_TEXTEDIT_K_WORDLEFT     0x1000C // keyboard input to move cursor left one word
+#define STB_TEXTEDIT_K_WORDRIGHT    0x1000D // keyboard input to move cursor right one word
+#define STB_TEXTEDIT_K_SHIFT        0x20000
 
 #ifdef IMGUI_STB_NAMESPACE
 namespace IMGUI_STB_NAMESPACE
