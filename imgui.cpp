@@ -8778,6 +8778,7 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
 
 #endif
 
+#ifndef IMGUI_DISABLE_TEST_WINDOWS
 //-----------------------------------------------------------------------------
 // HELP
 //-----------------------------------------------------------------------------
@@ -10308,6 +10309,7 @@ static void ShowExampleAppLongText(bool* opened)
 }
 
 // End of Sample code
+#endif
 
 //-----------------------------------------------------------------------------
 // FONT DATA
