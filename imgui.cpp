@@ -1207,7 +1207,6 @@ public:
     ImGuiID     GetID(const char* str);
     ImGuiID     GetID(const void* ptr);
 
-    void        AddToRenderList();
     bool        FocusItemRegister(bool is_active, bool tab_stop = true);      // Return true if focus is requested
     void        FocusItemUnregister();
 
@@ -1600,21 +1599,24 @@ void ImGuiWindow::FocusItemUnregister()
     FocusIdxTabCounter--;
 }
 
-void ImGuiWindow::AddToRenderList()
+static inline void AddDrawListToRenderList(ImDrawList* draw_list)
 {
-    ImGuiState& g = *GImGui;
-
-    if (!DrawList->commands.empty() && !DrawList->vtx_buffer.empty())
+    if (!draw_list->commands.empty() && !draw_list->vtx_buffer.empty())
     {
-        if (DrawList->commands.back().vtx_count == 0)
-            DrawList->commands.pop_back();
-        g.RenderDrawLists.push_back(DrawList);
+        if (draw_list->commands.back().vtx_count == 0)
+            draw_list->commands.pop_back();
+        GImGui->RenderDrawLists.push_back(draw_list);
     }
-    for (size_t i = 0; i < DC.ChildWindows.size(); i++)
+}
+
+static void AddWindowToRenderList(ImGuiWindow* window)
+{
+    AddDrawListToRenderList(window->DrawList);
+    for (size_t i = 0; i < window->DC.ChildWindows.size(); i++)
     {
-        ImGuiWindow* child = DC.ChildWindows[i];
+        ImGuiWindow* child = window->DC.ChildWindows[i];
         if (child->Visible)                 // clipped children may have been marked not Visible
-            child->AddToRenderList();
+            AddWindowToRenderList(child);
     }
 }
 
@@ -2123,13 +2125,13 @@ void ImGui::Render()
         {
             ImGuiWindow* window = g.Windows[i];
             if (window->Visible && (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) == 0)
-                window->AddToRenderList();
+                AddWindowToRenderList(window);
         }
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
             if (window->Visible && (window->Flags & ImGuiWindowFlags_Tooltip))
-                window->AddToRenderList();
+                AddWindowToRenderList(window);
         }
 
         if (g.IO.MouseDrawCursor)
@@ -2140,11 +2142,13 @@ void ImGui::Render()
             const ImVec2 tex_uv_scale(1.0f/g.IO.Fonts->TexWidth, 1.0f/g.IO.Fonts->TexHeight);
             static ImDrawList draw_list;
             draw_list.Clear();
+            draw_list.PushTextureID(tex_id);
             draw_list.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
             draw_list.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
             draw_list.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0xFF000000); // Black border
             draw_list.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_WHITE * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_WHITE + size) * tex_uv_scale, 0xFFFFFFFF); // White fill
-            g.RenderDrawLists.push_back(&draw_list);
+            draw_list.PopTextureID();
+            AddDrawListToRenderList(&draw_list);
         }
 
         // Render
