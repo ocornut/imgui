@@ -7587,6 +7587,7 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
     if ((col >> 24) == 0)
         return;
 
+    // FIXME-OPT: This is wasting draw calls.
     const bool push_texture_id = texture_id_stack.empty() || user_texture_id != texture_id_stack.back();
     if (push_texture_id)
         PushTextureID(user_texture_id);
