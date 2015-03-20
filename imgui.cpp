@@ -1222,8 +1222,8 @@ public:
 
 static inline ImGuiWindow* GetCurrentWindow()
 {
+    // If this ever crash it probably means that ImGui::NewFrame() hasn't been called. We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
     ImGuiState& g = *GImGui;
-    IM_ASSERT(g.CurrentWindow != NULL);    // ImGui::NewFrame() hasn't been called yet?
     g.CurrentWindow->Accessed = true;
     return g.CurrentWindow;
 }
