@@ -10335,7 +10335,7 @@ static unsigned char *stb__dout;
 static void stb__match(unsigned char *data, unsigned int length)
 {
     // INVERSE of memmove... write each byte before copying the next...
-    assert (stb__dout + length <= stb__barrier);
+    IM_ASSERT (stb__dout + length <= stb__barrier);
     if (stb__dout + length > stb__barrier) { stb__dout += length; return; }
     if (data < stb__barrier4) { stb__dout = stb__barrier+1; return; }
     while (length--) *stb__dout++ = *data++;
@@ -10343,7 +10343,7 @@ static void stb__match(unsigned char *data, unsigned int length)
 
 static void stb__lit(unsigned char *data, unsigned int length)
 {
-    assert (stb__dout + length <= stb__barrier);
+    IM_ASSERT (stb__dout + length <= stb__barrier);
     if (stb__dout + length > stb__barrier) { stb__dout += length; return; }
     if (data < stb__barrier2) { stb__dout = stb__barrier+1; return; }
     memcpy(stb__dout, data, length);
@@ -10420,17 +10420,17 @@ static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsi
         i = stb_decompress_token(i);
         if (i == old_i) {
             if (*i == 0x05 && i[1] == 0xfa) {
-                assert(stb__dout == output + olen);
+                IM_ASSERT(stb__dout == output + olen);
                 if (stb__dout != output + olen) return 0;
                 if (stb_adler32(1, output, olen) != (unsigned int) stb__in4(2))
                     return 0;
                 return olen;
             } else {
-                assert(0); /* NOTREACHED */
+                IM_ASSERT(0); /* NOTREACHED */
                 return 0;
             }
         }
-        assert(stb__dout <= output + olen); 
+        IM_ASSERT(stb__dout <= output + olen); 
         if (stb__dout > output + olen)
             return 0;
     }
