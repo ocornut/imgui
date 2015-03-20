@@ -1835,8 +1835,8 @@ void ImGui::NewFrame()
             else
             {
                 g.IO.MouseClickedTime[i] = g.Time;
-                g.IO.MouseClickedPos[i] = g.IO.MousePos;
             }
+            g.IO.MouseClickedPos[i] = g.IO.MousePos;
         }
     }
     for (size_t i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
