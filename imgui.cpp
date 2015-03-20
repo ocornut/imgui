@@ -8807,7 +8807,14 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
 
 #endif
 
-#ifndef IMGUI_DISABLE_TEST_WINDOWS
+#ifdef IMGUI_DISABLE_TEST_WINDOWS
+
+void ImGui::ShowUserGuide() {}
+void ImGui::ShowStyleEditor() {}
+void ImGui::ShowTestWindow() {}
+
+#else
+
 //-----------------------------------------------------------------------------
 // HELP
 //-----------------------------------------------------------------------------

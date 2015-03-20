@@ -155,11 +155,10 @@ namespace ImGui
     IMGUI_API void          NewFrame();
     IMGUI_API void          Render();
     IMGUI_API void          Shutdown();
-#ifndef IMGUI_DISABLE_TEST_WINDOWS
     IMGUI_API void          ShowUserGuide();
     IMGUI_API void          ShowStyleEditor(ImGuiStyle* ref = NULL);
     IMGUI_API void          ShowTestWindow(bool* open = NULL);
-#endif
+
     // Window
     // See implementation in .cpp for details
     IMGUI_API bool          Begin(const char* name = "Debug", bool* p_opened = NULL, const ImVec2& initial_size = ImVec2(0,0), float bg_alpha = -1.0f, ImGuiWindowFlags flags = 0); // return false when window is collapsed, so you can early out in your code. passing 'bool* p_opened' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
