@@ -8807,6 +8807,14 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
 
 #endif
 
+#ifdef IMGUI_DISABLE_TEST_WINDOWS
+
+void ImGui::ShowUserGuide() {}
+void ImGui::ShowStyleEditor() {}
+void ImGui::ShowTestWindow() {}
+
+#else
+
 //-----------------------------------------------------------------------------
 // HELP
 //-----------------------------------------------------------------------------
@@ -10339,6 +10347,7 @@ static void ShowExampleAppLongText(bool* opened)
 }
 
 // End of Sample code
+#endif
 
 //-----------------------------------------------------------------------------
 // FONT DATA
