@@ -1169,6 +1169,7 @@ struct ImGuiWindow
     float                   NextScrollY;
     bool                    ScrollbarY;
     bool                    Visible;                            // Set to true on Begin()
+    bool                    Accessed;                           // Set to true when any widget access the current window
     bool                    Collapsed;                          // Set when collapsing window to become only title-bar
     bool                    SkipItems;                          // == Visible && !Collapsed
     int                     AutoFitFrames;
@@ -1222,6 +1223,7 @@ static inline ImGuiWindow* GetCurrentWindow()
 {
     ImGuiState& g = *GImGui;
     IM_ASSERT(g.CurrentWindow != NULL);    // ImGui::NewFrame() hasn't been called yet?
+    g.CurrentWindow->Accessed = true;
     return g.CurrentWindow;
 }
 
@@ -1510,6 +1512,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     NextScrollY = 0.0f;
     ScrollbarY = false;
     Visible = false;
+    Accessed = false;
     Collapsed = false;
     SkipItems = false;
     AutoFitFrames = -1;
@@ -1934,6 +1937,7 @@ void ImGui::NewFrame()
     {
         ImGuiWindow* window = g.Windows[i];
         window->Visible = false;
+        window->Accessed = false;
     }
 
     // No window should be open at the beginning of the frame.
@@ -2060,9 +2064,8 @@ void ImGui::Render()
     {
         // Hide implicit window if it hasn't been used
         IM_ASSERT(g.CurrentWindowStack.size() == 1);    // Mismatched Begin/End 
-        if (ImGuiWindow* window = g.CurrentWindow)
-            if (ImLengthSqr(window->DC.CursorMaxPos - window->DC.CursorStartPos) < 0.001f)
-                g.CurrentWindow->Visible = false;
+        if (g.CurrentWindow && !g.CurrentWindow->Accessed)
+            g.CurrentWindow->Visible = false;
         ImGui::End();
 
         // Select window for move/focus when we're done with all our widgets (we use the root window ID here)
@@ -3193,6 +3196,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
     if (window->ScrollbarY)
         clip_rect.z -= style.ScrollbarWidth;
     PushClipRect(clip_rect);
+
+    // Clear 'accessed' flag last thing
+    if (first_begin_of_the_frame)
+        window->Accessed = false;
 
     // Child window can be out of sight and have "negative" clip windows.
     // Mark them as collapsed so commands are skipped earlier (we can't manually collapse because they have no title bar).
