@@ -2541,6 +2541,14 @@ ImVec2 ImGui::GetMousePos()
     return GImGui->IO.MousePos;
 }
 
+ImVec2 ImGui::GetMouseDragDelta()
+{
+    ImGuiState& g = *GImGui;
+    if (g.IO.MouseDown[0])
+        return g.IO.MousePos - g.IO.MouseClickedPos[0];     // Assume we can only get active with left-mouse button (at the moment).
+    return ImVec2(0.0f, 0.0f);
+}
+
 bool ImGui::IsItemHovered()
 {
     ImGuiWindow* window = GetCurrentWindow();
