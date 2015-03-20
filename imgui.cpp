@@ -3056,6 +3056,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                         window->SizeFull = size_auto_fit;
                         if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
                             MarkSettingsDirty();
+                        SetActiveId(0);
                     }
                     else if (held)
                     {
