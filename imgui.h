@@ -355,7 +355,6 @@ namespace ImGui
     IMGUI_API bool          IsItemHoveredRectOnly();                                            // was the last item hovered by mouse? even if another item is active while we are hovering this.
     IMGUI_API bool          IsItemActive();                                                     // was the last item active? (e.g. button being held, text field being edited- items that don't interact will always return false)
     IMGUI_API bool          IsAnyItemActive();                                                  // 
-    IMGUI_API ImVec2        GetItemActiveDragDelta();                                           // mouse delta from the time the item first got active
     IMGUI_API ImVec2        GetItemRectMin();                                                   // get bounding rect of last item
     IMGUI_API ImVec2        GetItemRectMax();                                                   // "
     IMGUI_API ImVec2        GetItemRectSize();                                                  // "
@@ -369,9 +368,10 @@ namespace ImGui
     IMGUI_API bool          IsMouseHoveringWindow();                                            // is mouse hovering current window ("window" in API names always refer to current window)
     IMGUI_API bool          IsMouseHoveringAnyWindow();                                         // is mouse hovering any active imgui window
     IMGUI_API bool          IsMouseHoveringRect(const ImVec2& rect_min, const ImVec2& rect_max);// is mouse hovering given bounding rect
+    IMGUI_API bool          IsMouseDragging(int button = 0, float lock_threshold = -1.0f);      // is mouse dragging. if lock_threshold < -1.0f uses io.MouseDraggingThreshold.
     IMGUI_API bool          IsPosHoveringAnyWindow(const ImVec2& pos);                          // is given position hovering any active imgui window
     IMGUI_API ImVec2        GetMousePos();                                                      // shortcut to ImGui::GetIO().MousePos provided by user, to be consistent with other calls
-    IMGUI_API ImVec2        GetMouseDragDelta();                                                // dragging amount - also see: GetItemActiveDragDelta().
+    IMGUI_API ImVec2        GetMouseDragDelta(int button = 0, float lock_threshold = -1.0f);    // dragging amount, also see: GetItemActiveDragDelta(). if lock_threshold < -1.0f uses io.MouseDraggingThreshold.
     IMGUI_API float         GetTime();
     IMGUI_API int           GetFrameCount();
     IMGUI_API const char*   GetStyleColName(ImGuiCol idx);
@@ -581,6 +581,7 @@ struct ImGuiIO
     const char*   LogFilename;              // = "imgui_log.txt"    // Path to .log file (default parameter to ImGui::LogToFile when no file is specified).
     float         MouseDoubleClickTime;     // = 0.30f              // Time for a double-click, in seconds.
     float         MouseDoubleClickMaxDist;  // = 6.0f               // Distance threshold to stay in to validate a double-click, in pixels.
+    float         MouseDragThreshold;       // = 6.0f               // Distance threshold before considering we are dragging
     int           KeyMap[ImGuiKey_COUNT];   // <unset>              // Map of indices into the KeysDown[512] entries array
     void*         UserData;                 // = NULL               // Store your own data for retrieval by callbacks.
 
@@ -650,6 +651,7 @@ struct ImGuiIO
     bool        MouseDoubleClicked[5];      // Has mouse button been double-clicked?
     bool        MouseDownOwned[5];          // Track if button was clicked inside a window. We don't request mouse capture from the application if click started outside ImGui bounds.
     float       MouseDownTime[5];           // Time the mouse button has been down
+    float       MouseDragMaxDistanceSqr[5]; // Squared maximum distance of how much mouse has traveled from the click point
     float       KeysDownTime[512];          // Time the keyboard key has been down
 
     IMGUI_API   ImGuiIO();

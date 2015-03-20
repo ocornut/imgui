@@ -577,6 +577,7 @@ ImGuiIO::ImGuiIO()
     MousePosPrev = ImVec2(-1,-1);
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
+    MouseDragThreshold = 6.0f;
     UserData = NULL;
 
     // User functions
@@ -1840,6 +1841,11 @@ void ImGui::NewFrame()
                 g.IO.MouseClickedTime[i] = g.Time;
             }
             g.IO.MouseClickedPos[i] = g.IO.MousePos;
+            g.IO.MouseDragMaxDistanceSqr[i] = 0.0f;
+        }
+        else if (g.IO.MouseDown[i])
+        {
+            g.IO.MouseDragMaxDistanceSqr[i] = ImMax(g.IO.MouseDragMaxDistanceSqr[i], ImLengthSqr(g.IO.MousePos - g.IO.MouseClickedPos[i]));
         }
     }
     for (size_t i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
@@ -2539,16 +2545,29 @@ bool ImGui::IsMouseDoubleClicked(int button)
     return g.IO.MouseDoubleClicked[button];
 }
 
+bool ImGui::IsMouseDragging(int button, float lock_threshold)
+{
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (lock_threshold < 0.0f)
+        lock_threshold = g.IO.MouseDragThreshold;
+    return g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold;
+}
+
 ImVec2 ImGui::GetMousePos()
 {
     return GImGui->IO.MousePos;
 }
 
-ImVec2 ImGui::GetMouseDragDelta()
+ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
 {
     ImGuiState& g = *GImGui;
-    if (g.IO.MouseDown[0])
-        return g.IO.MousePos - g.IO.MouseClickedPos[0];     // Assume we can only get active with left-mouse button (at the moment).
+    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (lock_threshold < 0.0f)
+        lock_threshold = g.IO.MouseDragThreshold;
+    if (g.IO.MouseDown[button])
+        if (g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold)
+            return g.IO.MousePos - g.IO.MouseClickedPos[button];     // Assume we can only get active with left-mouse button (at the moment).
     return ImVec2(0.0f, 0.0f);
 }
 
@@ -2579,17 +2598,6 @@ bool ImGui::IsAnyItemActive()
 {
     ImGuiState& g = *GImGui;
     return g.ActiveId != 0;
-}
-
-ImVec2 ImGui::GetItemActiveDragDelta()
-{
-    if (ImGui::IsItemActive())
-    {
-        ImGuiState& g = *GImGui;
-        if (g.IO.MouseDown[0])
-            return g.IO.MousePos - g.IO.MouseClickedPos[0];     // Assume we can only get active with left-mouse button (at the moment).
-    }
-    return ImVec2(0.0f, 0.0f);
 }
 
 ImVec2 ImGui::GetItemRectMin()
@@ -9417,11 +9425,13 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::TreeNode("Dragging"))
         {
             // You can use ImGui::GetItemActiveDragDelta() to query for the dragged amount on any widget.
-            static ImVec2 value(0.0f, 0.0f);
+            static ImVec2 value_raw(0.0f, 0.0f);
+            static ImVec2 value_with_lock_threshold(0.0f, 0.0f);
             ImGui::Button("Drag Me");
             if (ImGui::IsItemActive())
             {
-                value = ImGui::GetItemActiveDragDelta();
+                value_raw = ImGui::GetMouseDragDelta(0, 0.0f);
+                value_with_lock_threshold = ImGui::GetMouseDragDelta(0);
                 //ImGui::SetTooltip("Delta: %.1f, %.1f", value.x, value.y);
 
                 // Draw a line between the button and the mouse cursor
@@ -9430,7 +9440,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 draw_list->AddLine(ImGui::CalcItemRectClosestPoint(ImGui::GetIO().MousePos, true, -2.0f), ImGui::GetIO().MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]), 2.0f);
                 draw_list->PopClipRect();
             }
-            ImGui::SameLine(); ImGui::Text("Value: %.1f, %.1f", value.x, value.y);
+            ImGui::SameLine(); ImGui::Text("Raw (%.1f, %.1f), WithLockThresold (%.1f, %.1f)", value_raw.x, value_raw.y, value_with_lock_threshold.x, value_with_lock_threshold.y);
             ImGui::TreePop();
         }
     }
