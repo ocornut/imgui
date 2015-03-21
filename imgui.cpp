@@ -1081,6 +1081,7 @@ struct ImGuiState
     // Render
     ImVector<ImDrawList*>   RenderDrawLists;
     ImVector<ImGuiWindow*>  RenderSortedWindows;
+    ImDrawList              CursorDrawList;
 
     // Widget state
     ImGuiTextEditState      InputTextState;
@@ -1975,6 +1976,7 @@ void ImGui::Shutdown()
     g.Windows.clear();
     g.CurrentWindowStack.clear();
     g.RenderDrawLists.clear();
+    g.CursorDrawList.Clear();
     g.FocusedWindow = NULL;
     g.HoveredWindow = NULL;
     g.HoveredRootWindow = NULL;
@@ -2140,15 +2142,14 @@ void ImGui::Render()
             const ImVec2 size = TEX_ATLAS_SIZE_MOUSE_CURSOR;
             const ImTextureID tex_id = g.IO.Fonts->TexID;
             const ImVec2 tex_uv_scale(1.0f/g.IO.Fonts->TexWidth, 1.0f/g.IO.Fonts->TexHeight);
-            static ImDrawList draw_list;
-            draw_list.Clear();
-            draw_list.PushTextureID(tex_id);
-            draw_list.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
-            draw_list.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
-            draw_list.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0xFF000000); // Black border
-            draw_list.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_WHITE * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_WHITE + size) * tex_uv_scale, 0xFFFFFFFF); // White fill
-            draw_list.PopTextureID();
-            AddDrawListToRenderList(&draw_list);
+            g.CursorDrawList.Clear();
+            g.CursorDrawList.PushTextureID(tex_id);
+            g.CursorDrawList.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
+            g.CursorDrawList.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
+            g.CursorDrawList.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0xFF000000); // Black border
+            g.CursorDrawList.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_WHITE * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_WHITE + size) * tex_uv_scale, 0xFFFFFFFF); // White fill
+            g.CursorDrawList.PopTextureID();
+            AddDrawListToRenderList(&g.CursorDrawList);
         }
 
         // Render
