@@ -27,6 +27,13 @@ ImGui outputs vertex buffers and simple command-lists that you can render in you
 
 ImGui allows you create elaborate tools as well as very short-lived ones. On the extreme side of short-liveness: using the Edit&Continue feature of compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, etc. 
 
+Demo
+----
+
+You should be able to build the examples from sources (tested on Winodws/Mac/Linux). If you don't, let me know! If you want to have a quick look at the features of ImGui, you can download binaries of the demo app here.
+- [imgui-demo-binaries-20150321.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20150321.zip) (Windows binaries, ImGui 1.37 WIP 2015/03/31, 4 executables, 391 KB)
+
+
 Gallery
 -------
 
