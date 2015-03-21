@@ -485,17 +485,6 @@ static void         SetClipboardTextFn_DefaultImpl(const char* text);
 static void         ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 
 //-----------------------------------------------------------------------------
-// Texture Atlas data
-//-----------------------------------------------------------------------------
-
-// Technically we should use the rect pack API for that, but it's just simpler to hard-core the positions for now.
-// As we start using more of the texture atlas (for rounded corners) we can change that.
-static const ImVec2 TEX_ATLAS_SIZE(32, 32);
-static const ImVec2 TEX_ATLAS_POS_MOUSE_CURSOR_BLACK(1, 3);
-static const ImVec2 TEX_ATLAS_POS_MOUSE_CURSOR_WHITE(14, 3);
-static const ImVec2 TEX_ATLAS_SIZE_MOUSE_CURSOR(12, 19);
-
-//-----------------------------------------------------------------------------
 // User facing structures
 //-----------------------------------------------------------------------------
 
@@ -1038,6 +1027,15 @@ struct ImGuiIniData
     ~ImGuiIniData() { if (Name) { ImGui::MemFree(Name); Name = NULL; } }
 };
 
+struct ImGuiMouseCursorData
+{
+    ImGuiMouseCursor    Type;
+    ImVec2              Offset;
+    ImVec2              Size;
+    ImVec2              TexUvMin[2];
+    ImVec2              TexUvMax[2];
+};
+
 // Main state for ImGui
 struct ImGuiState
 {
@@ -1082,7 +1080,11 @@ struct ImGuiState
     // Render
     ImVector<ImDrawList*>   RenderDrawLists;
     ImVector<ImGuiWindow*>  RenderSortedWindows;
-    ImDrawList              CursorDrawList;
+
+    // Mouse cursor
+    ImGuiMouseCursor        MouseCursor;
+    ImDrawList              MouseCursorDrawList;                // Optional software render of mouse cursors, if io.MouseDrawCursor is set
+    ImGuiMouseCursorData    MouseCursorData[ImGuiMouseCursor_Count_];
 
     // Widget state
     ImGuiTextEditState      InputTextState;
@@ -1901,6 +1903,7 @@ void ImGui::NewFrame()
     bool mouse_owned_by_application = mouse_earliest_button_down != -1 && !g.IO.MouseDownOwned[mouse_earliest_button_down];
     g.IO.WantCaptureMouse = (!mouse_owned_by_application && g.HoveredWindow != NULL) || (g.ActiveId != 0);
     g.IO.WantCaptureKeyboard = (g.ActiveId != 0);
+    g.MouseCursor = ImGuiMouseCursor_Arrow;
 
     // If mouse was first clicked outside of ImGui bounds we also cancel out hovering.
     if (mouse_owned_by_application)
@@ -1990,7 +1993,7 @@ void ImGui::Shutdown()
     g.FontStack.clear();
     g.RenderDrawLists.clear();
     g.RenderSortedWindows.clear();
-    g.CursorDrawList.ClearFreeMemory();
+    g.MouseCursorDrawList.ClearFreeMemory();
     g.ColorEditModeStorage.Clear();
     if (g.PrivateClipboard)
     {
@@ -2140,18 +2143,18 @@ void ImGui::Render()
 
         if (g.IO.MouseDrawCursor)
         {
-            const ImVec2 pos = g.IO.MousePos;
-            const ImVec2 size = TEX_ATLAS_SIZE_MOUSE_CURSOR;
+            const ImGuiMouseCursorData& cursor_data = g.MouseCursorData[g.MouseCursor];
+            const ImVec2 pos = g.IO.MousePos - cursor_data.Offset;
+            const ImVec2 size = cursor_data.Size;
             const ImTextureID tex_id = g.IO.Fonts->TexID;
-            const ImVec2 tex_uv_scale(1.0f/g.IO.Fonts->TexWidth, 1.0f/g.IO.Fonts->TexHeight);
-            g.CursorDrawList.Clear();
-            g.CursorDrawList.PushTextureID(tex_id);
-            g.CursorDrawList.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
-            g.CursorDrawList.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
-            g.CursorDrawList.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0xFF000000); // Black border
-            g.CursorDrawList.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_WHITE * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_WHITE + size) * tex_uv_scale, 0xFFFFFFFF); // White fill
-            g.CursorDrawList.PopTextureID();
-            AddDrawListToRenderList(&g.CursorDrawList);
+            g.MouseCursorDrawList.Clear();
+            g.MouseCursorDrawList.PushTextureID(tex_id);
+            g.MouseCursorDrawList.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, cursor_data.TexUvMin[0], cursor_data.TexUvMax[0], 0x30000000); // Shadow
+            g.MouseCursorDrawList.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, cursor_data.TexUvMin[0], cursor_data.TexUvMax[0], 0x30000000); // Shadow
+            g.MouseCursorDrawList.AddImage(tex_id, pos,             pos + size,             cursor_data.TexUvMin[0], cursor_data.TexUvMax[0], 0xFF000000); // Black border
+            g.MouseCursorDrawList.AddImage(tex_id, pos,             pos + size,             cursor_data.TexUvMin[1], cursor_data.TexUvMax[1], 0xFFFFFFFF); // White fill
+            g.MouseCursorDrawList.PopTextureID();
+            AddDrawListToRenderList(&g.MouseCursorDrawList);
         }
 
         // Render
@@ -2578,6 +2581,16 @@ ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
         if (g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold)
             return g.IO.MousePos - g.IO.MouseClickedPos[button];     // Assume we can only get active with left-mouse button (at the moment).
     return ImVec2(0.0f, 0.0f);
+}
+
+ImGuiMouseCursor ImGui::GetMouseCursor()
+{
+    return GImGui->MouseCursor;
+}
+
+void ImGui::SetMouseCursor(ImGuiMouseCursor cursor_type)
+{
+    GImGui->MouseCursor = cursor_type;
 }
 
 bool ImGui::IsItemHovered()
@@ -3065,11 +3078,14 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                 else if (!(window->Flags & ImGuiWindowFlags_NoResize))
                 {
                     // Manual resize grip
-                    const ImRect resize_rect(window->Rect().GetBR()-ImVec2(18,18), window->Rect().GetBR());
+                    const ImRect resize_rect(window->Rect().GetBR()-ImVec2(14,14), window->Rect().GetBR());
                     const ImGuiID resize_id = window->GetID("#RESIZE");
                     bool hovered, held;
                     ButtonBehavior(resize_rect, resize_id, &hovered, &held, true);
                     resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
+
+                    if (hovered || held)
+                        g.MouseCursor = ImGuiMouseCursor_ResizeNWSE;
 
                     if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0])
                     {
@@ -5858,7 +5874,10 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
 
     const bool hovered = IsHovered(frame_bb, id);
     if (hovered)
+    {
         g.HoveredId = id;
+        g.MouseCursor = ImGuiMouseCursor_TextInput;
+    }
     const bool user_clicked = hovered && io.MouseClicked[0];
 
     bool select_all = (g.ActiveId != id) && (flags & ImGuiInputTextFlags_AutoSelectAll) != 0;
@@ -5948,7 +5967,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             edit_state.CursorAnimReset();
         }
         if (edit_state.SelectedAllMouseLock && !io.MouseDown[0])
-             edit_state.SelectedAllMouseLock = false;
+            edit_state.SelectedAllMouseLock = false;
 
         if (g.IO.InputCharacters[0])
         {
@@ -7644,7 +7663,7 @@ ImFontAtlas::ImFontAtlas()
     TexPixelsAlpha8 = NULL;
     TexPixelsRGBA32 = NULL;
     TexWidth = TexHeight = 0;
-    TexExtraDataPos = TexUvWhitePixel = ImVec2(0, 0);
+    TexUvWhitePixel = ImVec2(0, 0);
 }
 
 ImFontAtlas::~ImFontAtlas()
@@ -7802,7 +7821,7 @@ bool    ImFontAtlas::Build()
 
     TexID = NULL;
     TexWidth = TexHeight = 0;
-    TexExtraDataPos = TexUvWhitePixel = ImVec2(0, 0);
+    TexUvWhitePixel = ImVec2(0, 0);
     ClearTexData();
 
     // Initialize font information early (so we can error without any cleanup) + count glyphs
@@ -7835,12 +7854,14 @@ bool    ImFontAtlas::Build()
     IM_ASSERT(ret);
     stbtt_PackSetOversampling(&spc, 1, 1);
 
-    // Pack our extra data rectangle first, so it will be on the upper-left corner of our texture (UV will have small values).
-    stbrp_rect extra_rect;
-    extra_rect.w = (stbrp_coord)TEX_ATLAS_SIZE.x;
-    extra_rect.h = (stbrp_coord)TEX_ATLAS_SIZE.y;
-    stbrp_pack_rects((stbrp_context*)spc.pack_info, &extra_rect, 1);
-    TexExtraDataPos = ImVec2(extra_rect.x, extra_rect.y);
+    // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
+    ImVector<stbrp_rect> extra_rects;
+    RenderCustomTexData(0, &extra_rects);
+    stbrp_pack_rects((stbrp_context*)spc.pack_info, &extra_rects[0], (int)extra_rects.size());
+    int tex_height = 0;
+    for (size_t i = 0; i < extra_rects.size(); i++)
+        if (extra_rects[i].was_packed)
+            tex_height = ImMax(tex_height, extra_rects[i].y + extra_rects[i].h);
 
     // Allocate packing character data and flag packed characters buffer as non-packed (x0=y0=x1=y1=0)
     int buf_packedchars_n = 0, buf_rects_n = 0, buf_ranges_n = 0;
@@ -7848,11 +7869,10 @@ bool    ImFontAtlas::Build()
     stbrp_rect* buf_rects = (stbrp_rect*)ImGui::MemAlloc(total_glyph_count * sizeof(stbrp_rect));
     stbtt_pack_range* buf_ranges = (stbtt_pack_range*)ImGui::MemAlloc(total_glyph_range_count * sizeof(stbtt_pack_range));
     memset(buf_packedchars, 0, total_glyph_count * sizeof(stbtt_packedchar));
-    memset(buf_rects, 0, total_glyph_count * sizeof(stbrp_rect));              // Unnessary but let's clear this for the sake of sanity.
+    memset(buf_rects, 0, total_glyph_count * sizeof(stbrp_rect));              // Unnecessary but let's clear this for the sake of sanity.
     memset(buf_ranges, 0, total_glyph_range_count * sizeof(stbtt_pack_range));
 
-    // First pass: pack all glyphs (no rendering at this point, we are working with glyph sizes only)
-    int tex_height = extra_rect.y + extra_rect.h;
+    // First font pass: pack all glyphs (no rendering at this point, we are working with glyph sizes only)
     for (size_t input_i = 0; input_i < InputData.size(); input_i++)
     {
         ImFontAtlasData& data = *InputData[input_i];
@@ -7964,22 +7984,67 @@ bool    ImFontAtlas::Build()
     ClearInputData();
 
     // Render into our custom data block
-    RenderCustomTexData();
+    RenderCustomTexData(1, &extra_rects);
 
     return true;
 }
 
-void ImFontAtlas::RenderCustomTexData()
+static void AddMouseCursor(int pass, ImVector<stbrp_rect>& rects, int& rect_i, ImGuiMouseCursor type, const ImVec2& offset, const ImVec2& size, const char* in_char_pixels, unsigned char* tex_pixels, const ImVec2& tex_uv_scale, int tex_pitch)
 {
-    IM_ASSERT(TexExtraDataPos.x == 0.0f && TexExtraDataPos.y == 0.0f);
+    if (pass == 0)
+    {
+        stbrp_rect r; 
+        r.w = (unsigned short)((size.x*2)+1);
+        r.h = (unsigned short)(size.y);
+        rects.push_back(r);
+    }
+    else if (pass == 1)
+    {
+        ImGuiMouseCursorData& cursor_data = GImGui->MouseCursorData[type];
+        cursor_data.Type = type;
+        cursor_data.Size = size;
+        cursor_data.Offset = offset;
+        const stbrp_rect& r = rects[rect_i++];
+        ImVec2 pos((float)r.x, (float)r.y);
+        for (int layer = 0; layer < 2; layer++)
+        {
+            // Draw a mouse cursor into texture
+            // Because our font uses a single color channel, we have to spread the cursor in 2 layers (black/white) which will be rendered separately.
+            const char layer_char = layer ? '.' : 'X';
+            cursor_data.TexUvMin[layer] = (pos) * tex_uv_scale;
+            cursor_data.TexUvMax[layer] = (pos + size) * tex_uv_scale;
+            for (int y = 0, n = 0; y < (int)size.y; y++)
+                for (int x = 0; x < (int)size.x; x++, n++)
+                    tex_pixels[((int)pos.x + x) + ((int)pos.y + y) * tex_pitch] = (in_char_pixels[n] == layer_char) ? 0xFF : 0x00;
+            pos.x += size.x + 1;
+        }
+    }
+}
+
+void ImFontAtlas::RenderCustomTexData(int pass, void* rects_opaque)
+{
+    ImVector<stbrp_rect>& rects = *(ImVector<stbrp_rect>*)rects_opaque;
+    int rect_i = 0;
 
     // Draw white pixel into texture and make UV points to it
-    TexPixelsAlpha8[0] = TexPixelsAlpha8[1] = TexPixelsAlpha8[TexWidth+0] = TexPixelsAlpha8[TexWidth+1] = 0xFF;
-    TexUvWhitePixel = ImVec2((TexExtraDataPos.x + 0.5f) / TexWidth, (TexExtraDataPos.y + 0.5f) / TexHeight);
+    const ImVec2 uv_scale(1.0f / TexWidth, 1.0f / TexHeight);
+    if (pass == 0)
+    {
+        // Measure
+        stbrp_rect r; 
+        r.w = r.h = 3;
+        rects.push_back(r);
+    }
+    else if (pass == 1)
+    {
+        // Render
+        const stbrp_rect& r = rects[rect_i++];
+        const int offset = (int)r.x + (int)r.y * TexWidth;
+        TexPixelsAlpha8[offset] = TexPixelsAlpha8[offset+1] = TexPixelsAlpha8[TexWidth] = TexPixelsAlpha8[TexWidth+1] = 0xFF;
+        TexUvWhitePixel = ImVec2(r.x + 0.5f, r.y + 0.5f) * uv_scale;
+    }
 
-    // Draw a mouse cursor into texture
-    // Because our font uses a single color channel, we have to spread the cursor in 2 layers (black/white) which will be rendered separately.
-    const char cursor_pixels[] =
+    const char cursor_arrow[12*19+1] =
     {
         "X           "
         "XX          "
@@ -8001,13 +8066,136 @@ void ImFontAtlas::RenderCustomTexData()
         "      X..X  "
         "       XX   "
     };
-    IM_ASSERT(sizeof(cursor_pixels)-1 == (int)TEX_ATLAS_SIZE_MOUSE_CURSOR.x * (int)TEX_ATLAS_SIZE_MOUSE_CURSOR.y);
-    for (int y = 0, n = 0; y < 19; y++)
-        for (int x = 0; x < 12; x++, n++)
-        {
-            TexPixelsAlpha8[((int)TEX_ATLAS_POS_MOUSE_CURSOR_BLACK.x + x) + ((int)TEX_ATLAS_POS_MOUSE_CURSOR_BLACK.y + y) * TexWidth] = (cursor_pixels[n] == 'X') ? 0xFF : 0x00;
-            TexPixelsAlpha8[((int)TEX_ATLAS_POS_MOUSE_CURSOR_WHITE.x + x) + ((int)TEX_ATLAS_POS_MOUSE_CURSOR_WHITE.y + y) * TexWidth] = (cursor_pixels[n] == '.') ? 0xFF : 0x00;
-        }
+    const char cursor_text_input[7*16+1] =
+    {
+        "XXXXXXX"
+        "X.....X"
+        "XXX.XXX"
+        "  X.X  "
+        "  X.X  "
+        "  X.X  "
+        "  X.X  "
+        "  X.X  "
+        "  X.X  "
+        "  X.X  "
+        "  X.X  "
+        "  X.X  "
+        "  X.X  "
+        "XXX.XXX"
+        "X.....X"
+        "XXXXXXX"
+    };
+    const char cursor_move[23*23+1] =
+    {
+        "           X           "
+        "          X.X          "
+        "         X...X         "
+        "        X.....X        "
+        "       X.......X       "
+        "       XXXX.XXXX       "
+        "          X.X          "
+        "    XX    X.X    XX    "
+        "   X.X    X.X    X.X   "
+        "  X..X    X.X    X..X  "
+        " X...XXXXXX.XXXXXX...X "
+        "X.....................X"
+        " X...XXXXXX.XXXXXX...X "
+        "  X..X    X.X    X..X  "
+        "   X.X    X.X    X.X   "
+        "    XX    X.X    XX    "
+        "          X.X          "
+        "       XXXX.XXXX       "
+        "       X.......X       "
+        "        X.....X        "
+        "         X...X         "
+        "          X.X          "
+        "           X           "
+    };
+    const char cursor_resize_ns[9*23+1] =
+    {
+        "    X    "
+        "   X.X   "
+        "  X...X  "
+        " X.....X "
+        "X.......X"
+        "XXXX.XXXX"
+        "   X.X   "
+        "   X.X   "
+        "   X.X   "
+        "   X.X   "
+        "   X.X   "
+        "   X.X   "
+        "   X.X   "
+        "   X.X   "
+        "   X.X   "
+        "   X.X   "
+        "   X.X   "
+        "XXXX.XXXX"
+        "X.......X"
+        " X.....X "
+        "  X...X  "
+        "   X.X   "
+        "    X    "
+    };
+    const char cursor_resize_ew[23*9+1] =
+    {
+        "    XX           XX    "
+        "   X.X           X.X   "
+        "  X..X           X..X  "
+        " X...XXXXXXXXXXXXX...X "
+        "X.....................X"
+        " X...XXXXXXXXXXXXX...X "
+        "  X..X           X..X  "
+        "   X.X           X.X   "
+        "    XX           XX    "
+    };
+    const char cursor_resize_nwse[17*17+1] =
+    {
+        "XXXXXXX          "
+        "X.....X          "
+        "X....X           "
+        "X...X            "
+        "X..X.X           "
+        "X.X X.X          "
+        "XX   X.X         "
+        "      X.X        "
+        "       X.X       "
+        "        X.X      "
+        "         X.X   XX"
+        "          X.X X.X"
+        "           X.X..X"
+        "            X...X"
+        "           X....X"
+        "          X.....X"
+        "          XXXXXXX"
+    };
+    const char cursor_resize_nesw[17*17+1] =
+    {
+        "          XXXXXXX"
+        "          X.....X"
+        "           X....X"
+        "            X...X"
+        "           X.X..X"
+        "          X.X X.X"
+        "         X.X   XX"
+        "        X.X      "
+        "       X.X       "
+        "      X.X        "
+        "XX   X.X         "
+        "X.X X.X          "
+        "X..X.X           "
+        "X...X            "
+        "X....X           "
+        "X.....X          "
+        "XXXXXXX          "
+    };
+    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_Arrow,     ImVec2(0,0),    ImVec2(12,19),  cursor_arrow,       TexPixelsAlpha8, uv_scale, TexWidth);
+    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_TextInput, ImVec2(4,9),    ImVec2(7,16),   cursor_text_input,  TexPixelsAlpha8, uv_scale, TexWidth);
+    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_Move,      ImVec2(11,11),  ImVec2(23,23),  cursor_move,        TexPixelsAlpha8, uv_scale, TexWidth);
+    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_ResizeNS,  ImVec2(5,11),   ImVec2(9,23),   cursor_resize_ns,   TexPixelsAlpha8, uv_scale, TexWidth);
+    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_ResizeEW,  ImVec2(11,5),   ImVec2(23,9),   cursor_resize_ew,   TexPixelsAlpha8, uv_scale, TexWidth);
+    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_ResizeNESW,ImVec2(9,9),    ImVec2(17,17),  cursor_resize_nesw, TexPixelsAlpha8, uv_scale, TexWidth);
+    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_ResizeNWSE,ImVec2(9,9),    ImVec2(17,17),  cursor_resize_nwse, TexPixelsAlpha8, uv_scale, TexWidth);
 }
 
 //-----------------------------------------------------------------------------
@@ -9862,7 +10050,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::BulletText("%s", lines[i]);
     }
 
-    if (ImGui::CollapsingHeader("Keyboard & Focus"))
+    if (ImGui::CollapsingHeader("Keyboard, Mouse & Focus"))
     {
         if (ImGui::TreeNode("Tabbing"))
         {
@@ -9906,6 +10094,21 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::Text("Item with focus: <none>");
             ImGui::TextWrapped("Cursor & selection are preserved when refocusing last used item in code.");
             ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Mouse cursors"))
+        {
+            ImGui::TextWrapped("(Your application can render a different mouse cursor based on what ImGui::GetMouseCursor() returns. You can also set io.MouseDrawCursor to ask ImGui to render the cursor for you in software)");
+            ImGui::Checkbox("io.MouseDrawCursor", &ImGui::GetIO().MouseDrawCursor);
+            ImGui::Text("Hover to see mouse cursors:");
+            for (int i = 0; i < ImGuiMouseCursor_Count_; i++)
+            {
+                char label[32];
+                sprintf(label, "Mouse cursor %d", i);
+                ImGui::Bullet(); ImGui::Selectable(label, false); 
+                if (ImGui::IsItemHovered()) 
+                    ImGui::SetMouseCursor(i);
+            }
         }
     }
 

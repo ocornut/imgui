@@ -43,6 +43,7 @@ typedef int ImGuiCol;               // enum ImGuiCol_
 typedef int ImGuiStyleVar;          // enum ImGuiStyleVar_
 typedef int ImGuiKey;               // enum ImGuiKey_
 typedef int ImGuiColorEditMode;     // enum ImGuiColorEditMode_
+typedef int ImGuiMouseCursor;       // enum ImGuiMouseCursor_
 typedef int ImGuiWindowFlags;       // enum ImGuiWindowFlags_
 typedef int ImGuiSetCond;           // enum ImGuiSetCondition_
 typedef int ImGuiInputTextFlags;    // enum ImGuiInputTextFlags_
@@ -372,6 +373,8 @@ namespace ImGui
     IMGUI_API bool          IsPosHoveringAnyWindow(const ImVec2& pos);                          // is given position hovering any active imgui window
     IMGUI_API ImVec2        GetMousePos();                                                      // shortcut to ImGui::GetIO().MousePos provided by user, to be consistent with other calls
     IMGUI_API ImVec2        GetMouseDragDelta(int button = 0, float lock_threshold = -1.0f);    // dragging amount, also see: GetItemActiveDragDelta(). if lock_threshold < -1.0f uses io.MouseDraggingThreshold.
+    IMGUI_API ImGuiMouseCursor GetMouseCursor();                                                // get desired cursor type, reset in ImGui::NewFrame(), this updated during the frame. valid before Render(). If you use software rendering by setting io.MouseDrawCursor ImGui will render those for you.
+    IMGUI_API void          SetMouseCursor(ImGuiMouseCursor type);                              // set desired cursor type
     IMGUI_API float         GetTime();
     IMGUI_API int           GetFrameCount();
     IMGUI_API const char*   GetStyleColName(ImGuiCol idx);
@@ -531,6 +534,19 @@ enum ImGuiColorEditMode_
     ImGuiColorEditMode_RGB = 0,
     ImGuiColorEditMode_HSV = 1,
     ImGuiColorEditMode_HEX = 2
+};
+
+// Enumeration for io.MouseCursor
+enum ImGuiMouseCursor_
+{
+    ImGuiMouseCursor_Arrow = 0,
+    ImGuiMouseCursor_TextInput,
+    ImGuiMouseCursor_Move,                  // Unused by ImGui
+    ImGuiMouseCursor_ResizeNS,              // Unused by ImGui
+    ImGuiMouseCursor_ResizeEW,              // Unused by ImGui
+    ImGuiMouseCursor_ResizeNESW,            // Unused by ImGui
+    ImGuiMouseCursor_ResizeNWSE,
+    ImGuiMouseCursor_Count_
 };
 
 // Condition flags for ImGui::SetWindow***(), SetNextWindow***(), SetNextTreeNode***() functions
@@ -936,7 +952,6 @@ struct ImFontAtlas
     unsigned int*               TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
     int                         TexWidth;
     int                         TexHeight;
-    ImVec2                      TexExtraDataPos;    // Position of our rectangle where we draw non-font graphics
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel (part of the TexExtraData block)
     ImVector<ImFont*>           Fonts;
 
@@ -945,7 +960,7 @@ struct ImFontAtlas
     ImVector<ImFontAtlasData*>  InputData;          // Internal data
     IMGUI_API bool              Build();            // Build pixels data. This is automatically for you by the GetTexData*** functions.
     IMGUI_API void              ClearInputData();   // Clear the input TTF data.
-    IMGUI_API void              RenderCustomTexData();
+    IMGUI_API void              RenderCustomTexData(int pass, void* rects);
 };
 
 // TTF font loading and rendering
