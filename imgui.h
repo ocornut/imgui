@@ -536,7 +536,7 @@ enum ImGuiColorEditMode_
     ImGuiColorEditMode_HEX = 2
 };
 
-// Enumeration for io.MouseCursor
+// Enumeration for GetMouseCursor()
 enum ImGuiMouseCursor_
 {
     ImGuiMouseCursor_Arrow = 0,
