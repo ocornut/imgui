@@ -1975,8 +1975,6 @@ void ImGui::Shutdown()
     }
     g.Windows.clear();
     g.CurrentWindowStack.clear();
-    g.RenderDrawLists.clear();
-    g.CursorDrawList.Clear();
     g.FocusedWindow = NULL;
     g.HoveredWindow = NULL;
     g.HoveredRootWindow = NULL;
@@ -1989,25 +1987,28 @@ void ImGui::Shutdown()
     g.ColorModifiers.clear();
     g.StyleModifiers.clear();
     g.FontStack.clear();
+    g.RenderDrawLists.clear();
+    g.RenderSortedWindows.clear();
+    g.CursorDrawList.ClearFreeMemory();
     g.ColorEditModeStorage.Clear();
-    if (g.LogFile && g.LogFile != stdout)
-    {
-        fclose(g.LogFile);
-        g.LogFile = NULL;
-    }
-    g.IO.Fonts->Clear();
-
     if (g.PrivateClipboard)
     {
         ImGui::MemFree(g.PrivateClipboard);
         g.PrivateClipboard = NULL;
     }
 
+    if (g.LogFile && g.LogFile != stdout)
+    {
+        fclose(g.LogFile);
+        g.LogFile = NULL;
+    }
     if (g.LogClipboard)
     {
         g.LogClipboard->~ImGuiTextBuffer();
         ImGui::MemFree(g.LogClipboard);
     }
+
+    g.IO.Fonts->Clear();
 
     g.Initialized = false;
 }
@@ -7243,6 +7244,15 @@ void ImDrawList::Clear()
     vtx_write = NULL;
     clip_rect_stack.resize(0);
     texture_id_stack.resize(0);
+}
+
+void ImDrawList::ClearFreeMemory()
+{
+    commands.clear();
+    vtx_buffer.clear();
+    vtx_write = NULL;
+    clip_rect_stack.clear();
+    texture_id_stack.clear();
 }
 
 void ImDrawList::AddDrawCmd()

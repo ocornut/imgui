@@ -865,6 +865,7 @@ struct ImDrawList
 
     ImDrawList() { Clear(); }
     IMGUI_API void  Clear();
+    IMGUI_API void  ClearFreeMemory();
     IMGUI_API void  PushClipRect(const ImVec4& clip_rect);          // Scissoring. The values are x1, y1, x2, y2.
     IMGUI_API void  PushClipRectFullScreen();
     IMGUI_API void  PopClipRect();
