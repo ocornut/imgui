@@ -4394,7 +4394,11 @@ void ImGui::LogToFile(int max_depth, const char* filename)
     if (g.LogEnabled)
         return;
     if (!filename)
+    {
         filename = g.IO.LogFilename;
+        if (!filename)
+            return;
+    }
 
     g.LogFile = fopen(filename, "ab");
     if (!g.LogFile)
