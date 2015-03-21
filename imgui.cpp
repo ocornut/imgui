@@ -339,10 +339,10 @@
 #endif
 
 #include "imgui.h"
-#include <ctype.h>      // toupper
-#include <math.h>       // sqrtf
+#include <ctype.h>      // toupper, isprint
+#include <math.h>       // sqrtf, fabsf, fmodf, powf, cosf, sinf, floorf, ceilf
 #include <stdint.h>     // intptr_t
-#include <stdio.h>      // vsnprintf
+#include <stdio.h>      // vsnprintf, sscanf
 #include <new>          // new (ptr)
 
 #ifdef _MSC_VER
@@ -6710,9 +6710,9 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
             const float w_slider_all = w_full - square_sz;
             char buf[64];
             if (alpha)
-                sprintf(buf, "#%02X%02X%02X%02X", ix, iy, iz, iw);
+                ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X%02X", ix, iy, iz, iw);
             else
-                sprintf(buf, "#%02X%02X%02X", ix, iy, iz);
+                ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X", ix, iy, iz);
             ImGui::PushItemWidth(w_slider_all - style.ItemInnerSpacing.x);
             value_changed |= ImGui::InputText("##Text", buf, IM_ARRAYSIZE(buf), ImGuiInputTextFlags_CharsHexadecimal);
             ImGui::PopItemWidth();
@@ -7224,7 +7224,7 @@ void ImGui::Value(const char* prefix, float v, const char* float_format)
     if (float_format)
     {
         char fmt[64];
-        sprintf(fmt, "%%s: %s", float_format);
+        ImFormatString(fmt, IM_ARRAYSIZE(fmt), "%%s: %s", float_format);
         ImGui::Text(fmt, prefix, v);
     }
     else

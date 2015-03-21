@@ -9,9 +9,9 @@
 #include "imconfig.h"       // User-editable configuration file
 #include <float.h>          // FLT_MAX
 #include <stdarg.h>         // va_list
-#include <stddef.h>         // ptrdiff_t
-#include <stdlib.h>         // NULL, malloc
-#include <string.h>         // memset, memmove
+#include <stddef.h>         // ptrdiff_t, NULL
+#include <stdlib.h>         // NULL, malloc, free, qsort, atoi
+#include <string.h>         // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
 #define IMGUI_VERSION       "1.37 WIP"
 
