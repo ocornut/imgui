@@ -7111,6 +7111,8 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 
             bool hovered, held;
             ButtonBehavior(column_rect, column_id, &hovered, &held, true);
+            if (hovered || held)
+                g.MouseCursor = ImGuiMouseCursor_ResizeEW;
 
             // Draw before resize so our items positioning are in sync with the line being drawn
             const ImU32 col = window->Color(held ? ImGuiCol_ColumnActive : hovered ? ImGuiCol_ColumnHovered : ImGuiCol_Column);
