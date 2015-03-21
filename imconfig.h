@@ -22,6 +22,9 @@
 //#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS
 //#define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS
 
+//---- Don't implement help and test window functionality (ShowUserGuide()/ShowStyleEditor()/ShowTestWindow() methods will be empty)
+//#define IMGUI_DISABLE_TEST_WINDOWS
+
 //---- Include imgui_user.inl at the end of imgui.cpp so you can include code that extends ImGui using its private data/functions.
 //#define IMGUI_INCLUDE_IMGUI_USER_INL
 

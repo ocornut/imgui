@@ -406,6 +406,8 @@ namespace IMGUI_STB_NAMESPACE
 #endif
 #include "stb_truetype.h"
 
+#undef STB_TEXTEDIT_STRING
+#undef STB_TEXTEDIT_CHARTYPE
 #define STB_TEXTEDIT_STRING    ImGuiTextEditState
 #define STB_TEXTEDIT_CHARTYPE  ImWchar
 #include "stb_textedit.h"
@@ -583,6 +585,7 @@ ImGuiIO::ImGuiIO()
     MousePosPrev = ImVec2(-1,-1);
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
+    MouseDragThreshold = 6.0f;
     UserData = NULL;
 
     // User functions
@@ -1084,6 +1087,7 @@ struct ImGuiState
     // Render
     ImVector<ImDrawList*>   RenderDrawLists;
     ImVector<ImGuiWindow*>  RenderSortedWindows;
+    ImDrawList              CursorDrawList;
 
     // Widget state
     ImGuiTextEditState      InputTextState;
@@ -1175,6 +1179,7 @@ struct ImGuiWindow
     float                   NextScrollY;
     bool                    ScrollbarY;
     bool                    Visible;                            // Set to true on Begin()
+    bool                    Accessed;                           // Set to true when any widget access the current window
     bool                    Collapsed;                          // Set when collapsing window to become only title-bar
     bool                    SkipItems;                          // == Visible && !Collapsed
     int                     AutoFitFrames;
@@ -1209,7 +1214,6 @@ public:
     ImGuiID     GetID(const char* str);
     ImGuiID     GetID(const void* ptr);
 
-    void        AddToRenderList();
     bool        FocusItemRegister(bool is_active, bool tab_stop = true);      // Return true if focus is requested
     void        FocusItemUnregister();
 
@@ -1226,8 +1230,9 @@ public:
 
 static inline ImGuiWindow* GetCurrentWindow()
 {
+    // If this ever crash it probably means that ImGui::NewFrame() hasn't been called. We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
     ImGuiState& g = *GImGui;
-    IM_ASSERT(g.CurrentWindow != NULL);    // ImGui::NewFrame() hasn't been called yet?
+    g.CurrentWindow->Accessed = true;
     return g.CurrentWindow;
 }
 
@@ -1516,6 +1521,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     NextScrollY = 0.0f;
     ScrollbarY = false;
     Visible = false;
+    Accessed = false;
     Collapsed = false;
     SkipItems = false;
     AutoFitFrames = -1;
@@ -1600,21 +1606,24 @@ void ImGuiWindow::FocusItemUnregister()
     FocusIdxTabCounter--;
 }
 
-void ImGuiWindow::AddToRenderList()
+static inline void AddDrawListToRenderList(ImDrawList* draw_list)
 {
-    ImGuiState& g = *GImGui;
-
-    if (!DrawList->commands.empty() && !DrawList->vtx_buffer.empty())
+    if (!draw_list->commands.empty() && !draw_list->vtx_buffer.empty())
     {
-        if (DrawList->commands.back().vtx_count == 0)
-            DrawList->commands.pop_back();
-        g.RenderDrawLists.push_back(DrawList);
+        if (draw_list->commands.back().vtx_count == 0)
+            draw_list->commands.pop_back();
+        GImGui->RenderDrawLists.push_back(draw_list);
     }
-    for (size_t i = 0; i < DC.ChildWindows.size(); i++)
+}
+
+static void AddWindowToRenderList(ImGuiWindow* window)
+{
+    AddDrawListToRenderList(window->DrawList);
+    for (size_t i = 0; i < window->DC.ChildWindows.size(); i++)
     {
-        ImGuiWindow* child = DC.ChildWindows[i];
+        ImGuiWindow* child = window->DC.ChildWindows[i];
         if (child->Visible)                 // clipped children may have been marked not Visible
-            child->AddToRenderList();
+            AddWindowToRenderList(child);
     }
 }
 
@@ -1841,8 +1850,13 @@ void ImGui::NewFrame()
             else
             {
                 g.IO.MouseClickedTime[i] = g.Time;
-                g.IO.MouseClickedPos[i] = g.IO.MousePos;
             }
+            g.IO.MouseClickedPos[i] = g.IO.MousePos;
+            g.IO.MouseDragMaxDistanceSqr[i] = 0.0f;
+        }
+        else if (g.IO.MouseDown[i])
+        {
+            g.IO.MouseDragMaxDistanceSqr[i] = ImMax(g.IO.MouseDragMaxDistanceSqr[i], ImLengthSqr(g.IO.MousePos - g.IO.MouseClickedPos[i]));
         }
     }
     for (size_t i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
@@ -1940,6 +1954,7 @@ void ImGui::NewFrame()
     {
         ImGuiWindow* window = g.Windows[i];
         window->Visible = false;
+        window->Accessed = false;
     }
 
     // No window should be open at the beginning of the frame.
@@ -1966,7 +1981,6 @@ void ImGui::Shutdown()
     }
     g.Windows.clear();
     g.CurrentWindowStack.clear();
-    g.RenderDrawLists.clear();
     g.FocusedWindow = NULL;
     g.HoveredWindow = NULL;
     g.HoveredRootWindow = NULL;
@@ -1979,25 +1993,28 @@ void ImGui::Shutdown()
     g.ColorModifiers.clear();
     g.StyleModifiers.clear();
     g.FontStack.clear();
+    g.RenderDrawLists.clear();
+    g.RenderSortedWindows.clear();
+    g.CursorDrawList.ClearFreeMemory();
     g.ColorEditModeStorage.Clear();
-    if (g.LogFile && g.LogFile != stdout)
-    {
-        fclose(g.LogFile);
-        g.LogFile = NULL;
-    }
-    g.IO.Fonts->Clear();
-
     if (g.PrivateClipboard)
     {
         ImGui::MemFree(g.PrivateClipboard);
         g.PrivateClipboard = NULL;
     }
 
+    if (g.LogFile && g.LogFile != stdout)
+    {
+        fclose(g.LogFile);
+        g.LogFile = NULL;
+    }
     if (g.LogClipboard)
     {
         g.LogClipboard->~ImGuiTextBuffer();
         ImGui::MemFree(g.LogClipboard);
     }
+
+    g.IO.Fonts->Clear();
 
     g.Initialized = false;
 }
@@ -2066,9 +2083,8 @@ void ImGui::Render()
     {
         // Hide implicit window if it hasn't been used
         IM_ASSERT(g.CurrentWindowStack.size() == 1);    // Mismatched Begin/End 
-        if (ImGuiWindow* window = g.CurrentWindow)
-            if (ImLengthSqr(window->DC.CursorMaxPos - window->DC.CursorStartPos) < 0.001f)
-                g.CurrentWindow->Visible = false;
+        if (g.CurrentWindow && !g.CurrentWindow->Accessed)
+            g.CurrentWindow->Visible = false;
         ImGui::End();
 
         // Select window for move/focus when we're done with all our widgets (we use the root window ID here)
@@ -2118,13 +2134,13 @@ void ImGui::Render()
         {
             ImGuiWindow* window = g.Windows[i];
             if (window->Visible && (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) == 0)
-                window->AddToRenderList();
+                AddWindowToRenderList(window);
         }
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
             if (window->Visible && (window->Flags & ImGuiWindowFlags_Tooltip))
-                window->AddToRenderList();
+                AddWindowToRenderList(window);
         }
 
         if (g.IO.MouseDrawCursor)
@@ -2133,13 +2149,14 @@ void ImGui::Render()
             const ImVec2 size = TEX_ATLAS_SIZE_MOUSE_CURSOR;
             const ImTextureID tex_id = g.IO.Fonts->TexID;
             const ImVec2 tex_uv_scale(1.0f/g.IO.Fonts->TexWidth, 1.0f/g.IO.Fonts->TexHeight);
-            static ImDrawList draw_list;
-            draw_list.Clear();
-            draw_list.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
-            draw_list.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
-            draw_list.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0xFF000000); // Black border
-            draw_list.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_WHITE * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_WHITE + size) * tex_uv_scale, 0xFFFFFFFF); // White fill
-            g.RenderDrawLists.push_back(&draw_list);
+            g.CursorDrawList.Clear();
+            g.CursorDrawList.PushTextureID(tex_id);
+            g.CursorDrawList.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
+            g.CursorDrawList.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0x30000000); // Shadow
+            g.CursorDrawList.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_BLACK * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_BLACK + size) * tex_uv_scale, 0xFF000000); // Black border
+            g.CursorDrawList.AddImage(tex_id, pos,             pos + size,             TEX_ATLAS_POS_MOUSE_CURSOR_WHITE * tex_uv_scale, (TEX_ATLAS_POS_MOUSE_CURSOR_WHITE + size) * tex_uv_scale, 0xFFFFFFFF); // White fill
+            g.CursorDrawList.PopTextureID();
+            AddDrawListToRenderList(&g.CursorDrawList);
         }
 
         // Render
@@ -2541,9 +2558,30 @@ bool ImGui::IsMouseDoubleClicked(int button)
     return g.IO.MouseDoubleClicked[button];
 }
 
+bool ImGui::IsMouseDragging(int button, float lock_threshold)
+{
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (lock_threshold < 0.0f)
+        lock_threshold = g.IO.MouseDragThreshold;
+    return g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold;
+}
+
 ImVec2 ImGui::GetMousePos()
 {
     return GImGui->IO.MousePos;
+}
+
+ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
+{
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (lock_threshold < 0.0f)
+        lock_threshold = g.IO.MouseDragThreshold;
+    if (g.IO.MouseDown[button])
+        if (g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold)
+            return g.IO.MousePos - g.IO.MouseClickedPos[button];     // Assume we can only get active with left-mouse button (at the moment).
+    return ImVec2(0.0f, 0.0f);
 }
 
 bool ImGui::IsItemHovered()
@@ -2573,17 +2611,6 @@ bool ImGui::IsAnyItemActive()
 {
     ImGuiState& g = *GImGui;
     return g.ActiveId != 0;
-}
-
-ImVec2 ImGui::GetItemActiveDragDelta()
-{
-    if (ImGui::IsItemActive())
-    {
-        ImGuiState& g = *GImGui;
-        if (g.IO.MouseDown[0])
-            return g.IO.MousePos - g.IO.MouseClickedPos[0];     // Assume we can only get active with left-mouse button (at the moment).
-    }
-    return ImVec2(0.0f, 0.0f);
 }
 
 ImVec2 ImGui::GetItemRectMin()
@@ -2707,12 +2734,13 @@ void ImGui::EndChild()
     }
     else
     {
-        // When using auto-filling child window, we don't provide the width/height to ItemSize so that it doesn't feed back into automatic size-fitting.
+        // When using auto-filling child window, we don't provide full width/height to ItemSize so that it doesn't feed back into automatic size-fitting.
+        ImGuiState& g = *GImGui;
         ImVec2 sz = ImGui::GetWindowSize();
         if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitX)
-            sz.x = 0;
+            sz.x = ImMax(g.Style.WindowMinSize.x, sz.x - g.Style.AutoFitPadding.x);
         if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitY)
-            sz.y = 0;
+            sz.y = ImMax(g.Style.WindowMinSize.y, sz.y - g.Style.AutoFitPadding.y);
         
         ImGui::End();
 
@@ -3053,6 +3081,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                         window->SizeFull = size_auto_fit;
                         if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
                             MarkSettingsDirty();
+                        SetActiveId(0);
                     }
                     else if (held)
                     {
@@ -3184,6 +3213,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
     if (window->ScrollbarY)
         clip_rect.z -= style.ScrollbarWidth;
     PushClipRect(clip_rect);
+
+    // Clear 'accessed' flag last thing
+    if (first_begin_of_the_frame)
+        window->Accessed = false;
 
     // Child window can be out of sight and have "negative" clip windows.
     // Mark them as collapsed so commands are skipped earlier (we can't manually collapse because they have no title bar).
@@ -5522,24 +5555,22 @@ static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const Im
     return true;
 }
 
-enum
-{
-    STB_TEXTEDIT_K_LEFT = 1 << 16,  // keyboard input to move cursor left
-    STB_TEXTEDIT_K_RIGHT,           // keyboard input to move cursor right
-    STB_TEXTEDIT_K_UP,              // keyboard input to move cursor up
-    STB_TEXTEDIT_K_DOWN,            // keyboard input to move cursor down
-    STB_TEXTEDIT_K_LINESTART,       // keyboard input to move cursor to start of line
-    STB_TEXTEDIT_K_LINEEND,         // keyboard input to move cursor to end of line
-    STB_TEXTEDIT_K_TEXTSTART,       // keyboard input to move cursor to start of text
-    STB_TEXTEDIT_K_TEXTEND,         // keyboard input to move cursor to end of text
-    STB_TEXTEDIT_K_DELETE,          // keyboard input to delete selection or character under cursor
-    STB_TEXTEDIT_K_BACKSPACE,       // keyboard input to delete selection or character left of cursor
-    STB_TEXTEDIT_K_UNDO,            // keyboard input to perform undo
-    STB_TEXTEDIT_K_REDO,            // keyboard input to perform redo
-    STB_TEXTEDIT_K_WORDLEFT,        // keyboard input to move cursor left one word
-    STB_TEXTEDIT_K_WORDRIGHT,       // keyboard input to move cursor right one word
-    STB_TEXTEDIT_K_SHIFT = 1 << 17
-};
+// We don't use an enum so we can build even with conflicting symbols (if another user of stb_textedit.h leak their STB_TEXTEDIT_K_* symbols)
+#define STB_TEXTEDIT_K_LEFT         0x10000 // keyboard input to move cursor left
+#define STB_TEXTEDIT_K_RIGHT        0x10001 // keyboard input to move cursor right
+#define STB_TEXTEDIT_K_UP           0x10002 // keyboard input to move cursor up
+#define STB_TEXTEDIT_K_DOWN         0x10003 // keyboard input to move cursor down
+#define STB_TEXTEDIT_K_LINESTART    0x10004 // keyboard input to move cursor to start of line
+#define STB_TEXTEDIT_K_LINEEND      0x10005 // keyboard input to move cursor to end of line
+#define STB_TEXTEDIT_K_TEXTSTART    0x10006 // keyboard input to move cursor to start of text
+#define STB_TEXTEDIT_K_TEXTEND      0x10007 // keyboard input to move cursor to end of text
+#define STB_TEXTEDIT_K_DELETE       0x10008 // keyboard input to delete selection or character under cursor
+#define STB_TEXTEDIT_K_BACKSPACE    0x10009 // keyboard input to delete selection or character left of cursor
+#define STB_TEXTEDIT_K_UNDO         0x1000A // keyboard input to perform undo
+#define STB_TEXTEDIT_K_REDO         0x1000B // keyboard input to perform redo
+#define STB_TEXTEDIT_K_WORDLEFT     0x1000C // keyboard input to move cursor left one word
+#define STB_TEXTEDIT_K_WORDRIGHT    0x1000D // keyboard input to move cursor right one word
+#define STB_TEXTEDIT_K_SHIFT        0x20000
 
 #ifdef IMGUI_STB_NAMESPACE
 namespace IMGUI_STB_NAMESPACE
@@ -7215,6 +7246,15 @@ void ImDrawList::Clear()
     texture_id_stack.resize(0);
 }
 
+void ImDrawList::ClearFreeMemory()
+{
+    commands.clear();
+    vtx_buffer.clear();
+    vtx_write = NULL;
+    clip_rect_stack.clear();
+    texture_id_stack.clear();
+}
+
 void ImDrawList::AddDrawCmd()
 {
     ImDrawCmd draw_cmd;
@@ -7663,6 +7703,7 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
     if ((col >> 24) == 0)
         return;
 
+    // FIXME-OPT: This is wasting draw calls.
     const bool push_texture_id = texture_id_stack.empty() || user_texture_id != texture_id_stack.back();
     if (push_texture_id)
         PushTextureID(user_texture_id);
@@ -8882,6 +8923,14 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
 
 #endif
 
+#ifdef IMGUI_DISABLE_TEST_WINDOWS
+
+void ImGui::ShowUserGuide() {}
+void ImGui::ShowStyleEditor() {}
+void ImGui::ShowTestWindow() {}
+
+#else
+
 //-----------------------------------------------------------------------------
 // HELP
 //-----------------------------------------------------------------------------
@@ -9505,11 +9554,13 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::TreeNode("Dragging"))
         {
             // You can use ImGui::GetItemActiveDragDelta() to query for the dragged amount on any widget.
-            static ImVec2 value(0.0f, 0.0f);
+            static ImVec2 value_raw(0.0f, 0.0f);
+            static ImVec2 value_with_lock_threshold(0.0f, 0.0f);
             ImGui::Button("Drag Me");
             if (ImGui::IsItemActive())
             {
-                value = ImGui::GetItemActiveDragDelta();
+                value_raw = ImGui::GetMouseDragDelta(0, 0.0f);
+                value_with_lock_threshold = ImGui::GetMouseDragDelta(0);
                 //ImGui::SetTooltip("Delta: %.1f, %.1f", value.x, value.y);
 
                 // Draw a line between the button and the mouse cursor
@@ -9518,7 +9569,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 draw_list->AddLine(ImGui::CalcItemRectClosestPoint(ImGui::GetIO().MousePos, true, -2.0f), ImGui::GetIO().MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]), 2.0f);
                 draw_list->PopClipRect();
             }
-            ImGui::SameLine(); ImGui::Text("Value: %.1f, %.1f", value.x, value.y);
+            ImGui::SameLine(); ImGui::Text("Raw (%.1f, %.1f), WithLockThresold (%.1f, %.1f)", value_raw.x, value_raw.y, value_with_lock_threshold.x, value_with_lock_threshold.y);
             ImGui::TreePop();
         }
     }
@@ -10412,6 +10463,7 @@ static void ShowExampleAppLongText(bool* opened)
 }
 
 // End of Sample code
+#endif
 
 //-----------------------------------------------------------------------------
 // FONT DATA
@@ -10439,7 +10491,7 @@ static unsigned char *stb__dout;
 static void stb__match(unsigned char *data, unsigned int length)
 {
     // INVERSE of memmove... write each byte before copying the next...
-    assert (stb__dout + length <= stb__barrier);
+    IM_ASSERT (stb__dout + length <= stb__barrier);
     if (stb__dout + length > stb__barrier) { stb__dout += length; return; }
     if (data < stb__barrier4) { stb__dout = stb__barrier+1; return; }
     while (length--) *stb__dout++ = *data++;
@@ -10447,7 +10499,7 @@ static void stb__match(unsigned char *data, unsigned int length)
 
 static void stb__lit(unsigned char *data, unsigned int length)
 {
-    assert (stb__dout + length <= stb__barrier);
+    IM_ASSERT (stb__dout + length <= stb__barrier);
     if (stb__dout + length > stb__barrier) { stb__dout += length; return; }
     if (data < stb__barrier2) { stb__dout = stb__barrier+1; return; }
     memcpy(stb__dout, data, length);
@@ -10524,17 +10576,17 @@ static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsi
         i = stb_decompress_token(i);
         if (i == old_i) {
             if (*i == 0x05 && i[1] == 0xfa) {
-                assert(stb__dout == output + olen);
+                IM_ASSERT(stb__dout == output + olen);
                 if (stb__dout != output + olen) return 0;
                 if (stb_adler32(1, output, olen) != (unsigned int) stb__in4(2))
                     return 0;
                 return olen;
             } else {
-                assert(0); /* NOTREACHED */
+                IM_ASSERT(0); /* NOTREACHED */
                 return 0;
             }
         }
-        assert(stb__dout <= output + olen); 
+        IM_ASSERT(stb__dout <= output + olen); 
         if (stb__dout > output + olen)
             return 0;
     }
