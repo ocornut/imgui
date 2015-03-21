@@ -11,7 +11,12 @@
  - END-USER GUIDE
  - PROGRAMMER GUIDE (read me!)
  - API BREAKING CHANGES (read me when you update!)
- - FREQUENTLY ASKED QUESTIONS (FAQ) & TROUBLESHOOTING (read me!)
+ - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
+   - Can I have multiple widgets with the same label? (Yes)
+   - Why is my text output blurry?
+   - How can I load a different font than the default? 
+   - How can I load multiple fonts?
+   - How can I display and input Chinese, Japanese, Korean characters?
  - ISSUES & TODO-LIST
  - CODE
  - SAMPLE CODE
@@ -172,24 +177,29 @@
  - 2014/08/28 (1.09) - changed the behavior of IO.PixelCenterOffset following various rendering fixes
 
 
- FREQUENTLY ASKED QUESTIONS (FAQ) & TROUBLESHOOTING
- ==================================================
+ FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
+ ======================================
 
- If text or lines are blurry when integrating ImGui in your engine:
-
-   - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-
- A primer on the meaning and use of IDs in ImGui:
+ Q: Can I have multiple widgets with the same label? 
+ A: Yes. A primer on the use of labels/IDs in ImGui..
  
-   - widgets require state to be carried over multiple frames (most typically ImGui often needs to remember what is the "active" widget).
+   - Interactive widgets require state to be carried over multiple frames (most typically ImGui often needs to remember what is the "active" widget).
      to do so they need an unique ID. unique ID are typically derived from a string label, an integer index or a pointer.
      
        Button("OK");        // Label = "OK",     ID = hash of "OK"
        Button("Cancel");    // Label = "Cancel", ID = hash of "Cancel"
 
-   - element that are not interactive, such as Text() items don't need an ID.
+   - Elements that are not clickable, such as Text() items don't need an ID.
 
-   - ID are uniquely scoped within Windows so no conflict can happen if you have two buttons called "OK" in two different Windows.
+   - ID are uniquely scoped within windows, tree nodes, etc. so no conflict can happen if you have two buttons called "OK" in two different windows
+     or in two different locations of a tree.
+
+   - if you have a same ID twice in the same location, you'll have a conflict:
+
+       Button("OK");
+       Button("OK");        // ID collision! Both buttons will be treated as the same.
+
+     Fear not! this is easy to solve and there are many ways to solve it!
 
    - when passing a label you can optionally specify extra unique ID information within string itself. This helps solving the simpler collision cases.
      use "##" to pass a complement to the ID that won't be visible to the end-user:
@@ -197,41 +207,74 @@
        Button("Play##0");   // Label = "Play",   ID = hash of "Play##0"
        Button("Play##1");   // Label = "Play",   ID = hash of "Play##1" (different from above)
 
-     use "###" to pass a label that isn't part of ID. You can use that to change labels while preserving a constant ID.
+   - occasionally (rarely) you might want change a label while preserving a constant ID. This allows you to animate labels.
+     use "###" to pass a label that isn't part of ID:
 
        Button("Hello###ID"; // Label = "Hello",  ID = hash of "ID"
        Button("World###ID"; // Label = "World",  ID = hash of "ID" (same as above)
 
-   - use PushID() / PopID() to create scopes and avoid ID conflicts within the same Window:
+   - use PushID() / PopID() to create scopes and avoid ID conflicts within the same Window.
+     this is the most convenient way of distinguish ID if you are iterating and creating many UI elements.
+     you can push a pointer, a string or an integer value. remember that ID are formed from the addition of everything in the ID stack!
+
+       for (int i = 0; i < 100; i++)
+       {
+         PushID(i);
+         Button("Click");   // Label = "Click",  ID = hash of integer + "label" (unique)
+         PopID();
+       }
+
+       for (int i = 0; i < 100; i++)
+       {
+         MyObject* obj = Objects[i];
+         PushID(obj);
+         Button("Click");   // Label = "Click",  ID = hash of pointer + "label" (unique)
+         PopID();
+       }
+
+       for (int i = 0; i < 100; i++)
+       {
+         MyObject* obj = Objects[i];
+         PushID(obj->Name);
+         Button("Click");   // Label = "Click",  ID = hash of string + "label" (unique)
+         PopID();
+       }
+
+   - more example showing that you can stack multiple prefixes into the ID stack:
 
        Button("Click");     // Label = "Click",  ID = hash of "Click"
        PushID("node");
        Button("Click");     // Label = "Click",  ID = hash of "node" + "Click"
-       for (int i = 0; i < 100; i++)
-       {
-          PushID(i);
-          Button("Click");  // Label = "Click",  ID = hash of "node" + i + "label"
-          PopID();
-       }
+         PushID(my_ptr);
+           Button("Click"); // Label = "Click",  ID = hash of "node" + ptr + "Click"
+         PopID();
        PopID();
-       PushID(my_ptr);
-       Button("Click");     // Label = "Click",  ID = hash of ptr + "Click"
-       PopID();
-      
-     so if you have a loop creating multiple items, you can use PushID() / PopID() with the index of each item, or their pointer, etc.
-     some functions like TreeNode() implicitly creates a scope for you by calling PushID().
 
-   - when working with trees, ID are used to preserve the opened/closed state of tree nodes.
+   - tree nodes implicitly creates a scope for you by calling PushID().
+
+       Button("Click");     // Label = "Click",  ID = hash of "Click"
+       if (TreeNode("node"))
+       {
+         Button("Click");   // Label = "Click",  ID = hash of "node" + "Click"
+         TreePop();
+       }
+
+   - when working with trees, ID are used to preserve the opened/closed state of each tree node.
      depending on your use cases you may want to use strings, indices or pointers as ID. 
       e.g. when displaying a single object that may change over time (1-1 relationship), using a static string as ID will preserve your node open/closed state when the targeted object change.
       e.g. when displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state differently. experiment and see what makes more sense!
 
- If you want to load a different font than the default (ProggyClean.ttf, size 13)
+ Q: Why is my text output blurry?
+ A: In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
+
+ Q: How can I load a different font than the default? (default is an embedded version of ProggyClean.ttf, rendered at size 13)
+ A: Use the font atlas to load the TTF file you want:
 
      io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
      io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
 
- If you want to load multiple fonts, use the font atlas to pack them into a single texture!
+ Q: How can I load multiple fonts?
+ A: Use the font atlas to pack them into a single texture:
 
      ImFont* font0 = io.Fonts->AddFontDefault();
      ImFont* font1 = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
@@ -240,7 +283,9 @@
      // the first loaded font gets used by default
      // use ImGui::PushFont()/ImGui::PopFont() to change the font at runtime
 
- If you want to display Chinese, Japanese, Korean characters, pass custom Unicode ranges when loading a font:
+ Q: How can I render and input Chinese, Japanese, Korean characters?
+ A: When loading a font, pass custom Unicode ranges to specify the glyphs to load. ImGui will support UTF-8 encoding across the board.
+    Character input depends on you passing the right character code to io.AddInputCharacter(). The example applications do that.
 
      io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, io.Fonts->GetGlyphRangesJapanese());  // Load Japanese characters
      io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
