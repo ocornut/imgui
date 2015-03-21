@@ -2149,10 +2149,10 @@ void ImGui::Render()
             const ImTextureID tex_id = g.IO.Fonts->TexID;
             g.MouseCursorDrawList.Clear();
             g.MouseCursorDrawList.PushTextureID(tex_id);
-            g.MouseCursorDrawList.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, cursor_data.TexUvMin[0], cursor_data.TexUvMax[0], 0x30000000); // Shadow
-            g.MouseCursorDrawList.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, cursor_data.TexUvMin[0], cursor_data.TexUvMax[0], 0x30000000); // Shadow
-            g.MouseCursorDrawList.AddImage(tex_id, pos,             pos + size,             cursor_data.TexUvMin[0], cursor_data.TexUvMax[0], 0xFF000000); // Black border
-            g.MouseCursorDrawList.AddImage(tex_id, pos,             pos + size,             cursor_data.TexUvMin[1], cursor_data.TexUvMax[1], 0xFFFFFFFF); // White fill
+            g.MouseCursorDrawList.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, cursor_data.TexUvMin[1], cursor_data.TexUvMax[1], 0x30000000); // Shadow
+            g.MouseCursorDrawList.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, cursor_data.TexUvMin[1], cursor_data.TexUvMax[1], 0x30000000); // Shadow
+            g.MouseCursorDrawList.AddImage(tex_id, pos,             pos + size,             cursor_data.TexUvMin[1], cursor_data.TexUvMax[1], 0xFF000000); // Black border
+            g.MouseCursorDrawList.AddImage(tex_id, pos,             pos + size,             cursor_data.TexUvMin[0], cursor_data.TexUvMax[0], 0xFFFFFFFF); // White fill
             g.MouseCursorDrawList.PopTextureID();
             AddDrawListToRenderList(&g.MouseCursorDrawList);
         }
@@ -7858,10 +7858,9 @@ bool    ImFontAtlas::Build()
     ImVector<stbrp_rect> extra_rects;
     RenderCustomTexData(0, &extra_rects);
     stbrp_pack_rects((stbrp_context*)spc.pack_info, &extra_rects[0], (int)extra_rects.size());
-    int tex_height = 0;
     for (size_t i = 0; i < extra_rects.size(); i++)
         if (extra_rects[i].was_packed)
-            tex_height = ImMax(tex_height, extra_rects[i].y + extra_rects[i].h);
+            TexHeight = ImMax(TexHeight, extra_rects[i].y + extra_rects[i].h);
 
     // Allocate packing character data and flag packed characters buffer as non-packed (x0=y0=x1=y1=0)
     int buf_packedchars_n = 0, buf_rects_n = 0, buf_ranges_n = 0;
@@ -7908,14 +7907,14 @@ bool    ImFontAtlas::Build()
         // Extend texture height
         for (int i = 0; i < n; i++)
             if (data.Rects[i].was_packed)
-                tex_height = ImMax(tex_height, data.Rects[i].y + data.Rects[i].h);
+                TexHeight = ImMax(TexHeight, data.Rects[i].y + data.Rects[i].h);
     }
     IM_ASSERT(buf_rects_n == total_glyph_count);
     IM_ASSERT(buf_packedchars_n == total_glyph_count);
     IM_ASSERT(buf_ranges_n == total_glyph_range_count);
 
     // Create texture
-    TexHeight = ImUpperPowerOfTwo(tex_height);
+    TexHeight = ImUpperPowerOfTwo(TexHeight);
     TexPixelsAlpha8 = (unsigned char*)ImGui::MemAlloc(TexWidth * TexHeight);
     memset(TexPixelsAlpha8, 0, TexWidth * TexHeight);
     spc.pixels = TexPixelsAlpha8;
@@ -7989,213 +7988,92 @@ bool    ImFontAtlas::Build()
     return true;
 }
 
-static void AddMouseCursor(int pass, ImVector<stbrp_rect>& rects, int& rect_i, ImGuiMouseCursor type, const ImVec2& offset, const ImVec2& size, const char* in_char_pixels, unsigned char* tex_pixels, const ImVec2& tex_uv_scale, int tex_pitch)
+void ImFontAtlas::RenderCustomTexData(int pass, void* p_rects)
 {
+    // . = white layer, X = black layer, others are blank
+    const int TEX_DATA_W = 90;
+    const int TEX_DATA_H = 27;
+    const char texture_data[TEX_DATA_W*TEX_DATA_H+1] =
+    {
+        "..-         -XXXXXXX-    X    -           X           -XXXXXXX          -          XXXXXXX"
+        "..-         -X.....X-   X.X   -          X.X          -X.....X          -          X.....X"
+        "---         -XXX.XXX-  X...X  -         X...X         -X....X           -           X....X"
+        "X           -  X.X  - X.....X -        X.....X        -X...X            -            X...X"
+        "XX          -  X.X  -X.......X-       X.......X       -X..X.X           -           X.X..X"
+        "X.X         -  X.X  -XXXX.XXXX-       XXXX.XXXX       -X.X X.X          -          X.X X.X"
+        "X..X        -  X.X  -   X.X   -          X.X          -XX   X.X         -         X.X   XX"
+        "X...X       -  X.X  -   X.X   -    XX    X.X    XX    -      X.X        -        X.X      "
+        "X....X      -  X.X  -   X.X   -   X.X    X.X    X.X   -       X.X       -       X.X       "
+        "X.....X     -  X.X  -   X.X   -  X..X    X.X    X..X  -        X.X      -      X.X        "
+        "X......X    -  X.X  -   X.X   - X...XXXXXX.XXXXXX...X -         X.X   XX-XX   X.X         "
+        "X.......X   -  X.X  -   X.X   -X.....................X-          X.X X.X-X.X X.X          "
+        "X........X  -  X.X  -   X.X   - X...XXXXXX.XXXXXX...X -           X.X..X-X..X.X           "
+        "X.........X -XXX.XXX-   X.X   -  X..X    X.X    X..X  -            X...X-X...X            "
+        "X..........X-X.....X-   X.X   -   X.X    X.X    X.X   -           X....X-X....X           "
+        "X......XXXXX-XXXXXXX-   X.X   -    XX    X.X    XX    -          X.....X-X.....X          "
+        "X...X..X    ---------   X.X   -          X.X          -          XXXXXXX-XXXXXXX          "
+        "X..X X..X   -       -XXXX.XXXX-       XXXX.XXXX       ------------------------------------"
+        "X.X  X..X   -       -X.......X-       X.......X       -    XX           XX    -           "
+        "XX    X..X  -       - X.....X -        X.....X        -   X.X           X.X   -           "
+        "      X..X          -  X...X  -         X...X         -  X..X           X..X  -           "
+        "       XX           -   X.X   -          X.X          - X...XXXXXXXXXXXXX...X -           "
+        "------------        -    X    -           X           -X.....................X-           "
+        "                    ----------------------------------- X...XXXXXXXXXXXXX...X -           "
+        "                                                      -  X..X           X..X  -           "
+        "                                                      -   X.X           X.X   -           "
+        "                                                      -    XX           XX    -           "
+    };
+
+    ImVector<stbrp_rect>& rects = *(ImVector<stbrp_rect>*)p_rects;
     if (pass == 0)
     {
         stbrp_rect r; 
-        r.w = (unsigned short)((size.x*2)+1);
-        r.h = (unsigned short)(size.y);
+        r.w = (TEX_DATA_W*2)+1;
+        r.h = TEX_DATA_H+1;
         rects.push_back(r);
     }
     else if (pass == 1)
     {
-        ImGuiMouseCursorData& cursor_data = GImGui->MouseCursorData[type];
-        cursor_data.Type = type;
-        cursor_data.Size = size;
-        cursor_data.Offset = offset;
-        const stbrp_rect& r = rects[rect_i++];
-        ImVec2 pos((float)r.x, (float)r.y);
-        for (int layer = 0; layer < 2; layer++)
+        // Copy pixels
+        const stbrp_rect& r = rects[0];
+        for (int y = 0, n = 0; y < TEX_DATA_H; y++)
+            for (int x = 0; x < TEX_DATA_W; x++, n++)
+            {
+                const int offset0 = (int)(r.x + x) + (int)(r.y + y) * TexWidth;
+                const int offset1 = offset0 + 1 + TEX_DATA_W;
+                TexPixelsAlpha8[offset0] = texture_data[n] == '.' ? 0xFF : 0x00;
+                TexPixelsAlpha8[offset1] = texture_data[n] == 'X' ? 0xFF : 0x00;
+            }
+        const ImVec2 tex_uv_scale(1.0f / TexWidth, 1.0f / TexHeight);
+        TexUvWhitePixel = ImVec2(r.x + 0.5f, r.y + 0.5f) * tex_uv_scale;
+
+        const ImVec2 cursor_datas[ImGuiMouseCursor_Count_][3] =
         {
-            // Draw a mouse cursor into texture
-            // Because our font uses a single color channel, we have to spread the cursor in 2 layers (black/white) which will be rendered separately.
-            const char layer_char = layer ? '.' : 'X';
-            cursor_data.TexUvMin[layer] = (pos) * tex_uv_scale;
-            cursor_data.TexUvMax[layer] = (pos + size) * tex_uv_scale;
-            for (int y = 0, n = 0; y < (int)size.y; y++)
-                for (int x = 0; x < (int)size.x; x++, n++)
-                    tex_pixels[((int)pos.x + x) + ((int)pos.y + y) * tex_pitch] = (in_char_pixels[n] == layer_char) ? 0xFF : 0x00;
-            pos.x += size.x + 1;
+            // Pos ........ Size ......... Offset ......
+            { ImVec2(0,3),  ImVec2(12,19), ImVec2( 0, 0) }, // ImGuiMouseCursor_Arrow
+            { ImVec2(13,0), ImVec2(7,16),  ImVec2( 4, 9) }, // ImGuiMouseCursor_TextInput
+            { ImVec2(31,0), ImVec2(23,23), ImVec2(11,11) }, // ImGuiMouseCursor_Move
+            { ImVec2(21,0), ImVec2( 9,23), ImVec2( 5,11) }, // ImGuiMouseCursor_ResizeNS
+            { ImVec2(55,18),ImVec2(23, 9), ImVec2(11, 5) }, // ImGuiMouseCursor_ResizeEW
+            { ImVec2(73,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNESW
+            { ImVec2(55,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNWSE
+        };
+
+        for (int type = 0; type < ImGuiMouseCursor_Count_; type++)
+        {
+            ImGuiMouseCursorData& cursor_data = GImGui->MouseCursorData[type];
+            ImVec2 pos = cursor_datas[type][0] + ImVec2((float)r.x, (float)r.y);
+            const ImVec2 size = cursor_datas[type][1];
+            cursor_data.Type = type;
+            cursor_data.Size = size;
+            cursor_data.Offset = cursor_datas[type][2];
+            cursor_data.TexUvMin[0] = (pos) * tex_uv_scale;
+            cursor_data.TexUvMax[0] = (pos + size) * tex_uv_scale;
+            pos.x += TEX_DATA_W+1;
+            cursor_data.TexUvMin[1] = (pos) * tex_uv_scale;
+            cursor_data.TexUvMax[1] = (pos + size) * tex_uv_scale;
         }
     }
-}
-
-void ImFontAtlas::RenderCustomTexData(int pass, void* rects_opaque)
-{
-    ImVector<stbrp_rect>& rects = *(ImVector<stbrp_rect>*)rects_opaque;
-    int rect_i = 0;
-
-    // Draw white pixel into texture and make UV points to it
-    const ImVec2 uv_scale(1.0f / TexWidth, 1.0f / TexHeight);
-    if (pass == 0)
-    {
-        // Measure
-        stbrp_rect r; 
-        r.w = r.h = 3;
-        rects.push_back(r);
-    }
-    else if (pass == 1)
-    {
-        // Render
-        const stbrp_rect& r = rects[rect_i++];
-        const int offset = (int)r.x + (int)r.y * TexWidth;
-        TexPixelsAlpha8[offset] = TexPixelsAlpha8[offset+1] = TexPixelsAlpha8[TexWidth] = TexPixelsAlpha8[TexWidth+1] = 0xFF;
-        TexUvWhitePixel = ImVec2(r.x + 0.5f, r.y + 0.5f) * uv_scale;
-    }
-
-    const char cursor_arrow[12*19+1] =
-    {
-        "X           "
-        "XX          "
-        "X.X         "
-        "X..X        "
-        "X...X       "
-        "X....X      "
-        "X.....X     "
-        "X......X    "
-        "X.......X   "
-        "X........X  "
-        "X.........X "
-        "X..........X"
-        "X......XXXXX"
-        "X...X..X    "
-        "X..X X..X   "
-        "X.X  X..X   "
-        "XX    X..X  "
-        "      X..X  "
-        "       XX   "
-    };
-    const char cursor_text_input[7*16+1] =
-    {
-        "XXXXXXX"
-        "X.....X"
-        "XXX.XXX"
-        "  X.X  "
-        "  X.X  "
-        "  X.X  "
-        "  X.X  "
-        "  X.X  "
-        "  X.X  "
-        "  X.X  "
-        "  X.X  "
-        "  X.X  "
-        "  X.X  "
-        "XXX.XXX"
-        "X.....X"
-        "XXXXXXX"
-    };
-    const char cursor_move[23*23+1] =
-    {
-        "           X           "
-        "          X.X          "
-        "         X...X         "
-        "        X.....X        "
-        "       X.......X       "
-        "       XXXX.XXXX       "
-        "          X.X          "
-        "    XX    X.X    XX    "
-        "   X.X    X.X    X.X   "
-        "  X..X    X.X    X..X  "
-        " X...XXXXXX.XXXXXX...X "
-        "X.....................X"
-        " X...XXXXXX.XXXXXX...X "
-        "  X..X    X.X    X..X  "
-        "   X.X    X.X    X.X   "
-        "    XX    X.X    XX    "
-        "          X.X          "
-        "       XXXX.XXXX       "
-        "       X.......X       "
-        "        X.....X        "
-        "         X...X         "
-        "          X.X          "
-        "           X           "
-    };
-    const char cursor_resize_ns[9*23+1] =
-    {
-        "    X    "
-        "   X.X   "
-        "  X...X  "
-        " X.....X "
-        "X.......X"
-        "XXXX.XXXX"
-        "   X.X   "
-        "   X.X   "
-        "   X.X   "
-        "   X.X   "
-        "   X.X   "
-        "   X.X   "
-        "   X.X   "
-        "   X.X   "
-        "   X.X   "
-        "   X.X   "
-        "   X.X   "
-        "XXXX.XXXX"
-        "X.......X"
-        " X.....X "
-        "  X...X  "
-        "   X.X   "
-        "    X    "
-    };
-    const char cursor_resize_ew[23*9+1] =
-    {
-        "    XX           XX    "
-        "   X.X           X.X   "
-        "  X..X           X..X  "
-        " X...XXXXXXXXXXXXX...X "
-        "X.....................X"
-        " X...XXXXXXXXXXXXX...X "
-        "  X..X           X..X  "
-        "   X.X           X.X   "
-        "    XX           XX    "
-    };
-    const char cursor_resize_nwse[17*17+1] =
-    {
-        "XXXXXXX          "
-        "X.....X          "
-        "X....X           "
-        "X...X            "
-        "X..X.X           "
-        "X.X X.X          "
-        "XX   X.X         "
-        "      X.X        "
-        "       X.X       "
-        "        X.X      "
-        "         X.X   XX"
-        "          X.X X.X"
-        "           X.X..X"
-        "            X...X"
-        "           X....X"
-        "          X.....X"
-        "          XXXXXXX"
-    };
-    const char cursor_resize_nesw[17*17+1] =
-    {
-        "          XXXXXXX"
-        "          X.....X"
-        "           X....X"
-        "            X...X"
-        "           X.X..X"
-        "          X.X X.X"
-        "         X.X   XX"
-        "        X.X      "
-        "       X.X       "
-        "      X.X        "
-        "XX   X.X         "
-        "X.X X.X          "
-        "X..X.X           "
-        "X...X            "
-        "X....X           "
-        "X.....X          "
-        "XXXXXXX          "
-    };
-    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_Arrow,     ImVec2(0,0),    ImVec2(12,19),  cursor_arrow,       TexPixelsAlpha8, uv_scale, TexWidth);
-    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_TextInput, ImVec2(4,9),    ImVec2(7,16),   cursor_text_input,  TexPixelsAlpha8, uv_scale, TexWidth);
-    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_Move,      ImVec2(11,11),  ImVec2(23,23),  cursor_move,        TexPixelsAlpha8, uv_scale, TexWidth);
-    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_ResizeNS,  ImVec2(5,11),   ImVec2(9,23),   cursor_resize_ns,   TexPixelsAlpha8, uv_scale, TexWidth);
-    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_ResizeEW,  ImVec2(11,5),   ImVec2(23,9),   cursor_resize_ew,   TexPixelsAlpha8, uv_scale, TexWidth);
-    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_ResizeNESW,ImVec2(9,9),    ImVec2(17,17),  cursor_resize_nesw, TexPixelsAlpha8, uv_scale, TexWidth);
-    AddMouseCursor(pass, rects, rect_i, ImGuiMouseCursor_ResizeNWSE,ImVec2(9,9),    ImVec2(17,17),  cursor_resize_nwse, TexPixelsAlpha8, uv_scale, TexWidth);
 }
 
 //-----------------------------------------------------------------------------
