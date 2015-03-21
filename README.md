@@ -128,13 +128,10 @@ Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Bin
 ImGui is financially supported on [**Patreon**](http://www.patreon.com/imgui).
 
 Special supporters 
-- Jetha Chan
-- Pastagames
-- Wild Sheep Studio
+- Jetha Chan, Mārtiņš Možeiko, Alex Evans, Pastagames, Wild Sheep Studio
 
 And
-- Dale Kim
-- Michel Courtine
+- Dale Kim, Michel Courtine, Paul Patrashcu, Rui Figueira
 
 And other supporters; thanks!
 
