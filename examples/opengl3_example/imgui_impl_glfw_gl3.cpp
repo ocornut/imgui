@@ -2,7 +2,6 @@
 // https://github.com/ocornut/imgui
 
 #include <algorithm>
-#include <cassert>
 
 #include <imgui.h>
 #include "imgui_impl_glfw_gl3.h"
@@ -103,8 +102,7 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->texture_id);
                 int scissor_width = (int)(pcmd->clip_rect.z - pcmd->clip_rect.x);
                 int scissor_height = (int)(pcmd->clip_rect.w - pcmd->clip_rect.y);
-                assert(scissor_width >= 0);
-                assert(scissor_height >= 0);
+                IM_ASSERT(scissor_width >= 0 && scissor_height >= 0); // this would usually indicate something wrong inside imgui
                 scissor_width = std::max(scissor_width, 0);
                 scissor_height = std::max(scissor_height, 0);
                 glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), scissor_width, scissor_height);
