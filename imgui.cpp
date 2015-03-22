@@ -1574,12 +1574,6 @@ ImGuiWindow::ImGuiWindow(const char* name)
     ItemWidthDefault = 0.0f;
     FontWindowScale = 1.0f;
 
-    if (ImLengthSqr(Size) < 0.00001f)
-    {
-        AutoFitFrames = 2;
-        AutoFitOnlyGrows = true;
-    }
-
     DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
     new(DrawList) ImDrawList();
     RootWindow = NULL;
@@ -2877,6 +2871,13 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
             size = settings->Size;
         window->Size = window->SizeFull = size;
     }
+
+    if (ImLengthSqr(window->Size) < 0.00001f)
+    {
+        window->AutoFitFrames = 2;
+        window->AutoFitOnlyGrows = true;
+    }
+
     g.Windows.push_back(window);
     return window;
 }
