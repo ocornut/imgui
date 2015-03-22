@@ -3081,9 +3081,29 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
             window->Collapsed = false;
         }
 
+        // Calculate auto-fit size
+        ImVec2 size_auto_fit;
+        if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
+        {
+            // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
+            size_auto_fit = window->SizeContents + style.WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
+        }
+        else
+        {
+            size_auto_fit = ImClamp(window->SizeContents + style.AutoFitPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding));
+        }
+
         const float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
         if (window->Collapsed)
         {
+            // We still process initial auto-fit on collapsed windows to get a window width
+            // But otherwise we don't honor ImGuiWindowFlags_AlwaysAutoResize when collapsed.
+            if (window->AutoFitFrames > 0)
+            {
+                window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
+                title_bar_rect = window->TitleBarRect();
+            }
+        
             // Draw title bar only
             window->Size = title_bar_rect.GetSize();
             window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_TitleBgCollapsed), window_rounding);
@@ -3098,13 +3118,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
             ImU32 resize_col = 0;
             if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
             {
-                // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
-                const ImVec2 size_auto_fit = window->SizeContents + style.WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
                 window->Size = window->SizeFull = size_auto_fit;
             }
             else
             {
-                const ImVec2 size_auto_fit = ImClamp(window->SizeContents + style.AutoFitPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding));
                 if ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
                 {
                     // Don't continuously mark settings as dirty, the size of the window doesn't need to be stored.
@@ -3113,10 +3130,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
                 else if (window->AutoFitFrames > 0)
                 {
                     // Auto-fit only grows during the first few frames
-                    if (window->AutoFitOnlyGrows)
-                        window->SizeFull = ImMax(window->SizeFull, size_auto_fit);
-                    else
-                        window->SizeFull = size_auto_fit;
+                    window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
                     if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkSettingsDirty();
                 }
@@ -3299,7 +3313,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->Visible = false;
 
     // Return false if we don't intend to display anything to allow user to perform an early out optimization
-    window->SkipItems = window->Collapsed || (!window->Visible && window->AutoFitFrames == 0);
+    window->SkipItems = (window->Collapsed || !window->Visible) && window->AutoFitFrames == 0;
     return !window->SkipItems;
 }
 
