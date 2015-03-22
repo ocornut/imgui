@@ -41,6 +41,7 @@ static void ImGui_ImplGlfw_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
     glEnable(GL_TEXTURE_2D);
+    //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context
 
     // Setup orthographic projection matrix
     const float width = ImGui::GetIO().DisplaySize.x;
@@ -256,15 +257,7 @@ void ImGui_ImplGlfw_NewFrame()
     g_MouseWheel = 0.0f;
 
     // Hide/show hardware mouse cursor
-    if (io.MouseDrawCursor)
-    {
-    	// imgui draws cursor itself
-    	glfwSetInputMode(g_Window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-    }
-    else
-    {
-    	glfwSetInputMode(g_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    }
+    glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
 
     // Start the frame
     ImGui::NewFrame();
