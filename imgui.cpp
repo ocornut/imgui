@@ -7353,6 +7353,10 @@ void ImDrawList::AddDrawCmd()
     draw_cmd.texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
     draw_cmd.user_callback = NULL;
     draw_cmd.user_callback_data = NULL;
+
+    assert(draw_cmd.clip_rect.x <= draw_cmd.clip_rect.z);
+    assert(draw_cmd.clip_rect.y <= draw_cmd.clip_rect.w);
+
     commands.push_back(draw_cmd);
 }
 
