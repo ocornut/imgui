@@ -10038,6 +10038,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 if (ImGui::IsItemHovered()) 
                     ImGui::SetMouseCursor(i);
             }
+            ImGui::TreePop();
         }
     }
 
