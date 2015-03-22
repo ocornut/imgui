@@ -2898,9 +2898,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
     IM_ASSERT(name != NULL);                        // Must pass a name
 
     // Find or create
+    bool window_is_new = false;
     ImGuiWindow* window = FindWindowByName(name);
     if (!window)
+    {
         window = CreateNewWindow(name, size, flags);
+        window_is_new = true;
+    }
     window->Flags = (ImGuiWindowFlags)flags;
 
     // Add to stack
@@ -2967,7 +2971,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         window->ClipRectStack.resize(0);
 
         // Reset contents size for auto-fitting
-        window->SizeContents = window->DC.CursorMaxPos - window->Pos;
+        window->SizeContents = window_is_new ? ImVec2(0.0f, 0.0f) : window->DC.CursorMaxPos - window->Pos;
         window->SizeContents.y += window->ScrollY;
 
         if (flags & ImGuiWindowFlags_ChildWindow)
