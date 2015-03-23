@@ -2892,7 +2892,12 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 // - Return false when window is collapsed, so you can early out in your code. You always need to call ImGui::End() even if false is returned.
 // - Passing 'bool* p_opened' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
 // - Passing non-zero 'size' is roughly equivalent to calling SetNextWindowSize(size, ImGuiSetCond_FirstUseEver) prior to calling Begin().
-bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& initial_size, float bg_alpha, ImGuiWindowFlags flags)
+bool ImGui::Begin(const char* name, bool* p_opened, ImGuiWindowFlags flags)
+{
+    return ImGui::Begin(name, p_opened, ImVec2(0.f, 0.f), -1.0f, flags);
+}
+
+bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_use, float bg_alpha, ImGuiWindowFlags flags)
 {
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
@@ -2904,7 +2909,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& initial_size, 
     ImGuiWindow* window = FindWindowByName(name);
     if (!window)
     {
-        window = CreateNewWindow(name, initial_size, flags);
+        window = CreateNewWindow(name, size_on_first_use, flags);
         window_is_new = true;
     }
     window->Flags = (ImGuiWindowFlags)flags;
@@ -2980,7 +2985,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& initial_size, 
         {
             parent_window->DC.ChildWindows.push_back(window);
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
-            window->SizeFull = initial_size;
+            window->SizeFull = size_on_first_use;
         }
     }
 
@@ -10078,7 +10083,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
 static void ShowExampleAppAutoResize(bool* opened)
 {
-    if (!ImGui::Begin("Example: Auto-Resizing Window", opened, ImVec2(0,0), -1.0f, ImGuiWindowFlags_AlwaysAutoResize))
+    if (!ImGui::Begin("Example: Auto-Resizing Window", opened, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::End();
         return;
