@@ -1999,7 +1999,8 @@ void ImGui::NewFrame()
     g.CurrentWindowStack.resize(0);
 
     // Create implicit window - we will only render it if the user has added something to it.
-    ImGui::Begin("Debug", NULL, ImVec2(400,400));
+    ImGui::SetNextWindowSize(ImVec2(400,400), ImGuiSetCond_FirstUseEver);
+    ImGui::Begin("Debug");
 }
 
 // NB: behavior of ImGui after Shutdown() is not tested/guaranteed at the moment. This function is merely here to free heap allocations.
@@ -2891,7 +2892,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 // - Return false when window is collapsed, so you can early out in your code. You always need to call ImGui::End() even if false is returned.
 // - Passing 'bool* p_opened' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
 // - Passing non-zero 'size' is roughly equivalent to calling SetNextWindowSize(size, ImGuiSetCond_FirstUseEver) prior to calling Begin().
-bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg_alpha, ImGuiWindowFlags flags)
+bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& initial_size, float bg_alpha, ImGuiWindowFlags flags)
 {
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
@@ -2903,7 +2904,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
     ImGuiWindow* window = FindWindowByName(name);
     if (!window)
     {
-        window = CreateNewWindow(name, size, flags);
+        window = CreateNewWindow(name, initial_size, flags);
         window_is_new = true;
     }
     window->Flags = (ImGuiWindowFlags)flags;
@@ -2979,7 +2980,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size, float bg
         {
             parent_window->DC.ChildWindows.push_back(window);
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
-            window->SizeFull = size;
+            window->SizeFull = initial_size;
         }
     }
 
@@ -10243,7 +10244,8 @@ struct ExampleAppConsole
 
     void    Run(const char* title, bool* opened)
     {
-        if (!ImGui::Begin(title, opened, ImVec2(520,600)))
+        ImGui::SetNextWindowSize(ImVec2(520,600), ImGuiSetCond_FirstUseEver);
+        if (!ImGui::Begin(title, opened))
         {
             ImGui::End();
             return;
@@ -10462,7 +10464,8 @@ static void ShowExampleAppConsole(bool* opened)
 
 static void ShowExampleAppLongText(bool* opened)
 {
-    if (!ImGui::Begin("Example: Long text display", opened, ImVec2(520,600)))
+    ImGui::SetNextWindowSize(ImVec2(520,600), ImGuiSetCond_FirstUseEver);
+    if (!ImGui::Begin("Example: Long text display", opened))
     {
         ImGui::End();
         return;
