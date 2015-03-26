@@ -225,7 +225,7 @@ namespace ImGui
     IMGUI_API void          EndTooltip();
 
     // Popup
-    IMGUI_API bool          BeginPopup(bool* p_opened);
+    IMGUI_API void          BeginPopup(bool* p_opened);
     IMGUI_API void          EndPopup();
 
     // Layout

@@ -2742,8 +2742,8 @@ int ImGui::GetFrameCount()
 void ImGui::BeginTooltip()
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
-    ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), g.Style.Colors[ImGuiCol_TooltipBg].w, window_flags);
+    ImGuiWindowFlags flags = ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
+    ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), g.Style.Colors[ImGuiCol_TooltipBg].w, flags);
 }
 
 void ImGui::EndTooltip()
@@ -2752,12 +2752,13 @@ void ImGui::EndTooltip()
     ImGui::End();
 }
 
-bool ImGui::BeginPopup(bool* p_opened)
+void ImGui::BeginPopup(bool* p_opened)
 {
     IM_ASSERT(p_opened != NULL);    // Must provide a bool at the moment
+
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    bool ret = ImGui::Begin("##Popup", p_opened, ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize);
-    return ret;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
+    ImGui::Begin("##Popup", p_opened, flags);
 }
 
 void ImGui::EndPopup()
@@ -9469,7 +9470,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Popup Menu"))
+        if (ImGui::TreeNode("Popup"))
         {
             static bool popup_open = false;
             static int selected_fish = -1;
