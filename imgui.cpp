@@ -3309,7 +3309,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
         if (window->Flags & ImGuiWindowFlags_Popup)
         {
-            if (g.FocusedWindow != window)
+            if ((g.IO.MouseClicked[0] && (!g.HoveredWindow || g.HoveredWindow->RootWindow != window)) || (!g.FocusedWindow || g.FocusedWindow->RootWindow != window))
                 if (p_opened)
                     *p_opened = false;
         }
