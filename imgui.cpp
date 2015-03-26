@@ -2174,6 +2174,7 @@ void ImGui::Render()
         }
 
         // Gather windows to render
+        // FIXME-OPT: Rework this in a more performance conscious way.
         g.RenderDrawLists.resize(0);
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
@@ -2184,7 +2185,13 @@ void ImGui::Render()
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
-            if (window->Visible && (window->Flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)))
+            if (window->Visible && (window->Flags & ImGuiWindowFlags_Popup) != 0)
+                AddWindowToRenderList(window);
+        }
+        for (size_t i = 0; i != g.Windows.size(); i++)
+        {
+            ImGuiWindow* window = g.Windows[i];
+            if (window->Visible && (window->Flags & ImGuiWindowFlags_Tooltip) != 0)
                 AddWindowToRenderList(window);
         }
 
@@ -2992,7 +2999,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->Visible = true;
 
         // New windows appears in front
-        if (!(flags & ImGuiWindowFlags_ChildWindow))
+        if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
+        {
             if (window->LastFrameDrawn < current_frame - 1)
             {
                 FocusWindow(window);
@@ -3004,6 +3012,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                         window->PosFloat = g.IO.MousePos;
                 }
             }
+        }
 
         window->LastFrameDrawn = current_frame;
         window->ClipRectStack.resize(0);
@@ -9461,11 +9470,13 @@ void ImGui::ShowTestWindow(bool* opened)
             {
                 ImGui::BeginPopup(&popup_open);
                 for (size_t i = 0; i < IM_ARRAYSIZE(fishes); i++)
+                {
                     if (ImGui::Selectable(fishes[i], false))
                     {
                         selected_fish = i;
                         popup_open = false;
                     }
+                }
                 ImGui::EndPopup();
             }
             ImGui::TreePop();
