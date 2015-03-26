@@ -4244,8 +4244,13 @@ static bool IsHovered(const ImRect& bb, ImGuiID id)
         ImGuiWindow* window = GetCurrentWindow();
         if (g.HoveredRootWindow == window->RootWindow)
         {
-            bool hovered = (g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && IsMouseHoveringRect(bb);
-            return hovered;
+            if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && IsMouseHoveringRect(bb))
+            {
+                if (!(g.FocusedWindow->Flags & ImGuiWindowFlags_Popup) || g.FocusedWindow == g.HoveredRootWindow)
+                {
+                    return true;
+                }
+            }
         }
     }
     return false;
@@ -6999,10 +7004,10 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
         // Matching the behavior of IsHovered() but ignore if ActiveId==window->MoveID (we clicked on the window background)
         // So that clicking on items with no active id such as Text() still returns true with IsItemHovered()
         window->DC.LastItemHoveredRect = true;
+        window->DC.LastItemHoveredAndUsable = false;
         if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly || (g.ActiveId == window->MoveID))
-            window->DC.LastItemHoveredAndUsable = true;
-        else
-            window->DC.LastItemHoveredAndUsable = false;
+            if (!(g.FocusedWindow->Flags & ImGuiWindowFlags_Popup) || g.FocusedWindow == window)
+                window->DC.LastItemHoveredAndUsable = true;
     }
     else
     {
