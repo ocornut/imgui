@@ -2062,6 +2062,8 @@ static int ChildWindowComparer(const void* lhs, const void* rhs)
 {
     const ImGuiWindow* a = *(const ImGuiWindow**)lhs;
     const ImGuiWindow* b = *(const ImGuiWindow**)rhs;
+    if (int d = (a->Flags & ImGuiWindowFlags_Popup) - (b->Flags & ImGuiWindowFlags_Popup))
+        return d;
     if (int d = (a->Flags & ImGuiWindowFlags_Tooltip) - (b->Flags & ImGuiWindowFlags_Tooltip))
         return d;
     if (int d = (a->Flags & ImGuiWindowFlags_ComboBox) - (b->Flags & ImGuiWindowFlags_ComboBox))
@@ -2174,13 +2176,13 @@ void ImGui::Render()
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
-            if (window->Visible && (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) == 0)
+            if (window->Visible && (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) == 0)
                 AddWindowToRenderList(window);
         }
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
-            if (window->Visible && (window->Flags & ImGuiWindowFlags_Tooltip))
+            if (window->Visible && (window->Flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)))
                 AddWindowToRenderList(window);
         }
 
@@ -2719,7 +2721,7 @@ int ImGui::GetFrameCount()
 void ImGui::BeginTooltip()
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_Tooltip;
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
     ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), g.Style.Colors[ImGuiCol_TooltipBg].w, window_flags);
 }
 
@@ -2727,6 +2729,21 @@ void ImGui::EndTooltip()
 {
     IM_ASSERT(GetCurrentWindow()->Flags & ImGuiWindowFlags_Tooltip);
     ImGui::End();
+}
+
+bool ImGui::BeginPopup(bool* p_opened)
+{
+    IM_ASSERT(p_opened != NULL);    // Must provide a bool at the moment
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    bool ret = ImGui::Begin("##Popup", p_opened, ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize);
+    return ret;
+}
+
+void ImGui::EndPopup()
+{
+    IM_ASSERT(GetCurrentWindow()->Flags & ImGuiWindowFlags_Popup);
+    ImGui::End();
+    ImGui::PopStyleVar();
 }
 
 bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
@@ -2975,7 +2992,16 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         // New windows appears in front
         if (!(flags & ImGuiWindowFlags_ChildWindow))
             if (window->LastFrameDrawn < current_frame - 1)
+            {
                 FocusWindow(window);
+
+                // Popup position themselves when they first appear
+                if (flags & ImGuiWindowFlags_Popup)
+                {
+                    if (!window_pos_set_by_api)
+                        window->PosFloat = g.IO.MousePos;
+                }
+            }
 
         window->LastFrameDrawn = current_frame;
         window->ClipRectStack.resize(0);
@@ -3280,6 +3306,12 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
             const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_rect.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y*2 + text_size.y);
             RenderTextClipped(text_min, name, NULL, &text_size, text_max);
+        }
+        if (window->Flags & ImGuiWindowFlags_Popup)
+        {
+            if (g.FocusedWindow != window)
+                if (p_opened)
+                    *p_opened = false;
         }
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
@@ -9396,37 +9428,31 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
-        /*
         if (ImGui::TreeNode("Popup Menu"))
         {
             static bool popup_open = false;
             static int selected_fish = -1;
             const char* fishes[] = { "Bream", "Mackerel", "Pollock", "Tilefish" };
             if (ImGui::Button("Select.."))
-            {
                 popup_open = true;
-                ImGui::SetNextWindowPos(ImGui::GetMousePos());
-            }
             ImGui::SameLine();
             ImGui::Text(selected_fish == -1 ? "<None>" : fishes[selected_fish]);
+
             if (popup_open)
             {
-                ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-                ImGui::Begin("##Popup", &popup_open, ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize);
-                if (!ImGui::IsWindowFocused())
-                    popup_open = false;
-                for (size_t i = 0; i < IM_ARRAYSIZE(fishes); i++)
-                    if (ImGui::Selectable(fishes[i], false))
-                    {
-                        selected_fish = i;
-                        popup_open = false;
-                    }
-                ImGui::End();
-                ImGui::PopStyleVar();
+                if (ImGui::BeginPopup(&popup_open))
+                {
+                    for (size_t i = 0; i < IM_ARRAYSIZE(fishes); i++)
+                        if (ImGui::Selectable(fishes[i], false))
+                        {
+                            selected_fish = i;
+                            popup_open = false;
+                        }
+                }
+                ImGui::EndPopup();
             }
             ImGui::TreePop();
         }
-        */
 
         if (ImGui::TreeNode("Filtered Text Input"))
         {

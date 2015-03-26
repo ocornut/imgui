@@ -224,6 +224,10 @@ namespace ImGui
     IMGUI_API void          BeginTooltip();                                                     // use to create full-featured tooltip windows that aren't just text
     IMGUI_API void          EndTooltip();
 
+    // Popup
+    IMGUI_API bool          BeginPopup(bool* p_opened);
+    IMGUI_API void          EndPopup();
+
     // Layout
     IMGUI_API void          BeginGroup();
     IMGUI_API void          EndGroup();
@@ -424,7 +428,8 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_ChildWindowAutoFitX    = 1 << 10,  // For internal use by BeginChild()
     ImGuiWindowFlags_ChildWindowAutoFitY    = 1 << 11,  // For internal use by BeginChild()
     ImGuiWindowFlags_ComboBox               = 1 << 12,  // For internal use by ComboBox()
-    ImGuiWindowFlags_Tooltip                = 1 << 13   // For internal use by BeginTooltip()
+    ImGuiWindowFlags_Tooltip                = 1 << 13,  // For internal use by BeginTooltip()
+    ImGuiWindowFlags_Popup                  = 1 << 14   // For internal use by BeginPopup()
 };
 
 // Flags for ImGui::InputText()
