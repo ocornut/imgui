@@ -9437,18 +9437,15 @@ void ImGui::ShowTestWindow(bool* opened)
                 popup_open = true;
             ImGui::SameLine();
             ImGui::Text(selected_fish == -1 ? "<None>" : fishes[selected_fish]);
-
             if (popup_open)
             {
-                if (ImGui::BeginPopup(&popup_open))
-                {
-                    for (size_t i = 0; i < IM_ARRAYSIZE(fishes); i++)
-                        if (ImGui::Selectable(fishes[i], false))
-                        {
-                            selected_fish = i;
-                            popup_open = false;
-                        }
-                }
+                ImGui::BeginPopup(&popup_open);
+                for (size_t i = 0; i < IM_ARRAYSIZE(fishes); i++)
+                    if (ImGui::Selectable(fishes[i], false))
+                    {
+                        selected_fish = i;
+                        popup_open = false;
+                    }
                 ImGui::EndPopup();
             }
             ImGui::TreePop();
