@@ -982,7 +982,7 @@ struct ImGuiDrawContext
     ImGuiID                 LastItemID;
     ImRect                  LastItemRect;
     bool                    LastItemHoveredAndUsable;
-    bool                    LastItemHoveredRectOnly;
+    bool                    LastItemHoveredRect;
     ImVector<ImGuiWindow*>  ChildWindows;
     ImVector<bool>          AllowKeyboardFocus;
     ImVector<float>         ItemWidth;           // 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
@@ -1011,7 +1011,7 @@ struct ImGuiDrawContext
         TreeDepth = 0;
         LastItemID = 0;
         LastItemRect = ImRect(0.0f,0.0f,0.0f,0.0f);
-        LastItemHoveredAndUsable = LastItemHoveredRectOnly = false;
+        LastItemHoveredAndUsable = LastItemHoveredRect = false;
         StateStorage = NULL;
 
         ColumnsStartX = 0.0f;
@@ -2640,10 +2640,10 @@ bool ImGui::IsItemHovered()
     return window->DC.LastItemHoveredAndUsable;
 }
 
-bool ImGui::IsItemHoveredRectOnly()
+bool ImGui::IsItemHoveredRect()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    return window->DC.LastItemHoveredRectOnly;
+    return window->DC.LastItemHoveredRect;
 }
 
 bool ImGui::IsItemActive()
@@ -6956,7 +6956,7 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
     window->DC.LastItemRect = bb;
     if (IsClipped(bb))
     {
-        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRectOnly = false;
+        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = false;
         return false;
     }
 
@@ -6966,7 +6966,7 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
     {
         // Matching the behavior of IsHovered() but ignore if ActiveId==window->MoveID (we clicked on the window background)
         // So that clicking on items with no active id such as Text() still returns true with IsItemHovered()
-        window->DC.LastItemHoveredRectOnly = true;
+        window->DC.LastItemHoveredRect = true;
         if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly || (g.ActiveId == window->MoveID))
             window->DC.LastItemHoveredAndUsable = true;
         else
@@ -6974,7 +6974,7 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
     }
     else
     {
-        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRectOnly = false;
+        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = false;
     }
 
     return true;
