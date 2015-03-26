@@ -1124,7 +1124,7 @@ struct ImGuiState
     ImGuiSetCond            SetNextTreeNodeOpenedCond;
 
     // Render
-    ImVector<ImDrawList*>   RenderDrawLists;
+    ImVector<ImDrawList*>   RenderDrawLists[3];
 
     // Mouse cursor
     ImGuiMouseCursor        MouseCursor;
@@ -1643,24 +1643,24 @@ void ImGuiWindow::FocusItemUnregister()
     FocusIdxTabCounter--;
 }
 
-static inline void AddDrawListToRenderList(ImDrawList* draw_list)
+static inline void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDrawList* draw_list)
 {
     if (!draw_list->commands.empty() && !draw_list->vtx_buffer.empty())
     {
         if (draw_list->commands.back().vtx_count == 0)
             draw_list->commands.pop_back();
-        GImGui->RenderDrawLists.push_back(draw_list);
+        out_render_list.push_back(draw_list);
     }
 }
 
-static void AddWindowToRenderList(ImGuiWindow* window)
+static void AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiWindow* window)
 {
-    AddDrawListToRenderList(window->DrawList);
+    AddDrawListToRenderList(out_render_list, window->DrawList);
     for (size_t i = 0; i < window->DC.ChildWindows.size(); i++)
     {
         ImGuiWindow* child = window->DC.ChildWindows[i];
         if (child->Visible)                 // clipped children may have been marked not Visible
-            AddWindowToRenderList(child);
+            AddWindowToRenderList(out_render_list, child);
     }
 }
 
@@ -2020,6 +2020,7 @@ void ImGui::Shutdown()
         ImGui::MemFree(g.Windows[i]);
     }
     g.Windows.clear();
+    g.WindowsSortBuffer.clear();
     g.CurrentWindowStack.clear();
     g.FocusedWindow = NULL;
     g.HoveredWindow = NULL;
@@ -2033,8 +2034,8 @@ void ImGui::Shutdown()
     g.ColorModifiers.clear();
     g.StyleModifiers.clear();
     g.FontStack.clear();
-    g.RenderDrawLists.clear();
-    g.WindowsSortBuffer.clear();
+    for (size_t i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
+        g.RenderDrawLists[i].clear();
     g.MouseCursorDrawList.ClearFreeMemory();
     g.ColorEditModeStorage.Clear();
     if (g.PrivateClipboard)
@@ -2073,9 +2074,9 @@ static int ChildWindowComparer(const void* lhs, const void* rhs)
     return 0;
 }
 
-static void AddWindowToSortedBuffer(ImGuiWindow* window, ImVector<ImGuiWindow*>& sorted_windows)
+static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, ImGuiWindow* window)
 {
-    sorted_windows.push_back(window);
+    out_sorted_windows.push_back(window);
     if (window->Visible)
     {
         const size_t count = window->DC.ChildWindows.size();
@@ -2085,7 +2086,7 @@ static void AddWindowToSortedBuffer(ImGuiWindow* window, ImVector<ImGuiWindow*>&
         {
             ImGuiWindow* child = window->DC.ChildWindows[i];
             if (child->Visible)
-                AddWindowToSortedBuffer(child, sorted_windows);
+                AddWindowToSortedBuffer(out_sorted_windows, child);
         }
     }
 }
@@ -2150,7 +2151,7 @@ void ImGui::Render()
             if (window->Flags & ImGuiWindowFlags_ChildWindow)           // if a child is visible its parent will add it
                 if (window->Visible)
                     continue;
-            AddWindowToSortedBuffer(window, g.WindowsSortBuffer);
+            AddWindowToSortedBuffer(g.WindowsSortBuffer, window);
         }
         IM_ASSERT(g.Windows.size() == g.WindowsSortBuffer.size());    // we done something wrong
         g.Windows.swap(g.WindowsSortBuffer);
@@ -2174,25 +2175,37 @@ void ImGui::Render()
         }
 
         // Gather windows to render
-        // FIXME-OPT: Rework this in a more performance conscious way.
-        g.RenderDrawLists.resize(0);
+        for (size_t i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
+            g.RenderDrawLists[i].resize(0);
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
-            if (window->Visible && (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) == 0)
-                AddWindowToRenderList(window);
+            if (window->Visible && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0)
+            {
+                // FIXME: Generalize this with a proper layering system so we can stack.
+                if (window->Flags & ImGuiWindowFlags_Popup)
+                    AddWindowToRenderList(g.RenderDrawLists[1], window);
+                else if (window->Flags & ImGuiWindowFlags_Tooltip)
+                    AddWindowToRenderList(g.RenderDrawLists[2], window);
+                else
+                    AddWindowToRenderList(g.RenderDrawLists[0], window);
+            }
         }
-        for (size_t i = 0; i != g.Windows.size(); i++)
+
+        // Flatten layers
+        size_t n = g.RenderDrawLists[0].size();
+        size_t flattened_size = n;
+        for (size_t i = 1; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
+            flattened_size += g.RenderDrawLists[i].size();
+        g.RenderDrawLists[0].resize(flattened_size);
+        for (size_t i = 1; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
         {
-            ImGuiWindow* window = g.Windows[i];
-            if (window->Visible && (window->Flags & ImGuiWindowFlags_Popup) != 0)
-                AddWindowToRenderList(window);
-        }
-        for (size_t i = 0; i != g.Windows.size(); i++)
-        {
-            ImGuiWindow* window = g.Windows[i];
-            if (window->Visible && (window->Flags & ImGuiWindowFlags_Tooltip) != 0)
-                AddWindowToRenderList(window);
+            ImVector<ImDrawList*>& layer = g.RenderDrawLists[i];
+            if (!layer.empty())
+            {
+                memcpy(&g.RenderDrawLists[0][n], &layer[0], layer.size() * sizeof(ImDrawList*));
+                n += layer.size();
+            }
         }
 
         if (g.IO.MouseDrawCursor)
@@ -2208,13 +2221,12 @@ void ImGui::Render()
             g.MouseCursorDrawList.AddImage(tex_id, pos,             pos + size,             cursor_data.TexUvMin[1], cursor_data.TexUvMax[1], 0xFF000000); // Black border
             g.MouseCursorDrawList.AddImage(tex_id, pos,             pos + size,             cursor_data.TexUvMin[0], cursor_data.TexUvMax[0], 0xFFFFFFFF); // White fill
             g.MouseCursorDrawList.PopTextureID();
-            AddDrawListToRenderList(&g.MouseCursorDrawList);
+            AddDrawListToRenderList(g.RenderDrawLists[0], &g.MouseCursorDrawList);
         }
 
         // Render
-        if (!g.RenderDrawLists.empty())
-            g.IO.RenderDrawListsFn(&g.RenderDrawLists[0], (int)g.RenderDrawLists.size());
-        g.RenderDrawLists.resize(0);
+        if (!g.RenderDrawLists[0].empty())
+            g.IO.RenderDrawListsFn(&g.RenderDrawLists[0][0], (int)g.RenderDrawLists[0].size());
     }
 }
 
