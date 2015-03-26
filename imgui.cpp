@@ -1095,6 +1095,7 @@ struct ImGuiState
     int                     FrameCount;
     int                     FrameCountRendered;
     ImVector<ImGuiWindow*>  Windows;
+    ImVector<ImGuiWindow*>  WindowsSortBuffer;
     ImGuiWindow*            CurrentWindow;                      // Being drawn into
     ImVector<ImGuiWindow*>  CurrentWindowStack;
     ImGuiWindow*            FocusedWindow;                      // Will catch keyboard inputs
@@ -1124,7 +1125,6 @@ struct ImGuiState
 
     // Render
     ImVector<ImDrawList*>   RenderDrawLists;
-    ImVector<ImGuiWindow*>  RenderSortedWindows;
 
     // Mouse cursor
     ImGuiMouseCursor        MouseCursor;
@@ -2034,7 +2034,7 @@ void ImGui::Shutdown()
     g.StyleModifiers.clear();
     g.FontStack.clear();
     g.RenderDrawLists.clear();
-    g.RenderSortedWindows.clear();
+    g.WindowsSortBuffer.clear();
     g.MouseCursorDrawList.ClearFreeMemory();
     g.ColorEditModeStorage.Clear();
     if (g.PrivateClipboard)
@@ -2142,18 +2142,18 @@ void ImGui::Render()
 
         // Sort the window list so that all child windows are after their parent
         // We cannot do that on FocusWindow() because childs may not exist yet
-        g.RenderSortedWindows.resize(0);
-        g.RenderSortedWindows.reserve(g.Windows.size());
+        g.WindowsSortBuffer.resize(0);
+        g.WindowsSortBuffer.reserve(g.Windows.size());
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
             if (window->Flags & ImGuiWindowFlags_ChildWindow)           // if a child is visible its parent will add it
                 if (window->Visible)
                     continue;
-            AddWindowToSortedBuffer(window, g.RenderSortedWindows);
+            AddWindowToSortedBuffer(window, g.WindowsSortBuffer);
         }
-        IM_ASSERT(g.Windows.size() == g.RenderSortedWindows.size());    // we done something wrong
-        g.Windows.swap(g.RenderSortedWindows);
+        IM_ASSERT(g.Windows.size() == g.WindowsSortBuffer.size());    // we done something wrong
+        g.Windows.swap(g.WindowsSortBuffer);
 
         // Clear data for next frame
         g.IO.MouseWheel = 0.0f;
@@ -3311,9 +3311,15 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
         if (window->Flags & ImGuiWindowFlags_Popup)
         {
-            if ((g.IO.MouseClicked[0] && (!g.HoveredWindow || g.HoveredWindow->RootWindow != window)) || (!g.FocusedWindow || g.FocusedWindow->RootWindow != window))
-                if (p_opened)
+            if (p_opened)
+            {
+                if (g.IO.MouseClicked[0] && (!g.HoveredWindow || g.HoveredWindow->RootWindow != window))
                     *p_opened = false;
+                else if (!g.FocusedWindow)
+                    *p_opened = false;
+                else if (g.FocusedWindow->RootWindow != window)// && !(g.FocusedWindow->RootWindow->Flags & ImGuiWindowFlags_Tooltip))
+                    *p_opened = false;
+            }
         }
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
