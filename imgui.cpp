@@ -2097,6 +2097,8 @@ static void PushClipRect(const ImVec4& clip_rect, bool clipped = true)
         const ImVec4 cur_cr = window->ClipRectStack.back();
         cr = ImVec4(ImMax(cr.x, cur_cr.x), ImMax(cr.y, cur_cr.y), ImMin(cr.z, cur_cr.z), ImMin(cr.w, cur_cr.w));
     }
+    cr.z = ImMax(cr.x, cr.z);
+    cr.w = ImMax(cr.y, cr.w);
 
     IM_ASSERT(cr.x <= cr.z && cr.y <= cr.w);
     window->ClipRectStack.push_back(cr);
@@ -3301,8 +3303,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     ImVec4 clip_rect(title_bar_rect.Min.x+0.5f+window->WindowPadding().x*0.5f, title_bar_rect.Max.y+0.5f, window->Rect().Max.x+0.5f-window->WindowPadding().x*0.5f, window->Rect().Max.y-1.5f);
     if (window->ScrollbarY)
         clip_rect.z -= style.ScrollbarWidth;
-    clip_rect.z = ImMax(clip_rect.x, clip_rect.z);
-    clip_rect.w = ImMax(clip_rect.y, clip_rect.w);
     PushClipRect(clip_rect);
 
     // Clear 'accessed' flag last thing
