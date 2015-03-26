@@ -3155,6 +3155,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         else
         {
             size_auto_fit = ImClamp(window->SizeContents + style.AutoFitPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding));
+            if (size_auto_fit.y < window->SizeContents.y + style.AutoFitPadding.y)
+                size_auto_fit.x += style.ScrollbarWidth;
         }
 
         const float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
@@ -9436,7 +9438,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 static bool selected[3] = { false, true, false };
                 ImGui::Selectable("1. I am selectable", &selected[0]);
                 ImGui::Selectable("2. I am selectable", &selected[1]);
-                ImGui::Text("3. I am normal text");
+                ImGui::Text("3. I am not selectable");
                 ImGui::Selectable("4. I am selectable", &selected[2]);
                 ImGui::TreePop();
             }
