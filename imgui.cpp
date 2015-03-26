@@ -9473,7 +9473,7 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             static bool popup_open = false;
             static int selected_fish = -1;
-            const char* fishes[] = { "Bream", "Mackerel", "Pollock", "Tilefish" };
+            const char* fishes[] = { "Bream", "Haddock", "Mackerel", "Pollock", "Tilefish" };
             if (ImGui::Button("Select.."))
                 popup_open = true;
             ImGui::SameLine();
@@ -9481,6 +9481,8 @@ void ImGui::ShowTestWindow(bool* opened)
             if (popup_open)
             {
                 ImGui::BeginPopup(&popup_open);
+                ImGui::Text("Aquarium");
+                ImGui::Separator();
                 for (size_t i = 0; i < IM_ARRAYSIZE(fishes); i++)
                 {
                     if (ImGui::Selectable(fishes[i], false))
