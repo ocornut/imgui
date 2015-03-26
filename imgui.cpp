@@ -7555,10 +7555,10 @@ void ImDrawList::AddVtxUV(const ImVec2& pos, ImU32 col, const ImVec2& uv)
 }
 
 // NB: memory should be reserved for 6 vertices by the caller.
-void ImDrawList::AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col, float half_thickness)
+void ImDrawList::AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness)
 {
     const float inv_length = 1.0f / sqrtf(ImLengthSqr(b - a));
-    const ImVec2 hn = (b - a) * (half_thickness * inv_length);  // half normal
+    const ImVec2 hn = (b - a) * (thickness * 0.5f * inv_length);// half normal
     const ImVec2 hp0 = ImVec2(+hn.y, -hn.x);                    // half perpendiculars + user offset
     const ImVec2 hp1 = ImVec2(-hn.y, +hn.x);
 
@@ -7571,13 +7571,13 @@ void ImDrawList::AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col, float h
     AddVtx(a + hp1, col);
 }
 
-void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float half_thickness)
+void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness)
 {
     if ((col >> 24) == 0)
         return;
 
     ReserveVertices(6);
-    AddVtxLine(a, b, col, half_thickness);
+    AddVtxLine(a, b, col, thickness);
 }
 
 void ImDrawList::AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, int a_max, bool tris, const ImVec2& third_point_offset)
@@ -9715,7 +9715,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 // Draw a line between the button and the mouse cursor
                 ImDrawList* draw_list = ImGui::GetWindowDrawList();
                 draw_list->PushClipRectFullScreen();
-                draw_list->AddLine(ImGui::CalcItemRectClosestPoint(ImGui::GetIO().MousePos, true, -2.0f), ImGui::GetIO().MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]), 2.0f);
+                draw_list->AddLine(ImGui::CalcItemRectClosestPoint(ImGui::GetIO().MousePos, true, -2.0f), ImGui::GetIO().MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]), 4.0f);
                 draw_list->PopClipRect();
             }
             ImGui::SameLine(); ImGui::Text("Raw (%.1f, %.1f), WithLockThresold (%.1f, %.1f)", value_raw.x, value_raw.y, value_with_lock_threshold.x, value_with_lock_threshold.y);
