@@ -45,7 +45,7 @@ typedef int ImGuiKey;               // enum ImGuiKey_
 typedef int ImGuiColorEditMode;     // enum ImGuiColorEditMode_
 typedef int ImGuiMouseCursor;       // enum ImGuiMouseCursor_
 typedef int ImGuiWindowFlags;       // enum ImGuiWindowFlags_
-typedef int ImGuiSetCond;           // enum ImGuiSetCondition_
+typedef int ImGuiSetCond;           // enum ImGuiSetCond_
 typedef int ImGuiInputTextFlags;    // enum ImGuiInputTextFlags_
 struct ImGuiTextEditCallbackData;   // for advanced uses of InputText() 
 typedef int (*ImGuiTextEditCallback)(ImGuiTextEditCallbackData *data);

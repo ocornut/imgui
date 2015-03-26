@@ -2098,6 +2098,7 @@ static void PushClipRect(const ImVec4& clip_rect, bool clipped = true)
         cr = ImVec4(ImMax(cr.x, cur_cr.x), ImMax(cr.y, cur_cr.y), ImMin(cr.z, cur_cr.z), ImMin(cr.w, cur_cr.w));
     }
 
+    IM_ASSERT(cr.x <= cr.z && cr.y <= cr.w);
     window->ClipRectStack.push_back(cr);
     window->DrawList->PushClipRect(cr);
 }
@@ -3295,10 +3296,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
     // Inner clipping rectangle
     // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
+    // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
     const ImRect title_bar_rect = window->TitleBarRect();
     ImVec4 clip_rect(title_bar_rect.Min.x+0.5f+window->WindowPadding().x*0.5f, title_bar_rect.Max.y+0.5f, window->Rect().Max.x+0.5f-window->WindowPadding().x*0.5f, window->Rect().Max.y-1.5f);
     if (window->ScrollbarY)
         clip_rect.z -= style.ScrollbarWidth;
+    clip_rect.z = ImMax(clip_rect.x, clip_rect.z);
+    clip_rect.w = ImMax(clip_rect.y, clip_rect.w);
     PushClipRect(clip_rect);
 
     // Clear 'accessed' flag last thing
@@ -7360,6 +7364,8 @@ void ImDrawList::AddDrawCmd()
     draw_cmd.texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
     draw_cmd.user_callback = NULL;
     draw_cmd.user_callback_data = NULL;
+
+    IM_ASSERT(draw_cmd.clip_rect.x <= draw_cmd.clip_rect.z && draw_cmd.clip_rect.y <= draw_cmd.clip_rect.w);
     commands.push_back(draw_cmd);
 }
 
