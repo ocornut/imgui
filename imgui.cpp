@@ -9396,6 +9396,38 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
+        /*
+        if (ImGui::TreeNode("Popup Menu"))
+        {
+            static bool popup_open = false;
+            static int selected_fish = -1;
+            const char* fishes[] = { "Bream", "Mackerel", "Pollock", "Tilefish" };
+            if (ImGui::Button("Select.."))
+            {
+                popup_open = true;
+                ImGui::SetNextWindowPos(ImGui::GetMousePos());
+            }
+            ImGui::SameLine();
+            ImGui::Text(selected_fish == -1 ? "<None>" : fishes[selected_fish]);
+            if (popup_open)
+            {
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+                ImGui::Begin("##Popup", &popup_open, ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize);
+                if (!ImGui::IsWindowFocused())
+                    popup_open = false;
+                for (size_t i = 0; i < IM_ARRAYSIZE(fishes); i++)
+                    if (ImGui::Selectable(fishes[i], false))
+                    {
+                        selected_fish = i;
+                        popup_open = false;
+                    }
+                ImGui::End();
+                ImGui::PopStyleVar();
+            }
+            ImGui::TreePop();
+        }
+        */
+
         if (ImGui::TreeNode("Filtered Text Input"))
         {
             static char buf1[64] = ""; ImGui::InputText("default", buf1, 64);
