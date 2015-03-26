@@ -4238,6 +4238,17 @@ void ImGui::LabelText(const char* label, const char* fmt, ...)
     va_end(args);
 }
 
+static inline bool IsWindowContentHoverable(ImGuiWindow* window)
+{
+    ImGuiState& g = *GImGui;
+
+    ImGuiWindow* focused_window = g.FocusedWindow;
+    if (focused_window && (focused_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_window->WasVisible && focused_window != window)
+        return false;
+
+    return true;
+}
+
 static bool IsHovered(const ImRect& bb, ImGuiID id)
 {
     ImGuiState& g = *GImGui;
@@ -4247,12 +4258,8 @@ static bool IsHovered(const ImRect& bb, ImGuiID id)
         if (g.HoveredRootWindow == window->RootWindow)
         {
             if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && IsMouseHoveringRect(bb))
-            {
-                if (g.FocusedWindow == g.HoveredRootWindow || !((g.FocusedWindow->Flags & ImGuiWindowFlags_Popup) != 0 && g.FocusedWindow->WasVisible))
-                {
+                if (IsWindowContentHoverable(g.HoveredRootWindow))
                     return true;
-                }
-            }
         }
     }
     return false;
@@ -7008,7 +7015,7 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
         window->DC.LastItemHoveredRect = true;
         window->DC.LastItemHoveredAndUsable = false;
         if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly || (g.ActiveId == window->MoveID))
-            if (g.FocusedWindow == window || !((g.FocusedWindow->Flags & ImGuiWindowFlags_Popup) != 0 && g.FocusedWindow->WasVisible))
+            if (IsWindowContentHoverable(window))
                 window->DC.LastItemHoveredAndUsable = true;
     }
     else
