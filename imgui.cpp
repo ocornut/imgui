@@ -1221,6 +1221,7 @@ struct ImGuiWindow
     float                   NextScrollY;
     bool                    ScrollbarY;
     bool                    Visible;                            // Set to true on Begin()
+    bool                    WasVisible;
     bool                    Accessed;                           // Set to true when any widget access the current window
     bool                    Collapsed;                          // Set when collapsing window to become only title-bar
     bool                    SkipItems;                          // == Visible && !Collapsed
@@ -1562,7 +1563,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     ScrollY = 0.0f;
     NextScrollY = 0.0f;
     ScrollbarY = false;
-    Visible = false;
+    Visible = WasVisible = false;
     Accessed = false;
     Collapsed = false;
     SkipItems = false;
@@ -1990,6 +1991,7 @@ void ImGui::NewFrame()
     for (size_t i = 0; i != g.Windows.size(); i++)
     {
         ImGuiWindow* window = g.Windows[i];
+        window->WasVisible = window->Visible;
         window->Visible = false;
         window->Accessed = false;
     }
@@ -4246,7 +4248,7 @@ static bool IsHovered(const ImRect& bb, ImGuiID id)
         {
             if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && IsMouseHoveringRect(bb))
             {
-                if (!(g.FocusedWindow->Flags & ImGuiWindowFlags_Popup) || g.FocusedWindow == g.HoveredRootWindow)
+                if (g.FocusedWindow == g.HoveredRootWindow || !((g.FocusedWindow->Flags & ImGuiWindowFlags_Popup) != 0 && g.FocusedWindow->WasVisible))
                 {
                     return true;
                 }
@@ -7006,7 +7008,7 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
         window->DC.LastItemHoveredRect = true;
         window->DC.LastItemHoveredAndUsable = false;
         if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly || (g.ActiveId == window->MoveID))
-            if (!(g.FocusedWindow->Flags & ImGuiWindowFlags_Popup) || g.FocusedWindow == window)
+            if (g.FocusedWindow == window || !((g.FocusedWindow->Flags & ImGuiWindowFlags_Popup) != 0 && g.FocusedWindow->WasVisible))
                 window->DC.LastItemHoveredAndUsable = true;
     }
     else
