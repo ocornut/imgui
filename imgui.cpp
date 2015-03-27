@@ -2915,7 +2915,12 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
         window->Size = window->SizeFull = size;
     }
 
-    if (ImLengthSqr(window->Size) < 0.00001f)
+    if ((flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
+    {
+        window->AutoFitFrames = 2;
+        window->AutoFitOnlyGrows = false;
+    }
+    else if (ImLengthSqr(window->Size) < 0.00001f)
     {
         window->AutoFitFrames = 2;
         window->AutoFitOnlyGrows = true;
