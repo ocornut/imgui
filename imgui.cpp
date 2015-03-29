@@ -1088,7 +1088,8 @@ struct ImGuiState
     ImGuiIO                 IO;
     ImGuiStyle              Style;
     ImFont*                 Font;                               // (Shortcut) == FontStack.empty() ? IO.Font : FontStack.back()
-    float                   FontSize;                           // (Shortcut) == IO.FontGlobalScale * Font->Scale * Font->FontSize. Size of characters.
+    float                   FontSize;                           // (Shortcut) == FontBaseSize * g.CurrentWindow->FontWindowScale == window->FontSize()
+    float                   FontBaseSize;                       // (Shortcut) == IO.FontGlobalScale * Font->Scale * Font->FontSize. Size of characters.
     ImVec2                  FontTexUvWhitePixel;                // (Shortcut) == Font->TexUvForWhite
 
     float                   Time;
@@ -1157,7 +1158,7 @@ struct ImGuiState
     {
         Initialized = false;
         Font = NULL;
-        FontSize = 0.0f;
+        FontBaseSize = FontSize = 0.0f;
         FontTexUvWhitePixel = ImVec2(0.0f, 0.0f);
 
         Time = 0.0f;
@@ -1261,10 +1262,8 @@ public:
     void        FocusItemUnregister();
 
     ImRect      Rect() const                            { return ImRect(Pos, Pos+Size); }
-    ImFont*     Font() const                            { return GImGui->Font; }
-    float       FontSize() const                        { return GImGui->FontSize * FontWindowScale; }
-    ImVec2      CursorPos() const                       { return DC.CursorPos; }
-    float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0 : FontSize() + GImGui->Style.FramePadding.y * 2.0f; }
+    float       CalcFontSize() const                    { return GImGui->FontBaseSize * FontWindowScale; }
+    float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0 : CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f; }
     ImRect      TitleBarRect() const                    { return ImRect(Pos, Pos + ImVec2(SizeFull.x, TitleBarHeight())); }
     ImVec2      WindowPadding() const                   { return ((Flags & ImGuiWindowFlags_ChildWindow) && !(Flags & ImGuiWindowFlags_ShowBorders)) ? ImVec2(0,0) : GImGui->Style.WindowPadding; }
     ImU32       Color(ImGuiCol idx, float a=1.f) const  { ImVec4 c = GImGui->Style.Colors[idx]; c.w *= GImGui->Style.Alpha * a; return ImGui::ColorConvertFloat4ToU32(c); }
@@ -1277,6 +1276,14 @@ static inline ImGuiWindow* GetCurrentWindow()
     ImGuiState& g = *GImGui;
     g.CurrentWindow->Accessed = true;
     return g.CurrentWindow;
+}
+
+static inline void SetCurrentWindow(ImGuiWindow* window)
+{
+    ImGuiState& g = *GImGui;
+    g.CurrentWindow = window;
+    if (window)
+        g.FontSize = window->CalcFontSize();
 }
 
 static inline ImGuiWindow* GetParentWindow()
@@ -1961,6 +1968,7 @@ void ImGui::NewFrame()
                 float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
                 float scale = new_font_scale / window->FontWindowScale;
                 window->FontWindowScale = new_font_scale;
+                g.FontSize = window->CalcFontSize();
 
                 const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
                 window->Pos += offset;
@@ -1975,7 +1983,7 @@ void ImGui::NewFrame()
             if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
             {
                 const int scroll_lines = (window->Flags & ImGuiWindowFlags_ComboBox) ? 3 : 5;
-                window->NextScrollY -= g.IO.MouseWheel * window->FontSize() * scroll_lines;
+                window->NextScrollY -= g.IO.MouseWheel * g.FontSize * scroll_lines;
             }
         }
     }
@@ -2351,7 +2359,7 @@ static void RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
     if (text_len > 0)
     {
         // Render
-        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text_display_end);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_display_end);
 
         // Log as text
         if (g.LogEnabled)
@@ -2371,7 +2379,7 @@ static void RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
     if (text_len > 0)
     {
         // Render
-        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text_end, wrap_width);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end, wrap_width);
 
         // Log as text
         if (g.LogEnabled)
@@ -2395,7 +2403,7 @@ static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end
         const bool need_clipping = (pos.x + text_size.x >= clip_max.x) || (pos.y + text_size.y >= clip_max.y);
 
         // Render
-        window->DrawList->AddText(window->Font(), window->FontSize(), pos, window->Color(ImGuiCol_Text), text, text_display_end, 0.0f, need_clipping ? &clip_max : NULL);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_display_end, 0.0f, need_clipping ? &clip_max : NULL);
 
         // Log as text
         if (g.LogEnabled)
@@ -2420,9 +2428,10 @@ static void RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
 // Render a triangle to denote expanded/collapsed state
 static void RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale, bool shadow)
 {
+    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    const float h = window->FontSize() * 1.00f;
+    const float h = g.FontSize * 1.00f;
     const float r = h * 0.40f * scale;
     ImVec2 center = p_min + ImVec2(h*0.50f, h*0.50f*scale);
 
@@ -2450,7 +2459,7 @@ static void RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale, bool 
 // CalcTextSize("") should return ImVec2(0.0f, GImGui->FontSize)
 ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_text_after_double_hash, float wrap_width)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiState& g = *GImGui;
 
     const char* text_display_end;
     if (hide_text_after_double_hash)
@@ -2458,8 +2467,8 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
     else
         text_display_end = text_end;
 
-    ImFont* font = window->Font();
-    const float font_size = window->FontSize();
+    ImFont* font = g.Font;
+    const float font_size = g.FontSize;
     ImVec2 text_size = font->CalcTextSizeA(font_size, FLT_MAX, wrap_width, text, text_display_end, NULL);
 
     // Cancel out character spacing for the last character of a line (it is baked into glyph->XAdvance field)
@@ -2963,7 +2972,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
     // Add to stack
     g.CurrentWindowStack.push_back(window);
-    g.CurrentWindow = window;
+    SetCurrentWindow(window);
 
     // Process SetNextWindow***() calls
     bool window_pos_set_by_api = false;
@@ -3331,7 +3340,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             if (!(window->Flags & ImGuiWindowFlags_NoCollapse))
             {
                 RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
-                text_min.x += window->FontSize() + style.ItemInnerSpacing.x;
+                text_min.x += g.FontSize + style.ItemInnerSpacing.x;
             }
 
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
@@ -3418,7 +3427,7 @@ void ImGui::End()
     // Pop
     // NB: we don't clear 'window->RootWindow'. The pointer is allowed to live until the next call to Begin().
     g.CurrentWindowStack.pop_back();
-    g.CurrentWindow = g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back();
+    SetCurrentWindow(g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back());
 }
 
 // Vertical scrollbar
@@ -3549,7 +3558,8 @@ static void SetFont(ImFont* font)
     IM_ASSERT(font && font->IsLoaded());
     IM_ASSERT(font->Scale > 0.0f);
     g.Font = font;
-    g.FontSize = g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale;
+    g.FontBaseSize = g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale;
+    g.FontSize = g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;
     g.FontTexUvWhitePixel = g.Font->ContainerAtlas->TexUvWhitePixel;
 }
 
@@ -3948,15 +3958,14 @@ ImVec2 ImGui::GetWindowContentRegionMax()
 
 float ImGui::GetTextLineHeight()
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    return window->FontSize();
+    ImGuiState& g = *GImGui;
+    return g.FontSize;
 }
 
 float ImGui::GetTextLineHeightWithSpacing()
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
-    return window->FontSize() + g.Style.ItemSpacing.y;
+    return g.FontSize + g.Style.ItemSpacing.y;
 }
 
 ImDrawList* ImGui::GetWindowDrawList()
@@ -3967,20 +3976,22 @@ ImDrawList* ImGui::GetWindowDrawList()
 
 ImFont* ImGui::GetWindowFont()
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    return window->Font();
+    ImGuiState& g = *GImGui;
+    return g.Font;
 }
 
 float ImGui::GetWindowFontSize()
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    return window->FontSize();
+    ImGuiState& g = *GImGui;
+    return g.FontSize;
 }
 
 void ImGui::SetWindowFontScale(float scale)
 {
+    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     window->FontWindowScale = scale;
+    g.FontSize = window->CalcFontSize();
 }
 
 // NB: internally we store CursorPos in absolute screen coordinates because it is more convenient.
@@ -4235,7 +4246,7 @@ void ImGui::AlignFirstTextHeightToWidgets()
         return;
 
     // Declare a dummy item size to that upcoming items that are smaller will center-align on the newly expanded line height.
-    ItemSize(ImVec2(0, window->FontSize() + g.Style.FramePadding.y*2), g.Style.FramePadding.y);
+    ItemSize(ImVec2(0, g.FontSize + g.Style.FramePadding.y*2), g.Style.FramePadding.y);
     ImGui::SameLine(0, 0);
 }
 
@@ -4697,7 +4708,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     }
 
     // FIXME: we don't provide our width so that it doesn't get feed back into AutoFit. Should manage that better so we can still hover without extending ContentsSize
-    const ImRect text_bb(bb.Min, bb.Min + ImVec2(window->FontSize() + style.FramePadding.x*2*2,0) + label_size);
+    const ImRect text_bb(bb.Min, bb.Min + ImVec2(g.FontSize + style.FramePadding.x*2*2,0) + label_size);
     ItemSize(ImVec2(text_bb.GetSize().x, bb.GetSize().y), display_frame ? style.FramePadding.y : 0.0f);
 
     // When logging is enabled, if automatically expand tree nodes (but *NOT* collapsing headers.. seems like sensible behavior).
@@ -4729,7 +4740,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
             const char log_prefix[] = "\n##";
             LogText(bb.Min + style.FramePadding, log_prefix, log_prefix+3);
         }
-        RenderText(bb.Min + style.FramePadding + ImVec2(window->FontSize() + style.FramePadding.x*2,0), label);
+        RenderText(bb.Min + style.FramePadding + ImVec2(g.FontSize + style.FramePadding.x*2,0), label);
         if (g.LogEnabled)
         {
             const char log_suffix[] = "##";
@@ -4741,10 +4752,10 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
         // Unframed typed for tree nodes
         if ((held && hovered) || hovered)
             RenderFrame(bb.Min, bb.Max, col, false);
-        RenderCollapseTriangle(bb.Min + ImVec2(style.FramePadding.x, window->FontSize()*0.15f), opened, 0.70f, false);
+        RenderCollapseTriangle(bb.Min + ImVec2(style.FramePadding.x, g.FontSize*0.15f), opened, 0.70f, false);
         if (g.LogEnabled)
             LogText(bb.Min, ">");
-        RenderText(bb.Min + ImVec2(window->FontSize() + style.FramePadding.x*2,0), label);
+        RenderText(bb.Min + ImVec2(g.FontSize + style.FramePadding.x*2,0), label);
     }
 
     return opened;
@@ -4758,7 +4769,7 @@ void ImGui::Bullet()
         return;
 
     const ImGuiStyle& style = g.Style;
-    const float line_height = window->FontSize();
+    const float line_height = g.FontSize;
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(line_height, line_height));
     ItemSize(bb);
     if (!ItemAdd(bb, NULL))
@@ -4784,7 +4795,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
     const char* text_end = text_begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
 
     const ImGuiStyle& style = g.Style;
-    const float line_height = window->FontSize();
+    const float line_height = g.FontSize;
     const ImVec2 label_size = CalcTextSize(text_begin, text_end, true);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(line_height + (label_size.x > 0.0f ? (style.FramePadding.x*2) : 0.0f),0) + label_size);  // Empty text doesn't add padding
     ItemSize(bb);
@@ -4794,7 +4805,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
     // Render
     const float bullet_size = line_height*0.15f;
     window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + line_height*0.5f, line_height*0.5f), bullet_size, window->Color(ImGuiCol_Text));
-    RenderText(bb.Min+ImVec2(window->FontSize() + style.FramePadding.x*2,0), text_begin, text_end);
+    RenderText(bb.Min+ImVec2(g.FontSize + style.FramePadding.x*2,0), text_begin, text_end);
 }
 
 void ImGui::BulletText(const char* fmt, ...)
@@ -5856,7 +5867,7 @@ bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast,
 
     ImGui::BeginGroup();
     ImGui::PushID(label);
-    const ImVec2 button_sz = ImVec2(window->FontSize(), window->FontSize()) + style.FramePadding * 2;
+    const ImVec2 button_sz = ImVec2(g.FontSize, g.FontSize) + style.FramePadding * 2;
     if (step > 0.0f)
         ImGui::PushItemWidth(ImMax(1.0f, w - (button_sz.x + style.ItemInnerSpacing.x)*2));
 
@@ -6101,15 +6112,15 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         // Update some data if we are active or last active
         edit_state.Width = w + style.FramePadding.x;
         edit_state.BufSizeA = buf_size;
-        edit_state.Font = window->Font();
-        edit_state.FontSize = window->FontSize();
+        edit_state.Font = g.Font;
+        edit_state.FontSize = g.FontSize;
         edit_state.UpdateScrollOffset();
     }
     if (g.ActiveId == id)
     {
         // Edit in progress
         const float mx = g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x;
-        const float my = window->FontSize()*0.5f;   // Flatten mouse because we are doing a single-line edit
+        const float my = g.FontSize*0.5f;   // Flatten mouse because we are doing a single-line edit
 
         if (select_all || (hovered && io.MouseDoubleClicked[0]))
         {
@@ -6294,8 +6305,8 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
-    const ImVec2 font_off_up = ImVec2(0.0f,window->FontSize()+1.0f);    // FIXME: those offsets are part of the style or font API
-    const ImVec2 font_off_dn = ImVec2(0.0f,2.0f);
+    const ImVec2 font_off_up = ImVec2(0.0f, g.FontSize+1.0f);    // FIXME: those offsets are part of the style or font API
+    const ImVec2 font_off_dn = ImVec2(0.0f, 2.0f);
 
     if (g.ActiveId == id)
     {
@@ -6312,7 +6323,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
 
     //const float render_scroll_x = (g.ActiveId == id) ? edit_state.ScrollX : 0.0f;
     const float render_scroll_x = (edit_state.Id == id) ? edit_state.ScrollX : 0.0f;
-    ImGuiTextEditState::RenderTextScrolledClipped(window->Font(), window->FontSize(), buf, frame_bb.Min + style.FramePadding, w + style.FramePadding.x, render_scroll_x);
+    ImGuiTextEditState::RenderTextScrolledClipped(g.Font, g.FontSize, buf, frame_bb.Min + style.FramePadding, w + style.FramePadding.x, render_scroll_x);
 
     if (g.ActiveId == id)
     {
@@ -6324,7 +6335,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         
         // Notify OS of text input position for advanced IME
         if (io.ImeSetInputScreenPosFn && ImLengthSqr(edit_state.InputCursorScreenPos - cursor_pos) > 0.0001f)
-            io.ImeSetInputScreenPosFn((int)cursor_pos.x - 1, (int)(cursor_pos.y - window->FontSize()));   // -1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.
+            io.ImeSetInputScreenPosFn((int)cursor_pos.x - 1, (int)(cursor_pos.y - g.FontSize));   // -1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.
 
         edit_state.InputCursorScreenPos = cursor_pos;
     }
@@ -6511,7 +6522,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     if (!ItemAdd(total_bb, &id))
         return false;
 
-    const float arrow_size = (window->FontSize() + style.FramePadding.x * 2.0f);
+    const float arrow_size = (g.FontSize + style.FramePadding.x * 2.0f);
     const bool hovered = IsHovered(frame_bb, id);
 
     bool value_changed = false;
@@ -6757,7 +6768,7 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
 
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID("#colorbutton");
-    const float square_size = window->FontSize();
+    const float square_size = g.FontSize;
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(square_size + style.FramePadding.x*2, square_size + (small_height ? 0 : style.FramePadding.y*2)));
     ItemSize(bb, small_height ? 0.0f : style.FramePadding.y);
     if (!ItemAdd(bb, &id))
@@ -6805,7 +6816,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
     const float w_full = ImGui::CalcItemWidth();
-    const float square_sz = (window->FontSize() + style.FramePadding.x * 2.0f);
+    const float square_sz = (g.FontSize + style.FramePadding.x * 2.0f);
 
     ImGuiColorEditMode edit_mode = window->DC.ColorEditMode;
     if (edit_mode == ImGuiColorEditMode_UserSelect || edit_mode == ImGuiColorEditMode_UserSelectShowButton)
