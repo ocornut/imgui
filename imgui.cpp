@@ -9502,7 +9502,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::BeginPopup(&popup_open);
                 ImGui::Text("Aquarium");
                 ImGui::Separator();
-                for (size_t i = 0; i < IM_ARRAYSIZE(fishes); i++)
+                for (int i = 0; i < IM_ARRAYSIZE(fishes); i++)
                 {
                     if (ImGui::Selectable(fishes[i], false))
                     {
