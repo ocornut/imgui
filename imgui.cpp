@@ -1968,7 +1968,6 @@ void ImGui::NewFrame()
                 float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
                 float scale = new_font_scale / window->FontWindowScale;
                 window->FontWindowScale = new_font_scale;
-                g.FontSize = window->CalcFontSize();
 
                 const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
                 window->Pos += offset;
@@ -1983,7 +1982,7 @@ void ImGui::NewFrame()
             if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
             {
                 const int scroll_lines = (window->Flags & ImGuiWindowFlags_ComboBox) ? 3 : 5;
-                window->NextScrollY -= g.IO.MouseWheel * g.FontSize * scroll_lines;
+                window->NextScrollY -= g.IO.MouseWheel * window->CalcFontSize() * scroll_lines;
             }
         }
     }
