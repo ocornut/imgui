@@ -3290,8 +3290,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             // (after the input handling so we don't have a frame of latency)
             if (!(window->Flags & ImGuiWindowFlags_NoResize))
             {
-                const float base_size = window->FontSize() * 1.35f;
-                const float min_size = window_rounding + 1.0f + window->FontSize() * 0.2f;
+                const float base_size = g.FontSize * 1.35f;
+                const float min_size = window_rounding + 1.0f + g.FontSize * 0.2f;
                 const float corner_size = ImMax(base_size, min_size);
                 const ImVec2 br = window->Rect().GetBR();
                 window->DrawList->LineTo(br + ImVec2(-corner_size, 0.0f));
