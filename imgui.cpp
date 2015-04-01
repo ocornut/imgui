@@ -8201,7 +8201,7 @@ void ImFontAtlas::RenderCustomTexData(int pass, void* p_rects)
     ImVector<stbrp_rect>& rects = *(ImVector<stbrp_rect>*)p_rects;
     if (pass == 0)
     {
-        stbrp_rect r; 
+        stbrp_rect r = { 0 };
         r.w = (TEX_DATA_W*2)+1;
         r.h = TEX_DATA_H+1;
         rects.push_back(r);
