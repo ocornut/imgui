@@ -1012,6 +1012,7 @@ struct ImGuiDrawContext
         LastItemID = 0;
         LastItemRect = ImRect(0.0f,0.0f,0.0f,0.0f);
         LastItemHoveredAndUsable = LastItemHoveredRect = false;
+        ColorEditMode = ImGuiColorEditMode_RGB;
         StateStorage = NULL;
 
         ColumnsStartX = 0.0f;
@@ -1191,6 +1192,8 @@ struct ImGuiState
         ScrollbarClickDeltaToGrabCenter = 0.0f;
         memset(Tooltip, 0, sizeof(Tooltip));
         PrivateClipboard = NULL;
+
+        MouseCursor = ImGuiMouseCursor_Arrow;
 
         LogEnabled = false;
         LogFile = NULL;
