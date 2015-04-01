@@ -53,7 +53,7 @@ typedef int (*ImGuiTextEditCallback)(ImGuiTextEditCallbackData *data);
 struct ImVec2
 {
     float x, y;
-    ImVec2() {}
+    ImVec2() { x = y = 0.0f; }
     ImVec2(float _x, float _y) { x = _x; y = _y; }
 
 #ifdef IM_VEC2_CLASS_EXTRA
@@ -64,7 +64,7 @@ struct ImVec2
 struct ImVec4
 {
     float x, y, z, w;
-    ImVec4() {}
+    ImVec4() { x = y = z = w = 0.0f; }
     ImVec4(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
 
 #ifdef IM_VEC4_CLASS_EXTRA
