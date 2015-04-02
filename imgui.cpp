@@ -3450,7 +3450,7 @@ static void Scrollbar(ImGuiWindow* window)
 
     // The grabable box size generally represent the amount visible (vs the total scrollable amount)
     // But we maintain a minimum size in pixel to allow for the user to still aim inside.
-    const float grab_h_pixels = ImMax(style.GrabMinSize, scrollbar_height * ImSaturate(window->Size.y / ImMax(window->SizeContents.y, window->Size.y)));
+    const float grab_h_pixels = ImMin(ImMax(scrollbar_height * ImSaturate(window->Size.y / ImMax(window->SizeContents.y, window->Size.y)), style.GrabMinSize), scrollbar_height);
     const float grab_h_norm = grab_h_pixels / scrollbar_height;
 
     // Handle input right away. None of the code of Begin() is relying on scrolling position before calling Scrollbar().
@@ -5046,9 +5046,9 @@ static bool SliderBehavior(const ImRect& frame_bb, const ImRect& slider_bb, ImGu
     const float slider_sz = horizontal ? slider_bb.GetWidth() : slider_bb.GetHeight();
     float grab_sz;
     if (decimal_precision > 0 || !is_finite)
-        grab_sz = style.GrabMinSize;
+        grab_sz = ImMin(style.GrabMinSize, slider_sz);
     else
-        grab_sz = ImMax(1.0f * (slider_sz / (v_max-v_min+1.0f)), style.GrabMinSize);    // Integer sliders, if possible have the grab size represent 1 unit
+        grab_sz = ImMin(ImMax(1.0f * (slider_sz / (v_max-v_min+1.0f)), style.GrabMinSize), slider_sz);  // Integer sliders, if possible have the grab size represent 1 unit
     const float slider_usable_sz = slider_sz - grab_sz;
     const float slider_usable_pos_min = (horizontal ? slider_bb.Min.x : slider_bb.Min.y) + grab_sz*0.5f;
     const float slider_usable_pos_max = (horizontal ? slider_bb.Max.x : slider_bb.Max.y) - grab_sz*0.5f;
@@ -5191,7 +5191,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
 
-    // NB- we don't call ItemSize() yet becausae we may turn into a text edit box below
+    // NB- we don't call ItemSize() yet because we may turn into a text edit box below
     if (!ItemAdd(total_bb, &id))
     {
         ItemSize(total_bb, style.FramePadding.y);
