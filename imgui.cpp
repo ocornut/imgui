@@ -3408,7 +3408,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->Visible = false;
 
     // Return false if we don't intend to display anything to allow user to perform an early out optimization
-    window->SkipItems = (window->Collapsed || !window->Visible) && window->AutoFitFrames == 0;
+    window->SkipItems = (window->Collapsed || !window->Visible) && window->AutoFitFrames <= 0;
     return !window->SkipItems;
 }
 
