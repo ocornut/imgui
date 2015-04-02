@@ -998,7 +998,7 @@ struct ImFont
 
     // Methods
     IMGUI_API ImFont();
-    IMGUI_API ~ImFont() { Clear(); }
+    IMGUI_API ~ImFont();
     IMGUI_API void                  Clear();
     IMGUI_API void                  BuildLookupTable();
     IMGUI_API const Glyph*          FindGlyph(unsigned short c) const;

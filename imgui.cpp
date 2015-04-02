@@ -8264,6 +8264,16 @@ ImFont::ImFont()
     Clear();
 }
 
+ImFont::~ImFont()
+{
+    // Invalidate active font so that the user gets a clear crash instead of a dangling pointer.
+    // If you want to delete fonts you need to do it between Render() and NewFrame().
+    ImGuiState& g = *GImGui;
+    if (g.Font == this)
+        g.Font = NULL;
+    Clear();
+}
+
 void    ImFont::Clear()
 {
     FontSize = 0.0f;
