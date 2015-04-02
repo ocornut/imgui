@@ -5230,15 +5230,16 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     ItemSize(total_bb, style.FramePadding.y);
 
     // Actual slider behavior + render grab
-    bool value_changed = SliderBehavior(frame_bb, inner_bb, id, v, v_min, v_max, power, decimal_precision, true);
+    const bool value_changed = SliderBehavior(frame_bb, inner_bb, id, v, v_min, v_max, power, decimal_precision, true);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
-    char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), display_format, *v);
+    const char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), display_format, *v);
     const ImVec2 value_text_size = CalcTextSize(value_buf, value_buf_end, true);
     RenderTextClipped(ImVec2(ImMax(frame_bb.Min.x + style.FramePadding.x, inner_bb.GetCenter().x - value_text_size.x*0.5f), frame_bb.Min.y + style.FramePadding.y), value_buf, value_buf_end, &value_text_size, frame_bb.Max);
 
-    RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
+    if (label_size.x > 0.0f)
+        RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
 
     return value_changed;
 }
