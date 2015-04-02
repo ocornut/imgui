@@ -1135,7 +1135,7 @@ struct ImGuiState
 
     // Widget state
     ImGuiTextEditState      InputTextState;
-    ImGuiID                 SliderAsInputTextId;
+    ImGuiID                 ScalarAsInputTextId;                // Temporary text input when CTRL+clicking on a slider, etc.
     ImGuiStorage            ColorEditModeStorage;               // for user selection
     ImGuiID                 ActiveComboID;
     float                   ScrollbarClickDeltaToGrabCenter;    // distance between mouse and center of grab box, normalized in parent space
@@ -1187,7 +1187,7 @@ struct ImGuiState
         SetNextTreeNodeOpenedVal = false;
         SetNextTreeNodeOpenedCond = 0;
 
-        SliderAsInputTextId = 0;
+        ScalarAsInputTextId = 0;
         ActiveComboID = 0;
         ScrollbarClickDeltaToGrabCenter = 0.0f;
         memset(Tooltip, 0, sizeof(Tooltip));
@@ -4986,24 +4986,24 @@ static bool SliderFloatAsInputText(const char* label, float* v, ImGuiID id, int 
     char text_buf[64];
     ImFormatString(text_buf, IM_ARRAYSIZE(text_buf), "%.*f", decimal_precision, *v);
 
-    SetActiveId(g.SliderAsInputTextId);
+    SetActiveId(g.ScalarAsInputTextId);
     g.HoveredId = 0;
 
     // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
     window->FocusItemUnregister();
 
     bool value_changed = ImGui::InputText(label, text_buf, IM_ARRAYSIZE(text_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
-    if (g.SliderAsInputTextId == 0)
+    if (g.ScalarAsInputTextId == 0)
     {
         // First frame
         IM_ASSERT(g.ActiveId == id);    // InputText ID expected to match the Slider ID (else we'd need to store them both, which is also possible)
-        g.SliderAsInputTextId = g.ActiveId;
+        g.ScalarAsInputTextId = g.ActiveId;
         g.HoveredId = id;
     }
-    else if (g.ActiveId != g.SliderAsInputTextId)
+    else if (g.ActiveId != g.ScalarAsInputTextId)
     {
         // Release
-        g.SliderAsInputTextId = 0;
+        g.ScalarAsInputTextId = 0;
     }
     if (value_changed)
     {
@@ -5221,10 +5221,10 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         if (tab_focus_requested || is_ctrl_down || !is_finite)
         {
             start_text_input = true;
-            g.SliderAsInputTextId = 0;
+            g.ScalarAsInputTextId = 0;
         }
     }
-    if (start_text_input || (g.ActiveId == id && id == g.SliderAsInputTextId))
+    if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
         return SliderFloatAsInputText(label, v, id, decimal_precision);
 
     ItemSize(total_bb, style.FramePadding.y);
