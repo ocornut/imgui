@@ -9728,6 +9728,18 @@ void ImGui::ShowTestWindow(bool* opened)
         }
 
         {
+            static int i1=50;
+            static int i2=42;
+            ImGui::DragInt("drag int", &i1, 1);
+            ImGui::DragInt("drag int 0..100", &i2, 1, 0, 100);
+
+            static float f1=1.00f;
+            static float f2=0.0067f;
+            ImGui::DragFloat("drag float", &f1, 1.0f);
+            ImGui::DragFloat("drag small float", &f2, 0.0001f, 0.0f, 0.0f, "%.06f");
+        }
+
+        {
             static int i1=0;
             static int i2=42;
             ImGui::SliderInt("slider int 0..3", &i1, 0, 3);
