@@ -136,6 +136,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
  - 2015/04/03 (1.38) - removed ImGuiCol_CheckHovered, ImGuiCol_CheckActive, replaced with the more general ImGuiCol_FrameBgHovered, ImGuiCol_FrameBgActive.
+ - 2014/04/03 (1.38) - removed support for passing -FLT_MAX..+FLT_MAX as the range for a SliderFloat(). Use DragFloat() or Inputfloat() instead.
  - 2015/03/17 (1.36) - renamed GetItemRectMin()/GetItemRectMax()/IsMouseHoveringBox() to GetItemRectMin()/GetItemRectMax()/IsMouseHoveringRect(). Kept inline redirection function (will obsolete).
  - 2015/03/15 (1.36) - renamed style.TreeNodeSpacing to style.IndentSpacing, ImGuiStyleVar_TreeNodeSpacing to ImGuiStyleVar_IndentSpacing
  - 2015/03/13 (1.36) - renamed GetWindowIsFocused() to IsWindowFocused(). Kept inline redirection function (will obsolete).
@@ -5049,12 +5050,11 @@ static bool SliderBehavior(const ImRect& frame_bb, const ImRect& slider_bb, ImGu
     // Draw frame
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
-    const bool is_finite = (v_min != -FLT_MAX && v_min != FLT_MAX && v_max != -FLT_MAX && v_max != FLT_MAX);
     const bool is_non_linear = fabsf(power - 1.0f) > 0.0001f;
 
     const float slider_sz = horizontal ? slider_bb.GetWidth() : slider_bb.GetHeight();
     float grab_sz;
-    if (decimal_precision > 0 || !is_finite)
+    if (decimal_precision > 0)
         grab_sz = ImMin(style.GrabMinSize, slider_sz);
     else
         grab_sz = ImMin(ImMax(1.0f * (slider_sz / (v_max-v_min+1.0f)), style.GrabMinSize), slider_sz);  // Integer sliders, if possible have the grab size represent 1 unit
@@ -5064,117 +5064,114 @@ static bool SliderBehavior(const ImRect& frame_bb, const ImRect& slider_bb, ImGu
 
     bool value_changed = false;
 
-    if (is_finite)
+    // For logarithmic sliders that cross over sign boundary we want the exponential increase to be symmetric around 0.0f
+    float linear_zero_pos = 0.0f;   // 0.0->1.0f
+    if (v_min * v_max < 0.0f)
     {
-        // For logarithmic sliders that cross over sign boundary we want the exponential increase to be symmetric around 0.0f
-        float linear_zero_pos = 0.0f;   // 0.0->1.0f
-        if (v_min * v_max < 0.0f)
-        {
-            // Different sign
-            const float linear_dist_min_to_0 = powf(fabsf(0.0f - v_min), 1.0f/power);
-            const float linear_dist_max_to_0 = powf(fabsf(v_max - 0.0f), 1.0f/power);
-            linear_zero_pos = linear_dist_min_to_0 / (linear_dist_min_to_0+linear_dist_max_to_0);
-        }
-        else
-        {
-            // Same sign
-            linear_zero_pos = v_min < 0.0f ? 1.0f : 0.0f;
-        }
-
-        // Process clicking on the slider
-        if (g.ActiveId == id)
-        {
-            if (g.IO.MouseDown[0])
-            {
-                const float mouse_abs_pos = horizontal ? g.IO.MousePos.x : g.IO.MousePos.y;
-                float normalized_pos = ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f);
-                if (!horizontal)
-                    normalized_pos = 1.0f - normalized_pos;
-
-                float new_value;
-                if (is_non_linear)
-                {
-                    // Account for logarithmic scale on both sides of the zero
-                    if (normalized_pos < linear_zero_pos)
-                    {
-                        // Negative: rescale to the negative range before powering
-                        float a = 1.0f - (normalized_pos / linear_zero_pos);
-                        a = powf(a, power);
-                        new_value = ImLerp(ImMin(v_max,0.f), v_min, a);
-                    }
-                    else
-                    {
-                        // Positive: rescale to the positive range before powering
-                        float a;
-                        if (fabsf(linear_zero_pos - 1.0f) > 1.e-6)
-                            a = (normalized_pos - linear_zero_pos) / (1.0f - linear_zero_pos);
-                        else
-                            a = normalized_pos;
-                        a = powf(a, power);
-                        new_value = ImLerp(ImMax(v_min,0.0f), v_max, a);
-                    }
-                }
-                else
-                {
-                    // Linear slider
-                    new_value = ImLerp(v_min, v_max, normalized_pos);
-                }
-
-                // Round past decimal precision
-                //    0->1, 1->0.1, 2->0.01, etc.
-                // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
-                const float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
-                const float remainder = fmodf(new_value, min_step);
-                if (remainder <= min_step*0.5f)
-                    new_value -= remainder;
-                else
-                    new_value += (min_step - remainder);
-
-                if (*v != new_value)
-                {
-                    *v = new_value;
-                    value_changed = true;
-                }
-            }
-            else
-            {
-                SetActiveId(0);
-            }
-        }
-
-        // Calculate slider grab positioning
-        float grab_t;
-        if (is_non_linear)
-        {
-            float v_clamped = ImClamp(*v, v_min, v_max);
-            if (v_clamped < 0.0f)
-            {
-                const float f = 1.0f - (v_clamped - v_min) / (ImMin(0.0f,v_max) - v_min);
-                grab_t = (1.0f - powf(f, 1.0f/power)) * linear_zero_pos;
-            }
-            else
-            {
-                const float f = (v_clamped - ImMax(0.0f,v_min)) / (v_max - ImMax(0.0f,v_min));
-                grab_t = linear_zero_pos + powf(f, 1.0f/power) * (1.0f - linear_zero_pos);
-            }
-        }
-        else
-        {
-            // Linear slider
-            grab_t = (ImClamp(*v, v_min, v_max) - v_min) / (v_max - v_min);
-        }
-
-        // Draw
-        if (!horizontal)
-            grab_t = 1.0f - grab_t;
-        const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
-        ImRect grab_bb;
-        if (horizontal)
-            grab_bb = ImRect(ImVec2(grab_pos - grab_sz*0.5f, frame_bb.Min.y + 2.0f), ImVec2(grab_pos + grab_sz*0.5f, frame_bb.Max.y - 2.0f));
-        else
-            grab_bb = ImRect(ImVec2(frame_bb.Min.x + 2.0f, grab_pos - grab_sz*0.5f), ImVec2(frame_bb.Max.x - 2.0f, grab_pos + grab_sz*0.5f));
-        window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, window->Color(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab));
+        // Different sign
+        const float linear_dist_min_to_0 = powf(fabsf(0.0f - v_min), 1.0f/power);
+        const float linear_dist_max_to_0 = powf(fabsf(v_max - 0.0f), 1.0f/power);
+        linear_zero_pos = linear_dist_min_to_0 / (linear_dist_min_to_0+linear_dist_max_to_0);
     }
+    else
+    {
+        // Same sign
+        linear_zero_pos = v_min < 0.0f ? 1.0f : 0.0f;
+    }
+
+    // Process clicking on the slider
+    if (g.ActiveId == id)
+    {
+        if (g.IO.MouseDown[0])
+        {
+            const float mouse_abs_pos = horizontal ? g.IO.MousePos.x : g.IO.MousePos.y;
+            float normalized_pos = ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f);
+            if (!horizontal)
+                normalized_pos = 1.0f - normalized_pos;
+
+            float new_value;
+            if (is_non_linear)
+            {
+                // Account for logarithmic scale on both sides of the zero
+                if (normalized_pos < linear_zero_pos)
+                {
+                    // Negative: rescale to the negative range before powering
+                    float a = 1.0f - (normalized_pos / linear_zero_pos);
+                    a = powf(a, power);
+                    new_value = ImLerp(ImMin(v_max,0.f), v_min, a);
+                }
+                else
+                {
+                    // Positive: rescale to the positive range before powering
+                    float a;
+                    if (fabsf(linear_zero_pos - 1.0f) > 1.e-6)
+                        a = (normalized_pos - linear_zero_pos) / (1.0f - linear_zero_pos);
+                    else
+                        a = normalized_pos;
+                    a = powf(a, power);
+                    new_value = ImLerp(ImMax(v_min,0.0f), v_max, a);
+                }
+            }
+            else
+            {
+                // Linear slider
+                new_value = ImLerp(v_min, v_max, normalized_pos);
+            }
+
+            // Round past decimal precision
+            //    0->1, 1->0.1, 2->0.01, etc.
+            // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
+            const float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
+            const float remainder = fmodf(new_value, min_step);
+            if (remainder <= min_step*0.5f)
+                new_value -= remainder;
+            else
+                new_value += (min_step - remainder);
+
+            if (*v != new_value)
+            {
+                *v = new_value;
+                value_changed = true;
+            }
+        }
+        else
+        {
+            SetActiveId(0);
+        }
+    }
+
+    // Calculate slider grab positioning
+    float grab_t;
+    if (is_non_linear)
+    {
+        float v_clamped = ImClamp(*v, v_min, v_max);
+        if (v_clamped < 0.0f)
+        {
+            const float f = 1.0f - (v_clamped - v_min) / (ImMin(0.0f,v_max) - v_min);
+            grab_t = (1.0f - powf(f, 1.0f/power)) * linear_zero_pos;
+        }
+        else
+        {
+            const float f = (v_clamped - ImMax(0.0f,v_min)) / (v_max - ImMax(0.0f,v_min));
+            grab_t = linear_zero_pos + powf(f, 1.0f/power) * (1.0f - linear_zero_pos);
+        }
+    }
+    else
+    {
+        // Linear slider
+        grab_t = (ImClamp(*v, v_min, v_max) - v_min) / (v_max - v_min);
+    }
+
+    // Draw
+    if (!horizontal)
+        grab_t = 1.0f - grab_t;
+    const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
+    ImRect grab_bb;
+    if (horizontal)
+        grab_bb = ImRect(ImVec2(grab_pos - grab_sz*0.5f, frame_bb.Min.y + 2.0f), ImVec2(grab_pos + grab_sz*0.5f, frame_bb.Max.y - 2.0f));
+    else
+        grab_bb = ImRect(ImVec2(frame_bb.Min.x + 2.0f, grab_pos - grab_sz*0.5f), ImVec2(frame_bb.Max.x - 2.0f, grab_pos + grab_sz*0.5f));
+    window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, window->Color(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab));
 
     return value_changed;
 }
@@ -5216,8 +5213,6 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     int decimal_precision = 3;
     ParseFormat(display_format, decimal_precision);
 
-    const bool is_finite = (v_min != -FLT_MAX && v_min != FLT_MAX && v_max != -FLT_MAX && v_max != FLT_MAX);
-
     // Tabbing or CTRL-clicking on Slider turns it into an input box
     bool start_text_input = false;
     const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id);
@@ -5227,7 +5222,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         FocusWindow(window);
 
         const bool is_ctrl_down = g.IO.KeyCtrl;
-        if (tab_focus_requested || is_ctrl_down || !is_finite)
+        if (tab_focus_requested || is_ctrl_down)
         {
             start_text_input = true;
             g.ScalarAsInputTextId = 0;
@@ -6685,7 +6680,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
 
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
-
+    
     ImGui::PushID((int)id);
     bool menu_toggled = false;
     if (hovered)
@@ -9729,31 +9724,32 @@ void ImGui::ShowTestWindow(bool* opened)
         static int item2 = -1;
         ImGui::Combo("combo scroll", &item2, items, IM_ARRAYSIZE(items));
 
-        static char str0[128] = "Hello, world!";
-        static int i0=123;
-        static float f0=0.001f;
-        ImGui::InputText("input text", str0, IM_ARRAYSIZE(str0));
-        ImGui::InputInt("input int", &i0);
-        ImGui::InputFloat("input float", &f0, 0.01f, 1.0f);
+        {
+            static char str0[128] = "Hello, world!";
+            static int i0=123;
+            static float f0=0.001f;
+            ImGui::InputText("input text", str0, IM_ARRAYSIZE(str0));
+            ImGui::InputInt("input int", &i0);
+            ImGui::InputFloat("input float", &f0, 0.01f, 1.0f);
 
-        static float vec4a[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
-        //ImGui::InputFloat2("input float2", vec4a);
-        ImGui::InputFloat3("input float3", vec4a);
-        //ImGui::InputFloat4("input float4", vec4a);
+            static float vec4a[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+            ImGui::InputFloat3("input float3", vec4a);
+        }
 
-        static int i1=0;
-        static int i2=42;
-        ImGui::SliderInt("slider int 0..3", &i1, 0, 3);
-        ImGui::SliderInt("slider int -100..100", &i2, -100, 100);
+        {
+            static int i1=0;
+            static int i2=42;
+            ImGui::SliderInt("slider int 0..3", &i1, 0, 3);
+            ImGui::SliderInt("slider int -100..100", &i2, -100, 100);
 
-        static float f1=1.123f;
-        static float f2=0;
-        static float f3=123456789.0f;
-        ImGui::SliderFloat("slider float", &f1, 0.0f, 2.0f);
-        ImGui::SliderFloat("slider log float", &f2, -10.0f, 10.0f, "%.4f", 3.0f);
-        ImGui::SliderFloat("slider unbound", &f3, -FLT_MAX, FLT_MAX, "%.4f");
-        static float angle = 0.0f;
-        ImGui::SliderAngle("slider angle", &angle);
+            static float f1=1.123f;
+            static float f2=0;
+            static float f3=123456789.0f;
+            ImGui::SliderFloat("slider float", &f1, 0.0f, 2.0f);
+            ImGui::SliderFloat("slider log float", &f2, -10.0f, 10.0f, "%.4f", 3.0f);
+            static float angle = 0.0f;
+            ImGui::SliderAngle("slider angle", &angle);
+        }
 
         static float col1[3] = { 1.0f,0.0f,0.2f };
         static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
@@ -9812,12 +9808,13 @@ void ImGui::ShowTestWindow(bool* opened)
                 if (i > 0) ImGui::SameLine();
                 ImGui::PushID(i);
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor::HSV(i/7.0f, 0.5f, 0.5f));
+                ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImColor::HSV(i/7.0f, 0.6f, 0.5f));
+                ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImColor::HSV(i/7.0f, 0.7f, 0.5f));
                 ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImColor::HSV(i/7.0f, 0.9f, 0.9f));
-                ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImColor::HSV(i/7.0f, 1.0f, 1.0f));
                 ImGui::VSliderFloat("##v", ImVec2(18,160), &values[i], 0.0f, 1.0f, "");
                 if (ImGui::IsItemActive() || ImGui::IsItemHovered())
                     ImGui::SetTooltip("%.3f", values[i]);
-                ImGui::PopStyleColor(3);
+                ImGui::PopStyleColor(4);
                 ImGui::PopID();
             }
             ImGui::PopID();
