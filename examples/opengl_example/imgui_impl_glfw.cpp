@@ -119,12 +119,46 @@ void ImGui_ImplGlFw_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
 {
     ImGuiIO& io = ImGui::GetIO();
     if (action == GLFW_PRESS)
-        io.KeysDown[key] = true;
+    {
+        switch (key)
+        {
+        case GLFW_KEY_LEFT_CONTROL:
+        case GLFW_KEY_RIGHT_CONTROL:
+            io.KeyCtrl = true;
+            break;
+        case GLFW_KEY_LEFT_SHIFT:
+        case GLFW_KEY_RIGHT_SHIFT:
+            io.KeyShift = true;
+            break;
+        case GLFW_KEY_LEFT_ALT:
+        case GLFW_KEY_RIGHT_ALT:
+            io.KeyAlt = true;
+            break;
+        default:
+            io.KeysDown[key] = true;
+        }
+    }
+
     if (action == GLFW_RELEASE)
-        io.KeysDown[key] = false;
-    io.KeyCtrl = (mods & GLFW_MOD_CONTROL) != 0;
-    io.KeyShift = (mods & GLFW_MOD_SHIFT) != 0;
-    io.KeyAlt = (mods & GLFW_MOD_ALT) != 0;
+    {
+        switch (key)
+        {
+        case GLFW_KEY_LEFT_CONTROL:
+        case GLFW_KEY_RIGHT_CONTROL:
+            io.KeyCtrl = false;
+            break;
+        case GLFW_KEY_LEFT_SHIFT:
+        case GLFW_KEY_RIGHT_SHIFT:
+            io.KeyShift = false;
+            break;
+        case GLFW_KEY_LEFT_ALT:
+        case GLFW_KEY_RIGHT_ALT:
+            io.KeyAlt = false;
+            break;
+        default:
+            io.KeysDown[key] = false;
+        }
+    }
 }
 
 void ImGui_ImplGlfw_CharCallback(GLFWwindow*, unsigned int c)
