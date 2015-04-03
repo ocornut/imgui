@@ -9727,6 +9727,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::InputFloat3("input float3", vec4a);
         }
 
+        /*
         {
             static int i1=50;
             static int i2=42;
@@ -9738,6 +9739,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::DragFloat("drag float", &f1, 1.0f);
             ImGui::DragFloat("drag small float", &f2, 0.0001f, 0.0f, 0.0f, "%.06f");
         }
+        */
 
         {
             static int i1=0;
