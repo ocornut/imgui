@@ -5512,14 +5512,13 @@ bool ImGui::DragFloat(const char* label, float *v, float v_step, float v_min, fl
     // Tabbing or CTRL-clicking on Drag turns it into an input box
     bool start_text_input = false;
     const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id);
-    if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]))
+    if (tab_focus_requested || (hovered && (g.IO.MouseClicked[0] | g.IO.MouseDoubleClicked[0])))
     {
         SetActiveId(id);
         FocusWindow(window);
         g.DragLastMouseDelta = ImVec2(0.f, 0.f);
 
-        const bool is_ctrl_down = g.IO.KeyCtrl;
-        if (tab_focus_requested || is_ctrl_down)
+        if (tab_focus_requested || g.IO.KeyCtrl || g.IO.MouseDoubleClicked[0])
         {
             start_text_input = true;
             g.ScalarAsInputTextId = 0;
