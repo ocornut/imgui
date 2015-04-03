@@ -6825,19 +6825,12 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     if (edit_mode == ImGuiColorEditMode_UserSelect || edit_mode == ImGuiColorEditMode_UserSelectShowButton)
         edit_mode = g.ColorEditModeStorage.GetInt(id, 0) % 3;
 
-    float fx = col[0];
-    float fy = col[1];
-    float fz = col[2];
-    float fw = col[3];
-    const ImVec4 col_display(fx, fy, fz, 1.0f);
+    float f[4] = { col[0], col[1], col[2], col[3] };
 
     if (edit_mode == ImGuiColorEditMode_HSV)
-        ImGui::ColorConvertRGBtoHSV(fx, fy, fz, fx, fy, fz);
+        ImGui::ColorConvertRGBtoHSV(f[0], f[1], f[2], f[0], f[1], f[2]);
 
-    int ix = (int)(fx * 255.0f + 0.5f);
-    int iy = (int)(fy * 255.0f + 0.5f);
-    int iz = (int)(fz * 255.0f + 0.5f);
-    int iw = (int)(fw * 255.0f + 0.5f);
+    int i[4] = { (int)(f[0] * 255.0f + 0.5f), (int)(f[1] * 255.0f + 0.5f), (int)(f[2] * 255.0f + 0.5f), (int)(f[3] * 255.0f + 0.5f) };
 
     int components = alpha ? 4 : 3;
     bool value_changed = false;
@@ -6845,36 +6838,35 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     ImGui::BeginGroup();
     ImGui::PushID(label);
 
-    bool hsv = (edit_mode == 1);
+    const bool hsv = (edit_mode == 1);
     switch (edit_mode)
     {
     case ImGuiColorEditMode_RGB:
     case ImGuiColorEditMode_HSV:
         {
-            // 0: RGB 0..255 Sliders
-            // 1: HSV 0..255 Sliders
+            // RGB/HSV 0..255 Sliders
             const float w_items_all = w_full - (square_sz + style.ItemInnerSpacing.x);
             const float w_item_one  = ImMax(1.0f, (float)(int)((w_items_all - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)) / (float)components));
             const float w_item_last = ImMax(1.0f, (float)(int)(w_items_all - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)));
 
             const bool hide_prefix = (w_item_one <= CalcTextSize("M:999").x);
+            const char* ids[4] = { "##X", "##Y", "##Z", "##W" };
+            const char* fmt_table[3][4] = 
+            {
+                {   "%3.0f",   "%3.0f",   "%3.0f",   "%3.0f" }, 
+                { "R:%3.0f", "G:%3.0f", "B:%3.0f", "A:%3.0f" },
+                { "H:%3.0f", "S:%3.0f", "V:%3.0f", "A:%3.0f" } 
+            };
+            const char** fmt = hide_prefix ? fmt_table[0] : hsv ? fmt_table[2] : fmt_table[1]; 
 
             ImGui::PushItemWidth(w_item_one);
-            value_changed |= ImGui::SliderInt("##X", &ix, 0, 255, hide_prefix ? "%3.0f" : hsv ? "H:%3.0f" : "R:%3.0f");
-            ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
-            value_changed |= ImGui::SliderInt("##Y", &iy, 0, 255, hide_prefix ? "%3.0f" : hsv ? "S:%3.0f" : "G:%3.0f");
-            ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
-            if (alpha)
+            for (int n = 0; n < components; n++)
             {
-                value_changed |= ImGui::SliderInt("##Z", &iz, 0, 255, hide_prefix ? "%3.0f" : hsv ? "V:%3.0f" : "B:%3.0f");
-                ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
-                ImGui::PushItemWidth(w_item_last);
-                value_changed |= ImGui::SliderInt("##W", &iw, 0, 255, hide_prefix ? "%3.0f" : "A:%3.0f");
-            }
-            else
-            {
-                ImGui::PushItemWidth(w_item_last);
-                value_changed |= ImGui::SliderInt("##Z", &iz, 0, 255, hide_prefix ? "%3.0f" : hsv ? "V:%3.0f" : "B:%3.0f");
+                if (n > 0)
+                    ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+                if (n + 1 == components)
+                    ImGui::PushItemWidth(w_item_last);
+                value_changed |= ImGui::SliderInt(ids[n], &i[n], 0, 255, fmt[n]);
             }
             ImGui::PopItemWidth();
             ImGui::PopItemWidth();
@@ -6882,46 +6874,42 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
         break;
     case ImGuiColorEditMode_HEX:
         {
-            // 2: RGB Hexadecimal
+            // RGB Hexadecimal Input
             const float w_slider_all = w_full - square_sz;
             char buf[64];
             if (alpha)
-                ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X%02X", ix, iy, iz, iw);
+                ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X%02X", i[0], i[1], i[2], i[3]);
             else
-                ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X", ix, iy, iz);
+                ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X", i[0], i[1], i[2]);
             ImGui::PushItemWidth(w_slider_all - style.ItemInnerSpacing.x);
-            value_changed |= ImGui::InputText("##Text", buf, IM_ARRAYSIZE(buf), ImGuiInputTextFlags_CharsHexadecimal);
+            value_changed |= ImGui::InputText("##Text", buf, IM_ARRAYSIZE(buf), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
             ImGui::PopItemWidth();
             char* p = buf;
             while (*p == '#' || ImCharIsSpace(*p)) 
                 p++;
 
             // Treat at unsigned (%X is unsigned)
-            ix = iy = iz = iw = 0;
+            i[0] = i[1] = i[2] = i[3] = 0;
             if (alpha)
-                sscanf(p, "%02X%02X%02X%02X", (unsigned int*)&ix, (unsigned int*)&iy, (unsigned int*)&iz, (unsigned int*)&iw);
+                sscanf(p, "%02X%02X%02X%02X", (unsigned int*)&i[0], (unsigned int*)&i[1], (unsigned int*)&i[2], (unsigned int*)&i[3]);
             else
-                sscanf(p, "%02X%02X%02X", (unsigned int*)&ix, (unsigned int*)&iy, (unsigned int*)&iz);
+                sscanf(p, "%02X%02X%02X", (unsigned int*)&i[0], (unsigned int*)&i[1], (unsigned int*)&i[2]);
         }
         break;
     }
 
     ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+
+    const ImVec4 col_display(col[0], col[1], col[2], 1.0f);
     if (ImGui::ColorButton(col_display))
-    {
-        // Don't set local copy of 'edit_mode' right away!
-        g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3);
-    }
+        g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3); // Don't set local copy of 'edit_mode' right away!
 
     if (window->DC.ColorEditMode == ImGuiColorEditMode_UserSelectShowButton)
     {
         ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
         const char* button_titles[3] = { "RGB", "HSV", "HEX" };
         if (ImGui::Button(button_titles[edit_mode]))
-        {
-            // Don't set local copy of 'edit_mode' right away!
-            g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3);
-        }
+            g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3); // Don't set local copy of 'edit_mode' right away!
         ImGui::SameLine();
     }
     else
@@ -6932,20 +6920,18 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
 
     // Convert back
-    fx = ix / 255.0f;
-    fy = iy / 255.0f;
-    fz = iz / 255.0f;
-    fw = iw / 255.0f;
+    for (int n = 0; n < 4; n++)
+        f[n] = i[n] / 255.0f;
     if (edit_mode == 1)
-        ImGui::ColorConvertHSVtoRGB(fx, fy, fz, fx, fy, fz);
+        ImGui::ColorConvertHSVtoRGB(f[0], f[1], f[2], f[0], f[1], f[2]);
 
     if (value_changed)
     {
-        col[0] = fx;
-        col[1] = fy;
-        col[2] = fz;
+        col[0] = f[0];
+        col[1] = f[1];
+        col[2] = f[2];
         if (alpha)
-            col[3] = fw;
+            col[3] = f[3];
     }
 
     ImGui::PopID();
