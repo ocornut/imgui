@@ -284,25 +284,36 @@ namespace ImGui
     IMGUI_API void          Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0,0), const ImVec2& uv1 = ImVec2(1,1), const ImVec4& tint_col = ImVec4(1,1,1,1), const ImVec4& border_col = ImVec4(0,0,0,0));
     IMGUI_API bool          ImageButton(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0,0),  const ImVec2& uv1 = ImVec2(1,1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0,0,0,1), const ImVec4& tint_col = ImVec4(1,1,1,1));    // <0 frame_padding uses default frame padding settings. 0 for no padding
     IMGUI_API bool          CollapsingHeader(const char* label, const char* str_id = NULL, bool display_frame = true, bool default_open = false);
+    IMGUI_API bool          Checkbox(const char* label, bool* v);
+    IMGUI_API bool          CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value);
+    IMGUI_API bool          RadioButton(const char* label, bool active);
+    IMGUI_API bool          RadioButton(const char* label, int* v, int v_button);
+    IMGUI_API bool          Combo(const char* label, int* current_item, const char** items, int items_count, int height_in_items = -1);
+    IMGUI_API bool          Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int height_in_items = -1);      // separate items with \0, end item-list with \0\0
+    IMGUI_API bool          Combo(const char* label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);
+    IMGUI_API bool          ColorButton(const ImVec4& col, bool small_height = false, bool outline_border = true);
+    IMGUI_API bool          ColorEdit3(const char* label, float col[3]);
+    IMGUI_API bool          ColorEdit4(const char* label, float col[4], bool show_alpha = true);
+    IMGUI_API void          ColorEditMode(ImGuiColorEditMode mode);
+    IMGUI_API void          PlotLines(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), size_t stride = sizeof(float));
+    IMGUI_API void          PlotLines(const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0));
+    IMGUI_API void          PlotHistogram(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), size_t stride = sizeof(float));
+    IMGUI_API void          PlotHistogram(const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0));
+
+    // Widgets: Sliders (tip: ctrl+click on a slider to input text)
     IMGUI_API bool          SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);     // adjust display_format to decorate the value with a prefix or a suffix. Use power!=1.0 for logarithmic sliders
     IMGUI_API bool          SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
     IMGUI_API bool          SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
     IMGUI_API bool          SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          SliderAngle(const char* label, float* v, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f);     // *v in radians
+    IMGUI_API bool          SliderAngle(const char* label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f);
     IMGUI_API bool          SliderInt(const char* label, int* v, int v_min, int v_max, const char* display_format = "%.0f");
     IMGUI_API bool          SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* display_format = "%.0f");
     IMGUI_API bool          SliderInt3(const char* label, int v[3], int v_min, int v_max, const char* display_format = "%.0f");
     IMGUI_API bool          SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* display_format = "%.0f");
     IMGUI_API bool          VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
     IMGUI_API bool          VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* display_format = "%.0f");
-    IMGUI_API void          PlotLines(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), size_t stride = sizeof(float));
-    IMGUI_API void          PlotLines(const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0));
-    IMGUI_API void          PlotHistogram(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), size_t stride = sizeof(float));
-    IMGUI_API void          PlotHistogram(const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0));
-    IMGUI_API bool          Checkbox(const char* label, bool* v);
-    IMGUI_API bool          CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value);
-    IMGUI_API bool          RadioButton(const char* label, bool active);
-    IMGUI_API bool          RadioButton(const char* label, int* v, int v_button);
+
+    // Widgets: Input
     IMGUI_API bool          InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
     IMGUI_API bool          InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f, int decimal_precision = -1, ImGuiInputTextFlags extra_flags = 0);
     IMGUI_API bool          InputFloat2(const char* label, float v[2], int decimal_precision = -1);
@@ -312,15 +323,8 @@ namespace ImGui
     IMGUI_API bool          InputInt2(const char* label, int v[2]);
     IMGUI_API bool          InputInt3(const char* label, int v[3]);
     IMGUI_API bool          InputInt4(const char* label, int v[4]);
-    IMGUI_API bool          Combo(const char* label, int* current_item, const char** items, int items_count, int height_in_items = -1);
-    IMGUI_API bool          Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int height_in_items = -1);      // separate items with \0, end item-list with \0\0
-    IMGUI_API bool          Combo(const char* label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);
-    IMGUI_API bool          ColorButton(const ImVec4& col, bool small_height = false, bool outline_border = true);
-    IMGUI_API bool          ColorEdit3(const char* label, float col[3]);
-    IMGUI_API bool          ColorEdit4(const char* label, float col[4], bool show_alpha = true);
-    IMGUI_API void          ColorEditMode(ImGuiColorEditMode mode);
 
-    // Trees
+    // Widgets: Trees
     IMGUI_API bool          TreeNode(const char* str_label_id);                                 // if returning 'true' the node is open and the user is responsible for calling TreePop
     IMGUI_API bool          TreeNode(const char* str_id, const char* fmt, ...);                 // "
     IMGUI_API bool          TreeNode(const void* ptr_id, const char* fmt, ...);                 // "
@@ -331,7 +335,7 @@ namespace ImGui
     IMGUI_API void          TreePop();
     IMGUI_API void          SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond = 0);          // set next tree node to be opened.
 
-    // Selectable / Lists
+    // Widgets: Selectable / Lists
     IMGUI_API bool          Selectable(const char* label, bool selected = false, const ImVec2& size = ImVec2(0,0));
     IMGUI_API bool          Selectable(const char* label, bool* p_selected, const ImVec2& size = ImVec2(0,0));
     IMGUI_API bool          ListBox(const char* label, int* current_item, const char** items, int items_count, int height_in_items = -1);
@@ -340,7 +344,7 @@ namespace ImGui
     IMGUI_API bool          ListBoxHeader(const char* label, int items_count, int height_in_items = -1); // "
     IMGUI_API void          ListBoxFooter();                                                    // terminate the scrolling region
 
-    // Value() Helpers: output single value in "name: value" format. Tip: freely declare your own within the ImGui namespace!
+    // Widgets: Value() Helpers. Output single value in "name: value" format (tip: freely declare your own within the ImGui namespace!)
     IMGUI_API void          Value(const char* prefix, bool b);
     IMGUI_API void          Value(const char* prefix, int v);
     IMGUI_API void          Value(const char* prefix, unsigned int v);
@@ -348,7 +352,7 @@ namespace ImGui
     IMGUI_API void          Color(const char* prefix, const ImVec4& v);
     IMGUI_API void          Color(const char* prefix, unsigned int v);
 
-    // Logging: All text output from your interface are redirected to tty/file/clipboard. Tree nodes are automatically opened.
+    // Logging: all text output from interface is redirected to tty/file/clipboard. Tree nodes are automatically opened.
     IMGUI_API void          LogToTTY(int max_depth = -1);                                       // start logging to tty
     IMGUI_API void          LogToFile(int max_depth = -1, const char* filename = NULL);         // start logging to file
     IMGUI_API void          LogToClipboard(int max_depth = -1);                                 // start logging to OS clipboard

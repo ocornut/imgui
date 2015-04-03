@@ -5294,11 +5294,11 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     return value_changed;
 }
 
-bool ImGui::SliderAngle(const char* label, float* v, float v_degrees_min, float v_degrees_max)
+bool ImGui::SliderAngle(const char* label, float* v_rad, float v_degrees_min, float v_degrees_max)
 {
-    float v_deg = *v * 360.0f / (2*PI);
+    float v_deg = (*v_rad) * 360.0f / (2*PI);
     bool value_changed = ImGui::SliderFloat(label, &v_deg, v_degrees_min, v_degrees_max, "%.0f deg", 1.0f);
-    *v = v_deg * (2*PI) / 360.0f;
+    *v_rad = v_deg * (2*PI) / 360.0f;
     return value_changed;
 }
 
