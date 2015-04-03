@@ -301,10 +301,8 @@ namespace ImGui
     IMGUI_API void          PlotHistogram(const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0));
 
     // Widgets: Drags (tip: ctrl+click on a drag box to input text)
-    IMGUI_API bool          DragFloat(const char* label, float* v, float v_step = 1.0f, float v_min = -FLT_MAX, float v_max = FLT_MAX, const char* display_format = "%.3f");
-    IMGUI_API bool          DragFloat(const char* label, float* v, float v_step, const char* display_format);
-    IMGUI_API bool          DragInt(const char* label, int* v, int v_step = 1, int v_min = -0x7fffffff-1, int v_max = 0x7fffffff, const char* display_format = "%.0f");
-    IMGUI_API bool          DragInt(const char* label, int* v, int v_step, const char* display_format = "%.0f");
+    IMGUI_API bool          DragFloat(const char* label, float* v, float v_step = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f");   // If v_max >= v_max we have no bound
+    IMGUI_API bool          DragInt(const char* label, int* v, int v_step = 1, int v_min = 0.0f, int v_max = 0.0f, const char* display_format = "%.0f");                // If v_max >= v_max we have no bound
 
     // Widgets: Sliders (tip: ctrl+click on a slider to input text)
     IMGUI_API bool          SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);     // adjust display_format to decorate the value with a prefix or a suffix. Use power!=1.0 for logarithmic sliders

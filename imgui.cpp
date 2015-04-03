@@ -5460,7 +5460,9 @@ static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, flo
                     step = v_step * g.DragSpeedScaleSlow;
 
                 *v += (mouse_drag_delta.x - g.DragLastMouseDelta.x) * step;
-                *v = ImClamp(*v, v_min, v_max);
+
+                if (v_min < v_max)
+                    *v = ImClamp(*v, v_min, v_max);
 
                 g.DragLastMouseDelta.x = mouse_drag_delta.x;
                 value_changed = true;
@@ -5543,11 +5545,6 @@ bool ImGui::DragFloat(const char* label, float *v, float v_step, float v_min, fl
     return value_changed;
 }
 
-bool ImGui::DragFloat(const char* label, float* v, float v_step, const char* display_format)
-{
-    return ImGui::DragFloat(label, v, v_step, -FLT_MAX, FLT_MAX, display_format);
-}
-
 bool ImGui::DragInt(const char* label, int* v, int v_step, int v_min, int v_max, const char* display_format)
 {
     if (!display_format)
@@ -5556,11 +5553,6 @@ bool ImGui::DragInt(const char* label, int* v, int v_step, int v_min, int v_max,
     bool value_changed = ImGui::DragFloat(label, &v_f, (float)v_step, (float)v_min, (float)v_max, display_format);
     *v = (int)v_f;
     return value_changed;
-}
-
-bool ImGui::DragInt(const char* label, int* v, int v_step, const char* display_format)
-{
-    return ImGui::DragInt(label, v, v_step, IM_INT_MIN, IM_INT_MAX, display_format);
 }
 
 enum ImGuiPlotType
