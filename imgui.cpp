@@ -6857,22 +6857,24 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
             const float w_item_one  = ImMax(1.0f, (float)(int)((w_items_all - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)) / (float)components));
             const float w_item_last = ImMax(1.0f, (float)(int)(w_items_all - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)));
 
+            const bool hide_prefix = (w_item_one <= CalcTextSize("M:999").x);
+
             ImGui::PushItemWidth(w_item_one);
-            value_changed |= ImGui::SliderInt("##X", &ix, 0, 255, hsv ? "H:%3.0f" : "R:%3.0f");
+            value_changed |= ImGui::SliderInt("##X", &ix, 0, 255, hide_prefix ? "%3.0f" : hsv ? "H:%3.0f" : "R:%3.0f");
             ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
-            value_changed |= ImGui::SliderInt("##Y", &iy, 0, 255, hsv ? "S:%3.0f" : "G:%3.0f");
+            value_changed |= ImGui::SliderInt("##Y", &iy, 0, 255, hide_prefix ? "%3.0f" : hsv ? "S:%3.0f" : "G:%3.0f");
             ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
             if (alpha)
             {
-                value_changed |= ImGui::SliderInt("##Z", &iz, 0, 255, hsv ? "V:%3.0f" : "B:%3.0f");
+                value_changed |= ImGui::SliderInt("##Z", &iz, 0, 255, hide_prefix ? "%3.0f" : hsv ? "V:%3.0f" : "B:%3.0f");
                 ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
                 ImGui::PushItemWidth(w_item_last);
-                value_changed |= ImGui::SliderInt("##W", &iw, 0, 255, "A:%3.0f");
+                value_changed |= ImGui::SliderInt("##W", &iw, 0, 255, hide_prefix ? "%3.0f" : "A:%3.0f");
             }
             else
             {
                 ImGui::PushItemWidth(w_item_last);
-                value_changed |= ImGui::SliderInt("##Z", &iz, 0, 255, hsv ? "V:%3.0f" : "B:%3.0f");
+                value_changed |= ImGui::SliderInt("##Z", &iz, 0, 255, hide_prefix ? "%3.0f" : hsv ? "V:%3.0f" : "B:%3.0f");
             }
             ImGui::PopItemWidth();
             ImGui::PopItemWidth();
