@@ -9728,7 +9728,7 @@ void ImGui::ShowTestWindow(bool* opened)
         static char str0[128] = "Hello, world!";
         static int i0=123;
         static float f0=0.001f;
-        ImGui::InputText("string", str0, IM_ARRAYSIZE(str0));
+        ImGui::InputText("input text", str0, IM_ARRAYSIZE(str0));
         ImGui::InputInt("input int", &i0);
         ImGui::InputFloat("input float", &f0, 0.01f, 1.0f);
 
@@ -9739,19 +9739,17 @@ void ImGui::ShowTestWindow(bool* opened)
 
         static int i1=0;
         static int i2=42;
-        ImGui::SliderInt("int 0..3", &i1, 0, 3);
-        ImGui::SliderInt("int -100..100", &i2, -100, 100);
+        ImGui::SliderInt("slider int 0..3", &i1, 0, 3);
+        ImGui::SliderInt("slider int -100..100", &i2, -100, 100);
 
         static float f1=1.123f;
         static float f2=0;
-        static float f3=0;
-        static float f4=123456789.0f;
-        ImGui::SliderFloat("float", &f1, 0.0f, 2.0f);
-        ImGui::SliderFloat("log float", &f2, 0.0f, 10.0f, "%.4f", 2.0f);
-        ImGui::SliderFloat("signed log float", &f3, -10.0f, 10.0f, "%.4f", 3.0f);
-        ImGui::SliderFloat("unbound float", &f4, -FLT_MAX, FLT_MAX, "%.4f");
+        static float f3=123456789.0f;
+        ImGui::SliderFloat("slider float", &f1, 0.0f, 2.0f);
+        ImGui::SliderFloat("slider log float", &f2, -10.0f, 10.0f, "%.4f", 3.0f);
+        ImGui::SliderFloat("slider unbound", &f3, -FLT_MAX, FLT_MAX, "%.4f");
         static float angle = 0.0f;
-        ImGui::SliderAngle("angle", &angle);
+        ImGui::SliderAngle("slider angle", &angle);
 
         static float col1[3] = { 1.0f,0.0f,0.2f };
         static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
