@@ -56,7 +56,7 @@ struct ImVec2
     ImVec2() { x = y = 0.0f; }
     ImVec2(float _x, float _y) { x = _x; y = _y; }
 
-#ifdef IM_VEC2_CLASS_EXTRA
+#ifdef IM_VEC2_CLASS_EXTRA          // Define constructor and implicit cast operators to convert back<>forth from your math types and ImVec2.
     IM_VEC2_CLASS_EXTRA
 #endif
 };
@@ -67,7 +67,7 @@ struct ImVec4
     ImVec4() { x = y = z = w = 0.0f; }
     ImVec4(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
 
-#ifdef IM_VEC4_CLASS_EXTRA
+#ifdef IM_VEC4_CLASS_EXTRA          // Define constructor and implicit cast operators to convert back<>forth from your math types and ImVec4.
     IM_VEC4_CLASS_EXTRA
 #endif
 };
@@ -147,7 +147,7 @@ public:
 // - struct ImFont                      // TTF font loader, bake glyphs into bitmap
 
 // ImGui end-user API
-// In a namespace so that user can add extra functions (e.g. Value() helpers for your vector or common types)
+// In a namespace so that user can add extra functions in a separate file (e.g. Value() helpers for your vector or common types)
 namespace ImGui
 {
     // Main
@@ -555,12 +555,12 @@ enum ImGuiColorEditMode_
 enum ImGuiMouseCursor_
 {
     ImGuiMouseCursor_Arrow = 0,
-    ImGuiMouseCursor_TextInput,
-    ImGuiMouseCursor_Move,                  // Unused by ImGui
-    ImGuiMouseCursor_ResizeNS,              // Unused by ImGui
-    ImGuiMouseCursor_ResizeEW,
-    ImGuiMouseCursor_ResizeNESW,            // Unused by ImGui
-    ImGuiMouseCursor_ResizeNWSE,
+    ImGuiMouseCursor_TextInput,         // When hovering over InputText, etc.
+    ImGuiMouseCursor_Move,              // Unused
+    ImGuiMouseCursor_ResizeNS,          // Unused
+    ImGuiMouseCursor_ResizeEW,          // When hovering over a column
+    ImGuiMouseCursor_ResizeNESW,        // Unused
+    ImGuiMouseCursor_ResizeNWSE,        // When hovering over the bottom-right corner of a window
     ImGuiMouseCursor_Count_
 };
 
@@ -882,6 +882,7 @@ IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
 // At the moment, each ImGui window contains its own ImDrawList but they could potentially be merged in the future.
 // If you want to add custom rendering within a window, you can use ImGui::GetWindowDrawList() to access the current draw list and add your own primitives.
 // You can interleave normal ImGui:: calls and adding primitives to the current draw list.
+// All positions are in screen coordinates (0,0=top-left, 1 pixel per unit). Primitives are always added to the list and not culled (culling is done at render time and at a higher-level by ImGui:: functions).
 // Note that this only gives you access to rendering polygons. If your intent is to create custom widgets and the publicly exposed functions/data aren't sufficient, you can add code in imgui_user.inl
 struct ImDrawList
 {
