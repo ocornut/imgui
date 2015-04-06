@@ -3519,6 +3519,10 @@ static void FocusWindow(ImGuiWindow* window)
     // Always mark the window we passed as focused. This is used for keyboard interactions such as tabbing.
     g.FocusedWindow = window;
 
+    // Passing NULL allow to disable keyboard focus
+    if (!window)
+        return;
+
     // And move its root window to the top of the pile 
     if (window->RootWindow)
         window = window->RootWindow;
@@ -3903,9 +3907,16 @@ void ImGui::SetWindowFocus()
 
 void ImGui::SetWindowFocus(const char* name)
 {
-    ImGuiWindow* window = FindWindowByName(name);
-    if (window)
-        FocusWindow(window);
+    if (name)
+    {
+        ImGuiWindow* window = FindWindowByName(name);
+        if (window)
+            FocusWindow(window);
+    }
+    else
+    {
+        FocusWindow(NULL);
+    }
 }
 
 void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiSetCond cond)
