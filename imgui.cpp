@@ -2153,12 +2153,20 @@ void ImGui::Render()
             g.CurrentWindow->Visible = false;
         ImGui::End();
 
-        // Select window for move/focus when we're done with all our widgets (we use the root window ID here)
-        if (g.ActiveId == 0 && g.HoveredId == 0 && g.HoveredRootWindow != NULL && g.IO.MouseClicked[0])
+        if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
         {
-            IM_ASSERT(g.MovedWindow == NULL);
-            g.MovedWindow = g.HoveredWindow;
-            SetActiveId(g.HoveredRootWindow->MoveID);
+            if (g.HoveredRootWindow != NULL)
+            {
+                // Select window for move/focus when we're done with all our widgets (we use the root window ID here)
+                IM_ASSERT(g.MovedWindow == NULL);
+                g.MovedWindow = g.HoveredWindow;
+                SetActiveId(g.HoveredRootWindow->MoveID);
+            }
+            else if (g.FocusedWindow != NULL)
+            {
+                // Clicking on void disable focus
+                FocusWindow(NULL);
+            }
         }
 
         // Sort the window list so that all child windows are after their parent
