@@ -4347,11 +4347,9 @@ static bool IsHovered(const ImRect& bb, ImGuiID id)
     {
         ImGuiWindow* window = GetCurrentWindow();
         if (g.HoveredRootWindow == window->RootWindow)
-        {
             if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && IsMouseHoveringRect(bb))
                 if (IsWindowContentHoverable(g.HoveredRootWindow))
                     return true;
-        }
     }
     return false;
 }
@@ -7215,9 +7213,10 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
         // So that clicking on items with no active id such as Text() still returns true with IsItemHovered()
         window->DC.LastItemHoveredRect = true;
         window->DC.LastItemHoveredAndUsable = false;
-        if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly || (g.ActiveId == window->MoveID))
-            if (IsWindowContentHoverable(window))
-                window->DC.LastItemHoveredAndUsable = true;
+        if (g.HoveredRootWindow == window->RootWindow)
+            if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly || (g.ActiveId == window->MoveID))
+                if (IsWindowContentHoverable(window))
+                    window->DC.LastItemHoveredAndUsable = true;
     }
     else
     {
