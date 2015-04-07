@@ -1670,6 +1670,7 @@ static inline void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_lis
         if (draw_list->commands.back().vtx_count == 0)
             draw_list->commands.pop_back();
         out_render_list.push_back(draw_list);
+        GImGui->IO.MetricsVertices += (int)draw_list->vtx_buffer.size();
     }
 }
 
@@ -2203,6 +2204,7 @@ void ImGui::Render()
         }
 
         // Gather windows to render
+        g.IO.MetricsVertices = 0;
         for (size_t i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
             g.RenderDrawLists[i].resize(0);
         for (size_t i = 0; i != g.Windows.size(); i++)
