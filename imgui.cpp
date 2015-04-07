@@ -1115,6 +1115,7 @@ struct ImGuiState
     ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window. Only valid if ActiveID is the "#MOVE" identifier of a window.
     float                   SettingsDirtyTimer;
     ImVector<ImGuiIniData*> Settings;
+    int                     DisableHideTextAfterDoubleHash;
     ImVector<ImGuiColMod>   ColorModifiers;
     ImVector<ImGuiStyleMod> StyleModifiers;
     ImVector<ImFont*>       FontStack;
@@ -1183,6 +1184,7 @@ struct ImGuiState
         ActiveIdIsFocusedOnly = false;
         MovedWindow = NULL;
         SettingsDirtyTimer = 0.0f;
+        DisableHideTextAfterDoubleHash = 0;
 
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
         SetNextWindowPosCond = 0;
@@ -2266,8 +2268,18 @@ static const char*  FindTextDisplayEnd(const char* text, const char* text_end = 
     const char* text_display_end = text;
     if (!text_end)
         text_end = (const char*)-1;
-    while (text_display_end < text_end && *text_display_end != '\0' && (text_display_end[0] != '#' || text_display_end[1] != '#'))
-        text_display_end++;
+
+    ImGuiState& g = *GImGui;
+    if (g.DisableHideTextAfterDoubleHash > 0)
+    {
+        while (text_display_end < text_end && *text_display_end != '\0')
+            text_display_end++;
+    }
+    else
+    {
+        while (text_display_end < text_end && *text_display_end != '\0' && (text_display_end[0] != '#' || text_display_end[1] != '#'))
+            text_display_end++;
+    }
     return text_display_end;
 }
 
