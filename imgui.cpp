@@ -3808,7 +3808,7 @@ bool ImGui::IsRootWindowOrAnyChildFocused()
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* root_window = GetCurrentWindow()->RootWindow;
-    return g.FocusedWindow->RootWindow == root_window;
+    return g.FocusedWindow && g.FocusedWindow->RootWindow == root_window;
 }
 
 float ImGui::GetWindowWidth()
