@@ -31,7 +31,7 @@ ImGui allows you create elaborate tools as well as very short-lived ones. On the
 Demo
 ----
 
-You should be able to build the examples from sources (tested on Winodws/Mac/Linux). If you don't, let me know! If you want to have a quick look at the features of ImGui, you can download binaries of the demo app here.
+You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at the features of ImGui, you can download binaries of the demo app here.
 - [imgui-demo-binaries-20150321.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20150321.zip) (Windows binaries, ImGui 1.37 WIP 2015/03/31, 4 executables, 391 KB)
 
 
@@ -67,13 +67,15 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 Frequently Asked Question
 -------------------------
 
-<b>Where are samples?</b>
+<b>Where is the documentation?</b>
 
-The bulk of example user code is contained within the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. Ready-to-go example applications covering different versions of OpenGL/DirectX are provided in the examples/ folder. 
+- The documentation is at the top of imgui.cpp + effectively imgui.h.
+- Example code is in the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
+- Standalone example applications using OpenGL/DirectX are provided in the examples/ folder. 
 
 <b>How do you use ImGui on a platform that may not have a mouse or keyboard?</b>
 
-I recommend using [Synergy](http://synergy-project.org) ([sources](https://github.com/synergy/synergy)). With the uSynergy.c micro client running on your platform and connecting to your PC, you can seamlessly use your PC input devices from a video game console or a tablet. ImGui allows to increase the hit box of widgets (via the _TouchPadding_ setting) to accomodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.
+I recommend using [Synergy](http://synergy-project.org) ([sources](https://github.com/synergy/synergy)). In particular, the _src/micro/uSynergy.c_ file contains a small client that you can use on any platform to connect to your host PC. You can seamlessly use your PC input devices from a video game console or a tablet. ImGui allows to increase the hit box of widgets (via the _TouchPadding_ setting) to accomodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.
 
 <b>I integrated ImGui in my engine and the text or lines are blurry..</b>
 
@@ -87,14 +89,13 @@ Yes. I have written data browsers, debuggers, profilers and all sort of non-triv
 
 Down to the fundation of its visual design, ImGui is engineered to be fairly performant both in term of CPU and GPU usage. Running elaborate code and creating elaborate UI will of course have a cost but ImGui aims to minimize it.
 
-Mileage may vary but the following screenshot may give you a rough idea of the cost of running and rendering UI code (In the case of a trivial demo application like this one, your driver/os setup may be a bottleneck and cause higher variation or throttled framerate. Testing performance as part of a real application is recommended).
+Mileage may vary but the following screenshot can give you a rough idea of the cost of running and rendering UI code (In the case of a trivial demo application like this one, your driver/os setup are likely to be the bottleneck. Testing performance as part of a real application is recommended).
 
 ![performance screenshot](/web/performance_01.png?raw=true)
 
-This is showing framerate for the full application loop on my 2011 iMac running Windows 7, OpenGL, AMD Radeon HD 6700M with an optimized executable.
-In contrast, librairies featuring higher-quality rendering and layouting techniques may have a higher resources footprint.
+This is showing framerate for the full application loop on my 2011 iMac running Windows 7, OpenGL, AMD Radeon HD 6700M with an optimized executable. In contrast, librairies featuring higher-quality rendering and layouting techniques may have a higher resources footprint.
 
-If you intend to display large lists of items (say, 1000+) it can be beneficial for your code to perform clipping manually - using helpers such as CalcListClipping() - in order to avoid submitting them to ImGui in the first place. Even though ImGui will discard your clipped items it still needs to calculate their size and that overhead will add up if you have thousands of items.
+If you intend to display large lists of items (say, 1000+) it can be beneficial for your code to perform clipping manually - using helpers such as CalcListClipping() - in order to avoid submitting them to ImGui in the first place. Even though ImGui will discard your clipped items it still needs to calculate their size and that overhead will add up if you have thousands of items. If you can handle clipping and height positionning yourself then browsing a list with millions of items isn't a problem.
 
 <b>Can you reskin the look of ImGui?</b>
 
