@@ -57,7 +57,8 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
         }
     }
     g_pVB->Unlock();
-
+    g_pd3dDevice->SetPixelShader(NULL);
+    g_pd3dDevice->SetVertexShader(NULL);
     g_pd3dDevice->SetStreamSource( 0, g_pVB, 0, sizeof( CUSTOMVERTEX ) );
     g_pd3dDevice->SetFVF( D3DFVF_CUSTOMVERTEX );
 
