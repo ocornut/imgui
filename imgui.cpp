@@ -9231,6 +9231,7 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int, int)
 void ImGui::ShowUserGuide() {}
 void ImGui::ShowStyleEditor(ImGuiStyle*) {}
 void ImGui::ShowTestWindow(bool*) {}
+void ImGui::ShowMetricsWindow(bool*) {}
 
 #else
 
@@ -9371,12 +9372,15 @@ static void ShowExampleAppCustomRendering(bool* opened);
 void ImGui::ShowTestWindow(bool* opened)
 {
     // Examples apps
+    static bool show_app_metrics = false;
     static bool show_app_console = false;
     static bool show_app_long_text = false;
     static bool show_app_auto_resize = false;
     static bool show_app_fixed_overlay = false;
     static bool show_app_custom_rendering = false;
     static bool show_app_manipulating_window_title = false;
+    if (show_app_metrics)
+        ImGui::ShowMetricsWindow(&show_app_metrics);
     if (show_app_console)
         ShowExampleAppConsole(&show_app_console);
     if (show_app_long_text)
@@ -10374,6 +10378,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
     if (ImGui::CollapsingHeader("App Examples"))
     {
+        ImGui::Checkbox("Metrics", &show_app_metrics);
         ImGui::Checkbox("Console", &show_app_console);
         ImGui::Checkbox("Long text display", &show_app_long_text);
         ImGui::Checkbox("Auto-resizing window", &show_app_auto_resize);
@@ -10382,6 +10387,69 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Checkbox("Custom rendering", &show_app_custom_rendering);
     }
 
+    ImGui::End();
+}
+
+void ImGui::ShowMetricsWindow(bool* opened)
+{
+    if (ImGui::Begin("ImGui Metrics", opened))
+    {
+        ImGui::Text("ImGui %s", ImGui::GetVersion());
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::Text("%d vertices", ImGui::GetIO().MetricsVertices);
+        ImGui::Separator();
+
+        struct Funcs
+        {
+            static void NodeDrawList(ImDrawList* draw_list, const char* label)
+            {
+                bool opened = ImGui::TreeNode(draw_list, "%s: %d vtx, %d cmds", label, draw_list->vtx_buffer.size(), draw_list->commands.size());
+                if (draw_list == ImGui::GetWindowDrawList())
+                {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImColor(255,100,100), "CURRENTLY APPENDING"); // Can't display stats for active draw list! (we don't have the data double-buffered)
+                }
+                if (!opened)
+                    return;
+                for (const ImDrawCmd* pcmd = draw_list->commands.begin(); pcmd < draw_list->commands.end(); pcmd++)
+                    if (pcmd->user_callback)
+                        ImGui::BulletText("Callback %p, user_data %p", pcmd->user_callback, pcmd->user_callback_data);
+                    else
+                        ImGui::BulletText("Draw %d vtx, tex = %p", pcmd->vtx_count, pcmd->texture_id);
+                ImGui::TreePop();
+            }
+
+            static void NodeWindows(ImVector<ImGuiWindow*>& windows, const char* label)
+            {
+                if (!ImGui::TreeNode(label, "%s (%d)", label, (int)windows.size()))
+                    return;
+                for (int i = 0; i < (int)windows.size(); i++)
+                    Funcs::NodeWindow(windows[i], "Window");
+                ImGui::TreePop();
+            }
+
+            static void NodeWindow(ImGuiWindow* window, const char* label)
+            {
+                if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Visible, window))
+                    return;
+                NodeDrawList(window->DrawList, "DrawList");
+                if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
+                if (window->DC.ChildWindows.size() > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
+                ImGui::TreePop();
+            }
+        };
+
+        ImGuiState& g = *GImGui;                // Access private state
+        g.DisableHideTextAfterDoubleHash++;     // Not exposed (yet). Disable processing that hides text after '##' markers.
+        Funcs::NodeWindows(g.Windows, "Windows");
+        if (ImGui::TreeNode("DrawList", "Active DrawLists (%d)", (int)g.RenderDrawLists[0].size()))
+        {
+            for (int i = 0; i < (int)g.RenderDrawLists[0].size(); i++)
+                Funcs::NodeDrawList(g.RenderDrawLists[0][i], "DrawList");
+            ImGui::TreePop();
+        }
+        g.DisableHideTextAfterDoubleHash--;
+    }
     ImGui::End();
 }
 

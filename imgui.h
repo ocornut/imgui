@@ -156,9 +156,10 @@ namespace ImGui
     IMGUI_API void          NewFrame();
     IMGUI_API void          Render();
     IMGUI_API void          Shutdown();
-    IMGUI_API void          ShowUserGuide();
-    IMGUI_API void          ShowStyleEditor(ImGuiStyle* ref = NULL);
-    IMGUI_API void          ShowTestWindow(bool* open = NULL);
+    IMGUI_API void          ShowUserGuide();                            // help block
+    IMGUI_API void          ShowStyleEditor(ImGuiStyle* ref = NULL);    // style editor block
+    IMGUI_API void          ShowTestWindow(bool* opened = NULL);        // test window, demonstrate ImGui features
+    IMGUI_API void          ShowMetricsWindow(bool* opened = NULL);     // metrics window
 
     // Window
     // See implementation in .cpp for details
