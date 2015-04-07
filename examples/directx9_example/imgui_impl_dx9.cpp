@@ -57,11 +57,12 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
         }
     }
     g_pVB->Unlock();
-
     g_pd3dDevice->SetStreamSource( 0, g_pVB, 0, sizeof( CUSTOMVERTEX ) );
     g_pd3dDevice->SetFVF( D3DFVF_CUSTOMVERTEX );
 
-    // Setup render state: alpha-blending, no face culling, no depth testing
+    // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
+    g_pd3dDevice->SetPixelShader( NULL );
+    g_pd3dDevice->SetVertexShader( NULL );
     g_pd3dDevice->SetRenderState( D3DRS_CULLMODE, D3DCULL_NONE );
     g_pd3dDevice->SetRenderState( D3DRS_LIGHTING, false );
     g_pd3dDevice->SetRenderState( D3DRS_ZENABLE, false );

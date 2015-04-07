@@ -73,6 +73,7 @@ int main(int, char**)
 
     // Setup ImGui binding
     ImGui_ImplDX9_Init(hwnd, g_pd3dDevice);
+    //ImGuiIO& io = ImGui::GetIO();
     //ImFont* my_font0 = io.Fonts->AddFontDefault();
     //ImFont* my_font1 = io.Fonts->AddFontFromFileTTF("../../extra_fonts/DroidSans.ttf", 16.0f);
     //ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("../../extra_fonts/Karla-Regular.ttf", 16.0f);
@@ -103,7 +104,7 @@ int main(int, char**)
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
         {
-            static float f;
+            static float f = 0.0f;
             ImGui::Text("Hello, world!");
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
             ImGui::ColorEdit3("clear color", (float*)&clear_col);
