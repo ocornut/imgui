@@ -317,7 +317,7 @@ namespace ImGui
     // Widgets: Drags (tip: ctrl+click on a drag box to input text)
     // ImGui 1.38+ work-in-progress, may change name or API.
     IMGUI_API bool          DragFloat(const char* label, float* v, float v_step = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f");   // If v_max >= v_max we have no bound
-    IMGUI_API bool          DragInt(const char* label, int* v, int v_step = 1, int v_min = 0.0f, int v_max = 0.0f, const char* display_format = "%.0f");                // If v_max >= v_max we have no bound
+    IMGUI_API bool          DragInt(const char* label, int* v, int v_step = 1, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");                // If v_max >= v_max we have no bound
 
     // Widgets: Input
     IMGUI_API bool          InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
