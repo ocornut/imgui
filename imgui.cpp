@@ -135,6 +135,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/04/09 (1.38) - renamed ImDrawList::AddArc() to ImDrawList::AddArcFast() for compatibility with future API, and changed 2*PI range from 0..12 to 0..16
  - 2015/04/03 (1.38) - removed ImGuiCol_CheckHovered, ImGuiCol_CheckActive, replaced with the more general ImGuiCol_FrameBgHovered, ImGuiCol_FrameBgActive.
  - 2014/04/03 (1.38) - removed support for passing -FLT_MAX..+FLT_MAX as the range for a SliderFloat(). Use DragFloat() or Inputfloat() instead.
  - 2015/03/17 (1.36) - renamed GetItemRectMin()/GetItemRectMax()/IsMouseHoveringBox() to GetItemRectMin()/GetItemRectMax()/IsMouseHoveringRect(). Kept inline redirection function (will obsolete).
@@ -3328,7 +3329,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 else
                 {
                     // FIXME: We should draw 4 triangles and decide on a size that's not dependent on the rounding size (previously used 18)
-                    window->DrawList->AddArc(br - ImVec2(r,r), r, resize_col, 6, 9, true);
+                    window->DrawList->AddArcFast(br - ImVec2(r,r), r, resize_col, 8, 12, true);
                     window->DrawList->AddTriangleFilled(br+ImVec2(0,-2*r),br+ImVec2(0,-r),br+ImVec2(-r,-r), resize_col);
                     window->DrawList->AddTriangleFilled(br+ImVec2(-r,-r), br+ImVec2(-r,0),br+ImVec2(-2*r,0), resize_col);
                 }
@@ -7750,18 +7751,18 @@ void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thic
     AddVtxLine(a, b, col, thickness);
 }
 
-void ImDrawList::AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, int a_max, bool tris, const ImVec2& third_point_offset)
+void ImDrawList::AddArcFast(const ImVec2& center, float rad, ImU32 col, int a_min, int a_max, bool tris, const ImVec2& third_point_offset)
 {
     if ((col >> 24) == 0)
         return;
 
-    static ImVec2 circle_vtx[12];
+    static ImVec2 circle_vtx[16];
     static bool circle_vtx_builds = false;
     if (!circle_vtx_builds)
     {
-        for (int i = 0; i < IM_ARRAYSIZE(circle_vtx); i++)
+        for (int i = 0; i < 16; i++)
         {
-            const float a = ((float)i / (float)IM_ARRAYSIZE(circle_vtx)) * 2*PI;
+            const float a = ((float)i / (float)16.0f) * 2*PI;
             circle_vtx[i].x = cosf(a + PI);
             circle_vtx[i].y = sinf(a + PI);
         }
@@ -7773,8 +7774,8 @@ void ImDrawList::AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, i
         ReserveVertices((unsigned int)(a_max-a_min) * 3);
         for (int a = a_min; a < a_max; a++)
         {
-            AddVtx(center + circle_vtx[a % IM_ARRAYSIZE(circle_vtx)] * rad, col);
-            AddVtx(center + circle_vtx[(a+1) % IM_ARRAYSIZE(circle_vtx)] * rad, col);
+            AddVtx(center + circle_vtx[a & 15] * rad, col);
+            AddVtx(center + circle_vtx[(a+1) & 15] * rad, col);
             AddVtx(center + third_point_offset, col);
         }
     }
@@ -7782,7 +7783,7 @@ void ImDrawList::AddArc(const ImVec2& center, float rad, ImU32 col, int a_min, i
     {
         ReserveVertices((unsigned int)(a_max-a_min) * 6);
         for (int a = a_min; a < a_max; a++)
-            AddVtxLine(center + circle_vtx[a % IM_ARRAYSIZE(circle_vtx)] * rad, center + circle_vtx[(a+1) % IM_ARRAYSIZE(circle_vtx)] * rad, col);
+            AddVtxLine(center + circle_vtx[a & 15] * rad, center + circle_vtx[(a+1) & 15] * rad, col);
     }
 }
 
@@ -7811,10 +7812,10 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
         AddVtxLine(ImVec2(b.x - ((rounding_corners & 4)?r:0), b.y), ImVec2(a.x + ((rounding_corners & 8)?r:0), b.y), col);
         AddVtxLine(ImVec2(a.x, b.y - ((rounding_corners & 8)?r:0)), ImVec2(a.x, a.y + ((rounding_corners & 1)?r:0)), col);
 
-        if (rounding_corners & 1) AddArc(ImVec2(a.x+r,a.y+r), r, col, 0, 3);
-        if (rounding_corners & 2) AddArc(ImVec2(b.x-r,a.y+r), r, col, 3, 6);
-        if (rounding_corners & 4) AddArc(ImVec2(b.x-r,b.y-r), r, col, 6, 9);
-        if (rounding_corners & 8) AddArc(ImVec2(a.x+r,b.y-r), r, col, 9, 12);
+        if (rounding_corners & 1) AddArcFast(ImVec2(a.x+r,a.y+r), r, col, 0, 4);
+        if (rounding_corners & 2) AddArcFast(ImVec2(b.x-r,a.y+r), r, col, 4, 8);
+        if (rounding_corners & 4) AddArcFast(ImVec2(b.x-r,b.y-r), r, col, 8, 12);
+        if (rounding_corners & 8) AddArcFast(ImVec2(a.x+r,b.y-r), r, col, 12, 16);
     }
 }
 
@@ -7866,10 +7867,10 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
         AddVtx(ImVec2(b.x,bot_y), col);
         AddVtx(ImVec2(b.x-r,bot_y), col);
 
-        if (rounding_corners & 1) AddArc(ImVec2(a.x+r,a.y+r), r, col, 0, 3, true);
-        if (rounding_corners & 2) AddArc(ImVec2(b.x-r,a.y+r), r, col, 3, 6, true);
-        if (rounding_corners & 4) AddArc(ImVec2(b.x-r,b.y-r), r, col, 6, 9, true);
-        if (rounding_corners & 8) AddArc(ImVec2(a.x+r,b.y-r), r, col, 9, 12,true);
+        if (rounding_corners & 1) AddArcFast(ImVec2(a.x+r,a.y+r), r, col, 0, 4, true);
+        if (rounding_corners & 2) AddArcFast(ImVec2(b.x-r,a.y+r), r, col, 4, 8, true);
+        if (rounding_corners & 4) AddArcFast(ImVec2(b.x-r,b.y-r), r, col, 8, 12, true);
+        if (rounding_corners & 8) AddArcFast(ImVec2(a.x+r,b.y-r), r, col, 12, 16, true);
     }
 }
 
