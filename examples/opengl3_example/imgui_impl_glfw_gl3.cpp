@@ -23,7 +23,7 @@ static GLuint       g_FontTexture = 0;
 static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
 static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
-static size_t       g_VboMaxSize = 20000;
+static size_t       g_VboSize = 0;
 static unsigned int g_VboHandle = 0, g_VaoHandle = 0;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
@@ -62,11 +62,10 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
     for (int n = 0; n < cmd_lists_count; n++)
         total_vtx_count += cmd_lists[n]->vtx_buffer.size();
     glBindBuffer(GL_ARRAY_BUFFER, g_VboHandle);
-    size_t neededBufferSize = total_vtx_count * sizeof(ImDrawVert);
-    if (neededBufferSize > g_VboMaxSize)
+    size_t needed_vtx_size = total_vtx_count * sizeof(ImDrawVert);
+    if (g_VboSize < needed_vtx_size)
     {
-        g_VboMaxSize = neededBufferSize + 5000;  // Grow buffer
-        glBufferData(GL_ARRAY_BUFFER, g_VboMaxSize, NULL, GL_STREAM_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, g_VboSize, NULL, GL_STREAM_DRAW);
     }
 
     // Copy and convert all vertices into a single contiguous buffer
