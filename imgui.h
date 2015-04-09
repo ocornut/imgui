@@ -914,7 +914,7 @@ struct ImDrawList
     IMGUI_API void  ArcTo(const ImVec2& centre, float radius, float a_min, float a_max, int num_segments = 12);
     IMGUI_API void  Rect(const ImVec2& a, const ImVec2& b, float rounding = 0.0f, int rounding_corners = 0x0F);
     IMGUI_API void  Fill(ImU32 col);
-    IMGUI_API void  Stroke(ImU32 col, float thickness, bool closed = false);
+    IMGUI_API void  Stroke(ImU32 col, float thickness, bool closed);
 
     // Primitives   
     IMGUI_API void  AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness = 1.0f);

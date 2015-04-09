@@ -7844,14 +7844,6 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             PrimVtx(v1 + hn, uv, col);
             PrimVtx(v1 - hn, uv, col);
         }
-
-        /*
-        const float inv_length = 1.0f / sqrtf(ImLengthSqr(b - a));
-        const float aa_size = 1.0f;
-        const ImVec2 hn = (b - a) * (thickness * 0.5f * inv_length);// half normalized
-        const ImVec2 hp0 = ImVec2(+hn.y, -hn.x);                    // half perpendiculars + user offset
-        const ImVec2 hp1 = ImVec2(-hn.y, +hn.x);
-        */
     }
 }
 
@@ -8031,14 +8023,13 @@ void ImDrawList::Rect(const ImVec2& a, const ImVec2& b, float rounding, int roun
     }
 }
 
-void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float half_thickness)
+void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness)
 {
     if ((col >> 24) == 0)
         return;
     LineTo(a);
     LineTo(b);
-    Stroke(col, false);
-    (void)half_thickness;
+    Stroke(col, thickness, false);
 }
 
 void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
@@ -8046,7 +8037,7 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
     if ((col >> 24) == 0)
         return;
     Rect(a + ImVec2(0.5f,0.5f), b + ImVec2(0.5f,0.5f), rounding, rounding_corners);
-    Stroke(col, true);
+    Stroke(col, 1.0f, true);
 }
 
 void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
@@ -8074,7 +8065,7 @@ void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int nu
 
     const float a_max = PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
     ArcTo(centre, radius, 0.0f, a_max, num_segments);
-    Stroke(col, true);
+    Stroke(col, 1.0f, true);
 }
 
 void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments)
