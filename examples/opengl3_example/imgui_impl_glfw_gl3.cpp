@@ -65,6 +65,7 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
     size_t needed_vtx_size = total_vtx_count * sizeof(ImDrawVert);
     if (g_VboSize < needed_vtx_size)
     {
+        g_VboSize = needed_vtx_size + 5000 * sizeof(ImDrawVert);  // Grow buffer
         glBufferData(GL_ARRAY_BUFFER, g_VboSize, NULL, GL_STREAM_DRAW);
     }
 
@@ -216,8 +217,6 @@ bool ImGui_ImplGlfwGL3_CreateDeviceObjects()
     g_AttribLocationColor = glGetAttribLocation(g_ShaderHandle, "Color");
 
     glGenBuffers(1, &g_VboHandle);
-    glBindBuffer(GL_ARRAY_BUFFER, g_VboHandle);
-    glBufferData(GL_ARRAY_BUFFER, g_VboMaxSize, NULL, GL_DYNAMIC_DRAW);
 
     glGenVertexArrays(1, &g_VaoHandle);
     glBindVertexArray(g_VaoHandle);
