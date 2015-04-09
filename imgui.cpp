@@ -7700,13 +7700,10 @@ void ImDrawList::PopTextureID()
 
 void ImDrawList::ReserveVertices(unsigned int vtx_count)
 {
-    if (vtx_count > 0)
-    {
-        ImDrawCmd& draw_cmd = commands.back();
-        draw_cmd.vtx_count += vtx_count;
-        vtx_buffer.resize(vtx_buffer.size() + vtx_count);
-        vtx_write = &vtx_buffer[vtx_buffer.size() - vtx_count];
-    }
+    ImDrawCmd& draw_cmd = commands.back();
+    draw_cmd.vtx_count += vtx_count;
+    vtx_buffer.resize(vtx_buffer.size() + vtx_count);
+    vtx_write = &vtx_buffer[vtx_buffer.size() - vtx_count];
 }
 
 void ImDrawList::AddVtx(const ImVec2& pos, ImU32 col)
@@ -7931,6 +7928,8 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 
     if (text_end == NULL)
         text_end = text_begin + strlen(text_begin);
+    if (text_begin == text_end)
+        return;
 
     IM_ASSERT(font->ContainerAtlas->TexID == texture_id_stack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
