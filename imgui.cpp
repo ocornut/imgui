@@ -7,8 +7,8 @@
 // ANTI-ALIASED PRIMITIVES BRANCH
 // TODO
 // - settle on where to the 0.5f offset for lines
-// - checkbox, slider grabs are not centered properly if you enable border (relate to point above)
-// - thick lines? recently been added to the ImDrawList API as a convenience.
+// - check-box, slider grabs are not centered properly if you enable border (relate to point above)
+// - support for thickness stroking. recently been added to the ImDrawList API as a convenience.
 
 /*
 
@@ -398,6 +398,7 @@
 #include <new>          // new (ptr)
 
 #ifdef _MSC_VER
+#pragma warning (disable: 4127) // conditional expression is constant
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
@@ -7723,18 +7724,14 @@ void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a
 
 static ImVector<ImVec2> GTempPolyData;
 
-void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed)
+void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, bool closed)
 {
+    (void)thickness; // Unsupported
+
     if (points_count < 2)
         return;
 
-    const float aa_size = 1.0f;
-
-    // Temporary buffer
-    GTempPolyData.resize(points_count * 3);
-    ImVec2* temp_inner = &GTempPolyData[0];
-    ImVec2* temp_outer = &GTempPolyData[points_count];
-    ImVec2* temp_normals = &GTempPolyData[points_count * 2];
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
 
     int start = 0, count = points_count;
     if (!closed)
@@ -7743,136 +7740,200 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         count = points_count-1;
     }
 
-    for (int i = 0; i < count; i++)
+    const bool aa_enabled = true;//!ImGui::GetIO().KeyCtrl;
+    if (aa_enabled)
     {
-        const int ni = (i+1) < points_count ? i+1 : 0; 
-        const ImVec2& v0 = points[i];
-        const ImVec2& v1 = points[ni];
-        ImVec2 diff = v1 - v0;
-        float d = ImLengthSqr(diff);
-        if (d > 0)
-            diff *= 1.0f/sqrtf(d);
-        temp_normals[i].x = diff.y;
-        temp_normals[i].y = -diff.x;
-    }
+        // Anti-aliased stroke
+        const float aa_size = 1.0f;
 
-    if (!closed)
-    {
-        temp_normals[points_count-1] = temp_normals[points_count-2];
-        temp_outer[0] = points[0] + temp_normals[0]*aa_size;
-        temp_inner[0] = points[0] - temp_normals[0]*aa_size;
-        temp_outer[points_count-1] = points[points_count-1] + temp_normals[points_count-1]*aa_size;
-        temp_inner[points_count-1] = points[points_count-1] - temp_normals[points_count-1]*aa_size;
-    }
+        // Temporary buffer
+        GTempPolyData.resize(points_count * 3);
+        ImVec2* temp_inner = &GTempPolyData[0];
+        ImVec2* temp_outer = &GTempPolyData[points_count];
+        ImVec2* temp_normals = &GTempPolyData[points_count * 2];
 
-    for (int i = start; i < count; i++)
-    {
-        const int ni = (i+1) < points_count ? i+1 : 0;
-        const ImVec2& dl0 = temp_normals[i];
-        const ImVec2& dl1 = temp_normals[ni];
-        ImVec2 dm = (dl0 + dl1) * 0.5f;
-        float dmr2 = dm.x*dm.x + dm.y*dm.y;
-        if (dmr2 > 0.000001f)
+        for (int i = 0; i < count; i++)
         {
-            float scale = 1.0f / dmr2;
-            if (scale > 100.0f) scale = 100.0f;
-            dm *= scale;
+            const int ni = (i+1) < points_count ? i+1 : 0; 
+            const ImVec2& v0 = points[i];
+            const ImVec2& v1 = points[ni];
+            ImVec2 diff = v1 - v0;
+            float d = ImLengthSqr(diff);
+            if (d > 0)
+                diff *= 1.0f/sqrtf(d);
+            temp_normals[i].x = diff.y;
+            temp_normals[i].y = -diff.x;
         }
-        dm *= aa_size;
-        temp_outer[ni] = points[ni] + dm;
-        temp_inner[ni] = points[ni] - dm;
+
+        if (!closed)
+        {
+            temp_normals[points_count-1] = temp_normals[points_count-2];
+            temp_outer[0] = points[0] + temp_normals[0]*aa_size;
+            temp_inner[0] = points[0] - temp_normals[0]*aa_size;
+            temp_outer[points_count-1] = points[points_count-1] + temp_normals[points_count-1]*aa_size;
+            temp_inner[points_count-1] = points[points_count-1] - temp_normals[points_count-1]*aa_size;
+        }
+
+        for (int i = start; i < count; i++)
+        {
+            const int ni = (i+1) < points_count ? i+1 : 0;
+            const ImVec2& dl0 = temp_normals[i];
+            const ImVec2& dl1 = temp_normals[ni];
+            ImVec2 dm = (dl0 + dl1) * 0.5f;
+            float dmr2 = dm.x*dm.x + dm.y*dm.y;
+            if (dmr2 > 0.000001f)
+            {
+                float scale = 1.0f / dmr2;
+                if (scale > 100.0f) scale = 100.0f;
+                dm *= scale;
+            }
+            dm *= aa_size;
+            temp_outer[ni] = points[ni] + dm;
+            temp_inner[ni] = points[ni] - dm;
+        }
+
+        const ImU32 col_trans = col & 0x00ffffff;
+        const int vertex_count = count*12;
+        PrimReserve(vertex_count);
+
+        // Stroke
+        for (int i = 0; i < count; i++)
+        {
+            const int ni = (i+1) < points_count ? i+1 : 0;
+            PrimVtx(points[ni], uv, col);
+            PrimVtx(points[i], uv, col);
+            PrimVtx(temp_outer[i], uv, col_trans);
+
+            PrimVtx(temp_outer[i], uv, col_trans);
+            PrimVtx(temp_outer[ni], uv, col_trans);
+            PrimVtx(points[ni], uv, col);
+
+            PrimVtx(temp_inner[ni], uv, col_trans);
+            PrimVtx(temp_inner[i], uv, col_trans);
+            PrimVtx(points[i], uv, col);
+
+            PrimVtx(points[i], uv, col);
+            PrimVtx(points[ni], uv, col);
+            PrimVtx(temp_inner[ni], uv, col_trans);
+        }
     }
-
-    const ImU32 col_trans = col & 0x00ffffff;
-    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
-
-    const int vertex_count = count*12;
-    PrimReserve(vertex_count);
-
-    // Stroke
-    for (int i = 0; i < count; i++)
+    else
     {
-        const int ni = (i+1) < points_count ? i+1 : 0;
-        PrimVtx(points[ni], uv, col);
-        PrimVtx(points[i], uv, col);
-        PrimVtx(temp_outer[i], uv, col_trans);
+        // Non Anti-aliased Stroke
+        const int vertex_count = count*6;
+        PrimReserve(vertex_count);
 
-        PrimVtx(temp_outer[i], uv, col_trans);
-        PrimVtx(temp_outer[ni], uv, col_trans);
-        PrimVtx(points[ni], uv, col);
+        for (int i = 0; i < count; i++)
+        {
+            const int ni = (i+1) < points_count ? i+1 : 0; 
+            const ImVec2& v0 = points[i];
+            const ImVec2& v1 = points[ni];
+            ImVec2 diff = v1 - v0;
+            float d = ImLengthSqr(diff);
+            if (d > 0)
+                diff *= 1.0f / sqrtf(d);
 
-        PrimVtx(temp_inner[ni], uv, col_trans);
-        PrimVtx(temp_inner[i], uv, col_trans);
-        PrimVtx(points[i], uv, col);
+            ImVec2 hn;
+            hn.x = diff.y * 0.5f;
+            hn.y = -diff.x * 0.5f;
 
-        PrimVtx(points[i], uv, col);
-        PrimVtx(points[ni], uv, col);
-        PrimVtx(temp_inner[ni], uv, col_trans);
+            PrimVtx(v0 - hn, uv, col);
+            PrimVtx(v0 + hn, uv, col);
+            PrimVtx(v1 + hn, uv, col);
+            PrimVtx(v0 - hn, uv, col);
+            PrimVtx(v1 + hn, uv, col);
+            PrimVtx(v1 - hn, uv, col);
+        }
+
+        /*
+        const float inv_length = 1.0f / sqrtf(ImLengthSqr(b - a));
+        const float aa_size = 1.0f;
+        const ImVec2 hn = (b - a) * (thickness * 0.5f * inv_length);// half normalized
+        const ImVec2 hp0 = ImVec2(+hn.y, -hn.x);                    // half perpendiculars + user offset
+        const ImVec2 hp1 = ImVec2(-hn.y, +hn.x);
+        */
     }
 }
 
 void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col)
 {
-    const float aa_size = 1.0f;
-
-    // Temporary buffer
-    GTempPolyData.resize(points_count * 3);
-    ImVec2* temp_inner = &GTempPolyData[0];
-    ImVec2* temp_outer = &GTempPolyData[points_count];
-    ImVec2* temp_normals = &GTempPolyData[points_count * 2];
-    for (int i = 0, j = points_count-1; i < points_count; j=i++)
-    {
-        const ImVec2& v0 = points[j];
-        const ImVec2& v1 = points[i];
-        ImVec2 diff = v1 - v0;
-        float d = ImLengthSqr(diff);
-        if (d > 0)
-            diff *= 1.0f/sqrtf(d);
-        temp_normals[j].x = diff.y;
-        temp_normals[j].y = -diff.x;
-    }
-
-    for (int i = 0, j = points_count-1; i < points_count; j=i++)
-    {
-        const ImVec2& dl0 = temp_normals[j];
-        const ImVec2& dl1 = temp_normals[i];
-        ImVec2 dm = (dl0 + dl1) * 0.5f;
-        float dmr2 = dm.x*dm.x + dm.y*dm.y;
-        if (dmr2 > 0.000001f)
-        {
-            float scale = 1.0f / dmr2;
-            if (scale > 100.0f) scale = 100.0f;
-            dm *= scale;
-        }
-        dm *= aa_size*0.5f;
-        temp_outer[i] = points[i] + dm;
-        temp_inner[i] = points[i] - dm;
-    }
-
-    const ImU32 col_trans = col & 0x00ffffff;
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
 
-    int vertex_count = (points_count-2)*3 + points_count*6;
-    PrimReserve(vertex_count);
-
-    // Fill
-    for (int i = 2; i < points_count; i++)
+    const bool aa_enabled = true;//!ImGui::GetIO().KeyCtrl;
+    if (aa_enabled)
     {
-        PrimVtx(temp_inner[0], uv, col);
-        PrimVtx(temp_inner[i-1], uv, col);
-        PrimVtx(temp_inner[i], uv, col);
+        // Anti-aliased Fill
+        const float aa_size = 1.0f;
+
+        // Temporary buffer
+        GTempPolyData.resize(points_count * 3);
+        ImVec2* temp_inner = &GTempPolyData[0];
+        ImVec2* temp_outer = &GTempPolyData[points_count];
+        ImVec2* temp_normals = &GTempPolyData[points_count * 2];
+        for (int i = 0, j = points_count-1; i < points_count; j=i++)
+        {
+            const ImVec2& v0 = points[j];
+            const ImVec2& v1 = points[i];
+            ImVec2 diff = v1 - v0;
+            float d = ImLengthSqr(diff);
+            if (d > 0)
+                diff *= 1.0f/sqrtf(d);
+            temp_normals[j].x = diff.y;
+            temp_normals[j].y = -diff.x;
+        }
+
+        for (int i = 0, j = points_count-1; i < points_count; j=i++)
+        {
+            const ImVec2& dl0 = temp_normals[j];
+            const ImVec2& dl1 = temp_normals[i];
+            ImVec2 dm = (dl0 + dl1) * 0.5f;
+            float dmr2 = dm.x*dm.x + dm.y*dm.y;
+            if (dmr2 > 0.000001f)
+            {
+                float scale = 1.0f / dmr2;
+                if (scale > 100.0f) scale = 100.0f;
+                dm *= scale;
+            }
+            dm *= aa_size*0.5f;
+            temp_outer[i] = points[i] + dm;
+            temp_inner[i] = points[i] - dm;
+        }
+
+        const ImU32 col_trans = col & 0x00ffffff;
+        const int vertex_count = (points_count-2)*3 + points_count*6;
+        PrimReserve(vertex_count);
+
+        // Fill
+        for (int i = 2; i < points_count; i++)
+        {
+            PrimVtx(temp_inner[0], uv, col);
+            PrimVtx(temp_inner[i-1], uv, col);
+            PrimVtx(temp_inner[i], uv, col);
+        }
+
+        // AA fringe
+        for (int i = 0, j = points_count-1; i < points_count; j=i++)
+        {
+            PrimVtx(temp_inner[i], uv, col);
+            PrimVtx(temp_inner[j], uv, col);
+            PrimVtx(temp_outer[j], uv, col_trans);
+
+            PrimVtx(temp_outer[j], uv, col_trans);
+            PrimVtx(temp_outer[i], uv, col_trans);
+            PrimVtx(temp_inner[i], uv, col);
+        }
     }
-
-    // AA fringe
-    for (int i = 0, j = points_count-1; i < points_count; j=i++)
+    else
     {
-        PrimVtx(temp_inner[i], uv, col);
-        PrimVtx(temp_inner[j], uv, col);
-        PrimVtx(temp_outer[j], uv, col_trans);
-
-        PrimVtx(temp_outer[j], uv, col_trans);
-        PrimVtx(temp_outer[i], uv, col_trans);
-        PrimVtx(temp_inner[i], uv, col);
+        // Non Anti-aliased Fill
+        const int vertex_count = (points_count-2)*3;
+        PrimReserve(vertex_count);
+        for (int i = 2; i < points_count; i++)
+        {
+            PrimVtx(points[0], uv, col);
+            PrimVtx(points[i-1], uv, col);
+            PrimVtx(points[i], uv, col);
+        }
     }
 }
 
@@ -7936,10 +7997,10 @@ void ImDrawList::Fill(ImU32 col)
     ClearPath();
 }
 
-void ImDrawList::Stroke(ImU32 col, bool closed)
+void ImDrawList::Stroke(ImU32 col, float thickness, bool closed)
 {
     // Remove duplicates
-    AddPolyline(&path[0], (int)path.size(), col, closed);
+    AddPolyline(&path[0], (int)path.size(), col, thickness, closed);
     ClearPath();
 }
 
