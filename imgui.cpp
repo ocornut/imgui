@@ -7833,16 +7833,19 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             if (d > 0)
                 diff *= 1.0f / sqrtf(d);
 
-            ImVec2 hn;
-            hn.x = diff.y * 0.5f;
-            hn.y = -diff.x * 0.5f;
+            const float dx = diff.x * (thickness * 0.5f);
+            const float dy = diff.y * (thickness * 0.5f);
 
-            PrimVtx(v0 - hn, uv, col);
-            PrimVtx(v0 + hn, uv, col);
-            PrimVtx(v1 + hn, uv, col);
-            PrimVtx(v0 - hn, uv, col);
-            PrimVtx(v1 + hn, uv, col);
-            PrimVtx(v1 - hn, uv, col);
+            const ImVec2 pa(v0.x + dy, v0.y - dx);
+            const ImVec2 pb(v1.x + dy, v1.y - dx);
+            const ImVec2 pc(v1.x - dy, v1.y + dx);
+            const ImVec2 pd(v0.x - dy, v0.y + dx);
+            PrimVtx(pa, uv, col);
+            PrimVtx(pb, uv, col);
+            PrimVtx(pc, uv, col);
+            PrimVtx(pa, uv, col);
+            PrimVtx(pc, uv, col);
+            PrimVtx(pd, uv, col);
         }
     }
 }
