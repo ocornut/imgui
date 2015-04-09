@@ -670,7 +670,7 @@ struct ImGuiIO
     bool        WantCaptureMouse;           // Mouse is hovering a window or widget is active (= ImGui will use your mouse input)
     bool        WantCaptureKeyboard;        // Widget is active (= ImGui will use your keyboard input)
     float       Framerate;                  // Framerate estimation, in frame per second. Rolling average estimation based on IO.DeltaTime over 120 frames
-    int         MetricsVertices;            // Vertices processed during last call to Render()
+    int         MetricsRenderVertices;      // Vertices processed during last call to Render()
 
     //------------------------------------------------------------------
     // [Internal] ImGui will maintain those fields for you
