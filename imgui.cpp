@@ -7861,7 +7861,6 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
     r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ));
     r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ));
 
-    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
     if (r == 0.0f || rounding_corners == 0)
     {
         // Use triangle so we can merge more draw calls together (at the cost of extra vertices)
