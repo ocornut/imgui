@@ -7804,9 +7804,9 @@ void ImDrawList::AddArcFast(const ImVec2& center, float radius, ImU32 col, int a
         for (int a0 = a_min; a0 < a_max; a0++)
         {
             int a1 = (a0 + 1 == SAMPLES) ? 0 : a0 + 1;
-            AddVtx(center + circle_vtx[a0] * radius, uv, col);
-            AddVtx(center + circle_vtx[a1] * radius, uv, col);
-            AddVtx(center + third_point_offset, uv, col);
+            PrimVtx(center + circle_vtx[a0] * radius, uv, col);
+            PrimVtx(center + circle_vtx[a1] * radius, uv, col);
+            PrimVtx(center + third_point_offset, uv, col);
         }
     }
     else
@@ -7925,9 +7925,9 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
     for (int i = 0; i < num_segments; i++)
     {
         const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        AddVtx(centre + ImVec2(cosf(a0), sinf(a0))*radius, uv, col);
-        AddVtx(centre + ImVec2(cosf(a1), sinf(a1))*radius, uv, col);
-        AddVtx(centre, uv, col);
+        PrimVtx(centre + ImVec2(cosf(a0), sinf(a0))*radius, uv, col);
+        PrimVtx(centre + ImVec2(cosf(a1), sinf(a1))*radius, uv, col);
+        PrimVtx(centre, uv, col);
         a0 = a1;
     }
 }
