@@ -8,7 +8,6 @@
 // TODO
 // - settle on where to the 0.5f offset for lines
 // - checkbox, slider grabs are not centered properly if you enable border (relate to point above)
-// - fix circles
 // - thick lines? recently been added to the ImDrawList API as a convenience.
 
 /*
@@ -7911,6 +7910,7 @@ void ImDrawList::ArcToFast(const ImVec2& centre, float radius, int amin, int ama
     }
     else
     {
+        path.reserve(path.size() + (amax - amin + 1));
         for (int a = amin; a <= amax; a++)
             path.push_back(centre + circle_vtx[a % circle_vtx_count] * radius);
     }
@@ -7922,6 +7922,7 @@ void ImDrawList::ArcTo(const ImVec2& centre, float radius, float amin, float ama
     {
         path.push_back(centre);
     }
+    path.reserve(path.size() + (num_segments + 1));
     for (int i = 0; i <= num_segments; i++)
     {
         const float a = amin + ((float)i / (float)num_segments) * (amax - amin);
@@ -8009,7 +8010,9 @@ void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int nu
 {
     if ((col >> 24) == 0)
         return;
-    ArcTo(centre, radius, 0.0f, PI*2, num_segments);
+
+    const float a_max = PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
+    ArcTo(centre, radius, 0.0f, a_max, num_segments);
     Stroke(col, true);
 }
 
@@ -8017,7 +8020,9 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
 {
     if ((col >> 24) == 0)
         return;
-    ArcTo(centre, radius, 0.0f, PI*2, num_segments);
+
+    const float a_max = PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
+    ArcTo(centre, radius, 0.0f, a_max, num_segments);
     Fill(col);
 }
 
