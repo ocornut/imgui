@@ -65,7 +65,7 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
     size_t needed_vtx_size = total_vtx_count * sizeof(ImDrawVert);
     if (g_VboSize < needed_vtx_size)
     {
-        g_VboSize = needed_vtx_size + 8192;  // Grow buffer
+        g_VboSize = needed_vtx_size + 5000 * sizeof(ImDrawVert);  // Grow buffer
         glBufferData(GL_ARRAY_BUFFER, g_VboSize, NULL, GL_STREAM_DRAW);
     }
 
