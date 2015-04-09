@@ -7782,11 +7782,14 @@ void ImDrawList::PrimQuad(const ImVec2& a, const ImVec2& b, const ImVec2& c, con
 void ImDrawList::PrimLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness)
 {
     const float inv_length = 1.0f / sqrtf(ImLengthSqr(b - a));
-    const ImVec2 hn = (b - a) * (thickness * 0.5f * inv_length);// half normalized
-    const ImVec2 hp0 = ImVec2(+hn.y, -hn.x);                    // half perpendiculars + user offset
-    const ImVec2 hp1 = ImVec2(-hn.y, +hn.x);
+    const float dx = (b.x - a.x) * (thickness * 0.5f * inv_length); // line direction, halved
+    const float dy = (b.y - a.y) * (thickness * 0.5f * inv_length); // line direction, halved
 
-    PrimQuad(a + hp0, b + hp0, b + hp1, a + hp1, col);
+    const ImVec2 pa(a.x + dy, a.y - dx);
+    const ImVec2 pb(b.x + dy, b.y - dx);
+    const ImVec2 pc(b.x - dy, b.y + dx);
+    const ImVec2 pd(a.x - dy, a.y + dx);
+    PrimQuad(pa, pb, pc, pd, col);
 }
 
 void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness)
