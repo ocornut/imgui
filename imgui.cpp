@@ -142,6 +142,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/04/09 (1.38) - renamed ImDrawList::AddArc() to ImDrawList::AddArcFast() for compatibility with future API
  - 2015/04/03 (1.38) - removed ImGuiCol_CheckHovered, ImGuiCol_CheckActive, replaced with the more general ImGuiCol_FrameBgHovered, ImGuiCol_FrameBgActive.
  - 2014/04/03 (1.38) - removed support for passing -FLT_MAX..+FLT_MAX as the range for a SliderFloat(). Use DragFloat() or Inputfloat() instead.
  - 2015/03/17 (1.36) - renamed GetItemRectMin()/GetItemRectMax()/IsMouseHoveringBox() to GetItemRectMin()/GetItemRectMax()/IsMouseHoveringRect(). Kept inline redirection function (will obsolete).
@@ -1678,7 +1679,7 @@ static inline void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_lis
         if (draw_list->commands.back().vtx_count == 0)
             draw_list->commands.pop_back();
         out_render_list.push_back(draw_list);
-        GImGui->IO.MetricsVertices += (int)draw_list->vtx_buffer.size();
+        GImGui->IO.MetricsRenderVertices += (int)draw_list->vtx_buffer.size();
     }
 }
 
@@ -2212,7 +2213,7 @@ void ImGui::Render()
         }
 
         // Gather windows to render
-        g.IO.MetricsVertices = 0;
+        g.IO.MetricsRenderVertices = 0;
         for (size_t i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
             g.RenderDrawLists[i].resize(0);
         for (size_t i = 0; i != g.Windows.size(); i++)
@@ -7697,31 +7698,64 @@ void ImDrawList::PopTextureID()
     UpdateTextureID();
 }
 
-void ImDrawList::ReserveVertices(unsigned int vtx_count)
+void ImDrawList::PrimReserve(unsigned int vtx_count)
 {
-    if (vtx_count > 0)
-    {
-        ImDrawCmd& draw_cmd = commands.back();
-        draw_cmd.vtx_count += vtx_count;
-        vtx_buffer.resize(vtx_buffer.size() + vtx_count);
-        vtx_write = &vtx_buffer[vtx_buffer.size() - vtx_count];
-    }
+    ImDrawCmd& draw_cmd = commands.back();
+    draw_cmd.vtx_count += vtx_count;
+
+    size_t vtx_buffer_size = vtx_buffer.size();
+    vtx_buffer.resize(vtx_buffer_size + vtx_count);
+    vtx_write = &vtx_buffer[vtx_buffer_size];
 }
 
-void ImDrawList::AddVtx(const ImVec2& pos, ImU32 col)
+void ImDrawList::PrimTriangle(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col)
 {
-    vtx_write->pos = pos;
-    vtx_write->col = col;
-    vtx_write->uv = GImGui->FontTexUvWhitePixel;
-    vtx_write++;
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col;
+    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col;
+    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col;
+    vtx_write += 3;
 }
 
-void ImDrawList::AddVtxUV(const ImVec2& pos, ImU32 col, const ImVec2& uv)
+void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
 {
-    vtx_write->pos = pos;
-    vtx_write->col = col;
-    vtx_write->uv = uv;
-    vtx_write++;
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+	const ImVec2 b(c.x, a.y);
+	const ImVec2 d(a.x, c.y);
+    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col;
+    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col;
+    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col;
+    vtx_write[3].pos = a; vtx_write[3].uv = uv; vtx_write[3].col = col;
+    vtx_write[4].pos = c; vtx_write[4].uv = uv; vtx_write[4].col = col;
+    vtx_write[5].pos = d; vtx_write[5].uv = uv; vtx_write[5].col = col;
+    vtx_write += 6;
+}
+
+void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 col)
+{
+	const ImVec2 b(c.x, a.y);
+	const ImVec2 d(a.x, c.y);
+	const ImVec2 uv_b(uv_c.x, uv_a.y);
+	const ImVec2 uv_d(uv_a.x, uv_c.y);
+    vtx_write[0].pos = a; vtx_write[0].uv = uv_a; vtx_write[0].col = col;
+    vtx_write[1].pos = b; vtx_write[1].uv = uv_b; vtx_write[1].col = col;
+    vtx_write[2].pos = c; vtx_write[2].uv = uv_c; vtx_write[2].col = col;
+    vtx_write[3].pos = a; vtx_write[3].uv = uv_a; vtx_write[3].col = col;
+    vtx_write[4].pos = c; vtx_write[4].uv = uv_c; vtx_write[4].col = col;
+    vtx_write[5].pos = d; vtx_write[5].uv = uv_d; vtx_write[5].col = col;
+    vtx_write += 6;
+}
+
+void ImDrawList::PrimQuad(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, ImU32 col)
+{
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col;
+    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col;
+    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col;
+    vtx_write[3].pos = a; vtx_write[3].uv = uv; vtx_write[3].col = col;
+    vtx_write[4].pos = c; vtx_write[4].uv = uv; vtx_write[4].col = col;
+    vtx_write[5].pos = d; vtx_write[5].uv = uv; vtx_write[5].col = col;
+    vtx_write += 6;
 }
 
 static ImVector<ImVec2> GTempPolyData;
@@ -7787,29 +7821,30 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     }
 
     const ImU32 col_trans = col & 0x00ffffff;
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
 
-    int vertex_count = count*12;
-    ReserveVertices(vertex_count);
+    const int vertex_count = count*12;
+    PrimReserve(vertex_count);
 
     // Stroke
     for (int i = 0; i < count; i++)
     {
         const int ni = (i+1) < points_count ? i+1 : 0;
-        AddVtx(points[ni], col);
-        AddVtx(points[i], col);
-        AddVtx(temp_outer[i], col_trans);
+        PrimVtx(points[ni], uv, col);
+        PrimVtx(points[i], uv, col);
+        PrimVtx(temp_outer[i], uv, col_trans);
 
-        AddVtx(temp_outer[i], col_trans);
-        AddVtx(temp_outer[ni], col_trans);
-        AddVtx(points[ni], col);
+        PrimVtx(temp_outer[i], uv, col_trans);
+        PrimVtx(temp_outer[ni], uv, col_trans);
+        PrimVtx(points[ni], uv, col);
 
-        AddVtx(temp_inner[ni], col_trans);
-        AddVtx(temp_inner[i], col_trans);
-        AddVtx(points[i], col);
+        PrimVtx(temp_inner[ni], uv, col_trans);
+        PrimVtx(temp_inner[i], uv, col_trans);
+        PrimVtx(points[i], uv, col);
 
-        AddVtx(points[i], col);
-        AddVtx(points[ni], col);
-        AddVtx(temp_inner[ni], col_trans);
+        PrimVtx(points[i], uv, col);
+        PrimVtx(points[ni], uv, col);
+        PrimVtx(temp_inner[ni], uv, col_trans);
     }
 }
 
@@ -7852,28 +7887,29 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     }
 
     const ImU32 col_trans = col & 0x00ffffff;
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
 
     int vertex_count = (points_count-2)*3 + points_count*6;
-    ReserveVertices(vertex_count);
+    PrimReserve(vertex_count);
 
     // Fill
     for (int i = 2; i < points_count; i++)
     {
-        AddVtx(temp_inner[0], col);
-        AddVtx(temp_inner[i-1], col);
-        AddVtx(temp_inner[i], col);
+        PrimVtx(temp_inner[0], uv, col);
+        PrimVtx(temp_inner[i-1], uv, col);
+        PrimVtx(temp_inner[i], uv, col);
     }
 
     // AA fringe
     for (int i = 0, j = points_count-1; i < points_count; j=i++)
     {
-        AddVtx(temp_inner[i], col);
-        AddVtx(temp_inner[j], col);
-        AddVtx(temp_outer[j], col_trans);
+        PrimVtx(temp_inner[i], uv, col);
+        PrimVtx(temp_inner[j], uv, col);
+        PrimVtx(temp_outer[j], uv, col_trans);
 
-        AddVtx(temp_outer[j], col_trans);
-        AddVtx(temp_outer[i], col_trans);
-        AddVtx(temp_inner[i], col);
+        PrimVtx(temp_outer[j], uv, col_trans);
+        PrimVtx(temp_outer[i], uv, col_trans);
+        PrimVtx(temp_inner[i], uv, col);
     }
 }
 
@@ -7891,7 +7927,7 @@ void ImDrawList::ArcToFast(const ImVec2& centre, float radius, int amin, int ama
 {
     static ImVec2 circle_vtx[12];
     static bool circle_vtx_builds = false;
-    static const int circle_vtx_count = IM_ARRAYSIZE(circle_vtx);
+    const int circle_vtx_count = IM_ARRAYSIZE(circle_vtx);
     if (!circle_vtx_builds)
     {
         for (int i = 0; i < circle_vtx_count; i++)
@@ -7902,6 +7938,7 @@ void ImDrawList::ArcToFast(const ImVec2& centre, float radius, int amin, int ama
         }
         circle_vtx_builds = true;
     }
+
     if (amin > amax) return;
 
     if (radius == 0.0f)
@@ -7947,6 +7984,7 @@ void ImDrawList::Rect(const ImVec2& a, const ImVec2& b, float rounding, int roun
     r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ) - 1.0f);
     r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ) - 1.0f);
 
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
     if (r == 0.0f || rounding_corners == 0)
     {
         LineTo(ImVec2(a.x,a.y));
@@ -8026,6 +8064,8 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 
     if (text_end == NULL)
         text_end = text_begin + strlen(text_begin);
+    if (text_begin == text_end)
+        return;
 
     IM_ASSERT(font->ContainerAtlas->TexID == texture_id_stack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
@@ -8033,9 +8073,9 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     const unsigned int char_count = (unsigned int)(text_end - text_begin);
     const unsigned int vtx_count_max = char_count * 6;
     const size_t vtx_begin = vtx_buffer.size();
-    ReserveVertices(vtx_count_max);
+    PrimReserve(vtx_count_max);
 
-    font->RenderText(font_size, pos, col, clip_rect_stack.back(), text_begin, text_end, vtx_write, wrap_width, cpu_clip_max);
+    font->RenderText(font_size, pos, col, clip_rect_stack.back(), text_begin, text_end, this, wrap_width, cpu_clip_max);
 
     // give back unused vertices
     vtx_buffer.resize((size_t)(vtx_write - &vtx_buffer.front()));
@@ -8054,13 +8094,8 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
     if (push_texture_id)
         PushTextureID(user_texture_id);
 
-    ReserveVertices(6);
-    AddVtxUV(ImVec2(a.x,a.y), col, uv0);
-    AddVtxUV(ImVec2(b.x,a.y), col, ImVec2(uv1.x,uv0.y));
-    AddVtxUV(ImVec2(b.x,b.y), col, uv1);
-    AddVtxUV(ImVec2(a.x,a.y), col, ImVec2(uv0.x,uv0.y));
-    AddVtxUV(ImVec2(b.x,b.y), col, uv1);
-    AddVtxUV(ImVec2(a.x,b.y), col, ImVec2(uv0.x,uv1.y));
+    PrimReserve(6);
+    PrimRectUV(a, b, uv0, uv1, col);
 
     if (push_texture_id)
         PopTextureID();
@@ -9076,7 +9111,7 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
     return text_size;
 }
 
-void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect_ref, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width, const ImVec2* cpu_clip_max) const
+void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect_ref, const char* text_begin, const char* text_end, ImDrawList* draw_list, float wrap_width, const ImVec2* cpu_clip_max) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin);
@@ -9099,6 +9134,8 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
     }
     float x = pos.x;
     float y = pos.y;
+
+    ImDrawVert* out_vertices = draw_list->vtx_write;
 
     const char* s = text_begin;
     while (s < text_end)
@@ -9187,6 +9224,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                             }
                         }
 
+                        // NB: we are not calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
                         out_vertices[0].pos = ImVec2(x1, y1);
                         out_vertices[0].uv  = ImVec2(u1, v1);
                         out_vertices[0].col = col;
@@ -9214,6 +9252,8 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
 
         x += char_width;
     }
+
+    draw_list->vtx_write = out_vertices;
 }
 
 //-----------------------------------------------------------------------------
@@ -9886,7 +9926,6 @@ void ImGui::ShowTestWindow(bool* opened)
 
             static float f1=1.123f;
             static float f2=0;
-            static float f3=123456789.0f;
             ImGui::SliderFloat("slider float", &f1, 0.0f, 2.0f);
             ImGui::SliderFloat("slider log float", &f2, -10.0f, 10.0f, "%.4f", 3.0f);
             static float angle = 0.0f;
@@ -10496,7 +10535,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
     {
         ImGui::Text("ImGui %s", ImGui::GetVersion());
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::Text("%d vertices", ImGui::GetIO().MetricsVertices);
+        ImGui::Text("%d vertices", ImGui::GetIO().MetricsRenderVertices);
         ImGui::Separator();
 
         struct Funcs

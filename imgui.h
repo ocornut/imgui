@@ -317,7 +317,7 @@ namespace ImGui
     // Widgets: Drags (tip: ctrl+click on a drag box to input text)
     // ImGui 1.38+ work-in-progress, may change name or API.
     IMGUI_API bool          DragFloat(const char* label, float* v, float v_step = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f");   // If v_max >= v_max we have no bound
-    IMGUI_API bool          DragInt(const char* label, int* v, int v_step = 1, int v_min = 0.0f, int v_max = 0.0f, const char* display_format = "%.0f");                // If v_max >= v_max we have no bound
+    IMGUI_API bool          DragInt(const char* label, int* v, int v_step = 1, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");                // If v_max >= v_max we have no bound
 
     // Widgets: Input
     IMGUI_API bool          InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
@@ -670,7 +670,7 @@ struct ImGuiIO
     bool        WantCaptureMouse;           // Mouse is hovering a window or widget is active (= ImGui will use your mouse input)
     bool        WantCaptureKeyboard;        // Widget is active (= ImGui will use your keyboard input)
     float       Framerate;                  // Framerate estimation, in frame per second. Rolling average estimation based on IO.DeltaTime over 120 frames
-    int         MetricsVertices;            // Vertices processed during last call to Render()
+    int         MetricsRenderVertices;      // Vertices processed during last call to Render()
 
     //------------------------------------------------------------------
     // [Internal] ImGui will maintain those fields for you
@@ -918,8 +918,8 @@ struct ImDrawList
 
     // Primitives   
     IMGUI_API void  AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness = 1.0f);
-    IMGUI_API void  AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding = 0.0f, int rounding_corners=0x0F);
-    IMGUI_API void  AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding = 0.0f, int rounding_corners=0x0F);
+    IMGUI_API void  AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding = 0.0f, int rounding_corners = 0x0F);
+    IMGUI_API void  AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding = 0.0f, int rounding_corners = 0x0F);
     IMGUI_API void  AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col);
     IMGUI_API void  AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
     IMGUI_API void  AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
@@ -929,15 +929,19 @@ struct ImDrawList
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, const int num_points, ImU32 col);
 
     // Advanced
-    IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);   // Your rendering function must check for 'user_callback' in ImDrawCmd and call the function instead of rendering triangles.
-    IMGUI_API void  AddDrawCmd();               // This is useful if you need to forcefully create a new draw call (to allow for dependent rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
+    IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);  // Your rendering function must check for 'user_callback' in ImDrawCmd and call the function instead of rendering triangles.
+    IMGUI_API void  AddDrawCmd();                                               // This is useful if you need to forcefully create a new draw call (to allow for dependent rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
 
     // Internal helpers
-    IMGUI_API void  ReserveVertices(unsigned int vtx_count);
-    IMGUI_API void  AddVtx(const ImVec2& pos, ImU32 col);
-    IMGUI_API void  AddVtxUV(const ImVec2& pos, ImU32 col, const ImVec2& uv);
+    IMGUI_API void  PrimReserve(unsigned int vtx_count);
+    IMGUI_API void  PrimTriangle(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col);
+    IMGUI_API void  PrimRect(const ImVec2& a, const ImVec2& b, ImU32 col);
+    IMGUI_API void  PrimRectUV(const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col);
+    IMGUI_API void  PrimQuad(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, ImU32 col);
+    IMGUI_API void  PrimLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness = 1.0f);
     IMGUI_API void  UpdateClipRect();
     IMGUI_API void  UpdateTextureID();
+    IMGUI_API void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)  { vtx_write->pos = pos; vtx_write->uv = uv; vtx_write->col = col; vtx_write++; }
 };
 
 // Load and rasterize multiple TTF fonts into a same texture.
@@ -1021,18 +1025,18 @@ struct ImFont
     // Methods
     IMGUI_API ImFont();
     IMGUI_API ~ImFont();
-    IMGUI_API void                  Clear();
-    IMGUI_API void                  BuildLookupTable();
-    IMGUI_API const Glyph*          FindGlyph(unsigned short c) const;
-    IMGUI_API void                  SetFallbackChar(ImWchar c);
-    IMGUI_API bool                  IsLoaded() const        { return ContainerAtlas != NULL; }
+    IMGUI_API void              Clear();
+    IMGUI_API void              BuildLookupTable();
+    IMGUI_API const Glyph*      FindGlyph(unsigned short c) const;
+    IMGUI_API void              SetFallbackChar(ImWchar c);
+    IMGUI_API bool              IsLoaded() const        { return ContainerAtlas != NULL; }
 
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
     // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
-    IMGUI_API ImVec2                CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
-    IMGUI_API ImVec2                CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;                 // wchar
-    IMGUI_API void                  RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width = 0.0f, const ImVec2* cpu_clip_max = NULL) const;
-    IMGUI_API const char*           CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
+    IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
+    IMGUI_API ImVec2            CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL) const;                 // wchar
+    IMGUI_API void              RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawList* draw_list, float wrap_width = 0.0f, const ImVec2* cpu_clip_max = NULL) const;
+    IMGUI_API const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
 };
 
 //---- Include imgui_user.h at the end of imgui.h
