@@ -1670,10 +1670,11 @@ static inline void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_lis
 {
     if (!draw_list->commands.empty() && !draw_list->vtx_buffer.empty())
     {
-        if (draw_list->commands.back().vtx_count == 0)
+        if (draw_list->commands.back().idx_count == 0)
             draw_list->commands.pop_back();
         out_render_list.push_back(draw_list);
         GImGui->IO.MetricsRenderVertices += (int)draw_list->vtx_buffer.size();
+        GImGui->IO.MetricsRenderIndices += (int)draw_list->idx_buffer.size();
     }
 }
 
@@ -2207,7 +2208,7 @@ void ImGui::Render()
         }
 
         // Gather windows to render
-        g.IO.MetricsRenderVertices = 0;
+        g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = 0;
         for (size_t i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
             g.RenderDrawLists[i].resize(0);
         for (size_t i = 0; i != g.Windows.size(); i++)
@@ -7590,6 +7591,9 @@ void ImDrawList::Clear()
     commands.resize(0);
     vtx_buffer.resize(0);
     vtx_write = NULL;
+    vtx_current_idx = 0;
+    idx_buffer.resize(0);
+    idx_write = NULL;
     clip_rect_stack.resize(0);
     texture_id_stack.resize(0);
 }
@@ -7599,6 +7603,9 @@ void ImDrawList::ClearFreeMemory()
     commands.clear();
     vtx_buffer.clear();
     vtx_write = NULL;
+    vtx_current_idx = 0;
+    idx_buffer.clear();
+    idx_write = NULL;
     clip_rect_stack.clear();
     texture_id_stack.clear();
 }
@@ -7606,7 +7613,7 @@ void ImDrawList::ClearFreeMemory()
 void ImDrawList::AddDrawCmd()
 {
     ImDrawCmd draw_cmd;
-    draw_cmd.vtx_count = 0;
+    draw_cmd.idx_count = 0;
     draw_cmd.clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
     draw_cmd.texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
     draw_cmd.user_callback = NULL;
@@ -7619,7 +7626,7 @@ void ImDrawList::AddDrawCmd()
 void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
 {
     ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
-    if (!current_cmd || current_cmd->vtx_count != 0 || current_cmd->user_callback != NULL)
+    if (!current_cmd || current_cmd->idx_count != 0 || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
         current_cmd = &commands.back();
@@ -7635,7 +7642,7 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
 void ImDrawList::UpdateClipRect()
 {
     ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
-    if (!current_cmd || (current_cmd->vtx_count != 0) || current_cmd->user_callback != NULL)
+    if (!current_cmd || (current_cmd->idx_count != 0) || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
     }
@@ -7675,7 +7682,7 @@ void ImDrawList::UpdateTextureID()
 {
     ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
     const ImTextureID texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
-    if (!current_cmd || (current_cmd->vtx_count != 0 && current_cmd->texture_id != texture_id) || current_cmd->user_callback != NULL)
+    if (!current_cmd || (current_cmd->idx_count != 0 && current_cmd->texture_id != texture_id) || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
     }
@@ -7698,23 +7705,30 @@ void ImDrawList::PopTextureID()
     UpdateTextureID();
 }
 
-void ImDrawList::PrimReserve(unsigned int vtx_count)
+void ImDrawList::PrimReserve(unsigned int idx_count, unsigned int vtx_count)
 {
     ImDrawCmd& draw_cmd = commands.back();
-    draw_cmd.vtx_count += vtx_count;
-
+    draw_cmd.idx_count += idx_count;
+        
     size_t vtx_buffer_size = vtx_buffer.size();
     vtx_buffer.resize(vtx_buffer_size + vtx_count);
     vtx_write = &vtx_buffer[vtx_buffer_size];
+
+    size_t idx_buffer_size = idx_buffer.size();
+    idx_buffer.resize(idx_buffer_size + idx_count);
+    idx_write = &idx_buffer[idx_buffer_size];
 }
 
 void ImDrawList::PrimTriangle(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col)
 {
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
-    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col;
-    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col;
-    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col;
+    idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
+    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col; 
+    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col; 
+    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col; 
     vtx_write += 3;
+    vtx_current_idx += 3;
+    idx_write += 3;
 }
 
 void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
@@ -7722,13 +7736,15 @@ void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
 	const ImVec2 b(c.x, a.y);
 	const ImVec2 d(a.x, c.y);
-    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col;
-    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col;
-    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col;
-    vtx_write[3].pos = a; vtx_write[3].uv = uv; vtx_write[3].col = col;
-    vtx_write[4].pos = c; vtx_write[4].uv = uv; vtx_write[4].col = col;
-    vtx_write[5].pos = d; vtx_write[5].uv = uv; vtx_write[5].col = col;
-    vtx_write += 6;
+    idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
+    idx_write[3] = vtx_current_idx; idx_write[4] = vtx_current_idx+2; idx_write[5] = vtx_current_idx+3; 
+    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col; 
+    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col; 
+    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col; 
+    vtx_write[3].pos = d; vtx_write[3].uv = uv; vtx_write[3].col = col;
+    vtx_write += 4;
+    vtx_current_idx += 4;
+    idx_write += 6;
 }
 
 void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 col)
@@ -7737,25 +7753,29 @@ void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a
 	const ImVec2 d(a.x, c.y);
 	const ImVec2 uv_b(uv_c.x, uv_a.y);
 	const ImVec2 uv_d(uv_a.x, uv_c.y);
-    vtx_write[0].pos = a; vtx_write[0].uv = uv_a; vtx_write[0].col = col;
-    vtx_write[1].pos = b; vtx_write[1].uv = uv_b; vtx_write[1].col = col;
-    vtx_write[2].pos = c; vtx_write[2].uv = uv_c; vtx_write[2].col = col;
-    vtx_write[3].pos = a; vtx_write[3].uv = uv_a; vtx_write[3].col = col;
-    vtx_write[4].pos = c; vtx_write[4].uv = uv_c; vtx_write[4].col = col;
-    vtx_write[5].pos = d; vtx_write[5].uv = uv_d; vtx_write[5].col = col;
-    vtx_write += 6;
+    idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
+    idx_write[3] = vtx_current_idx; idx_write[4] = vtx_current_idx+2; idx_write[5] = vtx_current_idx+3; 
+    vtx_write[0].pos = a; vtx_write[0].uv = uv_a; vtx_write[0].col = col; 
+    vtx_write[1].pos = b; vtx_write[1].uv = uv_b; vtx_write[1].col = col; 
+    vtx_write[2].pos = c; vtx_write[2].uv = uv_c; vtx_write[2].col = col; 
+    vtx_write[3].pos = d; vtx_write[3].uv = uv_d; vtx_write[3].col = col;
+    vtx_write += 4;
+    vtx_current_idx += 4;
+    idx_write += 6;
 }
 
 void ImDrawList::PrimQuad(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, ImU32 col)
 {
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
-    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col;
-    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col;
-    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col;
-    vtx_write[3].pos = a; vtx_write[3].uv = uv; vtx_write[3].col = col;
-    vtx_write[4].pos = c; vtx_write[4].uv = uv; vtx_write[4].col = col;
-    vtx_write[5].pos = d; vtx_write[5].uv = uv; vtx_write[5].col = col;
-    vtx_write += 6;
+    idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
+    idx_write[3] = vtx_current_idx; idx_write[4] = vtx_current_idx+2; idx_write[5] = vtx_current_idx+3; 
+    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col; 
+    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col; 
+    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col; 
+    vtx_write[3].pos = d; vtx_write[3].uv = uv; vtx_write[3].col = col; 
+    vtx_write += 4;
+    vtx_current_idx += 4;
+    idx_write += 6;
 }
 
 // FIXME-OPT: In many instances the caller could provide a normal.
@@ -7774,7 +7794,7 @@ void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thic
     if ((col >> 24) == 0)
         return;
 
-    PrimReserve(6);
+    PrimReserve(6, 4);
     PrimLine(a, b, col, thickness);
 }
 
@@ -7796,27 +7816,31 @@ void ImDrawList::AddArcFast(const ImVec2& center, float radius, ImU32 col, int a
         }
         circle_vtx_builds = true;
     }
-    
-    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+
     if (filled)
     {
-        PrimReserve((unsigned int)(a_max-a_min) * 3);
-        for (int a0 = a_min; a0 < a_max; a0++)
+        PrimReserve((unsigned int)(a_max-a_min) * 3, (unsigned int)(a_max-a_min+1) + 1);
+        ImDrawIdx idx = vtx_current_idx;
+        for (int a = 0; a < a_max - a_min; a++)
         {
-            int a1 = (a0 + 1 == SAMPLES) ? 0 : a0 + 1;
-            PrimVtx(center + circle_vtx[a0] * radius, uv, col);
-            PrimVtx(center + circle_vtx[a1] * radius, uv, col);
-            PrimVtx(center + third_point_offset, uv, col);
+            PrimIdx(idx + 1 + a);
+            PrimIdx(idx + 1 + a + 1);
+            PrimIdx(idx);
         }
+        const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+        PrimVtx(center + third_point_offset, uv, col);
+        for (int a = a_min; a < a_max+1; a++)
+            PrimVtx(center + circle_vtx[(a >= SAMPLES) ? a - SAMPLES : a] * radius, uv, col);
     }
     else
     {
-        PrimReserve((unsigned int)(a_max-a_min) * 6);
+        // FIXME-OPT: Wasting vertices.
+        PrimReserve((unsigned int)(a_max-a_min) * 6, (unsigned int)(a_max-a_min) * 4);
         for (int a0 = a_min; a0 < a_max; a0++)
-        {
+		{
             int a1 = (a0 + 1 == SAMPLES) ? 0 : a0 + 1;
             PrimLine(center + circle_vtx[a0] * radius, center + circle_vtx[a1] * radius, col);
-        }
+		}
     }
 }
 
@@ -7831,7 +7855,7 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
 
     if (r == 0.0f || rounding_corners == 0)
     {
-        PrimReserve(4*6);
+        PrimReserve(6*4, 4*4);
         PrimLine(ImVec2(a.x,a.y), ImVec2(b.x,a.y), col);
         PrimLine(ImVec2(b.x,a.y), ImVec2(b.x,b.y), col);
         PrimLine(ImVec2(b.x,b.y), ImVec2(a.x,b.y), col);
@@ -7839,7 +7863,7 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
     }
     else
     {
-        PrimReserve(4*6);
+        PrimReserve(6*4, 4*4);
         PrimLine(ImVec2(a.x + ((rounding_corners & 1)?r:0), a.y), ImVec2(b.x - ((rounding_corners & 2)?r:0), a.y), col);
         PrimLine(ImVec2(b.x, a.y + ((rounding_corners & 2)?r:0)), ImVec2(b.x, b.y - ((rounding_corners & 4)?r:0)), col);
         PrimLine(ImVec2(b.x - ((rounding_corners & 4)?r:0), b.y), ImVec2(a.x + ((rounding_corners & 8)?r:0), b.y), col);
@@ -7861,16 +7885,15 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
     r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ));
     r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ));
 
-    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
     if (r == 0.0f || rounding_corners == 0)
     {
         // Use triangle so we can merge more draw calls together (at the cost of extra vertices)
-        PrimReserve(6);
+        PrimReserve(6, 4);
         PrimRect(a, b, col);
     }
     else
     {
-        PrimReserve(6+6*2);
+        PrimReserve(6*3, 4*3);
         PrimRect(ImVec2(a.x+r,a.y), ImVec2(b.x-r,b.y), col);
         
         float top_y = (rounding_corners & 1) ? a.y+r : a.y;
@@ -7893,7 +7916,7 @@ void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec
     if ((col >> 24) == 0)
         return;
 
-    PrimReserve(3);
+    PrimReserve(3, 3);
     PrimTriangle(a, b, c, col);
 }
 
@@ -7902,14 +7925,18 @@ void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int nu
     if ((col >> 24) == 0)
         return;
 
-    PrimReserve((unsigned int)num_segments*6);
+    PrimReserve(num_segments * 6, num_segments * 4);
+
     const float a_step = 2*PI/(float)num_segments;
     float a0 = 0.0f;
+    ImVec2 p0 = centre + ImVec2(cosf(a0), sinf(a0)) * radius;
     for (int i = 0; i < num_segments; i++)
     {
         const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        PrimLine(centre + ImVec2(cosf(a0), sinf(a0))*radius, centre + ImVec2(cosf(a1), sinf(a1))*radius, col);
+        const ImVec2 p1 = centre + ImVec2(cosf(a1), sinf(a1)) * radius;
+        PrimLine(p0, p1, col);
         a0 = a1;
+        p0 = p1;
     }
 }
 
@@ -7919,16 +7946,18 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
         return;
 
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
-    PrimReserve((unsigned int)num_segments*3);
+    const ImDrawIdx idx = vtx_current_idx;
+    PrimReserve((unsigned int)(num_segments*3), (unsigned int)(1 + num_segments));
+
     const float a_step = 2*PI/(float)num_segments;
     float a0 = 0.0f;
-    for (int i = 0; i < num_segments; i++)
+    PrimVtx(centre, uv, col);
+    for (int i = 0; i < num_segments; i++, a0 += a_step)
     {
-        const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        PrimVtx(centre + ImVec2(cosf(a0), sinf(a0))*radius, uv, col);
-        PrimVtx(centre + ImVec2(cosf(a1), sinf(a1))*radius, uv, col);
-        PrimVtx(centre, uv, col);
-        a0 = a1;
+        PrimVtx(centre + ImVec2(cosf(a0), sinf(a0)) * radius, uv, col);
+        PrimIdx(idx);
+        PrimIdx(idx + 1 + i);
+        PrimIdx(idx + 1 + ((i + 1 == num_segments) ? 0 : i + 1));
     }
 }
 
@@ -7946,17 +7975,24 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 
     // reserve vertices for worse case
     const unsigned int char_count = (unsigned int)(text_end - text_begin);
-    const unsigned int vtx_count_max = char_count * 6;
+    const unsigned int vtx_count_max = char_count * 4;
+    const unsigned int idx_count_max = char_count * 6;
     const size_t vtx_begin = vtx_buffer.size();
-    PrimReserve(vtx_count_max);
+    const size_t idx_begin = idx_buffer.size();
+    PrimReserve(idx_count_max, vtx_count_max);
 
     font->RenderText(font_size, pos, col, clip_rect_stack.back(), text_begin, text_end, this, wrap_width, cpu_clip_max);
 
     // give back unused vertices
+    // FIXME-OPT
     vtx_buffer.resize((size_t)(vtx_write - &vtx_buffer.front()));
-    const size_t vtx_count = vtx_buffer.size() - vtx_begin;
-    commands.back().vtx_count -= (unsigned int)(vtx_count_max - vtx_count);
-    vtx_write -= (vtx_count_max - vtx_count);
+    idx_buffer.resize((size_t)(idx_write - &idx_buffer.front()));
+    unsigned int vtx_unused = vtx_count_max - (unsigned int)(vtx_buffer.size() - vtx_begin);
+    unsigned int idx_unused = idx_count_max - (unsigned int)(idx_buffer.size() - idx_begin);
+    commands.back().idx_count -= idx_unused;
+    vtx_write -= vtx_unused;
+    idx_write -= idx_unused;
+    vtx_current_idx = (ImDrawIdx)vtx_buffer.size();
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
@@ -7969,7 +8005,7 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
     if (push_texture_id)
         PushTextureID(user_texture_id);
 
-    PrimReserve(6);
+    PrimReserve(6, 4);
     PrimRectUV(a, b, uv0, uv1, col);
 
     if (push_texture_id)
@@ -9010,7 +9046,9 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
     float x = pos.x;
     float y = pos.y;
 
-    ImDrawVert* out_vertices = draw_list->vtx_write;
+    ImDrawVert* vtx_write = draw_list->vtx_write;
+    ImDrawIdx vtx_current_idx = draw_list->vtx_current_idx;
+    ImDrawIdx* idx_write = draw_list->idx_write;
 
     const char* s = text_begin;
     while (s < text_end)
@@ -9100,26 +9138,18 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                         }
 
                         // NB: we are not calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
-                        out_vertices[0].pos = ImVec2(x1, y1);
-                        out_vertices[0].uv  = ImVec2(u1, v1);
-                        out_vertices[0].col = col;
-
-                        out_vertices[1].pos = ImVec2(x2, y1);
-                        out_vertices[1].uv  = ImVec2(u2, v1);
-                        out_vertices[1].col = col;
-
-                        out_vertices[2].pos = ImVec2(x2, y2);
-                        out_vertices[2].uv  = ImVec2(u2, v2);
-                        out_vertices[2].col = col;
-
-                        out_vertices[3] = out_vertices[0];
-                        out_vertices[4] = out_vertices[2];
-
-                        out_vertices[5].pos = ImVec2(x1, y2);
-                        out_vertices[5].uv  = ImVec2(u1, v2);
-                        out_vertices[5].col = col;
-
-                        out_vertices += 6;
+                        // inlined:
+                        {
+                            idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
+                            idx_write[3] = vtx_current_idx; idx_write[4] = vtx_current_idx+2; idx_write[5] = vtx_current_idx+3; 
+                            vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
+                            vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
+                            vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
+                            vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = col; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
+                            vtx_write += 4;
+                            vtx_current_idx += 4;
+                            idx_write += 6;
+                        }
                     }
                 }
             }
@@ -9128,7 +9158,9 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
         x += char_width;
     }
 
-    draw_list->vtx_write = out_vertices;
+    draw_list->vtx_write = vtx_write;
+    draw_list->vtx_current_idx = vtx_current_idx;
+    draw_list->idx_write = idx_write;
 }
 
 //-----------------------------------------------------------------------------
@@ -10410,14 +10442,14 @@ void ImGui::ShowMetricsWindow(bool* opened)
     {
         ImGui::Text("ImGui %s", ImGui::GetVersion());
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::Text("%d vertices", ImGui::GetIO().MetricsRenderVertices);
+        ImGui::Text("%d vertices, %d triangles", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices / 3);
         ImGui::Separator();
 
         struct Funcs
         {
             static void NodeDrawList(ImDrawList* draw_list, const char* label)
             {
-                bool opened = ImGui::TreeNode(draw_list, "%s: %d vtx, %d cmds", label, draw_list->vtx_buffer.size(), draw_list->commands.size());
+                bool opened = ImGui::TreeNode(draw_list, "%s: %d vtx, %d indices, %d cmds", label, draw_list->vtx_buffer.size(), draw_list->idx_buffer.size(), draw_list->commands.size());
                 if (draw_list == ImGui::GetWindowDrawList())
                 {
                     ImGui::SameLine();
@@ -10429,7 +10461,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
                     if (pcmd->user_callback)
                         ImGui::BulletText("Callback %p, user_data %p", pcmd->user_callback, pcmd->user_callback_data);
                     else
-                        ImGui::BulletText("Draw %d vtx, tex = %p", pcmd->vtx_count, pcmd->texture_id);
+                        ImGui::BulletText("Draw %d indexed vtx, tex = %p", pcmd->idx_count, pcmd->texture_id);
                 ImGui::TreePop();
             }
 

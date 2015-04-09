@@ -671,6 +671,7 @@ struct ImGuiIO
     bool        WantCaptureKeyboard;        // Widget is active (= ImGui will use your keyboard input)
     float       Framerate;                  // Framerate estimation, in frame per second. Rolling average estimation based on IO.DeltaTime over 120 frames
     int         MetricsRenderVertices;      // Vertices processed during last call to Render()
+    int         MetricsRenderIndices;       // 
 
     //------------------------------------------------------------------
     // [Internal] ImGui will maintain those fields for you
@@ -857,12 +858,15 @@ typedef void (*ImDrawCallback)(const ImDrawList* parent_list, const ImDrawCmd* c
 // Typically, 1 command = 1 gpu draw call (unless command is a callback)
 struct ImDrawCmd
 {
-    unsigned int    vtx_count;                  // Number of vertices (multiple of 3) to be drawn as triangles. The vertices are stored in the callee ImDrawList's vtx_buffer[] array.
+    unsigned int    idx_count;                  // Number of indices (multiple of 3) to be rendered as triangles. Vertices are stored in the callee ImDrawList's vtx_buffer[] array, indices in idx_buffer[].
     ImVec4          clip_rect;                  // Clipping rectangle (x1, y1, x2, y2)
     ImTextureID     texture_id;                 // User-provided texture ID. Set by user in ImfontAtlas::SetTexID() for fonts or passed to Image*() functions. Ignore if never using images or multiple fonts atlas.
     ImDrawCallback  user_callback;              // If != NULL, call the function instead of rendering the vertices. vtx_count will be 0. clip_rect and texture_id will be set normally.
     void*           user_callback_data;         // The draw callback code can access this.
 };
+
+// Vertex index
+typedef unsigned short ImDrawIdx;
 
 // Vertex layout
 #ifndef IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT
@@ -891,11 +895,14 @@ struct ImDrawList
     // This is what you have to render
     ImVector<ImDrawCmd>     commands;           // Commands. Typically 1 command = 1 gpu draw call.
     ImVector<ImDrawVert>    vtx_buffer;         // Vertex buffer. Each command consume ImDrawCmd::vtx_count of those
+    ImVector<ImDrawIdx>     idx_buffer;         // Index buffer. Each command consume ImDrawCmd::idx_count of those
 
     // [Internal to ImGui]
     ImVector<ImVec4>        clip_rect_stack;    // [Internal]
     ImVector<ImTextureID>   texture_id_stack;   // [Internal] 
     ImDrawVert*             vtx_write;          // [Internal] point within vtx_buffer after each add command (to avoid using the ImVector<> operators too much)
+    ImDrawIdx               vtx_current_idx;    // [Internal] == vtx_buffer.size()
+    ImDrawIdx*              idx_write;          // [Internal] point within idx_buffer after each add command (to avoid using the ImVector<> operators too much)
 
     ImDrawList() { Clear(); }
     IMGUI_API void  Clear();
@@ -918,11 +925,11 @@ struct ImDrawList
     IMGUI_API void  AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col = 0xFFFFFFFF);
 
     // Advanced
-    IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);  // Your rendering function must check for 'user_callback' in ImDrawCmd and call the function instead of rendering triangles.
-    IMGUI_API void  AddDrawCmd();                                               // This is useful if you need to forcefully create a new draw call (to allow for dependent rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
+    IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);   // Your rendering function must check for 'user_callback' in ImDrawCmd and call the function instead of rendering triangles.
+    IMGUI_API void  AddDrawCmd();               // This is useful if you need to forcefully create a new draw call (to allow for dependent rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
 
     // Internal helpers
-    IMGUI_API void  PrimReserve(unsigned int vtx_count);
+    IMGUI_API void  PrimReserve(unsigned int idx_count, unsigned int vtx_count);
     IMGUI_API void  PrimTriangle(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col);
     IMGUI_API void  PrimRect(const ImVec2& a, const ImVec2& b, ImU32 col);
     IMGUI_API void  PrimRectUV(const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col);
@@ -930,7 +937,8 @@ struct ImDrawList
     IMGUI_API void  PrimLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness = 1.0f);
     IMGUI_API void  UpdateClipRect();
     IMGUI_API void  UpdateTextureID();
-    IMGUI_API void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)  { vtx_write->pos = pos; vtx_write->uv = uv; vtx_write->col = col; vtx_write++; }
+    IMGUI_API void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)   { vtx_write->pos = pos; vtx_write->uv = uv; vtx_write->col = col; vtx_write++; vtx_current_idx++; }
+    IMGUI_API void  PrimIdx(unsigned int idx)                                 { *idx_write++ = (ImDrawIdx)idx; }
 };
 
 // Load and rasterize multiple TTF fonts into a same texture.
