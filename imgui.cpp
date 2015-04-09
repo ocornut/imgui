@@ -7698,45 +7698,71 @@ void ImDrawList::PopTextureID()
     UpdateTextureID();
 }
 
-void ImDrawList::ReserveVertices(unsigned int vtx_count)
+void ImDrawList::PrimReserve(unsigned int vtx_count)
 {
     ImDrawCmd& draw_cmd = commands.back();
     draw_cmd.vtx_count += vtx_count;
-    vtx_buffer.resize(vtx_buffer.size() + vtx_count);
-    vtx_write = &vtx_buffer[vtx_buffer.size() - vtx_count];
+
+    size_t vtx_buffer_size = vtx_buffer.size();
+    vtx_buffer.resize(vtx_buffer_size + vtx_count);
+    vtx_write = &vtx_buffer[vtx_buffer_size];
 }
 
-void ImDrawList::AddVtx(const ImVec2& pos, ImU32 col)
+void ImDrawList::PrimTriangle(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col)
 {
-    vtx_write->pos = pos;
-    vtx_write->col = col;
-    vtx_write->uv = GImGui->FontTexUvWhitePixel;
-    vtx_write++;
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+	AddVtx(a, uv, col);
+	AddVtx(b, uv, col);
+	AddVtx(c, uv, col);
 }
 
-void ImDrawList::AddVtxUV(const ImVec2& pos, ImU32 col, const ImVec2& uv)
+void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
 {
-    vtx_write->pos = pos;
-    vtx_write->col = col;
-    vtx_write->uv = uv;
-    vtx_write++;
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+	ImVec2 b(c.x, a.y);
+	ImVec2 d(a.x, c.y);
+	AddVtx(a, uv, col);
+	AddVtx(b, uv, col);
+	AddVtx(c, uv, col);
+	AddVtx(a, uv, col);
+	AddVtx(c, uv, col);
+	AddVtx(d, uv, col);
 }
 
-// NB: memory should be reserved for 6 vertices by the caller.
-void ImDrawList::AddVtxLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness)
+void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 col)
+{
+	ImVec2 b(c.x, a.y);
+	ImVec2 d(a.x, c.y);
+	ImVec2 uv_b(uv_c.x, uv_a.y);
+	ImVec2 uv_d(uv_a.x, uv_c.y);
+	AddVtx(a, uv_a, col);
+	AddVtx(b, uv_b, col);
+	AddVtx(c, uv_c, col);
+	AddVtx(a, uv_a, col);
+	AddVtx(c, uv_c, col);
+	AddVtx(d, uv_d, col);
+}
+
+void ImDrawList::PrimQuad(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, ImU32 col)
+{
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+	AddVtx(a, uv, col);
+	AddVtx(b, uv, col);
+	AddVtx(c, uv, col);
+	AddVtx(a, uv, col);
+	AddVtx(c, uv, col);
+	AddVtx(d, uv, col);
+}
+
+// FIXME-OPT: In many instances the caller could provide a normal.
+void ImDrawList::PrimLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness)
 {
     const float inv_length = 1.0f / sqrtf(ImLengthSqr(b - a));
-    const ImVec2 hn = (b - a) * (thickness * 0.5f * inv_length);// half normal
+    const ImVec2 hn = (b - a) * (thickness * 0.5f * inv_length);// half normalized
     const ImVec2 hp0 = ImVec2(+hn.y, -hn.x);                    // half perpendiculars + user offset
     const ImVec2 hp1 = ImVec2(-hn.y, +hn.x);
 
-    // Two triangles makes up one line. Using triangles allows us to reduce amount of draw calls.
-    AddVtx(a + hp0, col);
-    AddVtx(b + hp0, col);
-    AddVtx(a + hp1, col);
-    AddVtx(b + hp0, col);
-    AddVtx(b + hp1, col);
-    AddVtx(a + hp1, col);
+    PrimQuad(a + hp0, b + hp0, b + hp1, a + hp1, col);
 }
 
 void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness)
@@ -7744,8 +7770,8 @@ void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thic
     if ((col >> 24) == 0)
         return;
 
-    ReserveVertices(6);
-    AddVtxLine(a, b, col, thickness);
+    PrimReserve(6);
+    PrimLine(a, b, col, thickness);
 }
 
 void ImDrawList::AddArcFast(const ImVec2& center, float radius, ImU32 col, int a_min, int a_max, bool filled, const ImVec2& third_point_offset)
@@ -7767,24 +7793,25 @@ void ImDrawList::AddArcFast(const ImVec2& center, float radius, ImU32 col, int a
         circle_vtx_builds = true;
     }
     
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
     if (filled)
     {
-        ReserveVertices((unsigned int)(a_max-a_min) * 3);
+        PrimReserve((unsigned int)(a_max-a_min) * 3);
         for (int a0 = a_min; a0 < a_max; a0++)
         {
             int a1 = (a0 + 1 == SAMPLES) ? 0 : a0 + 1;
-            AddVtx(center + circle_vtx[a0] * radius, col);
-            AddVtx(center + circle_vtx[a1] * radius, col);
-            AddVtx(center + third_point_offset, col);
+            AddVtx(center + circle_vtx[a0] * radius, uv, col);
+            AddVtx(center + circle_vtx[a1] * radius, uv, col);
+            AddVtx(center + third_point_offset, uv, col);
         }
     }
     else
     {
-        ReserveVertices((unsigned int)(a_max-a_min) * 6);
+        PrimReserve((unsigned int)(a_max-a_min) * 6);
         for (int a0 = a_min; a0 < a_max; a0++)
         {
             int a1 = (a0 + 1 == SAMPLES) ? 0 : a0 + 1;
-            AddVtxLine(center + circle_vtx[a0] * radius, center + circle_vtx[a1] * radius, col);
+            PrimLine(center + circle_vtx[a0] * radius, center + circle_vtx[a1] * radius, col);
         }
     }
 }
@@ -7800,19 +7827,19 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
 
     if (r == 0.0f || rounding_corners == 0)
     {
-        ReserveVertices(4*6);
-        AddVtxLine(ImVec2(a.x,a.y), ImVec2(b.x,a.y), col);
-        AddVtxLine(ImVec2(b.x,a.y), ImVec2(b.x,b.y), col);
-        AddVtxLine(ImVec2(b.x,b.y), ImVec2(a.x,b.y), col);
-        AddVtxLine(ImVec2(a.x,b.y), ImVec2(a.x,a.y), col);
+        PrimReserve(4*6);
+        PrimLine(ImVec2(a.x,a.y), ImVec2(b.x,a.y), col);
+        PrimLine(ImVec2(b.x,a.y), ImVec2(b.x,b.y), col);
+        PrimLine(ImVec2(b.x,b.y), ImVec2(a.x,b.y), col);
+        PrimLine(ImVec2(a.x,b.y), ImVec2(a.x,a.y), col);
     }
     else
     {
-        ReserveVertices(4*6);
-        AddVtxLine(ImVec2(a.x + ((rounding_corners & 1)?r:0), a.y), ImVec2(b.x - ((rounding_corners & 2)?r:0), a.y), col);
-        AddVtxLine(ImVec2(b.x, a.y + ((rounding_corners & 2)?r:0)), ImVec2(b.x, b.y - ((rounding_corners & 4)?r:0)), col);
-        AddVtxLine(ImVec2(b.x - ((rounding_corners & 4)?r:0), b.y), ImVec2(a.x + ((rounding_corners & 8)?r:0), b.y), col);
-        AddVtxLine(ImVec2(a.x, b.y - ((rounding_corners & 8)?r:0)), ImVec2(a.x, a.y + ((rounding_corners & 1)?r:0)), col);
+        PrimReserve(4*6);
+        PrimLine(ImVec2(a.x + ((rounding_corners & 1)?r:0), a.y), ImVec2(b.x - ((rounding_corners & 2)?r:0), a.y), col);
+        PrimLine(ImVec2(b.x, a.y + ((rounding_corners & 2)?r:0)), ImVec2(b.x, b.y - ((rounding_corners & 4)?r:0)), col);
+        PrimLine(ImVec2(b.x - ((rounding_corners & 4)?r:0), b.y), ImVec2(a.x + ((rounding_corners & 8)?r:0), b.y), col);
+        PrimLine(ImVec2(a.x, b.y - ((rounding_corners & 8)?r:0)), ImVec2(a.x, a.y + ((rounding_corners & 1)?r:0)), col);
 
         if (rounding_corners & 1) AddArcFast(ImVec2(a.x+r,a.y+r), r, col, 0, 3);
         if (rounding_corners & 2) AddArcFast(ImVec2(b.x-r,a.y+r), r, col, 3, 6);
@@ -7830,44 +7857,25 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
     r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ));
     r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ));
 
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
     if (r == 0.0f || rounding_corners == 0)
     {
         // Use triangle so we can merge more draw calls together (at the cost of extra vertices)
-        ReserveVertices(6);
-        AddVtx(ImVec2(a.x,a.y), col);
-        AddVtx(ImVec2(b.x,a.y), col);
-        AddVtx(ImVec2(b.x,b.y), col);
-        AddVtx(ImVec2(a.x,a.y), col);
-        AddVtx(ImVec2(b.x,b.y), col);
-        AddVtx(ImVec2(a.x,b.y), col);
+        PrimReserve(6);
+        PrimRect(a, b, col);
     }
     else
     {
-        ReserveVertices(6+6*2);
-        AddVtx(ImVec2(a.x+r,a.y), col);
-        AddVtx(ImVec2(b.x-r,a.y), col);
-        AddVtx(ImVec2(b.x-r,b.y), col);
-        AddVtx(ImVec2(a.x+r,a.y), col);
-        AddVtx(ImVec2(b.x-r,b.y), col);
-        AddVtx(ImVec2(a.x+r,b.y), col);
+        PrimReserve(6+6*2);
+        PrimRect(ImVec2(a.x+r,a.y), ImVec2(b.x-r,b.y), col);
         
         float top_y = (rounding_corners & 1) ? a.y+r : a.y;
         float bot_y = (rounding_corners & 8) ? b.y-r : b.y;
-        AddVtx(ImVec2(a.x,top_y), col);
-        AddVtx(ImVec2(a.x+r,top_y), col);
-        AddVtx(ImVec2(a.x+r,bot_y), col);
-        AddVtx(ImVec2(a.x,top_y), col);
-        AddVtx(ImVec2(a.x+r,bot_y), col);
-        AddVtx(ImVec2(a.x,bot_y), col);
+        PrimRect(ImVec2(a.x,top_y), ImVec2(a.x+r,bot_y), col);
 
         top_y = (rounding_corners & 2) ? a.y+r : a.y;
         bot_y = (rounding_corners & 4) ? b.y-r : b.y;
-        AddVtx(ImVec2(b.x-r,top_y), col);
-        AddVtx(ImVec2(b.x,top_y), col);
-        AddVtx(ImVec2(b.x,bot_y), col);
-        AddVtx(ImVec2(b.x-r,top_y), col);
-        AddVtx(ImVec2(b.x,bot_y), col);
-        AddVtx(ImVec2(b.x-r,bot_y), col);
+        PrimRect(ImVec2(b.x-r,top_y), ImVec2(b.x,bot_y), col);
 
         if (rounding_corners & 1) AddArcFast(ImVec2(a.x+r,a.y+r), r, col, 0, 3, true);
         if (rounding_corners & 2) AddArcFast(ImVec2(b.x-r,a.y+r), r, col, 3, 6, true);
@@ -7881,10 +7889,8 @@ void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec
     if ((col >> 24) == 0)
         return;
 
-    ReserveVertices(3);
-    AddVtx(a, col);
-    AddVtx(b, col);
-    AddVtx(c, col);
+    PrimReserve(3);
+    PrimTriangle(a, b, c, col);
 }
 
 void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments)
@@ -7892,13 +7898,13 @@ void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int nu
     if ((col >> 24) == 0)
         return;
 
-    ReserveVertices((unsigned int)num_segments*6);
+    PrimReserve((unsigned int)num_segments*6);
     const float a_step = 2*PI/(float)num_segments;
     float a0 = 0.0f;
     for (int i = 0; i < num_segments; i++)
     {
         const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        AddVtxLine(centre + ImVec2(cosf(a0), sinf(a0))*radius, centre + ImVec2(cosf(a1), sinf(a1))*radius, col);
+        PrimLine(centre + ImVec2(cosf(a0), sinf(a0))*radius, centre + ImVec2(cosf(a1), sinf(a1))*radius, col);
         a0 = a1;
     }
 }
@@ -7908,15 +7914,16 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
     if ((col >> 24) == 0)
         return;
 
-    ReserveVertices((unsigned int)num_segments*3);
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+    PrimReserve((unsigned int)num_segments*3);
     const float a_step = 2*PI/(float)num_segments;
     float a0 = 0.0f;
     for (int i = 0; i < num_segments; i++)
     {
         const float a1 = (i + 1) == num_segments ? 0.0f : a0 + a_step;
-        AddVtx(centre + ImVec2(cosf(a0), sinf(a0))*radius, col);
-        AddVtx(centre + ImVec2(cosf(a1), sinf(a1))*radius, col);
-        AddVtx(centre, col);
+        AddVtx(centre + ImVec2(cosf(a0), sinf(a0))*radius, uv, col);
+        AddVtx(centre + ImVec2(cosf(a1), sinf(a1))*radius, uv, col);
+        AddVtx(centre, uv, col);
         a0 = a1;
     }
 }
@@ -7937,9 +7944,9 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     const unsigned int char_count = (unsigned int)(text_end - text_begin);
     const unsigned int vtx_count_max = char_count * 6;
     const size_t vtx_begin = vtx_buffer.size();
-    ReserveVertices(vtx_count_max);
+    PrimReserve(vtx_count_max);
 
-    font->RenderText(font_size, pos, col, clip_rect_stack.back(), text_begin, text_end, vtx_write, wrap_width, cpu_clip_max);
+    font->RenderText(font_size, pos, col, clip_rect_stack.back(), text_begin, text_end, this, wrap_width, cpu_clip_max);
 
     // give back unused vertices
     vtx_buffer.resize((size_t)(vtx_write - &vtx_buffer.front()));
@@ -7958,13 +7965,8 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
     if (push_texture_id)
         PushTextureID(user_texture_id);
 
-    ReserveVertices(6);
-    AddVtxUV(ImVec2(a.x,a.y), col, uv0);
-    AddVtxUV(ImVec2(b.x,a.y), col, ImVec2(uv1.x,uv0.y));
-    AddVtxUV(ImVec2(b.x,b.y), col, uv1);
-    AddVtxUV(ImVec2(a.x,a.y), col, ImVec2(uv0.x,uv0.y));
-    AddVtxUV(ImVec2(b.x,b.y), col, uv1);
-    AddVtxUV(ImVec2(a.x,b.y), col, ImVec2(uv0.x,uv1.y));
+    PrimReserve(6);
+    PrimRectUV(a, b, uv0, uv1, col);
 
     if (push_texture_id)
         PopTextureID();
@@ -8980,7 +8982,7 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
     return text_size;
 }
 
-void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect_ref, const char* text_begin, const char* text_end, ImDrawVert*& out_vertices, float wrap_width, const ImVec2* cpu_clip_max) const
+void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect_ref, const char* text_begin, const char* text_end, ImDrawList* draw_list, float wrap_width, const ImVec2* cpu_clip_max) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin);
@@ -9003,6 +9005,8 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
     }
     float x = pos.x;
     float y = pos.y;
+
+    ImDrawVert* out_vertices = draw_list->vtx_write;
 
     const char* s = text_begin;
     while (s < text_end)
@@ -9091,6 +9095,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                             }
                         }
 
+                        // NB: we are not calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
                         out_vertices[0].pos = ImVec2(x1, y1);
                         out_vertices[0].uv  = ImVec2(u1, v1);
                         out_vertices[0].col = col;
@@ -9118,6 +9123,8 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
 
         x += char_width;
     }
+
+    draw_list->vtx_write = out_vertices;
 }
 
 //-----------------------------------------------------------------------------
