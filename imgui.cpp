@@ -7874,7 +7874,7 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
 
         if (rounding_corners & 1) AddArcFast(ImVec2(a.x+r,a.y+r), r, col, 0, 3, true);
         if (rounding_corners & 2) AddArcFast(ImVec2(b.x-r,a.y+r), r, col, 3, 6, true);
-        if (rounding_corners & 4) AddArcFast(ImVec2(b.x-r,b.y-r), r, col, 6, 8, true);
+        if (rounding_corners & 4) AddArcFast(ImVec2(b.x-r,b.y-r), r, col, 6, 9, true);
         if (rounding_corners & 8) AddArcFast(ImVec2(a.x+r,b.y-r), r, col, 9, 12, true);
     }
 }
