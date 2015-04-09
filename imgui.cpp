@@ -7751,7 +7751,7 @@ void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thic
     AddVtxLine(a, b, col, thickness);
 }
 
-void ImDrawList::AddArcFast(const ImVec2& center, float radius, ImU32 col, int a_min, int a_max, bool tris, const ImVec2& third_point_offset)
+void ImDrawList::AddArcFast(const ImVec2& center, float radius, ImU32 col, int a_min, int a_max, bool filled, const ImVec2& third_point_offset)
 {
     if ((col >> 24) == 0)
         return;
@@ -7770,7 +7770,7 @@ void ImDrawList::AddArcFast(const ImVec2& center, float radius, ImU32 col, int a
         circle_vtx_builds = true;
     }
     
-    if (tris)
+    if (filled)
     {
         ReserveVertices((unsigned int)(a_max-a_min) * 3);
         for (int a0 = a_min; a0 < a_max; a0++)
