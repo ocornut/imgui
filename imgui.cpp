@@ -9786,7 +9786,6 @@ void ImGui::ShowTestWindow(bool* opened)
 
             static float f1=1.123f;
             static float f2=0;
-            static float f3=123456789.0f;
             ImGui::SliderFloat("slider float", &f1, 0.0f, 2.0f);
             ImGui::SliderFloat("slider log float", &f2, -10.0f, 10.0f, "%.4f", 3.0f);
             static float angle = 0.0f;
