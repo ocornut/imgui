@@ -934,11 +934,7 @@ struct ImDrawList
 
     // Internal helpers
     IMGUI_API void  PrimReserve(unsigned int vtx_count);
-    IMGUI_API void  PrimTriangle(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col);
-    IMGUI_API void  PrimRect(const ImVec2& a, const ImVec2& b, ImU32 col);
     IMGUI_API void  PrimRectUV(const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col);
-    IMGUI_API void  PrimQuad(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, ImU32 col);
-    IMGUI_API void  PrimLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness = 1.0f);
     IMGUI_API void  UpdateClipRect();
     IMGUI_API void  UpdateTextureID();
     IMGUI_API void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)  { vtx_write->pos = pos; vtx_write->uv = uv; vtx_write->col = col; vtx_write++; }

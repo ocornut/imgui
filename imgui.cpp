@@ -142,7 +142,6 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
- - 2015/04/09 (1.38) - renamed ImDrawList::AddArc() to ImDrawList::AddArcFast() for compatibility with future API
  - 2015/04/03 (1.38) - removed ImGuiCol_CheckHovered, ImGuiCol_CheckActive, replaced with the more general ImGuiCol_FrameBgHovered, ImGuiCol_FrameBgActive.
  - 2014/04/03 (1.38) - removed support for passing -FLT_MAX..+FLT_MAX as the range for a SliderFloat(). Use DragFloat() or Inputfloat() instead.
  - 2015/03/17 (1.36) - renamed GetItemRectMin()/GetItemRectMax()/IsMouseHoveringBox() to GetItemRectMin()/GetItemRectMax()/IsMouseHoveringRect(). Kept inline redirection function (will obsolete).
@@ -7708,29 +7707,6 @@ void ImDrawList::PrimReserve(unsigned int vtx_count)
     vtx_write = &vtx_buffer[vtx_buffer_size];
 }
 
-void ImDrawList::PrimTriangle(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col)
-{
-    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
-    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col;
-    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col;
-    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col;
-    vtx_write += 3;
-}
-
-void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
-{
-    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
-	const ImVec2 b(c.x, a.y);
-	const ImVec2 d(a.x, c.y);
-    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col;
-    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col;
-    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col;
-    vtx_write[3].pos = a; vtx_write[3].uv = uv; vtx_write[3].col = col;
-    vtx_write[4].pos = c; vtx_write[4].uv = uv; vtx_write[4].col = col;
-    vtx_write[5].pos = d; vtx_write[5].uv = uv; vtx_write[5].col = col;
-    vtx_write += 6;
-}
-
 void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 col)
 {
 	const ImVec2 b(c.x, a.y);
@@ -7743,18 +7719,6 @@ void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a
     vtx_write[3].pos = a; vtx_write[3].uv = uv_a; vtx_write[3].col = col;
     vtx_write[4].pos = c; vtx_write[4].uv = uv_c; vtx_write[4].col = col;
     vtx_write[5].pos = d; vtx_write[5].uv = uv_d; vtx_write[5].col = col;
-    vtx_write += 6;
-}
-
-void ImDrawList::PrimQuad(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, ImU32 col)
-{
-    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
-    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col;
-    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col;
-    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col;
-    vtx_write[3].pos = a; vtx_write[3].uv = uv; vtx_write[3].col = col;
-    vtx_write[4].pos = c; vtx_write[4].uv = uv; vtx_write[4].col = col;
-    vtx_write[5].pos = d; vtx_write[5].uv = uv; vtx_write[5].col = col;
     vtx_write += 6;
 }
 
