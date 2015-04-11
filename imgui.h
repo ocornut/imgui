@@ -947,7 +947,8 @@ struct ImFontAtlas
     IMGUI_API ~ImFontAtlas();
     IMGUI_API ImFont*           AddFontDefault();
     IMGUI_API ImFont*           AddFontFromFileTTF(const char* filename, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0);
-    IMGUI_API ImFont*           AddFontFromMemoryTTF(void* in_ttf_data, size_t in_ttf_data_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0); // Pass ownership of 'in_ttf_data' memory.
+    IMGUI_API ImFont*           AddFontFromMemoryTTF(void* in_ttf_data, unsigned int in_ttf_data_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0); // Pass ownership of 'in_ttf_data' memory, will be deleted after build
+    IMGUI_API ImFont*           AddFontFromMemoryCompressedTTF(const void* in_compressed_ttf_data, unsigned int in_compressed_ttf_data_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0); // 'in_compressed_ttf_data' untouched and still owned by caller. compress with binary_to_compressed_c.
     IMGUI_API void              ClearTexData();             // Saves RAM once the texture has been copied to graphics memory.
     IMGUI_API void              Clear();
 

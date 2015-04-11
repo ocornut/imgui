@@ -8101,18 +8101,10 @@ static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsi
 // Load embedded ProggyClean.ttf at size 13
 ImFont* ImFontAtlas::AddFontDefault()
 {
-    // Get compressed data
     unsigned int ttf_compressed_size;
     const void* ttf_compressed;
     GetDefaultCompressedFontDataTTF(&ttf_compressed, &ttf_compressed_size);
-
-    // Decompress
-    const size_t buf_decompressed_size = stb_decompress_length((unsigned char*)ttf_compressed);
-    unsigned char* buf_decompressed = (unsigned char *)ImGui::MemAlloc(buf_decompressed_size);
-    stb_decompress(buf_decompressed, (unsigned char*)ttf_compressed, ttf_compressed_size);
-
-    // Add
-    ImFont* font = AddFontFromMemoryTTF(buf_decompressed, buf_decompressed_size, 13.0f, GetGlyphRangesDefault(), 0);
+    ImFont* font = AddFontFromMemoryCompressedTTF(ttf_compressed, ttf_compressed_size, 13.0f, GetGlyphRangesDefault(), 0);
     font->DisplayOffset.y += 1;
     return font;
 }
@@ -8127,7 +8119,6 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
         return NULL;
     }
 
-    // Add
     ImFont* font = AddFontFromMemoryTTF(data, data_size, size_pixels, glyph_ranges, font_no);
     return font;
 }
@@ -8154,6 +8145,18 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* in_ttf_data, size_t in_ttf_data_
     // Invalidate texture
     ClearTexData();
 
+    return font;
+}
+
+ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* in_compressed_ttf_data, size_t in_compressed_ttf_data_size, float size_pixels, const ImWchar* glyph_ranges, int font_no)
+{
+    // Decompress
+    const size_t buf_decompressed_size = stb_decompress_length((unsigned char*)in_compressed_ttf_data);
+    unsigned char* buf_decompressed = (unsigned char *)ImGui::MemAlloc(buf_decompressed_size);
+    stb_decompress(buf_decompressed, (unsigned char*)in_compressed_ttf_data, in_compressed_ttf_data_size);
+
+    // Add
+    ImFont* font = AddFontFromMemoryTTF(buf_decompressed, buf_decompressed_size, size_pixels, glyph_ranges, font_no);
     return font;
 }
 
