@@ -47,8 +47,7 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
     for (int n = 0; n < cmd_lists_count; n++)
     {
         const ImDrawList* cmd_list = cmd_lists[n];
-        const ImDrawVert* vtx_src = &cmd_list->vtx_buffer[0];
-        memcpy(vtx_dst, vtx_src, cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
+        memcpy(vtx_dst, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
         vtx_dst += cmd_list->vtx_buffer.size();
     }
     g_pd3dDeviceContext->Unmap(g_pVB, 0);
