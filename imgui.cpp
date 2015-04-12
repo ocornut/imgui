@@ -5531,7 +5531,7 @@ static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, flo
 
                 // Clamp
                 if (v_min < v_max)
-                    g.DragCurrentValue = ImClamp(v_cur, v_min, v_max);
+                    v_cur = ImClamp(v_cur, v_min, v_max);
                 g.DragCurrentValue = v_cur;
 
                 // Round to user desired precision, then apply
