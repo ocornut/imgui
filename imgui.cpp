@@ -10917,16 +10917,9 @@ static void ShowExampleAppLongText(bool* opened)
 //-----------------------------------------------------------------------------
 // FONT DATA
 //-----------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------
-// ProggyClean.ttf
-// Copyright (c) 2004, 2005 Tristan Grimmer
-// MIT license (see License.txt in http://www.upperbounds.net/download/ProggyClean.ttf.zip)
-// Download and more information at http://upperbounds.net
-//-----------------------------------------------------------------------------
 // Compressed with stb_compress() then converted to a C array.
-// Decompressor from stb.h (public domain) by Sean Barrett
-// https://github.com/nothings/stb/blob/master/stb.h
+// Use the program in extra_fonts/binary_to_compressed_c.cpp to create the array from a TTF file.
+// Decompressor from stb.h (public domain) by Sean Barrett https://github.com/nothings/stb/blob/master/stb.h
 //-----------------------------------------------------------------------------
 
 static unsigned int stb_decompress_length(unsigned char *input)
@@ -10935,7 +10928,6 @@ static unsigned int stb_decompress_length(unsigned char *input)
 }
 
 static unsigned char *stb__barrier, *stb__barrier2, *stb__barrier3, *stb__barrier4;
-
 static unsigned char *stb__dout;
 static void stb__match(unsigned char *data, unsigned int length)
 {
@@ -11041,6 +11033,12 @@ static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsi
     }
 }
 
+//-----------------------------------------------------------------------------
+// ProggyClean.ttf
+// Copyright (c) 2004, 2005 Tristan Grimmer
+// MIT license (see License.txt in http://www.upperbounds.net/download/ProggyClean.ttf.zip)
+// Download and more information at http://upperbounds.net
+//-----------------------------------------------------------------------------
 static const unsigned int proggy_clean_ttf_compressed_size = 9583;
 static const unsigned int proggy_clean_ttf_compressed_data[9584/4] =
 {
