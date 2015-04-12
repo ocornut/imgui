@@ -7720,8 +7720,8 @@ void ImDrawList::PrimTriangle(const ImVec2& a, const ImVec2& b, const ImVec2& c,
 void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
 {
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
-	const ImVec2 b(c.x, a.y);
-	const ImVec2 d(a.x, c.y);
+    const ImVec2 b(c.x, a.y);
+    const ImVec2 d(a.x, c.y);
     vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col;
     vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col;
     vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col;
@@ -7733,10 +7733,10 @@ void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
 
 void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 col)
 {
-	const ImVec2 b(c.x, a.y);
-	const ImVec2 d(a.x, c.y);
-	const ImVec2 uv_b(uv_c.x, uv_a.y);
-	const ImVec2 uv_d(uv_a.x, uv_c.y);
+    const ImVec2 b(c.x, a.y);
+    const ImVec2 d(a.x, c.y);
+    const ImVec2 uv_b(uv_c.x, uv_a.y);
+    const ImVec2 uv_d(uv_a.x, uv_c.y);
     vtx_write[0].pos = a; vtx_write[0].uv = uv_a; vtx_write[0].col = col;
     vtx_write[1].pos = b; vtx_write[1].uv = uv_b; vtx_write[1].col = col;
     vtx_write[2].pos = c; vtx_write[2].uv = uv_c; vtx_write[2].col = col;
@@ -10205,7 +10205,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Spacing();
 
         // Scrolling columns
-		/*
+        /*
         ImGui::Text("Scrolling:");
         ImGui::BeginChild("##header", ImVec2(0, ImGui::GetTextLineHeightWithSpacing()+ImGui::GetStyle().ItemSpacing.y));
         ImGui::Columns(3);
@@ -10228,7 +10228,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
         ImGui::Separator();
         ImGui::Spacing();
-		*/
+        */
 
         // Create multiple items in a same cell before switching to next column
         ImGui::Text("Mixed items:");
