@@ -1,4 +1,4 @@
-// ImGui library v1.38 WIP
+﻿// ImGui library v1.38 WIP
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -1145,7 +1145,7 @@ struct ImGuiState
     ImGuiID                 ScalarAsInputTextId;                // Temporary text input when CTRL+clicking on a slider, etc.
     ImGuiStorage            ColorEditModeStorage;               // for user selection
     ImGuiID                 ActiveComboID;
-    float                   DragCurrentValue;
+    float                   DragCurrentValue;                   // current dragged value, always float, not rounded by end-user precision settings
     ImVec2                  DragLastMouseDelta;
     float                   DragSpeedScaleSlow;
     float                   DragSpeedScaleFast;
@@ -5478,7 +5478,7 @@ bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const 
 }
 
 // FIXME-WIP: Work in progress. May change API / behavior.
-static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, int decimal_precision)
+static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, int decimal_precision, float power)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5505,22 +5505,40 @@ static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, flo
             const ImVec2 mouse_drag_delta = ImGui::GetMouseDragDelta(0, 1.0f);
             if (fabsf(mouse_drag_delta.x - g.DragLastMouseDelta.x) > 0.0f)
             {
-                float step = v_speed;
+                float speed = v_speed;
                 if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
-                    step = v_speed * g.DragSpeedScaleFast;
+                    speed = v_speed * g.DragSpeedScaleFast;
                 if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
-                    step = v_speed * g.DragSpeedScaleSlow;
+                    speed = v_speed * g.DragSpeedScaleSlow;
 
-                g.DragCurrentValue += (mouse_drag_delta.x - g.DragLastMouseDelta.x) * step;
+                float v_cur = g.DragCurrentValue;
+                float delta = (mouse_drag_delta.x - g.DragLastMouseDelta.x) * speed;
+                if (fabsf(power - 1.0f) > 0.001f)
+                {
+                    // Logarithmic curve on both side of 0.0
+                    float v0_abs = v_cur >= 0.0f ? v_cur : -v_cur;
+                    float v0_sign = v_cur >= 0.0f ? 1.0f : -1.0f;
+                    float v1 = powf(v0_abs, 1.0f / power) + (delta * v0_sign);
+                    float v1_abs = v1 >= 0.0f ? v1 : -v1;
+                    float v1_sign = v1 >= 0.0f ? 1.0f : -1.0f;          // Crossed sign line
+                    v_cur = powf(v1_abs, power) * v0_sign * v1_sign;    // Reapply sign
+                }
+                else
+                {
+                    v_cur += delta;
+                }
                 g.DragLastMouseDelta.x = mouse_drag_delta.x;
 
+                // Clamp
                 if (v_min < v_max)
-                    g.DragCurrentValue = ImClamp(g.DragCurrentValue, v_min, v_max);
+                    g.DragCurrentValue = ImClamp(v_cur, v_min, v_max);
+                g.DragCurrentValue = v_cur;
 
-                float new_value = RoundScalar(g.DragCurrentValue, decimal_precision);
-                if (*v != new_value)
+                // Round to user desired precision, then apply
+                v_cur = RoundScalar(v_cur, decimal_precision);
+                if (*v != v_cur)
                 {
-                    *v = new_value;
+                    *v = v_cur;
                     value_changed = true;
                 }
             }
@@ -5534,7 +5552,7 @@ static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, flo
     return value_changed;
 }
 
-bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, float v_max, const char* display_format)
+bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, float v_max, const char* display_format, float power)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5586,7 +5604,7 @@ bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, f
     ItemSize(total_bb, style.FramePadding.y);
 
     // Actual drag behavior
-    const bool value_changed = DragScalarBehavior(frame_bb, id, v, v_speed, v_min, v_max, decimal_precision);
+    const bool value_changed = DragScalarBehavior(frame_bb, id, v, v_speed, v_min, v_max, decimal_precision, power);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
