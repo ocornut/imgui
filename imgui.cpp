@@ -1108,10 +1108,11 @@ struct ImGuiState
     ImGuiWindow*            FocusedWindow;                      // Will catch keyboard inputs
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs
     ImGuiWindow*            HoveredRootWindow;                  // Will catch mouse inputs (for focus/move only)
-    ImGuiID                 HoveredId;
-    ImGuiID                 ActiveId;
+    ImGuiID                 HoveredId;                          // Hovered widget
+    ImGuiID                 ActiveId;                           // Active widget
     ImGuiID                 ActiveIdPreviousFrame;
     bool                    ActiveIdIsAlive;
+    bool                    ActiveIdIsJustActivated;            // Set when 
     bool                    ActiveIdIsFocusedOnly;              // Set only by active widget. Denote focus but no active interaction.
     ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window. Only valid if ActiveID is the "#MOVE" identifier of a window.
     float                   SettingsDirtyTimer;
@@ -1144,6 +1145,7 @@ struct ImGuiState
     ImGuiID                 ScalarAsInputTextId;                // Temporary text input when CTRL+clicking on a slider, etc.
     ImGuiStorage            ColorEditModeStorage;               // for user selection
     ImGuiID                 ActiveComboID;
+    float                   DragCurrentValue;
     ImVec2                  DragLastMouseDelta;
     float                   DragSpeedScaleSlow;
     float                   DragSpeedScaleFast;
@@ -1182,6 +1184,7 @@ struct ImGuiState
         ActiveId = 0;
         ActiveIdPreviousFrame = 0;
         ActiveIdIsAlive = false;
+        ActiveIdIsJustActivated = false;
         ActiveIdIsFocusedOnly = false;
         MovedWindow = NULL;
         SettingsDirtyTimer = 0.0f;
@@ -1199,6 +1202,7 @@ struct ImGuiState
 
         ScalarAsInputTextId = 0;
         ActiveComboID = 0;
+        DragCurrentValue = 0.0f;
         DragLastMouseDelta = ImVec2(0.0f, 0.0f);
         DragSpeedScaleSlow = 0.01f;
         DragSpeedScaleFast = 10.0f;
@@ -1314,6 +1318,7 @@ static void SetActiveId(ImGuiID id)
     ImGuiState& g = *GImGui;
     g.ActiveId = id; 
     g.ActiveIdIsFocusedOnly = false;
+    g.ActiveIdIsJustActivated = true;
 }
 
 static void RegisterAliveId(ImGuiID id)
@@ -1935,6 +1940,7 @@ void ImGui::NewFrame()
         SetActiveId(0);
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = false;
+    g.ActiveIdIsJustActivated = false;
     if (!g.ActiveId)
         g.MovedWindow = NULL;
 
@@ -5055,7 +5061,7 @@ static bool SliderFloatAsInputText(const char* label, float* v, ImGuiID id, int 
 }
 
 // Parse display precision back from the display format string
-static void ParseFormat(const char* fmt, int& decimal_precision)
+static inline void ParseFormat(const char* fmt, int& decimal_precision)
 {
     while ((fmt = strchr(fmt, '%')) != NULL)
     {
@@ -5071,6 +5077,21 @@ static void ParseFormat(const char* fmt, int& decimal_precision)
         }
         break;
     }
+}
+
+static inline float RoundScalar(float value, int decimal_precision)
+{
+    // Round past decimal precision
+    //    0: 1, 1: 0.1, 2: 0.01, etc.
+    // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
+    // FIXME: Investigate better rounding methods
+    const float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
+    const float remainder = fmodf(value, min_step);
+    if (remainder <= min_step*0.5f)
+        value -= remainder;
+    else
+        value += (min_step - remainder);
+    return value;
 }
 
 static bool SliderBehavior(const ImRect& frame_bb, const ImRect& slider_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, bool horizontal)
@@ -5151,14 +5172,7 @@ static bool SliderBehavior(const ImRect& frame_bb, const ImRect& slider_bb, ImGu
             }
 
             // Round past decimal precision
-            //    0->1, 1->0.1, 2->0.01, etc.
-            // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
-            const float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
-            const float remainder = fmodf(new_value, min_step);
-            if (remainder <= min_step*0.5f)
-                new_value -= remainder;
-            else
-                new_value += (min_step - remainder);
+            new_value = RoundScalar(new_value, decimal_precision);
 
             if (*v != new_value)
             {
@@ -5464,7 +5478,7 @@ bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const 
 }
 
 // FIXME-WIP: Work in progress. May change API / behavior.
-static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_step, float v_min, float v_max)
+static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, int decimal_precision)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5481,23 +5495,34 @@ static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, flo
     {
         if (g.IO.MouseDown[0])
         {
-            const ImVec2 mouse_drag_delta = ImGui::GetMouseDragDelta(0);
+            if (g.ActiveIdIsJustActivated)
+            {
+                // Lock current value on click
+                g.DragCurrentValue = *v;
+                g.DragLastMouseDelta = ImVec2(0.f, 0.f);
+            }
 
+            const ImVec2 mouse_drag_delta = ImGui::GetMouseDragDelta(0, 1.0f);
             if (fabsf(mouse_drag_delta.x - g.DragLastMouseDelta.x) > 0.0f)
             {
-                float step = v_step;
+                float step = v_speed;
                 if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
-                    step = v_step * g.DragSpeedScaleFast;
+                    step = v_speed * g.DragSpeedScaleFast;
                 if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
-                    step = v_step * g.DragSpeedScaleSlow;
+                    step = v_speed * g.DragSpeedScaleSlow;
 
-                *v += (mouse_drag_delta.x - g.DragLastMouseDelta.x) * step;
+                g.DragCurrentValue += (mouse_drag_delta.x - g.DragLastMouseDelta.x) * step;
+                g.DragLastMouseDelta.x = mouse_drag_delta.x;
 
                 if (v_min < v_max)
-                    *v = ImClamp(*v, v_min, v_max);
+                    g.DragCurrentValue = ImClamp(g.DragCurrentValue, v_min, v_max);
 
-                g.DragLastMouseDelta.x = mouse_drag_delta.x;
-                value_changed = true;
+                float new_value = RoundScalar(g.DragCurrentValue, decimal_precision);
+                if (*v != new_value)
+                {
+                    *v = new_value;
+                    value_changed = true;
+                }
             }
         }
         else
@@ -5509,7 +5534,7 @@ static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, flo
     return value_changed;
 }
 
-bool ImGui::DragFloat(const char* label, float *v, float v_step, float v_min, float v_max, const char* display_format)
+bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, float v_max, const char* display_format)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5548,7 +5573,6 @@ bool ImGui::DragFloat(const char* label, float *v, float v_step, float v_min, fl
     {
         SetActiveId(id);
         FocusWindow(window);
-        g.DragLastMouseDelta = ImVec2(0.f, 0.f);
 
         if (tab_focus_requested || g.IO.KeyCtrl || g.IO.MouseDoubleClicked[0])
         {
@@ -5562,7 +5586,7 @@ bool ImGui::DragFloat(const char* label, float *v, float v_step, float v_min, fl
     ItemSize(total_bb, style.FramePadding.y);
 
     // Actual drag behavior
-    const bool value_changed = DragScalarBehavior(frame_bb, id, v, v_step, v_min, v_max);
+    const bool value_changed = DragScalarBehavior(frame_bb, id, v, v_speed, v_min, v_max, decimal_precision);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
@@ -5576,12 +5600,13 @@ bool ImGui::DragFloat(const char* label, float *v, float v_step, float v_min, fl
     return value_changed;
 }
 
-bool ImGui::DragInt(const char* label, int* v, int v_step, int v_min, int v_max, const char* display_format)
+// NB: v_speed is float to allow adjusting the drag speed with more precision
+bool ImGui::DragInt(const char* label, int* v, float v_speed, int v_min, int v_max, const char* display_format)
 {
     if (!display_format)
         display_format = "%.0f";
     float v_f = (float)*v;
-    bool value_changed = ImGui::DragFloat(label, &v_f, (float)v_step, (float)v_min, (float)v_max, display_format);
+    bool value_changed = ImGui::DragFloat(label, &v_f, v_speed, (float)v_min, (float)v_max, display_format);
     *v = (int)v_f;
     return value_changed;
 }
@@ -7029,7 +7054,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
                     ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
                 if (n + 1 == components)
                     ImGui::PushItemWidth(w_item_last);
-                value_changed |= ImGui::DragInt(ids[n], &i[n], 1, 0, 255, fmt[n]);
+                value_changed |= ImGui::DragInt(ids[n], &i[n], 1.0f, 0, 255, fmt[n]);
             }
             ImGui::PopItemWidth();
             ImGui::PopItemWidth();
