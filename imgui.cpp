@@ -135,6 +135,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/04/13 (1.38) - renamed IsClipped() to IsRectClipped(). Kept inline redirection function (will obsolete).
  - 2015/04/09 (1.38) - renamed ImDrawList::AddArc() to ImDrawList::AddArcFast() for compatibility with future API
  - 2015/04/03 (1.38) - removed ImGuiCol_CheckHovered, ImGuiCol_CheckActive, replaced with the more general ImGuiCol_FrameBgHovered, ImGuiCol_FrameBgActive.
  - 2014/04/03 (1.38) - removed support for passing -FLT_MAX..+FLT_MAX as the range for a SliderFloat(). Use DragFloat() or Inputfloat() instead.
@@ -7262,10 +7263,10 @@ static bool IsClippedEx(const ImRect& bb, bool clip_even_when_logged)
     return false;
 }
 
-bool ImGui::IsClipped(const ImVec2& item_size)
+bool ImGui::IsRectClipped(const ImVec2& size)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    return IsClippedEx(ImRect(window->DC.CursorPos, window->DC.CursorPos + item_size), true);
+    return IsClippedEx(ImRect(window->DC.CursorPos, window->DC.CursorPos + size), true);
 }
 
 static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
