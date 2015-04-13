@@ -1275,7 +1275,7 @@ public:
     ImGuiWindow(const char* name);
     ~ImGuiWindow();
 
-    ImGuiID     GetID(const char* str);
+    ImGuiID     GetID(const char* str, const char* str_end = NULL);
     ImGuiID     GetID(const void* ptr);
 
     bool        FocusItemRegister(bool is_active, bool tab_stop = true);      // Return true if focus is requested
@@ -1621,10 +1621,10 @@ ImGuiWindow::~ImGuiWindow()
     Name = NULL;
 }
 
-ImGuiID ImGuiWindow::GetID(const char* str)
+ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
 {
     ImGuiID seed = IDStack.back();
-    const ImGuiID id = ImHash(str, 0, seed);
+    const ImGuiID id = ImHash(str, str_end ? str_end - str : 0, seed);
     RegisterAliveId(id);
     return id;
 }
@@ -4948,6 +4948,12 @@ void ImGui::PushID(const char* str_id)
     window->IDStack.push_back(window->GetID(str_id));
 }
 
+void ImGui::PushID(const char* str_id_begin, const char* str_id_end)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->IDStack.push_back(window->GetID(str_id_begin, str_id_end));
+}
+
 void ImGui::PushID(const void* ptr_id)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -4971,6 +4977,12 @@ ImGuiID ImGui::GetID(const char* str_id)
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->GetID(str_id);
+}
+
+ImGuiID ImGui::GetID(const char* str_id_begin, const char* str_id_end)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->GetID(str_id_begin, str_id_end);
 }
 
 ImGuiID ImGui::GetID(const void* ptr_id)
