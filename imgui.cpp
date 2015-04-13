@@ -7265,8 +7265,11 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
     window->DC.LastItemRect = bb;
     if (IsClipped(bb))
     {
-        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = false;
-        return false;
+        if (!id || *id != GImGui->ActiveId)
+        {
+            window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = false;
+            return false;
+        }
     }
 
     // This is a sensible default, but widgets are free to override it after calling ItemAdd()
