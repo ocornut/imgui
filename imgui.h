@@ -945,7 +945,7 @@ struct ImDrawList
 //  2. Call GetTexDataAsAlpha8() or GetTexDataAsRGBA32() to build and retrieve pixels data.
 //  3. Upload the pixels data into a texture within your graphics system.
 //  4. Call SetTexID(my_tex_id); and pass the pointer/identifier to your texture. This value will be passed back to you during rendering to identify the texture.
-//  5. Call ClearPixelsData() to free textures memory on the heap.
+//  5. Call ClearTexData() to free textures memory on the heap.
 struct ImFontAtlas
 {
     IMGUI_API ImFontAtlas();
