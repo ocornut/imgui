@@ -116,7 +116,7 @@ void ImGui_ImplGlfw_ScrollCallback(GLFWwindow*, double /*xoffset*/, double yoffs
     g_MouseWheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
 }
 
-void ImGui_ImplGlFw_KeyCallback(GLFWwindow* window, int key, int, int action, int mods)
+void ImGui_ImplGlFw_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
 {
     ImGuiIO& io = ImGui::GetIO();
     if (action == GLFW_PRESS)
@@ -125,9 +125,9 @@ void ImGui_ImplGlFw_KeyCallback(GLFWwindow* window, int key, int, int action, in
         io.KeysDown[key] = false;
 
     (void)mods; // Modifiers are not reliable across systems
-    io.KeyCtrl = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
-    io.KeyShift = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-    io.KeyAlt = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+    io.KeyCtrl = io.KeysDown[GLFW_KEY_LEFT_CONTROL] || io.KeysDown[GLFW_KEY_RIGHT_CONTROL];
+    io.KeyShift = io.KeysDown[GLFW_KEY_LEFT_SHIFT] || io.KeysDown[GLFW_KEY_RIGHT_SHIFT];
+    io.KeyAlt = io.KeysDown[GLFW_KEY_LEFT_ALT] || io.KeysDown[GLFW_KEY_RIGHT_ALT];
 }
 
 void ImGui_ImplGlfw_CharCallback(GLFWwindow*, unsigned int c)
