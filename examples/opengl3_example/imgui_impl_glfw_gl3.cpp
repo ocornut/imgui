@@ -134,50 +134,24 @@ void ImGui_ImplGlfwGL3_ScrollCallback(GLFWwindow*, double /*xoffset*/, double yo
     g_MouseWheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
 }
 
-void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
+void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow* window, int key, int, int action, int mods)
 {
     ImGuiIO& io = ImGui::GetIO();
     if (action == GLFW_PRESS)
-    {
-        switch (key)
-        {
-        case GLFW_KEY_LEFT_CONTROL:
-        case GLFW_KEY_RIGHT_CONTROL:
-            io.KeyCtrl = true;
-            break;
-        case GLFW_KEY_LEFT_SHIFT:
-        case GLFW_KEY_RIGHT_SHIFT:
-            io.KeyShift = true;
-            break;
-        case GLFW_KEY_LEFT_ALT:
-        case GLFW_KEY_RIGHT_ALT:
-            io.KeyAlt = true;
-            break;
-        default:
-            io.KeysDown[key] = true;
-        }
-    }
-
+        io.KeysDown[key] = true;
     if (action == GLFW_RELEASE)
-    {
-        switch (key)
-        {
-        case GLFW_KEY_LEFT_CONTROL:
-        case GLFW_KEY_RIGHT_CONTROL:
-            io.KeyCtrl = false;
-            break;
-        case GLFW_KEY_LEFT_SHIFT:
-        case GLFW_KEY_RIGHT_SHIFT:
-            io.KeyShift = false;
-            break;
-        case GLFW_KEY_LEFT_ALT:
-        case GLFW_KEY_RIGHT_ALT:
-            io.KeyAlt = false;
-            break;
-        default:
-            io.KeysDown[key] = false;
-        }
-    }
+        io.KeysDown[key] = false;
+
+    bool leftCtrl = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS;
+    bool rightCtrl = glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+    bool leftShift = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+    bool rightShift = glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+    bool leftAlt = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS;
+    bool rightAlt = glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+
+    io.KeyCtrl = leftCtrl || rightCtrl;
+    io.KeyShift = leftShift || rightShift;
+    io.KeyAlt = leftAlt || rightAlt;
 }
 
 void ImGui_ImplGlfwGL3_CharCallback(GLFWwindow*, unsigned int c)
