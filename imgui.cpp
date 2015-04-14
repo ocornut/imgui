@@ -2,7 +2,7 @@
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
-// Developed by Omar Cornut and contributors.
+// Developed by Omar Cornut and ImGui contributors.
 
 /*
 
