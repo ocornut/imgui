@@ -52,8 +52,7 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
     for (int n = 0; n < cmd_lists_count; n++)
     {
         const ImDrawList* cmd_list = cmd_lists[n];
-        const ImDrawVert* vtx_src = &cmd_list->vtx_buffer[0];
-        memcpy(vtx_dst, vtx_src, cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
+        memcpy(vtx_dst, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
         memcpy(idx_dst, &cmd_list->idx_buffer[0], cmd_list->idx_buffer.size() * sizeof(ImDrawIdx));
         vtx_dst += cmd_list->vtx_buffer.size();
         idx_dst += cmd_list->idx_buffer.size();
