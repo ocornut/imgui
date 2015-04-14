@@ -1,4 +1,4 @@
-// ImGui library v1.38 WIP
+﻿// ImGui library v1.38 WIP
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -141,6 +141,8 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/04/13 (1.38) - renamed IsClipped() to IsRectClipped(). Kept inline redirection function (will obsolete).
+ - 2015/04/09 (1.38) - renamed ImDrawList::AddArc() to ImDrawList::AddArcFast() for compatibility with future API
  - 2015/04/03 (1.38) - removed ImGuiCol_CheckHovered, ImGuiCol_CheckActive, replaced with the more general ImGuiCol_FrameBgHovered, ImGuiCol_FrameBgActive.
  - 2014/04/03 (1.38) - removed support for passing -FLT_MAX..+FLT_MAX as the range for a SliderFloat(). Use DragFloat() or Inputfloat() instead.
  - 2015/03/17 (1.36) - renamed GetItemRectMin()/GetItemRectMax()/IsMouseHoveringBox() to GetItemRectMin()/GetItemRectMax()/IsMouseHoveringRect(). Kept inline redirection function (will obsolete).
@@ -496,7 +498,7 @@ static bool         ItemAdd(const ImRect& bb, const ImGuiID* id);
 static void         ItemSize(ImVec2 size, float text_offset_y = 0.0f);
 static void         ItemSize(const ImRect& bb, float text_offset_y = 0.0f);
 static void         PushColumnClipRect(int column_index = -1);
-static bool         IsClipped(const ImRect& bb);
+static bool         IsClippedEx(const ImRect& bb, bool clip_even_when_logged);
 
 static bool         IsMouseHoveringRect(const ImRect& bb);
 static bool         IsKeyPressedMap(ImGuiKey key, bool repeat = true);
@@ -1113,10 +1115,11 @@ struct ImGuiState
     ImGuiWindow*            FocusedWindow;                      // Will catch keyboard inputs
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs
     ImGuiWindow*            HoveredRootWindow;                  // Will catch mouse inputs (for focus/move only)
-    ImGuiID                 HoveredId;
-    ImGuiID                 ActiveId;
+    ImGuiID                 HoveredId;                          // Hovered widget
+    ImGuiID                 ActiveId;                           // Active widget
     ImGuiID                 ActiveIdPreviousFrame;
     bool                    ActiveIdIsAlive;
+    bool                    ActiveIdIsJustActivated;            // Set when 
     bool                    ActiveIdIsFocusedOnly;              // Set only by active widget. Denote focus but no active interaction.
     ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window. Only valid if ActiveID is the "#MOVE" identifier of a window.
     float                   SettingsDirtyTimer;
@@ -1149,6 +1152,7 @@ struct ImGuiState
     ImGuiID                 ScalarAsInputTextId;                // Temporary text input when CTRL+clicking on a slider, etc.
     ImGuiStorage            ColorEditModeStorage;               // for user selection
     ImGuiID                 ActiveComboID;
+    float                   DragCurrentValue;                   // current dragged value, always float, not rounded by end-user precision settings
     ImVec2                  DragLastMouseDelta;
     float                   DragSpeedScaleSlow;
     float                   DragSpeedScaleFast;
@@ -1187,6 +1191,7 @@ struct ImGuiState
         ActiveId = 0;
         ActiveIdPreviousFrame = 0;
         ActiveIdIsAlive = false;
+        ActiveIdIsJustActivated = false;
         ActiveIdIsFocusedOnly = false;
         MovedWindow = NULL;
         SettingsDirtyTimer = 0.0f;
@@ -1204,6 +1209,7 @@ struct ImGuiState
 
         ScalarAsInputTextId = 0;
         ActiveComboID = 0;
+        DragCurrentValue = 0.0f;
         DragLastMouseDelta = ImVec2(0.0f, 0.0f);
         DragSpeedScaleSlow = 0.01f;
         DragSpeedScaleFast = 10.0f;
@@ -1276,7 +1282,7 @@ public:
     ImGuiWindow(const char* name);
     ~ImGuiWindow();
 
-    ImGuiID     GetID(const char* str);
+    ImGuiID     GetID(const char* str, const char* str_end = NULL);
     ImGuiID     GetID(const void* ptr);
 
     bool        FocusItemRegister(bool is_active, bool tab_stop = true);      // Return true if focus is requested
@@ -1319,6 +1325,7 @@ static void SetActiveId(ImGuiID id)
     ImGuiState& g = *GImGui;
     g.ActiveId = id; 
     g.ActiveIdIsFocusedOnly = false;
+    g.ActiveIdIsJustActivated = true;
 }
 
 static void RegisterAliveId(ImGuiID id)
@@ -1621,10 +1628,10 @@ ImGuiWindow::~ImGuiWindow()
     Name = NULL;
 }
 
-ImGuiID ImGuiWindow::GetID(const char* str)
+ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
 {
     ImGuiID seed = IDStack.back();
-    const ImGuiID id = ImHash(str, 0, seed);
+    const ImGuiID id = ImHash(str, str_end ? str_end - str : 0, seed);
     RegisterAliveId(id);
     return id;
 }
@@ -1940,6 +1947,7 @@ void ImGui::NewFrame()
         SetActiveId(0);
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = false;
+    g.ActiveIdIsJustActivated = false;
     if (!g.ActiveId)
         g.MovedWindow = NULL;
 
@@ -2697,6 +2705,14 @@ ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
     return ImVec2(0.0f, 0.0f);
 }
 
+void ImGui::ResetMouseDragDelta(int button)
+{
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    // NB: We don't need to reset g.IO.MouseDragMaxDistanceSqr
+    g.IO.MouseClickedPos[button] = g.IO.MousePos;
+}
+
 ImGuiMouseCursor ImGui::GetMouseCursor()
 {
     return GImGui->MouseCursor;
@@ -2734,6 +2750,13 @@ bool ImGui::IsAnyItemActive()
 {
     ImGuiState& g = *GImGui;
     return g.ActiveId != 0;
+}
+
+bool ImGui::IsItemVisible()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    ImRect r(window->ClipRectStack.back());
+    return r.Overlaps(window->DC.LastItemRect);
 }
 
 ImVec2 ImGui::GetItemRectMin()
@@ -4230,7 +4253,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                 while (line < text_end)
                 {
                     const char* line_end = strchr(line, '\n');
-                    if (IsClipped(line_rect))
+                    if (IsClippedEx(line_rect, false))
                         break;
 
                     const ImVec2 line_size = CalcTextSize(line, line_end, false);
@@ -4941,6 +4964,12 @@ void ImGui::PushID(const char* str_id)
     window->IDStack.push_back(window->GetID(str_id));
 }
 
+void ImGui::PushID(const char* str_id_begin, const char* str_id_end)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->IDStack.push_back(window->GetID(str_id_begin, str_id_end));
+}
+
 void ImGui::PushID(const void* ptr_id)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -4964,6 +4993,12 @@ ImGuiID ImGui::GetID(const char* str_id)
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->GetID(str_id);
+}
+
+ImGuiID ImGui::GetID(const char* str_id_begin, const char* str_id_end)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->GetID(str_id_begin, str_id_end);
 }
 
 ImGuiID ImGui::GetID(const void* ptr_id)
@@ -5054,7 +5089,7 @@ static bool SliderFloatAsInputText(const char* label, float* v, ImGuiID id, int 
 }
 
 // Parse display precision back from the display format string
-static void ParseFormat(const char* fmt, int& decimal_precision)
+static inline void ParseFormat(const char* fmt, int& decimal_precision)
 {
     while ((fmt = strchr(fmt, '%')) != NULL)
     {
@@ -5070,6 +5105,21 @@ static void ParseFormat(const char* fmt, int& decimal_precision)
         }
         break;
     }
+}
+
+static inline float RoundScalar(float value, int decimal_precision)
+{
+    // Round past decimal precision
+    //    0: 1, 1: 0.1, 2: 0.01, etc.
+    // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
+    // FIXME: Investigate better rounding methods
+    const float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
+    const float remainder = fmodf(value, min_step);
+    if (remainder <= min_step*0.5f)
+        value -= remainder;
+    else
+        value += (min_step - remainder);
+    return value;
 }
 
 static bool SliderBehavior(const ImRect& frame_bb, const ImRect& slider_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, bool horizontal)
@@ -5150,14 +5200,7 @@ static bool SliderBehavior(const ImRect& frame_bb, const ImRect& slider_bb, ImGu
             }
 
             // Round past decimal precision
-            //    0->1, 1->0.1, 2->0.01, etc.
-            // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
-            const float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
-            const float remainder = fmodf(new_value, min_step);
-            if (remainder <= min_step*0.5f)
-                new_value -= remainder;
-            else
-                new_value += (min_step - remainder);
+            new_value = RoundScalar(new_value, decimal_precision);
 
             if (*v != new_value)
             {
@@ -5463,7 +5506,7 @@ bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const 
 }
 
 // FIXME-WIP: Work in progress. May change API / behavior.
-static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_step, float v_min, float v_max)
+static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, int decimal_precision, float power)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5480,23 +5523,52 @@ static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, flo
     {
         if (g.IO.MouseDown[0])
         {
-            const ImVec2 mouse_drag_delta = ImGui::GetMouseDragDelta(0);
+            if (g.ActiveIdIsJustActivated)
+            {
+                // Lock current value on click
+                g.DragCurrentValue = *v;
+                g.DragLastMouseDelta = ImVec2(0.f, 0.f);
+            }
 
+            const ImVec2 mouse_drag_delta = ImGui::GetMouseDragDelta(0, 1.0f);
             if (fabsf(mouse_drag_delta.x - g.DragLastMouseDelta.x) > 0.0f)
             {
-                float step = v_step;
+                float speed = v_speed;
                 if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
-                    step = v_step * g.DragSpeedScaleFast;
+                    speed = v_speed * g.DragSpeedScaleFast;
                 if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
-                    step = v_step * g.DragSpeedScaleSlow;
+                    speed = v_speed * g.DragSpeedScaleSlow;
 
-                *v += (mouse_drag_delta.x - g.DragLastMouseDelta.x) * step;
-
-                if (v_min < v_max)
-                    *v = ImClamp(*v, v_min, v_max);
-
+                float v_cur = g.DragCurrentValue;
+                float delta = (mouse_drag_delta.x - g.DragLastMouseDelta.x) * speed;
+                if (fabsf(power - 1.0f) > 0.001f)
+                {
+                    // Logarithmic curve on both side of 0.0
+                    float v0_abs = v_cur >= 0.0f ? v_cur : -v_cur;
+                    float v0_sign = v_cur >= 0.0f ? 1.0f : -1.0f;
+                    float v1 = powf(v0_abs, 1.0f / power) + (delta * v0_sign);
+                    float v1_abs = v1 >= 0.0f ? v1 : -v1;
+                    float v1_sign = v1 >= 0.0f ? 1.0f : -1.0f;          // Crossed sign line
+                    v_cur = powf(v1_abs, power) * v0_sign * v1_sign;    // Reapply sign
+                }
+                else
+                {
+                    v_cur += delta;
+                }
                 g.DragLastMouseDelta.x = mouse_drag_delta.x;
-                value_changed = true;
+
+                // Clamp
+                if (v_min < v_max)
+                    v_cur = ImClamp(v_cur, v_min, v_max);
+                g.DragCurrentValue = v_cur;
+
+                // Round to user desired precision, then apply
+                v_cur = RoundScalar(v_cur, decimal_precision);
+                if (*v != v_cur)
+                {
+                    *v = v_cur;
+                    value_changed = true;
+                }
             }
         }
         else
@@ -5508,7 +5580,7 @@ static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, flo
     return value_changed;
 }
 
-bool ImGui::DragFloat(const char* label, float *v, float v_step, float v_min, float v_max, const char* display_format)
+bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, float v_max, const char* display_format, float power)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5547,7 +5619,6 @@ bool ImGui::DragFloat(const char* label, float *v, float v_step, float v_min, fl
     {
         SetActiveId(id);
         FocusWindow(window);
-        g.DragLastMouseDelta = ImVec2(0.f, 0.f);
 
         if (tab_focus_requested || g.IO.KeyCtrl || g.IO.MouseDoubleClicked[0])
         {
@@ -5561,7 +5632,7 @@ bool ImGui::DragFloat(const char* label, float *v, float v_step, float v_min, fl
     ItemSize(total_bb, style.FramePadding.y);
 
     // Actual drag behavior
-    const bool value_changed = DragScalarBehavior(frame_bb, id, v, v_step, v_min, v_max);
+    const bool value_changed = DragScalarBehavior(frame_bb, id, v, v_speed, v_min, v_max, decimal_precision, power);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
@@ -5575,12 +5646,13 @@ bool ImGui::DragFloat(const char* label, float *v, float v_step, float v_min, fl
     return value_changed;
 }
 
-bool ImGui::DragInt(const char* label, int* v, int v_step, int v_min, int v_max, const char* display_format)
+// NB: v_speed is float to allow adjusting the drag speed with more precision
+bool ImGui::DragInt(const char* label, int* v, float v_speed, int v_min, int v_max, const char* display_format)
 {
     if (!display_format)
         display_format = "%.0f";
     float v_f = (float)*v;
-    bool value_changed = ImGui::DragFloat(label, &v_f, (float)v_step, (float)v_min, (float)v_max, display_format);
+    bool value_changed = ImGui::DragFloat(label, &v_f, v_speed, (float)v_min, (float)v_max, display_format);
     *v = (int)v_f;
     return value_changed;
 }
@@ -7028,7 +7100,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
                     ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
                 if (n + 1 == components)
                     ImGui::PushItemWidth(w_item_last);
-                value_changed |= ImGui::DragInt(ids[n], &i[n], 1, 0, 255, fmt[n]);
+                value_changed |= ImGui::DragInt(ids[n], &i[n], 1.0f, 0, 255, fmt[n]);
             }
             ImGui::PopItemWidth();
             ImGui::PopItemWidth();
@@ -7178,20 +7250,23 @@ static inline void ItemSize(const ImRect& bb, float text_offset_y)
     ItemSize(bb.GetSize(), text_offset_y); 
 }
 
-static bool IsClipped(const ImRect& bb)
+static bool IsClippedEx(const ImRect& bb, bool clip_even_when_logged)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    if (!bb.Overlaps(ImRect(window->ClipRectStack.back())) && !g.LogEnabled)
-        return true;
+    if (!bb.Overlaps(ImRect(window->ClipRectStack.back())))
+    {
+        if (clip_even_when_logged || !g.LogEnabled)
+            return true;
+    }
     return false;
 }
 
-bool ImGui::IsClipped(const ImVec2& item_size)
+bool ImGui::IsRectClipped(const ImVec2& size)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    return IsClipped(ImRect(window->DC.CursorPos, window->DC.CursorPos + item_size));
+    return IsClippedEx(ImRect(window->DC.CursorPos, window->DC.CursorPos + size), true);
 }
 
 static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
@@ -7199,10 +7274,13 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.LastItemID = id ? *id : 0;
     window->DC.LastItemRect = bb;
-    if (IsClipped(bb))
+    if (IsClippedEx(bb, false))
     {
-        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = false;
-        return false;
+        if (!id || *id != GImGui->ActiveId)
+        {
+            window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = false;
+            return false;
+        }
     }
 
     // This is a sensible default, but widgets are free to override it after calling ItemAdd()
@@ -7431,7 +7509,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(i);
             const ImRect column_rect(ImVec2(x-4,y1),ImVec2(x+4,y2));
 
-            if (IsClipped(column_rect))
+            if (IsClippedEx(column_rect, false))
                 continue;
 
             bool hovered, held;
@@ -7709,10 +7787,10 @@ void ImDrawList::PrimReserve(unsigned int vtx_count)
 
 void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 col)
 {
-	const ImVec2 b(c.x, a.y);
-	const ImVec2 d(a.x, c.y);
-	const ImVec2 uv_b(uv_c.x, uv_a.y);
-	const ImVec2 uv_d(uv_a.x, uv_c.y);
+    const ImVec2 b(c.x, a.y);
+    const ImVec2 d(a.x, c.y);
+    const ImVec2 uv_b(uv_c.x, uv_a.y);
+    const ImVec2 uv_d(uv_a.x, uv_c.y);
     vtx_write[0].pos = a; vtx_write[0].uv = uv_a; vtx_write[0].col = col;
     vtx_write[1].pos = b; vtx_write[1].uv = uv_b; vtx_write[1].col = col;
     vtx_write[2].pos = c; vtx_write[2].uv = uv_c; vtx_write[2].col = col;
@@ -10351,7 +10429,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Spacing();
 
         // Scrolling columns
-		/*
+        /*
         ImGui::Text("Scrolling:");
         ImGui::BeginChild("##header", ImVec2(0, ImGui::GetTextLineHeightWithSpacing()+ImGui::GetStyle().ItemSpacing.y));
         ImGui::Columns(3);
@@ -10374,7 +10452,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
         ImGui::Separator();
         ImGui::Spacing();
-		*/
+        */
 
         // Create multiple items in a same cell before switching to next column
         ImGui::Text("Mixed items:");
@@ -11063,16 +11141,9 @@ static void ShowExampleAppLongText(bool* opened)
 //-----------------------------------------------------------------------------
 // FONT DATA
 //-----------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------
-// ProggyClean.ttf
-// Copyright (c) 2004, 2005 Tristan Grimmer
-// MIT license (see License.txt in http://www.upperbounds.net/download/ProggyClean.ttf.zip)
-// Download and more information at http://upperbounds.net
-//-----------------------------------------------------------------------------
 // Compressed with stb_compress() then converted to a C array.
-// Decompressor from stb.h (public domain) by Sean Barrett
-// https://github.com/nothings/stb/blob/master/stb.h
+// Use the program in extra_fonts/binary_to_compressed_c.cpp to create the array from a TTF file.
+// Decompressor from stb.h (public domain) by Sean Barrett https://github.com/nothings/stb/blob/master/stb.h
 //-----------------------------------------------------------------------------
 
 static unsigned int stb_decompress_length(unsigned char *input)
@@ -11081,7 +11152,6 @@ static unsigned int stb_decompress_length(unsigned char *input)
 }
 
 static unsigned char *stb__barrier, *stb__barrier2, *stb__barrier3, *stb__barrier4;
-
 static unsigned char *stb__dout;
 static void stb__match(unsigned char *data, unsigned int length)
 {
@@ -11187,6 +11257,12 @@ static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsi
     }
 }
 
+//-----------------------------------------------------------------------------
+// ProggyClean.ttf
+// Copyright (c) 2004, 2005 Tristan Grimmer
+// MIT license (see License.txt in http://www.upperbounds.net/download/ProggyClean.ttf.zip)
+// Download and more information at http://upperbounds.net
+//-----------------------------------------------------------------------------
 static const unsigned int proggy_clean_ttf_compressed_size = 9583;
 static const unsigned int proggy_clean_ttf_compressed_data[9584/4] =
 {
