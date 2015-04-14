@@ -142,16 +142,10 @@ void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow* window, int key, int, int action,
     if (action == GLFW_RELEASE)
         io.KeysDown[key] = false;
 
-    bool leftCtrl = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS;
-    bool rightCtrl = glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
-    bool leftShift = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
-    bool rightShift = glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-    bool leftAlt = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS;
-    bool rightAlt = glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
-
-    io.KeyCtrl = leftCtrl || rightCtrl;
-    io.KeyShift = leftShift || rightShift;
-    io.KeyAlt = leftAlt || rightAlt;
+    (void)mods; // Modifiers are not reliable across systems
+    io.KeyCtrl = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+    io.KeyShift = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+    io.KeyAlt = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
 }
 
 void ImGui_ImplGlfwGL3_CharCallback(GLFWwindow*, unsigned int c)
