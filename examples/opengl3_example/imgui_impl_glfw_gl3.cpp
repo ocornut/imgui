@@ -35,6 +35,9 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
         return;
 
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
+    GLint last_program, last_texture;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -108,9 +111,9 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
 
     // Restore modified state
     glBindVertexArray(0);
-    glUseProgram(0);
+    glUseProgram(last_program);
     glDisable(GL_SCISSOR_TEST);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D, last_texture);
 }
 
 static const char* ImGui_ImplGlfwGL3_GetClipboardText()
