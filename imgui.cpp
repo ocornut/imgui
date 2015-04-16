@@ -327,16 +327,16 @@
  - layout: horizontal layout helper (github issue #97)
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
- - columns: separator function or parameter that works within the column (currently Separator() bypass all columns)
- - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills)
- - columns: columns header to act as button (~sort op) and allow resize/reorder
- - columns: user specify columns size
- - columns: tree node example, removing the last NextColumn() makes a padding difference (it should not)
+ - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (github issue #125)
+ - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills) (github issue #125)
+ - columns: columns header to act as button (~sort op) and allow resize/reorder (github issue #125)
+ - columns: user specify columns size (github issue #125)
+ - popup: border options. richer api like BeginChild() perhaps? (github issue #197)
  - combo: turn child handling code into pop up helper
  - combo: contents should extends to fit label if combo widget is small
  - listbox: multiple selection
  - listbox: user may want to initial scroll to focus on the one selected value?
- ! menubar, menus
+ ! menubar, menus (github issue #126)
  - tabs
  - gauge: various forms of gauge/loading bars widgets
  - color: better color editor.
