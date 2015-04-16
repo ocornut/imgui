@@ -10489,9 +10489,9 @@ void ImGui::ShowTestWindow(bool* opened)
     ImGui::End();
 }
 
-void ImGui::ShowMetricsWindow(bool* opened1)
+void ImGui::ShowMetricsWindow(bool* opened)
 {
-    if (ImGui::Begin("ImGui Metrics", opened1))
+    if (ImGui::Begin("ImGui Metrics", opened))
     {
         ImGui::Text("ImGui %s", ImGui::GetVersion());
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
@@ -10502,13 +10502,13 @@ void ImGui::ShowMetricsWindow(bool* opened1)
         {
             static void NodeDrawList(ImDrawList* draw_list, const char* label)
             {
-                bool opened = ImGui::TreeNode(draw_list, "%s: %d vtx, %d cmds", label, draw_list->vtx_buffer.size(), draw_list->commands.size());
+                bool node_opened = ImGui::TreeNode(draw_list, "%s: %d vtx, %d cmds", label, draw_list->vtx_buffer.size(), draw_list->commands.size());
                 if (draw_list == ImGui::GetWindowDrawList())
                 {
                     ImGui::SameLine();
                     ImGui::TextColored(ImColor(255,100,100), "CURRENTLY APPENDING"); // Can't display stats for active draw list! (we don't have the data double-buffered)
                 }
-                if (!opened)
+                if (!node_opened)
                     return;
                 for (const ImDrawCmd* pcmd = draw_list->commands.begin(); pcmd < draw_list->commands.end(); pcmd++)
                     if (pcmd->user_callback)
