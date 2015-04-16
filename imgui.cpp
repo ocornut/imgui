@@ -8198,7 +8198,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
         return NULL;
     }
 
-    ImFont* font = AddFontFromMemoryTTF(data, data_size, size_pixels, glyph_ranges, font_no);
+    ImFont* font = AddFontFromMemoryTTF(data, (unsigned int)data_size, size_pixels, glyph_ranges, font_no);
     return font;
 }
 
@@ -8235,7 +8235,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* in_compressed_tt
     stb_decompress(buf_decompressed, (unsigned char*)in_compressed_ttf_data, in_compressed_ttf_data_size);
 
     // Add
-    ImFont* font = AddFontFromMemoryTTF(buf_decompressed, buf_decompressed_size, size_pixels, glyph_ranges, font_no);
+    ImFont* font = AddFontFromMemoryTTF(buf_decompressed, (unsigned int)buf_decompressed_size, size_pixels, glyph_ranges, font_no);
     return font;
 }
 
