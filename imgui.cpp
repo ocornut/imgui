@@ -4356,9 +4356,11 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window)
 {
     ImGuiState& g = *GImGui;
 
-    ImGuiWindow* focused_window = g.FocusedWindow;
-    if (focused_window && (focused_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_window->WasVisible && focused_window != window)
-        return false;
+    // An active popup disable hovering on other windows (apart from its own children)
+    if (ImGuiWindow* focused_window = g.FocusedWindow)
+        if (ImGuiWindow* focused_root_window = focused_window->RootWindow)
+            if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasVisible && focused_root_window != window->RootWindow)
+                return false;
 
     return true;
 }
