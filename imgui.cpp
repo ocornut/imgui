@@ -10488,9 +10488,9 @@ void ImGui::ShowTestWindow(bool* opened)
     ImGui::End();
 }
 
-void ImGui::ShowMetricsWindow(bool* opened)
+void ImGui::ShowMetricsWindow(bool* opened1)
 {
-    if (ImGui::Begin("ImGui Metrics", opened))
+    if (ImGui::Begin("ImGui Metrics", opened1))
     {
         ImGui::Text("ImGui %s", ImGui::GetVersion());
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
