@@ -1148,6 +1148,7 @@ struct ImGuiState
     ImGuiID                 ActiveComboID;
     float                   DragCurrentValue;                   // current dragged value, always float, not rounded by end-user precision settings
     ImVec2                  DragLastMouseDelta;
+    float                   DragSpeedDefaultRatio;              // if speed == 0.0f, uses (max-min) * DragSpeedDefaultRatio
     float                   DragSpeedScaleSlow;
     float                   DragSpeedScaleFast;
     float                   ScrollbarClickDeltaToGrabCenter;    // distance between mouse and center of grab box, normalized in parent space
@@ -1205,6 +1206,7 @@ struct ImGuiState
         ActiveComboID = 0;
         DragCurrentValue = 0.0f;
         DragLastMouseDelta = ImVec2(0.0f, 0.0f);
+        DragSpeedDefaultRatio = 0.01f;
         DragSpeedScaleSlow = 0.01f;
         DragSpeedScaleFast = 10.0f;
         ScrollbarClickDeltaToGrabCenter = 0.0f;
@@ -5536,10 +5538,12 @@ static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, flo
             if (fabsf(mouse_drag_delta.x - g.DragLastMouseDelta.x) > 0.0f)
             {
                 float speed = v_speed;
+                if (speed == 0.0f && (v_max - v_min) != 0.0f && (v_max - v_min) < FLT_MAX)
+                    speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
                 if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
-                    speed = v_speed * g.DragSpeedScaleFast;
+                    speed = speed * g.DragSpeedScaleFast;
                 if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
-                    speed = v_speed * g.DragSpeedScaleSlow;
+                    speed = speed * g.DragSpeedScaleSlow;
 
                 float v_cur = g.DragCurrentValue;
                 float delta = (mouse_drag_delta.x - g.DragLastMouseDelta.x) * speed;
