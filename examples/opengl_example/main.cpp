@@ -10,6 +10,18 @@ static void error_callback(int error, const char* description)
     fprintf(stderr, "Error %d: %s\n", error, description);
 }
 
+float IntAsFloat(void *ints, int index)
+{
+    return (float)(((int *)ints)[index]);
+}
+
+const char *WeaponDropTypeStr(void *strs, int index)
+{
+    return ((const char **)strs)[index];
+}
+
+#define ARRAY_ELEMENTS(array)    (sizeof(array) / sizeof(array[0]))
+
 int main(int, char**)
 {
     // Setup window
@@ -32,6 +44,7 @@ int main(int, char**)
     bool show_test_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImColor(114, 144, 154);
+    srand(0);
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -66,6 +79,50 @@ int main(int, char**)
             ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
             ImGui::ShowTestWindow(&show_test_window);
         }
+
+        ImGui::Begin("Histogram labels");
+        static const char *dropTypeStr[] =
+        {
+            "WEAPONDROPTYPE_MG",
+            "WEAPONDROPTYPE_CANNON",
+            "WEAPONDROPTYPE_ARTILLERY",
+            "WEAPONDROPTYPE_LASER",
+            "WEAPONDROPTYPE_FLAME",
+        };
+
+        static int dropCounts[ARRAY_ELEMENTS(dropTypeStr)] = {};
+        static bool customLabels = false;
+
+        ImGui::Checkbox("Custom histogram labels", &customLabels);
+
+        if (customLabels)
+        {
+            ImGui::PlotHistogram("Type histogram", IntAsFloat, WeaponDropTypeStr, dropCounts, dropTypeStr, ARRAY_ELEMENTS(dropCounts), 0, NULL, 0.0f, FLT_MAX, ImVec2(0.0f, 200.0f));
+        }
+        else
+        {
+            ImGui::PlotHistogram("Type histogram", IntAsFloat, NULL, dropCounts, NULL, ARRAY_ELEMENTS(dropCounts), 0, NULL, 0.0f, FLT_MAX, ImVec2(0.0f, 200.0f));
+        }
+
+        static int numToDrop = 1;
+        ImGui::SliderInt("Drops to generate", &numToDrop, 1, 100000);
+
+        if (ImGui::Button("Drop"))
+        {
+            for (int i = 0; i < numToDrop; ++i)
+            {
+                ++dropCounts[rand() % ARRAY_ELEMENTS(dropCounts)];
+            }
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Clear statistics"))
+        {
+            memset(dropCounts, 0, sizeof(dropCounts));
+        }
+
+        ImGui::End();
 
         // Rendering
         glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
