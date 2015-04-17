@@ -35,6 +35,9 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
         return;
 
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
+    GLint last_program, last_texture;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -108,9 +111,9 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
 
     // Restore modified state
     glBindVertexArray(0);
-    glUseProgram(0);
+    glUseProgram(last_program);
     glDisable(GL_SCISSOR_TEST);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D, last_texture);
 }
 
 static const char* ImGui_ImplGlfwGL3_GetClipboardText()
@@ -134,7 +137,7 @@ void ImGui_ImplGlfwGL3_ScrollCallback(GLFWwindow*, double /*xoffset*/, double yo
     g_MouseWheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
 }
 
-void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow* window, int key, int, int action, int mods)
+void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
 {
     ImGuiIO& io = ImGui::GetIO();
     if (action == GLFW_PRESS)
@@ -143,9 +146,9 @@ void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow* window, int key, int, int action,
         io.KeysDown[key] = false;
 
     (void)mods; // Modifiers are not reliable across systems
-    io.KeyCtrl = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
-    io.KeyShift = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-    io.KeyAlt = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+    io.KeyCtrl = io.KeysDown[GLFW_KEY_LEFT_CONTROL] || io.KeysDown[GLFW_KEY_RIGHT_CONTROL];
+    io.KeyShift = io.KeysDown[GLFW_KEY_LEFT_SHIFT] || io.KeysDown[GLFW_KEY_RIGHT_SHIFT];
+    io.KeyAlt = io.KeysDown[GLFW_KEY_LEFT_ALT] || io.KeysDown[GLFW_KEY_RIGHT_ALT];
 }
 
 void ImGui_ImplGlfwGL3_CharCallback(GLFWwindow*, unsigned int c)

@@ -2,7 +2,7 @@
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
-// Developed by Omar Cornut and contributors.
+// Developed by Omar Cornut and ImGui contributors.
 
 // ANTI-ALIASED PRIMITIVES BRANCH
 // TODO
@@ -332,16 +332,16 @@
  - layout: horizontal layout helper (github issue #97)
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
- - columns: separator function or parameter that works within the column (currently Separator() bypass all columns)
- - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills)
- - columns: columns header to act as button (~sort op) and allow resize/reorder
- - columns: user specify columns size
- - columns: tree node example, removing the last NextColumn() makes a padding difference (it should not)
+ - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (github issue #125)
+ - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills) (github issue #125)
+ - columns: columns header to act as button (~sort op) and allow resize/reorder (github issue #125)
+ - columns: user specify columns size (github issue #125)
+ - popup: border options. richer api like BeginChild() perhaps? (github issue #197)
  - combo: turn child handling code into pop up helper
  - combo: contents should extends to fit label if combo widget is small
  - listbox: multiple selection
  - listbox: user may want to initial scroll to focus on the one selected value?
- ! menubar, menus
+ ! menubar, menus (github issue #126)
  - tabs
  - gauge: various forms of gauge/loading bars widgets
  - color: better color editor.
@@ -4356,9 +4356,11 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window)
 {
     ImGuiState& g = *GImGui;
 
-    ImGuiWindow* focused_window = g.FocusedWindow;
-    if (focused_window && (focused_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_window->WasVisible && focused_window != window)
-        return false;
+    // An active popup disable hovering on other windows (apart from its own children)
+    if (ImGuiWindow* focused_window = g.FocusedWindow)
+        if (ImGuiWindow* focused_root_window = focused_window->RootWindow)
+            if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasVisible && focused_root_window != window->RootWindow)
+                return false;
 
     return true;
 }
@@ -8343,7 +8345,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
         return NULL;
     }
 
-    ImFont* font = AddFontFromMemoryTTF(data, data_size, size_pixels, glyph_ranges, font_no);
+    ImFont* font = AddFontFromMemoryTTF(data, (unsigned int)data_size, size_pixels, glyph_ranges, font_no);
     return font;
 }
 
@@ -8380,7 +8382,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* in_compressed_tt
     stb_decompress(buf_decompressed, (unsigned char*)in_compressed_ttf_data, in_compressed_ttf_data_size);
 
     // Add
-    ImFont* font = AddFontFromMemoryTTF(buf_decompressed, buf_decompressed_size, size_pixels, glyph_ranges, font_no);
+    ImFont* font = AddFontFromMemoryTTF(buf_decompressed, (unsigned int)buf_decompressed_size, size_pixels, glyph_ranges, font_no);
     return font;
 }
 
@@ -8596,7 +8598,8 @@ void ImFontAtlas::RenderCustomTexData(int pass, void* p_rects)
     ImVector<stbrp_rect>& rects = *(ImVector<stbrp_rect>*)p_rects;
     if (pass == 0)
     {
-        stbrp_rect r = { 0 };
+        stbrp_rect r;
+        memset(&r, 0, sizeof(r));
         r.w = (TEX_DATA_W*2)+1;
         r.h = TEX_DATA_H+1;
         rects.push_back(r);
@@ -10646,13 +10649,13 @@ void ImGui::ShowMetricsWindow(bool* opened)
         {
             static void NodeDrawList(ImDrawList* draw_list, const char* label)
             {
-                bool opened = ImGui::TreeNode(draw_list, "%s: %d vtx, %d cmds", label, draw_list->vtx_buffer.size(), draw_list->commands.size());
+                bool node_opened = ImGui::TreeNode(draw_list, "%s: %d vtx, %d cmds", label, draw_list->vtx_buffer.size(), draw_list->commands.size());
                 if (draw_list == ImGui::GetWindowDrawList())
                 {
                     ImGui::SameLine();
                     ImGui::TextColored(ImColor(255,100,100), "CURRENTLY APPENDING"); // Can't display stats for active draw list! (we don't have the data double-buffered)
                 }
-                if (!opened)
+                if (!node_opened)
                     return;
                 for (const ImDrawCmd* pcmd = draw_list->commands.begin(); pcmd < draw_list->commands.end(); pcmd++)
                     if (pcmd->user_callback)
