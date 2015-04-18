@@ -13,6 +13,7 @@
  - API BREAKING CHANGES (read me when you update!)
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - Can I have multiple widgets with the same label? (Yes)
+   - How do I update to a newer version of ImGui?
    - Why is my text output blurry?
    - How can I load a different font than the default? 
    - How can I load multiple fonts?
@@ -267,6 +268,15 @@
      depending on your use cases you may want to use strings, indices or pointers as ID. 
       e.g. when displaying a single object that may change over time (1-1 relationship), using a static string as ID will preserve your node open/closed state when the targeted object change.
       e.g. when displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state differently. experiment and see what makes more sense!
+
+ Q: How do I update to a newer version of ImGui?
+ A: Overwrite the following files:
+     imgui.cpp
+     imgui.h
+     stb_rect_pack.h
+     stb_textedit.h
+     stb_truetype.h
+    Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes.
 
  Q: Why is my text output blurry?
  A: In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
