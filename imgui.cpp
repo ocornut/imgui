@@ -9921,9 +9921,9 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::SliderInt("slider int 0..3", &i1, 0, 3);
             ImGui::SliderInt("slider int -100..100", &i2, -100, 100);
 
-            static float f1=1.123f;
-            static float f2=0;
-            ImGui::SliderFloat("slider float", &f1, 0.0f, 2.0f);
+            static float f1=0.123f;
+            static float f2=0.0f;
+            ImGui::SliderFloat("slider float", &f1, 0.0f, 1.0f, "ratio = %.3f");
             ImGui::SliderFloat("slider log float", &f2, -10.0f, 10.0f, "%.4f", 3.0f);
             static float angle = 0.0f;
             ImGui::SliderAngle("slider angle", &angle);
