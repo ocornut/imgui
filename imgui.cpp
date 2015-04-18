@@ -1156,6 +1156,7 @@ struct ImGuiState
     ImGuiID                 ScalarAsInputTextId;                // Temporary text input when CTRL+clicking on a slider, etc.
     ImGuiStorage            ColorEditModeStorage;               // for user selection
     ImGuiID                 ActiveComboID;
+    ImVec2                  ActiveClickDeltaToCenter;
     float                   DragCurrentValue;                   // current dragged value, always float, not rounded by end-user precision settings
     ImVec2                  DragLastMouseDelta;
     float                   DragSpeedDefaultRatio;              // if speed == 0.0f, uses (max-min) * DragSpeedDefaultRatio
@@ -1214,6 +1215,7 @@ struct ImGuiState
 
         ScalarAsInputTextId = 0;
         ActiveComboID = 0;
+        ActiveClickDeltaToCenter = ImVec2(0.0f, 0.0f);
         DragCurrentValue = 0.0f;
         DragLastMouseDelta = ImVec2(0.0f, 0.0f);
         DragSpeedDefaultRatio = 0.01f;
@@ -7424,7 +7426,7 @@ void ImGui::NextColumn()
         window->DC.CurrentLineTextBaseOffset = 0.0f;
 
         PushColumnClipRect();
-        ImGui::PushItemWidth(ImGui::GetColumnWidth() * 0.65f);
+        ImGui::PushItemWidth(ImGui::GetColumnWidth() * 0.65f);  // FIXME
     }
 }
 
@@ -7440,12 +7442,34 @@ int ImGui::GetColumnsCount()
     return window->DC.ColumnsCount;
 }
 
+static float GetDraggedColumnOffset(int column_index)
+{
+    // Active (dragged) column always follow mouse. The reason we need this is that dragging a column to the right edge of an auto-resizing
+    // window creates a feedback loop because we store normalized positions/ So while dragging we enforce absolute positioning
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    IM_ASSERT(g.ActiveId == window->DC.ColumnsSetID + ImGuiID(column_index));
+
+    float x = g.IO.MousePos.x + g.ActiveClickDeltaToCenter.x;
+    x -= window->Pos.x;
+    x = ImClamp(x, ImGui::GetColumnOffset(column_index-1)+g.Style.ColumnsMinSpacing, ImGui::GetColumnOffset(column_index+1)-g.Style.ColumnsMinSpacing);
+
+    return x;
+}
+
 float ImGui::GetColumnOffset(int column_index)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
+
+    if (g.ActiveId)
+    {
+        const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
+        if (g.ActiveId == column_id)
+            return GetDraggedColumnOffset(column_index);
+    }
 
     // Read from cache
     IM_ASSERT(column_index < (int)window->DC.ColumnsOffsetsT.size());
@@ -7538,10 +7562,11 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 
             if (held)
             {
-                x -= window->Pos.x;
-                x = ImClamp(x + g.IO.MouseDelta.x, ImGui::GetColumnOffset(i-1)+g.Style.ColumnsMinSpacing, ImGui::GetColumnOffset(i+1)-g.Style.ColumnsMinSpacing);
+                if (g.ActiveIdIsJustActivated)
+                    g.ActiveClickDeltaToCenter.x = x - g.IO.MousePos.x;
+
+                x = GetDraggedColumnOffset(i);
                 SetColumnOffset(i, x);
-                x += window->Pos.x;
             }
         }
     }
