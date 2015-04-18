@@ -502,7 +502,7 @@ static bool         ItemAdd(const ImRect& bb, const ImGuiID* id);
 static void         ItemSize(ImVec2 size, float text_offset_y = 0.0f);
 static void         ItemSize(const ImRect& bb, float text_offset_y = 0.0f);
 static void         PushColumnClipRect(int column_index = -1);
-static bool         IsClippedEx(const ImRect& bb, bool clip_even_when_logged);
+static bool         IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when_logged);
 
 static bool         IsMouseHoveringRect(const ImRect& bb);
 static bool         IsKeyPressedMap(ImGuiKey key, bool repeat = true);
@@ -4265,7 +4265,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                 while (line < text_end)
                 {
                     const char* line_end = strchr(line, '\n');
-                    if (IsClippedEx(line_rect, false))
+                    if (IsClippedEx(line_rect, NULL, false))
                         break;
 
                     const ImVec2 line_size = CalcTextSize(line, line_end, false);
@@ -7266,15 +7266,16 @@ static inline void ItemSize(const ImRect& bb, float text_offset_y)
     ItemSize(bb.GetSize(), text_offset_y); 
 }
 
-static bool IsClippedEx(const ImRect& bb, bool clip_even_when_logged)
+static bool IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when_logged)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
     if (!bb.Overlaps(ImRect(window->ClipRectStack.back())))
     {
-        if (clip_even_when_logged || !g.LogEnabled)
-            return true;
+        if (!id || *id != GImGui->ActiveId)
+            if (clip_even_when_logged || !g.LogEnabled)
+                return true;
     }
     return false;
 }
@@ -7282,7 +7283,7 @@ static bool IsClippedEx(const ImRect& bb, bool clip_even_when_logged)
 bool ImGui::IsRectClipped(const ImVec2& size)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    return IsClippedEx(ImRect(window->DC.CursorPos, window->DC.CursorPos + size), true);
+    return IsClippedEx(ImRect(window->DC.CursorPos, window->DC.CursorPos + size), NULL, true);
 }
 
 static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
@@ -7290,13 +7291,10 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.LastItemID = id ? *id : 0;
     window->DC.LastItemRect = bb;
-    if (IsClippedEx(bb, false))
+    if (IsClippedEx(bb, id, false))
     {
-        if (!id || *id != GImGui->ActiveId)
-        {
-            window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = false;
-            return false;
-        }
+        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = false;
+        return false;
     }
 
     // This is a sensible default, but widgets are free to override it after calling ItemAdd()
@@ -7525,7 +7523,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(i);
             const ImRect column_rect(ImVec2(x-4,y1),ImVec2(x+4,y2));
 
-            if (IsClippedEx(column_rect, false))
+            if (IsClippedEx(column_rect, &column_id, false))
                 continue;
 
             bool hovered, held;
