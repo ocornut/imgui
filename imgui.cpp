@@ -6980,7 +6980,8 @@ bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
     const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : w, size_arg.y != 0.0f ? size_arg.y : label_size.y);
     ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
     ItemSize(bb);
-    bb.Max.x += style.AutoFitPadding.x;
+    if (size_arg.x == 0.0f)
+        bb.Max.x += style.AutoFitPadding.x;
 
     // Selectables are meant to be tightly packed together. So for both rendering and collision we extend to compensate for spacing.
     ImRect bb_with_spacing = bb;
