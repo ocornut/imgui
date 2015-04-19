@@ -5416,7 +5416,7 @@ bool ImGui::VSliderInt(const char* label, const ImVec2& size, int* v, int v_min,
 }
 
 // Add multiple sliders on 1 line for compact edition of multiple components
-static bool SliderFloatN(const char* label, float v[3], int components, float v_min, float v_max, const char* display_format, float power)
+static bool SliderFloatN(const char* label, float* v, int components, float v_min, float v_max, const char* display_format, float power)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5468,7 +5468,7 @@ bool ImGui::SliderFloat4(const char* label, float v[4], float v_min, float v_max
     return SliderFloatN(label, v, 4, v_min, v_max, display_format, power);
 }
 
-static bool SliderIntN(const char* label, int v[3], int components, int v_min, int v_max, const char* display_format)
+static bool SliderIntN(const char* label, int* v, int components, int v_min, int v_max, const char* display_format)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5663,6 +5663,58 @@ bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, f
     return value_changed;
 }
 
+static bool DragFloatN(const char* label, float* v, int components, float v_speed, float v_min, float v_max, const char* display_format, float power)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    const ImGuiStyle& style = g.Style;
+    const float w_full = ImGui::CalcItemWidth();
+    const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)) / (float)components));
+    const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)));
+
+    bool value_changed = false;
+    ImGui::BeginGroup();
+    ImGui::PushID(label);
+    ImGui::PushItemWidth(w_item_one);
+    for (int i = 0; i < components; i++)
+    {
+        ImGui::PushID(i);
+        if (i + 1 == components)
+        {
+            ImGui::PopItemWidth();
+            ImGui::PushItemWidth(w_item_last);
+        }
+        value_changed |= ImGui::DragFloat("##v", &v[i], v_speed, v_min, v_max, display_format, power);
+        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        ImGui::PopID();
+    }
+    ImGui::PopItemWidth();
+    ImGui::PopID();
+
+    ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
+    ImGui::EndGroup();
+
+    return value_changed;
+}
+
+bool ImGui::DragFloat2(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* display_format, float power)
+{
+    return DragFloatN(label, v, 2, v_speed, v_min, v_max, display_format, power);
+}
+
+bool ImGui::DragFloat3(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* display_format, float power)
+{
+    return DragFloatN(label, v, 3, v_speed, v_min, v_max, display_format, power);
+}
+
+bool ImGui::DragFloat4(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* display_format, float power)
+{
+    return DragFloatN(label, v, 4, v_speed, v_min, v_max, display_format, power);
+}
+
 // NB: v_speed is float to allow adjusting the drag speed with more precision
 bool ImGui::DragInt(const char* label, int* v, float v_speed, int v_min, int v_max, const char* display_format)
 {
@@ -5672,6 +5724,58 @@ bool ImGui::DragInt(const char* label, int* v, float v_speed, int v_min, int v_m
     bool value_changed = ImGui::DragFloat(label, &v_f, v_speed, (float)v_min, (float)v_max, display_format);
     *v = (int)v_f;
     return value_changed;
+}
+
+static bool DragIntN(const char* label, int* v, int components, float v_speed, int v_min, int v_max, const char* display_format)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    const ImGuiStyle& style = g.Style;
+    const float w_full = ImGui::CalcItemWidth();
+    const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)) / (float)components));
+    const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)));
+
+    bool value_changed = false;
+    ImGui::BeginGroup();
+    ImGui::PushID(label);
+    ImGui::PushItemWidth(w_item_one);
+    for (int i = 0; i < components; i++)
+    {
+        ImGui::PushID(i);
+        if (i + 1 == components)
+        {
+            ImGui::PopItemWidth();
+            ImGui::PushItemWidth(w_item_last);
+        }
+        value_changed |= ImGui::DragInt("##v", &v[i], v_speed, v_min, v_max, display_format);
+        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        ImGui::PopID();
+    }
+    ImGui::PopItemWidth();
+    ImGui::PopID();
+
+    ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
+    ImGui::EndGroup();
+
+    return value_changed;
+}
+
+bool ImGui::DragInt2(const char* label, int v[2], float v_speed, int v_min, int v_max, const char* display_format)
+{
+    return DragIntN(label, v, 2, v_speed, v_min, v_max, display_format);
+}
+
+bool ImGui::DragInt3(const char* label, int v[3], float v_speed, int v_min, int v_max, const char* display_format)
+{
+    return DragIntN(label, v, 3, v_speed, v_min, v_max, display_format);
+}
+
+bool ImGui::DragInt4(const char* label, int v[4], float v_speed, int v_min, int v_max, const char* display_format)
+{
+    return DragIntN(label, v, 4, v_speed, v_min, v_max, display_format);
 }
 
 enum ImGuiPlotType
@@ -9953,18 +10057,24 @@ void ImGui::ShowTestWindow(bool* opened)
             static int vec4i[4] = { 1, 5, 100, 255 };
 
             ImGui::InputFloat2("input float2", vec4f);
+            ImGui::DragFloat2("drag float2", vec4f, 0.01f, 0.0f, 1.0f);
             ImGui::SliderFloat2("slider float2", vec4f, 0.0f, 1.0f);
+            ImGui::DragInt2("drag int2", vec4i, 1, 0, 255);
             ImGui::InputInt2("input int2", vec4i);
             ImGui::SliderInt2("slider int2", vec4i, 0, 255);
 
             ImGui::InputFloat3("input float3", vec4f);
+            ImGui::DragFloat3("drag float3", vec4f, 0.01f, 0.0f, 1.0f);
             ImGui::SliderFloat3("slider float3", vec4f, 0.0f, 1.0f);
+            ImGui::DragInt3("drag int3", vec4i, 1, 0, 255);
             ImGui::InputInt3("input int3", vec4i);
             ImGui::SliderInt3("slider int3", vec4i, 0, 255);
 
             ImGui::InputFloat4("input float4", vec4f);
+            ImGui::DragFloat4("drag float4", vec4f, 0.01f, 0.0f, 1.0f);
             ImGui::SliderFloat4("slider float4", vec4f, 0.0f, 1.0f);
             ImGui::InputInt4("input int4", vec4i);
+            ImGui::DragInt4("drag int4", vec4i, 1, 0, 255);
             ImGui::SliderInt4("slider int4", vec4i, 0, 255);
 
             ImGui::Indent();
