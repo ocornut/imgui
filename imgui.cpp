@@ -5533,7 +5533,7 @@ static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, flo
 
     bool value_changed = false;
 
-    // Process clicking on the slider
+    // Process clicking on the drag
     if (g.ActiveId == id)
     {
         if (g.IO.MouseDown[0])
@@ -9900,25 +9900,28 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::InputFloat3("input float3", vec4a);
         }
 
-        /*
         {
             static int i1=50;
             static int i2=42;
             ImGui::DragInt("drag int", &i1, 1);
-            ImGui::DragInt("drag int 0..100", &i2, 1, 0, 100);
+            ImGui::SameLine();
+            ImGui::TextColored(ImColor(170,170,170,255), "(?)");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Click and drag to edit value.\nHold SHIFT/ALT for faster/slower edit.\nDouble-click or CTRL+click to input text");
+
+            ImGui::DragInt("drag int 0..100", &i2, 1, 0, 100, "%.0f%%");
 
             static float f1=1.00f;
             static float f2=0.0067f;
             ImGui::DragFloat("drag float", &f1, 1.0f);
-            ImGui::DragFloat("drag small float", &f2, 0.0001f, 0.0f, 0.0f, "%.06f");
+            ImGui::DragFloat("drag small float", &f2, 0.0001f, 0.0f, 0.0f, "%.06f ns");
         }
-        */
 
         {
             static int i1=0;
-            static int i2=42;
+            //static int i2=42;
             ImGui::SliderInt("slider int 0..3", &i1, 0, 3);
-            ImGui::SliderInt("slider int -100..100", &i2, -100, 100);
+            //ImGui::SliderInt("slider int -100..100", &i2, -100, 100);
 
             static float f1=0.123f;
             static float f2=0.0f;
