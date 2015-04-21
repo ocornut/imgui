@@ -804,6 +804,7 @@ struct ImGuiStorage
     // - You can also use this to quickly create temporary editable values during a session of using Edit&Continue, without restarting your application.
     IMGUI_API int*    GetIntRef(ImGuiID key, int default_val = 0);
     IMGUI_API float*  GetFloatRef(ImGuiID key, float default_val = 0);
+    IMGUI_API void**  GetVoidPtrRef(ImGuiID key, void* default_val = NULL);
 
     // Use on your own storage if you know only integer are being stored (open/close all tree nodes)
     IMGUI_API void    SetAllInt(int val);
