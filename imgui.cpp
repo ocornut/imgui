@@ -400,7 +400,11 @@
 #include "imgui.h"
 #include <ctype.h>      // toupper, isprint
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, cosf, sinf, floorf, ceilf
+#if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
+#include <stddef.h>     // intptr_t
+#else
 #include <stdint.h>     // intptr_t
+#endif
 #include <stdio.h>      // vsnprintf, sscanf
 #include <new>          // new (ptr)
 
@@ -7097,14 +7101,42 @@ bool ImGui::ListBox(const char* label, int* current_item, const char** items, in
 
 bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return false;
+	ImGuiState& g = *GImGui;
+	ImGuiWindow* window = GetCurrentWindow();
+	if (window->SkipItems)
+		return false;
 
-    if (!ImGui::ListBoxHeader(label, items_count, height_in_items))
-        return false;
+	if (!ImGui::ListBoxHeader(label, items_count, height_in_items))
+		return false;
 
-    bool value_changed = false;
+	const ImGuiID id = window->GetID(label);
+
+	bool value_changed = false;
+
+	//if(g.ActiveId == id) // last added (listbox) must be active, but it's not...
+	{
+		if(IsKeyPressedMap(ImGuiKey_DownArrow))
+		{
+			if((*current_item) + 1 < items_count)
+				*current_item = (*current_item) + 1;
+			else
+				*current_item = 0;
+
+			value_changed = true;
+			ImGui::SetScrollPosHere(); // not figured out how to it yet
+		}
+		else if(IsKeyPressedMap(ImGuiKey_UpArrow))
+		{
+			if((*current_item) - 1 > 0)
+				*current_item = (*current_item) - 1;
+			else
+				*current_item = items_count - 1;
+
+			value_changed = true;
+			ImGui::SetScrollPosHere(); // not figured out how to it yet
+		}
+	}
+
     for (int i = 0; i < items_count; i++)
     {
         const bool item_selected = (i == *current_item);

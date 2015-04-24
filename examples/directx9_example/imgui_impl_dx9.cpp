@@ -1,13 +1,34 @@
 // ImGui Win32 + DirectX9 binding
 // https://github.com/ocornut/imgui
 
-#include <imgui.h>
+#include "imgui.h"
 #include "imgui_impl_dx9.h"
 
 // DirectX
+#include <d3d9.h>
 #include <d3dx9.h>
-#define DIRECTINPUT_VERSION 0x0800
-#include <dinput.h>
+//-----------------------------------------------------------------------------------
+#pragma message("Linking with d3d9.lib...")
+#pragma comment(lib, "d3d9.lib")
+//-----------------------------------------------------------------------------------
+#ifdef _DEBUG
+//#     if D3D9_SDK_VERSION >= 32
+#               define GW_D3DX9_LIB "d3dx9d.lib"
+//#     else
+//#             define GW_D3DX9_LIB "d3dx9dt.lib"
+//#     endif
+#else
+#       define GW_D3DX9_LIB "d3dx9.lib"
+#endif
+//-----------------------------------------------------------------------------------
+#pragma message("Linking with " GW_D3DX9_LIB "...")
+#pragma comment(lib, GW_D3DX9_LIB)
+//-----------------------------------------------------------------------------------
+//#define DIRECTINPUT_VERSION 0x0800
+//#include <dinput.h>
+//#pragma message("Linking with " "dinput8.lib" "...")
+//#pragma comment(lib, "dinput8.lib")
+//-----------------------------------------------------------------------------------
 
 // Data
 static HWND                     g_hWnd = 0;
