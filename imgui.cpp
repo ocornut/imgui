@@ -2831,6 +2831,14 @@ int ImGui::GetFrameCount()
     return GImGui->FrameCount;
 }
 
+static ImVec4 GetVisibleRect()
+{
+    ImGuiState& g = *GImGui;
+    if (g.IO.DisplayVisibleMin.x != g.IO.DisplayVisibleMax.x && g.IO.DisplayVisibleMin.y != g.IO.DisplayVisibleMax.y)
+        return ImVec4(g.IO.DisplayVisibleMin.x, g.IO.DisplayVisibleMin.y, g.IO.DisplayVisibleMax.x, g.IO.DisplayVisibleMax.y);
+    return ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y);
+}
+
 void ImGui::BeginTooltip()
 {
     ImGuiState& g = *GImGui;
@@ -3145,10 +3153,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     // Setup outer clipping rectangle
     if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
         PushClipRect(parent_window->ClipRectStack.back());
-    else if (g.IO.DisplayVisibleMin.x != g.IO.DisplayVisibleMax.x && g.IO.DisplayVisibleMin.y != g.IO.DisplayVisibleMax.y)
-        PushClipRect(ImVec4(g.IO.DisplayVisibleMin.x, g.IO.DisplayVisibleMin.y, g.IO.DisplayVisibleMax.x, g.IO.DisplayVisibleMax.y));
     else
-        PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
+        PushClipRect(GetVisibleRect());
 
     // Setup and draw window
     if (first_begin_of_the_frame)
@@ -7890,10 +7896,7 @@ void ImDrawList::PushClipRectFullScreen()
 
     // This would be more correct but we're not supposed to access ImGuiState from here?
     //ImGuiState& g = *GImGui;
-    //if (g.IO.DisplayVisibleMin.x != g.IO.DisplayVisibleMax.x && g.IO.DisplayVisibleMin.y != g.IO.DisplayVisibleMax.y)
-    //    PushClipRect(ImVec4(g.IO.DisplayVisibleMin.x, g.IO.DisplayVisibleMin.y, g.IO.DisplayVisibleMax.x, g.IO.DisplayVisibleMax.y));
-    //else
-    //    PushClipRect(ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y));
+    //PushClipRect(GetVisibleRect());
 }
 
 void ImDrawList::PopClipRect()
