@@ -7330,7 +7330,12 @@ void ImGui::Separator()
     if (window->DC.ColumnsCount > 1)
         PopClipRect();
 
-    const ImRect bb(ImVec2(window->Pos.x, window->DC.CursorPos.y), ImVec2(window->Pos.x + window->Size.x, window->DC.CursorPos.y));
+    float x1 = window->Pos.x;
+    float x2 = window->Pos.x + window->Size.x;
+    if (!window->DC.GroupStack.empty())
+        x1 += window->DC.ColumnsStartX;
+
+    const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y));
     ItemSize(ImVec2(0.0f, bb.GetSize().y)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit
     if (!ItemAdd(bb, NULL))
     {
