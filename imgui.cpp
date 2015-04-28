@@ -2657,6 +2657,13 @@ static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
     return ImGui::IsKeyPressed(key_index, repeat);
 }
 
+bool ImGui::IsKeyDown(int key_index)
+{
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
+    return g.IO.KeysDown[key_index];
+}
+
 bool ImGui::IsKeyPressed(int key_index, bool repeat)
 {
     ImGuiState& g = *GImGui;
@@ -2673,6 +2680,13 @@ bool ImGui::IsKeyPressed(int key_index, bool repeat)
             return true;
 
     return false;
+}
+
+bool ImGui::IsMouseDown(int button)
+{
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    return g.IO.MouseDown[button];
 }
 
 bool ImGui::IsMouseClicked(int button, bool repeat)
