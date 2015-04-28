@@ -7575,6 +7575,7 @@ static float GetDraggedColumnOffset(int column_index)
     // window creates a feedback loop because we store normalized positions/ So while dragging we enforce absolute positioning
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
+    IM_ASSERT(column_index > 0); // We cannot drag column 0. If you get this assert you may have a conflict between the ID of your columns and another widgets.
     IM_ASSERT(g.ActiveId == window->DC.ColumnsSetID + ImGuiID(column_index));
 
     float x = g.IO.MousePos.x + g.ActiveClickDeltaToCenter.x;
@@ -7699,7 +7700,9 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     }
 
     // Set state for first column
+    ImGui::PushID(0x11223344); // Differentiate column ID with an arbitrary/random prefix for cases where users name their columns set the same as another non-scope widget
     window->DC.ColumnsSetID = window->GetID(id ? id : "");
+    ImGui::PopID();
     window->DC.ColumnsCurrent = 0;
     window->DC.ColumnsCount = columns_count;
     window->DC.ColumnsShowBorders = border;
@@ -10251,12 +10254,12 @@ void ImGui::ShowTestWindow(bool* opened)
             // Text
             ImGui::Text("Two items: Hello");
             ImGui::SameLine();
-            ImGui::TextColored(ImVec4(1,1,0,1), "World");
+            ImGui::TextColored(ImVec4(1,1,0,1), "Sailor");
 
             // Adjust spacing
             ImGui::Text("More spacing: Hello");
             ImGui::SameLine(0, 20);
-            ImGui::TextColored(ImVec4(1,1,0,1), "World");
+            ImGui::TextColored(ImVec4(1,1,0,1), "Sailor");
 
             // Button
             ImGui::AlignFirstTextHeightToWidgets();
@@ -10499,7 +10502,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Text("An extra line here.");
         ImGui::NextColumn();
         
-        ImGui::Text("World!");
+        ImGui::Text("Sailor");
         ImGui::Button("Corniflower");
         ImGui::RadioButton("radio c", &e, 2);
         static float bar = 1.0f;
@@ -10518,8 +10521,8 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Text("Tree items:");
         ImGui::Columns(2, "tree items");
         ImGui::Separator();
-        if (ImGui::TreeNode("Hello")) { ImGui::BulletText("World"); ImGui::TreePop(); } ImGui::NextColumn();
-        if (ImGui::TreeNode("Bonjour")) { ImGui::BulletText("Monde"); ImGui::TreePop(); } ImGui::NextColumn();
+        if (ImGui::TreeNode("Hello")) { ImGui::BulletText("Sailor"); ImGui::TreePop(); } ImGui::NextColumn();
+        if (ImGui::TreeNode("Bonjour")) { ImGui::BulletText("Marin"); ImGui::TreePop(); } ImGui::NextColumn();
         ImGui::Columns(1);
 
         ImGui::Separator();
