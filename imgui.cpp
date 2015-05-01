@@ -381,7 +381,6 @@
  - keyboard: full keyboard navigation and focus.
  - input: rework IO to be able to pass actual events to fix temporal aliasing issues.
  - input: support track pad style scrolling & slider edit.
- - tooltip: move to fit within screen (e.g. when mouse cursor is right of the screen).
  - portability: big-endian test/support (github issue #81)
  - misc: mark printf compiler attributes on relevant functions
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
@@ -570,7 +569,8 @@ ImGuiStyle::ImGuiStyle()
     ColumnsMinSpacing       = 6.0f;             // Minimum horizontal spacing between two columns
     ScrollbarWidth          = 16.0f;            // Width of the vertical scrollbar
     GrabMinSize             = 10.0f;            // Minimum width/height of a slider or scrollbar grab
-    DisplaySafeAreaPadding  = ImVec2(22,22);    // Window positions are clamped to be visible within the display area. If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding
+    DisplayWindowPadding    = ImVec2(22,22);    // Window positions are clamped to be visible within the display area by at least this amount. Only covers regular windows.
+    DisplaySafeAreaPadding  = ImVec2(4,4);      // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
 
     Colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
     Colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
@@ -963,6 +963,7 @@ struct ImRect           // 2D axis aligned bounding-box
     void        Add(const ImRect& rhs)              { Min.x = ImMin(Min.x, rhs.Min.x); Min.y = ImMin(Min.y, rhs.Min.y); Max.x = ImMax(Max.x, rhs.Max.x); Max.y = ImMax(Max.y, rhs.Max.y); }
     void        Expand(const float amount)          { Min.x -= amount; Min.y -= amount; Max.x += amount; Max.y += amount; }
     void        Expand(const ImVec2& amount)        { Min -= amount; Max += amount; }
+    void        Reduce(const ImVec2& amount)        { Min += amount; Max -= amount; }
     void        Clip(const ImRect& clip)            { Min.x = ImMax(Min.x, clip.Min.x); Min.y = ImMax(Min.y, clip.Min.y); Max.x = ImMin(Max.x, clip.Max.x); Max.y = ImMin(Max.y, clip.Max.y); }
     ImVec2      GetClosestPoint(ImVec2 p, bool on_edge) const
     {
@@ -2974,6 +2975,28 @@ void ImGui::EndChildFrame()
     ImGui::PopStyleColor();
 }
 
+static ImVec2 FindTooltipPos(const ImVec2& mouse_pos, const ImVec2& size)
+{
+    const ImGuiStyle& style = GImGui->Style;
+
+    // Clamp into visible area while not overlapping the cursor
+    ImRect r_outer(GetVisibleRect()); 
+    r_outer.Reduce(style.DisplaySafeAreaPadding);
+    ImRect r_inner(mouse_pos.x - 16, mouse_pos.y - 8, mouse_pos.x + 28, mouse_pos.y + 24);     // FIXME: Completely hard-coded. Perhaps center on cursor hit-point instead?
+    ImVec2 mouse_pos_clamped = ImClamp(mouse_pos, r_outer.Min, r_outer.Max - size);
+
+    for (int dir = 0; dir < 4; dir++)   // right, down, up, left
+    {
+        ImRect rect(dir == 0 ? r_inner.Max.x : r_outer.Min.x, dir == 1 ? r_inner.Max.y : r_outer.Min.y, dir == 3 ? r_inner.Min.x : r_outer.Max.x, dir == 2 ? r_inner.Min.y : r_outer.Max.y);
+        if (rect.GetWidth() < size.x || rect.GetHeight() < size.y)
+            continue;
+        return ImVec2(dir == 0 ? r_inner.Max.x : dir == 3 ? r_inner.Min.x - size.x : mouse_pos_clamped.x, dir == 1 ? r_inner.Max.y : dir == 2 ? r_inner.Min.y - size.y : mouse_pos_clamped.y);
+    }
+
+    // Fallback
+    return mouse_pos + ImVec2(2,2);
+}
+
 static ImGuiWindow* FindWindowByName(const char* name)
 {
     // FIXME-OPT: Store sorted hashes -> pointers.
@@ -3202,18 +3225,17 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         // Tooltips always follows mouse
         if (!window_pos_set_by_api && (window->Flags & ImGuiWindowFlags_Tooltip) != 0)
         {
-            window->PosFloat = g.IO.MousePos + ImVec2(32,16) - style.FramePadding*2;
+            window->PosFloat = FindTooltipPos(g.IO.MousePos, window->Size);
         }
 
-        // Clamp into view
+        // Clamp into display
         if (!(window->Flags & ImGuiWindowFlags_ChildWindow) && !(window->Flags & ImGuiWindowFlags_Tooltip))
         {
             if (window->AutoFitFrames <= 0 && g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
             {
-                ImVec2 clip_min = style.DisplaySafeAreaPadding;
-                ImVec2 clip_max = g.IO.DisplaySize - style.DisplaySafeAreaPadding;
-                window->PosFloat = ImMax(window->PosFloat + window->Size, clip_min) - window->Size;
-                window->PosFloat = ImMin(window->PosFloat, clip_max);
+                ImVec2 padding = ImMax(style.DisplayWindowPadding, style.DisplaySafeAreaPadding);
+                window->PosFloat = ImMax(window->PosFloat + window->Size, padding) - window->Size;
+                window->PosFloat = ImMin(window->PosFloat, g.IO.DisplaySize - padding);
             }
             window->SizeFull = ImMax(window->SizeFull, style.WindowMinSize);
         }
