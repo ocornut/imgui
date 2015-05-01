@@ -344,6 +344,7 @@
  - popup: border options. richer api like BeginChild() perhaps? (github issue #197)
  - combo: turn child handling code into pop up helper
  - combo: contents should extends to fit label if combo widget is small
+ - combo/listbox: keyboard control. need inputtext like non-active focus + key handling. considering keybord for custom listbox (see github pr #203)
  - listbox: multiple selection
  - listbox: user may want to initial scroll to focus on the one selected value?
  ! menubar, menus (github issue #126)
