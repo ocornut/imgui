@@ -1,4 +1,4 @@
-// ImGui library v1.38
+// ImGui library v1.39 WIP
 // See .cpp file for documentation.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
@@ -13,7 +13,7 @@
 #include <stdlib.h>         // NULL, malloc, free, qsort, atoi
 #include <string.h>         // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
-#define IMGUI_VERSION       "1.38"
+#define IMGUI_VERSION       "1.39 WIP"
 
 // Define assertion handler.
 #ifndef IM_ASSERT
@@ -159,14 +159,14 @@ namespace ImGui
     IMGUI_API void          ShowUserGuide();                            // help block
     IMGUI_API void          ShowStyleEditor(ImGuiStyle* ref = NULL);    // style editor block
     IMGUI_API void          ShowTestWindow(bool* opened = NULL);        // test window, demonstrate ImGui features
-    IMGUI_API void          ShowMetricsWindow(bool* opened = NULL);     // metrics window
+    IMGUI_API void          ShowMetricsWindow(bool* opened = NULL);     // metrics window for debugging imgui
 
     // Window
     // See implementation in .cpp for details
     IMGUI_API bool          Begin(const char* name = "Debug", bool* p_opened = NULL, ImGuiWindowFlags flags = 0);                                           // return false when window is collapsed, so you can early out in your code. 'bool* p_opened' creates a widget on the upper-right to close the window (which sets your bool to false). 
     IMGUI_API bool          Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_use, float bg_alpha = -1.0f, ImGuiWindowFlags flags = 0);   // this is the older/longer API. call SetNextWindowSize() instead if you want to set a window size. For regular windows, 'size_on_first_use' only applies to the first time EVER the window is created and probably not what you want! maybe obsolete this API eventually.
     IMGUI_API void          End();
-    IMGUI_API bool          BeginChild(const char* str_id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);        // size==0.0f: use remaining window size, size<0.0f: use remaining window size minus abs(size). on each axis.
+    IMGUI_API bool          BeginChild(const char* str_id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);        // size==0.0f: use remaining window size, size<0.0f: use remaining window size minus abs(size). size>0.0f: fixed size. each axis can use a different mode, e.g. ImVec2(0,400).
     IMGUI_API bool          BeginChild(ImGuiID id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);                // "
     IMGUI_API void          EndChild();
     IMGUI_API ImVec2        GetContentRegionMax();                                              // window or current column boundaries, in windows coordinates
@@ -237,7 +237,7 @@ namespace ImGui
     IMGUI_API void          Spacing();                                                          // add vertical spacing
     IMGUI_API void          Indent();                                                           // move content position toward the right by style.IndentSpacing pixels
     IMGUI_API void          Unindent();                                                         // move content position back to the left (cancel Indent)
-    IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border=true);    // setup number of columns
+    IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border=true);    // setup number of columns. use an identifier to distinguish multiple column sets. close with Columns(1).
     IMGUI_API void          NextColumn();                                                       // next column
     IMGUI_API int           GetColumnIndex();                                                   // get current column index
     IMGUI_API float         GetColumnOffset(int column_index = -1);                             // get position of column line (in pixels, from the left side of the contents region). pass -1 to use current column, otherwise 0..GetcolumnsCount() inclusive. column 0 is usually 0.0f and not resizable unless you call this
@@ -317,9 +317,14 @@ namespace ImGui
     IMGUI_API bool          VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* display_format = "%.0f");
 
     // Widgets: Drags (tip: ctrl+click on a drag box to input text)
-    // ImGui 1.38+ work-in-progress, may change name or API.
-    IMGUI_API bool          DragFloat(const char* label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f", float power = 1.0f);  // If v_max >= v_max we have no bound
-    IMGUI_API bool          DragInt(const char* label, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");                                    // If v_max >= v_max we have no bound
+    IMGUI_API bool          DragFloat(const char* label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f", float power = 1.0f);     // If v_max >= v_max we have no bound
+    IMGUI_API bool          DragFloat2(const char* label, float v[2], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          DragFloat3(const char* label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          DragFloat4(const char* label, float v[4], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          DragInt(const char* label, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");                                       // If v_max >= v_max we have no bound
+    IMGUI_API bool          DragInt2(const char* label, int v[2], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");
+    IMGUI_API bool          DragInt3(const char* label, int v[3], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");
+    IMGUI_API bool          DragInt4(const char* label, int v[4], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");
 
     // Widgets: Input
     IMGUI_API bool          InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
@@ -381,7 +386,9 @@ namespace ImGui
     IMGUI_API bool          IsRootWindowFocused();                                              // is current root window focused
     IMGUI_API bool          IsRootWindowOrAnyChildFocused();                                    // is current root window or any of its child (including current window) focused
     IMGUI_API bool          IsRectClipped(const ImVec2& size);                                  // test if rectangle of given size starting from cursor pos is out of clipping region. to perform coarse clipping on user's side (as an optimization)
-    IMGUI_API bool          IsKeyPressed(int key_index, bool repeat = true);                    // key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry
+    IMGUI_API bool          IsKeyDown(int key_index);                                           // key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry
+    IMGUI_API bool          IsKeyPressed(int key_index, bool repeat = true);                    // "
+    IMGUI_API bool          IsMouseDown(int button);
     IMGUI_API bool          IsMouseClicked(int button, bool repeat = false);
     IMGUI_API bool          IsMouseDoubleClicked(int button);
     IMGUI_API bool          IsMouseHoveringWindow();                                            // is mouse hovering current window ("window" in API names always refer to current window)
@@ -597,7 +604,8 @@ struct ImGuiStyle
     float       ColumnsMinSpacing;          // Minimum horizontal spacing between two columns
     float       ScrollbarWidth;             // Width of the vertical scrollbar
     float       GrabMinSize;                // Minimum width/height of a slider or scrollbar grab
-    ImVec2      DisplaySafeAreaPadding;     // Window positions are clamped to be visible within the display area. If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding.
+    ImVec2      DisplayWindowPadding;       // Window positions are clamped to be visible within the display area by at least this amount. Only covers regular windows.
+    ImVec2      DisplaySafeAreaPadding;     // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
     ImVec4      Colors[ImGuiCol_COUNT];
 
     IMGUI_API ImGuiStyle();
@@ -799,6 +807,7 @@ struct ImGuiStorage
     // - You can also use this to quickly create temporary editable values during a session of using Edit&Continue, without restarting your application.
     IMGUI_API int*    GetIntRef(ImGuiID key, int default_val = 0);
     IMGUI_API float*  GetFloatRef(ImGuiID key, float default_val = 0);
+    IMGUI_API void**  GetVoidPtrRef(ImGuiID key, void* default_val = NULL);
 
     // Use on your own storage if you know only integer are being stored (open/close all tree nodes)
     IMGUI_API void    SetAllInt(int val);

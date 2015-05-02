@@ -168,7 +168,7 @@ bool    ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device)
     io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
-    io.KeyMap[ImGuiKey_DownArrow] = VK_UP;
+    io.KeyMap[ImGuiKey_DownArrow] = VK_DOWN;
     io.KeyMap[ImGuiKey_Home] = VK_HOME;
     io.KeyMap[ImGuiKey_End] = VK_END;
     io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
@@ -280,6 +280,9 @@ void ImGui_ImplDX9_NewFrame()
     // io.MousePos : filled by WM_MOUSEMOVE events
     // io.MouseDown : filled by WM_*BUTTON* events
     // io.MouseWheel : filled by WM_MOUSEWHEEL events
+
+    // Hide OS mouse cursor if ImGui is drawing it
+    SetCursor(io.MouseDrawCursor ? NULL : LoadCursor(NULL, IDC_ARROW));
 
     // Start the frame
     ImGui::NewFrame();
