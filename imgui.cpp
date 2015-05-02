@@ -6690,7 +6690,8 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
                     if (callback_data.SelectionEnd != utf8_selection_end)      edit_state.StbState.select_end = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionEnd);
                     if (callback_data.BufDirty)
                     {
-                        ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), g.TempBuffer, NULL);
+                        edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), g.TempBuffer, NULL);
+                        edit_state.CurLenA = strlen(g.TempBuffer);
                         edit_state.CursorAnimReset();
                     }
                 }
