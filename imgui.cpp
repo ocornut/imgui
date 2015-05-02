@@ -3293,13 +3293,14 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 size_auto_fit.x += style.ScrollbarWidth;
         }
 
-        // Update window size
+        // Handle automatic resize
         if (window->Collapsed)
         {
             // We still process initial auto-fit on collapsed windows to get a window width
             // But otherwise we don't honor ImGuiWindowFlags_AlwaysAutoResize when collapsed.
             if (window->AutoFitFrames > 0)
                 window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
+            window->Size = title_bar_rect.GetSize();
         }
         else
         {
@@ -3323,7 +3324,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         if (window->Collapsed)
         {
             // Draw title bar only
-            window->Size = title_bar_rect.GetSize();
             window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_TitleBgCollapsed), window_rounding);
             if (window->Flags & ImGuiWindowFlags_ShowBorders)
             {
