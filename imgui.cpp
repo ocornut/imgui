@@ -3303,7 +3303,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
         else
         {
-            if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0 && (window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
+            if ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
             {
                 // Don't continuously mark settings as dirty, the size of the window doesn't need to be stored.
                 window->Size = window->SizeFull = size_auto_fit;
