@@ -2215,12 +2215,12 @@ void ImGui::Render()
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
-            if (window->Flags & ImGuiWindowFlags_ChildWindow)           // if a child is visible its parent will add it
+            if (window->Flags & ImGuiWindowFlags_ChildWindow)       // if a child is visible its parent will add it
                 if (window->Visible)
                     continue;
             AddWindowToSortedBuffer(g.WindowsSortBuffer, window);
         }
-        IM_ASSERT(g.Windows.size() == g.WindowsSortBuffer.size());    // we done something wrong
+        IM_ASSERT(g.Windows.size() == g.WindowsSortBuffer.size());  // we done something wrong
         g.Windows.swap(g.WindowsSortBuffer);
 
         // Clear data for next frame
@@ -2975,14 +2975,13 @@ void ImGui::EndChildFrame()
     ImGui::PopStyleColor();
 }
 
-static ImVec2 FindTooltipPos(const ImVec2& mouse_pos, const ImVec2& size)
+static ImVec2 FindBestWindowPos(const ImVec2& mouse_pos, const ImVec2& size, const ImRect& r_inner)
 {
     const ImGuiStyle& style = GImGui->Style;
 
     // Clamp into visible area while not overlapping the cursor
     ImRect r_outer(GetVisibleRect()); 
     r_outer.Reduce(style.DisplaySafeAreaPadding);
-    ImRect r_inner(mouse_pos.x - 16, mouse_pos.y - 8, mouse_pos.x + 28, mouse_pos.y + 24);     // FIXME: Completely hard-coded. Perhaps center on cursor hit-point instead?
     ImVec2 mouse_pos_clamped = ImClamp(mouse_pos, r_outer.Min, r_outer.Max - size);
 
     for (int dir = 0; dir < 4; dir++)   // right, down, up, left
@@ -3152,6 +3151,20 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     if (first_begin_of_the_frame)
     {
         window->DrawList->Clear();
+        window->ClipRectStack.resize(0);
+    }
+
+    // Setup texture
+    window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
+
+    // Setup outer clipping rectangle
+    if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
+        PushClipRect(parent_window->ClipRectStack.back());
+    else
+        PushClipRect(GetVisibleRect());
+
+    if (first_begin_of_the_frame)
+    {
         window->Visible = true;
 
         // New windows appears in front
@@ -3171,7 +3184,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
 
         window->LastFrameDrawn = current_frame;
-        window->ClipRectStack.resize(0);
 
         // Reset contents size for auto-fitting
         window->SizeContents = window_is_new ? ImVec2(0.0f, 0.0f) : window->DC.CursorMaxPos - window->Pos;
@@ -3183,20 +3195,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
             window->SizeFull = size_on_first_use;
         }
-    }
 
-    // Setup texture
-    window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
-
-    // Setup outer clipping rectangle
-    if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
-        PushClipRect(parent_window->ClipRectStack.back());
-    else
-        PushClipRect(GetVisibleRect());
-
-    // Setup and draw window
-    if (first_begin_of_the_frame)
-    {
         // Reset ID stack
         window->IDStack.resize(1);
 
@@ -3225,7 +3224,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         // Tooltips always follows mouse
         if (!window_pos_set_by_api && (window->Flags & ImGuiWindowFlags_Tooltip) != 0)
         {
-            window->PosFloat = FindTooltipPos(g.IO.MousePos, window->Size);
+            ImRect rect_to_avoid(g.IO.MousePos.x - 16, g.IO.MousePos.y - 8, g.IO.MousePos.x + 28, g.IO.MousePos.y + 24); // FIXME: Completely hard-coded. Perhaps center on cursor hit-point instead?
+            window->PosFloat = FindBestWindowPos(g.IO.MousePos, window->Size, rect_to_avoid);
         }
 
         // Clamp into display
