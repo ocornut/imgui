@@ -3262,12 +3262,11 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             window->ScrollY = ImMin(window->ScrollY, ImMax(0.0f, window->SizeContents.y - window->SizeFull.y));
         window->NextScrollY = window->ScrollY;
 
-        // At this point we don't have a clipping rectangle setup yet, so we can test and draw in title bar
+        // At this point we don't have a clipping rectangle setup yet, so we can use the title bar area for hit detection and drawing
         // Collapse window by double-clicking on title bar
-        ImRect title_bar_rect = window->TitleBarRect();
         if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
         {
-            if (!(window->Flags & ImGuiWindowFlags_NoCollapse) && g.HoveredWindow == window && IsMouseHoveringRect(title_bar_rect) && g.IO.MouseDoubleClicked[0])
+            if (!(window->Flags & ImGuiWindowFlags_NoCollapse) && g.HoveredWindow == window && IsMouseHoveringRect(window->TitleBarRect()) && g.IO.MouseDoubleClicked[0])
             {
                 window->Collapsed = !window->Collapsed;
                 if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
@@ -3294,17 +3293,35 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 size_auto_fit.x += style.ScrollbarWidth;
         }
 
-        const float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
+        // Update window size
         if (window->Collapsed)
         {
             // We still process initial auto-fit on collapsed windows to get a window width
             // But otherwise we don't honor ImGuiWindowFlags_AlwaysAutoResize when collapsed.
             if (window->AutoFitFrames > 0)
-            {
                 window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
-                title_bar_rect = window->TitleBarRect();
+        }
+        else
+        {
+            if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0 && (window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
+            {
+                // Don't continuously mark settings as dirty, the size of the window doesn't need to be stored.
+                window->Size = window->SizeFull = size_auto_fit;
             }
-        
+            else if (window->AutoFitFrames > 0)
+            {
+                // Auto-fit only grows during the first few frames
+                window->Size = window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
+                if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+                    MarkSettingsDirty();
+            }
+        }
+
+        // Draw window + handle manual resize
+        ImRect title_bar_rect = window->TitleBarRect();
+        const float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
+        if (window->Collapsed)
+        {
             // Draw title bar only
             window->Size = title_bar_rect.GetSize();
             window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_TitleBgCollapsed), window_rounding);
@@ -3317,55 +3334,33 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         else
         {
             ImU32 resize_col = 0;
-            if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
+            if (!(window->Flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFrames <= 0 && !(window->Flags & ImGuiWindowFlags_NoResize))
             {
-                window->Size = window->SizeFull = size_auto_fit;
-            }
-            else
-            {
-                if ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
+                // Manual resize grip
+                const ImRect resize_rect(window->Rect().GetBR()-ImVec2(14,14), window->Rect().GetBR());
+                const ImGuiID resize_id = window->GetID("#RESIZE");
+                bool hovered, held;
+                ButtonBehavior(resize_rect, resize_id, &hovered, &held, true);
+                resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
+
+                if (hovered || held)
+                    g.MouseCursor = ImGuiMouseCursor_ResizeNWSE;
+
+                if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0])
                 {
-                    // Don't continuously mark settings as dirty, the size of the window doesn't need to be stored.
-                    window->SizeFull = size_auto_fit;
+                    // Manual auto-fit when double-clicking
+                    window->Size = window->SizeFull = size_auto_fit;
+                    if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+                        MarkSettingsDirty();
+                    SetActiveId(0);
                 }
-                else if (window->AutoFitFrames > 0)
+                else if (held)
                 {
-                    // Auto-fit only grows during the first few frames
-                    window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
+                    // Resize
+                    window->Size = window->SizeFull = ImMax(window->SizeFull + g.IO.MouseDelta, style.WindowMinSize);
                     if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkSettingsDirty();
                 }
-                else if (!(window->Flags & ImGuiWindowFlags_NoResize))
-                {
-                    // Manual resize grip
-                    const ImRect resize_rect(window->Rect().GetBR()-ImVec2(14,14), window->Rect().GetBR());
-                    const ImGuiID resize_id = window->GetID("#RESIZE");
-                    bool hovered, held;
-                    ButtonBehavior(resize_rect, resize_id, &hovered, &held, true);
-                    resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
-
-                    if (hovered || held)
-                        g.MouseCursor = ImGuiMouseCursor_ResizeNWSE;
-
-                    if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0])
-                    {
-                        // Manual auto-fit when double-clicking
-                        window->SizeFull = size_auto_fit;
-                        if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
-                            MarkSettingsDirty();
-                        SetActiveId(0);
-                    }
-                    else if (held)
-                    {
-                        // Resize
-                        window->SizeFull = ImMax(window->SizeFull + g.IO.MouseDelta, style.WindowMinSize);
-                        if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
-                            MarkSettingsDirty();
-                    }
-                }
-
-                // Update rectangle immediately so that rendering right below us isn't one frame late
-                window->Size = window->SizeFull;
                 title_bar_rect = window->TitleBarRect();
             }
 
