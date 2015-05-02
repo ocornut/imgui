@@ -3200,10 +3200,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         {
             if (g.IO.MouseDown[0])
             {
-                if (!(window->Flags & ImGuiWindowFlags_NoMove))
+                if (!(flags & ImGuiWindowFlags_NoMove))
                 {
                     window->PosFloat += g.IO.MouseDelta;
-                    if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+                    if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkSettingsDirty();
                 }
                 IM_ASSERT(g.MovedWindow != NULL);
@@ -3217,14 +3217,14 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
 
         // Tooltips always follows mouse
-        if (!window_pos_set_by_api && (window->Flags & ImGuiWindowFlags_Tooltip) != 0)
+        if (!window_pos_set_by_api && (flags & ImGuiWindowFlags_Tooltip) != 0)
         {
             ImRect rect_to_avoid(g.IO.MousePos.x - 16, g.IO.MousePos.y - 8, g.IO.MousePos.x + 28, g.IO.MousePos.y + 24); // FIXME: Completely hard-coded. Perhaps center on cursor hit-point instead?
             window->PosFloat = FindBestWindowPos(g.IO.MousePos, window->Size, rect_to_avoid);
         }
 
         // Clamp into display
-        if (!(window->Flags & ImGuiWindowFlags_ChildWindow) && !(window->Flags & ImGuiWindowFlags_Tooltip))
+        if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
         {
             if (window->AutoFitFrames <= 0 && g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
             {
@@ -3237,7 +3237,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
 
         // Default item width. Make it proportional to window size if window manually resizes
-        if (window->Size.x > 0.0f && !(window->Flags & ImGuiWindowFlags_Tooltip) && !(window->Flags & ImGuiWindowFlags_AlwaysAutoResize))
+        if (window->Size.x > 0.0f && !(flags & ImGuiWindowFlags_Tooltip) && !(flags & ImGuiWindowFlags_AlwaysAutoResize))
             window->ItemWidthDefault = (float)(int)(window->Size.x * 0.65f);
         else
             window->ItemWidthDefault = 200.0f;
@@ -3263,12 +3263,12 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
         // At this point we don't have a clipping rectangle setup yet, so we can use the title bar area for hit detection and drawing
         // Collapse window by double-clicking on title bar
-        if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
+        if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
-            if (!(window->Flags & ImGuiWindowFlags_NoCollapse) && g.HoveredWindow == window && IsMouseHoveringRect(window->TitleBarRect()) && g.IO.MouseDoubleClicked[0])
+            if (!(flags & ImGuiWindowFlags_NoCollapse) && g.HoveredWindow == window && IsMouseHoveringRect(window->TitleBarRect()) && g.IO.MouseDoubleClicked[0])
             {
                 window->Collapsed = !window->Collapsed;
-                if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+                if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                     MarkSettingsDirty();
                 FocusWindow(window);
             }
@@ -3280,7 +3280,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
         // Calculate auto-fit size
         ImVec2 size_auto_fit;
-        if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
+        if ((flags & ImGuiWindowFlags_Tooltip) != 0)
         {
             // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
             size_auto_fit = window->SizeContents + style.WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
@@ -3303,7 +3303,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
         else
         {
-            if ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
+            if ((flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
             {
                 // Don't continuously mark settings as dirty, the size of the window doesn't need to be stored.
                 window->Size = window->SizeFull = size_auto_fit;
@@ -3312,19 +3312,19 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             {
                 // Auto-fit only grows during the first few frames
                 window->Size = window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
-                if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+                if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                     MarkSettingsDirty();
             }
         }
 
         // Draw window + handle manual resize
         ImRect title_bar_rect = window->TitleBarRect();
-        const float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
+        const float window_rounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
         if (window->Collapsed)
         {
             // Draw title bar only
             window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_TitleBgCollapsed), window_rounding);
-            if (window->Flags & ImGuiWindowFlags_ShowBorders)
+            if (flags & ImGuiWindowFlags_ShowBorders)
             {
                 window->DrawList->AddRect(title_bar_rect.GetTL()+ImVec2(1,1), title_bar_rect.GetBR()+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
                 window->DrawList->AddRect(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_Border), window_rounding);
@@ -3333,7 +3333,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         else
         {
             ImU32 resize_col = 0;
-            if (!(window->Flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFrames <= 0 && !(window->Flags & ImGuiWindowFlags_NoResize))
+            if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFrames <= 0 && !(flags & ImGuiWindowFlags_NoResize))
             {
                 // Manual resize grip
                 const ImRect resize_rect(window->Rect().GetBR()-ImVec2(14,14), window->Rect().GetBR());
@@ -3349,7 +3349,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 {
                     // Manual auto-fit when double-clicking
                     window->SizeFull = size_auto_fit;
-                    if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+                    if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkSettingsDirty();
                     SetActiveId(0);
                 }
@@ -3357,7 +3357,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 {
                     // Resize
                     window->SizeFull = ImMax(window->SizeFull + g.IO.MouseDelta, style.WindowMinSize);
-                    if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+                    if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkSettingsDirty();
                 }
 
@@ -3366,31 +3366,31 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             }
 
             // Scrollbar
-            window->ScrollbarY = (window->SizeContents.y > window->Size.y) && !(window->Flags & ImGuiWindowFlags_NoScrollbar);
+            window->ScrollbarY = (window->SizeContents.y > window->Size.y) && !(flags & ImGuiWindowFlags_NoScrollbar);
 
             // Window background
             if (bg_alpha > 0.0f)
             {
-                if ((window->Flags & ImGuiWindowFlags_ComboBox) != 0)
+                if ((flags & ImGuiWindowFlags_ComboBox) != 0)
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_ComboBg, bg_alpha), window_rounding);
-                else if ((window->Flags & ImGuiWindowFlags_Tooltip) != 0)
+                else if ((flags & ImGuiWindowFlags_Tooltip) != 0)
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_TooltipBg, bg_alpha), window_rounding);
-                else if ((window->Flags & ImGuiWindowFlags_ChildWindow) != 0)
+                else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size-ImVec2(window->ScrollbarY?style.ScrollbarWidth:0.0f,0.0f), window->Color(ImGuiCol_ChildWindowBg, bg_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
                 else
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, bg_alpha), window_rounding);
             }
 
             // Title bar
-            if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
+            if (!(flags & ImGuiWindowFlags_NoTitleBar))
                 window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_TitleBg), window_rounding, 1|2);
 
             // Borders
-            if (window->Flags & ImGuiWindowFlags_ShowBorders)
+            if (flags & ImGuiWindowFlags_ShowBorders)
             {
                 window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
                 window->DrawList->AddRect(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_Border), window_rounding);
-                if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
+                if (!(flags & ImGuiWindowFlags_NoTitleBar))
                     window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_Border));
             }
 
@@ -3400,7 +3400,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
             // Render resize grip
             // (after the input handling so we don't have a frame of latency)
-            if (!(window->Flags & ImGuiWindowFlags_NoResize))
+            if (!(flags & ImGuiWindowFlags_NoResize))
             {
                 const float r = window_rounding;
                 const ImVec2 br = window->Rect().GetBR();
@@ -3448,13 +3448,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             window->AutoFitFrames--;
 
         // Title bar
-        if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
+        if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
             if (p_opened != NULL)
                 CloseWindowButton(p_opened);
 
             ImVec2 text_min = window->Pos + style.FramePadding;
-            if (!(window->Flags & ImGuiWindowFlags_NoCollapse))
+            if (!(flags & ImGuiWindowFlags_NoCollapse))
             {
                 RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
                 text_min.x += g.FontSize + style.ItemInnerSpacing.x;
@@ -3464,7 +3464,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_rect.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y*2 + text_size.y);
             RenderTextClipped(text_min, name, NULL, &text_size, text_max);
         }
-        if (window->Flags & ImGuiWindowFlags_Popup)
+        if (flags & ImGuiWindowFlags_Popup)
         {
             if (p_opened)
             {
