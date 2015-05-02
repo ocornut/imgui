@@ -3148,16 +3148,17 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     const int current_frame = ImGui::GetFrameCount();
     const bool first_begin_of_the_frame = (window->LastFrameDrawn != current_frame);
+	const bool window_was_visible = (window->LastFrameDrawn == current_frame - 1);
     if (first_begin_of_the_frame)
     {
+        window->Visible = true;
         window->DrawList->Clear();
         window->ClipRectStack.resize(0);
+        window->LastFrameDrawn = current_frame;
     }
 
-    // Setup texture
+    // Setup texture, outer clipping rectangle
     window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
-
-    // Setup outer clipping rectangle
     if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
         PushClipRect(parent_window->ClipRectStack.back());
     else
@@ -3165,30 +3166,25 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
     if (first_begin_of_the_frame)
     {
-        window->Visible = true;
-
         // New windows appears in front
-        if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
+        if (!window_was_visible)
         {
-            if (window->LastFrameDrawn < current_frame - 1)
+            if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
             {
                 FocusWindow(window);
 
                 // Popup position themselves when they first appear
                 if (flags & ImGuiWindowFlags_Popup)
-                {
                     if (!window_pos_set_by_api)
                         window->PosFloat = g.IO.MousePos;
-                }
             }
         }
-
-        window->LastFrameDrawn = current_frame;
 
         // Reset contents size for auto-fitting
         window->SizeContents = window_is_new ? ImVec2(0.0f, 0.0f) : window->DC.CursorMaxPos - window->Pos;
         window->SizeContents.y += window->ScrollY;
 
+        // Child position follows drawing cursor
         if (flags & ImGuiWindowFlags_ChildWindow)
         {
             parent_window->DC.ChildWindows.push_back(window);
@@ -3259,8 +3255,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->FocusIdxAllCounter = window->FocusIdxTabCounter = -1;
         window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = IM_INT_MAX;
 
-        ImRect title_bar_rect = window->TitleBarRect();
-
         // Apply scrolling
         window->ScrollY = window->NextScrollY;
         window->ScrollY = ImMax(window->ScrollY, 0.0f);
@@ -3270,6 +3264,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
         // At this point we don't have a clipping rectangle setup yet, so we can test and draw in title bar
         // Collapse window by double-clicking on title bar
+        ImRect title_bar_rect = window->TitleBarRect();
         if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
         {
             if (!(window->Flags & ImGuiWindowFlags_NoCollapse) && g.HoveredWindow == window && IsMouseHoveringRect(title_bar_rect) && g.IO.MouseDoubleClicked[0])
