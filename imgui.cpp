@@ -1269,6 +1269,8 @@ struct ImGuiWindow
     bool                    SkipItems;                          // == Visible && !Collapsed
     int                     AutoFitFrames;
     bool                    AutoFitOnlyGrows;
+    int                     AutoPosLastDirection;
+    int                     HiddenFrames;
     int                     SetWindowPosAllowFlags;             // bit ImGuiSetCond_*** specify if SetWindowPos() call will succeed with this particular flag. 
     int                     SetWindowSizeAllowFlags;            // bit ImGuiSetCond_*** specify if SetWindowSize() call will succeed with this particular flag. 
     int                     SetWindowCollapsedAllowFlags;       // bit ImGuiSetCond_*** specify if SetWindowCollapsed() call will succeed with this particular flag. 
@@ -1626,6 +1628,8 @@ ImGuiWindow::ImGuiWindow(const char* name)
     SkipItems = false;
     AutoFitFrames = -1;
     AutoFitOnlyGrows = false;
+    AutoPosLastDirection = -1;
+    HiddenFrames = 0;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiSetCond_Always | ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver;
 
     LastFrameDrawn = -1;
@@ -2248,7 +2252,7 @@ void ImGui::Render()
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
-            if (window->Active && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0)
+            if (window->Active && window->HiddenFrames <= 0 && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0)
             {
                 // FIXME: Generalize this with a proper layering system so we can stack.
                 if (window->Flags & ImGuiWindowFlags_Popup)
@@ -2975,7 +2979,7 @@ void ImGui::EndChildFrame()
     ImGui::PopStyleColor();
 }
 
-static ImVec2 FindBestWindowPos(const ImVec2& mouse_pos, const ImVec2& size, const ImRect& r_inner)
+static ImVec2 FindBestWindowPos(const ImVec2& mouse_pos, const ImVec2& size, int* last_dir, const ImRect& r_inner)
 {
     const ImGuiStyle& style = GImGui->Style;
 
@@ -2984,15 +2988,18 @@ static ImVec2 FindBestWindowPos(const ImVec2& mouse_pos, const ImVec2& size, con
     r_outer.Reduce(style.DisplaySafeAreaPadding);
     ImVec2 mouse_pos_clamped = ImClamp(mouse_pos, r_outer.Min, r_outer.Max - size);
 
-    for (int dir = 0; dir < 4; dir++)   // right, down, up, left
+    for (int n = (*last_dir != -1) ? -1 : 0; n < 4; n++)   // Right, down, up, left. Favor last used direction.
     {
+        const int dir = (n == -1) ? *last_dir : n;
         ImRect rect(dir == 0 ? r_inner.Max.x : r_outer.Min.x, dir == 1 ? r_inner.Max.y : r_outer.Min.y, dir == 3 ? r_inner.Min.x : r_outer.Max.x, dir == 2 ? r_inner.Min.y : r_outer.Max.y);
         if (rect.GetWidth() < size.x || rect.GetHeight() < size.y)
             continue;
+        *last_dir = dir;
         return ImVec2(dir == 0 ? r_inner.Max.x : dir == 3 ? r_inner.Min.x - size.x : mouse_pos_clamped.x, dir == 1 ? r_inner.Max.y : dir == 2 ? r_inner.Min.y - size.y : mouse_pos_clamped.y);
     }
 
     // Fallback
+	*last_dir = -1;
     return mouse_pos + ImVec2(2,2);
 }
 
@@ -3169,30 +3176,120 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         // New windows appears in front
         if (!window->WasActive)
         {
+            window->AutoPosLastDirection = -1;
+
             if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
             {
                 FocusWindow(window);
 
-                // Popup position themselves when they first appear
-                if (flags & ImGuiWindowFlags_Popup)
-                    if (!window_pos_set_by_api)
-                        window->PosFloat = g.IO.MousePos;
+                // Popup first latch mouse position, will position itself when it appears next frame
+                if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api)
+                    window->PosFloat = g.IO.MousePos;
             }
         }
 
-        // Reset contents size for auto-fitting
+        // Collapse window by double-clicking on title bar
+        // At this point we don't have a clipping rectangle setup yet, so we can use the title bar area for hit detection and drawing
+        if (!(flags & ImGuiWindowFlags_NoTitleBar) && !(flags & ImGuiWindowFlags_NoCollapse))
+        {
+            if (g.HoveredWindow == window && IsMouseHoveringRect(window->TitleBarRect()) && g.IO.MouseDoubleClicked[0])
+            {
+                window->Collapsed = !window->Collapsed;
+                if (!(flags & ImGuiWindowFlags_NoSavedSettings))
+                    MarkSettingsDirty();
+                FocusWindow(window);
+            }
+        }
+        else
+        {
+            window->Collapsed = false;
+        }
+
+        const bool window_appearing_after_being_hidden = (window->HiddenFrames == 1);
+        if (window->HiddenFrames > 0)
+            window->HiddenFrames--;
+
+        // SIZE
+
+        // Save contents size from last frame for auto-fitting
         window->SizeContents = window_is_new ? ImVec2(0.0f, 0.0f) : window->DC.CursorMaxPos - window->Pos;
         window->SizeContents.y += window->ScrollY;
 
-        // Child position follows drawing cursor
+        // Hide popup/tooltip window when first appearing while we measure size (because we recycle them)
+        if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && !window->WasActive)
+        {
+            window->HiddenFrames = 1;
+            window->Size = window->SizeFull = window->SizeContents = ImVec2(0.f, 0.f);  // TODO: We don't support SetNextWindowSize() for tooltips or popups yet
+        }
+
+        // Calculate auto-fit size
+        ImVec2 size_auto_fit;
+        if ((flags & ImGuiWindowFlags_Tooltip) != 0)
+        {
+            // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
+            size_auto_fit = window->SizeContents + style.WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
+        }
+        else
+        {
+            size_auto_fit = ImClamp(window->SizeContents + style.AutoFitPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding));
+            if (size_auto_fit.y < window->SizeContents.y + style.AutoFitPadding.y)
+                size_auto_fit.x += style.ScrollbarWidth;
+        }
+
+        // Handle automatic resize
+        if (window->Collapsed)
+        {
+            // We still process initial auto-fit on collapsed windows to get a window width,
+            // But otherwise we don't honor ImGuiWindowFlags_AlwaysAutoResize when collapsed.
+            if (window->AutoFitFrames > 0)
+                window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
+            window->Size = window->TitleBarRect().GetSize();
+        }
+        else
+        {
+            if (flags & ImGuiWindowFlags_AlwaysAutoResize)
+            {
+                window->SizeFull = size_auto_fit;
+            }
+            else if (window->AutoFitFrames > 0)
+            {
+                // Auto-fit only grows during the first few frames
+                window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
+                if (!(flags & ImGuiWindowFlags_NoSavedSettings))
+                    MarkSettingsDirty();
+            }
+            window->Size = window->SizeFull;
+        }
+
+        // Minimum window size
+        if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
+            window->SizeFull = ImMax(window->SizeFull, style.WindowMinSize);
+
+        // POSITION
+
+        // Position child window
         if (flags & ImGuiWindowFlags_ChildWindow)
         {
             parent_window->DC.ChildWindows.push_back(window);
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
-            window->SizeFull = size_on_first_use;
+            window->SizeFull = size_on_first_use; // NB: argument name 'size_on_first_use' misleading here, it's really just 'size' as provided by user.
         }
 
-        // Move window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
+        // Position popup
+        if ((flags & ImGuiWindowFlags_Popup) != 0 && window_appearing_after_being_hidden && !window_pos_set_by_api)
+        {
+            ImRect rect_to_avoid(window->PosFloat.x - 1, window->PosFloat.y - 1, window->PosFloat.x + 1, window->PosFloat.y + 1);
+            window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
+        }
+
+        // Position tooltip (always follows mouse)
+        if ((flags & ImGuiWindowFlags_Tooltip) != 0 && !window_pos_set_by_api)
+        {
+            ImRect rect_to_avoid(g.IO.MousePos.x - 16, g.IO.MousePos.y - 8, g.IO.MousePos.x + 24, g.IO.MousePos.y + 24); // FIXME: Completely hard-coded. Perhaps center on cursor hit-point instead?
+            window->PosFloat = FindBestWindowPos(g.IO.MousePos, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
+        }
+
+        // User moving window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
         RegisterAliveId(window->MoveID);
         if (g.ActiveId == window->MoveID)
         {
@@ -3214,13 +3311,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             }
         }
 
-        // Tooltips always follows mouse
-        if (!window_pos_set_by_api && (flags & ImGuiWindowFlags_Tooltip) != 0)
-        {
-            ImRect rect_to_avoid(g.IO.MousePos.x - 16, g.IO.MousePos.y - 8, g.IO.MousePos.x + 28, g.IO.MousePos.y + 24); // FIXME: Completely hard-coded. Perhaps center on cursor hit-point instead?
-            window->PosFloat = FindBestWindowPos(g.IO.MousePos, window->Size, rect_to_avoid);
-        }
-
         // Clamp into display
         if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
         {
@@ -3230,7 +3320,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 window->PosFloat = ImMax(window->PosFloat + window->Size, padding) - window->Size;
                 window->PosFloat = ImMin(window->PosFloat, g.IO.DisplaySize - padding);
             }
-            window->SizeFull = ImMax(window->SizeFull, style.WindowMinSize);
         }
         window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
 
@@ -3258,63 +3347,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         if (!window->Collapsed && !window->SkipItems)
             window->ScrollY = ImMin(window->ScrollY, ImMax(0.0f, window->SizeContents.y - window->SizeFull.y));
         window->NextScrollY = window->ScrollY;
-
-        // At this point we don't have a clipping rectangle setup yet, so we can use the title bar area for hit detection and drawing
-        // Collapse window by double-clicking on title bar
-        if (!(flags & ImGuiWindowFlags_NoTitleBar))
-        {
-            if (!(flags & ImGuiWindowFlags_NoCollapse) && g.HoveredWindow == window && IsMouseHoveringRect(window->TitleBarRect()) && g.IO.MouseDoubleClicked[0])
-            {
-                window->Collapsed = !window->Collapsed;
-                if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                    MarkSettingsDirty();
-                FocusWindow(window);
-            }
-        }
-        else
-        {
-            window->Collapsed = false;
-        }
-
-        // Calculate auto-fit size
-        ImVec2 size_auto_fit;
-        if ((flags & ImGuiWindowFlags_Tooltip) != 0)
-        {
-            // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
-            size_auto_fit = window->SizeContents + style.WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
-        }
-        else
-        {
-            size_auto_fit = ImClamp(window->SizeContents + style.AutoFitPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding));
-            if (size_auto_fit.y < window->SizeContents.y + style.AutoFitPadding.y)
-                size_auto_fit.x += style.ScrollbarWidth;
-        }
-
-        // Handle automatic resize
-        if (window->Collapsed)
-        {
-            // We still process initial auto-fit on collapsed windows to get a window width
-            // But otherwise we don't honor ImGuiWindowFlags_AlwaysAutoResize when collapsed.
-            if (window->AutoFitFrames > 0)
-                window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
-            window->Size = window->TitleBarRect().GetSize();
-        }
-        else
-        {
-            if ((flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
-            {
-                // Don't continuously mark settings as dirty, the size of the window doesn't need to be stored.
-                window->SizeFull = size_auto_fit;
-            }
-            else if (window->AutoFitFrames > 0)
-            {
-                // Auto-fit only grows during the first few frames
-                window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
-                if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                    MarkSettingsDirty();
-            }
-            window->Size = window->SizeFull;
-        }
 
         // Draw window + handle manual resize
         ImRect title_bar_rect = window->TitleBarRect();
