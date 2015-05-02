@@ -1262,8 +1262,8 @@ struct ImGuiWindow
     float                   ScrollY;
     float                   NextScrollY;
     bool                    ScrollbarY;
-    bool                    Visible;                            // Set to true on Begin()
-    bool                    WasVisible;
+    bool                    Active;                             // Set to true on Begin()
+    bool                    WasActive;
     bool                    Accessed;                           // Set to true when any widget access the current window
     bool                    Collapsed;                          // Set when collapsing window to become only title-bar
     bool                    SkipItems;                          // == Visible && !Collapsed
@@ -1620,7 +1620,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     ScrollY = 0.0f;
     NextScrollY = 0.0f;
     ScrollbarY = false;
-    Visible = WasVisible = false;
+    Active = WasActive = false;
     Accessed = false;
     Collapsed = false;
     SkipItems = false;
@@ -1717,7 +1717,7 @@ static void AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiW
     for (size_t i = 0; i < window->DC.ChildWindows.size(); i++)
     {
         ImGuiWindow* child = window->DC.ChildWindows[i];
-        if (child->Visible)                 // clipped children may have been marked not Visible
+        if (child->Active)                 // clipped children may have been marked not active
             AddWindowToRenderList(out_render_list, child);
     }
 }
@@ -2041,7 +2041,7 @@ void ImGui::NewFrame()
 
     // Pressing TAB activate widget focus
     // NB: Don't discard FocusedWindow if it isn't active, so that a window that go on/off programatically won't lose its keyboard focus.
-    if (g.ActiveId == 0 && g.FocusedWindow != NULL && g.FocusedWindow->Visible && IsKeyPressedMap(ImGuiKey_Tab, false))
+    if (g.ActiveId == 0 && g.FocusedWindow != NULL && g.FocusedWindow->Active && IsKeyPressedMap(ImGuiKey_Tab, false))
     {
         g.FocusedWindow->FocusIdxTabRequestNext = 0;
     }
@@ -2050,8 +2050,8 @@ void ImGui::NewFrame()
     for (size_t i = 0; i != g.Windows.size(); i++)
     {
         ImGuiWindow* window = g.Windows[i];
-        window->WasVisible = window->Visible;
-        window->Visible = false;
+        window->WasActive = window->Active;
+        window->Active = false;
         window->Accessed = false;
     }
 
@@ -2136,7 +2136,7 @@ static int ChildWindowComparer(const void* lhs, const void* rhs)
 static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, ImGuiWindow* window)
 {
     out_sorted_windows.push_back(window);
-    if (window->Visible)
+    if (window->Active)
     {
         const size_t count = window->DC.ChildWindows.size();
         if (count > 1)
@@ -2144,7 +2144,7 @@ static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, 
         for (size_t i = 0; i < count; i++)
         {
             ImGuiWindow* child = window->DC.ChildWindows[i];
-            if (child->Visible)
+            if (child->Active)
                 AddWindowToSortedBuffer(out_sorted_windows, child);
         }
     }
@@ -2189,7 +2189,7 @@ void ImGui::Render()
         // Hide implicit window if it hasn't been used
         IM_ASSERT(g.CurrentWindowStack.size() == 1);    // Mismatched Begin/End 
         if (g.CurrentWindow && !g.CurrentWindow->Accessed)
-            g.CurrentWindow->Visible = false;
+            g.CurrentWindow->Active = false;
         ImGui::End();
 
         if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
@@ -2215,8 +2215,8 @@ void ImGui::Render()
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
-            if (window->Flags & ImGuiWindowFlags_ChildWindow)       // if a child is visible its parent will add it
-                if (window->Visible)
+            if (window->Flags & ImGuiWindowFlags_ChildWindow)       // if a child is active its parent will add it
+                if (window->Active)
                     continue;
             AddWindowToSortedBuffer(g.WindowsSortBuffer, window);
         }
@@ -2248,7 +2248,7 @@ void ImGui::Render()
         for (size_t i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
-            if (window->Visible && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0)
+            if (window->Active && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0)
             {
                 // FIXME: Generalize this with a proper layering system so we can stack.
                 if (window->Flags & ImGuiWindowFlags_Popup)
@@ -2595,7 +2595,7 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
     for (int i = (int)g.Windows.size()-1; i >= 0; i--)
     {
         ImGuiWindow* window = g.Windows[(size_t)i];
-        if (!window->Visible)
+        if (!window->Active)
             continue;
         if (excluding_childs && (window->Flags & ImGuiWindowFlags_ChildWindow) != 0)
             continue;
@@ -3148,10 +3148,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     const int current_frame = ImGui::GetFrameCount();
     const bool first_begin_of_the_frame = (window->LastFrameDrawn != current_frame);
-	const bool window_was_visible = (window->LastFrameDrawn == current_frame - 1);
     if (first_begin_of_the_frame)
     {
-        window->Visible = true;
+        window->Active = true;
         window->DrawList->Clear();
         window->ClipRectStack.resize(0);
         window->LastFrameDrawn = current_frame;
@@ -3167,7 +3166,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     if (first_begin_of_the_frame)
     {
         // New windows appears in front
-        if (!window_was_visible)
+        if (!window->WasActive)
         {
             if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
             {
@@ -3518,13 +3517,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         // We also hide the window from rendering because we've already added its border to the command list.
         // (we could perform the check earlier in the function but it is simpler at this point)
         if (window->Collapsed)
-            window->Visible = false;
+            window->Active = false;
     }
     if (style.Alpha <= 0.0f)
-        window->Visible = false;
+        window->Active = false;
 
     // Return false if we don't intend to display anything to allow user to perform an early out optimization
-    window->SkipItems = (window->Collapsed || !window->Visible) && window->AutoFitFrames <= 0;
+    window->SkipItems = (window->Collapsed || !window->Active) && window->AutoFitFrames <= 0;
     return !window->SkipItems;
 }
 
@@ -4420,7 +4419,7 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window)
     // An active popup disable hovering on other windows (apart from its own children)
     if (ImGuiWindow* focused_window = g.FocusedWindow)
         if (ImGuiWindow* focused_root_window = focused_window->RootWindow)
-            if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasVisible && focused_root_window != window->RootWindow)
+            if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasActive && focused_root_window != window->RootWindow)
                 return false;
 
     return true;
@@ -10732,7 +10731,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
 
             static void NodeWindow(ImGuiWindow* window, const char* label)
             {
-                if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Visible, window))
+                if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Active, window))
                     return;
                 NodeDrawList(window->DrawList, "DrawList");
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
