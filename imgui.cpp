@@ -3304,15 +3304,16 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             if ((flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
             {
                 // Don't continuously mark settings as dirty, the size of the window doesn't need to be stored.
-                window->Size = window->SizeFull = size_auto_fit;
+                window->SizeFull = size_auto_fit;
             }
             else if (window->AutoFitFrames > 0)
             {
                 // Auto-fit only grows during the first few frames
-                window->Size = window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
+                window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
                 if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                     MarkSettingsDirty();
             }
+            window->Size = window->SizeFull;
         }
 
         // Draw window + handle manual resize
