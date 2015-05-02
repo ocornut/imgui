@@ -159,7 +159,7 @@ namespace ImGui
     IMGUI_API void          ShowUserGuide();                            // help block
     IMGUI_API void          ShowStyleEditor(ImGuiStyle* ref = NULL);    // style editor block
     IMGUI_API void          ShowTestWindow(bool* opened = NULL);        // test window, demonstrate ImGui features
-    IMGUI_API void          ShowMetricsWindow(bool* opened = NULL);     // metrics window
+    IMGUI_API void          ShowMetricsWindow(bool* opened = NULL);     // metrics window for debugging imgui
 
     // Window
     // See implementation in .cpp for details

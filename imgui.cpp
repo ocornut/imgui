@@ -3154,6 +3154,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->DrawList->Clear();
         window->ClipRectStack.resize(0);
         window->LastFrameDrawn = current_frame;
+        window->IDStack.resize(1);
     }
 
     // Setup texture, outer clipping rectangle
@@ -3190,9 +3191,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
             window->SizeFull = size_on_first_use;
         }
-
-        // Reset ID stack
-        window->IDStack.resize(1);
 
         // Move window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
         RegisterAliveId(window->MoveID);
@@ -3335,7 +3333,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             ImU32 resize_col = 0;
             if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFrames <= 0 && !(flags & ImGuiWindowFlags_NoResize))
             {
-                // Manual resize grip
+                // Manual resize
                 const ImRect resize_rect(window->Rect().GetBR()-ImVec2(14,14), window->Rect().GetBR());
                 const ImGuiID resize_id = window->GetID("#RESIZE");
                 bool hovered, held;
@@ -3355,7 +3353,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 }
                 else if (held)
                 {
-                    // Resize
                     window->SizeFull = ImMax(window->SizeFull + g.IO.MouseDelta, style.WindowMinSize);
                     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkSettingsDirty();
@@ -10731,7 +10728,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
 
             static void NodeWindow(ImGuiWindow* window, const char* label)
             {
-                if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Active, window))
+                if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Active || window->WasActive, window))
                     return;
                 NodeDrawList(window->DrawList, "DrawList");
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
