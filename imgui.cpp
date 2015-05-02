@@ -3300,7 +3300,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             // But otherwise we don't honor ImGuiWindowFlags_AlwaysAutoResize when collapsed.
             if (window->AutoFitFrames > 0)
                 window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
-            window->Size = title_bar_rect.GetSize();
+            window->Size = window->TitleBarRect().GetSize();
         }
         else
         {
