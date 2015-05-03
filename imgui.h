@@ -598,7 +598,6 @@ struct ImGuiStyle
     ImVec2      ItemSpacing;                // Horizontal and vertical spacing between widgets/lines
     ImVec2      ItemInnerSpacing;           // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
     ImVec2      TouchExtraPadding;          // Expand reactive bounding box for touch-based system where touch position is not accurate enough. Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget. So don't grow this too much!
-    ImVec2      AutoFitPadding;             // Extra space after auto-fit (double-clicking on resize grip)
     float       WindowFillAlphaDefault;     // Default alpha of window background, if not specified in ImGui::Begin()
     float       IndentSpacing;              // Horizontal indentation when e.g. entering a tree node
     float       ColumnsMinSpacing;          // Minimum horizontal spacing between two columns

@@ -136,6 +136,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/05/03 (1.39) - removed style.AutoFitPadding, using style.WindowPadding makes more sense (the default values were already the same).
  - 2015/04/13 (1.38) - renamed IsClipped() to IsRectClipped(). Kept inline redirection function (will obsolete).
  - 2015/04/09 (1.38) - renamed ImDrawList::AddArc() to ImDrawList::AddArcFast() for compatibility with future API
  - 2015/04/03 (1.38) - removed ImGuiCol_CheckHovered, ImGuiCol_CheckActive, replaced with the more general ImGuiCol_FrameBgHovered, ImGuiCol_FrameBgActive.
@@ -563,7 +564,6 @@ ImGuiStyle::ImGuiStyle()
     ItemSpacing             = ImVec2(8,4);      // Horizontal and vertical spacing between widgets/lines
     ItemInnerSpacing        = ImVec2(4,4);      // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
     TouchExtraPadding       = ImVec2(0,0);      // Expand reactive bounding box for touch-based system where touch position is not accurate enough. Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget. So don't grow this too much!
-    AutoFitPadding          = ImVec2(8,8);      // Extra space after auto-fit (double-clicking on resize grip)
     WindowFillAlphaDefault  = 0.70f;            // Default alpha of window background, if not specified in ImGui::Begin()
     IndentSpacing           = 22.0f;            // Horizontal spacing when e.g. entering a tree node
     ColumnsMinSpacing       = 6.0f;             // Minimum horizontal spacing between two columns
@@ -2954,9 +2954,9 @@ void ImGui::EndChild()
         ImGuiState& g = *GImGui;
         ImVec2 sz = ImGui::GetWindowSize();
         if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitX)
-            sz.x = ImMax(g.Style.WindowMinSize.x, sz.x - g.Style.AutoFitPadding.x);
+            sz.x = ImMax(g.Style.WindowMinSize.x, sz.x - g.Style.WindowPadding.x);
         if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitY)
-            sz.y = ImMax(g.Style.WindowMinSize.y, sz.y - g.Style.AutoFitPadding.y);
+            sz.y = ImMax(g.Style.WindowMinSize.y, sz.y - g.Style.WindowPadding.y);
         
         ImGui::End();
 
@@ -3236,8 +3236,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
         else
         {
-            size_auto_fit = ImClamp(window->SizeContents + style.AutoFitPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding));
-            if (size_auto_fit.y < window->SizeContents.y + style.AutoFitPadding.y)
+            size_auto_fit = ImClamp(window->SizeContents + style.WindowPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - style.WindowPadding));
+            if (size_auto_fit.y < window->SizeContents.y + style.WindowPadding.y)
                 size_auto_fit.x += style.ScrollbarWidth;
             size_auto_fit.y -= style.ItemSpacing.y;
         }
@@ -7059,12 +7059,12 @@ bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     
-    const float w = ImMax(label_size.x, window->Pos.x + ImGui::GetContentRegionMax().x - style.AutoFitPadding.x - window->DC.CursorPos.x);
+    const float w = ImMax(label_size.x, window->Pos.x + ImGui::GetContentRegionMax().x - style.WindowPadding.x - window->DC.CursorPos.x);
     const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : w, size_arg.y != 0.0f ? size_arg.y : label_size.y);
     ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
     ItemSize(bb);
     if (size_arg.x == 0.0f)
-        bb.Max.x += style.AutoFitPadding.x;
+        bb.Max.x += style.WindowPadding.x;
 
     // Selectables are meant to be tightly packed together. So for both rendering and collision we extend to compensate for spacing.
     ImRect bb_with_spacing = bb;
