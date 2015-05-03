@@ -3239,6 +3239,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             size_auto_fit = ImClamp(window->SizeContents + style.AutoFitPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - style.AutoFitPadding));
             if (size_auto_fit.y < window->SizeContents.y + style.AutoFitPadding.y)
                 size_auto_fit.x += style.ScrollbarWidth;
+            size_auto_fit.y -= style.ItemSpacing.y;
         }
 
         // Handle automatic resize
