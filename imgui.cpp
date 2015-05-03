@@ -575,7 +575,7 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
     Colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
     Colors[ImGuiCol_ChildWindowBg]          = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-    Colors[ImGuiCol_Border]                 = ImVec4(0.70f, 0.70f, 0.70f, 1.00f);
+    Colors[ImGuiCol_Border]                 = ImVec4(0.70f, 0.70f, 0.70f, 0.65f);
     Colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.60f);
     Colors[ImGuiCol_FrameBg]                = ImVec4(0.80f, 0.80f, 0.80f, 0.30f);   // Background of checkbox, radio button, plot, slider, text input
     Colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.90f, 0.80f, 0.80f, 0.40f);
@@ -2877,8 +2877,9 @@ void ImGui::BeginPopup(bool* p_opened)
     IM_ASSERT(p_opened != NULL);    // Must provide a bool at the moment
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGuiWindowFlags flags = ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
-    ImGui::Begin("##Popup", p_opened, flags);
+    ImGuiWindowFlags flags = ImGuiWindowFlags_Popup|ImGuiWindowFlags_ShowBorders|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
+    float alpha = 1.0f;
+    ImGui::Begin("##Popup", p_opened, ImVec2(0.0f, 0.0f), alpha, flags);
 }
 
 void ImGui::EndPopup()
