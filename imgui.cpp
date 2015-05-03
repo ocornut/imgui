@@ -2874,12 +2874,16 @@ void ImGui::EndTooltip()
 
 void ImGui::BeginPopup(bool* p_opened)
 {
+    ImGuiWindow* window = GetCurrentWindow();
     IM_ASSERT(p_opened != NULL);    // Must provide a bool at the moment
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGuiWindowFlags flags = ImGuiWindowFlags_Popup|ImGuiWindowFlags_ShowBorders|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
     float alpha = 1.0f;
     ImGui::Begin("##Popup", p_opened, ImVec2(0.0f, 0.0f), alpha, flags);
+
+    if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
+        GetCurrentWindow()->Flags &= ~ImGuiWindowFlags_ShowBorders;
 }
 
 void ImGui::EndPopup()
@@ -2922,7 +2926,7 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
     bool ret = ImGui::Begin(title, NULL, size, alpha, flags);
 
     if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
-        g.CurrentWindow->Flags &= ~ImGuiWindowFlags_ShowBorders;
+        GetCurrentWindow()->Flags &= ~ImGuiWindowFlags_ShowBorders;
 
     return ret;
 }
