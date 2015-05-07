@@ -1631,7 +1631,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     AutoFitOnlyGrows = false;
     AutoPosLastDirection = -1;
     HiddenFrames = 0;
-    SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiSetCond_Always | ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver;
+    SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiSetCond_Always | ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver | ImGuiSetCond_Appearing;
 
     LastFrameDrawn = -1;
     ItemWidthDefault = 0.0f;
@@ -3129,6 +3129,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     }
     window->Flags = (ImGuiWindowFlags)flags;
 
+    const int current_frame = ImGui::GetFrameCount();
+    const bool window_was_visible = (window->LastFrameDrawn == current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
+
     // Add to stack
     g.CurrentWindowStack.push_back(window);
     SetCurrentWindow(window);
@@ -3138,18 +3141,21 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     if (g.SetNextWindowPosCond)
     {
         const ImVec2 backup_cursor_pos = window->DC.CursorPos;                  // FIXME: not sure of the exact reason of this anymore :( need to look into that.
+        if (!window_was_visible) window->SetWindowPosAllowFlags |= ImGuiSetCond_Appearing;
+        window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) != 0;
         ImGui::SetWindowPos(g.SetNextWindowPosVal, g.SetNextWindowPosCond);
         window->DC.CursorPos = backup_cursor_pos;
-        window_pos_set_by_api = true;
         g.SetNextWindowPosCond = 0;
     }
     if (g.SetNextWindowSizeCond)
     {
+        if (!window_was_visible) window->SetWindowSizeAllowFlags |= ImGuiSetCond_Appearing;
         ImGui::SetWindowSize(g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
         g.SetNextWindowSizeCond = 0;
     }
     if (g.SetNextWindowCollapsedCond)
     {
+        if (!window_was_visible) window->SetWindowCollapsedAllowFlags |= ImGuiSetCond_Appearing;
         ImGui::SetWindowCollapsed(g.SetNextWindowCollapsedVal, g.SetNextWindowCollapsedCond);
         g.SetNextWindowCollapsedCond = 0;
     }
@@ -3177,9 +3183,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         bg_alpha = style.WindowFillAlphaDefault;
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
-    const int current_frame = ImGui::GetFrameCount();
     const bool first_begin_of_the_frame = (window->LastFrameDrawn != current_frame);
-    const bool window_was_visible = (window->LastFrameDrawn == current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
     if (first_begin_of_the_frame)
     {
         window->Active = true;
@@ -3967,7 +3971,7 @@ static void SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiSetCond co
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowPosAllowFlags & cond) == 0)
         return;
-    window->SetWindowPosAllowFlags &= ~(ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver);
+    window->SetWindowPosAllowFlags &= ~(ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver | ImGuiSetCond_Appearing);
 
     // Set
     const ImVec2 old_pos = window->Pos;
@@ -4001,7 +4005,7 @@ static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiSetCond 
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowSizeAllowFlags & cond) == 0)
         return;
-    window->SetWindowSizeAllowFlags &= ~(ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver);
+    window->SetWindowSizeAllowFlags &= ~(ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver | ImGuiSetCond_Appearing);
 
     // Set
     if (ImLengthSqr(size) > 0.00001f)
@@ -4035,7 +4039,7 @@ static void SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiSetCond
     // Test condition (NB: bit 0 is always true) and clear flags for next time
     if (cond && (window->SetWindowCollapsedAllowFlags & cond) == 0)
         return;
-    window->SetWindowCollapsedAllowFlags &= ~(ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver);
+    window->SetWindowCollapsedAllowFlags &= ~(ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver | ImGuiSetCond_Appearing);
 
     // Set
     window->Collapsed = collapsed;
