@@ -501,6 +501,7 @@ static void         RenderTextWrapped(ImVec2 pos, const char* text, const char* 
 static void         RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& clip_max);
 static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
 static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
+static void         RenderCheckMark(ImVec2 pos);
 
 static void         SetFont(ImFont* font);
 static bool         ItemAdd(const ImRect& bb, const ImGuiID* id);
@@ -2528,6 +2529,22 @@ static void RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale, bool 
     window->DrawList->AddTriangleFilled(a, b, c, window->Color(ImGuiCol_Text));
 }
 
+static void RenderCheckMark(ImVec2 pos)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+
+    float ax = (float)(int)(g.FontSize * 0.307f + 0.5f);        // Spacing
+    float rem_third = (float)(int)((g.FontSize - ax) / 3.0f);
+    float bx = ax + rem_third;
+    float cx = ax + rem_third * 3.0f;
+    float by = (float)(int)(g.Font->BaseLine * (g.FontSize / g.Font->FontSize) + 0.5f) + (float)(int)(g.Font->DisplayOffset.y);
+    float ay = by - rem_third;
+    float cy = by - rem_third * 2.0f;
+    window->DrawList->AddLine(ImVec2(pos.x + ax, pos.y + ay), ImVec2(pos.x + bx, pos.y + by), window->Color(ImGuiCol_Text));
+    window->DrawList->AddLine(ImVec2(pos.x + bx, pos.y + by), ImVec2(pos.x + cx, pos.y + cy), window->Color(ImGuiCol_Text));
+}
+
 // Calculate text size. Text can be multi-line. Optionally ignore text after a ## marker.
 // CalcTextSize("") should return ImVec2(0.0f, GImGui->FontSize)
 ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_text_after_double_hash, float wrap_width)
@@ -3003,7 +3020,7 @@ static ImVec2 FindBestWindowPos(const ImVec2& mouse_pos, const ImVec2& size, int
     }
 
     // Fallback
-	*last_dir = -1;
+    *last_dir = -1;
     return mouse_pos + ImVec2(2,2);
 }
 
@@ -8595,6 +8612,7 @@ bool    ImFontAtlas::Build()
         const float font_scale = stbtt_ScaleForPixelHeight(&data.FontInfo, data.SizePixels);
         int font_ascent, font_descent, font_line_gap;
         stbtt_GetFontVMetrics(&data.FontInfo, &font_ascent, &font_descent, &font_line_gap);
+        data.OutFont->BaseLine = (font_ascent * font_scale);
 
         const float uv_scale_x = 1.0f / TexWidth;
         const float uv_scale_y = 1.0f / TexHeight;
@@ -8754,6 +8772,7 @@ void    ImFont::Clear()
 {
     FontSize = 0.0f;
     DisplayOffset = ImVec2(-0.5f, 0.5f);
+    BaseLine = 0.0f;
     ContainerAtlas = NULL;
     Glyphs.clear();
     FallbackGlyph = NULL;
