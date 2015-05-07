@@ -501,7 +501,7 @@ static void         RenderTextWrapped(ImVec2 pos, const char* text, const char* 
 static void         RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& clip_max);
 static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
 static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
-static void         RenderCheckMark(ImVec2 pos);
+static void         RenderCheckMark(ImVec2 pos, ImU32 col);
 
 static void         SetFont(ImFont* font);
 static bool         ItemAdd(const ImRect& bb, const ImGuiID* id);
@@ -2529,20 +2529,23 @@ static void RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale, bool 
     window->DrawList->AddTriangleFilled(a, b, c, window->Color(ImGuiCol_Text));
 }
 
-static void RenderCheckMark(ImVec2 pos)
+static void RenderCheckMark(ImVec2 pos, ImU32 col)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    float ax = (float)(int)(g.FontSize * 0.307f + 0.5f);        // Spacing
-    float rem_third = (float)(int)((g.FontSize - ax) / 3.0f);
-    float bx = ax + rem_third;
-    float cx = ax + rem_third * 3.0f;
-    float by = (float)(int)(g.Font->BaseLine * (g.FontSize / g.Font->FontSize) + 0.5f) + (float)(int)(g.Font->DisplayOffset.y);
-    float ay = by - rem_third;
-    float cy = by - rem_third * 2.0f;
-    window->DrawList->AddLine(ImVec2(pos.x + ax, pos.y + ay), ImVec2(pos.x + bx, pos.y + by), window->Color(ImGuiCol_Text));
-    window->DrawList->AddLine(ImVec2(pos.x + bx, pos.y + by), ImVec2(pos.x + cx, pos.y + cy), window->Color(ImGuiCol_Text));
+    ImVec2 a, b, c;
+    float start_x = (float)(int)(g.FontSize * 0.307f + 0.5f);
+    float rem_third = (float)(int)((g.FontSize - start_x) / 3.0f);
+    a.x = pos.x + start_x;
+    b.x = a.x + rem_third;
+    c.x = a.x + rem_third * 3.0f;
+    b.y = pos.y + (float)(int)(g.Font->BaseLine * (g.FontSize / g.Font->FontSize) + 0.5f) + (float)(int)(g.Font->DisplayOffset.y);
+    a.y = b.y - rem_third;
+    c.y = b.y - rem_third * 2.0f;
+
+    window->DrawList->AddLine(a, b, col);
+    window->DrawList->AddLine(b, c, col);
 }
 
 // Calculate text size. Text can be multi-line. Optionally ignore text after a ## marker.
