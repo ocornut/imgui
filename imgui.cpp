@@ -2193,7 +2193,7 @@ void ImGui::Render()
         // Hide implicit window if it hasn't been used
         IM_ASSERT(g.CurrentWindowStack.size() == 1);    // Mismatched Begin/End 
         if (g.CurrentWindow && !g.CurrentWindow->Accessed)
-            g.CurrentWindow->Active = false;
+            g.CurrentWindow->HiddenFrames = ImMax(1, g.CurrentWindow->HiddenFrames);
         ImGui::End();
 
         if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
