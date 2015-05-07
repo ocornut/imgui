@@ -7800,8 +7800,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     }
 }
 
-
-inline void ImGui::Indent()
+void ImGui::Indent()
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -7809,7 +7808,7 @@ inline void ImGui::Indent()
     window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
 }
 
-inline void ImGui::Unindent()
+void ImGui::Unindent()
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
