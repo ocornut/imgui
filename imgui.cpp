@@ -10056,7 +10056,7 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::TreeNode("Popup, Menus"))
         {
             static int selected_fish = -1;
-            const char* names[] = { "BreamXYZA", "Haddk", "Mackerel", "Pollock", "Tilefish" };
+            const char* names[] = { "Bream", "Haddock", "Mackerel", "Pollock", "Tilefish" };
             static bool toggles[] = { true, false, false, false, false };
 
             {
@@ -10091,6 +10091,12 @@ void ImGui::ShowTestWindow(bool* opened)
                     for (int i = 0; i < IM_ARRAYSIZE(names); i++)
                         if (ImGui::MenuItem(names[i], "", &toggles[i]))
                             popup_open = false;
+
+                    ImGui::Separator();
+                    ImGui::Text("Tooltip here");
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("I am a tooltip over a popup");
+
                     ImGui::EndPopup();
                 }
             }
