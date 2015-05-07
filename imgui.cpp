@@ -2193,7 +2193,7 @@ void ImGui::Render()
         // Hide implicit window if it hasn't been used
         IM_ASSERT(g.CurrentWindowStack.size() == 1);    // Mismatched Begin/End 
         if (g.CurrentWindow && !g.CurrentWindow->Accessed)
-            g.CurrentWindow->HiddenFrames = ImMax(1, g.CurrentWindow->HiddenFrames);
+            g.CurrentWindow->Active = false;
         ImGui::End();
 
         if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
@@ -3160,6 +3160,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     const int current_frame = ImGui::GetFrameCount();
     const bool first_begin_of_the_frame = (window->LastFrameDrawn != current_frame);
+    const bool was_recently_drawn = (window->LastFrameDrawn == current_frame - 1);
     if (first_begin_of_the_frame)
     {
         window->Active = true;
@@ -3179,7 +3180,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     if (first_begin_of_the_frame)
     {
         // New windows appears in front
-        if (!window->WasActive)
+        if (!window->WasActive && !was_recently_drawn)
         {
             window->AutoPosLastDirection = -1;
 
