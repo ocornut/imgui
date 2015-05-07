@@ -1123,6 +1123,7 @@ struct ImGuiState
     ImVector<ImGuiWindow*>  WindowsSortBuffer;
     ImGuiWindow*            CurrentWindow;                      // Being drawn into
     ImVector<ImGuiWindow*>  CurrentWindowStack;
+    int                     CurrentPopupStackSize;
     ImGuiWindow*            FocusedWindow;                      // Will catch keyboard inputs
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs
     ImGuiWindow*            HoveredRootWindow;                  // Will catch mouse inputs (for focus/move only)
@@ -1197,6 +1198,7 @@ struct ImGuiState
         FrameCount = 0;
         FrameCountRendered = -1;
         CurrentWindow = NULL;
+        CurrentPopupStackSize = 0;
         FocusedWindow = NULL;
         HoveredWindow = NULL;
         HoveredRootWindow = NULL;
@@ -2893,13 +2895,17 @@ void ImGui::EndTooltip()
 
 void ImGui::BeginPopup(bool* p_opened)
 {
+    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     IM_ASSERT(p_opened != NULL);    // Must provide a bool at the moment
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGuiWindowFlags flags = ImGuiWindowFlags_Popup|ImGuiWindowFlags_ShowBorders|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
     float alpha = 1.0f;
-    ImGui::Begin("##Popup", p_opened, ImVec2(0.0f, 0.0f), alpha, flags);
+
+    char name[20];
+    ImFormatString(name, 20, "##Popup%02d", g.CurrentPopupStackSize++);
+    ImGui::Begin(name, p_opened, ImVec2(0.0f, 0.0f), alpha, flags);
 
     if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
         GetCurrentWindow()->Flags &= ~ImGuiWindowFlags_ShowBorders;
@@ -2907,7 +2913,10 @@ void ImGui::BeginPopup(bool* p_opened)
 
 void ImGui::EndPopup()
 {
+    ImGuiState& g = *GImGui;
     IM_ASSERT(GetCurrentWindow()->Flags & ImGuiWindowFlags_Popup);
+    IM_ASSERT(g.CurrentPopupStackSize > 0);
+    g.CurrentPopupStackSize--;
     ImGui::End();
     ImGui::PopStyleVar();
 }
@@ -3133,6 +3142,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     const bool window_was_visible = (window->LastFrameDrawn == current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
 
     // Add to stack
+    ImGuiWindow* parent_window = !g.CurrentWindowStack.empty() ? g.CurrentWindowStack.back() : NULL;
     g.CurrentWindowStack.push_back(window);
     SetCurrentWindow(window);
 
@@ -3164,9 +3174,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         ImGui::SetWindowFocus();
         g.SetNextWindowFocus = false;
     }
-
-    // Find parent
-    ImGuiWindow* parent_window = (flags & ImGuiWindowFlags_ChildWindow) != 0 ? g.CurrentWindowStack[g.CurrentWindowStack.size()-2] : NULL;
 
     // Update known root window (if we are a child window, otherwise window == window->RootWindow)
     size_t root_idx = g.CurrentWindowStack.size() - 1;
