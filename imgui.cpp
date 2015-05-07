@@ -2183,24 +2183,24 @@ static void PopClipRect()
 void ImGui::Render()
 {
     ImGuiState& g = *GImGui;
-    IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
+    IM_ASSERT(g.Initialized);                           // Forgot to call ImGui::NewFrame()
 
     const bool first_render_of_the_frame = (g.FrameCountRendered != g.FrameCount);
     g.FrameCountRendered = g.FrameCount;
     
     if (first_render_of_the_frame)
     {
-        // Hide implicit window if it hasn't been used
+        // Hide implicit "Debug" window if it hasn't been used
         IM_ASSERT(g.CurrentWindowStack.size() == 1);    // Mismatched Begin/End 
         if (g.CurrentWindow && !g.CurrentWindow->Accessed)
             g.CurrentWindow->Active = false;
         ImGui::End();
 
+        // Click to focus window and start moving (after we're done with all our widgets)
         if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
         {
             if (g.HoveredRootWindow != NULL)
             {
-                // Select window for move/focus when we're done with all our widgets (we use the root window ID here)
                 IM_ASSERT(g.MovedWindow == NULL);
                 g.MovedWindow = g.HoveredWindow;
                 SetActiveId(g.HoveredRootWindow->MoveID);
@@ -2227,19 +2227,18 @@ void ImGui::Render()
         IM_ASSERT(g.Windows.size() == g.WindowsSortBuffer.size());  // we done something wrong
         g.Windows.swap(g.WindowsSortBuffer);
 
-        // Clear data for next frame
+        // Clear Input data for next frame
         g.IO.MouseWheel = 0.0f;
         memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
     }
 
     // Skip render altogether if alpha is 0.0
-    // Note that vertex buffers have been created, so it is best practice that you don't call Begin/End in the first place.
+    // Note that vertex buffers have been created, so it is best practice that you don't create windows in the first place, or respond to Begin() returning false
     if (g.Style.Alpha > 0.0f)
     {
         // Render tooltip
         if (g.Tooltip[0])
         {
-            // Use a dummy window to render the tooltip
             ImGui::BeginTooltip();
             ImGui::TextUnformatted(g.Tooltip);
             ImGui::EndTooltip();
@@ -3160,7 +3159,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     const int current_frame = ImGui::GetFrameCount();
     const bool first_begin_of_the_frame = (window->LastFrameDrawn != current_frame);
-    const bool window_was_visible = (window->LastFrameDrawn == current_frame - 1);
+    const bool window_was_visible = (window->LastFrameDrawn == current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
     if (first_begin_of_the_frame)
     {
         window->Active = true;
