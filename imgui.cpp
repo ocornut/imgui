@@ -7220,6 +7220,41 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
     return value_changed;
 }
 
+bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected)
+{
+    (void)shortcut; // FIXME-MENU: Shortcut are not supported yet. Argument is reserved.
+
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const float symbol_spacing = (float)(int)(g.FontSize * 1.50f + 0.5f);
+    const float w = ImMax(label_size.x + symbol_spacing, window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x); // Feedback to next frame
+    bool ret = ImGui::Selectable(label, false, ImVec2(w, 0.0f));
+
+    if (selected)
+    {
+        pos.x = window->Pos.x + ImGui::GetContentRegionMax().x - g.FontSize;
+        RenderCheckMark(pos, window->Color(ImGuiCol_Text));
+    }
+
+    return ret;
+}
+
+bool ImGui::MenuItem(const char* label, const char* shortcut, bool* p_selected)
+{
+    if (ImGui::MenuItem(label, shortcut, p_selected ? *p_selected : false))
+    {
+        if (p_selected)
+            *p_selected = !*p_selected;
+        return true;
+    }
+    return false;
+}
+
 // A little colored square. Return true when clicked.
 bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_border)
 {
@@ -10007,30 +10042,48 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Popup"))
+        if (ImGui::TreeNode("Popup, Menus"))
         {
-            static bool popup_open = false;
             static int selected_fish = -1;
-            const char* fishes[] = { "Bream", "Haddock", "Mackerel", "Pollock", "Tilefish" };
-            if (ImGui::Button("Select.."))
-                popup_open = true;
-            ImGui::SameLine();
-            ImGui::Text(selected_fish == -1 ? "<None>" : fishes[selected_fish]);
-            if (popup_open)
+            const char* names[] = { "BreamXYZA", "Haddk", "Mackerel", "Pollock", "Tilefish" };
+            static bool toggles[] = { true, false, false, false, false };
+
             {
-                ImGui::BeginPopup(&popup_open);
-                ImGui::Text("Aquarium");
-                ImGui::Separator();
-                for (int i = 0; i < IM_ARRAYSIZE(fishes); i++)
+                static bool popup_open = false;
+                if (ImGui::Button("Select.."))
+                    popup_open = true;
+                ImGui::SameLine();
+                ImGui::Text(selected_fish == -1 ? "<None>" : names[selected_fish]);
+                if (popup_open)
                 {
-                    if (ImGui::Selectable(fishes[i], false))
+                    ImGui::BeginPopup(&popup_open);
+                    ImGui::Text("Aquarium");
+                    ImGui::Separator();
+                    for (int i = 0; i < IM_ARRAYSIZE(names); i++)
                     {
-                        selected_fish = i;
-                        popup_open = false;
+                        if (ImGui::Selectable(names[i]))
+                        {
+                            selected_fish = i;
+                            popup_open = false;
+                        }
                     }
+                    ImGui::EndPopup();
                 }
-                ImGui::EndPopup();
             }
+            {
+                static bool popup_open = false;
+                if (ImGui::Button("Toggle.."))
+                    popup_open = true;
+                if (popup_open)
+                {
+                    ImGui::BeginPopup(&popup_open);
+                    for (int i = 0; i < IM_ARRAYSIZE(names); i++)
+                        if (ImGui::MenuItem(names[i], "", &toggles[i]))
+                            popup_open = false;
+                    ImGui::EndPopup();
+                }
+            }
+
             ImGui::TreePop();
         }
 
