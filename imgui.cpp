@@ -1013,6 +1013,7 @@ struct ImGuiDrawContext
     ImVector<ImGuiGroupData> GroupStack;
     ImGuiColorEditMode      ColorEditMode;
     ImGuiStorage*           StateStorage;
+    int                     StackSizesBackup[5]; // store size of various stacks for asserting
 
     float                   ColumnsStartX;       // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
     float                   ColumnsOffsetX;      // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
@@ -1037,6 +1038,7 @@ struct ImGuiDrawContext
         LastItemHoveredAndUsable = LastItemHoveredRect = false;
         ColorEditMode = ImGuiColorEditMode_RGB;
         StateStorage = NULL;
+        memset(StackSizesBackup, 0, sizeof(StackSizesBackup));
 
         ColumnsStartX = 0.0f;
         ColumnsOffsetX = 0.0f;
@@ -3003,6 +3005,20 @@ void ImGui::EndChildFrame()
     ImGui::PopStyleColor();
 }
 
+// Save and compare stack sizes on Begin()/End() to detect usage errors
+static void CheckStacksSize(ImGuiWindow* window, bool write)
+{
+    // NOT checking: DC.ItemWidth, DC.AllowKeyboardFocus, DC.TextWrapPos (per window) to allow user to conveniently push once and not pop (they are cleared on Begin)
+    ImGuiState& g = *GImGui;
+    int* p_backup = &window->DC.StackSizesBackup[0];
+    { int current = (int)window->IDStack.size();       if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopID()
+    { int current = (int)window->DC.GroupStack.size(); if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot EndGroup()
+    { int current = (int)g.ColorModifiers.size();      if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopStyleColor()
+    { int current = (int)g.StyleModifiers.size();      if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopStyleVar()
+    { int current = (int)g.FontStack.size();           if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopFont()
+    IM_ASSERT(p_backup == window->DC.StackSizesBackup + IM_ARRAYSIZE(window->DC.StackSizesBackup));
+}
+
 static ImVec2 FindBestWindowPos(const ImVec2& mouse_pos, const ImVec2& size, int* last_dir, const ImRect& r_inner)
 {
     const ImGuiStyle& style = GImGui->Style;
@@ -3132,6 +3148,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     // Add to stack
     g.CurrentWindowStack.push_back(window);
     SetCurrentWindow(window);
+    CheckStacksSize(window, true);
 
     // Process SetNextWindow***() calls
     bool window_pos_set_by_api = false;
@@ -3599,6 +3616,7 @@ void ImGui::End()
 
     // Pop
     // NB: we don't clear 'window->RootWindow'. The pointer is allowed to live until the next call to Begin().
+    CheckStacksSize(window, false);
     g.CurrentWindowStack.pop_back();
     SetCurrentWindow(g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back());
 }
