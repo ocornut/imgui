@@ -569,7 +569,8 @@ ImGuiStyle::ImGuiStyle()
     IndentSpacing           = 22.0f;            // Horizontal spacing when e.g. entering a tree node
     ColumnsMinSpacing       = 6.0f;             // Minimum horizontal spacing between two columns
     ScrollbarWidth          = 16.0f;            // Width of the vertical scrollbar
-    GrabMinSize             = 10.0f;            // Minimum width/height of a slider or scrollbar grab
+    ScrollbarRounding       = 0.0f;             // Radius of grab corners rounding for scrollbar
+    GrabMinSize             = 10.0f;            // Minimum width/height of a grab box for slider/scrollbar
     DisplayWindowPadding    = ImVec2(22,22);    // Window positions are clamped to be visible within the display area by at least this amount. Only covers regular windows.
     DisplaySafeAreaPadding  = ImVec2(4,4);      // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
 
@@ -3698,7 +3699,7 @@ static void Scrollbar(ImGuiWindow* window)
 
     // Render
     const ImU32 grab_col = window->Color(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
-    window->DrawList->AddRectFilled(ImVec2(bb.Min.x, ImLerp(bb.Min.y, bb.Max.y, grab_y_norm)), ImVec2(bb.Max.x, ImLerp(bb.Min.y, bb.Max.y, grab_y_norm) + grab_h_pixels), grab_col);
+    window->DrawList->AddRectFilled(ImVec2(bb.Min.x, ImLerp(bb.Min.y, bb.Max.y, grab_y_norm)), ImVec2(bb.Max.x, ImLerp(bb.Min.y, bb.Max.y, grab_y_norm) + grab_h_pixels), grab_col, style.ScrollbarRounding);
 }
 
 // Moving window to front of display (which happens to be back of our sorted list)
@@ -9707,7 +9708,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::SliderFloat2("ItemInnerSpacing", (float*)&style.ItemInnerSpacing, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat2("TouchExtraPadding", (float*)&style.TouchExtraPadding, 0.0f, 10.0f, "%.0f");
         ImGui::SliderFloat("IndentSpacing", &style.IndentSpacing, 0.0f, 20.0f, "%.0f");
-        ImGui::SliderFloat("ScrollBarWidth", &style.ScrollbarWidth, 1.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat("ScrollbarWidth", &style.ScrollbarWidth, 1.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat("ScrollbarRounding", &style.ScrollbarRounding, 0.0f, 16.0f, "%.0f");
         ImGui::SliderFloat("GrabMinSize", &style.GrabMinSize, 1.0f, 20.0f, "%.0f");
         ImGui::TreePop();
     }
