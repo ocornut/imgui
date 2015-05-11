@@ -360,7 +360,9 @@ namespace ImGui
     IMGUI_API void          ListBoxFooter();                                                    // terminate the scrolling region
 
     // Widgets: Menus
-	// FIXME-WIP: v1.39 in development, API may change
+	// FIXME-WIP: v1.39 in development, API *WILL* change
+    IMGUI_API bool          BeginMenu(const char* label);
+    IMGUI_API void          EndMenu();
     IMGUI_API bool          MenuItem(const char* label, const char* shortcut = NULL, bool selected = NULL); // bool enabled = true
     IMGUI_API bool          MenuItem(const char* label, const char* shortcut, bool* p_selected); // bool enabled = true
 
@@ -458,7 +460,9 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_ChildWindowAutoFitY    = 1 << 11,  // For internal use by BeginChild()
     ImGuiWindowFlags_ComboBox               = 1 << 12,  // For internal use by ComboBox()
     ImGuiWindowFlags_Tooltip                = 1 << 13,  // For internal use by BeginTooltip()
-    ImGuiWindowFlags_Popup                  = 1 << 14   // For internal use by BeginPopup()
+    ImGuiWindowFlags_Popup                  = 1 << 14,  // For internal use by BeginPopup()
+    ImGuiWindowFlags_Menu                   = 1 << 15   // For internal use by BeginMenu()
+
 };
 
 // Flags for ImGui::InputText()
