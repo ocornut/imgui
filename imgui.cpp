@@ -6648,6 +6648,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         }
 
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
+        const bool is_ctrl_only = is_ctrl_down && !is_alt_down && !is_shift_down;
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_RightArrow))          { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Home))                { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
@@ -6656,10 +6657,10 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         else if (IsKeyPressedMap(ImGuiKey_Backspace))           { edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Enter))               { SetActiveId(0); enter_pressed = true; }
         else if (IsKeyPressedMap(ImGuiKey_Escape))              { SetActiveId(0); cancel_edit = true; }
-        else if (is_ctrl_down && !is_alt_down && !is_shift_down && IsKeyPressedMap(ImGuiKey_Z))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); }
-        else if (is_ctrl_down && !is_alt_down && !is_shift_down && IsKeyPressedMap(ImGuiKey_Y))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); }
-        else if (is_ctrl_down && !is_alt_down && !is_shift_down && IsKeyPressedMap(ImGuiKey_A))   { edit_state.SelectAll(); }
-        else if (is_ctrl_down && !is_alt_down && !is_shift_down && (IsKeyPressedMap(ImGuiKey_X) || IsKeyPressedMap(ImGuiKey_C)))
+        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Z))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); }
+        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Y))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); }
+        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_A))   { edit_state.SelectAll(); }
+        else if (is_ctrl_only && (IsKeyPressedMap(ImGuiKey_X) || IsKeyPressedMap(ImGuiKey_C)))
         {
             // Cut, Copy
             const bool cut = IsKeyPressedMap(ImGuiKey_X);
@@ -6677,7 +6678,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             if (cut)
                 stb_textedit_cut(&edit_state, &edit_state.StbState);
         }
-        else if (is_ctrl_down && IsKeyPressedMap(ImGuiKey_V))
+        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_V))
         {
             // Paste
             if (g.IO.GetClipboardTextFn)
