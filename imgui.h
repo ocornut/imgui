@@ -329,13 +329,13 @@ namespace ImGui
     // Widgets: Input
     IMGUI_API bool          InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
     IMGUI_API bool          InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f, int decimal_precision = -1, ImGuiInputTextFlags extra_flags = 0);
-    IMGUI_API bool          InputFloat2(const char* label, float v[2], int decimal_precision = -1);
-    IMGUI_API bool          InputFloat3(const char* label, float v[3], int decimal_precision = -1);
-    IMGUI_API bool          InputFloat4(const char* label, float v[4], int decimal_precision = -1);
+    IMGUI_API bool          InputFloat2(const char* label, float v[2], int decimal_precision = -1, ImGuiInputTextFlags extra_flags = 0);
+    IMGUI_API bool          InputFloat3(const char* label, float v[3], int decimal_precision = -1, ImGuiInputTextFlags extra_flags = 0);
+    IMGUI_API bool          InputFloat4(const char* label, float v[4], int decimal_precision = -1, ImGuiInputTextFlags extra_flags = 0);
     IMGUI_API bool          InputInt(const char* label, int* v, int step = 1, int step_fast = 100, ImGuiInputTextFlags extra_flags = 0);
-    IMGUI_API bool          InputInt2(const char* label, int v[2]);
-    IMGUI_API bool          InputInt3(const char* label, int v[3]);
-    IMGUI_API bool          InputInt4(const char* label, int v[4]);
+    IMGUI_API bool          InputInt2(const char* label, int v[2], ImGuiInputTextFlags extra_flags = 0);
+    IMGUI_API bool          InputInt3(const char* label, int v[3], ImGuiInputTextFlags extra_flags = 0);
+    IMGUI_API bool          InputInt4(const char* label, int v[4], ImGuiInputTextFlags extra_flags = 0);
 
     // Widgets: Trees
     IMGUI_API bool          TreeNode(const char* str_label_id);                                 // if returning 'true' the node is open and the user is responsible for calling TreePop
