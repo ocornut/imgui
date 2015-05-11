@@ -6525,8 +6525,8 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     ImGuiTextEditState& edit_state = g.InputTextState;
 
     const bool is_ctrl_down = io.KeyCtrl;
-		const bool is_shift_down = io.KeyShift;
-		const bool is_alt_down = io.KeyAlt;
+    const bool is_shift_down = io.KeyShift;
+    const bool is_alt_down = io.KeyAlt;
     const bool focus_requested = window->FocusItemRegister(g.ActiveId == id, (flags & ImGuiInputTextFlags_CallbackCompletion) == 0);    // Using completion callback disable keyboard tabbing
     const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
     const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
