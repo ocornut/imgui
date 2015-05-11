@@ -359,7 +359,7 @@ namespace ImGui
 
     // Widgets: Menus
 	// FIXME-WIP: v1.39 in development
-    IMGUI_API bool          MenuItem(const char* label, const char* shortcut = NULL, bool selected = NULL); // bool enabled = true
+    IMGUI_API bool          MenuItem(const char* label, const char* shortcut = NULL, bool selected = false); // bool enabled = true
     IMGUI_API bool          MenuItem(const char* label, const char* shortcut, bool* p_selected); // bool enabled = true
 
     // Widgets: Value() Helpers. Output single value in "name: value" format (tip: freely declare your own within the ImGui namespace!)
