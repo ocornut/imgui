@@ -6703,7 +6703,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         return value_changed;
 }
 
-static bool InputFloatN(const char* label, float* v, int components, int decimal_precision)
+static bool InputFloatN(const char* label, float* v, int components, int decimal_precision, ImGuiInputTextFlags flags)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -6727,7 +6727,7 @@ static bool InputFloatN(const char* label, float* v, int components, int decimal
             ImGui::PopItemWidth();
             ImGui::PushItemWidth(w_item_last);
         }
-        value_changed |= ImGui::InputFloat("##v", &v[i], 0, 0, decimal_precision);
+        value_changed |= ImGui::InputFloat("##v", &v[i], 0, 0, decimal_precision, flags);
         ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
         ImGui::PopID();
     }
@@ -6741,22 +6741,22 @@ static bool InputFloatN(const char* label, float* v, int components, int decimal
     return value_changed;
 }
 
-bool ImGui::InputFloat2(const char* label, float v[2], int decimal_precision)
+bool ImGui::InputFloat2(const char* label, float v[2], int decimal_precision, ImGuiInputTextFlags flags)
 {
-    return InputFloatN(label, v, 2, decimal_precision);
+    return InputFloatN(label, v, 2, decimal_precision, flags);
 }
 
-bool ImGui::InputFloat3(const char* label, float v[3], int decimal_precision)
+bool ImGui::InputFloat3(const char* label, float v[3], int decimal_precision, ImGuiInputTextFlags flags)
 {
-    return InputFloatN(label, v, 3, decimal_precision);
+    return InputFloatN(label, v, 3, decimal_precision, flags);
 }
 
-bool ImGui::InputFloat4(const char* label, float v[4], int decimal_precision)
+bool ImGui::InputFloat4(const char* label, float v[4], int decimal_precision, ImGuiInputTextFlags flags)
 {
-    return InputFloatN(label, v, 4, decimal_precision);
+    return InputFloatN(label, v, 4, decimal_precision, flags);
 }
 
-static bool InputIntN(const char* label, int* v, int components)
+static bool InputIntN(const char* label, int* v, int components, ImGuiInputTextFlags flags)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -6780,7 +6780,7 @@ static bool InputIntN(const char* label, int* v, int components)
             ImGui::PopItemWidth();
             ImGui::PushItemWidth(w_item_last);
         }
-        value_changed |= ImGui::InputInt("##v", &v[i], 0, 0);
+        value_changed |= ImGui::InputInt("##v", &v[i], 0, 0, flags);
         ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
         ImGui::PopID();
     }
@@ -6794,19 +6794,19 @@ static bool InputIntN(const char* label, int* v, int components)
     return value_changed;
 }
 
-bool ImGui::InputInt2(const char* label, int v[2])
+bool ImGui::InputInt2(const char* label, int v[2], ImGuiInputTextFlags flags)
 {
-    return InputIntN(label, v, 2);
+    return InputIntN(label, v, 2, flags);
 }
 
-bool ImGui::InputInt3(const char* label, int v[3])
+bool ImGui::InputInt3(const char* label, int v[3], ImGuiInputTextFlags flags)
 {
-    return InputIntN(label, v, 3);
+    return InputIntN(label, v, 3, flags);
 }
 
-bool ImGui::InputInt4(const char* label, int v[4])
+bool ImGui::InputInt4(const char* label, int v[4], ImGuiInputTextFlags flags)
 {
-    return InputIntN(label, v, 4);
+    return InputIntN(label, v, 4, flags);
 }
 
 static bool Items_ArrayGetter(void* data, int idx, const char** out_text)
