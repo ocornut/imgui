@@ -3737,6 +3737,19 @@ void ImGui::PushItemWidth(float item_width)
     window->DC.ItemWidth.push_back(item_width == 0.0f ? window->ItemWidthDefault : item_width);
 }
 
+static void PushMultiItemsWidths(int components, float w_full = 0.0f)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    const ImGuiStyle& style = GImGui->Style;
+    if (w_full <= 0.0f)
+        w_full = ImGui::CalcItemWidth();
+    const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)) / (float)components));
+    const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)));
+    window->DC.ItemWidth.push_back(w_item_last);
+    for (int i = 0; i < components-1; i++)
+        window->DC.ItemWidth.push_back(w_item_one);
+}
+
 void ImGui::PopItemWidth()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -3751,9 +3764,8 @@ float ImGui::CalcItemWidth()
     {
         // Align to a right-side limit. We include 1 frame padding in the calculation because this is how the width is always used (we add 2 frame padding to it), but we could move that responsibility to the widget as well.
         ImGuiState& g = *GImGui;
-        w = -w;
         float width_to_right_edge = window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x;
-        w = ImMax(1.0f, width_to_right_edge - w - g.Style.FramePadding.x * 2.0f);
+        w = ImMax(1.0f, width_to_right_edge + w - g.Style.FramePadding.x * 2.0f);
     }
     w = (float)(int)w;
     return w;
@@ -5556,28 +5568,18 @@ static bool SliderFloatN(const char* label, float* v, int components, float v_mi
     if (window->SkipItems)
         return false;
 
-    const ImGuiStyle& style = g.Style;
-    const float w_full = ImGui::CalcItemWidth();
-    const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)) / (float)components));
-    const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)));
-
     bool value_changed = false;
     ImGui::BeginGroup();
     ImGui::PushID(label);
-    ImGui::PushItemWidth(w_item_one);
+    PushMultiItemsWidths(components);
     for (int i = 0; i < components; i++)
     {
         ImGui::PushID(i);
-        if (i + 1 == components)
-        {
-            ImGui::PopItemWidth();
-            ImGui::PushItemWidth(w_item_last);
-        }
         value_changed |= ImGui::SliderFloat("##v", &v[i], v_min, v_max, display_format, power);
-        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        ImGui::SameLine(0, (int)g.Style.ItemInnerSpacing.x);
         ImGui::PopID();
+        ImGui::PopItemWidth();
     }
-    ImGui::PopItemWidth();
     ImGui::PopID();
 
     ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
@@ -5608,28 +5610,18 @@ static bool SliderIntN(const char* label, int* v, int components, int v_min, int
     if (window->SkipItems)
         return false;
 
-    const ImGuiStyle& style = g.Style;
-    const float w_full = ImGui::CalcItemWidth();
-    const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)) / (float)components));
-    const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)));
-
     bool value_changed = false;
     ImGui::BeginGroup();
     ImGui::PushID(label);
-    ImGui::PushItemWidth(w_item_one);
+    PushMultiItemsWidths(components);
     for (int i = 0; i < components; i++)
     {
         ImGui::PushID(i);
-        if (i + 1 == components)
-        {
-            ImGui::PopItemWidth();
-            ImGui::PushItemWidth(w_item_last);
-        }
         value_changed |= ImGui::SliderInt("##v", &v[i], v_min, v_max, display_format);
-        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        ImGui::SameLine(0, (int)g.Style.ItemInnerSpacing.x);
         ImGui::PopID();
+        ImGui::PopItemWidth();
     }
-    ImGui::PopItemWidth();
     ImGui::PopID();
 
     ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
@@ -5803,28 +5795,18 @@ static bool DragFloatN(const char* label, float* v, int components, float v_spee
     if (window->SkipItems)
         return false;
 
-    const ImGuiStyle& style = g.Style;
-    const float w_full = ImGui::CalcItemWidth();
-    const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)) / (float)components));
-    const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)));
-
     bool value_changed = false;
     ImGui::BeginGroup();
     ImGui::PushID(label);
-    ImGui::PushItemWidth(w_item_one);
+    PushMultiItemsWidths(components);
     for (int i = 0; i < components; i++)
     {
         ImGui::PushID(i);
-        if (i + 1 == components)
-        {
-            ImGui::PopItemWidth();
-            ImGui::PushItemWidth(w_item_last);
-        }
         value_changed |= ImGui::DragFloat("##v", &v[i], v_speed, v_min, v_max, display_format, power);
-        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        ImGui::SameLine(0, (int)g.Style.ItemInnerSpacing.x);
         ImGui::PopID();
+        ImGui::PopItemWidth();
     }
-    ImGui::PopItemWidth();
     ImGui::PopID();
 
     ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
@@ -5866,28 +5848,18 @@ static bool DragIntN(const char* label, int* v, int components, float v_speed, i
     if (window->SkipItems)
         return false;
 
-    const ImGuiStyle& style = g.Style;
-    const float w_full = ImGui::CalcItemWidth();
-    const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)) / (float)components));
-    const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x)*(components-1)));
-
     bool value_changed = false;
     ImGui::BeginGroup();
     ImGui::PushID(label);
-    ImGui::PushItemWidth(w_item_one);
+    PushMultiItemsWidths(components);
     for (int i = 0; i < components; i++)
     {
         ImGui::PushID(i);
-        if (i + 1 == components)
-        {
-            ImGui::PopItemWidth();
-            ImGui::PushItemWidth(w_item_last);
-        }
         value_changed |= ImGui::DragInt("##v", &v[i], v_speed, v_min, v_max, display_format);
-        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        ImGui::SameLine(0, (int)g.Style.ItemInnerSpacing.x);
         ImGui::PopID();
+        ImGui::PopItemWidth();
     }
-    ImGui::PopItemWidth();
     ImGui::PopID();
 
     ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
@@ -6846,31 +6818,21 @@ static bool InputFloatN(const char* label, float* v, int components, int decimal
     if (window->SkipItems)
         return false;
 
-    const ImGuiStyle& style = g.Style;
-    const float w_full = ImGui::CalcItemWidth();
-    const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)) / (float)components));
-    const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)));
-
     bool value_changed = false;
     ImGui::BeginGroup();
     ImGui::PushID(label);
-    ImGui::PushItemWidth(w_item_one);
+    PushMultiItemsWidths(components);
     for (int i = 0; i < components; i++)
     {
         ImGui::PushID(i);
-        if (i + 1 == components)
-        {
-            ImGui::PopItemWidth();
-            ImGui::PushItemWidth(w_item_last);
-        }
         value_changed |= ImGui::InputFloat("##v", &v[i], 0, 0, decimal_precision, extra_flags);
-        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        ImGui::SameLine(0, (int)g.Style.ItemInnerSpacing.x);
         ImGui::PopID();
+        ImGui::PopItemWidth();
     }
-    ImGui::PopItemWidth();
     ImGui::PopID();
 
-    window->DC.CurrentLineTextBaseOffset = ImMax(window->DC.CurrentLineTextBaseOffset, style.FramePadding.y);
+    window->DC.CurrentLineTextBaseOffset = ImMax(window->DC.CurrentLineTextBaseOffset, g.Style.FramePadding.y);
     ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
     ImGui::EndGroup();
 
@@ -6899,31 +6861,21 @@ static bool InputIntN(const char* label, int* v, int components, ImGuiInputTextF
     if (window->SkipItems)
         return false;
 
-    const ImGuiStyle& style = g.Style;
-    const float w_full = ImGui::CalcItemWidth();
-    const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)) / (float)components));
-    const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)));
-
     bool value_changed = false;
     ImGui::BeginGroup();
     ImGui::PushID(label);
-    ImGui::PushItemWidth(w_item_one);
+    PushMultiItemsWidths(components);
     for (int i = 0; i < components; i++)
     {
         ImGui::PushID(i);
-        if (i + 1 == components)
-        {
-            ImGui::PopItemWidth();
-            ImGui::PushItemWidth(w_item_last);
-        }
         value_changed |= ImGui::InputInt("##v", &v[i], 0, 0, extra_flags);
-        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        ImGui::SameLine(0, (int)g.Style.ItemInnerSpacing.x);
         ImGui::PopID();
+        ImGui::PopItemWidth();
     }
-    ImGui::PopItemWidth();
     ImGui::PopID();
 
-    window->DC.CurrentLineTextBaseOffset = ImMax(window->DC.CurrentLineTextBaseOffset, style.FramePadding.y);
+    window->DC.CurrentLineTextBaseOffset = ImMax(window->DC.CurrentLineTextBaseOffset, g.Style.FramePadding.y);
     ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
     ImGui::EndGroup();
 
