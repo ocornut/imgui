@@ -10345,6 +10345,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::PopID();
             }
             ImGui::PopID();
+            ImGui::PopStyleVar();
 
             ImGui::Indent();
             ImGui::TreePop();
