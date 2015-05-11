@@ -504,6 +504,7 @@ enum ImGuiKey_
 enum ImGuiCol_
 {
     ImGuiCol_Text,
+    ImGuiCol_TextDisabled,
     ImGuiCol_WindowBg,
     ImGuiCol_ChildWindowBg,
     ImGuiCol_Border,
