@@ -3454,14 +3454,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             window->ItemWidthDefault = 200.0f;
 
         // Prepare for focus requests
-        if (window->FocusIdxAllRequestNext == IM_INT_MAX || window->FocusIdxAllCounter == -1)
-            window->FocusIdxAllRequestCurrent = IM_INT_MAX;
-        else
-            window->FocusIdxAllRequestCurrent = (window->FocusIdxAllRequestNext + (window->FocusIdxAllCounter+1)) % (window->FocusIdxAllCounter+1);
-        if (window->FocusIdxTabRequestNext == IM_INT_MAX || window->FocusIdxTabCounter == -1)
-            window->FocusIdxTabRequestCurrent = IM_INT_MAX;
-        else
-            window->FocusIdxTabRequestCurrent = (window->FocusIdxTabRequestNext + (window->FocusIdxTabCounter+1)) % (window->FocusIdxTabCounter+1);
+        window->FocusIdxAllRequestCurrent = (window->FocusIdxAllRequestNext == IM_INT_MAX || window->FocusIdxAllCounter == -1) ? IM_INT_MAX : (window->FocusIdxAllRequestNext + (window->FocusIdxAllCounter+1)) % (window->FocusIdxAllCounter+1);
+        window->FocusIdxTabRequestCurrent = (window->FocusIdxTabRequestNext == IM_INT_MAX || window->FocusIdxTabCounter == -1) ? IM_INT_MAX : (window->FocusIdxTabRequestNext + (window->FocusIdxTabCounter+1)) % (window->FocusIdxTabCounter+1);
         window->FocusIdxAllCounter = window->FocusIdxTabCounter = -1;
         window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = IM_INT_MAX;
 
