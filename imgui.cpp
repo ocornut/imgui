@@ -1005,8 +1005,7 @@ struct ImGuiSimpleColumns
     {
         Count = count;
         Width = 0.0f;
-        if (clear)
-            memset(NextWidths, 0, sizeof(NextWidths));
+        if (clear) memset(NextWidths, 0, sizeof(NextWidths));
         for (int i = 0; i < Count; i++)
         {
             if (i > 0 && NextWidths[i] > 0.0f)
@@ -1021,6 +1020,14 @@ struct ImGuiSimpleColumns
         NextWidths[0] = ImMax(NextWidths[0], w0);
         NextWidths[1] = ImMax(NextWidths[1], w1);
         NextWidths[2] = ImMax(NextWidths[2], w2);
+    }
+    void FillExtraSpace(float avail_w, int column_no)
+    {
+        if (Width >= avail_w) return;
+        float extra_w = avail_w - Width;
+        Width = avail_w;
+        for (int i = column_no+1; i < Count; i++)
+            Pos[i] += extra_w;
     }
 };
 
@@ -7381,24 +7388,23 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected)
         return false;
 
     ImVec2 pos = ImGui::GetCursorScreenPos();
-    const ImVec2 label_size = CalcTextSize(label, NULL, true);
-    const ImVec2 shortcut_size = shortcut ? CalcTextSize(shortcut, NULL) : ImVec2(0.0f, 0.0f);
-    window->MenuColumns.Extend(label_size.x, shortcut_size.x, g.FontSize * 1.20f); // Feedback for next frame
+    ImVec2 label_size = CalcTextSize(label, NULL, true);
+    ImVec2 shortcut_size = shortcut ? CalcTextSize(shortcut, NULL) : ImVec2(0.0f, 0.0f);
+    window->MenuColumns.Extend(label_size.x, shortcut_size.x, g.FontSize * 1.10f); // Feedback for next frame
+    window->MenuColumns.FillExtraSpace(window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x, 0);
 
-    const float avail_w = window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x;
-    const float w = ImMax(avail_w, window->MenuColumns.Width); // Feedback from previous frame
-    const float extra_w = w - window->MenuColumns.Width;
+    float w = window->MenuColumns.Width;
     bool pressed = ImGui::Selectable(label, false, ImVec2(w, 0.0f));
 
     if (shortcut_size.x > 0.0f)
     {
         ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
-        RenderText(pos + ImVec2(window->MenuColumns.Pos[1] + extra_w, 0.0f), shortcut, NULL, false);
+        RenderText(pos + ImVec2(window->MenuColumns.Pos[1], 0.0f), shortcut, NULL, false);
         ImGui::PopStyleColor();
     }
 
     if (selected)
-        RenderCheckMark(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w, 0.0f), window->Color(ImGuiCol_Text));
+        RenderCheckMark(pos + ImVec2(window->MenuColumns.Pos[2] + g.FontSize * 0.10f, 0.0f), window->Color(ImGuiCol_Text));
 
     return pressed;
 }
@@ -7425,13 +7431,14 @@ bool ImGui::BeginMenu(const char* label)
     const ImGuiID id = window->GetID(label);
     bool opened = IsPopupOpen(id);
 
-    const ImVec2 pos = ImGui::GetCursorScreenPos();
-    const ImVec2 label_size = CalcTextSize(label, NULL, true);
-    window->MenuColumns.Extend(label_size.x, 0.0f, g.FontSize * 1.20f); // Feedback to next frame
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    ImVec2 label_size = CalcTextSize(label, NULL, true);
+    window->MenuColumns.Extend(label_size.x, 0.0f, g.FontSize * 1.10f); // Feedback to next frame
+    window->MenuColumns.FillExtraSpace(window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x, 0);
 
-    const float w = window->MenuColumns.Width; // Feedback from next frame
+    float w = window->MenuColumns.Width;
     ImGui::Selectable(label, opened, ImVec2(w, 0.0f));
-    RenderCollapseTriangle(pos + ImVec2(w - g.FontSize, 0.0f), false);
+    RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + g.FontSize * 0.20f, 0.0f), false);
 
     bool hovered = ImGui::IsItemHovered();
     if (!opened && hovered)
@@ -10273,6 +10280,11 @@ void ImGui::ShowTestWindow(bool* opened)
             {
                 for (int i = 0; i < IM_ARRAYSIZE(names); i++)
                     ImGui::MenuItem(names[i], "", &toggles[i]);
+                if (ImGui::BeginMenu("Sub-menu"))
+                {
+                    ImGui::MenuItem("Hello");
+                    ImGui::EndMenu();
+                }
 
                 ImGui::Separator();
                 ImGui::Text("Tooltip here");
