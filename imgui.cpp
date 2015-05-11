@@ -992,6 +992,37 @@ struct ImGuiGroupData
     float  BackupLogLinePosY;
 };
 
+// Simple column measurement currently used for menu items
+struct ImGuiSimpleColumns
+{
+    int    Count;
+    float  Width;
+    float  Pos[8], NextWidths[8];
+
+    ImGuiSimpleColumns() { Count = 0; Width = 0.0f; memset(Pos, 0, sizeof(Pos)); memset(NextWidths, 0, sizeof(NextWidths)); }
+    void Update(int count, float spacing, bool clear)
+    {
+        Count = count;
+        Width = 0.0f;
+        if (clear)
+            memset(NextWidths, 0, sizeof(NextWidths));
+        for (int i = 0; i < Count; i++)
+        {
+            if (i > 0 && NextWidths[i] > 0.0f)
+                Width += spacing;
+            Pos[i] = (float)(int)Width;
+            Width += NextWidths[i];
+            NextWidths[i] = 0.0f;
+        }
+    }
+    void Extend(float w0, float w1, float w2) // not using va_arg because they promote float to double
+    {
+        NextWidths[0] = ImMax(NextWidths[0], w0);
+        NextWidths[1] = ImMax(NextWidths[1], w1);
+        NextWidths[2] = ImMax(NextWidths[2], w2);
+    }
+};
+
 // Temporary per-window data, reset at the beginning of the frame
 struct ImGuiDrawContext
 {
@@ -1016,9 +1047,6 @@ struct ImGuiDrawContext
     ImVector<ImGuiGroupData> GroupStack;
     ImGuiColorEditMode      ColorEditMode;
     ImGuiStorage*           StateStorage;
-    float                   MenuTotalWidth;      // Simplified columns storage for menu items
-    float                   MenuColumnsCurr[3];
-    float                   MenuColumnsNextWidth[3];
     int                     StackSizesBackup[6]; // Store size of various stacks for asserting
 
     float                   ColumnsStartX;       // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
@@ -1044,9 +1072,6 @@ struct ImGuiDrawContext
         LastItemHoveredAndUsable = LastItemHoveredRect = false;
         ColorEditMode = ImGuiColorEditMode_RGB;
         StateStorage = NULL;
-        MenuTotalWidth = 0.0f;
-        memset(MenuColumnsCurr, 0, sizeof(MenuColumnsCurr));
-        memset(MenuColumnsNextWidth, 0, sizeof(MenuColumnsNextWidth));
         memset(StackSizesBackup, 0, sizeof(StackSizesBackup));
 
         ColumnsStartX = 0.0f;
@@ -1296,6 +1321,7 @@ struct ImGuiWindow
     ImRect                  ClippedRect;                        // = ClipRectStack.front() after setup in Begin()
     int                     LastFrameDrawn;
     float                   ItemWidthDefault;
+    ImGuiSimpleColumns      MenuColumns;                        // Simplified columns storage for menu items
     ImGuiStorage            StateStorage;
     float                   FontWindowScale;                    // Scale multiplier per-window
     ImDrawList*             DrawList;
@@ -3624,18 +3650,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->DC.TreeDepth = 0;
         window->DC.StateStorage = &window->StateStorage;
         window->DC.GroupStack.resize(0);
-
-        window->DC.MenuTotalWidth = 0.0f;
-        for (size_t n = 0; n < IM_ARRAYSIZE(window->DC.MenuColumnsCurr); n++)
-        {
-            if (!window_was_visible)
-                window->DC.MenuColumnsNextWidth[n] = 0.0f;
-            if (n > 0 && window->DC.MenuColumnsNextWidth[n] > 0.0f)
-                window->DC.MenuTotalWidth += style.ItemInnerSpacing.x;    
-            window->DC.MenuColumnsCurr[n] = window->DC.MenuTotalWidth;
-            window->DC.MenuTotalWidth += window->DC.MenuColumnsNextWidth[n];
-            window->DC.MenuColumnsNextWidth[n] = 0.0f;
-        }
+        window->MenuColumns.Update(3, style.ItemInnerSpacing.x, !window_was_visible);
 
         if (window->AutoFitFrames > 0)
             window->AutoFitFrames--;
@@ -7364,26 +7379,22 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected)
     ImVec2 pos = ImGui::GetCursorScreenPos();
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImVec2 shortcut_size = shortcut ? CalcTextSize(shortcut, NULL) : ImVec2(0.0f, 0.0f);
-
-    window->DC.MenuColumnsNextWidth[0] = ImMax(window->DC.MenuColumnsNextWidth[0], label_size.x + (shortcut_size.x > 0.0f ? g.FontSize : 0.0f));     // Feedback to next frame
-    window->DC.MenuColumnsNextWidth[1] = ImMax(window->DC.MenuColumnsNextWidth[1], shortcut_size.x);
-    window->DC.MenuColumnsNextWidth[2] = ImMax(window->DC.MenuColumnsNextWidth[2], (float)(int)(g.FontSize * 1.20f + 0.5f));
+    window->MenuColumns.Extend(label_size.x, shortcut_size.x, g.FontSize * 1.20f); // Feedback for next frame
 
     const float avail_w = window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x;
-    const float menu_w = window->DC.MenuTotalWidth;                                                        // Feedback from previous frame
-    const float w = ImMax(avail_w, menu_w);
-    const float extra_w = w - menu_w;
+    const float w = ImMax(avail_w, window->MenuColumns.Width); // Feedback from previous frame
+    const float extra_w = w - window->MenuColumns.Width;
     bool pressed = ImGui::Selectable(label, false, ImVec2(w, 0.0f));
 
     if (shortcut_size.x > 0.0f)
     {
         ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
-        RenderText(pos + ImVec2(window->DC.MenuColumnsCurr[1] + extra_w, 0.0f), shortcut, NULL, false);
+        RenderText(pos + ImVec2(window->MenuColumns.Pos[1] + extra_w, 0.0f), shortcut, NULL, false);
         ImGui::PopStyleColor();
     }
 
     if (selected)
-        RenderCheckMark(pos + ImVec2(window->DC.MenuColumnsCurr[2] + extra_w, 0.0f), window->Color(ImGuiCol_Text));
+        RenderCheckMark(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w, 0.0f), window->Color(ImGuiCol_Text));
 
     return pressed;
 }
@@ -7412,13 +7423,11 @@ bool ImGui::BeginMenu(const char* label)
 
     const ImVec2 pos = ImGui::GetCursorScreenPos();
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    window->MenuColumns.Extend(label_size.x, 0.0f, g.FontSize * 1.20f); // Feedback to next frame
 
-    const float w = window->DC.MenuTotalWidth;                                                      // Feedback from next frame
-    window->DC.MenuColumnsNextWidth[0] = ImMax(window->DC.MenuColumnsNextWidth[0], label_size.x);   // Feedback to next frame
-    window->DC.MenuColumnsNextWidth[2] = ImMax(window->DC.MenuColumnsNextWidth[2], (float)(int)(g.FontSize * 1.20f + 0.5f));
+    const float w = window->MenuColumns.Width; // Feedback from next frame
     ImGui::Selectable(label, opened, ImVec2(w, 0.0f));
-
-    RenderCollapseTriangle(pos + ImVec2(window->DC.MenuTotalWidth - g.FontSize, 0.0f), false);
+    RenderCollapseTriangle(pos + ImVec2(w - g.FontSize, 0.0f), false);
 
     bool hovered = ImGui::IsItemHovered();
     if (!opened && hovered)
