@@ -343,6 +343,7 @@
  - columns: columns header to act as button (~sort op) and allow resize/reorder (github issue #125)
  - columns: user specify columns size (github issue #125)
  - popup: border options. richer api like BeginChild() perhaps? (github issue #197)
+ - combo: sparse combo boxes (via function call?)
  - combo: turn child handling code into pop up helper
  - combo: contents should extends to fit label if combo widget is small
  - combo/listbox: keyboard control. need inputtext like non-active focus + key handling. considering keybord for custom listbox (see github pr #203)
@@ -8384,16 +8385,21 @@ void    ImFontAtlas::ClearTexData()
     TexPixelsRGBA32 = NULL;
 }
 
-void    ImFontAtlas::Clear()
+void    ImFontAtlas::ClearFonts()
 {
-    ClearInputData(); 
-    ClearTexData();
     for (size_t i = 0; i < Fonts.size(); i++)
     {
         Fonts[i]->~ImFont();
         ImGui::MemFree(Fonts[i]);
     }
     Fonts.clear();
+}
+
+void    ImFontAtlas::Clear()
+{
+    ClearInputData(); 
+    ClearTexData();
+    ClearFonts();
 }
 
 void ImGui::GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size)
@@ -9824,7 +9830,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Fonts"))
+        if (ImGui::TreeNode("Fonts", "Fonts (%d)", (int)ImGui::GetIO().Fonts->Fonts.size()))
         {
             ImGui::TextWrapped("Tip: Load fonts with GetIO().Fonts->AddFontFromFileTTF().");
             for (size_t i = 0; i < ImGui::GetIO().Fonts->Fonts.size(); i++)

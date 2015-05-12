@@ -979,8 +979,10 @@ struct ImFontAtlas
     IMGUI_API ImFont*           AddFontFromFileTTF(const char* filename, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0);
     IMGUI_API ImFont*           AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0); // Transfer ownership of 'ttf_data' to ImFontAtlas, will be deleted after Build()
     IMGUI_API ImFont*           AddFontFromMemoryCompressedTTF(const void* compressed_ttf_data, int compressed_ttf_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0); // 'compressed_ttf_data' untouched and still owned by caller. Compress with binary_to_compressed_c.cpp
-    IMGUI_API void              ClearTexData();             // Saves RAM once the texture has been copied to graphics memory.
-    IMGUI_API void              Clear();
+    IMGUI_API void              ClearTexData();             // Clear the CPU-side texture data. Saves RAM once the texture has been copied to graphics memory.
+    IMGUI_API void              ClearInputData();           // Clear the input TTF data (inc sizes, glyph ranges)
+    IMGUI_API void              ClearFonts();               // Clear the ImGui-side font data (glyphs storage, UV coordinates)
+    IMGUI_API void              Clear();                    // Clear all
 
     // Retrieve texture data
     // User is in charge of copying the pixels into graphics memory, then call SetTextureUserID()
@@ -1011,7 +1013,6 @@ struct ImFontAtlas
     struct ImFontAtlasData;
     ImVector<ImFontAtlasData*>  InputData;          // Internal data
     IMGUI_API bool              Build();            // Build pixels data. This is automatically for you by the GetTexData*** functions.
-    IMGUI_API void              ClearInputData();   // Clear the input TTF data.
     IMGUI_API void              RenderCustomTexData(int pass, void* rects);
 };
 
