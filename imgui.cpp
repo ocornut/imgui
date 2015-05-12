@@ -2255,6 +2255,7 @@ void ImGui::Render()
 
         // Gather windows to render
         g.IO.MetricsRenderVertices = 0;
+        g.IO.MetricsActiveWindows = 0;
         for (size_t i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
             g.RenderDrawLists[i].resize(0);
         for (size_t i = 0; i != g.Windows.size(); i++)
@@ -2263,6 +2264,7 @@ void ImGui::Render()
             if (window->Active && window->HiddenFrames <= 0 && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0)
             {
                 // FIXME: Generalize this with a proper layering system so we can stack.
+                g.IO.MetricsActiveWindows++;
                 if (window->Flags & ImGuiWindowFlags_Popup)
                     AddWindowToRenderList(g.RenderDrawLists[1], window);
                 else if (window->Flags & ImGuiWindowFlags_Tooltip)

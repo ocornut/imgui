@@ -700,6 +700,7 @@ struct ImGuiIO
     bool        WantCaptureKeyboard;        // Widget is active (= ImGui will use your keyboard input)
     float       Framerate;                  // Framerate estimation, in frame per second. Rolling average estimation based on IO.DeltaTime over 120 frames
     int         MetricsRenderVertices;      // Vertices processed during last call to Render()
+    int         MetricsActiveWindows;       // Number of visible windows (exclude child windows)
 
     //------------------------------------------------------------------
     // [Internal] ImGui will maintain those fields for you
