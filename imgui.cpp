@@ -8648,8 +8648,8 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
     return font;
 }
 
-// NB: ownership of 'data' is given to ImFontAtlas which will clear it.
-ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* in_ttf_data, unsigned int in_ttf_data_size, float size_pixels, const ImWchar* glyph_ranges, int font_no)
+// Transfer ownership of 'ttf_data' to ImFontAtlas, will be deleted after Build()
+ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float size_pixels, const ImWchar* glyph_ranges, int font_no)
 {
     // Create new font
     ImFont* font = (ImFont*)ImGui::MemAlloc(sizeof(ImFont));
@@ -8660,8 +8660,8 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* in_ttf_data, unsigned int in_ttf
     ImFontAtlasData* data = (ImFontAtlasData*)ImGui::MemAlloc(sizeof(ImFontAtlasData));
     memset(data, 0, sizeof(ImFontAtlasData));
     data->OutFont = font;
-    data->TTFData = in_ttf_data;
-    data->TTFDataSize = in_ttf_data_size;
+    data->TTFData = ttf_data;
+    data->TTFDataSize = (size_t)ttf_size;
     data->SizePixels = size_pixels;
     data->GlyphRanges = glyph_ranges;
     data->FontNo = font_no;
@@ -8673,15 +8673,15 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* in_ttf_data, unsigned int in_ttf
     return font;
 }
 
-ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* in_compressed_ttf_data, unsigned int in_compressed_ttf_data_size, float size_pixels, const ImWchar* glyph_ranges, int font_no)
+ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* compressed_ttf_data, int compressed_ttf_size, float size_pixels, const ImWchar* glyph_ranges, int font_no)
 {
     // Decompress
-    const size_t buf_decompressed_size = stb_decompress_length((unsigned char*)in_compressed_ttf_data);
-    unsigned char* buf_decompressed = (unsigned char *)ImGui::MemAlloc(buf_decompressed_size);
-    stb_decompress(buf_decompressed, (unsigned char*)in_compressed_ttf_data, in_compressed_ttf_data_size);
+    const size_t buf_decompressed_size = stb_decompress_length((unsigned char*)compressed_ttf_data);
+    unsigned char* buf_decompressed_data = (unsigned char *)ImGui::MemAlloc(buf_decompressed_size);
+    stb_decompress(buf_decompressed_data, (unsigned char*)compressed_ttf_data, (unsigned int)compressed_ttf_size);
 
     // Add
-    ImFont* font = AddFontFromMemoryTTF(buf_decompressed, (unsigned int)buf_decompressed_size, size_pixels, glyph_ranges, font_no);
+    ImFont* font = AddFontFromMemoryTTF(buf_decompressed_data, (int)buf_decompressed_size, size_pixels, glyph_ranges, font_no);
     return font;
 }
 
