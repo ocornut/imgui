@@ -8531,7 +8531,7 @@ bool    ImFontAtlas::Build()
     for (size_t input_i = 0; input_i < InputData.size(); input_i++)
     {
         ImFontAtlasData& data = *InputData[input_i];
-        IM_ASSERT(data.OutFont && !data.OutFont->IsLoaded());
+        IM_ASSERT(data.OutFont && (!data.OutFont->IsLoaded() || data.OutFont->ContainerAtlas == this));
         const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)data.TTFData, data.FontNo);
         IM_ASSERT(font_offset >= 0);
         if (!stbtt_InitFont(&data.FontInfo, (unsigned char*)data.TTFData, font_offset)) 
@@ -8645,6 +8645,7 @@ bool    ImFontAtlas::Build()
         int font_ascent, font_descent, font_line_gap;
         stbtt_GetFontVMetrics(&data.FontInfo, &font_ascent, &font_descent, &font_line_gap);
         data.OutFont->BaseLine = (font_ascent * font_scale);
+        data.OutFont->Glyphs.resize(0);
 
         const float uv_scale_x = 1.0f / TexWidth;
         const float uv_scale_y = 1.0f / TexHeight;
