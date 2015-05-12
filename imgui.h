@@ -42,6 +42,7 @@ typedef ImU32 ImGuiID;              // unique ID used by widgets (typically hash
 typedef int ImGuiCol;               // enum ImGuiCol_
 typedef int ImGuiStyleVar;          // enum ImGuiStyleVar_
 typedef int ImGuiKey;               // enum ImGuiKey_
+typedef int ImGuiAlign;             // enum ImGuiAlign_
 typedef int ImGuiColorEditMode;     // enum ImGuiColorEditMode_
 typedef int ImGuiMouseCursor;       // enum ImGuiMouseCursor_
 typedef int ImGuiWindowFlags;       // enum ImGuiWindowFlags_
@@ -559,6 +560,14 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_GrabMinSize          // float
 };
 
+enum ImGuiAlign_
+{
+    ImGuiAlign_Left     = 1 << 0,
+    ImGuiAlign_Center   = 1 << 1,
+    ImGuiAlign_Right    = 1 << 2,
+    ImGuiAlign_Default  = ImGuiAlign_Left,
+};
+
 // Enumeration for ColorEditMode()
 enum ImGuiColorEditMode_
 {
@@ -598,6 +607,7 @@ struct ImGuiStyle
     ImVec2      WindowPadding;              // Padding within a window
     ImVec2      WindowMinSize;              // Minimum window size
     float       WindowRounding;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
+    ImGuiAlign  WindowTitleAlign;           // Alignment for title bar text
     float       ChildWindowRounding;        // Radius of child window corners rounding. Set to 0.0f to have rectangular windows
     ImVec2      FramePadding;               // Padding within a framed rectangle (used by most widgets)
     float       FrameRounding;              // Radius of frame corners rounding. Set to 0.0f to have rectangular frame (used by most widgets).

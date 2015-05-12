@@ -498,7 +498,7 @@ static void         LogText(const ImVec2& ref_pos, const char* text, const char*
 
 static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
 static void         RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width);
-static void         RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& clip_max);
+static void         RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& clip_max, ImGuiAlign align = ImGuiAlign_Default);
 static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
 static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
 static void         RenderCheckMark(ImVec2 pos, ImU32 col);
@@ -559,6 +559,7 @@ ImGuiStyle::ImGuiStyle()
     WindowPadding           = ImVec2(8,8);      // Padding within a window
     WindowMinSize           = ImVec2(32,32);    // Minimum window size
     WindowRounding          = 9.0f;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
+    WindowTitleAlign        = ImGuiAlign_Left;  // Alignment for title bar text
     ChildWindowRounding     = 0.0f;             // Radius of child window corners rounding. Set to 0.0f to have rectangular windows
     FramePadding            = ImVec2(4,3);      // Padding within a framed rectangle (used by most widgets)
     FrameRounding           = 0.0f;             // Radius of frame corners rounding. Set to 0.0f to have rectangular frames (used by most widgets).
@@ -2458,16 +2459,13 @@ static void RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
     const int text_len = (int)(text_end - text);
     if (text_len > 0)
     {
-        // Render
         window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end, wrap_width);
-
-        // Log as text
         if (g.LogEnabled)
             LogText(pos, text, text_end);
     }
 }
 
-static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& clip_max)
+static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& clip_max, ImGuiAlign align)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -2477,15 +2475,16 @@ static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end
     const int text_len = (int)(text_display_end - text);
     if (text_len > 0)
     {
-        const ImVec2 text_size = text_size_if_known ? *text_size_if_known : ImGui::CalcTextSize(text, text_display_end, false, 0.0f);
-
         // Perform CPU side clipping for single clipped element to avoid using scissor state
+        const ImVec2 text_size = text_size_if_known ? *text_size_if_known : ImGui::CalcTextSize(text, text_display_end, false, 0.0f);
         const bool need_clipping = (pos.x + text_size.x >= clip_max.x) || (pos.y + text_size.y >= clip_max.y);
+
+        // Align
+        if (align & ImGuiAlign_Center) pos.x = ImMax(pos.x, (pos.x + clip_max.x - text_size.x) * 0.5f);
+        else if (align & ImGuiAlign_Right) pos.x = ImMax(pos.x, clip_max.x - text_size.x);
 
         // Render
         window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_display_end, 0.0f, need_clipping ? &clip_max : NULL);
-
-        // Log as text
         if (g.LogEnabled)
             LogText(pos, text, text_display_end);
     }
@@ -3547,8 +3546,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             }
 
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
-            const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_rect.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y*2 + text_size.y);
-            RenderTextClipped(text_min, name, NULL, &text_size, text_max);
+            ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? title_bar_rect.GetHeight()-3 : style.FramePadding.x), style.FramePadding.y*2 + text_size.y);
+            if (style.WindowTitleAlign & ImGuiAlign_Right) text_max.x -= style.FramePadding.x;
+            RenderTextClipped(text_min, name, NULL, &text_size, text_max, style.WindowTitleAlign);
         }
         if (flags & ImGuiWindowFlags_Popup)
         {
