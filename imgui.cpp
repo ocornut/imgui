@@ -8683,7 +8683,6 @@ bool    ImFontAtlas::Build()
     ImGui::MemFree(buf_ranges);
     buf_packedchars = NULL;
     buf_ranges = NULL;
-    ClearInputData();
 
     // Render into our custom data block
     RenderCustomTexData(1, &extra_rects);
