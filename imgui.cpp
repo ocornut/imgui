@@ -498,7 +498,7 @@ static void         LogText(const ImVec2& ref_pos, const char* text, const char*
 
 static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
 static void         RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width);
-static void         RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& clip_max, ImGuiAlign align = ImGuiAlign_Default);
+static void         RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& pos_max, const ImVec2* clip_max = NULL, ImGuiAlign align = ImGuiAlign_Default);
 static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
 static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
 static void         RenderCheckMark(ImVec2 pos, ImU32 col);
@@ -2465,29 +2465,30 @@ static void RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
     }
 }
 
-static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& clip_max, ImGuiAlign align)
+static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& pos_max, const ImVec2* clip_max, ImGuiAlign align)
 {
-    ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
-
     // Hide anything after a '##' string
     const char* text_display_end = FindTextDisplayEnd(text, text_end);
     const int text_len = (int)(text_display_end - text);
-    if (text_len > 0)
-    {
-        // Perform CPU side clipping for single clipped element to avoid using scissor state
-        const ImVec2 text_size = text_size_if_known ? *text_size_if_known : ImGui::CalcTextSize(text, text_display_end, false, 0.0f);
-        const bool need_clipping = (pos.x + text_size.x >= clip_max.x) || (pos.y + text_size.y >= clip_max.y);
+    if (text_len == 0)
+        return;
 
-        // Align
-        if (align & ImGuiAlign_Center) pos.x = ImMax(pos.x, (pos.x + clip_max.x - text_size.x) * 0.5f);
-        else if (align & ImGuiAlign_Right) pos.x = ImMax(pos.x, clip_max.x - text_size.x);
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
 
-        // Render
-        window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_display_end, 0.0f, need_clipping ? &clip_max : NULL);
-        if (g.LogEnabled)
-            LogText(pos, text, text_display_end);
-    }
+    // Perform CPU side clipping for single clipped element to avoid using scissor state
+    const ImVec2 text_size = text_size_if_known ? *text_size_if_known : ImGui::CalcTextSize(text, text_display_end, false, 0.0f);
+    if (!clip_max) clip_max = &pos_max;
+    const bool need_clipping = (pos.x + text_size.x >= clip_max->x) || (pos.y + text_size.y >= clip_max->y);
+
+    // Align
+    if (align & ImGuiAlign_Center) pos.x = ImMax(pos.x, (pos.x + pos_max.x - text_size.x) * 0.5f);
+    else if (align & ImGuiAlign_Right) pos.x = ImMax(pos.x, pos_max.x - text_size.x);
+
+    // Render
+    window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_display_end, 0.0f, need_clipping ? clip_max : NULL);
+    if (g.LogEnabled)
+        LogText(pos, text, text_display_end);
 }
 
 // Render a rectangle shaped with optional rounding and borders
@@ -3538,17 +3539,19 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             if (p_opened != NULL)
                 CloseWindowButton(p_opened);
 
-            ImVec2 text_min = window->Pos + style.FramePadding;
-            if (!(flags & ImGuiWindowFlags_NoCollapse))
-            {
-                RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
-                text_min.x += g.FontSize + style.ItemInnerSpacing.x;
-            }
-
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
-            ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? title_bar_rect.GetHeight()-3 : style.FramePadding.x), style.FramePadding.y*2 + text_size.y);
-            if (style.WindowTitleAlign & ImGuiAlign_Right) text_max.x -= style.FramePadding.x;
-            RenderTextClipped(text_min, name, NULL, &text_size, text_max, style.WindowTitleAlign);
+            if (!(flags & ImGuiWindowFlags_NoCollapse))
+                RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
+            
+            ImVec2 text_min = window->Pos + style.FramePadding;
+            ImVec2 text_max = window->Pos + ImVec2(window->Size.x - style.FramePadding.x, style.FramePadding.y*2 + text_size.y);
+            ImVec2 clip_max = ImVec2(window->Pos.x + window->Size.x - (p_opened ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x), text_max.y); // Match the size of CloseWindowButton()
+            bool pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0;
+            bool pad_right = (p_opened != NULL);
+            if (style.WindowTitleAlign & ImGuiAlign_Center) pad_right = pad_left;
+            if (pad_left) text_min.x += g.FontSize + style.ItemInnerSpacing.x;
+            if (pad_right) text_max.x -= g.FontSize + style.ItemInnerSpacing.x;
+            RenderTextClipped(text_min, name, NULL, &text_size, text_max, &clip_max, style.WindowTitleAlign);
         }
         if (flags & ImGuiWindowFlags_Popup)
         {
