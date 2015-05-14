@@ -12,8 +12,8 @@
  - PROGRAMMER GUIDE (read me!)
  - API BREAKING CHANGES (read me when you update!)
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
-   - Can I have multiple widgets with the same label? (Yes)
    - How do I update to a newer version of ImGui?
+   - Can I have multiple widgets with the same label? (Yes)
    - Why is my text output blurry?
    - How can I load a different font than the default? 
    - How can I load multiple fonts?
@@ -186,6 +186,16 @@
  FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
  ======================================
 
+ Q: How do I update to a newer version of ImGui?
+ A: Overwrite the following files:
+      imgui.cpp
+      imgui.h
+      stb_rect_pack.h
+      stb_textedit.h
+      stb_truetype.h
+    Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes. If you have a problem with a function, search for its name
+    in the code, there will likely be a comment about it. Please report any issue to the GitHub page!
+
  Q: Can I have multiple widgets with the same label? 
  A: Yes. A primer on the use of labels/IDs in ImGui..
  
@@ -270,15 +280,6 @@
       e.g. when displaying a single object that may change over time (1-1 relationship), using a static string as ID will preserve your node open/closed state when the targeted object change.
       e.g. when displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state differently. experiment and see what makes more sense!
 
- Q: How do I update to a newer version of ImGui?
- A: Overwrite the following files:
-     imgui.cpp
-     imgui.h
-     stb_rect_pack.h
-     stb_textedit.h
-     stb_truetype.h
-    Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes.
-
  Q: Why is my text output blurry?
  A: In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 
@@ -329,6 +330,7 @@
  - main: considering adding EndFrame()/Init(). some constructs are awkward in the implementation because of the lack of them.
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
+ - input text: add ImGuiInputTextFlags_EnterToApply? (off github issue #218)
 !- input number: large int not reliably supported because of int<>float conversions.
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
