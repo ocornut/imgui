@@ -3021,8 +3021,11 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
     if ((flags & ImGuiWindowFlags_Menu) && (window->Flags & ImGuiWindowFlags_Popup))
         flags |= ImGuiWindowFlags_ChildWindow;
 
-    char name[20];
-    ImFormatString(name, 20, "##Popup%02d", g.CurrentPopupStack.size());    // Recycle windows based on depth
+    char name[32];
+	if (flags & ImGuiWindowFlags_Menu)
+		ImFormatString(name, 20, "##menu_%d", g.CurrentPopupStack.size());    // Recycle windows based on depth
+	else
+		ImFormatString(name, 20, "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
     float alpha = 1.0f;
     bool opened = ImGui::Begin(name, NULL, ImVec2(0.0f, 0.0f), alpha, flags);
     IM_ASSERT(opened);
@@ -3087,7 +3090,7 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
 bool ImGui::BeginChild(ImGuiID id, const ImVec2& size, bool border, ImGuiWindowFlags extra_flags)
 {
     char str_id[32];
-    ImFormatString(str_id, IM_ARRAYSIZE(str_id), "child_%x", id);
+    ImFormatString(str_id, IM_ARRAYSIZE(str_id), "child_%08x", id);
     bool ret = ImGui::BeginChild(str_id, size, border, extra_flags);
     return ret;
 }
