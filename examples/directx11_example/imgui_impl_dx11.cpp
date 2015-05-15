@@ -241,6 +241,10 @@ static void ImGui_ImplDX11_CreateFontsTexture()
         samplerDesc.MaxLOD = 0.f;
         g_pd3dDevice->CreateSamplerState(&samplerDesc, &g_pFontSampler);
     }
+
+    // Cleanup (don't clear the input data if you want to append new fonts later)
+    io.Fonts->ClearInputData();
+    io.Fonts->ClearTexData();
 }
 
 bool    ImGui_ImplDX11_CreateDeviceObjects()

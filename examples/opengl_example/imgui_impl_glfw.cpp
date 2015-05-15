@@ -156,6 +156,10 @@ bool ImGui_ImplGlfw_CreateDeviceObjects()
     // Store our identifier
     io.Fonts->TexID = (void *)(intptr_t)g_FontTexture;
 
+    // Cleanup (don't clear the input data if you want to append new fonts later)
+    io.Fonts->ClearInputData();
+    io.Fonts->ClearTexData();
+
     return true;
 }
 
