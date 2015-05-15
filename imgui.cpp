@@ -1149,6 +1149,14 @@ struct ImGuiMouseCursorData
     ImVec2              TexUvMax[2];
 };
 
+struct ImGuiPopupRef
+{
+    ImGuiID             PopupID;    // Set on OpenPopup()
+    ImGuiWindow*        Window;     // Resolved on BeginPopup() - may stay unresolved if user never calls OpenPopup()
+
+    ImGuiPopupRef(ImGuiID id) { PopupID = id; Window = NULL; }
+};
+
 // Main state for ImGui
 struct ImGuiState
 {
@@ -1183,8 +1191,8 @@ struct ImGuiState
     ImVector<ImGuiColMod>   ColorModifiers;
     ImVector<ImGuiStyleMod> StyleModifiers;
     ImVector<ImFont*>       FontStack;
-    ImVector<ImGuiID>       OpenedPopupStack;                   // Which popups are open
-    ImVector<ImGuiID>       CurrentPopupStack;                  // Which level of BeginPopup() we are in (reset every frame)
+    ImVector<ImGuiPopupRef> OpenedPopupStack;                   // Which popups are open
+    ImVector<ImGuiPopupRef> CurrentPopupStack;                  // Which level of BeginPopup() we are in (reset every frame)
 
     ImVec2                  SetNextWindowPosVal;
     ImGuiSetCond            SetNextWindowPosCond;
@@ -2132,12 +2140,16 @@ static void CloseInactivePopups()
         return;
     }
 
-    // When popups are stacked, clicking on a lower level popups puts focus back to it and close its child
-    IM_ASSERT(g.FocusedWindow->PopupID != 0);
-    for (size_t n = 0; n < g.OpenedPopupStack.size(); n++)
-        if (g.OpenedPopupStack[n] == g.FocusedWindow->PopupID)
+    // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it
+    IM_ASSERT(g.FocusedWindow->RootWindow->PopupID != 0);
+    for (int n = 0; n < (int)g.OpenedPopupStack.size()-1; n++)
+        if (g.OpenedPopupStack[n].PopupID == g.FocusedWindow->RootWindow->PopupID)
         {
-            g.OpenedPopupStack.resize(n+1);
+            // Don't close our own Child Popup windows
+            while (++n < (int)g.OpenedPopupStack.size())
+                if (!g.OpenedPopupStack[n].Window || !(g.OpenedPopupStack[n].Window->Flags & ImGuiWindowFlags_ChildWindow))
+                    break;
+            g.OpenedPopupStack.resize(n);
             return;
         }
 }
@@ -2975,9 +2987,9 @@ void ImGui::OpenPopup(const char* str_id)
 
     // One open popup per level of the popup hierarchy
     if (g.OpenedPopupStack.size() == g.CurrentPopupStack.size())
-        g.OpenedPopupStack.push_back(id);
+        g.OpenedPopupStack.push_back(ImGuiPopupRef(id));
     else if (g.OpenedPopupStack.size() == g.CurrentPopupStack.size() + 1)
-        g.OpenedPopupStack.back() = id;
+        g.OpenedPopupStack.back() = ImGuiPopupRef(id);
     else
         IM_ASSERT(0); // Invalid state
 }
@@ -2985,9 +2997,9 @@ void ImGui::OpenPopup(const char* str_id)
 void ImGui::CloseCurrentPopup()
 {
     ImGuiState& g = *GImGui;
-    if (g.CurrentPopupStack.empty() || g.OpenedPopupStack.empty() || g.CurrentPopupStack.back() != g.OpenedPopupStack.back())
+    if (g.CurrentPopupStack.empty() || g.OpenedPopupStack.empty() || g.CurrentPopupStack.back().PopupID != g.OpenedPopupStack.back().PopupID)
         return;
-    if (g.Windows.back()->PopupID == g.OpenedPopupStack.back() && g.Windows.size() >= 2)
+    if (g.Windows.back()->PopupID == g.OpenedPopupStack.back().PopupID && g.Windows.size() >= 2)
         FocusWindow(g.Windows[g.Windows.size()-2]);
     g.OpenedPopupStack.pop_back();
 }
@@ -3003,7 +3015,7 @@ static void CloseAllPopups()
 static bool IsPopupOpen(ImGuiID id)
 {
     ImGuiState& g = *GImGui;
-    const bool opened = g.OpenedPopupStack.size() > g.CurrentPopupStack.size() && g.OpenedPopupStack[g.CurrentPopupStack.size()] == id;
+    const bool opened = g.OpenedPopupStack.size() > g.CurrentPopupStack.size() && g.OpenedPopupStack[g.CurrentPopupStack.size()].PopupID == id;
     return opened;
 }
 
@@ -3291,10 +3303,11 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     bool window_was_visible = (window->LastFrameDrawn == current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
     if (flags & ImGuiWindowFlags_Popup)
     {
-        const ImGuiID popup_id = g.OpenedPopupStack[g.CurrentPopupStack.size()];
-        g.CurrentPopupStack.push_back(popup_id);
-        window_was_visible &= (window->PopupID == popup_id);
-        window->PopupID = popup_id;
+        ImGuiPopupRef& popup_ref = g.OpenedPopupStack[g.CurrentPopupStack.size()];
+        window_was_visible &= (window->PopupID == popup_ref.PopupID);
+        popup_ref.Window = window;
+        g.CurrentPopupStack.push_back(popup_ref);
+        window->PopupID = popup_ref.PopupID;
     }
 
     // Process SetNextWindow***() calls
@@ -10237,7 +10250,7 @@ void ImGui::ShowTestWindow(bool* opened)
                     ImGui::MenuItem(names[i], "", &toggles[i]);
                 if (ImGui::BeginMenu("Sub-menu"))
                 {
-                    ImGui::MenuItem("Hello");
+                    ImGui::MenuItem("Click me");
                     ImGui::EndMenu();
                 }
 
@@ -10284,6 +10297,10 @@ void ImGui::ShowTestWindow(bool* opened)
                     static bool enabled = true;
                     static float f = 0.5f;
                     ImGui::MenuItem("Enabled", "", &enabled);
+                    ImGui::BeginChild("child", ImVec2(0, 60), true);
+                    for (int i = 0; i < 10; i++)
+                        ImGui::Text("Scrolling Text %d", i);
+                    ImGui::EndChild();
                     ImGui::SliderFloat("Value", &f, 0.0f, 1.0f);
                     ImGui::EndMenu();
                 }
