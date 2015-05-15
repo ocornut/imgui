@@ -2981,11 +2981,14 @@ void ImGui::OpenPopup(const char* str_id)
     ImGuiWindow* window = GetCurrentWindow();
     const ImGuiID id = window->GetID(str_id);
 
-    // One open popup per level of the popup hierarchy
+    // One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
     if (g.OpenedPopupStack.size() == g.CurrentPopupStack.size())
         g.OpenedPopupStack.push_back(ImGuiPopupRef(id));
     else if (g.OpenedPopupStack.size() == g.CurrentPopupStack.size() + 1)
-        g.OpenedPopupStack.back() = ImGuiPopupRef(id);
+    {
+        if (g.OpenedPopupStack.back().PopupID != id)
+            g.OpenedPopupStack.back() = ImGuiPopupRef(id);
+    }
     else
         IM_ASSERT(0); // Invalid state
 }
@@ -2995,7 +2998,7 @@ void ImGui::CloseCurrentPopup()
     ImGuiState& g = *GImGui;
     if (g.CurrentPopupStack.empty() || g.OpenedPopupStack.empty() || g.CurrentPopupStack.back().PopupID != g.OpenedPopupStack.back().PopupID)
         return;
-    if (g.Windows.back()->PopupID == g.OpenedPopupStack.back().PopupID && g.Windows.size() >= 2)
+    if (g.CurrentWindow->PopupID == g.OpenedPopupStack.back().PopupID && g.Windows.size() >= 2)
         FocusWindow(g.Windows[g.Windows.size()-2]);
     g.OpenedPopupStack.pop_back();
 }
@@ -3301,6 +3304,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     {
         ImGuiPopupRef& popup_ref = g.OpenedPopupStack[g.CurrentPopupStack.size()];
         window_was_visible &= (window->PopupID == popup_ref.PopupID);
+        window_was_visible &= (window == popup_ref.Window);
         popup_ref.Window = window;
         g.CurrentPopupStack.push_back(popup_ref);
         window->PopupID = popup_ref.PopupID;
