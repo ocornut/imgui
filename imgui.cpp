@@ -384,6 +384,7 @@
  - input: rework IO to be able to pass actual events to fix temporal aliasing issues.
  - input: support track pad style scrolling & slider edit.
  - portability: big-endian test/support (github issue #81)
+ - memory: add a way to discard allocs of unused/transient windows. with the current architecture new windows (including popup, opened combos, listbox) perform at least 3 allocs.
  - misc: mark printf compiler attributes on relevant functions
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
@@ -1135,9 +1136,6 @@ struct ImGuiIniData
     ImVec2  Pos;
     ImVec2  Size;
     bool    Collapsed;
-
-    ImGuiIniData() { memset(this, 0, sizeof(*this)); }
-    ~ImGuiIniData() { if (Name) { ImGui::MemFree(Name); Name = NULL; } }
 };
 
 struct ImGuiMouseCursorData
@@ -1186,7 +1184,7 @@ struct ImGuiState
     bool                    ActiveIdIsFocusedOnly;              // Set only by active widget. Denote focus but no active interaction.
     ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window. Only valid if ActiveID is the "#MOVE" identifier of a window.
     float                   SettingsDirtyTimer;
-    ImVector<ImGuiIniData*> Settings;
+    ImVector<ImGuiIniData>  Settings;
     int                     DisableHideTextAfterDoubleHash;
     ImVector<ImGuiColMod>   ColorModifiers;
     ImVector<ImGuiStyleMod> StyleModifiers;
@@ -1793,7 +1791,7 @@ void* ImGui::MemAlloc(size_t sz)
 
 void ImGui::MemFree(void* ptr)
 {
-    GImGui->IO.MetricsAllocs--;
+    if (ptr) GImGui->IO.MetricsAllocs--;
     return GImGui->IO.MemFreeFn(ptr);
 }
     
@@ -1803,7 +1801,7 @@ static ImGuiIniData* FindWindowSettings(const char* name)
     ImGuiID id = ImHash(name, 0);
     for (size_t i = 0; i != g.Settings.size(); i++)
     {
-        ImGuiIniData* ini = g.Settings[i];
+        ImGuiIniData* ini = &g.Settings[i];
         if (ini->ID == id)
             return ini;
     }
@@ -1812,14 +1810,13 @@ static ImGuiIniData* FindWindowSettings(const char* name)
 
 static ImGuiIniData* AddWindowSettings(const char* name)
 {
-    ImGuiIniData* ini = (ImGuiIniData*)ImGui::MemAlloc(sizeof(ImGuiIniData));
-    new(ini) ImGuiIniData();
+    GImGui->Settings.resize(GImGui->Settings.size() + 1);
+    ImGuiIniData* ini = &GImGui->Settings.back();
     ini->Name = ImStrdup(name);
     ini->ID = ImHash(name, 0);
     ini->Collapsed = false;
     ini->Pos = ImVec2(FLT_MAX,FLT_MAX);
     ini->Size = ImVec2(0,0);
-    GImGui->Settings.push_back(ini);
     return ini;
 }
 
@@ -1897,7 +1894,7 @@ static void SaveSettings()
         return;
     for (size_t i = 0; i != g.Settings.size(); i++)
     {
-        const ImGuiIniData* settings = g.Settings[i];
+        const ImGuiIniData* settings = &g.Settings[i];
         if (settings->Pos.x == FLT_MAX)
             continue;
         const char* name = settings->Name;
@@ -2177,10 +2174,7 @@ void ImGui::Shutdown()
     g.HoveredWindow = NULL;
     g.HoveredRootWindow = NULL;
     for (size_t i = 0; i < g.Settings.size(); i++)
-    {
-        g.Settings[i]->~ImGuiIniData();
-        ImGui::MemFree(g.Settings[i]);
-    }
+        ImGui::MemFree(g.Settings[i].Name);
     g.Settings.clear();
     g.ColorModifiers.clear();
     g.StyleModifiers.clear();
