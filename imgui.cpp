@@ -8841,14 +8841,13 @@ bool    ImFontAtlas::Build()
             stbtt_pack_range& range = data.Ranges[i];
             for (int char_idx = 0; char_idx < range.num_chars_in_range; char_idx += 1)
             {
-                const int codepoint = range.first_unicode_char_in_range + char_idx;
                 const stbtt_packedchar& pc = range.chardata_for_range[char_idx];
                 if (!pc.x0 && !pc.x1 && !pc.y0 && !pc.y1)
                     continue;
 
                 data.OutFont->Glyphs.resize(data.OutFont->Glyphs.size() + 1);
                 ImFont::Glyph& glyph = data.OutFont->Glyphs.back();
-                glyph.Codepoint = (ImWchar)codepoint;
+                glyph.Codepoint = (ImWchar)(range.first_unicode_char_in_range + char_idx);
                 glyph.Width = (signed short)pc.x1 - pc.x0 + 1;
                 glyph.Height = (signed short)pc.y1 - pc.y0 + 1;
                 glyph.XOffset = (signed short)(pc.xoff);
@@ -11091,6 +11090,12 @@ void ImGui::ShowMetricsWindow(bool* opened)
         {
             for (int i = 0; i < (int)g.RenderDrawLists[0].size(); i++)
                 Funcs::NodeDrawList(g.RenderDrawLists[0][i], "DrawList");
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Popups", "Opened Popups (%d)", (int)g.OpenedPopupStack.size()))
+        {
+            for (int i = 0; i < (int)g.OpenedPopupStack.size(); i++)
+                ImGui::BulletText("PopupID: %08x, Window: '%s'", g.OpenedPopupStack[i].PopupID, g.OpenedPopupStack[i].Window ? g.OpenedPopupStack[i].Window->Name : "NULL");
             ImGui::TreePop();
         }
         g.DisableHideTextAfterDoubleHash--;
