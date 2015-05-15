@@ -119,7 +119,9 @@ public:
     inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size-1]; }
     inline void                 swap(ImVector<T>& rhs)          { const size_t rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; const size_t rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
 
-    inline void                 resize(size_t new_size)         { if (new_size > Capacity) reserve(new_size); Size = new_size; }
+    inline size_t               _grow_capacity(size_t new_size) { size_t new_capacity = Capacity ? (Capacity + Capacity/2) : 8; return new_capacity > new_size ? new_capacity : new_size; }
+
+    inline void                 resize(size_t new_size)         { if (new_size > Capacity) reserve(_grow_capacity(new_size)); Size = new_size; }
     inline void                 reserve(size_t new_capacity)    
     { 
         if (new_capacity <= Capacity) return;
@@ -130,7 +132,7 @@ public:
         Capacity = new_capacity; 
     }
 
-    inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); Data[Size++] = v; }
+    inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(_grow_capacity(Size+1)); Data[Size++] = v; }
     inline void                 pop_back()                      { IM_ASSERT(Size > 0); Size--; }
 
     inline iterator             erase(const_iterator it)        { IM_ASSERT(it >= begin() && it < end()); const ptrdiff_t off = it - begin(); memmove(Data + off, Data + off + 1, (Size - (size_t)off - 1) * sizeof(value_type)); Size--; return Data + off; }
