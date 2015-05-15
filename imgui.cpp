@@ -11242,13 +11242,13 @@ struct ExampleAppConsole
     {
         ClearLog();
         for (size_t i = 0; i < Items.size(); i++) 
-            ImGui::MemFree(History[i]); 
+            free(History[i]); 
     }
 
     void    ClearLog()
     {
         for (size_t i = 0; i < Items.size(); i++) 
-            ImGui::MemFree(Items[i]); 
+            free(Items[i]); 
         Items.clear();
         ScrollToBottom = true;
     }
@@ -11260,7 +11260,7 @@ struct ExampleAppConsole
         va_start(args, fmt);
         ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
         va_end(args);
-        Items.push_back(ImStrdup(buf));
+        Items.push_back(strdup(buf));
         ScrollToBottom = true;
     }
 
@@ -11343,11 +11343,11 @@ struct ExampleAppConsole
         for (int i = (int)History.size()-1; i >= 0; i--)
             if (ImStricmp(History[i], command_line) == 0)
             {
-                ImGui::MemFree(History[i]);
+                free(History[i]);
                 History.erase(History.begin() + i);
                 break;
             }
-        History.push_back(ImStrdup(command_line));
+        History.push_back(strdup(command_line));
 
         // Process command
         if (ImStricmp(command_line, "CLEAR") == 0)
