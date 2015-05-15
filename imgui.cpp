@@ -7210,12 +7210,13 @@ bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     
-    const float w = ImMax(label_size.x, window->Pos.x + ImGui::GetContentRegionMax().x - style.WindowPadding.x - window->DC.CursorPos.x);
+    const ImVec2 window_padding = window->WindowPadding();
+    const float w = ImMax(label_size.x, window->Pos.x + ImGui::GetContentRegionMax().x - window_padding.x - window->DC.CursorPos.x);
     const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : w, size_arg.y != 0.0f ? size_arg.y : label_size.y);
     ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
     ItemSize(bb);
     if (size_arg.x == 0.0f)
-        bb.Max.x += style.WindowPadding.x;
+        bb.Max.x += window_padding.x;
 
     // Selectables are meant to be tightly packed together. So for both rendering and collision we extend to compensate for spacing.
     ImRect bb_with_spacing = bb;
