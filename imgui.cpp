@@ -3425,15 +3425,16 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
         // Calculate auto-fit size
         ImVec2 size_auto_fit;
+        ImVec2 window_padding = window->WindowPadding();
         if ((flags & ImGuiWindowFlags_Tooltip) != 0)
         {
             // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
-            size_auto_fit = window->SizeContents + style.WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
+            size_auto_fit = window->SizeContents + window_padding - ImVec2(0.0f, style.ItemSpacing.y);
         }
         else
         {
-            size_auto_fit = ImClamp(window->SizeContents + style.WindowPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - style.WindowPadding));
-            if (size_auto_fit.y < window->SizeContents.y + style.WindowPadding.y)
+            size_auto_fit = ImClamp(window->SizeContents + window_padding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - window_padding));
+            if (size_auto_fit.y < window->SizeContents.y && !(flags & ImGuiWindowFlags_NoScrollbar))
                 size_auto_fit.x += style.ScrollbarWidth;
             size_auto_fit.y -= style.ItemSpacing.y;
         }
