@@ -1149,10 +1149,11 @@ struct ImGuiMouseCursorData
 
 struct ImGuiPopupRef
 {
-    ImGuiID             PopupID;    // Set on OpenPopup()
-    ImGuiWindow*        Window;     // Resolved on BeginPopup() - may stay unresolved if user never calls OpenPopup()
+    ImGuiID             PopupID;        // Set on OpenPopup()
+    ImGuiWindow*        ParentWindow;   // Set on OpenPopup()
+    ImGuiWindow*        Window;         // Resolved on BeginPopup() - may stay unresolved if user never calls OpenPopup()
 
-    ImGuiPopupRef(ImGuiID id) { PopupID = id; Window = NULL; }
+    ImGuiPopupRef(ImGuiID id, ImGuiWindow* parent_window) { PopupID = id; ParentWindow = parent_window; Window = NULL; }
 };
 
 // Main state for ImGui
@@ -2136,24 +2137,36 @@ static void CloseInactivePopups()
         return;
 
     // User has clicked outside of a popup
-    if (!g.FocusedWindow || !(g.FocusedWindow->RootWindow->Flags & ImGuiWindowFlags_Popup))
+    if (!g.FocusedWindow)
     {
         g.OpenedPopupStack.resize(0);
         return;
     }
 
     // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it
-    IM_ASSERT(g.FocusedWindow->RootWindow->PopupID != 0);
-    for (int n = 0; n < (int)g.OpenedPopupStack.size()-1; n++)
-        if (g.OpenedPopupStack[n].PopupID == g.FocusedWindow->RootWindow->PopupID)
+    // Don't close our own child popup windows
+    int n;
+    for (n = 0; n < (int)g.OpenedPopupStack.size(); n++)
+    {
+        ImGuiPopupRef& popup = g.OpenedPopupStack[n];
+        if (!popup.Window)
+            continue;
+        IM_ASSERT((popup.Window->Flags & ImGuiWindowFlags_Popup) != 0);
+        if (popup.Window->Flags & ImGuiWindowFlags_ChildWindow)
         {
-            // Don't close our own Child Popup windows
-            while (++n < (int)g.OpenedPopupStack.size())
-                if (!g.OpenedPopupStack[n].Window || !(g.OpenedPopupStack[n].Window->Flags & ImGuiWindowFlags_ChildWindow))
-                    break;
-            g.OpenedPopupStack.resize(n);
-            return;
+            if (g.FocusedWindow->RootWindow != popup.Window->RootWindow)
+                break;
         }
+        else
+        {
+            bool has_focus = false;
+            for (int m = n; m < (int)g.OpenedPopupStack.size() && !has_focus; m++)
+                has_focus = (g.OpenedPopupStack[m].Window && g.OpenedPopupStack[m].Window->RootWindow == g.FocusedWindow->RootWindow);
+            if (!has_focus)
+                break;
+        }
+    }
+    g.OpenedPopupStack.resize(n);
 }
 
 // NB: behavior of ImGui after Shutdown() is not tested/guaranteed at the moment. This function is merely here to free heap allocations.
@@ -2985,15 +2998,9 @@ void ImGui::OpenPopup(const char* str_id)
     const ImGuiID id = window->GetID(str_id);
 
     // One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
-    if (g.OpenedPopupStack.size() == g.CurrentPopupStack.size())
-        g.OpenedPopupStack.push_back(ImGuiPopupRef(id));
-    else if (g.OpenedPopupStack.size() == g.CurrentPopupStack.size() + 1)
-    {
-        if (g.OpenedPopupStack.back().PopupID != id)
-            g.OpenedPopupStack.back() = ImGuiPopupRef(id);
-    }
-    else
-        IM_ASSERT(0); // Invalid state
+    g.OpenedPopupStack.resize(g.CurrentPopupStack.size() + 1);
+    if (g.OpenedPopupStack.back().PopupID != id)
+        g.OpenedPopupStack.back() = ImGuiPopupRef(id, window);
 }
 
 void ImGui::CloseCurrentPopup()
@@ -3032,7 +3039,7 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGuiWindowFlags flags = ImGuiWindowFlags_Popup|ImGuiWindowFlags_ShowBorders|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
     flags |= extra_flags;
-    if ((flags & ImGuiWindowFlags_Menu) && (window->Flags & ImGuiWindowFlags_Popup))
+    if ((flags & ImGuiWindowFlags_Menu))
         flags |= ImGuiWindowFlags_ChildWindow;
 
     char name[32];
