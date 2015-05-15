@@ -1787,11 +1787,13 @@ static void AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiW
 
 void* ImGui::MemAlloc(size_t sz)
 {
+    GImGui->IO.MetricsAllocs++;
     return GImGui->IO.MemAllocFn(sz);
 }
 
 void ImGui::MemFree(void* ptr)
 {
+    GImGui->IO.MetricsAllocs--;
     return GImGui->IO.MemFreeFn(ptr);
 }
     
@@ -11039,6 +11041,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
         ImGui::Text("ImGui %s", ImGui::GetVersion());
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::Text("%d vertices", ImGui::GetIO().MetricsRenderVertices);
+        ImGui::Text("%d active allocations", ImGui::GetIO().MetricsAllocs);
         ImGui::Separator();
 
         struct Funcs
