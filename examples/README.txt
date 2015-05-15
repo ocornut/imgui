@@ -10,6 +10,9 @@ opengl_example/
     This is simple and should work for all OpenGL enabled applications.
     Prefer following this example since it is the shortest one!
 
+opengl_sdl_example/
+    OpenGL example, using SDL + fixed pipeline.
+	
 opengl3_example/
     OpenGL exemple, using GLFW/GL3W + programmable pipeline.
     This uses more modern calls and custom shaders.
