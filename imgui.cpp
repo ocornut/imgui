@@ -994,41 +994,44 @@ struct ImGuiGroupData
     float  BackupLogLinePosY;
 };
 
-// Simple column measurement currently used for menu items
+// Simple column measurement currently used for menu items. This is very short-sighted for now.
 struct ImGuiSimpleColumns
 {
     int    Count;
-    float  Width;
+    float  Spacing;
+    float  Width, NextWidth;
     float  Pos[8], NextWidths[8];
 
-    ImGuiSimpleColumns() { Count = 0; Width = 0.0f; memset(Pos, 0, sizeof(Pos)); memset(NextWidths, 0, sizeof(NextWidths)); }
+    ImGuiSimpleColumns() { Count = 0; Spacing = 0.0f; Width = 0.0f; NextWidth = 0.0f; memset(Pos, 0, sizeof(Pos)); memset(NextWidths, 0, sizeof(NextWidths)); }
     void Update(int count, float spacing, bool clear)
     {
+        IM_ASSERT(Count <= IM_ARRAYSIZE(Pos));
         Count = count;
-        Width = 0.0f;
+        Width = NextWidth = 0.0f;
+        Spacing = spacing;
         if (clear) memset(NextWidths, 0, sizeof(NextWidths));
         for (int i = 0; i < Count; i++)
         {
             if (i > 0 && NextWidths[i] > 0.0f)
-                Width += spacing;
+                Width += Spacing;
             Pos[i] = (float)(int)Width;
             Width += NextWidths[i];
             NextWidths[i] = 0.0f;
         }
     }
-    void Extend(float w0, float w1, float w2) // not using va_arg because they promote float to double
+    float DeclColumns(float w0, float w1, float w2) // not using va_arg because they promote float to double
     {
+        NextWidth = 0.0f;
         NextWidths[0] = ImMax(NextWidths[0], w0);
         NextWidths[1] = ImMax(NextWidths[1], w1);
         NextWidths[2] = ImMax(NextWidths[2], w2);
+        for (int i = 0; i < 3; i++)
+            NextWidth += NextWidths[i] + ((i > 0 && NextWidths[i] > 0.0f) ? Spacing : 0.0f);
+        return ImMax(Width, NextWidth);
     }
-    void FillExtraSpace(float avail_w, int column_no)
+    float CalcExtraSpace(float avail_w)
     {
-        if (Width >= avail_w) return;
-        float extra_w = avail_w - Width;
-        Width = avail_w;
-        for (int i = column_no+1; i < Count; i++)
-            Pos[i] += extra_w;
+        return ImMax(0.0f, avail_w - Width);
     }
 };
 
@@ -7204,9 +7207,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     return value_changed;
 }
 
-// Tip: pass an empty label (e.g. "##dummy") then you can use the space to draw other text or image.
-// But you need to make sure the ID is unique, e.g. enclose calls in PushID/PopID.
-bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
+static bool SelectableEx(const char* label, bool selected, const ImVec2& size_arg, const ImVec2 size_draw_arg)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -7215,20 +7216,22 @@ bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
 
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
     
     const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : label_size.x, size_arg.y != 0.0f ? size_arg.y : label_size.y);
     const ImVec2 pos = window->DC.CursorPos;
     ImRect bb(pos, pos + size);
     ItemSize(bb);
 
-    // Selectables are meant to be tightly packed together. So for both rendering and collision we extend to compensate for spacing.
+    // Fill horizontal space.
     const ImVec2 window_padding = window->WindowPadding();
-    const float w_full = ImMax(label_size.x, window->Pos.x + ImGui::GetContentRegionMax().x - window_padding.x - window->DC.CursorPos.x);
-    const ImVec2 size_full(size_arg.x != 0.0f ? size_arg.x : w_full, size_arg.y != 0.0f ? size_arg.y : label_size.y);
-    ImRect bb_with_spacing(pos, pos + size_full);
-    if (size_arg.x == 0.0f)
+    const float w_draw = ImMax(label_size.x, window->Pos.x + ImGui::GetContentRegionMax().x - window_padding.x - window->DC.CursorPos.x);
+    const ImVec2 size_draw(size_draw_arg.x != 0.0f ? size_draw_arg.x : w_draw, size_draw_arg.y != 0.0f ? size_draw_arg.y : size.y);
+    ImRect bb_with_spacing(pos, pos + size_draw);
+    if (size_draw_arg.x == 0.0f)
         bb_with_spacing.Max.x += window_padding.x;
+
+    // Selectables are tightly packed together, we extend the box to cover spacing between selectable.
     const float spacing_L = (float)(int)(style.ItemSpacing.x * 0.5f);
     const float spacing_U = (float)(int)(style.ItemSpacing.y * 0.5f);
     const float spacing_R = style.ItemSpacing.x - spacing_L;
@@ -7261,9 +7264,16 @@ bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
     return pressed;
 }
 
+// Tip: pass an empty label (e.g. "##dummy") then you can use the space to draw other text or image.
+// But you need to make sure the ID is unique, e.g. enclose calls in PushID/PopID.
+bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
+{
+    return SelectableEx(label, selected, size_arg, size_arg);
+}
+
 bool ImGui::Selectable(const char* label, bool* p_selected, const ImVec2& size_arg)
 {
-    if (ImGui::Selectable(label, *p_selected, size_arg))
+    if (SelectableEx(label, *p_selected, size_arg, size_arg))
     {
         *p_selected = !*p_selected;
         return true;
@@ -7376,21 +7386,20 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected)
     ImVec2 pos = ImGui::GetCursorScreenPos();
     ImVec2 label_size = CalcTextSize(label, NULL, true);
     ImVec2 shortcut_size = shortcut ? CalcTextSize(shortcut, NULL) : ImVec2(0.0f, 0.0f);
-    window->MenuColumns.Extend(label_size.x, shortcut_size.x, g.FontSize * 1.10f); // Feedback for next frame
-    window->MenuColumns.FillExtraSpace(window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x, 0);
+    float w = window->MenuColumns.DeclColumns(label_size.x, shortcut_size.x, (float)(int)(g.FontSize * 1.20f)); // Feedback for next frame
+    float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
 
-    float w = window->MenuColumns.Width;
-    bool pressed = ImGui::Selectable(label, false, ImVec2(w, 0.0f));
+    bool pressed = SelectableEx(label, false, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f));
 
     if (shortcut_size.x > 0.0f)
     {
         ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
-        RenderText(pos + ImVec2(window->MenuColumns.Pos[1], 0.0f), shortcut, NULL, false);
+        RenderText(pos + ImVec2(window->MenuColumns.Pos[1] + extra_w, 0.0f), shortcut, NULL, false);
         ImGui::PopStyleColor();
     }
 
     if (selected)
-        RenderCheckMark(pos + ImVec2(window->MenuColumns.Pos[2] + g.FontSize * 0.10f, 0.0f), window->Color(ImGuiCol_Text));
+        RenderCheckMark(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), window->Color(ImGuiCol_Text));
 
     return pressed;
 }
@@ -7415,16 +7424,15 @@ bool ImGui::BeginMenu(const char* label)
         return false;
     
     const ImGuiID id = window->GetID(label);
-    bool opened = IsPopupOpen(id);
 
     ImVec2 pos = ImGui::GetCursorScreenPos();
     ImVec2 label_size = CalcTextSize(label, NULL, true);
-    window->MenuColumns.Extend(label_size.x, 0.0f, g.FontSize * 1.10f); // Feedback to next frame
-    window->MenuColumns.FillExtraSpace(window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x, 0);
-
-    float w = window->MenuColumns.Width;
-    ImGui::Selectable(label, opened, ImVec2(w, 0.0f));
-    RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + g.FontSize * 0.20f, 0.0f), false);
+    float w = window->MenuColumns.DeclColumns(label_size.x, 0.0f, (float)(int)(g.FontSize * 1.20f)); // Feedback to next frame
+    float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
+ 
+    bool opened = IsPopupOpen(id);
+    SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f));
+    RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), false);
 
     bool hovered = ImGui::IsItemHovered();
     if (!opened && hovered)
@@ -10333,7 +10341,6 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::MenuItem("Quit", "Alt+F4");
                 ImGui::EndPopup();
             }
-
             ImGui::TreePop();
         }
 
