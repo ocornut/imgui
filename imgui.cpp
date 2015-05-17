@@ -3062,10 +3062,12 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
 		ImFormatString(name, 20, "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
     float alpha = 1.0f;
     bool opened = ImGui::Begin(name, NULL, ImVec2(0.0f, 0.0f), alpha, flags);
-    IM_ASSERT(opened);
 
     if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
         GetCurrentWindow()->Flags &= ~ImGuiWindowFlags_ShowBorders;
+
+    if (!opened) // opened can be 'false' when the popup is completely clipped (e.g. zero size display)
+        ImGui::EndPopup();
 
     return opened;
 }
@@ -7518,8 +7520,7 @@ bool ImGui::BeginMenu(const char* label)
     if (opened)
     {
         ImGui::SetNextWindowPos(popup_pos, ImGuiSetCond_Always);
-        bool popup_opened = BeginPopupEx(label, ImGuiWindowFlags_Menu);
-        IM_ASSERT(opened == popup_opened);
+        opened = BeginPopupEx(label, ImGuiWindowFlags_Menu); // opened can be 'false' when the popup is completely clipped (e.g. zero size display)
     }
 
     return opened;
