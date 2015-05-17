@@ -7682,7 +7682,7 @@ void ImGui::Spacing()
     ItemSize(ImVec2(0,0));
 }
 
-// Advance cursor given item size.
+// Advance cursor given item size for layout.
 static void ItemSize(ImVec2 size, float text_offset_y)
 {
     ImGuiState& g = *GImGui;
@@ -7730,6 +7730,9 @@ bool ImGui::IsRectClipped(const ImVec2& size)
     return IsClippedEx(ImRect(window->DC.CursorPos, window->DC.CursorPos + size), NULL, true);
 }
 
+// Declare item bounding box for clipping and interaction.
+// Note that the size can be different than the one provided to ItemSize(). Typically, widgets that spread over available surface
+// declares their minimum size requirement to ItemSize() and then use a larger region for drawing/interaction, which is passed to ItemAdd().
 static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
 {
     ImGuiWindow* window = GetCurrentWindow();
