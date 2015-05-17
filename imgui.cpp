@@ -10032,6 +10032,7 @@ static void ShowExampleAppAutoResize(bool* opened);
 static void ShowExampleAppFixedOverlay(bool* opened);
 static void ShowExampleAppManipulatingWindowTitle(bool* opened);
 static void ShowExampleAppCustomRendering(bool* opened);
+static void ShowExampleMenuFile();
 
 // Demonstrate ImGui features (unfortunately this makes this function a little bloated!)
 void ImGui::ShowTestWindow(bool* opened)
@@ -10065,6 +10066,7 @@ void ImGui::ShowTestWindow(bool* opened)
     static bool no_move = false;
     static bool no_scrollbar = false;
     static bool no_collapse = false;
+    static bool no_menu = false;
     static float bg_alpha = 0.65f;
 
     // Demonstrate the various window flags. Typically you would just use the default.
@@ -10075,6 +10077,7 @@ void ImGui::ShowTestWindow(bool* opened)
     if (no_move)      window_flags |= ImGuiWindowFlags_NoMove;
     if (no_scrollbar) window_flags |= ImGuiWindowFlags_NoScrollbar;
     if (no_collapse)  window_flags |= ImGuiWindowFlags_NoCollapse;
+    if (!no_menu)     window_flags |= ImGuiWindowFlags_MenuBar;
     if (!ImGui::Begin("ImGui Test", opened, ImVec2(550,680), bg_alpha, window_flags))
     {
         // Early out if the window is collapsed, as an optimization.
@@ -10092,6 +10095,28 @@ void ImGui::ShowTestWindow(bool* opened)
     //ImGui::Text("WantCaptureMouse: %d", ImGui::GetIO().WantCaptureMouse);
     //ImGui::Text("WantCaptureKeyboard: %d", ImGui::GetIO().WantCaptureKeyboard);
 
+    // Menu
+    if (ImGui::BeginMenuBar())
+    {
+        if (ImGui::BeginMenu("Menu"))
+        {
+            ShowExampleMenuFile();
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Examples"))
+        {
+            ImGui::MenuItem("Metrics", NULL, &show_app_metrics);
+            ImGui::MenuItem("Console", NULL, &show_app_console);
+            ImGui::MenuItem("Long text display", NULL, &show_app_long_text);
+            ImGui::MenuItem("Auto-resizing window", NULL, &show_app_auto_resize);
+            ImGui::MenuItem("Simple overlay", NULL, &show_app_fixed_overlay);
+            ImGui::MenuItem("Manipulating window title", NULL, &show_app_manipulating_window_title);
+            ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
+
     ImGui::Spacing();
     if (ImGui::CollapsingHeader("Help"))
     {
@@ -10107,6 +10132,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Checkbox("no move", &no_move); ImGui::SameLine(150);
         ImGui::Checkbox("no scrollbar", &no_scrollbar); ImGui::SameLine(300);
         ImGui::Checkbox("no collapse", &no_collapse);
+        ImGui::Checkbox("no menu", &no_menu);
         ImGui::SliderFloat("bg alpha", &bg_alpha, 0.0f, 1.0f);
 
         if (ImGui::TreeNode("Style"))
@@ -10374,43 +10400,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::OpenPopup("context menu");
             if (ImGui::BeginPopup("context menu"))
             {
-                ImGui::MenuItem("New");
-                ImGui::MenuItem("Open", "Ctrl+O");
-                if (ImGui::BeginMenu("Open Recent"))
-                {
-                    ImGui::MenuItem("fish_hat.c");
-                    ImGui::MenuItem("fish_hat.inl");
-                    ImGui::MenuItem("fish_hat.h");
-                    if (ImGui::BeginMenu("More.."))
-                    {
-                        ImGui::MenuItem("Hello");
-                        ImGui::MenuItem("Sailor");
-                        ImGui::EndMenu();
-                    }
-                    ImGui::EndMenu();
-                }
-                ImGui::MenuItem("Save", "Ctrl+S");
-                ImGui::MenuItem("Save As..");
-                ImGui::Separator();
-                if (ImGui::BeginMenu("Options"))
-                {
-                    static bool enabled = true;
-                    static float f = 0.5f;
-                    ImGui::MenuItem("Enabled", "", &enabled);
-                    ImGui::BeginChild("child", ImVec2(0, 60), true);
-                    for (int i = 0; i < 10; i++)
-                        ImGui::Text("Scrolling Text %d", i);
-                    ImGui::EndChild();
-                    ImGui::SliderFloat("Value", &f, 0.0f, 1.0f);
-                    ImGui::EndMenu();
-                }
-                if (ImGui::BeginMenu("Colors"))
-                {
-                    for (int i = 0; i < ImGuiCol_COUNT; i++)
-                        ImGui::MenuItem(ImGui::GetStyleColName((ImGuiCol)i));
-                    ImGui::EndMenu();
-                }
-                ImGui::MenuItem("Quit", "Alt+F4");
+                ShowExampleMenuFile();
                 ImGui::EndPopup();
             }
             ImGui::TreePop();
@@ -11117,17 +11107,6 @@ void ImGui::ShowTestWindow(bool* opened)
         }
     }
 
-    if (ImGui::CollapsingHeader("App Examples"))
-    {
-        ImGui::Checkbox("Metrics", &show_app_metrics);
-        ImGui::Checkbox("Console", &show_app_console);
-        ImGui::Checkbox("Long text display", &show_app_long_text);
-        ImGui::Checkbox("Auto-resizing window", &show_app_auto_resize);
-        ImGui::Checkbox("Simple overlay", &show_app_fixed_overlay);
-        ImGui::Checkbox("Manipulating window title", &show_app_manipulating_window_title);
-        ImGui::Checkbox("Custom rendering", &show_app_custom_rendering);
-    }
-
     ImGui::End();
 }
 
@@ -11199,6 +11178,48 @@ void ImGui::ShowMetricsWindow(bool* opened)
         g.DisableHideTextAfterDoubleHash--;
     }
     ImGui::End();
+}
+
+static void ShowExampleMenuFile()
+{
+    ImGui::TextColored(ImGui::GetStyle().Colors[ImGuiCol_TextDisabled], "(dummy menu)");
+    ImGui::MenuItem("New");
+    ImGui::MenuItem("Open", "Ctrl+O");
+    if (ImGui::BeginMenu("Open Recent"))
+    {
+        ImGui::MenuItem("fish_hat.c");
+        ImGui::MenuItem("fish_hat.inl");
+        ImGui::MenuItem("fish_hat.h");
+        if (ImGui::BeginMenu("More.."))
+        {
+            ImGui::MenuItem("Hello");
+            ImGui::MenuItem("Sailor");
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenu();
+    }
+    ImGui::MenuItem("Save", "Ctrl+S");
+    ImGui::MenuItem("Save As..");
+    ImGui::Separator();
+    if (ImGui::BeginMenu("Options"))
+    {
+        static bool enabled = true;
+        ImGui::MenuItem("Enabled", "", &enabled);
+        ImGui::BeginChild("child", ImVec2(0, 60), true);
+        for (int i = 0; i < 10; i++)
+            ImGui::Text("Scrolling Text %d", i);
+        ImGui::EndChild();
+        static float f = 0.5f;
+        ImGui::SliderFloat("Value", &f, 0.0f, 1.0f);
+        ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Colors"))
+    {
+        for (int i = 0; i < ImGuiCol_COUNT; i++)
+            ImGui::MenuItem(ImGui::GetStyleColName((ImGuiCol)i));
+        ImGui::EndMenu();
+    }
+    ImGui::MenuItem("Quit", "Alt+F4");
 }
 
 static void ShowExampleAppAutoResize(bool* opened)
