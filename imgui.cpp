@@ -7446,8 +7446,9 @@ bool ImGui::BeginMenuBar()
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
+    if (!(window->Flags & ImGuiWindowFlags_MenuBar))
+        return false;
 
-    IM_ASSERT(window->Flags & ImGuiWindowFlags_MenuBar);
     IM_ASSERT(!window->DC.MenuBarAppending);
     window->DC.MenuBarAppending = true;
     ImGui::PushID("##menubar");
