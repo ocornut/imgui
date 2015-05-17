@@ -3052,11 +3052,11 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGuiWindowFlags flags = ImGuiWindowFlags_Popup|ImGuiWindowFlags_ShowBorders|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
     flags |= extra_flags;
-    if ((flags & ImGuiWindowFlags_Menu))
+    if ((flags & ImGuiWindowFlags_ChildMenu))
         flags |= ImGuiWindowFlags_ChildWindow;
 
     char name[32];
-	if (flags & ImGuiWindowFlags_Menu)
+	if (flags & ImGuiWindowFlags_ChildMenu)
 		ImFormatString(name, 20, "##menu_%d", g.CurrentPopupStack.size());    // Recycle windows based on depth
 	else
 		ImFormatString(name, 20, "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
@@ -3506,7 +3506,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
 
         // Position popup
-        if (flags & ImGuiWindowFlags_Menu)
+        if (flags & ImGuiWindowFlags_ChildMenu)
         {
             IM_ASSERT(window_pos_set_by_api);
             ImRect rect_to_avoid;
@@ -7283,7 +7283,7 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
     RenderTextClipped(bb.Min, label, NULL, &label_size, bb_with_spacing.Max);
 
     // Automatically close popups
-    if (pressed && (window->Flags & ImGuiWindowFlags_Menu))
+    if (pressed && (window->Flags & ImGuiWindowFlags_ChildMenu))
         CloseAllPopups();
     else if (pressed && (window->Flags & ImGuiWindowFlags_Popup))
         ImGui::CloseCurrentPopup();
@@ -7520,7 +7520,7 @@ bool ImGui::BeginMenu(const char* label)
     if (opened)
     {
         ImGui::SetNextWindowPos(popup_pos, ImGuiSetCond_Always);
-        opened = BeginPopupEx(label, ImGuiWindowFlags_Menu); // opened can be 'false' when the popup is completely clipped (e.g. zero size display)
+        opened = BeginPopupEx(label, ImGuiWindowFlags_ChildMenu); // opened can be 'false' when the popup is completely clipped (e.g. zero size display)
     }
 
     return opened;
