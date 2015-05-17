@@ -7217,16 +7217,18 @@ bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     
-    const ImVec2 window_padding = window->WindowPadding();
-    const float w = ImMax(label_size.x, window->Pos.x + ImGui::GetContentRegionMax().x - window_padding.x - window->DC.CursorPos.x);
-    const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : w, size_arg.y != 0.0f ? size_arg.y : label_size.y);
-    ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
+    const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : label_size.x, size_arg.y != 0.0f ? size_arg.y : label_size.y);
+    const ImVec2 pos = window->DC.CursorPos;
+    ImRect bb(pos, pos + size);
     ItemSize(bb);
-    if (size_arg.x == 0.0f)
-        bb.Max.x += window_padding.x;
 
     // Selectables are meant to be tightly packed together. So for both rendering and collision we extend to compensate for spacing.
-    ImRect bb_with_spacing = bb;
+    const ImVec2 window_padding = window->WindowPadding();
+    const float w_full = ImMax(label_size.x, window->Pos.x + ImGui::GetContentRegionMax().x - window_padding.x - window->DC.CursorPos.x);
+    const ImVec2 size_full(size_arg.x != 0.0f ? size_arg.x : w_full, size_arg.y != 0.0f ? size_arg.y : label_size.y);
+    ImRect bb_with_spacing(pos, pos + size_full);
+    if (size_arg.x == 0.0f)
+        bb_with_spacing.Max.x += window_padding.x;
     const float spacing_L = (float)(int)(style.ItemSpacing.x * 0.5f);
     const float spacing_U = (float)(int)(style.ItemSpacing.y * 0.5f);
     const float spacing_R = style.ItemSpacing.x - spacing_L;
