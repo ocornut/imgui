@@ -4707,7 +4707,7 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window)
 static bool IsHovered(const ImRect& bb, ImGuiID id)
 {
     ImGuiState& g = *GImGui;
-    if (g.HoveredId == 0)
+    if (g.HoveredId == 0 || g.HoveredId == id)
     {
         ImGuiWindow* window = GetCurrentWindow();
         if (g.HoveredRootWindow == window->RootWindow)
@@ -7504,7 +7504,7 @@ bool ImGui::BeginMenu(const char* label)
         RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), false);
     }
 
-    bool hovered = ImGui::IsItemHovered();
+    bool hovered = IsHovered(window->DC.LastItemRect, id);
     if (!opened && hovered)
     {
         ImGui::OpenPopup(label);
