@@ -588,6 +588,7 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_FrameBgActive]          = ImVec4(0.90f, 0.65f, 0.65f, 0.45f);
     Colors[ImGuiCol_TitleBg]                = ImVec4(0.50f, 0.50f, 1.00f, 0.45f);
     Colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.40f, 0.40f, 0.80f, 0.20f);
+    Colors[ImGuiCol_MenuBarBg]              = ImVec4(0.35f, 0.35f, 0.45f, 0.55f);
     Colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.40f, 0.40f, 0.80f, 0.15f);
     Colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.40f, 0.40f, 0.80f, 0.30f);
     Colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.40f, 0.40f, 0.80f, 0.40f);
@@ -1052,6 +1053,8 @@ struct ImGuiDrawContext
     ImRect                  LastItemRect;
     bool                    LastItemHoveredAndUsable;
     bool                    LastItemHoveredRect;
+    bool                    MenuBarAppending;
+    float                   MenuBarOffsetX;
     ImVector<ImGuiWindow*>  ChildWindows;
     ImVector<bool>          AllowKeyboardFocus;
     ImVector<float>         ItemWidth;           // 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
@@ -1082,6 +1085,8 @@ struct ImGuiDrawContext
         LastItemID = 0;
         LastItemRect = ImRect(0.0f,0.0f,0.0f,0.0f);
         LastItemHoveredAndUsable = LastItemHoveredRect = false;
+        MenuBarAppending = false;
+        MenuBarOffsetX = 0.0f;
         ColorEditMode = ImGuiColorEditMode_RGB;
         StateStorage = NULL;
         memset(StackSizesBackup, 0, sizeof(StackSizesBackup));
@@ -1181,6 +1186,7 @@ struct ImGuiState
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs
     ImGuiWindow*            HoveredRootWindow;                  // Will catch mouse inputs (for focus/move only)
     ImGuiID                 HoveredId;                          // Hovered widget
+    ImGuiID                 HoveredIdPreviousFrame;
     ImGuiID                 ActiveId;                           // Active widget
     ImGuiID                 ActiveIdPreviousFrame;
     bool                    ActiveIdIsAlive;
@@ -1257,6 +1263,7 @@ struct ImGuiState
         HoveredWindow = NULL;
         HoveredRootWindow = NULL;
         HoveredId = 0;
+        HoveredIdPreviousFrame = 0;
         ActiveId = 0;
         ActiveIdPreviousFrame = 0;
         ActiveIdIsAlive = false;
@@ -1365,8 +1372,10 @@ public:
 
     ImRect      Rect() const                            { return ImRect(Pos, Pos+Size); }
     float       CalcFontSize() const                    { return GImGui->FontBaseSize * FontWindowScale; }
-    float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0 : CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f; }
+    float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0.0f : CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f; }
     ImRect      TitleBarRect() const                    { return ImRect(Pos, Pos + ImVec2(SizeFull.x, TitleBarHeight())); }
+    float       MenuBarHeight() const                   { return (Flags & ImGuiWindowFlags_MenuBar) ? CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f : 0.0f; }
+    ImRect      MenuBarRect() const                     { float y1 = Pos.y + TitleBarHeight(); return ImRect(Pos.x, y1, Pos.x + SizeFull.x, y1 + MenuBarHeight()); } 
     ImVec2      WindowPadding() const                   { return ((Flags & ImGuiWindowFlags_ChildWindow) && !(Flags & (ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup))) ? ImVec2(0,0) : GImGui->Style.WindowPadding; }
     ImU32       Color(ImGuiCol idx, float a=1.f) const  { ImVec4 c = GImGui->Style.Colors[idx]; c.w *= GImGui->Style.Alpha * a; return ImGui::ColorConvertFloat4ToU32(c); }
     ImU32       Color(const ImVec4& col) const          { ImVec4 c = col; c.w *= GImGui->Style.Alpha; return ImGui::ColorConvertFloat4ToU32(c); }
@@ -2031,6 +2040,7 @@ void ImGui::NewFrame()
     g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
 
     // Clear reference to active widget if the widget isn't alive anymore
+    g.HoveredIdPreviousFrame = g.HoveredId;
     g.HoveredId = 0;
     if (!g.ActiveIdIsAlive && g.ActiveIdPreviousFrame == g.ActiveId && g.ActiveId != 0)
         SetActiveId(0);
@@ -3497,7 +3507,11 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         if (flags & ImGuiWindowFlags_Menu)
         {
             IM_ASSERT(window_pos_set_by_api);
-            ImRect rect_to_avoid = ImRect(parent_window->Pos.x + 4.0f, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - 4.0f, FLT_MAX); // We want some overlap to convey the relative depth of each popup (here hard-coded to 4)
+            ImRect rect_to_avoid;
+            if (parent_window->DC.MenuBarAppending)
+                rect_to_avoid = ImRect(-FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight(), FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight() + parent_window->MenuBarHeight());
+            else
+                rect_to_avoid = ImRect(parent_window->Pos.x + 4.0f, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - 4.0f, FLT_MAX); // We want some overlap to convey the relative depth of each popup (here hard-coded to 4)
             window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
         }
         else if ((flags & ImGuiWindowFlags_Popup) != 0 && window_appearing_after_being_hidden && !window_pos_set_by_api)
@@ -3635,6 +3649,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             if (!(flags & ImGuiWindowFlags_NoTitleBar))
                 window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_TitleBg), window_rounding, 1|2);
 
+            // Menu bar
+            if (flags & ImGuiWindowFlags_MenuBar)
+            {
+                ImRect menu_bar_rect = window->MenuBarRect();
+                window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), window->Color(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, 1|2);
+            }
+
             // Borders
             if (flags & ImGuiWindowFlags_ShowBorders)
             {
@@ -3671,12 +3692,14 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         // Setup drawing context
         window->DC.ColumnsStartX = window->WindowPadding().x;
         window->DC.ColumnsOffsetX = 0.0f;
-        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.ColumnsStartX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->WindowPadding().y) - ImVec2(0.0f, window->ScrollY);
+        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.ColumnsStartX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding().y) - ImVec2(0.0f, window->ScrollY);
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CursorMaxPos = window->DC.CursorStartPos;
         window->DC.CurrentLineHeight = window->DC.PrevLineHeight = 0.0f;
         window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset = 0.0f;
+        window->DC.MenuBarAppending = false;
+        window->DC.MenuBarOffsetX = window->DC.ColumnsStartX;
         window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
         window->DC.ChildWindows.resize(0);
         window->DC.ItemWidth.resize(0); 
@@ -4094,6 +4117,7 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     case ImGuiCol_FrameBgActive: return "FrameBgActive";
     case ImGuiCol_TitleBg: return "TitleBg";
     case ImGuiCol_TitleBgCollapsed: return "TitleBgCollapsed";
+    case ImGuiCol_MenuBarBg: return "MenuBarBg";
     case ImGuiCol_ScrollbarBg: return "ScrollbarBg";
     case ImGuiCol_ScrollbarGrab: return "ScrollbarGrab";
     case ImGuiCol_ScrollbarGrabHovered: return "ScrollbarGrabHovered";
@@ -4327,7 +4351,7 @@ ImVec2 ImGui::GetContentRegionMax()
 ImVec2 ImGui::GetWindowContentRegionMin()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    return ImVec2(0, window->TitleBarHeight()) + window->WindowPadding();
+    return ImVec2(0, window->TitleBarHeight() + window->MenuBarHeight()) + window->WindowPadding();
 }
 
 ImVec2 ImGui::GetWindowContentRegionMax()
@@ -7415,6 +7439,32 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool* p_selected)
     return false;
 }
 
+bool ImGui::BeginMenuBar()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    IM_ASSERT(window->Flags & ImGuiWindowFlags_MenuBar);
+    IM_ASSERT(!window->DC.MenuBarAppending);
+    window->DC.MenuBarAppending = true;
+    ImGui::PushID("##menubar");
+
+    return true;
+}
+
+void ImGui::EndMenuBar()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    IM_ASSERT(window->Flags & ImGuiWindowFlags_MenuBar);
+    IM_ASSERT(window->DC.MenuBarAppending);
+    window->DC.MenuBarAppending = false;
+    ImGui::PopID();
+}
+
 // FIXME-WIP: v1.39 in development, API *WILL* change!
 bool ImGui::BeginMenu(const char* label)
 {
@@ -7423,16 +7473,36 @@ bool ImGui::BeginMenu(const char* label)
     if (window->SkipItems)
         return false;
     
+    const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-
-    ImVec2 pos = ImGui::GetCursorScreenPos();
-    ImVec2 label_size = CalcTextSize(label, NULL, true);
-    float w = window->MenuColumns.DeclColumns(label_size.x, 0.0f, (float)(int)(g.FontSize * 1.20f)); // Feedback to next frame
-    float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
- 
     bool opened = IsPopupOpen(id);
-    SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f));
-    RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), false);
+
+    ImVec2 pos;
+    ImVec2 popup_pos;
+    ImVec2 backup_pos = window->DC.CursorPos;
+    ImVec2 label_size = CalcTextSize(label, NULL, true);
+
+    if (window->DC.MenuBarAppending)
+    {
+        // FIXME: Should be moved at a lower-level once we have horizontal layout (#97)
+        pos = window->DC.CursorPos = ImVec2(window->Pos.x + window->DC.MenuBarOffsetX, window->Pos.y + window->TitleBarHeight() + style.FramePadding.y);
+        popup_pos = ImVec2(pos.x - style.ItemSpacing.x, pos.y);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
+        float w = label_size.x;
+        SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(w, 0.0f));
+        window->DC.MenuBarOffsetX += (label_size.x + style.ItemSpacing.x);
+        window->DC.CursorPos = backup_pos;
+        ImGui::PopStyleVar();
+    }
+    else
+    {
+        pos = window->DC.CursorPos;
+        popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
+        float w = window->MenuColumns.DeclColumns(label_size.x, 0.0f, (float)(int)(g.FontSize * 1.20f)); // Feedback to next frame
+        float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
+        SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f));
+        RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), false);
+    }
 
     bool hovered = ImGui::IsItemHovered();
     if (!opened && hovered)
@@ -7447,7 +7517,7 @@ bool ImGui::BeginMenu(const char* label)
     }
     if (opened)
     {
-        ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y - g.Style.WindowPadding.y), ImGuiSetCond_Always);
+        ImGui::SetNextWindowPos(popup_pos, ImGuiSetCond_Always);
         bool popup_opened = BeginPopupEx(label, ImGuiWindowFlags_Menu);
         IM_ASSERT(opened == popup_opened);
     }
