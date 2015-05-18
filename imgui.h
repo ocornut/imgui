@@ -36,7 +36,7 @@ struct ImGuiStorage;
 struct ImGuiStyle;
 
 typedef unsigned int ImU32;
-typedef unsigned short ImWchar;     // character for display
+typedef unsigned short ImWchar;     // character for keyboard input/display
 typedef void* ImTextureID;          // user data to refer to a texture (e.g. store your texture handle/id)
 typedef ImU32 ImGuiID;              // unique ID used by widgets (typically hashed from a stack of string)
 typedef int ImGuiCol;               // enum ImGuiCol_
@@ -80,9 +80,9 @@ namespace ImGui
     IMGUI_API void        MemFree(void* ptr);
 }
 
-// std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug). 
+// Lightweight std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug). 
 // Use '#define ImVector std::vector' if you want to use the STL type or your own type.
-// Our implementation does NOT call c++ constructors! because the data types we use don't need them (but that could be added as well). Only provide the minimum functionalities we need.
+// Our implementation does NOT call c++ constructors because we don't use them in ImGui. Don't use this class as a straight std::vector replacement in your code!
 #ifndef ImVector
 template<typename T>
 class ImVector
@@ -144,8 +144,11 @@ public:
 // - struct ImGuiTextFilter             // Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
 // - struct ImGuiTextBuffer             // Text buffer for logging/accumulating text
 // - struct ImGuiStorage                // Custom key value storage (if you need to alter open/close states manually)
+// - struct ImGuiTextEditCallbackData   // Shared state of ImGui::InputText() when using custom callbacks
+// - struct ImColor                     // Helper functions to created packed 32-bit RGBA color values 
 // - struct ImDrawList                  // Draw command list
-// - struct ImFont                      // TTF font loader, bake glyphs into bitmap
+// - struct ImFontAtlas                 // Bake multiple fonts into a single texture, TTF font loader, bake glyphs into bitmap
+// - struct ImFont                      // Single font
 
 // ImGui end-user API
 // In a namespace so that user can add extra functions in a separate file (e.g. Value() helpers for your vector or common types)
