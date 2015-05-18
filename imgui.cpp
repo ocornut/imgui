@@ -12,8 +12,8 @@
  - PROGRAMMER GUIDE (read me!)
  - API BREAKING CHANGES (read me when you update!)
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
-   - Can I have multiple widgets with the same label? (Yes)
    - How do I update to a newer version of ImGui?
+   - Can I have multiple widgets with the same label? (Yes)
    - Why is my text output blurry?
    - How can I load a different font than the default? 
    - How can I load multiple fonts?
@@ -187,6 +187,16 @@
  FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
  ======================================
 
+ Q: How do I update to a newer version of ImGui?
+ A: Overwrite the following files:
+      imgui.cpp
+      imgui.h
+      stb_rect_pack.h
+      stb_textedit.h
+      stb_truetype.h
+    Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes. If you have a problem with a function, search for its name
+    in the code, there will likely be a comment about it. Please report any issue to the GitHub page!
+
  Q: Can I have multiple widgets with the same label? 
  A: Yes. A primer on the use of labels/IDs in ImGui..
  
@@ -271,15 +281,6 @@
       e.g. when displaying a single object that may change over time (1-1 relationship), using a static string as ID will preserve your node open/closed state when the targeted object change.
       e.g. when displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state differently. experiment and see what makes more sense!
 
- Q: How do I update to a newer version of ImGui?
- A: Overwrite the following files:
-     imgui.cpp
-     imgui.h
-     stb_rect_pack.h
-     stb_textedit.h
-     stb_truetype.h
-    Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes.
-
  Q: Why is my text output blurry?
  A: In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 
@@ -330,6 +331,7 @@
  - main: considering adding EndFrame()/Init(). some constructs are awkward in the implementation because of the lack of them.
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
+ - input text: add ImGuiInputTextFlags_EnterToApply? (off github issue #218)
 !- input number: large int not reliably supported because of int<>float conversions.
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
@@ -344,6 +346,7 @@
  - columns: columns header to act as button (~sort op) and allow resize/reorder (github issue #125)
  - columns: user specify columns size (github issue #125)
  - popup: border options. richer api like BeginChild() perhaps? (github issue #197)
+ - combo: sparse combo boxes (via function call?)
  - combo: turn child handling code into pop up helper
  - combo: contents should extends to fit label if combo widget is small
  - combo/listbox: keyboard control. need inputtext like non-active focus + key handling. considering keybord for custom listbox (see github pr #203)
@@ -494,13 +497,14 @@ struct ImGuiTextEditState;
 struct ImGuiIniData;
 struct ImGuiState;
 struct ImGuiWindow;
+typedef int ImGuiButtonFlags; // enum ImGuiButtonFlags_
 
-static bool         ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false, bool pressed_on_click = false);
+static bool         ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, ImGuiButtonFlags flags = 0);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
 
 static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
 static void         RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width);
-static void         RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& clip_max);
+static void         RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& pos_max, const ImVec2* clip_max = NULL, ImGuiAlign align = ImGuiAlign_Default);
 static void         RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
 static void         RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
 static void         RenderCheckMark(ImVec2 pos, ImU32 col);
@@ -562,6 +566,7 @@ ImGuiStyle::ImGuiStyle()
     WindowPadding           = ImVec2(8,8);      // Padding within a window
     WindowMinSize           = ImVec2(32,32);    // Minimum window size
     WindowRounding          = 9.0f;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
+    WindowTitleAlign        = ImGuiAlign_Left;  // Alignment for title bar text
     ChildWindowRounding     = 0.0f;             // Radius of child window corners rounding. Set to 0.0f to have rectangular windows
     FramePadding            = ImVec2(4,3);      // Padding within a framed rectangle (used by most widgets)
     FrameRounding           = 0.0f;             // Radius of frame corners rounding. Set to 0.0f to have rectangular frames (used by most widgets).
@@ -932,6 +937,13 @@ static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode,
 }
 
 //-----------------------------------------------------------------------------
+
+enum ImGuiButtonFlags_
+{
+    ImGuiButtonFlags_Repeat         = (1 << 0),
+    ImGuiButtonFlags_PressedOnClick = (1 << 1),
+    ImGuiButtonFlags_FlattenChilds  = (1 << 2)
+};
 
 struct ImGuiColMod       // Color modifier, backup of modified data so we can restore it
 {
@@ -2360,6 +2372,7 @@ void ImGui::Render()
 
         // Gather windows to render
         g.IO.MetricsRenderVertices = 0;
+        g.IO.MetricsActiveWindows = 0;
         for (size_t i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
             g.RenderDrawLists[i].resize(0);
         for (size_t i = 0; i != g.Windows.size(); i++)
@@ -2368,6 +2381,7 @@ void ImGui::Render()
             if (window->Active && window->HiddenFrames <= 0 && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0)
             {
                 // FIXME: Generalize this with a proper layering system so we can stack.
+                g.IO.MetricsActiveWindows++;
                 if (window->Flags & ImGuiWindowFlags_Popup)
                     AddWindowToRenderList(g.RenderDrawLists[1], window);
                 else if (window->Flags & ImGuiWindowFlags_Tooltip)
@@ -2565,37 +2579,36 @@ static void RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
     const int text_len = (int)(text_end - text);
     if (text_len > 0)
     {
-        // Render
         window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end, wrap_width);
-
-        // Log as text
         if (g.LogEnabled)
             LogText(pos, text, text_end);
     }
 }
 
-static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& clip_max)
+static void RenderTextClipped(ImVec2 pos, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& pos_max, const ImVec2* clip_max, ImGuiAlign align)
 {
-    ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
-
     // Hide anything after a '##' string
     const char* text_display_end = FindTextDisplayEnd(text, text_end);
     const int text_len = (int)(text_display_end - text);
-    if (text_len > 0)
-    {
-        const ImVec2 text_size = text_size_if_known ? *text_size_if_known : ImGui::CalcTextSize(text, text_display_end, false, 0.0f);
+    if (text_len == 0)
+        return;
 
-        // Perform CPU side clipping for single clipped element to avoid using scissor state
-        const bool need_clipping = (pos.x + text_size.x >= clip_max.x) || (pos.y + text_size.y >= clip_max.y);
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
 
-        // Render
-        window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_display_end, 0.0f, need_clipping ? &clip_max : NULL);
+    // Perform CPU side clipping for single clipped element to avoid using scissor state
+    const ImVec2 text_size = text_size_if_known ? *text_size_if_known : ImGui::CalcTextSize(text, text_display_end, false, 0.0f);
+    if (!clip_max) clip_max = &pos_max;
+    const bool need_clipping = (pos.x + text_size.x >= clip_max->x) || (pos.y + text_size.y >= clip_max->y);
 
-        // Log as text
-        if (g.LogEnabled)
-            LogText(pos, text, text_display_end);
-    }
+    // Align
+    if (align & ImGuiAlign_Center) pos.x = ImMax(pos.x, (pos.x + pos_max.x - text_size.x) * 0.5f);
+    else if (align & ImGuiAlign_Right) pos.x = ImMax(pos.x, pos_max.x - text_size.x);
+
+    // Render
+    window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_display_end, 0.0f, need_clipping ? clip_max : NULL);
+    if (g.LogEnabled)
+        LogText(pos, text, text_display_end);
 }
 
 // Render a rectangle shaped with optional rounding and borders
@@ -3604,7 +3617,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 const ImRect resize_rect(window->Rect().GetBR()-ImVec2(14,14), window->Rect().GetBR());
                 const ImGuiID resize_id = window->GetID("#RESIZE");
                 bool hovered, held;
-                ButtonBehavior(resize_rect, resize_id, &hovered, &held, true);
+                ButtonBehavior(resize_rect, resize_id, &hovered, &held, true, ImGuiButtonFlags_FlattenChilds);
                 resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
                 if (hovered || held)
@@ -3729,16 +3742,19 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             if (p_opened != NULL)
                 CloseWindowButton(p_opened);
 
-            ImVec2 text_min = window->Pos + style.FramePadding;
-            if (!(flags & ImGuiWindowFlags_NoCollapse))
-            {
-                RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
-                text_min.x += g.FontSize + style.ItemInnerSpacing.x;
-            }
-
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
-            const ImVec2 text_max = window->Pos + ImVec2(window->Size.x - (p_opened ? (title_bar_rect.GetHeight()-3) : style.FramePadding.x), style.FramePadding.y*2 + text_size.y);
-            RenderTextClipped(text_min, name, NULL, &text_size, text_max);
+            if (!(flags & ImGuiWindowFlags_NoCollapse))
+                RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
+            
+            ImVec2 text_min = window->Pos + style.FramePadding;
+            ImVec2 text_max = window->Pos + ImVec2(window->Size.x - style.FramePadding.x, style.FramePadding.y*2 + text_size.y);
+            ImVec2 clip_max = ImVec2(window->Pos.x + window->Size.x - (p_opened ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x), text_max.y); // Match the size of CloseWindowButton()
+            bool pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0;
+            bool pad_right = (p_opened != NULL);
+            if (style.WindowTitleAlign & ImGuiAlign_Center) pad_right = pad_left;
+            if (pad_left) text_min.x += g.FontSize + style.ItemInnerSpacing.x;
+            if (pad_right) text_max.x -= g.FontSize + style.ItemInnerSpacing.x;
+            RenderTextClipped(text_min, name, NULL, &text_size, text_max, &clip_max, style.WindowTitleAlign);
         }
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
@@ -4706,13 +4722,13 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window)
     return true;
 }
 
-static bool IsHovered(const ImRect& bb, ImGuiID id)
+static bool IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs = false)
 {
     ImGuiState& g = *GImGui;
     if (g.HoveredId == 0 || g.HoveredId == id)
     {
         ImGuiWindow* window = GetCurrentWindow();
-        if (g.HoveredRootWindow == window->RootWindow)
+        if (g.HoveredWindow == window || (flatten_childs && g.HoveredRootWindow == window->RootWindow))
             if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && IsMouseHoveringRect(bb))
                 if (IsWindowContentHoverable(g.HoveredRootWindow))
                     return true;
@@ -4720,13 +4736,13 @@ static bool IsHovered(const ImRect& bb, ImGuiID id)
     return false;
 }
 
-static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat, bool pressed_on_click)
+static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, ImGuiButtonFlags flags)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    const bool hovered = IsHovered(bb, id);
     bool pressed = false;
+    const bool hovered = IsHovered(bb, id, (flags & ImGuiButtonFlags_FlattenChilds) != 0);
     if (hovered)
     {
         g.HoveredId = id;
@@ -4734,7 +4750,7 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         {
             if (g.IO.MouseClicked[0])
             {
-                if (pressed_on_click)
+                if (flags & ImGuiButtonFlags_PressedOnClick)
                 {
                     pressed = true;
                     SetActiveId(0);
@@ -4745,7 +4761,7 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                 }
                 FocusWindow(window);
             }
-            else if (repeat && g.ActiveId && ImGui::IsMouseClicked(0, true))
+            else if ((flags & ImGuiButtonFlags_Repeat) && g.ActiveId == id && ImGui::IsMouseClicked(0, true))
             {
                 pressed = true;
             }
@@ -4791,7 +4807,7 @@ bool ImGui::Button(const char* label, const ImVec2& size_arg, bool repeat_when_h
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true, repeat_when_held);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true, repeat_when_held ? ImGuiButtonFlags_Repeat : 0);
 
     // Render
     const ImU32 col = window->Color((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
@@ -7270,7 +7286,7 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true, false, false);
+    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true);
 
     // Render
     if (hovered || selected)
@@ -8678,16 +8694,21 @@ void    ImFontAtlas::ClearTexData()
     TexPixelsRGBA32 = NULL;
 }
 
-void    ImFontAtlas::Clear()
+void    ImFontAtlas::ClearFonts()
 {
-    ClearInputData(); 
-    ClearTexData();
     for (size_t i = 0; i < Fonts.size(); i++)
     {
         Fonts[i]->~ImFont();
         ImGui::MemFree(Fonts[i]);
     }
     Fonts.clear();
+}
+
+void    ImFontAtlas::Clear()
+{
+    ClearInputData(); 
+    ClearTexData();
+    ClearFonts();
 }
 
 void ImGui::GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size)
@@ -8819,7 +8840,7 @@ bool    ImFontAtlas::Build()
     for (size_t input_i = 0; input_i < InputData.size(); input_i++)
     {
         ImFontAtlasData& data = *InputData[input_i];
-        IM_ASSERT(data.OutFont && !data.OutFont->IsLoaded());
+        IM_ASSERT(data.OutFont && (!data.OutFont->IsLoaded() || data.OutFont->ContainerAtlas == this));
         const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)data.TTFData, data.FontNo);
         IM_ASSERT(font_offset >= 0);
         if (!stbtt_InitFont(&data.FontInfo, (unsigned char*)data.TTFData, font_offset)) 
@@ -8933,6 +8954,7 @@ bool    ImFontAtlas::Build()
         int font_ascent, font_descent, font_line_gap;
         stbtt_GetFontVMetrics(&data.FontInfo, &font_ascent, &font_descent, &font_line_gap);
         data.OutFont->BaseLine = (font_ascent * font_scale);
+        data.OutFont->Glyphs.resize(0);
 
         const float uv_scale_x = 1.0f / TexWidth;
         const float uv_scale_y = 1.0f / TexHeight;
@@ -8969,7 +8991,6 @@ bool    ImFontAtlas::Build()
     ImGui::MemFree(buf_ranges);
     buf_packedchars = NULL;
     buf_ranges = NULL;
-    ClearInputData();
 
     // Render into our custom data block
     RenderCustomTexData(1, &extra_rects);
@@ -10143,7 +10164,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Fonts"))
+        if (ImGui::TreeNode("Fonts", "Fonts (%d)", (int)ImGui::GetIO().Fonts->Fonts.size()))
         {
             ImGui::TextWrapped("Tip: Load fonts with GetIO().Fonts->AddFontFromFileTTF().");
             for (size_t i = 0; i < ImGui::GetIO().Fonts->Fonts.size(); i++)
