@@ -495,8 +495,9 @@ struct ImGuiTextEditState;
 struct ImGuiIniData;
 struct ImGuiState;
 struct ImGuiWindow;
+typedef int ImGuiButtonFlags; // enum ImGuiButtonFlags_
 
-static bool         ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat = false, bool pressed_on_click = false);
+static bool         ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, ImGuiButtonFlags flags = 0);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
 
 static void         RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
@@ -931,6 +932,12 @@ static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode,
 }
 
 //-----------------------------------------------------------------------------
+
+enum ImGuiButtonFlags_
+{
+    ImGuiButtonFlags_Repeat         = (1 << 0),
+    ImGuiButtonFlags_PressedOnClick = (1 << 1)
+};
 
 struct ImGuiColMod       // Color modifier, backup of modified data so we can restore it
 {
@@ -4546,13 +4553,13 @@ static bool IsHovered(const ImRect& bb, ImGuiID id)
     return false;
 }
 
-static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, bool repeat, bool pressed_on_click)
+static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, ImGuiButtonFlags flags)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    const bool hovered = IsHovered(bb, id);
     bool pressed = false;
+    const bool hovered = IsHovered(bb, id);
     if (hovered)
     {
         g.HoveredId = id;
@@ -4560,7 +4567,7 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         {
             if (g.IO.MouseClicked[0])
             {
-                if (pressed_on_click)
+                if (flags & ImGuiButtonFlags_PressedOnClick)
                 {
                     pressed = true;
                     SetActiveId(0);
@@ -4571,7 +4578,7 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                 }
                 FocusWindow(window);
             }
-            else if (repeat && g.ActiveId && ImGui::IsMouseClicked(0, true))
+            else if ((flags & ImGuiButtonFlags_Repeat) && g.ActiveId == id && ImGui::IsMouseClicked(0, true))
             {
                 pressed = true;
             }
@@ -4617,7 +4624,7 @@ bool ImGui::Button(const char* label, const ImVec2& size_arg, bool repeat_when_h
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true, repeat_when_held);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true, repeat_when_held ? ImGuiButtonFlags_Repeat : 0);
 
     // Render
     const ImU32 col = window->Color((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
@@ -7093,7 +7100,7 @@ bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true, false, false);
+    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true);
 
     // Render
     if (hovered || selected)
