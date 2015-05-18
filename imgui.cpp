@@ -7262,27 +7262,26 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
         return false;
 
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID(label);
-    const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
-    
-    const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : label_size.x, size_arg.y != 0.0f ? size_arg.y : label_size.y);
-    const ImVec2 pos = window->DC.CursorPos;
+    ImGuiID id = window->GetID(label);
+    ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
+    ImVec2 size(size_arg.x != 0.0f ? size_arg.x : label_size.x, size_arg.y != 0.0f ? size_arg.y : label_size.y);
+    ImVec2 pos = window->DC.CursorPos;
     ImRect bb(pos, pos + size);
     ItemSize(bb);
 
     // Fill horizontal space.
-    const ImVec2 window_padding = window->WindowPadding();
-    const float w_draw = ImMax(label_size.x, window->Pos.x + ImGui::GetContentRegionMax().x - window_padding.x - window->DC.CursorPos.x);
-    const ImVec2 size_draw(size_draw_arg.x != 0.0f ? size_draw_arg.x : w_draw, size_draw_arg.y != 0.0f ? size_draw_arg.y : size.y);
+    ImVec2 window_padding = window->WindowPadding();
+    float w_draw = ImMax(label_size.x, window->Pos.x + ImGui::GetContentRegionMax().x - window_padding.x - window->DC.CursorPos.x);
+    ImVec2 size_draw(size_draw_arg.x != 0.0f ? size_draw_arg.x : w_draw, size_draw_arg.y != 0.0f ? size_draw_arg.y : size.y);
     ImRect bb_with_spacing(pos, pos + size_draw);
     if (size_draw_arg.x == 0.0f)
         bb_with_spacing.Max.x += window_padding.x;
 
     // Selectables are tightly packed together, we extend the box to cover spacing between selectable.
-    const float spacing_L = (float)(int)(style.ItemSpacing.x * 0.5f);
-    const float spacing_U = (float)(int)(style.ItemSpacing.y * 0.5f);
-    const float spacing_R = style.ItemSpacing.x - spacing_L;
-    const float spacing_D = style.ItemSpacing.y - spacing_U;
+    float spacing_L = (float)(int)(style.ItemSpacing.x * 0.5f);
+    float spacing_U = (float)(int)(style.ItemSpacing.y * 0.5f);
+    float spacing_R = style.ItemSpacing.x - spacing_L;
+    float spacing_D = style.ItemSpacing.y - spacing_U;
     bb_with_spacing.Min.x -= spacing_L;
     bb_with_spacing.Min.y -= spacing_U;
     bb_with_spacing.Max.x += spacing_R;
@@ -7291,7 +7290,7 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true, menu_item ? (ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_FlattenChilds) : 0);
+    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true, menu_item ? ImGuiButtonFlags_PressedOnClick : 0);
 
     // Render
     if (hovered || selected)
@@ -7299,8 +7298,6 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
         const ImU32 col = window->Color((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
         RenderFrame(bb_with_spacing.Min, bb_with_spacing.Max, col, false, style.FrameRounding);
     }
-
-    //const ImVec2 off = ImVec2(ImMax(0.0f, size.x - text_size.x) * 0.5f, ImMax(0.0f, size.y - text_size.y) * 0.5f);
     RenderTextClipped(bb.Min, label, NULL, &label_size, bb_with_spacing.Max);
 
     // Automatically close popups
@@ -7342,9 +7339,9 @@ bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
     ImVec2 size;
     size.x = (size_arg.x != 0.0f) ? (size_arg.x) : ImGui::CalcItemWidth() + style.FramePadding.x * 2.0f;
     size.y = (size_arg.y != 0.0f) ? (size_arg.y) : ImGui::GetTextLineHeightWithSpacing() * 7.4f + style.ItemSpacing.y;
-    const ImVec2 frame_size = ImVec2(size.x, ImMax(size.y, label_size.y));
-    const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + frame_size);
-    const ImRect bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
+    ImVec2 frame_size = ImVec2(size.x, ImMax(size.y, label_size.y));
+    ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + frame_size);
+    ImRect bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
     window->DC.LastItemRect = bb;
 
     ImGui::BeginGroup();
@@ -7437,7 +7434,6 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected)
     float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
 
     bool pressed = SelectableEx(label, false, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f), true);
-
     if (shortcut_size.x > 0.0f)
     {
         ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
@@ -7501,15 +7497,13 @@ bool ImGui::BeginMenu(const char* label)
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
 
-    ImVec2 pos;
-    ImVec2 popup_pos;
+    ImVec2 pos, popup_pos, backup_pos = window->DC.CursorPos;
     ImVec2 label_size = CalcTextSize(label, NULL, true);
-    ImVec2 backup_pos = window->DC.CursorPos;
     ImGuiWindow* backed_focused_window = g.FocusedWindow;
 
     bool pressed;
     bool opened = IsPopupOpen(id);
-    bool menuset_opened = (g.OpenedPopupStack.size() > g.CurrentPopupStack.size() && g.OpenedPopupStack[g.CurrentPopupStack.size()].ParentMenuSet == window->GetID("##menus"));
+    bool menuset_opened = !(window->Flags & ImGuiWindowFlags_Popup) && (g.OpenedPopupStack.size() > g.CurrentPopupStack.size() && g.OpenedPopupStack[g.CurrentPopupStack.size()].ParentMenuSet == window->GetID("##menus"));
     if (menuset_opened)
         g.FocusedWindow = window;
 
@@ -7539,31 +7533,22 @@ bool ImGui::BeginMenu(const char* label)
     if (menuset_opened)
         g.FocusedWindow = backed_focused_window;
 
+    bool want_open = false;
     if (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
+        want_open = (!opened && hovered);
+    else if (pressed && menuset_opened)
     {
-        if (!opened && hovered)
-        {
-            ImGui::OpenPopup(label);
-            opened = true;
-        }
+        ClosePopup(label); // click again to toggle
+        want_open = opened = false;
     }
-    else
-    {
-        if (menuset_opened && pressed)
-        {
-            ClosePopup(label);
-            opened = pressed = false;
-        }
-        else if (menuset_opened)
-            pressed |= hovered;
-        else
-            pressed |= (hovered && !g.OpenedPopupStack.empty() && g.OpenedPopupStack.back().PopupID != id && g.OpenedPopupStack.back().ParentWindow == window);
-        if (pressed)
-        {
-            ImGui::OpenPopup(label);    // FIXME-MENUS: toggle
-            opened = true;
-        }
-    }
+    else if (pressed)
+        want_open = true;
+    else if (hovered && menuset_opened)
+        want_open = true;
+
+    opened |= want_open;
+    if (want_open)
+        ImGui::OpenPopup(label);
 
     if (opened)
     {
