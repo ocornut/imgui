@@ -936,7 +936,8 @@ static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode,
 enum ImGuiButtonFlags_
 {
     ImGuiButtonFlags_Repeat         = (1 << 0),
-    ImGuiButtonFlags_PressedOnClick = (1 << 1)
+    ImGuiButtonFlags_PressedOnClick = (1 << 1),
+    ImGuiButtonFlags_FlattenChilds  = (1 << 2)
 };
 
 struct ImGuiColMod       // Color modifier, backup of modified data so we can restore it
@@ -3438,7 +3439,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 const ImRect resize_rect(window->Rect().GetBR()-ImVec2(14,14), window->Rect().GetBR());
                 const ImGuiID resize_id = window->GetID("#RESIZE");
                 bool hovered, held;
-                ButtonBehavior(resize_rect, resize_id, &hovered, &held, true);
+                ButtonBehavior(resize_rect, resize_id, &hovered, &held, true, ImGuiButtonFlags_FlattenChilds);
                 resize_col = window->Color(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
                 if (hovered || held)
@@ -4539,13 +4540,13 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window)
     return true;
 }
 
-static bool IsHovered(const ImRect& bb, ImGuiID id)
+static bool IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs = false)
 {
     ImGuiState& g = *GImGui;
     if (g.HoveredId == 0)
     {
         ImGuiWindow* window = GetCurrentWindow();
-        if (g.HoveredRootWindow == window->RootWindow)
+        if (g.HoveredWindow == window || (flatten_childs && g.HoveredRootWindow == window->RootWindow))
             if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && IsMouseHoveringRect(bb))
                 if (IsWindowContentHoverable(g.HoveredRootWindow))
                     return true;
@@ -4559,7 +4560,7 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     ImGuiWindow* window = GetCurrentWindow();
 
     bool pressed = false;
-    const bool hovered = IsHovered(bb, id);
+    const bool hovered = IsHovered(bb, id, (flags & ImGuiButtonFlags_FlattenChilds) != 0);
     if (hovered)
     {
         g.HoveredId = id;
