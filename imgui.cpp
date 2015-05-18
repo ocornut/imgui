@@ -3018,16 +3018,31 @@ void ImGui::EndTooltip()
     ImGui::End();
 }
 
+static bool IsPopupOpen(ImGuiID id)
+{
+    ImGuiState& g = *GImGui;
+    const bool opened = g.OpenedPopupStack.size() > g.CurrentPopupStack.size() && g.OpenedPopupStack[g.CurrentPopupStack.size()].PopupID == id;
+    return opened;
+}
+
+// One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
 void ImGui::OpenPopup(const char* str_id)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     const ImGuiID id = window->GetID(str_id);
-
-    // One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
     g.OpenedPopupStack.resize(g.CurrentPopupStack.size() + 1);
     if (g.OpenedPopupStack.back().PopupID != id)
         g.OpenedPopupStack.back() = ImGuiPopupRef(id, window, window->GetID("##menus"));
+}
+
+static void ClosePopup(const char* str_id) // not exposed because 'id' scope is misleading
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    const ImGuiID id = window->GetID(str_id);
+    if (IsPopupOpen(id))
+        g.OpenedPopupStack.resize(g.CurrentPopupStack.size());
 }
 
 void ImGui::CloseCurrentPopup()
@@ -3048,13 +3063,6 @@ static void CloseAllPopups()
     g.OpenedPopupStack.resize(0);
 }
 
-static bool IsPopupOpen(ImGuiID id)
-{
-    ImGuiState& g = *GImGui;
-    const bool opened = g.OpenedPopupStack.size() > g.CurrentPopupStack.size() && g.OpenedPopupStack[g.CurrentPopupStack.size()].PopupID == id;
-    return opened;
-}
-
 static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
 {
     ImGuiState& g = *GImGui;
@@ -3072,11 +3080,10 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
 	else
 		ImFormatString(name, 20, "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
     float alpha = 1.0f;
-    bool opened = ImGui::Begin(name, NULL, ImVec2(0.0f, 0.0f), alpha, flags);
 
+    bool opened = ImGui::Begin(name, NULL, ImVec2(0.0f, 0.0f), alpha, flags);
     if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
         GetCurrentWindow()->Flags &= ~ImGuiWindowFlags_ShowBorders;
-
     if (!opened) // opened can be 'false' when the popup is completely clipped (e.g. zero size display)
         ImGui::EndPopup();
 
@@ -7484,7 +7491,6 @@ void ImGui::EndMenuBar()
     ImGui::PopID();
 }
 
-// FIXME-WIP: v1.39 in development, API *WILL* change!
 bool ImGui::BeginMenu(const char* label)
 {
     ImGuiState& g = *GImGui;
@@ -7494,16 +7500,18 @@ bool ImGui::BeginMenu(const char* label)
     
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-    bool opened = IsPopupOpen(id);
 
     ImVec2 pos;
     ImVec2 popup_pos;
-    ImVec2 backup_pos = window->DC.CursorPos;
     ImVec2 label_size = CalcTextSize(label, NULL, true);
+    ImVec2 backup_pos = window->DC.CursorPos;
+    ImGuiWindow* backed_focused_window = g.FocusedWindow;
 
     bool pressed;
-    bool active_menuset = false;
-    ImGuiWindow* focused_window_backup = g.FocusedWindow;
+    bool opened = IsPopupOpen(id);
+    bool menuset_opened = (g.OpenedPopupStack.size() > g.CurrentPopupStack.size() && g.OpenedPopupStack[g.CurrentPopupStack.size()].ParentMenuSet == window->GetID("##menus"));
+    if (menuset_opened)
+        g.FocusedWindow = window;
 
     if (window->DC.MenuBarAppending)
     {
@@ -7511,14 +7519,8 @@ bool ImGui::BeginMenu(const char* label)
         pos = window->DC.CursorPos = ImVec2(window->Pos.x + window->DC.MenuBarOffsetX, window->Pos.y + window->TitleBarHeight() + style.FramePadding.y);
         popup_pos = ImVec2(pos.x - style.ItemSpacing.x, pos.y);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
-
-        active_menuset = (g.OpenedPopupStack.size() > g.CurrentPopupStack.size() && g.OpenedPopupStack[g.CurrentPopupStack.size()].ParentMenuSet == window->GetID("##menus"));
-        if (active_menuset)
-            g.FocusedWindow = NULL;
-        
         float w = label_size.x;
         pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(w, 0.0f), true);
-                
         window->DC.MenuBarOffsetX += (label_size.x + style.ItemSpacing.x);
         window->DC.CursorPos = backup_pos;
         ImGui::PopStyleVar();
@@ -7534,8 +7536,8 @@ bool ImGui::BeginMenu(const char* label)
     }
 
     bool hovered = IsHovered(window->DC.LastItemRect, id);
-    if (active_menuset)
-        g.FocusedWindow = focused_window_backup;
+    if (menuset_opened)
+        g.FocusedWindow = backed_focused_window;
 
     if (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
     {
@@ -7547,7 +7549,12 @@ bool ImGui::BeginMenu(const char* label)
     }
     else
     {
-        if (active_menuset)
+        if (menuset_opened && pressed)
+        {
+            ClosePopup(label);
+            opened = pressed = false;
+        }
+        else if (menuset_opened)
             pressed |= hovered;
         else
             pressed |= (hovered && !g.OpenedPopupStack.empty() && g.OpenedPopupStack.back().PopupID != id && g.OpenedPopupStack.back().ParentWindow == window);
