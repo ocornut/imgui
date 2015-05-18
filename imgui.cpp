@@ -1170,10 +1170,11 @@ struct ImGuiMouseCursorData
 struct ImGuiPopupRef
 {
     ImGuiID             PopupID;        // Set on OpenPopup()
-    ImGuiWindow*        ParentWindow;   // Set on OpenPopup()
     ImGuiWindow*        Window;         // Resolved on BeginPopup() - may stay unresolved if user never calls OpenPopup()
+    ImGuiWindow*        ParentWindow;   // Set on OpenPopup()
+    ImGuiID             ParentMenuSet;  // Set on OpenPopup()
 
-    ImGuiPopupRef(ImGuiID id, ImGuiWindow* parent_window) { PopupID = id; ParentWindow = parent_window; Window = NULL; }
+    ImGuiPopupRef(ImGuiID id, ImGuiWindow* parent_window, ImGuiID parent_menu_set) { PopupID = id; Window = NULL; ParentWindow = parent_window; ParentMenuSet = parent_menu_set; }
 };
 
 // Main state for ImGui
@@ -3026,7 +3027,7 @@ void ImGui::OpenPopup(const char* str_id)
     // One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
     g.OpenedPopupStack.resize(g.CurrentPopupStack.size() + 1);
     if (g.OpenedPopupStack.back().PopupID != id)
-        g.OpenedPopupStack.back() = ImGuiPopupRef(id, window);
+        g.OpenedPopupStack.back() = ImGuiPopupRef(id, window, window->GetID("##menus"));
 }
 
 void ImGui::CloseCurrentPopup()
@@ -3063,10 +3064,7 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
         return false;
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGuiWindowFlags flags = ImGuiWindowFlags_Popup|ImGuiWindowFlags_ShowBorders|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
-    flags |= extra_flags;
-    if ((flags & ImGuiWindowFlags_ChildMenu))
-        flags |= ImGuiWindowFlags_ChildWindow;
+    ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_ShowBorders|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
 
     char name[32];
 	if (flags & ImGuiWindowFlags_ChildMenu)
@@ -7249,7 +7247,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     return value_changed;
 }
 
-static bool SelectableEx(const char* label, bool selected, const ImVec2& size_arg, const ImVec2 size_draw_arg)
+static bool SelectableEx(const char* label, bool selected, const ImVec2& size_arg, const ImVec2 size_draw_arg, bool menu_item = false)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -7286,7 +7284,7 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true);
+    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true, menu_item ? (ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_FlattenChilds) : 0);
 
     // Render
     if (hovered || selected)
@@ -7431,7 +7429,7 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected)
     float w = window->MenuColumns.DeclColumns(label_size.x, shortcut_size.x, (float)(int)(g.FontSize * 1.20f)); // Feedback for next frame
     float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
 
-    bool pressed = SelectableEx(label, false, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f));
+    bool pressed = SelectableEx(label, false, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f), true);
 
     if (shortcut_size.x > 0.0f)
     {
@@ -7503,14 +7501,24 @@ bool ImGui::BeginMenu(const char* label)
     ImVec2 backup_pos = window->DC.CursorPos;
     ImVec2 label_size = CalcTextSize(label, NULL, true);
 
+    bool pressed;
+    bool active_menuset = false;
+    ImGuiWindow* focused_window_backup = g.FocusedWindow;
+
     if (window->DC.MenuBarAppending)
     {
         // FIXME: Should be moved at a lower-level once we have horizontal layout (#97)
         pos = window->DC.CursorPos = ImVec2(window->Pos.x + window->DC.MenuBarOffsetX, window->Pos.y + window->TitleBarHeight() + style.FramePadding.y);
         popup_pos = ImVec2(pos.x - style.ItemSpacing.x, pos.y);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
+
+        active_menuset = (g.OpenedPopupStack.size() > g.CurrentPopupStack.size() && g.OpenedPopupStack[g.CurrentPopupStack.size()].ParentMenuSet == window->GetID("##menus"));
+        if (active_menuset)
+            g.FocusedWindow = NULL;
+        
         float w = label_size.x;
-        SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(w, 0.0f));
+        pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(w, 0.0f), true);
+                
         window->DC.MenuBarOffsetX += (label_size.x + style.ItemSpacing.x);
         window->DC.CursorPos = backup_pos;
         ImGui::PopStyleVar();
@@ -7521,25 +7529,40 @@ bool ImGui::BeginMenu(const char* label)
         popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
         float w = window->MenuColumns.DeclColumns(label_size.x, 0.0f, (float)(int)(g.FontSize * 1.20f)); // Feedback to next frame
         float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
-        SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f));
+        pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f), true);
         RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), false);
     }
 
     bool hovered = IsHovered(window->DC.LastItemRect, id);
-    if (!opened && hovered)
+    if (active_menuset)
+        g.FocusedWindow = focused_window_backup;
+
+    if (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
     {
-        ImGui::OpenPopup(label);
-        opened = true;
+        if (!opened && hovered)
+        {
+            ImGui::OpenPopup(label);
+            opened = true;
+        }
     }
-    else if (opened && !hovered && g.HoveredWindow == window)
+    else
     {
-        g.OpenedPopupStack.pop_back();
-        opened = false;
+        if (active_menuset)
+            pressed |= hovered;
+        else
+            pressed |= (hovered && !g.OpenedPopupStack.empty() && g.OpenedPopupStack.back().PopupID != id && g.OpenedPopupStack.back().ParentWindow == window);
+        if (pressed)
+        {
+            ImGui::OpenPopup(label);    // FIXME-MENUS: toggle
+            opened = true;
+        }
     }
+
     if (opened)
     {
         ImGui::SetNextWindowPos(popup_pos, ImGuiSetCond_Always);
-        opened = BeginPopupEx(label, ImGuiWindowFlags_ChildMenu); // opened can be 'false' when the popup is completely clipped (e.g. zero size display)
+        ImGuiWindowFlags flags = (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu)) ? ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_ChildWindow : ImGuiWindowFlags_ChildMenu;
+        opened = BeginPopupEx(label, flags); // opened can be 'false' when the popup is completely clipped (e.g. zero size display)
     }
 
     return opened;
