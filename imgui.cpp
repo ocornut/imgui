@@ -7536,15 +7536,22 @@ bool ImGui::BeginMenu(const char* label)
     bool want_open = false;
     if (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
         want_open = (!opened && hovered);
-    else if (pressed && menuset_opened)
+    else if (opened && pressed && menuset_opened)
     {
         ClosePopup(label); // click again to toggle
         want_open = opened = false;
     }
     else if (pressed)
         want_open = true;
-    else if (hovered && menuset_opened)
+    else if (hovered && menuset_opened && !opened)
         want_open = true;
+
+    if (!opened && want_open && g.OpenedPopupStack.size() > g.CurrentPopupStack.size())
+    {
+        // Don't recycle same menu level in the same frame, first close the other menu and yield for a frame.
+        ImGui::OpenPopup(label);
+        return false;
+    }
 
     opened |= want_open;
     if (want_open)
