@@ -13,7 +13,7 @@
  - API BREAKING CHANGES (read me when you update!)
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - How do I update to a newer version of ImGui?
-   - Can I have multiple widgets with the same label? (Yes)
+   - Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
    - Why is my text output blurry?
    - How can I load a different font than the default? 
    - How can I load multiple fonts?
@@ -196,16 +196,16 @@
     Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes. If you have a problem with a function, search for its name
     in the code, there will likely be a comment about it. Please report any issue to the GitHub page!
 
- Q: Can I have multiple widgets with the same label? 
+ Q: Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
  A: Yes. A primer on the use of labels/IDs in ImGui..
  
+   - Elements that are not clickable, such as Text() items don't need an ID.
+
    - Interactive widgets require state to be carried over multiple frames (most typically ImGui often needs to remember what is the "active" widget).
      to do so they need an unique ID. unique ID are typically derived from a string label, an integer index or a pointer.
      
        Button("OK");        // Label = "OK",     ID = hash of "OK"
        Button("Cancel");    // Label = "Cancel", ID = hash of "Cancel"
-
-   - Elements that are not clickable, such as Text() items don't need an ID.
 
    - ID are uniquely scoped within windows, tree nodes, etc. so no conflict can happen if you have two buttons called "OK" in two different windows
      or in two different locations of a tree.
@@ -213,21 +213,25 @@
    - if you have a same ID twice in the same location, you'll have a conflict:
 
        Button("OK");
-       Button("OK");        // ID collision! Both buttons will be treated as the same.
+       Button("OK");           // ID collision! Both buttons will be treated as the same.
 
      Fear not! this is easy to solve and there are many ways to solve it!
 
    - when passing a label you can optionally specify extra unique ID information within string itself. This helps solving the simpler collision cases.
      use "##" to pass a complement to the ID that won't be visible to the end-user:
 
-       Button("Play##0");   // Label = "Play",   ID = hash of "Play##0"
-       Button("Play##1");   // Label = "Play",   ID = hash of "Play##1" (different from above)
+       Button("Play##0");      // Label = "Play",   ID = hash of "Play##0"
+       Button("Play##1");      // Label = "Play",   ID = hash of "Play##1" (different from above)
+
+   - so if you want to hide the label but need an ID:
+
+       Checkbox("##On", &b);   // Label = "",       ID = hash of "##On"
 
    - occasionally (rarely) you might want change a label while preserving a constant ID. This allows you to animate labels.
      use "###" to pass a label that isn't part of ID:
 
-       Button("Hello###ID"; // Label = "Hello",  ID = hash of "ID"
-       Button("World###ID"; // Label = "World",  ID = hash of "ID" (same as above)
+       Button("Hello###ID";   // Label = "Hello",  ID = hash of "ID"
+       Button("World###ID";   // Label = "World",  ID = hash of "ID" (same as above)
 
    - use PushID() / PopID() to create scopes and avoid ID conflicts within the same Window.
      this is the most convenient way of distinguish ID if you are iterating and creating many UI elements.
