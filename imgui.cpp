@@ -1879,7 +1879,6 @@ static void SaveSettings()
 static void MarkSettingsDirty()
 {
     ImGuiState& g = *GImGui;
-
     if (g.SettingsDirtyTimer <= 0.0f)
         g.SettingsDirtyTimer = g.IO.IniSavingRate;
 }
@@ -3794,7 +3793,6 @@ float ImGui::CalcItemWidth()
 static void SetFont(ImFont* font)
 {
     ImGuiState& g = *GImGui;
-
     IM_ASSERT(font && font->IsLoaded());
     IM_ASSERT(font->Scale > 0.0f);
     g.Font = font;
@@ -3806,10 +3804,8 @@ static void SetFont(ImFont* font)
 void ImGui::PushFont(ImFont* font)
 {
     ImGuiState& g = *GImGui;
-
     if (!font)
         font = g.IO.Fonts->Fonts[0];
-
     SetFont(font);
     g.FontStack.push_back(font);
     g.CurrentWindow->DrawList->PushTextureID(font->ContainerAtlas->TexID);
@@ -3818,7 +3814,6 @@ void ImGui::PushFont(ImFont* font)
 void  ImGui::PopFont()
 {
     ImGuiState& g = *GImGui;
-
     g.CurrentWindow->DrawList->PopTextureID();
     g.FontStack.pop_back();
     SetFont(g.FontStack.empty() ? g.IO.Fonts->Fonts[0] : g.FontStack.back());
@@ -3851,7 +3846,6 @@ void ImGui::PopTextWrapPos()
 void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
 {
     ImGuiState& g = *GImGui;
-
     ImGuiColMod backup;
     backup.Col = idx;
     backup.PreviousValue = g.Style.Colors[idx];
@@ -3862,7 +3856,6 @@ void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
 void ImGui::PopStyleColor(int count)
 {
     ImGuiState& g = *GImGui;
-
     while (count > 0)
     {
         ImGuiColMod& backup = g.ColorModifiers.back();
@@ -3903,7 +3896,6 @@ static ImVec2* GetStyleVarVec2Addr(ImGuiStyleVar idx)
 void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
 {
     ImGuiState& g = *GImGui;
-
     float* pvar = GetStyleVarFloatAddr(idx);
     IM_ASSERT(pvar != NULL); // Called function with wrong-type? Variable is not a float.
     ImGuiStyleMod backup;
@@ -3917,7 +3909,6 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
 void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
 {
     ImGuiState& g = *GImGui;
-
     ImVec2* pvar = GetStyleVarVec2Addr(idx);
     IM_ASSERT(pvar != NULL); // Called function with wrong-type? Variable is not a ImVec2.
     ImGuiStyleMod backup;
@@ -3930,7 +3921,6 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
 void ImGui::PopStyleVar(int count)
 {
     ImGuiState& g = *GImGui;
-
     while (count > 0)
     {
         ImGuiStyleMod& backup = g.StyleModifiers.back();
@@ -4533,10 +4523,9 @@ void ImGui::LabelText(const char* label, const char* fmt, ...)
 
 static inline bool IsWindowContentHoverable(ImGuiWindow* window)
 {
-    ImGuiState& g = *GImGui;
-
     // An active popup disable hovering on other windows (apart from its own children)
-    if (ImGuiWindow* focused_window = g.FocusedWindow)
+    ImGuiState& g = *GImGui;
+   if (ImGuiWindow* focused_window = g.FocusedWindow)
         if (ImGuiWindow* focused_root_window = focused_window->RootWindow)
             if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasActive && focused_root_window != window->RootWindow)
                 return false;
