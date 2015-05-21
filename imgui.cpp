@@ -13,7 +13,7 @@
  - API BREAKING CHANGES (read me when you update!)
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - How do I update to a newer version of ImGui?
-   - Can I have multiple widgets with the same label? (Yes)
+   - Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
    - Why is my text output blurry?
    - How can I load a different font than the default? 
    - How can I load multiple fonts?
@@ -197,16 +197,16 @@
     Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes. If you have a problem with a function, search for its name
     in the code, there will likely be a comment about it. Please report any issue to the GitHub page!
 
- Q: Can I have multiple widgets with the same label? 
+ Q: Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
  A: Yes. A primer on the use of labels/IDs in ImGui..
  
+   - Elements that are not clickable, such as Text() items don't need an ID.
+
    - Interactive widgets require state to be carried over multiple frames (most typically ImGui often needs to remember what is the "active" widget).
      to do so they need an unique ID. unique ID are typically derived from a string label, an integer index or a pointer.
      
        Button("OK");        // Label = "OK",     ID = hash of "OK"
        Button("Cancel");    // Label = "Cancel", ID = hash of "Cancel"
-
-   - Elements that are not clickable, such as Text() items don't need an ID.
 
    - ID are uniquely scoped within windows, tree nodes, etc. so no conflict can happen if you have two buttons called "OK" in two different windows
      or in two different locations of a tree.
@@ -214,21 +214,25 @@
    - if you have a same ID twice in the same location, you'll have a conflict:
 
        Button("OK");
-       Button("OK");        // ID collision! Both buttons will be treated as the same.
+       Button("OK");           // ID collision! Both buttons will be treated as the same.
 
      Fear not! this is easy to solve and there are many ways to solve it!
 
    - when passing a label you can optionally specify extra unique ID information within string itself. This helps solving the simpler collision cases.
      use "##" to pass a complement to the ID that won't be visible to the end-user:
 
-       Button("Play##0");   // Label = "Play",   ID = hash of "Play##0"
-       Button("Play##1");   // Label = "Play",   ID = hash of "Play##1" (different from above)
+       Button("Play##0");      // Label = "Play",   ID = hash of "Play##0"
+       Button("Play##1");      // Label = "Play",   ID = hash of "Play##1" (different from above)
+
+   - so if you want to hide the label but need an ID:
+
+       Checkbox("##On", &b);   // Label = "",       ID = hash of "##On"
 
    - occasionally (rarely) you might want change a label while preserving a constant ID. This allows you to animate labels.
      use "###" to pass a label that isn't part of ID:
 
-       Button("Hello###ID"; // Label = "Hello",  ID = hash of "ID"
-       Button("World###ID"; // Label = "World",  ID = hash of "ID" (same as above)
+       Button("Hello###ID";   // Label = "Hello",  ID = hash of "ID"
+       Button("World###ID";   // Label = "World",  ID = hash of "ID" (same as above)
 
    - use PushID() / PopID() to create scopes and avoid ID conflicts within the same Window.
      this is the most convenient way of distinguish ID if you are iterating and creating many UI elements.
@@ -706,6 +710,7 @@ static inline ImVec2& operator+=(ImVec2& lhs, const ImVec2& rhs)                
 static inline ImVec2& operator-=(ImVec2& lhs, const ImVec2& rhs)                { lhs.x -= rhs.x; lhs.y -= rhs.y; return lhs; }
 static inline ImVec2& operator*=(ImVec2& lhs, const float rhs)                  { lhs.x *= rhs; lhs.y *= rhs; return lhs; }
 //static inline ImVec2& operator/=(ImVec2& lhs, const float rhs)                { lhs.x /= rhs; lhs.y /= rhs; return lhs; }
+static inline ImVec4 operator-(const ImVec4& lhs, const ImVec4& rhs)            { return ImVec4(lhs.x-rhs.x, lhs.y-rhs.y, lhs.z-rhs.z, lhs.w-lhs.w); }
 
 static inline int    ImMin(int lhs, int rhs)                                    { return lhs < rhs ? lhs : rhs; }
 static inline int    ImMax(int lhs, int rhs)                                    { return lhs >= rhs ? lhs : rhs; }
@@ -720,6 +725,7 @@ static inline float  ImSaturate(float f)                                        
 static inline float  ImLerp(float a, float b, float t)                          { return a + (b - a) * t; }
 static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, const ImVec2& t)  { return ImVec2(a.x + (b.x - a.x) * t.x, a.y + (b.y - a.y) * t.y); }
 static inline float  ImLengthSqr(const ImVec2& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y; }
+static inline float  ImLengthSqr(const ImVec4& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y + lhs.z*lhs.z + lhs.w*lhs.w; }
 
 static int ImStricmp(const char* str1, const char* str2)
 {
@@ -1344,6 +1350,7 @@ struct ImGuiWindow
     bool                    Accessed;                           // Set to true when any widget access the current window
     bool                    Collapsed;                          // Set when collapsing window to become only title-bar
     bool                    SkipItems;                          // == Visible && !Collapsed
+    int                     BeginCount;                         // Number of Begin() during the current frame (generally 0 or 1, 1+ if appending via multiple Begin/End pairs)
     ImGuiID                 PopupID;                            // ID in the popup stack when this window is used as a popup/menu (because we use generic Name/ID for recycling) 
     int                     AutoFitFrames;
     bool                    AutoFitOnlyGrows;
@@ -1706,6 +1713,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Accessed = false;
     Collapsed = false;
     SkipItems = false;
+    BeginCount = 0;
     PopupID = 0;
     AutoFitFrames = -1;
     AutoFitOnlyGrows = false;
@@ -1942,7 +1950,6 @@ static void SaveSettings()
 static void MarkSettingsDirty()
 {
     ImGuiState& g = *GImGui;
-
     if (g.SettingsDirtyTimer <= 0.0f)
         g.SettingsDirtyTimer = g.IO.IniSavingRate;
 }
@@ -3154,7 +3161,7 @@ void ImGui::EndChild()
     ImGuiWindow* window = GetCurrentWindow();
 
     IM_ASSERT(window->Flags & ImGuiWindowFlags_ChildWindow);
-    if (window->Flags & ImGuiWindowFlags_ComboBox)
+    if ((window->Flags & ImGuiWindowFlags_ComboBox) || window->BeginCount > 1)
     {
         ImGui::End();
     }
@@ -3401,21 +3408,19 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     if (first_begin_of_the_frame)
     {
         window->Active = true;
+        window->BeginCount = 0;
         window->DrawList->Clear();
         window->ClipRectStack.resize(0);
         window->LastFrameDrawn = current_frame;
         window->IDStack.resize(1);
-    }
 
-    // Setup texture, outer clipping rectangle
-    window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
-    if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_ComboBox|ImGuiWindowFlags_Popup)))
-        PushClipRect(parent_window->ClipRectStack.back());
-    else
-        PushClipRect(GetVisibleRect());
+        // Setup texture, outer clipping rectangle
+        window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
+        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_ComboBox|ImGuiWindowFlags_Popup)))
+            PushClipRect(parent_window->ClipRectStack.back());
+        else
+            PushClipRect(GetVisibleRect());
 
-    if (first_begin_of_the_frame)
-    {
         // New windows appears in front
         if (!window_was_visible)
         {
@@ -3775,6 +3780,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 ImGui::LogToClipboard();
         */
     }
+    window->BeginCount++;
 
     // Inner clipping rectangle
     // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
@@ -3819,8 +3825,6 @@ void ImGui::End()
 
     ImGui::Columns(1, "#CloseColumns");
     PopClipRect();   // inner window clip rectangle
-    PopClipRect();   // outer window clip rectangle
-    window->DrawList->PopTextureID();
 
     // Stop logging
     if (!(window->Flags & ImGuiWindowFlags_ChildWindow))    // FIXME: add more options for scope of logging
@@ -3975,7 +3979,6 @@ float ImGui::CalcItemWidth()
 static void SetFont(ImFont* font)
 {
     ImGuiState& g = *GImGui;
-
     IM_ASSERT(font && font->IsLoaded());
     IM_ASSERT(font->Scale > 0.0f);
     g.Font = font;
@@ -3987,10 +3990,8 @@ static void SetFont(ImFont* font)
 void ImGui::PushFont(ImFont* font)
 {
     ImGuiState& g = *GImGui;
-
     if (!font)
         font = g.IO.Fonts->Fonts[0];
-
     SetFont(font);
     g.FontStack.push_back(font);
     g.CurrentWindow->DrawList->PushTextureID(font->ContainerAtlas->TexID);
@@ -3999,7 +4000,6 @@ void ImGui::PushFont(ImFont* font)
 void  ImGui::PopFont()
 {
     ImGuiState& g = *GImGui;
-
     g.CurrentWindow->DrawList->PopTextureID();
     g.FontStack.pop_back();
     SetFont(g.FontStack.empty() ? g.IO.Fonts->Fonts[0] : g.FontStack.back());
@@ -4032,7 +4032,6 @@ void ImGui::PopTextWrapPos()
 void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
 {
     ImGuiState& g = *GImGui;
-
     ImGuiColMod backup;
     backup.Col = idx;
     backup.PreviousValue = g.Style.Colors[idx];
@@ -4043,7 +4042,6 @@ void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
 void ImGui::PopStyleColor(int count)
 {
     ImGuiState& g = *GImGui;
-
     while (count > 0)
     {
         ImGuiColMod& backup = g.ColorModifiers.back();
@@ -4084,7 +4082,6 @@ static ImVec2* GetStyleVarVec2Addr(ImGuiStyleVar idx)
 void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
 {
     ImGuiState& g = *GImGui;
-
     float* pvar = GetStyleVarFloatAddr(idx);
     IM_ASSERT(pvar != NULL); // Called function with wrong-type? Variable is not a float.
     ImGuiStyleMod backup;
@@ -4098,7 +4095,6 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
 void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
 {
     ImGuiState& g = *GImGui;
-
     ImVec2* pvar = GetStyleVarVec2Addr(idx);
     IM_ASSERT(pvar != NULL); // Called function with wrong-type? Variable is not a ImVec2.
     ImGuiStyleMod backup;
@@ -4111,7 +4107,6 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
 void ImGui::PopStyleVar(int count)
 {
     ImGuiState& g = *GImGui;
-
     while (count > 0)
     {
         ImGuiStyleMod& backup = g.StyleModifiers.back();
@@ -4716,10 +4711,9 @@ void ImGui::LabelText(const char* label, const char* fmt, ...)
 
 static inline bool IsWindowContentHoverable(ImGuiWindow* window)
 {
-    ImGuiState& g = *GImGui;
-
     // An active popup disable hovering on other windows (apart from its own children)
-    if (ImGuiWindow* focused_window = g.FocusedWindow)
+    ImGuiState& g = *GImGui;
+   if (ImGuiWindow* focused_window = g.FocusedWindow)
         if (ImGuiWindow* focused_root_window = focused_window->RootWindow)
             if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasActive && focused_root_window != window->RootWindow)
                 return false;
@@ -6996,7 +6990,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
 
         // Draw blinking cursor
         if (g.InputTextState.CursorIsVisible())
-            window->DrawList->AddRect(cursor_pos - font_off_up + ImVec2(0,2), cursor_pos + font_off_dn - ImVec2(0,3), window->Color(ImGuiCol_Text));
+            window->DrawList->AddLine(cursor_pos - font_off_up + ImVec2(0,2), cursor_pos + font_off_dn - ImVec2(0,3), window->Color(ImGuiCol_Text));
         
         // Notify OS of text input position for advanced IME
         if (io.ImeSetInputScreenPosFn && ImLengthSqr(edit_state.InputCursorScreenPos - cursor_pos) > 0.0001f)
@@ -8326,7 +8320,11 @@ void ImDrawList::UpdateClipRect()
     }
     else
     {
-        current_cmd->clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
+        ImVec4 current_clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
+        if (commands.size() > 2 && ImLengthSqr(commands[commands.size()-2].clip_rect - current_clip_rect) < 0.00001f)
+            commands.pop_back();
+        else
+            current_cmd->clip_rect = current_clip_rect;
     }
 }
 
