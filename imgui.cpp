@@ -1289,6 +1289,7 @@ struct ImGuiWindow
     bool                    Accessed;                           // Set to true when any widget access the current window
     bool                    Collapsed;                          // Set when collapsing window to become only title-bar
     bool                    SkipItems;                          // == Visible && !Collapsed
+    int                     BeginCount;                         // Number of Begin() during the current frame (generally 0 or 1, 1+ if appending via multiple Begin/End pairs)
     int                     AutoFitFrames;
     bool                    AutoFitOnlyGrows;
     int                     AutoPosLastDirection;
@@ -1648,6 +1649,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Accessed = false;
     Collapsed = false;
     SkipItems = false;
+    BeginCount = 0;
     AutoFitFrames = -1;
     AutoFitOnlyGrows = false;
     AutoPosLastDirection = -1;
@@ -2992,7 +2994,7 @@ void ImGui::EndChild()
     ImGuiWindow* window = GetCurrentWindow();
 
     IM_ASSERT(window->Flags & ImGuiWindowFlags_ChildWindow);
-    if (window->Flags & ImGuiWindowFlags_ComboBox)
+    if ((window->Flags & ImGuiWindowFlags_ComboBox) || window->BeginCount > 1)
     {
         ImGui::End();
     }
@@ -3229,11 +3231,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     if (first_begin_of_the_frame)
     {
         window->Active = true;
+        window->BeginCount = 0;
         window->DrawList->Clear();
         window->ClipRectStack.resize(0);
         window->LastFrameDrawn = current_frame;
         window->IDStack.resize(1);
     }
+    window->BeginCount++;
 
     // Setup texture, outer clipping rectangle
     window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
