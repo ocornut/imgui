@@ -26,7 +26,8 @@ static ID3D10Blob *             g_pPixelShaderBlob = NULL;
 static ID3D11PixelShader*       g_pPixelShader = NULL;
 static ID3D11SamplerState*      g_pFontSampler = NULL;
 static ID3D11ShaderResourceView*g_pFontTextureView = NULL;
-static ID3D11BlendState*        g_blendState = NULL;
+static ID3D11RasterizerState*   g_pRasterizerState = NULL;
+static ID3D11BlendState*        g_pBlendState = NULL;
 static int                      VERTEX_BUFFER_SIZE = 30000;     // TODO: Make vertex buffer smaller and grow dynamically as needed.
 
 struct VERTEX_CONSTANT_BUFFER
@@ -100,7 +101,8 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
 
     // Setup render state
     const float blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
-    g_pd3dDeviceContext->OMSetBlendState(g_blendState, blendFactor, 0xffffffff);
+    g_pd3dDeviceContext->OMSetBlendState(g_pBlendState, blendFactor, 0xffffffff);
+    g_pd3dDeviceContext->RSSetState(g_pRasterizerState);
 
     // Render command lists
     int vtx_offset = 0;
@@ -339,19 +341,30 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
         desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
         desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
         desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-        g_pd3dDevice->CreateBlendState(&desc, &g_blendState);
+        g_pd3dDevice->CreateBlendState(&desc, &g_pBlendState);
+    }
+
+    // Create the rasterizer state
+    {
+        D3D11_RASTERIZER_DESC desc;
+        ZeroMemory(&desc, sizeof(desc));
+        desc.FillMode = D3D11_FILL_SOLID;
+        desc.CullMode = D3D11_CULL_NONE;
+        desc.ScissorEnable = true;
+        desc.DepthClipEnable = true;
+        g_pd3dDevice->CreateRasterizerState(&desc, &g_pRasterizerState);
     }
 
     // Create the vertex buffer
     {
-        D3D11_BUFFER_DESC bufferDesc;
-        memset(&bufferDesc, 0, sizeof(D3D11_BUFFER_DESC));
-        bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-        bufferDesc.ByteWidth = VERTEX_BUFFER_SIZE * sizeof(ImDrawVert);
-        bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        bufferDesc.MiscFlags = 0;
-        if (g_pd3dDevice->CreateBuffer(&bufferDesc, NULL, &g_pVB) < 0)
+        D3D11_BUFFER_DESC desc;
+        memset(&desc, 0, sizeof(D3D11_BUFFER_DESC));
+        desc.Usage = D3D11_USAGE_DYNAMIC;
+        desc.ByteWidth = VERTEX_BUFFER_SIZE * sizeof(ImDrawVert);
+        desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        desc.MiscFlags = 0;
+        if (g_pd3dDevice->CreateBuffer(&desc, NULL, &g_pVB) < 0)
             return false;
     }
 
@@ -369,7 +382,8 @@ void    ImGui_ImplDX11_InvalidateDeviceObjects()
     if (g_pFontTextureView) { g_pFontTextureView->Release(); ImGui::GetIO().Fonts->TexID = 0; }
     if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
 
-    if (g_blendState) { g_blendState->Release(); g_blendState = NULL; }
+    if (g_pBlendState) { g_pBlendState->Release(); g_pBlendState = NULL; }
+    if (g_pRasterizerState) { g_pRasterizerState->Release(); g_pRasterizerState = NULL; }
     if (g_pPixelShader) { g_pPixelShader->Release(); g_pPixelShader = NULL; }
     if (g_pPixelShaderBlob) { g_pPixelShaderBlob->Release(); g_pPixelShaderBlob = NULL; }
     if (g_pVertexConstantBuffer) { g_pVertexConstantBuffer->Release(); g_pVertexConstantBuffer = NULL; }
