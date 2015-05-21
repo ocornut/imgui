@@ -3238,18 +3238,14 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->ClipRectStack.resize(0);
         window->LastFrameDrawn = current_frame;
         window->IDStack.resize(1);
-    }
-    window->BeginCount++;
 
-    // Setup texture, outer clipping rectangle
-    window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
-    if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
-        PushClipRect(parent_window->ClipRectStack.back());
-    else
-        PushClipRect(GetVisibleRect());
+        // Setup texture, outer clipping rectangle
+        window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
+        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ComboBox))
+            PushClipRect(parent_window->ClipRectStack.back());
+        else
+            PushClipRect(GetVisibleRect());
 
-    if (first_begin_of_the_frame)
-    {
         // New windows appears in front
         if (!window_was_visible)
         {
@@ -3601,6 +3597,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 ImGui::LogToClipboard();
         */
     }
+    window->BeginCount++;
 
     // Inner clipping rectangle
     // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
@@ -3645,8 +3642,6 @@ void ImGui::End()
 
     ImGui::Columns(1, "#CloseColumns");
     PopClipRect();   // inner window clip rectangle
-    PopClipRect();   // outer window clip rectangle
-    window->DrawList->PopTextureID();
 
     // Stop logging
     if (!(window->Flags & ImGuiWindowFlags_ChildWindow))    // FIXME: add more options for scope of logging
