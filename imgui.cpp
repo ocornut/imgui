@@ -2701,8 +2701,13 @@ bool ImGui::IsKeyDown(int key_index)
 bool ImGui::IsKeyPressed(int key_index, bool repeat)
 {
     ImGuiState& g = *GImGui;
-    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
-    const float t = g.IO.KeysDownTime[key_index];
+
+	if(!(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown)))
+	{
+		return true;
+	}
+
+	const float t = g.IO.KeysDownTime[key_index];
     if (t == 0.0f)
         return true;
 
@@ -4561,7 +4566,6 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                 if (pressed_on_click)
                 {
                     pressed = true;
-                    SetActiveId(0);
                 }
                 else
                 {
@@ -4587,9 +4591,13 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         {
             if (hovered)
                 pressed = true;
-            SetActiveId(0);
         }
     }
+
+	if(pressed)
+	{
+        SetActiveId(0);
+	}
 
     if (out_hovered) *out_hovered = hovered;
     if (out_held) *out_held = held;
