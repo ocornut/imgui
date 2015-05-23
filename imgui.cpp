@@ -948,7 +948,8 @@ enum ImGuiButtonFlags_
 {
     ImGuiButtonFlags_Repeat         = (1 << 0),
     ImGuiButtonFlags_PressedOnClick = (1 << 1),
-    ImGuiButtonFlags_FlattenChilds  = (1 << 2)
+    ImGuiButtonFlags_FlattenChilds  = (1 << 2),
+    ImGuiButtonFlags_Disabled       = (1 << 3)
 };
 
 struct ImGuiColMod       // Color modifier, backup of modified data so we can restore it
@@ -4741,6 +4742,14 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
+    if (flags & ImGuiButtonFlags_Disabled)
+    {
+        if (out_hovered) *out_hovered = false;
+        if (out_held) *out_held = false;
+        if (g.ActiveId == id) SetActiveId(0);
+        return false;
+    }
+
     bool pressed = false;
     const bool hovered = IsHovered(bb, id, (flags & ImGuiButtonFlags_FlattenChilds) != 0);
     if (hovered)
@@ -7249,7 +7258,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     return value_changed;
 }
 
-static bool SelectableEx(const char* label, bool selected, const ImVec2& size_arg, const ImVec2 size_draw_arg, bool menu_item = false)
+static bool SelectableEx(const char* label, bool selected, const ImVec2& size_arg, const ImVec2 size_draw_arg, bool menu_item = false, bool enabled = true)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -7285,7 +7294,7 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true, menu_item ? ImGuiButtonFlags_PressedOnClick : 0);
+    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true, (menu_item ? ImGuiButtonFlags_PressedOnClick : 0) | (enabled ? 0 : ImGuiButtonFlags_Disabled));
 
     // Render
     if (hovered || selected)
@@ -7293,7 +7302,9 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
         const ImU32 col = window->Color((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
         RenderFrame(bb_with_spacing.Min, bb_with_spacing.Max, col, false, style.FrameRounding);
     }
+    if (!enabled) ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
     RenderTextClipped(bb.Min, label, NULL, &label_size, bb_with_spacing.Max);
+    if (!enabled) ImGui::PopStyleColor();
 
     // Automatically close popups
     if (pressed && (window->Flags & ImGuiWindowFlags_ChildMenu))
@@ -7415,7 +7426,7 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
     return value_changed;
 }
 
-bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected)
+bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected, bool enabled)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -7428,7 +7439,7 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected)
     float w = window->MenuColumns.DeclColumns(label_size.x, shortcut_size.x, (float)(int)(g.FontSize * 1.20f)); // Feedback for next frame
     float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
 
-    bool pressed = SelectableEx(label, false, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f), true);
+    bool pressed = SelectableEx(label, false, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f), true, enabled);
     if (shortcut_size.x > 0.0f)
     {
         ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
@@ -7442,9 +7453,9 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected)
     return pressed;
 }
 
-bool ImGui::MenuItem(const char* label, const char* shortcut, bool* p_selected)
+bool ImGui::MenuItem(const char* label, const char* shortcut, bool* p_selected, bool enabled)
 {
-    if (ImGui::MenuItem(label, shortcut, p_selected ? *p_selected : false))
+    if (ImGui::MenuItem(label, shortcut, p_selected ? *p_selected : false, enabled))
     {
         if (p_selected)
             *p_selected = !*p_selected;
@@ -11257,7 +11268,7 @@ static void ShowExampleAppMainMenuBar()
         if (ImGui::BeginMenu("Edit"))
         {
             if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
-            if (ImGui::MenuItem("Redo", "CTRL+Y")) {}
+            if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
             ImGui::Separator();
             if (ImGui::MenuItem("Cut", "CTRL+X")) {}
             if (ImGui::MenuItem("Copy", "CTRL+C")) {}
@@ -11270,7 +11281,7 @@ static void ShowExampleAppMainMenuBar()
 
 static void ShowExampleMenuFile()
 {
-    ImGui::TextColored(ImGui::GetStyle().Colors[ImGuiCol_TextDisabled], "(dummy menu)");
+    ImGui::MenuItem("(dummy menu)", NULL, false, false);
     ImGui::MenuItem("New");
     ImGui::MenuItem("Open", "Ctrl+O");
     if (ImGui::BeginMenu("Open Recent"))
