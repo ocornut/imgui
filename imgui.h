@@ -300,7 +300,9 @@ namespace ImGui
 
     // Widgets: Menus
 	// FIXME-WIP: v1.39 in development, API *WILL* change
-    IMGUI_API bool          BeginMenuBar();
+    IMGUI_API bool          BeginMainMenuBar();                 // create and append to a fullscreen menu-bar
+    IMGUI_API void          EndMainMenuBar();
+    IMGUI_API bool          BeginMenuBar();                     // append to menu-bar of current window
     IMGUI_API void          EndMenuBar();
     IMGUI_API bool          BeginMenu(const char* label);
     IMGUI_API void          EndMenu();
@@ -504,6 +506,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_Alpha,               // float
     ImGuiStyleVar_WindowPadding,       // ImVec2
     ImGuiStyleVar_WindowRounding,      // float
+    ImGuiStyleVar_WindowMinSize,       // ImVec2
     ImGuiStyleVar_ChildWindowRounding, // float
     ImGuiStyleVar_FramePadding,        // ImVec2
     ImGuiStyleVar_FrameRounding,       // float

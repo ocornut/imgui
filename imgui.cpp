@@ -4072,6 +4072,7 @@ static ImVec2* GetStyleVarVec2Addr(ImGuiStyleVar idx)
     switch (idx)
     {
     case ImGuiStyleVar_WindowPadding: return &g.Style.WindowPadding;
+    case ImGuiStyleVar_WindowMinSize: return &g.Style.WindowMinSize;
     case ImGuiStyleVar_FramePadding: return &g.Style.FramePadding;
     case ImGuiStyleVar_ItemSpacing: return &g.Style.ItemSpacing;
     case ImGuiStyleVar_ItemInnerSpacing: return &g.Style.ItemInnerSpacing;
@@ -7452,6 +7453,30 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool* p_selected)
     return false;
 }
 
+bool ImGui::BeginMainMenuBar()
+{
+    ImGuiState& g = *GImGui;
+    ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+    ImGui::SetNextWindowSize(ImVec2(g.IO.DisplaySize.x, g.FontBaseSize + g.Style.FramePadding.y * 2.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0,0));
+    if (!ImGui::Begin("##MainMenuBar", NULL, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_MenuBar)
+        || !ImGui::BeginMenuBar())
+    {
+        ImGui::End();
+        ImGui::PopStyleVar(2);
+        return false;
+    }
+    return true;
+}
+
+void ImGui::EndMainMenuBar()
+{
+    ImGui::EndMenuBar();
+    ImGui::End();
+    ImGui::PopStyleVar(2);
+}
+
 bool ImGui::BeginMenuBar()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -10075,33 +10100,29 @@ static void ShowExampleAppAutoResize(bool* opened);
 static void ShowExampleAppFixedOverlay(bool* opened);
 static void ShowExampleAppManipulatingWindowTitle(bool* opened);
 static void ShowExampleAppCustomRendering(bool* opened);
+static void ShowExampleAppMainMenuBar();
 static void ShowExampleMenuFile();
 
-// Demonstrate ImGui features (unfortunately this makes this function a little bloated!)
+// Demonstrate most ImGui features (big function!)
 void ImGui::ShowTestWindow(bool* opened)
 {
     // Examples apps
     static bool show_app_metrics = false;
+    static bool show_app_main_menu_bar = false;
     static bool show_app_console = false;
     static bool show_app_long_text = false;
     static bool show_app_auto_resize = false;
     static bool show_app_fixed_overlay = false;
     static bool show_app_custom_rendering = false;
     static bool show_app_manipulating_window_title = false;
-    if (show_app_metrics)
-        ImGui::ShowMetricsWindow(&show_app_metrics);
-    if (show_app_console)
-        ShowExampleAppConsole(&show_app_console);
-    if (show_app_long_text)
-        ShowExampleAppLongText(&show_app_long_text);
-    if (show_app_auto_resize)
-        ShowExampleAppAutoResize(&show_app_auto_resize);
-    if (show_app_fixed_overlay)
-        ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
-    if (show_app_manipulating_window_title)
-        ShowExampleAppManipulatingWindowTitle(&show_app_manipulating_window_title);
-    if (show_app_custom_rendering)
-        ShowExampleAppCustomRendering(&show_app_custom_rendering);
+    if (show_app_metrics) ImGui::ShowMetricsWindow(&show_app_metrics);
+    if (show_app_main_menu_bar) ShowExampleAppMainMenuBar();
+    if (show_app_console) ShowExampleAppConsole(&show_app_console);
+    if (show_app_long_text) ShowExampleAppLongText(&show_app_long_text);
+    if (show_app_auto_resize) ShowExampleAppAutoResize(&show_app_auto_resize);
+    if (show_app_fixed_overlay) ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
+    if (show_app_manipulating_window_title) ShowExampleAppManipulatingWindowTitle(&show_app_manipulating_window_title);
+    if (show_app_custom_rendering) ShowExampleAppCustomRendering(&show_app_custom_rendering);
 
     static bool no_titlebar = false;
     static bool no_border = true;
@@ -10149,6 +10170,7 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::BeginMenu("Examples"))
         {
             ImGui::MenuItem("Metrics", NULL, &show_app_metrics);
+            ImGui::MenuItem("Main menu bar", NULL, &show_app_main_menu_bar);
             ImGui::MenuItem("Console", NULL, &show_app_console);
             ImGui::MenuItem("Long text display", NULL, &show_app_long_text);
             ImGui::MenuItem("Auto-resizing window", NULL, &show_app_auto_resize);
@@ -11221,6 +11243,29 @@ void ImGui::ShowMetricsWindow(bool* opened)
         g.DisableHideTextAfterDoubleHash--;
     }
     ImGui::End();
+}
+
+static void ShowExampleAppMainMenuBar()
+{
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            ShowExampleMenuFile();
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Edit"))
+        {
+            if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
+            if (ImGui::MenuItem("Redo", "CTRL+Y")) {}
+            ImGui::Separator();
+            if (ImGui::MenuItem("Cut", "CTRL+X")) {}
+            if (ImGui::MenuItem("Copy", "CTRL+C")) {}
+            if (ImGui::MenuItem("Paste", "CTRL+V")) {}
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
 }
 
 static void ShowExampleMenuFile()
