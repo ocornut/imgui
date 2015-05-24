@@ -168,7 +168,7 @@ namespace ImGui
     IMGUI_API void          OpenPopup(const char* str_id);                                      // mark popup as open. close childs popups if any. will close popup when user click outside, or activate menu items, or CloseCurrentPopup() is called within a BeginPopup/EndPopup block.
     IMGUI_API bool          BeginPopup(const char* str_id);                                     // return true if popup if opened and start outputting to it. only call EndPopup() if BeginPopup() returned true!
     IMGUI_API void          EndPopup();
-    IMGUI_API void          CloseCurrentPopup();
+    IMGUI_API void          CloseCurrentPopup();                                                // close the popup we have begin-ed into
 
     // Layout
     IMGUI_API void          BeginGroup();                                                       // once closing a group it is seen as a single item (so you can use IsItemHovered() on a group, SameLine() between groups, etc. 
@@ -301,11 +301,11 @@ namespace ImGui
 
     // Widgets: Menus
 	// FIXME-WIP: v1.39 in development, API *WILL* change
-    IMGUI_API bool          BeginMainMenuBar();                 // create and append to a fullscreen menu-bar
+    IMGUI_API bool          BeginMainMenuBar();                 // create and append to a full screen menu-bar. only call EndMainMenuBar() if this returns true!
     IMGUI_API void          EndMainMenuBar();
-    IMGUI_API bool          BeginMenuBar();                     // append to menu-bar of current window
+    IMGUI_API bool          BeginMenuBar();                     // append to menu-bar of current window. only call EndMenuBar() if this returns true!
     IMGUI_API void          EndMenuBar();
-    IMGUI_API bool          BeginMenu(const char* label);
+    IMGUI_API bool          BeginMenu(const char* label);       // create a sub-menu entry. only call EndMenu() if this returns true!
     IMGUI_API void          EndMenu();
     IMGUI_API bool          MenuItem(const char* label, const char* shortcut = NULL, bool selected = false, bool enabled = true);
     IMGUI_API bool          MenuItem(const char* label, const char* shortcut, bool* p_selected, bool enabled = true);
@@ -411,7 +411,6 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_Tooltip                = 1 << 24,  // Don't use! For internal use by BeginTooltip()
     ImGuiWindowFlags_Popup                  = 1 << 25,  // Don't use! For internal use by BeginPopup()
     ImGuiWindowFlags_ChildMenu              = 1 << 26   // Don't use! For internal use by BeginMenu()
-
 };
 
 // Flags for ImGui::InputText()
