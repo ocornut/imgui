@@ -3227,14 +3227,14 @@ static void CheckStacksSize(ImGuiWindow* window, bool write)
     IM_ASSERT(p_backup == window->DC.StackSizesBackup + IM_ARRAYSIZE(window->DC.StackSizesBackup));
 }
 
-static ImVec2 FindBestWindowPos(const ImVec2& mouse_pos, const ImVec2& size, int* last_dir, const ImRect& r_inner)
+static ImVec2 FindBestWindowPos(const ImVec2& base_pos, const ImVec2& size, ImGuiWindowFlags flags, int* last_dir, const ImRect& r_inner)
 {
     const ImGuiStyle& style = GImGui->Style;
 
     // Clamp into visible area while not overlapping the cursor
     ImRect r_outer(GetVisibleRect()); 
     r_outer.Reduce(style.DisplaySafeAreaPadding);
-    ImVec2 mouse_pos_clamped = ImClamp(mouse_pos, r_outer.Min, r_outer.Max - size);
+    ImVec2 base_pos_clamped = ImClamp(base_pos, r_outer.Min, r_outer.Max - size);
 
     for (int n = (*last_dir != -1) ? -1 : 0; n < 4; n++)   // Right, down, up, left. Favor last used direction.
     {
@@ -3243,12 +3243,19 @@ static ImVec2 FindBestWindowPos(const ImVec2& mouse_pos, const ImVec2& size, int
         if (rect.GetWidth() < size.x || rect.GetHeight() < size.y)
             continue;
         *last_dir = dir;
-        return ImVec2(dir == 0 ? r_inner.Max.x : dir == 3 ? r_inner.Min.x - size.x : mouse_pos_clamped.x, dir == 1 ? r_inner.Max.y : dir == 2 ? r_inner.Min.y - size.y : mouse_pos_clamped.y);
+        return ImVec2(dir == 0 ? r_inner.Max.x : dir == 3 ? r_inner.Min.x - size.x : base_pos_clamped.x, dir == 1 ? r_inner.Max.y : dir == 2 ? r_inner.Min.y - size.y : base_pos_clamped.y);
     }
 
     // Fallback
     *last_dir = -1;
-    return mouse_pos + ImVec2(2,2);
+    if (flags & ImGuiWindowFlags_Tooltip) // For tooltip we prefer avoiding the cursor at all cost even if it means that part of the tooltip won't be visible.
+        return base_pos + ImVec2(2,2);
+
+    // Otherwise try to keep within display
+    ImVec2 pos = base_pos;
+    pos.x = ImMax(ImMin(pos.x + size.x, r_outer.Max.x) - size.x, r_outer.Min.x);
+    pos.y = ImMax(ImMin(pos.y + size.y, r_outer.Max.y) - size.y, r_outer.Min.y);
+    return pos;
 }
 
 static ImGuiWindow* FindWindowByName(const char* name)
@@ -3548,19 +3555,19 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 rect_to_avoid = ImRect(-FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight(), FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight() + parent_window->MenuBarHeight());
             else
                 rect_to_avoid = ImRect(parent_window->Pos.x + 4.0f, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - 4.0f, FLT_MAX); // We want some overlap to convey the relative depth of each popup (here hard-coded to 4)
-            window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
+            window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
         }
         else if ((flags & ImGuiWindowFlags_Popup) != 0 && window_appearing_after_being_hidden && !window_pos_set_by_api)
         {
             ImRect rect_to_avoid(window->PosFloat.x - 1, window->PosFloat.y - 1, window->PosFloat.x + 1, window->PosFloat.y + 1);
-            window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
+            window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
         }
 
         // Position tooltip (always follows mouse)
         if ((flags & ImGuiWindowFlags_Tooltip) != 0 && !window_pos_set_by_api)
         {
             ImRect rect_to_avoid(g.IO.MousePos.x - 16, g.IO.MousePos.y - 8, g.IO.MousePos.x + 24, g.IO.MousePos.y + 24); // FIXME: Completely hard-coded. Perhaps center on cursor hit-point instead?
-            window->PosFloat = FindBestWindowPos(g.IO.MousePos, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
+            window->PosFloat = FindBestWindowPos(g.IO.MousePos, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
         }
 
         // User moving window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
@@ -3585,7 +3592,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             }
         }
 
-        // Clamp into display
+        // Clamp position so it stays visible
         if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
         {
             if (!window_pos_set_by_api && window->AutoFitFrames <= 0 && g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
@@ -7552,7 +7559,7 @@ bool ImGui::BeginMenu(const char* label)
     {
         // FIXME: Should be moved at a lower-level once we have horizontal layout (#97)
         pos = window->DC.CursorPos = ImVec2(window->Pos.x + window->DC.MenuBarOffsetX, window->Pos.y + window->TitleBarHeight() + style.FramePadding.y);
-		popup_pos = ImVec2(pos.x - window->WindowPadding().x, pos.y);
+		popup_pos = ImVec2(pos.x - window->WindowPadding().x, pos.y - style.FramePadding.y + window->MenuBarHeight());
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
         float w = label_size.x;
         pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(w, 0.0f), true, true, false);
