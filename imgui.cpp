@@ -7268,7 +7268,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     return value_changed;
 }
 
-static bool SelectableEx(const char* label, bool selected, const ImVec2& size_arg, const ImVec2 size_draw_arg, bool menu_item = false, bool enabled = true)
+static bool SelectableEx(const char* label, bool selected, const ImVec2& size_arg, const ImVec2 size_draw_arg, bool menu_item = false, bool enabled = true, bool close_popups = true)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -7317,9 +7317,9 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
     if (!enabled) ImGui::PopStyleColor();
 
     // Automatically close popups
-    if (pressed && (window->Flags & ImGuiWindowFlags_ChildMenu))
+    if (close_popups && pressed && (window->Flags & ImGuiWindowFlags_ChildMenu))
         CloseCurrentMenus();
-    else if (pressed && (window->Flags & ImGuiWindowFlags_Popup))
+    else if (close_popups && pressed && (window->Flags & ImGuiWindowFlags_Popup))
         ImGui::CloseCurrentPopup();
     return pressed;
 }
@@ -7555,7 +7555,7 @@ bool ImGui::BeginMenu(const char* label)
 		popup_pos = ImVec2(pos.x - window->WindowPadding().x, pos.y);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
         float w = label_size.x;
-        pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(w, 0.0f), true);
+        pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(w, 0.0f), true, true, false);
         window->DC.MenuBarOffsetX += (label_size.x + style.ItemSpacing.x);
         window->DC.CursorPos = backup_pos;
         ImGui::PopStyleVar();
@@ -7566,7 +7566,7 @@ bool ImGui::BeginMenu(const char* label)
         popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
         float w = window->MenuColumns.DeclColumns(label_size.x, 0.0f, (float)(int)(g.FontSize * 1.20f)); // Feedback to next frame
         float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
-        pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f), true);
+        pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f), true, true, false);
         RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), false);
     }
 
