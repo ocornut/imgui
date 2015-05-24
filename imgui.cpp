@@ -3555,7 +3555,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             if (parent_window->DC.MenuBarAppending)
                 rect_to_avoid = ImRect(-FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight(), FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight() + parent_window->MenuBarHeight());
             else
-                rect_to_avoid = ImRect(parent_window->Pos.x + 4.0f, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - 4.0f - parent_window->ScrollbarWidth(), FLT_MAX); // We want some overlap to convey the relative depth of each popup (here hard-coded to 4)
+                rect_to_avoid = ImRect(parent_window->Pos.x + style.ItemSpacing.x, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - style.ItemSpacing.x - parent_window->ScrollbarWidth(), FLT_MAX); // We want some overlap to convey the relative depth of each popup (here hard-coded to 4)
             window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
         }
         else if ((flags & ImGuiWindowFlags_Popup) != 0 && window_appearing_after_being_hidden && !window_pos_set_by_api)
