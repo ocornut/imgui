@@ -3071,13 +3071,22 @@ static void CloseAllPopups()
     g.OpenedPopupStack.resize(0);
 }
 
+static void ClearSetNextWindowData()
+{
+    ImGuiState& g = *GImGui;
+    g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowCollapsedCond = g.SetNextWindowFocus = 0;
+}
+
 static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     const ImGuiID id = window->GetID(str_id);
     if (!IsPopupOpen(id))
+    {
+        ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
         return false;
+    }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_ShowBorders|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
