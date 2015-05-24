@@ -171,11 +171,12 @@ namespace ImGui
     IMGUI_API void          CloseCurrentPopup();
 
     // Layout
-    IMGUI_API void          BeginGroup();
+    IMGUI_API void          BeginGroup();                                                       // once closing a group it is seen as a single item (so you can use IsItemHovered() on a group, SameLine() between groups, etc. 
     IMGUI_API void          EndGroup();
     IMGUI_API void          Separator();                                                        // horizontal line
     IMGUI_API void          SameLine(int column_x = 0, int spacing_w = -1);                     // call between widgets or groups to layout them horizontally
-    IMGUI_API void          Spacing();                                                          // add vertical spacing
+    IMGUI_API void          Spacing();                                                          // add spacing
+    IMGUI_API void          Dummy(const ImVec2& size);                                          // add a dummy item of given size
     IMGUI_API void          Indent();                                                           // move content position toward the right by style.IndentSpacing pixels
     IMGUI_API void          Unindent();                                                         // move content position back to the left (cancel Indent)
     IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border=true);    // setup number of columns. use an identifier to distinguish multiple column sets. close with Columns(1).
