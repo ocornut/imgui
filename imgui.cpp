@@ -3056,14 +3056,15 @@ static void ClosePopup(const char* str_id) // not exposed because 'id' scope is 
 void ImGui::CloseCurrentPopup()
 {
     ImGuiState& g = *GImGui;
-    if (g.CurrentPopupStack.empty() || g.OpenedPopupStack.empty() || g.CurrentPopupStack.back().PopupID != g.OpenedPopupStack.back().PopupID)
+    int popup_idx = (int)g.CurrentPopupStack.size() - 1;
+    if (popup_idx < 0 || popup_idx > (int)g.OpenedPopupStack.size() || g.CurrentPopupStack[popup_idx].PopupID != g.OpenedPopupStack[popup_idx].PopupID)
         return;
-    if (g.CurrentWindow->PopupID == g.OpenedPopupStack.back().PopupID && g.Windows.size() >= 2)
+    if (g.CurrentWindow->PopupID == g.OpenedPopupStack[popup_idx].PopupID && g.Windows.size() > 1)
         FocusWindow(g.Windows[g.Windows.size()-2]);
-    g.OpenedPopupStack.pop_back();
+    g.OpenedPopupStack.resize(popup_idx);
 }
 
-static void CloseAllPopups()
+static void CloseCurrentMenus()
 {
     // Close all popups
     // FIXME-MENUS: invalid for popup->menus with current BeginMenu() scheme
@@ -7317,7 +7318,7 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
 
     // Automatically close popups
     if (pressed && (window->Flags & ImGuiWindowFlags_ChildMenu))
-        CloseAllPopups();
+        CloseCurrentMenus();
     else if (pressed && (window->Flags & ImGuiWindowFlags_Popup))
         ImGui::CloseCurrentPopup();
     return pressed;
