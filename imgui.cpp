@@ -7472,14 +7472,20 @@ void ImGui::Separator()
     }
 }
 
-// A little vertical spacing.
 void ImGui::Spacing()
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
-
     ItemSize(ImVec2(0,0));
+}
+
+void ImGui::Dummy(const ImVec2& size)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+    ItemSize(size);
 }
 
 // Advance cursor given item size.
@@ -10462,6 +10468,12 @@ void ImGui::ShowTestWindow(bool* opened)
                 //if (ImGui::IsItemHovered()) ImGui::SetTooltip("ListBox %d hovered", i); 
             }
             ImGui::PopItemWidth();
+
+            // Dummy
+            ImVec2 sz(30,30);
+            ImGui::Button("A", sz); ImGui::SameLine();
+            ImGui::Dummy(sz); ImGui::SameLine();
+            ImGui::Button("B", sz);
 
             ImGui::TreePop();
         }
