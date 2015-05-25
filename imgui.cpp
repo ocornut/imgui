@@ -7580,11 +7580,13 @@ bool ImGui::BeginMenu(const char* label)
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
 		popup_pos = ImVec2(pos.x - window->WindowPadding().x, pos.y - style.FramePadding.y + window->MenuBarHeight());
+        window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
         float w = label_size.x;
         pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(w, 0.0f), true, true, false);
-        ImGui::SameLine();
         ImGui::PopStyleVar();
+        ImGui::SameLine();
+        window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
     }
     else
     {
