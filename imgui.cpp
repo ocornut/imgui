@@ -7289,6 +7289,7 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
     ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
     ImVec2 size(size_arg.x != 0.0f ? size_arg.x : label_size.x, size_arg.y != 0.0f ? size_arg.y : label_size.y);
     ImVec2 pos = window->DC.CursorPos;
+    pos.y += window->DC.CurrentLineTextBaseOffset;
     ImRect bb(pos, pos + size);
     ItemSize(bb);
 
