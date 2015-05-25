@@ -501,6 +501,7 @@ struct ImGuiTextEditState;
 struct ImGuiIniData;
 struct ImGuiState;
 struct ImGuiWindow;
+typedef int ImGuiLayoutType;  // enum ImGuiLayoutType_
 typedef int ImGuiButtonFlags; // enum ImGuiButtonFlags_
 
 static bool         ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, ImGuiButtonFlags flags = 0);
@@ -944,6 +945,12 @@ static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode,
 
 //-----------------------------------------------------------------------------
 
+enum ImGuiLayoutType_
+{
+    ImGuiLayoutType_Vertical,
+    ImGuiLayoutType_Horizontal
+};
+
 enum ImGuiButtonFlags_
 {
     ImGuiButtonFlags_Repeat         = (1 << 0),
@@ -1012,6 +1019,7 @@ struct ImGuiGroupData
     float  BackupCurrentLineHeight;
     float  BackupCurrentLineTextBaseOffset;
     float  BackupLogLinePosY;
+    bool   AdvanceCursor;
 };
 
 // Simple column measurement currently used for menu items. This is very short-sighted for now.
@@ -1075,6 +1083,7 @@ struct ImGuiDrawContext
     bool                    MenuBarAppending;
     float                   MenuBarOffsetX;
     ImVector<ImGuiWindow*>  ChildWindows;
+    ImGuiLayoutType         LayoutType;
     ImVector<bool>          AllowKeyboardFocus;
     ImVector<float>         ItemWidth;           // 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
     ImVector<float>         TextWrapPos;
@@ -1106,6 +1115,7 @@ struct ImGuiDrawContext
         LastItemHoveredAndUsable = LastItemHoveredRect = false;
         MenuBarAppending = false;
         MenuBarOffsetX = 0.0f;
+        LayoutType = ImGuiLayoutType_Vertical;
         ColorEditMode = ImGuiColorEditMode_RGB;
         StateStorage = NULL;
         memset(StackSizesBackup, 0, sizeof(StackSizesBackup));
@@ -3748,6 +3758,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->DC.ChildWindows.resize(0);
         window->DC.ItemWidth.resize(0); 
         window->DC.ItemWidth.push_back(window->ItemWidthDefault);
+        window->DC.LayoutType = ImGuiLayoutType_Vertical;
         window->DC.AllowKeyboardFocus.resize(0);
         window->DC.AllowKeyboardFocus.push_back(true);
         window->DC.TextWrapPos.resize(0);
@@ -7518,10 +7529,14 @@ bool ImGui::BeginMenuBar()
         return false;
 
     IM_ASSERT(!window->DC.MenuBarAppending);
-    window->DC.MenuBarAppending = true;
+    ImGui::BeginGroup(); // Save position
     ImGui::PushID("##menubar");
     ImRect rect = window->MenuBarRect();
     PushClipRect(ImVec4(rect.Min.x+0.5f, rect.Min.y-0.5f, rect.Max.x+0.5f, rect.Max.y-1.5f), false);
+    window->DC.CursorPos = ImVec2(rect.Min.x + window->DC.MenuBarOffsetX, rect.Min.y);// + g.Style.FramePadding.y);
+    window->DC.LayoutType = ImGuiLayoutType_Horizontal;
+    window->DC.MenuBarAppending = true;
+    ImGui::AlignFirstTextHeightToWidgets();
     return true;
 }
 
@@ -7533,22 +7548,25 @@ void ImGui::EndMenuBar()
 
     IM_ASSERT(window->Flags & ImGuiWindowFlags_MenuBar);
     IM_ASSERT(window->DC.MenuBarAppending);
-    window->DC.MenuBarAppending = false;
     PopClipRect();
     ImGui::PopID();
+    window->DC.MenuBarOffsetX = window->DC.CursorPos.x - window->MenuBarRect().Min.x;
+    window->DC.GroupStack.back().AdvanceCursor = false;
+    ImGui::EndGroup();
+    window->DC.LayoutType = ImGuiLayoutType_Vertical;
+    window->DC.MenuBarAppending = false;
 }
 
 bool ImGui::BeginMenu(const char* label)
 {
-    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
     
+    ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
 
-    ImVec2 pos, popup_pos, backup_pos = window->DC.CursorPos;
     ImVec2 label_size = CalcTextSize(label, NULL, true);
     ImGuiWindow* backed_focused_window = g.FocusedWindow;
 
@@ -7558,21 +7576,18 @@ bool ImGui::BeginMenu(const char* label)
     if (menuset_opened)
         g.FocusedWindow = window;
 
-    if (window->DC.MenuBarAppending)
+    ImVec2 popup_pos, pos = window->DC.CursorPos;
+    if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
-        // FIXME: Should be moved at a lower-level once we have horizontal layout (#97)
-        pos = window->DC.CursorPos = ImVec2(window->Pos.x + window->DC.MenuBarOffsetX, window->Pos.y + window->TitleBarHeight() + style.FramePadding.y);
 		popup_pos = ImVec2(pos.x - window->WindowPadding().x, pos.y - style.FramePadding.y + window->MenuBarHeight());
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
         float w = label_size.x;
         pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(w, 0.0f), true, true, false);
-        window->DC.MenuBarOffsetX += (label_size.x + style.ItemSpacing.x);
-        window->DC.CursorPos = backup_pos;
+        ImGui::SameLine();
         ImGui::PopStyleVar();
     }
     else
     {
-        pos = window->DC.CursorPos;
         popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
         float w = window->MenuColumns.DeclColumns(label_size.x, 0.0f, (float)(int)(g.FontSize * 1.20f)); // Feedback to next frame
         float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
@@ -7956,6 +7971,7 @@ void ImGui::BeginGroup()
     group_data.BackupCurrentLineHeight = window->DC.CurrentLineHeight;
     group_data.BackupCurrentLineTextBaseOffset = window->DC.CurrentLineTextBaseOffset;
     group_data.BackupLogLinePosY = window->DC.LogLinePosY;
+    group_data.AdvanceCursor = true;
 
     window->DC.ColumnsStartX = window->DC.CursorPos.x - window->Pos.x;
     window->DC.CursorMaxPos = window->DC.CursorPos;
@@ -7983,8 +7999,11 @@ void ImGui::EndGroup()
     window->DC.ColumnsStartX = group_data.BackupColumnsStartX;
     window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
 
-    ItemSize(group_bb.GetSize(), group_data.BackupCurrentLineTextBaseOffset);
-    ItemAdd(group_bb, NULL);
+    if (group_data.AdvanceCursor)
+    {
+        ItemSize(group_bb.GetSize(), group_data.BackupCurrentLineTextBaseOffset);
+        ItemAdd(group_bb, NULL);
+    }
 
     window->DC.GroupStack.pop_back();
 
