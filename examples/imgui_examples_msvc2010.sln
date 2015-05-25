@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Express 2012 for Windows Desktop
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "opengl_example", "opengl_example\opengl_example.vcxproj", "{9CDA7840-B7A5-496D-A527-E95571496D18}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "directx9_example", "directx9_example\directx9_example.vcxproj", "{4165A294-21F2-44CA-9B38-E3F935ABADF5}"
@@ -8,6 +8,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "directx11_example", "directx11_example\directx11_example.vcxproj", "{9F316E83-5AE5-4939-A723-305A94F48005}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "opengl3_example", "opengl3_example\opengl3_example.vcxproj", "{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "opengl_sdl_example", "opengl_sdl_example\opengl_sdl_example.vcxproj", "{C727E872-E9C3-44A6-8C55-F71539353CDC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,6 +51,12 @@ Global
 		{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}.Release|Win32.Build.0 = Release|Win32
 		{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}.Release|x64.ActiveCfg = Release|x64
 		{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}.Release|x64.Build.0 = Release|x64
+		{C727E872-E9C3-44A6-8C55-F71539353CDC}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C727E872-E9C3-44A6-8C55-F71539353CDC}.Debug|Win32.Build.0 = Debug|Win32
+		{C727E872-E9C3-44A6-8C55-F71539353CDC}.Debug|x64.ActiveCfg = Debug|Win32
+		{C727E872-E9C3-44A6-8C55-F71539353CDC}.Release|Win32.ActiveCfg = Release|Win32
+		{C727E872-E9C3-44A6-8C55-F71539353CDC}.Release|Win32.Build.0 = Release|Win32
+		{C727E872-E9C3-44A6-8C55-F71539353CDC}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
