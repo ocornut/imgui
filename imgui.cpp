@@ -3125,10 +3125,10 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
     ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_ShowBorders|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
 
     char name[32];
-	if (flags & ImGuiWindowFlags_ChildMenu)
-		ImFormatString(name, 20, "##menu_%d", g.CurrentPopupStack.size());    // Recycle windows based on depth
-	else
-		ImFormatString(name, 20, "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
+    if (flags & ImGuiWindowFlags_ChildMenu)
+        ImFormatString(name, 20, "##menu_%d", g.CurrentPopupStack.size());    // Recycle windows based on depth
+    else
+        ImFormatString(name, 20, "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
     float alpha = 1.0f;
 
     bool opened = ImGui::Begin(name, NULL, ImVec2(0.0f, 0.0f), alpha, flags);
@@ -6633,7 +6633,6 @@ bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast,
             value_changed = true;
         }
     }
-
     ImGui::PopID();
 
     if (label_size.x > 0)
@@ -6642,7 +6641,6 @@ bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast,
         RenderText(ImVec2(window->DC.CursorPos.x, window->DC.CursorPos.y + style.FramePadding.y), label);
         ItemSize(label_size, style.FramePadding.y);
     }
-
     ImGui::EndGroup();
 
     return value_changed;
@@ -7615,7 +7613,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     ImVec2 popup_pos, pos = window->DC.CursorPos;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
-		popup_pos = ImVec2(pos.x - window->WindowPadding().x, pos.y - style.FramePadding.y + window->MenuBarHeight());
+        popup_pos = ImVec2(pos.x - window->WindowPadding().x, pos.y - style.FramePadding.y + window->MenuBarHeight());
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
         float w = label_size.x;
@@ -10741,6 +10739,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::DragInt2("drag int2", vec4i, 1, 0, 255);
             ImGui::InputInt2("input int2", vec4i);
             ImGui::SliderInt2("slider int2", vec4i, 0, 255);
+            ImGui::Spacing();
 
             ImGui::InputFloat3("input float3", vec4f);
             ImGui::DragFloat3("drag float3", vec4f, 0.01f, 0.0f, 1.0f);
@@ -10748,6 +10747,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::DragInt3("drag int3", vec4i, 1, 0, 255);
             ImGui::InputInt3("input int3", vec4i);
             ImGui::SliderInt3("slider int3", vec4i, 0, 255);
+            ImGui::Spacing();
 
             ImGui::InputFloat4("input float4", vec4f);
             ImGui::DragFloat4("drag float4", vec4f, 0.01f, 0.0f, 1.0f);
