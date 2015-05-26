@@ -7343,6 +7343,8 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
 
     bool hovered, held;
     bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true, ((flags & ImGuiSelectableFlags_MenuItem) ? ImGuiButtonFlags_PressedOnClick : 0) | ((flags & ImGuiSelectableFlags_Disabled) ? ImGuiButtonFlags_Disabled : 0));
+    if (flags & ImGuiSelectableFlags_Disabled)
+        selected = false;
 
     // Render
     if (hovered || selected)
@@ -7574,7 +7576,7 @@ void ImGui::EndMenuBar()
     window->DC.MenuBarAppending = false;
 }
 
-bool ImGui::BeginMenu(const char* label)
+bool ImGui::BeginMenu(const char* label, bool enabled)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -7600,7 +7602,7 @@ bool ImGui::BeginMenu(const char* label)
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
         float w = label_size.x;
-        pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(w, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups);
+        pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(w, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups | (!enabled ? ImGuiSelectableFlags_Disabled : 0));
         ImGui::PopStyleVar();
         ImGui::SameLine();
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
@@ -7610,11 +7612,13 @@ bool ImGui::BeginMenu(const char* label)
         popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
         float w = window->MenuColumns.DeclColumns(label_size.x, 0.0f, (float)(int)(g.FontSize * 1.20f)); // Feedback to next frame
         float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
-        pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups);
+        pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImVec2(0.0f, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups | (!enabled ? ImGuiSelectableFlags_Disabled : 0));
+        if (!enabled) ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
         RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), false);
+        if (!enabled) ImGui::PopStyleColor();
     }
 
-    bool hovered = IsHovered(window->DC.LastItemRect, id);
+    bool hovered = enabled && IsHovered(window->DC.LastItemRect, id);
     if (menuset_opened)
         g.FocusedWindow = backed_focused_window;
 
@@ -11414,6 +11418,10 @@ static void ShowExampleMenuFile()
         for (int i = 0; i < ImGuiCol_COUNT; i++)
             ImGui::MenuItem(ImGui::GetStyleColName((ImGuiCol)i));
         ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Disabled", false)) // Disabled
+    {
+        IM_ASSERT(0);
     }
     if (ImGui::MenuItem("Quit", "Alt+F4")) {}
 }
