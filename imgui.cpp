@@ -11374,8 +11374,8 @@ static void ShowExampleAppMainMenuBar()
 static void ShowExampleMenuFile()
 {
     ImGui::MenuItem("(dummy menu)", NULL, false, false);
-    ImGui::MenuItem("New");
-    ImGui::MenuItem("Open", "Ctrl+O");
+    if (ImGui::MenuItem("New")) {}
+    if (ImGui::MenuItem("Open", "Ctrl+O")) {}
     if (ImGui::BeginMenu("Open Recent"))
     {
         ImGui::MenuItem("fish_hat.c");
@@ -11394,8 +11394,8 @@ static void ShowExampleMenuFile()
         }
         ImGui::EndMenu();
     }
-    ImGui::MenuItem("Save", "Ctrl+S");
-    ImGui::MenuItem("Save As..");
+    if (ImGui::MenuItem("Save", "Ctrl+S")) {}
+    if (ImGui::MenuItem("Save As..")) {}
     ImGui::Separator();
     if (ImGui::BeginMenu("Options"))
     {
@@ -11415,7 +11415,7 @@ static void ShowExampleMenuFile()
             ImGui::MenuItem(ImGui::GetStyleColName((ImGuiCol)i));
         ImGui::EndMenu();
     }
-    ImGui::MenuItem("Quit", "Alt+F4");
+    if (ImGui::MenuItem("Quit", "Alt+F4")) {}
 }
 
 static void ShowExampleAppAutoResize(bool* opened)
