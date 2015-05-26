@@ -8056,12 +8056,13 @@ void ImGui::EndGroup()
     window->DC.CursorPos = group_data.BackupCursorPos;
     window->DC.CursorMaxPos = ImMax(group_data.BackupCursorMaxPos, window->DC.CursorMaxPos);
     window->DC.CurrentLineHeight = group_data.BackupCurrentLineHeight;
-    window->DC.CurrentLineTextBaseOffset = group_data.BackupCurrentLineTextBaseOffset;      // FIXME: Ideally we'll grab the base offset from the first line of the group.
+    window->DC.CurrentLineTextBaseOffset = group_data.BackupCurrentLineTextBaseOffset;
     window->DC.ColumnsStartX = group_data.BackupColumnsStartX;
     window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
 
     if (group_data.AdvanceCursor)
     {
+        window->DC.CurrentLineTextBaseOffset = ImMax(window->DC.PrevLineTextBaseOffset, group_data.BackupCurrentLineTextBaseOffset);      // FIXME: Incorrect, we should grab the base offset from the *first line* of the group but it is hard to obtain now.
         ItemSize(group_bb.GetSize(), group_data.BackupCurrentLineTextBaseOffset);
         ItemAdd(group_bb, NULL);
     }
