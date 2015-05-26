@@ -11358,6 +11358,11 @@ static void ShowExampleMenuFile()
         {
             ImGui::MenuItem("Hello");
             ImGui::MenuItem("Sailor");
+            if (ImGui::BeginMenu("Recurse.."))
+            {
+                ShowExampleMenuFile();
+                ImGui::EndMenu();
+            }
             ImGui::EndMenu();
         }
         ImGui::EndMenu();
