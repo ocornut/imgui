@@ -7603,15 +7603,17 @@ bool ImGui::BeginMenu(const char* label)
 
     bool want_open = false;
     if (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
-        want_open = (!opened && hovered);
-    else if (opened && pressed && menuset_opened)
     {
-        ClosePopup(label); // click again to toggle
+        if (opened && !hovered && g.HoveredWindow == window && g.HoveredIdPreviousFrame != 0 && g.HoveredIdPreviousFrame != id)
+            ClosePopup(label);
+        want_open = (!opened && hovered);
+    }
+    else if (opened && pressed && menuset_opened) // menu-bar: click open menu to close
+    {
+        ClosePopup(label);
         want_open = opened = false;
     }
-    else if (pressed)
-        want_open = true;
-    else if (hovered && menuset_opened && !opened)
+    else if (pressed || (hovered && menuset_opened && !opened)) // menu-bar: first click to open, then hover to open others
         want_open = true;
 
     if (!opened && want_open && g.OpenedPopupStack.size() > g.CurrentPopupStack.size())
