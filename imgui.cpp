@@ -54,7 +54,7 @@
  - TAB/SHIFT+TAB to cycle through keyboard editable fields
  - use mouse wheel to scroll
  - use CTRL+mouse wheel to zoom window contents (if IO.FontAllowScaling is true)
- - CTRL+Click on a slider to input value as text
+ - CTRL+Click on a slider or drag box to input value as text
  - text editor:
    - Hold SHIFT or use mouse to select text.
    - CTRL+Left/Right to word jump
@@ -373,6 +373,7 @@
  - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
  - text edit: add multi-line text edit
  - tree: add treenode/treepush int variants? because (void*) cast from int warns on some platforms/settings
+ - tooltip: figure out a way to use TextWrapped() in a tooltip.
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file
  ! style: store rounded corners in texture to use 1 quad per corner (filled and wireframe). so rounding have minor cost.
@@ -10099,12 +10100,12 @@ void ImGui::ShowUserGuide()
     if (g.IO.FontAllowUserScaling)
         ImGui::BulletText("CTRL+Mouse Wheel to zoom window contents.");
     ImGui::BulletText("TAB/SHIFT+TAB to cycle through keyboard editable fields.");
-    ImGui::BulletText("CTRL+Click on a slider to input text.");
+    ImGui::BulletText("CTRL+Click on a slider or drag box to input text.");
     ImGui::BulletText(
         "While editing text:\n"
         "- Hold SHIFT or use mouse to select text\n"
         "- CTRL+Left/Right to word jump\n"
-        "- CTRL+A select all\n"
+        "- CTRL+A or double-click to select all\n"
         "- CTRL+X,CTRL+C,CTRL+V clipboard\n"
         "- CTRL+Z,CTRL+Y undo/redo\n"
         "- ESCAPE to revert\n"
@@ -10351,6 +10352,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Logging"))
         {
+            ImGui::TextWrapped("The logging API redirects all text output of ImGui so you can easily capture the content of a window or a block. Tree nodes can be automatically expanded. You can also call ImGui::LogText() to output directly to the log without a visual output.");
             ImGui::LogButtons();
             ImGui::TreePop();
         }
@@ -10387,8 +10389,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::BulletText("Bullet point 1");
             ImGui::BulletText("Bullet point 2\nOn multiple lines");
             ImGui::Bullet(); ImGui::Text("Bullet point 3 (two calls)");
-            ImGui::Bullet(); ImGui::SmallButton("Button 1");
-            ImGui::Bullet(); ImGui::SmallButton("Button 2");
+            ImGui::Bullet(); ImGui::SmallButton("Button");
             ImGui::TreePop();
         }
 
@@ -10404,7 +10405,7 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::TreeNode("Word Wrapping"))
         {
             // Using shortcut. You can use PushTextWrapPos()/PopTextWrapPos() for more flexibility.
-            ImGui::TextWrapped("This text should automatically wrap on the edge of the window. The current implementation for text wrapping follows simple rules that works for English and possibly other languages.");
+            ImGui::TextWrapped("This text should automatically wrap on the edge of the window. The current implementation for text wrapping follows simple rules suitable for English and possibly other languages.");
             ImGui::Spacing();
 
             static float wrap_width = 200.0f;
@@ -10449,7 +10450,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TextWrapped("On a per-widget basis we are occasionally clipping text if it won't fit in its frame.");
             ImGui::SliderFloat2("size", (float*)&size, 5.0f, 200.0f);
             ImGui::Button("Line 1 hello\nLine 2 clip me!", size);
-            ImGui::TextWrapped("Otherwise we are doing coarser clipping + passing a scissor rectangle to the renderer. The system is designed to try minimizing both execution and rendering cost.");
+            ImGui::TextWrapped("Otherwise we are doing coarser clipping + passing a scissor rectangle to the renderer. The system is designed to try minimizing both execution and CPU/GPU rendering cost.");
             ImGui::TreePop();
         }
 
@@ -10533,6 +10534,8 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Popup, Menus"))
         {
+            ImGui::TextWrapped("When a popup is active, it inhibits interacting with windows that are behind the popup. Clicking outside the popup closes it.");
+
             static int selected_fish = -1;
             const char* names[] = { "Bream", "Haddock", "Mackerel", "Pollock", "Tilefish" };
             static bool toggles[] = { true, false, false, false, false };
@@ -10667,7 +10670,11 @@ void ImGui::ShowTestWindow(bool* opened)
             static int i0=123;
             static float f0=0.001f;
             ImGui::InputText("input text", str0, IM_ARRAYSIZE(str0));
+            ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("Hold SHIFT or use mouse to select text.\n" "CTRL+Left/Right to word jump.\n" "CTRL+A or double-click to select all.\n" "CTRL+X,CTRL+C,CTRL+V clipboard.\n" "CTRL+Z,CTRL+Y undo/redo.\n" "ESCAPE to revert.\n");
+
             ImGui::InputInt("input int", &i0);
+            ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("You can apply arithmetic operators +,*,/ on numerical values.\n  e.g. [ 100 ], input \'*2\', result becomes [ 200 ]\nUse +- to subtract.\n");
+
             ImGui::InputFloat("input float", &f0, 0.01f, 1.0f);
 
             static float vec4a[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
@@ -10678,10 +10685,7 @@ void ImGui::ShowTestWindow(bool* opened)
             static int i1=50;
             static int i2=42;
             ImGui::DragInt("drag int", &i1, 1);
-            ImGui::SameLine();
-            ImGui::TextDisabled("(?)");
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Click and drag to edit value.\nHold SHIFT/ALT for faster/slower edit.\nDouble-click or CTRL+click to input text");
+            ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("Click and drag to edit value.\nHold SHIFT/ALT for faster/slower edit.\nDouble-click or CTRL+click to input text.");
 
             ImGui::DragInt("drag int 0..100", &i2, 1, 0, 100, "%.0f%%");
 
@@ -10694,7 +10698,9 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             static int i1=0;
             //static int i2=42;
-            ImGui::SliderInt("slider int 0..3", &i1, 0, 3);
+            ImGui::SliderInt("slider int", &i1, 0, 3);
+            ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("CTRL+click to input value.");
+
             //ImGui::SliderInt("slider int -100..100", &i2, -100, 100);
 
             static float f1=0.123f;
@@ -10708,6 +10714,8 @@ void ImGui::ShowTestWindow(bool* opened)
         static float col1[3] = { 1.0f,0.0f,0.2f };
         static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
         ImGui::ColorEdit3("color 1", col1);
+        ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("Click on the colored square to change edit mode. CTRL+click on individual component to input value.\n");
+        
         ImGui::ColorEdit4("color 2", col2);
 
         const char* listbox_items[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
@@ -11286,7 +11294,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Mouse cursors"))
         {
-            ImGui::TextWrapped("(Your application can render a different mouse cursor based on what ImGui::GetMouseCursor() returns. You can also set io.MouseDrawCursor to ask ImGui to render the cursor for you in software)");
+            ImGui::TextWrapped("Your application can render a different mouse cursor based on what ImGui::GetMouseCursor() returns. You can also set io.MouseDrawCursor to ask ImGui to render the cursor for you in software.");
             ImGui::Checkbox("io.MouseDrawCursor", &ImGui::GetIO().MouseDrawCursor);
             ImGui::Text("Hover to see mouse cursors:");
             for (int i = 0; i < ImGuiMouseCursor_Count_; i++)
