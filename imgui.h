@@ -168,7 +168,7 @@ namespace ImGui
     IMGUI_API void          OpenPopup(const char* str_id);                                      // mark popup as open. close childs popups if any. will close popup when user click outside, or activate menu items, or CloseCurrentPopup() is called within a BeginPopup/EndPopup block.
     IMGUI_API bool          BeginPopup(const char* str_id);                                     // return true if popup if opened and start outputting to it. only call EndPopup() if BeginPopup() returned true!
     IMGUI_API void          EndPopup();
-    IMGUI_API void          CloseCurrentPopup();                                                // close the popup we have begin-ed into
+    IMGUI_API void          CloseCurrentPopup();                                                // close the popup we have begin-ed into. clicking on a MenuItem or Selectable automatically close the current popup.
 
     // Layout
     IMGUI_API void          BeginGroup();                                                       // once closing a group it is seen as a single item (so you can use IsItemHovered() on a group, SameLine() between groups, etc. 

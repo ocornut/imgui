@@ -3072,32 +3072,35 @@ void ImGui::OpenPopup(const char* str_id)
         g.OpenedPopupStack.back() = ImGuiPopupRef(id, window, window->GetID("##menus"));
 }
 
+static void ClosePopupToLevel(int remaining)
+{
+    ImGuiState& g = *GImGui;
+    if (remaining > 0)
+        FocusWindow(g.OpenedPopupStack[remaining-1].Window);
+    else
+        FocusWindow(g.OpenedPopupStack[0].ParentWindow);
+    g.OpenedPopupStack.resize(remaining);
+}
+
 static void ClosePopup(const char* str_id) // not exposed because 'id' scope is misleading
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     const ImGuiID id = window->GetID(str_id);
     if (IsPopupOpen(id))
-        g.OpenedPopupStack.resize(g.CurrentPopupStack.size());
+        ClosePopupToLevel((int)g.CurrentPopupStack.size());
 }
 
+// Close the popup we have begin-ed into.
 void ImGui::CloseCurrentPopup()
 {
     ImGuiState& g = *GImGui;
     int popup_idx = (int)g.CurrentPopupStack.size() - 1;
     if (popup_idx < 0 || popup_idx > (int)g.OpenedPopupStack.size() || g.CurrentPopupStack[popup_idx].PopupID != g.OpenedPopupStack[popup_idx].PopupID)
         return;
-    if (g.CurrentWindow->PopupID == g.OpenedPopupStack[popup_idx].PopupID && g.Windows.size() > 1)
-        FocusWindow(g.Windows[g.Windows.size()-2]);
-    g.OpenedPopupStack.resize(popup_idx);
-}
-
-static void CloseCurrentMenus()
-{
-    // Close all popups
-    // FIXME-MENUS: invalid for popup->menus with current BeginMenu() scheme
-    ImGuiState& g = *GImGui;
-    g.OpenedPopupStack.resize(0);
+    while (popup_idx > 0 && g.OpenedPopupStack[popup_idx].Window && (g.OpenedPopupStack[popup_idx].Window->Flags & ImGuiWindowFlags_ChildMenu))
+        popup_idx--;
+    ClosePopupToLevel(popup_idx);
 }
 
 static void ClearSetNextWindowData()
@@ -7357,9 +7360,7 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
     if (flags & ImGuiSelectableFlags_Disabled) ImGui::PopStyleColor();
 
     // Automatically close popups
-    if (pressed && (window->Flags & ImGuiWindowFlags_ChildMenu) && !(flags & ImGuiSelectableFlags_DontClosePopups))
-        CloseCurrentMenus();
-    else if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_DontClosePopups))
+    if (pressed && !(flags & ImGuiSelectableFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
         ImGui::CloseCurrentPopup();
     return pressed;
 }
@@ -10557,6 +10558,11 @@ void ImGui::ShowTestWindow(bool* opened)
                 {
                     for (int i = 0; i < IM_ARRAYSIZE(names); i++)
                         ImGui::MenuItem(names[i], "", &toggles[i]);
+                    if (ImGui::BeginMenu("Sub-menu"))
+                    {
+                        ImGui::MenuItem("Click me");
+                        ImGui::EndMenu();
+                    }
                     ImGui::EndPopup();
                 }
                 ImGui::EndPopup();
