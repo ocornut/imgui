@@ -4593,6 +4593,21 @@ void ImGui::TextColored(const ImVec4& col, const char* fmt, ...)
     va_end(args);
 }
 
+void ImGui::TextDisabledV(const char* fmt, va_list args)
+{
+    ImGui::PushStyleColor(ImGuiCol_Text, GImGui->Style.Colors[ImGuiCol_TextDisabled]);
+    TextV(fmt, args);
+    ImGui::PopStyleColor();
+}
+
+void ImGui::TextDisabled(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    TextDisabledV(fmt, args);
+    va_end(args);
+}
+
 void ImGui::TextWrappedV(const char* fmt, va_list args)
 {
     ImGui::PushTextWrapPos(0.0f);
@@ -10382,6 +10397,7 @@ void ImGui::ShowTestWindow(bool* opened)
             // Using shortcut. You can use PushStyleColor()/PopStyleColor() for more flexibility.
             ImGui::TextColored(ImVec4(1.0f,0.0f,1.0f,1.0f), "Pink");
             ImGui::TextColored(ImVec4(1.0f,1.0f,0.0f,1.0f), "Yellow");
+            ImGui::TextDisabled("Disabled");
             ImGui::TreePop();
         }
 
@@ -10663,7 +10679,7 @@ void ImGui::ShowTestWindow(bool* opened)
             static int i2=42;
             ImGui::DragInt("drag int", &i1, 1);
             ImGui::SameLine();
-            ImGui::TextColored(ImColor(170,170,170,255), "(?)");
+            ImGui::TextDisabled("(?)");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Click and drag to edit value.\nHold SHIFT/ALT for faster/slower edit.\nDouble-click or CTRL+click to input text");
 
