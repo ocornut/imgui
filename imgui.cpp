@@ -2377,16 +2377,19 @@ void ImGui::Render()
         // Click to focus window and start moving (after we're done with all our widgets)
         if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
         {
-            if (g.HoveredRootWindow != NULL)
+            if (!(g.FocusedWindow && !g.FocusedWindow->WasActive && g.FocusedWindow->Active)) // Unless we just made a popup appear
             {
-                IM_ASSERT(g.MovedWindow == NULL);
-                g.MovedWindow = g.HoveredWindow;
-                SetActiveId(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
-            }
-            else if (g.FocusedWindow != NULL)
-            {
-                // Clicking on void disable focus
-                FocusWindow(NULL);
+                if (g.HoveredRootWindow != NULL)
+                {
+                    IM_ASSERT(g.MovedWindow == NULL);
+                    g.MovedWindow = g.HoveredWindow;
+                    SetActiveId(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
+                }
+                else if (g.FocusedWindow != NULL)
+                {
+                    // Clicking on void disable focus
+                    FocusWindow(NULL);
+                }
             }
         }
 
