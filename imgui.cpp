@@ -3131,7 +3131,7 @@ static void ClearSetNextWindowData()
 static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = g.CurrentWindow;
     const ImGuiID id = window->GetID(str_id);
     if (!IsPopupOpen(id))
     {
@@ -5454,20 +5454,17 @@ void ImGui::PopID()
 
 ImGuiID ImGui::GetID(const char* str_id)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    return window->GetID(str_id);
+    return GImGui->CurrentWindow->GetID(str_id);
 }
 
 ImGuiID ImGui::GetID(const char* str_id_begin, const char* str_id_end)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    return window->GetID(str_id_begin, str_id_end);
+    return GImGui->CurrentWindow->GetID(str_id_begin, str_id_end);
 }
 
 ImGuiID ImGui::GetID(const void* ptr_id)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    return window->GetID(ptr_id);
+    return GImGui->CurrentWindow->GetID(ptr_id);
 }
 
 // User can input math operators (e.g. +100) to edit a numerical values.
