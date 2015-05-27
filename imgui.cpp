@@ -653,6 +653,8 @@ ImGuiIO::ImGuiIO()
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
     MouseDragThreshold = 6.0f;
+    KeyRepeatDelay = 0.250f;
+    KeyRepeatRate = 0.020f;
     UserData = NULL;
 
     // User functions
@@ -2864,12 +2866,12 @@ bool ImGui::IsKeyPressed(int key_index, bool repeat)
     if (t == 0.0f)
         return true;
 
-    // FIXME: Repeat rate should be provided elsewhere?
-    const float KEY_REPEAT_DELAY = 0.250f;
-    const float KEY_REPEAT_RATE = 0.020f;
-    if (repeat && t > KEY_REPEAT_DELAY)
-        if ((fmodf(t - KEY_REPEAT_DELAY, KEY_REPEAT_RATE) > KEY_REPEAT_RATE*0.5f) != (fmodf(t - KEY_REPEAT_DELAY - g.IO.DeltaTime, KEY_REPEAT_RATE) > KEY_REPEAT_RATE*0.5f))
+    if (repeat && t > g.IO.KeyRepeatDelay)
+    {
+        float delay = g.IO.KeyRepeatDelay, rate = g.IO.KeyRepeatRate;
+        if ((fmodf(t - delay, rate) > rate*0.5f) != (fmodf(t - delay - g.IO.DeltaTime, rate) > rate*0.5f))
             return true;
+    }
 
     return false;
 }
@@ -2889,12 +2891,12 @@ bool ImGui::IsMouseClicked(int button, bool repeat)
     if (t == 0.0f)
         return true;
 
-    // FIXME: Repeat rate should be provided elsewhere?
-    const float MOUSE_REPEAT_DELAY = 0.250f;
-    const float MOUSE_REPEAT_RATE = 0.020f;
-    if (repeat && t > MOUSE_REPEAT_DELAY)
-        if ((fmodf(t - MOUSE_REPEAT_DELAY, MOUSE_REPEAT_RATE) > MOUSE_REPEAT_RATE*0.5f) != (fmodf(t - MOUSE_REPEAT_DELAY - g.IO.DeltaTime, MOUSE_REPEAT_RATE) > MOUSE_REPEAT_RATE*0.5f))
+    if (repeat && t > g.IO.KeyRepeatDelay)
+    {
+        float delay = g.IO.KeyRepeatDelay, rate = g.IO.KeyRepeatRate;
+        if ((fmodf(t - delay, rate) > rate*0.5f) != (fmodf(t - delay - g.IO.DeltaTime, rate) > rate*0.5f))
             return true;
+    }
 
     return false;
 }
