@@ -3171,6 +3171,21 @@ void ImGui::EndPopup()
     ImGui::PopStyleVar();
 }
 
+bool ImGui::BeginPopupContextItem(const char* str_id, int button)
+{
+    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(button))
+        ImGui::OpenPopup(str_id);
+    return ImGui::BeginPopup(str_id);
+}
+
+bool ImGui::BeginPopupContextWindow(const char* str_id, bool void_only, int button)
+{
+    if (ImGui::IsMouseHoveringWindow() && ImGui::IsMouseClicked(button))
+        if (!void_only || !ImGui::IsAnyItemHovered())
+            ImGui::OpenPopup(str_id);
+    return ImGui::BeginPopup(str_id);
+}
+
 bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
 {
     ImGuiState& g = *GImGui;
@@ -11694,6 +11709,11 @@ struct ExampleAppConsole
         // NB- if you have thousands of entries this approach may be too inefficient. You can seek and display only the lines that are visible - CalcListClipping() is a helper to compute this information.
         // If your items are of variable size you may want to implement code similar to what CalcListClipping() does. Or split your data into fixed height items to allow random-seeking into your list.
         ImGui::BeginChild("ScrollingRegion", ImVec2(0,-ImGui::GetTextLineHeightWithSpacing()*2));
+        if (ImGui::BeginPopupContextWindow())
+        {
+            if (ImGui::Selectable("Clear")) ClearLog();
+            ImGui::EndPopup();
+        }
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,1)); // Tighten spacing
         for (size_t i = 0; i < Items.size(); i++)
         {
