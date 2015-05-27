@@ -136,6 +136,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/05/27 (1.39) - removed the third 'repeat_if_held' parameter from Button() - sorry! it was rarely used and inconsistent. Use PushButtonRepeat(true) / PopButtonRepeat() to enable repeat on desired buttons.
  - 2015/05/11 (1.39) - changed BeginPopup() API, takes a string identifier instead of a bool. ImGui needs to manage the open/closed state of popups. Call OpenPopup() to actually set the "opened" state of a popup. BeginPopup() returns true if the popup is opened.
  - 2015/05/03 (1.39) - removed style.AutoFitPadding, using style.WindowPadding makes more sense (the default values were already the same).
  - 2015/04/13 (1.38) - renamed IsClipped() to IsRectClipped(). Kept inline redirection function (will obsolete).
@@ -1104,13 +1105,16 @@ struct ImGuiDrawContext
     bool                    MenuBarAppending;
     float                   MenuBarOffsetX;
     ImVector<ImGuiWindow*>  ChildWindows;
+    ImGuiStorage*           StateStorage;
     ImGuiLayoutType         LayoutType;
+
+    bool                    ButtonRepeat;        // == ButtonRepeatStack.back() [false]
+    ImVector<bool>          ButtonRepeatStack;
     ImVector<bool>          AllowKeyboardFocus;
     ImVector<float>         ItemWidth;           // 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
     ImVector<float>         TextWrapPos;
     ImVector<ImGuiGroupData> GroupStack;
     ImGuiColorEditMode      ColorEditMode;
-    ImGuiStorage*           StateStorage;
     int                     StackSizesBackup[6]; // Store size of various stacks for asserting
 
     float                   ColumnsStartX;       // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
@@ -1136,9 +1140,9 @@ struct ImGuiDrawContext
         LastItemHoveredAndUsable = LastItemHoveredRect = false;
         MenuBarAppending = false;
         MenuBarOffsetX = 0.0f;
+        StateStorage = NULL;
         LayoutType = ImGuiLayoutType_Vertical;
         ColorEditMode = ImGuiColorEditMode_RGB;
-        StateStorage = NULL;
         memset(StackSizesBackup, 0, sizeof(StackSizesBackup));
 
         ColumnsStartX = 0.0f;
@@ -3785,6 +3789,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->DC.ItemWidth.resize(0); 
         window->DC.ItemWidth.push_back(window->ItemWidthDefault);
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
+        window->DC.ButtonRepeat = false;
+        window->DC.ButtonRepeatStack.resize(0);
         window->DC.AllowKeyboardFocus.resize(0);
         window->DC.AllowKeyboardFocus.push_back(true);
         window->DC.TextWrapPos.resize(0);
@@ -4074,6 +4080,20 @@ void ImGui::PopAllowKeyboardFocus()
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.AllowKeyboardFocus.pop_back();
+}
+
+void ImGui::PushButtonRepeat(bool repeat)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.ButtonRepeat = repeat;
+    window->DC.ButtonRepeatStack.push_back(repeat);
+}
+
+void ImGui::PopButtonRepeat()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.ButtonRepeatStack.pop_back();
+    window->DC.ButtonRepeat = window->DC.ButtonRepeatStack.empty() ? false : window->DC.ButtonRepeatStack.back();
 }
 
 void ImGui::PushTextWrapPos(float wrap_x)
@@ -4868,7 +4888,7 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     return pressed;
 }
 
-static bool ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags flags)
+static bool ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), ImGuiButtonFlags flags = 0)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -4885,6 +4905,7 @@ static bool ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     if (!ItemAdd(bb, &id))
         return false;
 
+    if (window->DC.ButtonRepeat) flags |= ImGuiButtonFlags_Repeat;
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, true, flags);
 
@@ -4900,22 +4921,18 @@ static bool ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     return pressed;
 }
 
-bool ImGui::Button(const char* label, const ImVec2& size_arg, bool repeat_when_held)
+bool ImGui::Button(const char* label, const ImVec2& size_arg)
 {
-    return ButtonEx(label, size_arg, repeat_when_held ? ImGuiButtonFlags_Repeat : 0);
+    return ButtonEx(label, size_arg, 0);
 }
 
 // Small buttons fits within text without additional vertical spacing.
 bool ImGui::SmallButton(const char* label)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return false;
-
     ImGuiState& g = *GImGui;
     float backup_padding_y = g.Style.FramePadding.y;
     g.Style.FramePadding.y = 0.0f;
-    bool pressed = ButtonEx(label, ImVec2(0,0), 0);
+    bool pressed = ButtonEx(label);
     g.Style.FramePadding.y = backup_padding_y;
     return pressed;
 }
