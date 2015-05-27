@@ -3185,10 +3185,18 @@ bool ImGui::BeginPopupContextItem(const char* str_id, int button)
 
 bool ImGui::BeginPopupContextWindow(bool in_empty_space_only, const char* str_id, int button)
 {
-    if (str_id == NULL) str_id = "window_context_menu";
+    if (!str_id) str_id = "window_context_menu";
     if (ImGui::IsMouseHoveringWindow() && ImGui::IsMouseClicked(button))
         if (!in_empty_space_only || !ImGui::IsAnyItemHovered())
             ImGui::OpenPopup(str_id);
+    return ImGui::BeginPopup(str_id);
+}
+
+bool ImGui::BeginPopupContextVoid(const char* str_id, int button)
+{
+    if (!str_id) str_id = "void_context_menu";
+    if (!ImGui::IsMouseHoveringAnyWindow() && ImGui::IsMouseClicked(button))
+        ImGui::OpenPopup(str_id);
     return ImGui::BeginPopup(str_id);
 }
 
