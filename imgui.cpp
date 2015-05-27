@@ -3791,9 +3791,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
         window->DC.ChildWindows.resize(0);
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
-        window->DC.ItemWidthStack.resize(0); 
-        window->DC.ItemWidthStack.push_back(window->ItemWidthDefault);
         window->DC.ItemWidth = window->ItemWidthDefault;
+        window->DC.ItemWidthStack.resize(0); 
         window->DC.ButtonRepeat = false;
         window->DC.ButtonRepeatStack.resize(0);
         window->DC.AllowKeyboardFocus = true;
@@ -4031,7 +4030,7 @@ void ImGui::PopItemWidth()
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.ItemWidthStack.pop_back();
-    window->DC.ItemWidth = window->DC.ItemWidthStack.back();
+    window->DC.ItemWidth = window->DC.ItemWidthStack.empty() ? window->ItemWidthDefault : window->DC.ItemWidthStack.back();
 }
 
 float ImGui::CalcItemWidth()
