@@ -10609,12 +10609,25 @@ void ImGui::ShowTestWindow(bool* opened)
             }
 
             if (ImGui::Button("Popup Menu.."))
-                ImGui::OpenPopup("context menu");
-            if (ImGui::BeginPopup("context menu"))
+                ImGui::OpenPopup("popup from button");
+            if (ImGui::BeginPopup("popup from button"))
             {
                 ShowExampleMenuFile();
                 ImGui::EndPopup();
             }
+
+            static float value = 0.5f;
+            ImGui::PushItemWidth(100); ImGui::DragFloat("Context Menu", &value); ImGui::PopItemWidth();
+            if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1))
+                ImGui::OpenPopup("context menu");
+            ImGui::SameLine(); ImGui::Text("<-- right-click");
+            if (ImGui::BeginPopup("context menu"))
+            {
+                if (ImGui::Selectable("Set to zero")) value = 0.0f; 
+                if (ImGui::Selectable("Set to PI")) value = PI; 
+                ImGui::EndPopup();
+            }
+
             ImGui::TreePop();
         }
 
