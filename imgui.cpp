@@ -357,7 +357,8 @@
  - combo/listbox: keyboard control. need inputtext like non-active focus + key handling. considering keybord for custom listbox (see github pr #203)
  - listbox: multiple selection
  - listbox: user may want to initial scroll to focus on the one selected value?
- ! menubar, menus (github issue #126)
+ - menus: local shortcuts, global shortcuts
+ - menus: icons
  - tabs
  - gauge: various forms of gauge/loading bars widgets
  - color: better color editor.
@@ -4926,8 +4927,8 @@ static bool ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), Im
     RenderTextClipped(bb.Min, bb.Max, label, NULL, &label_size, NULL, ImGuiAlign_Center | ImGuiAlign_VCenter);
 
     // Automatically close popups
-    if (pressed && !(flags & ImGuiButtonFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
-        ImGui::CloseCurrentPopup();
+    //if (pressed && !(flags & ImGuiButtonFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
+    //    ImGui::CloseCurrentPopup();
 
     return pressed;
 }
@@ -11464,7 +11465,6 @@ static void ShowExampleMenuFile()
         static float f = 0.5f;
         ImGui::SliderFloat("Value", &f, 0.0f, 1.0f);
         ImGui::InputFloat("Input", &f, 0.1f);
-        ImGui::Button("Button");
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Colors"))
