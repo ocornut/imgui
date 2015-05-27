@@ -4116,7 +4116,7 @@ void ImGui::PopTextWrapPos()
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.TextWrapPosStack.pop_back();
-    window->DC.TextWrapPos = window->DC.TextWrapPosStack.back();
+    window->DC.TextWrapPos = window->DC.TextWrapPosStack.empty() ? -1.0f : window->DC.TextWrapPosStack.back();
 }
 
 void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
