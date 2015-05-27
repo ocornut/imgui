@@ -2984,10 +2984,14 @@ bool ImGui::IsItemActive()
     return false;
 }
 
+bool ImGui::IsAnyItemHovered()
+{
+    return GImGui->HoveredId != 0 || GImGui->HoveredIdPreviousFrame != 0;
+}
+
 bool ImGui::IsAnyItemActive()
 {
-    ImGuiState& g = *GImGui;
-    return g.ActiveId != 0;
+    return GImGui->ActiveId != 0;
 }
 
 bool ImGui::IsItemVisible()
