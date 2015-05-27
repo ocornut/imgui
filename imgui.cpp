@@ -4864,16 +4864,16 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     return pressed;
 }
 
-bool ImGui::Button(const char* label, const ImVec2& size_arg, bool repeat_when_held)
+static bool ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags flags)
 {
-    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
 
+    ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
 
     const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : (label_size.x + style.FramePadding.x*2), size_arg.y != 0.0f ? size_arg.y : (label_size.y + style.FramePadding.y*2));
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
@@ -4882,45 +4882,35 @@ bool ImGui::Button(const char* label, const ImVec2& size_arg, bool repeat_when_h
         return false;
 
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true, repeat_when_held ? ImGuiButtonFlags_Repeat : 0);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true, flags);
 
     // Render
     const ImU32 col = window->Color((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
 
     const ImVec2 off = ImVec2(ImMax(0.0f, size.x - label_size.x) * 0.5f, ImMax(0.0f, size.y - label_size.y) * 0.5f); // Center (only applies if we explicitly gave a size bigger than the text size, which isn't the common path)
-    RenderTextClipped(bb.Min + off, label, NULL, &label_size, bb.Max);                          // Render clip (only applies if we explicitly gave a size smaller than the text size, which isn't the commmon path)
+    RenderTextClipped(bb.Min + off, label, NULL, &label_size, bb.Max);                          // Render clip (only applies if we explicitly gave a size smaller than the text size, which isn't common)
 
     return pressed;
 }
 
-// Small buttons fits within text without additional spacing.
+bool ImGui::Button(const char* label, const ImVec2& size_arg, bool repeat_when_held)
+{
+    return ButtonEx(label, size_arg, repeat_when_held ? ImGuiButtonFlags_Repeat : 0);
+}
+
+// Small buttons fits within text without additional vertical spacing.
 bool ImGui::SmallButton(const char* label)
 {
-    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
 
-    const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID(label);
-    const ImVec2 label_size = CalcTextSize(label, NULL, true);
-
-    ImVec2 text_pos = window->DC.CursorPos;
-    text_pos.y += window->DC.CurrentLineTextBaseOffset;
-    ImRect bb(text_pos, text_pos + label_size + ImVec2(style.FramePadding.x*2,0));
-    ItemSize(bb);
-    if (!ItemAdd(bb, &id))
-        return false;
-
-    bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held, true);
-
-    // Render
-    const ImU32 col = window->Color((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-    RenderFrame(bb.Min, bb.Max, col);
-    RenderText(bb.Min + ImVec2(style.FramePadding.x,0), label);
-
+    ImGuiState& g = *GImGui;
+    float backup_padding_y = g.Style.FramePadding.y;
+    g.Style.FramePadding.y = 0.0f;
+    bool pressed = ButtonEx(label, ImVec2(0,0), 0);
+    g.Style.FramePadding.y = backup_padding_y;
     return pressed;
 }
 
