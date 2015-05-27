@@ -963,10 +963,11 @@ enum ImGuiLayoutType_
 
 enum ImGuiButtonFlags_
 {
-    ImGuiButtonFlags_Repeat         = (1 << 0),
-    ImGuiButtonFlags_PressedOnClick = (1 << 1),
-    ImGuiButtonFlags_FlattenChilds  = (1 << 2),
-    ImGuiButtonFlags_Disabled       = (1 << 3)
+    ImGuiButtonFlags_Repeat             = (1 << 0),
+    ImGuiButtonFlags_PressedOnClick     = (1 << 1),
+    ImGuiButtonFlags_FlattenChilds      = (1 << 2),
+    ImGuiButtonFlags_DontClosePopups    = (1 << 3),
+    ImGuiButtonFlags_Disabled           = (1 << 4)
 };
 
 enum ImGuiSelectableFlags_
@@ -4891,6 +4892,10 @@ static bool ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     const ImVec2 off = ImVec2(ImMax(0.0f, size.x - label_size.x) * 0.5f, ImMax(0.0f, size.y - label_size.y) * 0.5f); // Center (only applies if we explicitly gave a size bigger than the text size, which isn't the common path)
     RenderTextClipped(bb.Min + off, label, NULL, &label_size, bb.Max);                          // Render clip (only applies if we explicitly gave a size smaller than the text size, which isn't common)
 
+    // Automatically close popups
+    if (pressed && !(flags & ImGuiButtonFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
+        ImGui::CloseCurrentPopup();
+
     return pressed;
 }
 
@@ -6611,13 +6616,13 @@ bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast,
     {
         ImGui::PopItemWidth();
         ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
-        if (ImGui::Button("-", button_sz, true))
+        if (ButtonEx("-", button_sz, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
         {
             *v -= g.IO.KeyCtrl && step_fast > 0.0f ? step_fast : step;
             value_changed = true;
         }
         ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
-        if (ImGui::Button("+", button_sz, true))
+        if (ButtonEx("+", button_sz, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
         {
             *v += g.IO.KeyCtrl && step_fast > 0.0f ? step_fast : step;
             value_changed = true;
@@ -7834,7 +7839,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     {
         ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
         const char* button_titles[3] = { "RGB", "HSV", "HEX" };
-        if (ImGui::Button(button_titles[edit_mode]))
+        if (ButtonEx(button_titles[edit_mode], ImVec2(0,0), ImGuiButtonFlags_DontClosePopups))
             g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3); // Don't set local copy of 'edit_mode' right away!
         ImGui::SameLine();
     }
@@ -11432,6 +11437,8 @@ static void ShowExampleMenuFile()
         ImGui::EndChild();
         static float f = 0.5f;
         ImGui::SliderFloat("Value", &f, 0.0f, 1.0f);
+        ImGui::InputFloat("Input", &f, 0.1f);
+        ImGui::Button("Button");
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Colors"))
