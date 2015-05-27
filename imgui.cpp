@@ -10617,7 +10617,7 @@ void ImGui::ShowTestWindow(bool* opened)
             }
 
             static float value = 0.5f;
-            ImGui::PushItemWidth(100); ImGui::DragFloat("Context Menu", &value); ImGui::PopItemWidth();
+            ImGui::Text("Value = %.3f", value);
             if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1))
                 ImGui::OpenPopup("context menu");
             ImGui::SameLine(); ImGui::Text("<-- right-click");
