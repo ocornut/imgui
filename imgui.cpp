@@ -357,7 +357,7 @@
  - combo/listbox: keyboard control. need inputtext like non-active focus + key handling. considering keybord for custom listbox (see github pr #203)
  - listbox: multiple selection
  - listbox: user may want to initial scroll to focus on the one selected value?
- - menus: local shortcuts, global shortcuts
+ - menus: local shortcuts, global shortcuts (github issue #126)
  - menus: icons
  - tabs
  - gauge: various forms of gauge/loading bars widgets
@@ -11477,6 +11477,7 @@ static void ShowExampleMenuFile()
     {
         IM_ASSERT(0);
     }
+    if (ImGui::MenuItem("Checked", NULL, true)) {}
     if (ImGui::MenuItem("Quit", "Alt+F4")) {}
 }
 
