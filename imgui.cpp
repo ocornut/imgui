@@ -3180,10 +3180,11 @@ bool ImGui::BeginPopupContextItem(const char* str_id, int button)
     return ImGui::BeginPopup(str_id);
 }
 
-bool ImGui::BeginPopupContextWindow(const char* str_id, bool void_only, int button)
+bool ImGui::BeginPopupContextWindow(bool in_empty_space_only, const char* str_id, int button)
 {
+    if (str_id == NULL) str_id = "window_context_menu";
     if (ImGui::IsMouseHoveringWindow() && ImGui::IsMouseClicked(button))
-        if (!void_only || !ImGui::IsAnyItemHovered())
+        if (!in_empty_space_only || !ImGui::IsAnyItemHovered())
             ImGui::OpenPopup(str_id);
     return ImGui::BeginPopup(str_id);
 }
