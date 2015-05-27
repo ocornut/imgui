@@ -1091,7 +1091,7 @@ struct ImGuiDrawContext
     ImVec2                  CursorPos;
     ImVec2                  CursorPosPrevLine;
     ImVec2                  CursorStartPos;
-    ImVec2                  CursorMaxPos;        // Implicitly calculate the size of our contents, always extending. Saved into window->SizeContents at the end of the frame
+    ImVec2                  CursorMaxPos;           // Implicitly calculate the size of our contents, always extending. Saved into window->SizeContents at the end of the frame
     float                   CurrentLineHeight;
     float                   CurrentLineTextBaseOffset;
     float                   PrevLineHeight;
@@ -1108,17 +1108,21 @@ struct ImGuiDrawContext
     ImGuiStorage*           StateStorage;
     ImGuiLayoutType         LayoutType;
 
-    bool                    ButtonRepeat;        // == ButtonRepeatStack.back() [false]
+    // We store the current settings outside of the vectors to increase memory locality (reduce cache misses). The vectors are rarely modified. Also it allows us to not heap allocate for short-lived windows which are not using those settings.
+    bool                    ButtonRepeat;           // == ButtonRepeatStack.back() [empty == false]
+    bool                    AllowKeyboardFocus;     // == AllowKeyboardFocusStack.back() [empty == true]
+    float                   ItemWidth;              // == ItemWidthStack.back(). 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
+    float                   TextWrapPos;            // == TextWrapPosStack.back() [empty == -1.0f]
     ImVector<bool>          ButtonRepeatStack;
-    ImVector<bool>          AllowKeyboardFocus;
-    ImVector<float>         ItemWidth;           // 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
-    ImVector<float>         TextWrapPos;
-    ImVector<ImGuiGroupData> GroupStack;
+    ImVector<bool>          AllowKeyboardFocusStack;
+    ImVector<float>         ItemWidthStack;
+    ImVector<float>         TextWrapPosStack;
+    ImVector<ImGuiGroupData>GroupStack;
     ImGuiColorEditMode      ColorEditMode;
-    int                     StackSizesBackup[6]; // Store size of various stacks for asserting
+    int                     StackSizesBackup[6];    // Store size of various stacks for asserting
 
-    float                   ColumnsStartX;       // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
-    float                   ColumnsOffsetX;      // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
+    float                   ColumnsStartX;          // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
+    float                   ColumnsOffsetX;         // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
     int                     ColumnsCurrent;
     int                     ColumnsCount;
     ImVec2                  ColumnsStartPos;
@@ -1126,7 +1130,7 @@ struct ImGuiDrawContext
     float                   ColumnsCellMaxY;
     bool                    ColumnsShowBorders;
     ImGuiID                 ColumnsSetID;
-    ImVector<float>         ColumnsOffsetsT;     // Columns offset normalized 0.0 (far left) -> 1.0 (far right)
+    ImVector<float>         ColumnsOffsetsT;        // Columns offset normalized 0.0 (far left) -> 1.0 (far right)
 
     ImGuiDrawContext()
     {
@@ -1801,7 +1805,7 @@ bool ImGuiWindow::FocusItemRegister(bool is_active, bool tab_stop)
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    const bool allow_keyboard_focus = window->DC.AllowKeyboardFocus.back();
+    const bool allow_keyboard_focus = window->DC.AllowKeyboardFocus;
     FocusIdxAllCounter++;
     if (allow_keyboard_focus)
         FocusIdxTabCounter++;
@@ -3256,7 +3260,7 @@ void ImGui::EndChildFrame()
 // Save and compare stack sizes on Begin()/End() to detect usage errors
 static void CheckStacksSize(ImGuiWindow* window, bool write)
 {
-    // NOT checking: DC.ItemWidth, DC.AllowKeyboardFocus, DC.TextWrapPos (per window) to allow user to conveniently push once and not pop (they are cleared on Begin)
+    // NOT checking: DC.ItemWidth, DC.AllowKeyboardFocus, DC.ButtonRepeat, DC.TextWrapPos (per window) to allow user to conveniently push once and not pop (they are cleared on Begin)
     ImGuiState& g = *GImGui;
     int* p_backup = &window->DC.StackSizesBackup[0];
     { int current = (int)window->IDStack.size();       if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopID()
@@ -3786,15 +3790,16 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->DC.MenuBarOffsetX = ImMax(window->DC.ColumnsStartX, style.ItemSpacing.x);
         window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
         window->DC.ChildWindows.resize(0);
-        window->DC.ItemWidth.resize(0); 
-        window->DC.ItemWidth.push_back(window->ItemWidthDefault);
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
+        window->DC.ItemWidthStack.resize(0); 
+        window->DC.ItemWidthStack.push_back(window->ItemWidthDefault);
+        window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.ButtonRepeat = false;
         window->DC.ButtonRepeatStack.resize(0);
-        window->DC.AllowKeyboardFocus.resize(0);
-        window->DC.AllowKeyboardFocus.push_back(true);
-        window->DC.TextWrapPos.resize(0);
-        window->DC.TextWrapPos.push_back(-1.0f); // disabled
+        window->DC.AllowKeyboardFocus = true;
+        window->DC.AllowKeyboardFocusStack.resize(0);
+        window->DC.TextWrapPos = -1.0f; // disabled
+        window->DC.TextWrapPosStack.resize(0);
         window->DC.ColorEditMode = ImGuiColorEditMode_UserSelect;
         window->DC.ColumnsCurrent = 0;
         window->DC.ColumnsCount = 1;
@@ -4004,7 +4009,8 @@ static void FocusWindow(ImGuiWindow* window)
 void ImGui::PushItemWidth(float item_width)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ItemWidth.push_back(item_width == 0.0f ? window->ItemWidthDefault : item_width);
+    window->DC.ItemWidth = (item_width == 0.0f ? window->ItemWidthDefault : item_width);
+    window->DC.ItemWidthStack.push_back(window->DC.ItemWidth);
 }
 
 static void PushMultiItemsWidths(int components, float w_full = 0.0f)
@@ -4015,21 +4021,23 @@ static void PushMultiItemsWidths(int components, float w_full = 0.0f)
         w_full = ImGui::CalcItemWidth();
     const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)) / (float)components));
     const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.FramePadding.x*2.0f + style.ItemInnerSpacing.x) * (components-1)));
-    window->DC.ItemWidth.push_back(w_item_last);
+    window->DC.ItemWidthStack.push_back(w_item_last);
     for (int i = 0; i < components-1; i++)
-        window->DC.ItemWidth.push_back(w_item_one);
+        window->DC.ItemWidthStack.push_back(w_item_one);
+    window->DC.ItemWidth = window->DC.ItemWidthStack.back();
 }
 
 void ImGui::PopItemWidth()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ItemWidth.pop_back();
+    window->DC.ItemWidthStack.pop_back();
+    window->DC.ItemWidth = window->DC.ItemWidthStack.back();
 }
 
 float ImGui::CalcItemWidth()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    float w = window->DC.ItemWidth.back();
+    float w = window->DC.ItemWidth;
     if (w < 0.0f)
     {
         // Align to a right-side limit. We include 1 frame padding in the calculation because this is how the width is always used (we add 2 frame padding to it), but we could move that responsibility to the widget as well.
@@ -4073,13 +4081,15 @@ void  ImGui::PopFont()
 void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.AllowKeyboardFocus.push_back(allow_keyboard_focus);
+    window->DC.AllowKeyboardFocus = allow_keyboard_focus;
+    window->DC.AllowKeyboardFocusStack.push_back(allow_keyboard_focus);
 }
 
 void ImGui::PopAllowKeyboardFocus()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.AllowKeyboardFocus.pop_back();
+    window->DC.AllowKeyboardFocusStack.pop_back();
+    window->DC.AllowKeyboardFocus = window->DC.AllowKeyboardFocusStack.empty() ? true : window->DC.AllowKeyboardFocusStack.back();
 }
 
 void ImGui::PushButtonRepeat(bool repeat)
@@ -4096,16 +4106,18 @@ void ImGui::PopButtonRepeat()
     window->DC.ButtonRepeat = window->DC.ButtonRepeatStack.empty() ? false : window->DC.ButtonRepeatStack.back();
 }
 
-void ImGui::PushTextWrapPos(float wrap_x)
+void ImGui::PushTextWrapPos(float wrap_pos_x)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.TextWrapPos.push_back(wrap_x);
+    window->DC.TextWrapPos = wrap_pos_x;
+    window->DC.TextWrapPosStack.push_back(wrap_pos_x);
 }
 
 void ImGui::PopTextWrapPos()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.TextWrapPos.pop_back();
+    window->DC.TextWrapPosStack.pop_back();
+    window->DC.TextWrapPos = window->DC.TextWrapPosStack.back();
 }
 
 void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
@@ -4661,7 +4673,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
     if (text_end == NULL)
         text_end = text + strlen(text); // FIXME-OPT
 
-    const float wrap_pos_x = window->DC.TextWrapPos.back();
+    const float wrap_pos_x = window->DC.TextWrapPos;
     const bool wrap_enabled = wrap_pos_x >= 0.0f;
     if (text_end - text > 2000 && !wrap_enabled)
     {
