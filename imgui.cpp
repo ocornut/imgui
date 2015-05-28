@@ -474,6 +474,8 @@ namespace IMGUI_STB_NAMESPACE
 #ifndef IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
+#else
+#define STBTT_DEF extern
 #endif
 #include "stb_truetype.h"
 
