@@ -3054,9 +3054,12 @@ void ImGui::OpenPopup(const char* str_id)
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     const ImGuiID id = window->GetID(str_id);
-    g.OpenedPopupStack.resize(g.CurrentPopupStack.size() + 1);
-    if (g.OpenedPopupStack.back().PopupID != id)
-        g.OpenedPopupStack.back() = ImGuiPopupRef(id, window, window->GetID("##menus"));
+    size_t current_stack_size = g.CurrentPopupStack.size();
+    ImGuiPopupRef popup_ref = ImGuiPopupRef(id, window, window->GetID("##menus")); // Tagged as new ref because constructor sets Window to NULL (we are passing the ParentWindow info here)
+    if (g.OpenedPopupStack.size() < current_stack_size + 1)
+        g.OpenedPopupStack.push_back(popup_ref);
+    else if (g.OpenedPopupStack[current_stack_size].PopupID != id)
+        g.OpenedPopupStack[current_stack_size] = popup_ref;
 }
 
 static void CloseInactivePopups()
