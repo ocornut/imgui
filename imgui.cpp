@@ -2209,45 +2209,6 @@ void ImGui::NewFrame()
     ImGui::Begin("Debug");
 }
 
-static void CloseInactivePopups()
-{
-    ImGuiState& g = *GImGui;
-    if (g.OpenedPopupStack.empty())
-        return;
-
-    // User has clicked outside of a popup
-    if (!g.FocusedWindow)
-    {
-        g.OpenedPopupStack.resize(0);
-        return;
-    }
-
-    // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it
-    // Don't close our own child popup windows
-    int n;
-    for (n = 0; n < (int)g.OpenedPopupStack.size(); n++)
-    {
-        ImGuiPopupRef& popup = g.OpenedPopupStack[n];
-        if (!popup.Window)
-            continue;
-        IM_ASSERT((popup.Window->Flags & ImGuiWindowFlags_Popup) != 0);
-        if (popup.Window->Flags & ImGuiWindowFlags_ChildWindow)
-        {
-            if (g.FocusedWindow->RootWindow != popup.Window->RootWindow)
-                break;
-        }
-        else
-        {
-            bool has_focus = false;
-            for (int m = n; m < (int)g.OpenedPopupStack.size() && !has_focus; m++)
-                has_focus = (g.OpenedPopupStack[m].Window && g.OpenedPopupStack[m].Window->RootWindow == g.FocusedWindow->RootWindow);
-            if (!has_focus)
-                break;
-        }
-    }
-    g.OpenedPopupStack.resize(n);
-}
-
 // NB: behavior of ImGui after Shutdown() is not tested/guaranteed at the moment. This function is merely here to free heap allocations.
 void ImGui::Shutdown()
 {
@@ -3098,6 +3059,41 @@ void ImGui::OpenPopup(const char* str_id)
         g.OpenedPopupStack.back() = ImGuiPopupRef(id, window, window->GetID("##menus"));
 }
 
+static void CloseInactivePopups()
+{
+    ImGuiState& g = *GImGui;
+    if (g.OpenedPopupStack.empty())
+        return;
+
+    // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it
+    // Don't close our own child popup windows
+    int n = 0;
+    if (g.FocusedWindow)
+    {
+        for (n = 0; n < (int)g.OpenedPopupStack.size(); n++)
+        {
+            ImGuiPopupRef& popup = g.OpenedPopupStack[n];
+            if (!popup.Window)
+                continue;
+            IM_ASSERT((popup.Window->Flags & ImGuiWindowFlags_Popup) != 0);
+            if (popup.Window->Flags & ImGuiWindowFlags_ChildWindow)
+            {
+                if (g.FocusedWindow->RootWindow != popup.Window->RootWindow)
+                    break;
+            }
+            else
+            {
+                bool has_focus = false;
+                for (int m = n; m < (int)g.OpenedPopupStack.size() && !has_focus; m++)
+                    has_focus = (g.OpenedPopupStack[m].Window && g.OpenedPopupStack[m].Window->RootWindow == g.FocusedWindow->RootWindow);
+                if (!has_focus)
+                    break;
+            }
+        }
+    }
+    g.OpenedPopupStack.resize(n);
+}
+
 static void ClosePopupToLevel(int remaining)
 {
     ImGuiState& g = *GImGui;
@@ -3411,9 +3407,9 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 }
 
 // Push a new ImGui window to add widgets to. 
-// - 'size' for a regular window denote the initial size for first-time creation (no saved data) and isn't that useful. Use SetNextWindowSize() prior to calling Begin() for more flexible window manipulation.
 // - A default window called "Debug" is automatically stacked at the beginning of every frame so you can use widgets without explicitly calling a Begin/End pair.
 // - Begin/End can be called multiple times during the frame with the same window name to append content.
+// - 'size_on_first_use' for a regular window denote the initial size for first-time creation (no saved data) and isn't that useful. Use SetNextWindowSize() prior to calling Begin() for more flexible window manipulation.
 // - The window name is used as a unique identifier to preserve window information across frames (and save rudimentary information to the .ini file). 
 //   You can use the "##" or "###" markers to use the same label with different id, or same id with different label. See documentation at the top of this file.
 // - Return false when window is collapsed, so you can early out in your code. You always need to call ImGui::End() even if false is returned.
