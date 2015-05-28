@@ -3059,7 +3059,10 @@ void ImGui::OpenPopup(const char* str_id)
     if (g.OpenedPopupStack.size() < current_stack_size + 1)
         g.OpenedPopupStack.push_back(popup_ref);
     else if (g.OpenedPopupStack[current_stack_size].PopupID != id)
+    {
+        g.OpenedPopupStack.resize(current_stack_size+1);
         g.OpenedPopupStack[current_stack_size] = popup_ref;
+    }
 }
 
 static void CloseInactivePopups()
