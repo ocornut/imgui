@@ -1252,8 +1252,9 @@ struct ImGuiState
     ImGuiID                 ActiveId;                           // Active widget
     ImGuiID                 ActiveIdPreviousFrame;
     bool                    ActiveIdIsAlive;
-    bool                    ActiveIdIsJustActivated;            // Set when 
-    bool                    ActiveIdIsFocusedOnly;              // Set only by active widget. Denote focus but no active interaction.
+    bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
+    bool                    ActiveIdIsFocusedOnly;              // Set only by active widget. Denote focus but no active interaction
+    ImGuiWindow*            ActiveIdWindow;
     ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window. Only valid if ActiveID is the "#MOVE" identifier of a window.
     float                   SettingsDirtyTimer;
     ImVector<ImGuiIniData>  Settings;
@@ -1468,12 +1469,13 @@ static inline ImGuiWindow* GetParentWindow()
     return g.CurrentWindowStack[g.CurrentWindowStack.size() - 2];
 }
 
-static void SetActiveId(ImGuiID id) 
+static void SetActiveId(ImGuiID id, ImGuiWindow* window = NULL) 
 {
     ImGuiState& g = *GImGui;
     g.ActiveId = id; 
     g.ActiveIdIsFocusedOnly = false;
     g.ActiveIdIsJustActivated = true;
+    g.ActiveIdWindow = window;
 }
 
 static void RegisterAliveId(ImGuiID id)
@@ -2377,16 +2379,19 @@ void ImGui::Render()
         // Click to focus window and start moving (after we're done with all our widgets)
         if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
         {
-            if (g.HoveredRootWindow != NULL)
+            if (!(g.FocusedWindow && !g.FocusedWindow->WasActive && g.FocusedWindow->Active)) // Unless we just made a popup appear
             {
-                IM_ASSERT(g.MovedWindow == NULL);
-                g.MovedWindow = g.HoveredWindow;
-                SetActiveId(g.HoveredRootWindow->MoveID);
-            }
-            else if (g.FocusedWindow != NULL)
-            {
-                // Clicking on void disable focus
-                FocusWindow(NULL);
+                if (g.HoveredRootWindow != NULL)
+                {
+                    IM_ASSERT(g.MovedWindow == NULL);
+                    g.MovedWindow = g.HoveredWindow;
+                    SetActiveId(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
+                }
+                else if (g.FocusedWindow != NULL)
+                {
+                    // Clicking on void disable focus
+                    FocusWindow(NULL);
+                }
             }
         }
 
@@ -3180,11 +3185,20 @@ bool ImGui::BeginPopupContextItem(const char* str_id, int button)
     return ImGui::BeginPopup(str_id);
 }
 
-bool ImGui::BeginPopupContextWindow(const char* str_id, bool void_only, int button)
+bool ImGui::BeginPopupContextWindow(bool in_empty_space_only, const char* str_id, int button)
 {
+    if (!str_id) str_id = "window_context_menu";
     if (ImGui::IsMouseHoveringWindow() && ImGui::IsMouseClicked(button))
-        if (!void_only || !ImGui::IsAnyItemHovered())
+        if (!in_empty_space_only || !ImGui::IsAnyItemHovered())
             ImGui::OpenPopup(str_id);
+    return ImGui::BeginPopup(str_id);
+}
+
+bool ImGui::BeginPopupContextVoid(const char* str_id, int button)
+{
+    if (!str_id) str_id = "void_context_menu";
+    if (!ImGui::IsMouseHoveringAnyWindow() && ImGui::IsMouseClicked(button))
+        ImGui::OpenPopup(str_id);
     return ImGui::BeginPopup(str_id);
 }
 
@@ -4014,6 +4028,11 @@ static void FocusWindow(ImGuiWindow* window)
     // And move its root window to the top of the pile 
     if (window->RootWindow)
         window = window->RootWindow;
+
+    // Steal focus on active widgets
+    if (window->Flags & ImGuiWindowFlags_Popup) // FIXME: This statement should be unnecessary. Need further testing before removing it..
+        if (g.ActiveId != 0 && g.ActiveIdWindow && g.ActiveIdWindow->RootWindow != window)
+            SetActiveId(0);
 
     if (g.Windows.back() == window)
         return;
@@ -4889,7 +4908,7 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                 }
                 else
                 {
-                    SetActiveId(id);
+                    SetActiveId(id, window);
                 }
                 FocusWindow(window);
             }
@@ -5539,7 +5558,7 @@ static bool SliderFloatAsInputText(const char* label, float* v, ImGuiID id, int 
     char text_buf[64];
     ImFormatString(text_buf, IM_ARRAYSIZE(text_buf), "%.*f", decimal_precision, *v);
 
-    SetActiveId(g.ScalarAsInputTextId);
+    SetActiveId(g.ScalarAsInputTextId, window);
     g.HoveredId = 0;
 
     // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
@@ -5769,7 +5788,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id);
     if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]))
     {
-        SetActiveId(id);
+        SetActiveId(id, window);
         FocusWindow(window);
 
         const bool is_ctrl_down = g.IO.KeyCtrl;
@@ -5827,7 +5846,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
 
     if (hovered && g.IO.MouseClicked[0])
     {
-        SetActiveId(id);
+        SetActiveId(id, window);
         FocusWindow(window);
     }
 
@@ -6073,7 +6092,7 @@ bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, f
     const bool tab_focus_requested = window->FocusItemRegister(g.ActiveId == id);
     if (tab_focus_requested || (hovered && (g.IO.MouseClicked[0] | g.IO.MouseDoubleClicked[0])))
     {
-        SetActiveId(id);
+        SetActiveId(id, window);
         FocusWindow(window);
 
         if (tab_focus_requested || g.IO.KeyCtrl || g.IO.MouseDoubleClicked[0])
@@ -6786,11 +6805,11 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
 // Edit a string of text
 bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
-    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
 
+    ImGuiState& g = *GImGui;
     const ImGuiIO& io = g.IO;
     const ImGuiStyle& style = g.Style;
 
@@ -6857,16 +6876,14 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             if (focus_requested_by_tab || (user_clicked && is_ctrl_down))
                 select_all = true;
         }
-        SetActiveId(id);
+        SetActiveId(id, window);
         FocusWindow(window);
     }
     else if (io.MouseClicked[0])
     {
         // Release focus when we click outside
         if (g.ActiveId == id)
-        {
             SetActiveId(0);
-        }
     }
 
     // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
