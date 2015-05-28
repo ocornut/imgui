@@ -3104,15 +3104,6 @@ static void ClosePopupToLevel(int remaining)
     g.OpenedPopupStack.resize(remaining);
 }
 
-static void ClosePopup(const char* str_id) // not exposed because 'id' scope is misleading
-{
-    ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
-    const ImGuiID id = window->GetID(str_id);
-    if (IsPopupOpen(id))
-        ClosePopupToLevel((int)g.CurrentPopupStack.size());
-}
-
 // Close the popup we have begin-ed into.
 void ImGui::CloseCurrentPopup()
 {
@@ -7690,7 +7681,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     if (menuset_opened)
         g.FocusedWindow = backed_focused_window;
 
-    bool want_open = false;
+    bool want_open = false, want_close = false;
     if (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
     {
         // Implement http://bjk5.com/post/44698559168/breaking-down-amazons-mega-dropdown to avoid using timers so menus feel more reactive.
@@ -7712,17 +7703,19 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
             }
         }
             
-        if (opened && !hovered && g.HoveredWindow == window && g.HoveredIdPreviousFrame != 0 && g.HoveredIdPreviousFrame != id && !moving_within_opened_triangle)
-            ClosePopup(label);
+        want_close = (opened && !hovered && g.HoveredWindow == window && g.HoveredIdPreviousFrame != 0 && g.HoveredIdPreviousFrame != id && !moving_within_opened_triangle);
         want_open = (!opened && hovered && !moving_within_opened_triangle) || (!opened && hovered && pressed);
     }
     else if (opened && pressed && menuset_opened) // menu-bar: click open menu to close
     {
-        ClosePopup(label);
+        want_close = true;
         want_open = opened = false;
     }
     else if (pressed || (hovered && menuset_opened && !opened)) // menu-bar: first click to open, then hover to open others
         want_open = true;
+
+    if (want_close && IsPopupOpen(id))
+        ClosePopupToLevel((int)GImGui->CurrentPopupStack.size());
 
     if (!opened && want_open && g.OpenedPopupStack.size() > g.CurrentPopupStack.size())
     {
