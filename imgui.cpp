@@ -10929,12 +10929,10 @@ void ImGui::ShowTestWindow(bool* opened)
         static ImVector<float> values; if (values.empty()) { values.resize(90); memset(&values.front(), 0, values.size()*sizeof(float)); } 
         static size_t values_offset = 0; 
         if (!pause) 
-        { 
-            // create dummy data at fixed 60 hz rate
-            static float refresh_time = -1.0f;
-            if (ImGui::GetTime() > refresh_time + 1.0f/60.0f)
+        {
+            static float refresh_time = ImGui::GetTime(); // Create dummy data at fixed 60 hz rate for the demo
+            for (; ImGui::GetTime() > refresh_time + 1.0f/60.0f; refresh_time += 1.0f/60.0f)
             {
-                refresh_time = ImGui::GetTime();
                 static float phase = 0.0f;
                 values[values_offset] = cosf(phase); 
                 values_offset = (values_offset+1)%values.size(); 
@@ -10978,13 +10976,11 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TextWrapped("(Use ImGui::SameLine() to keep adding items to the right of the preceeding item)");
 
             // Text
-            ImGui::Text("Two items: Hello");
-            ImGui::SameLine();
+            ImGui::Text("Two items: Hello"); ImGui::SameLine();
             ImGui::TextColored(ImVec4(1,1,0,1), "Sailor");
 
             // Adjust spacing
-            ImGui::Text("More spacing: Hello");
-            ImGui::SameLine(0, 20);
+            ImGui::Text("More spacing: Hello"); ImGui::SameLine(0, 20);
             ImGui::TextColored(ImVec4(1,1,0,1), "Sailor");
 
             // Button
@@ -11050,8 +11046,6 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::TreeNode("Groups"))
         {
             ImGui::TextWrapped("(Using ImGui::BeginGroup()/EndGroup() to layout items)");
-
-            ImVec2 size;
             ImGui::BeginGroup();
             {
                 ImGui::BeginGroup();
@@ -11068,12 +11062,12 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::SameLine();
                 ImGui::Button("EEE");
                 ImGui::EndGroup();
-
-                // Capture the group size and create widgets using the same size
-                size = ImGui::GetItemRectSize();
-                const float values[5] = { 0.5f, 0.20f, 0.80f, 0.60f, 0.25f };
-                ImGui::PlotHistogram("##values", values, IM_ARRAYSIZE(values), 0, NULL, 0.0f, 1.0f, size);
             }
+            // Capture the group size and create widgets using the same size
+            ImVec2 size = ImGui::GetItemRectSize();
+            const float values[5] = { 0.5f, 0.20f, 0.80f, 0.60f, 0.25f };
+            ImGui::PlotHistogram("##values", values, IM_ARRAYSIZE(values), 0, NULL, 0.0f, 1.0f, size);
+
             ImGui::Button("ACTION", ImVec2((size.x - ImGui::GetStyle().ItemSpacing.x)*0.5f,size.y));
             ImGui::SameLine();
             ImGui::Button("REACTION", ImVec2((size.x - ImGui::GetStyle().ItemSpacing.x)*0.5f,size.y));
