@@ -10286,7 +10286,7 @@ void ImGui::ShowTestWindow(bool* opened)
     static bool show_app_metrics = false;
     static bool show_app_main_menu_bar = false;
     static bool show_app_console = false;
-    static bool show_app_layout = true;
+    static bool show_app_layout = false;
     static bool show_app_long_text = false;
     static bool show_app_auto_resize = false;
     static bool show_app_fixed_overlay = false;
@@ -10543,7 +10543,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 if (i > 0)
                     ImGui::SameLine();
                 ImGui::PushID(i);
-                int frame_padding = -1 + i;     // -1 padding uses default padding
+                int frame_padding = -1 + i;     // -1 = uses default padding
                 if (ImGui::ImageButton(tex_id, ImVec2(32,32), ImVec2(0,0), ImVec2(32.0f/tex_w,32/tex_h), frame_padding))
                     pressed_count += 1;
                 ImGui::PopID();
@@ -10657,11 +10657,8 @@ void ImGui::ShowTestWindow(bool* opened)
             }
 
             static float value = 0.5f;
-            ImGui::Text("Value = %.3f", value);
-            if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(1))
-                ImGui::OpenPopup("context menu");
-            ImGui::SameLine(); ImGui::Text("<-- right-click");
-            if (ImGui::BeginPopup("context menu"))
+            ImGui::Text("Value = %.3f (Right-click here)", value);
+            if (ImGui::BeginPopupContextItem("item context menu"))
             {
                 if (ImGui::Selectable("Set to zero")) value = 0.0f; 
                 if (ImGui::Selectable("Set to PI")) value = PI; 
