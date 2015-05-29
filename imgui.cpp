@@ -11525,7 +11525,7 @@ static void ShowExampleMenuFile()
 
 static void ShowExampleAppAutoResize(bool* opened)
 {
-    if (!ImGui::Begin("Example: Auto-Resizing Window", opened, ImGuiWindowFlags_AlwaysAutoResize))
+    if (!ImGui::Begin("Example: Auto-resizing window", opened, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::End();
         return;
@@ -11583,7 +11583,7 @@ static void ShowExampleAppManipulatingWindowTitle(bool* opened)
 static void ShowExampleAppCustomRendering(bool* opened)
 {
     ImGui::SetNextWindowSize(ImVec2(300,350), ImGuiSetCond_FirstUseEver);
-    if (!ImGui::Begin("Example: Custom Rendering", opened))
+    if (!ImGui::Begin("Example: Custom rendering", opened))
     {
         ImGui::End();
         return;
