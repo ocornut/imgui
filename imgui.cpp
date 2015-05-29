@@ -10270,6 +10270,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 //-----------------------------------------------------------------------------
 
 static void ShowExampleAppConsole(bool* opened);
+static void ShowExampleAppLayout(bool* opened);
 static void ShowExampleAppLongText(bool* opened);
 static void ShowExampleAppAutoResize(bool* opened);
 static void ShowExampleAppFixedOverlay(bool* opened);
@@ -10285,6 +10286,7 @@ void ImGui::ShowTestWindow(bool* opened)
     static bool show_app_metrics = false;
     static bool show_app_main_menu_bar = false;
     static bool show_app_console = false;
+    static bool show_app_layout = true;
     static bool show_app_long_text = false;
     static bool show_app_auto_resize = false;
     static bool show_app_fixed_overlay = false;
@@ -10293,6 +10295,7 @@ void ImGui::ShowTestWindow(bool* opened)
     if (show_app_metrics) ImGui::ShowMetricsWindow(&show_app_metrics);
     if (show_app_main_menu_bar) ShowExampleAppMainMenuBar();
     if (show_app_console) ShowExampleAppConsole(&show_app_console);
+    if (show_app_layout) ShowExampleAppLayout(&show_app_layout);
     if (show_app_long_text) ShowExampleAppLongText(&show_app_long_text);
     if (show_app_auto_resize) ShowExampleAppAutoResize(&show_app_auto_resize);
     if (show_app_fixed_overlay) ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
@@ -10347,6 +10350,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::MenuItem("Metrics", NULL, &show_app_metrics);
             ImGui::MenuItem("Main menu bar", NULL, &show_app_main_menu_bar);
             ImGui::MenuItem("Console", NULL, &show_app_console);
+            ImGui::MenuItem("Simple layout", NULL, &show_app_layout);
             ImGui::MenuItem("Long text display", NULL, &show_app_long_text);
             ImGui::MenuItem("Auto-resizing window", NULL, &show_app_auto_resize);
             ImGui::MenuItem("Simple overlay", NULL, &show_app_fixed_overlay);
@@ -11919,6 +11923,51 @@ static void ShowExampleAppConsole(bool* opened)
 {
     static ExampleAppConsole console;
     console.Run("Example: Console", opened);
+}
+
+static void ShowExampleAppLayout(bool* opened)
+{
+    ImGui::SetNextWindowSize(ImVec2(500, 440), ImGuiSetCond_FirstUseEver);
+    if (ImGui::Begin("Example: Layout", opened, ImGuiWindowFlags_MenuBar))
+    {
+        if (ImGui::BeginMenuBar())
+        {
+            if (ImGui::BeginMenu("File"))
+            {
+                if (ImGui::MenuItem("Close")) *opened = false;
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
+
+        // left
+        static int selected = 0;
+        ImGui::BeginChild("left pane", ImVec2(150, 0), true);
+        for (int i = 0; i < 100; i++)
+        {
+            char label[128];
+            sprintf(label, "MyObject %d", i);
+            if (ImGui::Selectable(label, selected == i))
+                selected = i;
+        }
+        ImGui::EndChild();
+        ImGui::SameLine();
+        
+        // right
+        ImGui::BeginGroup();
+            ImGui::BeginChild("item view", ImVec2(0, -ImGui::GetItemsLineHeightWithSpacing())); // Leave room for 1 line below us
+                ImGui::Text("MyObject: %d", selected);
+                ImGui::Separator();
+                ImGui::TextWrapped("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ");
+            ImGui::EndChild();
+            ImGui::BeginChild("buttons");
+                if (ImGui::Button("Revert")) {}
+                ImGui::SameLine();
+                if (ImGui::Button("Save")) {}
+            ImGui::EndChild();
+        ImGui::EndGroup();
+    }
+    ImGui::End();
 }
 
 static void ShowExampleAppLongText(bool* opened)
