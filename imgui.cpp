@@ -360,6 +360,7 @@
  - menus: local shortcuts, global shortcuts (github issue #126)
  - menus: icons
  - tabs
+ - separator: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
  - gauge: various forms of gauge/loading bars widgets
  - color: better color editor.
  - plot: make it easier for user to draw extra stuff into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
@@ -3197,7 +3198,6 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, int button)
 
 bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
 {
-    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_ChildWindow;
@@ -3209,13 +3209,13 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
     {
         if (size.x == 0.0f)
             flags |= ImGuiWindowFlags_ChildWindowAutoFitX;
-        size.x = ImMax(content_max.x - cursor_pos.x, g.Style.WindowMinSize.x) - fabsf(size.x);
+        size.x = ImMax(content_max.x - cursor_pos.x, 4.0f) - fabsf(size.x); // Arbitrary minimum zeroish child size of 4.0f
     }
     if (size.y <= 0.0f)
     {
         if (size.y == 0.0f)
             flags |= ImGuiWindowFlags_ChildWindowAutoFitY;
-        size.y = ImMax(content_max.y - cursor_pos.y, g.Style.WindowMinSize.y) - fabsf(size.y);
+        size.y = ImMax(content_max.y - cursor_pos.y, 4.0f) - fabsf(size.y);
     }
     if (border)
         flags |= ImGuiWindowFlags_ShowBorders;
@@ -3255,10 +3255,10 @@ void ImGui::EndChild()
         // When using auto-filling child window, we don't provide full width/height to ItemSize so that it doesn't feed back into automatic size-fitting.
         ImGuiState& g = *GImGui;
         ImVec2 sz = ImGui::GetWindowSize();
-        if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitX)
-            sz.x = ImMax(g.Style.WindowMinSize.x, sz.x - g.Style.WindowPadding.x);
+        if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitX) // Arbitrary minimum zeroish child size of 4.0f
+            sz.x = ImMax(4.0f, sz.x - g.Style.WindowPadding.x);
         if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitY)
-            sz.y = ImMax(g.Style.WindowMinSize.y, sz.y - g.Style.WindowPadding.y);
+            sz.y = ImMax(4.0f, sz.y - g.Style.WindowPadding.y);
         
         ImGui::End();
 
