@@ -11151,7 +11151,7 @@ void ImGui::ShowTestWindow(bool* opened)
             if (i == 50)
                 ImGui::NextColumn();
             char buf[32];
-            ImFormatString(buf, IM_ARRAYSIZE(buf), "%08x", i*5731);
+            sprintf(buf, "%08x", i*5731);
             ImGui::Button(buf);
         }
         ImGui::EndChild();
@@ -11169,8 +11169,8 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Text("Path"); ImGui::NextColumn();
         ImGui::Text("Flags"); ImGui::NextColumn();
         ImGui::Separator();
-        const char* names[3] = { "Robert", "Stephanie", "C64" };
-        const char* paths[3] = { "/path/robert", "/path/stephanie", "/path/computer" };
+        const char* names[3] = { "One", "Two", "Three" };
+        const char* paths[3] = { "/path/one", "/path/two", "/path/three" };
         for (int i = 0; i < 3; i++)
         {
             ImGui::Text("%04d", i); ImGui::NextColumn();
@@ -11315,7 +11315,7 @@ void ImGui::ShowTestWindow(bool* opened)
     {
         if (ImGui::TreeNode("Tabbing"))
         {
-            ImGui::Text("Use TAB/SHIFT+TAB to cycle thru keyboard editable fields.");
+            ImGui::Text("Use TAB/SHIFT+TAB to cycle through keyboard editable fields.");
             static char buf[32] = "dummy";
             ImGui::InputText("1", buf, IM_ARRAYSIZE(buf));
             ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
