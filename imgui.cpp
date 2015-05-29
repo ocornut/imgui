@@ -965,7 +965,7 @@ static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode,
 enum ImGuiLayoutType_
 {
     ImGuiLayoutType_Vertical,
-    ImGuiLayoutType_Horizontal
+    ImGuiLayoutType_Horizontal          // FIXME: this is in development, not exposed/functional as a generic feature yet.
 };
 
 enum ImGuiButtonFlags_
@@ -10279,6 +10279,13 @@ static void ShowExampleAppCustomRendering(bool* opened);
 static void ShowExampleAppMainMenuBar();
 static void ShowExampleMenuFile();
 
+static void ShowHelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)"); 
+    if (ImGui::IsItemHovered()) 
+        ImGui::SetTooltip(desc);
+}
+
 // Demonstrate most ImGui features (big function!)
 void ImGui::ShowTestWindow(bool* opened)
 {
@@ -10657,7 +10664,7 @@ void ImGui::ShowTestWindow(bool* opened)
             }
 
             static float value = 0.5f;
-            ImGui::Text("Value = %.3f (Right-click here)", value);
+            ImGui::Text("Value = %.3f (Context menu, right-click here)", value);
             if (ImGui::BeginPopupContextItem("item context menu"))
             {
                 if (ImGui::Selectable("Set to zero")) value = 0.0f; 
@@ -10730,21 +10737,21 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::LabelText("label", "Value");
 
         static int item = 1;
-        ImGui::Combo("combo", &item, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");
+        ImGui::Combo("combo", &item, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");   // Combo using values packed in a single constant string (for really quick combo)
 
         const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ", "KKKK" };
         static int item2 = -1;
-        ImGui::Combo("combo scroll", &item2, items, IM_ARRAYSIZE(items));
+        ImGui::Combo("combo scroll", &item2, items, IM_ARRAYSIZE(items));   // Combo using proper array. You can also pass a callback to retrieve array value, no need to create/copy an array just for that.
 
         {
             static char str0[128] = "Hello, world!";
             static int i0=123;
             static float f0=0.001f;
             ImGui::InputText("input text", str0, IM_ARRAYSIZE(str0));
-            ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("Hold SHIFT or use mouse to select text.\n" "CTRL+Left/Right to word jump.\n" "CTRL+A or double-click to select all.\n" "CTRL+X,CTRL+C,CTRL+V clipboard.\n" "CTRL+Z,CTRL+Y undo/redo.\n" "ESCAPE to revert.\n");
+            ImGui::SameLine(); ShowHelpMarker("Hold SHIFT or use mouse to select text.\n" "CTRL+Left/Right to word jump.\n" "CTRL+A or double-click to select all.\n" "CTRL+X,CTRL+C,CTRL+V clipboard.\n" "CTRL+Z,CTRL+Y undo/redo.\n" "ESCAPE to revert.\n");
 
             ImGui::InputInt("input int", &i0);
-            ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("You can apply arithmetic operators +,*,/ on numerical values.\n  e.g. [ 100 ], input \'*2\', result becomes [ 200 ]\nUse +- to subtract.\n");
+            ImGui::SameLine(); ShowHelpMarker("You can apply arithmetic operators +,*,/ on numerical values.\n  e.g. [ 100 ], input \'*2\', result becomes [ 200 ]\nUse +- to subtract.\n");
 
             ImGui::InputFloat("input float", &f0, 0.01f, 1.0f);
 
@@ -10756,7 +10763,7 @@ void ImGui::ShowTestWindow(bool* opened)
             static int i1=50;
             static int i2=42;
             ImGui::DragInt("drag int", &i1, 1);
-            ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("Click and drag to edit value.\nHold SHIFT/ALT for faster/slower edit.\nDouble-click or CTRL+click to input text.");
+            ImGui::SameLine(); ShowHelpMarker("Click and drag to edit value.\nHold SHIFT/ALT for faster/slower edit.\nDouble-click or CTRL+click to input text.");
 
             ImGui::DragInt("drag int 0..100", &i2, 1, 0, 100, "%.0f%%");
 
@@ -10770,7 +10777,7 @@ void ImGui::ShowTestWindow(bool* opened)
             static int i1=0;
             //static int i2=42;
             ImGui::SliderInt("slider int", &i1, 0, 3);
-            ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("CTRL+click to input value.");
+            ImGui::SameLine(); ShowHelpMarker("CTRL+click to input value.");
 
             //ImGui::SliderInt("slider int -100..100", &i2, -100, 100);
 
@@ -10785,7 +10792,7 @@ void ImGui::ShowTestWindow(bool* opened)
         static float col1[3] = { 1.0f,0.0f,0.2f };
         static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
         ImGui::ColorEdit3("color 1", col1);
-        ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("Click on the colored square to change edit mode. CTRL+click on individual component to input value.\n");
+        ImGui::SameLine(); ShowHelpMarker("Click on the colored square to change edit mode. CTRL+click on individual component to input value.\n");
         
         ImGui::ColorEdit4("color 2", col2);
 
@@ -11330,7 +11337,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::InputText("3", buf, IM_ARRAYSIZE(buf));
             ImGui::PushAllowKeyboardFocus(false);
             ImGui::InputText("4 (tab skip)", buf, IM_ARRAYSIZE(buf));
-            //ImGui::SameLine(); ImGui::Text("(?)"); if (ImGui::IsHovered()) ImGui::SetTooltip("Use ImGui::PushAllowKeyboardFocus(bool)\nto disable tabbing through certain widgets.");
+            //ImGui::SameLine(); ShowHelperMarker("Use ImGui::PushAllowKeyboardFocus(bool)\nto disable tabbing through certain widgets.");
             ImGui::PopAllowKeyboardFocus();
             ImGui::InputText("5", buf, IM_ARRAYSIZE(buf));
             ImGui::TreePop();
