@@ -2135,16 +2135,18 @@ void ImGui::NewFrame()
     // Are we using inputs? Tell user so they can capture/discard the inputs away from the rest of their application.
     // When clicking outside of a window we assume the click is owned by the application and won't request capture.
     int mouse_earliest_button_down = -1;
+    bool mouse_any_down = false;
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
     {
         if (g.IO.MouseClicked[i])
-            g.IO.MouseDownOwned[i] = (g.HoveredWindow != NULL);
+            g.IO.MouseDownOwned[i] = (g.HoveredWindow != NULL) || (!g.OpenedPopupStack.empty());
+        mouse_any_down |= g.IO.MouseDown[i];
         if (g.IO.MouseDown[i])
             if (mouse_earliest_button_down == -1 || g.IO.MouseClickedTime[mouse_earliest_button_down] > g.IO.MouseClickedTime[i])
                 mouse_earliest_button_down = i;
     }
     bool mouse_owned_by_application = mouse_earliest_button_down != -1 && !g.IO.MouseDownOwned[mouse_earliest_button_down];
-    g.IO.WantCaptureMouse = (!mouse_owned_by_application && g.HoveredWindow != NULL) || (g.ActiveId != 0);
+    g.IO.WantCaptureMouse = (!mouse_owned_by_application && g.HoveredWindow != NULL) || (!mouse_owned_by_application && mouse_any_down) || (g.ActiveId != 0) || (!g.OpenedPopupStack.empty());
     g.IO.WantCaptureKeyboard = (g.ActiveId != 0);
     g.MouseCursor = ImGuiMouseCursor_Arrow;
 
