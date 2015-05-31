@@ -7465,6 +7465,8 @@ bool ImGui::Selectable(const char* label, bool* p_selected, const ImVec2& size_a
 bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
 {
     ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
 
     const ImGuiStyle& style = ImGui::GetStyle();
     const ImGuiID id = ImGui::GetID(label);
@@ -7527,10 +7529,6 @@ bool ImGui::ListBox(const char* label, int* current_item, const char** items, in
 
 bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return false;
-
     if (!ImGui::ListBoxHeader(label, items_count, height_in_items))
         return false;
 
