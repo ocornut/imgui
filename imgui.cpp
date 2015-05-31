@@ -136,6 +136,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/05/31 (1.39) - renamed IsRectClipped to IsRectVisible for consistency. Note that return value is opposite! Kept inline redirection function (will obsolete).
  - 2015/05/27 (1.39) - removed the third 'repeat_if_held' parameter from Button() - sorry! it was rarely used and inconsistent. Use PushButtonRepeat(true) / PopButtonRepeat() to enable repeat on desired buttons.
  - 2015/05/11 (1.39) - changed BeginPopup() API, takes a string identifier instead of a bool. ImGui needs to manage the open/closed state of popups. Call OpenPopup() to actually set the "opened" state of a popup. BeginPopup() returns true if the popup is opened.
  - 2015/05/03 (1.39) - removed style.AutoFitPadding, using style.WindowPadding makes more sense (the default values were already the same).
@@ -8042,10 +8043,11 @@ static bool IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when
     return false;
 }
 
-bool ImGui::IsRectClipped(const ImVec2& size)
+bool ImGui::IsRectVisible(const ImVec2& size)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    return IsClippedEx(ImRect(window->DC.CursorPos, window->DC.CursorPos + size), NULL, true);
+    ImRect r(window->ClipRectStack.back());
+    return r.Overlaps(ImRect(window->DC.CursorPos, window->DC.CursorPos + size));
 }
 
 // Declare item bounding box for clipping and interaction.
