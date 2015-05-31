@@ -3180,26 +3180,26 @@ void ImGui::EndPopup()
     ImGui::PopStyleVar();
 }
 
-bool ImGui::BeginPopupContextItem(const char* str_id, int button)
+bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
 {
-    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(button))
+    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(mouse_button))
         ImGui::OpenPopup(str_id);
     return ImGui::BeginPopup(str_id);
 }
 
-bool ImGui::BeginPopupContextWindow(bool in_empty_space_only, const char* str_id, int button)
+bool ImGui::BeginPopupContextWindow(bool also_over_items, const char* str_id, int mouse_button)
 {
     if (!str_id) str_id = "window_context_menu";
-    if (ImGui::IsMouseHoveringWindow() && ImGui::IsMouseClicked(button))
-        if (!in_empty_space_only || !ImGui::IsAnyItemHovered())
+    if (ImGui::IsMouseHoveringWindow() && ImGui::IsMouseClicked(mouse_button))
+        if (also_over_items || !ImGui::IsAnyItemHovered())
             ImGui::OpenPopup(str_id);
     return ImGui::BeginPopup(str_id);
 }
 
-bool ImGui::BeginPopupContextVoid(const char* str_id, int button)
+bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
 {
     if (!str_id) str_id = "void_context_menu";
-    if (!ImGui::IsMouseHoveringAnyWindow() && ImGui::IsMouseClicked(button))
+    if (!ImGui::IsMouseHoveringAnyWindow() && ImGui::IsMouseClicked(mouse_button))
         ImGui::OpenPopup(str_id);
     return ImGui::BeginPopup(str_id);
 }
