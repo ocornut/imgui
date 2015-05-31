@@ -10043,6 +10043,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
+#pragma comment(lib, "user32")
 
 // Win32 API clipboard implementation
 static const char* GetClipboardTextFn_DefaultImpl()
