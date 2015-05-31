@@ -1,4 +1,4 @@
-// ImGui library v1.39 WIP
+// ImGui library v1.40 WIP
 // See .cpp file for documentation.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
@@ -13,7 +13,7 @@
 #include <stdlib.h>         // NULL, malloc, free, qsort, atoi
 #include <string.h>         // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
-#define IMGUI_VERSION       "1.39 WIP"
+#define IMGUI_VERSION       "1.40 WIP"
 
 // Define assertion handler.
 #ifndef IM_ASSERT
@@ -80,6 +80,7 @@ struct ImVec4
 // - struct ImGuiTextBuffer             // Text buffer for logging/accumulating text
 // - struct ImGuiStorage                // Custom key value storage (if you need to alter open/close states manually)
 // - struct ImGuiTextEditCallbackData   // Shared state of ImGui::InputText() when using custom callbacks
+// - struct ImGuiListClipper            // Helper to manually clip large list of items.
 // - struct ImColor                     // Helper functions to created packed 32-bit RGBA color values 
 // - struct ImDrawList                  // Draw command list
 // - struct ImFontAtlas                 // Bake multiple fonts into a single texture, TTF font loader, bake glyphs into bitmap
@@ -115,10 +116,10 @@ namespace ImGui
     IMGUI_API ImFont*       GetWindowFont();
     IMGUI_API float         GetWindowFontSize();                                                // size (also height in pixels) of current font with current scale applied
     IMGUI_API void          SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontGlobalScale if you want to scale all windows
-    IMGUI_API ImVec2        GetWindowPos();                                                     // you should rarely need/care about the window position, but it can be useful if you want to do your own drawing
-    IMGUI_API ImVec2        GetWindowSize();                                                    // get current window position
+    IMGUI_API ImVec2        GetWindowPos();                                                     // get current window position in screen space (useful if you want to do your own drawing via the DrawList api)
+    IMGUI_API ImVec2        GetWindowSize();                                                    // get current window size
     IMGUI_API float         GetWindowWidth();
-    IMGUI_API bool          GetWindowCollapsed();
+    IMGUI_API bool          IsWindowCollapsed();
 
     IMGUI_API void          SetNextWindowPos(const ImVec2& pos, ImGuiSetCond cond = 0);         // set next window position - call before Begin()
     IMGUI_API void          SetNextWindowSize(const ImVec2& size, ImGuiSetCond cond = 0);       // set next window size. set to ImVec2(0,0) to force an auto-fit
@@ -157,6 +158,8 @@ namespace ImGui
     IMGUI_API void          PopAllowKeyboardFocus();
     IMGUI_API void          PushTextWrapPos(float wrap_pos_x = 0.0f);                           // word-wrapping for Text*() commands. < 0.0f: no wrapping; 0.0f: wrap to end of window (or column); > 0.0f: wrap at 'wrap_pos_x' position in window local space
     IMGUI_API void          PopTextWrapPos();
+    IMGUI_API void          PushButtonRepeat(bool repeat);                                      // in 'repeat' mode, Button*() functions return true multiple times as you hold them (uses io.KeyRepeatDelay/io.KeyRepeatRate for now)
+    IMGUI_API void          PopButtonRepeat();
 
     // Tooltip
     IMGUI_API void          SetTooltip(const char* fmt, ...);                                   // set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). last call wins
@@ -165,15 +168,21 @@ namespace ImGui
     IMGUI_API void          EndTooltip();
 
     // Popup
-    IMGUI_API void          BeginPopup(bool* p_opened);
+    IMGUI_API void          OpenPopup(const char* str_id);                                      // mark popup as open. popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level). close childs popups if any. will close popup when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
+    IMGUI_API bool          BeginPopup(const char* str_id);                                     // return true if popup if opened and start outputting to it. only call EndPopup() if BeginPopup() returned true!
+    IMGUI_API bool          BeginPopupContextItem(const char* str_id, int mouse_button = 1);    // open and begin popup when clicked on last item
+    IMGUI_API bool          BeginPopupContextWindow(bool also_over_items = true, const char* str_id = NULL, int mouse_button = 1);  // open and begin popup when clicked on current window
+    IMGUI_API bool          BeginPopupContextVoid(const char* str_id = NULL, int mouse_button = 1);                                 // open and begin popup when clicked in void (no window)
     IMGUI_API void          EndPopup();
+    IMGUI_API void          CloseCurrentPopup();                                                // close the popup we have begin-ed into. clicking on a MenuItem or Selectable automatically close the current popup.
 
-    // Layout
-    IMGUI_API void          BeginGroup();
+    // Cursor / Layout
+    IMGUI_API void          BeginGroup();                                                       // once closing a group it is seen as a single item (so you can use IsItemHovered() on a group, SameLine() between groups, etc. 
     IMGUI_API void          EndGroup();
     IMGUI_API void          Separator();                                                        // horizontal line
     IMGUI_API void          SameLine(int column_x = 0, int spacing_w = -1);                     // call between widgets or groups to layout them horizontally
-    IMGUI_API void          Spacing();                                                          // add vertical spacing
+    IMGUI_API void          Spacing();                                                          // add spacing
+    IMGUI_API void          Dummy(const ImVec2& size);                                          // add a dummy item of given size
     IMGUI_API void          Indent();                                                           // move content position toward the right by style.IndentSpacing pixels
     IMGUI_API void          Unindent();                                                         // move content position back to the left (cancel Indent)
     IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border=true);    // setup number of columns. use an identifier to distinguish multiple column sets. close with Columns(1).
@@ -193,7 +202,8 @@ namespace ImGui
     IMGUI_API void          SetCursorScreenPos(const ImVec2& pos);                              // cursor position in absolute screen coordinates [0..io.DisplaySize]
     IMGUI_API void          AlignFirstTextHeightToWidgets();                                    // call once if the first item on the line is a Text() item and you want to vertically lower it to match subsequent (bigger) widgets
     IMGUI_API float         GetTextLineHeight();                                                // height of font == GetWindowFontSize()
-    IMGUI_API float         GetTextLineHeightWithSpacing();                                     // spacing (in pixels) between 2 consecutive lines of text == GetWindowFontSize() + GetStyle().ItemSpacing.y
+    IMGUI_API float         GetTextLineHeightWithSpacing();                                     // distance (in pixels) between 2 consecutive lines of text == GetWindowFontSize() + GetStyle().ItemSpacing.y
+    IMGUI_API float         GetItemsLineHeightWithSpacing();                                    // distance (in pixels) between 2 consecutive lines of standard height widgets == GetWindowFontSize() + GetStyle().FramePadding.y*2 + GetStyle().ItemSpacing.y
 
     // ID scopes
     // If you are creating widgets in a loop you most likely want to push a unique identifier so ImGui can differentiate them
@@ -212,7 +222,9 @@ namespace ImGui
     IMGUI_API void          TextV(const char* fmt, va_list args);
     IMGUI_API void          TextColored(const ImVec4& col, const char* fmt, ...);               // shortcut for PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
     IMGUI_API void          TextColoredV(const ImVec4& col, const char* fmt, va_list args);
-    IMGUI_API void          TextWrapped(const char* fmt, ...);                                  // shortcut for PushTextWrapPos(0.0f); Text(fmt, ...); PopTextWrapPos();
+    IMGUI_API void          TextDisabled(const char* fmt, ...);                                 // shortcut for PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]); Text(fmt, ...); PopStyleColor();
+    IMGUI_API void          TextDisabledV(const char* fmt, va_list args);
+    IMGUI_API void          TextWrapped(const char* fmt, ...);                                  // shortcut for PushTextWrapPos(0.0f); Text(fmt, ...); PopTextWrapPos();. Note that this won't work on an auto-resizing window if there's no other widgets to extend the window width, yoy may need to set a size using SetNextWindowSize().
     IMGUI_API void          TextWrappedV(const char* fmt, va_list args);
     IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL);     // doesn't require null terminated string if 'text_end' is specified. no copy done to any bounded stack buffer, recommended for long chunks of text
     IMGUI_API void          LabelText(const char* label, const char* fmt, ...);                 // display text+label aligned the same way as value+label widgets 
@@ -220,7 +232,7 @@ namespace ImGui
     IMGUI_API void          Bullet();
     IMGUI_API void          BulletText(const char* fmt, ...);
     IMGUI_API void          BulletTextV(const char* fmt, va_list args);
-    IMGUI_API bool          Button(const char* label, const ImVec2& size = ImVec2(0,0), bool repeat_when_held = false);
+    IMGUI_API bool          Button(const char* label, const ImVec2& size = ImVec2(0,0));
     IMGUI_API bool          SmallButton(const char* label);
     IMGUI_API bool          InvisibleButton(const char* str_id, const ImVec2& size);
     IMGUI_API void          Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0,0), const ImVec2& uv1 = ImVec2(1,1), const ImVec4& tint_col = ImVec4(1,1,1,1), const ImVec4& border_col = ImVec4(0,0,0,0));
@@ -241,19 +253,6 @@ namespace ImGui
     IMGUI_API void          PlotLines(const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0));
     IMGUI_API void          PlotHistogram(const char* label, const float* values, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), size_t stride = sizeof(float));
     IMGUI_API void          PlotHistogram(const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0, const char* overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0));
-
-    // Widgets: Sliders (tip: ctrl+click on a slider to input text)
-    IMGUI_API bool          SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);     // adjust display_format to decorate the value with a prefix or a suffix. Use power!=1.0 for logarithmic sliders
-    IMGUI_API bool          SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          SliderAngle(const char* label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f);
-    IMGUI_API bool          SliderInt(const char* label, int* v, int v_min, int v_max, const char* display_format = "%.0f");
-    IMGUI_API bool          SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* display_format = "%.0f");
-    IMGUI_API bool          SliderInt3(const char* label, int v[3], int v_min, int v_max, const char* display_format = "%.0f");
-    IMGUI_API bool          SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* display_format = "%.0f");
-    IMGUI_API bool          VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* display_format = "%.0f");
 
     // Widgets: Drags (tip: ctrl+click on a drag box to input text)
     IMGUI_API bool          DragFloat(const char* label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f", float power = 1.0f);     // If v_min >= v_max we have no bound
@@ -276,6 +275,19 @@ namespace ImGui
     IMGUI_API bool          InputInt3(const char* label, int v[3], ImGuiInputTextFlags extra_flags = 0);
     IMGUI_API bool          InputInt4(const char* label, int v[4], ImGuiInputTextFlags extra_flags = 0);
 
+    // Widgets: Sliders (tip: ctrl+click on a slider to input text)
+    IMGUI_API bool          SliderFloat(const char* label, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);     // adjust display_format to decorate the value with a prefix or a suffix. Use power!=1.0 for logarithmic sliders
+    IMGUI_API bool          SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          SliderAngle(const char* label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f);
+    IMGUI_API bool          SliderInt(const char* label, int* v, int v_min, int v_max, const char* display_format = "%.0f");
+    IMGUI_API bool          SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* display_format = "%.0f");
+    IMGUI_API bool          SliderInt3(const char* label, int v[3], int v_min, int v_max, const char* display_format = "%.0f");
+    IMGUI_API bool          SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* display_format = "%.0f");
+    IMGUI_API bool          VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* display_format = "%.0f");
+
     // Widgets: Trees
     IMGUI_API bool          TreeNode(const char* str_label_id);                                 // if returning 'true' the node is open and the user is responsible for calling TreePop
     IMGUI_API bool          TreeNode(const char* str_id, const char* fmt, ...);                 // "
@@ -297,11 +309,16 @@ namespace ImGui
     IMGUI_API void          ListBoxFooter();                                                    // terminate the scrolling region
 
     // Widgets: Menus
-    // FIXME-WIP: v1.39 in development
-    IMGUI_API bool          MenuItem(const char* label, const char* shortcut = NULL, bool selected = false); // bool enabled = true
-    IMGUI_API bool          MenuItem(const char* label, const char* shortcut, bool* p_selected); // bool enabled = true
+    IMGUI_API bool          BeginMainMenuBar();                                                 // create and append to a full screen menu-bar. only call EndMainMenuBar() if this returns true!
+    IMGUI_API void          EndMainMenuBar();
+    IMGUI_API bool          BeginMenuBar();                                                     // append to menu-bar of current window (requires ImGuiWindowFlags_MenuBar flag set). only call EndMenuBar() if this returns true!
+    IMGUI_API void          EndMenuBar();
+    IMGUI_API bool          BeginMenu(const char* label, bool enabled = true);                  // create a sub-menu entry. only call EndMenu() if this returns true!
+    IMGUI_API void          EndMenu();
+    IMGUI_API bool          MenuItem(const char* label, const char* shortcut = NULL, bool selected = false, bool enabled = true);  // return true when activated. shortcuts are displayed for convenience but not processed by ImGui at the moment
+    IMGUI_API bool          MenuItem(const char* label, const char* shortcut, bool* p_selected, bool enabled = true);              // return true when activated + toggle (*p_selected) if p_selected != NULL
 
-    // Widgets: Value() Helpers. Output single value in "name: value" format (tip: freely declare your own within the ImGui namespace!)
+    // Widgets: Value() Helpers. Output single value in "name: value" format (tip: freely declare more in your code to handle your types. you can add functions to the ImGui namespace)
     IMGUI_API void          Value(const char* prefix, bool b);
     IMGUI_API void          Value(const char* prefix, int v);
     IMGUI_API void          Value(const char* prefix, unsigned int v);
@@ -321,15 +338,16 @@ namespace ImGui
     IMGUI_API bool          IsItemHovered();                                                    // was the last item hovered by mouse?
     IMGUI_API bool          IsItemHoveredRect();                                                // was the last item hovered by mouse? even if another item is active while we are hovering this
     IMGUI_API bool          IsItemActive();                                                     // was the last item active? (e.g. button being held, text field being edited- items that don't interact will always return false)
-    IMGUI_API bool          IsAnyItemActive();                                                  // 
     IMGUI_API bool          IsItemVisible();
+    IMGUI_API bool          IsAnyItemHovered();
+    IMGUI_API bool          IsAnyItemActive();
     IMGUI_API ImVec2        GetItemRectMin();                                                   // get bounding rect of last item in screen space
     IMGUI_API ImVec2        GetItemRectMax();                                                   // "
     IMGUI_API ImVec2        GetItemRectSize();                                                  // "
     IMGUI_API bool          IsWindowFocused();                                                  // is current window focused (differentiate child windows from each others)
-    IMGUI_API bool          IsRootWindowFocused();                                              // is current root window focused
+    IMGUI_API bool          IsRootWindowFocused();                                              // is current root window focused (top parent window in case of child windows)
     IMGUI_API bool          IsRootWindowOrAnyChildFocused();                                    // is current root window or any of its child (including current window) focused
-    IMGUI_API bool          IsRectClipped(const ImVec2& size);                                  // test if rectangle of given size starting from cursor pos is out of clipping region. to perform coarse clipping on user's side (as an optimization)
+    IMGUI_API bool          IsRectVisible(const ImVec2& size);                                  // test if rectangle of given size starting from cursor pos is visible (not clipped). to perform coarse clipping on user's side (as an optimization)
     IMGUI_API bool          IsKeyDown(int key_index);                                           // key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry
     IMGUI_API bool          IsKeyPressed(int key_index, bool repeat = true);                    // "
     IMGUI_API bool          IsMouseDown(int button);
@@ -350,7 +368,7 @@ namespace ImGui
     IMGUI_API const char*   GetStyleColName(ImGuiCol idx);
     IMGUI_API ImVec2        CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge = false, float outward = +0.0f);   // utility to find the closest point the last item bounding rectangle edge. useful to visually link items
     IMGUI_API ImVec2        CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
-    IMGUI_API void          CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end);    // helper to manually clip large list of items. see comments in implementation
+    IMGUI_API void          CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end);    // calculate coarse clipping for large list of evenly sized items. Prefer using the ImGuiListClipper higher-level helper if you can.
 
     IMGUI_API void          BeginChildFrame(ImGuiID id, const ImVec2& size);                    // helper to create a child window / scrolling region that looks like a normal widget frame
     IMGUI_API void          EndChildFrame();
@@ -359,24 +377,28 @@ namespace ImGui
     IMGUI_API void          ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v);
     IMGUI_API void          ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
 
-    // Proxy functions to access the MemAllocFn/MemFreeFn pointers in ImGui::GetIO()
+    // Helpers functions to access the MemAllocFn/MemFreeFn pointers in ImGui::GetIO()
     IMGUI_API void*         MemAlloc(size_t sz);
     IMGUI_API void          MemFree(void* ptr);
 
-    // Internal state access - if you want to share ImGui state between modules (e.g. DLL) or allocate it yourself
+    // Internal state/context access - if you want to use multiple ImGui context, or share context between modules (e.g. DLL), or allocate the memory yourself
     IMGUI_API const char*   GetVersion();
     IMGUI_API void*         GetInternalState();
     IMGUI_API size_t        GetInternalStateSize();
     IMGUI_API void          SetInternalState(void* state, bool construct = false);
 
     // Obsolete (will be removed)
-    IMGUI_API void          GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size);   // OBSOLETE
-    static inline void      OpenNextNode(bool open) { ImGui::SetNextTreeNodeOpened(open, 0); }  // OBSOLETE
-    static inline bool      GetWindowIsFocused() { return ImGui::IsWindowFocused(); }   // OBSOLETE
-    static inline ImVec2    GetItemBoxMin() { return GetItemRectMin(); }    // OBSOLETE
-    static inline ImVec2    GetItemBoxMax() { return GetItemRectMax(); }    // OBSOLETE
-    static inline bool      IsClipped(const ImVec2& size) { return IsRectClipped(size); }   // OBSOLETE
-    static inline bool      IsMouseHoveringBox(const ImVec2& rect_min, const ImVec2& rect_max) { return IsMouseHoveringRect(rect_min, rect_max); }  // OBSOLETE
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    IMGUI_API void          GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size);   // OBSOLETE 1.30+
+    static inline void      OpenNextNode(bool open) { ImGui::SetNextTreeNodeOpened(open, 0); } // OBSOLETE 1.34+
+    static inline bool      GetWindowIsFocused() { return ImGui::IsWindowFocused(); }          // OBSOLETE 1.36+
+    static inline bool      GetWindowCollapsed() { return ImGui::IsWindowCollapsed(); }        // OBSOLETE 1.39+
+    static inline ImVec2    GetItemBoxMin() { return GetItemRectMin(); }                       // OBSOLETE 1.36+
+    static inline ImVec2    GetItemBoxMax() { return GetItemRectMax(); }                       // OBSOLETE 1.36+
+    static inline bool      IsClipped(const ImVec2& size) { return !IsRectVisible(size); }     // OBSOLETE 1.38+
+    static inline bool      IsRectClipped(const ImVec2& size) { return !IsRectVisible(size); } // OBSOLETE 1.39+
+    static inline bool      IsMouseHoveringBox(const ImVec2& rect_min, const ImVec2& rect_max) { return IsMouseHoveringRect(rect_min, rect_max); }  // OBSOLETE 1.36+
+#endif
 
 } // namespace ImGui
 
@@ -393,13 +415,15 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_AlwaysAutoResize       = 1 << 6,   // Resize every window to its content every frame
     ImGuiWindowFlags_ShowBorders            = 1 << 7,   // Show borders around windows and items
     ImGuiWindowFlags_NoSavedSettings        = 1 << 8,   // Never load/save settings in .ini file
+    ImGuiWindowFlags_MenuBar                = 1 << 9,   // Has a menu-bar
     // [Internal]
-    ImGuiWindowFlags_ChildWindow            = 1 << 9,   // For internal use by BeginChild()
-    ImGuiWindowFlags_ChildWindowAutoFitX    = 1 << 10,  // For internal use by BeginChild()
-    ImGuiWindowFlags_ChildWindowAutoFitY    = 1 << 11,  // For internal use by BeginChild()
-    ImGuiWindowFlags_ComboBox               = 1 << 12,  // For internal use by ComboBox()
-    ImGuiWindowFlags_Tooltip                = 1 << 13,  // For internal use by BeginTooltip()
-    ImGuiWindowFlags_Popup                  = 1 << 14   // For internal use by BeginPopup()
+    ImGuiWindowFlags_ChildWindow            = 1 << 20,  // Don't use! For internal use by BeginChild()
+    ImGuiWindowFlags_ChildWindowAutoFitX    = 1 << 21,  // Don't use! For internal use by BeginChild()
+    ImGuiWindowFlags_ChildWindowAutoFitY    = 1 << 22,  // Don't use! For internal use by BeginChild()
+    ImGuiWindowFlags_ComboBox               = 1 << 23,  // Don't use! For internal use by ComboBox()
+    ImGuiWindowFlags_Tooltip                = 1 << 24,  // Don't use! For internal use by BeginTooltip()
+    ImGuiWindowFlags_Popup                  = 1 << 25,  // Don't use! For internal use by BeginPopup()
+    ImGuiWindowFlags_ChildMenu              = 1 << 26   // Don't use! For internal use by BeginMenu()
 };
 
 // Flags for ImGui::InputText()
@@ -445,6 +469,7 @@ enum ImGuiKey_
 enum ImGuiCol_
 {
     ImGuiCol_Text,
+    ImGuiCol_TextDisabled,
     ImGuiCol_WindowBg,
     ImGuiCol_ChildWindowBg,
     ImGuiCol_Border,
@@ -454,6 +479,7 @@ enum ImGuiCol_
     ImGuiCol_FrameBgActive,
     ImGuiCol_TitleBg,
     ImGuiCol_TitleBgCollapsed,
+    ImGuiCol_MenuBarBg,
     ImGuiCol_ScrollbarBg,
     ImGuiCol_ScrollbarGrab,
     ImGuiCol_ScrollbarGrabHovered,
@@ -493,6 +519,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_Alpha,               // float
     ImGuiStyleVar_WindowPadding,       // ImVec2
     ImGuiStyleVar_WindowRounding,      // float
+    ImGuiStyleVar_WindowMinSize,       // ImVec2
     ImGuiStyleVar_ChildWindowRounding, // float
     ImGuiStyleVar_FramePadding,        // ImVec2
     ImGuiStyleVar_FrameRounding,       // float
@@ -507,7 +534,9 @@ enum ImGuiAlign_
     ImGuiAlign_Left     = 1 << 0,
     ImGuiAlign_Center   = 1 << 1,
     ImGuiAlign_Right    = 1 << 2,
-    ImGuiAlign_Default  = ImGuiAlign_Left,
+    ImGuiAlign_Top      = 1 << 3,
+    ImGuiAlign_VCenter  = 1 << 4,
+    ImGuiAlign_Default  = ImGuiAlign_Left | ImGuiAlign_Top,
 };
 
 // Enumeration for ColorEditMode()
@@ -586,6 +615,8 @@ struct ImGuiIO
     float         MouseDoubleClickMaxDist;  // = 6.0f               // Distance threshold to stay in to validate a double-click, in pixels.
     float         MouseDragThreshold;       // = 6.0f               // Distance threshold before considering we are dragging
     int           KeyMap[ImGuiKey_COUNT];   // <unset>              // Map of indices into the KeysDown[512] entries array
+    float         KeyRepeatDelay;           // = 0.250f             // When holding a key/button, time before it starts repeating, in seconds. (for actions where 'repeat' is active)
+    float         KeyRepeatRate;            // = 0.020f             // When holding a key/button, rate at which it repeats, in seconds.
     void*         UserData;                 // = NULL               // Store your own data for retrieval by callbacks.
 
     ImFontAtlas*  Fonts;                    // <auto>               // Load and assemble one or more fonts into a single tightly packed texture. Output to Fonts array.
@@ -641,6 +672,7 @@ struct ImGuiIO
     bool        WantCaptureMouse;           // Mouse is hovering a window or widget is active (= ImGui will use your mouse input)
     bool        WantCaptureKeyboard;        // Widget is active (= ImGui will use your keyboard input)
     float       Framerate;                  // Framerate estimation, in frame per second. Rolling average estimation based on IO.DeltaTime over 120 frames
+    int         MetricsAllocs;              // Number of active memory allocations
     int         MetricsRenderVertices;      // Vertices processed during last call to Render()
     int         MetricsRenderIndices;       // 
     int         MetricsActiveWindows;       // Number of visible windows (exclude child windows)
@@ -707,7 +739,9 @@ public:
     inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size-1]; }
     inline void                 swap(ImVector<T>& rhs)          { const size_t rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; const size_t rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
 
-    inline void                 resize(size_t new_size)         { if (new_size > Capacity) reserve(new_size); Size = new_size; }
+    inline size_t               _grow_capacity(size_t new_size) { size_t new_capacity = Capacity ? (Capacity + Capacity/2) : 8; return new_capacity > new_size ? new_capacity : new_size; }
+
+    inline void                 resize(size_t new_size)         { if (new_size > Capacity) reserve(_grow_capacity(new_size)); Size = new_size; }
     inline void                 reserve(size_t new_capacity)    
     { 
         if (new_capacity <= Capacity) return;
@@ -718,7 +752,7 @@ public:
         Capacity = new_capacity; 
     }
 
-    inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); Data[Size++] = v; }
+    inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(_grow_capacity(Size+1)); Data[Size++] = v; }
     inline void                 pop_back()                      { IM_ASSERT(Size > 0); Size--; }
 
     inline iterator             erase(const_iterator it)        { IM_ASSERT(it >= begin() && it < end()); const ptrdiff_t off = it - begin(); memmove(Data + off, Data + off + 1, (Size - (size_t)off - 1) * sizeof(value_type)); Size--; return Data + off; }
@@ -869,6 +903,38 @@ struct ImColor
     operator ImVec4() const                                         { return Value; }
 
     static ImColor HSV(float h, float s, float v, float a = 1.0f)   { float r,g,b; ImGui::ColorConvertHSVtoRGB(h, s, v, r, g, b); return ImColor(r,g,b,a); }
+};
+
+// Helper: Manually clip large list of items.
+// If you are displaying thousands of even spaced items and you have a random access to the list, you can perform clipping yourself to save on CPU.
+// Usage:
+//    ImGuiListClipper clipper(count, ImGui::GetTextLineHeightWithSpacing());
+//    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) // display only visible items
+//        ImGui::Text("line number %d", i);
+//    clipper.End();
+struct ImGuiListClipper
+{
+    float ItemsHeight;
+    int ItemsCount, DisplayStart, DisplayEnd;
+
+    ImGuiListClipper()                         { ItemsHeight = 0.0f; ItemsCount = DisplayStart = DisplayEnd = -1; }
+    ImGuiListClipper(int count, float height)  { ItemsCount = -1; Begin(count, height); }
+    ~ImGuiListClipper()                        { IM_ASSERT(ItemsCount == -1); } // user forgot to call End()
+
+    void Begin(int count, float height)        // items_height: generally pass GetTextLineHeightWithSpacing() or GetItemsLineHeightWithSpacing()
+    {
+        IM_ASSERT(ItemsCount == -1);
+        ItemsCount = count;
+        ItemsHeight = height;
+        ImGui::CalcListClipping(ItemsCount, ItemsHeight, &DisplayStart, &DisplayEnd); // calculate how many to clip/display
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + DisplayStart * ItemsHeight);    // advance cursor
+    }
+    void End()
+    {
+        IM_ASSERT(ItemsCount >= 0);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ItemsCount - DisplayEnd) * ItemsHeight); // advance cursor
+        ItemsCount = -1;
+    }
 };
 
 //-----------------------------------------------------------------------------

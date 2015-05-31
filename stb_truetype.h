@@ -1,7 +1,7 @@
-// [ImGui] this is a slightly modified version of stb_truetype.h 1.02
+// [ImGui] this is a slightly modified version of stb_truetype.h 1.05
 // [ImGui] we added stbtt_PackFontRangesGatherRects() and stbtt_PackFontRangesRenderIntoRects() and modified stbtt_PackBegin()
 
-// stb_truetype.h - v1.02 - public domain
+// stb_truetype.h - v1.05 - public domain
 // authored from 2009-2014 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -37,12 +37,20 @@
 //       Johan Duparc
 //       Hou Qiming
 //       Fabian "ryg" Giesen
+//       Martins Mozeiko
+//       Cap Petschulat
+//       Omar Cornut
+//       github:aloucks
+//       Peter LaValle
 //
 //   Misc other:
 //       Ryan Gordon
 //
 // VERSION HISTORY
 //
+//   1.05 (2015-04-15) fix misplaced definitions for STBTT_STATIC
+//   1.04 (2015-04-15) typo in example
+//   1.03 (2015-04-12) STBTT_STATIC, fix memory leak in new packing, various fixes
 //   1.02 (2014-12-10) fix various warnings & compile issues w/ stb_rect_pack, C++
 //   1.01 (2014-12-08) fix subpixel position when oversampling to exactly match
 //                        non-oversampled; STBTT_POINT_SIZE for packed case only
@@ -85,6 +93,9 @@
 //      #define STB_TRUETYPE_IMPLEMENTATION
 //   before the #include of this file. This expands out the actual
 //   implementation into that C/C++ file.
+//
+//   To make the implementation private to the file that generates the implementation,
+//      #define STBTT_STATIC
 //
 //   Simple 3D API (don't ship this, but it's fine for tools and quick start)
 //           stbtt_BakeFontBitmap()               -- bake a font to a bitmap for use as texture
@@ -225,16 +236,16 @@
 #define STB_TRUETYPE_IMPLEMENTATION  // force following include to generate implementation
 #include "stb_truetype.h"
 
-char ttf_buffer[1<<20];
+unsigned char ttf_buffer[1<<20];
 unsigned char temp_bitmap[512*512];
 
 stbtt_bakedchar cdata[96]; // ASCII 32..126 is 95 glyphs
-GLstbtt_uint ftex;
+GLuint ftex;
 
 void my_stbtt_initfont(void)
 {
    fread(ttf_buffer, 1, 1<<20, fopen("c:/windows/fonts/times.ttf", "rb"));
-   stbtt_BakeFontBitmap(data,0, 32.0, temp_bitmap,512,512, 32,96, cdata); // no guarantee this fits!
+   stbtt_BakeFontBitmap(ttf_buffer,0, 32.0, temp_bitmap,512,512, 32,96, cdata); // no guarantee this fits!
    // can free ttf_buffer at this point
    glGenTextures(1, &ftex);
    glBindTexture(GL_TEXTURE_2D, ftex);
@@ -246,6 +257,7 @@ void my_stbtt_initfont(void)
 void my_stbtt_print(float x, float y, char *text)
 {
    // assume orthographic projection with units = screen pixels, origin at top left
+   glEnable(GL_TEXTURE_2D);
    glBindTexture(GL_TEXTURE_2D, ftex);
    glBegin(GL_QUADS);
    while (*text) {
@@ -379,12 +391,6 @@ int main(int arg, char **argv)
    typedef char stbtt__check_size32[sizeof(stbtt_int32)==4 ? 1 : -1];
    typedef char stbtt__check_size16[sizeof(stbtt_int16)==2 ? 1 : -1];
 
-   #ifdef STBTT_STATIC
-   #define STBTT_DEF static
-   #else
-   #define STBTT_DEF extern
-   #endif
-
    // #define your own STBTT_sort() to override this to avoid qsort
    #ifndef STBTT_sort
    #include <stdlib.h>
@@ -436,6 +442,12 @@ int main(int arg, char **argv)
 
 #ifndef __STB_INCLUDE_STB_TRUETYPE_H__
 #define __STB_INCLUDE_STB_TRUETYPE_H__
+
+#ifdef STBTT_STATIC
+#define STBTT_DEF static
+#else
+#define STBTT_DEF extern
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -1059,7 +1071,6 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
       stbtt_uint16 searchRange = ttUSHORT(data+index_map+8) >> 1;
       stbtt_uint16 entrySelector = ttUSHORT(data+index_map+10);
       stbtt_uint16 rangeShift = ttUSHORT(data+index_map+12) >> 1;
-      stbtt_uint16 item, offset, start, end;
 
       // do a binary search of the segments
       stbtt_uint32 endCount = index_map + 14;
@@ -1076,8 +1087,8 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
       // now decrement to bias correctly to find smallest
       search -= 2;
       while (entrySelector) {
+         stbtt_uint16 end;
          searchRange >>= 1;
-         start = ttUSHORT(data + search + searchRange*2 + segcount*2 + 2);
          end = ttUSHORT(data + search + searchRange*2);
          if (unicode_codepoint > end)
             search += searchRange*2;
@@ -1085,19 +1096,21 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
       }
       search += 2;
 
-      item = (stbtt_uint16) ((search - endCount) >> 1);
+      {
+         stbtt_uint16 offset, start;
+         stbtt_uint16 item = (stbtt_uint16) ((search - endCount) >> 1);
 
-      STBTT_assert(unicode_codepoint <= ttUSHORT(data + endCount + 2*item));
-      start = ttUSHORT(data + index_map + 14 + segcount*2 + 2 + 2*item);
-      end = ttUSHORT(data + index_map + 14 + 2 + 2*item);
-      if (unicode_codepoint < start)
-         return 0;
+         STBTT_assert(unicode_codepoint <= ttUSHORT(data + endCount + 2*item));
+         start = ttUSHORT(data + index_map + 14 + segcount*2 + 2 + 2*item);
+         if (unicode_codepoint < start)
+            return 0;
 
-      offset = ttUSHORT(data + index_map + 14 + segcount*6 + 2 + 2*item);
-      if (offset == 0)
-         return (stbtt_uint16) (unicode_codepoint + ttSHORT(data + index_map + 14 + segcount*4 + 2 + 2*item));
+         offset = ttUSHORT(data + index_map + 14 + segcount*6 + 2 + 2*item);
+         if (offset == 0)
+            return (stbtt_uint16) (unicode_codepoint + ttSHORT(data + index_map + 14 + segcount*4 + 2 + 2*item));
 
-      return ttUSHORT(data + offset + (unicode_codepoint-start)*2 + index_map + 14 + segcount*6 + 2 + 2*item);
+         return ttUSHORT(data + offset + (unicode_codepoint-start)*2 + index_map + 14 + segcount*6 + 2 + 2*item);
+      }
    } else if (format == 12 || format == 13) {
       stbtt_uint32 ngroups = ttULONG(data+index_map+12);
       stbtt_int32 low,high;
@@ -2054,8 +2067,8 @@ STBTT_DEF void stbtt_GetBakedQuad(stbtt_bakedchar *chardata, int pw, int ph, int
    float d3d_bias = opengl_fillrule ? 0 : -0.5f;
    float ipw = 1.0f / pw, iph = 1.0f / ph;
    stbtt_bakedchar *b = chardata + char_index;
-   int round_x = STBTT_ifloor((*xpos + b->xoff) + 0.5);
-   int round_y = STBTT_ifloor((*ypos + b->yoff) + 0.5);
+   int round_x = STBTT_ifloor((*xpos + b->xoff) + 0.5f);
+   int round_y = STBTT_ifloor((*ypos + b->yoff) + 0.5f);
 
    q->x0 = round_x + d3d_bias;
    q->y0 = round_y + d3d_bias;
@@ -2209,7 +2222,7 @@ static void stbtt__h_prefilter(unsigned char *pixels, int w, int h, int stride_i
    for (j=0; j < h; ++j) {
       int i;
       unsigned int total;
-      memset(buffer, 0, kernel_width);
+      STBTT_memset(buffer, 0, kernel_width);
 
       total = 0;
 
@@ -2263,7 +2276,7 @@ static void stbtt__v_prefilter(unsigned char *pixels, int w, int h, int stride_i
    for (j=0; j < w; ++j) {
       int i;
       unsigned int total;
-      memset(buffer, 0, kernel_width);
+      STBTT_memset(buffer, 0, kernel_width);
 
       total = 0;
 
@@ -2333,7 +2346,7 @@ STBTT_DEF int stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, stbtt_fon
       for (j=0; j < ranges[i].num_chars_in_range; ++j) {
          int x0,y0,x1,y1;
 		 int glyph = stbtt_FindGlyphIndex(info,ranges[i].first_unicode_char_in_range + j);
-		 if (glyph) {
+         if (glyph) {
             stbtt_GetGlyphBitmapBoxSubpixel(info,glyph,
                                             scale * spc->h_oversample,
                                             scale * spc->v_oversample,
@@ -2341,10 +2354,10 @@ STBTT_DEF int stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, stbtt_fon
                                             &x0,&y0,&x1,&y1);
             rects[k].w = (stbrp_coord) (x1-x0 + spc->padding + spc->h_oversample-1);
             rects[k].h = (stbrp_coord) (y1-y0 + spc->padding + spc->v_oversample-1);
-		 } else {
+         } else {
             rects[k].w = rects[k].h = 1;
          }
-		 ++k;
+         ++k;
       }
    }
 
@@ -2453,6 +2466,7 @@ STBTT_DEF int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontd
   
    return_value = stbtt_PackFontRangesRenderIntoRects(spc, &info, ranges, num_ranges, rects);
 
+   STBTT_free(rects, spc->user_allocator_context);
    return return_value;
 }
 
@@ -2473,8 +2487,8 @@ STBTT_DEF void stbtt_GetPackedQuad(stbtt_packedchar *chardata, int pw, int ph, i
    stbtt_packedchar *b = chardata + char_index;
 
    if (align_to_integer) {
-      float x = (float) STBTT_ifloor((*xpos + b->xoff) + 0.5);
-      float y = (float) STBTT_ifloor((*ypos + b->yoff) + 0.5);
+      float x = (float) STBTT_ifloor((*xpos + b->xoff) + 0.5f);
+      float y = (float) STBTT_ifloor((*ypos + b->yoff) + 0.5f);
       q->x0 = x;
       q->y0 = y;
       q->x1 = x + b->xoff2 - b->xoff;
