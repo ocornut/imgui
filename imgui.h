@@ -80,6 +80,7 @@ struct ImVec4
 // - struct ImGuiTextBuffer             // Text buffer for logging/accumulating text
 // - struct ImGuiStorage                // Custom key value storage (if you need to alter open/close states manually)
 // - struct ImGuiTextEditCallbackData   // Shared state of ImGui::InputText() when using custom callbacks
+// - struct ImGuiListClipper            // Helper to manually clip large list of items.
 // - struct ImColor                     // Helper functions to created packed 32-bit RGBA color values 
 // - struct ImDrawList                  // Draw command list
 // - struct ImFontAtlas                 // Bake multiple fonts into a single texture, TTF font loader, bake glyphs into bitmap
@@ -367,7 +368,7 @@ namespace ImGui
     IMGUI_API const char*   GetStyleColName(ImGuiCol idx);
     IMGUI_API ImVec2        CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge = false, float outward = +0.0f);   // utility to find the closest point the last item bounding rectangle edge. useful to visually link items
     IMGUI_API ImVec2        CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
-    IMGUI_API void          CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end);    // helper to manually clip large list of evenly sized items. see comments in implementation
+    IMGUI_API void          CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end);    // calculate coarse clipping for large list of evenly sized items. Prefer using the ImGuiListClipper higher-level helper if you can.
 
     IMGUI_API void          BeginChildFrame(ImGuiID id, const ImVec2& size);                    // helper to create a child window / scrolling region that looks like a normal widget frame
     IMGUI_API void          EndChildFrame();
@@ -901,6 +902,38 @@ struct ImColor
     operator ImVec4() const                                         { return Value; }
 
     static ImColor HSV(float h, float s, float v, float a = 1.0f)   { float r,g,b; ImGui::ColorConvertHSVtoRGB(h, s, v, r, g, b); return ImColor(r,g,b,a); }
+};
+
+// Helper: Manually clip large list of items.
+// If you are displaying thousands of even spaced items and you have a random access to the list, you can perform clipping yourself to save on CPU.
+// Usage:
+//    ImGuiListClipper clipper(count, ImGui::GetTextLineHeightWithSpacing());
+//    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) // display only visible items
+//        ImGui::Text("line number %d", i);
+//    clipper.End();
+struct ImGuiListClipper
+{
+    float ItemsHeight;
+    int ItemsCount, DisplayStart, DisplayEnd;
+
+    ImGuiListClipper()                         { ItemsHeight = 0.0f; ItemsCount = DisplayStart = DisplayEnd = -1; }
+    ImGuiListClipper(int count, float height)  { ItemsCount = -1; Begin(count, height); }
+    ~ImGuiListClipper()                        { IM_ASSERT(ItemsCount == -1); } // user forgot to call End()
+
+    void Begin(int count, float height)        // items_height: generally pass GetTextLineHeightWithSpacing() or GetItemsLineHeightWithSpacing()
+    {
+        IM_ASSERT(ItemsCount == -1);
+        ItemsCount = count;
+        ItemsHeight = height;
+        ImGui::CalcListClipping(ItemsCount, ItemsHeight, &DisplayStart, &DisplayEnd); // calculate how many to clip/display
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + DisplayStart * ItemsHeight);    // advance cursor
+    }
+    void End()
+    {
+        IM_ASSERT(ItemsCount >= 0);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ItemsCount - DisplayEnd) * ItemsHeight); // advance cursor
+        ItemsCount = -1;
+    }
 };
 
 //-----------------------------------------------------------------------------

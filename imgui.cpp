@@ -2730,6 +2730,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
 }
 
 // Helper to calculate coarse clipping of large list of evenly sized items. 
+// NB: Prefer using the ImGuiListClipper higher-level helper if you can!
 // If you are displaying thousands of items and you have a random access to the list, you can perform clipping yourself to save on CPU.
 // {
 //    float item_height = ImGui::GetTextLineHeightWithSpacing();
@@ -2744,7 +2745,6 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-
     if (g.LogEnabled)
     {
         // If logging is active, do not perform any clipping
@@ -2762,7 +2762,6 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
     int end = (int)((clip_y2 - pos.y) / items_height);
     start = ImClamp(start, 0, items_count);
     end = ImClamp(end + 1, start, items_count);
-
     *out_items_display_start = start;
     *out_items_display_end = end;
 }
