@@ -32,7 +32,7 @@ Demo
 ----
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at the features of ImGui, you can download binaries of the demo app here.
-- [imgui-demo-binaries-20150321.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20150321.zip) (Windows binaries, ImGui 1.37 WIP 2015/03/31, 4 executables, 391 KB)
+- [imgui-demo-binaries-20150531.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20150531.zip) (Windows binaries, ImGui 1.40 WIP 2015/05/31, 4 executables, 432 KB)
 
 
 Gallery
@@ -42,7 +42,9 @@ Gallery
 ![screenshot 2](/web/test_window_02.png?raw=true)
 ![screenshot 3](/web/test_window_03.png?raw=true)
 ![screenshot 4](/web/test_window_04.png?raw=true)
-![screenshot 4](/web/examples_02.png?raw=true)
+![screenshot 5](/web/test_window_05_menus.png?raw=true)
+![screenshot 6](/web/examples_03.png?raw=true)
+![screenshot 7](/web/examples_02.png?raw=true)
 
 ImGui can load TTF fonts. UTF-8 is supported for text display and input. Here using Arial Unicode font to display Japanese. Initialize custom font with:
 ```
@@ -127,13 +129,13 @@ Embeds [stb_textedit.h, stb_truetype.h, stb_rectpack.h](https://github.com/nothi
 
 Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. And everybody posting feedback, questions and patches on the GitHub.
 
-ImGui is financially supported on [**Patreon**](http://www.patreon.com/imgui).
+ImGui development is financially supported on [**Patreon**](http://www.patreon.com/imgui).
 
-Special supporters 
-- Jetha Chan, Mārtiņš Možeiko, Alex Evans, Pastagames, Wild Sheep Studio
+Special supporters:
+- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Stefano Cristiano.
 
-And
-- Dale Kim, Michel Courtine, Paul Patrashcu, Rui Figueira
+And:
+- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly.
 
 And other supporters; thanks!
 
