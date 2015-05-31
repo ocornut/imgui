@@ -201,8 +201,8 @@ namespace ImGui
     IMGUI_API void          SetCursorScreenPos(const ImVec2& pos);                              // cursor position in absolute screen coordinates [0..io.DisplaySize]
     IMGUI_API void          AlignFirstTextHeightToWidgets();                                    // call once if the first item on the line is a Text() item and you want to vertically lower it to match subsequent (bigger) widgets
     IMGUI_API float         GetTextLineHeight();                                                // height of font == GetWindowFontSize()
-    IMGUI_API float         GetTextLineHeightWithSpacing();                                     // spacing (in pixels) between 2 consecutive lines of text == GetWindowFontSize() + GetStyle().ItemSpacing.y
-    IMGUI_API float         GetItemsLineHeightWithSpacing();
+    IMGUI_API float         GetTextLineHeightWithSpacing();                                     // distance (in pixels) between 2 consecutive lines of text == GetWindowFontSize() + GetStyle().ItemSpacing.y
+    IMGUI_API float         GetItemsLineHeightWithSpacing();                                    // distance (in pixels) between 2 consecutive lines of standard height widgets == GetWindowFontSize() + GetStyle().FramePadding.y*2 + GetStyle().ItemSpacing.y
 
     // ID scopes
     // If you are creating widgets in a loop you most likely want to push a unique identifier so ImGui can differentiate them
