@@ -7531,8 +7531,10 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
     if (!ImGui::ListBoxHeader(label, items_count, height_in_items))
         return false;
 
+    // Assume all items have even height (= 1 line of text). If you need items of different or variable sizes you can create a custom version of ListBox() in your code without using the clipper.
     bool value_changed = false;
-    for (int i = 0; i < items_count; i++)
+    ImGuiListClipper clipper(items_count, ImGui::GetTextLineHeightWithSpacing());
+    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
     {
         const bool item_selected = (i == *current_item);
         const char* item_text;
@@ -7547,7 +7549,7 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
         }
         ImGui::PopID();
     }
-
+    clipper.End();
     ImGui::ListBoxFooter();
     return value_changed;
 }
