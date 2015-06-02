@@ -4310,36 +4310,43 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     return "Unknown";
 }
 
+bool ImGui::IsWindowHovered()
+{
+    ImGuiState& g = *GImGui;
+    return g.HoveredWindow == g.CurrentWindow;
+}
+
 bool ImGui::IsWindowFocused()
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
-    return g.FocusedWindow == window;
+    return g.FocusedWindow == g.CurrentWindow;
 }
 
 bool ImGui::IsRootWindowFocused()
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* root_window = GetCurrentWindow()->RootWindow;
+    ImGuiWindow* root_window = g.CurrentWindow->RootWindow;
     return g.FocusedWindow == root_window;
 }
 
 bool ImGui::IsRootWindowOrAnyChildFocused()
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* root_window = GetCurrentWindow()->RootWindow;
+    ImGuiWindow* root_window = g.CurrentWindow->RootWindow;
     return g.FocusedWindow && g.FocusedWindow->RootWindow == root_window;
 }
 
 float ImGui::GetWindowWidth()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     return window->Size.x;
 }
 
 ImVec2 ImGui::GetWindowPos()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     return window->Pos;
 }
 
