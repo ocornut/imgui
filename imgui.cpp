@@ -5629,13 +5629,15 @@ static inline float RoundScalar(float value, int decimal_precision)
     //    0: 1, 1: 0.1, 2: 0.01, etc.
     // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
     // FIXME: Investigate better rounding methods
-    const float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
-    const float remainder = fmodf(value, min_step);
+    float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
+    bool negative = value < 0.0f;
+    value = fabsf(value);
+    float remainder = fmodf(value, min_step);
     if (remainder <= min_step*0.5f)
         value -= remainder;
     else
         value += (min_step - remainder);
-    return value;
+    return negative ? -value : value;
 }
 
 static bool SliderScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, bool horizontal)
@@ -5718,7 +5720,6 @@ static bool SliderScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, f
 
             // Round past decimal precision
             new_value = RoundScalar(new_value, decimal_precision);
-
             if (*v != new_value)
             {
                 *v = new_value;
@@ -10810,13 +10811,13 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::DragInt("drag int 0..100", &i2, 1, 0, 100, "%.0f%%");
 
             static float f1=1.00f, f2=0.0067f;
-            ImGui::DragFloat("drag float", &f1, 1.0f);
+            ImGui::DragFloat("drag float", &f1, 0.005f);
             ImGui::DragFloat("drag small float", &f2, 0.0001f, 0.0f, 0.0f, "%.06f ns");
         }
 
         {
             static int i1=0;
-            ImGui::SliderInt("slider int", &i1, 0, 3);
+            ImGui::SliderInt("slider int", &i1, -1, 3);
             ImGui::SameLine(); ShowHelpMarker("CTRL+click to input value.");
 
             static float f1=0.123f, f2=0.0f;
