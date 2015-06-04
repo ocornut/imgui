@@ -9714,12 +9714,20 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
         if (c == 0)
             break;
 
-        if (c == '\n')
+        if (c < 32)
         {
-            line_width = word_width = blank_width = 0.0f;
-            inside_word = true;
-            s = next_s;
-            continue;
+            if (c == '\n')
+            {
+                line_width = word_width = blank_width = 0.0f;
+                inside_word = true;
+                s = next_s;
+                continue;
+            }
+            if (c == '\r')
+            {
+                s = next_s;
+                continue;
+            }
         }
 
         const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : FallbackXAdvance;
@@ -9825,12 +9833,17 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 break;
         }
         
-        if (c == '\n')
+        if (c < 32)
         {
-            text_size.x = ImMax(text_size.x, line_width);
-            text_size.y += line_height;
-            line_width = 0.0f;
-            continue;
+            if (c == '\n')
+            {
+                text_size.x = ImMax(text_size.x, line_width);
+                text_size.y += line_height;
+                line_width = 0.0f;
+                continue;
+            }
+            if (c == '\r')
+                continue;
         }
         
         const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : FallbackXAdvance;
@@ -9872,12 +9885,17 @@ ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_be
     {
         const unsigned int c = (unsigned int)(*s++);
 
-        if (c == '\n')
+        if (c < 32)
         {
-            text_size.x = ImMax(text_size.x, line_width);
-            text_size.y += line_height;
-            line_width = 0.0f;
-            continue;
+            if (c == '\n')
+            {
+                text_size.x = ImMax(text_size.x, line_width);
+                text_size.y += line_height;
+                line_width = 0.0f;
+                continue;
+            }
+            if (c == '\r')
+                continue;
         }
         
         const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : FallbackXAdvance;
@@ -9971,11 +9989,16 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                 break;
         }
 
-        if (c == '\n')
+        if (c < 32)
         {
-            x = pos.x;
-            y += line_height;
-            continue;
+            if (c == '\n')
+            {
+                x = pos.x;
+                y += line_height;
+                continue;
+            }
+            if (c == '\r')
+                continue;
         }
 
         float char_width = 0.0f;
