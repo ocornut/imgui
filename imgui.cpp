@@ -3717,7 +3717,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         // Apply scrolling
         if (window->ScrollTargetCenterY >= 0.0f)
         {
-            window->ScrollY = window->ScrollTargetCenterY - (window->Pos.y + window->SizeFull.y * 0.5f) - (window->TitleBarHeight() + window->WindowPadding().y);
+            window->ScrollY = window->ScrollTargetCenterY - (window->Pos.y + (window->SizeFull.y + window->TitleBarHeight() + window->WindowPadding().y) * 0.5f);
             window->ScrollTargetCenterY = -1.0f;
         }
         window->ScrollY = ImMax(window->ScrollY, 0.0f);
@@ -4646,7 +4646,7 @@ float ImGui::GetScrollMaxY()
 void ImGui::SetScrollPosHere()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->ScrollTargetCenterY = (window->DC.CursorPos.y + window->ScrollY);
+    window->ScrollTargetCenterY = (window->DC.CursorPos.y + window->ScrollY) - window->DC.PrevLineHeight * 0.5f;
 }
 
 void ImGui::SetKeyboardFocusHere(int offset)
