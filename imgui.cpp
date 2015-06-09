@@ -3468,7 +3468,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     }
 
     // Process SetNextWindow***() calls
-    bool window_pos_set_by_api = false;
+    bool window_pos_set_by_api = false, window_size_set_by_api = false;
     if (g.SetNextWindowPosCond)
     {
         const ImVec2 backup_cursor_pos = window->DC.CursorPos;                  // FIXME: not sure of the exact reason of this anymore :( need to look into that.
@@ -3481,6 +3481,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     if (g.SetNextWindowSizeCond)
     {
         if (!window_was_visible) window->SetWindowSizeAllowFlags |= ImGuiSetCond_Appearing;
+        window_size_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0;
         ImGui::SetWindowSize(g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
         g.SetNextWindowSizeCond = 0;
     }
@@ -3602,11 +3603,11 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
         else
         {
-            if (flags & ImGuiWindowFlags_AlwaysAutoResize)
+            if ((flags & ImGuiWindowFlags_AlwaysAutoResize) && !window_size_set_by_api)
             {
                 window->SizeFull = size_auto_fit;
             }
-            else if (window->AutoFitFrames > 0)
+            else if (window->AutoFitFrames > 0 && !window_size_set_by_api)
             {
                 // Auto-fit only grows during the first few frames
                 window->SizeFull = window->AutoFitOnlyGrows ? ImMax(window->SizeFull, size_auto_fit) : size_auto_fit;
