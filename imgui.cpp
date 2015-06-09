@@ -7341,6 +7341,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         if (g.IO.MouseClicked[0])
         {
             menu_toggled = true;
+            SetActiveId(0);
             g.ActiveComboID = (g.ActiveComboID == id) ? 0 : id;
             if (g.ActiveComboID)
                 FocusWindow(window);
