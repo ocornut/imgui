@@ -1301,7 +1301,6 @@ struct ImGuiState
     ImGuiTextEditState      InputTextState;
     ImGuiID                 ScalarAsInputTextId;                // Temporary text input when CTRL+clicking on a slider, etc.
     ImGuiStorage            ColorEditModeStorage;               // Store user selection of color edit mode
-    ImGuiID                 ActiveComboID;
     ImVec2                  ActiveClickDeltaToCenter;
     float                   DragCurrentValue;                   // current dragged value, always float, not rounded by end-user precision settings
     ImVec2                  DragLastMouseDelta;
@@ -1362,7 +1361,6 @@ struct ImGuiState
         SetNextTreeNodeOpenedCond = 0;
 
         ScalarAsInputTextId = 0;
-        ActiveComboID = 0;
         ActiveClickDeltaToCenter = ImVec2(0.0f, 0.0f);
         DragCurrentValue = 0.0f;
         DragLastMouseDelta = ImVec2(0.0f, 0.0f);
@@ -3126,6 +3124,14 @@ static void ClosePopupToLevel(int remaining)
     g.OpenedPopupStack.resize(remaining);
 }
 
+static void ClosePopup(ImGuiID id)
+{
+    if (!IsPopupOpen(id))
+        return;
+    ImGuiState& g = *GImGui;
+    ClosePopupToLevel(g.OpenedPopupStack.size() - 1);
+}
+
 // Close the popup we have begin-ed into.
 void ImGui::CloseCurrentPopup()
 {
@@ -3156,7 +3162,7 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
     }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_ShowBorders|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
+    ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
 
     char name[32];
     if (flags & ImGuiWindowFlags_ChildMenu)
@@ -3176,7 +3182,7 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
 
 bool ImGui::BeginPopup(const char* str_id)
 {
-    return BeginPopupEx(str_id, 0);
+    return BeginPopupEx(str_id, ImGuiWindowFlags_ShowBorders);
 }
 
 void ImGui::EndPopup()
@@ -7288,7 +7294,7 @@ bool ImGui::Combo(const char* label, int* current_item, const char** items, int 
 bool ImGui::Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int height_in_items)
 {
     int items_count = 0;
-    const char* p = items_separated_by_zeros;       // FIXME-OPT: Avoid computing this
+    const char* p = items_separated_by_zeros;       // FIXME-OPT: Avoid computing this, or at least only when combo is open
     while (*p)
     {
         p += strlen(p) + 1;
@@ -7320,7 +7326,6 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     const float arrow_size = (g.FontSize + style.FramePadding.x * 2.0f);
     const bool hovered = IsHovered(frame_bb, id);
 
-    bool value_changed = false;
     const ImRect value_bb(frame_bb.Min, frame_bb.Max - ImVec2(arrow_size, 0.0f));
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
     RenderFrame(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y), frame_bb.Max, window->Color(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button), true, style.FrameRounding);	// FIXME-ROUNDING
@@ -7336,71 +7341,66 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
     
-    ImGui::PushID((int)id);
     bool menu_toggled = false;
     if (hovered)
     {
         g.HoveredId = id;
         if (g.IO.MouseClicked[0])
         {
-            menu_toggled = true;
             SetActiveId(0);
-            g.ActiveComboID = (g.ActiveComboID == id) ? 0 : id;
-            if (g.ActiveComboID)
-                FocusWindow(window);
+            if (IsPopupOpen(id))
+            {
+                ClosePopup(id);
+            }
+            else
+            {
+            	FocusWindow(window);
+                ImGui::OpenPopup(label);
+                menu_toggled = true;
+            }
         }
     }
     
-    if (g.ActiveComboID == id)
+    bool value_changed = false;
+    if (IsPopupOpen(id))
     {
         // Size default to hold ~7 items
         if (height_in_items < 0)
             height_in_items = 7;
 
         const ImVec2 backup_pos = ImGui::GetCursorPos();
-        const float popup_off_x = 0.0f;//style.ItemInnerSpacing.x;
         const float popup_height = (label_size.y + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
-        const ImRect popup_rect(ImVec2(frame_bb.Min.x+popup_off_x, frame_bb.Max.y), ImVec2(frame_bb.Max.x+popup_off_x, frame_bb.Max.y + popup_height));
-        ImGui::SetCursorPos(popup_rect.Min - window->Pos);
+        const ImRect popup_rect(ImVec2(frame_bb.Min.x, frame_bb.Max.y), ImVec2(frame_bb.Max.x, frame_bb.Max.y + popup_height));
+        ImGui::SetNextWindowPos(popup_rect.Min);
+        ImGui::SetNextWindowSize(popup_rect.GetSize());
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
 
         const ImGuiWindowFlags flags = ImGuiWindowFlags_ComboBox | ((window->Flags & ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
-        ImGui::BeginChild("#ComboBox", popup_rect.GetSize(), false, flags);
-        ImGui::Spacing();
-
-        bool combo_item_active = false;
-        combo_item_active |= (g.ActiveId == GetCurrentWindow()->GetID("#SCROLLY"));
-
-        // Display items
-        for (int i = 0; i < items_count; i++)
+        if (BeginPopupEx(label, flags))
         {
-            ImGui::PushID((void*)(intptr_t)i);
-            const bool item_selected = (i == *current_item);
-            const char* item_text;
-            if (!items_getter(data, i, &item_text))
-                item_text = "*Unknown item*";
-            if (ImGui::Selectable(item_text, item_selected))
+            // Display items
+            ImGui::Spacing();
+            for (int i = 0; i < items_count; i++)
             {
-                SetActiveId(0);
-                g.ActiveComboID = 0;
-                value_changed = true;
-                *current_item = i;
+                ImGui::PushID((void*)(intptr_t)i);
+                const bool item_selected = (i == *current_item);
+                const char* item_text;
+                if (!items_getter(data, i, &item_text))
+                    item_text = "*Unknown item*";
+                if (ImGui::Selectable(item_text, item_selected))
+                {
+                    SetActiveId(0);
+                    value_changed = true;
+                    *current_item = i;
+                }
+                if (item_selected && menu_toggled)
+                    ImGui::SetScrollPosHere();
+                ImGui::PopID();
             }
-            if (item_selected && menu_toggled)
-                ImGui::SetScrollPosHere();
-            combo_item_active |= ImGui::IsItemActive();
-            ImGui::PopID();
+            ImGui::EndPopup();
         }
-        ImGui::EndChild();
         ImGui::PopStyleVar();
-        ImGui::SetCursorPos(backup_pos);
-        
-        if (!combo_item_active && g.ActiveId != 0)
-            g.ActiveComboID = 0;
     }
-
-    ImGui::PopID();
-
     return value_changed;
 }
 
@@ -7769,7 +7769,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     if (opened)
     {
         ImGui::SetNextWindowPos(popup_pos, ImGuiSetCond_Always);
-        ImGuiWindowFlags flags = (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu)) ? ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_ChildWindow : ImGuiWindowFlags_ChildMenu;
+        ImGuiWindowFlags flags = ImGuiWindowFlags_ShowBorders | ((window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu)) ? ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_ChildWindow : ImGuiWindowFlags_ChildMenu);
         opened = BeginPopupEx(label, flags); // opened can be 'false' when the popup is completely clipped (e.g. zero size display)
     }
 
