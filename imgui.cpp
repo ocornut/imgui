@@ -3573,7 +3573,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && !window_was_visible)
         {
             window->HiddenFrames = 1;
-            window->Size = window->SizeFull = window->SizeContents = ImVec2(0.f, 0.f);  // TODO: We don't support SetNextWindowSize() for tooltips or popups yet
+            if (!window_size_set_by_api)
+                window->Size = window->SizeFull = ImVec2(0.f, 0.f);
+            window->SizeContents = ImVec2(0.f, 0.f);
         }
 
         // Calculate auto-fit size
