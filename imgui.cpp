@@ -7794,7 +7794,7 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID("#colorbutton");
     const float square_size = g.FontSize;
-    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(square_size + style.FramePadding.x*2, square_size + (small_height ? 0 : style.FramePadding.y*2)));
+    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(square_size + style.FramePadding.y*2, square_size + (small_height ? 0 : style.FramePadding.y*2)));
     ItemSize(bb, small_height ? 0.0f : style.FramePadding.y);
     if (!ItemAdd(bb, &id))
         return false;
@@ -7841,7 +7841,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
     const float w_full = ImGui::CalcItemWidth();
-    const float square_sz = (g.FontSize + style.FramePadding.x * 2.0f);
+    const float square_sz = (g.FontSize + style.FramePadding.y * 2.0f);
 
     ImGuiColorEditMode edit_mode = window->DC.ColorEditMode;
     if (edit_mode == ImGuiColorEditMode_UserSelect || edit_mode == ImGuiColorEditMode_UserSelectShowButton)
