@@ -1400,7 +1400,7 @@ struct ImGuiWindow
     ImVec2                  SizeContents;                       // Size of contents (== extents reach of the drawing cursor) from previous frame
     ImGuiID                 MoveID;                             // == window->GetID("#MOVE")
     float                   ScrollY;
-    float                   NextScrollY;
+    float                   ScrollTargetCenterY;                // position which we aim to center on
     bool                    ScrollbarY;
     bool                    Active;                             // Set to true on Begin()
     bool                    WasActive;
@@ -1766,7 +1766,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContents = ImVec2(0.0f, 0.0f);
     ScrollY = 0.0f;
-    NextScrollY = 0.0f;
+    ScrollTargetCenterY = -1.0f;
     ScrollbarY = false;
     Active = WasActive = false;
     Accessed = false;
@@ -2192,7 +2192,7 @@ void ImGui::NewFrame()
             if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
             {
                 const int scroll_lines = (window->Flags & ImGuiWindowFlags_ComboBox) ? 3 : 5;
-                window->NextScrollY -= g.IO.MouseWheel * window->CalcFontSize() * scroll_lines;
+                window->ScrollY -= g.IO.MouseWheel * window->CalcFontSize() * scroll_lines;
             }
         }
     }
@@ -3715,11 +3715,14 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = IM_INT_MAX;
 
         // Apply scrolling
-        window->ScrollY = window->NextScrollY;
+        if (window->ScrollTargetCenterY >= 0.0f)
+        {
+            window->ScrollY = window->ScrollTargetCenterY - (window->Pos.y + window->SizeFull.y * 0.5f) - (window->TitleBarHeight() + window->WindowPadding().y);
+            window->ScrollTargetCenterY = -1.0f;
+        }
         window->ScrollY = ImMax(window->ScrollY, 0.0f);
         if (!window->Collapsed && !window->SkipItems)
             window->ScrollY = ImMin(window->ScrollY, ImMax(0.0f, window->SizeContents.y - window->SizeFull.y));
-        window->NextScrollY = window->ScrollY;
 
         // Draw window + handle manual resize
         ImRect title_bar_rect = window->TitleBarRect();
@@ -4014,7 +4017,6 @@ static void Scrollbar(ImGuiWindow* window)
         // Apply scroll
         const float scroll_y_norm = ImSaturate((clicked_y_norm - g.ScrollbarClickDeltaToGrabCenter - grab_h_norm*0.5f) / (1.0f - grab_h_norm));
         window->ScrollY = (float)(int)(0.5f + scroll_y_norm * (window->SizeContents.y - window->Size.y));
-        window->NextScrollY = window->ScrollY;
 
         // Update values for rendering
         scroll_ratio = ImSaturate(window->ScrollY / scroll_max);
@@ -4644,7 +4646,7 @@ float ImGui::GetScrollMaxY()
 void ImGui::SetScrollPosHere()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->NextScrollY = (window->DC.CursorPos.y + window->ScrollY) - (window->Pos.y + window->SizeFull.y * 0.5f) - (window->TitleBarHeight() + window->WindowPadding().y);
+    window->ScrollTargetCenterY = (window->DC.CursorPos.y + window->ScrollY);
 }
 
 void ImGui::SetKeyboardFocusHere(int offset)
