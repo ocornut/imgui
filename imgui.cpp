@@ -4646,7 +4646,7 @@ float ImGui::GetScrollMaxY()
 void ImGui::SetScrollPosHere()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->ScrollTargetCenterY = (window->DC.CursorPos.y + window->ScrollY) - window->DC.PrevLineHeight * 0.5f;
+    window->ScrollTargetCenterY = (float)(int)(window->DC.CursorPos.y + window->ScrollY - window->DC.PrevLineHeight * 0.5f);
 }
 
 void ImGui::SetKeyboardFocusHere(int offset)
