@@ -518,7 +518,6 @@ struct ImGuiState;
 struct ImGuiWindow;
 typedef int ImGuiLayoutType;      // enum ImGuiLayoutType_
 typedef int ImGuiButtonFlags;     // enum ImGuiButtonFlags_
-typedef int ImGuiSelectableFlags; // enum ImGuiSelectableFlags_
 
 static bool         ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, ImGuiButtonFlags flags = 0);
 static void         LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
@@ -979,19 +978,19 @@ enum ImGuiLayoutType_
 
 enum ImGuiButtonFlags_
 {
-    ImGuiButtonFlags_Repeat             = (1 << 0),
-    ImGuiButtonFlags_PressedOnClick     = (1 << 1),
-    ImGuiButtonFlags_FlattenChilds      = (1 << 2),
-    ImGuiButtonFlags_DontClosePopups    = (1 << 3),
-    ImGuiButtonFlags_Disabled           = (1 << 4)
+    ImGuiButtonFlags_Repeat             = 1 << 0,
+    ImGuiButtonFlags_PressedOnClick     = 1 << 1,
+    ImGuiButtonFlags_FlattenChilds      = 1 << 2,
+    ImGuiButtonFlags_DontClosePopups    = 1 << 3,
+    ImGuiButtonFlags_Disabled           = 1 << 4
 };
 
-enum ImGuiSelectableFlags_
+enum ImGuiSelectableFlagsPrivate_
 {
-    ImGuiSelectableFlags_MenuItem           = (1 << 0),
-    ImGuiSelectableFlags_DontClosePopups    = (1 << 1),
-    ImGuiSelectableFlags_Disabled           = (1 << 2),
-    ImGuiSelectableFlags_DrawFillAvailWidth = (1 << 3)
+    // NB: need to be in sync with last value of ImGuiSelectableFlags_
+    ImGuiSelectableFlags_MenuItem           = 1 << 2,
+    ImGuiSelectableFlags_Disabled           = 1 << 3,
+    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 4
 };
 
 
@@ -7407,12 +7406,17 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     return value_changed;
 }
 
-static bool SelectableEx(const char* label, bool selected, const ImVec2& size_arg, ImGuiSelectableFlags flags)
+// Tip: pass an empty label (e.g. "##dummy") then you can use the space to draw other text or image.
+// But you need to make sure the ID is unique, e.g. enclose calls in PushID/PopID.
+bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg, ImGuiSelectableFlags flags)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
+
+    if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.ColumnsCount > 1)
+        PopClipRect();
 
     const ImGuiStyle& style = g.Style;
     ImGuiID id = window->GetID(label);
@@ -7425,7 +7429,8 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
 
     // Fill horizontal space.
     ImVec2 window_padding = window->WindowPadding();
-    float w_draw = ImMax(label_size.x, window->Pos.x + ImGui::GetContentRegionMax().x - window_padding.x - window->DC.CursorPos.x);
+    float max_x = (flags & ImGuiSelectableFlags_SpanAllColumns) ? ImGui::GetWindowContentRegionMax().x : ImGui::GetContentRegionMax().x;
+    float w_draw = ImMax(label_size.x, window->Pos.x + max_x - window_padding.x - window->DC.CursorPos.x);
     ImVec2 size_draw((size_arg.x != 0 && !(flags & ImGuiSelectableFlags_DrawFillAvailWidth)) ? size_arg.x : w_draw, size_arg.y != 0.0f ? size_arg.y : size.y);
     ImRect bb_with_spacing(pos, pos + size_draw);
     if (size_arg.x == 0.0f || (flags & ImGuiSelectableFlags_DrawFillAvailWidth))
@@ -7441,7 +7446,11 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
     bb_with_spacing.Max.x += spacing_R;
     bb_with_spacing.Max.y += spacing_D;
     if (!ItemAdd(bb_with_spacing, &id))
+    {
+        if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.ColumnsCount > 1)
+            PushColumnClipRect();
         return false;
+    }
 
     bool hovered, held;
     bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true, ((flags & ImGuiSelectableFlags_MenuItem) ? ImGuiButtonFlags_PressedOnClick : 0) | ((flags & ImGuiSelectableFlags_Disabled) ? ImGuiButtonFlags_Disabled : 0));
@@ -7454,6 +7463,13 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
         const ImU32 col = window->Color((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
         RenderFrame(bb_with_spacing.Min, bb_with_spacing.Max, col, false, 0.0f);
     }
+
+    if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.ColumnsCount > 1)
+    {
+        PushColumnClipRect();
+        bb_with_spacing.Max.x -= (ImGui::GetContentRegionMax().x - max_x);
+    }
+
     if (flags & ImGuiSelectableFlags_Disabled) ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
     RenderTextClipped(bb.Min, bb_with_spacing.Max, label, NULL, &label_size);
     if (flags & ImGuiSelectableFlags_Disabled) ImGui::PopStyleColor();
@@ -7464,16 +7480,9 @@ static bool SelectableEx(const char* label, bool selected, const ImVec2& size_ar
     return pressed;
 }
 
-// Tip: pass an empty label (e.g. "##dummy") then you can use the space to draw other text or image.
-// But you need to make sure the ID is unique, e.g. enclose calls in PushID/PopID.
-bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg)
+bool ImGui::Selectable(const char* label, bool* p_selected, const ImVec2& size_arg, ImGuiSelectableFlags flags)
 {
-    return SelectableEx(label, selected, size_arg, 0);
-}
-
-bool ImGui::Selectable(const char* label, bool* p_selected, const ImVec2& size_arg)
-{
-    if (SelectableEx(label, *p_selected, size_arg, 0))
+    if (ImGui::Selectable(label, *p_selected, size_arg, flags))
     {
         *p_selected = !*p_selected;
         return true;
@@ -7589,7 +7598,7 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected, boo
     float w = window->MenuColumns.DeclColumns(label_size.x, shortcut_size.x, (float)(int)(g.FontSize * 1.20f)); // Feedback for next frame
     float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
 
-    bool pressed = SelectableEx(label, false, ImVec2(w, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0));
+    bool pressed = ImGui::Selectable(label, false, ImVec2(w, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0));
     if (shortcut_size.x > 0.0f)
     {
         ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
@@ -7702,7 +7711,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
         float w = label_size.x;
-        pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups | (!enabled ? ImGuiSelectableFlags_Disabled : 0));
+        pressed = ImGui::Selectable(label, opened, ImVec2(w, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups | (!enabled ? ImGuiSelectableFlags_Disabled : 0));
         ImGui::PopStyleVar();
         ImGui::SameLine();
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
@@ -7712,7 +7721,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
         float w = window->MenuColumns.DeclColumns(label_size.x, 0.0f, (float)(int)(g.FontSize * 1.20f)); // Feedback to next frame
         float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
-        pressed = SelectableEx(label, opened, ImVec2(w, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0));
+        pressed = ImGui::Selectable(label, opened, ImVec2(w, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0));
         if (!enabled) ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
         RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), false);
         if (!enabled) ImGui::PopStyleColor();
@@ -11226,9 +11235,14 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Separator();
         const char* names[3] = { "One", "Two", "Three" };
         const char* paths[3] = { "/path/one", "/path/two", "/path/three" };
+        static int selected = -1;
         for (int i = 0; i < 3; i++)
         {
-            ImGui::Text("%04d", i); ImGui::NextColumn();
+            char label[32];
+            sprintf(label, "%04d", i);
+            if (ImGui::Selectable(label, selected == i, ImVec2(0,0), ImGuiSelectableFlags_SpanAllColumns))
+                selected = i;
+            ImGui::NextColumn();
             ImGui::Text(names[i]); ImGui::NextColumn();
             ImGui::Text(paths[i]); ImGui::NextColumn(); 
             ImGui::Text("...."); ImGui::NextColumn();
