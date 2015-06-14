@@ -301,7 +301,7 @@ namespace ImGui
     IMGUI_API void          SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond = 0);          // set next tree node to be opened.
 
     // Widgets: Selectable / Lists
-    IMGUI_API bool          Selectable(const char* label, bool selected = false, const ImVec2& size = ImVec2(0,0), ImGuiSelectableFlags flags = 0);
+    IMGUI_API bool          Selectable(const char* label, bool selected = false, const ImVec2& size = ImVec2(0,0), ImGuiSelectableFlags flags = 0);  // size.x==0.0: use remaining width, size.x>0.0: specify width. size.y==0.0: use label height, size.y>0.0: specify height 
     IMGUI_API bool          Selectable(const char* label, bool* p_selected, const ImVec2& size = ImVec2(0,0), ImGuiSelectableFlags flags = 0);
     IMGUI_API bool          ListBox(const char* label, int* current_item, const char** items, int items_count, int height_in_items = -1);
     IMGUI_API bool          ListBox(const char* label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);
@@ -449,7 +449,7 @@ enum ImGuiSelectableFlags_
 {
     // Default: 0
     ImGuiSelectableFlags_DontClosePopups    = 1 << 0,   // Clicking this don't close parent popup window
-    ImGuiSelectableFlags_SpanAllColumns     = 1 << 1    // Selectable frame spans all columns (text will still fit in current column)
+    ImGuiSelectableFlags_SpanAllColumns     = 1 << 1    // Selectable frame can span all columns (text will still fit in current column)
 };
 
 // User fill ImGuiIO.KeyMap[] array with indices into the ImGuiIO.KeysDown[512] array
