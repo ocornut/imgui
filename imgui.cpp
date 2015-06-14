@@ -136,11 +136,12 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
- - 2015/05/31 (1.39) - renamed GetWindowCollapsed() to IsWindowCollapsed() for consistency. Kept inline redirection function (will obsolete).
- - 2015/05/31 (1.39) - renamed IsRectClipped() to IsRectVisible() for consistency. Note that return value is opposite! Kept inline redirection function (will obsolete).
- - 2015/05/27 (1.39) - removed the third 'repeat_if_held' parameter from Button() - sorry! it was rarely used and inconsistent. Use PushButtonRepeat(true) / PopButtonRepeat() to enable repeat on desired buttons.
- - 2015/05/11 (1.39) - changed BeginPopup() API, takes a string identifier instead of a bool. ImGui needs to manage the open/closed state of popups. Call OpenPopup() to actually set the "opened" state of a popup. BeginPopup() returns true if the popup is opened.
- - 2015/05/03 (1.39) - removed style.AutoFitPadding, using style.WindowPadding makes more sense (the default values were already the same).
+ - 2015/06/14 (1.41) - changed prototype of Selectable(label, selected, size) to Selectable(label, selected, flags, size). Size override should have been rarely be used. Sorry!
+ - 2015/05/31 (1.40) - renamed GetWindowCollapsed() to IsWindowCollapsed() for consistency. Kept inline redirection function (will obsolete).
+ - 2015/05/31 (1.40) - renamed IsRectClipped() to IsRectVisible() for consistency. Note that return value is opposite! Kept inline redirection function (will obsolete).
+ - 2015/05/27 (1.40) - removed the third 'repeat_if_held' parameter from Button() - sorry! it was rarely used and inconsistent. Use PushButtonRepeat(true) / PopButtonRepeat() to enable repeat on desired buttons.
+ - 2015/05/11 (1.40) - changed BeginPopup() API, takes a string identifier instead of a bool. ImGui needs to manage the open/closed state of popups. Call OpenPopup() to actually set the "opened" state of a popup. BeginPopup() returns true if the popup is opened.
+ - 2015/05/03 (1.40) - removed style.AutoFitPadding, using style.WindowPadding makes more sense (the default values were already the same).
  - 2015/04/13 (1.38) - renamed IsClipped() to IsRectClipped(). Kept inline redirection function (will obsolete).
  - 2015/04/09 (1.38) - renamed ImDrawList::AddArc() to ImDrawList::AddArcFast() for compatibility with future API
  - 2015/04/03 (1.38) - removed ImGuiCol_CheckHovered, ImGuiCol_CheckActive, replaced with the more general ImGuiCol_FrameBgHovered, ImGuiCol_FrameBgActive.
@@ -7408,7 +7409,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
 
 // Tip: pass an empty label (e.g. "##dummy") then you can use the space to draw other text or image.
 // But you need to make sure the ID is unique, e.g. enclose calls in PushID/PopID.
-bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg, ImGuiSelectableFlags flags)
+bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -7480,9 +7481,9 @@ bool ImGui::Selectable(const char* label, bool selected, const ImVec2& size_arg,
     return pressed;
 }
 
-bool ImGui::Selectable(const char* label, bool* p_selected, const ImVec2& size_arg, ImGuiSelectableFlags flags)
+bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)
 {
-    if (ImGui::Selectable(label, *p_selected, size_arg, flags))
+    if (ImGui::Selectable(label, *p_selected, flags, size_arg))
     {
         *p_selected = !*p_selected;
         return true;
@@ -7598,7 +7599,7 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected, boo
     float w = window->MenuColumns.DeclColumns(label_size.x, shortcut_size.x, (float)(int)(g.FontSize * 1.20f)); // Feedback for next frame
     float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
 
-    bool pressed = ImGui::Selectable(label, false, ImVec2(w, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0));
+    bool pressed = ImGui::Selectable(label, false, ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(w, 0.0f));
     if (shortcut_size.x > 0.0f)
     {
         ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
@@ -7711,7 +7712,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
         float w = label_size.x;
-        pressed = ImGui::Selectable(label, opened, ImVec2(w, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups | (!enabled ? ImGuiSelectableFlags_Disabled : 0));
+        pressed = ImGui::Selectable(label, opened, ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(w, 0.0f));
         ImGui::PopStyleVar();
         ImGui::SameLine();
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
@@ -7721,7 +7722,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
         float w = window->MenuColumns.DeclColumns(label_size.x, 0.0f, (float)(int)(g.FontSize * 1.20f)); // Feedback to next frame
         float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
-        pressed = ImGui::Selectable(label, opened, ImVec2(w, 0.0f), ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0));
+        pressed = ImGui::Selectable(label, opened, ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(w, 0.0f));
         if (!enabled) ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
         RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), false);
         if (!enabled) ImGui::PopStyleColor();
@@ -10648,7 +10649,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 for (int i = 0; i < 16; i++)
                 {
                     ImGui::PushID(i);
-                    if (ImGui::Selectable("Me", &selected[i], ImVec2(50,50)))
+                    if (ImGui::Selectable("Me", &selected[i], 0, ImVec2(50,50)))
                     {
                         int x = i % 4, y = i / 4;
                         if (x > 0) selected[i - 1] ^= 1;
@@ -11240,7 +11241,7 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             char label[32];
             sprintf(label, "%04d", i);
-            if (ImGui::Selectable(label, selected == i, ImVec2(0,0), ImGuiSelectableFlags_SpanAllColumns))
+            if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns))
                 selected = i;
             ImGui::NextColumn();
             ImGui::Text(names[i]); ImGui::NextColumn();
