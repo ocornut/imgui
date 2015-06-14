@@ -1114,7 +1114,8 @@ struct ImFont
         signed short    XOffset, YOffset;
         float           U0, V0, U1, V1;     // Texture coordinates
     };
-    float               BaseLine;           // Distance from top to bottom of e.g. 'A' [0..FontSize]
+    float               Ascent;             // Distance from top to bottom of e.g. 'A' [0..FontSize]
+    float               Descent;            // 
     ImFontAtlas*        ContainerAtlas;     // What we has been loaded into
     ImVector<Glyph>     Glyphs;
     const Glyph*        FallbackGlyph;      // == FindGlyph(FontFallbackChar)
@@ -1127,9 +1128,10 @@ struct ImFont
     IMGUI_API ~ImFont();
     IMGUI_API void              Clear();
     IMGUI_API void              BuildLookupTable();
+    IMGUI_API float             GetCharAdvance(unsigned short c) const  { return ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] : FallbackXAdvance; }
     IMGUI_API const Glyph*      FindGlyph(unsigned short c) const;
     IMGUI_API void              SetFallbackChar(ImWchar c);
-    IMGUI_API bool              IsLoaded() const        { return ContainerAtlas != NULL; }
+    IMGUI_API bool              IsLoaded() const                        { return ContainerAtlas != NULL; }
 
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
     // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.

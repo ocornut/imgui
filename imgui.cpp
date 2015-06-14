@@ -2703,7 +2703,7 @@ static void RenderCheckMark(ImVec2 pos, ImU32 col)
     a.x = pos.x + start_x;
     b.x = a.x + rem_third;
     c.x = a.x + rem_third * 3.0f;
-    b.y = pos.y + (float)(int)(g.Font->BaseLine * (g.FontSize / g.Font->FontSize) + 0.5f) + (float)(int)(g.Font->DisplayOffset.y);
+    b.y = pos.y + (float)(int)(g.Font->Ascent * (g.FontSize / g.Font->FontSize) + 0.5f) + (float)(int)(g.Font->DisplayOffset.y);
     a.y = b.y - rem_third;
     c.y = b.y - rem_third * 2.0f;
 
@@ -9215,7 +9215,8 @@ bool    ImFontAtlas::Build()
         const float font_scale = stbtt_ScaleForPixelHeight(&data.FontInfo, data.SizePixels);
         int font_ascent, font_descent, font_line_gap;
         stbtt_GetFontVMetrics(&data.FontInfo, &font_ascent, &font_descent, &font_line_gap);
-        data.OutFont->BaseLine = (font_ascent * font_scale);
+        data.OutFont->Ascent = (font_ascent * font_scale);
+        data.OutFont->Descent = (font_descent * font_scale);
         data.OutFont->Glyphs.resize(0);
 
         const float uv_scale_x = 1.0f / TexWidth;
@@ -9374,7 +9375,7 @@ void    ImFont::Clear()
 {
     FontSize = 0.0f;
     DisplayOffset = ImVec2(-0.5f, 0.5f);
-    BaseLine = 0.0f;
+    Ascent = Descent = 0.0f;
     ContainerAtlas = NULL;
     Glyphs.clear();
     FallbackGlyph = NULL;
