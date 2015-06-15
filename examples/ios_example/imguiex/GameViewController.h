@@ -1,0 +1,13 @@
+//
+//  GameViewController.h
+//  imguiex
+
+// This is the OpenGL Example template from XCode, modified to
+// support IMGUI
+
+#import <UIKit/UIKit.h>
+#import <GLKit/GLKit.h>
+
+@interface GameViewController : GLKViewController
+
+@end
