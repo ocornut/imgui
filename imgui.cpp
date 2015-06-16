@@ -10092,8 +10092,10 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             {
                 // Clipping on Y is more likely
                 float y1 = (float)(y + glyph->YOffset * scale);
+                if (y1 > clip_rect.w)
+                    break;
                 float y2 = (float)(y1 + glyph->Height * scale);
-                if (y1 <= clip_rect.w && y2 >= clip_rect.y) // FIMXE-OPT: could fast-forward until next line
+                if (y2 >= clip_rect.y) // FIMXE-OPT: could fast-forward until next line (without breaking word-wrapping)
                 {
                     float x1 = (float)(x + glyph->XOffset * scale);
                     float x2 = (float)(x1 + glyph->Width * scale);
