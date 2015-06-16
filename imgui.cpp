@@ -6735,76 +6735,6 @@ void ImGuiTextEditState::RenderTextScrolledClipped(ImFont* font, float font_size
         LogText(pos, buf, NULL);
 }
 
-bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags extra_flags)
-{
-    ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return false;
-
-    const ImGuiStyle& style = g.Style;
-    const float w = ImGui::CalcItemWidth();
-    const ImVec2 label_size = CalcTextSize(label, NULL, true);
-    const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
-
-    ImGui::BeginGroup();
-    ImGui::PushID(label);
-    const ImVec2 button_sz = ImVec2(g.FontSize, g.FontSize) + style.FramePadding * 2;
-    if (step > 0.0f)
-        ImGui::PushItemWidth(ImMax(1.0f, w - (button_sz.x + style.ItemInnerSpacing.x)*2));
-
-    char buf[64];
-    if (decimal_precision < 0)
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "%f", *v);       // Ideally we'd have a minimum decimal precision of 1 to visually denote that it is a float, while hiding non-significant digits?
-    else
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "%.*f", decimal_precision, *v);
-    bool value_changed = false;
-    const ImGuiInputTextFlags flags = extra_flags | (ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_AutoSelectAll);
-    if (ImGui::InputText("", buf, IM_ARRAYSIZE(buf), flags))
-    {
-        ApplyNumericalTextInput(buf, v);
-        value_changed = true;
-    }
-
-    // Step buttons
-    if (step > 0.0f)
-    {
-        ImGui::PopItemWidth();
-        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
-        if (ButtonEx("-", button_sz, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
-        {
-            *v -= g.IO.KeyCtrl && step_fast > 0.0f ? step_fast : step;
-            value_changed = true;
-        }
-        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
-        if (ButtonEx("+", button_sz, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
-        {
-            *v += g.IO.KeyCtrl && step_fast > 0.0f ? step_fast : step;
-            value_changed = true;
-        }
-    }
-    ImGui::PopID();
-
-    if (label_size.x > 0)
-    {
-        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
-        RenderText(ImVec2(window->DC.CursorPos.x, window->DC.CursorPos.y + style.FramePadding.y), label);
-        ItemSize(label_size, style.FramePadding.y);
-    }
-    ImGui::EndGroup();
-
-    return value_changed;
-}
-
-bool ImGui::InputInt(const char* label, int *v, int step, int step_fast, ImGuiInputTextFlags extra_flags)
-{
-    float f = (float)*v;
-    const bool value_changed = ImGui::InputFloat(label, &f, (float)step, (float)step_fast, 0, extra_flags);
-    if (value_changed)
-        *v = (int)f;
-    return value_changed;
-}
-
 // Public API to manipulate UTF-8 text
 // We expose UTF-8 to the user (unlike the STB_TEXTEDIT_* functions which are manipulating wchar)
 void ImGuiTextEditCallbackData::DeleteChars(int pos, int bytes_count)
@@ -7277,6 +7207,76 @@ bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, co
 {
     bool ret = InputTextEx(label, buf, buf_size, size, flags | ImGuiInputTextFlags_Multiline, callback, user_data);
     return ret;
+}
+
+bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags extra_flags)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    const ImGuiStyle& style = g.Style;
+    const float w = ImGui::CalcItemWidth();
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
+
+    ImGui::BeginGroup();
+    ImGui::PushID(label);
+    const ImVec2 button_sz = ImVec2(g.FontSize, g.FontSize) + style.FramePadding * 2;
+    if (step > 0.0f)
+        ImGui::PushItemWidth(ImMax(1.0f, w - (button_sz.x + style.ItemInnerSpacing.x)*2));
+
+    char buf[64];
+    if (decimal_precision < 0)
+        ImFormatString(buf, IM_ARRAYSIZE(buf), "%f", *v);       // Ideally we'd have a minimum decimal precision of 1 to visually denote that it is a float, while hiding non-significant digits?
+    else
+        ImFormatString(buf, IM_ARRAYSIZE(buf), "%.*f", decimal_precision, *v);
+    bool value_changed = false;
+    const ImGuiInputTextFlags flags = extra_flags | (ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_AutoSelectAll);
+    if (ImGui::InputText("", buf, IM_ARRAYSIZE(buf), flags))
+    {
+        ApplyNumericalTextInput(buf, v);
+        value_changed = true;
+    }
+
+    // Step buttons
+    if (step > 0.0f)
+    {
+        ImGui::PopItemWidth();
+        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        if (ButtonEx("-", button_sz, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
+        {
+            *v -= g.IO.KeyCtrl && step_fast > 0.0f ? step_fast : step;
+            value_changed = true;
+        }
+        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        if (ButtonEx("+", button_sz, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
+        {
+            *v += g.IO.KeyCtrl && step_fast > 0.0f ? step_fast : step;
+            value_changed = true;
+        }
+    }
+    ImGui::PopID();
+
+    if (label_size.x > 0)
+    {
+        ImGui::SameLine(0, (int)style.ItemInnerSpacing.x);
+        RenderText(ImVec2(window->DC.CursorPos.x, window->DC.CursorPos.y + style.FramePadding.y), label);
+        ItemSize(label_size, style.FramePadding.y);
+    }
+    ImGui::EndGroup();
+
+    return value_changed;
+}
+
+bool ImGui::InputInt(const char* label, int *v, int step, int step_fast, ImGuiInputTextFlags extra_flags)
+{
+    float f = (float)*v;
+    const bool value_changed = ImGui::InputFloat(label, &f, (float)step, (float)step_fast, 0, extra_flags);
+    if (value_changed)
+        *v = (int)f;
+    return value_changed;
 }
 
 static bool InputFloatN(const char* label, float* v, int components, int decimal_precision, ImGuiInputTextFlags extra_flags)
