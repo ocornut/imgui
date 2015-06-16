@@ -495,6 +495,7 @@ namespace IMGUI_STB_NAMESPACE
 #undef STB_TEXTEDIT_CHARTYPE
 #define STB_TEXTEDIT_STRING    ImGuiTextEditState
 #define STB_TEXTEDIT_CHARTYPE  ImWchar
+#define STB_TEXTEDIT_GETWIDTH_NEWLINE   -1.0f
 #include "stb_textedit.h"
 
 #ifdef __clang__
@@ -1187,7 +1188,7 @@ struct ImGuiTextEditState
     char                InitialText[1024*3+1];          // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
     size_t              CurLenA, CurLenW;               // we need to maintain our buffer length in both UTF-8 and wchar format.
     size_t              BufSizeA;                       // end-user buffer size, <= 1024 (or increase above)
-    float               Width;                          // widget width
+    ImVec2              Size;                           // widget width/height
     float               ScrollX;
     STB_TexteditState   StbState;
     float               CursorAnim;
@@ -1201,7 +1202,7 @@ struct ImGuiTextEditState
     void                CursorAnimReset()               { CursorAnim = -0.30f; }                                                // After a user-input the cursor stays on for a while without blinking
     bool                CursorIsVisible() const         { return CursorAnim <= 0.0f || fmodf(CursorAnim, 1.20f) <= 0.80f; }     // Blinking
     bool                HasSelection() const            { return StbState.select_start != StbState.select_end; }
-    void                SelectAll()                     { StbState.select_start = 0; StbState.select_end = (int)ImStrlenW(Text); StbState.cursor = StbState.select_end; StbState.has_preferred_x = false; }
+    void                SelectAll()                     { StbState.select_start = 0; StbState.select_end = (int)CurLenW; StbState.cursor = StbState.select_end; StbState.has_preferred_x = false; }
 
     void                OnKeyPressed(int key);
     void                UpdateScrollOffset();
@@ -1209,8 +1210,8 @@ struct ImGuiTextEditState
 
     // Static functions because they are used to render non-focused instances of a text input box
     static const char*      GetTextPointerClippedA(ImFont* font, float font_size, const char* text, float width, ImVec2* out_text_size = NULL);
-    static const ImWchar*   GetTextPointerClippedW(ImFont* font, float font_size, const ImWchar* text, float width, ImVec2* out_text_size = NULL);
-    static void             RenderTextScrolledClipped(ImFont* font, float font_size, const char* text, ImVec2 pos_base, float width, float scroll_x);
+    static const ImWchar*   GetTextPointerClippedW(ImFont* font, float font_size, const ImWchar* text, const ImWchar* text_end, float width, ImVec2* out_text_size = NULL);
+    static void             RenderTextScrolledClipped(ImFont* font, float font_size, const char* text, const ImVec2& pos, const ImVec2& size, float scroll_x);
 };
 
 // Data saved in imgui.ini file
@@ -6511,16 +6512,71 @@ bool ImGui::RadioButton(const char* label, int* v, int v_button)
     return pressed;
 }
 
+static ImVec2 CalcTextSizeW(ImFont* font, float font_size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL, ImVec2* out_offset = NULL, bool stop_on_new_line = false)
+{
+    IM_ASSERT(text_end);
+
+    const float scale = font_size / font->FontSize;
+    const float line_height = font->FontSize * scale;
+
+    ImVec2 text_size = ImVec2(0,0);
+    float line_width = 0.0f;
+
+    const ImWchar* s = text_begin;
+    while (s < text_end)
+    {
+        const unsigned int c = (unsigned int)(*s++);
+
+        if (c < 32)
+        {
+            if (c == '\n')
+            {
+                text_size.x = ImMax(text_size.x, line_width);
+                text_size.y += line_height;
+                line_width = 0.0f;
+                if (stop_on_new_line)
+                    break;
+                continue;
+            }
+            if (c == '\r')
+                continue;
+        }
+
+        const float char_width = font->GetCharAdvance((unsigned short)c);
+        if (line_width + char_width >= max_width)
+        {
+            s--;
+            break;
+        }
+
+        line_width += char_width;
+    }
+
+    if (text_size.x < line_width)
+        text_size.x = line_width;
+
+    if (out_offset)
+        *out_offset = ImVec2(line_width, text_size.y + line_height);  // offset allow for the possibility of sitting after a trailing \n
+
+    if (line_width > 0 || text_size.y == 0.0f)                        // whereas size.y will ignore the trailing \n
+        text_size.y += line_height;
+
+    if (remaining)
+        *remaining = s;
+
+    return text_size;
+}
+
 // Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, wchar characters. InputText converts between UTF-8 and wchar)
-static int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                             { return (int)ImStrlenW(obj->Text); }
+static int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                             { return (int)obj->CurLenW; }
 static ImWchar STB_TEXTEDIT_GETCHAR(const STB_TEXTEDIT_STRING* obj, int idx)                      { return obj->Text[idx]; }
-static float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)  { (void)line_start_idx; return obj->Font->CalcTextSizeW(obj->FontSize, FLT_MAX, &obj->Text[char_idx], &obj->Text[char_idx]+1, NULL).x; }
+static float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)  { ImWchar* s = &obj->Text[line_start_idx+char_idx]; if (*s == '\n') return STB_TEXTEDIT_GETWIDTH_NEWLINE; return CalcTextSizeW(obj->Font, obj->FontSize, FLT_MAX, s, s+1, NULL).x; }
 static int     STB_TEXTEDIT_KEYTOTEXT(int key)                                                    { return key >= 0x10000 ? 0 : key; }
 static ImWchar STB_TEXTEDIT_NEWLINE = '\n';
 static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* obj, int line_start_idx)
 {
     const ImWchar* text_remaining = NULL;
-    const ImVec2 size = obj->Font->CalcTextSizeW(obj->FontSize, FLT_MAX, obj->Text + line_start_idx, NULL, &text_remaining);
+    const ImVec2 size = CalcTextSizeW(obj->Font, obj->FontSize, FLT_MAX, obj->Text + line_start_idx, obj->Text + obj->CurLenW, &text_remaining, NULL, true);
     r->x0 = 0.0f;
     r->x1 = size.x;
     r->baseline_y_delta = size.y;
@@ -6603,14 +6659,14 @@ void ImGuiTextEditState::OnKeyPressed(int key)
 void ImGuiTextEditState::UpdateScrollOffset()
 {
     // Scroll in chunks of quarter width
-    const float scroll_x_increment = Width * 0.25f;
-    const float cursor_offset_x = Font->CalcTextSizeW(FontSize, FLT_MAX, Text, Text+StbState.cursor, NULL).x;
+    const float scroll_x_increment = Size.x * 0.25f;
+    const float cursor_offset_x = CalcTextSizeW(Font, FontSize, FLT_MAX, Text, Text+StbState.cursor, NULL).x;
 
     // If widget became bigger than text (because of a resize), reset horizontal scrolling
     if (ScrollX > 0.0f)
     {
-        const float text_width = cursor_offset_x + Font->CalcTextSizeW(FontSize, FLT_MAX, Text+StbState.cursor, NULL, NULL).x;
-        if (text_width < Width)
+        const float text_width = cursor_offset_x + CalcTextSizeW(Font, FontSize, FLT_MAX, Text+StbState.cursor, NULL, NULL).x;
+        if (text_width < Size.x)
         {
             ScrollX = 0.0f;
             return;
@@ -6619,17 +6675,19 @@ void ImGuiTextEditState::UpdateScrollOffset()
 
     if (cursor_offset_x < ScrollX)
         ScrollX = ImMax(0.0f, cursor_offset_x - scroll_x_increment);    
-    else if (cursor_offset_x - Width >= ScrollX)
-        ScrollX = cursor_offset_x - Width + scroll_x_increment;
+    else if (cursor_offset_x - Size.x >= ScrollX)
+        ScrollX = cursor_offset_x - Size.x + scroll_x_increment;
 }
 
 ImVec2 ImGuiTextEditState::CalcDisplayOffsetFromCharIdx(int i) const
 {
-    const ImWchar* text_start = GetTextPointerClippedW(Font, FontSize, Text, ScrollX, NULL);
+    const ImWchar* text_start = GetTextPointerClippedW(Font, FontSize, Text, Text+CurLenW, ScrollX, NULL);
     const ImWchar* text_end = (Text+i >= text_start) ? Text+i : text_start;                    // Clip if requested character is outside of display
     IM_ASSERT(text_end >= text_start);
 
-    const ImVec2 offset = Font->CalcTextSizeW(FontSize, Width+1, text_start, text_end, NULL);
+    // FIXME-WIP-MULTILINE
+    ImVec2 offset;
+    CalcTextSizeW(Font, FontSize, Size.x+1, text_start, text_end, NULL, &offset);
     return offset;
 }
 
@@ -6647,20 +6705,20 @@ const char* ImGuiTextEditState::GetTextPointerClippedA(ImFont* font, float font_
 }
 
 // [Static]
-const ImWchar* ImGuiTextEditState::GetTextPointerClippedW(ImFont* font, float font_size, const ImWchar* text, float width, ImVec2* out_text_size)
+const ImWchar* ImGuiTextEditState::GetTextPointerClippedW(ImFont* font, float font_size, const ImWchar* text, const ImWchar* text_end, float width, ImVec2* out_text_size)
 {
     if (width <= 0.0f)
         return text;
 
     const ImWchar* text_clipped_end = NULL;
-    const ImVec2 text_size = font->CalcTextSizeW(font_size, width, text, NULL, &text_clipped_end);
+    const ImVec2 text_size = CalcTextSizeW(font, font_size, width, text, text_end, &text_clipped_end);
     if (out_text_size)
         *out_text_size = text_size;
     return text_clipped_end;
 }
 
 // [Static]
-void ImGuiTextEditState::RenderTextScrolledClipped(ImFont* font, float font_size, const char* buf, ImVec2 pos, float width, float scroll_x)
+void ImGuiTextEditState::RenderTextScrolledClipped(ImFont* font, float font_size, const char* buf, const ImVec2& pos, const ImVec2& size, float scroll_x)
 {
     ImGuiWindow* window = GetCurrentWindow();
     const ImU32 font_color = window->Color(ImGuiCol_Text);
@@ -6669,7 +6727,7 @@ void ImGuiTextEditState::RenderTextScrolledClipped(ImFont* font, float font_size
     // Determine start and end of visible string
     // FIXME-OPT: This is pretty slow for what it does.
     const char* text_start = scroll_x <= 0.0f ? buf : GetTextPointerClippedA(font, font_size, buf, scroll_x, NULL);
-    const char* text_end = GetTextPointerClippedA(font, font_size, text_start, width + 1, NULL); // +1 to allow character spacing to fit outside the allowed width
+    const char* text_end = GetTextPointerClippedA(font, font_size, text_start, size.x + 1, NULL); // +1 to allow character spacing to fit outside the allowed width
     window->DrawList->AddText(font, font_size, pos, font_color, text_start, text_end);
 
     // Log as text
@@ -6793,7 +6851,13 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
     unsigned int c = *p_char;
 
     if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
-        return false;
+    {
+        bool pass = false;
+        pass |= (c == '\n' && (flags & ImGuiInputTextFlags_Multiline));
+        pass |= (c == '\t' && (flags & ImGuiInputTextFlags_AllowTabInput));
+        if (!pass)
+            return false;
+    }
 
     if (c >= 0xE000 && c <= 0xF8FF) // Filter private Unicode range. I don't imagine anybody would want to input them. GLFW on OSX seems to send private characters for special keys like arrow keys.
         return false;
@@ -6836,21 +6900,30 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
 }
 
 // Edit a string of text
-bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
+static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
+
+    IM_ASSERT(!((flags & ImGuiInputTextFlags_CallbackHistory) && (flags & ImGuiInputTextFlags_Multiline))); // Can't use both together (they both use up/down keys)
+    IM_ASSERT(!((flags & ImGuiInputTextFlags_CallbackCompletion) && (flags & ImGuiInputTextFlags_AllowTabInput))); // Can't use both together (they both use tab key)
 
     ImGuiState& g = *GImGui;
     const ImGuiIO& io = g.IO;
     const ImGuiStyle& style = g.Style;
 
     const ImGuiID id = window->GetID(label);
-    const float w = ImGui::CalcItemWidth();
+    const bool is_multiline = (flags & ImGuiInputTextFlags_Multiline) != 0;
 
-    const ImVec2 label_size = CalcTextSize(label, NULL, true);
-    const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
+    ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
+    ImVec2 size = size_arg;
+    if (size.x == 0.0f)
+        size.x = ImGui::CalcItemWidth();
+    if (size.y == 0.0f)
+        size.y = is_multiline ? label_size.y * 8.0f : label_size.y; // Arbitrary default
+
+    const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + size + style.FramePadding*2.0f);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? (style.ItemInnerSpacing.x + label_size.x) : 0.0f, 0.0f));
     ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, &id))
@@ -6862,7 +6935,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     const bool is_ctrl_down = io.KeyCtrl;
     const bool is_shift_down = io.KeyShift;
     const bool is_alt_down = io.KeyAlt;
-    const bool focus_requested = window->FocusItemRegister(g.ActiveId == id, (flags & ImGuiInputTextFlags_CallbackCompletion) == 0);    // Using completion callback disable keyboard tabbing
+    const bool focus_requested = window->FocusItemRegister(g.ActiveId == id, (flags & (ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_AllowTabInput)) == 0);    // Using completion callback disable keyboard tabbing
     const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
     const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
 
@@ -6886,7 +6959,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             const char* buf_end = NULL;
             edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), buf, NULL, &buf_end);
             edit_state.CurLenA = buf_end - buf; // We can't get the result from ImFormatString() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
-            edit_state.Width = w + style.FramePadding.x;
+            edit_state.Size = size + style.FramePadding;
             edit_state.InputCursorScreenPos = ImVec2(-1.f,-1.f);
             edit_state.CursorAnimReset();
 
@@ -6894,7 +6967,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             {
                 edit_state.Id = id;
                 edit_state.ScrollX = 0.0f;
-                stb_textedit_initialize_state(&edit_state.StbState, true); 
+                stb_textedit_initialize_state(&edit_state.StbState, !is_multiline); 
                 if (focus_requested_by_code)
                     select_all = true;
             }
@@ -6931,7 +7004,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     //if (edit_state.Id == id)  // Works, but double-click to select-all sets cursors to end which in turn tends to scroll toward the right when shrinking widget.
     {
         // Update some data if we are active or last active
-        edit_state.Width = w + style.FramePadding.x;
+        edit_state.Size = size + style.FramePadding;
         edit_state.BufSizeA = buf_size;
         edit_state.Font = g.Font;
         edit_state.FontSize = g.FontSize;
@@ -6941,7 +7014,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
     {
         // Edit in progress
         const float mx = g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x;
-        const float my = g.FontSize*0.5f;   // Flatten mouse because we are doing a single-line edit
+        const float my = is_multiline ? (g.IO.MousePos.y - frame_bb.Min.y - style.FramePadding.y) : g.FontSize*0.5f;
 
         if (select_all || (hovered && io.MouseDoubleClicked[0]))
         {
@@ -6966,8 +7039,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
             // Process text input (before we check for Return because using some IME will effectively send a Return?)
             for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
             {
-                unsigned int c = (unsigned int)g.IO.InputCharacters[n];
-                if (c)
+                if (unsigned int c = (unsigned int)g.IO.InputCharacters[n])
                 {
                     // Insert character if they pass filtering
                     if (!InputTextFilterCharacter(&c, flags, callback, user_data))
@@ -6982,13 +7054,35 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
 
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
         const bool is_ctrl_only = is_ctrl_down && !is_alt_down && !is_shift_down;
-        if (IsKeyPressedMap(ImGuiKey_LeftArrow))                { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_RightArrow))          { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Home))                { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_End))                 { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Delete))              { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Backspace))           { edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Enter))               { SetActiveId(0); enter_pressed = true; }
+        if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
+        else if (is_multiline && IsKeyPressedMap(ImGuiKey_UpArrow))     { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UP | k_mask); }
+        else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DOWN| k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_Home))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_End))                         { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_Delete))                      { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_Backspace))                   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_Enter))
+        {
+            bool ctrl_enter_for_new_line = (flags & ImGuiInputTextFlags_CtrlEnterForNewLine) != 0;
+            if (!is_multiline || (ctrl_enter_for_new_line && !is_ctrl_down) || (!ctrl_enter_for_new_line && is_ctrl_down))
+            { 
+                SetActiveId(0); 
+                enter_pressed = true; 
+            }
+            else // New line
+            {
+                unsigned int c = '\n';
+                if (InputTextFilterCharacter(&c, flags, callback, user_data))
+                    edit_state.OnKeyPressed((int)c);
+            }
+        }
+        else if ((flags & ImGuiInputTextFlags_AllowTabInput) && IsKeyPressedMap(ImGuiKey_Tab))
+        {
+            unsigned int c = '\t';
+            if (InputTextFilterCharacter(&c, flags, callback, user_data))
+                edit_state.OnKeyPressed((int)c);
+        }
         else if (IsKeyPressedMap(ImGuiKey_Escape))              { SetActiveId(0); cancel_edit = true; }
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Z))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); }
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Y))   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); }
@@ -7146,7 +7240,7 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
 
     //const float render_scroll_x = (g.ActiveId == id) ? edit_state.ScrollX : 0.0f;
     const float render_scroll_x = (edit_state.Id == id) ? edit_state.ScrollX : 0.0f;
-    ImGuiTextEditState::RenderTextScrolledClipped(g.Font, g.FontSize, buf, frame_bb.Min + style.FramePadding, w + style.FramePadding.x, render_scroll_x);
+    ImGuiTextEditState::RenderTextScrolledClipped(g.Font, g.FontSize, buf, frame_bb.Min + style.FramePadding, size + style.FramePadding, render_scroll_x);
 
     if (g.ActiveId == id)
     {
@@ -7170,6 +7264,19 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
         return enter_pressed;
     else
         return value_changed;
+}
+
+bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
+{
+    IM_ASSERT(!(flags & ImGuiInputTextFlags_Multiline)); // call InputTextMultiline()
+    bool ret = InputTextEx(label, buf, buf_size, ImVec2(0,0), flags, callback, user_data);
+    return ret;
+}
+
+bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
+{
+    bool ret = InputTextEx(label, buf, buf_size, size, flags | ImGuiInputTextFlags_Multiline, callback, user_data);
+    return ret;
 }
 
 static bool InputFloatN(const char* label, float* v, int components, int decimal_precision, ImGuiInputTextFlags extra_flags)
@@ -9874,64 +9981,11 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         line_width += char_width;
     }
 
-    if (line_width > 0 || text_size.y == 0.0f)
-    {
-        if (text_size.x < line_width)
-            text_size.x = line_width;
-        text_size.y += line_height;
-    }
-
-    if (remaining)
-        *remaining = s;
-
-    return text_size;
-}
-
-ImVec2 ImFont::CalcTextSizeW(float size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining) const
-{
-    if (!text_end)
-        text_end = text_begin + ImStrlenW(text_begin);
-
-    const float scale = size / FontSize;
-    const float line_height = FontSize * scale;
-
-    ImVec2 text_size = ImVec2(0,0);
-    float line_width = 0.0f;
-
-    const ImWchar* s = text_begin;
-    while (s < text_end)
-    {
-        const unsigned int c = (unsigned int)(*s++);
-
-        if (c < 32)
-        {
-            if (c == '\n')
-            {
-                text_size.x = ImMax(text_size.x, line_width);
-                text_size.y += line_height;
-                line_width = 0.0f;
-                continue;
-            }
-            if (c == '\r')
-                continue;
-        }
-        
-        const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : FallbackXAdvance;
-        if (line_width + char_width >= max_width)
-        {
-            s--;
-            break;
-        }
-
-        line_width += char_width;
-    }
+    if (text_size.x < line_width)
+        text_size.x = line_width;
 
     if (line_width > 0 || text_size.y == 0.0f)
-    {
-        if (text_size.x < line_width)
-            text_size.x = line_width;
         text_size.y += line_height;
-    }
 
     if (remaining)
         *remaining = s;
