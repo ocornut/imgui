@@ -7146,7 +7146,8 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
                 ImVec2 rect_size = CalcTextSizeW(edit_state.Font, edit_state.FontSize, FLT_MAX, p, text_selected_end, &p, NULL, true);
                 ImRect rect(render_pos + rect_pos + ImVec2(-edit_state.ScrollX, (p == text_selected_begin) ? -font_offy_up : -g.FontSize), render_pos + rect_pos + ImVec2(rect_size.x - edit_state.ScrollX, (p == text_selected_end) ? +font_offy_dn : 0.0f));
                 rect.Clip(clip_rect);
-                window->DrawList->AddRectFilled(rect.Min, rect.Max, font_color);
+                if (rect.Overlaps(clip_rect))
+                    window->DrawList->AddRectFilled(rect.Min, rect.Max, font_color);
                 rect_pos.x = 0.0f;
                 rect_pos.y += g.FontSize;
             }
