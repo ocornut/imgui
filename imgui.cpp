@@ -7115,6 +7115,10 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     const float font_offy_dn = 2.0f;
     const ImVec2 render_pos = frame_bb.Min + style.FramePadding;
 
+    //const float render_scroll_x = (g.ActiveId == id) ? edit_state.ScrollX : 0.0f;
+    const float render_scroll_x = (edit_state.Id == id) ? edit_state.ScrollX : 0.0f;
+    const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x + style.FramePadding.x*2.0f, frame_bb.Min.y + size.y + style.FramePadding.y*2.0f);
+
     if (g.ActiveId == id)
     {
         // Draw selection
@@ -7122,26 +7126,24 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         const int select_end_idx = edit_state.StbState.select_end;
         if (select_begin_idx != select_end_idx)
         {
-            ImVec2 rect_pos;
             ImWchar* text_selected_begin = edit_state.Text + ImMin(select_begin_idx,select_end_idx);
             ImWchar* text_selected_end = edit_state.Text + ImMax(select_begin_idx,select_end_idx);
+            ImVec2 rect_pos;
             CalcTextSizeW(edit_state.Font, edit_state.FontSize, FLT_MAX, edit_state.Text, text_selected_begin, NULL, &rect_pos);
 
             ImU32 font_color = window->Color(ImGuiCol_TextSelectedBg);
             for (const ImWchar* p = text_selected_begin; p < text_selected_end; )
             {
                 ImVec2 rect_size = CalcTextSizeW(edit_state.Font, edit_state.FontSize, FLT_MAX, p, text_selected_end, &p, NULL, true);
-                window->DrawList->AddRectFilled(render_pos + rect_pos + ImVec2(-edit_state.ScrollX, -font_offy_up), render_pos + rect_pos + ImVec2(rect_size.x - edit_state.ScrollX, +font_offy_dn), font_color);
+                ImRect rect(render_pos + rect_pos + ImVec2(-edit_state.ScrollX, -font_offy_up), render_pos + rect_pos + ImVec2(rect_size.x - edit_state.ScrollX, +font_offy_dn));
+                rect.Clip(clip_rect);
+                window->DrawList->AddRectFilled(rect.Min, rect.Max, font_color);
                 rect_pos.x = 0.0f;
                 rect_pos.y += g.FontSize;
             }
         }
     }
 
-    // FIMXE-WIP-MULTILINE
-    //const float render_scroll_x = (g.ActiveId == id) ? edit_state.ScrollX : 0.0f;
-    const float render_scroll_x = (edit_state.Id == id) ? edit_state.ScrollX : 0.0f;
-    const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x + style.FramePadding.x*2.0f, frame_bb.Min.y + size.y + style.FramePadding.y*2.0f);
     window->DrawList->AddText(g.Font, g.FontSize, render_pos - ImVec2(render_scroll_x, 0.0f), window->Color(ImGuiCol_Text), buf, NULL, 0.0f, &clip_rect);
 
     // Log as text
