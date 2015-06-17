@@ -670,7 +670,7 @@ ImGuiIO::ImGuiIO()
     MouseDoubleClickMaxDist = 6.0f;
     MouseDragThreshold = 6.0f;
     KeyRepeatDelay = 0.250f;
-    KeyRepeatRate = 0.020f;
+    KeyRepeatRate = 0.050f;
     UserData = NULL;
 
     // User functions
