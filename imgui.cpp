@@ -6671,18 +6671,6 @@ void ImGuiTextEditState::UpdateScrollOffset()
     const ImWchar* text = Text.begin();
     CalcTextSizeW(Font, FontSize, FLT_MAX, text, text+StbState.cursor, NULL, &cursor_offset);
 
-    // If widget became bigger than text (because of a resize), reset horizontal scrolling
-    // FIXME-OPT
-    if (Scroll.x > 0.0f || Scroll.y > 0.0f)
-    {
-        ImVec2 text_size = CalcTextSizeW(Font, FontSize, FLT_MAX, text, NULL, NULL);
-        bool ret = false;
-        if (text_size.x < Size.x) { Scroll.x = 0.0f; ret = true; }
-        if (text_size.y < Size.y) { Scroll.y = 0.0f; ret = true; }
-        if (ret)
-            return;
-    }
-
     const ImVec2 scroll_increment(Size.x * 0.25f, FontSize);
     if (cursor_offset.x < Scroll.x)
         Scroll.x = ImMax(0.0f, cursor_offset.x - scroll_increment.x);    
