@@ -1190,7 +1190,7 @@ struct ImGuiTextEditState
     size_t              CurLenA, CurLenW;               // we need to maintain our buffer length in both UTF-8 and wchar format.
     size_t              BufSizeA;                       // end-user buffer size
     ImVec2              Size;                           // widget width/height
-    float               ScrollX;
+    ImVec2              Scroll;
     STB_TexteditState   StbState;
     float               CursorAnim;
     ImVec2              InputCursorScreenPos;           // Cursor position in screen space to be used by IME callback.
@@ -1207,7 +1207,6 @@ struct ImGuiTextEditState
 
     void                OnKeyPressed(int key);
     void                UpdateScrollOffset();
-    ImVec2              CalcDisplayOffsetFromCharIdx(int i) const;
 };
 
 // Data saved in imgui.ini file
@@ -6668,34 +6667,39 @@ void ImGuiTextEditState::OnKeyPressed(int key)
 void ImGuiTextEditState::UpdateScrollOffset()
 {
     // Scroll in chunks of quarter width
-    const float scroll_x_increment = Size.x * 0.25f;
     ImVec2 cursor_offset;
     const ImWchar* text = Text.begin();
     CalcTextSizeW(Font, FontSize, FLT_MAX, text, text+StbState.cursor, NULL, &cursor_offset);
 
     // If widget became bigger than text (because of a resize), reset horizontal scrolling
-    if (ScrollX > 0.0f)
+    // FIXME-OPT
+    if (Scroll.x > 0.0f || Scroll.y > 0.0f)
     {
-        const float text_width = CalcTextSizeW(Font, FontSize, FLT_MAX, text, NULL, NULL).x;
-        if (text_width < Size.x)
-        {
-            ScrollX = 0.0f;
+        ImVec2 text_size = CalcTextSizeW(Font, FontSize, FLT_MAX, text, NULL, NULL);
+        bool ret = false;
+        if (text_size.x < Size.x) { Scroll.x = 0.0f; ret = true; }
+        if (text_size.y < Size.y) { Scroll.y = 0.0f; ret = true; }
+        if (ret)
             return;
-        }
     }
 
-    if (cursor_offset.x < ScrollX)
-        ScrollX = ImMax(0.0f, cursor_offset.x - scroll_x_increment);    
-    else if (cursor_offset.x - Size.x >= ScrollX)
-        ScrollX = cursor_offset.x - Size.x + scroll_x_increment;
-}
+    const ImVec2 scroll_increment(Size.x * 0.25f, FontSize);
+    if (cursor_offset.x < Scroll.x)
+        Scroll.x = ImMax(0.0f, cursor_offset.x - scroll_increment.x);    
+    else if (cursor_offset.x - Size.x >= Scroll.x)
+        Scroll.x = cursor_offset.x - Size.x + scroll_increment.x;
 
-ImVec2 ImGuiTextEditState::CalcDisplayOffsetFromCharIdx(int i) const
-{
-    ImVec2 offset;
-    CalcTextSizeW(Font, FontSize, FLT_MAX, Text.begin(), Text.begin()+i, NULL, &offset);
-    offset.x -= ScrollX;
-    return offset;
+    //float height_aligned = FontSize * (float)(int)(0.5f + Size.y / FontSize);
+    if (cursor_offset.y - Scroll.y <= 0.0f)
+        Scroll.y = ImMax(0.0f, cursor_offset.y - FontSize * 2.0f);
+    else if (cursor_offset.y - Scroll.y > Size.y + 1)
+        Scroll.y = cursor_offset.y - Size.y + FontSize * 1.0f;
+    /*
+    if (cursor_offset.y <= Scroll.y)
+        Scroll.y = ImMax(0.0f, cursor_offset.y - FontSize * 2.0f);  
+    else if (cursor_offset.y - height_aligned >= Scroll.y)
+        Scroll.y = cursor_offset.y - height_aligned + FontSize * 2.0f;
+    */
 }
 
 // Public API to manipulate UTF-8 text
@@ -6855,13 +6859,13 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.begin(), edit_state.Text.size(), buf, NULL, &buf_end);
             edit_state.CurLenA = buf_end - buf; // We can't get the result from ImFormatString() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
             edit_state.Size = size + style.FramePadding;
-            edit_state.InputCursorScreenPos = ImVec2(-1.f,-1.f);
+            edit_state.InputCursorScreenPos = ImVec2(-1.f, -1.f);
             edit_state.CursorAnimReset();
 
             if (edit_state.Id != id)
             {
                 edit_state.Id = id;
-                edit_state.ScrollX = 0.0f;
+                edit_state.Scroll = ImVec2(0.f, 0.f);
                 stb_textedit_initialize_state(&edit_state.StbState, !is_multiline); 
                 if (!is_multiline && focus_requested_by_code)
                     select_all = true;
@@ -6918,12 +6922,12 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         }
         else if (io.MouseClicked[0] && !edit_state.SelectedAllMouseLock)
         {
-            stb_textedit_click(&edit_state, &edit_state.StbState, mx + edit_state.ScrollX, my);
+            stb_textedit_click(&edit_state, &edit_state.StbState, mx + edit_state.Scroll.x, my + edit_state.Scroll.y);
             edit_state.CursorAnimReset();
         }
         else if (io.MouseDown[0] && !edit_state.SelectedAllMouseLock)
         {
-            stb_textedit_drag(&edit_state, &edit_state.StbState, mx + edit_state.ScrollX, my);
+            stb_textedit_drag(&edit_state, &edit_state.StbState, mx + edit_state.Scroll.x, my + edit_state.Scroll.y);
             edit_state.CursorAnimReset();
         }
         if (edit_state.SelectedAllMouseLock && !io.MouseDown[0])
@@ -7124,8 +7128,8 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     const float font_offy_dn = 2.0f;
     const ImVec2 render_pos = frame_bb.Min + style.FramePadding;
 
-    //const float render_scroll_x = (g.ActiveId == id) ? edit_state.ScrollX : 0.0f;
-    const float render_scroll_x = (edit_state.Id == id) ? edit_state.ScrollX : 0.0f;
+    //const ImVec2 render_scroll = (g.ActiveId == id) ? edit_state.Scroll : ImVec2(0.f, 0.f);
+    const ImVec2 render_scroll = (edit_state.Id == id) ? edit_state.Scroll : ImVec2(0.f, 0.f);
     const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x + style.FramePadding.x*2.0f, frame_bb.Min.y + size.y + style.FramePadding.y*2.0f);
 
     if (g.ActiveId == id)
@@ -7144,7 +7148,8 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             for (const ImWchar* p = text_selected_begin; p < text_selected_end; )
             {
                 ImVec2 rect_size = CalcTextSizeW(edit_state.Font, edit_state.FontSize, FLT_MAX, p, text_selected_end, &p, NULL, true);
-                ImRect rect(render_pos + rect_pos + ImVec2(-edit_state.ScrollX, (p == text_selected_begin) ? -font_offy_up : -g.FontSize), render_pos + rect_pos + ImVec2(rect_size.x - edit_state.ScrollX, (p == text_selected_end) ? +font_offy_dn : 0.0f));
+                if (rect_size.x <= 0.0f) rect_size.x = 2.0f; // So we can see selected empty lines
+                ImRect rect(render_pos - render_scroll + rect_pos + ImVec2(0.0f, (p == text_selected_begin) ? -font_offy_up : -g.FontSize), render_pos - render_scroll + rect_pos + ImVec2(rect_size.x, (p == text_selected_end) ? +font_offy_dn : 0.0f));
                 rect.Clip(clip_rect);
                 if (rect.Overlaps(clip_rect))
                     window->DrawList->AddRectFilled(rect.Min, rect.Max, font_color);
@@ -7154,7 +7159,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         }
     }
 
-    window->DrawList->AddText(g.Font, g.FontSize, render_pos - ImVec2(render_scroll_x, 0.0f), window->Color(ImGuiCol_Text), buf, NULL, 0.0f, &clip_rect);
+    window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, window->Color(ImGuiCol_Text), buf, NULL, 0.0f, &clip_rect);
 
     // Log as text
     if (GImGui->LogEnabled)
@@ -7162,7 +7167,9 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
 
     if (g.ActiveId == id)
     {
-        const ImVec2 cursor_pos = render_pos + edit_state.CalcDisplayOffsetFromCharIdx(edit_state.StbState.cursor);
+        ImVec2 cursor_pos;
+        CalcTextSizeW(edit_state.Font, edit_state.FontSize, FLT_MAX, edit_state.Text.begin(), edit_state.Text.begin() + edit_state.StbState.cursor, NULL, &cursor_pos);
+        cursor_pos += render_pos - edit_state.Scroll;
 
         // Draw blinking cursor
         if (g.InputTextState.CursorIsVisible())
