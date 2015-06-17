@@ -1184,10 +1184,11 @@ struct ImGuiDrawContext
 struct ImGuiTextEditState
 {
     ImGuiID             Id;                             // widget id owning the text state
-    ImWchar             Text[1024];                     // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
-    char                InitialText[1024*3+1];          // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
+    ImVector<ImWchar>   Text;                           // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
+    ImVector<char>      InitialText;                    // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
+    ImVector<char>      TempTextBuffer;
     size_t              CurLenA, CurLenW;               // we need to maintain our buffer length in both UTF-8 and wchar format.
-    size_t              BufSizeA;                       // end-user buffer size, <= 1024 (or increase above)
+    size_t              BufSizeA;                       // end-user buffer size
     ImVec2              Size;                           // widget width/height
     float               ScrollX;
     STB_TexteditState   StbState;
@@ -5566,7 +5567,7 @@ static void ApplyNumericalTextInput(const char* buf, float *v)
 
     float ref_v = *v;
     if (op)
-        if (sscanf(GImGui->InputTextState.InitialText, "%f", &ref_v) < 1)
+        if (sscanf(GImGui->InputTextState.InitialText.begin(), "%f", &ref_v) < 1)
             return;
 
     float op_v = 0.0f;
@@ -6581,28 +6582,29 @@ static int     STB_TEXTEDIT_KEYTOTEXT(int key)                                  
 static ImWchar STB_TEXTEDIT_NEWLINE = '\n';
 static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* obj, int line_start_idx)
 {
+    const ImWchar* text = obj->Text.begin();
     const ImWchar* text_remaining = NULL;
-    const ImVec2 size = CalcTextSizeW(obj->Font, obj->FontSize, FLT_MAX, obj->Text + line_start_idx, obj->Text + obj->CurLenW, &text_remaining, NULL, true);
+    const ImVec2 size = CalcTextSizeW(obj->Font, obj->FontSize, FLT_MAX, text + line_start_idx, text + obj->CurLenW, &text_remaining, NULL, true);
     r->x0 = 0.0f;
     r->x1 = size.x;
     r->baseline_y_delta = size.y;
     r->ymin = 0.0f;
     r->ymax = size.y;
-    r->num_chars = (int)(text_remaining - (obj->Text + line_start_idx));
+    r->num_chars = (int)(text_remaining - (text + line_start_idx));
 }
 
 static bool is_separator(unsigned int c)                                                          { return c==',' || c==';' || c=='(' || c==')' || c=='{' || c=='}' || c=='[' || c==']' || c=='|'; }
 #define STB_TEXTEDIT_IS_SPACE(CH)                                                                 ( ImCharIsSpace((unsigned int)CH) || is_separator((unsigned int)CH) )
 static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)
 {
-    ImWchar* dst = obj->Text + pos;
+    ImWchar* dst = obj->Text.begin() + pos;
 
     // We maintain our buffer length in both UTF-8 and wchar formats
     obj->CurLenA -= ImTextCountUtf8BytesFromStr(dst, dst + n);
     obj->CurLenW -= n;
 
     // Offset remaining text
-    const ImWchar* src = obj->Text + pos + n; 
+    const ImWchar* src = obj->Text.begin() + pos + n; 
     while (ImWchar c = *src++)
         *dst++ = c; 
     *dst = '\0';
@@ -6611,16 +6613,17 @@ static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)
 static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const ImWchar* new_text, int new_text_len)
 {
     const size_t text_len = obj->CurLenW;
-    if ((size_t)new_text_len + text_len + 1 > IM_ARRAYSIZE(obj->Text))
+    if ((size_t)new_text_len + text_len + 1 > obj->Text.size())
         return false;
 
     const int new_text_len_utf8 = ImTextCountUtf8BytesFromStr(new_text, new_text + new_text_len);
     if ((size_t)new_text_len_utf8 + obj->CurLenA + 1 > obj->BufSizeA)
         return false;
 
+    ImWchar* text = obj->Text.begin();
     if (pos != (int)text_len)
-        memmove(obj->Text + (size_t)pos + new_text_len, obj->Text + (size_t)pos, (text_len - (size_t)pos) * sizeof(ImWchar));
-    memcpy(obj->Text + (size_t)pos, new_text, (size_t)new_text_len * sizeof(ImWchar));
+        memmove(text + (size_t)pos + new_text_len, text + (size_t)pos, (text_len - (size_t)pos) * sizeof(ImWchar));
+    memcpy(text + (size_t)pos, new_text, (size_t)new_text_len * sizeof(ImWchar));
 
     obj->CurLenW += new_text_len;
     obj->CurLenA += new_text_len_utf8;
@@ -6667,12 +6670,13 @@ void ImGuiTextEditState::UpdateScrollOffset()
     // Scroll in chunks of quarter width
     const float scroll_x_increment = Size.x * 0.25f;
     ImVec2 cursor_offset;
-    CalcTextSizeW(Font, FontSize, FLT_MAX, Text, Text+StbState.cursor, NULL, &cursor_offset);
+    const ImWchar* text = Text.begin();
+    CalcTextSizeW(Font, FontSize, FLT_MAX, text, text+StbState.cursor, NULL, &cursor_offset);
 
     // If widget became bigger than text (because of a resize), reset horizontal scrolling
     if (ScrollX > 0.0f)
     {
-        const float text_width = CalcTextSizeW(Font, FontSize, FLT_MAX, Text, NULL, NULL).x;
+        const float text_width = CalcTextSizeW(Font, FontSize, FLT_MAX, text, NULL, NULL).x;
         if (text_width < Size.x)
         {
             ScrollX = 0.0f;
@@ -6689,7 +6693,7 @@ void ImGuiTextEditState::UpdateScrollOffset()
 ImVec2 ImGuiTextEditState::CalcDisplayOffsetFromCharIdx(int i) const
 {
     ImVec2 offset;
-    CalcTextSizeW(Font, FontSize, FLT_MAX, Text, Text+i, NULL, &offset);
+    CalcTextSizeW(Font, FontSize, FLT_MAX, Text.begin(), Text.begin()+i, NULL, &offset);
     offset.x -= ScrollX;
     return offset;
 }
@@ -6742,7 +6746,7 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
     if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
     {
         bool pass = false;
-        pass |= (c == '\n' && (flags & ImGuiInputTextFlags_Multiline));
+        pass |= ((c == '\n' || c == '\r') && (flags & ImGuiInputTextFlags_Multiline));
         pass |= (c == '\t' && (flags & ImGuiInputTextFlags_AllowTabInput));
         if (!pass)
             return false;
@@ -6844,9 +6848,11 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             // Start edition
             // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
             // From the moment we focused we are ignoring the content of 'buf'
-            ImFormatString(edit_state.InitialText, IM_ARRAYSIZE(edit_state.InitialText), "%s", buf);
+            edit_state.Text.resize(buf_size);        // wchar count <= utf-8 count
+            edit_state.InitialText.resize(buf_size); // utf-8
+            ImFormatString(edit_state.InitialText.begin(), edit_state.InitialText.size(), "%s", buf);
             const char* buf_end = NULL;
-            edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), buf, NULL, &buf_end);
+            edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.begin(), edit_state.Text.size(), buf, NULL, &buf_end);
             edit_state.CurLenA = buf_end - buf; // We can't get the result from ImFormatString() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
             edit_state.Size = size + style.FramePadding;
             edit_state.InputCursorScreenPos = ImVec2(-1.f,-1.f);
@@ -6987,8 +6993,9 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             {
                 const int ib = edit_state.HasSelection() ? ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end) : 0;
                 const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : (int)edit_state.CurLenW;
-                ImTextStrToUtf8(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), edit_state.Text+ib, edit_state.Text+ie);
-                g.IO.SetClipboardTextFn(g.TempBuffer);
+                edit_state.TempTextBuffer.resize((ie-ib) * 4 + 1);
+                ImTextStrToUtf8(edit_state.TempTextBuffer.begin(), edit_state.TempTextBuffer.size(), edit_state.Text.begin()+ib, edit_state.Text.begin()+ie);
+                g.IO.SetClipboardTextFn(edit_state.TempTextBuffer.begin());
             }
 
             if (cut)
@@ -7040,7 +7047,8 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             // Note that as soon as we can focus into the input box, the in-widget value gets priority over any underlying modification of the input buffer
             // FIXME: We actually always render 'buf' in RenderTextScrolledClipped
             // FIXME-OPT: CPU waste to do this every time the widget is active, should mark dirty state from the stb_textedit callbacks
-            ImTextStrToUtf8(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), edit_state.Text, NULL);
+            edit_state.TempTextBuffer.resize(edit_state.Text.size() * 4);
+            ImTextStrToUtf8(edit_state.TempTextBuffer.begin(), edit_state.TempTextBuffer.size(), edit_state.Text.begin(), NULL);
 
             // User callback
             if ((flags & (ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackAlways)) != 0)
@@ -7071,22 +7079,23 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
                     ImGuiTextEditCallbackData callback_data;
                     callback_data.EventFlag = event_flag; 
                     callback_data.EventKey = event_key;
-                    callback_data.Buf = g.TempBuffer;
+                    callback_data.Buf = edit_state.TempTextBuffer.begin();
                     callback_data.BufSize = edit_state.BufSizeA;
                     callback_data.BufDirty = false;
                     callback_data.Flags = flags;
                     callback_data.UserData = user_data;
 
                     // We have to convert from position from wchar to UTF-8 positions
-                    const int utf8_cursor_pos = callback_data.CursorPos = ImTextCountUtf8BytesFromStr(edit_state.Text, edit_state.Text + edit_state.StbState.cursor);
-                    const int utf8_selection_start = callback_data.SelectionStart = ImTextCountUtf8BytesFromStr(edit_state.Text, edit_state.Text + edit_state.StbState.select_start);
-                    const int utf8_selection_end = callback_data.SelectionEnd = ImTextCountUtf8BytesFromStr(edit_state.Text, edit_state.Text + edit_state.StbState.select_end);
+                    ImWchar* text = edit_state.Text.begin();
+                    const int utf8_cursor_pos = callback_data.CursorPos = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.cursor);
+                    const int utf8_selection_start = callback_data.SelectionStart = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.select_start);
+                    const int utf8_selection_end = callback_data.SelectionEnd = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.select_end);
 
                     // Call user code
                     callback(&callback_data);
 
                     // Read back what user may have modified
-                    IM_ASSERT(callback_data.Buf == g.TempBuffer);              // Invalid to modify those fields
+                    IM_ASSERT(callback_data.Buf == edit_state.TempTextBuffer.begin());  // Invalid to modify those fields
                     IM_ASSERT(callback_data.BufSize == edit_state.BufSizeA);
                     IM_ASSERT(callback_data.Flags == flags);
                     if (callback_data.CursorPos != utf8_cursor_pos)            edit_state.StbState.cursor = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.CursorPos);
@@ -7094,16 +7103,16 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
                     if (callback_data.SelectionEnd != utf8_selection_end)      edit_state.StbState.select_end = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionEnd);
                     if (callback_data.BufDirty)
                     {
-                        edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text, IM_ARRAYSIZE(edit_state.Text), g.TempBuffer, NULL);
-                        edit_state.CurLenA = strlen(g.TempBuffer);
+                        edit_state.CurLenW = ImTextStrFromUtf8(text, edit_state.Text.size(), edit_state.TempTextBuffer.begin(), NULL);
+                        edit_state.CurLenA = strlen(edit_state.TempTextBuffer.begin());
                         edit_state.CursorAnimReset();
                     }
                 }
             }
 
-            if (strcmp(g.TempBuffer, buf) != 0)
+            if (strcmp(edit_state.TempTextBuffer.begin(), buf) != 0)
             {
-                ImFormatString(buf, buf_size, "%s", g.TempBuffer);
+                ImFormatString(buf, buf_size, "%s", edit_state.TempTextBuffer.begin());
                 value_changed = true;
             }
         }
@@ -7126,10 +7135,10 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         const int select_end_idx = edit_state.StbState.select_end;
         if (select_begin_idx != select_end_idx)
         {
-            ImWchar* text_selected_begin = edit_state.Text + ImMin(select_begin_idx,select_end_idx);
-            ImWchar* text_selected_end = edit_state.Text + ImMax(select_begin_idx,select_end_idx);
+            ImWchar* text_selected_begin = edit_state.Text.begin() + ImMin(select_begin_idx,select_end_idx);
+            ImWchar* text_selected_end = edit_state.Text.begin() + ImMax(select_begin_idx,select_end_idx);
             ImVec2 rect_pos;
-            CalcTextSizeW(edit_state.Font, edit_state.FontSize, FLT_MAX, edit_state.Text, text_selected_begin, NULL, &rect_pos);
+            CalcTextSizeW(edit_state.Font, edit_state.FontSize, FLT_MAX, edit_state.Text.begin(), text_selected_begin, NULL, &rect_pos);
 
             ImU32 font_color = window->Color(ImGuiCol_TextSelectedBg);
             for (const ImWchar* p = text_selected_begin; p < text_selected_end; )
