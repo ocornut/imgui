@@ -18,6 +18,9 @@
 		6D2FC5831B2E63A100C130BA /* imgui_impl_ios.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FC5811B2E63A100C130BA /* imgui_impl_ios.mm */; };
 		6D2FC5881B2E64AB00C130BA /* imgui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FC5861B2E64AB00C130BA /* imgui.cpp */; };
 		6D2FC58B1B2E6A5500C130BA /* debug_hud.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FC5891B2E6A5500C130BA /* debug_hud.cpp */; };
+		6D2FC58F1B2F375000C130BA /* uSynergy.c in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FC58D1B2F375000C130BA /* uSynergy.c */; };
+		6D2FC5911B30773F00C130BA /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6D2FC5901B30773F00C130BA /* CFNetwork.framework */; };
+		6D2FC5931B30774900C130BA /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6D2FC5921B30774900C130BA /* SystemConfiguration.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +43,10 @@
 		6D2FC5871B2E64AB00C130BA /* imgui.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui.h; path = ../../imgui.h; sourceTree = "<group>"; };
 		6D2FC5891B2E6A5500C130BA /* debug_hud.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = debug_hud.cpp; sourceTree = "<group>"; };
 		6D2FC58A1B2E6A5500C130BA /* debug_hud.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = debug_hud.h; sourceTree = "<group>"; };
+		6D2FC58D1B2F375000C130BA /* uSynergy.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = uSynergy.c; path = imguiex/uSynergy.c; sourceTree = "<group>"; };
+		6D2FC58E1B2F375000C130BA /* uSynergy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = uSynergy.h; path = imguiex/uSynergy.h; sourceTree = "<group>"; };
+		6D2FC5901B30773F00C130BA /* CFNetwork.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
+		6D2FC5921B30774900C130BA /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -47,6 +54,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6D2FC5931B30774900C130BA /* SystemConfiguration.framework in Frameworks */,
+				6D2FC5911B30773F00C130BA /* CFNetwork.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -56,6 +65,9 @@
 		6D2FC54B1B2E632000C130BA = {
 			isa = PBXGroup;
 			children = (
+				6D2FC5921B30774900C130BA /* SystemConfiguration.framework */,
+				6D2FC5901B30773F00C130BA /* CFNetwork.framework */,
+				6D2FC58C1B2F374200C130BA /* synergy */,
 				6D2FC5841B2E648D00C130BA /* imgui */,
 				6D2FC5561B2E632000C130BA /* imguiex */,
 				6D2FC5551B2E632000C130BA /* Products */,
@@ -108,6 +120,15 @@
 				6D2FC5871B2E64AB00C130BA /* imgui.h */,
 			);
 			name = imgui;
+			sourceTree = "<group>";
+		};
+		6D2FC58C1B2F374200C130BA /* synergy */ = {
+			isa = PBXGroup;
+			children = (
+				6D2FC58D1B2F375000C130BA /* uSynergy.c */,
+				6D2FC58E1B2F375000C130BA /* uSynergy.h */,
+			);
+			name = synergy;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -184,6 +205,7 @@
 			files = (
 				6D2FC55D1B2E632000C130BA /* AppDelegate.m in Sources */,
 				6D2FC5831B2E63A100C130BA /* imgui_impl_ios.mm in Sources */,
+				6D2FC58F1B2F375000C130BA /* uSynergy.c in Sources */,
 				6D2FC5641B2E632000C130BA /* GameViewController.m in Sources */,
 				6D2FC55A1B2E632000C130BA /* main.m in Sources */,
 				6D2FC5881B2E64AB00C130BA /* imgui.cpp in Sources */,
@@ -334,6 +356,7 @@
 				6D2FC57D1B2E632000C130BA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

@@ -12,7 +12,10 @@
 typedef struct DebugHUD
 {
     int show_test_window;
-    float rotation_amount;
+    int show_example_window;
+    float rotation_speed;
+    float cubeColor1[4];
+    float cubeColor2[4];
 } DebugHUD;
 
 #if __cplusplus

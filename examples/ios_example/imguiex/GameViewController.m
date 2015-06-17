@@ -18,6 +18,8 @@ enum
 {
     UNIFORM_MODELVIEWPROJECTION_MATRIX,
     UNIFORM_NORMAL_MATRIX,
+    UNIFORM_DIFFUSE_COLOR,
+    
     NUM_UNIFORMS
 };
 GLint uniforms[NUM_UNIFORMS];
@@ -228,7 +230,7 @@ GLfloat gCubeVertexData[216] =
     
     _modelViewProjectionMatrix = GLKMatrix4Multiply(projectionMatrix, modelViewMatrix);
     
-    _rotation += self.timeSinceLastUpdate * 0.5f;
+    _rotation += self.timeSinceLastUpdate * (_hud.rotation_speed * (M_PI / 180.0));
 }
 
 
@@ -249,13 +251,16 @@ GLfloat gCubeVertexData[216] =
     
     glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, _modelViewProjectionMatrix.m);
     glUniformMatrix3fv(uniforms[UNIFORM_NORMAL_MATRIX], 1, 0, _normalMatrix.m);
-    
+    glUniform3f(uniforms[UNIFORM_DIFFUSE_COLOR], _hud.cubeColor1[0], _hud.cubeColor1[1], _hud.cubeColor1[2] );
+
     glDrawArrays(GL_TRIANGLES, 0, 36);
     
     [self.imgui newFrame];
     
     // Now do our ImGUI UI
     DebugHUD_DoInterface( &_hud );
+    
+    self.effect.light0.diffuseColor = GLKVector4Make( _hud.cubeColor2[0], _hud.cubeColor2[1], _hud.cubeColor2[2], 1.0f);
     
     // Now render Imgui
     [self.imgui render];
@@ -320,6 +325,7 @@ GLfloat gCubeVertexData[216] =
     // Get uniform locations.
     uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] = glGetUniformLocation(_program, "modelViewProjectionMatrix");
     uniforms[UNIFORM_NORMAL_MATRIX] = glGetUniformLocation(_program, "normalMatrix");
+    uniforms[UNIFORM_DIFFUSE_COLOR] = glGetUniformLocation(_program, "diffuseColor");
     
     // Release vertex and fragment shaders.
     if (vertShader) {

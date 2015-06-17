@@ -8,10 +8,17 @@
 #import <OpenGLES/ES3/gl.h>
 #import <OpenGLES/ES3/glext.h>
 
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
 #include "imgui_impl_ios.h"
 #include "imgui.h"
 
-static double       g_Time = 0.0f;
+#include "uSynergy.h"
+
+//static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
 static float        g_MouseWheel = 0.0f;
 static GLuint       g_FontTexture = 0;
@@ -22,14 +29,124 @@ static size_t       g_VboSize = 0;
 static unsigned int g_VboHandle = 0, g_VaoHandle = 0;
 static float        g_displayScale;
 
+static int usynergy_sockfd;
+static bool g_synergyPtrActive = false;
+static uint16_t g_mousePosX = 0;
+static uint16_t g_mousePosY = 0;
+static uint16_t g_mouseWheel = 0;
+
+
 static void ImGui_ImplIOS_RenderDrawLists (ImDrawList** const cmd_lists, int cmd_lists_count);
 bool ImGui_ImplIOS_CreateDeviceObjects();
+
+uSynergyBool ImGui_ConnectFunc(uSynergyCookie cookie)
+{
+    NSLog( @"Connect Func!");
+    struct addrinfo hints, *res;
+    
+    // first, load up address structs with getaddrinfo():
+    
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
+    hints.ai_socktype = SOCK_STREAM;
+    
+    // we could put "80" instead on "http" on the next line:
+    getaddrinfo("pareidolia", "24800", &hints, &res);
+    
+    // make a socket:
+    
+    usynergy_sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    
+    // connect it to the address and port we passed in to getaddrinfo():
+    int ret = connect(usynergy_sockfd, res->ai_addr, res->ai_addrlen);
+    if (!ret) {
+        NSLog( @"Connect suceeded...");
+    } else {
+        NSLog( @"Connect failed, %d", ret );
+    }
+    
+    
+    
+    return USYNERGY_TRUE;
+}
+
+uSynergyBool ImGui_SendFunc(uSynergyCookie cookie, const uint8_t *buffer, int length)
+{
+    NSLog( @"Send Func" );
+    send( usynergy_sockfd, buffer, length, 0 );
+    
+    return USYNERGY_TRUE;
+}
+
+uSynergyBool ImGui_RecvFunc(uSynergyCookie cookie, uint8_t *buffer, int maxLength, int* outLength)
+{
+    *outLength = (int)recv( usynergy_sockfd, buffer, maxLength, 0 );
+    
+    return USYNERGY_TRUE;
+}
+
+void ImGui_SleepFunc(uSynergyCookie cookie, int timeMs)
+{
+    usleep( timeMs * 1000 );
+}
+
+uint32_t ImGui_GetTimeFunc()
+{
+    struct timeval  tv;
+    gettimeofday(&tv, NULL);
+    
+    return (int32_t)((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000);
+}
+
+void ImGui_TraceFunc(uSynergyCookie cookie, const char *text)
+{
+    puts(text);
+}
+
+void ImGui_ScreenActiveCallback(uSynergyCookie cookie, uSynergyBool active)
+{
+    g_synergyPtrActive = active;
+    printf( "Synergy: screen activate %s\n", active?"YES":"NO" );
+}
+
+void ImGui_MouseCallback(uSynergyCookie cookie, uint16_t x, uint16_t y, int16_t wheelX, int16_t wheelY,
+                         uSynergyBool buttonLeft, uSynergyBool buttonRight, uSynergyBool buttonMiddle)
+{
+    printf("Synergy: mouse callback\n" );
+    g_mousePosX = x;
+    g_mousePosY = y;
+    g_mouseWheel = wheelX;
+    g_MousePressed[0] = buttonLeft;
+    g_MousePressed[1] = buttonMiddle;
+    g_MousePressed[2] = buttonRight;
+    
+}
+
+void ImGui_KeyboardCallback(uSynergyCookie cookie, uint16_t key,
+                            uint16_t modifiers, uSynergyBool down, uSynergyBool repeat)
+{
+    printf("Synergy: keyboard callback\n");
+}
+
+void ImGui_JoystickCallback(uSynergyCookie cookie, uint8_t joyNum, uint16_t buttons, int8_t leftStickX, int8_t leftStickY, int8_t rightStickX, int8_t rightStickY)
+{
+    printf("Synergy: joystick callback\n");
+}
+
+void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat format, const uint8_t *data, uint32_t size)
+{
+    printf("Synergy: clipboard callback\n" );
+}
+
 
 @interface ImGuiHelper ()
 {
     BOOL _mouseDown;
     BOOL _mouseTapped;
     CGPoint _touchPos;
+    
+    uSynergyContext _synergyCtx;
+    dispatch_queue_t _synergyQueue;
 }
 @property (nonatomic, weak) UIView *view;
 @end
@@ -55,7 +172,7 @@ bool ImGui_ImplIOS_CreateDeviceObjects();
     g_displayScale = [[UIScreen mainScreen] scale];
     
     ImGuiStyle &style = ImGui::GetStyle();
-    style.TouchExtraPadding = ImVec2( 8.0, 8.0 );
+    style.TouchExtraPadding = ImVec2( 4.0, 4.0 );
     
     io.RenderDrawListsFn = ImGui_ImplIOS_RenderDrawLists;
     
@@ -64,6 +181,48 @@ bool ImGui_ImplIOS_CreateDeviceObjects();
     
     UITapGestureRecognizer *tapRecoginzer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector( viewDidTap:)];
     [self.view addGestureRecognizer:tapRecoginzer];
+    
+    // Init synergy
+    NSString *bundleName = [[[NSBundle mainBundle] infoDictionary] objectForKey:(NSString*)kCFBundleNameKey];
+
+    uSynergyInit( &_synergyCtx );
+    _synergyCtx.m_clientName = strdup( [bundleName UTF8String] );
+    _synergyCtx.m_clientWidth = self.view.bounds.size.width;
+    _synergyCtx.m_clientHeight = self.view.bounds.size.height;
+
+    _synergyCtx.m_connectFunc = ImGui_ConnectFunc;
+    _synergyCtx.m_sendFunc = ImGui_SendFunc;
+    _synergyCtx.m_receiveFunc = ImGui_RecvFunc;
+    _synergyCtx.m_sleepFunc = ImGui_SleepFunc;
+    _synergyCtx.m_traceFunc = ImGui_TraceFunc;
+    _synergyCtx.m_getTimeFunc = ImGui_GetTimeFunc;
+
+    _synergyCtx.m_traceFunc = ImGui_TraceFunc;
+    _synergyCtx.m_screenActiveCallback = ImGui_ScreenActiveCallback;
+    _synergyCtx.m_mouseCallback = ImGui_MouseCallback;
+//
+//    uSynergyCookie					m_cookie;										/* Cookie pointer passed to callback functions (can be NULL) */
+//    uSynergyTraceFunc				m_traceFunc;									/* Function for tracing status (can be NULL) */
+//    uSynergyScreenActiveCallback	m_screenActiveCallback;							/* Callback for entering and leaving screen */
+//    uSynergyMouseCallback			m_mouseCallback;								/* Callback for mouse events */
+//    uSynergyKeyboardCallback		m_keyboardCallback;								/* Callback for keyboard events */
+//    uSynergyJoystickCallback		m_joystickCallback;								/* Callback for joystick events */
+//    uSynergyClipboardCallback		m_clipboardCallback;							/* Callback for clipboard events */
+    
+//    uSynergyConnectFunc				m_connectFunc;									/* Connect function */
+//    uSynergySendFunc				m_sendFunc;										/* Send data function */
+//    uSynergyReceiveFunc				m_receiveFunc;									/* Receive data function */
+//    uSynergySleepFunc				m_sleepFunc;									/* Thread sleep function */
+//    uSynergyGetTimeFunc				m_getTimeFunc;									/* Get current time function */
+
+    
+    // Create a background thread for synergy
+    _synergyQueue = dispatch_queue_create( "imgui-usynergy", NULL );
+    dispatch_async( _synergyQueue, ^{
+        while (1) {
+            uSynergyUpdate( &_synergyCtx );
+        }
+    });
     
 }
 
@@ -98,6 +257,7 @@ bool ImGui_ImplIOS_CreateDeviceObjects();
 - (void)newFrame
 {
     ImGuiIO& io = ImGui::GetIO();
+    ImGuiStyle &style = ImGui::GetStyle();
     
     if (!g_FontTexture)
     {
@@ -106,17 +266,30 @@ bool ImGui_ImplIOS_CreateDeviceObjects();
     
     io.DisplaySize = ImVec2( _view.bounds.size.width, _view.bounds.size.height );
 
-    io.MousePos = ImVec2(_touchPos.x, _touchPos.y );
-    if ((_mouseDown) || (_mouseTapped))
+    io.MouseDrawCursor = g_synergyPtrActive;
+    if (g_synergyPtrActive)
     {
-        printf("Button0 down\n" );
-        io.MouseDown[0] = true;
-        _mouseTapped = NO;
+        style.TouchExtraPadding = ImVec2( 0.0, 0.0 );
+        io.MousePos = ImVec2( g_mousePosX, g_mousePosY );
+        for (int i=0; i < 3; i++)
+        {
+            io.MouseDown[i] = g_MousePressed[i];
+        }
     }
     else
     {
-        printf("Button0 UP\n" );
-        io.MouseDown[0] = false;
+        // Synergy not active, use touch events
+        style.TouchExtraPadding = ImVec2( 4.0, 4.0 );
+        io.MousePos = ImVec2(_touchPos.x, _touchPos.y );
+        if ((_mouseDown) || (_mouseTapped))
+        {
+            io.MouseDown[0] = true;
+            _mouseTapped = NO;
+        }
+        else
+        {
+            io.MouseDown[0] = false;
+        }
     }
     
     ImGui::NewFrame();
@@ -129,7 +302,9 @@ bool ImGui_ImplIOS_CreateDeviceObjects();
 static void ImGui_ImplIOS_RenderDrawLists (ImDrawList** const cmd_lists, int cmd_lists_count)
 {
     if (cmd_lists_count == 0)
+    {
         return;
+    }
     
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
     GLint last_program, last_texture;
@@ -209,6 +384,7 @@ static void ImGui_ImplIOS_RenderDrawLists (ImDrawList** const cmd_lists, int cmd
         }
         cmd_offset = vtx_offset;
     }
+    
     
     // Restore modified state
     glBindVertexArray(0);
