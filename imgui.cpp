@@ -6857,7 +6857,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
                 edit_state.Id = id;
                 edit_state.ScrollX = 0.0f;
                 stb_textedit_initialize_state(&edit_state.StbState, !is_multiline); 
-                if (focus_requested_by_code)
+                if (!is_multiline && focus_requested_by_code)
                     select_all = true;
             }
             else
@@ -6868,7 +6868,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
                 edit_state.StbState.select_start = ImMin(edit_state.StbState.select_start, (int)edit_state.CurLenW);
                 edit_state.StbState.select_end = ImMin(edit_state.StbState.select_end, (int)edit_state.CurLenW);
             }
-            if (focus_requested_by_tab || (user_clicked && is_ctrl_down))
+            if (!is_multiline && (focus_requested_by_tab || (user_clicked && is_ctrl_down)))
                 select_all = true;
         }
         SetActiveId(id, window);
@@ -6966,7 +6966,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
                     edit_state.OnKeyPressed((int)c);
             }
         }
-        else if ((flags & ImGuiInputTextFlags_AllowTabInput) && IsKeyPressedMap(ImGuiKey_Tab))
+        else if ((flags & ImGuiInputTextFlags_AllowTabInput) && IsKeyPressedMap(ImGuiKey_Tab) && !is_ctrl_down && !is_shift_down && !is_alt_down)
         {
             unsigned int c = '\t';
             if (InputTextFilterCharacter(&c, flags, callback, user_data))
