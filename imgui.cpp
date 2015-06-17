@@ -7038,7 +7038,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         if (cancel_edit)
         {
             // Restore initial value
-            ImFormatString(buf, buf_size, "%s", edit_state.InitialText);
+            ImFormatString(buf, buf_size, "%s", edit_state.InitialText.begin());
             value_changed = true;
         }
         else
@@ -7465,7 +7465,6 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         if (height_in_items < 0)
             height_in_items = 7;
 
-        const ImVec2 backup_pos = ImGui::GetCursorPos();
         const float popup_height = (label_size.y + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
         const ImRect popup_rect(ImVec2(frame_bb.Min.x, frame_bb.Max.y), ImVec2(frame_bb.Max.x, frame_bb.Max.y + popup_height));
         ImGui::SetNextWindowPos(popup_rect.Min);
