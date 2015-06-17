@@ -1207,11 +1207,6 @@ struct ImGuiTextEditState
     void                OnKeyPressed(int key);
     void                UpdateScrollOffset();
     ImVec2              CalcDisplayOffsetFromCharIdx(int i) const;
-
-    // Static functions because they are used to render non-focused instances of a text input box
-    static const char*      GetTextPointerClippedA(ImFont* font, float font_size, const char* text, float width, ImVec2* out_text_size = NULL);
-    static const ImWchar*   GetTextPointerClippedW(ImFont* font, float font_size, const ImWchar* text, const ImWchar* text_end, float width, ImVec2* out_text_size = NULL);
-    static void             RenderTextScrolledClipped(ImFont* font, float font_size, const char* text, const ImVec2& pos, const ImVec2& size, float scroll_x);
 };
 
 // Data saved in imgui.ini file
@@ -6524,7 +6519,8 @@ bool ImGui::RadioButton(const char* label, int* v, int v_button)
 
 static ImVec2 CalcTextSizeW(ImFont* font, float font_size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL, ImVec2* out_offset = NULL, bool stop_on_new_line = false)
 {
-    IM_ASSERT(text_end);
+    if (!text_end)
+        text_end = text_begin + ImStrlenW(text_begin);
 
     const float scale = font_size / font->FontSize;
     const float line_height = font->FontSize * scale;
@@ -6670,12 +6666,13 @@ void ImGuiTextEditState::UpdateScrollOffset()
 {
     // Scroll in chunks of quarter width
     const float scroll_x_increment = Size.x * 0.25f;
-    const float cursor_offset_x = CalcTextSizeW(Font, FontSize, FLT_MAX, Text, Text+StbState.cursor, NULL).x;
+    ImVec2 cursor_offset;
+    CalcTextSizeW(Font, FontSize, FLT_MAX, Text, Text+StbState.cursor, NULL, &cursor_offset);
 
     // If widget became bigger than text (because of a resize), reset horizontal scrolling
     if (ScrollX > 0.0f)
     {
-        const float text_width = cursor_offset_x + CalcTextSizeW(Font, FontSize, FLT_MAX, Text+StbState.cursor, NULL, NULL).x;
+        const float text_width = CalcTextSizeW(Font, FontSize, FLT_MAX, Text, NULL, NULL).x;
         if (text_width < Size.x)
         {
             ScrollX = 0.0f;
@@ -6683,66 +6680,18 @@ void ImGuiTextEditState::UpdateScrollOffset()
         }
     }
 
-    if (cursor_offset_x < ScrollX)
-        ScrollX = ImMax(0.0f, cursor_offset_x - scroll_x_increment);    
-    else if (cursor_offset_x - Size.x >= ScrollX)
-        ScrollX = cursor_offset_x - Size.x + scroll_x_increment;
+    if (cursor_offset.x < ScrollX)
+        ScrollX = ImMax(0.0f, cursor_offset.x - scroll_x_increment);    
+    else if (cursor_offset.x - Size.x >= ScrollX)
+        ScrollX = cursor_offset.x - Size.x + scroll_x_increment;
 }
 
 ImVec2 ImGuiTextEditState::CalcDisplayOffsetFromCharIdx(int i) const
 {
-    const ImWchar* text_start = GetTextPointerClippedW(Font, FontSize, Text, Text+CurLenW, ScrollX, NULL);
-    const ImWchar* text_end = (Text+i >= text_start) ? Text+i : text_start;                    // Clip if requested character is outside of display
-    IM_ASSERT(text_end >= text_start);
-
-    // FIXME-WIP-MULTILINE
     ImVec2 offset;
-    CalcTextSizeW(Font, FontSize, Size.x+1, text_start, text_end, NULL, &offset);
+    CalcTextSizeW(Font, FontSize, FLT_MAX, Text, Text+i, NULL, &offset);
+    offset.x -= ScrollX;
     return offset;
-}
-
-// [Static]
-const char* ImGuiTextEditState::GetTextPointerClippedA(ImFont* font, float font_size, const char* text, float width, ImVec2* out_text_size)
-{
-    if (width <= 0.0f)
-        return text;
-
-    const char* text_clipped_end = NULL;
-    const ImVec2 text_size = font->CalcTextSizeA(font_size, width, 0.0f, text, NULL, &text_clipped_end);
-    if (out_text_size)
-        *out_text_size = text_size;
-    return text_clipped_end;
-}
-
-// [Static]
-const ImWchar* ImGuiTextEditState::GetTextPointerClippedW(ImFont* font, float font_size, const ImWchar* text, const ImWchar* text_end, float width, ImVec2* out_text_size)
-{
-    if (width <= 0.0f)
-        return text;
-
-    const ImWchar* text_clipped_end = NULL;
-    const ImVec2 text_size = CalcTextSizeW(font, font_size, width, text, text_end, &text_clipped_end);
-    if (out_text_size)
-        *out_text_size = text_size;
-    return text_clipped_end;
-}
-
-// [Static]
-void ImGuiTextEditState::RenderTextScrolledClipped(ImFont* font, float font_size, const char* buf, const ImVec2& pos, const ImVec2& size, float scroll_x)
-{
-    ImGuiWindow* window = GetCurrentWindow();
-    const ImU32 font_color = window->Color(ImGuiCol_Text);
-    //window->DrawList->AddLine(pos, pos+ImVec2(width,0), 0xFF00FFFF);
-
-    // Determine start and end of visible string
-    // FIXME-OPT: This is pretty slow for what it does.
-    const char* text_start = scroll_x <= 0.0f ? buf : GetTextPointerClippedA(font, font_size, buf, scroll_x, NULL);
-    const char* text_end = GetTextPointerClippedA(font, font_size, text_start, size.x + 1, NULL); // +1 to allow character spacing to fit outside the allowed width
-    window->DrawList->AddText(font, font_size, pos, font_color, text_start, text_end);
-
-    // Log as text
-    if (GImGui->LogEnabled)
-        LogText(pos, buf, NULL);
 }
 
 // Public API to manipulate UTF-8 text
@@ -7162,8 +7111,9 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
-    const ImVec2 font_off_up = ImVec2(0.0f, g.FontSize+1.0f);    // FIXME: those offsets are part of the style or font API
-    const ImVec2 font_off_dn = ImVec2(0.0f, 2.0f);
+    const float font_offy_up = g.FontSize+1.0f;    // FIXME: those offsets are part of the style or font API
+    const float font_offy_dn = 2.0f;
+    const ImVec2 render_pos = frame_bb.Min + style.FramePadding;
 
     if (g.ActiveId == id)
     {
@@ -7172,23 +7122,39 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         const int select_end_idx = edit_state.StbState.select_end;
         if (select_begin_idx != select_end_idx)
         {
-            const ImVec2 select_begin_pos = frame_bb.Min + style.FramePadding + edit_state.CalcDisplayOffsetFromCharIdx(ImMin(select_begin_idx,select_end_idx));
-            const ImVec2 select_end_pos = frame_bb.Min + style.FramePadding + edit_state.CalcDisplayOffsetFromCharIdx(ImMax(select_begin_idx,select_end_idx));
-            window->DrawList->AddRectFilled(select_begin_pos - font_off_up, select_end_pos + font_off_dn, window->Color(ImGuiCol_TextSelectedBg));
+            ImVec2 rect_pos;
+            ImWchar* text_selected_begin = edit_state.Text + ImMin(select_begin_idx,select_end_idx);
+            ImWchar* text_selected_end = edit_state.Text + ImMax(select_begin_idx,select_end_idx);
+            CalcTextSizeW(edit_state.Font, edit_state.FontSize, FLT_MAX, edit_state.Text, text_selected_begin, NULL, &rect_pos);
+
+            ImU32 font_color = window->Color(ImGuiCol_TextSelectedBg);
+            for (const ImWchar* p = text_selected_begin; p < text_selected_end; )
+            {
+                ImVec2 rect_size = CalcTextSizeW(edit_state.Font, edit_state.FontSize, FLT_MAX, p, text_selected_end, &p, NULL, true);
+                window->DrawList->AddRectFilled(render_pos + rect_pos + ImVec2(-edit_state.ScrollX, -font_offy_up), render_pos + rect_pos + ImVec2(rect_size.x - edit_state.ScrollX, +font_offy_dn), font_color);
+                rect_pos.x = 0.0f;
+                rect_pos.y += g.FontSize;
+            }
         }
     }
 
+    // FIMXE-WIP-MULTILINE
     //const float render_scroll_x = (g.ActiveId == id) ? edit_state.ScrollX : 0.0f;
     const float render_scroll_x = (edit_state.Id == id) ? edit_state.ScrollX : 0.0f;
-    ImGuiTextEditState::RenderTextScrolledClipped(g.Font, g.FontSize, buf, frame_bb.Min + style.FramePadding, size + style.FramePadding, render_scroll_x);
+    const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x + style.FramePadding.x*2.0f, frame_bb.Min.y + size.y + style.FramePadding.y*2.0f);
+    window->DrawList->AddText(g.Font, g.FontSize, render_pos - ImVec2(render_scroll_x, 0.0f), window->Color(ImGuiCol_Text), buf, NULL, 0.0f, &clip_rect);
+
+    // Log as text
+    if (GImGui->LogEnabled)
+        LogText(render_pos, buf, NULL);
 
     if (g.ActiveId == id)
     {
-        const ImVec2 cursor_pos = frame_bb.Min + style.FramePadding + edit_state.CalcDisplayOffsetFromCharIdx(edit_state.StbState.cursor);
+        const ImVec2 cursor_pos = render_pos + edit_state.CalcDisplayOffsetFromCharIdx(edit_state.StbState.cursor);
 
         // Draw blinking cursor
         if (g.InputTextState.CursorIsVisible())
-            window->DrawList->AddLine(cursor_pos - font_off_up + ImVec2(0,2), cursor_pos + font_off_dn - ImVec2(0,3), window->Color(ImGuiCol_Text));
+            window->DrawList->AddLine(cursor_pos + ImVec2(0,2-font_offy_up), cursor_pos + ImVec2(0,-3+font_offy_dn), window->Color(ImGuiCol_Text));
         
         // Notify OS of text input position for advanced IME
         if (io.ImeSetInputScreenPosFn && ImLengthSqr(edit_state.InputCursorScreenPos - cursor_pos) > 0.0001f)
