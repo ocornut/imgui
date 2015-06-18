@@ -564,11 +564,12 @@ static inline int   ImUpperPowerOfTwo(int v) { v--; v |= v >> 1; v |= v >> 2; v 
 static inline bool  ImCharIsSpace(int c) { return c == ' ' || c == '\t' || c == 0x3000; }
 
 // Helpers: UTF-8 <> wchar
-static int          ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
+static inline int   ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
 static ptrdiff_t    ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end);   // return output UTF-8 bytes count
 static int          ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
 static ptrdiff_t    ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end, const char** in_remaining = NULL);   // return input UTF-8 bytes count
 static int          ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
+static inline int   ImTextCountUtf8BytesFromChar(unsigned int in_char);                                                // return output UTF-8 bytes count
 static int          ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string as UTF-8 code-points
 
 //-----------------------------------------------------------------------------
@@ -9745,48 +9746,50 @@ static int ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end
 }
 
 // Based on stb_to_utf8() from github.com/nothings/stb/
-static int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int c)
+static inline int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int c)
 {
-    if (c)
+    if (c < 0x80) 
     {
-        size_t i = 0;
-        size_t n = buf_size;
-        if (c < 0x80) 
-        {
-            if (i+1 > n) return 0;
-            buf[i++] = (char)c;
-            return 1;
-        } 
-        else if (c < 0x800) 
-        {
-            if (i+2 > n) return 0;
-            buf[i++] = (char)(0xc0 + (c >> 6));
-            buf[i++] = (char)(0x80 + (c & 0x3f));
-            return 2;
-        }
-        else if (c >= 0xdc00 && c < 0xe000)
-        {
-            return 0;
-        } 
-        else if (c >= 0xd800 && c < 0xdc00) 
-        {
-            if (i+4 > n) return 0;
-            buf[i++] = (char)(0xf0 + (c >> 18));
-            buf[i++] = (char)(0x80 + ((c >> 12) & 0x3f));
-            buf[i++] = (char)(0x80 + ((c >> 6) & 0x3f));
-            buf[i++] = (char)(0x80 + ((c ) & 0x3f));
-            return 4;
-        }
-        //else if (c < 0x10000)
-        {
-            if (i+3 > n) return 0;
-            buf[i++] = (char)(0xe0 + (c >> 12));
-            buf[i++] = (char)(0x80 + ((c>> 6) & 0x3f));
-            buf[i++] = (char)(0x80 + ((c ) & 0x3f));
-            return 3;
-        }
+        buf[0] = (char)c;
+        return 1;
     }
-    return 0;
+    if (c < 0x800) 
+    {
+        if (buf_size < 2) return 0;
+        buf[0] = (char)(0xc0 + (c >> 6));
+        buf[1] = (char)(0x80 + (c & 0x3f));
+        return 2;
+    }
+    if (c >= 0xdc00 && c < 0xe000)
+    {
+        return 0;
+    } 
+    if (c >= 0xd800 && c < 0xdc00) 
+    {
+        if (buf_size < 4) return 0;
+        buf[0] = (char)(0xf0 + (c >> 18));
+        buf[1] = (char)(0x80 + ((c >> 12) & 0x3f));
+        buf[2] = (char)(0x80 + ((c >> 6) & 0x3f));
+        buf[3] = (char)(0x80 + ((c ) & 0x3f));
+        return 4;
+    }
+    //else if (c < 0x10000)
+    {
+        if (buf_size < 3) return 0;
+        buf[0] = (char)(0xe0 + (c >> 12));
+        buf[1] = (char)(0x80 + ((c>> 6) & 0x3f));
+        buf[2] = (char)(0x80 + ((c ) & 0x3f));
+        return 3;
+    }
+}
+
+static inline int ImTextCountUtf8BytesFromChar(unsigned int c)
+{
+    if (c < 0x80) return 1;
+    if (c < 0x800) return 2;
+    if (c >= 0xdc00 && c < 0xe000) return 0;
+    if (c >= 0xd800 && c < 0xdc00) return 4;
+    return 3;
 }
 
 static ptrdiff_t ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end)
@@ -9795,8 +9798,11 @@ static ptrdiff_t ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_t
     const char* buf_end = buf + buf_size;
     while (buf_out < buf_end-1 && (!in_text_end || in_text < in_text_end) && *in_text)
     {
-        buf_out += ImTextCharToUtf8(buf_out, (uintptr_t)(buf_end-buf_out-1), (unsigned int)*in_text);
-        in_text++;
+        unsigned int c = (unsigned int)(*in_text++);
+        if (c < 0x80)
+            *buf_out++ = (char)c;
+        else
+            buf_out += ImTextCharToUtf8(buf_out, (uintptr_t)(buf_end-buf_out-1), c);
     }
     *buf_out = 0;
     return buf_out - buf;
@@ -9807,9 +9813,11 @@ static int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in
     int bytes_count = 0;
     while ((!in_text_end || in_text < in_text_end) && *in_text)
     {
-        char dummy[5]; // FIXME-OPT
-        bytes_count += ImTextCharToUtf8(dummy, 5, (unsigned int)*in_text);
-        in_text++;
+        unsigned int c = (unsigned int)(*in_text++);
+        if (c < 0x80)
+            bytes_count++;
+        else
+            bytes_count += ImTextCountUtf8BytesFromChar(c);
     }
     return bytes_count;
 }
