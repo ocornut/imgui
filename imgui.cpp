@@ -6867,22 +6867,18 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             SetActiveId(0);
     }
 
-    // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
-    // Down the line we should have a cleaner concept of focused vs active in the library.
-    if (g.ActiveId == id)
-        g.ActiveIdIsFocusedOnly = !io.MouseDown[0];
-
     bool value_changed = false;
     bool cancel_edit = false;
     bool enter_pressed = false;
-    
-    // Update some data if we are active or last active
-    if (g.ActiveId == id) //if (edit_state.Id == id)  // Works, but double-click to select-all sets cursors to end which in turn tends to scroll toward the right when shrinking widget.
-    {
-        edit_state.BufSizeA = buf_size;
-    }
+
     if (g.ActiveId == id)
     {
+        edit_state.BufSizeA = buf_size;
+
+        // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
+        // Down the line we should have a cleaner concept of focused vs active in the library.
+        g.ActiveIdIsFocusedOnly = !io.MouseDown[0];
+
         // Edit in progress
         const float mouse_x = (g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + edit_state.ScrollX;
         const float mouse_y = (is_multiline ? (g.IO.MousePos.y - draw_window->DC.CursorPos.y - style.FramePadding.y) : (g.FontSize*0.5f));
@@ -7106,16 +7102,17 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     const ImVec2 render_scroll = ImVec2((edit_state.Id == id) ? edit_state.ScrollX : 0.0f, 0.0f);
     ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x + style.FramePadding.x*2.0f, frame_bb.Min.y + size.y + style.FramePadding.y*2.0f);
 
-    if (g.ActiveId == id)
+    if (g.ActiveId == id || (edit_state.Id == id && is_multiline && g.ActiveId == draw_window->GetID("#SCROLLY")))
     {
+        edit_state.CursorAnim += g.IO.DeltaTime;
+
+        // Scroll 
         if (edit_state.CursorFollow)
         {
-            edit_state.CursorFollow = false;
-
             // Horizontal scroll in chunks of quarter width
             ImVec2 cursor_offset;
             CalcTextSizeW(g.Font, g.FontSize, FLT_MAX, edit_state.Text.begin(), edit_state.Text.begin() + edit_state.StbState.cursor, NULL, &cursor_offset);
- 
+
             const float scroll_increment_x = size.x * 0.25f;
             if (cursor_offset.x < edit_state.ScrollX)
                 edit_state.ScrollX = ImMax(0.0f, cursor_offset.x - scroll_increment_x);    
@@ -7131,11 +7128,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
                     draw_window->ScrollY = cursor_offset.y - size.y;
             }
         }
-    }
-
-    if (g.ActiveId == id || (edit_state.Id == id && is_multiline && g.ActiveId == draw_window->GetID("#SCROLLY")))
-    {
-        edit_state.CursorAnim += g.IO.DeltaTime;
+        edit_state.CursorFollow = false;
 
         // Draw selection
         int select_begin_idx = edit_state.StbState.select_start;
