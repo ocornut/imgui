@@ -6780,7 +6780,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + size + style.FramePadding*2.0f);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? (style.ItemInnerSpacing.x + label_size.x) : 0.0f, 0.0f));
 
-    ImGuiWindow* child_window = NULL;
+    ImGuiWindow* draw_window = window;
     if (is_multiline)
     {
         ImGui::BeginGroup();
@@ -6790,9 +6790,9 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             ImGui::EndGroup();
             return false;
         }
-        child_window = GetCurrentWindow();
-        child_window->DC.CursorPos += style.FramePadding;
-        size.x -= child_window->ScrollbarWidth();
+        draw_window = GetCurrentWindow();
+        draw_window->DC.CursorPos += style.FramePadding;
+        size.x -= draw_window->ScrollbarWidth();
     }
     else
     {
@@ -6800,7 +6800,6 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         if (!ItemAdd(total_bb, &id))
             return false;
     }
-    ImGuiWindow* draw_window = child_window ? child_window : window;
 
     // NB: we are only allowed to access 'edit_state' if we are the active widget.
     ImGuiTextEditState& edit_state = g.InputTextState;
@@ -6884,7 +6883,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     {
         // Edit in progress
         const float mouse_x = (g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + edit_state.ScrollX;
-        const float mouse_y = (is_multiline ? (g.IO.MousePos.y - child_window->DC.CursorPos.y - style.FramePadding.y) : (g.FontSize*0.5f));
+        const float mouse_y = (is_multiline ? (g.IO.MousePos.y - draw_window->DC.CursorPos.y - style.FramePadding.y) : (g.FontSize*0.5f));
 
         if (select_all || (hovered && io.MouseDoubleClicked[0]))
         {
@@ -6926,8 +6925,8 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         const bool is_ctrl_only = is_ctrl_down && !is_alt_down && !is_shift_down;
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
-        else if (is_multiline && IsKeyPressedMap(ImGuiKey_UpArrow))     { bool move_cursor = true; if (is_ctrl_down) { child_window->ScrollY -= g.FontSize; } if (move_cursor) edit_state.OnKeyPressed(STB_TEXTEDIT_K_UP | k_mask); }
-        else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { bool move_cursor = true; if (is_ctrl_down) { child_window->ScrollY += g.FontSize; } if (move_cursor) edit_state.OnKeyPressed(STB_TEXTEDIT_K_DOWN| k_mask); }
+        else if (is_multiline && IsKeyPressedMap(ImGuiKey_UpArrow))     { bool move_cursor = true; if (is_ctrl_down) { draw_window->ScrollY -= g.FontSize; } if (move_cursor) edit_state.OnKeyPressed(STB_TEXTEDIT_K_UP | k_mask); }
+        else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { bool move_cursor = true; if (is_ctrl_down) { draw_window->ScrollY += g.FontSize; } if (move_cursor) edit_state.OnKeyPressed(STB_TEXTEDIT_K_DOWN| k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Home))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_End))                         { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Delete))                      { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
@@ -7099,7 +7098,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
 
     const float font_offy_up = g.FontSize+1.0f;    // FIXME: those offsets should be part of the style? they don't play so well with multi-line selection.
     const float font_offy_dn = 2.0f;
-    const ImVec2 render_pos = is_multiline ? GetCurrentWindow()->DC.CursorPos : frame_bb.Min + style.FramePadding;
+    const ImVec2 render_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
 
     //const ImVec2 render_scroll = (g.ActiveId == id) ? edit_state.Scroll : ImVec2(0.f, 0.f);
     const ImVec2 render_scroll = ImVec2((edit_state.Id == id) ? edit_state.ScrollX : 0.0f, 0.0f);
@@ -7125,10 +7124,10 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             // Vertical scroll
             if (is_multiline)
             {
-                if (cursor_offset.y - g.FontSize < child_window->ScrollY)
-                    child_window->ScrollY = ImMax(0.0f, cursor_offset.y - g.FontSize);
-                else if (cursor_offset.y - g.FontSize*0 - size.y >= child_window->ScrollY)
-                    child_window->ScrollY = cursor_offset.y - size.y;// + g.FontSize;
+                if (cursor_offset.y - g.FontSize < draw_window->ScrollY)
+                    draw_window->ScrollY = ImMax(0.0f, cursor_offset.y - g.FontSize);
+                else if (cursor_offset.y - g.FontSize*0 - size.y >= draw_window->ScrollY)
+                    draw_window->ScrollY = cursor_offset.y - size.y;
             }
         }
     }
@@ -7150,7 +7149,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             for (const ImWchar* p = text_selected_begin; p < text_selected_end; )
             {
                 ImVec2 rect_size = CalcTextSizeW(g.Font, g.FontSize, FLT_MAX, p, text_selected_end, &p, NULL, true);
-                if (rect_size.x <= 0.0f) rect_size.x = 3.0f; // So we can see selected empty lines
+                if (rect_size.x <= 0.0f) rect_size.x = (float)(int)(g.Font->GetCharAdvance((unsigned short)' ') * 0.50f); // So we can see selected empty lines
                 ImRect rect(render_pos - render_scroll + rect_pos + ImVec2(0.0f, (p == text_selected_begin) ? -font_offy_up : -g.FontSize), render_pos - render_scroll + rect_pos + ImVec2(rect_size.x, (p == text_selected_end) ? +font_offy_dn : 0.0f));
                 rect.Clip(clip_rect);
                 if (rect.Overlaps(clip_rect))
