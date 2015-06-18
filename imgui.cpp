@@ -3293,13 +3293,13 @@ void ImGui::EndChild()
 }
 
 // Helper to create a child window / scrolling region that looks like a normal widget frame.
-void ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size)
+bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size)
 {
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.Colors[ImGuiCol_FrameBg]);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, style.FrameRounding);
-    ImGui::BeginChild(id, size);
+    return ImGui::BeginChild(id, size);
 }
 
 void ImGui::EndChildFrame()
@@ -6775,7 +6775,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
     ImVec2 size;
     size.x = (size_arg.x != 0.0f) ? size_arg.x : ImGui::CalcItemWidth();
-    size.y = (size_arg.y != 0.0f) ? size_arg.y : is_multiline ? ImGui::GetTextLineHeight() * 8.0f : label_size.y; // Arbitrary default
+    size.y = (size_arg.y != 0.0f) ? size_arg.y : is_multiline ? ImGui::GetTextLineHeight() * 8.0f : label_size.y; // Arbitrary default of 8 lines high for multi-line
 
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + size + style.FramePadding*2.0f);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? (style.ItemInnerSpacing.x + label_size.x) : 0.0f, 0.0f));
@@ -6784,7 +6784,12 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     if (is_multiline)
     {
         ImGui::BeginGroup();
-        ImGui::BeginChildFrame(id, frame_bb.GetSize());
+        if (!ImGui::BeginChildFrame(id, frame_bb.GetSize()))
+        {
+            ImGui::EndChildFrame();
+            ImGui::EndGroup();
+            return false;
+        }
         child_window = GetCurrentWindow();
         child_window->DC.CursorPos += style.FramePadding;
         size.x -= child_window->ScrollbarWidth();
@@ -7092,7 +7097,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     if (!is_multiline)
         RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
-    const float font_offy_up = g.FontSize+1.0f;    // FIXME: those offsets are part of the style or font API
+    const float font_offy_up = g.FontSize+1.0f;    // FIXME: those offsets should be part of the style? they don't play so well with multi-line selection.
     const float font_offy_dn = 2.0f;
     const ImVec2 render_pos = is_multiline ? GetCurrentWindow()->DC.CursorPos : frame_bb.Min + style.FramePadding;
 
