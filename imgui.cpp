@@ -1314,7 +1314,7 @@ struct ImGuiState
     int                     LogAutoExpandMaxDepth;
 
     // Misc
-    float                   FramerateSecPerFrame[10];          // calculate estimate of framerate for user
+    float                   FramerateSecPerFrame[120];          // calculate estimate of framerate for user
     int                     FramerateSecPerFrameIdx;
     float                   FramerateSecPerFrameAccum;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
