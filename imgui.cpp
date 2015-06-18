@@ -10822,6 +10822,15 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
+        if (ImGui::TreeNode("Multi-line Text Input"))
+        {
+            static char text[1024*4] = "// F00F bug\nlabel:\n\tlock cmpxchg8b eax\n";
+            ImGui::PushItemWidth(-1.0f);
+            ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(0.f, ImGui::GetTextLineHeight() * 16), ImGuiInputTextFlags_AllowTabInput);
+            ImGui::PopItemWidth();
+            ImGui::TreePop();
+        }
+
         if (ImGui::TreeNode("Dragging"))
         {
             ImGui::TextWrapped("You can use ImGui::GetItemActiveDragDelta() to query for the dragged amount on any widget.");
@@ -10952,15 +10961,6 @@ void ImGui::ShowTestWindow(bool* opened)
         //ImGui::PushItemWidth(-1);
         //ImGui::ListBox("##listbox2", &listbox_item_current2, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
         //ImGui::PopItemWidth();
-
-        if (ImGui::TreeNode("Multi-line text input"))
-        {
-            static char text[1024*4] = "// F00F bug\nlabel:\n\tlock cmpxchg8b eax\n";
-            ImGui::PushItemWidth(-1.0f);
-            ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(0.f, ImGui::GetTextLineHeight() * 8), ImGuiInputTextFlags_AllowTabInput);
-            ImGui::PopItemWidth();
-            ImGui::TreePop();
-        }
 
         if (ImGui::TreeNode("Multi-component Widgets"))
         {
