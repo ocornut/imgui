@@ -1314,7 +1314,7 @@ struct ImGuiState
     int                     LogAutoExpandMaxDepth;
 
     // Misc
-    float                   FramerateSecPerFrame[120];          // calculate estimate of framerate for user
+    float                   FramerateSecPerFrame[10];          // calculate estimate of framerate for user
     int                     FramerateSecPerFrameIdx;
     float                   FramerateSecPerFrameAccum;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
@@ -7107,13 +7107,15 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     {
         edit_state.CursorAnim += g.IO.DeltaTime;
 
-        // Scroll 
+        // 1. Display the text (this can be more easily clipped)
+        // 2. Handle scrolling, highlight selection, display cursor: those all requires some form of 1d->2d cursor position calculation, which we will try to merge to minimize the cost.
+        ImVec2 cursor_offset;
+        CalcTextSizeW(g.Font, g.FontSize, FLT_MAX, edit_state.Text.begin(), edit_state.Text.begin() + edit_state.StbState.cursor, NULL, &cursor_offset);
+
+        // Scroll
         if (edit_state.CursorFollow)
         {
             // Horizontal scroll in chunks of quarter width
-            ImVec2 cursor_offset;
-            CalcTextSizeW(g.Font, g.FontSize, FLT_MAX, edit_state.Text.begin(), edit_state.Text.begin() + edit_state.StbState.cursor, NULL, &cursor_offset);
-
             const float scroll_increment_x = size.x * 0.25f;
             if (cursor_offset.x < edit_state.ScrollX)
                 edit_state.ScrollX = ImMax(0.0f, cursor_offset.x - scroll_increment_x);    
@@ -7158,19 +7160,16 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
 
         draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, draw_window->Color(ImGuiCol_Text), buf, NULL, 0.0f, is_multiline ? NULL : &clip_rect);
 
-        ImVec2 cursor_pos;
-        CalcTextSizeW(g.Font, g.FontSize, FLT_MAX, edit_state.Text.begin(), edit_state.Text.begin() + edit_state.StbState.cursor, NULL, &cursor_pos);
-        cursor_pos += render_pos - ImVec2(edit_state.ScrollX, 0.0f);
-
         // Draw blinking cursor
+        ImVec2 cursor_screen_pos = render_pos + cursor_offset - ImVec2(edit_state.ScrollX, 0.0f);
         if (g.InputTextState.CursorIsVisible())
-            draw_window->DrawList->AddLine(cursor_pos + ImVec2(0,2-font_offy_up), cursor_pos + ImVec2(0,-3+font_offy_dn), window->Color(ImGuiCol_Text));
+            draw_window->DrawList->AddLine(cursor_screen_pos + ImVec2(0,2-font_offy_up), cursor_screen_pos + ImVec2(0,-3+font_offy_dn), window->Color(ImGuiCol_Text));
         
         // Notify OS of text input position for advanced IME
-        if (io.ImeSetInputScreenPosFn && ImLengthSqr(edit_state.InputCursorScreenPos - cursor_pos) > 0.0001f)
-            io.ImeSetInputScreenPosFn((int)cursor_pos.x - 1, (int)(cursor_pos.y - g.FontSize));   // -1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.
+        if (io.ImeSetInputScreenPosFn && ImLengthSqr(edit_state.InputCursorScreenPos - cursor_screen_pos) > 0.0001f)
+            io.ImeSetInputScreenPosFn((int)cursor_screen_pos.x - 1, (int)(cursor_screen_pos.y - g.FontSize));   // -1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.
 
-        edit_state.InputCursorScreenPos = cursor_pos;
+        edit_state.InputCursorScreenPos = cursor_screen_pos;
     }
     else
     {
