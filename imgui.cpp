@@ -6773,11 +6773,9 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     const bool is_multiline = (flags & ImGuiInputTextFlags_Multiline) != 0;
 
     ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
-    ImVec2 size = size_arg;
-    if (size.x == 0.0f)
-        size.x = ImGui::CalcItemWidth();
-    if (size.y == 0.0f)
-        size.y = is_multiline ? label_size.y * 8.0f : label_size.y; // Arbitrary default
+    ImVec2 size;
+    size.x = (size_arg.x != 0.0f) ? size_arg.x : ImGui::CalcItemWidth();
+    size.y = (size_arg.y != 0.0f) ? size_arg.y : is_multiline ? ImGui::GetTextLineHeight() * 8.0f : label_size.y; // Arbitrary default
 
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + size + style.FramePadding*2.0f);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? (style.ItemInnerSpacing.x + label_size.x) : 0.0f, 0.0f));
@@ -6871,10 +6869,10 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     bool value_changed = false;
     bool cancel_edit = false;
     bool enter_pressed = false;
-    if (g.ActiveId == id)
-    //if (edit_state.Id == id)  // Works, but double-click to select-all sets cursors to end which in turn tends to scroll toward the right when shrinking widget.
+    
+    // Update some data if we are active or last active
+    if (g.ActiveId == id) //if (edit_state.Id == id)  // Works, but double-click to select-all sets cursors to end which in turn tends to scroll toward the right when shrinking widget.
     {
-        // Update some data if we are active or last active
         edit_state.BufSizeA = buf_size;
     }
     if (g.ActiveId == id)
@@ -7129,7 +7127,6 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             }
         }
     }
-
 
     if (edit_state.Id == id) // Display selection if we are last active so that it shows when it use scrollbar
     {
