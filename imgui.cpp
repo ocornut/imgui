@@ -6819,9 +6819,10 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         g.MouseCursor = ImGuiMouseCursor_TextInput;
     }
     const bool user_clicked = hovered && io.MouseClicked[0];
+    const bool user_scrolled = is_multiline && g.ActiveId == 0 && edit_state.Id == id && g.ActiveIdPreviousFrame == draw_window->GetID("#SCROLLY");
 
     bool select_all = (g.ActiveId != id) && (flags & ImGuiInputTextFlags_AutoSelectAll) != 0;
-    if (focus_requested || user_clicked)
+    if (focus_requested || user_clicked || user_scrolled)
     {
         if (g.ActiveId != id)
         {
@@ -7107,7 +7108,6 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
 
     if (g.ActiveId == id)
     {
-        edit_state.CursorAnim += g.IO.DeltaTime;
         if (edit_state.CursorFollow)
         {
             edit_state.CursorFollow = false;
@@ -7133,11 +7133,13 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         }
     }
 
-    if (edit_state.Id == id) // Display selection if we are last active so that it shows when it use scrollbar
+    if (g.ActiveId == id || (edit_state.Id == id && is_multiline && g.ActiveId == draw_window->GetID("#SCROLLY")))
     {
+        edit_state.CursorAnim += g.IO.DeltaTime;
+
         // Draw selection
-        const int select_begin_idx = edit_state.StbState.select_start;
-        const int select_end_idx = edit_state.StbState.select_end;
+        int select_begin_idx = edit_state.StbState.select_start;
+        int select_end_idx = edit_state.StbState.select_end;
         if (select_begin_idx != select_end_idx)
         {
             // FIXME-OPT
@@ -7146,7 +7148,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             ImVec2 rect_pos;
             CalcTextSizeW(g.Font, g.FontSize, FLT_MAX, edit_state.Text.begin(), text_selected_begin, NULL, &rect_pos);
 
-            ImU32 font_color = draw_window->Color(ImGuiCol_TextSelectedBg);
+            ImU32 bg_color = draw_window->Color(ImGuiCol_TextSelectedBg);
             for (const ImWchar* p = text_selected_begin; p < text_selected_end; )
             {
                 ImVec2 rect_size = CalcTextSizeW(g.Font, g.FontSize, FLT_MAX, p, text_selected_end, &p, NULL, true);
@@ -7154,21 +7156,14 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
                 ImRect rect(render_pos - render_scroll + rect_pos + ImVec2(0.0f, (p == text_selected_begin) ? -font_offy_up : -g.FontSize), render_pos - render_scroll + rect_pos + ImVec2(rect_size.x, (p == text_selected_end) ? +font_offy_dn : 0.0f));
                 rect.Clip(clip_rect);
                 if (rect.Overlaps(clip_rect))
-                    draw_window->DrawList->AddRectFilled(rect.Min, rect.Max, font_color);
+                    draw_window->DrawList->AddRectFilled(rect.Min, rect.Max, bg_color);
                 rect_pos.x = 0.0f;
                 rect_pos.y += g.FontSize;
             }
         }
-    }
 
-    draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, draw_window->Color(ImGuiCol_Text), buf, NULL, 0.0f, is_multiline ? NULL : &clip_rect);
+        draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, draw_window->Color(ImGuiCol_Text), buf, NULL, 0.0f, is_multiline ? NULL : &clip_rect);
 
-    // Log as text
-    if (GImGui->LogEnabled)
-        LogText(render_pos, buf, NULL);
-
-    if (g.ActiveId == id)
-    {
         ImVec2 cursor_pos;
         CalcTextSizeW(g.Font, g.FontSize, FLT_MAX, edit_state.Text.begin(), edit_state.Text.begin() + edit_state.StbState.cursor, NULL, &cursor_pos);
         cursor_pos += render_pos - ImVec2(edit_state.ScrollX, 0.0f);
@@ -7183,6 +7178,11 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
 
         edit_state.InputCursorScreenPos = cursor_pos;
     }
+    else
+    {
+        // Render text only
+        draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, draw_window->Color(ImGuiCol_Text), buf, NULL, 0.0f, is_multiline ? NULL : &clip_rect);
+    }
 
     if (is_multiline)
     {
@@ -7192,6 +7192,10 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         ImGui::EndChildFrame();
         ImGui::EndGroup();
     }
+
+    // Log as text
+    if (GImGui->LogEnabled)
+        LogText(render_pos, buf, NULL);
 
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
@@ -9752,7 +9756,7 @@ static inline int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int c)
     {
         buf[0] = (char)c;
         return 1;
-    }
+    } 
     if (c < 0x800) 
     {
         if (buf_size < 2) return 0;
