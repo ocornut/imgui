@@ -10095,7 +10095,13 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                 if (y1 > clip_rect.w)
                     break;
                 float y2 = (float)(y1 + glyph->Height * scale);
-                if (y2 >= clip_rect.y) // FIMXE-OPT: could fast-forward until next line (without breaking word-wrapping)
+                if (y2 < clip_rect.y)
+                {
+                    // Fast-forward until next line
+                    char_width = 0.0f;
+                    while (s < text_end && *s != '\n') s++;
+                }
+                else
                 {
                     float x1 = (float)(x + glyph->XOffset * scale);
                     float x2 = (float)(x1 + glyph->Width * scale);
