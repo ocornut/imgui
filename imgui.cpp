@@ -1323,7 +1323,7 @@ struct ImGuiState
     {
         Initialized = false;
         Font = NULL;
-        FontBaseSize = FontSize = 0.0f;
+        FontSize = FontBaseSize = 0.0f;
         FontTexUvWhitePixel = ImVec2(0.0f, 0.0f);
 
         Time = 0.0f;
@@ -6514,13 +6514,11 @@ bool ImGui::RadioButton(const char* label, int* v, int v_button)
     return pressed;
 }
 
-static ImVec2 CalcTextSizeW(ImFont* font, float font_size, float max_width, const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL, ImVec2* out_offset = NULL, bool stop_on_new_line = false)
+static ImVec2 InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL, ImVec2* out_offset = NULL, bool stop_on_new_line = false)
 {
-    if (!text_end)
-        text_end = text_begin + ImStrlenW(text_begin);
-
-    const float scale = font_size / font->FontSize;
-    const float line_height = font->FontSize * scale;
+    ImFont* font = GImGui->Font;
+    const float line_height = GImGui->FontSize;
+    const float scale = line_height / font->FontSize;
 
     ImVec2 text_size = ImVec2(0,0);
     float line_width = 0.0f;
@@ -6545,13 +6543,7 @@ static ImVec2 CalcTextSizeW(ImFont* font, float font_size, float max_width, cons
                 continue;
         }
 
-        const float char_width = font->GetCharAdvance((unsigned short)c);
-        if (line_width + char_width >= max_width)
-        {
-            s--;
-            break;
-        }
-
+        const float char_width = font->GetCharAdvance((unsigned short)c) * scale;
         line_width += char_width;
     }
 
@@ -6573,15 +6565,14 @@ static ImVec2 CalcTextSizeW(ImFont* font, float font_size, float max_width, cons
 // Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, wchar characters. InputText converts between UTF-8 and wchar)
 static int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                             { return (int)obj->CurLenW; }
 static ImWchar STB_TEXTEDIT_GETCHAR(const STB_TEXTEDIT_STRING* obj, int idx)                      { return obj->Text[idx]; }
-static float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)  { ImWchar c = obj->Text[line_start_idx+char_idx]; if (c == '\n') return STB_TEXTEDIT_GETWIDTH_NEWLINE; return GImGui->Font->GetCharAdvance(c); }
+static float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)  { ImWchar c = obj->Text[line_start_idx+char_idx]; if (c == '\n') return STB_TEXTEDIT_GETWIDTH_NEWLINE; return GImGui->Font->GetCharAdvance(c) * (GImGui->FontSize / GImGui->Font->FontSize); }
 static int     STB_TEXTEDIT_KEYTOTEXT(int key)                                                    { return key >= 0x10000 ? 0 : key; }
 static ImWchar STB_TEXTEDIT_NEWLINE = '\n';
 static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* obj, int line_start_idx)
 {
-    ImGuiState& g = *GImGui;
     const ImWchar* text = obj->Text.begin();
     const ImWchar* text_remaining = NULL;
-    const ImVec2 size = CalcTextSizeW(g.Font, g.FontSize, FLT_MAX, text + line_start_idx, text + obj->CurLenW, &text_remaining, NULL, true);
+    const ImVec2 size = InputTextCalcTextSizeW(text + line_start_idx, text + obj->CurLenW, &text_remaining, NULL, true);
     r->x0 = 0.0f;
     r->x1 = size.x;
     r->baseline_y_delta = size.y;
@@ -7099,18 +7090,21 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     const float font_offy_dn = 2.0f;
     const ImVec2 render_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
 
-    //const ImVec2 render_scroll = (g.ActiveId == id) ? edit_state.Scroll : ImVec2(0.f, 0.f);
-    const ImVec2 render_scroll = ImVec2((edit_state.Id == id) ? edit_state.ScrollX : 0.0f, 0.0f);
     ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x + style.FramePadding.x*2.0f, frame_bb.Min.y + size.y + style.FramePadding.y*2.0f);
-
+    ImVec2 text_size(0.f, 0.f);
     if (g.ActiveId == id || (edit_state.Id == id && is_multiline && g.ActiveId == draw_window->GetID("#SCROLLY")))
     {
+        //const ImVec2 render_scroll = (g.ActiveId == id) ? edit_state.Scroll : ImVec2(0.f, 0.f);
+        ImVec2 render_scroll = ImVec2((edit_state.Id == id) ? edit_state.ScrollX : 0.0f, 0.0f);
         edit_state.CursorAnim += g.IO.DeltaTime;
 
         // 1. Display the text (this can be more easily clipped)
         // 2. Handle scrolling, highlight selection, display cursor: those all requires some form of 1d->2d cursor position calculation, which we will try to merge to minimize the cost.
         ImVec2 cursor_offset;
-        CalcTextSizeW(g.Font, g.FontSize, FLT_MAX, edit_state.Text.begin(), edit_state.Text.begin() + edit_state.StbState.cursor, NULL, &cursor_offset);
+        InputTextCalcTextSizeW(edit_state.Text.begin(), edit_state.Text.begin() + edit_state.StbState.cursor, NULL, &cursor_offset);
+
+        if (is_multiline)
+            text_size = InputTextCalcTextSizeW(edit_state.Text.begin(), edit_state.Text.begin() + edit_state.CurLenW);
 
         // Scroll
         if (edit_state.CursorFollow)
@@ -7118,9 +7112,9 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             // Horizontal scroll in chunks of quarter width
             const float scroll_increment_x = size.x * 0.25f;
             if (cursor_offset.x < edit_state.ScrollX)
-                edit_state.ScrollX = ImMax(0.0f, cursor_offset.x - scroll_increment_x);    
+                render_scroll.x = edit_state.ScrollX = ImMax(0.0f, cursor_offset.x - scroll_increment_x);    
             else if (cursor_offset.x - size.x >= edit_state.ScrollX)
-                edit_state.ScrollX = cursor_offset.x - size.x + scroll_increment_x;
+                render_scroll.x = edit_state.ScrollX = cursor_offset.x - size.x + scroll_increment_x;
 
             // Vertical scroll
             if (is_multiline)
@@ -7142,12 +7136,12 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             ImWchar* text_selected_begin = edit_state.Text.begin() + ImMin(select_begin_idx,select_end_idx);
             ImWchar* text_selected_end = edit_state.Text.begin() + ImMax(select_begin_idx,select_end_idx);
             ImVec2 rect_pos;
-            CalcTextSizeW(g.Font, g.FontSize, FLT_MAX, edit_state.Text.begin(), text_selected_begin, NULL, &rect_pos);
+            InputTextCalcTextSizeW(edit_state.Text.begin(), text_selected_begin, NULL, &rect_pos);
 
             ImU32 bg_color = draw_window->Color(ImGuiCol_TextSelectedBg);
             for (const ImWchar* p = text_selected_begin; p < text_selected_end; )
             {
-                ImVec2 rect_size = CalcTextSizeW(g.Font, g.FontSize, FLT_MAX, p, text_selected_end, &p, NULL, true);
+                ImVec2 rect_size = InputTextCalcTextSizeW(p, text_selected_end, &p, NULL, true);
                 if (rect_size.x <= 0.0f) rect_size.x = (float)(int)(g.Font->GetCharAdvance((unsigned short)' ') * 0.50f); // So we can see selected empty lines
                 ImRect rect(render_pos - render_scroll + rect_pos + ImVec2(0.0f, (p == text_selected_begin) ? -font_offy_up : -g.FontSize), render_pos - render_scroll + rect_pos + ImVec2(rect_size.x, (p == text_selected_end) ? +font_offy_dn : 0.0f));
                 rect.Clip(clip_rect);
@@ -7174,13 +7168,14 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     else
     {
         // Render text only
-        draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, draw_window->Color(ImGuiCol_Text), buf, NULL, 0.0f, is_multiline ? NULL : &clip_rect);
+        draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos, draw_window->Color(ImGuiCol_Text), buf, NULL, 0.0f, is_multiline ? NULL : &clip_rect);
+
+        if (is_multiline)
+            text_size = g.Font->CalcTextSizeA(g.FontSize, FLT_MAX, 0.0f, buf);
     }
 
     if (is_multiline)
     {
-        // FIXME-OPT FIXME-WIP-MULTILINE
-        ImVec2 text_size = g.Font->CalcTextSizeA(g.FontSize, FLT_MAX, 0.0f, buf);
         ImGui::Dummy(text_size + ImVec2(0.0f, g.FontSize)); // Always add room to scroll an extra line
         ImGui::EndChildFrame();
         ImGui::EndGroup();
