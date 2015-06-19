@@ -6539,22 +6539,18 @@ static ImVec2 InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* t
     const ImWchar* s = text_begin;
     while (s < text_end)
     {
-        const unsigned int c = (unsigned int)(*s++);
-
-        if (c < 32)
+        unsigned int c = (unsigned int)(*s++);
+        if (c == '\n')
         {
-            if (c == '\n')
-            {
-                text_size.x = ImMax(text_size.x, line_width);
-                text_size.y += line_height;
-                line_width = 0.0f;
-                if (stop_on_new_line)
-                    break;
-                continue;
-            }
-            if (c == '\r')
-                continue;
+            text_size.x = ImMax(text_size.x, line_width);
+            text_size.y += line_height;
+            line_width = 0.0f;
+            if (stop_on_new_line)
+                break;
+            continue;
         }
+        if (c == '\r')
+            continue;
 
         const float char_width = font->GetCharAdvance((unsigned short)c) * scale;
         line_width += char_width;
@@ -7165,7 +7161,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             }
         }
 
-        draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, draw_window->Color(ImGuiCol_Text), buf, NULL, 0.0f, is_multiline ? NULL : &clip_rect);
+        draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, draw_window->Color(ImGuiCol_Text), buf, buf+edit_state.CurLenA, 0.0f, is_multiline ? NULL : &clip_rect);
 
         // Draw blinking cursor
         ImVec2 cursor_screen_pos = render_pos + cursor_offset - ImVec2(edit_state.ScrollX, 0.0f);
