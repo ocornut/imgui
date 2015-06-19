@@ -7095,13 +7095,12 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     if (!is_multiline)
         RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
-    const ImVec2 render_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
+    ImVec2 render_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
 
     ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x + style.FramePadding.x*2.0f, frame_bb.Min.y + size.y + style.FramePadding.y*2.0f);
     ImVec2 text_size(0.f, 0.f);
     if (g.ActiveId == id || (edit_state.Id == id && is_multiline && g.ActiveId == draw_window->GetID("#SCROLLY")))
     {
-        //const ImVec2 render_scroll = (g.ActiveId == id) ? edit_state.Scroll : ImVec2(0.f, 0.f);
         ImVec2 render_scroll = ImVec2((edit_state.Id == id) ? edit_state.ScrollX : 0.0f, 0.0f);
         edit_state.CursorAnim += g.IO.DeltaTime;
 
@@ -7126,10 +7125,14 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             // Vertical scroll
             if (is_multiline)
             {
-                if (cursor_offset.y - g.FontSize < draw_window->ScrollY)
-                    draw_window->ScrollY = ImMax(0.0f, cursor_offset.y - g.FontSize);
-                else if (cursor_offset.y - g.FontSize*0 - size.y >= draw_window->ScrollY)
-                    draw_window->ScrollY = cursor_offset.y - size.y;
+                float scroll_y = draw_window->ScrollY;
+                if (cursor_offset.y - g.FontSize < scroll_y)
+                    scroll_y = ImMax(0.0f, cursor_offset.y - g.FontSize);
+                else if (cursor_offset.y - size.y >= scroll_y)
+                    scroll_y = cursor_offset.y - size.y;
+                draw_window->DC.CursorPos.y += (draw_window->ScrollY - scroll_y);   // To avoid a frame of lag
+                draw_window->ScrollY = scroll_y;
+                render_pos.y = draw_window->DC.CursorPos.y;
             }
         }
         edit_state.CursorFollow = false;
