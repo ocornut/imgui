@@ -2170,7 +2170,7 @@ void ImGui::NewFrame()
         g.HoveredWindow = g.HoveredRootWindow = NULL;
 
     // Scale & Scrolling
-    if (g.HoveredWindow && g.IO.MouseWheel != 0.0f)
+    if (g.HoveredWindow && g.IO.MouseWheel != 0.0f && !g.HoveredWindow->Collapsed)
     {
         ImGuiWindow* window = g.HoveredWindow;
         if (g.IO.KeyCtrl)
