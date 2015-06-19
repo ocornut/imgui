@@ -6514,6 +6514,19 @@ bool ImGui::RadioButton(const char* label, int* v, int v_button)
     return pressed;
 }
 
+static int InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end)
+{
+    int line_count = 0;
+    const char* s = text_begin;
+    while (char c = *s++) // We are only matching for \n so we can ignore UTF-8 decoding
+        if (c == '\n')
+            line_count++;
+    if (s[-1] != '\n' && s[-1] != '\r')
+        line_count++;
+    *out_text_end = s-1;
+    return line_count;
+}
+
 static ImVec2 InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL, ImVec2* out_offset = NULL, bool stop_on_new_line = false)
 {
     ImFont* font = GImGui->Font;
@@ -7168,10 +7181,10 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     else
     {
         // Render text only
-        draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos, draw_window->Color(ImGuiCol_Text), buf, NULL, 0.0f, is_multiline ? NULL : &clip_rect);
-
+        const char* buf_end = NULL;
         if (is_multiline)
-            text_size = g.Font->CalcTextSizeA(g.FontSize, FLT_MAX, 0.0f, buf);
+            text_size = ImVec2(size.x, InputTextCalcTextLenAndLineCount(buf, &buf_end) * g.FontSize); // We don't need width
+        draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos, draw_window->Color(ImGuiCol_Text), buf, buf_end, 0.0f, is_multiline ? NULL : &clip_rect);
     }
 
     if (is_multiline)
