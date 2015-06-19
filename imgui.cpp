@@ -10023,21 +10023,25 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
     if (!text_end)
         text_end = text_begin + strlen(text_begin);
 
-    const float scale = size / FontSize;
-    const float line_height = FontSize * scale;
-
     // Align to be pixel perfect
     pos.x = (float)(int)pos.x + DisplayOffset.x;
     pos.y = (float)(int)pos.y + DisplayOffset.y;
     float x = pos.x;
     float y = pos.y;
+    if (y > clip_rect.w)
+        return;
 
+    const float scale = size / FontSize;
+    const float line_height = FontSize * scale;
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
 
     ImDrawVert* out_vertices = draw_list->vtx_write;
 
     const char* s = text_begin;
+    if (!word_wrap_enabled && y + line_height < clip_rect.y)
+        while (s < text_end && *s != '\n')  // Fast-forward to next line
+            s++;
     while (s < text_end)
     {
         if (word_wrap_enabled)
@@ -10085,6 +10089,13 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             {
                 x = pos.x;
                 y += line_height;
+
+                if (y > clip_rect.w)
+                    break;
+                if (!word_wrap_enabled && y + line_height < clip_rect.y)
+                    while (s < text_end && *s != '\n')  // Fast-forward to next line
+                        s++;
+
                 continue;
             }
             if (c == '\r')
@@ -10095,78 +10106,70 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
         if (const Glyph* glyph = FindGlyph((unsigned short)c))
         {
             char_width = glyph->XAdvance * scale;
+            
+            // Clipping on Y is more likely
             if (c != ' ' && c != '\t')
             {
-                // Clipping on Y is more likely
+                // We don't do a second finer clipping test on the Y axis (todo: do some measurement see if it is worth it, probably not)
                 float y1 = (float)(y + glyph->YOffset * scale);
-                if (y1 > clip_rect.w)
-                    break;
                 float y2 = (float)(y1 + glyph->Height * scale);
-                if (y2 < clip_rect.y)
+
+                float x1 = (float)(x + glyph->XOffset * scale);
+                float x2 = (float)(x1 + glyph->Width * scale);
+                if (x1 <= clip_rect.z && x2 >= clip_rect.x)
                 {
-                    // Fast-forward until next line
-                    char_width = 0.0f;
-                    while (s < text_end && *s != '\n') s++;
-                }
-                else
-                {
-                    float x1 = (float)(x + glyph->XOffset * scale);
-                    float x2 = (float)(x1 + glyph->Width * scale);
-                    if (x1 <= clip_rect.z && x2 >= clip_rect.x)
+                    // Render a character
+                    float u1 = glyph->U0;
+                    float v1 = glyph->V0;
+                    float u2 = glyph->U1;
+                    float v2 = glyph->V1;
+
+                    // CPU side clipping used to fit text in their frame when the frame is too small. Only does clipping for axis aligned quads
+                    if (cpu_fine_clip)
                     {
-                        // Render a character
-                        float u1 = glyph->U0;
-                        float v1 = glyph->V0;
-                        float u2 = glyph->U1;
-                        float v2 = glyph->V1;
-
-                        // CPU side clipping used to fit text in their frame when the frame is too small. Only does clipping for axis aligned quads
-                        if (cpu_fine_clip)
+                        if (x1 < clip_rect.x)
                         {
-                            if (x1 < clip_rect.x)
-                            {
-                                u1 = u1 + (1.0f - (x2 - clip_rect.x) / (x2 - x1)) * (u2 - u1);
-                                x1 = clip_rect.x;
-                            }
-                            if (y1 < clip_rect.y)
-                            {
-                                v1 = v1 + (1.0f - (y2 - clip_rect.y) / (y2 - y1)) * (v2 - v1);
-                                y1 = clip_rect.y;
-                            }
-                            if (x2 > clip_rect.z)
-                            {
-                                u2 = u1 + ((clip_rect.z - x1) / (x2 - x1)) * (u2 - u1);
-                                x2 = clip_rect.z;
-                            }
-                            if (y2 > clip_rect.w)
-                            {
-                                v2 = v1 + ((clip_rect.w - y1) / (y2 - y1)) * (v2 - v1);
-                                y2 = clip_rect.w;
-                            }
+                            u1 = u1 + (1.0f - (x2 - clip_rect.x) / (x2 - x1)) * (u2 - u1);
+                            x1 = clip_rect.x;
                         }
-
-                        // NB: we are not calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
-                        out_vertices[0].pos = ImVec2(x1, y1);
-                        out_vertices[0].uv  = ImVec2(u1, v1);
-                        out_vertices[0].col = col;
-
-                        out_vertices[1].pos = ImVec2(x2, y1);
-                        out_vertices[1].uv  = ImVec2(u2, v1);
-                        out_vertices[1].col = col;
-
-                        out_vertices[2].pos = ImVec2(x2, y2);
-                        out_vertices[2].uv  = ImVec2(u2, v2);
-                        out_vertices[2].col = col;
-
-                        out_vertices[3] = out_vertices[0];
-                        out_vertices[4] = out_vertices[2];
-
-                        out_vertices[5].pos = ImVec2(x1, y2);
-                        out_vertices[5].uv  = ImVec2(u1, v2);
-                        out_vertices[5].col = col;
-
-                        out_vertices += 6;
+                        if (y1 < clip_rect.y)
+                        {
+                            v1 = v1 + (1.0f - (y2 - clip_rect.y) / (y2 - y1)) * (v2 - v1);
+                            y1 = clip_rect.y;
+                        }
+                        if (x2 > clip_rect.z)
+                        {
+                            u2 = u1 + ((clip_rect.z - x1) / (x2 - x1)) * (u2 - u1);
+                            x2 = clip_rect.z;
+                        }
+                        if (y2 > clip_rect.w)
+                        {
+                            v2 = v1 + ((clip_rect.w - y1) / (y2 - y1)) * (v2 - v1);
+                            y2 = clip_rect.w;
+                        }
                     }
+
+                    // NB: we are not calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
+                    out_vertices[0].pos = ImVec2(x1, y1);
+                    out_vertices[0].uv  = ImVec2(u1, v1);
+                    out_vertices[0].col = col;
+
+                    out_vertices[1].pos = ImVec2(x2, y1);
+                    out_vertices[1].uv  = ImVec2(u2, v1);
+                    out_vertices[1].col = col;
+
+                    out_vertices[2].pos = ImVec2(x2, y2);
+                    out_vertices[2].uv  = ImVec2(u2, v2);
+                    out_vertices[2].col = col;
+
+                    out_vertices[3] = out_vertices[0];
+                    out_vertices[4] = out_vertices[2];
+
+                    out_vertices[5].pos = ImVec2(x1, y2);
+                    out_vertices[5].uv  = ImVec2(u1, v2);
+                    out_vertices[5].col = col;
+
+                    out_vertices += 6;
                 }
             }
         }
