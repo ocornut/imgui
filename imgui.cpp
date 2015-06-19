@@ -551,8 +551,9 @@ static void         CloseInactivePopups();
 // Helpers: String
 static int          ImStricmp(const char* str1, const char* str2);
 static int          ImStrnicmp(const char* str1, const char* str2, int count);
-static char*        ImStrdup(const char *str);
+static char*        ImStrdup(const char* str);
 static size_t       ImStrlenW(const ImWchar* str);
+static const ImWchar* ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin); // Find beginning-of-line
 static const char*  ImStristr(const char* haystack, const char* needle, const char* needle_end);
 static size_t       ImFormatString(char* buf, size_t buf_size, const char* fmt, ...);
 static size_t       ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args);
@@ -784,6 +785,13 @@ static size_t ImStrlenW(const ImWchar* str)
     size_t n = 0;
     while (*str++) n++;
     return n;
+}
+
+static const ImWchar* ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin) // find beginning-of-line
+{
+    while (buf_mid_line > buf_begin && buf_mid_line[-1] != '\n')
+        buf_mid_line--;
+    return buf_mid_line;
 }
 
 static const char* ImStristr(const char* haystack, const char* needle, const char* needle_end)
@@ -7102,16 +7110,54 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     ImVec2 text_size(0.f, 0.f);
     if (g.ActiveId == id || (edit_state.Id == id && is_multiline && g.ActiveId == draw_window->GetID("#SCROLLY")))
     {
-        ImVec2 render_scroll = ImVec2((edit_state.Id == id) ? edit_state.ScrollX : 0.0f, 0.0f);
         edit_state.CursorAnim += g.IO.DeltaTime;
 
-        // 1. Display the text (this can be more easily clipped)
-        // 2. Handle scrolling, highlight selection, display cursor: those all requires some form of 1d->2d cursor position calculation, which we will try to merge to minimize the cost.
-        ImVec2 cursor_offset;
-        InputTextCalcTextSizeW(edit_state.Text.begin(), edit_state.Text.begin() + edit_state.StbState.cursor, NULL, &cursor_offset);
+        // We need to:
+        // - Display the text (this can be more easily clipped)
+        // - Handle scrolling, highlight selection, display cursor (those all requires some form of 1d->2d cursor position calculation)
+        // - Measure text height (for scrollbar)
+        // We are attempting to do most of that in one main pass to minimize the computation cost (non-negligible for large amount of text) + 2nd pass for selection rendering (we could merge them by an extra refactoring effort)
+        const ImWchar* text_begin = edit_state.Text.begin();
+        const ImWchar* text_end = text_begin + edit_state.CurLenW;
+        ImVec2 cursor_offset, select_start_offset;
 
-        if (is_multiline)
-            text_size = InputTextCalcTextSizeW(edit_state.Text.begin(), edit_state.Text.begin() + edit_state.CurLenW);
+        {
+            // Count lines + find lines numbers of cursor and select_start
+            int matches_remaining = 0;
+            int matches_line_no[2] = { -1, -999 };
+            const ImWchar* matches_ptr[2];
+            matches_ptr[0] = text_begin + edit_state.StbState.cursor; matches_remaining++;
+            if (edit_state.StbState.select_start != edit_state.StbState.select_end)
+            {
+                matches_ptr[1] = text_begin + ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end);
+                matches_line_no[1] = -1;
+                matches_remaining++;
+            }
+            matches_remaining += is_multiline ? 1 : 0;     // So that we never exit the loop until all lines are counted.
+
+            int line_count = 0;
+            for (const ImWchar* s = text_begin; s < text_end+1; s++)
+                if ((*s) == '\n' || s == text_end)
+                {
+                    line_count++;
+                    if (matches_line_no[0] == -1 && s >= matches_ptr[0]) { matches_line_no[0] = line_count; if (--matches_remaining <= 0) break; }
+                    if (matches_line_no[1] == -1 && s >= matches_ptr[1]) { matches_line_no[1] = line_count; if (--matches_remaining <= 0) break; }
+                }
+
+            // Calculate 2d position
+            IM_ASSERT(matches_line_no[0] != -1);
+            cursor_offset.x = InputTextCalcTextSizeW(ImStrbolW(matches_ptr[0], text_begin), matches_ptr[0]).x;
+            cursor_offset.y = matches_line_no[0] * g.FontSize;
+            if (matches_line_no[1] >= 0)
+            {
+                select_start_offset.x = InputTextCalcTextSizeW(ImStrbolW(matches_ptr[1], text_begin), matches_ptr[1]).x;
+                select_start_offset.y = matches_line_no[1] * g.FontSize;
+            }
+
+            // Calculate text height
+            if (is_multiline)
+                text_size = ImVec2(size.x, line_count * g.FontSize);
+        }
 
         // Scroll
         if (edit_state.CursorFollow)
@@ -7119,9 +7165,9 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             // Horizontal scroll in chunks of quarter width
             const float scroll_increment_x = size.x * 0.25f;
             if (cursor_offset.x < edit_state.ScrollX)
-                render_scroll.x = edit_state.ScrollX = ImMax(0.0f, cursor_offset.x - scroll_increment_x);    
+                edit_state.ScrollX = ImMax(0.0f, cursor_offset.x - scroll_increment_x);    
             else if (cursor_offset.x - size.x >= edit_state.ScrollX)
-                render_scroll.x = edit_state.ScrollX = cursor_offset.x - size.x + scroll_increment_x;
+                edit_state.ScrollX = cursor_offset.x - size.x + scroll_increment_x;
 
             // Vertical scroll
             if (is_multiline)
@@ -7137,30 +7183,38 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             }
         }
         edit_state.CursorFollow = false;
+        ImVec2 render_scroll = ImVec2(edit_state.ScrollX, 0.0f);
 
         // Draw selection
-        int select_begin_idx = edit_state.StbState.select_start;
-        int select_end_idx = edit_state.StbState.select_end;
-        if (select_begin_idx != select_end_idx)
+        if (edit_state.StbState.select_start != edit_state.StbState.select_end)
         {
-            // FIXME-OPT
-            ImWchar* text_selected_begin = edit_state.Text.begin() + ImMin(select_begin_idx,select_end_idx);
-            ImWchar* text_selected_end = edit_state.Text.begin() + ImMax(select_begin_idx,select_end_idx);
-            ImVec2 rect_pos;
-            InputTextCalcTextSizeW(edit_state.Text.begin(), text_selected_begin, NULL, &rect_pos);
+            const ImWchar* text_selected_begin = text_begin + ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end);
+            const ImWchar* text_selected_end = text_begin + ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end);
 
             float bg_offy_up = is_multiline ? 0.0f : -1.0f;    // FIXME: those offsets should be part of the style? they don't play so well with multi-line selection.
             float bg_offy_dn = is_multiline ? 0.0f : 2.0f;
             ImU32 bg_color = draw_window->Color(ImGuiCol_TextSelectedBg);
+            ImVec2 rect_pos = render_pos + select_start_offset - render_scroll;
             for (const ImWchar* p = text_selected_begin; p < text_selected_end; )
             {
-                ImVec2 rect_size = InputTextCalcTextSizeW(p, text_selected_end, &p, NULL, true);
-                if (rect_size.x <= 0.0f) rect_size.x = (float)(int)(g.Font->GetCharAdvance((unsigned short)' ') * 0.50f); // So we can see selected empty lines
-                ImRect rect(render_pos - render_scroll + rect_pos + ImVec2(0.0f, bg_offy_up - g.FontSize), render_pos - render_scroll + rect_pos + ImVec2(rect_size.x, bg_offy_dn));
-                rect.Clip(clip_rect);
-                if (rect.Overlaps(clip_rect))
-                    draw_window->DrawList->AddRectFilled(rect.Min, rect.Max, bg_color);
-                rect_pos.x = 0.0f;
+                if (rect_pos.y > clip_rect.w + g.FontSize)
+                    break;
+                if (rect_pos.y < clip_rect.y)
+                {
+                    while (p < text_selected_end)
+                        if (*p++ == '\n')
+                            break;
+                }
+                else
+                {
+                    ImVec2 rect_size = InputTextCalcTextSizeW(p, text_selected_end, &p, NULL, true);
+                    if (rect_size.x <= 0.0f) rect_size.x = (float)(int)(g.Font->GetCharAdvance((unsigned short)' ') * 0.50f); // So we can see selected empty lines
+                    ImRect rect(rect_pos + ImVec2(0.0f, bg_offy_up - g.FontSize), rect_pos +ImVec2(rect_size.x, bg_offy_dn));
+                    rect.Clip(clip_rect);
+                    if (rect.Overlaps(clip_rect))
+                        draw_window->DrawList->AddRectFilled(rect.Min, rect.Max, bg_color);
+                }
+                rect_pos.x = render_pos.x - render_scroll.x;
                 rect_pos.y += g.FontSize;
             }
         }
@@ -7168,7 +7222,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, draw_window->Color(ImGuiCol_Text), buf, buf+edit_state.CurLenA, 0.0f, is_multiline ? NULL : &clip_rect);
 
         // Draw blinking cursor
-        ImVec2 cursor_screen_pos = render_pos + cursor_offset - ImVec2(edit_state.ScrollX, 0.0f);
+        ImVec2 cursor_screen_pos = render_pos + cursor_offset - render_scroll;
         if (g.InputTextState.CursorIsVisible())
             draw_window->DrawList->AddLine(cursor_screen_pos + ImVec2(0,-g.FontSize+1), cursor_screen_pos + ImVec2(0,-1), window->Color(ImGuiCol_Text));
         
