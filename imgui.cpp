@@ -6720,7 +6720,7 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
     if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
     {
         bool pass = false;
-        pass |= ((c == '\n' || c == '\r') && (flags & ImGuiInputTextFlags_Multiline));
+        pass |= (c == '\n' && (flags & ImGuiInputTextFlags_Multiline));
         pass |= (c == '\t' && (flags & ImGuiInputTextFlags_AllowTabInput));
         if (!pass)
             return false;
