@@ -7095,8 +7095,6 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
     if (!is_multiline)
         RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
-    const float font_offy_up = g.FontSize+1.0f;    // FIXME: those offsets should be part of the style? they don't play so well with multi-line selection.
-    const float font_offy_dn = 2.0f;
     const ImVec2 render_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
 
     ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x + style.FramePadding.x*2.0f, frame_bb.Min.y + size.y + style.FramePadding.y*2.0f);
@@ -7147,12 +7145,14 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             ImVec2 rect_pos;
             InputTextCalcTextSizeW(edit_state.Text.begin(), text_selected_begin, NULL, &rect_pos);
 
+            float bg_offy_up = is_multiline ? 0.0f : -1.0f;    // FIXME: those offsets should be part of the style? they don't play so well with multi-line selection.
+            float bg_offy_dn = is_multiline ? 0.0f : 2.0f;
             ImU32 bg_color = draw_window->Color(ImGuiCol_TextSelectedBg);
             for (const ImWchar* p = text_selected_begin; p < text_selected_end; )
             {
                 ImVec2 rect_size = InputTextCalcTextSizeW(p, text_selected_end, &p, NULL, true);
                 if (rect_size.x <= 0.0f) rect_size.x = (float)(int)(g.Font->GetCharAdvance((unsigned short)' ') * 0.50f); // So we can see selected empty lines
-                ImRect rect(render_pos - render_scroll + rect_pos + ImVec2(0.0f, (p == text_selected_begin) ? -font_offy_up : -g.FontSize), render_pos - render_scroll + rect_pos + ImVec2(rect_size.x, (p == text_selected_end) ? +font_offy_dn : 0.0f));
+                ImRect rect(render_pos - render_scroll + rect_pos + ImVec2(0.0f, bg_offy_up - g.FontSize), render_pos - render_scroll + rect_pos + ImVec2(rect_size.x, bg_offy_dn));
                 rect.Clip(clip_rect);
                 if (rect.Overlaps(clip_rect))
                     draw_window->DrawList->AddRectFilled(rect.Min, rect.Max, bg_color);
@@ -7166,7 +7166,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         // Draw blinking cursor
         ImVec2 cursor_screen_pos = render_pos + cursor_offset - ImVec2(edit_state.ScrollX, 0.0f);
         if (g.InputTextState.CursorIsVisible())
-            draw_window->DrawList->AddLine(cursor_screen_pos + ImVec2(0,2-font_offy_up), cursor_screen_pos + ImVec2(0,-3+font_offy_dn), window->Color(ImGuiCol_Text));
+            draw_window->DrawList->AddLine(cursor_screen_pos + ImVec2(0,-g.FontSize+1), cursor_screen_pos + ImVec2(0,-1), window->Color(ImGuiCol_Text));
         
         // Notify OS of text input position for advanced IME
         if (io.ImeSetInputScreenPosFn && ImLengthSqr(edit_state.InputCursorScreenPos - cursor_screen_pos) > 0.0001f)
