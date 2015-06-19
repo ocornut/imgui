@@ -6521,9 +6521,10 @@ static int InputTextCalcTextLenAndLineCount(const char* text_begin, const char**
     while (char c = *s++) // We are only matching for \n so we can ignore UTF-8 decoding
         if (c == '\n')
             line_count++;
-    if (s[-1] != '\n' && s[-1] != '\r')
+    s--;
+    if (s[0] != '\n' && s[0] != '\r')
         line_count++;
-    *out_text_end = s-1;
+    *out_text_end = s;
     return line_count;
 }
 
@@ -6924,8 +6925,8 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         const bool is_ctrl_only = is_ctrl_down && !is_alt_down && !is_shift_down;
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
-        else if (is_multiline && IsKeyPressedMap(ImGuiKey_UpArrow))     { bool move_cursor = true; if (is_ctrl_down) { draw_window->ScrollY -= g.FontSize; } if (move_cursor) edit_state.OnKeyPressed(STB_TEXTEDIT_K_UP | k_mask); }
-        else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { bool move_cursor = true; if (is_ctrl_down) { draw_window->ScrollY += g.FontSize; } if (move_cursor) edit_state.OnKeyPressed(STB_TEXTEDIT_K_DOWN| k_mask); }
+        else if (is_multiline && IsKeyPressedMap(ImGuiKey_UpArrow))     { if (is_ctrl_down) draw_window->ScrollY -= g.FontSize; else edit_state.OnKeyPressed(STB_TEXTEDIT_K_UP | k_mask); }
+        else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { if (is_ctrl_down) draw_window->ScrollY += g.FontSize; else edit_state.OnKeyPressed(STB_TEXTEDIT_K_DOWN| k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Home))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_End))                         { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Delete))                      { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
