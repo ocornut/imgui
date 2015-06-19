@@ -9916,8 +9916,8 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
 
+    const float line_height = size;
     const float scale = size / FontSize;
-    const float line_height = FontSize * scale;
 
     ImVec2 text_size = ImVec2(0,0);
     float line_width = 0.0f;
@@ -9983,7 +9983,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 continue;
         }
         
-        const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : FallbackXAdvance;
+        const float char_width = ((size_t)c < IndexXAdvance.size() ? IndexXAdvance[(size_t)c] : FallbackXAdvance) * scale;
         if (line_width + char_width >= max_width)
         {
             s = prev_s;
