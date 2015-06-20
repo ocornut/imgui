@@ -65,8 +65,6 @@
 		6D2FC54B1B2E632000C130BA = {
 			isa = PBXGroup;
 			children = (
-				6D2FC5921B30774900C130BA /* SystemConfiguration.framework */,
-				6D2FC5901B30773F00C130BA /* CFNetwork.framework */,
 				6D2FC58C1B2F374200C130BA /* synergy */,
 				6D2FC5841B2E648D00C130BA /* imgui */,
 				6D2FC5561B2E632000C130BA /* imguiex */,
@@ -106,6 +104,8 @@
 		6D2FC5571B2E632000C130BA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				6D2FC5921B30774900C130BA /* SystemConfiguration.framework */,
+				6D2FC5901B30773F00C130BA /* CFNetwork.framework */,
 				6D2FC5581B2E632000C130BA /* Info.plist */,
 				6D2FC5591B2E632000C130BA /* main.m */,
 			);
