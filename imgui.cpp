@@ -378,6 +378,7 @@
  - plot: "smooth" automatic scale over time, user give an input 0.0(full user scale) 1.0(full derived from value)
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms
+ - inputfloat: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar).
  - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
@@ -5557,7 +5558,7 @@ ImGuiID ImGui::GetID(const void* ptr_id)
 
 // User can input math operators (e.g. +100) to edit a numerical values.
 // NB: only call right after InputText because we are using its InitialValue storage
-static void ApplyNumericalTextInput(const char* buf, float *v)
+static void InputTextApplyArithmeticOp(const char* buf, float *v)
 {
     while (ImCharIsSpace(*buf))
         buf++;
@@ -5588,17 +5589,17 @@ static void ApplyNumericalTextInput(const char* buf, float *v)
         return;
 
     if (op == '+')
-        *v = ref_v + op_v;
+        *v = ref_v + op_v;  // add (uses "+-" to substract)
     else if (op == '*')
-        *v = ref_v * op_v;
+        *v = ref_v * op_v;  // multiply
     else if (op == '/')
     {
-        if (op_v == 0.0f)
+        if (op_v == 0.0f)   // divide
             return;
         *v = ref_v / op_v;
     }
     else
-        *v = op_v;
+        *v = op_v;          // Constant
 }
 
 // Create text input in place of a slider (when CTRL+Clicking on slider)
@@ -5631,7 +5632,7 @@ static bool SliderFloatAsInputText(const char* label, float* v, ImGuiID id, int 
     }
     if (value_changed)
     {
-        ApplyNumericalTextInput(text_buf, v);
+        InputTextApplyArithmeticOp(text_buf, v);
     }
     return value_changed;
 }
@@ -7310,7 +7311,7 @@ bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast,
     const ImGuiInputTextFlags flags = extra_flags | (ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_AutoSelectAll);
     if (ImGui::InputText("", buf, IM_ARRAYSIZE(buf), flags))
     {
-        ApplyNumericalTextInput(buf, v);
+        InputTextApplyArithmeticOp(buf, v);
         value_changed = true;
     }
 
