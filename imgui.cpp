@@ -1719,8 +1719,6 @@ bool ImGuiTextFilter::PassFilter(const char* val) const
     return false;
 }
 
-//-----------------------------------------------------------------------------
-
 // On some platform vsnprintf() takes va_list by reference and modifies it. 
 // va_copy is the 'correct' way to copy a va_list but Visual Studio prior to 2013 doesn't have it.
 #ifndef va_copy
@@ -2266,6 +2264,9 @@ void ImGui::Shutdown()
         ImGui::MemFree(g.PrivateClipboard);
         g.PrivateClipboard = NULL;
     }
+    g.InputTextState.Text.clear();
+    g.InputTextState.InitialText.clear();
+    g.InputTextState.TempTextBuffer.clear();
 
     if (g.LogFile && g.LogFile != stdout)
     {
