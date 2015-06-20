@@ -143,7 +143,9 @@ static char g_keycodeCharShifted[256] = {};
 
 //static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
-static float        g_MouseWheel = 0.0f;
+static float        g_mouseWheelX = 0.0f;
+static float        g_mouseWheelY = 0.0f;
+
 static GLuint       g_FontTexture = 0;
 static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
@@ -156,7 +158,6 @@ static int usynergy_sockfd;
 static bool g_synergyPtrActive = false;
 static uint16_t g_mousePosX = 0;
 static uint16_t g_mousePosY = 0;
-static uint16_t g_mouseWheel = 0;
 
 static void ImGui_ImplIOS_RenderDrawLists (ImDrawList** const cmd_lists, int cmd_lists_count);
 bool ImGui_ImplIOS_CreateDeviceObjects();
@@ -234,14 +235,18 @@ void ImGui_ScreenActiveCallback(uSynergyCookie cookie, uSynergyBool active)
 void ImGui_MouseCallback(uSynergyCookie cookie, uint16_t x, uint16_t y, int16_t wheelX, int16_t wheelY,
                          uSynergyBool buttonLeft, uSynergyBool buttonRight, uSynergyBool buttonMiddle)
 {
-//    printf("Synergy: mouse callback\n" );
+    printf("Synergy: mouse callback %d %d -- wheel %d %d\n", x, y,  wheelX, wheelY );
+    uSynergyContext *ctx = (uSynergyContext*)cookie;
     g_mousePosX = x;
     g_mousePosY = y;
-    g_mouseWheel = wheelX;
+    g_mouseWheelX = wheelX;
+    g_mouseWheelY = wheelY;
     g_MousePressed[0] = buttonLeft;
     g_MousePressed[1] = buttonMiddle;
     g_MousePressed[2] = buttonRight;
     
+    ctx->m_mouseWheelX = 0;
+    ctx->m_mouseWheelY = 0;
 }
 
 void ImGui_KeyboardCallback(uSynergyCookie cookie, uint16_t key,
@@ -504,6 +509,8 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
     _synergyCtx.m_mouseCallback = ImGui_MouseCallback;
     _synergyCtx.m_keyboardCallback = ImGui_KeyboardCallback;
     
+    _synergyCtx.m_cookie = (uSynergyCookie)&_synergyCtx;
+    
 //
 //    uSynergyCookie					m_cookie;										/* Cookie pointer passed to callback functions (can be NULL) */
 //    uSynergyTraceFunc				m_traceFunc;									/* Function for tracing status (can be NULL) */
@@ -578,6 +585,12 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
         for (int i=0; i < 3; i++)
         {
             io.MouseDown[i] = g_MousePressed[i];
+        }
+        
+        io.MouseWheel = g_mouseWheelY / 500.0;
+        if (fabs(io.MouseWheel) > 0.0)
+        {
+            printf("MouseWheel: %f\n", io.MouseWheel );
         }
     }
     else
