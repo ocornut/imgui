@@ -9,6 +9,8 @@ Synergy (remote keyboard/mouse) is not required, but it's pretty hard to use IMG
 
 ## How to Use
 ----
+
+0. In Synergy, go to Preferences, and uncheck "Use SSL encryption"
 0. Run the example app.
 0. Tap the "servername" button in the corner
 0. Enter the name or the IP of your synergy host

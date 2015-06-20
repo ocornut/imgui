@@ -163,6 +163,9 @@ static NSString *g_serverName;
 
 uSynergyBool ImGui_ConnectFunc(uSynergyCookie cookie)
 {
+    // NOTE: You need to turn off "Use SSL Encryption" in Synergy preferences, since
+    // uSynergy does not support SSL.
+    
     NSLog( @"Connect Func!");
     struct addrinfo hints, *res;
     
@@ -319,7 +322,11 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
 
 - (void)setupKeymaps
 {
-    // There might be a better way to do this, but I don't know it...
+    // The keyboard mapping is a big headache. I tried for a while to find a better way to do this,
+    // but this was the best I could come up with. There are some device independent API's available
+    // to convert scan codes to unicode characters, but these are only available on mac and not
+    // on iOS as far as I can tell (it's part of Carbon). I didn't see any better way to do
+    // this or  any way to get the character codes out of usynergy.
     g_keycodeCharUnshifted[ kVK_ANSI_A ]='a';
     g_keycodeCharUnshifted[ kVK_ANSI_S ]='s';
     g_keycodeCharUnshifted[ kVK_ANSI_D ]='d';
