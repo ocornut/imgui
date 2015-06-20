@@ -162,22 +162,28 @@ static uint16_t g_mousePosY = 0;
 static void ImGui_ImplIOS_RenderDrawLists (ImDrawList** const cmd_lists, int cmd_lists_count);
 bool ImGui_ImplIOS_CreateDeviceObjects();
 
+static NSString *g_serverName;
+
 uSynergyBool ImGui_ConnectFunc(uSynergyCookie cookie)
 {
     NSLog( @"Connect Func!");
     struct addrinfo hints, *res;
     
     // first, load up address structs with getaddrinfo():
-    
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
     hints.ai_socktype = SOCK_STREAM;
     
-    // we could put "80" instead on "http" on the next line:
-    getaddrinfo("pareidolia", "24800", &hints, &res);
+    // get server address
+    getaddrinfo([g_serverName UTF8String], "24800", &hints, &res);
+    
+    if (!res)
+    {
+        NSLog( @"Could not find server: %@", g_serverName );
+        return USYNERGY_FALSE;
+    }
     
     // make a socket:
-    
     usynergy_sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     
     // connect it to the address and port we passed in to getaddrinfo():
@@ -187,7 +193,6 @@ uSynergyBool ImGui_ConnectFunc(uSynergyCookie cookie)
     } else {
         NSLog( @"Connect failed, %d", ret );
     }
-    
     
     
     return USYNERGY_TRUE;
@@ -229,13 +234,13 @@ void ImGui_TraceFunc(uSynergyCookie cookie, const char *text)
 void ImGui_ScreenActiveCallback(uSynergyCookie cookie, uSynergyBool active)
 {
     g_synergyPtrActive = active;
-    printf( "Synergy: screen activate %s\n", active?"YES":"NO" );
+//    printf( "Synergy: screen activate %s\n", active?"YES":"NO" );
 }
 
 void ImGui_MouseCallback(uSynergyCookie cookie, uint16_t x, uint16_t y, int16_t wheelX, int16_t wheelY,
                          uSynergyBool buttonLeft, uSynergyBool buttonRight, uSynergyBool buttonMiddle)
 {
-    printf("Synergy: mouse callback %d %d -- wheel %d %d\n", x, y,  wheelX, wheelY );
+//    printf("Synergy: mouse callback %d %d -- wheel %d %d\n", x, y,  wheelX, wheelY );
     uSynergyContext *ctx = (uSynergyContext*)cookie;
     g_mousePosX = x;
     g_mousePosY = y;
@@ -253,7 +258,7 @@ void ImGui_KeyboardCallback(uSynergyCookie cookie, uint16_t key,
                             uint16_t modifiers, uSynergyBool down, uSynergyBool repeat)
 {
     int scanCode = key-1;
-    printf("Synergy: keyboard callback: 0x%02X (%s)", scanCode, down?"true":"false");
+//    printf("Synergy: keyboard callback: 0x%02X (%s)", scanCode, down?"true":"false");
     ImGuiIO& io = ImGui::GetIO();
     io.KeysDown[key] = down;
     io.KeyShift = modifiers & USYNERGY_MODIFIER_SHIFT;
@@ -271,20 +276,19 @@ void ImGui_KeyboardCallback(uSynergyCookie cookie, uint16_t key,
         }
         
         // If this key maps to a character input, apply it
-        printf("ASCII: %c\n", charForKeycode );
         io.AddInputCharacter((unsigned short)charForKeycode);
-    } else printf("\n");
+    }
     
 }
 
 void ImGui_JoystickCallback(uSynergyCookie cookie, uint8_t joyNum, uint16_t buttons, int8_t leftStickX, int8_t leftStickY, int8_t rightStickX, int8_t rightStickY)
 {
-    printf("Synergy: joystick callback\n");
+    printf("Synergy: joystick callback TODO\n");
 }
 
 void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat format, const uint8_t *data, uint32_t size)
 {
-    printf("Synergy: clipboard callback\n" );
+    printf("Synergy: clipboard callback TODO\n" );
 }
 
 
@@ -293,11 +297,13 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
     BOOL _mouseDown;
     BOOL _mouseTapped;
     CGPoint _touchPos;
-    
+
     uSynergyContext _synergyCtx;
     dispatch_queue_t _synergyQueue;
 }
 @property (nonatomic, weak) UIView *view;
+@property (nonatomic, strong) NSString *serverName;
+
 @end
 
 @implementation ImGuiHelper
@@ -308,6 +314,7 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
     if (self)
     {
         self.view = view;
+
         [self setupImGuiHooks];
     }
     return self;
@@ -489,43 +496,35 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
     io.KeyMap[ImGuiKey_Y] = kVK_ANSI_Y+1;
     io.KeyMap[ImGuiKey_Z] = kVK_ANSI_Z+1;
     
+
+}
+
+- (void)connectServer: (NSString*)serverName
+{
+    self.serverName = serverName;
+    g_serverName = serverName;
+    
     // Init synergy
     NSString *bundleName = [[[NSBundle mainBundle] infoDictionary] objectForKey:(NSString*)kCFBundleNameKey];
-
+    
     uSynergyInit( &_synergyCtx );
     _synergyCtx.m_clientName = strdup( [bundleName UTF8String] );
     _synergyCtx.m_clientWidth = self.view.bounds.size.width;
     _synergyCtx.m_clientHeight = self.view.bounds.size.height;
-
+    
     _synergyCtx.m_connectFunc = ImGui_ConnectFunc;
     _synergyCtx.m_sendFunc = ImGui_SendFunc;
     _synergyCtx.m_receiveFunc = ImGui_RecvFunc;
     _synergyCtx.m_sleepFunc = ImGui_SleepFunc;
     _synergyCtx.m_traceFunc = ImGui_TraceFunc;
     _synergyCtx.m_getTimeFunc = ImGui_GetTimeFunc;
-
+    
     _synergyCtx.m_traceFunc = ImGui_TraceFunc;
     _synergyCtx.m_screenActiveCallback = ImGui_ScreenActiveCallback;
     _synergyCtx.m_mouseCallback = ImGui_MouseCallback;
     _synergyCtx.m_keyboardCallback = ImGui_KeyboardCallback;
     
     _synergyCtx.m_cookie = (uSynergyCookie)&_synergyCtx;
-    
-//
-//    uSynergyCookie					m_cookie;										/* Cookie pointer passed to callback functions (can be NULL) */
-//    uSynergyTraceFunc				m_traceFunc;									/* Function for tracing status (can be NULL) */
-//    uSynergyScreenActiveCallback	m_screenActiveCallback;							/* Callback for entering and leaving screen */
-//    uSynergyMouseCallback			m_mouseCallback;								/* Callback for mouse events */
-//    uSynergyKeyboardCallback		m_keyboardCallback;								/* Callback for keyboard events */
-//    uSynergyJoystickCallback		m_joystickCallback;								/* Callback for joystick events */
-//    uSynergyClipboardCallback		m_clipboardCallback;							/* Callback for clipboard events */
-    
-//    uSynergyConnectFunc				m_connectFunc;									/* Connect function */
-//    uSynergySendFunc				m_sendFunc;										/* Send data function */
-//    uSynergyReceiveFunc				m_receiveFunc;									/* Receive data function */
-//    uSynergySleepFunc				m_sleepFunc;									/* Thread sleep function */
-//    uSynergyGetTimeFunc				m_getTimeFunc;									/* Get current time function */
-
     
     // Create a background thread for synergy
     _synergyQueue = dispatch_queue_create( "imgui-usynergy", NULL );
@@ -534,7 +533,6 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
             uSynergyUpdate( &_synergyCtx );
         }
     });
-    
 }
 
 
@@ -586,12 +584,10 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
         {
             io.MouseDown[i] = g_MousePressed[i];
         }
-        
+
+        // This is an arbitrary scaling factor that works for me. Not sure what units these
+        // mousewheel values from synergy are supposed to be in
         io.MouseWheel = g_mouseWheelY / 500.0;
-        if (fabs(io.MouseWheel) > 0.0)
-        {
-            printf("MouseWheel: %f\n", io.MouseWheel );
-        }
     }
     else
     {
@@ -616,6 +612,7 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
+// NOTE: this is copied pretty much entirely from the opengl3_example, with only minor changes for ES
 static void ImGui_ImplIOS_RenderDrawLists (ImDrawList** const cmd_lists, int cmd_lists_count)
 {
     if (cmd_lists_count == 0)
@@ -737,7 +734,6 @@ void ImGui_ImplIOS_CreateFontsTexture()
 bool ImGui_ImplIOS_CreateDeviceObjects()
 {
     const GLchar *vertex_shader =
-//    "#version 330\n"
     "uniform mat4 ProjMtx;\n"
     "attribute highp vec2 Position;\n"
     "attribute highp vec2 UV;\n"
@@ -752,11 +748,9 @@ bool ImGui_ImplIOS_CreateDeviceObjects()
     "}\n";
     
     const GLchar* fragment_shader =
-//    "#version 330\n"
     "uniform sampler2D Texture;\n"
     "varying highp vec2 Frag_UV;\n"
     "varying highp vec4 Frag_Color;\n"
-//    "varying vec4 Out_Color;\n"
     "void main()\n"
     "{\n"
     "	gl_FragColor = Frag_Color * texture2D( Texture, Frag_UV.st);\n"

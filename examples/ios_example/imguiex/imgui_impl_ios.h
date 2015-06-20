@@ -15,6 +15,8 @@
 
 - (id) initWithView: (UIView *)view;
 
+- (void)connectServer: (NSString*)serverName;
+
 - (void)render;
 - (void)newFrame;
 

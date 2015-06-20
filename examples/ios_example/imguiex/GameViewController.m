@@ -13,6 +13,10 @@
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
+#define SERVERNAME_KEY @"ServerName"
+
+#define SERVERNAME_ALERT_TAG (10)
+
 // Uniform index.
 enum
 {
@@ -79,7 +83,8 @@ GLfloat gCubeVertexData[216] =
     -0.5f, 0.5f, -0.5f,        0.0f, 0.0f, -1.0f
 };
 
-@interface GameViewController () {
+@interface GameViewController () <UIAlertViewDelegate>
+{
     GLuint _program;
     
     GLKMatrix4 _modelViewProjectionMatrix;
@@ -94,6 +99,11 @@ GLfloat gCubeVertexData[216] =
 @property (strong, nonatomic) EAGLContext *context;
 @property (strong, nonatomic) GLKBaseEffect *effect;
 @property (strong, nonatomic) ImGuiHelper *imgui;
+@property (weak, nonatomic) IBOutlet UIButton *btnServername;
+
+@property (strong, nonatomic) NSString *serverName;
+
+- (IBAction)onServernameTapped:(id)sender;
 
 - (void)setupGL;
 - (void)tearDownGL;
@@ -120,9 +130,18 @@ GLfloat gCubeVertexData[216] =
     view.context = self.context;
     view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
     
+    [self.btnServername setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    
     [self setupGL];
     
+    NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+    self.serverName = [userDefaults objectForKey: SERVERNAME_KEY ];
     self.imgui = [[ImGuiHelper alloc] initWithView:self.view ];
+    if (self.serverName)
+    {
+        [self.btnServername setTitle:self.serverName forState:UIControlStateNormal];
+        [self.imgui connectServer: self.serverName ];
+    }
     
     DebugHUD_InitDefaults( &_hud );
 }
@@ -154,8 +173,50 @@ GLfloat gCubeVertexData[216] =
     // Dispose of any resources that can be recreated.
 }
 
+
 - (BOOL)prefersStatusBarHidden {
     return YES;
+}
+
+- (IBAction)onServernameTapped:(id)sender
+{
+    UIAlertView * alert = [[UIAlertView alloc] initWithTitle:@"Set Server" message:@"Enter server name or IP for uSynergy" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:@"Cancel", nil ];
+    alert.alertViewStyle = UIAlertViewStylePlainTextInput;
+    alert.tag = SERVERNAME_ALERT_TAG; // cheezy way to tell which alert view we're responding to
+    [alert show];
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if ((buttonIndex==0)&&(alertView.tag==SERVERNAME_ALERT_TAG))
+    {
+        // This is really janky. I usually just hardcode the servername since I'm building it anyway.
+        // If you want to properly handle updating the server, you'll want to tear down and recreate
+        // the usynergy stuff in connectServer
+        BOOL serverNameWasSet = self.serverName.length > 0;
+        NSString *serverName = [[alertView textFieldAtIndex:0] text];
+
+        if ([serverName length] > 0) {
+            self.serverName = serverName;
+            NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+            [userDefaults setObject:serverName forKey:SERVERNAME_KEY ];
+            [userDefaults synchronize];
+            
+            [self.btnServername setTitle:self.serverName forState:UIControlStateNormal];
+            
+            // If we hadn't previously connected, try now
+            if (!serverNameWasSet) {
+                [self.imgui connectServer:self.serverName];
+            }
+            else
+            {
+                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Servername Updated"
+                                                                message:@"Restart the app to connect the server"
+                                                               delegate:nil cancelButtonTitle:@"OK" otherButtonTitles: nil];
+                [alert show];
+            }
+        }
+    }
 }
 
 - (void)setupGL
