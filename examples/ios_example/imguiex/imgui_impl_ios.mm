@@ -18,6 +18,129 @@
 
 #include "uSynergy.h"
 
+// From Carbon HIToolbox/Events.h
+enum {
+    kVK_ANSI_A                    = 0x00,
+    kVK_ANSI_S                    = 0x01,
+    kVK_ANSI_D                    = 0x02,
+    kVK_ANSI_F                    = 0x03,
+    kVK_ANSI_H                    = 0x04,
+    kVK_ANSI_G                    = 0x05,
+    kVK_ANSI_Z                    = 0x06,
+    kVK_ANSI_X                    = 0x07,
+    kVK_ANSI_C                    = 0x08,
+    kVK_ANSI_V                    = 0x09,
+    kVK_ANSI_B                    = 0x0B,
+    kVK_ANSI_Q                    = 0x0C,
+    kVK_ANSI_W                    = 0x0D,
+    kVK_ANSI_E                    = 0x0E,
+    kVK_ANSI_R                    = 0x0F,
+    kVK_ANSI_Y                    = 0x10,
+    kVK_ANSI_T                    = 0x11,
+    kVK_ANSI_1                    = 0x12,
+    kVK_ANSI_2                    = 0x13,
+    kVK_ANSI_3                    = 0x14,
+    kVK_ANSI_4                    = 0x15,
+    kVK_ANSI_6                    = 0x16,
+    kVK_ANSI_5                    = 0x17,
+    kVK_ANSI_Equal                = 0x18,
+    kVK_ANSI_9                    = 0x19,
+    kVK_ANSI_7                    = 0x1A,
+    kVK_ANSI_Minus                = 0x1B,
+    kVK_ANSI_8                    = 0x1C,
+    kVK_ANSI_0                    = 0x1D,
+    kVK_ANSI_RightBracket         = 0x1E,
+    kVK_ANSI_O                    = 0x1F,
+    kVK_ANSI_U                    = 0x20,
+    kVK_ANSI_LeftBracket          = 0x21,
+    kVK_ANSI_I                    = 0x22,
+    kVK_ANSI_P                    = 0x23,
+    kVK_ANSI_L                    = 0x25,
+    kVK_ANSI_J                    = 0x26,
+    kVK_ANSI_Quote                = 0x27,
+    kVK_ANSI_K                    = 0x28,
+    kVK_ANSI_Semicolon            = 0x29,
+    kVK_ANSI_Backslash            = 0x2A,
+    kVK_ANSI_Comma                = 0x2B,
+    kVK_ANSI_Slash                = 0x2C,
+    kVK_ANSI_N                    = 0x2D,
+    kVK_ANSI_M                    = 0x2E,
+    kVK_ANSI_Period               = 0x2F,
+    kVK_ANSI_Grave                = 0x32,
+    kVK_ANSI_KeypadDecimal        = 0x41,
+    kVK_ANSI_KeypadMultiply       = 0x43,
+    kVK_ANSI_KeypadPlus           = 0x45,
+    kVK_ANSI_KeypadClear          = 0x47,
+    kVK_ANSI_KeypadDivide         = 0x4B,
+    kVK_ANSI_KeypadEnter          = 0x4C,
+    kVK_ANSI_KeypadMinus          = 0x4E,
+    kVK_ANSI_KeypadEquals         = 0x51,
+    kVK_ANSI_Keypad0              = 0x52,
+    kVK_ANSI_Keypad1              = 0x53,
+    kVK_ANSI_Keypad2              = 0x54,
+    kVK_ANSI_Keypad3              = 0x55,
+    kVK_ANSI_Keypad4              = 0x56,
+    kVK_ANSI_Keypad5              = 0x57,
+    kVK_ANSI_Keypad6              = 0x58,
+    kVK_ANSI_Keypad7              = 0x59,
+    kVK_ANSI_Keypad8              = 0x5B,
+    kVK_ANSI_Keypad9              = 0x5C
+};
+
+/* keycodes for keys that are independent of keyboard layout*/
+enum {
+    kVK_Return                    = 0x24,
+    kVK_Tab                       = 0x30,
+    kVK_Space                     = 0x31,
+    kVK_Delete                    = 0x33,
+    kVK_Escape                    = 0x35,
+    kVK_Command                   = 0x37,
+    kVK_Shift                     = 0x38,
+    kVK_CapsLock                  = 0x39,
+    kVK_Option                    = 0x3A,
+    kVK_Control                   = 0x3B,
+    kVK_RightShift                = 0x3C,
+    kVK_RightOption               = 0x3D,
+    kVK_RightControl              = 0x3E,
+    kVK_Function                  = 0x3F,
+    kVK_F17                       = 0x40,
+    kVK_VolumeUp                  = 0x48,
+    kVK_VolumeDown                = 0x49,
+    kVK_Mute                      = 0x4A,
+    kVK_F18                       = 0x4F,
+    kVK_F19                       = 0x50,
+    kVK_F20                       = 0x5A,
+    kVK_F5                        = 0x60,
+    kVK_F6                        = 0x61,
+    kVK_F7                        = 0x62,
+    kVK_F3                        = 0x63,
+    kVK_F8                        = 0x64,
+    kVK_F9                        = 0x65,
+    kVK_F11                       = 0x67,
+    kVK_F13                       = 0x69,
+    kVK_F16                       = 0x6A,
+    kVK_F14                       = 0x6B,
+    kVK_F10                       = 0x6D,
+    kVK_F12                       = 0x6F,
+    kVK_F15                       = 0x71,
+    kVK_Help                      = 0x72,
+    kVK_Home                      = 0x73,
+    kVK_PageUp                    = 0x74,
+    kVK_ForwardDelete             = 0x75,
+    kVK_F4                        = 0x76,
+    kVK_End                       = 0x77,
+    kVK_F2                        = 0x78,
+    kVK_PageDown                  = 0x79,
+    kVK_F1                        = 0x7A,
+    kVK_LeftArrow                 = 0x7B,
+    kVK_RightArrow                = 0x7C,
+    kVK_DownArrow                 = 0x7D,
+    kVK_UpArrow                   = 0x7E
+};
+
+static char g_keycodeCharUnshifted[256] = {};
+static char g_keycodeCharShifted[256] = {};
+
 //static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
 static float        g_MouseWheel = 0.0f;
@@ -34,7 +157,6 @@ static bool g_synergyPtrActive = false;
 static uint16_t g_mousePosX = 0;
 static uint16_t g_mousePosY = 0;
 static uint16_t g_mouseWheel = 0;
-
 
 static void ImGui_ImplIOS_RenderDrawLists (ImDrawList** const cmd_lists, int cmd_lists_count);
 bool ImGui_ImplIOS_CreateDeviceObjects();
@@ -72,7 +194,7 @@ uSynergyBool ImGui_ConnectFunc(uSynergyCookie cookie)
 
 uSynergyBool ImGui_SendFunc(uSynergyCookie cookie, const uint8_t *buffer, int length)
 {
-    NSLog( @"Send Func" );
+//    NSLog( @"Send Func" );
     send( usynergy_sockfd, buffer, length, 0 );
     
     return USYNERGY_TRUE;
@@ -112,7 +234,7 @@ void ImGui_ScreenActiveCallback(uSynergyCookie cookie, uSynergyBool active)
 void ImGui_MouseCallback(uSynergyCookie cookie, uint16_t x, uint16_t y, int16_t wheelX, int16_t wheelY,
                          uSynergyBool buttonLeft, uSynergyBool buttonRight, uSynergyBool buttonMiddle)
 {
-    printf("Synergy: mouse callback\n" );
+//    printf("Synergy: mouse callback\n" );
     g_mousePosX = x;
     g_mousePosY = y;
     g_mouseWheel = wheelX;
@@ -125,7 +247,29 @@ void ImGui_MouseCallback(uSynergyCookie cookie, uint16_t x, uint16_t y, int16_t 
 void ImGui_KeyboardCallback(uSynergyCookie cookie, uint16_t key,
                             uint16_t modifiers, uSynergyBool down, uSynergyBool repeat)
 {
-    printf("Synergy: keyboard callback\n");
+    int scanCode = key-1;
+    printf("Synergy: keyboard callback: 0x%02X (%s)", scanCode, down?"true":"false");
+    ImGuiIO& io = ImGui::GetIO();
+    io.KeysDown[key] = down;
+    io.KeyShift = modifiers & USYNERGY_MODIFIER_SHIFT;
+    io.KeyCtrl = modifiers & USYNERGY_MODIFIER_CTRL;
+    io.KeyAlt = modifiers & USYNERGY_MODIFIER_ALT;
+    
+    
+    // Add this as keyboard input
+    if ((down) && (key) && (scanCode<256) && !(modifiers & USYNERGY_MODIFIER_CTRL)) {
+        int charForKeycode = 0;
+        if (modifiers & USYNERGY_MODIFIER_SHIFT ) {
+            charForKeycode = g_keycodeCharShifted[ scanCode ];
+        } else {
+            charForKeycode = g_keycodeCharUnshifted[ scanCode ];
+        }
+        
+        // If this key maps to a character input, apply it
+        printf("ASCII: %c\n", charForKeycode );
+        io.AddInputCharacter((unsigned short)charForKeycode);
+    } else printf("\n");
+    
 }
 
 void ImGui_JoystickCallback(uSynergyCookie cookie, uint8_t joyNum, uint16_t buttons, int8_t leftStickX, int8_t leftStickY, int8_t rightStickX, int8_t rightStickY)
@@ -164,9 +308,147 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
     return self;
 }
 
+- (void)setupKeymaps
+{
+    // There might be a better way to do this, but I don't know it...
+    g_keycodeCharUnshifted[ kVK_ANSI_A ]='a';
+    g_keycodeCharUnshifted[ kVK_ANSI_S ]='s';
+    g_keycodeCharUnshifted[ kVK_ANSI_D ]='d';
+    g_keycodeCharUnshifted[ kVK_ANSI_F ]='f';
+    g_keycodeCharUnshifted[ kVK_ANSI_H ]='h';
+    g_keycodeCharUnshifted[ kVK_ANSI_G ]='g';
+    g_keycodeCharUnshifted[ kVK_ANSI_Z ]='z';
+    g_keycodeCharUnshifted[ kVK_ANSI_X ]='x';
+    g_keycodeCharUnshifted[ kVK_ANSI_C ]='c';
+    g_keycodeCharUnshifted[ kVK_ANSI_V ]='v';
+    g_keycodeCharUnshifted[ kVK_ANSI_B ]='b';
+    g_keycodeCharUnshifted[ kVK_ANSI_Q ]='q';
+    g_keycodeCharUnshifted[ kVK_ANSI_W ]='w';
+    g_keycodeCharUnshifted[ kVK_ANSI_E ]='e';
+    g_keycodeCharUnshifted[ kVK_ANSI_R ]='r';
+    g_keycodeCharUnshifted[ kVK_ANSI_Y ]='y';
+    g_keycodeCharUnshifted[ kVK_ANSI_T ]='t';
+    g_keycodeCharUnshifted[ kVK_ANSI_1 ]='1';
+    g_keycodeCharUnshifted[ kVK_ANSI_2 ]='2';
+    g_keycodeCharUnshifted[ kVK_ANSI_3 ]='3';
+    g_keycodeCharUnshifted[ kVK_ANSI_4 ]='4';
+    g_keycodeCharUnshifted[ kVK_ANSI_6 ]='6';
+    g_keycodeCharUnshifted[ kVK_ANSI_5 ]='5';
+    g_keycodeCharUnshifted[ kVK_ANSI_Equal ]='=';
+    g_keycodeCharUnshifted[ kVK_ANSI_9 ]='9';
+    g_keycodeCharUnshifted[ kVK_ANSI_7 ]='7';
+    g_keycodeCharUnshifted[ kVK_ANSI_Minus ]='-';
+    g_keycodeCharUnshifted[ kVK_ANSI_8 ]='8';
+    g_keycodeCharUnshifted[ kVK_ANSI_0 ]='0';
+    g_keycodeCharUnshifted[ kVK_ANSI_RightBracket ]=']';
+    g_keycodeCharUnshifted[ kVK_ANSI_O ]='o';
+    g_keycodeCharUnshifted[ kVK_ANSI_U ]='u';
+    g_keycodeCharUnshifted[ kVK_ANSI_LeftBracket ]='[';
+    g_keycodeCharUnshifted[ kVK_ANSI_I ]='i';
+    g_keycodeCharUnshifted[ kVK_ANSI_P ]='p';
+    g_keycodeCharUnshifted[ kVK_ANSI_L ]='l';
+    g_keycodeCharUnshifted[ kVK_ANSI_J ]='j';
+    g_keycodeCharUnshifted[ kVK_ANSI_Quote ]='\'';
+    g_keycodeCharUnshifted[ kVK_ANSI_K ]='k';
+    g_keycodeCharUnshifted[ kVK_ANSI_Semicolon ]=';';
+    g_keycodeCharUnshifted[ kVK_ANSI_Backslash ]='\\';
+    g_keycodeCharUnshifted[ kVK_ANSI_Comma ]=',';
+    g_keycodeCharUnshifted[ kVK_ANSI_Slash ]='/';
+    g_keycodeCharUnshifted[ kVK_ANSI_N ]='n';
+    g_keycodeCharUnshifted[ kVK_ANSI_M ]='m';
+    g_keycodeCharUnshifted[ kVK_ANSI_Period ]='.';
+    g_keycodeCharUnshifted[ kVK_ANSI_Grave ]='`';
+    g_keycodeCharUnshifted[ kVK_ANSI_KeypadDecimal ]='.';
+    g_keycodeCharUnshifted[ kVK_ANSI_KeypadMultiply ]='*';
+    g_keycodeCharUnshifted[ kVK_ANSI_KeypadPlus ]='+';
+    g_keycodeCharUnshifted[ kVK_ANSI_KeypadDivide ]='/';
+    g_keycodeCharUnshifted[ kVK_ANSI_KeypadEnter ]='\n';
+    g_keycodeCharUnshifted[ kVK_ANSI_KeypadMinus ]='-';
+    g_keycodeCharUnshifted[ kVK_ANSI_KeypadEquals ]='=';
+    g_keycodeCharUnshifted[ kVK_ANSI_Keypad0 ]='0';
+    g_keycodeCharUnshifted[ kVK_ANSI_Keypad1 ]='1';
+    g_keycodeCharUnshifted[ kVK_ANSI_Keypad2 ]='2';
+    g_keycodeCharUnshifted[ kVK_ANSI_Keypad3 ]='3';
+    g_keycodeCharUnshifted[ kVK_ANSI_Keypad4 ]='4';
+    g_keycodeCharUnshifted[ kVK_ANSI_Keypad5 ]='5';
+    g_keycodeCharUnshifted[ kVK_ANSI_Keypad6 ]='6';
+    g_keycodeCharUnshifted[ kVK_ANSI_Keypad7 ]='7';
+    g_keycodeCharUnshifted[ kVK_ANSI_Keypad8 ]='8';
+    g_keycodeCharUnshifted[ kVK_ANSI_Keypad9 ]='9';
+    g_keycodeCharUnshifted[ kVK_Space ]=' ';
+    
+    g_keycodeCharShifted[ kVK_ANSI_A ]='A';
+    g_keycodeCharShifted[ kVK_ANSI_S ]='S';
+    g_keycodeCharShifted[ kVK_ANSI_D ]='D';
+    g_keycodeCharShifted[ kVK_ANSI_F ]='F';
+    g_keycodeCharShifted[ kVK_ANSI_H ]='H';
+    g_keycodeCharShifted[ kVK_ANSI_G ]='G';
+    g_keycodeCharShifted[ kVK_ANSI_Z ]='Z';
+    g_keycodeCharShifted[ kVK_ANSI_X ]='X';
+    g_keycodeCharShifted[ kVK_ANSI_C ]='C';
+    g_keycodeCharShifted[ kVK_ANSI_V ]='V';
+    g_keycodeCharShifted[ kVK_ANSI_B ]='B';
+    g_keycodeCharShifted[ kVK_ANSI_Q ]='Q';
+    g_keycodeCharShifted[ kVK_ANSI_W ]='W';
+    g_keycodeCharShifted[ kVK_ANSI_E ]='E';
+    g_keycodeCharShifted[ kVK_ANSI_R ]='R';
+    g_keycodeCharShifted[ kVK_ANSI_Y ]='Y';
+    g_keycodeCharShifted[ kVK_ANSI_T ]='T';
+    g_keycodeCharShifted[ kVK_ANSI_1 ]='!';
+    g_keycodeCharShifted[ kVK_ANSI_2 ]='@';
+    g_keycodeCharShifted[ kVK_ANSI_3 ]='#';
+    g_keycodeCharShifted[ kVK_ANSI_4 ]='$';
+    g_keycodeCharShifted[ kVK_ANSI_6 ]='^';
+    g_keycodeCharShifted[ kVK_ANSI_5 ]='%';
+    g_keycodeCharShifted[ kVK_ANSI_Equal ]='+';
+    g_keycodeCharShifted[ kVK_ANSI_9 ]='(';
+    g_keycodeCharShifted[ kVK_ANSI_7 ]='&';
+    g_keycodeCharShifted[ kVK_ANSI_Minus ]='_';
+    g_keycodeCharShifted[ kVK_ANSI_8 ]='*';
+    g_keycodeCharShifted[ kVK_ANSI_0 ]=')';
+    g_keycodeCharShifted[ kVK_ANSI_RightBracket ]='}';
+    g_keycodeCharShifted[ kVK_ANSI_O ]='O';
+    g_keycodeCharShifted[ kVK_ANSI_U ]='U';
+    g_keycodeCharShifted[ kVK_ANSI_LeftBracket ]='{';
+    g_keycodeCharShifted[ kVK_ANSI_I ]='I';
+    g_keycodeCharShifted[ kVK_ANSI_P ]='P';
+    g_keycodeCharShifted[ kVK_ANSI_L ]='L';
+    g_keycodeCharShifted[ kVK_ANSI_J ]='J';
+    g_keycodeCharShifted[ kVK_ANSI_Quote ]='\"';
+    g_keycodeCharShifted[ kVK_ANSI_K ]='K';
+    g_keycodeCharShifted[ kVK_ANSI_Semicolon ]=':';
+    g_keycodeCharShifted[ kVK_ANSI_Backslash ]='|';
+    g_keycodeCharShifted[ kVK_ANSI_Comma ]='<';
+    g_keycodeCharShifted[ kVK_ANSI_Slash ]='?';
+    g_keycodeCharShifted[ kVK_ANSI_N ]='N';
+    g_keycodeCharShifted[ kVK_ANSI_M ]='M';
+    g_keycodeCharShifted[ kVK_ANSI_Period ]='>';
+    g_keycodeCharShifted[ kVK_ANSI_Grave ]='~';
+    g_keycodeCharShifted[ kVK_ANSI_KeypadDecimal ]='.';
+    g_keycodeCharShifted[ kVK_ANSI_KeypadMultiply ]='*';
+    g_keycodeCharShifted[ kVK_ANSI_KeypadPlus ]='+';
+    g_keycodeCharShifted[ kVK_ANSI_KeypadDivide ]='/';
+    g_keycodeCharShifted[ kVK_ANSI_KeypadEnter ]='\n';
+    g_keycodeCharShifted[ kVK_ANSI_KeypadMinus ]='-';
+    g_keycodeCharShifted[ kVK_ANSI_KeypadEquals ]='=';
+    g_keycodeCharShifted[ kVK_ANSI_Keypad0 ]='0';
+    g_keycodeCharShifted[ kVK_ANSI_Keypad1 ]='1';
+    g_keycodeCharShifted[ kVK_ANSI_Keypad2 ]='2';
+    g_keycodeCharShifted[ kVK_ANSI_Keypad3 ]='3';
+    g_keycodeCharShifted[ kVK_ANSI_Keypad4 ]='4';
+    g_keycodeCharShifted[ kVK_ANSI_Keypad5 ]='5';
+    g_keycodeCharShifted[ kVK_ANSI_Keypad6 ]='6';
+    g_keycodeCharShifted[ kVK_ANSI_Keypad7 ]='7';
+    g_keycodeCharShifted[ kVK_ANSI_Keypad8 ]='8';
+    g_keycodeCharShifted[ kVK_ANSI_Keypad9 ]='9';
+    g_keycodeCharShifted[ kVK_Space ]=' ';
+}
+
 - (void)setupImGuiHooks
 {
     ImGuiIO &io = ImGui::GetIO();
+    
+    [self setupKeymaps];
     
     // Account for retina display for glScissor
     g_displayScale = [[UIScreen mainScreen] scale];
@@ -181,6 +463,26 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
     
     UITapGestureRecognizer *tapRecoginzer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector( viewDidTap:)];
     [self.view addGestureRecognizer:tapRecoginzer];
+    
+    // Fill out the Synergy key map
+    // (for some reason synergy scan codes are off by 1)
+    io.KeyMap[ImGuiKey_Tab] = kVK_Tab+1;
+    io.KeyMap[ImGuiKey_LeftArrow] = kVK_LeftArrow+1;
+    io.KeyMap[ImGuiKey_RightArrow] = kVK_RightArrow+1;
+    io.KeyMap[ImGuiKey_UpArrow] = kVK_UpArrow+1;
+    io.KeyMap[ImGuiKey_DownArrow] = kVK_DownArrow+1;
+    io.KeyMap[ImGuiKey_Home] = kVK_Home+1;
+    io.KeyMap[ImGuiKey_End] = kVK_End+1;
+    io.KeyMap[ImGuiKey_Delete] = kVK_ForwardDelete+1;
+    io.KeyMap[ImGuiKey_Backspace] = kVK_Delete+1;
+    io.KeyMap[ImGuiKey_Enter] = kVK_Return+1;
+    io.KeyMap[ImGuiKey_Escape] = kVK_Escape+1;
+    io.KeyMap[ImGuiKey_A] = kVK_ANSI_A+1;
+    io.KeyMap[ImGuiKey_C] = kVK_ANSI_C+1;
+    io.KeyMap[ImGuiKey_V] = kVK_ANSI_V+1;
+    io.KeyMap[ImGuiKey_X] = kVK_ANSI_X+1;
+    io.KeyMap[ImGuiKey_Y] = kVK_ANSI_Y+1;
+    io.KeyMap[ImGuiKey_Z] = kVK_ANSI_Z+1;
     
     // Init synergy
     NSString *bundleName = [[[NSBundle mainBundle] infoDictionary] objectForKey:(NSString*)kCFBundleNameKey];
@@ -200,6 +502,8 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
     _synergyCtx.m_traceFunc = ImGui_TraceFunc;
     _synergyCtx.m_screenActiveCallback = ImGui_ScreenActiveCallback;
     _synergyCtx.m_mouseCallback = ImGui_MouseCallback;
+    _synergyCtx.m_keyboardCallback = ImGui_KeyboardCallback;
+    
 //
 //    uSynergyCookie					m_cookie;										/* Cookie pointer passed to callback functions (can be NULL) */
 //    uSynergyTraceFunc				m_traceFunc;									/* Function for tracing status (can be NULL) */
