@@ -5,7 +5,7 @@
 
 This example is the default XCode "OpenGL" example code, modified to support IMGUI and [Synergy](http://synergy-project.org/). 
 
-Synergy (remote keyboard/mouse) is not required, but it's pretty hard to use IMGUI without it. Synergy includes a "uSynergy" library that allows embedding a synergy client, this is what is used here.
+Synergy (remote keyboard/mouse) is not required, but it's pretty hard to use IMGUI without it. Synergy includes a "uSynergy" library that allows embedding a synergy client, this is what is used here. IMGUI supports "Touch Padding", and this is enabled when Synergy is not active.
 
 ## How to Use
 ----
@@ -22,7 +22,7 @@ Things that would be nice but I didn't get around to doing:
 * iOS software keyboard not supported for text inputs
 * iOS hardware (bluetooth) keyboards not supported
 * Graceful disconnect/reconnect from uSynergy.
-* Copy/Paste note well-supported
+* Copy/Paste not well-supported
 
 ----
 ## C++ on iOS

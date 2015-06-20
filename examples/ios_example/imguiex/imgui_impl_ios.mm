@@ -1,9 +1,6 @@
 //
 //  imgui_impl_ios.cpp
 //  imguiex
-//
-//  Joel Davis (joeld42@gmail.com)
-//
 
 #import <OpenGLES/ES3/gl.h>
 #import <OpenGLES/ES3/glext.h>
