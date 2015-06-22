@@ -2089,8 +2089,10 @@ void ImGui::NewFrame()
     g.IO.MousePosPrev = g.IO.MousePos;
     for (size_t i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
     {
-        g.IO.MouseDownTime[i] = g.IO.MouseDown[i] ? (g.IO.MouseDownTime[i] < 0.0f ? 0.0f : g.IO.MouseDownTime[i] + g.IO.DeltaTime) : -1.0f;
-        g.IO.MouseClicked[i] = (g.IO.MouseDownTime[i] == 0.0f);
+        g.IO.MouseDownDurationPrev[i] = g.IO.MouseDownDuration[i];
+        g.IO.MouseDownDuration[i] = g.IO.MouseDown[i] ? (g.IO.MouseDownDuration[i] < 0.0f ? 0.0f : g.IO.MouseDownDuration[i] + g.IO.DeltaTime) : -1.0f;
+        g.IO.MouseClicked[i] = g.IO.MouseDownDuration[i] == 0.0f;
+        g.IO.MouseReleased[i] = g.IO.MouseDownDurationPrev[i] >= 0.0f && !g.IO.MouseDown[i];
         g.IO.MouseDoubleClicked[i] = false;
         if (g.IO.MouseClicked[i])
         {
@@ -2894,7 +2896,7 @@ bool ImGui::IsMouseClicked(int button, bool repeat)
 {
     ImGuiState& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
-    const float t = g.IO.MouseDownTime[button];
+    const float t = g.IO.MouseDownDuration[button];
     if (t == 0.0f)
         return true;
 
@@ -2906,6 +2908,13 @@ bool ImGui::IsMouseClicked(int button, bool repeat)
     }
 
     return false;
+}
+
+bool ImGui::IsMouseReleased(int button)
+{
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    return g.IO.MouseReleased[button];
 }
 
 bool ImGui::IsMouseDoubleClicked(int button)
@@ -10561,6 +10570,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
     ImGui::Text("ImGui says hello.");
     //ImGui::Text("MousePos (%g, %g)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
+    //ImGui::Text("MouseClicked (%d, %d) MouseReleased (%d, %d)", ImGui::GetIO().MouseClicked[0], ImGui::GetIO().MouseClicked[1], ImGui::GetIO().MouseReleased[0], ImGui::GetIO().MouseReleased[1]);
     //ImGui::Text("MouseWheel %d", ImGui::GetIO().MouseWheel);
     //ImGui::Text("KeyMods %s%s%s", ImGui::GetIO().KeyCtrl ? "CTRL" : "", ImGui::GetIO().KeyShift ? "SHIFT" : "", ImGui::GetIO().KeyAlt? "ALT" : "");
     //ImGui::Text("WantCaptureMouse: %d", ImGui::GetIO().WantCaptureMouse);
