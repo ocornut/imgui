@@ -703,7 +703,7 @@ struct ImGuiIO
     ImVec2      MouseClickedPos[5];         // Position at time of clicking
     float       MouseClickedTime[5];        // Time of last click (used to figure out double-click)
     bool        MouseDoubleClicked[5];      // Has mouse button been double-clicked?
-    bool        MouseReleased[5];           // Mouse button went from !Down to Down
+    bool        MouseReleased[5];           // Mouse button went from Down to !Down
     bool        MouseDownOwned[5];          // Track if button was clicked inside a window. We don't request mouse capture from the application if click started outside ImGui bounds.
     float       MouseDownDuration[5];       // Duration the mouse button has been down (0.0f == just clicked)
     float       MouseDownDurationPrev[5];   // Previous time the mouse button has been down
