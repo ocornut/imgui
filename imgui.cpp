@@ -3663,12 +3663,15 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->SizeContents.y += window->ScrollY;
 
         // Hide popup/tooltip window when first appearing while we measure size (because we recycle them)
-        if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && (flags & ImGuiWindowFlags_AlwaysAutoResize) && !window_was_visible)
+        if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && !window_was_visible)
         {
             window->HiddenFrames = 1;
-            if (!window_size_set_by_api)
-                window->Size = window->SizeFull = ImVec2(0.f, 0.f);
-            window->SizeContents = ImVec2(0.f, 0.f);
+            if (flags & ImGuiWindowFlags_AlwaysAutoResize)
+            {
+                if (!window_size_set_by_api)
+                    window->Size = window->SizeFull = ImVec2(0.f, 0.f);
+                window->SizeContents = ImVec2(0.f, 0.f);
+            }
         }
 
         // Calculate auto-fit size
@@ -3742,10 +3745,20 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 rect_to_avoid = ImRect(parent_window->Pos.x + style.ItemSpacing.x, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - style.ItemSpacing.x - parent_window->ScrollbarWidth(), FLT_MAX); // We want some overlap to convey the relative depth of each popup (here hard-coded to 4)
             window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
         }
-        else if ((flags & ImGuiWindowFlags_Popup) != 0 && window_appearing_after_being_hidden && !window_pos_set_by_api)
+        else if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api && window_appearing_after_being_hidden)
         {
-            ImRect rect_to_avoid(window->PosFloat.x - 1, window->PosFloat.y - 1, window->PosFloat.x + 1, window->PosFloat.y + 1);
-            window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
+            if (flags & ImGuiWindowFlags_Modal)
+            {
+                // Center
+                // FIXME: Should be widely available, e.g. via SetNextWindowPos() API etc.
+                ImRect fullscreen_rect(GetVisibleRect());
+                window->PosFloat = ImMax(style.DisplaySafeAreaPadding, fullscreen_rect.GetCenter() - window->SizeContents * 0.5f);
+            }
+            else
+            {
+                ImRect rect_to_avoid(window->PosFloat.x - 1, window->PosFloat.y - 1, window->PosFloat.x + 1, window->PosFloat.y + 1);
+                window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
+            }
         }
 
         // Position tooltip (always follows mouse)
@@ -3814,8 +3827,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         // Modal window darkens what is behind them
         if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
         {
-            ImVec4 fullscreen_rect = GetVisibleRect();
-            window->DrawList->AddRectFilled(ImVec2(fullscreen_rect.x, fullscreen_rect.y), ImVec2(fullscreen_rect.z, fullscreen_rect.w), window->Color(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
+            ImRect fullscreen_rect = GetVisibleRect();
+            window->DrawList->AddRectFilled(fullscreen_rect.Min, fullscreen_rect.Max, window->Color(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
         }
 
         // Draw window + handle manual resize
