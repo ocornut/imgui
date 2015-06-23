@@ -3562,12 +3562,16 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
     // Process SetNextWindow***() calls
     bool window_pos_set_by_api = false, window_size_set_by_api = false;
+    bool window_pos_center = false;
     if (g.SetNextWindowPosCond)
     {
         const ImVec2 backup_cursor_pos = window->DC.CursorPos;                  // FIXME: not sure of the exact reason of this anymore :( need to look into that.
         if (!window_was_visible) window->SetWindowPosAllowFlags |= ImGuiSetCond_Appearing;
         window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) != 0;
-        ImGui::SetWindowPos(g.SetNextWindowPosVal, g.SetNextWindowPosCond);
+        if (window_pos_set_by_api && ImLengthSqr(g.SetNextWindowPosVal - ImVec2(-FLT_MAX,-FLT_MAX)) < 0.001f)
+            window_pos_center = true;
+        else
+            ImGui::SetWindowPos(g.SetNextWindowPosVal, g.SetNextWindowPosCond);
         window->DC.CursorPos = backup_cursor_pos;
         g.SetNextWindowPosCond = 0;
     }
@@ -3735,7 +3739,15 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
 
         // Position popup
-        if (flags & ImGuiWindowFlags_ChildMenu)
+        if ((flags & ImGuiWindowFlags_Modal) && !window_pos_set_by_api && window_appearing_after_being_hidden)
+            window_pos_center = true;
+
+        if (window_pos_center)
+        {
+            ImRect fullscreen_rect(GetVisibleRect());
+            SetWindowPos(ImMax(style.DisplaySafeAreaPadding, fullscreen_rect.GetCenter() - window->SizeFull * 0.5f));
+        }
+        else if (flags & ImGuiWindowFlags_ChildMenu)
         {
             IM_ASSERT(window_pos_set_by_api);
             ImRect rect_to_avoid;
@@ -3747,18 +3759,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
         else if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api && window_appearing_after_being_hidden)
         {
-            if (flags & ImGuiWindowFlags_Modal)
-            {
-                // Center
-                // FIXME: Should be widely available, e.g. via SetNextWindowPos() API etc.
-                ImRect fullscreen_rect(GetVisibleRect());
-                window->PosFloat = ImMax(style.DisplaySafeAreaPadding, fullscreen_rect.GetCenter() - window->SizeContents * 0.5f);
-            }
-            else
-            {
-                ImRect rect_to_avoid(window->PosFloat.x - 1, window->PosFloat.y - 1, window->PosFloat.x + 1, window->PosFloat.y + 1);
-                window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
-            }
+            ImRect rect_to_avoid(window->PosFloat.x - 1, window->PosFloat.y - 1, window->PosFloat.x + 1, window->PosFloat.y + 1);
+            window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
         }
 
         // Position tooltip (always follows mouse)
@@ -4598,6 +4600,13 @@ void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiSetCond cond)
 {
     ImGuiState& g = *GImGui;
     g.SetNextWindowPosVal = pos;
+    g.SetNextWindowPosCond = cond ? cond : ImGuiSetCond_Always;
+}
+
+void ImGui::SetNextWindowPosCenter(ImGuiSetCond cond)
+{
+    ImGuiState& g = *GImGui;
+    g.SetNextWindowPosVal = ImVec2(-FLT_MAX, -FLT_MAX);
     g.SetNextWindowPosCond = cond ? cond : ImGuiSetCond_Always;
 }
 
