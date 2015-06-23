@@ -10899,81 +10899,6 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Popup, Menus"))
-        {
-            ImGui::TextWrapped("When a popup is active, it inhibits interacting with windows that are behind the popup. Clicking outside the popup closes it.");
-
-            static int selected_fish = -1;
-            const char* names[] = { "Bream", "Haddock", "Mackerel", "Pollock", "Tilefish" };
-            static bool toggles[] = { true, false, false, false, false };
-
-            if (ImGui::Button("Select.."))
-                ImGui::OpenPopup("select");
-            ImGui::SameLine();
-            ImGui::Text(selected_fish == -1 ? "<None>" : names[selected_fish]);
-            if (ImGui::BeginPopup("select"))
-            {
-                ImGui::Text("Aquarium");
-                ImGui::Separator();
-                for (int i = 0; i < IM_ARRAYSIZE(names); i++)
-                    if (ImGui::Selectable(names[i]))
-                        selected_fish = i;
-                ImGui::EndPopup();
-            }
-
-            if (ImGui::Button("Toggle.."))
-                ImGui::OpenPopup("toggle");
-            if (ImGui::BeginPopup("toggle"))
-            {
-                for (int i = 0; i < IM_ARRAYSIZE(names); i++)
-                    ImGui::MenuItem(names[i], "", &toggles[i]);
-                if (ImGui::BeginMenu("Sub-menu"))
-                {
-                    ImGui::MenuItem("Click me");
-                    ImGui::EndMenu();
-                }
-
-                ImGui::Separator();
-                ImGui::Text("Tooltip here");
-                if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("I am a tooltip over a popup");
-
-                if (ImGui::Button("Stacked Popup"))
-                    ImGui::OpenPopup("another popup");
-                if (ImGui::BeginPopup("another popup"))
-                {
-                    for (int i = 0; i < IM_ARRAYSIZE(names); i++)
-                        ImGui::MenuItem(names[i], "", &toggles[i]);
-                    if (ImGui::BeginMenu("Sub-menu"))
-                    {
-                        ImGui::MenuItem("Click me");
-                        ImGui::EndMenu();
-                    }
-                    ImGui::EndPopup();
-                }
-                ImGui::EndPopup();
-            }
-
-            if (ImGui::Button("Popup Menu.."))
-                ImGui::OpenPopup("popup from button");
-            if (ImGui::BeginPopup("popup from button"))
-            {
-                ShowExampleMenuFile();
-                ImGui::EndPopup();
-            }
-
-            static float value = 0.5f;
-            ImGui::Text("Value = %.3f (Context menu, right-click here)", value);
-            if (ImGui::BeginPopupContextItem("item context menu"))
-            {
-                if (ImGui::Selectable("Set to zero")) value = 0.0f; 
-                if (ImGui::Selectable("Set to PI")) value = PI; 
-                ImGui::EndPopup();
-            }
-
-            ImGui::TreePop();
-        }
-
         if (ImGui::TreeNode("Filtered Text Input"))
         {
             static char buf1[64] = ""; ImGui::InputText("default", buf1, 64);
@@ -11258,6 +11183,46 @@ void ImGui::ShowTestWindow(bool* opened)
 
     if (ImGui::CollapsingHeader("Layout"))
     {
+        if (ImGui::TreeNode("Child regions"))
+        {
+            ImGui::Text("Without border");
+            static int line = 50;
+            bool goto_line = ImGui::Button("Goto");
+            ImGui::SameLine(); 
+            ImGui::PushItemWidth(100);
+            goto_line |= ImGui::InputInt("##Line", &line, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue);
+            ImGui::PopItemWidth();
+            ImGui::BeginChild("Sub1", ImVec2(ImGui::GetWindowWidth() * 0.5f,300));
+            for (int i = 0; i < 100; i++)
+            {
+                ImGui::Text("%04d: scrollable region", i);
+                if (goto_line && line == i)
+                    ImGui::SetScrollPosHere();
+            }
+            if (goto_line && line >= 100)
+                ImGui::SetScrollPosHere();
+            ImGui::EndChild();
+
+            ImGui::SameLine();
+
+            ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, 5.0f);
+            ImGui::BeginChild("Sub2", ImVec2(0,300), true);
+            ImGui::Text("With border");
+            ImGui::Columns(2);
+            for (int i = 0; i < 100; i++)
+            {
+                if (i == 50)
+                    ImGui::NextColumn();
+                char buf[32];
+                sprintf(buf, "%08x", i*5731);
+                ImGui::Button(buf);
+            }
+            ImGui::EndChild();
+            ImGui::PopStyleVar();
+
+            ImGui::TreePop();
+        }
+
         if (ImGui::TreeNode("Widgets Alignment"))
         {
             static float f = 0.0f;
@@ -11428,42 +11393,98 @@ void ImGui::ShowTestWindow(bool* opened)
         }
     }
 
-    if (ImGui::CollapsingHeader("Child regions"))
+    if (ImGui::CollapsingHeader("Popups & Modal windows"))
     {
-        ImGui::Text("Without border");
-        static int line = 50;
-        bool goto_line = ImGui::Button("Goto");
-        ImGui::SameLine(); 
-        ImGui::PushItemWidth(100);
-        goto_line |= ImGui::InputInt("##Line", &line, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue);
-        ImGui::PopItemWidth();
-        ImGui::BeginChild("Sub1", ImVec2(ImGui::GetWindowWidth() * 0.5f,300));
-        for (int i = 0; i < 100; i++)
-        {
-            ImGui::Text("%04d: scrollable region", i);
-            if (goto_line && line == i)
-                ImGui::SetScrollPosHere();
-        }
-        if (goto_line && line >= 100)
-            ImGui::SetScrollPosHere();
-        ImGui::EndChild();
+        ImGui::TextWrapped("When a popup is active, it inhibits interacting with windows that are behind the popup. Clicking outside the popup closes it.");
 
-        ImGui::SameLine();
-
-        ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, 5.0f);
-        ImGui::BeginChild("Sub2", ImVec2(0,300), true);
-        ImGui::Text("With border");
-        ImGui::Columns(2);
-        for (int i = 0; i < 100; i++)
+        if (ImGui::TreeNode("Popups"))
         {
-            if (i == 50)
-                ImGui::NextColumn();
-            char buf[32];
-            sprintf(buf, "%08x", i*5731);
-            ImGui::Button(buf);
+            static int selected_fish = -1;
+            const char* names[] = { "Bream", "Haddock", "Mackerel", "Pollock", "Tilefish" };
+            static bool toggles[] = { true, false, false, false, false };
+
+            if (ImGui::Button("Select.."))
+                ImGui::OpenPopup("select");
+            ImGui::SameLine();
+            ImGui::Text(selected_fish == -1 ? "<None>" : names[selected_fish]);
+            if (ImGui::BeginPopup("select"))
+            {
+                ImGui::Text("Aquarium");
+                ImGui::Separator();
+                for (int i = 0; i < IM_ARRAYSIZE(names); i++)
+                    if (ImGui::Selectable(names[i]))
+                        selected_fish = i;
+                ImGui::EndPopup();
+            }
+
+            if (ImGui::Button("Toggle.."))
+                ImGui::OpenPopup("toggle");
+            if (ImGui::BeginPopup("toggle"))
+            {
+                for (int i = 0; i < IM_ARRAYSIZE(names); i++)
+                    ImGui::MenuItem(names[i], "", &toggles[i]);
+                if (ImGui::BeginMenu("Sub-menu"))
+                {
+                    ImGui::MenuItem("Click me");
+                    ImGui::EndMenu();
+                }
+
+                ImGui::Separator();
+                ImGui::Text("Tooltip here");
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("I am a tooltip over a popup");
+
+                if (ImGui::Button("Stacked Popup"))
+                    ImGui::OpenPopup("another popup");
+                if (ImGui::BeginPopup("another popup"))
+                {
+                    for (int i = 0; i < IM_ARRAYSIZE(names); i++)
+                        ImGui::MenuItem(names[i], "", &toggles[i]);
+                    if (ImGui::BeginMenu("Sub-menu"))
+                    {
+                        ImGui::MenuItem("Click me");
+                        ImGui::EndMenu();
+                    }
+                    ImGui::EndPopup();
+                }
+                ImGui::EndPopup();
+            }
+
+            if (ImGui::Button("Popup Menu.."))
+                ImGui::OpenPopup("popup from button");
+            if (ImGui::BeginPopup("popup from button"))
+            {
+                ShowExampleMenuFile();
+                ImGui::EndPopup();
+            }
+            ImGui::TreePop();
         }
-        ImGui::EndChild();
-        ImGui::PopStyleVar();
+
+        if (ImGui::TreeNode("Context menus"))
+        {
+            static float value = 0.5f;
+            ImGui::Text("Value = %.3f (<-- right-click here)", value);
+            if (ImGui::BeginPopupContextItem("item context menu"))
+            {
+                if (ImGui::Selectable("Set to zero")) value = 0.0f; 
+                if (ImGui::Selectable("Set to PI")) value = PI; 
+                ImGui::EndPopup();
+            }
+
+            static ImVec4 color = ImColor(1.0f, 0.0f, 1.0f, 1.0f);
+            ImGui::ColorButton(color);
+            if (ImGui::BeginPopupContextItem("color context menu"))
+            {
+                ImGui::Text("Edit color");
+                ImGui::ColorEdit3("##edit", (float*)&color);
+                if (ImGui::Button("Close"))
+                    ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
+            }
+            ImGui::SameLine(); ImGui::Text("(<-- right-click here)");
+
+            ImGui::TreePop();
+        }
     }
 
     if (ImGui::CollapsingHeader("Columns"))
