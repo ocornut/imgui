@@ -3257,7 +3257,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_opened, ImGuiWindowFlags e
         return false;
     }
 
-    ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_Modal|ImGuiWindowFlags_NoSavedSettings;
+    ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_Modal|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings;
     bool opened = ImGui::Begin(name, p_opened, ImVec2(0.0f, 0.0f), -1.0f, flags);
     if (!opened || (p_opened && !*p_opened)) // Opened can be 'false' when the popup is completely clipped (e.g. zero size display)
     {
@@ -11519,7 +11519,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
             if (ImGui::Button("Delete.."))
                 ImGui::OpenPopup("Delete?");
-            if (ImGui::BeginPopupModal("Delete?", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse))
+            if (ImGui::BeginPopupModal("Delete?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
             {
                 ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
                 ImGui::Separator();
