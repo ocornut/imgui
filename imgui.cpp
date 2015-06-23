@@ -651,6 +651,7 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
     Colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.00f, 0.00f, 1.00f, 0.35f);
     Colors[ImGuiCol_TooltipBg]              = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
+    Colors[ImGuiCol_ModalWindowDarkening]   = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 }
 
 // Statically allocated font atlas. This is merely a maneuver to keep ImFontAtlas definition at the bottom of the .h file (otherwise it'd be inside ImGuiIO)
@@ -1297,6 +1298,7 @@ struct ImGuiState
 
     // Render
     ImVector<ImDrawList*>   RenderDrawLists[3];
+    float                   ModalWindowDarkeningRatio;
 
     // Mouse cursor
     ImGuiMouseCursor        MouseCursor;
@@ -1377,6 +1379,7 @@ struct ImGuiState
         memset(Tooltip, 0, sizeof(Tooltip));
         PrivateClipboard = NULL;
 
+        ModalWindowDarkeningRatio = 0.0f;
         MouseCursor = ImGuiMouseCursor_Arrow;
 
         LogEnabled = false;
@@ -2150,9 +2153,17 @@ void ImGui::NewFrame()
         g.HoveredRootWindow = g.HoveredWindow->RootWindow;
     else
         g.HoveredRootWindow = FindHoveredWindow(g.IO.MousePos, true);
+
     if (ImGuiWindow* modal_window = GetFrontMostModalRootWindow())
+    {
+        g.ModalWindowDarkeningRatio = ImMin(g.ModalWindowDarkeningRatio + g.IO.DeltaTime * 6.0f, 1.0f);
         if (g.HoveredRootWindow != modal_window)
             g.HoveredRootWindow = g.HoveredWindow = NULL;
+    }
+    else
+    {
+        g.ModalWindowDarkeningRatio = 0.0f;
+    }
 
     // Are we using inputs? Tell user so they can capture/discard the inputs away from the rest of their application.
     // When clicking outside of a window we assume the click is owned by the application and won't request capture.
@@ -3799,6 +3810,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         if (!window->Collapsed && !window->SkipItems)
             window->ScrollY = ImMin(window->ScrollY, ImMax(0.0f, window->SizeContents.y - window->SizeFull.y));
 
+        // Modal window darkens what is behind them
+        if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
+        {
+            ImVec4 fullscreen_rect = GetVisibleRect();
+            window->DrawList->AddRectFilled(ImVec2(fullscreen_rect.x, fullscreen_rect.y), ImVec2(fullscreen_rect.z, fullscreen_rect.w), window->Color(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
+        }
+
         // Draw window + handle manual resize
         ImRect title_bar_rect = window->TitleBarRect();
         const float window_rounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
@@ -4392,6 +4410,7 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     case ImGuiCol_PlotHistogramHovered: return "PlotHistogramHovered";
     case ImGuiCol_TextSelectedBg: return "TextSelectedBg";
     case ImGuiCol_TooltipBg: return "TooltipBg";
+    case ImGuiCol_ModalWindowDarkening: return "ModalWindowDarkening";
     }
     IM_ASSERT(0);
     return "Unknown";
