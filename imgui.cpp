@@ -548,6 +548,7 @@ static bool         CloseWindowButton(bool* p_opened = NULL);
 static void         FocusWindow(ImGuiWindow* window);
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs);
 static void         CloseInactivePopups();
+static ImGuiWindow* GetFrontMostModalRootWindow();
 static void         SetWindowScrollY(ImGuiWindow* window, float scroll_y);
 
 // Helpers: String
@@ -2149,6 +2150,9 @@ void ImGui::NewFrame()
         g.HoveredRootWindow = g.HoveredWindow->RootWindow;
     else
         g.HoveredRootWindow = FindHoveredWindow(g.IO.MousePos, true);
+    if (ImGuiWindow* modal_window = GetFrontMostModalRootWindow())
+        if (g.HoveredRootWindow != modal_window)
+            g.HoveredRootWindow = g.HoveredWindow = NULL;
 
     // Are we using inputs? Tell user so they can capture/discard the inputs away from the rest of their application.
     // When clicking outside of a window we assume the click is owned by the application and won't request capture.
@@ -2372,7 +2376,7 @@ void ImGui::Render()
                     g.MovedWindow = g.HoveredWindow;
                     SetActiveId(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
                 }
-                else if (g.FocusedWindow != NULL)
+                else if (g.FocusedWindow != NULL && GetFrontMostModalRootWindow() == NULL)
                 {
                     // Clicking on void disable focus
                     FocusWindow(NULL);
@@ -3149,6 +3153,16 @@ static void CloseInactivePopups()
     g.OpenedPopupStack.resize(n);
 }
 
+static ImGuiWindow* GetFrontMostModalRootWindow()
+{
+    ImGuiState& g = *GImGui;
+    if (!g.OpenedPopupStack.empty())
+        if (ImGuiWindow* front_most_popup = g.OpenedPopupStack.back().Window)
+            if (front_most_popup->Flags & ImGuiWindowFlags_Modal)
+                return front_most_popup;
+    return NULL;
+}
+
 static void ClosePopupToLevel(int remaining)
 {
     ImGuiState& g = *GImGui;
@@ -3220,12 +3234,33 @@ bool ImGui::BeginPopup(const char* str_id)
     return BeginPopupEx(str_id, ImGuiWindowFlags_ShowBorders);
 }
 
+bool ImGui::BeginPopupModal(const char* name, ImGuiWindowFlags extra_flags)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    const ImGuiID id = window->GetID(name);
+    if (!IsPopupOpen(id))
+    {
+        ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
+        return false;
+    }
+
+    ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_Modal|ImGuiWindowFlags_NoSavedSettings;
+    bool opened = ImGui::Begin(name, NULL, ImVec2(0.0f, 0.0f), -1.0f, flags);
+    if (!opened) // Opened can be 'false' when the popup is completely clipped (e.g. zero size display)
+        ImGui::EndPopup();
+
+    return opened;
+}
+
 void ImGui::EndPopup()
 {
-    IM_ASSERT(GetCurrentWindow()->Flags & ImGuiWindowFlags_Popup);
+    ImGuiWindow* window = GetCurrentWindow();
+    IM_ASSERT(window->Flags & ImGuiWindowFlags_Popup);
     IM_ASSERT(GImGui->CurrentPopupStack.size() > 0);
     ImGui::End();
-    ImGui::PopStyleVar();
+    if (!(window->Flags & ImGuiWindowFlags_Modal))
+        ImGui::PopStyleVar();
 }
 
 bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
@@ -3611,7 +3646,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->SizeContents.y += window->ScrollY;
 
         // Hide popup/tooltip window when first appearing while we measure size (because we recycle them)
-        if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && !window_was_visible)
+        if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && (flags & ImGuiWindowFlags_AlwaysAutoResize) && !window_was_visible)
         {
             window->HiddenFrames = 1;
             if (!window_size_set_by_api)
