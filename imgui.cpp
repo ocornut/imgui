@@ -3234,7 +3234,7 @@ bool ImGui::BeginPopup(const char* str_id)
     return BeginPopupEx(str_id, ImGuiWindowFlags_ShowBorders);
 }
 
-bool ImGui::BeginPopupModal(const char* name, ImGuiWindowFlags extra_flags)
+bool ImGui::BeginPopupModal(const char* name, bool* p_opened, ImGuiWindowFlags extra_flags)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -3246,9 +3246,14 @@ bool ImGui::BeginPopupModal(const char* name, ImGuiWindowFlags extra_flags)
     }
 
     ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_Modal|ImGuiWindowFlags_NoSavedSettings;
-    bool opened = ImGui::Begin(name, NULL, ImVec2(0.0f, 0.0f), -1.0f, flags);
-    if (!opened) // Opened can be 'false' when the popup is completely clipped (e.g. zero size display)
+    bool opened = ImGui::Begin(name, p_opened, ImVec2(0.0f, 0.0f), -1.0f, flags);
+    if (!opened || (p_opened && !*p_opened)) // Opened can be 'false' when the popup is completely clipped (e.g. zero size display)
+    {
         ImGui::EndPopup();
+        if (opened)
+            ClosePopup(id);
+        return false;
+    }
 
     return opened;
 }
