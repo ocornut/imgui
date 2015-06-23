@@ -11395,10 +11395,10 @@ void ImGui::ShowTestWindow(bool* opened)
 
     if (ImGui::CollapsingHeader("Popups & Modal windows"))
     {
-        ImGui::TextWrapped("When a popup is active, it inhibits interacting with windows that are behind the popup. Clicking outside the popup closes it.");
-
         if (ImGui::TreeNode("Popups"))
         {
+            ImGui::TextWrapped("When a popup is active, it inhibits interacting with windows that are behind the popup. Clicking outside the popup closes it.");
+
             static int selected_fish = -1;
             const char* names[] = { "Bream", "Haddock", "Mackerel", "Pollock", "Tilefish" };
             static bool toggles[] = { true, false, false, false, false };
@@ -11482,6 +11482,31 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::EndPopup();
             }
             ImGui::SameLine(); ImGui::Text("(<-- right-click here)");
+
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Modals"))
+        {  
+            ImGui::TextWrapped("Modal windows are like popups but the user cannot close them by clicking outside the window.");
+
+            if (ImGui::Button("Delete"))
+                ImGui::OpenPopup("Delete?");
+            if (ImGui::BeginPopupModal("Delete?", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse))
+            {
+                ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
+                ImGui::Separator();
+                
+                static bool dont_ask_me_next_time = false;
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
+                ImGui::Checkbox("Don't ask me next time", &dont_ask_me_next_time);
+                ImGui::PopStyleVar();
+
+                if (ImGui::Button("OK", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+                ImGui::EndPopup();
+            }
 
             ImGui::TreePop();
         }
