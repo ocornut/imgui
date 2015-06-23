@@ -11490,7 +11490,7 @@ void ImGui::ShowTestWindow(bool* opened)
         {  
             ImGui::TextWrapped("Modal windows are like popups but the user cannot close them by clicking outside the window.");
 
-            if (ImGui::Button("Delete"))
+            if (ImGui::Button("Delete.."))
                 ImGui::OpenPopup("Delete?");
             if (ImGui::BeginPopupModal("Delete?", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse))
             {
@@ -11505,6 +11505,27 @@ void ImGui::ShowTestWindow(bool* opened)
                 if (ImGui::Button("OK", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
                 ImGui::SameLine();
                 if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+                ImGui::EndPopup();
+            }
+
+            if (ImGui::Button("Stacked modals.."))
+                ImGui::OpenPopup("Stacked 1");
+            if (ImGui::BeginPopupModal("Stacked 1"))
+            {
+                ImGui::Text("Hello from Stacked The First");
+
+                if (ImGui::Button("Another one.."))
+                    ImGui::OpenPopup("Stacked 2");
+                if (ImGui::BeginPopupModal("Stacked 2"))
+                {
+                    ImGui::Text("Hello from Stacked The Second");
+                    if (ImGui::Button("Close"))
+                        ImGui::CloseCurrentPopup();
+                    ImGui::EndPopup();
+                }
+
+                if (ImGui::Button("Close"))
+                    ImGui::CloseCurrentPopup();
                 ImGui::EndPopup();
             }
 
