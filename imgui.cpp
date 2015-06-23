@@ -17,7 +17,7 @@
    - Why is my text output blurry?
    - How can I load a different font than the default? 
    - How can I load multiple fonts?
-   - How can I display and input Chinese, Japanese, Korean characters?
+   - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
  - ISSUES & TODO-LIST
  - CODE
  - SAMPLE CODE
@@ -309,7 +309,8 @@
      // the first loaded font gets used by default
      // use ImGui::PushFont()/ImGui::PopFont() to change the font at runtime
 
- Q: How can I render and input Chinese, Japanese, Korean characters?
+
+ Q: How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
  A: When loading a font, pass custom Unicode ranges to specify the glyphs to load. ImGui will support UTF-8 encoding across the board.
     Character input depends on you passing the right character code to io.AddInputCharacter(). The example applications do that.
 
@@ -9734,6 +9735,19 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesJapanese()
         dst[0] = 0;
         ranges_unpacked = true;
     }
+    return &ranges[0];
+}
+
+const ImWchar*  ImFontAtlas::GetGlyphRangesCyrillic()
+{
+    static const ImWchar ranges[] =
+    {
+        0x0020, 0x00FF, // Basic Latin + Latin Supplement
+        0x0400, 0x052F, // Cyrillic + Cyrillic Supplement
+        0x2DE0, 0x2DFF, // Cyrillic Extended-A
+        0xA640, 0xA69F, // Cyrillic Extended-B
+        0,
+    };
     return &ranges[0];
 }
 
