@@ -11100,7 +11100,7 @@ void ImGui::ShowTestWindow(bool* opened)
         static float col1[3] = { 1.0f,0.0f,0.2f };
         static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
         ImGui::ColorEdit3("color 1", col1);
-        ImGui::SameLine(); ShowHelpMarker("Click on the colored square to change edit mode. CTRL+click on individual component to input value.\n");
+        ImGui::SameLine(); ShowHelpMarker("Click on the colored square to change edit mode.\nCTRL+click on individual component to input value.\n");
         
         ImGui::ColorEdit4("color 2", col2);
 
