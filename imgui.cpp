@@ -1,4 +1,4 @@
-﻿// ImGui library v1.41
+﻿// ImGui library v1.42 wip
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -327,6 +327,7 @@
 
  ISSUES & TODO-LIST
  ==================
+ Issue numbers (#) refer to github issues.
 
  - misc: merge or clarify ImVec4 vs ImRect?
  - window: fix resize grip rendering scaling along with Rounding style setting
@@ -335,6 +336,7 @@
  - window: allow resizing of child windows (possibly given min/max for each axis?)
  - window: background options for child windows, border option (disable rounding)
  - window: resizing from any sides? + mouse cursor directives for app.
+ - window: get size/pos helpers given names (see discussion in #249)
  - scrolling: add horizontal scroll
 !- scrolling: set scrolling given a position.
 !- scrolling: allow immediately effective change of scroll if we haven't appended items yet
@@ -343,31 +345,32 @@
  - main: considering adding EndFrame()/Init(). some constructs are awkward in the implementation because of the lack of them.
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
- - input text: add ImGuiInputTextFlags_EnterToApply? (off github issue #218)
-!- input text: multiple lines inputs (#200)
+ - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
+ - input text multi-line: way to dynamically grow the buffer without forcing the user to initially allocate for worse case (follow up on #200)
+ - input text multi-line: line numbers? status bar? (follow up on #200)
 !- input number: large int not reliably supported because of int<>float conversions.
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
  - input number: non-decimal input.
  - text: proper alignment options
- - layout: horizontal layout helper (github issue #97)
+ - layout: horizontal layout helper (#97)
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
- - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (github issue #125)
- - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills) (github issue #125)
- - columns: columns header to act as button (~sort op) and allow resize/reorder (github issue #125)
- - columns: user specify columns size (github issue #125)
- - popup: border options. richer api like BeginChild() perhaps? (github issue #197)
+ - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
+ - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills) (#125)
+ - columns: columns header to act as button (~sort op) and allow resize/reorder (#125)
+ - columns: user specify columns size (#125)
+ - popup: border options. richer api like BeginChild() perhaps? (#197)
  - combo: sparse combo boxes (via function call?)
  - combo: turn child handling code into pop up helper
  - combo: contents should extends to fit label if combo widget is small
- - combo/listbox: keyboard control. need inputtext like non-active focus + key handling. considering keybord for custom listbox (see github pr #203)
+ - combo/listbox: keyboard control. need inputtext like non-active focus + key handling. considering keybord for custom listbox (pr #203)
  - listbox: multiple selection
  - listbox: user may want to initial scroll to focus on the one selected value?
  - listbox: keyboard navigation.
  - listbox: scrolling should track modified selection.
- - menus: local shortcuts, global shortcuts (github issue #126)
+ - menus: local shortcuts, global shortcuts (#126)
  - menus: icons
  - menus: see we can allow for click-menu-hold-release-on-item to work (like Windows does)
  - menus: menubars: some sort of priority / effect of main menu-bar on desktop size?
@@ -389,7 +392,7 @@
  - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
  - text edit: add multi-line text edit
  - tree: add treenode/treepush int variants? because (void*) cast from int warns on some platforms/settings
- - tooltip: figure out a way to use TextWrapped() in a tooltip.
+ - textwrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (git issue #249)
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file
  - style: store rounded corners in texture to use 1 quad per corner (filled and wireframe). so rounding have minor cost.
@@ -407,7 +410,7 @@
  - keyboard: full keyboard navigation and focus.
  - input: rework IO to be able to pass actual events to fix temporal aliasing issues.
  - input: support track pad style scrolling & slider edit.
- - portability: big-endian test/support (github issue #81)
+ - portability: big-endian test/support (#81)
  - memory: add a way to discard allocs of unused/transient windows. with the current architecture new windows (including popup, opened combos, listbox) perform at least 3 allocs.
  - misc: mark printf compiler attributes on relevant functions
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
