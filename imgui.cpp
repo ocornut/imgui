@@ -1035,10 +1035,10 @@ struct ImRect           // 2D axis aligned bounding-box
     ImRect(const ImVec4& v)                         { Min.x = v.x; Min.y = v.y; Max.x = v.z; Max.y = v.w; }
     ImRect(float x1, float y1, float x2, float y2)  { Min.x = x1; Min.y = y1; Max.x = x2; Max.y = y2; }
 
-    ImVec2      GetCenter() const                   { return Min + (Max-Min)*0.5f; }
-    ImVec2      GetSize() const                     { return Max-Min; }
-    float       GetWidth() const                    { return (Max-Min).x; }
-    float       GetHeight() const                   { return (Max-Min).y; }
+    ImVec2      GetCenter() const                   { return ImVec2((Min.x+Max.x)*0.5f, (Min.y+Max.y)*0.5f); }
+    ImVec2      GetSize() const                     { return ImVec2(Max.x-Min.x,Max.y-Min.y); }
+    float       GetWidth() const                    { return Max.x-Min.x; }
+    float       GetHeight() const                   { return Max.y-Min.y; }
     ImVec2      GetTL() const                       { return Min; }
     ImVec2      GetTR() const                       { return ImVec2(Max.x,Min.y); }
     ImVec2      GetBL() const                       { return ImVec2(Min.x,Max.y); }
@@ -1049,8 +1049,8 @@ struct ImRect           // 2D axis aligned bounding-box
     void        Add(const ImVec2& rhs)              { Min.x = ImMin(Min.x, rhs.x); Min.y = ImMin(Min.y, rhs.y); Max.x = ImMax(Max.x, rhs.x); Max.y = ImMax(Max.x, rhs.x); }
     void        Add(const ImRect& rhs)              { Min.x = ImMin(Min.x, rhs.Min.x); Min.y = ImMin(Min.y, rhs.Min.y); Max.x = ImMax(Max.x, rhs.Max.x); Max.y = ImMax(Max.y, rhs.Max.y); }
     void        Expand(const float amount)          { Min.x -= amount; Min.y -= amount; Max.x += amount; Max.y += amount; }
-    void        Expand(const ImVec2& amount)        { Min -= amount; Max += amount; }
-    void        Reduce(const ImVec2& amount)        { Min += amount; Max -= amount; }
+    void        Expand(const ImVec2& amount)        { Min.x -= amount.x; Min.y -= amount.y; Max.x += amount.x; Max.y += amount.y; }
+    void        Reduce(const ImVec2& amount)        { Min.x += amount.x; Min.y += amount.y; Max.x -= amount.x; Max.y -= amount.y; }
     void        Clip(const ImRect& clip)            { Min.x = ImMax(Min.x, clip.Min.x); Min.y = ImMax(Min.y, clip.Min.y); Max.x = ImMin(Max.x, clip.Max.x); Max.y = ImMin(Max.y, clip.Max.y); }
     ImVec2      GetClosestPoint(ImVec2 p, bool on_edge) const
     {
@@ -1063,7 +1063,6 @@ struct ImRect           // 2D axis aligned bounding-box
         return p;
     }
 };
-typedef ImRect ImGuiAabb;   // FIXME-OBSOLETE
 
 struct ImGuiGroupData
 {
