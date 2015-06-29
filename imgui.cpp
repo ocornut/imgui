@@ -3411,7 +3411,7 @@ static void CheckStacksSize(ImGuiWindow* window, bool write)
     IM_ASSERT(p_backup == window->DC.StackSizesBackup + IM_ARRAYSIZE(window->DC.StackSizesBackup));
 }
 
-static ImVec2 FindBestWindowPos(const ImVec2& base_pos, const ImVec2& size, ImGuiWindowFlags flags, int* last_dir, const ImRect& r_inner)
+static ImVec2 FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size, ImGuiWindowFlags flags, int* last_dir, const ImRect& r_inner)
 {
     const ImGuiStyle& style = GImGui->Style;
 
@@ -3770,19 +3770,19 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 rect_to_avoid = ImRect(-FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight(), FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight() + parent_window->MenuBarHeight());
             else
                 rect_to_avoid = ImRect(parent_window->Pos.x + style.ItemSpacing.x, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - style.ItemSpacing.x - parent_window->ScrollbarWidth(), FLT_MAX); // We want some overlap to convey the relative depth of each popup (here hard-coded to 4)
-            window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
+            window->PosFloat = FindBestPopupWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
         }
         else if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api && window_appearing_after_being_hidden)
         {
             ImRect rect_to_avoid(window->PosFloat.x - 1, window->PosFloat.y - 1, window->PosFloat.x + 1, window->PosFloat.y + 1);
-            window->PosFloat = FindBestWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
+            window->PosFloat = FindBestPopupWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
         }
 
         // Position tooltip (always follows mouse)
         if ((flags & ImGuiWindowFlags_Tooltip) != 0 && !window_pos_set_by_api)
         {
             ImRect rect_to_avoid(g.IO.MousePos.x - 16, g.IO.MousePos.y - 8, g.IO.MousePos.x + 24, g.IO.MousePos.y + 24); // FIXME: Completely hard-coded. Perhaps center on cursor hit-point instead?
-            window->PosFloat = FindBestWindowPos(g.IO.MousePos, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
+            window->PosFloat = FindBestPopupWindowPos(g.IO.MousePos, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
         }
 
         // User moving window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
