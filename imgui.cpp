@@ -10513,13 +10513,11 @@ void ImGui::ShowMetricsWindow(bool*) {}
 
 void ImGui::ShowUserGuide()
 {
-    ImGuiState& g = *GImGui;
-
     ImGui::BulletText("Double-click on title bar to collapse window.");
     ImGui::BulletText("Click and drag on lower right corner to resize window.");
     ImGui::BulletText("Click and drag on any empty space to move window.");
     ImGui::BulletText("Mouse Wheel to scroll.");
-    if (g.IO.FontAllowUserScaling)
+    if (ImGui::GetIO().FontAllowUserScaling)
         ImGui::BulletText("CTRL+Mouse Wheel to zoom window contents.");
     ImGui::BulletText("TAB/SHIFT+TAB to cycle through keyboard editable fields.");
     ImGui::BulletText("CTRL+Click on a slider or drag box to input text.");
@@ -10537,18 +10535,16 @@ void ImGui::ShowUserGuide()
 
 void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 {
-    ImGuiState& g = *GImGui;
-    ImGuiStyle& style = g.Style;
+    ImGuiStyle& style = ImGui::GetStyle();
 
     const ImGuiStyle def; // Default style
-
     if (ImGui::Button("Revert Style"))
-        g.Style = ref ? *ref : def;
+        style = ref ? *ref : def;
     if (ref)
     {
         ImGui::SameLine();
         if (ImGui::Button("Save Style"))
-            *ref = g.Style;
+            *ref = style;
     }
 
     ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.55f);
@@ -12482,7 +12478,7 @@ static void ShowExampleAppLongText(bool* opened)
 //-----------------------------------------------------------------------------
 // Compressed with stb_compress() then converted to a C array.
 // Use the program in extra_fonts/binary_to_compressed_c.cpp to create the array from a TTF file.
-// Decompressor from stb.h (public domain) by Sean Barrett https://github.com/nothings/stb/blob/master/stb.h
+// Decompression from stb.h (public domain) by Sean Barrett https://github.com/nothings/stb/blob/master/stb.h
 //-----------------------------------------------------------------------------
 
 static unsigned int stb_decompress_length(unsigned char *input)
