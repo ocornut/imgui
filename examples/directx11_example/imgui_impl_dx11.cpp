@@ -135,7 +135,7 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
             }
             idx_offset += pcmd->idx_count;
         }
-        vtx_offset += cmd_list->vtx_buffer.size();
+        vtx_offset += (int)cmd_list->vtx_buffer.size();
     }
 
     // Restore modified state

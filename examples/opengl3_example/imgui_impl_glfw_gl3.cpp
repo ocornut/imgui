@@ -107,7 +107,7 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
             }
             idx_buffer += pcmd->idx_count;
         }
-        vtx_offset += cmd_list->vtx_buffer.size();
+        vtx_offset += (int)cmd_list->vtx_buffer.size();
     }
 
     // Restore modified state

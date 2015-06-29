@@ -119,11 +119,11 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
                 const RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
                 g_pd3dDevice->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->texture_id );
                 g_pd3dDevice->SetScissorRect(&r);
-                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vtx_offset, 0, cmd_list->vtx_buffer.size(), idx_offset, pcmd->idx_count/3);
+                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->vtx_buffer.size(), idx_offset, pcmd->idx_count/3);
             }
             idx_offset += pcmd->idx_count;
         }
-        vtx_offset += cmd_list->vtx_buffer.size();
+        vtx_offset += (int)cmd_list->vtx_buffer.size();
     }
 }
 
