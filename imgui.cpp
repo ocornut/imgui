@@ -430,7 +430,7 @@
 #include "imgui.h"
 #include <ctype.h>      // toupper, isprint
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, cosf, sinf, floorf, ceilf
-#include <stdio.h>      // vsnprintf, sscanf
+#include <stdio.h>      // vsnprintf, sscanf, printf
 #include <new>          // new (ptr)
 #if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
 #include <stddef.h>     // intptr_t
@@ -711,8 +711,7 @@ void ImGuiIO::AddInputCharacter(ImWchar c)
 
 #define IM_ARRAYSIZE(_ARR)          ((int)(sizeof(_ARR)/sizeof(*_ARR)))
 
-#undef PI
-const float PI = 3.14159265358979323846f;
+const float IM_PI = 3.14159265358979323846f;
 
 #ifdef INT_MAX
 #define IM_INT_MIN  INT_MIN
@@ -724,9 +723,9 @@ const float PI = 3.14159265358979323846f;
 
 // Play it nice with Windows users. Notepad in 2015 still doesn't display text data with Unix-style \n.
 #ifdef _MSC_VER
-#define STR_NEWLINE "\r\n"
+#define IM_NEWLINE "\r\n"
 #else
-#define STR_NEWLINE "\n"
+#define IM_NEWLINE "\n"
 #endif
 
 // Math bits
@@ -2573,7 +2572,7 @@ static void LogText(const ImVec2& ref_pos, const char* text, const char* text_en
         {
             const int char_count = (int)(line_end - text_remaining);
             if (log_new_line || !is_first_line)
-                ImGui::LogText(STR_NEWLINE "%*s%.*s", tree_depth*4, "", char_count, text_remaining);
+                ImGui::LogText(IM_NEWLINE "%*s%.*s", tree_depth*4, "", char_count, text_remaining);
             else
                 ImGui::LogText(" %.*s", char_count, text_remaining);
         }
@@ -5349,7 +5348,7 @@ void ImGui::LogFinish()
     if (!g.LogEnabled)
         return;
 
-    ImGui::LogText(STR_NEWLINE);
+    ImGui::LogText(IM_NEWLINE);
     g.LogEnabled = false;
     if (g.LogFile != NULL)
     {
@@ -6052,9 +6051,9 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
 
 bool ImGui::SliderAngle(const char* label, float* v_rad, float v_degrees_min, float v_degrees_max)
 {
-    float v_deg = (*v_rad) * 360.0f / (2*PI);
+    float v_deg = (*v_rad) * 360.0f / (2*IM_PI);
     bool value_changed = ImGui::SliderFloat(label, &v_deg, v_degrees_min, v_degrees_max, "%.0f deg", 1.0f);
-    *v_rad = v_deg * (2*PI) / 360.0f;
+    *v_rad = v_deg * (2*IM_PI) / 360.0f;
     return value_changed;
 }
 
@@ -8319,7 +8318,7 @@ void ImGui::Separator()
 
     ImGuiState& g = *GImGui;
     if (g.LogEnabled)
-        ImGui::LogText(STR_NEWLINE "--------------------------------");
+        ImGui::LogText(IM_NEWLINE "--------------------------------");
 
     if (window->DC.ColumnsCount > 1)
     {
@@ -9025,9 +9024,9 @@ void ImDrawList::AddArcFast(const ImVec2& center, float radius, ImU32 col, int a
     {
         for (int i = 0; i < SAMPLES; i++)
         {
-            const float a = ((float)i / (float)SAMPLES) * 2*PI;
-            circle_vtx[i].x = cosf(a + PI);
-            circle_vtx[i].y = sinf(a + PI);
+            const float a = ((float)i / (float)SAMPLES) * 2*IM_PI;
+            circle_vtx[i].x = cosf(a + IM_PI);
+            circle_vtx[i].y = sinf(a + IM_PI);
         }
         circle_vtx_builds = true;
     }
@@ -9137,7 +9136,7 @@ void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int nu
         return;
 
     PrimReserve((unsigned int)num_segments*6);
-    const float a_step = 2*PI/(float)num_segments;
+    const float a_step = 2*IM_PI/(float)num_segments;
     float a0 = 0.0f;
     for (int i = 0; i < num_segments; i++)
     {
@@ -9154,7 +9153,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
 
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
     PrimReserve((unsigned int)num_segments*3);
-    const float a_step = 2*PI/(float)num_segments;
+    const float a_step = 2*IM_PI/(float)num_segments;
     float a0 = 0.0f;
     for (int i = 0; i < num_segments; i++)
     {
@@ -10582,13 +10581,13 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 ImGui::LogToClipboard();
             else
                 ImGui::LogToTTY();
-            ImGui::LogText("ImGuiStyle& style = ImGui::GetStyle();" STR_NEWLINE);
+            ImGui::LogText("ImGuiStyle& style = ImGui::GetStyle();" IM_NEWLINE);
             for (int i = 0; i < ImGuiCol_COUNT; i++)
             {
                 const ImVec4& col = style.Colors[i];
                 const char* name = ImGui::GetStyleColName(i);
                 if (!output_only_modified || memcmp(&col, (ref ? &ref->Colors[i] : &def.Colors[i]), sizeof(ImVec4)) != 0)
-                    ImGui::LogText("style.Colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" STR_NEWLINE, name, 22 - strlen(name), "", col.x, col.y, col.z, col.w);
+                    ImGui::LogText("style.Colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" IM_NEWLINE, name, 22 - strlen(name), "", col.x, col.y, col.z, col.w);
             }
             ImGui::LogFinish();
         }
@@ -11532,7 +11531,7 @@ void ImGui::ShowTestWindow(bool* opened)
             if (ImGui::BeginPopupContextItem("item context menu"))
             {
                 if (ImGui::Selectable("Set to zero")) value = 0.0f; 
-                if (ImGui::Selectable("Set to PI")) value = PI; 
+                if (ImGui::Selectable("Set to PI")) value = 3.1415f; 
                 ImGui::EndPopup();
             }
 
@@ -12196,9 +12195,9 @@ struct ExampleAppConsole
             const char* item = Items[i];
             if (!filter.PassFilter(item))
                 continue;
-            ImVec4 col(1,1,1,1); // A better implement may store a type per-item. For the sample let's just parse the text.
-            if (strstr(item, "[error]")) col = ImVec4(1.0f,0.4f,0.4f,1.0f);
-            else if (strncmp(item, "# ", 2) == 0) col = ImVec4(1.0f,0.8f,0.6f,1.0f);
+            ImVec4 col = ImColor(255,255,255); // A better implementation may store a type per-item. For the sample let's just parse the text.
+            if (strstr(item, "[error]")) col = ImColor(255,100,100);
+            else if (strncmp(item, "# ", 2) == 0) col = ImColor(255,200,150);
             ImGui::PushStyleColor(ImGuiCol_Text, col);
             ImGui::TextUnformatted(item);
             ImGui::PopStyleColor();
