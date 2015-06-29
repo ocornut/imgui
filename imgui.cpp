@@ -9669,40 +9669,6 @@ void ImFontAtlas::RenderCustomTexData(int pass, void* p_rects)
     }
 }
 
-//-----------------------------------------------------------------------------
-// ImFont
-//-----------------------------------------------------------------------------
-
-ImFont::ImFont()
-{
-    Scale = 1.0f;
-    FallbackChar = (ImWchar)'?';
-    Clear();
-}
-
-ImFont::~ImFont()
-{
-    // Invalidate active font so that the user gets a clear crash instead of a dangling pointer.
-    // If you want to delete fonts you need to do it between Render() and NewFrame().
-    ImGuiState& g = *GImGui;
-    if (g.Font == this)
-        g.Font = NULL;
-    Clear();
-}
-
-void    ImFont::Clear()
-{
-    FontSize = 0.0f;
-    DisplayOffset = ImVec2(-0.5f, 0.5f);
-    Ascent = Descent = 0.0f;
-    ContainerAtlas = NULL;
-    Glyphs.clear();
-    FallbackGlyph = NULL;
-    FallbackXAdvance = 0.0f;
-    IndexXAdvance.clear();
-    IndexLookup.clear();
-}
-
 // Retrieve list of range (2 int per range, values are inclusive)
 const ImWchar*   ImFontAtlas::GetGlyphRangesDefault()
 {
@@ -9799,6 +9765,40 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesCyrillic()
         0,
     };
     return &ranges[0];
+}
+
+//-----------------------------------------------------------------------------
+// ImFont
+//-----------------------------------------------------------------------------
+
+ImFont::ImFont()
+{
+    Scale = 1.0f;
+    FallbackChar = (ImWchar)'?';
+    Clear();
+}
+
+ImFont::~ImFont()
+{
+    // Invalidate active font so that the user gets a clear crash instead of a dangling pointer.
+    // If you want to delete fonts you need to do it between Render() and NewFrame().
+    ImGuiState& g = *GImGui;
+    if (g.Font == this)
+        g.Font = NULL;
+    Clear();
+}
+
+void    ImFont::Clear()
+{
+    FontSize = 0.0f;
+    DisplayOffset = ImVec2(-0.5f, 0.5f);
+    Ascent = Descent = 0.0f;
+    ContainerAtlas = NULL;
+    Glyphs.clear();
+    FallbackGlyph = NULL;
+    FallbackXAdvance = 0.0f;
+    IndexXAdvance.clear();
+    IndexLookup.clear();
 }
 
 void ImFont::BuildLookupTable()
