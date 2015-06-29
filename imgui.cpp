@@ -5768,7 +5768,7 @@ static bool SliderFloatAsInputText(const char* label, float* v, ImGuiID id, int 
 }
 
 // Parse display precision back from the display format string
-static inline void ParseFormat(const char* fmt, int& decimal_precision)
+static inline void ParseFormatPrecision(const char* fmt, int& decimal_precision)
 {
     while ((fmt = strchr(fmt, '%')) != NULL)
     {
@@ -5803,7 +5803,7 @@ static inline float RoundScalar(float value, int decimal_precision)
     return negative ? -value : value;
 }
 
-static bool SliderScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, bool horizontal)
+static bool SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, bool horizontal)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5965,7 +5965,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     if (!display_format)
         display_format = "%.3f";
     int decimal_precision = 3;
-    ParseFormat(display_format, decimal_precision);
+    ParseFormatPrecision(display_format, decimal_precision);
 
     // Tabbing or CTRL-clicking on Slider turns it into an input box
     bool start_text_input = false;
@@ -5988,7 +5988,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     ItemSize(total_bb, style.FramePadding.y);
 
     // Actual slider behavior + render grab
-    const bool value_changed = SliderScalarBehavior(frame_bb, id, v, v_min, v_max, power, decimal_precision, true);
+    const bool value_changed = SliderBehavior(frame_bb, id, v, v_min, v_max, power, decimal_precision, true);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
@@ -6026,7 +6026,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     if (!display_format)
         display_format = "%.3f";
     int decimal_precision = 3;
-    ParseFormat(display_format, decimal_precision);
+    ParseFormatPrecision(display_format, decimal_precision);
 
     if (hovered && g.IO.MouseClicked[0])
     {
@@ -6035,7 +6035,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     }
 
     // Actual slider behavior + render grab
-    bool value_changed = SliderScalarBehavior(frame_bb, id, v, v_min, v_max, power, decimal_precision, false);
+    bool value_changed = SliderBehavior(frame_bb, id, v, v_min, v_max, power, decimal_precision, false);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     // For the vertical slider we allow centered text to overlap the frame padding
@@ -6163,7 +6163,7 @@ bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const 
 }
 
 // FIXME-WIP: Work in progress. May change API / behavior.
-static bool DragScalarBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, int decimal_precision, float power)
+static bool DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, int decimal_precision, float power)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -6269,7 +6269,7 @@ bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, f
     if (!display_format)
         display_format = "%.3f";
     int decimal_precision = 3;
-    ParseFormat(display_format, decimal_precision);
+    ParseFormatPrecision(display_format, decimal_precision);
 
     // Tabbing or CTRL-clicking on Drag turns it into an input box
     bool start_text_input = false;
@@ -6291,7 +6291,7 @@ bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, f
     ItemSize(total_bb, style.FramePadding.y);
 
     // Actual drag behavior
-    const bool value_changed = DragScalarBehavior(frame_bb, id, v, v_speed, v_min, v_max, decimal_precision, power);
+    const bool value_changed = DragBehavior(frame_bb, id, v, v_speed, v_min, v_max, decimal_precision, power);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
