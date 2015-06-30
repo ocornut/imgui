@@ -336,7 +336,6 @@
  Issue numbers (#) refer to github issues.
 
  - misc: merge or clarify ImVec4 vs ImRect?
- - window: add horizontal scroll
  - window: autofit feedback loop when user relies on any dynamic layout (window width multiplier, column). maybe just clearly drop manual autofit?
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. 
  - window: allow resizing of child windows (possibly given min/max for each axis?)
@@ -445,7 +444,6 @@
 #endif
 
 #ifdef _MSC_VER
-#pragma warning (disable: 4127) // conditional expression is constant
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
@@ -2742,15 +2740,17 @@ static void RenderCheckMark(ImVec2 pos, ImU32 col)
     ImVec2 a, b, c;
     float start_x = (float)(int)(g.FontSize * 0.307f + 0.5f);
     float rem_third = (float)(int)((g.FontSize - start_x) / 3.0f);
-    a.x = pos.x + start_x;
+    a.x = pos.x + 0.5f + start_x;
     b.x = a.x + rem_third;
     c.x = a.x + rem_third * 3.0f;
-    b.y = pos.y + (float)(int)(g.Font->Ascent * (g.FontSize / g.Font->FontSize) + 0.5f) + (float)(int)(g.Font->DisplayOffset.y);
+    b.y = pos.y + 0.5f + (float)(int)(g.Font->Ascent * (g.FontSize / g.Font->FontSize) + 0.5f) + (float)(int)(g.Font->DisplayOffset.y);
     a.y = b.y - rem_third;
     c.y = b.y - rem_third * 2.0f;
 
-    window->DrawList->AddLine(a, b, col);
-    window->DrawList->AddLine(b, c, col);
+    window->DrawList->PathLineTo(a);
+    window->DrawList->PathLineTo(b);
+    window->DrawList->PathLineTo(c);
+    window->DrawList->PathStroke(col, 1.0f, false);
 }
 
 // Calculate text size. Text can be multi-line. Optionally ignore text after a ## marker.
