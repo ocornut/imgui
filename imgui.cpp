@@ -9202,16 +9202,6 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     }
 }
 
-void ImDrawList::PathClear()
-{
-    path.resize(0);
-}
-
-void ImDrawList::PathLineTo(const ImVec2& p)
-{
-    path.push_back(p);
-}
-
 void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int amin, int amax)
 {
     static ImVec2 circle_vtx[12];
