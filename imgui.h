@@ -1030,11 +1030,11 @@ struct ImDrawList
     IMGUI_API void  PopTextureID();
 
     // Stateful path API (finish with Fill or Stroke)
-    IMGUI_API void  ClearPath();
-    IMGUI_API void  LineTo(const ImVec2& p);
-    IMGUI_API void  ArcToFast(const ImVec2& centre, float radius, int a_min, int a_max);
-    IMGUI_API void  ArcTo(const ImVec2& centre, float radius, float a_min, float a_max, int num_segments = 12);
-    IMGUI_API void  Rect(const ImVec2& a, const ImVec2& b, float rounding = 0.0f, int rounding_corners = 0x0F);
+    IMGUI_API void  PathClear();
+    IMGUI_API void  PathLineTo(const ImVec2& p);
+    IMGUI_API void  PathArcToFast(const ImVec2& centre, float radius, int a_min, int a_max);
+    IMGUI_API void  PathArcTo(const ImVec2& centre, float radius, float a_min, float a_max, int num_segments = 12);
+    IMGUI_API void  PathRect(const ImVec2& a, const ImVec2& b, float rounding = 0.0f, int rounding_corners = 0x0F);
     IMGUI_API void  Fill(ImU32 col);
     IMGUI_API void  Stroke(ImU32 col, float thickness, bool closed);
 
