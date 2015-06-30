@@ -1,4 +1,4 @@
-// ImGui library v1.42
+// ImGui library v1.42 wip
 // See .cpp file for documentation.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
@@ -499,6 +499,7 @@ enum ImGuiCol_
     ImGuiCol_FrameBgActive,
     ImGuiCol_TitleBg,
     ImGuiCol_TitleBgCollapsed,
+    ImGuiCol_TitleBgActive,
     ImGuiCol_MenuBarBg,
     ImGuiCol_ScrollbarBg,
     ImGuiCol_ScrollbarGrab,

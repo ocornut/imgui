@@ -623,8 +623,9 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_FrameBg]                = ImVec4(0.80f, 0.80f, 0.80f, 0.30f);   // Background of checkbox, radio button, plot, slider, text input
     Colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.90f, 0.80f, 0.80f, 0.40f);
     Colors[ImGuiCol_FrameBgActive]          = ImVec4(0.90f, 0.65f, 0.65f, 0.45f);
-    Colors[ImGuiCol_TitleBg]                = ImVec4(0.50f, 0.50f, 1.00f, 0.45f);
+    Colors[ImGuiCol_TitleBg]                = ImVec4(0.50f, 0.50f, 1.00f, 0.40f);
     Colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.40f, 0.40f, 0.80f, 0.20f);
+    Colors[ImGuiCol_TitleBgActive]          = ImVec4(0.50f, 0.50f, 1.00f, 0.55f);
     Colors[ImGuiCol_MenuBarBg]              = ImVec4(0.40f, 0.40f, 0.55f, 0.60f);
     Colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.40f, 0.40f, 0.80f, 0.15f);
     Colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.40f, 0.40f, 0.80f, 0.30f);
@@ -3915,7 +3916,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
             // Title bar
             if (!(flags & ImGuiWindowFlags_NoTitleBar))
-                window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_TitleBg), window_rounding, 1|2);
+                window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color((g.FocusedWindow && window->RootWindow == g.FocusedWindow->RootWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, 1|2);
 
             // Menu bar
             if (flags & ImGuiWindowFlags_MenuBar)
@@ -4413,6 +4414,7 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     case ImGuiCol_FrameBgActive: return "FrameBgActive";
     case ImGuiCol_TitleBg: return "TitleBg";
     case ImGuiCol_TitleBgCollapsed: return "TitleBgCollapsed";
+    case ImGuiCol_TitleBgActive: return "TitleBgActive";
     case ImGuiCol_MenuBarBg: return "MenuBarBg";
     case ImGuiCol_ScrollbarBg: return "ScrollbarBg";
     case ImGuiCol_ScrollbarGrab: return "ScrollbarGrab";
