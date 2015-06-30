@@ -8949,6 +8949,22 @@ void ImDrawList::PrimReserve(unsigned int idx_count, unsigned int vtx_count)
     idx_write = &idx_buffer[idx_buffer_size];
 }
 
+void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
+{
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+    const ImVec2 b(c.x, a.y);
+    const ImVec2 d(a.x, c.y);
+    idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2); 
+    idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3); 
+    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col; 
+    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col; 
+    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col; 
+    vtx_write[3].pos = d; vtx_write[3].uv = uv; vtx_write[3].col = col;
+    vtx_write += 4;
+    vtx_current_idx += 4;
+    idx_write += 6;
+}
+
 void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 col)
 {
 	const ImVec2 b(c.x, a.y);
@@ -8968,7 +8984,7 @@ void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a
 
 static ImVector<ImVec2> GTempPolyData;
 
-void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, bool closed)
+void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, bool closed, bool anti_aliased)
 {
     (void)thickness; // Unsupported
 
@@ -8984,8 +9000,10 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         count = points_count-1;
     }
 
-    const bool aa_enabled = !ImGui::GetIO().KeyCtrl;
-    if (aa_enabled)
+    if (ImGui::GetIO().KeyCtrl)
+        anti_aliased = false;
+
+    if (anti_aliased)
     {
         // Anti-aliased stroke
         const float AA_SIZE = 1.0f;
@@ -9101,12 +9119,14 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     }
 }
 
-void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col)
+void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col, bool anti_aliased)
 {
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
 
-    const bool aa_enabled = !ImGui::GetIO().KeyCtrl;
-    if (aa_enabled)
+    if (ImGui::GetIO().KeyCtrl)
+        anti_aliased = false;
+
+    if (anti_aliased)
     {
         // Anti-aliased Fill
         const float AA_SIZE = 1.0f;
@@ -9278,8 +9298,16 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
 {
     if ((col >> 24) == 0)
         return;
-    PathRect(a, b, rounding, rounding_corners);
-    PathFill(col);
+    if (rounding > 0.0f)
+    {
+        PathRect(a, b, rounding, rounding_corners);
+        PathFill(col);
+    }
+    else
+    {
+        PrimReserve(6, 4);
+        PrimRect(a, b, col);
+    }
 }
 
 void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col)

@@ -1045,17 +1045,17 @@ struct ImDrawList
     IMGUI_API void  AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
     IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
     IMGUI_API void  AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col = 0xFFFFFFFF);
-    IMGUI_API void  AddPolyline(const ImVec2* points, const int num_points, ImU32 col, float thickness, bool closed);
-    IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, const int num_points, ImU32 col);
+    IMGUI_API void  AddPolyline(const ImVec2* points, const int num_points, ImU32 col, float thickness, bool closed, bool anti_aliased);
+    IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, const int num_points, ImU32 col, bool anti_aliased);
 
     // Stateful path API, add points finish with PathFill() or PathStroke(). Only convex shapes supported.
-    inline    void  PathClear()                                             { path.resize(0); }
-    inline    void  PathLineTo(const ImVec2& p)                             { path.push_back(p); }
+    inline    void  PathClear()                                                 { path.resize(0); }
+    inline    void  PathLineTo(const ImVec2& p)                                 { path.push_back(p); }
     IMGUI_API void  PathArcToFast(const ImVec2& centre, float radius, int a_min, int a_max);
     IMGUI_API void  PathArcTo(const ImVec2& centre, float radius, float a_min, float a_max, int num_segments = 12);
     IMGUI_API void  PathRect(const ImVec2& a, const ImVec2& b, float rounding = 0.0f, int rounding_corners = 0x0F);
-    inline    void  PathFill(ImU32 col)                                     { AddConvexPolyFilled(&path[0], (int)path.size(), col); PathClear(); }
-    inline    void  PathStroke(ImU32 col, float thickness, bool closed)     { AddPolyline(&path[0], (int)path.size(), col, thickness, closed); PathClear(); }
+    inline    void  PathFill(ImU32 col)                                         { AddConvexPolyFilled(&path[0], (int)path.size(), col, true); PathClear(); }
+    inline    void  PathStroke(ImU32 col, float thickness, bool closed)         { AddPolyline(&path[0], (int)path.size(), col, thickness, closed, true); PathClear(); }
 
     // Advanced
     IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);   // Your rendering function must check for 'user_callback' in ImDrawCmd and call the function instead of rendering triangles.
@@ -1063,6 +1063,7 @@ struct ImDrawList
 
     // Internal helpers
     IMGUI_API void  PrimReserve(unsigned int idx_count, unsigned int vtx_count);
+    IMGUI_API void  PrimRect(const ImVec2& a, const ImVec2& b, ImU32 col);
     IMGUI_API void  PrimRectUV(const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col);
     IMGUI_API void  UpdateClipRect();
     IMGUI_API void  UpdateTextureID();
