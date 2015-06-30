@@ -8981,8 +8981,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         // Temporary buffer
         GTempPolyData.resize(points_count * 3);
         ImVec2* temp_inner = &GTempPolyData[0];
-        ImVec2* temp_outer = &GTempPolyData[points_count];
-        ImVec2* temp_normals = &GTempPolyData[points_count * 2];
+        ImVec2* temp_outer = temp_inner + points_count;
+        ImVec2* temp_normals = temp_inner + points_count * 2;
 
         for (int i = 0; i < count; i++)
         {
@@ -9095,8 +9095,9 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         // Temporary buffer
         GTempPolyData.resize(points_count * 3);
         ImVec2* temp_inner = &GTempPolyData[0];
-        ImVec2* temp_outer = &GTempPolyData[points_count];
-        ImVec2* temp_normals = &GTempPolyData[points_count * 2];
+        ImVec2* temp_outer = temp_inner + points_count;
+        ImVec2* temp_normals = temp_inner + points_count + 2;
+
         for (int i = 0, j = points_count-1; i < points_count; j=i++)
         {
             const ImVec2& v0 = points[j];
@@ -9239,9 +9240,9 @@ void ImDrawList::Rect(const ImVec2& a, const ImVec2& b, float rounding, int roun
 
     if (r == 0.0f || rounding_corners == 0)
     {
-        LineTo(ImVec2(a.x,a.y));
+        LineTo(a);
         LineTo(ImVec2(b.x,a.y));
-        LineTo(ImVec2(b.x,b.y));
+        LineTo(b);
         LineTo(ImVec2(a.x,b.y));
     }
     else
