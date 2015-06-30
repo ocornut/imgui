@@ -60,11 +60,11 @@ static void ImGui_ImplGlfw_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
     {
         const ImDrawList* cmd_list = cmd_lists[n];
         const unsigned char* vtx_buffer = (const unsigned char*)&cmd_list->vtx_buffer.front();
+        const ImDrawIdx* idx_buffer = (const unsigned short*)&cmd_list->idx_buffer.front();
         glVertexPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, pos)));
         glTexCoordPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, uv)));
         glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, col)));
 
-        int vtx_offset = 0;
         for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
@@ -76,9 +76,9 @@ static void ImGui_ImplGlfw_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
             {
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->texture_id);
                 glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
-                glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
+                glDrawElements(GL_TRIANGLES, pcmd->idx_count, GL_UNSIGNED_SHORT, idx_buffer);
             }
-            vtx_offset += pcmd->vtx_count;
+            idx_buffer += pcmd->idx_count;
         }
     }
     #undef OFFSETOF

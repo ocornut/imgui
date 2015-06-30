@@ -15,7 +15,9 @@ static INT64                    g_Time = 0;
 static INT64                    g_TicksPerSecond = 0;
 static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
 static LPDIRECT3DVERTEXBUFFER9  g_pVB = NULL;
-static int                      VERTEX_BUFFER_SIZE = 30000;     // TODO: Make vertex buffer smaller and grow dynamically as needed.
+static LPDIRECT3DINDEXBUFFER9   g_pIB = NULL;
+static int                      VERTEX_BUFFER_SIZE = 30000;     // TODO: Make buffers smaller and grow dynamically as needed.
+static int                      INDEX_BUFFER_SIZE = 30000;      // TODO: Make buffers smaller and grow dynamically as needed.
 
 struct CUSTOMVERTEX
 {
@@ -31,14 +33,21 @@ struct CUSTOMVERTEX
 static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
     size_t total_vtx_count = 0;
+    size_t total_idx_count = 0;
     for (int n = 0; n < cmd_lists_count; n++)
+    {
         total_vtx_count += cmd_lists[n]->vtx_buffer.size();
+        total_idx_count += cmd_lists[n]->idx_buffer.size();
+    }
     if (total_vtx_count == 0)
         return;
 
     // Copy and convert all vertices into a single contiguous buffer
     CUSTOMVERTEX* vtx_dst;
+    ImDrawIdx* idx_dst;
     if (g_pVB->Lock(0, (UINT)total_vtx_count, (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
+        return;
+    if (g_pIB->Lock(0, (UINT)total_idx_count, (void**)&idx_dst, D3DLOCK_DISCARD) < 0)
         return;
     for (int n = 0; n < cmd_lists_count; n++)
     {
@@ -55,9 +64,13 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
             vtx_dst++;
             vtx_src++;
         }
+        memcpy(idx_dst, &cmd_list->idx_buffer[0], cmd_list->idx_buffer.size() * sizeof(ImDrawIdx));
+        idx_dst += cmd_list->idx_buffer.size();
     }
     g_pVB->Unlock();
+    g_pIB->Unlock();
     g_pd3dDevice->SetStreamSource( 0, g_pVB, 0, sizeof( CUSTOMVERTEX ) );
+    g_pd3dDevice->SetIndices( g_pIB );
     g_pd3dDevice->SetFVF( D3DFVF_CUSTOMVERTEX );
 
     // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
@@ -90,6 +103,7 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
 
     // Render command lists
     int vtx_offset = 0;
+    int idx_offset = 0;
     for (int n = 0; n < cmd_lists_count; n++)
     {
         const ImDrawList* cmd_list = cmd_lists[n];
@@ -105,10 +119,11 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
                 const RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
                 g_pd3dDevice->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->texture_id );
                 g_pd3dDevice->SetScissorRect(&r);
-                g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, vtx_offset, pcmd->vtx_count/3);
+                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->vtx_buffer.size(), idx_offset, pcmd->idx_count/3);
             }
-            vtx_offset += pcmd->vtx_count;
+            idx_offset += pcmd->idx_count;
         }
+        vtx_offset += (int)cmd_list->vtx_buffer.size();
     }
 }
 
@@ -238,6 +253,9 @@ bool ImGui_ImplDX9_CreateDeviceObjects()
     if (g_pd3dDevice->CreateVertexBuffer(VERTEX_BUFFER_SIZE * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
         return false;
 
+    if (g_pd3dDevice->CreateIndexBuffer(INDEX_BUFFER_SIZE * sizeof(ImDrawIdx), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, D3DPOOL_DEFAULT, &g_pIB, NULL) < 0)
+        return false;
+
     ImGui_ImplDX9_CreateFontsTexture();
     return true;
 }
@@ -250,6 +268,11 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
     {
         g_pVB->Release();
         g_pVB = NULL;
+    }
+    if (g_pIB)
+    {
+        g_pIB->Release();
+        g_pIB = NULL;
     }
     if (LPDIRECT3DTEXTURE9 tex = (LPDIRECT3DTEXTURE9)ImGui::GetIO().Fonts->TexID)
     {

@@ -73,24 +73,25 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
     }
 
     // Copy and convert all vertices into a single contiguous buffer
-    unsigned char* buffer_data = (unsigned char*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-    if (!buffer_data)
+    unsigned char* vtx_data = (unsigned char*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+    if (!vtx_data)
         return;
     for (int n = 0; n < cmd_lists_count; n++)
     {
         const ImDrawList* cmd_list = cmd_lists[n];
-        memcpy(buffer_data, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
-        buffer_data += cmd_list->vtx_buffer.size() * sizeof(ImDrawVert);
+        memcpy(vtx_data, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
+        vtx_data += cmd_list->vtx_buffer.size() * sizeof(ImDrawVert);
     }
     glUnmapBuffer(GL_ARRAY_BUFFER);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(g_VaoHandle);
 
-    int cmd_offset = 0;
+    int vtx_offset = 0;
     for (int n = 0; n < cmd_lists_count; n++)
     {
         const ImDrawList* cmd_list = cmd_lists[n];
-        int vtx_offset = cmd_offset;
+        const ImDrawIdx* idx_buffer = (const unsigned short*)&cmd_list->idx_buffer.front();
+
         const ImDrawCmd* pcmd_end = cmd_list->commands.end();
         for (const ImDrawCmd* pcmd = cmd_list->commands.begin(); pcmd != pcmd_end; pcmd++)
         {
@@ -102,11 +103,11 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
             {
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->texture_id);
                 glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
-                glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
+                glDrawElementsBaseVertex(GL_TRIANGLES, pcmd->idx_count, GL_UNSIGNED_SHORT, idx_buffer, vtx_offset);
             }
-            vtx_offset += pcmd->vtx_count;
+            idx_buffer += pcmd->idx_count;
         }
-        cmd_offset = vtx_offset;
+        vtx_offset += (int)cmd_list->vtx_buffer.size();
     }
 
     // Restore modified state

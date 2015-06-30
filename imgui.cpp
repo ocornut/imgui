@@ -1874,10 +1874,11 @@ static inline void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_lis
 {
     if (!draw_list->commands.empty() && !draw_list->vtx_buffer.empty())
     {
-        if (draw_list->commands.back().vtx_count == 0)
+        if (draw_list->commands.back().idx_count == 0)
             draw_list->commands.pop_back();
         out_render_list.push_back(draw_list);
         GImGui->IO.MetricsRenderVertices += (int)draw_list->vtx_buffer.size();
+        GImGui->IO.MetricsRenderIndices += (int)draw_list->idx_buffer.size();
     }
 }
 
@@ -2439,8 +2440,7 @@ void ImGui::Render()
         }
 
         // Gather windows to render
-        g.IO.MetricsRenderVertices = 0;
-        g.IO.MetricsActiveWindows = 0;
+        g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
         for (size_t i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
             g.RenderDrawLists[i].resize(0);
         for (size_t i = 0; i != g.Windows.size(); i++)
@@ -8820,6 +8820,9 @@ void ImDrawList::Clear()
     commands.resize(0);
     vtx_buffer.resize(0);
     vtx_write = NULL;
+    vtx_current_idx = 0;
+    idx_buffer.resize(0);
+    idx_write = NULL;
     clip_rect_stack.resize(0);
     texture_id_stack.resize(0);
 }
@@ -8829,6 +8832,9 @@ void ImDrawList::ClearFreeMemory()
     commands.clear();
     vtx_buffer.clear();
     vtx_write = NULL;
+    vtx_current_idx = 0;
+    idx_buffer.clear();
+    idx_write = NULL;
     clip_rect_stack.clear();
     texture_id_stack.clear();
 }
@@ -8836,7 +8842,7 @@ void ImDrawList::ClearFreeMemory()
 void ImDrawList::AddDrawCmd()
 {
     ImDrawCmd draw_cmd;
-    draw_cmd.vtx_count = 0;
+    draw_cmd.idx_count = 0;
     draw_cmd.clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
     draw_cmd.texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
     draw_cmd.user_callback = NULL;
@@ -8849,7 +8855,7 @@ void ImDrawList::AddDrawCmd()
 void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
 {
     ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
-    if (!current_cmd || current_cmd->vtx_count != 0 || current_cmd->user_callback != NULL)
+    if (!current_cmd || current_cmd->idx_count != 0 || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
         current_cmd = &commands.back();
@@ -8865,7 +8871,7 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
 void ImDrawList::UpdateClipRect()
 {
     ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
-    if (!current_cmd || (current_cmd->vtx_count != 0) || current_cmd->user_callback != NULL)
+    if (!current_cmd || (current_cmd->idx_count != 0) || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
     }
@@ -8906,7 +8912,7 @@ void ImDrawList::UpdateTextureID()
 {
     ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
     const ImTextureID texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
-    if (!current_cmd || (current_cmd->vtx_count != 0 && current_cmd->texture_id != texture_id) || current_cmd->user_callback != NULL)
+    if (!current_cmd || (current_cmd->idx_count != 0 && current_cmd->texture_id != texture_id) || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
     }
@@ -8929,29 +8935,51 @@ void ImDrawList::PopTextureID()
     UpdateTextureID();
 }
 
-void ImDrawList::PrimReserve(unsigned int vtx_count)
+void ImDrawList::PrimReserve(unsigned int idx_count, unsigned int vtx_count)
 {
     ImDrawCmd& draw_cmd = commands.back();
-    draw_cmd.vtx_count += vtx_count;
-
+    draw_cmd.idx_count += idx_count;
+        
     size_t vtx_buffer_size = vtx_buffer.size();
     vtx_buffer.resize(vtx_buffer_size + vtx_count);
     vtx_write = &vtx_buffer[vtx_buffer_size];
+
+    size_t idx_buffer_size = idx_buffer.size();
+    idx_buffer.resize(idx_buffer_size + idx_count);
+    idx_write = &idx_buffer[idx_buffer_size];
+}
+
+void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
+{
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+	const ImVec2 b(c.x, a.y);
+	const ImVec2 d(a.x, c.y);
+    idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
+    idx_write[3] = vtx_current_idx; idx_write[4] = vtx_current_idx+2; idx_write[5] = vtx_current_idx+3; 
+    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col; 
+    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col; 
+    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col; 
+    vtx_write[3].pos = d; vtx_write[3].uv = uv; vtx_write[3].col = col;
+    vtx_write += 4;
+    vtx_current_idx += 4;
+    idx_write += 6;
 }
 
 void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 col)
 {
-    const ImVec2 b(c.x, a.y);
-    const ImVec2 d(a.x, c.y);
-    const ImVec2 uv_b(uv_c.x, uv_a.y);
-    const ImVec2 uv_d(uv_a.x, uv_c.y);
-    vtx_write[0].pos = a; vtx_write[0].uv = uv_a; vtx_write[0].col = col;
-    vtx_write[1].pos = b; vtx_write[1].uv = uv_b; vtx_write[1].col = col;
-    vtx_write[2].pos = c; vtx_write[2].uv = uv_c; vtx_write[2].col = col;
-    vtx_write[3].pos = a; vtx_write[3].uv = uv_a; vtx_write[3].col = col;
-    vtx_write[4].pos = c; vtx_write[4].uv = uv_c; vtx_write[4].col = col;
-    vtx_write[5].pos = d; vtx_write[5].uv = uv_d; vtx_write[5].col = col;
-    vtx_write += 6;
+	const ImVec2 b(c.x, a.y);
+	const ImVec2 d(a.x, c.y);
+	const ImVec2 uv_b(uv_c.x, uv_a.y);
+	const ImVec2 uv_d(uv_a.x, uv_c.y);
+    idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
+    idx_write[3] = vtx_current_idx; idx_write[4] = vtx_current_idx+2; idx_write[5] = vtx_current_idx+3; 
+    vtx_write[0].pos = a; vtx_write[0].uv = uv_a; vtx_write[0].col = col; 
+    vtx_write[1].pos = b; vtx_write[1].uv = uv_b; vtx_write[1].col = col; 
+    vtx_write[2].pos = c; vtx_write[2].uv = uv_c; vtx_write[2].col = col; 
+    vtx_write[3].pos = d; vtx_write[3].uv = uv_d; vtx_write[3].col = col;
+    vtx_write += 4;
+    vtx_current_idx += 4;
+    idx_write += 6;
 }
 
 static ImVector<ImVec2> GTempPolyData;
@@ -8972,7 +9000,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         count = points_count-1;
     }
 
-    const bool aa_enabled = true;//!ImGui::GetIO().KeyCtrl;
+    const bool aa_enabled = !ImGui::GetIO().KeyCtrl;
     if (aa_enabled)
     {
         // Anti-aliased stroke
@@ -9006,7 +9034,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             temp_inner[points_count-1] = points[points_count-1] - temp_normals[points_count-1]*aa_size;
         }
 
-        for (int i = start; i < count; i++)
+        for (int i = 0; i < count; i++)
         {
             const int ni = (i+1) < points_count ? i+1 : 0;
             const ImVec2& dl0 = temp_normals[i];
@@ -9025,6 +9053,39 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         }
 
         const ImU32 col_trans = col & 0x00ffffff;
+
+#if 1
+        // Indexed
+        // FIXME-OPT: merge with loops above
+        const int idx_count = count*12;
+        const int vtx_count = points_count*3;
+        PrimReserve(idx_count, vtx_count);
+
+        // FIXME-OPT: merge with loops above
+        for (int i = 0; i < points_count; i++)
+        {
+            vtx_write[0].pos = points[i];     vtx_write[0].uv = uv; vtx_write[0].col = col;
+            vtx_write[1].pos = temp_inner[i]; vtx_write[1].uv = uv; vtx_write[1].col = col_trans;
+            vtx_write[2].pos = temp_outer[i]; vtx_write[2].uv = uv; vtx_write[2].col = col_trans;
+            vtx_write += 3;
+        }
+
+        ImDrawIdx vtx_inner_idx = vtx_current_idx+1;
+        ImDrawIdx vtx_outer_idx = vtx_current_idx+2;
+        for (int i = 0; i < count; i++)
+        {
+            const int ni = (i+1) < points_count ? i+1 : 0;
+            int i3 = i * 3;
+            int ni3 = ni * 3;
+
+            idx_write[0] = (ImDrawIdx)(vtx_current_idx + ni3); idx_write[1] = (ImDrawIdx)(vtx_current_idx +  i3); idx_write[2] = (ImDrawIdx)(vtx_outer_idx   + i3);
+            idx_write[3] = (ImDrawIdx)(vtx_outer_idx   +  i3); idx_write[4] = (ImDrawIdx)(vtx_outer_idx   + ni3); idx_write[5] = (ImDrawIdx)(vtx_current_idx + ni3);
+            idx_write[6] = (ImDrawIdx)(vtx_inner_idx   + ni3); idx_write[7] = (ImDrawIdx)(vtx_inner_idx   +  i3); idx_write[8] = (ImDrawIdx)(vtx_current_idx + i3);
+            idx_write[9] = (ImDrawIdx)(vtx_current_idx +  i3); idx_write[10]= (ImDrawIdx)(vtx_current_idx + ni3); idx_write[11]= (ImDrawIdx)(vtx_inner_idx   + ni3);
+            idx_write += 12;
+        }
+        vtx_current_idx += (ImDrawIdx)vtx_count;
+#else
         const int vertex_count = count*12;
         PrimReserve(vertex_count);
 
@@ -9048,12 +9109,14 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             PrimVtx(points[ni], uv, col);
             PrimVtx(temp_inner[ni], uv, col_trans);
         }
+#endif
     }
     else
     {
         // Non Anti-aliased Stroke
-        const int vertex_count = count*6;
-        PrimReserve(vertex_count);
+        const int idx_count = count*6;
+        const int vtx_count = count*4;      // FIXME-OPT: Not sharing edges
+        PrimReserve(idx_count, vtx_count);
 
         for (int i = 0; i < count; i++)
         {
@@ -9072,12 +9135,16 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             const ImVec2 pb(v1.x + dy, v1.y - dx);
             const ImVec2 pc(v1.x - dy, v1.y + dx);
             const ImVec2 pd(v0.x - dy, v0.y + dx);
-            PrimVtx(pa, uv, col);
-            PrimVtx(pb, uv, col);
-            PrimVtx(pc, uv, col);
-            PrimVtx(pa, uv, col);
-            PrimVtx(pc, uv, col);
-            PrimVtx(pd, uv, col);
+            vtx_write[0].pos = pa; vtx_write[0].uv = uv; vtx_write[0].col = col;
+            vtx_write[1].pos = pb; vtx_write[1].uv = uv; vtx_write[1].col = col;
+            vtx_write[2].pos = pc; vtx_write[2].uv = uv; vtx_write[2].col = col;
+            vtx_write[3].pos = pd; vtx_write[3].uv = uv; vtx_write[3].col = col;
+            vtx_write += 4;
+
+            idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
+            idx_write[3] = vtx_current_idx; idx_write[4] = vtx_current_idx+2; idx_write[5] = vtx_current_idx+3; 
+            idx_write += 6;
+            vtx_current_idx += 4;
         }
     }
 }
@@ -9086,7 +9153,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
 {
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
 
-    const bool aa_enabled = true;//!ImGui::GetIO().KeyCtrl;
+    const bool aa_enabled = !ImGui::GetIO().KeyCtrl;
     if (aa_enabled)
     {
         // Anti-aliased Fill
@@ -9128,6 +9195,41 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         }
 
         const ImU32 col_trans = col & 0x00ffffff;
+
+#if 1
+        // Indexed
+        const int idx_count = (points_count-2)*3 + points_count*6;
+        const int vtx_count = (points_count*2);
+        PrimReserve(idx_count, vtx_count);
+
+        // FIXME-OPT: merge with loops above
+        for (int i = 0; i < points_count; i++)
+        {
+            vtx_write[0].pos = temp_inner[i]; vtx_write[0].uv = uv; vtx_write[0].col = col;
+            vtx_write[1].pos = temp_outer[i]; vtx_write[1].uv = uv; vtx_write[1].col = col_trans;
+            vtx_write += 2;
+        }
+
+        // Fill
+        ImDrawIdx vtx_inner_idx = vtx_current_idx;
+        ImDrawIdx vtx_outer_idx = vtx_current_idx+1;
+        for (int i = 2; i < points_count; i++)
+        {
+            idx_write[0] = (ImDrawIdx)(vtx_inner_idx); idx_write[1] = (ImDrawIdx)(vtx_inner_idx+((i-1)<<1)); idx_write[2] = (ImDrawIdx)(vtx_inner_idx+(i<<1));
+            idx_write += 3;
+        }
+
+        // AA fringe
+        for (int i = 0, j = points_count-1; i < points_count; j=i++)
+        {
+            idx_write[0] = (ImDrawIdx)(vtx_inner_idx+(i<<1)); idx_write[1] = (ImDrawIdx)(vtx_inner_idx+(j<<1)); idx_write[2] = (ImDrawIdx)(vtx_outer_idx+(j<<1));
+            idx_write[3] = (ImDrawIdx)(vtx_outer_idx+(j<<1)); idx_write[4] = (ImDrawIdx)(vtx_outer_idx+(i<<1)); idx_write[5] = (ImDrawIdx)(vtx_inner_idx+(i<<1));
+            idx_write += 6;
+        }
+        vtx_current_idx += (ImDrawIdx)vtx_count;
+
+#else
+        // Not Indexed
         const int vertex_count = (points_count-2)*3 + points_count*6;
         PrimReserve(vertex_count);
 
@@ -9150,18 +9252,25 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             PrimVtx(temp_outer[i], uv, col_trans);
             PrimVtx(temp_inner[i], uv, col);
         }
+#endif
     }
     else
     {
         // Non Anti-aliased Fill
-        const int vertex_count = (points_count-2)*3;
-        PrimReserve(vertex_count);
+        const int idx_count = (points_count-2)*3;
+        const int vtx_count = points_count;
+        PrimReserve(idx_count, vtx_count);
+        for (int i = 0; i < vtx_count; i++)
+        {
+            vtx_write[0].pos = points[i]; vtx_write[0].uv = uv; vtx_write[0].col = col;
+            vtx_write++;
+        }
         for (int i = 2; i < points_count; i++)
         {
-            PrimVtx(points[0], uv, col);
-            PrimVtx(points[i-1], uv, col);
-            PrimVtx(points[i], uv, col);
+            idx_write[0] = vtx_current_idx; idx_write[1] = (ImDrawIdx)(vtx_current_idx+i-1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+i); 
+            idx_write += 3;
         }
+        vtx_current_idx += (ImDrawIdx)vtx_count;
     }
 }
 
@@ -9327,9 +9436,11 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 
     // reserve vertices for worse case
     const unsigned int char_count = (unsigned int)(text_end - text_begin);
-    const unsigned int vtx_count_max = char_count * 6;
+    const unsigned int vtx_count_max = char_count * 4;
+    const unsigned int idx_count_max = char_count * 6;
     const size_t vtx_begin = vtx_buffer.size();
-    PrimReserve(vtx_count_max);
+    const size_t idx_begin = idx_buffer.size();
+    PrimReserve(idx_count_max, vtx_count_max);
 
     ImVec4 clip_rect = clip_rect_stack.back();
     if (cpu_fine_clip_rect)
@@ -9342,10 +9453,15 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     font->RenderText(font_size, pos, col, clip_rect, text_begin, text_end, this, wrap_width, cpu_fine_clip_rect != NULL);
 
     // give back unused vertices
+    // FIXME-OPT
     vtx_buffer.resize((size_t)(vtx_write - &vtx_buffer.front()));
-    const size_t vtx_count = vtx_buffer.size() - vtx_begin;
-    commands.back().vtx_count -= (unsigned int)(vtx_count_max - vtx_count);
-    vtx_write -= (vtx_count_max - vtx_count);
+    idx_buffer.resize((size_t)(idx_write - &idx_buffer.front()));
+    unsigned int vtx_unused = vtx_count_max - (unsigned int)(vtx_buffer.size() - vtx_begin);
+    unsigned int idx_unused = idx_count_max - (unsigned int)(idx_buffer.size() - idx_begin);
+    commands.back().idx_count -= idx_unused;
+    vtx_write -= vtx_unused;
+    idx_write -= idx_unused;
+    vtx_current_idx = (ImDrawIdx)vtx_buffer.size();
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
@@ -9358,7 +9474,7 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
     if (push_texture_id)
         PushTextureID(user_texture_id);
 
-    PrimReserve(6);
+    PrimReserve(6, 4);
     PrimRectUV(a, b, uv0, uv1, col);
 
     if (push_texture_id)
@@ -10391,7 +10507,9 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
 
-    ImDrawVert* out_vertices = draw_list->vtx_write;
+    ImDrawVert* vtx_write = draw_list->vtx_write;
+    ImDrawIdx vtx_current_idx = draw_list->vtx_current_idx;
+    ImDrawIdx* idx_write = draw_list->idx_write;
 
     const char* s = text_begin;
     if (!word_wrap_enabled && y + line_height < clip_rect.y)
@@ -10505,26 +10623,18 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                     }
 
                     // NB: we are not calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
-                    out_vertices[0].pos = ImVec2(x1, y1);
-                    out_vertices[0].uv  = ImVec2(u1, v1);
-                    out_vertices[0].col = col;
-
-                    out_vertices[1].pos = ImVec2(x2, y1);
-                    out_vertices[1].uv  = ImVec2(u2, v1);
-                    out_vertices[1].col = col;
-
-                    out_vertices[2].pos = ImVec2(x2, y2);
-                    out_vertices[2].uv  = ImVec2(u2, v2);
-                    out_vertices[2].col = col;
-
-                    out_vertices[3] = out_vertices[0];
-                    out_vertices[4] = out_vertices[2];
-
-                    out_vertices[5].pos = ImVec2(x1, y2);
-                    out_vertices[5].uv  = ImVec2(u1, v2);
-                    out_vertices[5].col = col;
-
-                    out_vertices += 6;
+                    // inlined:
+                    {
+                        idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
+                        idx_write[3] = vtx_current_idx; idx_write[4] = vtx_current_idx+2; idx_write[5] = vtx_current_idx+3; 
+                        vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
+                        vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
+                        vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
+                        vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = col; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
+                        vtx_write += 4;
+                        vtx_current_idx += 4;
+                        idx_write += 6;
+                    }
                 }
             }
         }
@@ -10532,7 +10642,9 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
         x += char_width;
     }
 
-    draw_list->vtx_write = out_vertices;
+    draw_list->vtx_write = vtx_write;
+    draw_list->vtx_current_idx = vtx_current_idx;
+    draw_list->idx_write = idx_write;
 }
 
 //-----------------------------------------------------------------------------
@@ -11992,7 +12104,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
     {
         ImGui::Text("ImGui %s", ImGui::GetVersion());
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::Text("%d vertices", ImGui::GetIO().MetricsRenderVertices);
+        ImGui::Text("%d vertices, %d triangles", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices / 3);
         ImGui::Text("%d allocations", ImGui::GetIO().MetricsAllocs);
         ImGui::Separator();
 
@@ -12000,7 +12112,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
         {
             static void NodeDrawList(ImDrawList* draw_list, const char* label)
             {
-                bool node_opened = ImGui::TreeNode(draw_list, "%s: %d vtx, %d cmds", label, draw_list->vtx_buffer.size(), draw_list->commands.size());
+                bool node_opened = ImGui::TreeNode(draw_list, "%s: %d vtx, %d indices, %d cmds", label, draw_list->vtx_buffer.size(), draw_list->idx_buffer.size(), draw_list->commands.size());
                 if (draw_list == ImGui::GetWindowDrawList())
                 {
                     ImGui::SameLine();
@@ -12012,7 +12124,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
                     if (pcmd->user_callback)
                         ImGui::BulletText("Callback %p, user_data %p", pcmd->user_callback, pcmd->user_callback_data);
                     else
-                        ImGui::BulletText("Draw %d vtx, tex = %p", pcmd->vtx_count, pcmd->texture_id);
+                        ImGui::BulletText("Draw %d indexed vtx, tex = %p", pcmd->idx_count, pcmd->texture_id);
                 ImGui::TreePop();
             }
 

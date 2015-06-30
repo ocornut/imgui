@@ -18,6 +18,7 @@ static HWND                     g_hWnd = 0;
 static ID3D11Device*            g_pd3dDevice = NULL;
 static ID3D11DeviceContext*     g_pd3dDeviceContext = NULL;
 static ID3D11Buffer*            g_pVB = NULL;
+static ID3D11Buffer*            g_pIB = NULL;
 static ID3D10Blob *             g_pVertexShaderBlob = NULL;
 static ID3D11VertexShader*      g_pVertexShader = NULL;
 static ID3D11InputLayout*       g_pInputLayout = NULL;
@@ -28,7 +29,8 @@ static ID3D11SamplerState*      g_pFontSampler = NULL;
 static ID3D11ShaderResourceView*g_pFontTextureView = NULL;
 static ID3D11RasterizerState*   g_pRasterizerState = NULL;
 static ID3D11BlendState*        g_pBlendState = NULL;
-static int                      VERTEX_BUFFER_SIZE = 30000;     // TODO: Make vertex buffer smaller and grow dynamically as needed.
+static int                      VERTEX_BUFFER_SIZE = 30000;     // TODO: Make buffers smaller and grow dynamically as needed.
+static int                      INDEX_BUFFER_SIZE = 30000;      // TODO: Make buffers smaller and grow dynamically as needed.
 
 struct VERTEX_CONSTANT_BUFFER
 {
@@ -41,17 +43,23 @@ struct VERTEX_CONSTANT_BUFFER
 static void ImGui_ImplDX11_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
     // Copy and convert all vertices into a single contiguous buffer
-    D3D11_MAPPED_SUBRESOURCE mappedResource;
-    if (g_pd3dDeviceContext->Map(g_pVB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource) != S_OK)
+    D3D11_MAPPED_SUBRESOURCE vtx_resource, idx_resource;
+    if (g_pd3dDeviceContext->Map(g_pVB, 0, D3D11_MAP_WRITE_DISCARD, 0, &vtx_resource) != S_OK)
         return;
-    ImDrawVert* vtx_dst = (ImDrawVert*)mappedResource.pData;
+    if (g_pd3dDeviceContext->Map(g_pIB, 0, D3D11_MAP_WRITE_DISCARD, 0, &idx_resource) != S_OK)
+        return;
+    ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource.pData;
+    ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource.pData;
     for (int n = 0; n < cmd_lists_count; n++)
     {
         const ImDrawList* cmd_list = cmd_lists[n];
         memcpy(vtx_dst, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
+        memcpy(idx_dst, &cmd_list->idx_buffer[0], cmd_list->idx_buffer.size() * sizeof(ImDrawIdx));
         vtx_dst += cmd_list->vtx_buffer.size();
+        idx_dst += cmd_list->idx_buffer.size();
     }
     g_pd3dDeviceContext->Unmap(g_pVB, 0);
+    g_pd3dDeviceContext->Unmap(g_pIB, 0);
 
     // Setup orthographic projection matrix into our constant buffer
     {
@@ -93,6 +101,7 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
     unsigned int offset = 0;
     g_pd3dDeviceContext->IASetInputLayout(g_pInputLayout);
     g_pd3dDeviceContext->IASetVertexBuffers(0, 1, &g_pVB, &stride, &offset);
+    g_pd3dDeviceContext->IASetIndexBuffer(g_pIB, DXGI_FORMAT_R16_UINT, 0);
     g_pd3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     g_pd3dDeviceContext->VSSetShader(g_pVertexShader, NULL, 0);
     g_pd3dDeviceContext->VSSetConstantBuffers(0, 1, &g_pVertexConstantBuffer);
@@ -106,6 +115,7 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
 
     // Render command lists
     int vtx_offset = 0;
+    int idx_offset = 0;
     for (int n = 0; n < cmd_lists_count; n++)
     {
         const ImDrawList* cmd_list = cmd_lists[n];
@@ -121,10 +131,11 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
                 const D3D11_RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
                 g_pd3dDeviceContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->texture_id);
                 g_pd3dDeviceContext->RSSetScissorRects(1, &r); 
-                g_pd3dDeviceContext->Draw(pcmd->vtx_count, vtx_offset);
+                g_pd3dDeviceContext->DrawIndexed(pcmd->idx_count, idx_offset, vtx_offset);
             }
-            vtx_offset += pcmd->vtx_count;
+            idx_offset += pcmd->idx_count;
         }
+        vtx_offset += (int)cmd_list->vtx_buffer.size();
     }
 
     // Restore modified state
@@ -368,6 +379,18 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
             return false;
     }
 
+    // Create the index buffer
+    {
+        D3D11_BUFFER_DESC bufferDesc;
+        memset(&bufferDesc, 0, sizeof(D3D11_BUFFER_DESC));
+        bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+        bufferDesc.ByteWidth = INDEX_BUFFER_SIZE * sizeof(ImDrawIdx);
+        bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+        bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        if (g_pd3dDevice->CreateBuffer(&bufferDesc, NULL, &g_pIB) < 0)
+            return false;
+    }
+
     ImGui_ImplDX11_CreateFontsTexture();
 
     return true;
@@ -380,6 +403,7 @@ void    ImGui_ImplDX11_InvalidateDeviceObjects()
 
     if (g_pFontSampler) { g_pFontSampler->Release(); g_pFontSampler = NULL; }
     if (g_pFontTextureView) { g_pFontTextureView->Release(); ImGui::GetIO().Fonts->TexID = 0; }
+    if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
     if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
 
     if (g_pBlendState) { g_pBlendState->Release(); g_pBlendState = NULL; }
