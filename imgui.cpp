@@ -9018,6 +9018,13 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             temp_inner[points_count-1] = points[points_count-1] - temp_normals[points_count-1]*aa_size;
         }
 
+        const ImU32 col_trans = col & 0x00ffffff;
+        const int idx_count = count*12;
+        const int vtx_count = points_count*3;
+        PrimReserve(idx_count, vtx_count);
+        ImDrawIdx vtx_inner_idx = vtx_current_idx+1;
+        ImDrawIdx vtx_outer_idx = vtx_current_idx+2;
+
         for (int i = 0; i < count; i++)
         {
             const int ni = (i+1) < points_count ? i+1 : 0;
@@ -9034,37 +9041,25 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             dm *= aa_size;
             temp_outer[ni] = points[ni] + dm;
             temp_inner[ni] = points[ni] - dm;
+
+            // Add indexes
+            int i3 = i * 3;
+            int ni3 = ni * 3;
+            idx_write[0] = (ImDrawIdx)(vtx_current_idx + ni3); idx_write[1] = (ImDrawIdx)(vtx_current_idx +  i3); idx_write[2] = (ImDrawIdx)(vtx_outer_idx   + i3);
+            idx_write[3] = (ImDrawIdx)(vtx_outer_idx   +  i3); idx_write[4] = (ImDrawIdx)(vtx_outer_idx   + ni3); idx_write[5] = (ImDrawIdx)(vtx_current_idx + ni3);
+            idx_write[6] = (ImDrawIdx)(vtx_inner_idx   + ni3); idx_write[7] = (ImDrawIdx)(vtx_inner_idx   +  i3); idx_write[8] = (ImDrawIdx)(vtx_current_idx + i3);
+            idx_write[9] = (ImDrawIdx)(vtx_current_idx +  i3); idx_write[10]= (ImDrawIdx)(vtx_current_idx + ni3); idx_write[11]= (ImDrawIdx)(vtx_inner_idx   + ni3);
+            idx_write += 12;
         }
 
-        const ImU32 col_trans = col & 0x00ffffff;
-
-        // Indexed
-        // FIXME-OPT: merge with loops above
-        const int idx_count = count*12;
-        const int vtx_count = points_count*3;
-        PrimReserve(idx_count, vtx_count);
-
+        // Add vertexes
+        // FIXME-OPT: merge into loops above
         for (int i = 0; i < points_count; i++)
         {
             vtx_write[0].pos = points[i];     vtx_write[0].uv = uv; vtx_write[0].col = col;
             vtx_write[1].pos = temp_inner[i]; vtx_write[1].uv = uv; vtx_write[1].col = col_trans;
             vtx_write[2].pos = temp_outer[i]; vtx_write[2].uv = uv; vtx_write[2].col = col_trans;
             vtx_write += 3;
-        }
-
-        ImDrawIdx vtx_inner_idx = vtx_current_idx+1;
-        ImDrawIdx vtx_outer_idx = vtx_current_idx+2;
-        for (int i = 0; i < count; i++)
-        {
-            const int ni = (i+1) < points_count ? i+1 : 0;
-            int i3 = i * 3;
-            int ni3 = ni * 3;
-
-            idx_write[0] = (ImDrawIdx)(vtx_current_idx + ni3); idx_write[1] = (ImDrawIdx)(vtx_current_idx +  i3); idx_write[2] = (ImDrawIdx)(vtx_outer_idx   + i3);
-            idx_write[3] = (ImDrawIdx)(vtx_outer_idx   +  i3); idx_write[4] = (ImDrawIdx)(vtx_outer_idx   + ni3); idx_write[5] = (ImDrawIdx)(vtx_current_idx + ni3);
-            idx_write[6] = (ImDrawIdx)(vtx_inner_idx   + ni3); idx_write[7] = (ImDrawIdx)(vtx_inner_idx   +  i3); idx_write[8] = (ImDrawIdx)(vtx_current_idx + i3);
-            idx_write[9] = (ImDrawIdx)(vtx_current_idx +  i3); idx_write[10]= (ImDrawIdx)(vtx_current_idx + ni3); idx_write[11]= (ImDrawIdx)(vtx_inner_idx   + ni3);
-            idx_write += 12;
         }
         vtx_current_idx += (ImDrawIdx)vtx_count;
     }
@@ -9134,6 +9129,20 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             temp_normals[j].y = -diff.x;
         }
 
+        const ImU32 col_trans = col & 0x00ffffff;
+        const int idx_count = (points_count-2)*3 + points_count*6;
+        const int vtx_count = (points_count*2);
+        PrimReserve(idx_count, vtx_count);
+
+        // Add indexes for fill
+        ImDrawIdx vtx_inner_idx = vtx_current_idx;
+        ImDrawIdx vtx_outer_idx = vtx_current_idx+1;
+        for (int i = 2; i < points_count; i++)
+        {
+            idx_write[0] = (ImDrawIdx)(vtx_inner_idx); idx_write[1] = (ImDrawIdx)(vtx_inner_idx+((i-1)<<1)); idx_write[2] = (ImDrawIdx)(vtx_inner_idx+(i<<1));
+            idx_write += 3;
+        }
+
         for (int i = 0, j = points_count-1; i < points_count; j=i++)
         {
             const ImVec2& dl0 = temp_normals[j];
@@ -9149,33 +9158,13 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             dm *= aa_size*0.5f;
             temp_outer[i] = points[i] + dm;
             temp_inner[i] = points[i] - dm;
-        }
 
-        const ImU32 col_trans = col & 0x00ffffff;
-        const int idx_count = (points_count-2)*3 + points_count*6;
-        const int vtx_count = (points_count*2);
-        PrimReserve(idx_count, vtx_count);
-
-        // FIXME-OPT: merge with loops above
-        for (int i = 0; i < points_count; i++)
-        {
+            // Add vertices
             vtx_write[0].pos = temp_inner[i]; vtx_write[0].uv = uv; vtx_write[0].col = col;
             vtx_write[1].pos = temp_outer[i]; vtx_write[1].uv = uv; vtx_write[1].col = col_trans;
             vtx_write += 2;
-        }
 
-        // Fill
-        ImDrawIdx vtx_inner_idx = vtx_current_idx;
-        ImDrawIdx vtx_outer_idx = vtx_current_idx+1;
-        for (int i = 2; i < points_count; i++)
-        {
-            idx_write[0] = (ImDrawIdx)(vtx_inner_idx); idx_write[1] = (ImDrawIdx)(vtx_inner_idx+((i-1)<<1)); idx_write[2] = (ImDrawIdx)(vtx_inner_idx+(i<<1));
-            idx_write += 3;
-        }
-
-        // AA fringe
-        for (int i = 0, j = points_count-1; i < points_count; j=i++)
-        {
+            // Add indexes for fringes
             idx_write[0] = (ImDrawIdx)(vtx_inner_idx+(i<<1)); idx_write[1] = (ImDrawIdx)(vtx_inner_idx+(j<<1)); idx_write[2] = (ImDrawIdx)(vtx_outer_idx+(j<<1));
             idx_write[3] = (ImDrawIdx)(vtx_outer_idx+(j<<1)); idx_write[4] = (ImDrawIdx)(vtx_outer_idx+(i<<1)); idx_write[5] = (ImDrawIdx)(vtx_inner_idx+(i<<1));
             idx_write += 6;
