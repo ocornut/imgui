@@ -8988,7 +8988,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     if (aa_enabled)
     {
         // Anti-aliased stroke
-        const float aa_size = 1.0f;
+        const float AA_SIZE = 1.0f;
 
         // Temporary buffer
         GTempPolyData.resize(points_count * 3);
@@ -9012,10 +9012,10 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         if (!closed)
         {
             temp_normals[points_count-1] = temp_normals[points_count-2];
-            temp_outer[0] = points[0] + temp_normals[0]*aa_size;
-            temp_inner[0] = points[0] - temp_normals[0]*aa_size;
-            temp_outer[points_count-1] = points[points_count-1] + temp_normals[points_count-1]*aa_size;
-            temp_inner[points_count-1] = points[points_count-1] - temp_normals[points_count-1]*aa_size;
+            temp_outer[0] = points[0] + temp_normals[0] * AA_SIZE;
+            temp_inner[0] = points[0] - temp_normals[0] * AA_SIZE;
+            temp_outer[points_count-1] = points[points_count-1] + temp_normals[points_count-1] * AA_SIZE;
+            temp_inner[points_count-1] = points[points_count-1] - temp_normals[points_count-1] * AA_SIZE;
         }
 
         const ImU32 col_trans = col & 0x00ffffff;
@@ -9038,7 +9038,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 if (scale > 100.0f) scale = 100.0f;
                 dm *= scale;
             }
-            dm *= aa_size;
+            dm *= AA_SIZE;
             temp_outer[ni] = points[ni] + dm;
             temp_inner[ni] = points[ni] - dm;
 
@@ -9109,13 +9109,11 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     if (aa_enabled)
     {
         // Anti-aliased Fill
-        const float aa_size = 1.0f;
+        const float AA_SIZE = 1.0f;
 
         // Temporary buffer
-        GTempPolyData.resize(points_count * 3);
-        ImVec2* temp_inner = &GTempPolyData[0];
-        ImVec2* temp_outer = temp_inner + points_count;
-        ImVec2* temp_normals = temp_inner + points_count + 2;
+        GTempPolyData.resize(points_count);
+        ImVec2* temp_normals = &GTempPolyData[0];
 
         for (int i = 0, j = points_count-1; i < points_count; j=i++)
         {
@@ -9155,13 +9153,11 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
                 if (scale > 100.0f) scale = 100.0f;
                 dm *= scale;
             }
-            dm *= aa_size*0.5f;
-            temp_outer[i] = points[i] + dm;
-            temp_inner[i] = points[i] - dm;
+            dm *= AA_SIZE * 0.5f;
 
             // Add vertices
-            vtx_write[0].pos = temp_inner[i]; vtx_write[0].uv = uv; vtx_write[0].col = col;
-            vtx_write[1].pos = temp_outer[i]; vtx_write[1].uv = uv; vtx_write[1].col = col_trans;
+            vtx_write[0].pos = points[i] - dm; vtx_write[0].uv = uv; vtx_write[0].col = col;        // Inner
+            vtx_write[1].pos = points[i] + dm; vtx_write[1].uv = uv; vtx_write[1].col = col_trans;  // Outer
             vtx_write += 2;
 
             // Add indexes for fringes
