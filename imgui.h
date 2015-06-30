@@ -1063,7 +1063,6 @@ struct ImDrawList
 
     // Internal helpers
     IMGUI_API void  PrimReserve(unsigned int idx_count, unsigned int vtx_count);
-    IMGUI_API void  PrimRect(const ImVec2& a, const ImVec2& b, ImU32 col);
     IMGUI_API void  PrimRectUV(const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col);
     IMGUI_API void  UpdateClipRect();
     IMGUI_API void  UpdateTextureID();

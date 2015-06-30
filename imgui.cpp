@@ -8949,22 +8949,6 @@ void ImDrawList::PrimReserve(unsigned int idx_count, unsigned int vtx_count)
     idx_write = &idx_buffer[idx_buffer_size];
 }
 
-void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
-{
-    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
-	const ImVec2 b(c.x, a.y);
-	const ImVec2 d(a.x, c.y);
-    idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
-    idx_write[3] = vtx_current_idx; idx_write[4] = vtx_current_idx+2; idx_write[5] = vtx_current_idx+3; 
-    vtx_write[0].pos = a; vtx_write[0].uv = uv; vtx_write[0].col = col; 
-    vtx_write[1].pos = b; vtx_write[1].uv = uv; vtx_write[1].col = col; 
-    vtx_write[2].pos = c; vtx_write[2].uv = uv; vtx_write[2].col = col; 
-    vtx_write[3].pos = d; vtx_write[3].uv = uv; vtx_write[3].col = col;
-    vtx_write += 4;
-    vtx_current_idx += 4;
-    idx_write += 6;
-}
-
 void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a, const ImVec2& uv_c, ImU32 col)
 {
 	const ImVec2 b(c.x, a.y);
@@ -9054,14 +9038,12 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
         const ImU32 col_trans = col & 0x00ffffff;
 
-#if 1
         // Indexed
         // FIXME-OPT: merge with loops above
         const int idx_count = count*12;
         const int vtx_count = points_count*3;
         PrimReserve(idx_count, vtx_count);
 
-        // FIXME-OPT: merge with loops above
         for (int i = 0; i < points_count; i++)
         {
             vtx_write[0].pos = points[i];     vtx_write[0].uv = uv; vtx_write[0].col = col;
@@ -9085,31 +9067,6 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             idx_write += 12;
         }
         vtx_current_idx += (ImDrawIdx)vtx_count;
-#else
-        const int vertex_count = count*12;
-        PrimReserve(vertex_count);
-
-        // Stroke
-        for (int i = 0; i < count; i++)
-        {
-            const int ni = (i+1) < points_count ? i+1 : 0;
-            PrimVtx(points[ni], uv, col);
-            PrimVtx(points[i], uv, col);
-            PrimVtx(temp_outer[i], uv, col_trans);
-
-            PrimVtx(temp_outer[i], uv, col_trans);
-            PrimVtx(temp_outer[ni], uv, col_trans);
-            PrimVtx(points[ni], uv, col);
-
-            PrimVtx(temp_inner[ni], uv, col_trans);
-            PrimVtx(temp_inner[i], uv, col_trans);
-            PrimVtx(points[i], uv, col);
-
-            PrimVtx(points[i], uv, col);
-            PrimVtx(points[ni], uv, col);
-            PrimVtx(temp_inner[ni], uv, col_trans);
-        }
-#endif
     }
     else
     {
@@ -9195,9 +9152,6 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         }
 
         const ImU32 col_trans = col & 0x00ffffff;
-
-#if 1
-        // Indexed
         const int idx_count = (points_count-2)*3 + points_count*6;
         const int vtx_count = (points_count*2);
         PrimReserve(idx_count, vtx_count);
@@ -9227,32 +9181,6 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             idx_write += 6;
         }
         vtx_current_idx += (ImDrawIdx)vtx_count;
-
-#else
-        // Not Indexed
-        const int vertex_count = (points_count-2)*3 + points_count*6;
-        PrimReserve(vertex_count);
-
-        // Fill
-        for (int i = 2; i < points_count; i++)
-        {
-            PrimVtx(temp_inner[0], uv, col);
-            PrimVtx(temp_inner[i-1], uv, col);
-            PrimVtx(temp_inner[i], uv, col);
-        }
-
-        // AA fringe
-        for (int i = 0, j = points_count-1; i < points_count; j=i++)
-        {
-            PrimVtx(temp_inner[i], uv, col);
-            PrimVtx(temp_inner[j], uv, col);
-            PrimVtx(temp_outer[j], uv, col_trans);
-
-            PrimVtx(temp_outer[j], uv, col_trans);
-            PrimVtx(temp_outer[i], uv, col_trans);
-            PrimVtx(temp_inner[i], uv, col);
-        }
-#endif
     }
     else
     {
