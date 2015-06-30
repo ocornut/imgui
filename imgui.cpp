@@ -3954,7 +3954,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 window->DrawList->PathLineTo(br + ImVec2(-corner_size, 0.0f));
                 window->DrawList->PathLineTo(br + ImVec2(0.0f, -corner_size));
                 window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding, br.y - window_rounding), window_rounding, 6, 9);
-                window->DrawList->Fill(resize_col);
+                window->DrawList->PathFill(resize_col);
             }
         }
 
@@ -9256,19 +9256,6 @@ void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float amin, float
     }
 }
 
-void ImDrawList::Fill(ImU32 col)
-{
-    AddConvexPolyFilled(&path[0], (int)path.size(), col);
-    PathClear();
-}
-
-void ImDrawList::Stroke(ImU32 col, float thickness, bool closed)
-{
-    // Remove duplicates
-    AddPolyline(&path[0], (int)path.size(), col, thickness, closed);
-    PathClear();
-}
-
 void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int rounding_corners)
 {
     float r = rounding;
@@ -9301,7 +9288,7 @@ void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thic
         return;
     PathLineTo(a);
     PathLineTo(b);
-    Stroke(col, thickness, false);
+    PathStroke(col, thickness, false);
 }
 
 void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
@@ -9309,7 +9296,7 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
     if ((col >> 24) == 0)
         return;
     PathRect(a + ImVec2(0.5f,0.5f), b + ImVec2(0.5f,0.5f), rounding, rounding_corners);
-    Stroke(col, 1.0f, true);
+    PathStroke(col, 1.0f, true);
 }
 
 void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
@@ -9317,7 +9304,7 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
     if ((col >> 24) == 0)
         return;
     PathRect(a, b, rounding, rounding_corners);
-    Fill(col);
+    PathFill(col);
 }
 
 void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col)
@@ -9327,7 +9314,7 @@ void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec
     PathLineTo(a);
     PathLineTo(b);
     PathLineTo(c);
-    Fill(col);
+    PathFill(col);
 }
 
 void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments)
@@ -9337,7 +9324,7 @@ void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int nu
 
     const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(centre, radius, 0.0f, a_max, num_segments);
-    Stroke(col, 1.0f, true);
+    PathStroke(col, 1.0f, true);
 }
 
 void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments)
@@ -9347,7 +9334,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
 
     const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(centre, radius, 0.0f, a_max, num_segments);
-    Fill(col);
+    PathFill(col);
 }
 
 void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)

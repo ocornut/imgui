@@ -1042,8 +1042,8 @@ struct ImDrawList
     IMGUI_API void  PathArcToFast(const ImVec2& centre, float radius, int a_min, int a_max);
     IMGUI_API void  PathArcTo(const ImVec2& centre, float radius, float a_min, float a_max, int num_segments = 12);
     IMGUI_API void  PathRect(const ImVec2& a, const ImVec2& b, float rounding = 0.0f, int rounding_corners = 0x0F);
-    IMGUI_API void  Fill(ImU32 col);
-    IMGUI_API void  Stroke(ImU32 col, float thickness, bool closed);
+    inline    void  PathFill(ImU32 col)                                     { AddConvexPolyFilled(&path[0], (int)path.size(), col); PathClear(); }
+    inline    void  PathStroke(ImU32 col, float thickness, bool closed)     { AddPolyline(&path[0], (int)path.size(), col, thickness, closed); PathClear(); }
 
     // Primitives   
     IMGUI_API void  AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness = 1.0f);
