@@ -8955,8 +8955,8 @@ void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a
 	const ImVec2 d(a.x, c.y);
 	const ImVec2 uv_b(uv_c.x, uv_a.y);
 	const ImVec2 uv_d(uv_a.x, uv_c.y);
-    idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
-    idx_write[3] = vtx_current_idx; idx_write[4] = vtx_current_idx+2; idx_write[5] = vtx_current_idx+3; 
+    idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2); 
+    idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3); 
     vtx_write[0].pos = a; vtx_write[0].uv = uv_a; vtx_write[0].col = col; 
     vtx_write[1].pos = b; vtx_write[1].uv = uv_b; vtx_write[1].col = col; 
     vtx_write[2].pos = c; vtx_write[2].uv = uv_c; vtx_write[2].col = col; 
@@ -9022,8 +9022,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         const int idx_count = count*12;
         const int vtx_count = points_count*3;
         PrimReserve(idx_count, vtx_count);
-        ImDrawIdx vtx_inner_idx = vtx_current_idx+1;
-        ImDrawIdx vtx_outer_idx = vtx_current_idx+2;
+        unsigned int vtx_inner_idx = vtx_current_idx+1;
+        unsigned int vtx_outer_idx = vtx_current_idx+2;
 
         for (int i = 0; i < count; i++)
         {
@@ -9093,8 +9093,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             vtx_write[3].pos = pd; vtx_write[3].uv = uv; vtx_write[3].col = col;
             vtx_write += 4;
 
-            idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
-            idx_write[3] = vtx_current_idx; idx_write[4] = vtx_current_idx+2; idx_write[5] = vtx_current_idx+3; 
+            idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2); 
+            idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3); 
             idx_write += 6;
             vtx_current_idx += 4;
         }
@@ -9115,13 +9115,13 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         GTempPolyData.resize(points_count);
         ImVec2* temp_normals = &GTempPolyData[0];
 
-        for (int i = 0, j = points_count-1; i < points_count; j=i++)
+        for (int i = 0, j = points_count-1; i < points_count; j = i++)
         {
             const ImVec2& v0 = points[j];
             const ImVec2& v1 = points[i];
             ImVec2 diff = v1 - v0;
             float d = ImLengthSqr(diff);
-            if (d > 0)
+            if (d > 0.0f)
                 diff *= 1.0f/sqrtf(d);
             temp_normals[j].x = diff.y;
             temp_normals[j].y = -diff.x;
@@ -9133,15 +9133,15 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         PrimReserve(idx_count, vtx_count);
 
         // Add indexes for fill
-        ImDrawIdx vtx_inner_idx = vtx_current_idx;
-        ImDrawIdx vtx_outer_idx = vtx_current_idx+1;
+        unsigned int vtx_inner_idx = vtx_current_idx;
+        unsigned int vtx_outer_idx = vtx_current_idx+1;
         for (int i = 2; i < points_count; i++)
         {
             idx_write[0] = (ImDrawIdx)(vtx_inner_idx); idx_write[1] = (ImDrawIdx)(vtx_inner_idx+((i-1)<<1)); idx_write[2] = (ImDrawIdx)(vtx_inner_idx+(i<<1));
             idx_write += 3;
         }
 
-        for (int i = 0, j = points_count-1; i < points_count; j=i++)
+        for (int i = 0, j = points_count-1; i < points_count; j = i++)
         {
             const ImVec2& dl0 = temp_normals[j];
             const ImVec2& dl1 = temp_normals[i];
@@ -9180,7 +9180,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         }
         for (int i = 2; i < points_count; i++)
         {
-            idx_write[0] = vtx_current_idx; idx_write[1] = (ImDrawIdx)(vtx_current_idx+i-1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+i); 
+            idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+i-1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+i); 
             idx_write += 3;
         }
         vtx_current_idx += (ImDrawIdx)vtx_count;
@@ -10398,8 +10398,8 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
     const char* word_wrap_eol = NULL;
 
     ImDrawVert* vtx_write = draw_list->vtx_write;
-    ImDrawIdx vtx_current_idx = draw_list->vtx_current_idx;
     ImDrawIdx* idx_write = draw_list->idx_write;
+    unsigned int vtx_current_idx = draw_list->vtx_current_idx;
 
     const char* s = text_begin;
     if (!word_wrap_enabled && y + line_height < clip_rect.y)
@@ -10515,8 +10515,8 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                     // NB: we are not calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
                     // inlined:
                     {
-                        idx_write[0] = vtx_current_idx; idx_write[1] = vtx_current_idx+1; idx_write[2] = vtx_current_idx+2; 
-                        idx_write[3] = vtx_current_idx; idx_write[4] = vtx_current_idx+2; idx_write[5] = vtx_current_idx+3; 
+                        idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2); 
+                        idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3); 
                         vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
                         vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
                         vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;

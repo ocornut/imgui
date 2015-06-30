@@ -1024,7 +1024,7 @@ struct ImDrawList
     ImVector<ImTextureID>   texture_id_stack;   // [Internal] 
     ImVector<ImVec2>        path;				// [Internal]
     ImDrawVert*             vtx_write;          // [Internal] point within vtx_buffer after each add command (to avoid using the ImVector<> operators too much)
-    ImDrawIdx               vtx_current_idx;    // [Internal] == vtx_buffer.size()
+    unsigned int            vtx_current_idx;    // [Internal] == vtx_buffer.size()
     ImDrawIdx*              idx_write;          // [Internal] point within idx_buffer after each add command (to avoid using the ImVector<> operators too much)
 
     ImDrawList() { Clear(); }
