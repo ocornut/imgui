@@ -1066,8 +1066,6 @@ struct ImDrawList
     IMGUI_API void  PrimRectUV(const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col);
     IMGUI_API void  UpdateClipRect();
     IMGUI_API void  UpdateTextureID();
-    IMGUI_API void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)   { vtx_write->pos = pos; vtx_write->uv = uv; vtx_write->col = col; vtx_write++; vtx_current_idx++; }
-    IMGUI_API void  PrimIdx(unsigned int idx)                                 { *idx_write++ = (ImDrawIdx)idx; }
 };
 
 // Load and rasterize multiple TTF fonts into a same texture.
