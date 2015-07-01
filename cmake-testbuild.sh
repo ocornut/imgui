@@ -38,6 +38,8 @@ make_install . imgui
 make_install examples/opengl_example opengl_example
 make_install examples/opengl3_example opengl3_example
 
+make_install examples/imconfig_example imconfig_example || echo "Skip building imconfig_example, probably CMake version < 3.3"
+
 set +x
 echo -e "\n\nYou can run these examples from ./out/bin:\n\n"
 

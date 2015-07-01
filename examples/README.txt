@@ -1,6 +1,6 @@
 Those are standalone ready-to-build applications to demonstrate ImGui.
-Unfortunately in 2015 it is still a massive pain to create and maintain portable build files.
-I choose to provide Visual Studio 10 .sln files and Makefile for Linux/OSX. 
+I choose to provide Visual Studio 10 .sln files and Makefile for Linux/OSX.
+Also, CMake project files are provided, too. 
 Please let me know if they don't work with your setup!
 You can probably just import the .cpp files into your own system and figure out the linkage from there.
 
@@ -22,3 +22,7 @@ directx11_example/
     DirectX11 example, Windows only.
     This is quite long and tedious, because: DirectX11.
 	
+imconfig_example/
+    This example demonstrates how to use imconfig.h. The code itself
+    is the same as the opengl_example but a custom imconfig.h file
+    is included.
