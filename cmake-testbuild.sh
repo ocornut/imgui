@@ -6,6 +6,14 @@
 # - builds imgui as a static library
 # - builds the examples in separate build tree so the imgui config
 #   module is also tested
+#
+# Options:
+#
+# - you can set the variable `generator_option` to a
+#   non-default generator, example:
+#
+#     generator_option=-GXcode ./cmake-testbuild.sh
+
 
 set -ex
 
@@ -14,7 +22,8 @@ make_install() {
     builddir=$2
     extraflags=$3
     cmake -DCMAKE_INSTALL_PREFIX=${PWD}/out -DCMAKE_PREFIX_PATH=${PWD}/out \
-        -H$srcdir -Bout/build/$builddir -DCMAKE_BUILD_TYPE=Debug $extraflags
+        -H$srcdir -Bout/build/$builddir -DCMAKE_BUILD_TYPE=Debug $extraflags \
+        $generator_option
     cmake --build out/build/$builddir --target install --config Debug
     cmake out/build/$builddir -DCMAKE_BUILD_TYPE=Release
     cmake --build out/build/$builddir --target install --config Release
@@ -32,4 +41,4 @@ make_install examples/opengl3_example opengl3_example
 set +x
 echo -e "\n\nYou can run these examples from ./out/bin:\n\n"
 
-ls out/bin -l
+ls -l out/bin
