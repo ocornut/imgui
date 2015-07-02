@@ -11461,6 +11461,32 @@ void ImGui::ShowTestWindow(bool* opened)
 
             ImGui::TreePop();
         }
+
+        if (ImGui::TreeNode("Scrolling"))
+        {
+            ImGui::TextWrapped("Use SetScrollPosHere() to scroll to a given position.");
+            static bool track = true;
+            static int track_line = 50;
+            ImGui::Checkbox("Track", &track);
+            ImGui::SameLine(); ImGui::SliderInt("##line", &track_line, 0, 99, "Line %.0f");
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (i > 0) ImGui::SameLine();
+                ImGui::BeginGroup();
+                ImGui::Text(i == 0 ? "Top" : i == 1 ? "Center" : "Bottom");
+                ImGui::BeginChild(ImGui::GetID((void *)i), ImVec2(ImGui::GetWindowWidth() * 0.25f, 200.0f), true);
+                for (int line = 0; line < 100; line++)
+                {
+                    ImGui::Text("Line %d", line);
+                    if (track && line == track_line)
+                        ImGui::SetScrollPosHere(i * 0.50f); // 0.0f,0.5f,1.0f
+                }
+                ImGui::EndChild();
+                ImGui::EndGroup();
+            }
+            ImGui::TreePop();
+        }
     }
 
     if (ImGui::CollapsingHeader("Popups & Modal windows"))
