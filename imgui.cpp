@@ -4934,11 +4934,11 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
             // Lines to skip (can't skip when logging text)
             if (!g.LogEnabled)
             {
-                int lines_skippable = (int)((clip_rect.y - text_pos.y) / line_height) - 1;
+                int lines_skippable = (int)((clip_rect.y - text_pos.y) / line_height);
                 if (lines_skippable > 0)
                 {
                     int lines_skipped = 0;
-                    while (line < text_end && lines_skipped <= lines_skippable)
+                    while (line < text_end && lines_skipped < lines_skippable)
                     {
                         const char* line_end = strchr(line, '\n');
                         line = line_end + 1;
