@@ -3,6 +3,30 @@
  Those are only provided as a convenience, you can load your own .TTF files.
 
 ---------------------------------
+ LINKS
+---------------------------------
+
+ Typefaces for source code beautification
+   https://github.com/chrissimpkins/codeface
+
+ Proggy Programming Fonts
+   http://upperbounds.net
+   
+ Inconsolata
+   http://www.levien.com/type/myfonts/inconsolata.html
+
+ Adobe Source Code Pro: Monospaced font family for user interface and coding environments
+   https://github.com/adobe-fonts/source-code-pro
+
+ Monospace/Fixed Width Programmer's Fonts
+   http://www.lowing.org/fonts/
+
+ (Japanese) M+ fonts by Coji Morishita are free and include most useful Kanjis you would need.
+   http://mplus-fonts.sourceforge.jp/mplus-outline-fonts/index-en.html
+
+ Or use Arial Unicode or other Unicode fonts provided with Windows for full characters coverage (not sure of their licensing).
+
+---------------------------------
  INCLUDED FONTS
 ---------------------------------
 
@@ -26,20 +50,6 @@
    SIL OPEN FONT LICENSE Version 1.1
 
 ---------------------------------
- OTHER FONTS
----------------------------------
-
- For Japanese:
- 
-   M+ fonts by Coji Morishita are free and include most useful Kanjis you would need.
-   mplus-fonts.sourceforge.jp/mplus-outline-fonts/index-en.html
-   
- For Japanese, Chinese, Korean:
- 
-   You can use Arial Unicode or other Unicode fonts provided with Windows (not sure of their license).
-   Other suggestions?
-
----------------------------------
  LOADING INSTRUCTIONS
 ---------------------------------
 
@@ -54,8 +64,13 @@
    io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, io.Fonts->GetGlyphRangesJapanese());  // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
    io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, io.Fonts->GetGlyphRangesChinese());   // Include full set of about 21000 CJK Unified Ideographs
 
-Offset font by altering the io.Font->DisplayOffset value:
+ Offset font vertically by altering the io.Font->DisplayOffset value:
 
    ImFont* font = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels);
    font->DisplayOffset.y += 1;   // Render 1 pixel down
+
+ If you want to embed the font in source code (e.g. in your engine, so it doesn't have file-system dependencies);
+ Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array. Then load the font with:
+ 
+   ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
 
