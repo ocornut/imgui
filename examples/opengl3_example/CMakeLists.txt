@@ -9,11 +9,13 @@ find_package(glfw3 REQUIRED CONFIG)
 
 add_subdirectory(../libs/gl3w gl3w)
 
-add_executable(imgui_opengl3_example
-    imgui_impl_glfw_gl3.cpp
-    imgui_impl_glfw_gl3.h
-    main.cpp
-    )
+set(srcs imgui_impl_glfw_gl3.cpp imgui_impl_glfw_gl3.h main.cpp)
+
+if(CMAKE_VERSION VERSION_LESS 3.3)
+    list(APPEND srcs ${IMGUI_SOURCES})
+endif()
+
+add_executable(imgui_opengl3_example ${srcs})
 
 target_include_directories(imgui_opengl3_example PRIVATE
     ${OPENGL_INCLUDE_DIR})

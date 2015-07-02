@@ -7,10 +7,13 @@ find_package(imgui REQUIRED)
 
 find_package(glfw3 REQUIRED CONFIG)
 
-add_executable(imgui_opengl_example
-    imgui_impl_glfw.cpp
-    imgui_impl_glfw.h
-    main.cpp)
+set(srcs imgui_impl_glfw.cpp imgui_impl_glfw.h main.cpp)
+
+if(CMAKE_VERSION VERSION_LESS 3.3)
+    list(APPEND srcs ${IMGUI_SOURCES})
+endif()
+
+add_executable(imgui_opengl_example ${srcs})
 
 target_include_directories(imgui_opengl_example PRIVATE
     ${OPENGL_INCLUDE_DIR})
