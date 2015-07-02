@@ -1003,7 +1003,8 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_PressedOnClick     = 1 << 1,
     ImGuiButtonFlags_FlattenChilds      = 1 << 2,
     ImGuiButtonFlags_DontClosePopups    = 1 << 3,
-    ImGuiButtonFlags_Disabled           = 1 << 4
+    ImGuiButtonFlags_Disabled           = 1 << 4,
+    ImGuiButtonFlags_AlignTextBaseLine  = 1 << 5
 };
 
 enum ImGuiSelectableFlagsPrivate_
@@ -5166,8 +5167,12 @@ static bool ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), Im
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
 
+    ImVec2 pos = window->DC.CursorPos;
+    if ((flags & ImGuiButtonFlags_AlignTextBaseLine) && style.FramePadding.y < window->DC.CurrentLineTextBaseOffset)
+        pos.y += window->DC.CurrentLineTextBaseOffset - style.FramePadding.y;
     const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : (label_size.x + style.FramePadding.x*2), size_arg.y != 0.0f ? size_arg.y : (label_size.y + style.FramePadding.y*2));
-    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
+
+    const ImRect bb(pos, pos + size);
     ItemSize(bb, style.FramePadding.y);
     if (!ItemAdd(bb, &id))
         return false;
@@ -5199,7 +5204,7 @@ bool ImGui::SmallButton(const char* label)
     ImGuiState& g = *GImGui;
     float backup_padding_y = g.Style.FramePadding.y;
     g.Style.FramePadding.y = 0.0f;
-    bool pressed = ButtonEx(label);
+    bool pressed = ButtonEx(label, ImVec2(0,0), ImGuiButtonFlags_AlignTextBaseLine);
     g.Style.FramePadding.y = backup_padding_y;
     return pressed;
 }
