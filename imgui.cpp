@@ -3007,10 +3007,14 @@ void ImGui::SetMouseCursor(ImGuiMouseCursor cursor_type)
     GImGui->MouseCursor = cursor_type;
 }
 
-void ImGui::CaptureInputsFromApp(bool capture_mouse, bool capture_keyboard)
+void ImGui::CaptureKeyboardFromApp()
 {
-    GImGui->CaptureMouseNextFrame |= capture_mouse;
-    GImGui->CaptureKeyboardNextFrame |= capture_keyboard;
+    GImGui->CaptureKeyboardNextFrame = true;
+}
+
+void ImGui::CaptureMouseFromApp()
+{
+    GImGui->CaptureMouseNextFrame = true;
 }
 
 bool ImGui::IsItemHovered()
@@ -11869,7 +11873,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
             ImGui::Button("Hover me\nto enforce\ninputs capture");
             if (ImGui::IsItemHovered())
-                ImGui::CaptureInputsFromApp();
+                ImGui::CaptureKeyboardFromApp();
 
             ImGui::TreePop();
         }
