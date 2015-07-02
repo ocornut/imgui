@@ -353,23 +353,7 @@ namespace ImGui
     IMGUI_API bool          IsRootWindowFocused();                                              // is current root window focused (top parent window in case of child windows)
     IMGUI_API bool          IsRootWindowOrAnyChildFocused();                                    // is current root window or any of its child (including current window) focused
     IMGUI_API bool          IsRectVisible(const ImVec2& size);                                  // test if rectangle of given size starting from cursor pos is visible (not clipped). to perform coarse clipping on user's side (as an optimization)
-    IMGUI_API bool          IsKeyDown(int key_index);                                           // key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry, uses your own indices!
-    IMGUI_API bool          IsKeyPressed(int key_index, bool repeat = true);                    // "
-    IMGUI_API bool          IsKeyReleased(int key_index);                                       // "
-    IMGUI_API bool          IsMouseDown(int button);
-    IMGUI_API bool          IsMouseClicked(int button, bool repeat = false);
-    IMGUI_API bool          IsMouseDoubleClicked(int button);
-    IMGUI_API bool          IsMouseReleased(int button);
-    IMGUI_API bool          IsMouseHoveringWindow();                                            // is mouse hovering current window ("window" in API names always refer to current window)
-    IMGUI_API bool          IsMouseHoveringAnyWindow();                                         // is mouse hovering any active imgui window
-    IMGUI_API bool          IsMouseHoveringRect(const ImVec2& rect_min, const ImVec2& rect_max);// is mouse hovering given bounding rect
-    IMGUI_API bool          IsMouseDragging(int button = 0, float lock_threshold = -1.0f);      // is mouse dragging. if lock_threshold < -1.0f uses io.MouseDraggingThreshold
     IMGUI_API bool          IsPosHoveringAnyWindow(const ImVec2& pos);                          // is given position hovering any active imgui window
-    IMGUI_API ImVec2        GetMousePos();                                                      // shortcut to ImGui::GetIO().MousePos provided by user, to be consistent with other calls
-    IMGUI_API ImVec2        GetMouseDragDelta(int button = 0, float lock_threshold = -1.0f);    // dragging amount since clicking, also see: GetItemActiveDragDelta(). if lock_threshold < -1.0f uses io.MouseDraggingThreshold
-    IMGUI_API void          ResetMouseDragDelta(int button = 0);
-    IMGUI_API ImGuiMouseCursor GetMouseCursor();                                                // get desired cursor type, reset in ImGui::NewFrame(), this updated during the frame. valid before Render(). If you use software rendering by setting io.MouseDrawCursor ImGui will render those for you
-    IMGUI_API void          SetMouseCursor(ImGuiMouseCursor type);                              // set desired cursor type
     IMGUI_API float         GetTime();
     IMGUI_API int           GetFrameCount();
     IMGUI_API const char*   GetStyleColName(ImGuiCol idx);
@@ -383,6 +367,24 @@ namespace ImGui
     IMGUI_API ImU32         ColorConvertFloat4ToU32(const ImVec4& in);
     IMGUI_API void          ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v);
     IMGUI_API void          ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
+
+    // Inputs
+    IMGUI_API bool          IsKeyDown(int key_index);                                           // key_index into the keys_down[512] array, imgui doesn't know the semantic of each entry, uses your own indices!
+    IMGUI_API bool          IsKeyPressed(int key_index, bool repeat = true);                    // if repeat=true. uses io.KeyRepeatDelay / KeyRepeatRate
+    IMGUI_API bool          IsKeyReleased(int key_index);                                       // "
+    IMGUI_API bool          IsMouseDown(int button);                                            // is mouse button held 
+    IMGUI_API bool          IsMouseClicked(int button, bool repeat = false);                    // did mouse button clicked (went from !Down to Down)
+    IMGUI_API bool          IsMouseDoubleClicked(int button);                                   // did mouse button double-clicked. a double-click returns false in IsMouseClicked(). uses io.MouseDoubleClickTime.
+    IMGUI_API bool          IsMouseReleased(int button);                                        // did mouse button released (went from Down to !Down)
+    IMGUI_API bool          IsMouseHoveringWindow();                                            // is mouse hovering current window ("window" in API names always refer to current window)
+    IMGUI_API bool          IsMouseHoveringAnyWindow();                                         // is mouse hovering any active imgui window
+    IMGUI_API bool          IsMouseHoveringRect(const ImVec2& rect_min, const ImVec2& rect_max);// is mouse hovering given bounding rect
+    IMGUI_API bool          IsMouseDragging(int button = 0, float lock_threshold = -1.0f);      // is mouse dragging. if lock_threshold < -1.0f uses io.MouseDraggingThreshold
+    IMGUI_API ImVec2        GetMousePos();                                                      // shortcut to ImGui::GetIO().MousePos provided by user, to be consistent with other calls
+    IMGUI_API ImVec2        GetMouseDragDelta(int button = 0, float lock_threshold = -1.0f);    // dragging amount since clicking, also see: GetItemActiveDragDelta(). if lock_threshold < -1.0f uses io.MouseDraggingThreshold
+    IMGUI_API void          ResetMouseDragDelta(int button = 0);
+    IMGUI_API ImGuiMouseCursor GetMouseCursor();                                                // get desired cursor type, reset in ImGui::NewFrame(), this updated during the frame. valid before Render(). If you use software rendering by setting io.MouseDrawCursor ImGui will render those for you
+    IMGUI_API void          SetMouseCursor(ImGuiMouseCursor type);                              // set desired cursor type
 
     // Helpers functions to access the MemAllocFn/MemFreeFn pointers in ImGui::GetIO()
     IMGUI_API void*         MemAlloc(size_t sz);
