@@ -1410,6 +1410,7 @@ struct ImGuiWindow
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
     ImVec2                  SizeFull;                           // Size when non collapsed
     ImVec2                  SizeContents;                       // Size of contents (== extents reach of the drawing cursor) from previous frame
+    ImVec2                  WindowPadding;                      // Window padding at the time of begin. We need to lock it, in particular manipulation of the ShowBorder would have an effect
     ImGuiID                 MoveID;                             // == window->GetID("#MOVE")
     float                   ScrollY;
     float                   ScrollTargetRelY;                   // target scroll position. stored as cursor position with scrolling canceled out, so the highest point is always 0.0f. (-1.0f for no change)
@@ -1468,7 +1469,6 @@ public:
     ImRect      TitleBarRect() const                    { return ImRect(Pos, Pos + ImVec2(SizeFull.x, TitleBarHeight())); }
     float       MenuBarHeight() const                   { return (Flags & ImGuiWindowFlags_MenuBar) ? CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f : 0.0f; }
     ImRect      MenuBarRect() const                     { float y1 = Pos.y + TitleBarHeight(); return ImRect(Pos.x, y1, Pos.x + SizeFull.x, y1 + MenuBarHeight()); }
-    ImVec2      WindowPadding() const                   { return ((Flags & ImGuiWindowFlags_ChildWindow) && !(Flags & (ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup))) ? ImVec2(0,0) : GImGui->Style.WindowPadding; }
     float       ScrollbarWidth() const                  { return ScrollbarY ? GImGui->Style.ScrollbarWidth : 0.0f; }
     ImU32       Color(ImGuiCol idx, float a=1.f) const  { ImVec4 c = GImGui->Style.Colors[idx]; c.w *= GImGui->Style.Alpha * a; return ImGui::ColorConvertFloat4ToU32(c); }
     ImU32       Color(const ImVec4& col) const          { ImVec4 c = col; c.w *= GImGui->Style.Alpha; return ImGui::ColorConvertFloat4ToU32(c); }
@@ -1778,6 +1778,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     PosFloat = Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContents = ImVec2(0.0f, 0.0f);
+    WindowPadding = ImVec2(0.0f, 0.0f);
     ScrollY = 0.0f;
     ScrollTargetRelY = -1.0f;
     ScrollTargetCenterRatioY = 0.5f;
@@ -3694,17 +3695,19 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             }
         }
 
+        // Lock window padding so that altering the ShowBorders flag for childs doesn't have side-effects.
+        window->WindowPadding = ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup))) ? ImVec2(0,0) : style.WindowPadding;
+
         // Calculate auto-fit size
         ImVec2 size_auto_fit;
-        ImVec2 window_padding = window->WindowPadding();
         if ((flags & ImGuiWindowFlags_Tooltip) != 0)
         {
             // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
-            size_auto_fit = window->SizeContents + window_padding - ImVec2(0.0f, style.ItemSpacing.y);
+            size_auto_fit = window->SizeContents + window->WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
         }
         else
         {
-            size_auto_fit = ImClamp(window->SizeContents + window_padding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - window_padding));
+            size_auto_fit = ImClamp(window->SizeContents + window->WindowPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - window->WindowPadding));
             if (size_auto_fit.y < window->SizeContents.y && !(flags & ImGuiWindowFlags_NoScrollbar))
                 size_auto_fit.x += style.ScrollbarWidth;
             size_auto_fit.y = ImMax(size_auto_fit.y - style.ItemSpacing.y, 0.0f);
@@ -3965,9 +3968,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
 
         // Setup drawing context
-        window->DC.ColumnsStartX = window->WindowPadding().x;
+        window->DC.ColumnsStartX = window->WindowPadding.x;
         window->DC.ColumnsOffsetX = 0.0f;
-        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.ColumnsStartX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding().y) - ImVec2(0.0f, window->ScrollY);
+        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.ColumnsStartX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y) - ImVec2(0.0f, window->ScrollY);
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CursorMaxPos = window->DC.CursorStartPos;
@@ -4041,7 +4044,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
     // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
     const ImRect title_bar_rect = window->TitleBarRect();
-    ImVec4 clip_rect(title_bar_rect.Min.x+0.5f+window->WindowPadding().x*0.5f, title_bar_rect.Max.y+window->MenuBarHeight()+0.5f, window->Rect().Max.x+0.5f-window->WindowPadding().x*0.5f, window->Rect().Max.y-1.5f);
+    ImVec4 clip_rect(title_bar_rect.Min.x+0.5f+window->WindowPadding.x*0.5f, title_bar_rect.Max.y+window->MenuBarHeight()+0.5f, window->Rect().Max.x+0.5f-window->WindowPadding.x*0.5f, window->Rect().Max.y-1.5f);
     if (window->ScrollbarY)
         clip_rect.z -= style.ScrollbarWidth;
     PushClipRect(clip_rect);
@@ -4668,12 +4671,11 @@ void ImGui::SetNextWindowFocus()
 ImVec2 ImGui::GetContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    ImVec2 window_padding = window->WindowPadding();
-    ImVec2 mx = window->Size - window_padding;
+    ImVec2 mx = window->Size - window->WindowPadding;
     if (window->DC.ColumnsCount != 1)
     {
         mx.x = ImGui::GetColumnOffset(window->DC.ColumnsCurrent + 1);
-        mx.x -= window_padding.x;
+        mx.x -= window->WindowPadding.x;
     }
     else
     {
@@ -4685,13 +4687,13 @@ ImVec2 ImGui::GetContentRegionMax()
 ImVec2 ImGui::GetWindowContentRegionMin()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    return ImVec2(0, window->TitleBarHeight() + window->MenuBarHeight()) + window->WindowPadding();
+    return ImVec2(0, window->TitleBarHeight() + window->MenuBarHeight()) + window->WindowPadding;
 }
 
 ImVec2 ImGui::GetWindowContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    ImVec2 m = window->Size - window->WindowPadding();
+    ImVec2 m = window->Size - window->WindowPadding;
     m.x -= window->ScrollbarWidth();
     return m;
 }
@@ -5455,7 +5457,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     }
 
     // Framed header expand a little outside the default padding
-    const ImVec2 window_padding = window->WindowPadding();
+    const ImVec2 window_padding = window->WindowPadding;
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImVec2 pos_min = window->DC.CursorPos;
     const ImVec2 pos_max = window->Pos + GetContentRegionMax();
@@ -7752,7 +7754,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     ItemSize(bb);
 
     // Fill horizontal space.
-    ImVec2 window_padding = window->WindowPadding();
+    ImVec2 window_padding = window->WindowPadding;
     float max_x = (flags & ImGuiSelectableFlags_SpanAllColumns) ? ImGui::GetWindowContentRegionMax().x : ImGui::GetContentRegionMax().x;
     float w_draw = ImMax(label_size.x, window->Pos.x + max_x - window_padding.x - window->DC.CursorPos.x);
     ImVec2 size_draw((size_arg.x != 0 && !(flags & ImGuiSelectableFlags_DrawFillAvailWidth)) ? size_arg.x : w_draw, size_arg.y != 0.0f ? size_arg.y : size.y);
@@ -8031,7 +8033,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     ImVec2 popup_pos, pos = window->DC.CursorPos;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
-        popup_pos = ImVec2(pos.x - window->WindowPadding().x, pos.y - style.FramePadding.y + window->MenuBarHeight());
+        popup_pos = ImVec2(pos.x - window->WindowPadding.x, pos.y - style.FramePadding.y + window->MenuBarHeight());
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
         float w = label_size.x;
