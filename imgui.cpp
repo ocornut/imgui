@@ -1412,7 +1412,7 @@ struct ImGuiWindow
     ImVec2                  SizeContents;                       // Size of contents (== extents reach of the drawing cursor) from previous frame
     ImGuiID                 MoveID;                             // == window->GetID("#MOVE")
     float                   ScrollY;
-    float                   ScrollTargetAbsY;                   // target scroll position. stored as cursor position with scrolling canceled out, so the highest point is always 0.0f. (-1.0f for no change)
+    float                   ScrollTargetRelY;                   // target scroll position. stored as cursor position with scrolling canceled out, so the highest point is always 0.0f. (-1.0f for no change)
     float                   ScrollTargetCenterRatioY;           // 0.0f = scroll so that target position is at top, 0.5f = scroll so that target position is centered
     bool                    ScrollbarY;
     bool                    Active;                             // Set to true on Begin()
@@ -1779,7 +1779,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContents = ImVec2(0.0f, 0.0f);
     ScrollY = 0.0f;
-    ScrollTargetAbsY = -1.0f;
+    ScrollTargetRelY = -1.0f;
     ScrollTargetCenterRatioY = 0.5f;
     ScrollbarY = false;
     Active = WasActive = false;
@@ -3838,11 +3838,11 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = IM_INT_MAX;
 
         // Apply scrolling
-        if (window->ScrollTargetAbsY >= 0.0f)
+        if (window->ScrollTargetRelY >= 0.0f)
         {
             float center_ratio_y = window->ScrollTargetCenterRatioY;
-            window->ScrollY = window->ScrollTargetAbsY - (window->Pos.y + (1.0f - center_ratio_y) * window->TitleBarHeight() + center_ratio_y * window->SizeFull.y);
-            window->ScrollTargetAbsY = -1.0f;
+            window->ScrollY = window->ScrollTargetRelY - ((1.0f - center_ratio_y) * window->TitleBarHeight()) - (center_ratio_y * window->SizeFull.y);
+            window->ScrollTargetRelY = -1.0f;
         }
         window->ScrollY = ImMax(window->ScrollY, 0.0f);
         if (!window->Collapsed && !window->SkipItems)
@@ -4808,7 +4808,9 @@ void ImGui::SetScrollPosHere(float center_y_ratio)
     // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
     IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
     ImGuiWindow* window = GetCurrentWindow();
-    window->ScrollTargetAbsY = (float)(int)(window->ScrollY + window->DC.CursorPosPrevLine.y + (window->DC.PrevLineHeight) * center_y_ratio);
+    window->ScrollTargetRelY = (float)(int)(window->ScrollY + window->DC.CursorPosPrevLine.y - window->Pos.y + (window->DC.PrevLineHeight) * center_y_ratio);
+    float line_spacing = (window->DC.CursorPos.y - window->DC.CursorPosPrevLine.y) - (window->DC.PrevLineHeight);
+    window->ScrollTargetRelY += line_spacing * (center_y_ratio - 0.5f) * 2.0f;
     window->ScrollTargetCenterRatioY = center_y_ratio;
 }
 
