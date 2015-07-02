@@ -1333,6 +1333,8 @@ struct ImGuiState
     float                   FramerateSecPerFrame[120];          // calculate estimate of framerate for user
     int                     FramerateSecPerFrameIdx;
     float                   FramerateSecPerFrameAccum;
+    bool                    CaptureMouseNextFrame;              // explicit capture via CaptureInputs() sets those flags
+    bool                    CaptureKeyboardNextFrame;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
 
     ImGuiState()
@@ -1394,6 +1396,7 @@ struct ImGuiState
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
         FramerateSecPerFrameIdx = 0;
         FramerateSecPerFrameAccum = 0.0f;
+        CaptureMouseNextFrame = CaptureKeyboardNextFrame = false;
     }
 };
 
@@ -2189,9 +2192,10 @@ void ImGui::NewFrame()
                 mouse_earliest_button_down = i;
     }
     bool mouse_owned_by_application = mouse_earliest_button_down != -1 && !g.IO.MouseDownOwned[mouse_earliest_button_down];
-    g.IO.WantCaptureMouse = (!mouse_owned_by_application && g.HoveredWindow != NULL) || (!mouse_owned_by_application && mouse_any_down) || (g.ActiveId != 0) || (!g.OpenedPopupStack.empty());
-    g.IO.WantCaptureKeyboard = (g.ActiveId != 0);
+    g.IO.WantCaptureMouse = (!mouse_owned_by_application && g.HoveredWindow != NULL) || (!mouse_owned_by_application && mouse_any_down) || (g.ActiveId != 0) || (!g.OpenedPopupStack.empty()) || (g.CaptureMouseNextFrame);
+    g.IO.WantCaptureKeyboard = (g.ActiveId != 0) || (g.CaptureKeyboardNextFrame);
     g.MouseCursor = ImGuiMouseCursor_Arrow;
+    g.CaptureMouseNextFrame = g.CaptureKeyboardNextFrame = false;
 
     // If mouse was first clicked outside of ImGui bounds we also cancel out hovering.
     if (mouse_owned_by_application)
@@ -3001,6 +3005,12 @@ ImGuiMouseCursor ImGui::GetMouseCursor()
 void ImGui::SetMouseCursor(ImGuiMouseCursor cursor_type)
 {
     GImGui->MouseCursor = cursor_type;
+}
+
+void ImGui::CaptureInputsFromApp(bool capture_mouse, bool capture_keyboard)
+{
+    GImGui->CaptureMouseNextFrame |= capture_mouse;
+    GImGui->CaptureKeyboardNextFrame |= capture_keyboard;
 }
 
 bool ImGui::IsItemHovered()
@@ -11856,6 +11866,10 @@ void ImGui::ShowTestWindow(bool* opened)
 
             ImGui::Text("WantCaptureMouse: %s", io.WantCaptureMouse ? "true" : "false");
             ImGui::Text("WantCaptureKeyboard: %s", io.WantCaptureKeyboard ? "true" : "false");
+
+            ImGui::Button("Hover me\nto enforce\ninputs capture");
+            if (ImGui::IsItemHovered())
+                ImGui::CaptureInputsFromApp();
 
             ImGui::TreePop();
         }
