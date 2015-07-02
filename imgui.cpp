@@ -4797,6 +4797,12 @@ void ImGui::SetCursorPosY(float y)
     window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y);
 }
 
+ImVec2 ImGui::GetCursorStartPos()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->DC.CursorStartPos - window->Pos;
+}
+
 ImVec2 ImGui::GetCursorScreenPos()
 {
     ImGuiWindow* window = GetCurrentWindow();
