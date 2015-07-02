@@ -562,7 +562,7 @@ enum ImGuiAlign_
     ImGuiAlign_Right    = 1 << 2,
     ImGuiAlign_Top      = 1 << 3,
     ImGuiAlign_VCenter  = 1 << 4,
-    ImGuiAlign_Default  = ImGuiAlign_Left | ImGuiAlign_Top,
+    ImGuiAlign_Default  = ImGuiAlign_Left | ImGuiAlign_Top
 };
 
 // Enumeration for ColorEditMode()

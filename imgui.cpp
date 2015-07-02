@@ -386,6 +386,7 @@
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar).
  - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
+ - dragfloat: up/down axis
  - text edit: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now.
  - text edit: centered text for slider as input text so it matches typical positioning.
  - text edit: flag to disable live update of the user buffer. 
@@ -4756,8 +4757,8 @@ void ImGui::SetWindowFontScale(float scale)
     g.FontSize = window->CalcFontSize();
 }
 
-// NB: internally we store CursorPos in absolute screen coordinates because it is more convenient.
-// Conversion happens as we pass the value to user, but it makes our naming convention dodgy. May want to rename 'DC.CursorPos'.
+// User generally sees positions in window coordinates. Internally we store CursorPos in absolute screen coordinates because it is more convenient.
+// Conversion happens as we pass the value to user, but it makes our naming convention confusing because GetCursorPos() == (DC.CursorPos - window.Pos). May want to rename 'DC.CursorPos'.
 ImVec2 ImGui::GetCursorPos()
 {
     ImGuiWindow* window = GetCurrentWindow();
