@@ -4808,11 +4808,13 @@ float ImGui::GetScrollMaxY()
 void ImGui::SetScrollPosHere(float center_y_ratio)
 {
     // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
+    ImGuiState& g = *GImGui;
     IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
     ImGuiWindow* window = GetCurrentWindow();
     window->ScrollTargetRelY = (float)(int)(window->ScrollY + window->DC.CursorPosPrevLine.y - window->Pos.y + (window->DC.PrevLineHeight) * center_y_ratio);
-    float line_spacing = (window->DC.CursorPos.y - window->DC.CursorPosPrevLine.y) - (window->DC.PrevLineHeight);
-    window->ScrollTargetRelY += line_spacing * (center_y_ratio - 0.5f) * 2.0f;
+    window->ScrollTargetRelY += g.Style.ItemSpacing.y * (center_y_ratio - 0.5f) * 2.0f;
+    if (center_y_ratio <= 0.0f && window->ScrollTargetRelY <= window->WindowPadding.y)    // Minor hack to make "scroll to top" take account of WindowPadding, else it would scroll to (WindowPadding.y - ItemSpacing.y)
+        window->ScrollTargetRelY = 0.0f;
     window->ScrollTargetCenterRatioY = center_y_ratio;
 }
 
