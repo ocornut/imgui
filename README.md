@@ -5,11 +5,11 @@ ImGui
 
 [![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui) [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
-ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and carries minimal amount of dependencies. It is based on an "immediate" graphical user interface paradigm which allows you to build user interfaces with ease.
+ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and carries minimal amount of dependencies. It is based on an "immediate" graphical user interface paradigm which enables you to build user interfaces with ease.
 
 ImGui is designed to enable fast iteration and allow programmers to create "content creation" or "debug" tools (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal, and thus lacks certain features normally found in more high-level libraries.
 
-ImGui is particularly suited to integration in 3D applications, fullscreen applications, embedded applications, games, or any applications on consoles platforms where operating system features are non-standard. 
+ImGui is particularly suited to integration in realtime 3D applications, fullscreen applications, embedded applications, games, or any applications on consoles platforms where operating system features are non-standard. pa
 
 ImGui is self-contained within 6 files that you can easily copy and compile into your application/engine:
 
@@ -88,7 +88,9 @@ In your Render function, try translating your projection matrix by (0.5f,0.5f) o
 
 <b>Can you create elaborate/serious tools with ImGui?</b>
 
-Yes. I have written data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. However note that ImGui is programmer centric and the immediate-mode GUI paradigm might requires a bit of adaptation before you can realize its full potential. 
+Yes. I have written data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools).
+
+However note that ImGui is programmer centric and the immediate-mode GUI paradigm might requires a bit of adaptation before you can realize its full potential. Many programmers have unfortunately been taught by their environment to make complicated things instead of simple things. Strip yourself out of all those heavy layers and start making tools!
 
 <b>Is ImGui fast?</b>
 
@@ -100,7 +102,7 @@ Mileage may vary but the following screenshot can give you a rough idea of the c
 
 This is showing framerate for the full application loop on my 2011 iMac running Windows 7, OpenGL, AMD Radeon HD 6700M with an optimized executable. In contrast, librairies featuring higher-quality rendering and layouting techniques may have a higher resources footprint.
 
-If you intend to display large lists of items (say, 1000+) it can be beneficial for your code to perform clipping manually - using helpers such as CalcListClipping() - in order to avoid submitting them to ImGui in the first place. Even though ImGui will discard your clipped items it still needs to calculate their size and that overhead will add up if you have thousands of items. If you can handle clipping and height positionning yourself then browsing a list with millions of items isn't a problem.
+If you intend to display large lists of items (say, 1000+) it can be beneficial for your code to perform clipping manually - using helpers such as ImGuiListClipper - in order to avoid submitting them to ImGui in the first place. Even though ImGui will discard your clipped items it still needs to calculate their size and that overhead will add up if you have thousands of items. If you can handle clipping and height positionning yourself then browsing a list with millions of items isn't a problem.
 
 <b>Can you reskin the look of ImGui?</b>
 
