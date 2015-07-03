@@ -258,6 +258,8 @@ bool    ImGui_ImplGlfwGL3_Init(GLFWwindow* window, bool install_callbacks)
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
     io.KeyMap[ImGuiKey_DownArrow] = GLFW_KEY_DOWN;
+    io.KeyMap[ImGuiKey_PageUp] = GLFW_KEY_PAGE_UP;
+    io.KeyMap[ImGuiKey_PageDown] = GLFW_KEY_PAGE_DOWN;
     io.KeyMap[ImGuiKey_Home] = GLFW_KEY_HOME;
     io.KeyMap[ImGuiKey_End] = GLFW_KEY_END;
     io.KeyMap[ImGuiKey_Delete] = GLFW_KEY_DELETE;

@@ -142,6 +142,8 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/07/02 (1.42) - renamed SetScrollPosHere() to SetScrollFromCursorPos(). Kept inline redirection function (will obsolete).
+ - 2015/07/02 (1.42) - renamed GetScrollPosY() to GetScrollY(). Necessary to reduce confusion along with other scrolling functions, because positions (e.g. cursor position) are not equivalent to scrolling amount.
  - 2015/06/14 (1.41) - changed ImageButton() default bg_col parameter from (0,0,0,1) (black) to (0,0,0,0) (transparent) - makes a difference when texture have transparence
  - 2015/06/14 (1.41) - changed Selectable() API from (label, selected, size) to (label, selected, flags, size). Size override should have been rarely be used. Sorry!
  - 2015/05/31 (1.40) - renamed GetWindowCollapsed() to IsWindowCollapsed() for consistency. Kept inline redirection function (will obsolete).
@@ -343,7 +345,6 @@
  - window: resizing from any sides? + mouse cursor directives for app.
  - window: get size/pos helpers given names (see discussion in #249)
  - scrolling: add horizontal scroll
-!- scrolling: set scrolling given a position.
 !- scrolling: allow immediately effective change of scroll if we haven't appended items yet
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
  - widgets: clean up widgets internal toward exposing everything.
@@ -391,6 +392,7 @@
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar).
  - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
+ - dragfloat: up/down axis
  - text edit: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now.
  - text edit: centered text for slider as input text so it matches typical positioning.
  - text edit: flag to disable live update of the user buffer. 
@@ -686,6 +688,8 @@ ImGuiIO::ImGuiIO()
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
     MouseDragThreshold = 6.0f;
+    for (int i = 0; i < ImGuiKey_COUNT; i++)
+        KeyMap[i] = -1;
     KeyRepeatDelay = 0.250f;
     KeyRepeatRate = 0.050f;
     UserData = NULL;
@@ -1008,7 +1012,8 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_PressedOnClick     = 1 << 1,
     ImGuiButtonFlags_FlattenChilds      = 1 << 2,
     ImGuiButtonFlags_DontClosePopups    = 1 << 3,
-    ImGuiButtonFlags_Disabled           = 1 << 4
+    ImGuiButtonFlags_Disabled           = 1 << 4,
+    ImGuiButtonFlags_AlignTextBaseLine  = 1 << 5
 };
 
 enum ImGuiSelectableFlagsPrivate_
@@ -1422,7 +1427,7 @@ struct ImGuiWindow
     ImVec2                  WindowPadding;                      // Window padding at the time of begin. We need to lock it, in particular manipulation of the ShowBorder would have an effect
     ImGuiID                 MoveID;                             // == window->GetID("#MOVE")
     float                   ScrollY;
-    float                   ScrollTargetRelY;                   // target scroll position. stored as cursor position with scrolling canceled out, so the highest point is always 0.0f. (-1.0f for no change)
+    float                   ScrollTargetRelY;                   // target scroll position. stored as cursor position with scrolling canceled out, so the highest point is always 0.0f. (FLT_MAX for no change)
     float                   ScrollTargetCenterRatioY;           // 0.0f = scroll so that target position is at top, 0.5f = scroll so that target position is centered
     bool                    ScrollbarY;
     bool                    Active;                             // Set to true on Begin()
@@ -1789,7 +1794,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     SizeContents = ImVec2(0.0f, 0.0f);
     WindowPadding = ImVec2(0.0f, 0.0f);
     ScrollY = 0.0f;
-    ScrollTargetRelY = -1.0f;
+    ScrollTargetRelY = FLT_MAX;
     ScrollTargetCenterRatioY = 0.5f;
     ScrollbarY = false;
     Active = WasActive = false;
@@ -2892,21 +2897,27 @@ bool ImGui::IsPosHoveringAnyWindow(const ImVec2& pos)
 
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
 {
-    ImGuiState& g = *GImGui;
-    const int key_index = g.IO.KeyMap[key];
+    const int key_index = GImGui->IO.KeyMap[key];
     return ImGui::IsKeyPressed(key_index, repeat);
+}
+
+int ImGui::GetKeyIndex(ImGuiKey key)
+{
+    IM_ASSERT(key >= 0 && key < ImGuiKey_COUNT);
+    return GImGui->IO.KeyMap[key];
 }
 
 bool ImGui::IsKeyDown(int key_index)
 {
-    ImGuiState& g = *GImGui;
-    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
-    return g.IO.KeysDown[key_index];
+    if (key_index < 0) return false;
+    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(GImGui->IO.KeysDown));
+    return GImGui->IO.KeysDown[key_index];
 }
 
 bool ImGui::IsKeyPressed(int key_index, bool repeat)
 {
     ImGuiState& g = *GImGui;
+    if (key_index < 0) return false;
     IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
     const float t = g.IO.KeysDownDuration[key_index];
     if (t == 0.0f)
@@ -2924,10 +2935,10 @@ bool ImGui::IsKeyPressed(int key_index, bool repeat)
 bool ImGui::IsKeyReleased(int key_index)
 {
     ImGuiState& g = *GImGui;
+    if (key_index < 0) return false;
     IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
     if (g.IO.KeysDownDurationPrev[key_index] >= 0.0f && !g.IO.KeysDown[key_index])
         return true;
-
     return false;
 }
 
@@ -3862,11 +3873,11 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = IM_INT_MAX;
 
         // Apply scrolling
-        if (window->ScrollTargetRelY >= 0.0f)
+        if (window->ScrollTargetRelY < FLT_MAX)
         {
             float center_ratio_y = window->ScrollTargetCenterRatioY;
             window->ScrollY = window->ScrollTargetRelY - ((1.0f - center_ratio_y) * window->TitleBarHeight()) - (center_ratio_y * window->SizeFull.y);
-            window->ScrollTargetRelY = -1.0f;
+            window->ScrollTargetRelY = FLT_MAX;
         }
         window->ScrollY = ImMax(window->ScrollY, 0.0f);
         if (!window->Collapsed && !window->SkipItems)
@@ -4504,8 +4515,7 @@ bool ImGui::IsRootWindowOrAnyChildFocused()
 
 float ImGui::GetWindowWidth()
 {
-    ImGuiState& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiWindow* window = GImGui->CurrentWindow;
     return window->Size.x;
 }
 
@@ -4758,8 +4768,8 @@ void ImGui::SetWindowFontScale(float scale)
     g.FontSize = window->CalcFontSize();
 }
 
-// NB: internally we store CursorPos in absolute screen coordinates because it is more convenient.
-// Conversion happens as we pass the value to user, but it makes our naming convention dodgy. May want to rename 'DC.CursorPos'.
+// User generally sees positions in window coordinates. Internally we store CursorPos in absolute screen coordinates because it is more convenient.
+// Conversion happens as we pass the value to user, but it makes our naming convention confusing because GetCursorPos() == (DC.CursorPos - window.Pos). May want to rename 'DC.CursorPos'.
 ImVec2 ImGui::GetCursorPos()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -4797,6 +4807,12 @@ void ImGui::SetCursorPosY(float y)
     window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y);
 }
 
+ImVec2 ImGui::GetCursorStartPos()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->DC.CursorStartPos - window->Pos;
+}
+
 ImVec2 ImGui::GetCursorScreenPos()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -4809,7 +4825,7 @@ void ImGui::SetCursorScreenPos(const ImVec2& screen_pos)
     window->DC.CursorPos = screen_pos;
 }
 
-float ImGui::GetScrollPosY()
+float ImGui::GetScrollY()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->ScrollY;
@@ -4821,17 +4837,29 @@ float ImGui::GetScrollMaxY()
     return window->SizeContents.y - window->SizeFull.y;
 }
 
-void ImGui::SetScrollPosHere(float center_y_ratio)
+void ImGui::SetScrollY(float scroll_y)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->ScrollTargetRelY = scroll_y + window->TitleBarHeight(); // title bar height cancelled out when using ScrollTargetRelY
+    window->ScrollTargetCenterRatioY = 0.0f;
+}
+
+void ImGui::SetScrollFromPosY(float pos_y, float center_y_ratio)
 {
     // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
-    ImGuiState& g = *GImGui;
-    IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
     ImGuiWindow* window = GetCurrentWindow();
-    window->ScrollTargetRelY = (float)(int)(window->ScrollY + window->DC.CursorPosPrevLine.y - window->Pos.y + (window->DC.PrevLineHeight) * center_y_ratio);
-    window->ScrollTargetRelY += g.Style.ItemSpacing.y * (center_y_ratio - 0.5f) * 2.0f;
+    IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
+    window->ScrollTargetRelY = (float)(int)(pos_y + window->ScrollY);
     if (center_y_ratio <= 0.0f && window->ScrollTargetRelY <= window->WindowPadding.y)    // Minor hack to make "scroll to top" take account of WindowPadding, else it would scroll to (WindowPadding.y - ItemSpacing.y)
         window->ScrollTargetRelY = 0.0f;
     window->ScrollTargetCenterRatioY = center_y_ratio;
+}
+
+void ImGui::SetScrollHere(float center_y_ratio)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    float target_y = window->DC.CursorPosPrevLine.y + (window->DC.PrevLineHeight * center_y_ratio) + (GImGui->Style.ItemSpacing.y * (center_y_ratio - 0.5f) * 2.0f); // Precisely aim above, in the middle or below the last line.
+    ImGui::SetScrollFromPosY(target_y - window->Pos.y, center_y_ratio);
 }
 
 void ImGui::SetKeyboardFocusHere(int offset)
@@ -5167,8 +5195,12 @@ static bool ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), Im
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
 
+    ImVec2 pos = window->DC.CursorPos;
+    if ((flags & ImGuiButtonFlags_AlignTextBaseLine) && style.FramePadding.y < window->DC.CurrentLineTextBaseOffset)
+        pos.y += window->DC.CurrentLineTextBaseOffset - style.FramePadding.y;
     const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : (label_size.x + style.FramePadding.x*2), size_arg.y != 0.0f ? size_arg.y : (label_size.y + style.FramePadding.y*2));
-    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
+
+    const ImRect bb(pos, pos + size);
     ItemSize(bb, style.FramePadding.y);
     if (!ItemAdd(bb, &id))
         return false;
@@ -5200,7 +5232,7 @@ bool ImGui::SmallButton(const char* label)
     ImGuiState& g = *GImGui;
     float backup_padding_y = g.Style.FramePadding.y;
     g.Style.FramePadding.y = 0.0f;
-    bool pressed = ButtonEx(label);
+    bool pressed = ButtonEx(label, ImVec2(0,0), ImGuiButtonFlags_AlignTextBaseLine);
     g.Style.FramePadding.y = backup_padding_y;
     return pressed;
 }
@@ -7740,7 +7772,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
                     *current_item = i;
                 }
                 if (item_selected && menu_toggled)
-                    ImGui::SetScrollPosHere();
+                    ImGui::SetScrollHere();
                 ImGui::PopID();
             }
             ImGui::EndPopup();
@@ -11468,10 +11500,10 @@ void ImGui::ShowTestWindow(bool* opened)
             {
                 ImGui::Text("%04d: scrollable region", i);
                 if (goto_line && line == i)
-                    ImGui::SetScrollPosHere();
+                    ImGui::SetScrollHere();
             }
             if (goto_line && line >= 100)
-                ImGui::SetScrollPosHere();
+                ImGui::SetScrollHere();
             ImGui::EndChild();
 
             ImGui::SameLine();
@@ -11665,23 +11697,34 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Scrolling"))
         {
-            ImGui::TextWrapped("Use SetScrollPosHere() to scroll to a given position.");
+            ImGui::TextWrapped("Use SetScrollHere() or SetScrollFromPosY() to scroll to a given position.");
             static bool track = true;
-            static int track_line = 50;
+            static int track_line = 50, scroll_to_px = 200;
             ImGui::Checkbox("Track", &track);
-            ImGui::SameLine(); ImGui::SliderInt("##line", &track_line, 0, 99, "Line %.0f");
+            ImGui::SameLine(130); track |= ImGui::DragInt("##line", &track_line, 0.25f, 0, 9999, "Line %.0f");
+            bool scroll_to = ImGui::Button("Scroll To");
+            ImGui::SameLine(130); scroll_to |= ImGui::DragInt("##pos_y", &scroll_to_px, 1.00f, 0, 9999, "y = %.0f px");
+            if (scroll_to) track = false;
 
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 5; i++)
             {
                 if (i > 0) ImGui::SameLine();
                 ImGui::BeginGroup();
-                ImGui::Text(i == 0 ? "Top" : i == 1 ? "Center" : "Bottom");
-                ImGui::BeginChild(ImGui::GetID((void *)i), ImVec2(ImGui::GetWindowWidth() * 0.25f, 200.0f), true);
+                ImGui::Text("%s", i == 0 ? "Top" : i == 1 ? "25%" : i == 2 ? "Center" : i == 3 ? "75%" : "Bottom");
+                ImGui::BeginChild(ImGui::GetID((void *)i), ImVec2(ImGui::GetWindowWidth() * 0.17f, 200.0f), true);
+                if (scroll_to)
+                    ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + scroll_to_px, i * 0.25f);
                 for (int line = 0; line < 100; line++)
                 {
-                    ImGui::Text("Line %d", line);
                     if (track && line == track_line)
-                        ImGui::SetScrollPosHere(i * 0.50f); // 0.0f,0.5f,1.0f
+                    {
+                        ImGui::TextColored(ImColor(255,255,0), "Line %d", line);
+                        ImGui::SetScrollHere(i * 0.25f); // 0.0f:top, 0.5f:center, 1.0f:bottom
+                    }
+                    else
+                    {
+                        ImGui::Text("Line %d", line);
+                    }
                 }
                 ImGui::EndChild();
                 ImGui::EndGroup();
@@ -12440,7 +12483,7 @@ struct ExampleAppConsole
             ImGui::PopStyleColor();
         }
         if (ScrollToBottom)
-            ImGui::SetScrollPosHere();
+            ImGui::SetScrollHere();
         ScrollToBottom = false;
         ImGui::PopStyleVar();
         ImGui::EndChild();
