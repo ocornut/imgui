@@ -473,23 +473,25 @@ enum ImGuiSelectableFlags_
 // User fill ImGuiIO.KeyMap[] array with indices into the ImGuiIO.KeysDown[512] array
 enum ImGuiKey_
 {
-    ImGuiKey_Tab,
-    ImGuiKey_LeftArrow,
-    ImGuiKey_RightArrow,
-    ImGuiKey_UpArrow,
-    ImGuiKey_DownArrow,
-    ImGuiKey_Home,
-    ImGuiKey_End,
-    ImGuiKey_Delete,
-    ImGuiKey_Backspace,
-    ImGuiKey_Enter,
-    ImGuiKey_Escape,
-    ImGuiKey_A,         // for CTRL+A: select all
-    ImGuiKey_C,         // for CTRL+C: copy
-    ImGuiKey_V,         // for CTRL+V: paste
-    ImGuiKey_X,         // for CTRL+X: cut
-    ImGuiKey_Y,         // for CTRL+Y: redo
-    ImGuiKey_Z,         // for CTRL+Z: undo
+    ImGuiKey_Tab,       // for tabbing through fields
+    ImGuiKey_LeftArrow, // for text edit
+    ImGuiKey_RightArrow,// for text edit
+    ImGuiKey_UpArrow,   // for text edit
+    ImGuiKey_DownArrow, // for text edit
+    ImGuiKey_PageUp,
+    ImGuiKey_PageDown,
+    ImGuiKey_Home,      // for text edit
+    ImGuiKey_End,       // for text edit
+    ImGuiKey_Delete,    // for text edit
+    ImGuiKey_Backspace, // for text edit
+    ImGuiKey_Enter,     // for text edit
+    ImGuiKey_Escape,    // for text edit
+    ImGuiKey_A,         // for text edit CTRL+A: select all
+    ImGuiKey_C,         // for text edit CTRL+C: copy
+    ImGuiKey_V,         // for text edit CTRL+V: paste
+    ImGuiKey_X,         // for text edit CTRL+X: cut
+    ImGuiKey_Y,         // for text edit CTRL+Y: redo
+    ImGuiKey_Z,         // for text edit CTRL+Z: undo
     ImGuiKey_COUNT
 };
 

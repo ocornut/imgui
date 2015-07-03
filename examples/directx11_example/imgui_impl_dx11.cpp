@@ -409,6 +409,8 @@ bool    ImGui_ImplDX11_Init(void* hwnd, ID3D11Device* device, ID3D11DeviceContex
     io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
     io.KeyMap[ImGuiKey_DownArrow] = VK_DOWN;
+    io.KeyMap[ImGuiKey_PageUp] = VK_PRIOR;
+    io.KeyMap[ImGuiKey_PageDown] = VK_NEXT;
     io.KeyMap[ImGuiKey_Home] = VK_HOME;
     io.KeyMap[ImGuiKey_End] = VK_END;
     io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
