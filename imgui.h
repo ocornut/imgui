@@ -135,9 +135,11 @@ namespace ImGui
     IMGUI_API void          SetWindowCollapsed(const char* name, bool collapsed, ImGuiSetCond cond = 0);   // set named window collapsed state
     IMGUI_API void          SetWindowFocus(const char* name);                                              // set named window to be focused / front-most. use NULL to remove focus.
 
-    IMGUI_API float         GetScrollY();                                                       // get scrolling position [0..GetScrollMaxY()]
-    IMGUI_API float         GetScrollMaxY();                                                    // get maximum scrolling position == ContentSize.Y - WindowSize.Y
-    IMGUI_API void          SetScrollPosHere(float center_y_ratio = 0.5f);                      // adjust scrolling position to make the current cursor position visible. center_y_ratio=0.0: top, =0.5: center, =1.0: bottom.
+    IMGUI_API float         GetScrollY();                                                       // get scrolling amount [0..GetScrollMaxY()]
+    IMGUI_API float         GetScrollMaxY();                                                    // get maximum scrolling amount == ContentSize.Y - WindowSize.Y
+    IMGUI_API void          SetScrollY(float scroll_y);                                         // set scrolling amount [0..GetScrollMaxY()]
+    IMGUI_API void          SetScrollFromCursorPos(float center_y_ratio = 0.5f);                // adjust scrolling amount to make current cursor position visible. center_y_ratio=0.0: top, 0.5: center, 1.0: bottom.
+    IMGUI_API void          SetScrollFromPosY(float pos_y, float center_y_ratio = 0.5f);        // adjust scrolling amount to make given position valid. use GetCursorPos() or GetCursorStartPos()+offset to get valid positions.
     IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget
     IMGUI_API void          SetStateStorage(ImGuiStorage* tree);                                // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it)
     IMGUI_API ImGuiStorage* GetStateStorage();
@@ -409,6 +411,7 @@ namespace ImGui
     static inline bool      IsClipped(const ImVec2& size) { return !IsRectVisible(size); }     // OBSOLETE 1.38+
     static inline bool      IsRectClipped(const ImVec2& size) { return !IsRectVisible(size); } // OBSOLETE 1.39+
     static inline bool      IsMouseHoveringBox(const ImVec2& rect_min, const ImVec2& rect_max) { return IsMouseHoveringRect(rect_min, rect_max); }  // OBSOLETE 1.36+
+    static inline void      SetScrollPosHere() { SetScrollFromCursorPos(); }                   // OBSOLETE 1.42+
 #endif
 
 } // namespace ImGui
