@@ -4845,7 +4845,7 @@ void ImGui::SetScrollFromPosY(float pos_y, float center_y_ratio)
     window->ScrollTargetCenterRatioY = center_y_ratio;
 }
 
-void ImGui::SetScrollFromCursorPos(float center_y_ratio)
+void ImGui::SetScrollHere(float center_y_ratio)
 {
     ImGuiWindow* window = GetCurrentWindow();
     float target_y = window->DC.CursorPosPrevLine.y + (window->DC.PrevLineHeight * center_y_ratio) + (GImGui->Style.ItemSpacing.y * (center_y_ratio - 0.5f) * 2.0f); // Precisely aim above, in the middle or below the last line.
@@ -7762,7 +7762,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
                     *current_item = i;
                 }
                 if (item_selected && menu_toggled)
-                    ImGui::SetScrollFromCursorPos();
+                    ImGui::SetScrollHere();
                 ImGui::PopID();
             }
             ImGui::EndPopup();
@@ -11311,10 +11311,10 @@ void ImGui::ShowTestWindow(bool* opened)
             {
                 ImGui::Text("%04d: scrollable region", i);
                 if (goto_line && line == i)
-                    ImGui::SetScrollFromCursorPos();
+                    ImGui::SetScrollHere();
             }
             if (goto_line && line >= 100)
-                ImGui::SetScrollFromCursorPos();
+                ImGui::SetScrollHere();
             ImGui::EndChild();
 
             ImGui::SameLine();
@@ -11529,7 +11529,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 {
                     ImGui::Text("Line %d", line);
                     if (track && line == track_line)
-                        ImGui::SetScrollFromCursorPos(i * 0.50f); // 0.0f:top, 0.5f:center, 1.0f:bottom
+                        ImGui::SetScrollHere(i * 0.50f); // 0.0f:top, 0.5f:center, 1.0f:bottom
                 }
                 ImGui::EndChild();
                 ImGui::EndGroup();
@@ -12288,7 +12288,7 @@ struct ExampleAppConsole
             ImGui::PopStyleColor();
         }
         if (ScrollToBottom)
-            ImGui::SetScrollFromCursorPos();
+            ImGui::SetScrollHere();
         ScrollToBottom = false;
         ImGui::PopStyleVar();
         ImGui::EndChild();
