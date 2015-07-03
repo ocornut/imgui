@@ -60,7 +60,7 @@ struct ImVec2
     ImVec2() { x = y = 0.0f; }
     ImVec2(float _x, float _y) { x = _x; y = _y; }
 
-#ifdef IM_VEC2_CLASS_EXTRA          // Define constructor and implicit cast operators to convert back<>forth from your math types and ImVec2.
+#ifdef IM_VEC2_CLASS_EXTRA          // Define constructor and implicit cast operators in imconfig.h to convert back<>forth from your math types and ImVec2.
     IM_VEC2_CLASS_EXTRA
 #endif
 };
@@ -71,7 +71,7 @@ struct ImVec4
     ImVec4() { x = y = z = w = 0.0f; }
     ImVec4(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
 
-#ifdef IM_VEC4_CLASS_EXTRA          // Define constructor and implicit cast operators to convert back<>forth from your math types and ImVec4.
+#ifdef IM_VEC4_CLASS_EXTRA          // Define constructor and implicit cast operators in imconfig.h to convert back<>forth from your math types and ImVec4.
     IM_VEC4_CLASS_EXTRA
 #endif
 };
@@ -197,8 +197,8 @@ namespace ImGui
     IMGUI_API float         GetItemsLineHeightWithSpacing();                                    // distance (in pixels) between 2 consecutive lines of standard height widgets == GetWindowFontSize() + GetStyle().FramePadding.y*2 + GetStyle().ItemSpacing.y
 
     // ID scopes
-    // If you are creating widgets in a loop you most likely want to push a unique identifier so ImGui can differentiate them
-    // You can also use "##extra" within your widget name to distinguish them from each others (see 'Programmer Guide')
+    // If you are creating widgets in a loop you most likely want to push a unique identifier so ImGui can differentiate them.
+    // You can also use "##extra" within your widget name to distinguish them from each others. Read the FAQ for more details.
     IMGUI_API void          PushID(const char* str_id);                                         // push identifier into the ID stack. IDs are hash of the *entire* stack!
     IMGUI_API void          PushID(const char* str_id_begin, const char* str_id_end);
     IMGUI_API void          PushID(const void* ptr_id);
