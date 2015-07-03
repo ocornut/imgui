@@ -682,6 +682,8 @@ ImGuiIO::ImGuiIO()
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
     MouseDragThreshold = 6.0f;
+    for (int i = 0; i < ImGuiKey_COUNT; i++)
+        KeyMap[i] = -1;
     KeyRepeatDelay = 0.250f;
     KeyRepeatRate = 0.050f;
     UserData = NULL;
@@ -2888,21 +2890,27 @@ bool ImGui::IsPosHoveringAnyWindow(const ImVec2& pos)
 
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
 {
-    ImGuiState& g = *GImGui;
-    const int key_index = g.IO.KeyMap[key];
+    const int key_index = GImGui->IO.KeyMap[key];
     return ImGui::IsKeyPressed(key_index, repeat);
+}
+
+int ImGui::GetKeyIndex(ImGuiKey key)
+{
+    IM_ASSERT(key >= 0 && key < ImGuiKey_COUNT);
+    return GImGui->IO.KeyMap[key];
 }
 
 bool ImGui::IsKeyDown(int key_index)
 {
-    ImGuiState& g = *GImGui;
-    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
-    return g.IO.KeysDown[key_index];
+    if (key_index < 0) return false;
+    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(GImGui->IO.KeysDown));
+    return GImGui->IO.KeysDown[key_index];
 }
 
 bool ImGui::IsKeyPressed(int key_index, bool repeat)
 {
     ImGuiState& g = *GImGui;
+    if (key_index < 0) return false;
     IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
     const float t = g.IO.KeysDownDuration[key_index];
     if (t == 0.0f)
@@ -2920,10 +2928,10 @@ bool ImGui::IsKeyPressed(int key_index, bool repeat)
 bool ImGui::IsKeyReleased(int key_index)
 {
     ImGuiState& g = *GImGui;
+    if (key_index < 0) return false;
     IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
     if (g.IO.KeysDownDurationPrev[key_index] >= 0.0f && !g.IO.KeysDown[key_index])
         return true;
-
     return false;
 }
 
