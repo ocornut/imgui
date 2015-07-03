@@ -135,7 +135,7 @@ namespace ImGui
     IMGUI_API void          SetWindowCollapsed(const char* name, bool collapsed, ImGuiSetCond cond = 0);   // set named window collapsed state
     IMGUI_API void          SetWindowFocus(const char* name);                                              // set named window to be focused / front-most. use NULL to remove focus.
 
-    IMGUI_API float         GetScrollPosY();                                                    // get scrolling position [0..GetScrollMaxY()]
+    IMGUI_API float         GetScrollY();                                                       // get scrolling position [0..GetScrollMaxY()]
     IMGUI_API float         GetScrollMaxY();                                                    // get maximum scrolling position == ContentSize.Y - WindowSize.Y
     IMGUI_API void          SetScrollPosHere(float center_y_ratio = 0.5f);                      // adjust scrolling position to make the current cursor position visible. center_y_ratio=0.0: top, =0.5: center, =1.0: bottom.
     IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget
