@@ -9114,8 +9114,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         count = points_count-1;
     }
 
-    if (ImGui::GetIO().KeyCtrl)
-        anti_aliased = false;
+    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false;
 
     if (anti_aliased)
     {
@@ -9157,6 +9156,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         unsigned int vtx_inner_idx = vtx_current_idx+1;
         unsigned int vtx_outer_idx = vtx_current_idx+2;
 
+        // FIXME-OPT: Merge the different loops, possibly remove the temporary buffer.
         for (int i = 0; i < count; i++)
         {
             const int ni = (i+1) < points_count ? i+1 : 0;
@@ -9185,7 +9185,6 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         }
 
         // Add vertexes
-        // FIXME-OPT: merge into loops above
         for (int i = 0; i < points_count; i++)
         {
             vtx_write[0].pos = points[i];     vtx_write[0].uv = uv; vtx_write[0].col = col;
@@ -9214,15 +9213,10 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
             const float dx = diff.x * (thickness * 0.5f);
             const float dy = diff.y * (thickness * 0.5f);
-
-            const ImVec2 pa(v0.x + dy, v0.y - dx);
-            const ImVec2 pb(v1.x + dy, v1.y - dx);
-            const ImVec2 pc(v1.x - dy, v1.y + dx);
-            const ImVec2 pd(v0.x - dy, v0.y + dx);
-            vtx_write[0].pos = pa; vtx_write[0].uv = uv; vtx_write[0].col = col;
-            vtx_write[1].pos = pb; vtx_write[1].uv = uv; vtx_write[1].col = col;
-            vtx_write[2].pos = pc; vtx_write[2].uv = uv; vtx_write[2].col = col;
-            vtx_write[3].pos = pd; vtx_write[3].uv = uv; vtx_write[3].col = col;
+            vtx_write[0].pos.x = v0.x + dy; vtx_write[0].pos.y = v0.y - dx; vtx_write[0].uv = uv; vtx_write[0].col = col;
+            vtx_write[1].pos.x = v1.x + dy; vtx_write[1].pos.y = v1.y - dx; vtx_write[1].uv = uv; vtx_write[1].col = col;
+            vtx_write[2].pos.x = v1.x - dy; vtx_write[2].pos.y = v1.y + dx; vtx_write[2].uv = uv; vtx_write[2].col = col;
+            vtx_write[3].pos.x = v0.x - dy; vtx_write[3].pos.y = v0.y + dx; vtx_write[3].uv = uv; vtx_write[3].col = col;
             vtx_write += 4;
 
             idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2); 
@@ -9237,8 +9231,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
 {
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
 
-    if (ImGui::GetIO().KeyCtrl)
-        anti_aliased = false;
+    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false;
 
     if (anti_aliased)
     {
@@ -9248,7 +9241,6 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         // Temporary buffer
         GTempPolyData.resize(points_count);
         ImVec2* temp_normals = &GTempPolyData[0];
-
         for (int i = 0, j = points_count-1; i < points_count; j = i++)
         {
             const ImVec2& v0 = points[j];
@@ -9290,8 +9282,8 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             dm *= AA_SIZE * 0.5f;
 
             // Add vertices
-            vtx_write[0].pos = points[i] - dm; vtx_write[0].uv = uv; vtx_write[0].col = col;        // Inner
-            vtx_write[1].pos = points[i] + dm; vtx_write[1].uv = uv; vtx_write[1].col = col_trans;  // Outer
+            vtx_write[0].pos = (points[i] - dm); vtx_write[0].uv = uv; vtx_write[0].col = col;        // Inner
+            vtx_write[1].pos = (points[i] + dm); vtx_write[1].uv = uv; vtx_write[1].col = col_trans;  // Outer
             vtx_write += 2;
 
             // Add indexes for fringes
@@ -9338,7 +9330,6 @@ void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int amin, int
     }
 
     if (amin > amax) return;
-
     if (radius == 0.0f)
     {
         path.push_back(centre);
@@ -9354,9 +9345,7 @@ void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int amin, int
 void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float amin, float amax, int num_segments)
 {
     if (radius == 0.0f)
-    {
         path.push_back(centre);
-    }
     path.reserve(path.size() + (num_segments + 1));
     for (int i = 0; i <= num_segments; i++)
     {
