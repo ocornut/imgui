@@ -103,7 +103,7 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
             {
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->texture_id);
                 glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
-                glDrawElementsBaseVertex(GL_TRIANGLES, pcmd->idx_count, GL_UNSIGNED_SHORT, idx_buffer, vtx_offset);
+                glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->idx_count, GL_UNSIGNED_SHORT, idx_buffer, vtx_offset);
             }
             idx_buffer += pcmd->idx_count;
         }
