@@ -90,7 +90,7 @@ In your Render function, try translating your projection matrix by (0.5f,0.5f) o
 
 Yes. I have written data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools).
 
-However note that ImGui is programmer centric and the immediate-mode GUI paradigm might requires a bit of adaptation before you can realize its full potential. Many programmers have unfortunately been taught by their environment to make complicated things instead of simple things. Strip yourself out of all those heavy layers and start making tools!
+However note that ImGui is programmer centric and the immediate-mode GUI paradigm might requires a bit of adaptation before you can realize its full potential. Many programmers have unfortunately been taught by their environment to make complicated unproductive things. Strip yourself out of all those heavy layers and start making lots of useful tools!
 
 <b>Is ImGui fast?</b>
 

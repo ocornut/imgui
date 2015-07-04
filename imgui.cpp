@@ -748,7 +748,7 @@ static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs)            
 static inline ImVec2 operator*(const ImVec2& lhs, const ImVec2 rhs)             { return ImVec2(lhs.x*rhs.x, lhs.y*rhs.y); }
 static inline ImVec2 operator/(const ImVec2& lhs, const ImVec2 rhs)             { return ImVec2(lhs.x/rhs.x, lhs.y/rhs.y); }
 static inline ImVec2& operator+=(ImVec2& lhs, const ImVec2& rhs)                { lhs.x += rhs.x; lhs.y += rhs.y; return lhs; }
-static inline ImVec2& operator-=(ImVec2& lhs, const ImVec2& rhs)                { lhs.x -= rhs.x; lhs.y -= rhs.y; return lhs; }
+//static inline ImVec2& operator-=(ImVec2& lhs, const ImVec2& rhs)              { lhs.x -= rhs.x; lhs.y -= rhs.y; return lhs; }
 static inline ImVec2& operator*=(ImVec2& lhs, const float rhs)                  { lhs.x *= rhs; lhs.y *= rhs; return lhs; }
 //static inline ImVec2& operator/=(ImVec2& lhs, const float rhs)                { lhs.x /= rhs; lhs.y /= rhs; return lhs; }
 static inline ImVec4 operator-(const ImVec4& lhs, const ImVec4& rhs)            { return ImVec4(lhs.x-rhs.x, lhs.y-rhs.y, lhs.z-rhs.z, lhs.w-lhs.w); }
@@ -6410,6 +6410,31 @@ bool ImGui::DragFloat4(const char* label, float v[2], float v_speed, float v_min
     return DragFloatN(label, v, 4, v_speed, v_min, v_max, display_format, power);
 }
 
+bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* display_format, const char* display_format_max, float power)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGui::PushID(label);
+    ImGui::BeginGroup();
+    PushMultiItemsWidths(2);
+
+    bool value_changed = ImGui::DragFloat("##min", v_current_min, v_speed, (v_min >= v_max) ? -FLT_MAX : v_min, (v_min >= v_max) ? *v_current_max : ImMin(v_max, *v_current_max), display_format, power);
+    ImGui::PopItemWidth();
+    ImGui::SameLine(0, (int)g.Style.ItemInnerSpacing.x);
+    value_changed |= ImGui::DragFloat("##max", v_current_max, v_speed, (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min), (v_min >= v_max) ? FLT_MAX : v_max, display_format_max ? display_format_max : display_format, power);
+    ImGui::PopItemWidth();
+    ImGui::SameLine(0, (int)g.Style.ItemInnerSpacing.x);
+
+    ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
+    ImGui::EndGroup();
+    ImGui::PopID();
+
+    return value_changed;
+}
+
 // NB: v_speed is float to allow adjusting the drag speed with more precision
 bool ImGui::DragInt(const char* label, int* v, float v_speed, int v_min, int v_max, const char* display_format)
 {
@@ -6461,6 +6486,31 @@ bool ImGui::DragInt3(const char* label, int v[3], float v_speed, int v_min, int 
 bool ImGui::DragInt4(const char* label, int v[4], float v_speed, int v_min, int v_max, const char* display_format)
 {
     return DragIntN(label, v, 4, v_speed, v_min, v_max, display_format);
+}
+
+bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_max, float v_speed, int v_min, int v_max, const char* display_format, const char* display_format_max)
+{
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGui::PushID(label);
+    ImGui::BeginGroup();
+    PushMultiItemsWidths(2);
+
+    bool value_changed = ImGui::DragInt("##min", v_current_min, v_speed, (v_min >= v_max) ? IM_INT_MIN : v_min, (v_min >= v_max) ? *v_current_max : ImMin(v_max, *v_current_max), display_format);
+    ImGui::PopItemWidth();
+    ImGui::SameLine(0, (int)g.Style.ItemInnerSpacing.x);
+    value_changed |= ImGui::DragInt("##max", v_current_max, v_speed, (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min), (v_min >= v_max) ? IM_INT_MAX : v_max, display_format_max ? display_format_max : display_format);
+    ImGui::PopItemWidth();
+    ImGui::SameLine(0, (int)g.Style.ItemInnerSpacing.x);
+
+    ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
+    ImGui::EndGroup();
+    ImGui::PopID();
+
+    return value_changed;
 }
 
 enum ImGuiPlotType
@@ -11354,6 +11404,19 @@ void ImGui::ShowTestWindow(bool* opened)
         //ImGui::ListBox("##listbox2", &listbox_item_current2, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
         //ImGui::PopItemWidth();
 
+        if (ImGui::TreeNode("Ranges"))
+        {
+            ImGui::Unindent();
+
+            static float begin = 10, end = 90;
+            static int begin_i = 100, end_i = 1000;
+            ImGui::DragFloatRange2("range", &begin, &end, 0.25f, 0.0f, 100.0f, "Min: %.1f %%", "Max: %.1f %%");
+            ImGui::DragIntRange2("range int (no bounds)", &begin_i, &end_i, 5, 0, 0, "Min: %.0f units", "Max: %.0f units");
+
+            ImGui::Indent();
+            ImGui::TreePop();
+        }
+
         if (ImGui::TreeNode("Multi-component Widgets"))
         {
             ImGui::Unindent();
@@ -11711,7 +11774,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 if (i > 0) ImGui::SameLine();
                 ImGui::BeginGroup();
                 ImGui::Text("%s", i == 0 ? "Top" : i == 1 ? "25%" : i == 2 ? "Center" : i == 3 ? "75%" : "Bottom");
-                ImGui::BeginChild(ImGui::GetID((void *)i), ImVec2(ImGui::GetWindowWidth() * 0.17f, 200.0f), true);
+                ImGui::BeginChild(ImGui::GetID((void *)(intptr_t)i), ImVec2(ImGui::GetWindowWidth() * 0.17f, 200.0f), true);
                 if (scroll_to)
                     ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + scroll_to_px, i * 0.25f);
                 for (int line = 0; line < 100; line++)
