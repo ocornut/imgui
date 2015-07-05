@@ -8676,11 +8676,10 @@ static float GetDraggedColumnOffset(int column_index)
     IM_ASSERT(column_index > 0); // We cannot drag column 0. If you get this assert you may have a conflict between the ID of your columns and another widgets.
     IM_ASSERT(g.ActiveId == window->DC.ColumnsSetID + ImGuiID(column_index));
 
-    float x = g.IO.MousePos.x + g.ActiveClickDeltaToCenter.x;
-    x -= window->Pos.x;
+    float x = g.IO.MousePos.x + g.ActiveClickDeltaToCenter.x - window->Pos.x;
     x = ImClamp(x, ImGui::GetColumnOffset(column_index-1)+g.Style.ColumnsMinSpacing, ImGui::GetColumnOffset(column_index+1)-g.Style.ColumnsMinSpacing);
 
-    return x;
+    return (float)(int)x;
 }
 
 float ImGui::GetColumnOffset(int column_index)
@@ -8703,8 +8702,8 @@ float ImGui::GetColumnOffset(int column_index)
 
     const float min_x = window->DC.ColumnsStartX;
     const float max_x = window->Size.x - (g.Style.ScrollbarWidth);// - window->WindowPadding().x;
-    const float offset = min_x + t * (max_x - min_x);
-    return offset;
+    const float x = min_x + t * (max_x - min_x);
+    return (float)(int)x;
 }
 
 void ImGui::SetColumnOffset(int column_index, float offset)
