@@ -6,7 +6,6 @@
 
 // ANTI-ALIASED PRIMITIVES BRANCH
 // TODO
-// - check-box, slider grabs are not centered properly if you enable border (relate to point above)
 // - support for thickness stroking. recently been added to the ImDrawList API as a convenience.
 
 /*
@@ -2712,8 +2711,8 @@ static void RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
     window->DrawList->AddRectFilled(p_min, p_max, fill_col, rounding);
     if (border && (window->Flags & ImGuiWindowFlags_ShowBorders))
     {
-        window->DrawList->AddRect(p_min+ImVec2(1,1), p_max+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), rounding);
-        window->DrawList->AddRect(p_min, p_max, window->Color(ImGuiCol_Border), rounding);
+        window->DrawList->AddRect(p_min+ImVec2(1,1), p_max, window->Color(ImGuiCol_BorderShadow), rounding);
+        window->DrawList->AddRect(p_min, p_max-ImVec2(1,1), window->Color(ImGuiCol_Border), rounding);
     }
 }
 
