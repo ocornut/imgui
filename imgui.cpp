@@ -5513,8 +5513,8 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     ImRect bb = ImRect(pos_min, ImVec2(pos_max.x, pos_min.y + label_size.y));
     if (display_frame)
     {
-        bb.Min.x -= window_padding.x*0.5f - 1;
-        bb.Max.x += window_padding.x*0.5f - 1;
+        bb.Min.x -= (float)(int)(window_padding.x*0.5f) - 1;
+        bb.Max.x += (float)(int)(window_padding.x*0.5f) - 1;
         bb.Max.y += style.FramePadding.y * 2;
     }
 
