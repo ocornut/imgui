@@ -5551,7 +5551,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
             const char log_prefix[] = "\n##";
             LogText(bb.Min + style.FramePadding, log_prefix, log_prefix+3);
         }
-        RenderText(bb.Min + style.FramePadding + ImVec2(g.FontSize + style.FramePadding.x*2,0), label);
+        RenderTextClipped(bb.Min + style.FramePadding + ImVec2(g.FontSize + style.FramePadding.x*2,0), bb.Max, label, NULL, &label_size);
         if (g.LogEnabled)
         {
             const char log_suffix[] = "##";
