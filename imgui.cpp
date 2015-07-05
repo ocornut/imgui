@@ -6,7 +6,8 @@
 
 // ANTI-ALIASED PRIMITIVES BRANCH
 // TODO
-// - support for thickness stroking. recently been added to the ImDrawList API as a convenience.
+// - Clean up and optimise AddPolyline() which become an ugly mess.
+// - Support for thickness stroking. recently been added to the ImDrawList API as a convenience.
 
 /*
 
@@ -765,6 +766,7 @@ static inline float  ImLerp(float a, float b, float t)                          
 static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, const ImVec2& t)  { return ImVec2(a.x + (b.x - a.x) * t.x, a.y + (b.y - a.y) * t.y); }
 static inline float  ImLengthSqr(const ImVec2& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y; }
 static inline float  ImLengthSqr(const ImVec4& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y + lhs.z*lhs.z + lhs.w*lhs.w; }
+static inline float  ImInvLengthSqr(const ImVec2& lhs, float fail_value)        { float d = lhs.x*lhs.x + lhs.y*lhs.y; if (d > 0.0f) return 1.0f / sqrtf(d); return fail_value; }
 
 static bool ImIsPointInTriangle(const ImVec2& p, const ImVec2& a, const ImVec2& b, const ImVec2& c)
 {
@@ -9124,17 +9126,15 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         ImVec2* temp_outer = temp_inner + points_count;
         ImVec2* temp_normals = temp_inner + points_count * 2;
 
-        for (int i = 0; i < count; i++)
+        for (int i1 = 0; i1 < count; i1++)
         {
-            const int ni = (i+1) < points_count ? i+1 : 0; 
-            const ImVec2& v0 = points[i];
-            const ImVec2& v1 = points[ni];
-            ImVec2 diff = v1 - v0;
-            float d = ImLengthSqr(diff);
-            if (d > 0)
-                diff *= 1.0f/sqrtf(d);
-            temp_normals[i].x = diff.y;
-            temp_normals[i].y = -diff.x;
+            const int i2 = (i1+1) == points_count ? 0 : i1+1; 
+            const ImVec2& p1 = points[i1];
+            const ImVec2& p2 = points[i2];
+            ImVec2 diff = p2 - p1;
+            diff *= ImInvLengthSqr(diff, 1.0f);
+            temp_normals[i1].x = diff.y;
+            temp_normals[i1].y = -diff.x;
         }
 
         if (!closed)
@@ -9154,12 +9154,14 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         unsigned int vtx_outer_idx = vtx_current_idx+2;
 
         // FIXME-OPT: Merge the different loops, possibly remove the temporary buffer.
-        for (int i = 0; i < count; i++)
+        for (int i1 = 0; i1 < count; i1++)
         {
-            const int ni = (i+1) < points_count ? i+1 : 0;
-            const ImVec2& dl0 = temp_normals[i];
-            const ImVec2& dl1 = temp_normals[ni];
-            ImVec2 dm = (dl0 + dl1) * 0.5f;
+            const int i2 = (i1+1) == points_count ? 0 : i1+1; 
+
+            // Average normals
+            const ImVec2& n1 = temp_normals[i1];
+            const ImVec2& n2 = temp_normals[i2];
+            ImVec2 dm = (n1 + n2) * 0.5f;
             float dmr2 = dm.x*dm.x + dm.y*dm.y;
             if (dmr2 > 0.000001f)
             {
@@ -9168,16 +9170,14 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 dm *= scale;
             }
             dm *= AA_SIZE;
-            temp_outer[ni] = points[ni] + dm;
-            temp_inner[ni] = points[ni] - dm;
+            temp_outer[i2] = points[i2] + dm;
+            temp_inner[i2] = points[i2] - dm;
 
             // Add indexes
-            int i3 = i * 3;
-            int ni3 = ni * 3;
-            idx_write[0] = (ImDrawIdx)(vtx_current_idx + ni3); idx_write[1] = (ImDrawIdx)(vtx_current_idx +  i3); idx_write[2] = (ImDrawIdx)(vtx_outer_idx   + i3);
-            idx_write[3] = (ImDrawIdx)(vtx_outer_idx   +  i3); idx_write[4] = (ImDrawIdx)(vtx_outer_idx   + ni3); idx_write[5] = (ImDrawIdx)(vtx_current_idx + ni3);
-            idx_write[6] = (ImDrawIdx)(vtx_inner_idx   + ni3); idx_write[7] = (ImDrawIdx)(vtx_inner_idx   +  i3); idx_write[8] = (ImDrawIdx)(vtx_current_idx + i3);
-            idx_write[9] = (ImDrawIdx)(vtx_current_idx +  i3); idx_write[10]= (ImDrawIdx)(vtx_current_idx + ni3); idx_write[11]= (ImDrawIdx)(vtx_inner_idx   + ni3);
+            idx_write[0] = (ImDrawIdx)(vtx_current_idx + i2*3); idx_write[1] = (ImDrawIdx)(vtx_current_idx + i1*3); idx_write[2] = (ImDrawIdx)(vtx_outer_idx   + i1*3);
+            idx_write[3] = (ImDrawIdx)(vtx_outer_idx   + i1*3); idx_write[4] = (ImDrawIdx)(vtx_outer_idx   + i2*3); idx_write[5] = (ImDrawIdx)(vtx_current_idx + i2*3);
+            idx_write[6] = (ImDrawIdx)(vtx_inner_idx   + i2*3); idx_write[7] = (ImDrawIdx)(vtx_inner_idx   + i1*3); idx_write[8] = (ImDrawIdx)(vtx_current_idx + i1*3);
+            idx_write[9] = (ImDrawIdx)(vtx_current_idx + i1*3); idx_write[10]= (ImDrawIdx)(vtx_current_idx + i2*3); idx_write[11]= (ImDrawIdx)(vtx_inner_idx   + i2*3);
             idx_write += 12;
         }
 
@@ -9198,22 +9198,20 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         const int vtx_count = count*4;      // FIXME-OPT: Not sharing edges
         PrimReserve(idx_count, vtx_count);
 
-        for (int i = 0; i < count; i++)
+        for (int i1 = 0; i1 < count; i1++)
         {
-            const int ni = (i+1) < points_count ? i+1 : 0; 
-            const ImVec2& v0 = points[i];
-            const ImVec2& v1 = points[ni];
-            ImVec2 diff = v1 - v0;
-            float d = ImLengthSqr(diff);
-            if (d > 0)
-                diff *= 1.0f / sqrtf(d);
+            const int i2 = (i1+1) == points_count ? 0 : i1+1; 
+            const ImVec2& p1 = points[i1];
+            const ImVec2& p2 = points[i2];
+            ImVec2 diff = p2 - p1;
+            diff *= ImInvLengthSqr(diff, 1.0f);
 
             const float dx = diff.x * (thickness * 0.5f);
             const float dy = diff.y * (thickness * 0.5f);
-            vtx_write[0].pos.x = v0.x + dy; vtx_write[0].pos.y = v0.y - dx; vtx_write[0].uv = uv; vtx_write[0].col = col;
-            vtx_write[1].pos.x = v1.x + dy; vtx_write[1].pos.y = v1.y - dx; vtx_write[1].uv = uv; vtx_write[1].col = col;
-            vtx_write[2].pos.x = v1.x - dy; vtx_write[2].pos.y = v1.y + dx; vtx_write[2].uv = uv; vtx_write[2].col = col;
-            vtx_write[3].pos.x = v0.x - dy; vtx_write[3].pos.y = v0.y + dx; vtx_write[3].uv = uv; vtx_write[3].col = col;
+            vtx_write[0].pos.x = p1.x + dy; vtx_write[0].pos.y = p1.y - dx; vtx_write[0].uv = uv; vtx_write[0].col = col;
+            vtx_write[1].pos.x = p2.x + dy; vtx_write[1].pos.y = p2.y - dx; vtx_write[1].uv = uv; vtx_write[1].col = col;
+            vtx_write[2].pos.x = p2.x - dy; vtx_write[2].pos.y = p2.y + dx; vtx_write[2].uv = uv; vtx_write[2].col = col;
+            vtx_write[3].pos.x = p1.x - dy; vtx_write[3].pos.y = p1.y + dx; vtx_write[3].uv = uv; vtx_write[3].col = col;
             vtx_write += 4;
 
             idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2); 
@@ -9238,16 +9236,14 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         // Temporary buffer
         GTempPolyData.resize(points_count);
         ImVec2* temp_normals = &GTempPolyData[0];
-        for (int i = 0, j = points_count-1; i < points_count; j = i++)
+        for (int i0 = points_count-1, i1 = 0; i1 < points_count; i0 = i1++)
         {
-            const ImVec2& v0 = points[j];
-            const ImVec2& v1 = points[i];
-            ImVec2 diff = v1 - v0;
-            float d = ImLengthSqr(diff);
-            if (d > 0.0f)
-                diff *= 1.0f/sqrtf(d);
-            temp_normals[j].x = diff.y;
-            temp_normals[j].y = -diff.x;
+            const ImVec2& p0 = points[i0];
+            const ImVec2& p1 = points[i1];
+            ImVec2 diff = p1 - p0;
+            diff *= ImInvLengthSqr(diff, 1.0f);
+            temp_normals[i0].x = diff.y;
+            temp_normals[i0].y = -diff.x;
         }
 
         const ImU32 col_trans = col & 0x00ffffff;
@@ -9264,11 +9260,12 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             idx_write += 3;
         }
 
-        for (int i = 0, j = points_count-1; i < points_count; j = i++)
+        for (int i0 = points_count-1, i1 = 0; i1 < points_count; i0 = i1++)
         {
-            const ImVec2& dl0 = temp_normals[j];
-            const ImVec2& dl1 = temp_normals[i];
-            ImVec2 dm = (dl0 + dl1) * 0.5f;
+            // Average normals
+            const ImVec2& n0 = temp_normals[i0];
+            const ImVec2& n1 = temp_normals[i1];
+            ImVec2 dm = (n0 + n1) * 0.5f;
             float dmr2 = dm.x*dm.x + dm.y*dm.y;
             if (dmr2 > 0.000001f)
             {
@@ -9279,13 +9276,13 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             dm *= AA_SIZE * 0.5f;
 
             // Add vertices
-            vtx_write[0].pos = (points[i] - dm); vtx_write[0].uv = uv; vtx_write[0].col = col;        // Inner
-            vtx_write[1].pos = (points[i] + dm); vtx_write[1].uv = uv; vtx_write[1].col = col_trans;  // Outer
+            vtx_write[0].pos = (points[i1] - dm); vtx_write[0].uv = uv; vtx_write[0].col = col;        // Inner
+            vtx_write[1].pos = (points[i1] + dm); vtx_write[1].uv = uv; vtx_write[1].col = col_trans;  // Outer
             vtx_write += 2;
 
             // Add indexes for fringes
-            idx_write[0] = (ImDrawIdx)(vtx_inner_idx+(i<<1)); idx_write[1] = (ImDrawIdx)(vtx_inner_idx+(j<<1)); idx_write[2] = (ImDrawIdx)(vtx_outer_idx+(j<<1));
-            idx_write[3] = (ImDrawIdx)(vtx_outer_idx+(j<<1)); idx_write[4] = (ImDrawIdx)(vtx_outer_idx+(i<<1)); idx_write[5] = (ImDrawIdx)(vtx_inner_idx+(i<<1));
+            idx_write[0] = (ImDrawIdx)(vtx_inner_idx+(i1<<1)); idx_write[1] = (ImDrawIdx)(vtx_inner_idx+(i0<<1)); idx_write[2] = (ImDrawIdx)(vtx_outer_idx+(i0<<1));
+            idx_write[3] = (ImDrawIdx)(vtx_outer_idx+(i0<<1)); idx_write[4] = (ImDrawIdx)(vtx_outer_idx+(i1<<1)); idx_write[5] = (ImDrawIdx)(vtx_inner_idx+(i1<<1));
             idx_write += 6;
         }
         vtx_current_idx += (ImDrawIdx)vtx_count;
