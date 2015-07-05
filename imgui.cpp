@@ -6,7 +6,6 @@
 
 // ANTI-ALIASED PRIMITIVES BRANCH
 // TODO
-// - settle on where to the 0.5f offset for lines
 // - check-box, slider grabs are not centered properly if you enable border (relate to point above)
 // - support for thickness stroking. recently been added to the ImDrawList API as a convenience.
 
@@ -3972,7 +3971,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
                 window->DrawList->AddRect(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_Border), window_rounding);
                 if (!(flags & ImGuiWindowFlags_NoTitleBar))
-                    window->DrawList->AddLine(title_bar_rect.GetBL()+ImVec2(0.5f,0.5f), title_bar_rect.GetBR()+ImVec2(0.5f,0.5f), window->Color(ImGuiCol_Border));
+                    window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_Border));
             }
 
             // Scrollbar
@@ -7478,7 +7477,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
         // Draw blinking cursor
         ImVec2 cursor_screen_pos = render_pos + cursor_offset - render_scroll;
         if (g.InputTextState.CursorIsVisible())
-            draw_window->DrawList->AddLine(cursor_screen_pos + ImVec2(0.5f,-g.FontSize+1), cursor_screen_pos + ImVec2(0.5f,-1), window->Color(ImGuiCol_Text));
+            draw_window->DrawList->AddLine(cursor_screen_pos + ImVec2(0.0f,-g.FontSize+0.5f), cursor_screen_pos + ImVec2(0.0f,-1.5f), window->Color(ImGuiCol_Text));
         
         // Notify OS of text input position for advanced IME
         if (io.ImeSetInputScreenPosFn && ImLengthSqr(edit_state.InputCursorScreenPos - cursor_screen_pos) > 0.0001f)
@@ -8428,7 +8427,7 @@ void ImGui::Separator()
         return;
     }
 
-    window->DrawList->AddLine(bb.Min+ImVec2(0.0f,0.5f), bb.Max+ImVec2(0.0f,0.5f), window->Color(ImGuiCol_Border));
+    window->DrawList->AddLine(bb.Min, bb.Max, window->Color(ImGuiCol_Border));
 
     ImGuiState& g = *GImGui;
     if (g.LogEnabled)
@@ -8785,7 +8784,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             // Draw before resize so our items positioning are in sync with the line being drawn
             const ImU32 col = window->Color(held ? ImGuiCol_ColumnActive : hovered ? ImGuiCol_ColumnHovered : ImGuiCol_Column);
             const float xi = (float)(int)x;
-            window->DrawList->AddLine(ImVec2(xi+0.5f, y1+1.0f), ImVec2(xi+0.5f, y2), col);
+            window->DrawList->AddLine(ImVec2(xi, y1+1.0f), ImVec2(xi, y2), col);
 
             if (held)
             {
@@ -9384,8 +9383,8 @@ void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thic
 {
     if ((col >> 24) == 0)
         return;
-    PathLineTo(a);
-    PathLineTo(b);
+    PathLineTo(a + ImVec2(0.5f,0.5f));
+    PathLineTo(b + ImVec2(0.5f,0.5f));
     PathStroke(col, thickness, false);
 }
 
