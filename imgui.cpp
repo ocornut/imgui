@@ -766,7 +766,7 @@ static inline float  ImLerp(float a, float b, float t)                          
 static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, const ImVec2& t)  { return ImVec2(a.x + (b.x - a.x) * t.x, a.y + (b.y - a.y) * t.y); }
 static inline float  ImLengthSqr(const ImVec2& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y; }
 static inline float  ImLengthSqr(const ImVec4& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y + lhs.z*lhs.z + lhs.w*lhs.w; }
-static inline float  ImInvLengthSqr(const ImVec2& lhs, float fail_value)        { float d = lhs.x*lhs.x + lhs.y*lhs.y; if (d > 0.0f) return 1.0f / sqrtf(d); return fail_value; }
+static inline float  ImInvLength(const ImVec2& lhs, float fail_value)           { float d = lhs.x*lhs.x + lhs.y*lhs.y; if (d > 0.0f) return 1.0f / sqrtf(d); return fail_value; }
 
 static bool ImIsPointInTriangle(const ImVec2& p, const ImVec2& a, const ImVec2& b, const ImVec2& c)
 {
@@ -9132,7 +9132,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             const ImVec2& p1 = points[i1];
             const ImVec2& p2 = points[i2];
             ImVec2 diff = p2 - p1;
-            diff *= ImInvLengthSqr(diff, 1.0f);
+            diff *= ImInvLength(diff, 1.0f);
             temp_normals[i1].x = diff.y;
             temp_normals[i1].y = -diff.x;
         }
@@ -9204,7 +9204,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             const ImVec2& p1 = points[i1];
             const ImVec2& p2 = points[i2];
             ImVec2 diff = p2 - p1;
-            diff *= ImInvLengthSqr(diff, 1.0f);
+            diff *= ImInvLength(diff, 1.0f);
 
             const float dx = diff.x * (thickness * 0.5f);
             const float dy = diff.y * (thickness * 0.5f);
@@ -9241,7 +9241,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             const ImVec2& p0 = points[i0];
             const ImVec2& p1 = points[i1];
             ImVec2 diff = p1 - p0;
-            diff *= ImInvLengthSqr(diff, 1.0f);
+            diff *= ImInvLength(diff, 1.0f);
             temp_normals[i0].x = diff.y;
             temp_normals[i0].y = -diff.x;
         }
