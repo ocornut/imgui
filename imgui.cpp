@@ -1080,6 +1080,7 @@ struct ImRect           // 2D axis aligned bounding-box
     void        Expand(const ImVec2& amount)        { Min.x -= amount.x; Min.y -= amount.y; Max.x += amount.x; Max.y += amount.y; }
     void        Reduce(const ImVec2& amount)        { Min.x += amount.x; Min.y += amount.y; Max.x -= amount.x; Max.y -= amount.y; }
     void        Clip(const ImRect& clip)            { Min.x = ImMax(Min.x, clip.Min.x); Min.y = ImMax(Min.y, clip.Min.y); Max.x = ImMin(Max.x, clip.Max.x); Max.y = ImMin(Max.y, clip.Max.y); }
+    void        Round()                             { Min.x = (float)(int)Min.x; Min.y = (float)(int)Min.y; Max.x = (float)(int)Max.x; Max.y = (float)(int)Max.y; } 
     ImVec2      GetClosestPoint(ImVec2 p, bool on_edge) const
     {
         if (!on_edge && Contains(p))
@@ -12239,7 +12240,9 @@ void ImGui::ShowMetricsWindow(bool* opened)
                 }
                 if (!node_opened)
                     return;
-                for (const ImDrawCmd* pcmd = draw_list->commands.begin(); pcmd < draw_list->commands.end(); pcmd++)
+
+                int elem_offset = 0;
+                for (const ImDrawCmd* pcmd = draw_list->commands.begin(); pcmd < draw_list->commands.end(); elem_offset += pcmd->elem_count, pcmd++)
                     if (pcmd->user_callback)
                         ImGui::BulletText("Callback %p, user_data %p", pcmd->user_callback, pcmd->user_callback_data);
                     else
@@ -12247,8 +12250,13 @@ void ImGui::ShowMetricsWindow(bool* opened)
                         ImGui::BulletText("Draw %d indexed vtx, tex = %p, clip_rect = (%d,%d)..(%d,%d)", pcmd->elem_count, pcmd->texture_id, (int)pcmd->clip_rect.x, (int)pcmd->clip_rect.y, (int)pcmd->clip_rect.z, (int)pcmd->clip_rect.w);
                         if (show_clip_rects && ImGui::IsItemHovered())
                         {
+                            ImRect clip_rect = pcmd->clip_rect;
+                            ImRect vtxs_rect;
+                            for (int i = elem_offset; i < elem_offset + (int)pcmd->elem_count; i++)
+                                vtxs_rect.Add(draw_list->vtx_buffer[draw_list->idx_buffer[i]].pos);
                             GImGui->OverlayDrawList.PushClipRectFullScreen();
-                            GImGui->OverlayDrawList.AddRect(ImVec2(pcmd->clip_rect.x, pcmd->clip_rect.y), ImVec2(pcmd->clip_rect.z, pcmd->clip_rect.w), ImColor(255,255,0)); 
+                            clip_rect.Round(); GImGui->OverlayDrawList.AddRect(clip_rect.Min, clip_rect.Max, ImColor(255,255,0)); 
+                            vtxs_rect.Round(); GImGui->OverlayDrawList.AddRect(vtxs_rect.Min, vtxs_rect.Max, ImColor(255,0,255)); 
                             GImGui->OverlayDrawList.PopClipRect();
                         }
                     }
