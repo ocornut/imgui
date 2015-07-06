@@ -373,7 +373,6 @@
  - listbox: scrolling should track modified selection.
  - menus: local shortcuts, global shortcuts (#126)
  - menus: icons
- - menus: see we can allow for click-menu-hold-release-on-item to work (like Windows does)
  - menus: menubars: some sort of priority / effect of main menu-bar on desktop size?
  - tabs
  - separator: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
@@ -10995,7 +10994,7 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::TreeNode("Clipping"))
         {
             static ImVec2 size(100, 100), offset(50, 20);
-            ImGui::TextWrapped("On a per-widget basis we are occasionally clipping text if it won't fit in its frame. Otherwise we are doing coarser clipping + passing a scissor rectangle to the renderer. The system is designed to try minimizing both execution and CPU/GPU rendering cost.");
+            ImGui::TextWrapped("On a per-widget basis we are occasionally clipping text CPU-side if it won't fit in its frame. Otherwise we are doing coarser clipping + passing a scissor rectangle to the renderer. The system is designed to try minimizing both execution and CPU/GPU rendering cost.");
             ImGui::DragFloat2("size", (float*)&size, 0.5f, 0.0f, 200.0f, "%.0f");
             ImGui::DragFloat2("offset", (float*)&offset, 0.5f, -200, 200.0f, "%.0f");
             ImVec2 pos = ImGui::GetCursorScreenPos();
