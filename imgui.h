@@ -1038,6 +1038,7 @@ struct ImDrawList
     ImVector<ImDrawIdx>     idx_buffer;         // Index buffer. Each command consume ImDrawCmd::idx_count of those
 
     // [Internal to ImGui]
+    const char*             owner_name;         // Pointer to owner window's name, if any
     ImVector<ImVec4>        clip_rect_stack;    // [Internal]
     ImVector<ImTextureID>   texture_id_stack;   // [Internal] 
     ImVector<ImVec2>        path;				// [Internal] current path building
@@ -1045,7 +1046,7 @@ struct ImDrawList
     unsigned int            vtx_current_idx;    // [Internal] == vtx_buffer.size()
     ImDrawIdx*              idx_write;          // [Internal] point within idx_buffer after each add command (to avoid using the ImVector<> operators too much)
 
-    ImDrawList() { Clear(); }
+    ImDrawList() { owner_name = NULL; Clear(); }
     IMGUI_API void  Clear();
     IMGUI_API void  ClearFreeMemory();
     IMGUI_API void  PushClipRect(const ImVec4& clip_rect);          // Scissoring. The values are x1, y1, x2, y2.
