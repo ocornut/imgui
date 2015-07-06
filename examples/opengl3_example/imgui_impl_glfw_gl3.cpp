@@ -29,11 +29,8 @@ static unsigned int g_VboHandle = 0, g_VaoHandle = 0;
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
+static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
 {
-    if (cmd_lists_count == 0)
-        return;
-
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
     GLint last_program, last_texture;
     glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
@@ -61,11 +58,8 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
     glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
 
     // Grow our buffer according to what we need
-    size_t total_vtx_count = 0;
-    for (int n = 0; n < cmd_lists_count; n++)
-        total_vtx_count += cmd_lists[n]->vtx_buffer.size();
     glBindBuffer(GL_ARRAY_BUFFER, g_VboHandle);
-    size_t needed_vtx_size = total_vtx_count * sizeof(ImDrawVert);
+    size_t needed_vtx_size = draw_data->total_vtx_count * sizeof(ImDrawVert);
     if (g_VboSize < needed_vtx_size)
     {
         g_VboSize = needed_vtx_size + 5000 * sizeof(ImDrawVert);  // Grow buffer
@@ -76,9 +70,9 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
     unsigned char* vtx_data = (unsigned char*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
     if (!vtx_data)
         return;
-    for (int n = 0; n < cmd_lists_count; n++)
+    for (int n = 0; n < draw_data->cmd_lists_count; n++)
     {
-        const ImDrawList* cmd_list = cmd_lists[n];
+        const ImDrawList* cmd_list = draw_data->cmd_lists[n];
         memcpy(vtx_data, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
         vtx_data += cmd_list->vtx_buffer.size() * sizeof(ImDrawVert);
     }
@@ -87,9 +81,9 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawList** const cmd_lists, int 
     glBindVertexArray(g_VaoHandle);
 
     int vtx_offset = 0;
-    for (int n = 0; n < cmd_lists_count; n++)
+    for (int n = 0; n < draw_data->cmd_lists_count; n++)
     {
-        const ImDrawList* cmd_list = cmd_lists[n];
+        const ImDrawList* cmd_list = draw_data->cmd_lists[n];
         const ImDrawIdx* idx_buffer = (const unsigned short*)&cmd_list->idx_buffer.front();
 
         const ImDrawCmd* pcmd_end = cmd_list->commands.end();

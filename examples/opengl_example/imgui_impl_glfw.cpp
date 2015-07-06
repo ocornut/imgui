@@ -23,11 +23,8 @@ static GLuint       g_FontTexture = 0;
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-static void ImGui_ImplGlfw_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
+static void ImGui_ImplGlfw_RenderDrawLists(ImDrawData* draw_data)
 {
-    if (cmd_lists_count == 0)
-        return;
-
     // We are using the OpenGL fixed pipeline to make the example code simpler to read!
     // A probable faster way to render would be to collate all vertices from all cmd_lists into a single vertex buffer.
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
@@ -56,9 +53,9 @@ static void ImGui_ImplGlfw_RenderDrawLists(ImDrawList** const cmd_lists, int cmd
 
     // Render command lists
     #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
-    for (int n = 0; n < cmd_lists_count; n++)
+    for (int n = 0; n < draw_data->cmd_lists_count; n++)
     {
-        const ImDrawList* cmd_list = cmd_lists[n];
+        const ImDrawList* cmd_list = draw_data->cmd_lists[n];
         const unsigned char* vtx_buffer = (const unsigned char*)&cmd_list->vtx_buffer.front();
         const ImDrawIdx* idx_buffer = (const unsigned short*)&cmd_list->idx_buffer.front();
         glVertexPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, pos)));

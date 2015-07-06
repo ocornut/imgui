@@ -141,6 +141,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/07/05 (1.42) - io.RenderDrawListsFn signature changed from RenderDrawListsFn(ImDrawList** const cmd_lists, int cmd_lists_count) to RenderDrawListsFn(ImDrawData*). ImDrawData structure contains 'cmd_lists', 'cmd_lists_count' and more.
  - 2015/07/02 (1.42) - renamed SetScrollPosHere() to SetScrollFromCursorPos(). Kept inline redirection function (will obsolete).
  - 2015/07/02 (1.42) - renamed GetScrollPosY() to GetScrollY(). Necessary to reduce confusion along with other scrolling functions, because positions (e.g. cursor position) are not equivalent to scrolling amount.
  - 2015/06/14 (1.41) - changed ImageButton() default bg_col parameter from (0,0,0,1) (black) to (0,0,0,0) (transparent) - makes a difference when texture have transparence
@@ -2509,7 +2510,14 @@ void ImGui::Render()
 
         // Render
         if (!g.RenderDrawLists[0].empty())
-            g.IO.RenderDrawListsFn(&g.RenderDrawLists[0][0], (int)g.RenderDrawLists[0].size());
+        {
+            ImDrawData data;
+            data.cmd_lists = &g.RenderDrawLists[0][0];
+            data.cmd_lists_count = (int)g.RenderDrawLists[0].size();
+            data.total_vtx_count = g.IO.MetricsRenderVertices;
+            data.total_idx_count = g.IO.MetricsRenderIndices;
+            g.IO.RenderDrawListsFn(&data);
+        }
     }
 }
 

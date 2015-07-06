@@ -30,28 +30,18 @@ struct CUSTOMVERTEX
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
+static void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
 {
-    size_t total_vtx_count = 0;
-    size_t total_idx_count = 0;
-    for (int n = 0; n < cmd_lists_count; n++)
-    {
-        total_vtx_count += cmd_lists[n]->vtx_buffer.size();
-        total_idx_count += cmd_lists[n]->idx_buffer.size();
-    }
-    if (total_vtx_count == 0)
-        return;
-
     // Copy and convert all vertices into a single contiguous buffer
     CUSTOMVERTEX* vtx_dst;
     ImDrawIdx* idx_dst;
-    if (g_pVB->Lock(0, (UINT)(total_vtx_count * sizeof(CUSTOMVERTEX)), (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
+    if (g_pVB->Lock(0, (UINT)(draw_data->total_vtx_count * sizeof(CUSTOMVERTEX)), (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
         return;
-    if (g_pIB->Lock(0, (UINT)(total_idx_count * sizeof(ImDrawIdx)), (void**)&idx_dst, D3DLOCK_DISCARD) < 0)
+    if (g_pIB->Lock(0, (UINT)(draw_data->total_idx_count * sizeof(ImDrawIdx)), (void**)&idx_dst, D3DLOCK_DISCARD) < 0)
         return;
-    for (int n = 0; n < cmd_lists_count; n++)
+    for (int n = 0; n < draw_data->cmd_lists_count; n++)
     {
-        const ImDrawList* cmd_list = cmd_lists[n];
+        const ImDrawList* cmd_list = draw_data->cmd_lists[n];
         const ImDrawVert* vtx_src = &cmd_list->vtx_buffer[0];
         for (size_t i = 0; i < cmd_list->vtx_buffer.size(); i++)
         {
@@ -104,9 +94,9 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
     // Render command lists
     int vtx_offset = 0;
     int idx_offset = 0;
-    for (int n = 0; n < cmd_lists_count; n++)
+    for (int n = 0; n < draw_data->cmd_lists_count; n++)
     {
-        const ImDrawList* cmd_list = cmd_lists[n];
+        const ImDrawList* cmd_list = draw_data->cmd_lists[n];
         for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];

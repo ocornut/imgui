@@ -31,6 +31,7 @@
 // Forward declarations
 struct ImDrawCmd;
 struct ImDrawList;
+struct ImDrawData;
 struct ImFont;
 struct ImFontAtlas;
 struct ImGuiIO;
@@ -670,7 +671,7 @@ struct ImGuiIO
 
     // REQUIRED: rendering function. 
     // See example code if you are unsure of how to implement this.
-    void        (*RenderDrawListsFn)(ImDrawList** const draw_lists, int count);      
+    void        (*RenderDrawListsFn)(ImDrawData* data);      
 
     // Optional: access OS clipboard
     // (default to use native Win32 clipboard on Windows, otherwise uses a private clipboard. Override to access OS clipboard on other architectures)
@@ -981,7 +982,7 @@ struct ImGuiListClipper
 
 //-----------------------------------------------------------------------------
 // Draw List
-// Hold a series of drawing commands. The user provides a renderer for ImDrawList.
+// Hold a series of drawing commands. The user provides a renderer for ImDrawData which essentially contains an array of ImDrawList.
 //-----------------------------------------------------------------------------
 
 // Draw callbacks for advanced uses.
@@ -1085,6 +1086,15 @@ struct ImDrawList
     IMGUI_API void  PrimRectUV(const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col);
     IMGUI_API void  UpdateClipRect();
     IMGUI_API void  UpdateTextureID();
+};
+
+// All draw data to render an ImGui frame
+struct ImDrawData
+{
+    ImDrawList**    cmd_lists;
+    int             cmd_lists_count;
+    int             total_vtx_count;        // For convenience, sum of all cmd_lists vtx_buffer.size()
+    int             total_idx_count;        // For convenience, sum of all cmd_lists idx_buffer.size()
 };
 
 // Load and rasterize multiple TTF fonts into a same texture.
