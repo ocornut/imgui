@@ -620,6 +620,8 @@ ImGuiStyle::ImGuiStyle()
     GrabRounding            = 0.0f;             // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
     DisplayWindowPadding    = ImVec2(22,22);    // Window positions are clamped to be visible within the display area by at least this amount. Only covers regular windows.
     DisplaySafeAreaPadding  = ImVec2(4,4);      // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
+    AntiAliasedLines        = true;             // Enable anti-aliasing on lines/borders. Disable if you are really short on CPU/GPU.
+    AntiAliasedShapes       = true;             // Enable anti-aliasing on filled shapes (rounded rectangles, circles, etc.)
 
     Colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
     Colors[ImGuiCol_TextDisabled]           = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
@@ -9103,6 +9105,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         return;
 
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+    anti_aliased &= GImGui->Style.AntiAliasedLines;
+    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false;
 
     int start = 0, count = points_count;
     if (!closed)
@@ -9110,8 +9114,6 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         start = 1;
         count = points_count-1;
     }
-
-    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false;
 
     if (anti_aliased)
     {
@@ -9221,7 +9223,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col, bool anti_aliased)
 {
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
-
+    anti_aliased &= GImGui->Style.AntiAliasedShapes;
     //if (ImGui::GetIO().KeyCtrl) anti_aliased = false;
 
     if (anti_aliased)
@@ -10820,6 +10822,13 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     }
 
     ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.55f);
+
+    if (ImGui::TreeNode("Rendering"))
+    {
+        ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines);
+        ImGui::Checkbox("Anti-aliased shapes", &style.AntiAliasedShapes);
+        ImGui::TreePop();
+    }
 
     if (ImGui::TreeNode("Sizes"))
     {
