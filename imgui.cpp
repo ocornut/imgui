@@ -9095,8 +9095,6 @@ void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a
     idx_write += 6;
 }
 
-static ImVector<ImVec2> GTempPolyData;
-
 void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, bool closed, bool anti_aliased)
 {
     (void)thickness; // Unsupported
@@ -9119,10 +9117,15 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     {
         // Anti-aliased stroke
         const float AA_SIZE = 1.0f;
+        const ImU32 col_trans = col & 0x00ffffff;
+        const int idx_count = count*12;
+        const int vtx_count = points_count*3;
+        PrimReserve(idx_count, vtx_count);
+        unsigned int vtx_inner_idx = vtx_current_idx+1;
+        unsigned int vtx_outer_idx = vtx_current_idx+2;
 
         // Temporary buffer
-        GTempPolyData.resize(points_count * 3);
-        ImVec2* temp_inner = &GTempPolyData[0];
+        ImVec2* temp_inner = (ImVec2*)alloca(points_count * 3 * sizeof(ImVec2));
         ImVec2* temp_outer = temp_inner + points_count;
         ImVec2* temp_normals = temp_inner + points_count * 2;
 
@@ -9145,13 +9148,6 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             temp_outer[points_count-1] = points[points_count-1] + temp_normals[points_count-1] * AA_SIZE;
             temp_inner[points_count-1] = points[points_count-1] - temp_normals[points_count-1] * AA_SIZE;
         }
-
-        const ImU32 col_trans = col & 0x00ffffff;
-        const int idx_count = count*12;
-        const int vtx_count = points_count*3;
-        PrimReserve(idx_count, vtx_count);
-        unsigned int vtx_inner_idx = vtx_current_idx+1;
-        unsigned int vtx_outer_idx = vtx_current_idx+2;
 
         // FIXME-OPT: Merge the different loops, possibly remove the temporary buffer.
         for (int i1 = 0; i1 < count; i1++)
