@@ -9232,20 +9232,6 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     {
         // Anti-aliased Fill
         const float AA_SIZE = 1.0f;
-
-        // Temporary buffer
-        GTempPolyData.resize(points_count);
-        ImVec2* temp_normals = &GTempPolyData[0];
-        for (int i0 = points_count-1, i1 = 0; i1 < points_count; i0 = i1++)
-        {
-            const ImVec2& p0 = points[i0];
-            const ImVec2& p1 = points[i1];
-            ImVec2 diff = p1 - p0;
-            diff *= ImInvLength(diff, 1.0f);
-            temp_normals[i0].x = diff.y;
-            temp_normals[i0].y = -diff.x;
-        }
-
         const ImU32 col_trans = col & 0x00ffffff;
         const int idx_count = (points_count-2)*3 + points_count*6;
         const int vtx_count = (points_count*2);
@@ -9258,6 +9244,18 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         {
             idx_write[0] = (ImDrawIdx)(vtx_inner_idx); idx_write[1] = (ImDrawIdx)(vtx_inner_idx+((i-1)<<1)); idx_write[2] = (ImDrawIdx)(vtx_inner_idx+(i<<1));
             idx_write += 3;
+        }
+
+        // Compute normals
+        ImVec2* temp_normals = (ImVec2*)alloca(points_count * sizeof(ImVec2));
+        for (int i0 = points_count-1, i1 = 0; i1 < points_count; i0 = i1++)
+        {
+            const ImVec2& p0 = points[i0];
+            const ImVec2& p1 = points[i1];
+            ImVec2 diff = p1 - p0;
+            diff *= ImInvLength(diff, 1.0f);
+            temp_normals[i0].x = diff.y;
+            temp_normals[i0].y = -diff.x;
         }
 
         for (int i0 = points_count-1, i1 = 0; i1 < points_count; i0 = i1++)
