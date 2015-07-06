@@ -141,7 +141,19 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
- - 2015/07/05 (1.42) - io.RenderDrawListsFn signature changed from RenderDrawListsFn(ImDrawList** const cmd_lists, int cmd_lists_count) to RenderDrawListsFn(ImDrawData*). ImDrawData structure contains 'cmd_lists', 'cmd_lists_count' and more.
+ - 2015/07/05 (1.42) - switched rendering data to use indexed rendering. this is saving a fair amount of CPU/GPU and enables us to get anti-aliasing for a marginal cost.
+                       this necessary change will break your rendering function! the fix should be very easy.
+                     - if you are using a vanilla copy of one of the imgui_impl_XXXX.cpp provided in the example, you just need to update your copy and you can ignore the rest.
+                     - the signature of io.RenderDrawListsFn has changed! 
+                            ImGui_XXXX_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
+                       became:
+                            ImGui_XXXX_RenderDrawLists(ImDrawData* draw_data). 
+                     - the ImDrawData structure contains 'cmd_lists', 'cmd_lists_count' and more (that were previously passed as parameters).
+                     - the ImDrawList and ImDrawCmd structures also have changed to allow for indexed rendering.
+                       each ImDrawList now contains both a vertex buffer (vtx_buffer) and an index buffer (idx_buffer).
+                       renamed the 'vtx_count' field of ImDrawCmd to 'elem_count' to reflect this. Render 'elem_count' (multiple of 3) using indices from the index buffer.
+                     - if you REALLY cannot render indexed primitives, you can call the draw_data->DeIndexAllBuffers() method to de-index your buffer. This is slow and a waste of CPU/GPU. Prefer using indexed rendering!
+                     - refer to code in the examples/ folder or ask on the github if you are unsure of how to upgrade.
  - 2015/07/02 (1.42) - renamed SetScrollPosHere() to SetScrollFromCursorPos(). Kept inline redirection function (will obsolete).
  - 2015/07/02 (1.42) - renamed GetScrollPosY() to GetScrollY(). Necessary to reduce confusion along with other scrolling functions, because positions (e.g. cursor position) are not equivalent to scrolling amount.
  - 2015/06/14 (1.41) - changed ImageButton() default bg_col parameter from (0,0,0,1) (black) to (0,0,0,0) (transparent) - makes a difference when texture have transparence
