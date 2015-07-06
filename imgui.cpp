@@ -1890,7 +1890,7 @@ static inline void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_lis
 {
     if (!draw_list->commands.empty() && !draw_list->vtx_buffer.empty())
     {
-        if (draw_list->commands.back().idx_count == 0)
+        if (draw_list->commands.back().elem_count == 0)
             draw_list->commands.pop_back();
         out_render_list.push_back(draw_list);
         GImGui->IO.MetricsRenderVertices += (int)draw_list->vtx_buffer.size();
@@ -8965,7 +8965,7 @@ void ImDrawList::ClearFreeMemory()
 void ImDrawList::AddDrawCmd()
 {
     ImDrawCmd draw_cmd;
-    draw_cmd.idx_count = 0;
+    draw_cmd.elem_count = 0;
     draw_cmd.clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
     draw_cmd.texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
     draw_cmd.user_callback = NULL;
@@ -8978,7 +8978,7 @@ void ImDrawList::AddDrawCmd()
 void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
 {
     ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
-    if (!current_cmd || current_cmd->idx_count != 0 || current_cmd->user_callback != NULL)
+    if (!current_cmd || current_cmd->elem_count != 0 || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
         current_cmd = &commands.back();
@@ -8994,7 +8994,7 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
 void ImDrawList::UpdateClipRect()
 {
     ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
-    if (!current_cmd || (current_cmd->idx_count != 0) || current_cmd->user_callback != NULL)
+    if (!current_cmd || (current_cmd->elem_count != 0) || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
     }
@@ -9035,7 +9035,7 @@ void ImDrawList::UpdateTextureID()
 {
     ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
     const ImTextureID texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
-    if (!current_cmd || (current_cmd->idx_count != 0 && current_cmd->texture_id != texture_id) || current_cmd->user_callback != NULL)
+    if (!current_cmd || (current_cmd->elem_count != 0 && current_cmd->texture_id != texture_id) || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
     }
@@ -9061,7 +9061,7 @@ void ImDrawList::PopTextureID()
 void ImDrawList::PrimReserve(unsigned int idx_count, unsigned int vtx_count)
 {
     ImDrawCmd& draw_cmd = commands.back();
-    draw_cmd.idx_count += idx_count;
+    draw_cmd.elem_count += idx_count;
         
     size_t vtx_buffer_size = vtx_buffer.size();
     vtx_buffer.resize(vtx_buffer_size + vtx_count);
@@ -9480,7 +9480,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     idx_buffer.resize((size_t)(idx_write - &idx_buffer.front()));
     unsigned int vtx_unused = vtx_count_max - (unsigned int)(vtx_buffer.size() - vtx_begin);
     unsigned int idx_unused = idx_count_max - (unsigned int)(idx_buffer.size() - idx_begin);
-    commands.back().idx_count -= idx_unused;
+    commands.back().elem_count -= idx_unused;
     vtx_write -= vtx_unused;
     idx_write -= idx_unused;
     vtx_current_idx = (ImDrawIdx)vtx_buffer.size();
@@ -12208,7 +12208,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
                     if (pcmd->user_callback)
                         ImGui::BulletText("Callback %p, user_data %p", pcmd->user_callback, pcmd->user_callback_data);
                     else
-                        ImGui::BulletText("Draw %d indexed vtx, tex = %p", pcmd->idx_count, pcmd->texture_id);
+                        ImGui::BulletText("Draw %d indexed vtx, tex = %p", pcmd->elem_count, pcmd->texture_id);
                 ImGui::TreePop();
             }
 

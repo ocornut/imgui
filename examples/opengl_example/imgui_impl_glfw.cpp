@@ -73,9 +73,9 @@ static void ImGui_ImplGlfw_RenderDrawLists(ImDrawData* draw_data)
             {
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->texture_id);
                 glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
-                glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->idx_count, GL_UNSIGNED_SHORT, idx_buffer);
+                glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->elem_count, GL_UNSIGNED_SHORT, idx_buffer);
             }
-            idx_buffer += pcmd->idx_count;
+            idx_buffer += pcmd->elem_count;
         }
     }
     #undef OFFSETOF

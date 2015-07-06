@@ -131,9 +131,9 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
                 const D3D11_RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
                 g_pd3dDeviceContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->texture_id);
                 g_pd3dDeviceContext->RSSetScissorRects(1, &r); 
-                g_pd3dDeviceContext->DrawIndexed(pcmd->idx_count, idx_offset, vtx_offset);
+                g_pd3dDeviceContext->DrawIndexed(pcmd->elem_count, idx_offset, vtx_offset);
             }
-            idx_offset += pcmd->idx_count;
+            idx_offset += pcmd->elem_count;
         }
         vtx_offset += (int)cmd_list->vtx_buffer.size();
     }
