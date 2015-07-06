@@ -6,7 +6,7 @@
 
 // ANTI-ALIASED PRIMITIVES BRANCH
 // TODO
-// - Clean up and optimise AddPolyline() which become an ugly mess.
+// - Redesign parameters passed to RenderFn ImDrawList etc.
 // - Support for thickness stroking. recently been added to the ImDrawList API as a convenience.
 
 /*
@@ -9326,7 +9326,10 @@ void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int amin, int
     {
         path.reserve(path.size() + (amax - amin + 1));
         for (int a = amin; a <= amax; a++)
-            path.push_back(centre + circle_vtx[a % circle_vtx_count] * radius);
+        {
+            const ImVec2& c = circle_vtx[a % circle_vtx_count];
+            path.push_back(ImVec2(centre.x + c.x * radius, centre.y + c.y * radius));
+        }
     }
 }
 
@@ -9338,7 +9341,7 @@ void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float amin, float
     for (int i = 0; i <= num_segments; i++)
     {
         const float a = amin + ((float)i / (float)num_segments) * (amax - amin);
-        path.push_back(centre + ImVec2(cosf(a + IM_PI) * radius, sinf(a + IM_PI) * radius));
+        path.push_back(ImVec2(centre.x + cosf(a + IM_PI) * radius, centre.y + sinf(a + IM_PI) * radius));
     }
 }
 
