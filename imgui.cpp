@@ -1003,19 +1003,21 @@ enum ImGuiLayoutType_
 enum ImGuiButtonFlags_
 {
     ImGuiButtonFlags_Repeat             = 1 << 0,
-    ImGuiButtonFlags_PressedOnClick     = 1 << 1,
-    ImGuiButtonFlags_FlattenChilds      = 1 << 2,
-    ImGuiButtonFlags_DontClosePopups    = 1 << 3,
-    ImGuiButtonFlags_Disabled           = 1 << 4,
-    ImGuiButtonFlags_AlignTextBaseLine  = 1 << 5
+    ImGuiButtonFlags_PressedOnClick     = 1 << 1,   // return pressed on click only (default requires click+release)
+    ImGuiButtonFlags_PressedOnRelease   = 1 << 2,   // return pressed on release only (default requires click+release)
+    ImGuiButtonFlags_FlattenChilds      = 1 << 3,
+    ImGuiButtonFlags_DontClosePopups    = 1 << 4,
+    ImGuiButtonFlags_Disabled           = 1 << 5,
+    ImGuiButtonFlags_AlignTextBaseLine  = 1 << 6
 };
 
 enum ImGuiSelectableFlagsPrivate_
 {
     // NB: need to be in sync with last value of ImGuiSelectableFlags_
-    ImGuiSelectableFlags_MenuItem           = 1 << 2,
-    ImGuiSelectableFlags_Disabled           = 1 << 3,
-    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 4
+    ImGuiSelectableFlags_Menu               = 1 << 2,
+    ImGuiSelectableFlags_MenuItem           = 1 << 3,
+    ImGuiSelectableFlags_Disabled           = 1 << 4,
+    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 5
 };
 
 
@@ -5156,6 +5158,11 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                 }
                 FocusWindow(window);
             }
+            else if (g.IO.MouseReleased[0] && (flags & ImGuiButtonFlags_PressedOnRelease))
+            {
+                pressed = true;
+                SetActiveId(0);
+            }
             else if ((flags & ImGuiButtonFlags_Repeat) && g.ActiveId == id && ImGui::IsMouseClicked(0, true))
             {
                 pressed = true;
@@ -7878,8 +7885,12 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         return false;
     }
 
+    ImGuiButtonFlags button_flags = 0;
+    if (flags & ImGuiSelectableFlags_Menu) button_flags |= ImGuiButtonFlags_PressedOnClick;
+    if (flags & ImGuiSelectableFlags_MenuItem) button_flags |= ImGuiButtonFlags_PressedOnClick|ImGuiButtonFlags_PressedOnRelease;
+    if (flags & ImGuiSelectableFlags_Disabled) button_flags |= ImGuiButtonFlags_Disabled;
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true, ((flags & ImGuiSelectableFlags_MenuItem) ? ImGuiButtonFlags_PressedOnClick : 0) | ((flags & ImGuiSelectableFlags_Disabled) ? ImGuiButtonFlags_Disabled : 0));
+    bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, true, button_flags);
     if (flags & ImGuiSelectableFlags_Disabled)
         selected = false;
 
@@ -8137,7 +8148,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
         float w = label_size.x;
-        pressed = ImGui::Selectable(label, opened, ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(w, 0.0f));
+        pressed = ImGui::Selectable(label, opened, ImGuiSelectableFlags_Menu | ImGuiSelectableFlags_DontClosePopups | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(w, 0.0f));
         ImGui::PopStyleVar();
         ImGui::SameLine();
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
@@ -8147,7 +8158,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
         float w = window->MenuColumns.DeclColumns(label_size.x, 0.0f, (float)(int)(g.FontSize * 1.20f)); // Feedback to next frame
         float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
-        pressed = ImGui::Selectable(label, opened, ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DontClosePopups | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(w, 0.0f));
+        pressed = ImGui::Selectable(label, opened, ImGuiSelectableFlags_Menu | ImGuiSelectableFlags_DontClosePopups | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(w, 0.0f));
         if (!enabled) ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
         RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), false);
         if (!enabled) ImGui::PopStyleColor();
