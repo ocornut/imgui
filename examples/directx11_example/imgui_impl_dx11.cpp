@@ -29,8 +29,8 @@ static ID3D11SamplerState*      g_pFontSampler = NULL;
 static ID3D11ShaderResourceView*g_pFontTextureView = NULL;
 static ID3D11RasterizerState*   g_pRasterizerState = NULL;
 static ID3D11BlendState*        g_pBlendState = NULL;
-static int                      VERTEX_BUFFER_SIZE = 30000;     // TODO: Make buffers smaller and grow dynamically as needed.
-static int                      INDEX_BUFFER_SIZE = 30000;      // TODO: Make buffers smaller and grow dynamically as needed.
+static int                      VERTEX_BUFFER_SIZE = 20000;     // TODO: Make buffers smaller and grow dynamically as needed.
+static int                      INDEX_BUFFER_SIZE = 40000;      // TODO: Make buffers smaller and grow dynamically as needed.
 
 struct VERTEX_CONSTANT_BUFFER
 {

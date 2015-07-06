@@ -16,8 +16,8 @@ static INT64                    g_TicksPerSecond = 0;
 static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
 static LPDIRECT3DVERTEXBUFFER9  g_pVB = NULL;
 static LPDIRECT3DINDEXBUFFER9   g_pIB = NULL;
-static int                      VERTEX_BUFFER_SIZE = 30000;     // TODO: Make buffers smaller and grow dynamically as needed.
-static int                      INDEX_BUFFER_SIZE = 30000;      // TODO: Make buffers smaller and grow dynamically as needed.
+static int                      VERTEX_BUFFER_SIZE = 20000;     // TODO: Make buffers smaller and grow dynamically as needed.
+static int                      INDEX_BUFFER_SIZE = 40000;      // TODO: Make buffers smaller and grow dynamically as needed.
 
 struct CUSTOMVERTEX
 {
@@ -45,9 +45,9 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
     // Copy and convert all vertices into a single contiguous buffer
     CUSTOMVERTEX* vtx_dst;
     ImDrawIdx* idx_dst;
-    if (g_pVB->Lock(0, (UINT)total_vtx_count, (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
+    if (g_pVB->Lock(0, (UINT)(total_vtx_count * sizeof(CUSTOMVERTEX)), (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
         return;
-    if (g_pIB->Lock(0, (UINT)total_idx_count, (void**)&idx_dst, D3DLOCK_DISCARD) < 0)
+    if (g_pIB->Lock(0, (UINT)(total_idx_count * sizeof(ImDrawIdx)), (void**)&idx_dst, D3DLOCK_DISCARD) < 0)
         return;
     for (int n = 0; n < cmd_lists_count; n++)
     {
