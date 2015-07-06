@@ -985,7 +985,7 @@ struct ImGuiListClipper
 //-----------------------------------------------------------------------------
 
 // Draw callbacks for advanced uses.
-// NB- You most likely DO NOT need to care about draw callbacks just to create your own widget or customized UI rendering (you can poke into the draw list for that)
+// NB- You most likely do NOT need to use draw callbacks just to create your own widget or customized UI rendering (you can poke into the draw list for that)
 // Draw callback are useful for example if you want to render a complex 3D scene inside a UI element.
 // The expected behavior from your rendering loop is:
 //   if (cmd.user_callback != NULL)
@@ -1001,7 +1001,7 @@ struct ImDrawCmd
     unsigned int    idx_count;                  // Number of indices (multiple of 3) to be rendered as triangles. Vertices are stored in the callee ImDrawList's vtx_buffer[] array, indices in idx_buffer[].
     ImVec4          clip_rect;                  // Clipping rectangle (x1, y1, x2, y2)
     ImTextureID     texture_id;                 // User-provided texture ID. Set by user in ImfontAtlas::SetTexID() for fonts or passed to Image*() functions. Ignore if never using images or multiple fonts atlas.
-    ImDrawCallback  user_callback;              // If != NULL, call the function instead of rendering the vertices. vtx_count will be 0. clip_rect and texture_id will be set normally.
+    ImDrawCallback  user_callback;              // If != NULL, call the function instead of rendering the vertices. clip_rect and texture_id will be set normally.
     void*           user_callback_data;         // The draw callback code can access this.
 };
 
@@ -1040,7 +1040,7 @@ struct ImDrawList
     // [Internal to ImGui]
     ImVector<ImVec4>        clip_rect_stack;    // [Internal]
     ImVector<ImTextureID>   texture_id_stack;   // [Internal] 
-    ImVector<ImVec2>        path;				// [Internal]
+    ImVector<ImVec2>        path;				// [Internal] current path building
     ImDrawVert*             vtx_write;          // [Internal] point within vtx_buffer after each add command (to avoid using the ImVector<> operators too much)
     unsigned int            vtx_current_idx;    // [Internal] == vtx_buffer.size()
     ImDrawIdx*              idx_write;          // [Internal] point within idx_buffer after each add command (to avoid using the ImVector<> operators too much)
@@ -1066,7 +1066,7 @@ struct ImDrawList
     IMGUI_API void  AddPolyline(const ImVec2* points, const int num_points, ImU32 col, float thickness, bool closed, bool anti_aliased);
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, const int num_points, ImU32 col, bool anti_aliased);
 
-    // Stateful path API, add points finish with PathFill() or PathStroke(). Only convex shapes supported.
+    // Stateful path API, add points then finish with PathFill() or PathStroke()
     inline    void  PathClear()                                                 { path.resize(0); }
     inline    void  PathLineTo(const ImVec2& p)                                 { path.push_back(p); }
     IMGUI_API void  PathArcToFast(const ImVec2& centre, float radius, int a_min, int a_max);

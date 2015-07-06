@@ -2444,7 +2444,7 @@ void ImGui::Render()
     }
 
     // Skip render altogether if alpha is 0.0
-    // Note that vertex buffers have been created, so it is best practice that you don't create windows in the first place, or respond to Begin() returning false
+    // Note that vertex buffers have been created and are wasted, so it is best practice that you don't create windows in the first place, or respond to Begin() returning false.
     if (g.Style.Alpha > 0.0f)
     {
         // Render tooltip
@@ -2464,7 +2464,7 @@ void ImGui::Render()
             ImGuiWindow* window = g.Windows[i];
             if (window->Active && window->HiddenFrames <= 0 && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0)
             {
-                // FIXME: Generalize this with a proper layering system so we can stack.
+                // FIXME: Generalize this with a proper layering system so e.g. user can draw in specific layers, below text, ..
                 g.IO.MetricsActiveWindows++;
                 if (window->Flags & ImGuiWindowFlags_Popup)
                     AddWindowToRenderList(g.RenderDrawLists[1], window);
