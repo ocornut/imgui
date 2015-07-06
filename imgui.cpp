@@ -1308,10 +1308,8 @@ struct ImGuiState
     // Render
     ImVector<ImDrawList*>   RenderDrawLists[3];
     float                   ModalWindowDarkeningRatio;
-
-    // Mouse cursor
+    ImDrawList              OverlayDrawList;                    // Optional software render of mouse cursors, if io.MouseDrawCursor is set + a few debug overlays
     ImGuiMouseCursor        MouseCursor;
-    ImDrawList              MouseCursorDrawList;                // Optional software render of mouse cursors, if io.MouseDrawCursor is set
     ImGuiMouseCursorData    MouseCursorData[ImGuiMouseCursor_Count_];
 
     // Widget state
@@ -1391,6 +1389,7 @@ struct ImGuiState
         PrivateClipboard = NULL;
 
         ModalWindowDarkeningRatio = 0.0f;
+        OverlayDrawList.owner_name = "##Overlay"; // Give it a name for debugging
         MouseCursor = ImGuiMouseCursor_Arrow;
 
         LogEnabled = false;
@@ -1811,6 +1810,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
 
     DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
     new(DrawList) ImDrawList();
+    DrawList->owner_name = Name;
     RootWindow = NULL;
     RootNonPopupWindow = NULL;
 
@@ -2101,6 +2101,7 @@ void ImGui::NewFrame()
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
     g.Tooltip[0] = '\0';
+    g.OverlayDrawList.Clear();
 
     // Update inputs state
     if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0)
@@ -2241,9 +2242,7 @@ void ImGui::NewFrame()
     // Pressing TAB activate widget focus
     // NB: Don't discard FocusedWindow if it isn't active, so that a window that go on/off programatically won't lose its keyboard focus.
     if (g.ActiveId == 0 && g.FocusedWindow != NULL && g.FocusedWindow->Active && IsKeyPressedMap(ImGuiKey_Tab, false))
-    {
         g.FocusedWindow->FocusIdxTabRequestNext = 0;
-    }
 
     // Mark all windows as not visible
     for (size_t i = 0; i != g.Windows.size(); i++)
@@ -2295,7 +2294,7 @@ void ImGui::Shutdown()
     g.CurrentPopupStack.clear();
     for (size_t i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
         g.RenderDrawLists[i].clear();
-    g.MouseCursorDrawList.ClearFreeMemory();
+    g.OverlayDrawList.ClearFreeMemory();
     g.ColorEditModeStorage.Clear();
     if (g.PrivateClipboard)
     {
@@ -2490,15 +2489,15 @@ void ImGui::Render()
             const ImVec2 pos = g.IO.MousePos - cursor_data.Offset;
             const ImVec2 size = cursor_data.Size;
             const ImTextureID tex_id = g.IO.Fonts->TexID;
-            g.MouseCursorDrawList.Clear();
-            g.MouseCursorDrawList.PushTextureID(tex_id);
-            g.MouseCursorDrawList.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, cursor_data.TexUvMin[1], cursor_data.TexUvMax[1], 0x30000000); // Shadow
-            g.MouseCursorDrawList.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, cursor_data.TexUvMin[1], cursor_data.TexUvMax[1], 0x30000000); // Shadow
-            g.MouseCursorDrawList.AddImage(tex_id, pos,             pos + size,             cursor_data.TexUvMin[1], cursor_data.TexUvMax[1], 0xFF000000); // Black border
-            g.MouseCursorDrawList.AddImage(tex_id, pos,             pos + size,             cursor_data.TexUvMin[0], cursor_data.TexUvMax[0], 0xFFFFFFFF); // White fill
-            g.MouseCursorDrawList.PopTextureID();
-            AddDrawListToRenderList(g.RenderDrawLists[0], &g.MouseCursorDrawList);
+            g.OverlayDrawList.PushTextureID(tex_id);
+            g.OverlayDrawList.AddImage(tex_id, pos+ImVec2(1,0), pos+ImVec2(1,0) + size, cursor_data.TexUvMin[1], cursor_data.TexUvMax[1], 0x30000000); // Shadow
+            g.OverlayDrawList.AddImage(tex_id, pos+ImVec2(2,0), pos+ImVec2(2,0) + size, cursor_data.TexUvMin[1], cursor_data.TexUvMax[1], 0x30000000); // Shadow
+            g.OverlayDrawList.AddImage(tex_id, pos,             pos + size,             cursor_data.TexUvMin[1], cursor_data.TexUvMax[1], 0xFF000000); // Black border
+            g.OverlayDrawList.AddImage(tex_id, pos,             pos + size,             cursor_data.TexUvMin[0], cursor_data.TexUvMax[0], 0xFFFFFFFF); // White fill
+            g.OverlayDrawList.PopTextureID();
         }
+        if (!g.OverlayDrawList.vtx_buffer.empty())
+            AddDrawListToRenderList(g.RenderDrawLists[0], &g.OverlayDrawList);
 
         // Render
         if (!g.RenderDrawLists[0].empty())
@@ -12011,13 +12010,15 @@ void ImGui::ShowMetricsWindow(bool* opened)
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::Text("%d vertices", ImGui::GetIO().MetricsRenderVertices);
         ImGui::Text("%d allocations", ImGui::GetIO().MetricsAllocs);
+        static bool show_clip_rects = false;
+        ImGui::Checkbox("Show clipping rectangles when hovering ImDrawList", &show_clip_rects);
         ImGui::Separator();
 
         struct Funcs
         {
             static void NodeDrawList(ImDrawList* draw_list, const char* label)
             {
-                bool node_opened = ImGui::TreeNode(draw_list, "%s: %d vtx, %d cmds", label, draw_list->vtx_buffer.size(), draw_list->commands.size());
+                bool node_opened = ImGui::TreeNode(draw_list, "%s: '%s' %d vtx, %d cmds", label, draw_list->owner_name ? draw_list->owner_name : "", draw_list->vtx_buffer.size(), draw_list->commands.size());
                 if (draw_list == ImGui::GetWindowDrawList())
                 {
                     ImGui::SameLine();
@@ -12029,7 +12030,15 @@ void ImGui::ShowMetricsWindow(bool* opened)
                     if (pcmd->user_callback)
                         ImGui::BulletText("Callback %p, user_data %p", pcmd->user_callback, pcmd->user_callback_data);
                     else
-                        ImGui::BulletText("Draw %d vtx, tex = %p", pcmd->vtx_count, pcmd->texture_id);
+                    {
+                        ImGui::BulletText("Draw %d vtx, tex = %p, clip_rect = (%d,%d)..(%d,%d)", pcmd->vtx_count, pcmd->texture_id, (int)pcmd->clip_rect.x, (int)pcmd->clip_rect.y, (int)pcmd->clip_rect.z, (int)pcmd->clip_rect.w);
+                        if (show_clip_rects && ImGui::IsItemHovered())
+                        {
+                            GImGui->OverlayDrawList.PushClipRectFullScreen();
+                            GImGui->OverlayDrawList.AddRect(ImVec2(pcmd->clip_rect.x, pcmd->clip_rect.y), ImVec2(pcmd->clip_rect.z, pcmd->clip_rect.w), ImColor(255,255,0)); 
+                            GImGui->OverlayDrawList.PopClipRect();
+                        }
+                    }
                 ImGui::TreePop();
             }
 
