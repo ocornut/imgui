@@ -9414,19 +9414,6 @@ void    ImFontAtlas::Clear()
     ClearFonts();
 }
 
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-void ImGui::GetDefaultFontData(const void** fnt_data, unsigned int* fnt_size, const void** png_data, unsigned int* png_size)
-{
-    printf("GetDefaultFontData() is obsoleted in ImGui 1.30.\n");
-    printf("Please use ImGui::GetIO().Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8() functions to retrieve uncompressed texture data.\n");
-    if (fnt_data) *fnt_data = NULL;
-    if (fnt_size) *fnt_size = 0;
-    if (png_data) *png_data = NULL;
-    if (png_size) *png_size = 0;
-    IM_ASSERT(false);
-}
-#endif
-
 void    ImFontAtlas::GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
 {
     // Lazily build
