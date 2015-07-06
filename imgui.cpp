@@ -5102,7 +5102,7 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window)
 {
     // An active popup disable hovering on other windows (apart from its own children)
     ImGuiState& g = *GImGui;
-   if (ImGuiWindow* focused_window = g.FocusedWindow)
+    if (ImGuiWindow* focused_window = g.FocusedWindow)
         if (ImGuiWindow* focused_root_window = focused_window->RootWindow)
             if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasActive && focused_root_window != window->RootWindow)
                 return false;
@@ -6572,7 +6572,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
 
     // Tooltip on hover
     int v_hovered = -1;
-    if (IsMouseHoveringRect(inner_bb))
+    if (IsHovered(inner_bb, 0))
     {
         const float t = ImClamp((g.IO.MousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x), 0.0f, 0.9999f);
         const int v_idx = (int)(t * (values_count + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0)));
