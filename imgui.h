@@ -1095,6 +1095,9 @@ struct ImDrawData
     int             cmd_lists_count;
     int             total_vtx_count;        // For convenience, sum of all cmd_lists vtx_buffer.size()
     int             total_idx_count;        // For convenience, sum of all cmd_lists idx_buffer.size()
+
+    // Functions
+    void DeIndexAllBuffers();               // For backward compatibility: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
 };
 
 // Load and rasterize multiple TTF fonts into a same texture.

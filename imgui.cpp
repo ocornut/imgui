@@ -9504,6 +9504,29 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
 }
 
 //-----------------------------------------------------------------------------
+// ImDrawData
+//-----------------------------------------------------------------------------
+
+// For backward compatibility: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
+void ImDrawData::DeIndexAllBuffers()
+{
+    ImVector<ImDrawVert> new_vtx_buffer;
+    total_vtx_count = total_idx_count = 0;
+    for (int i = 0; i < cmd_lists_count; i++)
+    {
+        ImDrawList* cmd_list = cmd_lists[i];
+        if (cmd_list->idx_buffer.empty())
+            continue;
+        new_vtx_buffer.resize(cmd_list->idx_buffer.size());
+        for (size_t i = 0; i < cmd_list->idx_buffer.size(); i++)
+            new_vtx_buffer[i] = cmd_list->vtx_buffer[cmd_list->idx_buffer[i]];
+        cmd_list->vtx_buffer.swap(new_vtx_buffer);
+        cmd_list->idx_buffer.resize(0);
+        total_vtx_count += (int)cmd_list->vtx_buffer.size();
+    }
+}
+
+//-----------------------------------------------------------------------------
 // ImFontAtlias
 //-----------------------------------------------------------------------------
 
