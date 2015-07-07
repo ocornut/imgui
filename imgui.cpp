@@ -8798,10 +8798,8 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
         for (int i = 1; i < window->DC.ColumnsCount; i++)
         {
             float x = window->Pos.x + GetColumnOffset(i);
-            
             const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(i);
             const ImRect column_rect(ImVec2(x-4,y1),ImVec2(x+4,y2));
-
             if (IsClippedEx(column_rect, &column_id, false))
                 continue;
 
@@ -8996,7 +8994,7 @@ void ImDrawList::AddDrawCmd()
 
 void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
 {
-    ImDrawCmd* current_cmd = cmd_buffer.empty() ? NULL : &cmd_buffer.back();
+    ImDrawCmd* current_cmd = cmd_buffer.Size ? &cmd_buffer.back() : NULL;
     if (!current_cmd || current_cmd->elem_count != 0 || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
@@ -9012,15 +9010,15 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
 
 void ImDrawList::UpdateClipRect()
 {
-    ImDrawCmd* current_cmd = cmd_buffer.empty() ? NULL : &cmd_buffer.back();
+    ImDrawCmd* current_cmd = cmd_buffer.Size ? &cmd_buffer.back() : NULL;
     if (!current_cmd || (current_cmd->elem_count != 0) || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
     }
     else
     {
-        ImVec4 current_clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
-        if (cmd_buffer.Size >= 2 && ImLengthSqr(cmd_buffer[cmd_buffer.Size-2].clip_rect - current_clip_rect) < 0.00001f)
+        ImVec4 current_clip_rect = clip_rect_stack.Size ? clip_rect_stack.back() : GNullClipRect;
+        if (cmd_buffer.Size >= 2 && ImLengthSqr(cmd_buffer.Data[cmd_buffer.Size-2].clip_rect - current_clip_rect) < 0.00001f)
             cmd_buffer.pop_back();
         else
             current_cmd->clip_rect = current_clip_rect;
@@ -9052,16 +9050,12 @@ void ImDrawList::PopClipRect()
 
 void ImDrawList::UpdateTextureID()
 {
-    ImDrawCmd* current_cmd = cmd_buffer.empty() ? NULL : &cmd_buffer.back();
-    const ImTextureID texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
+    ImDrawCmd* current_cmd = cmd_buffer.Size ? &cmd_buffer.back() : NULL;
+    const ImTextureID texture_id = texture_id_stack.Size ? texture_id_stack.back() : NULL;
     if (!current_cmd || (current_cmd->elem_count != 0 && current_cmd->texture_id != texture_id) || current_cmd->user_callback != NULL)
-    {
         AddDrawCmd();
-    }
     else
-    {
         current_cmd->texture_id = texture_id;
-    }
 }
 
 void ImDrawList::PushTextureID(const ImTextureID& texture_id)
@@ -9079,16 +9073,16 @@ void ImDrawList::PopTextureID()
 
 void ImDrawList::PrimReserve(int idx_count, int vtx_count)
 {
-    ImDrawCmd& draw_cmd = cmd_buffer.back();
+    ImDrawCmd& draw_cmd = cmd_buffer.Data[cmd_buffer.Size-1];
     draw_cmd.elem_count += idx_count;
         
     int vtx_buffer_size = vtx_buffer.Size;
     vtx_buffer.resize(vtx_buffer_size + vtx_count);
-    vtx_write = &vtx_buffer[vtx_buffer_size];
+    vtx_write = vtx_buffer.Data + vtx_buffer_size;
 
     int idx_buffer_size = idx_buffer.Size;
     idx_buffer.resize(idx_buffer_size + idx_count);
-    idx_write = &idx_buffer[idx_buffer_size];
+    idx_write = idx_buffer.Data + idx_buffer_size;
 }
 
 void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
