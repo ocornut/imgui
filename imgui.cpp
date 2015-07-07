@@ -1060,8 +1060,8 @@ struct ImRect           // 2D axis aligned bounding-box
 
     ImRect()                                        : Min(FLT_MAX,FLT_MAX), Max(-FLT_MAX,-FLT_MAX)  {}
     ImRect(const ImVec2& min, const ImVec2& max)    : Min(min), Max(max)                            {}
-    ImRect(const ImVec4& v)                         : Min(v.x, v.y), Max(v.z, v.z)                  {}
-    ImRect(float x1, float y1, float x2, float y2)  : Min(x1,y1), Max(x2, y2)                       {}
+    ImRect(const ImVec4& v)                         : Min(v.x, v.y), Max(v.z, v.w)                  {}
+    ImRect(float x1, float y1, float x2, float y2)  : Min(x1, y1), Max(x2, y2)                      {}
 
     ImVec2      GetCenter() const                   { return ImVec2((Min.x+Max.x)*0.5f, (Min.y+Max.y)*0.5f); }
     ImVec2      GetSize() const                     { return ImVec2(Max.x-Min.x,Max.y-Min.y); }
@@ -12242,7 +12242,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
                         ImGui::BulletText("Callback %p, user_data %p", pcmd->user_callback, pcmd->user_callback_data);
                     else
                     {
-                        ImGui::BulletText("Draw %d indexed vtx, tex = %p, clip_rect = (%d,%d)..(%d,%d)", pcmd->elem_count, pcmd->texture_id, (int)pcmd->clip_rect.x, (int)pcmd->clip_rect.y, (int)pcmd->clip_rect.z, (int)pcmd->clip_rect.w);
+                        ImGui::BulletText("Draw %d indexed vtx, tex = %p, clip_rect = (%.0f,%.0f)..(%.0f,%.0f)", pcmd->elem_count, pcmd->texture_id, pcmd->clip_rect.x, pcmd->clip_rect.y, pcmd->clip_rect.z, pcmd->clip_rect.w);
                         if (show_clip_rects && ImGui::IsItemHovered())
                         {
                             ImRect clip_rect = pcmd->clip_rect;
