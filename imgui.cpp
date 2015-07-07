@@ -9353,7 +9353,7 @@ void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int amin, int
     }
     else
     {
-        path.reserve(path.size() + (amax - amin + 1));
+        path.reserve(path.Size + (amax - amin + 1));
         for (int a = amin; a <= amax; a++)
         {
             const ImVec2& c = circle_vtx[a % circle_vtx_count];
@@ -9366,7 +9366,7 @@ void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float amin, float
 {
     if (radius == 0.0f)
         path.push_back(centre);
-    path.reserve(path.size() + (num_segments + 1));
+    path.reserve(path.Size + (num_segments + 1));
     for (int i = 0; i <= num_segments; i++)
     {
         const float a = amin + ((float)i / (float)num_segments) * (amax - amin);
@@ -9495,14 +9495,14 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 
     // give back unused vertices
     // FIXME-OPT
-    vtx_buffer.resize((int)(vtx_write - &vtx_buffer.front()));
-    idx_buffer.resize((int)(idx_write - &idx_buffer.front()));
+    vtx_buffer.resize((int)(vtx_write - vtx_buffer.Data));
+    idx_buffer.resize((int)(idx_write - idx_buffer.Data));
     int vtx_unused = vtx_count_max - (vtx_buffer.Size - vtx_begin);
     int idx_unused = idx_count_max - (idx_buffer.Size - idx_begin);
     cmd_buffer.back().elem_count -= idx_unused;
     vtx_write -= vtx_unused;
     idx_write -= idx_unused;
-    vtx_current_idx = (ImDrawIdx)vtx_buffer.size();
+    vtx_current_idx = (ImDrawIdx)vtx_buffer.Size;
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
@@ -9536,12 +9536,12 @@ void ImDrawData::DeIndexAllBuffers()
         ImDrawList* cmd_list = cmd_lists[i];
         if (cmd_list->idx_buffer.empty())
             continue;
-        new_vtx_buffer.resize(cmd_list->idx_buffer.size());
-        for (int i = 0; i < cmd_list->idx_buffer.size(); i++)
+        new_vtx_buffer.resize(cmd_list->idx_buffer.Size);
+        for (int i = 0; i < cmd_list->idx_buffer.Size; i++)
             new_vtx_buffer[i] = cmd_list->vtx_buffer[cmd_list->idx_buffer[i]];
         cmd_list->vtx_buffer.swap(new_vtx_buffer);
         cmd_list->idx_buffer.resize(0);
-        total_vtx_count += (int)cmd_list->vtx_buffer.size();
+        total_vtx_count += cmd_list->vtx_buffer.Size;
     }
 }
 
@@ -11551,7 +11551,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::PlotLines("Frame Times", arr, IM_ARRAYSIZE(arr));
 
         static bool pause;
-        static ImVector<float> values; if (values.empty()) { values.resize(90); memset(&values.front(), 0, values.Size*sizeof(float)); } 
+        static ImVector<float> values; if (values.empty()) { values.resize(90); memset(values.Data, 0, values.Size*sizeof(float)); } 
         static int values_offset = 0; 
         if (!pause) 
         {
@@ -11564,7 +11564,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 phase += 0.10f*values_offset; 
             }
         }
-        ImGui::PlotLines("##Graph", &values.front(), (int)values.Size, values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
+        ImGui::PlotLines("##Graph", values.Data, values.Size, values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
         ImGui::SameLine(0, (int)ImGui::GetStyle().ItemInnerSpacing.x); 
         ImGui::BeginGroup();
         ImGui::Text("Graph");

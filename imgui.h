@@ -851,7 +851,7 @@ struct ImGuiTextBuffer
     ImGuiTextBuffer()   { Buf.push_back(0); }
     const char*         begin() const { return &Buf.front(); }
     const char*         end() const { return &Buf.back(); }      // Buf is zero-terminated, so end() will point on the zero-terminator
-    int                 size() const { return Buf.size()-1; }
+    int                 size() const { return Buf.Size-1; }
     bool                empty() { return size() >= 1; }
     void                clear() { Buf.clear(); Buf.push_back(0); }
     IMGUI_API void      append(const char* fmt, ...);
@@ -1034,7 +1034,7 @@ struct ImDrawList
     // [Internal to ImGui]
     const char*             owner_name;         // Pointer to owner window's name (if any) for debugging
     ImDrawVert*             vtx_write;          // [Internal] point within vtx_buffer after each add command (to avoid using the ImVector<> operators too much)
-    unsigned int            vtx_current_idx;    // [Internal] == vtx_buffer.size()
+    unsigned int            vtx_current_idx;    // [Internal] == vtx_buffer.Size
     ImDrawIdx*              idx_write;          // [Internal] point within idx_buffer after each add command (to avoid using the ImVector<> operators too much)
     ImVector<ImVec4>        clip_rect_stack;    // [Internal]
     ImVector<ImTextureID>   texture_id_stack;   // [Internal] 
@@ -1067,8 +1067,8 @@ struct ImDrawList
     IMGUI_API void  PathArcToFast(const ImVec2& centre, float radius, int a_min, int a_max);
     IMGUI_API void  PathArcTo(const ImVec2& centre, float radius, float a_min, float a_max, int num_segments = 12);
     IMGUI_API void  PathRect(const ImVec2& a, const ImVec2& b, float rounding = 0.0f, int rounding_corners = 0x0F);
-    inline    void  PathFill(ImU32 col)                                         { AddConvexPolyFilled(&path[0], (int)path.size(), col, true); PathClear(); }
-    inline    void  PathStroke(ImU32 col, float thickness, bool closed)         { AddPolyline(&path[0], (int)path.size(), col, thickness, closed, true); PathClear(); }
+    inline    void  PathFill(ImU32 col)                                         { AddConvexPolyFilled(path.Data, path.Size, col, true); PathClear(); }
+    inline    void  PathStroke(ImU32 col, float thickness, bool closed)         { AddPolyline(path.Data, path.Size, col, thickness, closed, true); PathClear(); }
 
     // Advanced
     IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);   // Your rendering function must check for 'user_callback' in ImDrawCmd and call the function instead of rendering triangles.
@@ -1087,8 +1087,8 @@ struct ImDrawData
 {
     ImDrawList**    cmd_lists;
     int             cmd_lists_count;
-    int             total_vtx_count;        // For convenience, sum of all cmd_lists vtx_buffer.size()
-    int             total_idx_count;        // For convenience, sum of all cmd_lists idx_buffer.size()
+    int             total_vtx_count;        // For convenience, sum of all cmd_lists vtx_buffer.Size
+    int             total_idx_count;        // For convenience, sum of all cmd_lists idx_buffer.Size
 
     // Functions
     void DeIndexAllBuffers();               // For backward compatibility: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
@@ -1182,7 +1182,7 @@ struct ImFont
     IMGUI_API ~ImFont();
     IMGUI_API void              Clear();
     IMGUI_API void              BuildLookupTable();
-    IMGUI_API float             GetCharAdvance(unsigned short c) const  { return ((int)c < IndexXAdvance.size()) ? IndexXAdvance[(int)c] : FallbackXAdvance; }
+    IMGUI_API float             GetCharAdvance(unsigned short c) const  { return ((int)c < IndexXAdvance.Size) ? IndexXAdvance[(int)c] : FallbackXAdvance; }
     IMGUI_API const Glyph*      FindGlyph(unsigned short c) const;
     IMGUI_API void              SetFallbackChar(ImWchar c);
     IMGUI_API bool              IsLoaded() const                        { return ContainerAtlas != NULL; }
