@@ -1033,18 +1033,18 @@ IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
 struct ImDrawList
 {
     // This is what you have to render
-    ImVector<ImDrawCmd>     commands;           // Commands. Typically 1 command = 1 gpu draw call.
-    ImVector<ImDrawVert>    vtx_buffer;         // Vertex buffer. Each command consume ImDrawCmd::vtx_count of those
+    ImVector<ImDrawCmd>     cmd_buffer;         // Commands. Typically 1 command = 1 gpu draw call.
+    ImVector<ImDrawVert>    vtx_buffer;         // Vertex buffer.
     ImVector<ImDrawIdx>     idx_buffer;         // Index buffer. Each command consume ImDrawCmd::idx_count of those
 
     // [Internal to ImGui]
-    const char*             owner_name;         // Pointer to owner window's name, if any
-    ImVector<ImVec4>        clip_rect_stack;    // [Internal]
-    ImVector<ImTextureID>   texture_id_stack;   // [Internal] 
-    ImVector<ImVec2>        path;				// [Internal] current path building
+    const char*             owner_name;         // Pointer to owner window's name (if any) for debugging
     ImDrawVert*             vtx_write;          // [Internal] point within vtx_buffer after each add command (to avoid using the ImVector<> operators too much)
     unsigned int            vtx_current_idx;    // [Internal] == vtx_buffer.size()
     ImDrawIdx*              idx_write;          // [Internal] point within idx_buffer after each add command (to avoid using the ImVector<> operators too much)
+    ImVector<ImVec4>        clip_rect_stack;    // [Internal]
+    ImVector<ImTextureID>   texture_id_stack;   // [Internal] 
+    ImVector<ImVec2>        path;				// [Internal] current path building
 
     ImDrawList() { owner_name = NULL; Clear(); }
     IMGUI_API void  Clear();

@@ -1902,10 +1902,10 @@ void ImGuiWindow::FocusItemUnregister()
 
 static inline void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDrawList* draw_list)
 {
-    if (!draw_list->commands.empty() && !draw_list->vtx_buffer.empty())
+    if (!draw_list->cmd_buffer.empty() && !draw_list->vtx_buffer.empty())
     {
-        if (draw_list->commands.back().elem_count == 0)
-            draw_list->commands.pop_back();
+        if (draw_list->cmd_buffer.back().elem_count == 0)
+            draw_list->cmd_buffer.pop_back();
         out_render_list.push_back(draw_list);
         GImGui->IO.MetricsRenderVertices += (int)draw_list->vtx_buffer.size();
         GImGui->IO.MetricsRenderIndices += (int)draw_list->idx_buffer.size();
@@ -8964,7 +8964,7 @@ static ImVec4 GNullClipRect(-9999.0f,-9999.0f, +9999.0f, +9999.0f);
 
 void ImDrawList::Clear()
 {
-    commands.resize(0);
+    cmd_buffer.resize(0);
     vtx_buffer.resize(0);
     vtx_write = NULL;
     vtx_current_idx = 0;
@@ -8976,7 +8976,7 @@ void ImDrawList::Clear()
 
 void ImDrawList::ClearFreeMemory()
 {
-    commands.clear();
+    cmd_buffer.clear();
     vtx_buffer.clear();
     vtx_write = NULL;
     vtx_current_idx = 0;
@@ -8996,16 +8996,16 @@ void ImDrawList::AddDrawCmd()
     draw_cmd.user_callback_data = NULL;
 
     IM_ASSERT(draw_cmd.clip_rect.x <= draw_cmd.clip_rect.z && draw_cmd.clip_rect.y <= draw_cmd.clip_rect.w);
-    commands.push_back(draw_cmd);
+    cmd_buffer.push_back(draw_cmd);
 }
 
 void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
 {
-    ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
+    ImDrawCmd* current_cmd = cmd_buffer.empty() ? NULL : &cmd_buffer.back();
     if (!current_cmd || current_cmd->elem_count != 0 || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
-        current_cmd = &commands.back();
+        current_cmd = &cmd_buffer.back();
     }
     current_cmd->user_callback = callback;
     current_cmd->user_callback_data = callback_data;
@@ -9017,7 +9017,7 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
 
 void ImDrawList::UpdateClipRect()
 {
-    ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
+    ImDrawCmd* current_cmd = cmd_buffer.empty() ? NULL : &cmd_buffer.back();
     if (!current_cmd || (current_cmd->elem_count != 0) || current_cmd->user_callback != NULL)
     {
         AddDrawCmd();
@@ -9025,8 +9025,8 @@ void ImDrawList::UpdateClipRect()
     else
     {
         ImVec4 current_clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
-        if (commands.size() >= 2 && ImLengthSqr(commands[commands.size()-2].clip_rect - current_clip_rect) < 0.00001f)
-            commands.pop_back();
+        if (cmd_buffer.size() >= 2 && ImLengthSqr(cmd_buffer[cmd_buffer.size()-2].clip_rect - current_clip_rect) < 0.00001f)
+            cmd_buffer.pop_back();
         else
             current_cmd->clip_rect = current_clip_rect;
     }
@@ -9057,7 +9057,7 @@ void ImDrawList::PopClipRect()
 
 void ImDrawList::UpdateTextureID()
 {
-    ImDrawCmd* current_cmd = commands.empty() ? NULL : &commands.back();
+    ImDrawCmd* current_cmd = cmd_buffer.empty() ? NULL : &cmd_buffer.back();
     const ImTextureID texture_id = texture_id_stack.empty() ? NULL : texture_id_stack.back();
     if (!current_cmd || (current_cmd->elem_count != 0 && current_cmd->texture_id != texture_id) || current_cmd->user_callback != NULL)
     {
@@ -9084,7 +9084,7 @@ void ImDrawList::PopTextureID()
 
 void ImDrawList::PrimReserve(unsigned int idx_count, unsigned int vtx_count)
 {
-    ImDrawCmd& draw_cmd = commands.back();
+    ImDrawCmd& draw_cmd = cmd_buffer.back();
     draw_cmd.elem_count += idx_count;
         
     size_t vtx_buffer_size = vtx_buffer.size();
@@ -9504,7 +9504,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     idx_buffer.resize((size_t)(idx_write - &idx_buffer.front()));
     unsigned int vtx_unused = vtx_count_max - (unsigned int)(vtx_buffer.size() - vtx_begin);
     unsigned int idx_unused = idx_count_max - (unsigned int)(idx_buffer.size() - idx_begin);
-    commands.back().elem_count -= idx_unused;
+    cmd_buffer.back().elem_count -= idx_unused;
     vtx_write -= vtx_unused;
     idx_write -= idx_unused;
     vtx_current_idx = (ImDrawIdx)vtx_buffer.size();
@@ -12232,7 +12232,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
         {
             static void NodeDrawList(ImDrawList* draw_list, const char* label)
             {
-                bool node_opened = ImGui::TreeNode(draw_list, "%s: '%s' %d vtx, %d indices, %d cmds", label, draw_list->owner_name ? draw_list->owner_name : "", draw_list->vtx_buffer.size(), draw_list->idx_buffer.size(), draw_list->commands.size());
+                bool node_opened = ImGui::TreeNode(draw_list, "%s: '%s' %d vtx, %d indices, %d cmds", label, draw_list->owner_name ? draw_list->owner_name : "", draw_list->vtx_buffer.size(), draw_list->idx_buffer.size(), draw_list->cmd_buffer.size());
                 if (draw_list == ImGui::GetWindowDrawList())
                 {
                     ImGui::SameLine();
@@ -12242,7 +12242,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
                     return;
 
                 int elem_offset = 0;
-                for (const ImDrawCmd* pcmd = draw_list->commands.begin(); pcmd < draw_list->commands.end(); elem_offset += pcmd->elem_count, pcmd++)
+                for (const ImDrawCmd* pcmd = draw_list->cmd_buffer.begin(); pcmd < draw_list->cmd_buffer.end(); elem_offset += pcmd->elem_count, pcmd++)
                     if (pcmd->user_callback)
                         ImGui::BulletText("Callback %p, user_data %p", pcmd->user_callback, pcmd->user_callback_data);
                     else

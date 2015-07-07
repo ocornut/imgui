@@ -119,9 +119,9 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     for (int n = 0; n < draw_data->cmd_lists_count; n++)
     {
         const ImDrawList* cmd_list = draw_data->cmd_lists[n];
-        for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
+        for (size_t cmd_i = 0; cmd_i < cmd_list->cmd_buffer.size(); cmd_i++)
         {
-            const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
+            const ImDrawCmd* pcmd = &cmd_list->cmd_buffer[cmd_i];
             if (pcmd->user_callback)
             {
                 pcmd->user_callback(cmd_list, pcmd);

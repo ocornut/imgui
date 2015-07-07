@@ -62,9 +62,9 @@ static void ImGui_ImplGlfw_RenderDrawLists(ImDrawData* draw_data)
         glTexCoordPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, uv)));
         glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, col)));
 
-        for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
+        for (size_t cmd_i = 0; cmd_i < cmd_list->cmd_buffer.size(); cmd_i++)
         {
-            const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
+            const ImDrawCmd* pcmd = &cmd_list->cmd_buffer[cmd_i];
             if (pcmd->user_callback)
             {
                 pcmd->user_callback(cmd_list, pcmd);

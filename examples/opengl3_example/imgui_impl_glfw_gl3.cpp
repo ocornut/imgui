@@ -86,8 +86,8 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
         const ImDrawList* cmd_list = draw_data->cmd_lists[n];
         const ImDrawIdx* idx_buffer = (const unsigned short*)&cmd_list->idx_buffer.front();
 
-        const ImDrawCmd* pcmd_end = cmd_list->commands.end();
-        for (const ImDrawCmd* pcmd = cmd_list->commands.begin(); pcmd != pcmd_end; pcmd++)
+        const ImDrawCmd* pcmd_end = cmd_list->cmd_buffer.end();
+        for (const ImDrawCmd* pcmd = cmd_list->cmd_buffer.begin(); pcmd != pcmd_end; pcmd++)
         {
             if (pcmd->user_callback)
             {
