@@ -1058,10 +1058,10 @@ struct ImRect           // 2D axis aligned bounding-box
     ImVec2      Min;
     ImVec2      Max;
 
-    ImRect()                                        { Min = ImVec2(FLT_MAX,FLT_MAX); Max = ImVec2(-FLT_MAX,-FLT_MAX); }
-    ImRect(const ImVec2& min, const ImVec2& max)    { Min = min; Max = max; }
-    ImRect(const ImVec4& v)                         { Min.x = v.x; Min.y = v.y; Max.x = v.z; Max.y = v.w; }
-    ImRect(float x1, float y1, float x2, float y2)  { Min.x = x1; Min.y = y1; Max.x = x2; Max.y = y2; }
+    ImRect()                                        : Min(FLT_MAX,FLT_MAX), Max(-FLT_MAX,-FLT_MAX)  {}
+    ImRect(const ImVec2& min, const ImVec2& max)    : Min(min), Max(max)                            {}
+    ImRect(const ImVec4& v)                         : Min(v.x, v.y), Max(v.z, v.z)                  {}
+    ImRect(float x1, float y1, float x2, float y2)  : Min(x1,y1), Max(x2, y2)                       {}
 
     ImVec2      GetCenter() const                   { return ImVec2((Min.x+Max.x)*0.5f, (Min.y+Max.y)*0.5f); }
     ImVec2      GetSize() const                     { return ImVec2(Max.x-Min.x,Max.y-Min.y); }
