@@ -741,12 +741,11 @@ struct ImGuiIO
 template<typename T>
 class ImVector
 {
-protected:
+public:
     int                         Size;
     int                         Capacity;
     T*                          Data;
 
-public:
     typedef T                   value_type;
     typedef value_type*         iterator;
     typedef const value_type*   const_iterator;
