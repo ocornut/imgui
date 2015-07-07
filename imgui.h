@@ -77,7 +77,7 @@ struct ImVec4
 };
 
 // Helpers at bottom of the file:
-// - class ImVector<>                   // Lightweight std::vector like class. Use '#define ImVector std::vector' if you want to use the STL type or your own type.
+// - class ImVector<>                   // Lightweight std::vector like class.
 // - IMGUI_ONCE_UPON_A_FRAME            // Execute a block of code once per frame only (convenient for creating UI within deep-nested code that runs multiple times)
 // - struct ImGuiTextFilter             // Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
 // - struct ImGuiTextBuffer             // Text buffer for logging/accumulating text
@@ -737,9 +737,7 @@ struct ImGuiIO
 //-----------------------------------------------------------------------------
 
 // Lightweight std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug). 
-// Use '#define ImVector std::vector' if you want to use the STL type or your own type.
 // Our implementation does NOT call c++ constructors because we don't use them in ImGui. Don't use this class as a straight std::vector replacement in your code!
-#ifndef ImVector
 template<typename T>
 class ImVector
 {
@@ -795,7 +793,6 @@ public:
     inline iterator             erase(const_iterator it)        { IM_ASSERT(it >= begin() && it < end()); const ptrdiff_t off = it - begin(); memmove(Data + off, Data + off + 1, (Size - (size_t)off - 1) * sizeof(value_type)); Size--; return Data + off; }
     inline iterator             insert(const_iterator it, const value_type& v)  { IM_ASSERT(it >= begin() && it <= end()); const ptrdiff_t off = it - begin(); if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); if (off < (int)Size) memmove(Data + off + 1, Data + off, (Size - (size_t)off) * sizeof(value_type)); Data[off] = v; Size++; return Data + off; }
 };
-#endif // #ifndef ImVector
 
 // Helper: execute a block of code once a frame only
 // Convenient if you want to quickly create an UI within deep-nested code that runs multiple times every frame.
