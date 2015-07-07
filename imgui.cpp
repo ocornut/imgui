@@ -9025,7 +9025,7 @@ void ImDrawList::UpdateClipRect()
     else
     {
         ImVec4 current_clip_rect = clip_rect_stack.empty() ? GNullClipRect : clip_rect_stack.back();
-        if (commands.size() > 2 && ImLengthSqr(commands[commands.size()-2].clip_rect - current_clip_rect) < 0.00001f)
+        if (commands.size() >= 2 && ImLengthSqr(commands[commands.size()-2].clip_rect - current_clip_rect) < 0.00001f)
             commands.pop_back();
         else
             current_cmd->clip_rect = current_clip_rect;
