@@ -30,7 +30,7 @@ struct CUSTOMVERTEX
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
-    size_t total_vtx_count = 0;
+    int total_vtx_count = 0;
     for (int n = 0; n < cmd_lists_count; n++)
         total_vtx_count += cmd_lists[n]->vtx_buffer.size();
     if (total_vtx_count == 0)
@@ -44,7 +44,7 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
     {
         const ImDrawList* cmd_list = cmd_lists[n];
         const ImDrawVert* vtx_src = &cmd_list->vtx_buffer[0];
-        for (size_t i = 0; i < cmd_list->vtx_buffer.size(); i++)
+        for (int i = 0; i < cmd_list->vtx_buffer.size(); i++)
         {
             vtx_dst->pos.x = vtx_src->pos.x;
             vtx_dst->pos.y = vtx_src->pos.y;
@@ -93,7 +93,7 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
     for (int n = 0; n < cmd_lists_count; n++)
     {
         const ImDrawList* cmd_list = cmd_lists[n];
-        for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
+        for (int cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
             if (pcmd->user_callback)
