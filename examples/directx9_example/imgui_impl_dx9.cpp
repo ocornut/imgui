@@ -43,7 +43,7 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     {
         const ImDrawList* cmd_list = draw_data->cmd_lists[n];
         const ImDrawVert* vtx_src = &cmd_list->vtx_buffer[0];
-        for (size_t i = 0; i < cmd_list->vtx_buffer.size(); i++)
+        for (int i = 0; i < cmd_list->vtx_buffer.size(); i++)
         {
             vtx_dst->pos.x = vtx_src->pos.x;
             vtx_dst->pos.y = vtx_src->pos.y;
@@ -97,7 +97,7 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     for (int n = 0; n < draw_data->cmd_lists_count; n++)
     {
         const ImDrawList* cmd_list = draw_data->cmd_lists[n];
-        for (size_t cmd_i = 0; cmd_i < cmd_list->cmd_buffer.size(); cmd_i++)
+        for (int cmd_i = 0; cmd_i < cmd_list->cmd_buffer.size(); cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->cmd_buffer[cmd_i];
             if (pcmd->user_callback)

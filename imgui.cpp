@@ -470,6 +470,7 @@
 #pragma clang diagnostic ignored "-Wglobal-constructors"    // warning : declaration requires a global destructor           // similar to above, not sure what the exact difference it.
 #pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion changes signedness             // 
 #pragma clang diagnostic ignored "-Wmissing-noreturn"       // warning : function xx could be declared with attribute 'noreturn' warning    // GetDefaultFontData() asserts which some implementation makes it never return.
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"// warning : 'xx' is deprecated: The POSIX name for this item.. // for strdup used in demo code (so user can copy & paste the code)
 #endif
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
@@ -577,23 +578,23 @@ static void         SetWindowScrollY(ImGuiWindow* window, float scroll_y);
 static int          ImStricmp(const char* str1, const char* str2);
 static int          ImStrnicmp(const char* str1, const char* str2, int count);
 static char*        ImStrdup(const char* str);
-static size_t       ImStrlenW(const ImWchar* str);
+static int          ImStrlenW(const ImWchar* str);
 static const ImWchar* ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin); // Find beginning-of-line
 static const char*  ImStristr(const char* haystack, const char* needle, const char* needle_end);
-static size_t       ImFormatString(char* buf, size_t buf_size, const char* fmt, ...);
-static size_t       ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args);
+static int          ImFormatString(char* buf, int buf_size, const char* fmt, ...);
+static int          ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args);
 
 // Helpers: Misc
-static ImU32        ImHash(const void* data, size_t data_size, ImU32 seed);
-static bool         ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size, size_t padding_bytes = 0);
+static ImU32        ImHash(const void* data, int data_size, ImU32 seed);
+static bool         ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, int* out_file_size, int padding_bytes = 0);
 static inline int   ImUpperPowerOfTwo(int v) { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 static inline bool  ImCharIsSpace(int c) { return c == ' ' || c == '\t' || c == 0x3000; }
 
 // Helpers: UTF-8 <> wchar
-static inline int   ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int in_char);                                // return output UTF-8 bytes count
-static ptrdiff_t    ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end);   // return output UTF-8 bytes count
+static inline int   ImTextCharToUtf8(char* buf, int buf_size, unsigned int in_char);                                   // return output UTF-8 bytes count
+static int          ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
 static int          ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
-static ptrdiff_t    ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end, const char** in_remaining = NULL);   // return input UTF-8 bytes count
+static int          ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_remaining = NULL);   // return input UTF-8 bytes count
 static int          ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
 static inline int   ImTextCountUtf8BytesFromChar(unsigned int in_char);                                                // return output UTF-8 bytes count
 static int          ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string as UTF-8 code-points
@@ -716,19 +717,6 @@ ImGuiIO::ImGuiIO()
     ImeSetInputScreenPosFn = ImeSetInputScreenPosFn_DefaultImpl;
 }
 
-// Pass in translated ASCII characters for text input.
-// - with glfw you can get those from the callback set in glfwSetCharCallback()
-// - on Windows you can get those using ToAscii+keyboard state, or via the WM_CHAR message
-void ImGuiIO::AddInputCharacter(ImWchar c)
-{
-    const size_t n = ImStrlenW(InputCharacters);
-    if (n + 1 < sizeof(InputCharacters) / sizeof(InputCharacters[0]))
-    {
-        InputCharacters[n] = c;
-        InputCharacters[n+1] = 0;
-    }
-}
-
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
@@ -751,6 +739,19 @@ const float IM_PI = 3.14159265358979323846f;
 #else
 #define IM_NEWLINE "\n"
 #endif
+
+// Pass in translated ASCII characters for text input.
+// - with glfw you can get those from the callback set in glfwSetCharCallback()
+// - on Windows you can get those using ToAscii+keyboard state, or via the WM_CHAR message
+void ImGuiIO::AddInputCharacter(ImWchar c)
+{
+    const int n = ImStrlenW(InputCharacters);
+    if (n + 1 < IM_ARRAYSIZE(InputCharacters))
+    {
+        InputCharacters[n] = c;
+        InputCharacters[n+1] = '\0';
+    }
+}
 
 // Math bits
 // We are keeping those static in the .cpp file so as not to leak them outside, in the case the user has implicit cast operators between ImVec2 and its own types.
@@ -812,9 +813,9 @@ static char* ImStrdup(const char *str)
     return buff;
 }
 
-static size_t ImStrlenW(const ImWchar* str)
+static int ImStrlenW(const ImWchar* str)
 {
-    size_t n = 0;
+    int n = 0;
     while (*str++) n++;
     return n;
 }
@@ -850,7 +851,7 @@ static const char* ImStristr(const char* haystack, const char* needle, const cha
 
 // Pass data_size==0 for zero-terminated string
 // Try to replace with FNV1a hash?
-static ImU32 ImHash(const void* data, size_t data_size, ImU32 seed = 0) 
+static ImU32 ImHash(const void* data, int data_size, ImU32 seed = 0) 
 { 
     static ImU32 crc32_lut[256] = { 0 };
     if (!crc32_lut[1])
@@ -893,21 +894,21 @@ static ImU32 ImHash(const void* data, size_t data_size, ImU32 seed = 0)
     return ~crc; 
 } 
 
-static size_t ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
+static int ImFormatString(char* buf, int buf_size, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
     int w = vsnprintf(buf, buf_size, fmt, args);
     va_end(args);
     buf[buf_size-1] = 0;
-    return (w == -1) ? buf_size : (size_t)w;
+    return (w == -1) ? buf_size : w;
 }
 
-static size_t ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
+static int ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args)
 {
     int w = vsnprintf(buf, buf_size, fmt, args);
     buf[buf_size-1] = 0;
-    return (w == -1) ? buf_size : (size_t)w;
+    return (w == -1) ? buf_size : w;
 }
 
 ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in)
@@ -972,7 +973,7 @@ void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float&
 
 // Load file content into memory
 // Memory allocated with ImGui::MemAlloc(), must be freed by user using ImGui::MemFree()
-static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, size_t* out_file_size, size_t padding_bytes)
+static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, int* out_file_size, int padding_bytes)
 {
     IM_ASSERT(filename && file_open_mode && out_file_data && out_file_size);
     *out_file_data = NULL;
@@ -989,14 +990,14 @@ static bool ImLoadFileToMemory(const char* filename, const char* file_open_mode,
         return false;
     }
 
-    size_t file_size = (size_t)file_size_signed;
+    int file_size = (int)file_size_signed;
     void* file_data = ImGui::MemAlloc(file_size + padding_bytes);
     if (file_data == NULL)
     {
         fclose(f);
         return false;
     }
-    if (fread(file_data, 1, file_size, f) != file_size)
+    if (fread(file_data, 1, (size_t)file_size, f) != (size_t)file_size)
     {
         fclose(f);
         ImGui::MemFree(file_data);
@@ -1231,8 +1232,8 @@ struct ImGuiTextEditState
     ImVector<ImWchar>   Text;                           // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
     ImVector<char>      InitialText;                    // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
     ImVector<char>      TempTextBuffer;
-    size_t              CurLenA, CurLenW;               // we need to maintain our buffer length in both UTF-8 and wchar format.
-    size_t              BufSizeA;                       // end-user buffer size
+    int                 CurLenA, CurLenW;               // we need to maintain our buffer length in both UTF-8 and wchar format.
+    int                 BufSizeA;                       // end-user buffer size
     float               ScrollX;
     STB_TexteditState   StbState;
     float               CursorAnim;
@@ -1245,7 +1246,7 @@ struct ImGuiTextEditState
     bool                CursorIsVisible() const         { return CursorAnim <= 0.0f || fmodf(CursorAnim, 1.20f) <= 0.80f; }     // Blinking
     bool                HasSelection() const            { return StbState.select_start != StbState.select_end; }
     void                ClearSelection()                { StbState.select_start = StbState.select_end = StbState.cursor; }
-    void                SelectAll()                     { StbState.select_start = 0; StbState.select_end = (int)CurLenW; StbState.cursor = StbState.select_end; StbState.has_preferred_x = false; }
+    void                SelectAll()                     { StbState.select_start = 0; StbState.select_end = CurLenW; StbState.cursor = StbState.select_end; StbState.has_preferred_x = false; }
     void                OnKeyPressed(int key);
 };
 
@@ -1659,7 +1660,7 @@ void ImGuiStorage::SetVoidPtr(ImU32 key, void* val)
 
 void ImGuiStorage::SetAllInt(int v)
 {
-    for (size_t i = 0; i < Data.size(); i++)
+    for (int i = 0; i < Data.size(); i++)
         Data[i].val_i = v;
 }
 
@@ -1715,7 +1716,7 @@ void ImGuiTextFilter::Build()
     input_range.split(',', Filters);
 
     CountGrep = 0;
-    for (size_t i = 0; i != Filters.size(); i++)
+    for (int i = 0; i != Filters.size(); i++)
     {
         Filters[i].trim_blanks();
         if (Filters[i].empty())
@@ -1733,7 +1734,7 @@ bool ImGuiTextFilter::PassFilter(const char* val) const
     if (val == NULL)
         val = "";
 
-    for (size_t i = 0; i != Filters.size(); i++)
+    for (int i = 0; i != Filters.size(); i++)
     {
         const TextRange& f = Filters[i];
         if (f.empty())
@@ -1775,16 +1776,16 @@ void ImGuiTextBuffer::appendv(const char* fmt, va_list args)
     if (len <= 0)
         return;
 
-    const size_t write_off = Buf.size();
-    const size_t needed_sz = write_off + (size_t)len;
-    if (write_off + (size_t)len >= Buf.capacity())
+    const int write_off = Buf.size();
+    const int needed_sz = write_off + len;
+    if (write_off + len >= Buf.capacity())
     {
-        const size_t double_capacity = Buf.capacity() * 2;
+        int double_capacity = Buf.capacity() * 2;
         Buf.reserve(needed_sz > double_capacity ? needed_sz : double_capacity);
     }
 
     Buf.resize(needed_sz);
-    ImFormatStringV(&Buf[write_off] - 1, (size_t)len+1, fmt, args_copy);
+    ImFormatStringV(&Buf[write_off] - 1, len+1, fmt, args_copy);
 }
 
 void ImGuiTextBuffer::append(const char* fmt, ...)
@@ -1853,7 +1854,7 @@ ImGuiWindow::~ImGuiWindow()
 ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
 {
     ImGuiID seed = IDStack.back();
-    const ImGuiID id = ImHash(str, str_end ? str_end - str : 0, seed);
+    ImGuiID id = ImHash(str, str_end ? (int)(str_end - str) : 0, seed);
     RegisterAliveId(id);
     return id;
 }
@@ -1861,7 +1862,7 @@ ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
 ImGuiID ImGuiWindow::GetID(const void* ptr)
 {
     ImGuiID seed = IDStack.back();
-    const ImGuiID id = ImHash(&ptr, sizeof(void*), seed);
+    ImGuiID id = ImHash(&ptr, sizeof(void*), seed);
     RegisterAliveId(id);
     return id;
 }
@@ -1907,15 +1908,15 @@ static inline void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_lis
         if (draw_list->cmd_buffer.back().elem_count == 0)
             draw_list->cmd_buffer.pop_back();
         out_render_list.push_back(draw_list);
-        GImGui->IO.MetricsRenderVertices += (int)draw_list->vtx_buffer.size();
-        GImGui->IO.MetricsRenderIndices += (int)draw_list->idx_buffer.size();
+        GImGui->IO.MetricsRenderVertices += draw_list->vtx_buffer.size();
+        GImGui->IO.MetricsRenderIndices += draw_list->idx_buffer.size();
     }
 }
 
 static void AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiWindow* window)
 {
     AddDrawListToRenderList(out_render_list, window->DrawList);
-    for (size_t i = 0; i < window->DC.ChildWindows.size(); i++)
+    for (int i = 0; i < window->DC.ChildWindows.size(); i++)
     {
         ImGuiWindow* child = window->DC.ChildWindows[i];
         if (!child->Active) // clipped children may have been marked not active
@@ -1944,7 +1945,7 @@ static ImGuiIniData* FindWindowSettings(const char* name)
 {
     ImGuiState& g = *GImGui;
     ImGuiID id = ImHash(name, 0);
-    for (size_t i = 0; i != g.Settings.size(); i++)
+    for (int i = 0; i != g.Settings.size(); i++)
     {
         ImGuiIniData* ini = &g.Settings[i];
         if (ini->ID == id)
@@ -1975,7 +1976,7 @@ static void LoadSettings()
         return;
 
     char* file_data;
-    size_t file_size;
+    int file_size;
     if (!ImLoadFileToMemory(filename, "rb", (void**)&file_data, &file_size, 1))
         return;
 
@@ -2021,7 +2022,7 @@ static void SaveSettings()
         return;
 
     // Gather data from windows that were active during this session
-    for (size_t i = 0; i != g.Windows.size(); i++)
+    for (int i = 0; i != g.Windows.size(); i++)
     {
         ImGuiWindow* window = g.Windows[i];
         if (window->Flags & ImGuiWindowFlags_NoSavedSettings)
@@ -2037,7 +2038,7 @@ static void SaveSettings()
     FILE* f = fopen(filename, "wt");
     if (!f)
         return;
-    for (size_t i = 0; i != g.Settings.size(); i++)
+    for (int i = 0; i != g.Settings.size(); i++)
     {
         const ImGuiIniData* settings = &g.Settings[i];
         if (settings->Pos.x == FLT_MAX)
@@ -2134,7 +2135,7 @@ void ImGui::NewFrame()
     else
         g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;
     g.IO.MousePosPrev = g.IO.MousePos;
-    for (size_t i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
+    for (int i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
     {
         g.IO.MouseDownDurationPrev[i] = g.IO.MouseDownDuration[i];
         g.IO.MouseDownDuration[i] = g.IO.MouseDown[i] ? (g.IO.MouseDownDuration[i] < 0.0f ? 0.0f : g.IO.MouseDownDuration[i] + g.IO.DeltaTime) : -1.0f;
@@ -2162,7 +2163,7 @@ void ImGui::NewFrame()
         }
     }
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
-    for (size_t i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
+    for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
         g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
 
     // Calculate frame-rate for the user, as a purely luxurious feature
@@ -2268,7 +2269,7 @@ void ImGui::NewFrame()
         g.FocusedWindow->FocusIdxTabRequestNext = 0;
 
     // Mark all windows as not visible
-    for (size_t i = 0; i != g.Windows.size(); i++)
+    for (int i = 0; i != g.Windows.size(); i++)
     {
         ImGuiWindow* window = g.Windows[i];
         window->WasActive = window->Active;
@@ -2296,7 +2297,7 @@ void ImGui::Shutdown()
 
     SaveSettings();
 
-    for (size_t i = 0; i < g.Windows.size(); i++)
+    for (int i = 0; i < g.Windows.size(); i++)
     {
         g.Windows[i]->~ImGuiWindow();
         ImGui::MemFree(g.Windows[i]);
@@ -2307,7 +2308,7 @@ void ImGui::Shutdown()
     g.FocusedWindow = NULL;
     g.HoveredWindow = NULL;
     g.HoveredRootWindow = NULL;
-    for (size_t i = 0; i < g.Settings.size(); i++)
+    for (int i = 0; i < g.Settings.size(); i++)
         ImGui::MemFree(g.Settings[i].Name);
     g.Settings.clear();
     g.ColorModifiers.clear();
@@ -2315,7 +2316,7 @@ void ImGui::Shutdown()
     g.FontStack.clear();
     g.OpenedPopupStack.clear();
     g.CurrentPopupStack.clear();
-    for (size_t i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
+    for (int i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
         g.RenderDrawLists[i].clear();
     g.OverlayDrawList.ClearFreeMemory();
     g.ColorEditModeStorage.Clear();
@@ -2364,10 +2365,10 @@ static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, 
     out_sorted_windows.push_back(window);
     if (window->Active)
     {
-        const size_t count = window->DC.ChildWindows.size();
+        int count = window->DC.ChildWindows.size();
         if (count > 1)
-            qsort(window->DC.ChildWindows.begin(), count, sizeof(ImGuiWindow*), ChildWindowComparer);
-        for (size_t i = 0; i < count; i++)
+            qsort(window->DC.ChildWindows.begin(), (size_t)count, sizeof(ImGuiWindow*), ChildWindowComparer);
+        for (int i = 0; i < count; i++)
         {
             ImGuiWindow* child = window->DC.ChildWindows[i];
             if (child->Active)
@@ -2441,7 +2442,7 @@ void ImGui::Render()
         // We cannot do that on FocusWindow() because childs may not exist yet
         g.WindowsSortBuffer.resize(0);
         g.WindowsSortBuffer.reserve(g.Windows.size());
-        for (size_t i = 0; i != g.Windows.size(); i++)
+        for (int i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
             if (window->Flags & ImGuiWindowFlags_ChildWindow)       // if a child is active its parent will add it
@@ -2471,9 +2472,9 @@ void ImGui::Render()
 
         // Gather windows to render
         g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
-        for (size_t i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
+        for (int i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
             g.RenderDrawLists[i].resize(0);
-        for (size_t i = 0; i != g.Windows.size(); i++)
+        for (int i = 0; i != g.Windows.size(); i++)
         {
             ImGuiWindow* window = g.Windows[i];
             if (window->Active && window->HiddenFrames <= 0 && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0)
@@ -2490,12 +2491,12 @@ void ImGui::Render()
         }
 
         // Flatten layers
-        size_t n = g.RenderDrawLists[0].size();
-        size_t flattened_size = n;
-        for (size_t i = 1; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
+        int n = g.RenderDrawLists[0].size();
+        int flattened_size = n;
+        for (int i = 1; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
             flattened_size += g.RenderDrawLists[i].size();
         g.RenderDrawLists[0].resize(flattened_size);
-        for (size_t i = 1; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
+        for (int i = 1; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
         {
             ImVector<ImDrawList*>& layer = g.RenderDrawLists[i];
             if (!layer.empty())
@@ -2526,7 +2527,7 @@ void ImGui::Render()
         {
             ImDrawData data;
             data.cmd_lists = &g.RenderDrawLists[0][0];
-            data.cmd_lists_count = (int)g.RenderDrawLists[0].size();
+            data.cmd_lists_count = g.RenderDrawLists[0].size();
             data.total_vtx_count = g.IO.MetricsRenderVertices;
             data.total_idx_count = g.IO.MetricsRenderIndices;
             g.IO.RenderDrawListsFn(&data);
@@ -2857,9 +2858,9 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 {
     ImGuiState& g = *GImGui;
-    for (int i = (int)g.Windows.size()-1; i >= 0; i--)
+    for (int i = g.Windows.size()-1; i >= 0; i--)
     {
-        ImGuiWindow* window = g.Windows[(size_t)i];
+        ImGuiWindow* window = g.Windows[i];
         if (!window->Active)
             continue;
         if (excluding_childs && (window->Flags & ImGuiWindowFlags_ChildWindow) != 0)
@@ -3179,8 +3180,8 @@ void ImGui::OpenPopup(const char* str_id)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    const ImGuiID id = window->GetID(str_id);
-    size_t current_stack_size = g.CurrentPopupStack.size();
+    ImGuiID id = window->GetID(str_id);
+    int current_stack_size = g.CurrentPopupStack.size();
     ImGuiPopupRef popup_ref = ImGuiPopupRef(id, window, window->GetID("##menus")); // Tagged as new ref because constructor sets Window to NULL (we are passing the ParentWindow info here)
     if (g.OpenedPopupStack.size() < current_stack_size + 1)
         g.OpenedPopupStack.push_back(popup_ref);
@@ -3202,7 +3203,7 @@ static void CloseInactivePopups()
     int n = 0;
     if (g.FocusedWindow)
     {
-        for (n = 0; n < (int)g.OpenedPopupStack.size(); n++)
+        for (n = 0; n < g.OpenedPopupStack.size(); n++)
         {
             ImGuiPopupRef& popup = g.OpenedPopupStack[n];
             if (!popup.Window)
@@ -3216,7 +3217,7 @@ static void CloseInactivePopups()
             else
             {
                 bool has_focus = false;
-                for (int m = n; m < (int)g.OpenedPopupStack.size() && !has_focus; m++)
+                for (int m = n; m < g.OpenedPopupStack.size() && !has_focus; m++)
                     has_focus = (g.OpenedPopupStack[m].Window && g.OpenedPopupStack[m].Window->RootWindow == g.FocusedWindow->RootWindow);
                 if (!has_focus)
                     break;
@@ -3251,15 +3252,15 @@ static void ClosePopup(ImGuiID id)
     if (!IsPopupOpen(id))
         return;
     ImGuiState& g = *GImGui;
-    ClosePopupToLevel((int)g.OpenedPopupStack.size() - 1);
+    ClosePopupToLevel(g.OpenedPopupStack.size() - 1);
 }
 
 // Close the popup we have begin-ed into.
 void ImGui::CloseCurrentPopup()
 {
     ImGuiState& g = *GImGui;
-    int popup_idx = (int)g.CurrentPopupStack.size() - 1;
-    if (popup_idx < 0 || popup_idx > (int)g.OpenedPopupStack.size() || g.CurrentPopupStack[popup_idx].PopupID != g.OpenedPopupStack[popup_idx].PopupID)
+    int popup_idx = g.CurrentPopupStack.size() - 1;
+    if (popup_idx < 0 || popup_idx > g.OpenedPopupStack.size() || g.CurrentPopupStack[popup_idx].PopupID != g.OpenedPopupStack[popup_idx].PopupID)
         return;
     while (popup_idx > 0 && g.OpenedPopupStack[popup_idx].Window && (g.OpenedPopupStack[popup_idx].Window->Flags & ImGuiWindowFlags_ChildMenu))
         popup_idx--;
@@ -3460,12 +3461,12 @@ static void CheckStacksSize(ImGuiWindow* window, bool write)
     // NOT checking: DC.ItemWidth, DC.AllowKeyboardFocus, DC.ButtonRepeat, DC.TextWrapPos (per window) to allow user to conveniently push once and not pop (they are cleared on Begin)
     ImGuiState& g = *GImGui;
     int* p_backup = &window->DC.StackSizesBackup[0];
-    { int current = (int)window->IDStack.size();       if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopID()
-    { int current = (int)window->DC.GroupStack.size(); if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot EndGroup()
-    { int current = (int)g.CurrentPopupStack.size();   if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot EndPopup()/EndMenu()
-    { int current = (int)g.ColorModifiers.size();      if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopStyleColor()
-    { int current = (int)g.StyleModifiers.size();      if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopStyleVar()
-    { int current = (int)g.FontStack.size();           if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopFont()
+    { int current = window->IDStack.size();       if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopID()
+    { int current = window->DC.GroupStack.size(); if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot EndGroup()
+    { int current = g.CurrentPopupStack.size();   if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot EndPopup()/EndMenu()
+    { int current = g.ColorModifiers.size();      if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopStyleColor()
+    { int current = g.StyleModifiers.size();      if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopStyleVar()
+    { int current = g.FontStack.size();           if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopFont()
     IM_ASSERT(p_backup == window->DC.StackSizesBackup + IM_ARRAYSIZE(window->DC.StackSizesBackup));
 }
 
@@ -3505,7 +3506,7 @@ static ImGuiWindow* FindWindowByName(const char* name)
     // FIXME-OPT: Store sorted hashes -> pointers.
     ImGuiState& g = *GImGui;
     ImGuiID id = ImHash(name, 0);
-    for (size_t i = 0; i < g.Windows.size(); i++)
+    for (int i = 0; i < g.Windows.size(); i++)
         if (g.Windows[i]->ID == id)
             return g.Windows[i];
     return NULL;
@@ -3663,7 +3664,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     }
 
     // Update known root window (if we are a child window, otherwise window == window->RootWindow)
-    size_t root_idx, root_non_popup_idx;
+    int root_idx, root_non_popup_idx;
     for (root_idx = g.CurrentWindowStack.size() - 1; root_idx > 0; root_idx--)
         if (!(g.CurrentWindowStack[root_idx]->Flags & ImGuiWindowFlags_ChildWindow))
             break;
@@ -4240,7 +4241,7 @@ static void FocusWindow(ImGuiWindow* window)
     if (g.Windows.back() == window)
         return;
 
-    for (size_t i = 0; i < g.Windows.size(); i++)
+    for (int i = 0; i < g.Windows.size(); i++)
         if (g.Windows[i] == window)
         {
             g.Windows.erase(g.Windows.begin() + i);
@@ -6643,9 +6644,9 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
 struct ImGuiPlotArrayGetterData
 {
     const float* Values;
-    size_t Stride;
+    int Stride;
 
-    ImGuiPlotArrayGetterData(const float* values, size_t stride) { Values = values; Stride = stride; }
+    ImGuiPlotArrayGetterData(const float* values, int stride) { Values = values; Stride = stride; }
 };
 
 static float Plot_ArrayGetter(void* data, int idx)
@@ -6655,7 +6656,7 @@ static float Plot_ArrayGetter(void* data, int idx)
     return v;
 }
 
-void ImGui::PlotLines(const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, size_t stride)
+void ImGui::PlotLines(const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, int stride)
 {
     ImGuiPlotArrayGetterData data(values, stride);
     Plot(ImGuiPlotType_Lines, label, &Plot_ArrayGetter, (void*)&data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
@@ -6666,7 +6667,7 @@ void ImGui::PlotLines(const char* label, float (*values_getter)(void* data, int 
     Plot(ImGuiPlotType_Lines, label, values_getter, data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
 }
 
-void ImGui::PlotHistogram(const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, size_t stride)
+void ImGui::PlotHistogram(const char* label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, int stride)
 {
     ImGuiPlotArrayGetterData data(values, stride);
     Plot(ImGuiPlotType_Histogram, label, &Plot_ArrayGetter, (void*)&data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
@@ -6860,7 +6861,7 @@ static ImVec2 InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* t
 }
 
 // Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, wchar characters. InputText converts between UTF-8 and wchar)
-static int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                             { return (int)obj->CurLenW; }
+static int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                             { return obj->CurLenW; }
 static ImWchar STB_TEXTEDIT_GETCHAR(const STB_TEXTEDIT_STRING* obj, int idx)                      { return obj->Text[idx]; }
 static float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)  { ImWchar c = obj->Text[line_start_idx+char_idx]; if (c == '\n') return STB_TEXTEDIT_GETWIDTH_NEWLINE; return GImGui->Font->GetCharAdvance(c) * (GImGui->FontSize / GImGui->Font->FontSize); }
 static int     STB_TEXTEDIT_KEYTOTEXT(int key)                                                    { return key >= 0x10000 ? 0 : key; }
@@ -6897,18 +6898,18 @@ static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)
 
 static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const ImWchar* new_text, int new_text_len)
 {
-    const size_t text_len = obj->CurLenW;
-    if ((size_t)new_text_len + text_len + 1 > obj->Text.size())
+    const int text_len = obj->CurLenW;
+    if (new_text_len + text_len + 1 > obj->Text.size())
         return false;
 
     const int new_text_len_utf8 = ImTextCountUtf8BytesFromStr(new_text, new_text + new_text_len);
-    if ((size_t)new_text_len_utf8 + obj->CurLenA + 1 > obj->BufSizeA)
+    if (new_text_len_utf8 + obj->CurLenA + 1 > obj->BufSizeA)
         return false;
 
     ImWchar* text = obj->Text.begin();
-    if (pos != (int)text_len)
-        memmove(text + (size_t)pos + new_text_len, text + (size_t)pos, (text_len - (size_t)pos) * sizeof(ImWchar));
-    memcpy(text + (size_t)pos, new_text, (size_t)new_text_len * sizeof(ImWchar));
+    if (pos != text_len)
+        memmove(text + pos + new_text_len, text + pos, (size_t)(text_len - pos) * sizeof(ImWchar));
+    memcpy(text + pos, new_text, (size_t)new_text_len * sizeof(ImWchar));
 
     obj->CurLenW += new_text_len;
     obj->CurLenA += new_text_len_utf8;
@@ -6971,23 +6972,22 @@ void ImGuiTextEditCallbackData::DeleteChars(int pos, int bytes_count)
 
 void ImGuiTextEditCallbackData::InsertChars(int pos, const char* new_text, const char* new_text_end)
 {
-    const size_t text_len = strlen(Buf);
+    const int text_len = (int)strlen(Buf);
     if (!new_text_end)
         new_text_end = new_text + strlen(new_text);
-    const size_t new_text_len = (size_t)(new_text_end - new_text);
+    const int new_text_len = (int)(new_text_end - new_text);
 
     if (new_text_len + text_len + 1 >= BufSize)
         return;
 
-    size_t upos = (size_t)pos;
-    if (text_len != upos)
-        memmove(Buf + upos + new_text_len, Buf + upos, text_len - upos);
-    memcpy(Buf + upos, new_text, new_text_len * sizeof(char));
+    if (text_len != pos)
+        memmove(Buf + pos + new_text_len, Buf + pos, (size_t)(text_len - pos));
+    memcpy(Buf + pos, new_text, (size_t)new_text_len * sizeof(char));
     Buf[text_len + new_text_len] = '\0';
 
     BufDirty = true;
     if (CursorPos >= pos)
-        CursorPos += (int)new_text_len;
+        CursorPos += new_text_len;
     SelectionStart = SelectionEnd = CursorPos;
 }
 
@@ -7046,7 +7046,7 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
 }
 
 // Edit a string of text
-static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
+static bool InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -7123,7 +7123,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             ImFormatString(edit_state.InitialText.begin(), edit_state.InitialText.size(), "%s", buf);
             const char* buf_end = NULL;
             edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.begin(), edit_state.Text.size(), buf, NULL, &buf_end);
-            edit_state.CurLenA = buf_end - buf; // We can't get the result from ImFormatString() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
+            edit_state.CurLenA = (int)(buf_end - buf); // We can't get the result from ImFormatString() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
             edit_state.InputCursorScreenPos = ImVec2(-1.f, -1.f);
             edit_state.CursorAnimReset();
 
@@ -7139,9 +7139,9 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             {
                 // Recycle existing cursor/selection/undo stack but clamp position
                 // Note a single mouse click will override the cursor/position immediately by calling stb_textedit_click handler.
-                edit_state.StbState.cursor = ImMin(edit_state.StbState.cursor, (int)edit_state.CurLenW);
-                edit_state.StbState.select_start = ImMin(edit_state.StbState.select_start, (int)edit_state.CurLenW);
-                edit_state.StbState.select_end = ImMin(edit_state.StbState.select_end, (int)edit_state.CurLenW);
+                edit_state.StbState.cursor = ImMin(edit_state.StbState.cursor, edit_state.CurLenW);
+                edit_state.StbState.select_start = ImMin(edit_state.StbState.select_start, edit_state.CurLenW);
+                edit_state.StbState.select_end = ImMin(edit_state.StbState.select_end, edit_state.CurLenW);
             }
             if (!is_multiline && (focus_requested_by_tab || (user_clicked && is_ctrl_down)))
                 select_all = true;
@@ -7253,7 +7253,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
             if (g.IO.SetClipboardTextFn)
             {
                 const int ib = edit_state.HasSelection() ? ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end) : 0;
-                const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : (int)edit_state.CurLenW;
+                const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : edit_state.CurLenW;
                 edit_state.TempTextBuffer.resize((ie-ib) * 4 + 1);
                 ImTextStrToUtf8(edit_state.TempTextBuffer.begin(), edit_state.TempTextBuffer.size(), edit_state.Text.begin()+ib, edit_state.Text.begin()+ie);
                 g.IO.SetClipboardTextFn(edit_state.TempTextBuffer.begin());
@@ -7273,7 +7273,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
                 if (const char* clipboard = g.IO.GetClipboardTextFn())
                 {
                     // Remove new-line from pasted buffer
-                    const size_t clipboard_len = strlen(clipboard);
+                    const int clipboard_len = (int)strlen(clipboard);
                     ImWchar* clipboard_filtered = (ImWchar*)ImGui::MemAlloc((clipboard_len+1) * sizeof(ImWchar));
                     int clipboard_filtered_len = 0;
                     for (const char* s = clipboard; *s; )
@@ -7366,7 +7366,7 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
                     if (callback_data.BufDirty)
                     {
                         edit_state.CurLenW = ImTextStrFromUtf8(text, edit_state.Text.size(), edit_state.TempTextBuffer.begin(), NULL);
-                        edit_state.CurLenA = strlen(edit_state.TempTextBuffer.begin());
+                        edit_state.CurLenA = (int)strlen(edit_state.TempTextBuffer.begin());
                         edit_state.CursorAnimReset();
                     }
                 }
@@ -7543,13 +7543,13 @@ static bool InputTextEx(const char* label, char* buf, size_t buf_size, const ImV
 bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
     IM_ASSERT(!(flags & ImGuiInputTextFlags_Multiline)); // call InputTextMultiline()
-    bool ret = InputTextEx(label, buf, buf_size, ImVec2(0,0), flags, callback, user_data);
+    bool ret = InputTextEx(label, buf, (int)buf_size, ImVec2(0,0), flags, callback, user_data);
     return ret;
 }
 
 bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
-    bool ret = InputTextEx(label, buf, buf_size, size, flags | ImGuiInputTextFlags_Multiline, callback, user_data);
+    bool ret = InputTextEx(label, buf, (int)buf_size, size, flags | ImGuiInputTextFlags_Multiline, callback, user_data);
     return ret;
 }
 
@@ -8220,7 +8220,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         want_open = true;
 
     if (want_close && IsPopupOpen(id))
-        ClosePopupToLevel((int)GImGui->CurrentPopupStack.size());
+        ClosePopupToLevel(GImGui->CurrentPopupStack.size());
 
     if (!opened && want_open && g.OpenedPopupStack.size() > g.CurrentPopupStack.size())
     {
@@ -8727,7 +8727,7 @@ float ImGui::GetColumnOffset(int column_index)
     }
 
     // Read from cache
-    IM_ASSERT(column_index < (int)window->DC.ColumnsOffsetsT.size());
+    IM_ASSERT(column_index < window->DC.ColumnsOffsetsT.size());
     const float t = window->DC.ColumnsOffsetsT[column_index];
 
     const float min_x = window->DC.ColumnsStartX;
@@ -8743,7 +8743,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
 
-    IM_ASSERT(column_index < (int)window->DC.ColumnsOffsetsT.size());
+    IM_ASSERT(column_index < window->DC.ColumnsOffsetsT.size());
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
 
     const float min_x = window->DC.ColumnsStartX;
@@ -8841,7 +8841,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     if (window->DC.ColumnsCount != 1)
     {
         // Cache column offsets
-        window->DC.ColumnsOffsetsT.resize((size_t)columns_count + 1);
+        window->DC.ColumnsOffsetsT.resize(columns_count + 1);
         for (int column_index = 0; column_index < columns_count + 1; column_index++)
         {
             const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
@@ -9077,16 +9077,16 @@ void ImDrawList::PopTextureID()
     UpdateTextureID();
 }
 
-void ImDrawList::PrimReserve(unsigned int idx_count, unsigned int vtx_count)
+void ImDrawList::PrimReserve(int idx_count, int vtx_count)
 {
     ImDrawCmd& draw_cmd = cmd_buffer.back();
     draw_cmd.elem_count += idx_count;
         
-    size_t vtx_buffer_size = vtx_buffer.size();
+    int vtx_buffer_size = vtx_buffer.size();
     vtx_buffer.resize(vtx_buffer_size + vtx_count);
     vtx_write = &vtx_buffer[vtx_buffer_size];
 
-    size_t idx_buffer_size = idx_buffer.size();
+    int idx_buffer_size = idx_buffer.size();
     idx_buffer.resize(idx_buffer_size + idx_count);
     idx_write = &idx_buffer[idx_buffer_size];
 }
@@ -9476,11 +9476,11 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     IM_ASSERT(font->ContainerAtlas->TexID == texture_id_stack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
     // reserve vertices for worse case
-    const unsigned int char_count = (unsigned int)(text_end - text_begin);
-    const unsigned int vtx_count_max = char_count * 4;
-    const unsigned int idx_count_max = char_count * 6;
-    const size_t vtx_begin = vtx_buffer.size();
-    const size_t idx_begin = idx_buffer.size();
+    const int char_count = (int)(text_end - text_begin);
+    const int vtx_count_max = char_count * 4;
+    const int idx_count_max = char_count * 6;
+    const int vtx_begin = vtx_buffer.size();
+    const int idx_begin = idx_buffer.size();
     PrimReserve(idx_count_max, vtx_count_max);
 
     ImVec4 clip_rect = clip_rect_stack.back();
@@ -9495,10 +9495,10 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 
     // give back unused vertices
     // FIXME-OPT
-    vtx_buffer.resize((size_t)(vtx_write - &vtx_buffer.front()));
-    idx_buffer.resize((size_t)(idx_write - &idx_buffer.front()));
-    unsigned int vtx_unused = vtx_count_max - (unsigned int)(vtx_buffer.size() - vtx_begin);
-    unsigned int idx_unused = idx_count_max - (unsigned int)(idx_buffer.size() - idx_begin);
+    vtx_buffer.resize((int)(vtx_write - &vtx_buffer.front()));
+    idx_buffer.resize((int)(idx_write - &idx_buffer.front()));
+    int vtx_unused = vtx_count_max - (vtx_buffer.size() - vtx_begin);
+    int idx_unused = idx_count_max - (idx_buffer.size() - idx_begin);
     cmd_buffer.back().elem_count -= idx_unused;
     vtx_write -= vtx_unused;
     idx_write -= idx_unused;
@@ -9537,7 +9537,7 @@ void ImDrawData::DeIndexAllBuffers()
         if (cmd_list->idx_buffer.empty())
             continue;
         new_vtx_buffer.resize(cmd_list->idx_buffer.size());
-        for (size_t i = 0; i < cmd_list->idx_buffer.size(); i++)
+        for (int i = 0; i < cmd_list->idx_buffer.size(); i++)
             new_vtx_buffer[i] = cmd_list->vtx_buffer[cmd_list->idx_buffer[i]];
         cmd_list->vtx_buffer.swap(new_vtx_buffer);
         cmd_list->idx_buffer.resize(0);
@@ -9554,7 +9554,7 @@ struct ImFontAtlas::ImFontAtlasData
     // Input
     ImFont*             OutFont;        // Load into this font
     void*               TTFData;        // TTF data, we own the memory
-    size_t              TTFDataSize;    // TTF data size, in bytes
+    int                 TTFDataSize;    // TTF data size, in bytes
     float               SizePixels;     // Desired output size, in pixels
     const ImWchar*      GlyphRanges;    // List of Unicode range (2 value per range, values are inclusive, zero-terminated list)
     int                 FontNo;         // Index of font within .TTF file (0)
@@ -9582,7 +9582,7 @@ ImFontAtlas::~ImFontAtlas()
 
 void    ImFontAtlas::ClearInputData()
 {
-    for (size_t i = 0; i < InputData.size(); i++)
+    for (int i = 0; i < InputData.size(); i++)
     {
         if (InputData[i]->TTFData)
             ImGui::MemFree(InputData[i]->TTFData);
@@ -9603,7 +9603,7 @@ void    ImFontAtlas::ClearTexData()
 
 void    ImFontAtlas::ClearFonts()
 {
-    for (size_t i = 0; i < Fonts.size(); i++)
+    for (int i = 0; i < Fonts.size(); i++)
     {
         Fonts[i]->~ImFont();
         ImGui::MemFree(Fonts[i]);
@@ -9673,14 +9673,14 @@ ImFont* ImFontAtlas::AddFontDefault()
 ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels, const ImWchar* glyph_ranges, int font_no)
 {
     void* data = NULL;
-    size_t data_size = 0;
+    int data_size = 0;
     if (!ImLoadFileToMemory(filename, "rb", (void**)&data, &data_size))
     {
         IM_ASSERT(0); // Could not load file.
         return NULL;
     }
 
-    ImFont* font = AddFontFromMemoryTTF(data, (unsigned int)data_size, size_pixels, glyph_ranges, font_no);
+    ImFont* font = AddFontFromMemoryTTF(data, data_size, size_pixels, glyph_ranges, font_no);
     return font;
 }
 
@@ -9697,7 +9697,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float si
     memset(data, 0, sizeof(ImFontAtlasData));
     data->OutFont = font;
     data->TTFData = ttf_data;
-    data->TTFDataSize = (size_t)ttf_size;
+    data->TTFDataSize = ttf_size;
     data->SizePixels = size_pixels;
     data->GlyphRanges = glyph_ranges;
     data->FontNo = font_no;
@@ -9712,7 +9712,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float si
 ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* compressed_ttf_data, int compressed_ttf_size, float size_pixels, const ImWchar* glyph_ranges, int font_no)
 {
     // Decompress
-    const size_t buf_decompressed_size = stb_decompress_length((unsigned char*)compressed_ttf_data);
+    const unsigned int buf_decompressed_size = stb_decompress_length((unsigned char*)compressed_ttf_data);
     unsigned char* buf_decompressed_data = (unsigned char *)ImGui::MemAlloc(buf_decompressed_size);
     stb_decompress(buf_decompressed_data, (unsigned char*)compressed_ttf_data, (unsigned int)compressed_ttf_size);
 
@@ -9733,7 +9733,7 @@ bool    ImFontAtlas::Build()
     // Initialize font information early (so we can error without any cleanup) + count glyphs
     int total_glyph_count = 0;
     int total_glyph_range_count = 0;
-    for (size_t input_i = 0; input_i < InputData.size(); input_i++)
+    for (int input_i = 0; input_i < InputData.size(); input_i++)
     {
         ImFontAtlasData& data = *InputData[input_i];
         IM_ASSERT(data.OutFont && (!data.OutFont->IsLoaded() || data.OutFont->ContainerAtlas == this));
@@ -9763,8 +9763,8 @@ bool    ImFontAtlas::Build()
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
     ImVector<stbrp_rect> extra_rects;
     RenderCustomTexData(0, &extra_rects);
-    stbrp_pack_rects((stbrp_context*)spc.pack_info, &extra_rects[0], (int)extra_rects.size());
-    for (size_t i = 0; i < extra_rects.size(); i++)
+    stbrp_pack_rects((stbrp_context*)spc.pack_info, &extra_rects[0], extra_rects.size());
+    for (int i = 0; i < extra_rects.size(); i++)
         if (extra_rects[i].was_packed)
             TexHeight = ImMax(TexHeight, extra_rects[i].y + extra_rects[i].h);
 
@@ -9778,7 +9778,7 @@ bool    ImFontAtlas::Build()
     memset(buf_ranges, 0, total_glyph_range_count * sizeof(stbtt_pack_range));
 
     // First font pass: pack all glyphs (no rendering at this point, we are working with glyph sizes only)
-    for (size_t input_i = 0; input_i < InputData.size(); input_i++)
+    for (int input_i = 0; input_i < InputData.size(); input_i++)
     {
         ImFontAtlasData& data = *InputData[input_i];
 
@@ -9827,7 +9827,7 @@ bool    ImFontAtlas::Build()
     spc.height = TexHeight;
 
     // Second pass: render characters
-    for (size_t input_i = 0; input_i < InputData.size(); input_i++)
+    for (int input_i = 0; input_i < InputData.size(); input_i++)
     {
         ImFontAtlasData& data = *InputData[input_i];
         ret = stbtt_PackFontRangesRenderIntoRects(&spc, &data.FontInfo, data.Ranges, data.RangesCount, data.Rects);
@@ -9840,7 +9840,7 @@ bool    ImFontAtlas::Build()
     buf_rects = NULL;
 
     // Third pass: setup ImFont and glyphs for runtime
-    for (size_t input_i = 0; input_i < InputData.size(); input_i++)
+    for (int input_i = 0; input_i < InputData.size(); input_i++)
     {
         ImFontAtlasData& data = *InputData[input_i];
         data.OutFont->ContainerAtlas = this;
@@ -10119,23 +10119,23 @@ void    ImFont::Clear()
 void ImFont::BuildLookupTable()
 {
     int max_codepoint = 0;
-    for (size_t i = 0; i != Glyphs.size(); i++)
+    for (int i = 0; i != Glyphs.size(); i++)
         max_codepoint = ImMax(max_codepoint, (int)Glyphs[i].Codepoint);
 
     IndexXAdvance.clear();
-    IndexXAdvance.resize((size_t)max_codepoint + 1);
+    IndexXAdvance.resize(max_codepoint + 1);
     IndexLookup.clear();
-    IndexLookup.resize((size_t)max_codepoint + 1);
-    for (size_t i = 0; i < (size_t)max_codepoint + 1; i++)
+    IndexLookup.resize(max_codepoint + 1);
+    for (int i = 0; i < max_codepoint + 1; i++)
     {
         IndexXAdvance[i] = -1.0f;
         IndexLookup[i] = -1;
     }
-    for (size_t i = 0; i < Glyphs.size(); i++)
+    for (int i = 0; i < Glyphs.size(); i++)
     {
-        const size_t codepoint = (int)Glyphs[i].Codepoint;
+        int codepoint = (int)Glyphs[i].Codepoint;
         IndexXAdvance[codepoint] = Glyphs[i].XAdvance;
-        IndexLookup[codepoint] = (int)i;
+        IndexLookup[codepoint] = i;
     }
 
     // Create a glyph to handle TAB
@@ -10148,14 +10148,14 @@ void ImFont::BuildLookupTable()
         tab_glyph = *FindGlyph((unsigned short)' ');
         tab_glyph.Codepoint = '\t';
         tab_glyph.XAdvance *= 4;
-        IndexXAdvance[(size_t)tab_glyph.Codepoint] = (float)tab_glyph.XAdvance;
-        IndexLookup[(size_t)tab_glyph.Codepoint] = (int)(Glyphs.size()-1);
+        IndexXAdvance[(int)tab_glyph.Codepoint] = (float)tab_glyph.XAdvance;
+        IndexLookup[(int)tab_glyph.Codepoint] = (int)(Glyphs.size()-1);
     }
 
     FallbackGlyph = NULL;
     FallbackGlyph = FindGlyph(FallbackChar);
     FallbackXAdvance = FallbackGlyph ? FallbackGlyph->XAdvance : 0.0f;
-    for (size_t i = 0; i < (size_t)max_codepoint + 1; i++)
+    for (int i = 0; i < max_codepoint + 1; i++)
         if (IndexXAdvance[i] < 0.0f)
             IndexXAdvance[i] = FallbackXAdvance;
 }
@@ -10168,7 +10168,7 @@ void ImFont::SetFallbackChar(ImWchar c)
 
 const ImFont::Glyph* ImFont::FindGlyph(unsigned short c) const
 {
-    if (c < (int)IndexLookup.size())
+    if (c < IndexLookup.size())
     {
         const int i = IndexLookup[c];
         if (i != -1)
@@ -10238,7 +10238,7 @@ static int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const
     return 0;
 }
 
-static ptrdiff_t ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in_text, const char* in_text_end, const char** in_text_remaining)
+static int ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_text_remaining)
 {
     ImWchar* buf_out = buf;
     ImWchar* buf_end = buf + buf_size;
@@ -10254,7 +10254,7 @@ static ptrdiff_t ImTextStrFromUtf8(ImWchar* buf, size_t buf_size, const char* in
     *buf_out = 0;
     if (in_text_remaining)
         *in_text_remaining = in_text;
-    return buf_out - buf;
+    return (int)(buf_out - buf);
 }
 
 static int ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end)
@@ -10273,7 +10273,7 @@ static int ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end
 }
 
 // Based on stb_to_utf8() from github.com/nothings/stb/
-static inline int ImTextCharToUtf8(char* buf, size_t buf_size, unsigned int c)
+static inline int ImTextCharToUtf8(char* buf, int buf_size, unsigned int c)
 {
     if (c < 0x80) 
     {
@@ -10319,7 +10319,7 @@ static inline int ImTextCountUtf8BytesFromChar(unsigned int c)
     return 3;
 }
 
-static ptrdiff_t ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_text, const ImWchar* in_text_end)
+static int ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end)
 {
     char* buf_out = buf;
     const char* buf_end = buf + buf_size;
@@ -10329,10 +10329,10 @@ static ptrdiff_t ImTextStrToUtf8(char* buf, size_t buf_size, const ImWchar* in_t
         if (c < 0x80)
             *buf_out++ = (char)c;
         else
-            buf_out += ImTextCharToUtf8(buf_out, (uintptr_t)(buf_end-buf_out-1), c);
+            buf_out += ImTextCharToUtf8(buf_out, (int)(buf_end-buf_out-1), c);
     }
     *buf_out = 0;
-    return buf_out - buf;
+    return (int)(buf_out - buf);
 }
 
 static int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end)
@@ -10402,7 +10402,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             }
         }
 
-        const float char_width = ((size_t)c < IndexXAdvance.size()) ? IndexXAdvance[(size_t)c] * scale : FallbackXAdvance;
+        const float char_width = ((int)c < IndexXAdvance.size()) ? IndexXAdvance[(int)c] * scale : FallbackXAdvance;
         if (ImCharIsSpace(c))
         {
             if (inside_word)
@@ -10518,7 +10518,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 continue;
         }
         
-        const float char_width = ((size_t)c < IndexXAdvance.size() ? IndexXAdvance[(size_t)c] : FallbackXAdvance) * scale;
+        const float char_width = ((int)c < IndexXAdvance.size() ? IndexXAdvance[(int)c] : FallbackXAdvance) * scale;
         if (line_width + char_width >= max_width)
         {
             s = prev_s;
@@ -10773,7 +10773,7 @@ static void SetClipboardTextFn_DefaultImpl(const char* text)
     const char* text_end = text + strlen(text);
     g.PrivateClipboard = (char*)ImGui::MemAlloc((size_t)(text_end - text) + 1);
     memcpy(g.PrivateClipboard, text, (size_t)(text_end - text));
-    g.PrivateClipboard[(size_t)(text_end - text)] = 0;
+    g.PrivateClipboard[(int)(text_end - text)] = 0;
 }
 
 #endif
@@ -11066,10 +11066,10 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Fonts", "Fonts (%d)", (int)ImGui::GetIO().Fonts->Fonts.size()))
+        if (ImGui::TreeNode("Fonts", "Fonts (%d)", ImGui::GetIO().Fonts->Fonts.size()))
         {
             ImGui::TextWrapped("Tip: Load fonts with GetIO().Fonts->AddFontFromFileTTF().");
-            for (size_t i = 0; i < ImGui::GetIO().Fonts->Fonts.size(); i++)
+            for (int i = 0; i < ImGui::GetIO().Fonts->Fonts.size(); i++)
             {
                 ImFont* font = ImGui::GetIO().Fonts->Fonts[i];
                 ImGui::BulletText("Font %d: %.2f pixels, %d glyphs", i, font->FontSize, font->Glyphs.size());
@@ -11112,14 +11112,14 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Tree"))
         {
-            for (size_t i = 0; i < 5; i++)
+            for (int i = 0; i < 5; i++)
             {
                 if (ImGui::TreeNode((void*)i, "Child %d", i))
                 {
                     ImGui::Text("blah blah");
                     ImGui::SameLine();
                     if (ImGui::SmallButton("print"))
-                        printf("Child %d pressed", (int)i);
+                        printf("Child %d pressed", i);
                     ImGui::TreePop();
                 }
             }
@@ -11552,7 +11552,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
         static bool pause;
         static ImVector<float> values; if (values.empty()) { values.resize(90); memset(&values.front(), 0, values.size()*sizeof(float)); } 
-        static size_t values_offset = 0; 
+        static int values_offset = 0; 
         if (!pause) 
         {
             static float refresh_time = ImGui::GetTime(); // Create dummy data at fixed 60 hz rate for the demo
@@ -11564,7 +11564,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 phase += 0.10f*values_offset; 
             }
         }
-        ImGui::PlotLines("##Graph", &values.front(), (int)values.size(), (int)values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
+        ImGui::PlotLines("##Graph", &values.front(), (int)values.size(), values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
         ImGui::SameLine(0, (int)ImGui::GetStyle().ItemInnerSpacing.x); 
         ImGui::BeginGroup();
         ImGui::Text("Graph");
@@ -12115,7 +12115,7 @@ void ImGui::ShowTestWindow(bool* opened)
                     "  \"-xxx\"     hide lines containing \"xxx\"");
         filter.Draw();
         const char* lines[] = { "aaa1.c", "bbb1.c", "ccc1.c", "aaa2.cpp", "bbb2.cpp", "ccc2.cpp", "abc.h", "hello, world" };
-        for (size_t i = 0; i < IM_ARRAYSIZE(lines); i++)
+        for (int i = 0; i < IM_ARRAYSIZE(lines); i++)
             if (filter.PassFilter(lines[i]))
                 ImGui::BulletText("%s", lines[i]);
     }
@@ -12260,9 +12260,9 @@ void ImGui::ShowMetricsWindow(bool* opened)
 
             static void NodeWindows(ImVector<ImGuiWindow*>& windows, const char* label)
             {
-                if (!ImGui::TreeNode(label, "%s (%d)", label, (int)windows.size()))
+                if (!ImGui::TreeNode(label, "%s (%d)", label, windows.size()))
                     return;
-                for (int i = 0; i < (int)windows.size(); i++)
+                for (int i = 0; i < windows.size(); i++)
                     Funcs::NodeWindow(windows[i], "Window");
                 ImGui::TreePop();
             }
@@ -12274,7 +12274,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
                 NodeDrawList(window->DrawList, "DrawList");
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.size() > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
-                ImGui::BulletText("Storage: %d bytes", (int)window->StateStorage.Data.size() * sizeof(ImGuiStorage::Pair));
+                ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.size() * sizeof(ImGuiStorage::Pair));
                 ImGui::TreePop();
             }
         };
@@ -12282,15 +12282,15 @@ void ImGui::ShowMetricsWindow(bool* opened)
         ImGuiState& g = *GImGui;                // Access private state
         g.DisableHideTextAfterDoubleHash++;     // Not exposed (yet). Disable processing that hides text after '##' markers.
         Funcs::NodeWindows(g.Windows, "Windows");
-        if (ImGui::TreeNode("DrawList", "Active DrawLists (%d)", (int)g.RenderDrawLists[0].size()))
+        if (ImGui::TreeNode("DrawList", "Active DrawLists (%d)", g.RenderDrawLists[0].size()))
         {
-            for (int i = 0; i < (int)g.RenderDrawLists[0].size(); i++)
+            for (int i = 0; i < g.RenderDrawLists[0].size(); i++)
                 Funcs::NodeDrawList(g.RenderDrawLists[0][i], "DrawList");
             ImGui::TreePop();
         }
-        if (ImGui::TreeNode("Popups", "Opened Popups (%d)", (int)g.OpenedPopupStack.size()))
+        if (ImGui::TreeNode("Popups", "Opened Popups (%d)", g.OpenedPopupStack.size()))
         {
-            for (int i = 0; i < (int)g.OpenedPopupStack.size(); i++)
+            for (int i = 0; i < g.OpenedPopupStack.size(); i++)
                 ImGui::BulletText("PopupID: %08x, Window: '%s'", g.OpenedPopupStack[i].PopupID, g.OpenedPopupStack[i].Window ? g.OpenedPopupStack[i].Window->Name : "NULL");
             ImGui::TreePop();
         }
@@ -12486,7 +12486,7 @@ static void ShowExampleAppCustomRendering(bool* opened)
         }
     }
     draw_list->PushClipRect(ImVec4(canvas_pos.x, canvas_pos.y, canvas_pos.x+canvas_size.x, canvas_pos.y+canvas_size.y));      // clip lines within the canvas (if we resize it, etc.)
-    for (int i = 0; i < (int)points.size() - 1; i += 2)
+    for (int i = 0; i < points.size() - 1; i += 2)
         draw_list->AddLine(ImVec2(canvas_pos.x + points[i].x, canvas_pos.y + points[i].y), ImVec2(canvas_pos.x + points[i+1].x, canvas_pos.y + points[i+1].y), 0xFF00FFFF);
     draw_list->PopClipRect();
     if (adding_preview)
@@ -12516,13 +12516,13 @@ struct ExampleAppConsole
     ~ExampleAppConsole()
     {
         ClearLog();
-        for (size_t i = 0; i < Items.size(); i++) 
+        for (int i = 0; i < Items.size(); i++) 
             free(History[i]); 
     }
 
     void    ClearLog()
     {
-        for (size_t i = 0; i < Items.size(); i++) 
+        for (int i = 0; i < Items.size(); i++) 
             free(Items[i]); 
         Items.clear();
         ScrollToBottom = true;
@@ -12576,7 +12576,7 @@ struct ExampleAppConsole
             ImGui::EndPopup();
         }
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,1)); // Tighten spacing
-        for (size_t i = 0; i < Items.size(); i++)
+        for (int i = 0; i < Items.size(); i++)
         {
             const char* item = Items[i];
             if (!filter.PassFilter(item))
@@ -12618,7 +12618,7 @@ struct ExampleAppConsole
 
         // Insert into history. First find match and delete it so it can be pushed to the back. This isn't trying to be smart or optimal.
         HistoryPos = -1;
-        for (int i = (int)History.size()-1; i >= 0; i--)
+        for (int i = History.size()-1; i >= 0; i--)
             if (ImStricmp(History[i], command_line) == 0)
             {
                 free(History[i]);
@@ -12635,12 +12635,12 @@ struct ExampleAppConsole
         else if (ImStricmp(command_line, "HELP") == 0)
         {
             AddLog("Commands:");
-            for (size_t i = 0; i < Commands.size(); i++)
+            for (int i = 0; i < Commands.size(); i++)
                 AddLog("- %s", Commands[i]);
         }
         else if (ImStricmp(command_line, "HISTORY") == 0)
         {
-            for (size_t i = History.size() >= 10 ? History.size() - 10 : 0; i < History.size(); i++)
+            for (int i = History.size() >= 10 ? History.size() - 10 : 0; i < History.size(); i++)
                 AddLog("%3d: %s\n", i, History[i]);
         }
         else
@@ -12677,7 +12677,7 @@ struct ExampleAppConsole
 
                 // Build a list of candidates
                 ImVector<const char*> candidates;
-                for (size_t i = 0; i < Commands.size(); i++)
+                for (int i = 0; i < Commands.size(); i++)
                     if (ImStrnicmp(Commands[i], word_start, (int)(word_end-word_start)) == 0)
                         candidates.push_back(Commands[i]);
 
@@ -12701,7 +12701,7 @@ struct ExampleAppConsole
                     {
                         int c = 0;
                         bool all_candidates_matches = true;
-                        for (size_t i = 0; i < candidates.size() && all_candidates_matches; i++)
+                        for (int i = 0; i < candidates.size() && all_candidates_matches; i++)
                             if (i == 0)
                                 c = toupper(candidates[i][match_len]);
                             else if (c != toupper(candidates[i][match_len]))
@@ -12719,7 +12719,7 @@ struct ExampleAppConsole
 
                     // List matches
                     AddLog("Possible matches:\n");
-                    for (size_t i = 0; i < candidates.size(); i++)
+                    for (int i = 0; i < candidates.size(); i++)
                         AddLog("- %s\n", candidates[i]);
                 }
 
@@ -12732,14 +12732,14 @@ struct ExampleAppConsole
                 if (data->EventKey == ImGuiKey_UpArrow)
                 {
                     if (HistoryPos == -1)
-                        HistoryPos = (int)(History.size() - 1);
+                        HistoryPos = History.size() - 1;
                     else if (HistoryPos > 0)
                         HistoryPos--;
                 }
                 else if (data->EventKey == ImGuiKey_DownArrow)
                 {
                     if (HistoryPos != -1)
-                        if (++HistoryPos >= (int)History.size())
+                        if (++HistoryPos >= History.size())
                             HistoryPos = -1;
                 }
 

@@ -23,7 +23,7 @@ static GLuint       g_FontTexture = 0;
 static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
 static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
-static size_t       g_VboSize = 0;
+static int          g_VboSize = 0;
 static unsigned int g_VboHandle = 0, g_VaoHandle = 0;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
@@ -59,7 +59,7 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
 
     // Grow our buffer according to what we need
     glBindBuffer(GL_ARRAY_BUFFER, g_VboHandle);
-    size_t needed_vtx_size = draw_data->total_vtx_count * sizeof(ImDrawVert);
+    int needed_vtx_size = draw_data->total_vtx_count * sizeof(ImDrawVert);
     if (g_VboSize < needed_vtx_size)
     {
         g_VboSize = needed_vtx_size + 5000 * sizeof(ImDrawVert);  // Grow buffer
