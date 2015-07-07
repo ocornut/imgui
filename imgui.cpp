@@ -1464,8 +1464,8 @@ struct ImGuiWindow
 
     ImGuiDrawContext        DC;                                 // Temporary per-window data, reset at the beginning of the frame
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
-    ImVector<ImVec4>        ClipRectStack;                      // Scissoring / clipping rectangle. x1, y1, x2, y2.
-    ImRect                  ClippedRect;                        // = ClipRectStack.front() after setup in Begin()
+    ImVec4                  ClipRect;                           // = DrawList->clip_rect_stack.back(). Scissoring / clipping rectangle. x1, y1, x2, y2.
+    ImRect                  ClippedWindowRect;                  // = ClipRect just after setup in Begin()
     int                     LastFrameDrawn;
     float                   ItemWidthDefault;
     ImGuiSimpleColumns      MenuColumns;                        // Simplified columns storage for menu items
@@ -2381,25 +2381,25 @@ static void PushClipRect(const ImVec4& clip_rect, bool clipped = true)
     ImGuiWindow* window = GetCurrentWindow();
 
     ImVec4 cr = clip_rect;
-    if (clipped && !window->ClipRectStack.empty())
+    if (clipped)
     {
         // Clip with existing clip rect
-        const ImVec4 cur_cr = window->ClipRectStack.back();
+        const ImVec4 cur_cr = window->ClipRect;
         cr = ImVec4(ImMax(cr.x, cur_cr.x), ImMax(cr.y, cur_cr.y), ImMin(cr.z, cur_cr.z), ImMin(cr.w, cur_cr.w));
     }
     cr.z = ImMax(cr.x, cr.z);
     cr.w = ImMax(cr.y, cr.w);
 
     IM_ASSERT(cr.x <= cr.z && cr.y <= cr.w);
-    window->ClipRectStack.push_back(cr);
+    window->ClipRect = cr;
     window->DrawList->PushClipRect(cr);
 }
 
 static void PopClipRect()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->ClipRectStack.pop_back();
     window->DrawList->PopClipRect();
+    window->ClipRect = window->DrawList->clip_rect_stack.back();
 }
 
 void ImGui::Render()
@@ -2842,9 +2842,8 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
     }
 
     const ImVec2 pos = window->DC.CursorPos;
-    const ImVec4 clip_rect = window->ClipRectStack.back();
-    const float clip_y1 = clip_rect.y;
-    const float clip_y2 = clip_rect.w;
+    const float clip_y1 = window->ClipRect.y;
+    const float clip_y2 = window->ClipRect.w;
 
     int start = (int)((clip_y1 - pos.y) / items_height);
     int end = (int)((clip_y2 - pos.y) / items_height);
@@ -2867,7 +2866,7 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
             continue;
 
         // Using the clipped AABB so a child window will typically be clipped by its parent.
-        ImRect bb(window->ClippedRect.Min - g.Style.TouchExtraPadding, window->ClippedRect.Max + g.Style.TouchExtraPadding);
+        ImRect bb(window->ClippedWindowRect.Min - g.Style.TouchExtraPadding, window->ClippedWindowRect.Max + g.Style.TouchExtraPadding);
         if (bb.Contains(pos))
             return window;
     }
@@ -2884,11 +2883,7 @@ static bool IsMouseHoveringRect(const ImRect& rect)
 
     // Clip
     ImRect rect_clipped = rect;
-    if (!window->ClipRectStack.empty())
-    {
-        const ImVec4 clip_rect = window->ClipRectStack.back();
-        rect_clipped.Clip(ImRect(ImVec2(clip_rect.x, clip_rect.y), ImVec2(clip_rect.z, clip_rect.w)));
-    }
+    rect_clipped.Clip(window->ClipRect);
 
     // Expand for touch input
     const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
@@ -3096,7 +3091,7 @@ bool ImGui::IsAnyItemActive()
 bool ImGui::IsItemVisible()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    ImRect r(window->ClipRectStack.back());
+    ImRect r(window->ClipRect);
     return r.Overlaps(window->DC.LastItemRect);
 }
 
@@ -3689,14 +3684,14 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->Active = true;
         window->BeginCount = 0;
         window->DrawList->Clear();
-        window->ClipRectStack.resize(0);
+        window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
         window->LastFrameDrawn = current_frame;
         window->IDStack.resize(1);
 
         // Setup texture, outer clipping rectangle
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_ComboBox|ImGuiWindowFlags_Popup)))
-            PushClipRect(parent_window->ClipRectStack.back());
+            PushClipRect(parent_window->ClipRect);
         else
             PushClipRect(GetVisibleRect());
 
@@ -4078,8 +4073,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
-        window->ClippedRect = window->Rect();
-        window->ClippedRect.Clip(window->ClipRectStack.front());
+        window->ClippedWindowRect = window->Rect();
+        window->ClippedWindowRect.Clip(window->ClipRect);
 
         // Pressing CTRL+C while holding on a window copy its content to the clipboard
         // This works but 1. doesn't handle multiple Begin/End pairs, 2. recursing into another Begin/End pair - so we need to work that out and add better logging scope.
@@ -4114,7 +4109,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
         if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
         {
-            const ImVec4 clip_rect_t = window->ClipRectStack.back();
+            const ImVec4 clip_rect_t = window->ClipRect;
             window->Collapsed |= (clip_rect_t.x >= clip_rect_t.z || clip_rect_t.y >= clip_rect_t.w);
         }
 
@@ -4993,7 +4988,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         const char* line = text;
         const float line_height = ImGui::GetTextLineHeight();
         const ImVec2 text_pos = window->DC.CursorPos + ImVec2(0.0f, window->DC.CurrentLineTextBaseOffset);
-        const ImVec4 clip_rect = window->ClipRectStack.back();
+        const ImVec4 clip_rect = window->ClipRect;
         ImVec2 text_size(0,0);
 
         if (text_pos.y <= clip_rect.w)
@@ -8524,7 +8519,7 @@ static bool IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    if (!bb.Overlaps(ImRect(window->ClipRectStack.back())))
+    if (!bb.Overlaps(ImRect(window->ClipRect)))
     {
         if (!id || *id != GImGui->ActiveId)
             if (clip_even_when_logged || !g.LogEnabled)
@@ -8536,7 +8531,7 @@ static bool IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when
 bool ImGui::IsRectVisible(const ImVec2& size)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    ImRect r(window->ClipRectStack.back());
+    ImRect r(window->ClipRect);
     return r.Overlaps(ImRect(window->DC.CursorPos, window->DC.CursorPos + size));
 }
 
