@@ -101,24 +101,46 @@ static void ImGui_ImplSdl_SetClipboardText(const char* text)
     SDL_SetClipboardText(text);
 }
 
-void ImGui_ImplSdl_KeyCallback(int key, bool down)
+bool ImGui_ImplSdl_EventCallback(const SDL_Event& event)
 {
     ImGuiIO& io = ImGui::GetIO();
-    if (down)
-        io.KeysDown[key] = true;
-	else
-        io.KeysDown[key] = false;
-
-	io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
-    io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
-	io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
-}
-
-void ImGui_ImplSdl_CharCallback(unsigned int c)
-{
-    ImGuiIO& io = ImGui::GetIO();
-    if (c > 0 && c < 0x10000)
-        io.AddInputCharacter((unsigned short)c);
+    switch (event.type)
+    {
+    case SDL_MOUSEWHEEL:
+        {
+            if (event.wheel.y > 0)
+                g_MouseWheel = 1;
+            if (event.wheel.y < 0)
+                g_MouseWheel = -1;
+            return true;
+        }
+    case SDL_MOUSEBUTTONDOWN:
+        {
+            if (event.button.button == SDL_BUTTON_LEFT) g_MousePressed[0] = true;
+            if (event.button.button == SDL_BUTTON_RIGHT) g_MousePressed[1] = true;
+            if (event.button.button == SDL_BUTTON_MIDDLE) g_MousePressed[2] = true;
+            return true;
+        }
+    case SDL_TEXTINPUT:
+        {
+            ImGuiIO& io = ImGui::GetIO();
+            unsigned int c = event.text.text[0];
+            if (c > 0 && c < 0x10000)
+                io.AddInputCharacter((unsigned short)c);
+            return true;
+        }
+    case SDL_KEYDOWN:
+    case SDL_KEYUP:
+        {
+            int key = event.key.keysym.sym & ~SDLK_SCANCODE_MASK;
+            io.KeysDown[key] = (event.type == SDL_KEYDOWN);
+            io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
+            io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
+            io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
+            return true;
+        }
+    }
+    return false;
 }
 
 bool ImGui_ImplSdl_CreateDeviceObjects()
@@ -164,6 +186,8 @@ bool    ImGui_ImplSdl_Init(SDL_Window *window)
     io.KeyMap[ImGuiKey_RightArrow] = SDL_SCANCODE_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = SDL_SCANCODE_UP;
     io.KeyMap[ImGuiKey_DownArrow] = SDL_SCANCODE_DOWN;
+    io.KeyMap[ImGuiKey_PageUp] = SDL_SCANCODE_PAGEUP;
+    io.KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
     io.KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
     io.KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
     io.KeyMap[ImGuiKey_Delete] = SDLK_DELETE;
@@ -197,46 +221,12 @@ void ImGui_ImplSdl_Shutdown()
     ImGui::Shutdown();
 }
 
-bool ImGui_ImplSdl_NewFrame(SDL_Window *window)
+void ImGui_ImplSdl_NewFrame(SDL_Window *window)
 {
     if (!g_FontTexture)
         ImGui_ImplSdl_CreateDeviceObjects();
 
     ImGuiIO& io = ImGui::GetIO();
-
-	bool done = false;
-	SDL_Event event;
-	while (SDL_PollEvent(&event))
-	{
-		switch (event.type)
-		{
-		case SDL_QUIT:
-			done = true;
-			break;
-		case SDL_MOUSEWHEEL:
-			if (event.wheel.y > 0)
-				g_MouseWheel = 1;
-			if (event.wheel.y < 0)
-				g_MouseWheel = -1;
-			break;
-		case SDL_MOUSEBUTTONDOWN:
-			if (event.button.button == SDL_BUTTON_LEFT) g_MousePressed[0] = true;
-			if (event.button.button == SDL_BUTTON_RIGHT) g_MousePressed[1] = true;
-			if (event.button.button == SDL_BUTTON_MIDDLE) g_MousePressed[2] = true;
-			break;
-		case SDL_TEXTINPUT:
-			ImGui_ImplSdl_CharCallback(event.text.text[0]);
-			break;
-		case SDL_KEYUP:
-			ImGui_ImplSdl_KeyCallback(event.key.keysym.sym&~SDLK_SCANCODE_MASK, false);
-			break;
-		case SDL_KEYDOWN:
-			ImGui_ImplSdl_KeyCallback(event.key.keysym.sym&~SDLK_SCANCODE_MASK, true);
-			break;
-		default:
-			break;
-		}
-	}
 
     // Setup display size (every frame to accommodate for window resizing)
     int w, h;
@@ -273,5 +263,4 @@ bool ImGui_ImplSdl_NewFrame(SDL_Window *window)
 
     // Start the frame
     ImGui::NewFrame();
-	return done;
 }

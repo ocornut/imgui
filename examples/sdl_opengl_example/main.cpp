@@ -56,7 +56,14 @@ int SDL_main(int /*argc*/, char* /*argv*/[])
 	bool done = false;
     while (!done)
     {
-        done = ImGui_ImplSdl_NewFrame(window);
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
+        {
+            ImGui_ImplSdl_EventCallback(event);
+            if (event.type == SDL_QUIT)
+                done = true;
+        }
+        ImGui_ImplSdl_NewFrame(window);
 
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
