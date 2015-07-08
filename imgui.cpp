@@ -454,9 +454,11 @@
 #pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion changes signedness             // 
 #pragma clang diagnostic ignored "-Wmissing-noreturn"       // warning : function xx could be declared with attribute 'noreturn' warning    // GetDefaultFontData() asserts which some implementation makes it never return.
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"// warning : 'xx' is deprecated: The POSIX name for this item.. // for strdup used in demo code (so user can copy & paste the code)
+#pragma clang diagnostic ignored "-Wint-to-void-pointer-cast" // warning : cast to 'void *' from smaller integer type 'int'
 #endif
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"      // warning: cast to pointer from integer of different size
 #endif
 
 //-------------------------------------------------------------------------
@@ -10864,7 +10866,7 @@ void ImGui::ShowTestWindow(bool* opened)
             {
                 ImFont* font = ImGui::GetIO().Fonts->Fonts[i];
                 ImGui::BulletText("Font %d: %.2f pixels, %d glyphs", i, font->FontSize, font->Glyphs.Size);
-                ImGui::TreePush((void*)(size_t)i);
+                ImGui::TreePush((void*)i);
                 ImGui::PushFont(font);
                 ImGui::Text("The quick brown fox jumps over the lazy dog");
                 ImGui::PopFont();
@@ -10905,7 +10907,7 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             for (int i = 0; i < 5; i++)
             {
-                if (ImGui::TreeNode((void*)(size_t)i, "Child %d", i))
+                if (ImGui::TreeNode((void*)i, "Child %d", i))
                 {
                     ImGui::Text("blah blah");
                     ImGui::SameLine();
