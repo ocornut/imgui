@@ -1,3 +1,6 @@
+// ImGui SDL2 binding with OpenGL
+// https://github.com/ocornut/imgui
+
 #include <SDL.h>
 #include <SDL_syswm.h>
 #include <SDL_OpenGL.h>
@@ -52,7 +55,7 @@ static void ImGui_ImplSdl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
         glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, col)));
 
         int vtx_offset = 0;
-        for (size_t cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
+        for (int cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
             if (pcmd->user_callback)
@@ -63,7 +66,7 @@ static void ImGui_ImplSdl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
             {
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->texture_id);
                 glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
-                glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
+                glDrawArrays(GL_TRIANGLES, vtx_offset, (GLsizei)pcmd->vtx_count);
             }
             vtx_offset += pcmd->vtx_count;
         }
@@ -117,7 +120,7 @@ bool ImGui_ImplSdl_EventCallback(const SDL_Event& event)
             ImGuiIO& io = ImGui::GetIO();
             unsigned int c = event.text.text[0];
             if (c > 0 && c < 0x10000)
-                io.AddInputCharacter((unsigned short)c);
+                io.AddInputCharacter((unsigned short)event.text.text[0]);
             return true;
         }
     case SDL_KEYDOWN:
@@ -153,6 +156,7 @@ bool ImGui_ImplSdl_CreateDeviceObjects()
     // Store our identifier
     io.Fonts->TexID = (void *)(intptr_t)g_FontTexture;
 
+    // Cleanup (don't clear the input data if you want to append new fonts later)
 	io.Fonts->ClearInputData();
 	io.Fonts->ClearTexData();
 
@@ -224,18 +228,16 @@ void ImGui_ImplSdl_NewFrame(SDL_Window *window)
 	SDL_GetWindowSize(window, &w, &h);
     io.DisplaySize = ImVec2((float)w, (float)h);
 
-	// Time
+    // Setup time step
 	Uint32	time = SDL_GetTicks();
 	double current_time = time / 1000.0;
-
     io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f/60.0f);
     g_Time = current_time;
 
-	int mx, my;
-	Uint32 mouseMask = SDL_GetMouseState(&mx, &my);
-
     // Setup inputs
     // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
+    int mx, my;
+    Uint32 mouseMask = SDL_GetMouseState(&mx, &my);
     if (SDL_GetWindowFlags(window) & SDL_WINDOW_MOUSE_FOCUS)
     	io.MousePos = ImVec2((float)mx, (float)my);   // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
     else
@@ -249,7 +251,7 @@ void ImGui_ImplSdl_NewFrame(SDL_Window *window)
     io.MouseWheel = g_MouseWheel;
     g_MouseWheel = 0.0f;
 
-    // Hide/show hardware mouse cursor
+    // Hide OS mouse cursor if ImGui is drawing it
     SDL_ShowCursor(io.MouseDrawCursor ? 0 : 1);
 
     // Start the frame

@@ -25,9 +25,6 @@ static GLuint       g_FontTexture = 0;
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 static void ImGui_ImplGlfw_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
-    if (cmd_lists_count == 0)
-        return;
-
     // We are using the OpenGL fixed pipeline to make the example code simpler to read!
     // A probable faster way to render would be to collate all vertices from all cmd_lists into a single vertex buffer.
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
