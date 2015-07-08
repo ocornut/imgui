@@ -44,7 +44,7 @@ int SDL_main(int, char**)
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
-            ImGui_ImplSdl_EventCallback(event);
+            ImGui_ImplSdl_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
                 done = true;
         }
