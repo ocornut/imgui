@@ -157,7 +157,6 @@
                      - each ImDrawList now contains both a vertex buffer and an index buffer. For each command, render ElemCount/3 triangles using indices from the index buffer.
                      - if you REALLY cannot render indexed primitives, you can call the draw_data->DeIndexAllBuffers() method to de-index your buffer. This is slow and a waste of CPU/GPU. Prefer using indexed rendering!
                      - refer to code in the examples/ folder or ask on the GitHub if you are unsure of how to upgrade. please upgrade!
-                     - removed the 'thickness' parameter from ImDrawList::AddLine().
  - 2015/07/02 (1.42) - renamed SetScrollPosHere() to SetScrollFromCursorPos(). Kept inline redirection function (will obsolete).
  - 2015/07/02 (1.42) - renamed GetScrollPosY() to GetScrollY(). Necessary to reduce confusion along with other scrolling functions, because positions (e.g. cursor position) are not equivalent to scrolling amount.
  - 2015/06/14 (1.41) - changed ImageButton() default bg_col parameter from (0,0,0,1) (black) to (0,0,0,0) (transparent) - makes a difference when texture have transparence
@@ -399,6 +398,7 @@
  - separator: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
  - gauge: various forms of gauge/loading bars widgets
  - color: better color editor.
+ - plot: plotlines should use the polygon-stroke facilities (currently issues with averaging normals)
  - plot: make it easier for user to draw extra stuff into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
  - plot: "smooth" automatic scale over time, user give an input 0.0(full user scale) 1.0(full derived from value)
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
@@ -433,6 +433,7 @@
  - input: rework IO to be able to pass actual events to fix temporal aliasing issues.
  - input: support track pad style scrolling & slider edit.
  - portability: big-endian test/support (#81)
+ - drawlist: add support for anti-aliased lines with >1.0f thickness (#133)
  - memory: add a way to discard allocs of unused/transient windows. with the current architecture new windows (including popup, opened combos, listbox) perform at least 3 allocs.
  - misc: mark printf compiler attributes on relevant functions
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
@@ -9199,7 +9200,7 @@ void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a
     _IdxWritePtr += 6;
 }
 
-void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed, bool anti_aliased)
+void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness, bool anti_aliased)
 {
     if (points_count < 2)
         return;
@@ -9215,7 +9216,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         count = points_count-1;
     }
 
-    if (anti_aliased)
+    if (anti_aliased && thickness == 1.0f)
     {
         // Anti-aliased stroke
         const float AA_SIZE = 1.0f;
@@ -9272,10 +9273,10 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             temp_inner[i2] = points[i2] - dm;
 
             // Add indexes
-            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + i2*3); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + i1*3); _IdxWritePtr[2] = (ImDrawIdx)(vtx_outer_idx   + i1*3);
-            _IdxWritePtr[3] = (ImDrawIdx)(vtx_outer_idx   + i1*3); _IdxWritePtr[4] = (ImDrawIdx)(vtx_outer_idx   + i2*3); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx + i2*3);
-            _IdxWritePtr[6] = (ImDrawIdx)(vtx_inner_idx   + i2*3); _IdxWritePtr[7] = (ImDrawIdx)(vtx_inner_idx   + i1*3); _IdxWritePtr[8] = (ImDrawIdx)(_VtxCurrentIdx + i1*3);
-            _IdxWritePtr[9] = (ImDrawIdx)(_VtxCurrentIdx + i1*3); _IdxWritePtr[10]= (ImDrawIdx)(_VtxCurrentIdx + i2*3); _IdxWritePtr[11]= (ImDrawIdx)(vtx_inner_idx   + i2*3);
+            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + i2*3); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + i1*3); _IdxWritePtr[2] = (ImDrawIdx)(vtx_outer_idx  + i1*3);
+            _IdxWritePtr[3] = (ImDrawIdx)(vtx_outer_idx  + i1*3); _IdxWritePtr[4] = (ImDrawIdx)(vtx_outer_idx  + i2*3); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx + i2*3);
+            _IdxWritePtr[6] = (ImDrawIdx)(vtx_inner_idx  + i2*3); _IdxWritePtr[7] = (ImDrawIdx)(vtx_inner_idx  + i1*3); _IdxWritePtr[8] = (ImDrawIdx)(_VtxCurrentIdx + i1*3);
+            _IdxWritePtr[9] = (ImDrawIdx)(_VtxCurrentIdx + i1*3); _IdxWritePtr[10]= (ImDrawIdx)(_VtxCurrentIdx + i2*3); _IdxWritePtr[11]= (ImDrawIdx)(vtx_inner_idx  + i2*3);
             _IdxWritePtr += 12;
         }
 
@@ -9304,8 +9305,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             ImVec2 diff = p2 - p1;
             diff *= ImInvLength(diff, 1.0f);
 
-            const float dx = diff.x * 0.5f;
-            const float dy = diff.y * 0.5f;
+            const float dx = diff.x * (thickness * 0.5f);
+            const float dy = diff.y * (thickness * 0.5f);
             _VtxWritePtr[0].pos.x = p1.x + dy; _VtxWritePtr[0].pos.y = p1.y - dx; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
             _VtxWritePtr[1].pos.x = p2.x + dy; _VtxWritePtr[1].pos.y = p2.y - dx; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col;
             _VtxWritePtr[2].pos.x = p2.x - dy; _VtxWritePtr[2].pos.y = p2.y + dx; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col;
@@ -9473,13 +9474,13 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int 
     }
 }
 
-void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col)
+void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness)
 {
     if ((col >> 24) == 0)
         return;
     PathLineTo(a + ImVec2(0.5f,0.5f));
     PathLineTo(b + ImVec2(0.5f,0.5f));
-    PathStroke(col, false);
+    PathStroke(col, false, thickness);
 }
 
 void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
@@ -11381,7 +11382,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 // Draw a line between the button and the mouse cursor
                 ImDrawList* draw_list = ImGui::GetWindowDrawList();
                 draw_list->PushClipRectFullScreen();
-                draw_list->AddLine(ImGui::CalcItemRectClosestPoint(ImGui::GetIO().MousePos, true, -2.0f), ImGui::GetIO().MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]));
+                draw_list->AddLine(ImGui::CalcItemRectClosestPoint(ImGui::GetIO().MousePos, true, -2.0f), ImGui::GetIO().MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]), 4.0f);
                 draw_list->PopClipRect();
                 ImVec2 value_raw = ImGui::GetMouseDragDelta(0, 0.0f);
                 ImVec2 value_with_lock_threshold = ImGui::GetMouseDragDelta(0);
