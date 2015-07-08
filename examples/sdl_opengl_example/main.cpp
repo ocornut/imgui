@@ -1,41 +1,26 @@
-// ImGui - standalone example application for SDL2
+// ImGui - standalone example application for SDL2 + OpenGL
 
 #include <imgui.h>
 #include "imgui_impl_sdl.h"
 #include <stdio.h>
-
-#ifdef WIN32
-#include <Windows.h>
-#include <gl/GL.h>
-#include <gl/GLU.h>
-#endif
-
-#ifdef MACOSX
-#include <OpenGL/gl.h>
-#endif
-
 #include <SDL.h>
 #include <SDL_OpenGL.h>
 
-int SDL_main(int /*argc*/, char* /*argv*/[])
+int SDL_main(int, char**)
 {
     // Setup SDL
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
         return -1;
 
-	// Init OpenGL
+    // Setup window
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-
-	// SDL window
 	SDL_DisplayMode current;
 	SDL_GetCurrentDisplayMode(0, &current);
 	SDL_Window *window = SDL_CreateWindow("ImGui SDL2+OpenGL example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
-  
-	// Create an OpenGL context associated with the window.
 	SDL_GLContext glcontext = SDL_GL_CreateContext(window);
 
     // Setup ImGui binding
@@ -103,10 +88,8 @@ int SDL_main(int /*argc*/, char* /*argv*/[])
 
     // Cleanup
     ImGui_ImplSdl_Shutdown();
-
     SDL_GL_DeleteContext(glcontext);  
 	SDL_DestroyWindow(window);
-
 	SDL_Quit();
 
     return 0;

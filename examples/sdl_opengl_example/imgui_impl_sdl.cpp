@@ -1,15 +1,6 @@
-#ifdef _MSC_VER
-#include <Windows.h>
-#include <gl/GL.h>
-#include <gl/GLU.h>
-#endif
-
-#ifdef MACOSX
-#include <OpenGL/gl.h>
-#endif
-
 #include <SDL.h>
 #include <SDL_syswm.h>
+#include <SDL_OpenGL.h>
 #include <imgui.h>
 #include "imgui_impl_sdl.h"
 

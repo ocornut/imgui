@@ -8,4 +8,3 @@ bool        ImGui_ImplSdl_EventCallback(const SDL_Event& event);
 
 void        ImGui_ImplSdl_InvalidateDeviceObjects();
 bool        ImGui_ImplSdl_CreateDeviceObjects();
-
