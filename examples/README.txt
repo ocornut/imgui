@@ -11,7 +11,7 @@ opengl_example/
     Prefer following this example since it is the shortest one!
 
 opengl3_example/
-    OpenGL exemple, using GLFW/GL3W + programmable pipeline.
+    OpenGL example, using GLFW/GL3W + programmable pipeline.
     This uses more modern calls and custom shaders.
     I don't think there is an advantage using this over the simpler example, but it is provided for reference.
 
@@ -22,3 +22,6 @@ directx11_example/
     DirectX11 example, Windows only.
     This is quite long and tedious, because: DirectX11.
 	
+ios_example/
+	iOS example.
+	Using Synergy to access keyboard/mouse data from server computer. Synergy keyboard integration is rather hacky.
