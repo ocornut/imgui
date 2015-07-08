@@ -1041,6 +1041,7 @@ struct ImDrawList
     ImVector<ImVec2>        path;				// [Internal] current path building
 
     ImDrawList() { owner_name = NULL; Clear(); }
+    ~ImDrawList() { ClearFreeMemory(); }
     IMGUI_API void  Clear();
     IMGUI_API void  ClearFreeMemory();
     IMGUI_API void  PushClipRect(const ImVec4& clip_rect);          // Scissoring. The values are x1, y1, x2, y2.
