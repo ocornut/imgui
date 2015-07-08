@@ -4,11 +4,10 @@ I choose to provide Visual Studio 10 .sln files and Makefile for Linux/OSX.
 Please let me know if they don't work with your setup!
 You can probably just import the .cpp files into your own system and figure out the linkage from there.
 
-
 opengl_example/
     OpenGL example, using GLFW + fixed pipeline.
     This is simple and should work for all OpenGL enabled applications.
-    Prefer following this example since it is the shortest one!
+    Prefer following this example to learn how ImGui works, because it is the simplest shortest one!
 
 opengl3_example/
     OpenGL example, using GLFW/GL3W + programmable pipeline.
@@ -28,3 +27,6 @@ ios_example/
 
 sdl_opengl_example/
 	SDL2 + OpenGL example.
+
+allegro5_example/
+	Allegro 5 example.

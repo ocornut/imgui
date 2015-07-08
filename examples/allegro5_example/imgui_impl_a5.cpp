@@ -1,7 +1,6 @@
 // ImGui Allegro 5 bindings
-// by @birthggd
-// public domain
 // https://github.com/ocornut/imgui
+// by @birthggd, public domain
 
 #include <stdint.h>     // uint64_t
 #include <cstring>      // memcpy
