@@ -61,7 +61,7 @@ static void ImGui_ImplA5_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_l
             else 
             {
                 ALLEGRO_BITMAP *tex = (ALLEGRO_BITMAP*)pcmd->texture_id;
-                al_set_clipping_rectangle(pcmd->clip_rect.x, pcmd->clip_rect.y, pcmd->clip_rect.z, pcmd->clip_rect.w);
+                al_set_clipping_rectangle(pcmd->clip_rect.x, pcmd->clip_rect.y, pcmd->clip_rect.z-pcmd->clip_rect.x, pcmd->clip_rect.w-pcmd->clip_rect.y);
                 al_draw_prim(&vertices[0], NULL, tex, vtx_offset, vtx_offset+pcmd->vtx_count, ALLEGRO_PRIM_TRIANGLE_LIST);
             }
             vtx_offset += pcmd->vtx_count;
@@ -140,6 +140,8 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_RightArrow] = ALLEGRO_KEY_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = ALLEGRO_KEY_UP;
     io.KeyMap[ImGuiKey_DownArrow] = ALLEGRO_KEY_DOWN;
+    io.KeyMap[ImGuiKey_PageUp] = ALLEGRO_KEY_PGUP;
+    io.KeyMap[ImGuiKey_PageDown] = ALLEGRO_KEY_PGDN;
     io.KeyMap[ImGuiKey_Home] = ALLEGRO_KEY_HOME;
     io.KeyMap[ImGuiKey_End] = ALLEGRO_KEY_END;
     io.KeyMap[ImGuiKey_Delete] = ALLEGRO_KEY_DELETE;
@@ -178,15 +180,13 @@ bool ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT *ev)
         return true;
     case ALLEGRO_EVENT_KEY_CHAR:
         if (ev->keyboard.display == g_Display) 
-        {
-            io.KeysDown[ev->keyboard.keycode] = true;
             if (ev->keyboard.unichar > 0 && ev->keyboard.unichar < 0x10000)
                 io.AddInputCharacter((unsigned short)ev->keyboard.unichar);
-        }
         return true;
+    case ALLEGRO_EVENT_KEY_DOWN:
     case ALLEGRO_EVENT_KEY_UP:
         if (ev->keyboard.display == g_Display)
-            io.KeysDown[ev->keyboard.keycode] = false;
+            io.KeysDown[ev->keyboard.keycode] = (ev->type == ALLEGRO_EVENT_KEY_DOWN);
         return true;
     }
     return false;
@@ -214,9 +214,9 @@ void ImGui_ImplA5_NewFrame()
     // Setup inputs
     ALLEGRO_KEYBOARD_STATE keys;
     al_get_keyboard_state(&keys);
-    io.KeyCtrl = al_key_down(&keys, ALLEGRO_KEYMOD_CTRL);
-    io.KeyShift = al_key_down(&keys, ALLEGRO_KEYMOD_SHIFT);
-    io.KeyAlt = al_key_down(&keys, ALLEGRO_KEYMOD_ALT);
+    io.KeyCtrl = al_key_down(&keys, ALLEGRO_KEY_LCTRL) || al_key_down(&keys, ALLEGRO_KEY_RCTRL);
+    io.KeyShift = al_key_down(&keys, ALLEGRO_KEY_LSHIFT) || al_key_down(&keys, ALLEGRO_KEY_RSHIFT);
+    io.KeyAlt = al_key_down(&keys, ALLEGRO_KEY_ALT) || al_key_down(&keys, ALLEGRO_KEY_ALTGR);
 
     ALLEGRO_MOUSE_STATE mouse;
     if (keys.display == g_Display) 
