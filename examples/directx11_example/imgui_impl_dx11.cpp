@@ -50,13 +50,13 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
         return;
     ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource.pData;
     ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource.pData;
-    for (int n = 0; n < draw_data->cmd_lists_count; n++)
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
-        const ImDrawList* cmd_list = draw_data->cmd_lists[n];
-        memcpy(vtx_dst, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
-        memcpy(idx_dst, &cmd_list->idx_buffer[0], cmd_list->idx_buffer.size() * sizeof(ImDrawIdx));
-        vtx_dst += cmd_list->vtx_buffer.size();
-        idx_dst += cmd_list->idx_buffer.size();
+        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        memcpy(vtx_dst, &cmd_list->VtxBuffer[0], cmd_list->VtxBuffer.size() * sizeof(ImDrawVert));
+        memcpy(idx_dst, &cmd_list->IdxBuffer[0], cmd_list->IdxBuffer.size() * sizeof(ImDrawIdx));
+        vtx_dst += cmd_list->VtxBuffer.size();
+        idx_dst += cmd_list->IdxBuffer.size();
     }
     g_pd3dDeviceContext->Unmap(g_pVB, 0);
     g_pd3dDeviceContext->Unmap(g_pIB, 0);
@@ -116,26 +116,26 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     // Render command lists
     int vtx_offset = 0;
     int idx_offset = 0;
-    for (int n = 0; n < draw_data->cmd_lists_count; n++)
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
-        const ImDrawList* cmd_list = draw_data->cmd_lists[n];
-        for (int cmd_i = 0; cmd_i < cmd_list->cmd_buffer.size(); cmd_i++)
+        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++)
         {
-            const ImDrawCmd* pcmd = &cmd_list->cmd_buffer[cmd_i];
-            if (pcmd->user_callback)
+            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+            if (pcmd->UserCallback)
             {
-                pcmd->user_callback(cmd_list, pcmd);
+                pcmd->UserCallback(cmd_list, pcmd);
             }
             else
             {
-                const D3D11_RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
-                g_pd3dDeviceContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->texture_id);
+                const D3D11_RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
+                g_pd3dDeviceContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->TextureId);
                 g_pd3dDeviceContext->RSSetScissorRects(1, &r); 
-                g_pd3dDeviceContext->DrawIndexed(pcmd->elem_count, idx_offset, vtx_offset);
+                g_pd3dDeviceContext->DrawIndexed(pcmd->ElemCount, idx_offset, vtx_offset);
             }
-            idx_offset += pcmd->elem_count;
+            idx_offset += pcmd->ElemCount;
         }
-        vtx_offset += (int)cmd_list->vtx_buffer.size();
+        vtx_offset += cmd_list->VtxBuffer.size();
     }
 
     // Restore modified state

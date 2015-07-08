@@ -35,15 +35,15 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     // Copy and convert all vertices into a single contiguous buffer
     CUSTOMVERTEX* vtx_dst;
     ImDrawIdx* idx_dst;
-    if (g_pVB->Lock(0, (UINT)(draw_data->total_vtx_count * sizeof(CUSTOMVERTEX)), (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
+    if (g_pVB->Lock(0, (UINT)(draw_data->TotalVtxCount * sizeof(CUSTOMVERTEX)), (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
         return;
-    if (g_pIB->Lock(0, (UINT)(draw_data->total_idx_count * sizeof(ImDrawIdx)), (void**)&idx_dst, D3DLOCK_DISCARD) < 0)
+    if (g_pIB->Lock(0, (UINT)(draw_data->TotalIdxCount * sizeof(ImDrawIdx)), (void**)&idx_dst, D3DLOCK_DISCARD) < 0)
         return;
-    for (int n = 0; n < draw_data->cmd_lists_count; n++)
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
-        const ImDrawList* cmd_list = draw_data->cmd_lists[n];
-        const ImDrawVert* vtx_src = &cmd_list->vtx_buffer[0];
-        for (int i = 0; i < cmd_list->vtx_buffer.size(); i++)
+        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        const ImDrawVert* vtx_src = &cmd_list->VtxBuffer[0];
+        for (int i = 0; i < cmd_list->VtxBuffer.size(); i++)
         {
             vtx_dst->pos.x = vtx_src->pos.x;
             vtx_dst->pos.y = vtx_src->pos.y;
@@ -54,8 +54,8 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
             vtx_dst++;
             vtx_src++;
         }
-        memcpy(idx_dst, &cmd_list->idx_buffer[0], cmd_list->idx_buffer.size() * sizeof(ImDrawIdx));
-        idx_dst += cmd_list->idx_buffer.size();
+        memcpy(idx_dst, &cmd_list->IdxBuffer[0], cmd_list->IdxBuffer.size() * sizeof(ImDrawIdx));
+        idx_dst += cmd_list->IdxBuffer.size();
     }
     g_pVB->Unlock();
     g_pIB->Unlock();
@@ -94,26 +94,26 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     // Render command lists
     int vtx_offset = 0;
     int idx_offset = 0;
-    for (int n = 0; n < draw_data->cmd_lists_count; n++)
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
-        const ImDrawList* cmd_list = draw_data->cmd_lists[n];
-        for (int cmd_i = 0; cmd_i < cmd_list->cmd_buffer.size(); cmd_i++)
+        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++)
         {
-            const ImDrawCmd* pcmd = &cmd_list->cmd_buffer[cmd_i];
-            if (pcmd->user_callback)
+            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+            if (pcmd->UserCallback)
             {
-                pcmd->user_callback(cmd_list, pcmd);
+                pcmd->UserCallback(cmd_list, pcmd);
             }
             else
             {
-                const RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
-                g_pd3dDevice->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->texture_id );
+                const RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
+                g_pd3dDevice->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->TextureId );
                 g_pd3dDevice->SetScissorRect(&r);
-                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->vtx_buffer.size(), idx_offset, pcmd->elem_count/3);
+                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.size(), idx_offset, pcmd->ElemCount/3);
             }
-            idx_offset += pcmd->elem_count;
+            idx_offset += pcmd->ElemCount;
         }
-        vtx_offset += (int)cmd_list->vtx_buffer.size();
+        vtx_offset += cmd_list->VtxBuffer.size();
     }
 }
 

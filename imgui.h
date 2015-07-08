@@ -982,8 +982,8 @@ struct ImGuiListClipper
 // NB- You most likely do NOT need to use draw callbacks just to create your own widget or customized UI rendering (you can poke into the draw list for that)
 // Draw callback are useful for example if you want to render a complex 3D scene inside a UI element.
 // The expected behavior from your rendering loop is:
-//   if (cmd.user_callback != NULL)
-//       cmd.user_callback(parent_list, cmd);
+//   if (cmd.UserCallback != NULL)
+//       cmd.UserCallback(parent_list, cmd);
 //   else
 //       RenderTriangles()
 // It is up to you to decide if your rendering loop or the callback should be responsible for backup/restoring rendering state.
@@ -992,11 +992,11 @@ typedef void (*ImDrawCallback)(const ImDrawList* parent_list, const ImDrawCmd* c
 // Typically, 1 command = 1 gpu draw call (unless command is a callback)
 struct ImDrawCmd
 {
-    unsigned int    elem_count;                 // Number of indices (multiple of 3) to be rendered as triangles. Vertices are stored in the callee ImDrawList's vtx_buffer[] array, indices in idx_buffer[].
-    ImVec4          clip_rect;                  // Clipping rectangle (x1, y1, x2, y2)
-    ImTextureID     texture_id;                 // User-provided texture ID. Set by user in ImfontAtlas::SetTexID() for fonts or passed to Image*() functions. Ignore if never using images or multiple fonts atlas.
-    ImDrawCallback  user_callback;              // If != NULL, call the function instead of rendering the vertices. clip_rect and texture_id will be set normally.
-    void*           user_callback_data;         // The draw callback code can access this.
+    unsigned int    ElemCount;              // Number of indices (multiple of 3) to be rendered as triangles. Vertices are stored in the callee ImDrawList's vtx_buffer[] array, indices in idx_buffer[].
+    ImVec4          ClipRect;               // Clipping rectangle (x1, y1, x2, y2)
+    ImTextureID     TextureId;              // User-provided texture ID. Set by user in ImfontAtlas::SetTexID() for fonts or passed to Image*() functions. Ignore if never using images or multiple fonts atlas.
+    ImDrawCallback  UserCallback;           // If != NULL, call the function instead of rendering the vertices. clip_rect and texture_id will be set normally.
+    void*           UserCallbackData;       // The draw callback code can access this.
 };
 
 // Vertex index
@@ -1020,8 +1020,8 @@ IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
 // Draw channels are used by the Columns API to "split" the render list into different channels while building, so items of each column can be batched together.
 struct ImDrawChannel
 {
-    ImVector<ImDrawCmd>     cmd_buffer;
-    ImVector<ImDrawIdx>     idx_buffer;
+    ImVector<ImDrawCmd>     CmdBuffer;
+    ImVector<ImDrawIdx>     IdxBuffer;
 };
 
 // Draw command list
@@ -1034,22 +1034,22 @@ struct ImDrawChannel
 struct ImDrawList
 {
     // This is what you have to render
-    ImVector<ImDrawCmd>     cmd_buffer;         // Commands. Typically 1 command = 1 gpu draw call.
-    ImVector<ImDrawIdx>     idx_buffer;         // Index buffer. Each command consume ImDrawCmd::idx_count of those
-    ImVector<ImDrawVert>    vtx_buffer;         // Vertex buffer.
+    ImVector<ImDrawCmd>     CmdBuffer;          // Commands. Typically 1 command = 1 gpu draw call.
+    ImVector<ImDrawIdx>     IdxBuffer;          // Index buffer. Each command consume ImDrawCmd::ElemCount of those
+    ImVector<ImDrawVert>    VtxBuffer;          // Vertex buffer.
 
     // [Internal, used while building lists]
-    const char*             owner_name;         // Pointer to owner window's name (if any) for debugging
-    ImDrawVert*             vtx_write;          // [Internal] point within vtx_buffer after each add command (to avoid using the ImVector<> operators too much)
-    unsigned int            vtx_current_idx;    // [Internal] == vtx_buffer.Size
-    ImDrawIdx*              idx_write;          // [Internal] point within idx_buffer after each add command (to avoid using the ImVector<> operators too much)
-    ImVector<ImVec4>        clip_rect_stack;    // [Internal]
-    ImVector<ImTextureID>   texture_id_stack;   // [Internal] 
-    ImVector<ImVec2>        path;				// [Internal] current path building
-    int                     channel_current;    // 
-    ImVector<ImDrawChannel> channels;           // [Internal] draw channels for layering or columns API
+    const char*             _OwnerName;         // Pointer to owner window's name (if any) for debugging
+    unsigned int            _VtxCurrentIdx;     // [Internal] == VtxBuffer.Size
+    ImDrawVert*             _VtxWritePtr;       // [Internal] point within VtxBuffer.Data after each add command (to avoid using the ImVector<> operators too much)
+    ImDrawIdx*              _IdxWritePtr;       // [Internal] point within IdxBuffer.Data after each add command (to avoid using the ImVector<> operators too much)
+    ImVector<ImVec4>        _ClipRectStack;     // [Internal]
+    ImVector<ImTextureID>   _TextureIdStack;    // [Internal] 
+    ImVector<ImVec2>        _Path;				// [Internal] current path building
+    int                     _ChannelCurrent;    // [Internal] current channel number (0)
+    ImVector<ImDrawChannel> _Channels;          // [Internal] draw channels for columns API
 
-    ImDrawList() { owner_name = NULL; Clear(); }
+    ImDrawList() { _OwnerName = NULL; Clear(); }
     ~ImDrawList() { ClearFreeMemory(); }
     IMGUI_API void  Clear();
     IMGUI_API void  ClearFreeMemory();
@@ -1072,16 +1072,16 @@ struct ImDrawList
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, const int num_points, ImU32 col, bool anti_aliased);
 
     // Stateful path API, add points then finish with PathFill() or PathStroke()
-    inline    void  PathClear()                                                 { path.resize(0); }
-    inline    void  PathLineTo(const ImVec2& p)                                 { path.push_back(p); }
+    inline    void  PathClear()                                                 { _Path.resize(0); }
+    inline    void  PathLineTo(const ImVec2& p)                                 { _Path.push_back(p); }
     IMGUI_API void  PathArcToFast(const ImVec2& centre, float radius, int a_min, int a_max);
     IMGUI_API void  PathArcTo(const ImVec2& centre, float radius, float a_min, float a_max, int num_segments = 12);
     IMGUI_API void  PathRect(const ImVec2& a, const ImVec2& b, float rounding = 0.0f, int rounding_corners = 0x0F);
-    inline    void  PathFill(ImU32 col)                                         { AddConvexPolyFilled(path.Data, path.Size, col, true); PathClear(); }
-    inline    void  PathStroke(ImU32 col, bool closed)                          { AddPolyline(path.Data, path.Size, col, closed, true); PathClear(); }
+    inline    void  PathFill(ImU32 col)                                         { AddConvexPolyFilled(_Path.Data, _Path.Size, col, true); PathClear(); }
+    inline    void  PathStroke(ImU32 col, bool closed)                          { AddPolyline(_Path.Data, _Path.Size, col, closed, true); PathClear(); }
 
     // Advanced
-    IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);  // Your rendering function must check for 'user_callback' in ImDrawCmd and call the function instead of rendering triangles.
+    IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);  // Your rendering function must check for 'UserCallback' in ImDrawCmd and call the function instead of rendering triangles.
     IMGUI_API void  AddDrawCmd();                                               // This is useful if you need to forcefully create a new draw call (to allow for dependent rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
     IMGUI_API void  ChannelsSplit(int channel_count);
     IMGUI_API void  ChannelsMerge(int channel_count);
@@ -1098,10 +1098,10 @@ struct ImDrawList
 // All draw data to render an ImGui frame
 struct ImDrawData
 {
-    ImDrawList**    cmd_lists;
-    int             cmd_lists_count;
-    int             total_vtx_count;        // For convenience, sum of all cmd_lists vtx_buffer.Size
-    int             total_idx_count;        // For convenience, sum of all cmd_lists idx_buffer.Size
+    ImDrawList**    CmdLists;
+    int             CmdListsCount;
+    int             TotalVtxCount;          // For convenience, sum of all cmd_lists vtx_buffer.Size
+    int             TotalIdxCount;          // For convenience, sum of all cmd_lists idx_buffer.Size
 
     // Functions
     void DeIndexAllBuffers();               // For backward compatibility: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!

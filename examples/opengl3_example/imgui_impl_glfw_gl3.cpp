@@ -59,7 +59,7 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
 
     // Grow our buffer according to what we need
     glBindBuffer(GL_ARRAY_BUFFER, g_VboHandle);
-    int needed_vtx_size = draw_data->total_vtx_count * sizeof(ImDrawVert);
+    int needed_vtx_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
     if (g_VboSize < needed_vtx_size)
     {
         g_VboSize = needed_vtx_size + 5000 * sizeof(ImDrawVert);  // Grow buffer
@@ -70,38 +70,38 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
     unsigned char* vtx_data = (unsigned char*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
     if (!vtx_data)
         return;
-    for (int n = 0; n < draw_data->cmd_lists_count; n++)
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
-        const ImDrawList* cmd_list = draw_data->cmd_lists[n];
-        memcpy(vtx_data, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
-        vtx_data += cmd_list->vtx_buffer.size() * sizeof(ImDrawVert);
+        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        memcpy(vtx_data, &cmd_list->VtxBuffer[0], cmd_list->VtxBuffer.size() * sizeof(ImDrawVert));
+        vtx_data += cmd_list->VtxBuffer.size() * sizeof(ImDrawVert);
     }
     glUnmapBuffer(GL_ARRAY_BUFFER);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(g_VaoHandle);
 
     int vtx_offset = 0;
-    for (int n = 0; n < draw_data->cmd_lists_count; n++)
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
-        const ImDrawList* cmd_list = draw_data->cmd_lists[n];
-        const ImDrawIdx* idx_buffer = (const unsigned short*)&cmd_list->idx_buffer.front();
+        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        const ImDrawIdx* idx_buffer = &cmd_list->IdxBuffer.front();
 
-        const ImDrawCmd* pcmd_end = cmd_list->cmd_buffer.end();
-        for (const ImDrawCmd* pcmd = cmd_list->cmd_buffer.begin(); pcmd != pcmd_end; pcmd++)
+        const ImDrawCmd* pcmd_end = cmd_list->CmdBuffer.end();
+        for (const ImDrawCmd* pcmd = cmd_list->CmdBuffer.begin(); pcmd != pcmd_end; pcmd++)
         {
-            if (pcmd->user_callback)
+            if (pcmd->UserCallback)
             {
-                pcmd->user_callback(cmd_list, pcmd);
+                pcmd->UserCallback(cmd_list, pcmd);
             }
             else
             {
-                glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->texture_id);
-                glScissor((int)pcmd->clip_rect.x, (int)(height - pcmd->clip_rect.w), (int)(pcmd->clip_rect.z - pcmd->clip_rect.x), (int)(pcmd->clip_rect.w - pcmd->clip_rect.y));
-                glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->elem_count, GL_UNSIGNED_SHORT, idx_buffer, vtx_offset);
+                glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
+                glScissor((int)pcmd->ClipRect.x, (int)(height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
+                glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, idx_buffer, vtx_offset);
             }
-            idx_buffer += pcmd->elem_count;
+            idx_buffer += pcmd->ElemCount;
         }
-        vtx_offset += (int)cmd_list->vtx_buffer.size();
+        vtx_offset += cmd_list->VtxBuffer.size();
     }
 
     // Restore modified state
