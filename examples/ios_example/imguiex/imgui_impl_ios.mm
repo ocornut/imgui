@@ -157,7 +157,7 @@ static bool g_synergyPtrActive = false;
 static uint16_t g_mousePosX = 0;
 static uint16_t g_mousePosY = 0;
 
-static void ImGui_ImplIOS_RenderDrawLists (ImDrawList** const cmd_lists, int cmd_lists_count);
+static void ImGui_ImplIOS_RenderDrawLists (ImDrawData *draw_data);
 bool ImGui_ImplIOS_CreateDeviceObjects();
 
 static NSString *g_serverName;
@@ -611,9 +611,9 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
 // If text or lines are blurry when integrating ImGui in your engine:
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 // NOTE: this is copied pretty much entirely from the opengl3_example, with only minor changes for ES
-static void ImGui_ImplIOS_RenderDrawLists (ImDrawList** const cmd_lists, int cmd_lists_count)
+static void ImGui_ImplIOS_RenderDrawLists (ImDrawData *draw_data)
 {
-    if (cmd_lists_count == 0)
+    if (draw_data->CmdListsCount == 0)
         return;
     
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
@@ -644,55 +644,64 @@ static void ImGui_ImplIOS_RenderDrawLists (ImDrawList** const cmd_lists, int cmd
     glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
     
     // Grow our buffer according to what we need
-    size_t total_vtx_count = 0;
-    for (int n = 0; n < cmd_lists_count; n++)
-        total_vtx_count += cmd_lists[n]->vtx_buffer.size();
     glBindBuffer(GL_ARRAY_BUFFER, g_VboHandle);
-    size_t needed_vtx_size = total_vtx_count * sizeof(ImDrawVert);
+    int needed_vtx_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
     if (g_VboSize < needed_vtx_size)
     {
         g_VboSize = needed_vtx_size + 5000 * sizeof(ImDrawVert);  // Grow buffer
-        glBufferData(GL_ARRAY_BUFFER, g_VboSize, NULL, GL_STREAM_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)g_VboSize, NULL, GL_STREAM_DRAW);
     }
     
     // Copy and convert all vertices into a single contiguous buffer
     unsigned char* buffer_data = (unsigned char*)glMapBufferRange(GL_ARRAY_BUFFER, 0, g_VboSize, GL_MAP_WRITE_BIT);
     if (!buffer_data)
         return;
-    for (int n = 0; n < cmd_lists_count; n++)
+    
+
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
-        const ImDrawList* cmd_list = cmd_lists[n];
-        memcpy(buffer_data, &cmd_list->vtx_buffer[0], cmd_list->vtx_buffer.size() * sizeof(ImDrawVert));
-        buffer_data += cmd_list->vtx_buffer.size() * sizeof(ImDrawVert);
+        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        memcpy(buffer_data, &cmd_list->VtxBuffer[0], cmd_list->VtxBuffer.size() * sizeof(ImDrawVert));
+        buffer_data += cmd_list->VtxBuffer.size() * sizeof(ImDrawVert);
     }
     glUnmapBuffer(GL_ARRAY_BUFFER);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(g_VaoHandle);
     
-    int cmd_offset = 0;
-    for (int n = 0; n < cmd_lists_count; n++)
+    int vtx_offset = 0;
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
-        const ImDrawList* cmd_list = cmd_lists[n];
-        int vtx_offset = cmd_offset;
-        const ImDrawCmd* pcmd_end = cmd_list->commands.end();
-        for (const ImDrawCmd* pcmd = cmd_list->commands.begin(); pcmd != pcmd_end; pcmd++)
+        ImDrawList* cmd_list = draw_data->CmdLists[n];
+        ImDrawIdx* idx_buffer = &cmd_list->IdxBuffer.front();
+        
+        // OpenGL ES doesn't support glDrawElementsBaseVertex, so
+        // we have to modify the index buffer to add the base vertex
+        // index for each command.
+        for (ImDrawIdx *idx = cmd_list->IdxBuffer.begin();
+             idx != cmd_list->IdxBuffer.end(); idx++)
         {
-            if (pcmd->user_callback)
+            (*idx) += vtx_offset;
+        }
+
+        const ImDrawCmd* pcmd_end = cmd_list->CmdBuffer.end();
+        for (const ImDrawCmd* pcmd = cmd_list->CmdBuffer.begin(); pcmd != pcmd_end; pcmd++)
+        {
+            if (pcmd->UserCallback)
             {
-                pcmd->user_callback(cmd_list, pcmd);
+                pcmd->UserCallback(cmd_list, pcmd);
             }
             else
             {
-                glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->texture_id);
-                glScissor((int)(pcmd->clip_rect.x * g_displayScale),
-                          (int)((height - pcmd->clip_rect.w) * g_displayScale),
-                          (int)((pcmd->clip_rect.z - pcmd->clip_rect.x) * g_displayScale),
-                          (int)((pcmd->clip_rect.w - pcmd->clip_rect.y) * g_displayScale));
-                glDrawArrays(GL_TRIANGLES, vtx_offset, pcmd->vtx_count);
+                glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
+                glScissor((int)(pcmd->ClipRect.x * g_displayScale),
+                          (int)((height - pcmd->ClipRect.w) * g_displayScale),
+                          (int)((pcmd->ClipRect.z - pcmd->ClipRect.x) * g_displayScale),
+                          (int)((pcmd->ClipRect.w - pcmd->ClipRect.y) * g_displayScale));
+                glDrawElements( GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, idx_buffer );
             }
-            vtx_offset += pcmd->vtx_count;
+            idx_buffer += pcmd->ElemCount;
         }
-        cmd_offset = vtx_offset;
+        vtx_offset += cmd_list->VtxBuffer.size();
     }
     
     // Restore modified state
