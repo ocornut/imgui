@@ -1,4 +1,4 @@
-// ImGui - standalone example application for Glfw + OpenGL 2, using fixed pipeline
+// ImGui - standalone example application for SDL2
 
 #include <imgui.h>
 #include "imgui_impl_sdl.h"
@@ -12,10 +12,10 @@
 
 #ifdef MACOSX
 #include <OpenGL/gl.h>
-
 #endif
 
 #include <SDL.h>
+#include <SDL_OpenGL.h>
 
 int SDL_main(int /*argc*/, char* /*argv*/[])
 {
@@ -27,16 +27,13 @@ int SDL_main(int /*argc*/, char* /*argv*/[])
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-
-	int width(1024), height(576);
 
 	// SDL window
 	SDL_DisplayMode current;
 	SDL_GetCurrentDisplayMode(0, &current);
-	SDL_Window *window = SDL_CreateWindow( "ImGui OpenGL2/SDL2 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE );
+	SDL_Window *window = SDL_CreateWindow("ImGui SDL2+OpenGL example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
   
 	// Create an OpenGL context associated with the window.
 	SDL_GLContext glcontext = SDL_GL_CreateContext(window);
@@ -55,9 +52,9 @@ int SDL_main(int /*argc*/, char* /*argv*/[])
     bool show_another_window = false;
     ImVec4 clear_color = ImColor(114, 144, 154);
 
-	bool done(false);
     // Main loop
-    while(!done)
+	bool done = false;
+    while (!done)
     {
         done = ImGui_ImplSdl_NewFrame(window);
 

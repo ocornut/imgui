@@ -1,4 +1,3 @@
-
 struct		SDL_Window;
 
 bool        ImGui_ImplSdl_Init(SDL_Window *window);

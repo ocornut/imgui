@@ -1,4 +1,3 @@
-
 #ifdef _MSC_VER
 #include <Windows.h>
 #include <gl/GL.h>
@@ -25,9 +24,6 @@ static GLuint       g_FontTexture = 0;
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 static void ImGui_ImplSdl_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
-    if (cmd_lists_count == 0)
-        return;
-
     // We are using the OpenGL fixed pipeline to make the example code simpler to read!
     // A probable faster way to render would be to collate all vertices from all cmd_lists into a single vertex buffer.
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
@@ -208,7 +204,7 @@ bool ImGui_ImplSdl_NewFrame(SDL_Window *window)
 
     ImGuiIO& io = ImGui::GetIO();
 
-	bool done(false);
+	bool done = false;
 	SDL_Event event;
 	while (SDL_PollEvent(&event))
 	{
@@ -218,14 +214,15 @@ bool ImGui_ImplSdl_NewFrame(SDL_Window *window)
 			done = true;
 			break;
 		case SDL_MOUSEWHEEL:
-			if (event.wheel.y>0 )
-			{
+			if (event.wheel.y > 0)
 				g_MouseWheel = 1;
-			}
-			if (event.wheel.y<0 )
-			{
+			if (event.wheel.y < 0)
 				g_MouseWheel = -1;
-			}
+			break;
+		case SDL_MOUSEBUTTONDOWN:
+			if (event.button.button == SDL_BUTTON_LEFT) g_MousePressed[0] = true;
+			if (event.button.button == SDL_BUTTON_RIGHT) g_MousePressed[1] = true;
+			if (event.button.button == SDL_BUTTON_MIDDLE) g_MousePressed[2] = true;
 			break;
 		case SDL_TEXTINPUT:
 			ImGui_ImplSdl_CharCallback(event.text.text[0]);
@@ -258,27 +255,21 @@ bool ImGui_ImplSdl_NewFrame(SDL_Window *window)
 
     // Setup inputs
     // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
-	Uint32 windowFlags = SDL_GetWindowFlags(window);
-    if (windowFlags&SDL_WINDOW_MOUSE_FOCUS)
-    {
+    if (SDL_GetWindowFlags(window) & SDL_WINDOW_MOUSE_FOCUS)
     	io.MousePos = ImVec2((float)mx, (float)my);   // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
-    }
     else
-    {
     	io.MousePos = ImVec2(-1,-1);
-    }
    
-    for (int i = 0; i < 3; i++)
-    {
-		io.MouseDown[i] = g_MousePressed[i] || (mouseMask&(1<<i)) != 0;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-        g_MousePressed[i] = false;
-    }
+	io.MouseDown[0] = g_MousePressed[0] || (mouseMask & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;		// If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+	io.MouseDown[1] = g_MousePressed[1] || (mouseMask & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
+	io.MouseDown[2] = g_MousePressed[2] || (mouseMask & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
+    g_MousePressed[0] = g_MousePressed[1] = g_MousePressed[2] = false;
 
     io.MouseWheel = g_MouseWheel;
     g_MouseWheel = 0.0f;
 
     // Hide/show hardware mouse cursor
-    SDL_ShowCursor( io.MouseDrawCursor ? 0 : 1);
+    SDL_ShowCursor(io.MouseDrawCursor ? 0 : 1);
 
     // Start the frame
     ImGui::NewFrame();
