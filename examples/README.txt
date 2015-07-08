@@ -25,3 +25,6 @@ directx11_example/
 ios_example/
 	iOS example.
 	Using Synergy to access keyboard/mouse data from server computer. Synergy keyboard integration is rather hacky.
+
+sdl_opengl_example/
+	SDL2 + OpenGL example.
