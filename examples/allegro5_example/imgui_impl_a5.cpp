@@ -14,9 +14,10 @@
 #endif
 
 // Data
-static ALLEGRO_DISPLAY* g_Display = NULL;
-static ALLEGRO_BITMAP*  g_Surface = NULL;
-static double           g_Time = 0.0;
+static ALLEGRO_DISPLAY*         g_Display = NULL;
+static ALLEGRO_BITMAP*          g_Surface = NULL;
+static double                   g_Time = 0.0;
+static ALLEGRO_MOUSE_CURSOR*    g_MouseCursorInvisible = NULL;
 
 static void ImGui_ImplA5_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
@@ -117,6 +118,12 @@ bool Imgui_ImplA5_CreateDeviceObjects()
     io.Fonts->ClearInputData();
     io.Fonts->ClearTexData();
 
+    // Create an invisible mouse cursor
+    // Because al_hide_mouse_cursor() seems to mess up with the actual inputs..
+    ALLEGRO_BITMAP* mouse_cursor = al_create_bitmap(8,8);
+    g_MouseCursorInvisible = al_create_mouse_cursor(mouse_cursor, 0, 0);
+    al_destroy_bitmap(mouse_cursor);
+
     return true;
 }
 
@@ -127,6 +134,11 @@ void ImGui_ImplA5_InvalidateDeviceObjects()
         al_destroy_bitmap(g_Surface);
         ImGui::GetIO().Fonts->TexID = NULL;
         g_Surface = NULL;
+    }
+    if (g_MouseCursorInvisible)
+    {
+        al_destroy_mouse_cursor(g_MouseCursorInvisible);
+        g_MouseCursorInvisible = NULL;
     }
 }
 
@@ -233,6 +245,26 @@ void ImGui_ImplA5_NewFrame()
     io.MouseDown[0] = mouse.buttons & (1 << 0);
     io.MouseDown[1] = mouse.buttons & (1 << 1);
     io.MouseDown[2] = mouse.buttons & (1 << 2);
+
+    // Hide OS mouse cursor if ImGui is drawing it
+    if (io.MouseDrawCursor)
+    {
+        al_set_mouse_cursor(g_Display, g_MouseCursorInvisible);
+    }
+    else
+    {
+        ALLEGRO_SYSTEM_MOUSE_CURSOR cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_DEFAULT;
+        switch (ImGui::GetMouseCursor())
+        {
+        case ImGuiMouseCursor_TextInput:    cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_EDIT; break;
+        case ImGuiMouseCursor_Move:         cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_MOVE; break;
+        case ImGuiMouseCursor_ResizeNS:     cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_N; break;
+        case ImGuiMouseCursor_ResizeEW:     cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_E; break;
+        case ImGuiMouseCursor_ResizeNESW:   cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_NE; break;
+        case ImGuiMouseCursor_ResizeNWSE:   cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_NW; break;
+        }
+        al_set_system_mouse_cursor(g_Display, cursor_id);
+    }
 
     // Start the frame
     ImGui::NewFrame();
