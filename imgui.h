@@ -1060,7 +1060,7 @@ struct ImDrawList
     IMGUI_API void  PopTextureID();
 
     // Primitives   
-    IMGUI_API void  AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness = 1.0f);
+    IMGUI_API void  AddLine(const ImVec2& a, const ImVec2& b, ImU32 col);
     IMGUI_API void  AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding = 0.0f, int rounding_corners = 0x0F);
     IMGUI_API void  AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding = 0.0f, int rounding_corners = 0x0F);
     IMGUI_API void  AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col);
@@ -1068,7 +1068,7 @@ struct ImDrawList
     IMGUI_API void  AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
     IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
     IMGUI_API void  AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col = 0xFFFFFFFF);
-    IMGUI_API void  AddPolyline(const ImVec2* points, const int num_points, ImU32 col, float thickness, bool closed, bool anti_aliased);
+    IMGUI_API void  AddPolyline(const ImVec2* points, const int num_points, ImU32 col, bool closed, bool anti_aliased);
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, const int num_points, ImU32 col, bool anti_aliased);
 
     // Stateful path API, add points then finish with PathFill() or PathStroke()
@@ -1078,7 +1078,7 @@ struct ImDrawList
     IMGUI_API void  PathArcTo(const ImVec2& centre, float radius, float a_min, float a_max, int num_segments = 12);
     IMGUI_API void  PathRect(const ImVec2& a, const ImVec2& b, float rounding = 0.0f, int rounding_corners = 0x0F);
     inline    void  PathFill(ImU32 col)                                         { AddConvexPolyFilled(path.Data, path.Size, col, true); PathClear(); }
-    inline    void  PathStroke(ImU32 col, float thickness, bool closed)         { AddPolyline(path.Data, path.Size, col, thickness, closed, true); PathClear(); }
+    inline    void  PathStroke(ImU32 col, bool closed)                          { AddPolyline(path.Data, path.Size, col, closed, true); PathClear(); }
 
     // Advanced
     IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);  // Your rendering function must check for 'user_callback' in ImDrawCmd and call the function instead of rendering triangles.

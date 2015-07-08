@@ -5,8 +5,6 @@
 // Developed by Omar Cornut and ImGui contributors.
 
 // ANTI-ALIASED PRIMITIVES BRANCH
-// TODO
-// - Support for thickness stroking. recently been added to the ImDrawList API as a convenience.
 
 /*
 
@@ -140,7 +138,7 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
- - 2015/07/05 (1.42) - switched rendering data to use indexed rendering. this is saving a fair amount of CPU/GPU and enables us to get anti-aliasing for a marginal cost.
+ - 2015/07/07 (1.42) - switched rendering data to use indexed rendering. this is saving a fair amount of CPU/GPU and enables us to get anti-aliasing for a marginal cost.
                        this necessary change will break your rendering function! the fix should be very easy. sorry for that :(
                      - if you are using a vanilla copy of one of the imgui_impl_XXXX.cpp provided in the example, you just need to update your copy and you can ignore the rest.
                      - the signature of io.RenderDrawListsFn has changed! 
@@ -155,6 +153,7 @@
                        each ImDrawList now contains both a vertex buffer (vtx_buffer) and an index buffer (idx_buffer). For each command, render elem_count/3 triangles using indices from the index buffer.
                      - if you REALLY cannot render indexed primitives, you can call the draw_data->DeIndexAllBuffers() method to de-index your buffer. This is slow and a waste of CPU/GPU. Prefer using indexed rendering!
                      - refer to code in the examples/ folder or ask on the github if you are unsure of how to upgrade.
+                     - removed the 'thickness' parameter from ImDrawList::AddLine().
  - 2015/07/02 (1.42) - renamed SetScrollPosHere() to SetScrollFromCursorPos(). Kept inline redirection function (will obsolete).
  - 2015/07/02 (1.42) - renamed GetScrollPosY() to GetScrollY(). Necessary to reduce confusion along with other scrolling functions, because positions (e.g. cursor position) are not equivalent to scrolling amount.
  - 2015/06/14 (1.41) - changed ImageButton() default bg_col parameter from (0,0,0,1) (black) to (0,0,0,0) (transparent) - makes a difference when texture have transparence
@@ -2791,7 +2790,7 @@ static void RenderCheckMark(ImVec2 pos, ImU32 col)
     window->DrawList->PathLineTo(a);
     window->DrawList->PathLineTo(b);
     window->DrawList->PathLineTo(c);
-    window->DrawList->PathStroke(col, 1.0f, false);
+    window->DrawList->PathStroke(col, false);
 }
 
 // Calculate text size. Text can be multi-line. Optionally ignore text after a ## marker.
@@ -9195,10 +9194,8 @@ void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a
     idx_write += 6;
 }
 
-void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, bool closed, bool anti_aliased)
+void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed, bool anti_aliased)
 {
-    (void)thickness; // Unsupported
-
     if (points_count < 2)
         return;
 
@@ -9302,8 +9299,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             ImVec2 diff = p2 - p1;
             diff *= ImInvLength(diff, 1.0f);
 
-            const float dx = diff.x * (thickness * 0.5f);
-            const float dy = diff.y * (thickness * 0.5f);
+            const float dx = diff.x * 0.5f;
+            const float dy = diff.y * 0.5f;
             vtx_write[0].pos.x = p1.x + dy; vtx_write[0].pos.y = p1.y - dx; vtx_write[0].uv = uv; vtx_write[0].col = col;
             vtx_write[1].pos.x = p2.x + dy; vtx_write[1].pos.y = p2.y - dx; vtx_write[1].uv = uv; vtx_write[1].col = col;
             vtx_write[2].pos.x = p2.x - dy; vtx_write[2].pos.y = p2.y + dx; vtx_write[2].uv = uv; vtx_write[2].col = col;
@@ -9471,13 +9468,13 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int 
     }
 }
 
-void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thickness)
+void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col)
 {
     if ((col >> 24) == 0)
         return;
     PathLineTo(a + ImVec2(0.5f,0.5f));
     PathLineTo(b + ImVec2(0.5f,0.5f));
-    PathStroke(col, thickness, false);
+    PathStroke(col, false);
 }
 
 void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
@@ -9485,7 +9482,7 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
     if ((col >> 24) == 0)
         return;
     PathRect(a + ImVec2(0.5f,0.5f), b + ImVec2(0.5f,0.5f), rounding, rounding_corners);
-    PathStroke(col, 1.0f, true);
+    PathStroke(col, true);
 }
 
 void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
@@ -9521,7 +9518,7 @@ void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int nu
 
     const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(centre, radius, 0.0f, a_max, num_segments);
-    PathStroke(col, 1.0f, true);
+    PathStroke(col, true);
 }
 
 void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments)
@@ -11379,7 +11376,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 // Draw a line between the button and the mouse cursor
                 ImDrawList* draw_list = ImGui::GetWindowDrawList();
                 draw_list->PushClipRectFullScreen();
-                draw_list->AddLine(ImGui::CalcItemRectClosestPoint(ImGui::GetIO().MousePos, true, -2.0f), ImGui::GetIO().MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]), 4.0f);
+                draw_list->AddLine(ImGui::CalcItemRectClosestPoint(ImGui::GetIO().MousePos, true, -2.0f), ImGui::GetIO().MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]));
                 draw_list->PopClipRect();
                 ImVec2 value_raw = ImGui::GetMouseDragDelta(0, 0.0f);
                 ImVec2 value_with_lock_threshold = ImGui::GetMouseDragDelta(0);
