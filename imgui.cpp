@@ -6,7 +6,6 @@
 
 // ANTI-ALIASED PRIMITIVES BRANCH
 // TODO
-// - Redesign parameters passed to RenderFn ImDrawList etc.
 // - Support for thickness stroking. recently been added to the ImDrawList API as a convenience.
 
 /*
@@ -8668,12 +8667,14 @@ void ImGui::NextColumn()
         if (++window->DC.ColumnsCurrent < window->DC.ColumnsCount)
         {
             window->DC.ColumnsOffsetX = ImGui::GetColumnOffset(window->DC.ColumnsCurrent) - window->DC.ColumnsStartX + g.Style.ItemSpacing.x;
+            window->DrawList->ChannelsSetCurrent(window->DC.ColumnsCurrent);
         }
         else
         {
             window->DC.ColumnsCurrent = 0;
             window->DC.ColumnsOffsetX = 0.0f;
             window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY;
+            window->DrawList->ChannelsSetCurrent(0);
         }
         window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX);
         window->DC.CursorPos.y = window->DC.ColumnsCellMinY;
@@ -8785,6 +8786,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             ItemSize(ImVec2(0,0));   // Advance to column 0
         ImGui::PopItemWidth();
         PopClipRect();
+        window->DrawList->ChannelsMerge(window->DC.ColumnsCount);
 
         window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
         window->DC.CursorPos.y = window->DC.ColumnsCellMaxY;
@@ -8848,7 +8850,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             const float t = window->DC.StateStorage->GetFloat(column_id, default_t);      // Cheaply store our floating point value inside the integer (could store an union into the map?)
             window->DC.ColumnsOffsetsT[column_index] = t;
         }
-
+        window->DrawList->ChannelsSplit(window->DC.ColumnsCount);
         PushColumnClipRect();
         ImGui::PushItemWidth(ImGui::GetColumnWidth() * 0.65f);
     }
@@ -8963,8 +8965,10 @@ void ImDrawList::Clear()
     vtx_current_idx = 0;
     idx_buffer.resize(0);
     idx_write = NULL;
+    channel_current = 0;
     clip_rect_stack.resize(0);
     texture_id_stack.resize(0);
+    // NB: Do not clear channels so our allocations are re-used after the first frame.
 }
 
 void ImDrawList::ClearFreeMemory()
@@ -8975,8 +8979,16 @@ void ImDrawList::ClearFreeMemory()
     vtx_current_idx = 0;
     idx_buffer.clear();
     idx_write = NULL;
+    channel_current = 0;
     clip_rect_stack.clear();
     texture_id_stack.clear();
+    for (int i = 0; i < channels.Size; i++)
+    {
+        if (i == 0) memset(&channels[0], 0, sizeof(channels[0]));  // channel 0 is a copy of cmd_buffer/idx_buffer, don't destruct again
+        channels[i].cmd_buffer.clear();
+        channels[i].idx_buffer.clear();
+    }
+    channels.clear();
 }
 
 void ImDrawList::AddDrawCmd()
@@ -9006,6 +9018,64 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
     // Force a new command after us
     // We function this way so that the most common calls (AddLine, AddRect..) always have a command to add to without doing any check.
     AddDrawCmd();
+}
+
+void ImDrawList::ChannelsSplit(int channel_count)
+{
+    IM_ASSERT(channel_current == 0);
+    int old_channels_count = channels.Size;
+    if (old_channels_count < channel_count)
+        channels.resize(channel_count);
+    for (int i = 0; i < channel_count; i++)
+        if (i >= old_channels_count)
+            new(&channels[i]) ImDrawChannel();
+        else
+            channels[i].cmd_buffer.resize(0), channels[i].idx_buffer.resize(0);
+}
+
+void ImDrawList::ChannelsMerge(int channel_count)
+{
+    // Note that we never use or rely on channels.Size because it is merely a buffer that we never shrink back to 0 to keep all sub-buffers ready for use.
+    // This is why this function takes 'channel_count' as a parameter of how many channels to merge (the user knows)
+    if (channel_count < 2)
+        return;
+
+    ChannelsSetCurrent(0);
+    if (cmd_buffer.Size && cmd_buffer.back().elem_count == 0) 
+        cmd_buffer.pop_back();
+
+    int new_cmd_buffer_count = 0, new_idx_buffer_count = 0;
+    for (int i = 1; i < channel_count; i++)
+    {
+        ImDrawChannel& ch = channels[i];
+        if (ch.cmd_buffer.Size && ch.cmd_buffer.back().elem_count == 0)
+            ch.cmd_buffer.pop_back();
+        new_cmd_buffer_count += ch.cmd_buffer.Size;
+        new_idx_buffer_count += ch.idx_buffer.Size;
+    }
+    cmd_buffer.resize(cmd_buffer.Size + new_cmd_buffer_count);
+    idx_buffer.resize(idx_buffer.Size + new_idx_buffer_count);
+
+    ImDrawCmd* cmd_write = cmd_buffer.Data + cmd_buffer.Size - new_cmd_buffer_count;
+    idx_write = idx_buffer.Data + idx_buffer.Size - new_idx_buffer_count;
+    for (int i = 1; i < channel_count; i++)
+    {
+        ImDrawChannel& ch = channels[i];
+        if (int sz = ch.cmd_buffer.Size) { memcpy(cmd_write, ch.cmd_buffer.Data, sz * sizeof(ImDrawCmd)); cmd_write += sz; }
+        if (int sz = ch.idx_buffer.Size) { memcpy(idx_write, ch.idx_buffer.Data, sz * sizeof(ImDrawIdx)); idx_write += sz; }
+    }
+    AddDrawCmd();
+}
+
+void ImDrawList::ChannelsSetCurrent(int idx)
+{
+    if (channel_current == idx) return;
+    memcpy(&channels.Data[channel_current].cmd_buffer, &cmd_buffer, sizeof(cmd_buffer));
+    memcpy(&channels.Data[channel_current].idx_buffer, &idx_buffer, sizeof(idx_buffer));
+    channel_current = idx;
+    memcpy(&cmd_buffer, &channels.Data[channel_current].cmd_buffer, sizeof(cmd_buffer));
+    memcpy(&idx_buffer, &channels.Data[channel_current].idx_buffer, sizeof(idx_buffer));
+    idx_write = idx_buffer.Data + idx_buffer.Size;
 }
 
 void ImDrawList::UpdateClipRect()

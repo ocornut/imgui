@@ -1017,6 +1017,13 @@ struct ImDrawVert
 IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
 #endif
 
+// Draw channels are used by the Columns API to "split" the render list into different channels while building, so items of each column can be batched together.
+struct ImDrawChannel
+{
+    ImVector<ImDrawCmd>     cmd_buffer;
+    ImVector<ImDrawIdx>     idx_buffer;
+};
+
 // Draw command list
 // This is the low-level list of polygons that ImGui functions are filling. At the end of the frame, all command lists are passed to your ImGuiIO::RenderDrawListFn function for rendering.
 // At the moment, each ImGui window contains its own ImDrawList but they could potentially be merged in the future.
@@ -1028,10 +1035,10 @@ struct ImDrawList
 {
     // This is what you have to render
     ImVector<ImDrawCmd>     cmd_buffer;         // Commands. Typically 1 command = 1 gpu draw call.
-    ImVector<ImDrawVert>    vtx_buffer;         // Vertex buffer.
     ImVector<ImDrawIdx>     idx_buffer;         // Index buffer. Each command consume ImDrawCmd::idx_count of those
+    ImVector<ImDrawVert>    vtx_buffer;         // Vertex buffer.
 
-    // [Internal to ImGui]
+    // [Internal, used while building lists]
     const char*             owner_name;         // Pointer to owner window's name (if any) for debugging
     ImDrawVert*             vtx_write;          // [Internal] point within vtx_buffer after each add command (to avoid using the ImVector<> operators too much)
     unsigned int            vtx_current_idx;    // [Internal] == vtx_buffer.Size
@@ -1039,6 +1046,8 @@ struct ImDrawList
     ImVector<ImVec4>        clip_rect_stack;    // [Internal]
     ImVector<ImTextureID>   texture_id_stack;   // [Internal] 
     ImVector<ImVec2>        path;				// [Internal] current path building
+    int                     channel_current;    // 
+    ImVector<ImDrawChannel> channels;           // [Internal] draw channels for layering or columns API
 
     ImDrawList() { owner_name = NULL; Clear(); }
     ~ImDrawList() { ClearFreeMemory(); }
@@ -1072,8 +1081,11 @@ struct ImDrawList
     inline    void  PathStroke(ImU32 col, float thickness, bool closed)         { AddPolyline(path.Data, path.Size, col, thickness, closed, true); PathClear(); }
 
     // Advanced
-    IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);   // Your rendering function must check for 'user_callback' in ImDrawCmd and call the function instead of rendering triangles.
-    IMGUI_API void  AddDrawCmd();               // This is useful if you need to forcefully create a new draw call (to allow for dependent rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
+    IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);  // Your rendering function must check for 'user_callback' in ImDrawCmd and call the function instead of rendering triangles.
+    IMGUI_API void  AddDrawCmd();                                               // This is useful if you need to forcefully create a new draw call (to allow for dependent rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
+    IMGUI_API void  ChannelsSplit(int channel_count);
+    IMGUI_API void  ChannelsMerge(int channel_count);
+    IMGUI_API void  ChannelsSetCurrent(int idx);
 
     // Internal helpers
     IMGUI_API void  PrimReserve(int idx_count, int vtx_count);
