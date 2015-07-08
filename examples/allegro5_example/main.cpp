@@ -14,6 +14,7 @@ int main(int, char**)
     al_install_keyboard();
     al_install_mouse();
     al_init_primitives_addon();
+    al_set_new_display_flags(ALLEGRO_RESIZABLE);
     ALLEGRO_DISPLAY* display = al_create_display(1280, 720);
     al_set_window_title(display, "ImGui Allegro 5 example");
     ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
@@ -44,6 +45,12 @@ int main(int, char**)
         {
             ImGui_ImplA5_ProcessEvent(&ev);
             if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE) running = false;
+            if (ev.type == ALLEGRO_EVENT_DISPLAY_RESIZE)
+            {
+                ImGui_ImplA5_InvalidateDeviceObjects();
+                al_acknowledge_resize(display);
+                Imgui_ImplA5_CreateDeviceObjects();
+            }
         }
         ImGui_ImplA5_NewFrame();
 
@@ -57,7 +64,6 @@ int main(int, char**)
             if (ImGui::Button("Test Window")) show_test_window ^= 1;
             if (ImGui::Button("Another Window")) show_another_window ^= 1;
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f/ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
         }
 
         // 2. Show another simple window, this time using an explicit Begin/End pair

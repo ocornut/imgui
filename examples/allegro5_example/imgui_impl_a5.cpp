@@ -15,62 +15,63 @@
 
 // Data
 static ALLEGRO_DISPLAY*         g_Display = NULL;
-static ALLEGRO_BITMAP*          g_Surface = NULL;
+static ALLEGRO_BITMAP*          g_Texture = NULL;
 static double                   g_Time = 0.0;
 static ALLEGRO_MOUSE_CURSOR*    g_MouseCursorInvisible = NULL;
+static ALLEGRO_VERTEX_DECL*     g_VertexDecl = NULL;
+
+#define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
+
+struct ImDrawVertAllegro
+{
+    ImVec2 pos;
+    ImVec2 uv;
+    ALLEGRO_COLOR col;
+};
 
 static void ImGui_ImplA5_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
 {
-    const float width = ImGui::GetIO().DisplaySize.x;
-    const float height = ImGui::GetIO().DisplaySize.y;
-
-    const float bw = al_get_bitmap_width(g_Surface);
-    const float bh = al_get_bitmap_height(g_Surface);
-
     int op, src, dst;
     al_get_blender(&op, &src, &dst);
     al_set_blender(ALLEGRO_ADD, ALLEGRO_ALPHA, ALLEGRO_INVERSE_ALPHA);
 
-    #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->Element))
-    for (int n=0; n < cmd_lists_count; ++n) 
+    for (int n = 0; n < cmd_lists_count; n++) 
     {
         const ImDrawList* cmd_list = cmd_lists[n];
-        static ImVector<ALLEGRO_VERTEX> vertices;
-        vertices.reserve(cmd_list->vtx_buffer.size());
-        vertices.clear();
+
+        // FIXME-OPT: Unfortunately Allegro doesn't support 32-bits packed colors so we have to convert them to 4 floats
+        static ImVector<ImDrawVertAllegro> vertices;
+        vertices.resize(cmd_list->vtx_buffer.size());
         for (int i = 0; i < cmd_list->vtx_buffer.size(); ++i) 
         {
-            ALLEGRO_VERTEX v;
             const ImDrawVert &dv = cmd_list->vtx_buffer[i];
-            v.x = dv.pos.x;
-            v.y = dv.pos.y;
-            v.z = 0;
-            v.u = dv.uv.x * bw;
-            v.v = dv.uv.y * bh;
+            ImDrawVertAllegro v;
+            v.pos = dv.pos;
+            v.uv = dv.uv;
             unsigned char *c = (unsigned char*)&dv.col;
-            v.color = al_map_rgba(c[0], c[1], c[2], c[3]);
-            vertices.push_back(v);
+            v.col = al_map_rgba(c[0], c[1], c[2], c[3]);
+            vertices[i] = v;
         }
+
         int vtx_offset = 0;
-        for (size_t cmd_i=0; cmd_i < cmd_list->commands.size(); ++cmd_i) 
+        for (int cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++) 
         {
-            const ImDrawCmd *pcmd = &cmd_list->commands[cmd_i];
+            const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
             if (pcmd->user_callback) 
             {
                 pcmd->user_callback(cmd_list, pcmd);
             }
             else 
             {
-                ALLEGRO_BITMAP *tex = (ALLEGRO_BITMAP*)pcmd->texture_id;
+                ALLEGRO_BITMAP* texture = (ALLEGRO_BITMAP*)pcmd->texture_id;
                 al_set_clipping_rectangle(pcmd->clip_rect.x, pcmd->clip_rect.y, pcmd->clip_rect.z-pcmd->clip_rect.x, pcmd->clip_rect.w-pcmd->clip_rect.y);
-                al_draw_prim(&vertices[0], NULL, tex, vtx_offset, vtx_offset+pcmd->vtx_count, ALLEGRO_PRIM_TRIANGLE_LIST);
+                al_draw_prim(&vertices[0], g_VertexDecl, texture, vtx_offset, vtx_offset+pcmd->vtx_count, ALLEGRO_PRIM_TRIANGLE_LIST);
             }
             vtx_offset += pcmd->vtx_count;
         }
     }
-    #undef OFFSETOF
 
-    // restore state
+    // Restore modified state
     al_set_blender(op, src, dst);
     al_set_clipping_rectangle(0, 0, al_get_display_width(g_Display), al_get_display_height(g_Display));
 }
@@ -112,7 +113,7 @@ bool Imgui_ImplA5_CreateDeviceObjects()
 
     // Store our identifier
     io.Fonts->TexID = (void*)cloned_img;
-    g_Surface = cloned_img;
+    g_Texture = cloned_img;
 
     // Cleanup (don't clear the input data if you want to append new fonts later)
     io.Fonts->ClearInputData();
@@ -129,11 +130,11 @@ bool Imgui_ImplA5_CreateDeviceObjects()
 
 void ImGui_ImplA5_InvalidateDeviceObjects()
 {
-    if (g_Surface) 
+    if (g_Texture) 
     {
-        al_destroy_bitmap(g_Surface);
+        al_destroy_bitmap(g_Texture);
         ImGui::GetIO().Fonts->TexID = NULL;
-        g_Surface = NULL;
+        g_Texture = NULL;
     }
     if (g_MouseCursorInvisible)
     {
@@ -145,6 +146,18 @@ void ImGui_ImplA5_InvalidateDeviceObjects()
 bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
 {
     g_Display = display;
+   
+    // Create custom vertex declaration. 
+    // Unfortunately Allegro doesn't support 32-bits packed colors so we have to convert them to 4 floats.
+    // We still use a custom declaration to use 'ALLEGRO_PRIM_TEX_COORD' instead of 'ALLEGRO_PRIM_TEX_COORD_PIXEL' else we can't do a reliable conversion.
+    ALLEGRO_VERTEX_ELEMENT elems[] = 
+    {
+        { ALLEGRO_PRIM_POSITION, ALLEGRO_PRIM_FLOAT_2, OFFSETOF(ImDrawVertAllegro, pos) },
+        { ALLEGRO_PRIM_TEX_COORD, ALLEGRO_PRIM_FLOAT_2, OFFSETOF(ImDrawVertAllegro, uv) },
+        { ALLEGRO_PRIM_COLOR_ATTR, 0, OFFSETOF(ImDrawVertAllegro, col) },
+        { 0, 0, 0 }
+    };
+    g_VertexDecl = al_create_vertex_decl(elems, sizeof(ImDrawVertAllegro));
 
     ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = ALLEGRO_KEY_TAB;
@@ -207,7 +220,7 @@ bool ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT *ev)
 
 void ImGui_ImplA5_NewFrame()
 {
-    if (!g_Surface) 
+    if (!g_Texture) 
         Imgui_ImplA5_CreateDeviceObjects();
 
     ImGuiIO &io = ImGui::GetIO();
