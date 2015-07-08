@@ -29,22 +29,22 @@ struct ImDrawVertAllegro
     ALLEGRO_COLOR col;
 };
 
-static void ImGui_ImplA5_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
+static void ImGui_ImplA5_RenderDrawLists(ImDrawData* draw_data)
 {
     int op, src, dst;
     al_get_blender(&op, &src, &dst);
     al_set_blender(ALLEGRO_ADD, ALLEGRO_ALPHA, ALLEGRO_INVERSE_ALPHA);
 
-    for (int n = 0; n < cmd_lists_count; n++) 
+    for (int n = 0; n < draw_data->CmdListsCount; n++) 
     {
-        const ImDrawList* cmd_list = cmd_lists[n];
+        const ImDrawList* cmd_list = draw_data->CmdLists[n];
 
         // FIXME-OPT: Unfortunately Allegro doesn't support 32-bits packed colors so we have to convert them to 4 floats
         static ImVector<ImDrawVertAllegro> vertices;
-        vertices.resize(cmd_list->vtx_buffer.size());
-        for (int i = 0; i < cmd_list->vtx_buffer.size(); ++i) 
+        vertices.resize(cmd_list->VtxBuffer.size());
+        for (int i = 0; i < cmd_list->VtxBuffer.size(); ++i) 
         {
-            const ImDrawVert &dv = cmd_list->vtx_buffer[i];
+            const ImDrawVert &dv = cmd_list->VtxBuffer[i];
             ImDrawVertAllegro v;
             v.pos = dv.pos;
             v.uv = dv.uv;
@@ -53,21 +53,27 @@ static void ImGui_ImplA5_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_l
             vertices[i] = v;
         }
 
-        int vtx_offset = 0;
-        for (int cmd_i = 0; cmd_i < cmd_list->commands.size(); cmd_i++) 
+        // FIXME-OPT: Unfortunately Allegro doesn't support 16-bit vertices
+        static ImVector<int> indices;
+        indices.resize(cmd_list->IdxBuffer.size());
+        for (int i = 0; i < cmd_list->IdxBuffer.size(); ++i) 
+            indices[i] = (int)cmd_list->IdxBuffer.Data[i];
+
+        int idx_offset = 0;
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++) 
         {
-            const ImDrawCmd* pcmd = &cmd_list->commands[cmd_i];
-            if (pcmd->user_callback) 
+            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+            if (pcmd->UserCallback) 
             {
-                pcmd->user_callback(cmd_list, pcmd);
+                pcmd->UserCallback(cmd_list, pcmd);
             }
             else 
             {
-                ALLEGRO_BITMAP* texture = (ALLEGRO_BITMAP*)pcmd->texture_id;
-                al_set_clipping_rectangle(pcmd->clip_rect.x, pcmd->clip_rect.y, pcmd->clip_rect.z-pcmd->clip_rect.x, pcmd->clip_rect.w-pcmd->clip_rect.y);
-                al_draw_prim(&vertices[0], g_VertexDecl, texture, vtx_offset, vtx_offset+pcmd->vtx_count, ALLEGRO_PRIM_TRIANGLE_LIST);
+                ALLEGRO_BITMAP* texture = (ALLEGRO_BITMAP*)pcmd->TextureId;
+                al_set_clipping_rectangle(pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z-pcmd->ClipRect.x, pcmd->ClipRect.w-pcmd->ClipRect.y);
+                al_draw_indexed_prim(&vertices[0], g_VertexDecl, texture, &indices[idx_offset], pcmd->ElemCount, ALLEGRO_PRIM_TRIANGLE_LIST);
             }
-            vtx_offset += pcmd->vtx_count;
+            idx_offset += pcmd->ElemCount;
         }
     }
 
