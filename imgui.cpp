@@ -7957,9 +7957,14 @@ bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
     const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
 
     // Size default to hold ~7 items. Fractional number of items helps seeing that we can scroll down/up without looking at scrollbar.
-    ImVec2 size;
-    size.x = (size_arg.x != 0.0f) ? (size_arg.x) : ImGui::CalcItemWidth() + style.FramePadding.x * 2.0f;
-    size.y = (size_arg.y != 0.0f) ? (size_arg.y) : ImGui::GetTextLineHeightWithSpacing() * 7.4f + style.ItemSpacing.y;
+    const ImVec2 content_max = window->Pos + ImGui::GetContentRegionMax();
+    const ImVec2 cursor_pos = window->Pos + ImGui::GetCursorPos();
+    // FIXME: Wrap this pattern for re-use
+    ImVec2 size = size_arg;
+    if (size.x <= 0.0f)
+        size.x = (size.x == 0.0f) ? ImGui::CalcItemWidth() + style.FramePadding.x * 2.0f : ImMax(content_max.x - cursor_pos.x, 4.0f) - fabsf(size.x);
+    if (size.y <= 0.0f)
+        size.y = (size.y == 0.0f) ? ImGui::GetTextLineHeightWithSpacing() * 7.4f + style.ItemSpacing.y : ImMax(content_max.y - cursor_pos.y, 4.0f) - fabsf(size.y);
     ImVec2 frame_size = ImVec2(size.x, ImMax(size.y, label_size.y));
     ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + frame_size);
     ImRect bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
