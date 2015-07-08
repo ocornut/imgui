@@ -1,4 +1,4 @@
-﻿// ImGui library v1.42
+﻿// ImGui library v1.43 WIP
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
@@ -5755,7 +5755,7 @@ void ImGui::PushID(const void* ptr_id)
     window->IDStack.push_back(window->GetID(ptr_id));
 }
 
-void ImGui::PushID(const int int_id)
+void ImGui::PushID(int int_id)
 {
     const void* ptr_id = (void*)(intptr_t)int_id;
     ImGuiWindow* window = GetCurrentWindow();

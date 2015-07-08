@@ -1,4 +1,4 @@
-// ImGui library v1.42
+// ImGui library v1.43 WIP
 // See .cpp file for documentation.
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
@@ -15,7 +15,7 @@
 #include <stdlib.h>         // NULL, malloc, free, qsort, atoi
 #include <string.h>         // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
-#define IMGUI_VERSION       "1.42"
+#define IMGUI_VERSION       "1.43 WIP"
 
 // Define assertion handler.
 #ifndef IM_ASSERT
@@ -203,7 +203,7 @@ namespace ImGui
     IMGUI_API void          PushID(const char* str_id);                                         // push identifier into the ID stack. IDs are hash of the *entire* stack!
     IMGUI_API void          PushID(const char* str_id_begin, const char* str_id_end);
     IMGUI_API void          PushID(const void* ptr_id);
-    IMGUI_API void          PushID(const int int_id);
+    IMGUI_API void          PushID(int int_id);
     IMGUI_API void          PopID();
     IMGUI_API ImGuiID       GetID(const char* str_id);                                          // calculate unique ID (hash of whole ID stack + given parameter). useful if you want to query into ImGuiStorage yourself. otherwise rarely needed
     IMGUI_API ImGuiID       GetID(const char* str_id_begin, const char* str_id_end);
@@ -809,7 +809,7 @@ struct ImGuiOnceUponAFrame
 {
     ImGuiOnceUponAFrame() { RefFrame = -1; }
     mutable int RefFrame;
-    operator bool() const { const int current_frame = ImGui::GetFrameCount(); if (RefFrame == current_frame) return false; RefFrame = current_frame; return true; }
+    operator bool() const { int current_frame = ImGui::GetFrameCount(); if (RefFrame == current_frame) return false; RefFrame = current_frame; return true; }
 };
 
 // Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
