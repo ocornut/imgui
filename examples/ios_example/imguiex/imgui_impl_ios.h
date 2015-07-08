@@ -5,8 +5,7 @@
 //  Joel Davis (joeld42@gmail.com)
 //
 
-#ifndef __imguiex__imgui_impl_ios__
-#define __imguiex__imgui_impl_ios__
+#pragma once
 
 #include <Foundation/Foundation.h>
 #include <UIKit/UIKit.h>
@@ -21,6 +20,3 @@
 - (void)newFrame;
 
 @end
-
-
-#endif /* defined(__imguiex__imgui_impl_ios__) */

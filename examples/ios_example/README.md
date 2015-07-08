@@ -3,9 +3,9 @@
 ----
 ## Introduction
 
-This example is the default XCode "OpenGL" example code, modified to support IMGUI and [Synergy](http://synergy-project.org/). 
+This example is the default XCode "OpenGL" example code, modified to support ImGui and [Synergy](http://synergy-project.org/). 
 
-Synergy (remote keyboard/mouse) is not required, but it's pretty hard to use IMGUI without it. Synergy includes a "uSynergy" library that allows embedding a synergy client, this is what is used here. IMGUI supports "Touch Padding", and this is enabled when Synergy is not active.
+Synergy (remote keyboard/mouse) is not required, but it's pretty hard to use ImGui without it. Synergy includes a "uSynergy" library that allows embedding a synergy client, this is what is used here. ImGui supports "TouchPadding", and this is enabled when Synergy is not active.
 
 ## How to Use
 ----
@@ -28,8 +28,8 @@ Things that would be nice but I didn't get around to doing:
 
 ----
 ## C++ on iOS
-IMGUI is a c++ library. If you want to include it directly, rename your Obj-C file to have the ".mm" extension. 
+ImGui is a c++ library. If you want to include it directly, rename your Obj-C file to have the ".mm" extension. 
 
 Alternatively, you can wrap your debug code in a C interface, this is what I am demonstrating here with the "debug_hud.h" interface. Either approach works, use whatever you prefer.
 
-In my case, most of my game code is already in C++ so it's not really an issue and I can use IMGUI directly.
+In my case, most of my game code is already in C++ so it's not really an issue and I can use ImGui directly.

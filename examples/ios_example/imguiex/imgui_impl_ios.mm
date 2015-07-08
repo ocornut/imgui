@@ -16,6 +16,7 @@
 #include "uSynergy.h"
 
 // From Carbon HIToolbox/Events.h
+// FIXME: Keyboard mapping is hacked in because Synergy doesn't give us character but only keycode which aren't really portable if you consider keyboard locale. See https://github.com/ocornut/imgui/pull/247
 enum {
     kVK_ANSI_A                    = 0x00,
     kVK_ANSI_S                    = 0x01,
@@ -267,15 +268,10 @@ void ImGui_KeyboardCallback(uSynergyCookie cookie, uint16_t key,
     
     
     // Add this as keyboard input
-    if ((down) && (key) && (scanCode<256) && !(modifiers & USYNERGY_MODIFIER_CTRL)) {
-        int charForKeycode = 0;
-        if (modifiers & USYNERGY_MODIFIER_SHIFT ) {
-            charForKeycode = g_keycodeCharShifted[ scanCode ];
-        } else {
-            charForKeycode = g_keycodeCharUnshifted[ scanCode ];
-        }
-        
+    if ((down) && (key) && (scanCode<256) && !(modifiers & USYNERGY_MODIFIER_CTRL)) 
+	{
         // If this key maps to a character input, apply it
+        int charForKeycode = (modifiers & USYNERGY_MODIFIER_SHIFT) ? g_keycodeCharShifted[scanCode] : g_keycodeCharUnshifted[scanCode];
         io.AddInputCharacter((unsigned short)charForKeycode);
     }
     
@@ -499,8 +495,6 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
     io.KeyMap[ImGuiKey_X] = kVK_ANSI_X+1;
     io.KeyMap[ImGuiKey_Y] = kVK_ANSI_Y+1;
     io.KeyMap[ImGuiKey_Z] = kVK_ANSI_Z+1;
-    
-
 }
 
 - (void)connectServer: (NSString*)serverName
@@ -620,9 +614,7 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
 static void ImGui_ImplIOS_RenderDrawLists (ImDrawList** const cmd_lists, int cmd_lists_count)
 {
     if (cmd_lists_count == 0)
-    {
         return;
-    }
     
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
     GLint last_program, last_texture;
@@ -702,7 +694,6 @@ static void ImGui_ImplIOS_RenderDrawLists (ImDrawList** const cmd_lists, int cmd
         }
         cmd_offset = vtx_offset;
     }
-    
     
     // Restore modified state
     glBindVertexArray(0);
@@ -822,4 +813,3 @@ bool ImGui_ImplIOS_CreateDeviceObjects()
     
     return true;
 }
-
