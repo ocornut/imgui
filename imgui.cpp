@@ -149,8 +149,11 @@
                               argument   'cmd_lists_count'  -> 'draw_data->CmdListsCount'
                               ImDrawList 'commands'         -> 'CmdBuffer'
                               ImDrawList 'vtx_buffer'       -> 'VtxBuffer'
-                              ImDrawList                    -> 'IdxBuffer' (new)
+                              ImDrawList  n/a               -> 'IdxBuffer' (new)
                               ImDrawCmd  'vtx_count'        -> 'ElemCount'
+                              ImDrawCmd  'clip_rect'        -> 'ClipRect'
+                              ImDrawCmd  'user_callback'    -> 'UserCallback'
+                              ImDrawCmd  'texture_id'       -> 'TextureId'
                      - each ImDrawList now contains both a vertex buffer and an index buffer. For each command, render ElemCount/3 triangles using indices from the index buffer.
                      - if you REALLY cannot render indexed primitives, you can call the draw_data->DeIndexAllBuffers() method to de-index your buffer. This is slow and a waste of CPU/GPU. Prefer using indexed rendering!
                      - refer to code in the examples/ folder or ask on the GitHub if you are unsure of how to upgrade. please upgrade!
