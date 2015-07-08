@@ -476,9 +476,11 @@
 #pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion changes signedness             // 
 #pragma clang diagnostic ignored "-Wmissing-noreturn"       // warning : function xx could be declared with attribute 'noreturn' warning    // GetDefaultFontData() asserts which some implementation makes it never return.
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"// warning : 'xx' is deprecated: The POSIX name for this item.. // for strdup used in demo code (so user can copy & paste the code)
+#pragma clang diagnostic ignored "-Wint-to-void-pointer-cast" // warning : cast to 'void *' from smaller integer type 'int'
 #endif
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"      // warning: cast to pointer from integer of different size
 #endif
 
 //-------------------------------------------------------------------------
@@ -9209,12 +9211,9 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     anti_aliased &= GImGui->Style.AntiAliasedLines;
     //if (ImGui::GetIO().KeyCtrl) anti_aliased = false;
 
-    int start = 0, count = points_count;
+    int count = points_count;
     if (!closed)
-    {
-        start = 1;
         count = points_count-1;
-    }
 
     if (anti_aliased && thickness == 1.0f)
     {
