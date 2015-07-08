@@ -10864,7 +10864,7 @@ void ImGui::ShowTestWindow(bool* opened)
             {
                 ImFont* font = ImGui::GetIO().Fonts->Fonts[i];
                 ImGui::BulletText("Font %d: %.2f pixels, %d glyphs", i, font->FontSize, font->Glyphs.Size);
-                ImGui::TreePush((void*)i);
+                ImGui::TreePush((void*)(size_t)i);
                 ImGui::PushFont(font);
                 ImGui::Text("The quick brown fox jumps over the lazy dog");
                 ImGui::PopFont();
@@ -10905,7 +10905,7 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             for (int i = 0; i < 5; i++)
             {
-                if (ImGui::TreeNode((void*)i, "Child %d", i))
+                if (ImGui::TreeNode((void*)(size_t)i, "Child %d", i))
                 {
                     ImGui::Text("blah blah");
                     ImGui::SameLine();
