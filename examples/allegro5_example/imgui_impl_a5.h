@@ -11,7 +11,7 @@ bool    ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display);
 void    ImGui_ImplA5_Shutdown();
 void    ImGui_ImplA5_NewFrame();
 
-void    ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT* event);
+bool    ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT* event);
 
 // Use if you want to reset your rendering device without losing ImGui state.
 bool    Imgui_ImplA5_CreateDeviceObjects();
