@@ -1288,7 +1288,7 @@ struct ImGuiState
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
     bool                    ActiveIdIsFocusedOnly;              // Set only by active widget. Denote focus but no active interaction
     ImGuiWindow*            ActiveIdWindow;
-    ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window. Only valid if ActiveID is the "#MOVE" identifier of a window.
+    ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window. Pointer is only valid if ActiveID is the "#MOVE" identifier of a window.
     float                   SettingsDirtyTimer;
     ImVector<ImGuiIniData>  Settings;
     int                     DisableHideTextAfterDoubleHash;
@@ -2399,13 +2399,14 @@ void ImGui::Render()
         ImGui::End();
 
         // Click to focus window and start moving (after we're done with all our widgets)
+        if (!g.ActiveId)
+            g.MovedWindow = NULL;
         if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
         {
             if (!(g.FocusedWindow && !g.FocusedWindow->WasActive && g.FocusedWindow->Active)) // Unless we just made a popup appear
             {
                 if (g.HoveredRootWindow != NULL)
                 {
-                    IM_ASSERT(g.MovedWindow == NULL);
                     g.MovedWindow = g.HoveredWindow;
                     SetActiveId(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
                 }
