@@ -7120,6 +7120,8 @@ static bool InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 edit_state.StbState.select_start = ImMin(edit_state.StbState.select_start, edit_state.CurLenW);
                 edit_state.StbState.select_end = ImMin(edit_state.StbState.select_end, edit_state.CurLenW);
             }
+            if (flags & ImGuiInputTextFlags_AlwaysInsertMode)
+                edit_state.StbState.insert_mode = true;
             if (!is_multiline && (focus_requested_by_tab || (user_clicked && is_ctrl_down)))
                 select_all = true;
         }

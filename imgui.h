@@ -462,6 +462,7 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_AllowTabInput       = 1 << 10,  // Pressing TAB input a '\t' character into the text field
     ImGuiInputTextFlags_CtrlEnterForNewLine = 1 << 11,  // In multi-line mode, allow exiting edition by pressing Enter. Ctrl+Enter to add new line (by default adds new lines with Enter).
     ImGuiInputTextFlags_NoHorizontalScroll  = 1 << 12,  // Disable following the cursor horizontally
+    ImGuiInputTextFlags_AlwaysInsertMode    = 1 << 13,  // Insert mode
     // [Internal]
     ImGuiInputTextFlags_Multiline           = 1 << 20   // For internal use by InputTextMultiline()
 };
