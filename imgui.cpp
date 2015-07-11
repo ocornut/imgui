@@ -7419,11 +7419,18 @@ static bool InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (edit_state.CursorFollow)
         {
             // Horizontal scroll in chunks of quarter width
-            const float scroll_increment_x = size.x * 0.25f;
-            if (cursor_offset.x < edit_state.ScrollX)
-                edit_state.ScrollX = ImMax(0.0f, cursor_offset.x - scroll_increment_x);    
-            else if (cursor_offset.x - size.x >= edit_state.ScrollX)
-                edit_state.ScrollX = cursor_offset.x - size.x + scroll_increment_x;
+            if (!(flags & ImGuiInputTextFlags_NoHorizontalScroll))
+            {
+                const float scroll_increment_x = size.x * 0.25f;
+                if (cursor_offset.x < edit_state.ScrollX)
+                    edit_state.ScrollX = ImMax(0.0f, cursor_offset.x - scroll_increment_x);    
+                else if (cursor_offset.x - size.x >= edit_state.ScrollX)
+                    edit_state.ScrollX = cursor_offset.x - size.x + scroll_increment_x;
+            }
+            else
+            {
+                edit_state.ScrollX = 0.0f;
+            }
 
             // Vertical scroll
             if (is_multiline)
