@@ -171,7 +171,7 @@ namespace ImGui
     IMGUI_API void          BeginGroup();                                                       // once closing a group it is seen as a single item (so you can use IsItemHovered() on a group, SameLine() between groups, etc. 
     IMGUI_API void          EndGroup();
     IMGUI_API void          Separator();                                                        // horizontal line
-    IMGUI_API void          SameLine(int column_x = 0, int spacing_w = -1);                     // call between widgets or groups to layout them horizontally
+    IMGUI_API void          SameLine(float pos_x = 0.0f, float spacing_w = -1.0f);              // call between widgets or groups to layout them horizontally
     IMGUI_API void          Spacing();                                                          // add spacing
     IMGUI_API void          Dummy(const ImVec2& size);                                          // add a dummy item of given size
     IMGUI_API void          Indent();                                                           // move content position toward the right by style.IndentSpacing pixels
@@ -462,6 +462,8 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_CallbackCharFilter  = 1 << 9,   // Call user function to filter character. Modify data->EventChar to replace/filter input, or return 1 to discard character.
     ImGuiInputTextFlags_AllowTabInput       = 1 << 10,  // Pressing TAB input a '\t' character into the text field
     ImGuiInputTextFlags_CtrlEnterForNewLine = 1 << 11,  // In multi-line mode, allow exiting edition by pressing Enter. Ctrl+Enter to add new line (by default adds new lines with Enter).
+    ImGuiInputTextFlags_NoHorizontalScroll  = 1 << 12,  // Disable following the cursor horizontally
+    ImGuiInputTextFlags_AlwaysInsertMode    = 1 << 13,  // Insert mode
     // [Internal]
     ImGuiInputTextFlags_Multiline           = 1 << 20   // For internal use by InputTextMultiline()
 };
@@ -924,6 +926,7 @@ struct ImGuiTextEditCallbackData
     // NB: calling those function loses selection.
     void DeleteChars(int pos, int bytes_count);
     void InsertChars(int pos, const char* text, const char* text_end = NULL);
+    bool HasSelection() const { return SelectionStart != SelectionEnd; }
 };
 
 // ImColor() is just a helper that implicity converts to either ImU32 (packed 4x1 byte) or ImVec4 (4x1 float)

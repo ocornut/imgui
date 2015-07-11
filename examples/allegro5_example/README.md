@@ -14,5 +14,3 @@ g++ -I ../imgui main.cpp imgui_impl_a5.cpp ../imgui/imgui.cpp -lallegro -lallegr
 ```
 cl /MD /I <a5path\include> /I ..\imgui main.cpp imgui_impl_a5.cpp ..\imgui\imgui.cpp /link /LIBPATH:<a5path\lib> allegro-5.0.10-monolith-md.lib user32.lib
 ```
-
-public domain

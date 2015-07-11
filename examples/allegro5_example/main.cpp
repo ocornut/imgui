@@ -1,5 +1,4 @@
 // ImGui - standalone example application for Allegro 5
-// public domain
 
 #include <stdint.h>
 #include <allegro5/allegro.h>
