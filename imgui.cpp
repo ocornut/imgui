@@ -9524,18 +9524,12 @@ void ImDrawList::AddRectFilledMultiColor(const ImVec2& a, const ImVec2& c, ImU32
 
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
     PrimReserve(6, 4);
-    const ImVec2 b(c.x, a.y);
-    const ImVec2 d(a.x, c.y);
-    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx));
-    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+1));
-    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+2));
-    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx));
-    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+2));
-    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+3));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx)); PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+1)); PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+2));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx)); PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+2)); PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+3));
     PrimWriteVtx(a, uv, col_upr_left);
-    PrimWriteVtx(b, uv, col_upr_right);
+    PrimWriteVtx(ImVec2(c.x, a.y), uv, col_upr_right);
     PrimWriteVtx(c, uv, col_bot_right);
-    PrimWriteVtx(d, uv, col_bot_left);
+    PrimWriteVtx(ImVec2(a.x, c.y), uv, col_bot_left);
 }
 
 void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col)
