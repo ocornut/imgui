@@ -9202,10 +9202,10 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
     if (r == 0.0f || rounding_corners == 0)
     {
         PrimReserve(4*6);
-        PrimLine(ImVec2(a.x,a.y), ImVec2(b.x,a.y), col);
-        PrimLine(ImVec2(b.x,a.y), ImVec2(b.x,b.y), col);
-        PrimLine(ImVec2(b.x,b.y), ImVec2(a.x,b.y), col);
-        PrimLine(ImVec2(a.x,b.y), ImVec2(a.x,a.y), col);
+        PrimLine(a,               ImVec2(b.x,a.y), col);
+        PrimLine(ImVec2(b.x,a.y), b,               col);
+        PrimLine(b,               ImVec2(a.x,b.y), col);
+        PrimLine(ImVec2(a.x,b.y), a,               col);
     }
     else
     {
@@ -9255,6 +9255,21 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
         if (rounding_corners & 4) AddArcFast(ImVec2(b.x-r,b.y-r), r, col, 6, 9, true);
         if (rounding_corners & 8) AddArcFast(ImVec2(a.x+r,b.y-r), r, col, 9, 12, true);
     }
+}
+
+void ImDrawList::AddRectFilledMultiColor(const ImVec2& a, const ImVec2& b, ImU32 col_upr_left, ImU32 col_upr_right, ImU32 col_bot_right, ImU32 col_bot_left)
+{
+    if (((col_upr_left | col_upr_right | col_bot_right | col_bot_left) >> 24) == 0)
+        return;
+
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+    PrimReserve(6);
+    PrimVtx(a,               uv, col_upr_left);
+    PrimVtx(ImVec2(b.x,a.y), uv, col_upr_right);
+    PrimVtx(ImVec2(b.x,b.y), uv, col_bot_right);
+    PrimVtx(a,               uv, col_upr_left);
+    PrimVtx(b,               uv, col_bot_right);
+    PrimVtx(ImVec2(a.x,b.y), uv, col_bot_left);
 }
 
 void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col)
