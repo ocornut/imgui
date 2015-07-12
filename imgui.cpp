@@ -6547,7 +6547,7 @@ static void Plot(ImGuiPlotType plot_type, const char* label, float (*values_gett
         return;
 
     // Determine scale from values if not specified
-    if (scale_min == FLT_MAX || scale_max == FLT_MAX)
+    if (scale_min == FLT_MAX || scale_max == FLT_MAX || (scale_min == 0.0f && scale_max == 0.0f))
     {
         float v_min = FLT_MAX;
         float v_max = -FLT_MAX;
