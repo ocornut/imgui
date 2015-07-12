@@ -9517,6 +9517,27 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
     }
 }
 
+void ImDrawList::AddRectFilledMultiColor(const ImVec2& a, const ImVec2& c, ImU32 col_upr_left, ImU32 col_upr_right, ImU32 col_bot_right, ImU32 col_bot_left)
+{
+    if (((col_upr_left | col_upr_right | col_bot_right | col_bot_left) >> 24) == 0)
+        return;
+
+    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+    PrimReserve(6, 4);
+    const ImVec2 b(c.x, a.y);
+    const ImVec2 d(a.x, c.y);
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+1));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+2));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+2));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+3));
+    PrimWriteVtx(a, uv, col_upr_left);
+    PrimWriteVtx(b, uv, col_upr_right);
+    PrimWriteVtx(c, uv, col_bot_right);
+    PrimWriteVtx(d, uv, col_bot_left);
+}
+
 void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col)
 {
     if ((col >> 24) == 0)
@@ -12544,7 +12565,8 @@ static void ShowExampleAppCustomRendering(bool* opened)
     // If you only use the ImDrawList API, you can notify the owner window of its extends by using SetCursorPos(max).
     ImVec2 canvas_pos = ImGui::GetCursorScreenPos();            // ImDrawList API uses screen coordinates!
     ImVec2 canvas_size = ImVec2(ImMax(50.0f,ImGui::GetWindowContentRegionMax().x-ImGui::GetCursorPos().x), ImMax(50.0f,ImGui::GetWindowContentRegionMax().y-ImGui::GetCursorPos().y));    // Resize canvas what's available
-    draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), 0xFFFFFFFF);
+    draw_list->AddRectFilledMultiColor(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(0,0,0), ImColor(255,0,0), ImColor(255,255,0), ImColor(0,255,0));
+    draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(255,255,255));
     bool adding_preview = false;
     ImGui::InvisibleButton("canvas", canvas_size);
     if (ImGui::IsItemHovered())
