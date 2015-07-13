@@ -2134,6 +2134,7 @@ void ImGui::NewFrame()
     g.FrameCount += 1;
     g.Tooltip[0] = '\0';
     g.OverlayDrawList.Clear();
+    g.OverlayDrawList.AddDrawCmd();
 
     // Update inputs state
     if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0)
