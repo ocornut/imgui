@@ -1185,8 +1185,7 @@ struct ImFont
     {
         ImWchar         Codepoint;
         signed short    XAdvance;
-        signed short    Width, Height;
-        signed short    XOffset, YOffset;
+        signed short    X0, Y0, X1, Y1;
         float           U0, V0, U1, V1;     // Texture coordinates
     };
     float               Ascent;             // Distance from top to bottom of e.g. 'A' [0..FontSize]

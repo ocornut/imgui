@@ -9968,15 +9968,15 @@ bool    ImFontAtlas::Build()
                 data.OutFont->Glyphs.resize(data.OutFont->Glyphs.Size + 1);
                 ImFont::Glyph& glyph = data.OutFont->Glyphs.back();
                 glyph.Codepoint = (ImWchar)(range.first_unicode_char_in_range + char_idx);
-                glyph.Width = (signed short)pc.x1 - pc.x0 + 1;
-                glyph.Height = (signed short)pc.y1 - pc.y0 + 1;
-                glyph.XOffset = (signed short)(pc.xoff);
-                glyph.YOffset = (signed short)(pc.yoff + (int)(font_ascent * font_scale));
+                glyph.X0 = (signed short)(pc.xoff);
+                glyph.Y0 = (signed short)(pc.yoff + (int)(font_ascent * font_scale));
+                glyph.X1 = glyph.X0 + ((signed short)pc.x1 - pc.x0 + 1);
+                glyph.Y1 = glyph.Y0 + ((signed short)pc.y1 - pc.y0 + 1);
                 glyph.XAdvance = (signed short)(pc.xadvance + character_spacing_x);  // Bake spacing into XAdvance
                 glyph.U0 = ((float)pc.x0 - 0.5f) * uv_scale_x;
                 glyph.V0 = ((float)pc.y0 - 0.5f) * uv_scale_y;
-                glyph.U1 = ((float)pc.x0 - 0.5f + glyph.Width) * uv_scale_x;
-                glyph.V1 = ((float)pc.y0 - 0.5f + glyph.Height) * uv_scale_y;
+                glyph.U1 = ((float)pc.x0 - 0.5f + (glyph.X1 - glyph.X0)) * uv_scale_x;
+                glyph.V1 = ((float)pc.y0 - 0.5f + (glyph.Y1 - glyph.Y0)) * uv_scale_y;
             }
         }
 
@@ -10735,11 +10735,11 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             if (c != ' ' && c != '\t')
             {
                 // We don't do a second finer clipping test on the Y axis (todo: do some measurement see if it is worth it, probably not)
-                float y1 = (float)(y + glyph->YOffset * scale);
-                float y2 = (float)(y1 + glyph->Height * scale);
+                float y1 = (float)(y + glyph->Y0 * scale);
+                float y2 = (float)(y + glyph->Y1 * scale);
 
-                float x1 = (float)(x + glyph->XOffset * scale);
-                float x2 = (float)(x1 + glyph->Width * scale);
+                float x1 = (float)(x + glyph->X0 * scale);
+                float x2 = (float)(x + glyph->X1 * scale);
                 if (x1 <= clip_rect.z && x2 >= clip_rect.x)
                 {
                     // Render a character
