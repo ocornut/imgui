@@ -3172,7 +3172,7 @@ static void CloseInactivePopups()
     if (g.OpenedPopupStack.empty())
         return;
 
-    // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it
+    // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it.
     // Don't close our own child popup windows
     int n = 0;
     if (g.FocusedWindow)
@@ -3184,21 +3184,17 @@ static void CloseInactivePopups()
                 continue;
             IM_ASSERT((popup.Window->Flags & ImGuiWindowFlags_Popup) != 0);
             if (popup.Window->Flags & ImGuiWindowFlags_ChildWindow)
-            {
-                if (g.FocusedWindow->RootWindow != popup.Window->RootWindow)
-                    break;
-            }
-            else
-            {
-                bool has_focus = false;
-                for (int m = n; m < g.OpenedPopupStack.Size && !has_focus; m++)
-                    has_focus = (g.OpenedPopupStack[m].Window && g.OpenedPopupStack[m].Window->RootWindow == g.FocusedWindow->RootWindow);
-                if (!has_focus)
-                    break;
-            }
+                continue;
+
+            bool has_focus = false;
+            for (int m = n; m < g.OpenedPopupStack.Size && !has_focus; m++)
+                has_focus = (g.OpenedPopupStack[m].Window && g.OpenedPopupStack[m].Window->RootWindow == g.FocusedWindow->RootWindow);
+            if (!has_focus)
+                break;
         }
     }
-    g.OpenedPopupStack.resize(n);
+    if (n < g.OpenedPopupStack.Size)   // This test is not required but it allows to set a useful breakpoint on the line below
+        g.OpenedPopupStack.resize(n);
 }
 
 static ImGuiWindow* GetFrontMostModalRootWindow()
