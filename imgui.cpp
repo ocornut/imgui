@@ -12100,10 +12100,13 @@ void ImGui::ShowMetricsWindow(bool* opened)
                 Funcs::NodeDrawList(g.RenderDrawLists[0][i], "DrawList");
             ImGui::TreePop();
         }
-        if (ImGui::TreeNode("Popups", "Opened Popups (%d)", g.OpenedPopupStack.Size))
+        if (ImGui::TreeNode("Popups", "Opened Popups Stack (%d)", g.OpenedPopupStack.Size))
         {
             for (int i = 0; i < g.OpenedPopupStack.Size; i++)
-                ImGui::BulletText("PopupID: %08x, Window: '%s'", g.OpenedPopupStack[i].PopupID, g.OpenedPopupStack[i].Window ? g.OpenedPopupStack[i].Window->Name : "NULL");
+            {
+                ImGuiWindow* window = g.OpenedPopupStack[i].Window;
+                ImGui::BulletText("PopupID: %08x, Window: '%s'%s%s", g.OpenedPopupStack[i].PopupID, window ? window->Name : "NULL", window && (window->Flags & ImGuiWindowFlags_ChildWindow) ? " ChildWindow" : "", window && (window->Flags & ImGuiWindowFlags_ChildMenu) ? " ChildMenu" : "");
+            }
             ImGui::TreePop();
         }
         g.DisableHideTextAfterDoubleHash--;
