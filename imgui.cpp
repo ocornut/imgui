@@ -3208,7 +3208,7 @@ static void CloseInactivePopups()
     if (g.OpenedPopupStack.empty())
         return;
 
-    // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it
+    // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it.
     // Don't close our own child popup windows
     int n = 0;
     if (g.FocusedWindow)
@@ -3220,21 +3220,17 @@ static void CloseInactivePopups()
                 continue;
             IM_ASSERT((popup.Window->Flags & ImGuiWindowFlags_Popup) != 0);
             if (popup.Window->Flags & ImGuiWindowFlags_ChildWindow)
-            {
-                if (g.FocusedWindow->RootWindow != popup.Window->RootWindow)
-                    break;
-            }
-            else
-            {
-                bool has_focus = false;
-                for (int m = n; m < g.OpenedPopupStack.Size && !has_focus; m++)
-                    has_focus = (g.OpenedPopupStack[m].Window && g.OpenedPopupStack[m].Window->RootWindow == g.FocusedWindow->RootWindow);
-                if (!has_focus)
-                    break;
-            }
+                continue;
+
+            bool has_focus = false;
+            for (int m = n; m < g.OpenedPopupStack.Size && !has_focus; m++)
+                has_focus = (g.OpenedPopupStack[m].Window && g.OpenedPopupStack[m].Window->RootWindow == g.FocusedWindow->RootWindow);
+            if (!has_focus)
+                break;
         }
     }
-    g.OpenedPopupStack.resize(n);
+    if (n < g.OpenedPopupStack.Size)   // This test is not required but it allows to set a useful breakpoint on the line below
+        g.OpenedPopupStack.resize(n);
 }
 
 static ImGuiWindow* GetFrontMostModalRootWindow()
@@ -11986,6 +11982,17 @@ void ImGui::ShowTestWindow(bool* opened)
                 ShowExampleMenuFile();
                 ImGui::EndPopup();
             }
+
+            ImGui::TextWrapped("Below we are testing adding menu items to a regular window. It's rather unusual but should work!");
+            ImGui::Separator();
+            ImGui::MenuItem("Menu item", "CTRL+M");
+            if (ImGui::BeginMenu("Menu"))
+            {
+                ShowExampleMenuFile();
+                ImGui::EndMenu();
+            }
+            ImGui::Separator();
+
             ImGui::TreePop();
         }
 
@@ -12388,10 +12395,13 @@ void ImGui::ShowMetricsWindow(bool* opened)
                 Funcs::NodeDrawList(g.RenderDrawLists[0][i], "DrawList");
             ImGui::TreePop();
         }
-        if (ImGui::TreeNode("Popups", "Opened Popups (%d)", g.OpenedPopupStack.Size))
+        if (ImGui::TreeNode("Popups", "Opened Popups Stack (%d)", g.OpenedPopupStack.Size))
         {
             for (int i = 0; i < g.OpenedPopupStack.Size; i++)
-                ImGui::BulletText("PopupID: %08x, Window: '%s'", g.OpenedPopupStack[i].PopupID, g.OpenedPopupStack[i].Window ? g.OpenedPopupStack[i].Window->Name : "NULL");
+            {
+                ImGuiWindow* window = g.OpenedPopupStack[i].Window;
+                ImGui::BulletText("PopupID: %08x, Window: '%s'%s%s", g.OpenedPopupStack[i].PopupID, window ? window->Name : "NULL", window && (window->Flags & ImGuiWindowFlags_ChildWindow) ? " ChildWindow" : "", window && (window->Flags & ImGuiWindowFlags_ChildMenu) ? " ChildMenu" : "");
+            }
             ImGui::TreePop();
         }
         g.DisableHideTextAfterDoubleHash--;
@@ -12457,8 +12467,10 @@ static void ShowExampleMenuFile()
             ImGui::Text("Scrolling Text %d", i);
         ImGui::EndChild();
         static float f = 0.5f;
+        static int n = 0;
         ImGui::SliderFloat("Value", &f, 0.0f, 1.0f);
         ImGui::InputFloat("Input", &f, 0.1f);
+        ImGui::Combo("Combo", &n, "Yes\0No\0Maybe\0\0");
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Colors"))
