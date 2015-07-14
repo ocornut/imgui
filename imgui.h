@@ -1184,8 +1184,8 @@ struct ImFont
     struct Glyph
     {
         ImWchar         Codepoint;
-        signed short    XAdvance;
-        signed short    X0, Y0, X1, Y1;
+        float           XAdvance;
+        float           X0, Y0, X1, Y1;
         float           U0, V0, U1, V1;     // Texture coordinates
     };
     float               Ascent;             // Distance from top to bottom of e.g. 'A' [0..FontSize]

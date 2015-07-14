@@ -9660,6 +9660,7 @@ struct ImFontAtlas::ImFontAtlasData
     stbrp_rect*         Rects;
     stbtt_pack_range*   Ranges;
     int                 RangesCount;
+    int                 OversampleH, OversampleV;
 };
 
 ImFontAtlas::ImFontAtlas()
@@ -9762,7 +9763,6 @@ ImFont* ImFontAtlas::AddFontDefault()
     const void* ttf_compressed;
     GetDefaultCompressedFontDataTTF(&ttf_compressed, &ttf_compressed_size);
     ImFont* font = AddFontFromMemoryCompressedTTF(ttf_compressed, ttf_compressed_size, 13.0f, GetGlyphRangesDefault(), 0);
-    font->DisplayOffset.y += 1;
     return font;
 }
 
@@ -9795,6 +9795,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float si
     data->TTFData = ttf_data;
     data->TTFDataSize = ttf_size;
     data->SizePixels = size_pixels;
+    data->OversampleH = data->OversampleV = 1;
     data->GlyphRanges = glyph_ranges;
     data->FontNo = font_no;
     InputData.push_back(data);
@@ -9854,11 +9855,11 @@ bool    ImFontAtlas::Build()
     stbtt_pack_context spc;
     int ret = stbtt_PackBegin(&spc, NULL, TexWidth, max_tex_height, 0, 1, NULL);
     IM_ASSERT(ret);
-    stbtt_PackSetOversampling(&spc, 1, 1);
 
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
     ImVector<stbrp_rect> extra_rects;
     RenderCustomTexData(0, &extra_rects);
+    stbtt_PackSetOversampling(&spc, 1, 1);
     stbrp_pack_rects((stbrp_context*)spc.pack_info, &extra_rects[0], extra_rects.Size);
     for (int i = 0; i < extra_rects.Size; i++)
         if (extra_rects[i].was_packed)
@@ -9903,6 +9904,7 @@ bool    ImFontAtlas::Build()
         // Pack
         data.Rects = buf_rects + buf_rects_n;
         buf_rects_n += glyph_count;
+        stbtt_PackSetOversampling(&spc, data.OversampleH, data.OversampleV);
         const int n = stbtt_PackFontRangesGatherRects(&spc, &data.FontInfo, data.Ranges, data.RangesCount, data.Rects);
         stbrp_pack_rects((stbrp_context*)spc.pack_info, data.Rects, n);
 
@@ -9926,6 +9928,7 @@ bool    ImFontAtlas::Build()
     for (int input_i = 0; input_i < InputData.Size; input_i++)
     {
         ImFontAtlasData& data = *InputData[input_i];
+        stbtt_PackSetOversampling(&spc, data.OversampleH, data.OversampleV);
         ret = stbtt_PackFontRangesRenderIntoRects(&spc, &data.FontInfo, data.Ranges, data.RangesCount, data.Rects);
         data.Rects = NULL;
     }
@@ -9949,8 +9952,6 @@ bool    ImFontAtlas::Build()
         data.OutFont->Descent = (font_descent * font_scale);
         data.OutFont->Glyphs.resize(0);
 
-        const float uv_scale_x = 1.0f / TexWidth;
-        const float uv_scale_y = 1.0f / TexHeight;
         const int character_spacing_x = 1;
         for (int i = 0; i < data.RangesCount; i++)
         {
@@ -9960,19 +9961,19 @@ bool    ImFontAtlas::Build()
                 const stbtt_packedchar& pc = range.chardata_for_range[char_idx];
                 if (!pc.x0 && !pc.x1 && !pc.y0 && !pc.y1)
                     continue;
+ 
+                stbtt_aligned_quad q;
+                float dummy_x = 0.0f, dummy_y = 0.0f;
+                stbtt_GetPackedQuad(range.chardata_for_range, TexWidth, TexHeight, char_idx, &dummy_x, &dummy_y, &q, 0);
 
                 data.OutFont->Glyphs.resize(data.OutFont->Glyphs.Size + 1);
                 ImFont::Glyph& glyph = data.OutFont->Glyphs.back();
                 glyph.Codepoint = (ImWchar)(range.first_unicode_char_in_range + char_idx);
-                glyph.X0 = (signed short)(pc.xoff);
-                glyph.Y0 = (signed short)(pc.yoff + (int)(font_ascent * font_scale));
-                glyph.X1 = glyph.X0 + ((signed short)pc.x1 - pc.x0 + 1);
-                glyph.Y1 = glyph.Y0 + ((signed short)pc.y1 - pc.y0 + 1);
-                glyph.XAdvance = (signed short)(pc.xadvance + character_spacing_x);  // Bake spacing into XAdvance
-                glyph.U0 = ((float)pc.x0 - 0.5f) * uv_scale_x;
-                glyph.V0 = ((float)pc.y0 - 0.5f) * uv_scale_y;
-                glyph.U1 = ((float)pc.x0 - 0.5f + (glyph.X1 - glyph.X0)) * uv_scale_x;
-                glyph.V1 = ((float)pc.y0 - 0.5f + (glyph.Y1 - glyph.Y0)) * uv_scale_y;
+                glyph.X0 = q.x0; glyph.Y0 = q.y0; glyph.X1 = q.x1; glyph.Y1 = q.y1;                
+                glyph.U0 = q.s0; glyph.V0 = q.t0; glyph.U1 = q.s1; glyph.V1 = q.t1;
+                glyph.Y0 += (float)(int)(data.OutFont->Ascent + 0.5f);
+                glyph.Y1 += (float)(int)(data.OutFont->Ascent + 0.5f);
+                glyph.XAdvance = (float)(int)(pc.xadvance + character_spacing_x + 0.5f);  // Bake spacing into XAdvance
             }
         }
 
@@ -10202,7 +10203,7 @@ ImFont::~ImFont()
 void    ImFont::Clear()
 {
     FontSize = 0.0f;
-    DisplayOffset = ImVec2(-0.5f, 0.5f);
+    DisplayOffset = ImVec2(0.0f, 1.0f);
     Ascent = Descent = 0.0f;
     ContainerAtlas = NULL;
     Glyphs.clear();
