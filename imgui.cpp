@@ -9762,8 +9762,7 @@ ImFont* ImFontAtlas::AddFontDefault()
     unsigned int ttf_compressed_size;
     const void* ttf_compressed;
     GetDefaultCompressedFontDataTTF(&ttf_compressed, &ttf_compressed_size);
-    ImFont* font = AddFontFromMemoryCompressedTTF(ttf_compressed, ttf_compressed_size, 13.0f, GetGlyphRangesDefault(), 0);
-    return font;
+    return AddFontFromMemoryCompressedTTF(ttf_compressed, ttf_compressed_size, 13.0f, GetGlyphRangesDefault(), 0);
 }
 
 ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels, const ImWchar* glyph_ranges, int font_no)
@@ -9775,9 +9774,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
         IM_ASSERT(0); // Could not load file.
         return NULL;
     }
-
-    ImFont* font = AddFontFromMemoryTTF(data, data_size, size_pixels, glyph_ranges, font_no);
-    return font;
+    return AddFontFromMemoryTTF(data, data_size, size_pixels, glyph_ranges, font_no);
 }
 
 // Transfer ownership of 'ttf_data' to ImFontAtlas, will be deleted after Build()
@@ -9808,14 +9805,10 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float si
 
 ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* compressed_ttf_data, int compressed_ttf_size, float size_pixels, const ImWchar* glyph_ranges, int font_no)
 {
-    // Decompress
     const unsigned int buf_decompressed_size = stb_decompress_length((unsigned char*)compressed_ttf_data);
     unsigned char* buf_decompressed_data = (unsigned char *)ImGui::MemAlloc(buf_decompressed_size);
     stb_decompress(buf_decompressed_data, (unsigned char*)compressed_ttf_data, (unsigned int)compressed_ttf_size);
-
-    // Add
-    ImFont* font = AddFontFromMemoryTTF(buf_decompressed_data, (int)buf_decompressed_size, size_pixels, glyph_ranges, font_no);
-    return font;
+    return AddFontFromMemoryTTF(buf_decompressed_data, (int)buf_decompressed_size, size_pixels, glyph_ranges, font_no);
 }
 
 bool    ImFontAtlas::Build()
@@ -9983,8 +9976,6 @@ bool    ImFontAtlas::Build()
     // Cleanup temporaries
     ImGui::MemFree(buf_packedchars);
     ImGui::MemFree(buf_ranges);
-    buf_packedchars = NULL;
-    buf_ranges = NULL;
 
     // Render into our custom data block
     RenderCustomTexData(1, &extra_rects);
@@ -11185,7 +11176,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 if (ImGui::TreeNode("Details"))
                 {
                     ImGui::DragFloat("font scale", &font->Scale, 0.005f, 0.3f, 2.0f, "%.1f");             // scale only this font
-                    ImGui::Text("Ascent: %f, Descent: %f", font->Ascent, font->Descent);
+                    ImGui::Text("Ascent: %f, Descent: %f, Height: %f", font->Ascent, font->Descent, font->Ascent - font->Descent);
                     ImGui::Text("Fallback character: '%c' (%d)", font->FallbackChar, font->FallbackChar);
                     ImGui::TreePop();
                 }
