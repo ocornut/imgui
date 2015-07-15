@@ -21,7 +21,7 @@
  - ISSUES & TODO-LIST
  - CODE
  - SAMPLE CODE
- - FONT DATA
+ - DEFAULT FONT DATA
 
  
  MISSION STATEMENT
@@ -427,7 +427,6 @@
  - text edit: centered text for slider as input text so it matches typical positioning.
  - text edit: flag to disable live update of the user buffer. 
  - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
- - text edit: add multi-line text edit
  - tree: add treenode/treepush int variants? because (void*) cast from int warns on some platforms/settings
  - textwrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (git issue #249)
  - settings: write more decent code to allow saving/loading new fields
@@ -455,7 +454,6 @@
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - style editor: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space?
  - style editor: color child window height expressed in multiple of line height.
- - optimization/render: use indexed rendering to reduce vertex data cost (e.g. for remote/networked imgui)
  - optimization/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
  - optimization: turn some the various stack vectors into statically-sized arrays
  - optimization: better clipping for multi-component widgets
@@ -9706,6 +9704,8 @@ void    ImFontAtlas::ClearInputData()
             ImGui::MemFree(ConfigData[i].FontData);
             ConfigData[i].FontData = NULL;
         }
+
+    // When clearing this we lose access to the font name and other information used to build the font.
     for (int i = 0; i < Fonts.Size; i++)
         if (Fonts[i]->ConfigData >= ConfigData.Data && Fonts[i]->ConfigData < ConfigData.Data + ConfigData.Size)
         {
@@ -13080,7 +13080,7 @@ static void ShowExampleAppLongText(bool* opened)
 #endif
 
 //-----------------------------------------------------------------------------
-// FONT DATA
+// DEFAULT FONT DATA
 //-----------------------------------------------------------------------------
 // Compressed with stb_compress() then converted to a C array.
 // Use the program in extra_fonts/binary_to_compressed_c.cpp to create the array from a TTF file.
