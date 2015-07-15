@@ -9798,15 +9798,20 @@ static unsigned int stb_decompress_length(unsigned char *input);
 static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length);
 
 // Load embedded ProggyClean.ttf at size 13
-ImFont* ImFontAtlas::AddFontDefault()
+ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 {
     unsigned int ttf_compressed_size;
     const void* ttf_compressed;
     GetDefaultCompressedFontDataTTF(&ttf_compressed, &ttf_compressed_size);
     ImFontConfig font_cfg;
-    font_cfg.OversampleH = font_cfg.OversampleV = 1;
-    font_cfg.PixelSnapH = true;
-    strcpy(font_cfg.Name, "<default>");
+    if (font_cfg_template)
+        font_cfg = *font_cfg_template;
+    else
+    {
+        font_cfg.OversampleH = font_cfg.OversampleV = 1;
+        font_cfg.PixelSnapH = true;
+    }
+    if (font_cfg.Name[0] == '\0') strcpy(font_cfg.Name, "<default>");
     return AddFontFromMemoryCompressedTTF(ttf_compressed, ttf_compressed_size, 13.0f, &font_cfg, GetGlyphRangesDefault());
 }
 
@@ -9820,7 +9825,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
         return NULL;
     }
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
-    if (font_cfg.Name[0] == 0)
+    if (font_cfg.Name[0] == '\0')
     {
         const char* p; 
         for (p = filename + strlen(filename); p > filename && p[-1] != '/' && p[-1] != '\\'; p--) {}
