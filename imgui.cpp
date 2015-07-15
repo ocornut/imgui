@@ -11107,6 +11107,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         filter.Draw("Filter colors", 200);
 
         ImGui::BeginChild("#colors", ImVec2(0, 300), true);
+        ImGui::PushItemWidth(-160);
         ImGui::ColorEditMode(edit_mode);
         for (int i = 0; i < ImGuiCol_COUNT; i++)
         {
@@ -11122,6 +11123,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             }
             ImGui::PopID();
         }
+        ImGui::PopItemWidth();
         ImGui::EndChild();
 
         ImGui::TreePop();
@@ -11293,7 +11295,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Logging"))
         {
-            ImGui::TextWrapped("The logging API redirects all text output of ImGui so you can easily capture the content of a window or a block. Tree nodes can be automatically expanded. You can also call ImGui::LogText() to output directly to the log without a visual output.");
+            ImGui::TextWrapped("The logging API redirects all text output so you can easily capture the content of a window or a block. Tree nodes can be automatically expanded. You can also call ImGui::LogText() to output directly to the log without a visual output.");
             ImGui::LogButtons();
             ImGui::TreePop();
         }
