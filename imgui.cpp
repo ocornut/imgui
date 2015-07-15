@@ -6453,12 +6453,12 @@ bool ImGui::DragFloat2(const char* label, float v[2], float v_speed, float v_min
     return DragFloatN(label, v, 2, v_speed, v_min, v_max, display_format, power);
 }
 
-bool ImGui::DragFloat3(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* display_format, float power)
+bool ImGui::DragFloat3(const char* label, float v[3], float v_speed, float v_min, float v_max, const char* display_format, float power)
 {
     return DragFloatN(label, v, 3, v_speed, v_min, v_max, display_format, power);
 }
 
-bool ImGui::DragFloat4(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* display_format, float power)
+bool ImGui::DragFloat4(const char* label, float v[4], float v_speed, float v_min, float v_max, const char* display_format, float power)
 {
     return DragFloatN(label, v, 4, v_speed, v_min, v_max, display_format, power);
 }
