@@ -155,7 +155,7 @@
                               ImDrawCmd  'user_callback'    -> 'UserCallback'
                               ImDrawCmd  'texture_id'       -> 'TextureId'
                      - each ImDrawList now contains both a vertex buffer and an index buffer. For each command, render ElemCount/3 triangles using indices from the index buffer.
-                     - if you REALLY cannot render indexed primitives, you can call the draw_data->DeIndexAllBuffers() method to de-index your buffer. This is slow and a waste of CPU/GPU. Prefer using indexed rendering!
+                     - if you REALLY cannot render indexed primitives, you can call the draw_data->DeIndexAllBuffers() method to de-index the buffers. This is slow and a waste of CPU/GPU. Prefer using indexed rendering!
                      - refer to code in the examples/ folder or ask on the GitHub if you are unsure of how to upgrade. please upgrade!
  - 2015/07/10 (1.43) - changed SameLine() parameters from int to float.
  - 2015/07/02 (1.42) - renamed SetScrollPosHere() to SetScrollFromCursorPos(). Kept inline redirection function (will obsolete).
@@ -9784,7 +9784,14 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     }
 
     ConfigData.push_back(*font_cfg);
-    ConfigData.back().DstFont = Fonts.back();
+    ImFontConfig& new_font_cfg = ConfigData.back();
+    new_font_cfg.DstFont = Fonts.back();
+    if (!new_font_cfg.FontDataOwnedByAtlas)
+    {
+        new_font_cfg.FontData = ImGui::MemAlloc(new_font_cfg.FontDataSize);
+        new_font_cfg.FontDataOwnedByAtlas = true;
+        memcpy(new_font_cfg.FontData, font_cfg->FontData, (size_t)new_font_cfg.FontDataSize);
+    }
 
     // Invalidate texture
     ClearTexData();
@@ -9842,12 +9849,6 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float si
     font_cfg.SizePixels = size_pixels;
     if (glyph_ranges)
         font_cfg.GlyphRanges = glyph_ranges;
-    if (!font_cfg.FontDataOwnedByAtlas)
-    {
-        font_cfg.FontData = ImGui::MemAlloc(ttf_size);
-        font_cfg.FontDataOwnedByAtlas = true;
-        memcpy(font_cfg.FontData, ttf_data, (size_t)ttf_size);
-    }
     return AddFont(&font_cfg);
 }
 
