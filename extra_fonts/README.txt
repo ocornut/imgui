@@ -30,6 +30,10 @@
  INCLUDED FONTS
 ---------------------------------
 
+ Cousine-Regular.ttf
+   Digitized data copyright (c) 2010 Google Corporation.
+   Licensed under the SIL Open Font License, Version 1.1   
+
  DroidSans.ttf
    Copyright (c) Steve Matteson
    Apache License, version 2.0
