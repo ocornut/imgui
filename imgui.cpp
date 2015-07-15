@@ -9706,6 +9706,7 @@ void    ImFontAtlas::ClearInputData()
             ImGui::MemFree(ConfigData[i].FontData);
             ConfigData[i].FontData = NULL;
         }
+    ConfigData.clear();
 }
 
 void    ImFontAtlas::ClearTexData()
