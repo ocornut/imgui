@@ -471,6 +471,11 @@
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, cosf, sinf, floorf, ceilf
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #include <new>          // new (ptr)
+#if defined(_MSC_VER) 
+#include <malloc.h>     // alloca
+#else
+#include <alloca.h>     // alloca
+#endif
 #if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
 #include <stddef.h>     // intptr_t
 #else
