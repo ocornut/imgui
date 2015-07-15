@@ -11231,7 +11231,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Fonts", "Fonts (%d)", ImGui::GetIO().Fonts->Fonts.Size))
         {
-            ImGui::TextWrapped("Tip: Load fonts with GetIO().Fonts->AddFontFromFileTTF().");
+            ImGui::TextWrapped("Tip: Load fonts with io.Fonts->AddFontFromFileTTF().");
             ImFontAtlas* atlas = ImGui::GetIO().Fonts;
             if (ImGui::TreeNode("Atlas texture"))
             {
