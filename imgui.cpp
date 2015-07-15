@@ -7433,7 +7433,7 @@ static bool InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // Count lines + find lines numbers of cursor and select_start
             int matches_remaining = 0;
             int matches_line_no[2] = { -1, -999 };
-            const ImWchar* matches_ptr[2];
+            const ImWchar* matches_ptr[2] = { NULL, NULL };
             matches_ptr[0] = text_begin + edit_state.StbState.cursor; matches_remaining++;
             if (edit_state.StbState.select_start != edit_state.StbState.select_end)
             {
@@ -9654,8 +9654,8 @@ void ImDrawData::DeIndexAllBuffers()
         if (cmd_list->IdxBuffer.empty())
             continue;
         new_vtx_buffer.resize(cmd_list->IdxBuffer.Size);
-        for (int i = 0; i < cmd_list->IdxBuffer.Size; i++)
-            new_vtx_buffer[i] = cmd_list->VtxBuffer[cmd_list->IdxBuffer[i]];
+        for (int j = 0; j < cmd_list->IdxBuffer.Size; j++)
+            new_vtx_buffer[j] = cmd_list->VtxBuffer[cmd_list->IdxBuffer[j]];
         cmd_list->VtxBuffer.swap(new_vtx_buffer);
         cmd_list->IdxBuffer.resize(0);
         TotalVtxCount += cmd_list->VtxBuffer.Size;
@@ -11266,8 +11266,8 @@ void ImGui::ShowTestWindow(bool* opened)
                     ImGui::DragFloat("font scale", &font->Scale, 0.005f, 0.3f, 2.0f, "%.1f");             // scale only this font
                     ImGui::Text("Ascent: %f, Descent: %f, Height: %f", font->Ascent, font->Descent, font->Ascent - font->Descent);
                     ImGui::Text("Fallback character: '%c' (%d)", font->FallbackChar, font->FallbackChar);
-                    for (int i = 0; i < font->ConfigDataCount; i++)
-                        ImGui::BulletText("Input %d: \'%s\'", i, font->ConfigData[i].Name);
+                    for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
+                        ImGui::BulletText("Input %d: \'%s\'", config_i, font->ConfigData[config_i].Name);
                     ImGui::TreePop();
                 }
                 ImGui::TreePop();
@@ -11618,7 +11618,7 @@ void ImGui::ShowTestWindow(bool* opened)
         //ImGui::ListBox("##listbox2", &listbox_item_current2, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
         //ImGui::PopItemWidth();
 
-        if (ImGui::TreeNode("Ranges"))
+        if (ImGui::TreeNode("Range Widgets"))
         {
             ImGui::Unindent();
 
