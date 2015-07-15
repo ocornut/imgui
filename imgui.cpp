@@ -2814,7 +2814,7 @@ static void RenderCheckMark(ImVec2 pos, ImU32 col)
     a.x = pos.x + 0.5f + start_x;
     b.x = a.x + rem_third;
     c.x = a.x + rem_third * 3.0f;
-    b.y = pos.y + 0.5f + (float)(int)(g.Font->Ascent * (g.FontSize / g.Font->FontSize) + 0.5f) + (float)(int)(g.Font->DisplayOffset.y);
+    b.y = pos.y - 1.0f + (float)(int)(g.Font->Ascent * (g.FontSize / g.Font->FontSize) + 0.5f) + (float)(int)(g.Font->DisplayOffset.y);
     a.y = b.y - rem_third;
     c.y = b.y - rem_third * 2.0f;
 
