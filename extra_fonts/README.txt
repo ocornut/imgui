@@ -81,7 +81,7 @@
    ImFontConfig config;
    config.MergeMode = true;
    io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese());
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, &config, io.Fonts->GetGlyphRangesJapanese());
 
  Add a fourth parameter to bake specific font ranges only:
 
