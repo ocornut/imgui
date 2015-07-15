@@ -2153,6 +2153,8 @@ void ImGui::NewFrame()
     g.FrameCount += 1;
     g.Tooltip[0] = '\0';
     g.OverlayDrawList.Clear();
+    g.OverlayDrawList.PushTextureID(g.IO.Fonts->TexID);
+    g.OverlayDrawList.PushClipRectFullScreen();
     g.OverlayDrawList.AddDrawCmd();
 
     // Update inputs state
