@@ -53,16 +53,41 @@
  LOADING INSTRUCTIONS
 ---------------------------------
 
+ Load default font with:
+
+   ImGuiIO& io = ImGui::GetIO();
+   io.Fonts->AddFontDefault();
+
  Load .TTF file with:
 
    ImGuiIO& io = ImGui::GetIO();
    io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels);
   
- Add a third parameter to bake specific font ranges:
+ Detailed options:
 
-   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, io.Fonts->GetGlyphRangesDefault());   // Basic Latin, Extended Latin 
-   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, io.Fonts->GetGlyphRangesJapanese());  // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
-   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, io.Fonts->GetGlyphRangesChinese());   // Include full set of about 21000 CJK Unified Ideographs
+   ImFontConfig config;
+   config.OversampleH = 3;
+   config.OversampleV = 3;
+   config.GlyphExtraSpacing.x = 1.0f;
+   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, &config);
+
+ Merge two fonts:
+
+   // Load main font
+   io.Fonts->AddFontDefault();
+
+   // Add character ranges and merge into main font
+   ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
+   ImFontConfig config;
+   config.MergeMode = true;
+   io.Fonts->LoadFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
+   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese());
+
+ Add a fourth parameter to bake specific font ranges only:
+
+   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesDefault());   // Basic Latin, Extended Latin 
+   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());  // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
+   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChinese());   // Include full set of about 21000 CJK Unified Ideographs
 
  Offset font vertically by altering the io.Font->DisplayOffset value:
 

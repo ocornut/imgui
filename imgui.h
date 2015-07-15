@@ -1115,6 +1115,27 @@ struct ImDrawData
     void DeIndexAllBuffers();               // For backward compatibility: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
 };
 
+struct ImFontConfig
+{
+    void*           FontData;                   //          // TTF data
+    int             FontDataSize;               //          // TTF data size
+    bool            FontDataOwnedByAtlas;       // true     // TTF data ownership taken by the container ImFontAtlas (will delete memory itself). Set to true 
+    int             FontNo;                     // 0        // Index of font within TTF file
+    float           SizePixels;                 //          // Size in pixels for rasterizer
+    int             OversampleH, OversampleV;   // 3, 1     // Rasterize at higher quality for sub-pixel positioning. We don't use sub-pixel positions on the Y axis.
+    bool            PixelSnapH;                 // false    // Align every character to pixel boundary (if enabled, set OversampleH/V to 1)
+    ImVec2          GlyphExtraSpacing;          // 0, 0     // Extra spacing (in pixels) between glyphs
+    const ImWchar*  GlyphRanges;                //          // List of Unicode range (2 value per range, values are inclusive, zero-terminated list)
+    bool            MergeMode;                  // false    // Merge into previous ImFont, so you can combine multiple inputs font into one ImFont (e.g. ASCII font + icons + Japanese glyphs).
+    bool            MergeGlyphCenterV;          // false    // When merging (multiple ImFontInput for one ImFont), vertically center new glyphs instead of aligning their baseline
+    
+    // [Internal]
+    char            Name[32];                               // Name (strictly for debugging)
+    ImFont*         DstFont;
+
+    IMGUI_API ImFontConfig();
+};
+
 // Load and rasterize multiple TTF fonts into a same texture.
 // Sharing a texture for multiple fonts allows us to reduce the number of draw calls during rendering.
 // We also add custom graphic data into the texture that serves for ImGui.
@@ -1127,10 +1148,11 @@ struct ImFontAtlas
 {
     IMGUI_API ImFontAtlas();
     IMGUI_API ~ImFontAtlas();
+    IMGUI_API ImFont*           AddFont(const ImFontConfig* font_cfg);
     IMGUI_API ImFont*           AddFontDefault();
-    IMGUI_API ImFont*           AddFontFromFileTTF(const char* filename, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0);
-    IMGUI_API ImFont*           AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0); // Transfer ownership of 'ttf_data' to ImFontAtlas, will be deleted after Build()
-    IMGUI_API ImFont*           AddFontFromMemoryCompressedTTF(const void* compressed_ttf_data, int compressed_ttf_size, float size_pixels, const ImWchar* glyph_ranges = NULL, int font_no = 0); // 'compressed_ttf_data' untouched and still owned by caller. Compress with binary_to_compressed_c.cpp
+    IMGUI_API ImFont*           AddFontFromFileTTF(const char* filename, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL);
+    IMGUI_API ImFont*           AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL);                                        // Transfer ownership of 'ttf_data' to ImFontAtlas, will be deleted after Build()
+    IMGUI_API ImFont*           AddFontFromMemoryCompressedTTF(const void* compressed_ttf_data, int compressed_ttf_size, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL);  // 'compressed_ttf_data' untouched and still owned by caller. Compress with binary_to_compressed_c.cpp
     IMGUI_API void              ClearTexData();             // Clear the CPU-side texture data. Saves RAM once the texture has been copied to graphics memory.
     IMGUI_API void              ClearInputData();           // Clear the input TTF data (inc sizes, glyph ranges)
     IMGUI_API void              ClearFonts();               // Clear the ImGui-side font data (glyphs storage, UV coordinates)
@@ -1163,15 +1185,13 @@ struct ImFontAtlas
     ImVector<ImFont*>           Fonts;
 
     // Private
-    struct ImFontAtlasData;
-    ImVector<ImFontAtlasData*>  InputData;          // Internal data
+    ImVector<ImFontConfig>      ConfigData;         // Internal data
     IMGUI_API bool              Build();            // Build pixels data. This is automatically for you by the GetTexData*** functions.
     IMGUI_API void              RenderCustomTexData(int pass, void* rects);
 };
 
-// TTF font loading and rendering
+// Font runtime data and rendering
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
-// Kerning isn't supported. At the moment some ImGui code does per-character CalcTextSize calls, need something more state-ful.
 struct ImFont
 {
     // Members: Settings
@@ -1179,6 +1199,8 @@ struct ImFont
     float                       Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
     ImVec2                      DisplayOffset;      // = (0.0f,0.0f)   // Offset font rendering by xx pixels
     ImWchar                     FallbackChar;       // = '?'           // Replacement glyph if one isn't found. Only set via SetFallbackChar()
+    ImFontConfig*               ConfigData;         //                 // Pointer within ImFontAtlas->ConfigData
+    int                         ConfigDataCount;    //
 
     // Members: Runtime data
     struct Glyph
@@ -1188,8 +1210,7 @@ struct ImFont
         float                   X0, Y0, X1, Y1;
         float                   U0, V0, U1, V1;     // Texture coordinates
     };
-    float                       Ascent;             // Distance from top to bottom of e.g. 'A' [0..FontSize]
-    float                       Descent;            // 
+    float                       Ascent, Descent;    // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize]
     ImFontAtlas*                ContainerAtlas;     // What we has been loaded into
     ImVector<Glyph>             Glyphs;
     const Glyph*                FallbackGlyph;      // == FindGlyph(FontFallbackChar)
