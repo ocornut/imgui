@@ -4,8 +4,6 @@
 // Get latest version at https://github.com/ocornut/imgui
 // Developed by Omar Cornut and ImGui contributors.
 
-// ANTI-ALIASED PRIMITIVES BRANCH
-
 /*
 
  Index
