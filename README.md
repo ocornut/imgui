@@ -44,7 +44,7 @@ Gallery
 ![screenshot 4](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_04.png)
 ![screenshot 5](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v140/test_window_05_menus.png)
 ![screenshot 4](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/skinning_sample_02.png)
-![screenshot 6](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/examples  _04.png)
+![screenshot 6](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/examples_04.png)
 ![screenshot 7](https://cloud.githubusercontent.com/assets/8225057/7903336/96f0fb7c-07d0-11e5-95d6-41c6a1595e5a.png)
 
 ImGui can load TTF fonts. UTF-8 is supported for text display and input. Here using Arial Unicode font to display Japanese. Initialize custom font with:
