@@ -11291,14 +11291,6 @@ void ImGui::ShowTestWindow(bool* opened)
 
     if (ImGui::CollapsingHeader("Widgets"))
     {
-        static bool a=false;
-        if (ImGui::Button("Button")) { printf("Clicked\n"); a ^= 1; }
-        if (a)
-        {
-            ImGui::SameLine(); 
-            ImGui::Text("Thanks for clicking me!");
-        }
-
         if (ImGui::TreeNode("Tree"))
         {
             for (int i = 0; i < 5; i++)
@@ -11375,20 +11367,6 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Clipping"))
-        {
-            static ImVec2 size(100, 100), offset(50, 20);
-            ImGui::TextWrapped("On a per-widget basis we are occasionally clipping text CPU-side if it won't fit in its frame. Otherwise we are doing coarser clipping + passing a scissor rectangle to the renderer. The system is designed to try minimizing both execution and CPU/GPU rendering cost.");
-            ImGui::DragFloat2("size", (float*)&size, 0.5f, 0.0f, 200.0f, "%.0f");
-            ImGui::DragFloat2("offset", (float*)&offset, 0.5f, -200, 200.0f, "%.0f");
-            ImVec2 pos = ImGui::GetCursorScreenPos();
-            ImVec4 clip_rect(pos.x, pos.y, pos.x+size.x, pos.y+size.y);
-            ImGui::GetWindowDrawList()->AddRectFilled(pos, pos+size, ImColor(90,90,120,255));
-            ImGui::GetWindowDrawList()->AddText(ImGui::GetWindowFont(), ImGui::GetWindowFontSize()*2.0f, pos+offset, ImColor(255,255,255,255), "Line 1 hello\nLine 2 clip me!", NULL, 0.0f, &clip_rect);
-            ImGui::Dummy(size);
-            ImGui::TreePop();
-        }
-
         if (ImGui::TreeNode("Images"))
         {
             ImGui::TextWrapped("Below we are displaying the font texture (which is the only texture we have access to in this demo). Use the 'ImTextureID' type as storage to pass pointers or identifier to your own texture data. Hover the texture for a zoomed view!");
@@ -11396,6 +11374,7 @@ void ImGui::ShowTestWindow(bool* opened)
             float tex_w = (float)ImGui::GetIO().Fonts->TexWidth;
             float tex_h = (float)ImGui::GetIO().Fonts->TexHeight;
             ImTextureID tex_id = ImGui::GetIO().Fonts->TexID;
+            ImGui::Text("%.0fx%.0f", tex_w, tex_h);
             ImGui::Image(tex_id, ImVec2(tex_w, tex_h), ImVec2(0,0), ImVec2(1,1), ImColor(255,255,255,255), ImColor(255,255,255,128));
             if (ImGui::IsItemHovered())
             {
@@ -11488,23 +11467,12 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Dragging"))
+        static bool a=false;
+        if (ImGui::Button("Button")) { printf("Clicked\n"); a ^= 1; }
+        if (a)
         {
-            ImGui::TextWrapped("You can use ImGui::GetItemActiveDragDelta() to query for the dragged amount on any widget.");
-            ImGui::Button("Drag Me");
-            if (ImGui::IsItemActive())
-            {
-                // Draw a line between the button and the mouse cursor
-                ImDrawList* draw_list = ImGui::GetWindowDrawList();
-                draw_list->PushClipRectFullScreen();
-                draw_list->AddLine(ImGui::CalcItemRectClosestPoint(ImGui::GetIO().MousePos, true, -2.0f), ImGui::GetIO().MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]), 4.0f);
-                draw_list->PopClipRect();
-                ImVec2 value_raw = ImGui::GetMouseDragDelta(0, 0.0f);
-                ImVec2 value_with_lock_threshold = ImGui::GetMouseDragDelta(0);
-                ImGui::SameLine(); ImGui::Text("Raw (%.1f, %.1f), WithLockThresold (%.1f, %.1f)", value_raw.x, value_raw.y, value_with_lock_threshold.x, value_with_lock_threshold.y);
-            }
-
-            ImGui::TreePop();
+            ImGui::SameLine(); 
+            ImGui::Text("Thanks for clicking me!");
         }
 
         static bool check = true;
@@ -11582,7 +11550,7 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             static int i1=50, i2=42;
             ImGui::DragInt("drag int", &i1, 1);
-            ImGui::SameLine(); ShowHelpMarker("Click and drag to edit value.\nHold SHIFT/ALT for faster/slower edit.\nDouble-click or CTRL+click to input text.");
+            ImGui::SameLine(); ShowHelpMarker("Click and drag to edit value.\nHold SHIFT/ALT for faster/slower edit.\nDouble-click or CTRL+click to input value.");
 
             ImGui::DragInt("drag int 0..100", &i2, 1, 0, 100, "%.0f%%");
 
@@ -12009,6 +11977,20 @@ void ImGui::ShowTestWindow(bool* opened)
             }
             ImGui::TreePop();
         }
+
+        if (ImGui::TreeNode("Clipping"))
+        {
+            static ImVec2 size(100, 100), offset(50, 20);
+            ImGui::TextWrapped("On a per-widget basis we are occasionally clipping text CPU-side if it won't fit in its frame. Otherwise we are doing coarser clipping + passing a scissor rectangle to the renderer. The system is designed to try minimizing both execution and CPU/GPU rendering cost.");
+            ImGui::DragFloat2("size", (float*)&size, 0.5f, 0.0f, 200.0f, "%.0f");
+            ImGui::DragFloat2("offset", (float*)&offset, 0.5f, -200, 200.0f, "%.0f");
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+            ImVec4 clip_rect(pos.x, pos.y, pos.x+size.x, pos.y+size.y);
+            ImGui::GetWindowDrawList()->AddRectFilled(pos, pos+size, ImColor(90,90,120,255));
+            ImGui::GetWindowDrawList()->AddText(ImGui::GetWindowFont(), ImGui::GetWindowFontSize()*2.0f, pos+offset, ImColor(255,255,255,255), "Line 1 hello\nLine 2 clip me!", NULL, 0.0f, &clip_rect);
+            ImGui::Dummy(size);
+            ImGui::TreePop();
+        }
     }
 
     if (ImGui::CollapsingHeader("Popups & Modal windows"))
@@ -12363,6 +12345,24 @@ void ImGui::ShowTestWindow(bool* opened)
             else 
                 ImGui::Text("Item with focus: <none>");
             ImGui::TextWrapped("Cursor & selection are preserved when refocusing last used item in code.");
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Dragging"))
+        {
+            ImGui::TextWrapped("You can use ImGui::GetItemActiveDragDelta() to query for the dragged amount on any widget.");
+            ImGui::Button("Drag Me");
+            if (ImGui::IsItemActive())
+            {
+                // Draw a line between the button and the mouse cursor
+                ImDrawList* draw_list = ImGui::GetWindowDrawList();
+                draw_list->PushClipRectFullScreen();
+                draw_list->AddLine(ImGui::CalcItemRectClosestPoint(ImGui::GetIO().MousePos, true, -2.0f), ImGui::GetIO().MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]), 4.0f);
+                draw_list->PopClipRect();
+                ImVec2 value_raw = ImGui::GetMouseDragDelta(0, 0.0f);
+                ImVec2 value_with_lock_threshold = ImGui::GetMouseDragDelta(0);
+                ImGui::SameLine(); ImGui::Text("Raw (%.1f, %.1f), WithLockThresold (%.1f, %.1f)", value_raw.x, value_raw.y, value_with_lock_threshold.x, value_with_lock_threshold.y);
+            }
             ImGui::TreePop();
         }
 
