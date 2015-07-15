@@ -69,7 +69,7 @@
    config.OversampleH = 3;
    config.OversampleV = 3;
    config.GlyphExtraSpacing.x = 1.0f;
-   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, &config);
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, &config);
 
  Merge two fonts:
 
@@ -80,14 +80,14 @@
    ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
    ImFontConfig config;
    config.MergeMode = true;
-   io.Fonts->LoadFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
-   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese());
+   io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese());
 
  Add a fourth parameter to bake specific font ranges only:
 
-   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesDefault());   // Basic Latin, Extended Latin 
-   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());  // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
-   io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChinese());   // Include full set of about 21000 CJK Unified Ideographs
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesDefault());   // Basic Latin, Extended Latin 
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());  // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChinese());   // Include full set of about 21000 CJK Unified Ideographs
 
  Offset font vertically by altering the io.Font->DisplayOffset value:
 
