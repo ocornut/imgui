@@ -22,7 +22,7 @@ ImGui is self-contained within 6 files that you can easily copy and compile into
 
 Your code passes mouse/keyboard inputs and settings to ImGui (see example applications for more details). After ImGui is setup, you can use it like in this example:
 
-![screenshot of sample code alongside its output with ImGui](/web/code_sample_01.png?raw=true)
+![screenshot of sample code alongside its output with ImGui](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/code_sample_01.png)
 
 ImGui outputs vertex buffers and simple command-lists that you can render in your application. Because it doesn't know or touch graphics state directly, you can call ImGui commands anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate ImGui with your existing codebase. 
 
@@ -38,16 +38,14 @@ You should be able to build the examples from sources (tested on Windows/Mac/Lin
 Gallery
 -------
 
-![screenshot 1](/web/test_window_01.png?raw=true)
-![screenshot 2](/web/test_window_02.png?raw=true)
-![screenshot 3](/web/test_window_03.png?raw=true)
-![screenshot 4](/web/test_window_04.png?raw=true)
-![screenshot 5](/web/test_window_05_menus.png?raw=true)
-![screenshot 6](/web/examples_03.png?raw=true)
-
+![screenshot 1](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_01.png)
+![screenshot 2](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_02.png)
+![screenshot 3](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_03.png)
+![screenshot 4](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_04.png)
+![screenshot 5](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v140/test_window_05_menus.png)
+![screenshot 4](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/skinning_sample_02.png)
+![screenshot 6](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/examples  _04.png)
 ![screenshot 7](https://cloud.githubusercontent.com/assets/8225057/7903336/96f0fb7c-07d0-11e5-95d6-41c6a1595e5a.png)
-
-![screenshot 8](/web/examples_02.png?raw=true)
 
 ImGui can load TTF fonts. UTF-8 is supported for text display and input. Here using Arial Unicode font to display Japanese. Initialize custom font with:
 ```
@@ -58,7 +56,7 @@ For Microsoft IME, pass your HWND to enable IME positioning:
 ```
 io.ImeWindowHandle = my_hwnd;
 ```
-![Japanese screenshot](/web/code_sample_01_jp.png?raw=true)
+![Japanese screenshot](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/code_sample_01.png)
 
 References
 ----------
@@ -98,7 +96,7 @@ Down to the fundation of its visual design, ImGui is engineered to be fairly per
 
 Mileage may vary but the following screenshot can give you a rough idea of the cost of running and rendering UI code (In the case of a trivial demo application like this one, your driver/os setup are likely to be the bottleneck. Testing performance as part of a real application is recommended).
 
-![performance screenshot](/web/performance_01.png?raw=true)
+![performance screenshot](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v138/performance_01.png)
 
 This is showing framerate for the full application loop on my 2011 iMac running Windows 7, OpenGL, AMD Radeon HD 6700M with an optimized executable. In contrast, librairies featuring higher-quality rendering and layouting techniques may have a higher resources footprint.
 
@@ -140,7 +138,7 @@ Special supporters:
 - Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Stefano Cristiano.
 
 And:
-- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly.
+- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei.
 
 And other supporters; thanks!
 
