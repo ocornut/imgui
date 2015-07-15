@@ -10795,7 +10795,6 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                 if (!word_wrap_enabled && y + line_height < clip_rect.y)
                     while (s < text_end && *s != '\n')  // Fast-forward to next line
                         s++;
-
                 continue;
             }
             if (c == '\r')
@@ -10846,6 +10845,11 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                         {
                             v2 = v1 + ((clip_rect.w - y1) / (y2 - y1)) * (v2 - v1);
                             y2 = clip_rect.w;
+                        }
+                        if (y1 >= y2)
+                        {
+                            x += char_width;
+                            continue;
                         }
                     }
 
