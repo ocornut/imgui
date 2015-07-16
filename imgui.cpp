@@ -778,6 +778,18 @@ void ImGuiIO::AddInputCharacter(ImWchar c)
     }
 }
 
+void ImGuiIO::AddInputCharactersUTF8(const char* utf8chars)
+{
+    // we can't pass more wchars than ImGuiIO::InputCharacters[] can hold so don't convert more
+    static const int wcharBufLen = sizeof(ImGuiIO::InputCharacters)/sizeof(ImWchar);
+    ImWchar wchars[wcharBufLen];
+    ImTextStrFromUtf8(wchars, wcharBufLen, utf8chars, NULL);
+    for(int i=0; i<wcharBufLen && wchars[i] != 0; ++i)
+    {
+        AddInputCharacter(wchars[i]);
+    }
+}
+
 // Math bits
 // We are keeping those static in the .cpp file so as not to leak them outside, in the case the user has implicit cast operators between ImVec2 and its own types.
 static inline ImVec2 operator*(const ImVec2& lhs, const float rhs)              { return ImVec2(lhs.x*rhs, lhs.y*rhs); }
