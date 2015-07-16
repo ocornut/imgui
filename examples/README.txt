@@ -1,6 +1,12 @@
 Those are standalone ready-to-build applications to demonstrate ImGui.
 Binaries of those demos are available from the main GitHub page.
 
+TL;DR; 
+ Refer to 'opengl_example' (not 'opengl3_example') to understand how the library is setup.
+ Copy the imgui_impl_xxx.cpp/.h file you need if you are using one of the rendering backend used in the example.
+ If you are using a different of your own engine/backends, copy opengl_example/imgui_impl_opengl.cpp/.h and work from there.
+ 
+
 ImGui is highly portable and only requires a few things to run:
  - Providing mouse/keyboard inputs
  - Load the font atlas texture into GPU memory
@@ -9,8 +15,8 @@ ImGui is highly portable and only requires a few things to run:
 So this is essentially what those examples are doing + the obligatory cruft for portability.
 
 Unfortunately in 2015 it is still a massive pain to create and maintain portable build files using
-external library like the ones used here. 
-I choose to provide Visual Studio 10 .sln files and Makefile for Linux/OSX. 
+external library like the ones we're using here. 
+For most example here I choose to provide Visual Studio 10 .sln files and Makefile for Linux/OSX. 
 Please let me know if they don't work with your setup!
 You can probably just import the imgui_impl_xxx.cpp/.h files into your own codebase or compile those
 directly with a command-line compiler.
@@ -23,7 +29,7 @@ opengl_example/
 opengl3_example/
     OpenGL example, using GLFW/GL3W + programmable pipeline.
     This uses more modern OpenGL calls and custom shaders.
-	Even if your application is using modern OpenGL you are better off copying the code from the fixed pipeline version!
+    Even if your application is using modern OpenGL you are better off copying the code from the fixed pipeline version!
     I don't think there is an advantage using this over the simpler example, but it is provided for reference.
 
 directx9_example/
