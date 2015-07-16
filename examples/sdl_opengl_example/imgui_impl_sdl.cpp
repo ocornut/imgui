@@ -3,7 +3,7 @@
 
 #include <SDL.h>
 #include <SDL_syswm.h>
-#include <SDL_OpenGL.h>
+#include <SDL_opengl.h>
 #include <imgui.h>
 #include "imgui_impl_sdl.h"
 

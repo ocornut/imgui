@@ -4,9 +4,9 @@
 #include "imgui_impl_sdl.h"
 #include <stdio.h>
 #include <SDL.h>
-#include <SDL_OpenGL.h>
+#include <SDL_opengl.h>
 
-int SDL_main(int, char**)
+int main(int, char**)
 {
     // Setup SDL
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
