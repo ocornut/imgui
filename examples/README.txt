@@ -3,8 +3,8 @@ Binaries of those demos are available from the main GitHub page.
 
 TL;DR; 
  Refer to 'opengl_example' (not 'opengl3_example') to understand how the library is setup.
- Copy the imgui_impl_xxx.cpp/.h file you need if you are using one of the rendering backend used in the example.
- If you are using a different of your own engine/backends, copy opengl_example/imgui_impl_opengl.cpp/.h and work from there.
+ Copy the imgui_impl_xxx.cpp/.h file you need if you are using one of the rendering backend used in an example.
+ If you are using a different or your own backend, copy opengl_example/imgui_impl_opengl.cpp/.h to get started.
  
 
 ImGui is highly portable and only requires a few things to run:
