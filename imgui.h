@@ -705,6 +705,7 @@ struct ImGuiIO
 
     // Function
     IMGUI_API void AddInputCharacter(ImWchar c); // Helper to add a new character into InputCharacters[]
+    IMGUI_API void AddInputCharactersUTF8(const char* utf8chars); // Helper to add new characters into InputCharacters[] from an utf8-string
 
     //------------------------------------------------------------------
     // Output - Retrieve after calling NewFrame(), you can use them to discard inputs or hide them from the rest of your application

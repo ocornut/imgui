@@ -118,9 +118,7 @@ bool ImGui_ImplSdl_ProcessEvent(SDL_Event* event)
     case SDL_TEXTINPUT:
         {
             ImGuiIO& io = ImGui::GetIO();
-            unsigned int c = event->text.text[0];
-            if (c > 0 && c < 0x10000)
-                io.AddInputCharacter((unsigned short)c);
+            io.AddInputCharactersUTF8(event->text.text);
             return true;
         }
     case SDL_KEYDOWN:
