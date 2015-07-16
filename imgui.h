@@ -703,9 +703,9 @@ struct ImGuiIO
     bool        KeysDown[512];              // Keyboard keys that are pressed (in whatever storage order you naturally have access to keyboard data)
     ImWchar     InputCharacters[16+1];      // List of characters input (translated by user from keypress+keyboard state). Fill using AddInputCharacter() helper.
 
-    // Function
-    IMGUI_API void AddInputCharacter(ImWchar c); // Helper to add a new character into InputCharacters[]
-    IMGUI_API void AddInputCharactersUTF8(const char* utf8chars); // Helper to add new characters into InputCharacters[] from an utf8-string
+    // Functions
+    IMGUI_API void AddInputCharacter(ImWchar c);                    // Helper to add a new character into InputCharacters[]
+    IMGUI_API void AddInputCharactersUTF8(const char* utf8_chars);  // Helper to add new characters into InputCharacters[] from an UTF-8 string
 
     //------------------------------------------------------------------
     // Output - Retrieve after calling NewFrame(), you can use them to discard inputs or hide them from the rest of your application

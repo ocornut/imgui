@@ -778,16 +778,14 @@ void ImGuiIO::AddInputCharacter(ImWchar c)
     }
 }
 
-void ImGuiIO::AddInputCharactersUTF8(const char* utf8chars)
+void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
 {
-    // we can't pass more wchars than ImGuiIO::InputCharacters[] can hold so don't convert more
-    static const int wcharBufLen = sizeof(ImGuiIO::InputCharacters)/sizeof(ImWchar);
-    ImWchar wchars[wcharBufLen];
-    ImTextStrFromUtf8(wchars, wcharBufLen, utf8chars, NULL);
-    for(int i=0; i<wcharBufLen && wchars[i] != 0; ++i)
-    {
+    // We can't pass more wchars than ImGuiIO::InputCharacters[] can hold so don't convert more
+    const int wchars_buf_len = sizeof(ImGuiIO::InputCharacters) / sizeof(ImWchar);
+    ImWchar wchars[wchars_buf_len];
+    ImTextStrFromUtf8(wchars, wchars_buf_len, utf8_chars, NULL);
+    for (int i = 0; wchars[i] != 0 && i < wchars_buf_len; i++)
         AddInputCharacter(wchars[i]);
-    }
 }
 
 // Math bits
