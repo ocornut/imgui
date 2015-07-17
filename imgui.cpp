@@ -7106,10 +7106,7 @@ static bool InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool is_multiline = (flags & ImGuiInputTextFlags_Multiline) != 0;
 
     ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
-    ImVec2 size;
-    size.x = (size_arg.x != 0.0f) ? size_arg.x : ImGui::CalcItemWidth();
-    size.y = (size_arg.y != 0.0f) ? size_arg.y : is_multiline ? ImGui::GetTextLineHeight() * 8.0f : label_size.y; // Arbitrary default of 8 lines high for multi-line
-
+    ImVec2 size = CalcItemSize(size_arg, ImGui::CalcItemWidth(), is_multiline ? ImGui::GetTextLineHeight() * 8.0f : label_size.y); // Arbitrary default of 8 lines high for multi-line
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + size + style.FramePadding*2.0f);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? (style.ItemInnerSpacing.x + label_size.x) : 0.0f, 0.0f));
 
@@ -11499,9 +11496,7 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::TreeNode("Multi-line Text Input"))
         {
             static char text[1024*16] = "// F00F bug\nlabel:\n\tlock cmpxchg8b eax\n";
-            ImGui::PushItemWidth(-1.0f);
-            ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(0.f, ImGui::GetTextLineHeight() * 16), ImGuiInputTextFlags_AllowTabInput);
-            ImGui::PopItemWidth();
+            ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 16), ImGuiInputTextFlags_AllowTabInput);
             ImGui::TreePop();
         }
 
