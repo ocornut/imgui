@@ -7871,8 +7871,9 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         if (height_in_items < 0)
             height_in_items = 7;
 
-        const float popup_height = (label_size.y + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
-        const ImRect popup_rect(ImVec2(frame_bb.Min.x, frame_bb.Max.y), ImVec2(frame_bb.Max.x, frame_bb.Max.y + popup_height));
+        float popup_height = (label_size.y + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
+        ImRect popup_rect(ImVec2(frame_bb.Min.x, frame_bb.Max.y), ImVec2(frame_bb.Max.x, frame_bb.Max.y + popup_height));
+        popup_rect.Max.y = ImMin(popup_rect.Max.y, g.IO.DisplaySize.y - style.DisplaySafeAreaPadding.y); // Adhoc height limit for Combo. Ideally should be handled in Begin() along with other popups size, we want to have the possibility of moving the popup above as well.
         ImGui::SetNextWindowPos(popup_rect.Min);
         ImGui::SetNextWindowSize(popup_rect.GetSize());
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
