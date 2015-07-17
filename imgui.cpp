@@ -2902,6 +2902,8 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
         ImGuiWindow* window = g.Windows[i];
         if (!window->Active)
             continue;
+        if (window->Flags & ImGuiWindowFlags_NoInputs)
+            continue;
         if (excluding_childs && (window->Flags & ImGuiWindowFlags_ChildWindow) != 0)
             continue;
 
@@ -3630,6 +3632,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     const ImGuiStyle& style = g.Style;
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
     IM_ASSERT(name != NULL);                        // Must pass a name
+
+    if (flags & ImGuiWindowFlags_NoInputs)
+        flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
 
     // Find or create
     bool window_is_new = false;
