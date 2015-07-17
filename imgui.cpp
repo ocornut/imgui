@@ -11176,6 +11176,7 @@ void ImGui::ShowTestWindow(bool* opened)
     static bool show_app_fixed_overlay = false;
     static bool show_app_custom_rendering = false;
     static bool show_app_manipulating_window_title = false;
+    static bool show_app_about = false;
     if (show_app_metrics) ImGui::ShowMetricsWindow(&show_app_metrics);
     if (show_app_main_menu_bar) ShowExampleAppMainMenuBar();
     if (show_app_console) ShowExampleAppConsole(&show_app_console);
@@ -11185,6 +11186,15 @@ void ImGui::ShowTestWindow(bool* opened)
     if (show_app_fixed_overlay) ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
     if (show_app_manipulating_window_title) ShowExampleAppManipulatingWindowTitle(&show_app_manipulating_window_title);
     if (show_app_custom_rendering) ShowExampleAppCustomRendering(&show_app_custom_rendering);
+    if (show_app_about)
+    {
+        ImGui::Begin("About ImGui", &show_app_about, ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::Text("ImGui %s", ImGui::GetVersion());
+        ImGui::Separator();
+        ImGui::Text("By Omar Cornut and all github contributors.");
+        ImGui::Text("ImGui is licensed under the MIT License, see LICENSE for more information.");
+        ImGui::End();
+    }
 
     static bool no_titlebar = false;
     static bool no_border = true;
@@ -11226,7 +11236,6 @@ void ImGui::ShowTestWindow(bool* opened)
         }
         if (ImGui::BeginMenu("Examples"))
         {
-            ImGui::MenuItem("Metrics", NULL, &show_app_metrics);
             ImGui::MenuItem("Main menu bar", NULL, &show_app_main_menu_bar);
             ImGui::MenuItem("Console", NULL, &show_app_console);
             ImGui::MenuItem("Simple layout", NULL, &show_app_layout);
@@ -11235,6 +11244,12 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::MenuItem("Simple overlay", NULL, &show_app_fixed_overlay);
             ImGui::MenuItem("Manipulating window title", NULL, &show_app_manipulating_window_title);
             ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Help"))
+        {
+            ImGui::MenuItem("Metrics", NULL, &show_app_metrics);
+            ImGui::MenuItem("About ImGui", NULL, &show_app_about);
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
