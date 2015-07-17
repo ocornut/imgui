@@ -4755,14 +4755,9 @@ ImVec2 ImGui::GetContentRegionMax()
     ImGuiWindow* window = GetCurrentWindow();
     ImVec2 mx = window->Size - window->WindowPadding;
     if (window->DC.ColumnsCount != 1)
-    {
-        mx.x = ImGui::GetColumnOffset(window->DC.ColumnsCurrent + 1);
-        mx.x -= window->WindowPadding.x;
-    }
+        mx.x = ImGui::GetColumnOffset(window->DC.ColumnsCurrent + 1) - window->WindowPadding.x;
     else
-    {
         mx.x -= window->ScrollbarWidth();
-    }
     return mx;
 }
 
@@ -5245,6 +5240,19 @@ static bool ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     return pressed;
 }
 
+static inline ImVec2 CalcItemSize(ImVec2 size, float default_x, float default_y)
+{
+    ImGuiState& g = *GImGui;
+    ImVec2 content_max;
+    if (size.x < 0.0f || size.y < 0.0f)
+        content_max = g.CurrentWindow->Pos + ImGui::GetContentRegionMax();
+    if (size.x <= 0.0f)
+        size.x = (size.x == 0.0f) ? default_x : ImMax(content_max.x - g.CurrentWindow->DC.CursorPos.x, 4.0f) + size.x;
+    if (size.y <= 0.0f)
+        size.y = (size.y == 0.0f) ? default_y : ImMax(content_max.y - g.CurrentWindow->DC.CursorPos.y, 4.0f) + size.y;
+    return size;
+}
+
 static bool ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), ImGuiButtonFlags flags = 0)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -5259,7 +5267,7 @@ static bool ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), Im
     ImVec2 pos = window->DC.CursorPos;
     if ((flags & ImGuiButtonFlags_AlignTextBaseLine) && style.FramePadding.y < window->DC.CurrentLineTextBaseOffset)
         pos.y += window->DC.CurrentLineTextBaseOffset - style.FramePadding.y;
-    const ImVec2 size(size_arg.x != 0.0f ? size_arg.x : (label_size.x + style.FramePadding.x*2), size_arg.y != 0.0f ? size_arg.y : (label_size.y + style.FramePadding.y*2));
+    ImVec2 size = CalcItemSize(size_arg, label_size.x + style.FramePadding.x * 2.0f, label_size.y + style.FramePadding.y * 2.0f);
 
     const ImRect bb(pos, pos + size);
     ItemSize(bb, style.FramePadding.y);
@@ -8002,14 +8010,7 @@ bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
     const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
 
     // Size default to hold ~7 items. Fractional number of items helps seeing that we can scroll down/up without looking at scrollbar.
-    const ImVec2 content_max = window->Pos + ImGui::GetContentRegionMax();
-    const ImVec2 cursor_pos = window->Pos + ImGui::GetCursorPos();
-    // FIXME: Wrap this pattern for re-use
-    ImVec2 size = size_arg;
-    if (size.x <= 0.0f)
-        size.x = (size.x == 0.0f) ? ImGui::CalcItemWidth() + style.FramePadding.x * 2.0f : ImMax(content_max.x - cursor_pos.x, 4.0f) - fabsf(size.x);
-    if (size.y <= 0.0f)
-        size.y = (size.y == 0.0f) ? ImGui::GetTextLineHeightWithSpacing() * 7.4f + style.ItemSpacing.y : ImMax(content_max.y - cursor_pos.y, 4.0f) - fabsf(size.y);
+    ImVec2 size = CalcItemSize(size_arg, ImGui::CalcItemWidth() + style.FramePadding.x * 2.0f, ImGui::GetTextLineHeightWithSpacing() * 7.4f + style.ItemSpacing.y);
     ImVec2 frame_size = ImVec2(size.x, ImMax(size.y, label_size.y));
     ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + frame_size);
     ImRect bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
