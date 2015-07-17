@@ -468,7 +468,7 @@
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, cosf, sinf, floorf, ceilf
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #include <new>          // new (ptr)
-#if defined(_MSC_VER) 
+#if defined(_MSC_VER) || defined(__MINGW32__) 
 #include <malloc.h>     // alloca
 #else
 #include <alloca.h>     // alloca
