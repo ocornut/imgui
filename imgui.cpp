@@ -11801,7 +11801,7 @@ void ImGui::ShowTestWindow(bool* opened)
                     ImGui::NextColumn();
                 char buf[32];
                 sprintf(buf, "%08x", i*5731);
-                ImGui::Button(buf);
+                ImGui::Button(buf, ImVec2(ImGui::GetContentRegionMax().x - ImGui::GetCursorPosX(), 0.0f));
             }
             ImGui::EndChild();
             ImGui::PopStyleVar();
