@@ -483,6 +483,7 @@
 #ifdef _MSC_VER
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
+#define snprintf _snprintf
 #endif
 
 // Clang warnings with -Weverything
@@ -9871,7 +9872,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
 ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
 {
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
-	IM_ASSERT(font_cfg.FontData == NULL); 
+    IM_ASSERT(font_cfg.FontData == NULL); 
     font_cfg.FontData = ttf_data;
     font_cfg.FontDataSize = ttf_size;
     font_cfg.SizePixels = size_pixels;
@@ -9887,7 +9888,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* compressed_ttf_d
     stb_decompress(buf_decompressed_data, (unsigned char*)compressed_ttf_data, (unsigned int)compressed_ttf_size);
 
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
-	IM_ASSERT(font_cfg.FontData == NULL); 
+    IM_ASSERT(font_cfg.FontData == NULL); 
     font_cfg.FontDataOwnedByAtlas = true;
     return AddFontFromMemoryTTF(buf_decompressed_data, (int)buf_decompressed_size, size_pixels, font_cfg_template, glyph_ranges);
 }
@@ -10039,7 +10040,7 @@ bool    ImFontAtlas::Build()
         float descent = unscaled_descent * font_scale;
         if (!cfg.MergeMode)
         {
-	        dst_font->ContainerAtlas = this;
+            dst_font->ContainerAtlas = this;
             dst_font->ConfigData = &cfg;
             dst_font->ConfigDataCount = 0;
             dst_font->FontSize = cfg.SizePixels;
@@ -10063,7 +10064,7 @@ bool    ImFontAtlas::Build()
                 const int codepoint = range.first_unicode_char_in_range + char_idx;
                 if (cfg.MergeMode && dst_font->FindGlyph((unsigned short)codepoint))
                     continue;
- 
+
                 stbtt_aligned_quad q;
                 float dummy_x = 0.0f, dummy_y = 0.0f;
                 stbtt_GetPackedQuad(range.chardata_for_range, TexWidth, TexHeight, char_idx, &dummy_x, &dummy_y, &q, 0);
@@ -10705,7 +10706,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
             if (c == 0)
                 break;
         }
-        
+
         if (c < 32)
         {
             if (c == '\n')
@@ -10718,7 +10719,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
             if (c == '\r')
                 continue;
         }
-        
+
         const float char_width = ((int)c < IndexXAdvance.Size ? IndexXAdvance[(int)c] : FallbackXAdvance) * scale;
         if (line_width + char_width >= max_width)
         {
@@ -10830,7 +10831,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
         if (const Glyph* glyph = FindGlyph((unsigned short)c))
         {
             char_width = glyph->XAdvance * scale;
-            
+
             // Clipping on Y is more likely
             if (c != ' ' && c != '\t')
             {
@@ -11014,18 +11015,102 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int, int)
 
 #endif
 
-#ifdef IMGUI_DISABLE_TEST_WINDOWS
-
-void ImGui::ShowUserGuide() {}
-void ImGui::ShowStyleEditor(ImGuiStyle*) {}
-void ImGui::ShowTestWindow(bool*) {}
-void ImGui::ShowMetricsWindow(bool*) {}
-
-#else
-
 //-----------------------------------------------------------------------------
 // HELP
 //-----------------------------------------------------------------------------
+
+void ImGui::ShowMetricsWindow(bool* opened)
+{
+    if (ImGui::Begin("ImGui Metrics", opened))
+    {
+        ImGui::Text("ImGui %s", ImGui::GetVersion());
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::Text("%d vertices, %d triangles", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices / 3);
+        ImGui::Text("%d allocations", ImGui::GetIO().MetricsAllocs);
+        static bool show_clip_rects = true;
+        ImGui::Checkbox("Show clipping rectangles when hovering ImDrawList", &show_clip_rects);
+        ImGui::Separator();
+
+        struct Funcs
+        {
+            static void NodeDrawList(ImDrawList* draw_list, const char* label)
+            {
+                bool node_opened = ImGui::TreeNode(draw_list, "%s: '%s' %d vtx, %d indices, %d cmds", label, draw_list->_OwnerName ? draw_list->_OwnerName : "", draw_list->VtxBuffer.Size, draw_list->IdxBuffer.Size, draw_list->CmdBuffer.Size);
+                if (draw_list == ImGui::GetWindowDrawList())
+                {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImColor(255,100,100), "CURRENTLY APPENDING"); // Can't display stats for active draw list! (we don't have the data double-buffered)
+                }
+                if (!node_opened)
+                    return;
+
+                int elem_offset = 0;
+                for (const ImDrawCmd* pcmd = draw_list->CmdBuffer.begin(); pcmd < draw_list->CmdBuffer.end(); elem_offset += pcmd->ElemCount, pcmd++)
+                {
+                    if (pcmd->UserCallback)
+                        ImGui::BulletText("Callback %p, user_data %p", pcmd->UserCallback, pcmd->UserCallbackData);
+                    else
+                    {
+                        ImGui::BulletText("Draw %d indexed vtx, tex = %p, clip_rect = (%.0f,%.0f)..(%.0f,%.0f)", pcmd->ElemCount, pcmd->TextureId, pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
+                        if (show_clip_rects && ImGui::IsItemHovered())
+                        {
+                            ImRect clip_rect = pcmd->ClipRect;
+                            ImRect vtxs_rect;
+                            for (int i = elem_offset; i < elem_offset + (int)pcmd->ElemCount; i++)
+                                vtxs_rect.Add(draw_list->VtxBuffer[draw_list->IdxBuffer[i]].pos);
+                            GImGui->OverlayDrawList.PushClipRectFullScreen();
+                            clip_rect.Round(); GImGui->OverlayDrawList.AddRect(clip_rect.Min, clip_rect.Max, ImColor(255,255,0)); 
+                            vtxs_rect.Round(); GImGui->OverlayDrawList.AddRect(vtxs_rect.Min, vtxs_rect.Max, ImColor(255,0,255)); 
+                            GImGui->OverlayDrawList.PopClipRect();
+                        }
+                    }
+                }
+                ImGui::TreePop();
+            }
+
+            static void NodeWindows(ImVector<ImGuiWindow*>& windows, const char* label)
+            {
+                if (!ImGui::TreeNode(label, "%s (%d)", label, windows.Size))
+                    return;
+                for (int i = 0; i < windows.Size; i++)
+                    Funcs::NodeWindow(windows[i], "Window");
+                ImGui::TreePop();
+            }
+
+            static void NodeWindow(ImGuiWindow* window, const char* label)
+            {
+                if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Active || window->WasActive, window))
+                    return;
+                NodeDrawList(window->DrawList, "DrawList");
+                if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
+                if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
+                ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.Size * sizeof(ImGuiStorage::Pair));
+                ImGui::TreePop();
+            }
+        };
+
+        ImGuiState& g = *GImGui;                // Access private state
+        g.DisableHideTextAfterDoubleHash++;     // Not exposed (yet). Disable processing that hides text after '##' markers.
+        Funcs::NodeWindows(g.Windows, "Windows");
+        if (ImGui::TreeNode("DrawList", "Active DrawLists (%d)", g.RenderDrawLists[0].Size))
+        {
+            for (int i = 0; i < g.RenderDrawLists[0].Size; i++)
+                Funcs::NodeDrawList(g.RenderDrawLists[0][i], "DrawList");
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Popups", "Opened Popups Stack (%d)", g.OpenedPopupStack.Size))
+        {
+            for (int i = 0; i < g.OpenedPopupStack.Size; i++)
+            {
+                ImGuiWindow* window = g.OpenedPopupStack[i].Window;
+                ImGui::BulletText("PopupID: %08x, Window: '%s'%s%s", g.OpenedPopupStack[i].PopupID, window ? window->Name : "NULL", window && (window->Flags & ImGuiWindowFlags_ChildWindow) ? " ChildWindow" : "", window && (window->Flags & ImGuiWindowFlags_ChildMenu) ? " ChildMenu" : "");
+            }
+            ImGui::TreePop();
+        }
+        g.DisableHideTextAfterDoubleHash--;
+    }
+    ImGui::End();
+}
 
 void ImGui::ShowUserGuide()
 {
@@ -11154,6 +11239,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 //-----------------------------------------------------------------------------
 // SAMPLE CODE
 //-----------------------------------------------------------------------------
+
+#ifndef IMGUI_DISABLE_TEST_WINDOWS
 
 static void ShowExampleAppConsole(bool* opened);
 static void ShowExampleAppLayout(bool* opened);
@@ -11381,14 +11468,16 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::SliderFloat("Wrap width", &wrap_width, -20, 600, "%.0f");
 
             ImGui::Text("Test paragraph 1:");
-            ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetCursorScreenPos() + ImVec2(wrap_width, 0.0f), ImGui::GetCursorScreenPos() + ImVec2(wrap_width+10, ImGui::GetTextLineHeight()), 0xFFFF00FF);
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x + wrap_width, pos.y), ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight()), 0xFFFF00FF);
             ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
             ImGui::Text("lazy dog. This paragraph is made to fit within %.0f pixels. The quick brown fox jumps over the lazy dog.", wrap_width);
             ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF00FFFF);
             ImGui::PopTextWrapPos();
 
             ImGui::Text("Test paragraph 2:");
-            ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetCursorScreenPos() + ImVec2(wrap_width, 0.0f), ImGui::GetCursorScreenPos() + ImVec2(wrap_width+10, ImGui::GetTextLineHeight()), 0xFFFF00FF);
+            pos = ImGui::GetCursorScreenPos();
+            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x + wrap_width, pos.y), ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight()), 0xFFFF00FF);
             ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
             ImGui::Text("aaaaaaaa bbbbbbbb, cccccccc,dddddddd. eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
             ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF00FFFF);
@@ -12030,8 +12119,8 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::DragFloat2("offset", (float*)&offset, 0.5f, -200, 200.0f, "%.0f");
             ImVec2 pos = ImGui::GetCursorScreenPos();
             ImVec4 clip_rect(pos.x, pos.y, pos.x+size.x, pos.y+size.y);
-            ImGui::GetWindowDrawList()->AddRectFilled(pos, pos+size, ImColor(90,90,120,255));
-            ImGui::GetWindowDrawList()->AddText(ImGui::GetWindowFont(), ImGui::GetWindowFontSize()*2.0f, pos+offset, ImColor(255,255,255,255), "Line 1 hello\nLine 2 clip me!", NULL, 0.0f, &clip_rect);
+            ImGui::GetWindowDrawList()->AddRectFilled(pos, ImVec2(pos.x+size.x,pos.y+size.y), ImColor(90,90,120,255));
+            ImGui::GetWindowDrawList()->AddText(ImGui::GetWindowFont(), ImGui::GetWindowFontSize()*2.0f, ImVec2(pos.x+offset.x,pos.y+offset.y), ImColor(255,255,255,255), "Line 1 hello\nLine 2 clip me!", NULL, 0.0f, &clip_rect);
             ImGui::Dummy(size);
             ImGui::TreePop();
         }
@@ -12455,97 +12544,6 @@ void ImGui::ShowTestWindow(bool* opened)
     ImGui::End();
 }
 
-void ImGui::ShowMetricsWindow(bool* opened)
-{
-    if (ImGui::Begin("ImGui Metrics", opened))
-    {
-        ImGui::Text("ImGui %s", ImGui::GetVersion());
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::Text("%d vertices, %d triangles", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices / 3);
-        ImGui::Text("%d allocations", ImGui::GetIO().MetricsAllocs);
-        static bool show_clip_rects = true;
-        ImGui::Checkbox("Show clipping rectangles when hovering ImDrawList", &show_clip_rects);
-        ImGui::Separator();
-
-        struct Funcs
-        {
-            static void NodeDrawList(ImDrawList* draw_list, const char* label)
-            {
-                bool node_opened = ImGui::TreeNode(draw_list, "%s: '%s' %d vtx, %d indices, %d cmds", label, draw_list->_OwnerName ? draw_list->_OwnerName : "", draw_list->VtxBuffer.Size, draw_list->IdxBuffer.Size, draw_list->CmdBuffer.Size);
-                if (draw_list == ImGui::GetWindowDrawList())
-                {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImColor(255,100,100), "CURRENTLY APPENDING"); // Can't display stats for active draw list! (we don't have the data double-buffered)
-                }
-                if (!node_opened)
-                    return;
-
-                int elem_offset = 0;
-                for (const ImDrawCmd* pcmd = draw_list->CmdBuffer.begin(); pcmd < draw_list->CmdBuffer.end(); elem_offset += pcmd->ElemCount, pcmd++)
-                    if (pcmd->UserCallback)
-                        ImGui::BulletText("Callback %p, user_data %p", pcmd->UserCallback, pcmd->UserCallbackData);
-                    else
-                    {
-                        ImGui::BulletText("Draw %d indexed vtx, tex = %p, clip_rect = (%.0f,%.0f)..(%.0f,%.0f)", pcmd->ElemCount, pcmd->TextureId, pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
-                        if (show_clip_rects && ImGui::IsItemHovered())
-                        {
-                            ImRect clip_rect = pcmd->ClipRect;
-                            ImRect vtxs_rect;
-                            for (int i = elem_offset; i < elem_offset + (int)pcmd->ElemCount; i++)
-                                vtxs_rect.Add(draw_list->VtxBuffer[draw_list->IdxBuffer[i]].pos);
-                            GImGui->OverlayDrawList.PushClipRectFullScreen();
-                            clip_rect.Round(); GImGui->OverlayDrawList.AddRect(clip_rect.Min, clip_rect.Max, ImColor(255,255,0)); 
-                            vtxs_rect.Round(); GImGui->OverlayDrawList.AddRect(vtxs_rect.Min, vtxs_rect.Max, ImColor(255,0,255)); 
-                            GImGui->OverlayDrawList.PopClipRect();
-                        }
-                    }
-                ImGui::TreePop();
-            }
-
-            static void NodeWindows(ImVector<ImGuiWindow*>& windows, const char* label)
-            {
-                if (!ImGui::TreeNode(label, "%s (%d)", label, windows.Size))
-                    return;
-                for (int i = 0; i < windows.Size; i++)
-                    Funcs::NodeWindow(windows[i], "Window");
-                ImGui::TreePop();
-            }
-
-            static void NodeWindow(ImGuiWindow* window, const char* label)
-            {
-                if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Active || window->WasActive, window))
-                    return;
-                NodeDrawList(window->DrawList, "DrawList");
-                if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
-                if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
-                ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.Size * sizeof(ImGuiStorage::Pair));
-                ImGui::TreePop();
-            }
-        };
-
-        ImGuiState& g = *GImGui;                // Access private state
-        g.DisableHideTextAfterDoubleHash++;     // Not exposed (yet). Disable processing that hides text after '##' markers.
-        Funcs::NodeWindows(g.Windows, "Windows");
-        if (ImGui::TreeNode("DrawList", "Active DrawLists (%d)", g.RenderDrawLists[0].Size))
-        {
-            for (int i = 0; i < g.RenderDrawLists[0].Size; i++)
-                Funcs::NodeDrawList(g.RenderDrawLists[0][i], "DrawList");
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNode("Popups", "Opened Popups Stack (%d)", g.OpenedPopupStack.Size))
-        {
-            for (int i = 0; i < g.OpenedPopupStack.Size; i++)
-            {
-                ImGuiWindow* window = g.OpenedPopupStack[i].Window;
-                ImGui::BulletText("PopupID: %08x, Window: '%s'%s%s", g.OpenedPopupStack[i].PopupID, window ? window->Name : "NULL", window && (window->Flags & ImGuiWindowFlags_ChildWindow) ? " ChildWindow" : "", window && (window->Flags & ImGuiWindowFlags_ChildMenu) ? " ChildMenu" : "");
-            }
-            ImGui::TreePop();
-        }
-        g.DisableHideTextAfterDoubleHash--;
-    }
-    ImGui::End();
-}
-
 static void ShowExampleAppMainMenuBar()
 {
     if (ImGui::BeginMainMenuBar())
@@ -12674,7 +12672,7 @@ static void ShowExampleAppManipulatingWindowTitle(bool* opened)
 
     // Using "###" to display a changing title but keep a static identifier "AnimatedTitle"
     char buf[128];
-    ImFormatString(buf, IM_ARRAYSIZE(buf), "Animated title %c %d###AnimatedTitle", "|/-\\"[(int)(ImGui::GetTime()/0.25f)&3], rand());
+    sprintf(buf, "Animated title %c %d###AnimatedTitle", "|/-\\"[(int)(ImGui::GetTime()/0.25f)&3], rand());
     ImGui::SetNextWindowPos(ImVec2(100,300), ImGuiSetCond_FirstUseEver);
     ImGui::Begin(buf);
     ImGui::Text("This window has a changing title.");
@@ -12783,7 +12781,8 @@ struct ExampleAppConsole
         char buf[1024];
         va_list args;
         va_start(args, fmt);
-        ImFormatStringV(buf, IM_ARRAYSIZE(buf), fmt, args);
+        vsnprintf(buf, IM_ARRAYSIZE(buf), fmt, args);
+        buf[IM_ARRAYSIZE(buf)-1] = 0;
         va_end(args);
         Items.push_back(strdup(buf));
         ScrollToBottom = true;
@@ -12920,7 +12919,7 @@ struct ExampleAppConsole
                 while (word_start > data->Buf)
                 {
                     const char c = word_start[-1];
-                    if (ImCharIsSpace(c) || c == ',' || c == ';')
+                    if (c == ' ' || c == '\t' || c == 0x3000 || c == ',' || c == ';')
                         break;
                     word_start--;
                 }
@@ -12996,7 +12995,7 @@ struct ExampleAppConsole
                 // A better implementation would preserve the data on the current input line along with cursor position.
                 if (prev_history_pos != HistoryPos)
                 {
-                    ImFormatString(data->Buf, data->BufSize, "%s", (HistoryPos >= 0) ? History[HistoryPos] : "");
+                    snprintf(data->Buf, data->BufSize, "%s", (HistoryPos >= 0) ? History[HistoryPos] : "");
                     data->BufDirty = true;
                     data->CursorPos = data->SelectionStart = data->SelectionEnd = (int)strlen(data->Buf);
                 }
@@ -13111,6 +13110,10 @@ static void ShowExampleAppLongText(bool* opened)
 }
 
 // End of Sample code
+#else
+
+void ImGui::ShowTestWindow(bool*) {}
+
 #endif
 
 //-----------------------------------------------------------------------------
