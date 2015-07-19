@@ -744,7 +744,7 @@ ImGuiIO::ImGuiIO()
 }
 
 //-----------------------------------------------------------------------------
-// Helpers
+// HELPERS
 //-----------------------------------------------------------------------------
 
 #define IM_ARRAYSIZE(_ARR)          ((int)(sizeof(_ARR)/sizeof(*_ARR)))
@@ -795,8 +795,8 @@ static inline ImVec2 operator*(const ImVec2& lhs, const float rhs)              
 //static inline ImVec2 operator/(const ImVec2& lhs, const float rhs)            { return ImVec2(lhs.x/rhs, lhs.y/rhs); }
 static inline ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs)            { return ImVec2(lhs.x+rhs.x, lhs.y+rhs.y); }
 static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs)            { return ImVec2(lhs.x-rhs.x, lhs.y-rhs.y); }
-static inline ImVec2 operator*(const ImVec2& lhs, const ImVec2 rhs)             { return ImVec2(lhs.x*rhs.x, lhs.y*rhs.y); }
-static inline ImVec2 operator/(const ImVec2& lhs, const ImVec2 rhs)             { return ImVec2(lhs.x/rhs.x, lhs.y/rhs.y); }
+static inline ImVec2 operator*(const ImVec2& lhs, const ImVec2& rhs)            { return ImVec2(lhs.x*rhs.x, lhs.y*rhs.y); }
+static inline ImVec2 operator/(const ImVec2& lhs, const ImVec2& rhs)            { return ImVec2(lhs.x/rhs.x, lhs.y/rhs.y); }
 static inline ImVec2& operator+=(ImVec2& lhs, const ImVec2& rhs)                { lhs.x += rhs.x; lhs.y += rhs.y; return lhs; }
 //static inline ImVec2& operator-=(ImVec2& lhs, const ImVec2& rhs)              { lhs.x -= rhs.x; lhs.y -= rhs.y; return lhs; }
 static inline ImVec2& operator*=(ImVec2& lhs, const float rhs)                  { lhs.x *= rhs; lhs.y *= rhs; return lhs; }
@@ -1076,7 +1076,6 @@ enum ImGuiSelectableFlagsPrivate_
     ImGuiSelectableFlags_Disabled           = 1 << 4,
     ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 5
 };
-
 
 struct ImGuiColMod       // Color modifier, backup of modified data so we can restore it
 {
