@@ -136,8 +136,9 @@
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  
+ - 2015/07/18 (1.44) - fixed angles in ImDrawList::PathArcTo(), PathArcToFast() (introduced in 1.43) being off by an extra PI for no justifiable reason
  - 2015/07/14 (1.43) - add new ImFontAtlas::AddFont() API. For the old AddFont***, moved the 'font_no' parameter of ImFontAtlas::AddFont** functions to the ImFontConfig structure.
-                       you need to render your textured triangles with bilinear filtering to benefit from subpixel positioning of text.
+                       you need to render your textured triangles with bilinear filtering to benefit from sub-pixel positioning of text.
  - 2015/07/08 (1.43) - switched rendering data to use indexed rendering. this is saving a fair amount of CPU/GPU and enables us to get anti-aliasing for a marginal cost.
                        this necessary change will break your rendering function! the fix should be very easy. sorry for that :(
                      - if you are using a vanilla copy of one of the imgui_impl_XXXX.cpp provided in the example, you just need to update your copy and you can ignore the rest.
@@ -4050,7 +4051,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 const ImVec2 br = window->Rect().GetBR();
                 window->DrawList->PathLineTo(br + ImVec2(-corner_size, 0.0f));
                 window->DrawList->PathLineTo(br + ImVec2(0.0f, -corner_size));
-                window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding, br.y - window_rounding), window_rounding, 6, 9);
+                window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding, br.y - window_rounding), window_rounding, 0, 3);
                 window->DrawList->PathFill(resize_col);
             }
         }
@@ -9451,8 +9452,8 @@ void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int amin, int
         for (int i = 0; i < circle_vtx_count; i++)
         {
             const float a = ((float)i / (float)circle_vtx_count) * 2*IM_PI;
-            circle_vtx[i].x = cosf(a + IM_PI);
-            circle_vtx[i].y = sinf(a + IM_PI);
+            circle_vtx[i].x = cosf(a);
+            circle_vtx[i].y = sinf(a);
         }
         circle_vtx_builds = true;
     }
@@ -9481,7 +9482,7 @@ void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float amin, float
     for (int i = 0; i <= num_segments; i++)
     {
         const float a = amin + ((float)i / (float)num_segments) * (amax - amin);
-        _Path.push_back(ImVec2(centre.x + cosf(a + IM_PI) * radius, centre.y + sinf(a + IM_PI) * radius));
+        _Path.push_back(ImVec2(centre.x + cosf(a) * radius, centre.y + sinf(a) * radius));
     }
 }
 
@@ -9504,10 +9505,10 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int 
         const float r1 = (rounding_corners & 2) ? r : 0.0f;
         const float r2 = (rounding_corners & 4) ? r : 0.0f;
         const float r3 = (rounding_corners & 8) ? r : 0.0f;
-        PathArcToFast(ImVec2(a.x+r0,a.y+r0), r0, 0, 3);
-        PathArcToFast(ImVec2(b.x-r1,a.y+r1), r1, 3, 6);
-        PathArcToFast(ImVec2(b.x-r2,b.y-r2), r2, 6, 9);
-        PathArcToFast(ImVec2(a.x+r3,b.y-r3), r3, 9, 12);
+        PathArcToFast(ImVec2(a.x+r0,a.y+r0), r0, 6, 9);
+        PathArcToFast(ImVec2(b.x-r1,a.y+r1), r1, 9, 12);
+        PathArcToFast(ImVec2(b.x-r2,b.y-r2), r2, 0, 3);
+        PathArcToFast(ImVec2(a.x+r3,b.y-r3), r3, 3, 6);
     }
 }
 
