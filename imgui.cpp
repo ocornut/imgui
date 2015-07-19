@@ -9632,6 +9632,14 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     _VtxCurrentIdx = (ImDrawIdx)VtxBuffer.Size;
 }
 
+// This is one of the few function breaking the encapsulation of ImDrawLst, but it is just so useful.
+void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
+{
+    if ((col >> 24) == 0)
+        return;
+    AddText(ImGui::GetWindowFont(), ImGui::GetWindowFontSize(), pos, col, text_begin, text_end);
+}
+
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
 {
     if ((col >> 24) == 0)
