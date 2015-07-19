@@ -24,7 +24,7 @@ static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
 static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
 static int          g_VboSize = 0;
-static unsigned int g_VboHandle = 0, g_VaoHandle = 0;
+static unsigned int g_VboHandle = 0, g_VaoHandle = 0, g_ElementsHandle = 0;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
@@ -61,7 +61,7 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        const ImDrawIdx* idx_buffer = &cmd_list->IdxBuffer.front();
+        const ImDrawIdx* idx_buffer_offset = 0;
 
         glBindBuffer(GL_ARRAY_BUFFER, g_VboHandle);
         int needed_vtx_size = cmd_list->VtxBuffer.size() * sizeof(ImDrawVert);
@@ -78,6 +78,9 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
         memcpy(vtx_data, &cmd_list->VtxBuffer[0], cmd_list->VtxBuffer.size() * sizeof(ImDrawVert));
         glUnmapBuffer(GL_ARRAY_BUFFER);
 
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ElementsHandle);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, cmd_list->IdxBuffer.size() * sizeof(ImDrawIdx), (GLvoid*)&cmd_list->IdxBuffer.front(), GL_STREAM_DRAW);
+
         for (const ImDrawCmd* pcmd = cmd_list->CmdBuffer.begin(); pcmd != cmd_list->CmdBuffer.end(); pcmd++)
         {
             if (pcmd->UserCallback)
@@ -88,15 +91,16 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
             {
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
                 glScissor((int)pcmd->ClipRect.x, (int)(height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
-                glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, idx_buffer);
+                glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, idx_buffer_offset);
             }
-            idx_buffer += pcmd->ElemCount;
+            idx_buffer_offset += pcmd->ElemCount;
         }
     }
 
     // Restore modified state
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glUseProgram(last_program);
     glDisable(GL_SCISSOR_TEST);
     glBindTexture(GL_TEXTURE_2D, last_texture);
@@ -212,6 +216,7 @@ bool ImGui_ImplGlfwGL3_CreateDeviceObjects()
     g_AttribLocationColor = glGetAttribLocation(g_ShaderHandle, "Color");
 
     glGenBuffers(1, &g_VboHandle);
+    glGenBuffers(1, &g_ElementsHandle);
 
     glGenVertexArrays(1, &g_VaoHandle);
     glBindVertexArray(g_VaoHandle);
@@ -280,6 +285,8 @@ void ImGui_ImplGlfwGL3_Shutdown()
 {
     if (g_VaoHandle) glDeleteVertexArrays(1, &g_VaoHandle);
     if (g_VboHandle) glDeleteBuffers(1, &g_VboHandle);
+    if (g_ElementsHandle) glDeleteBuffers(1, &g_ElementsHandle);
+    g_ElementsHandle = 0;
     g_VaoHandle = 0;
     g_VboHandle = 0;
 
