@@ -11,7 +11,7 @@
 #CXX = g++
 
 OBJS = main.o imgui_impl_glfw_gl3.o
-OBJS += ../../imgui.o
+OBJS += ../../imgui.o ../../imgui_demo.o ../../imgui_draw.o
 OBJS += ../libs/gl3w/GL/gl3w.o
 
 UNAME_S := $(shell uname -s)
