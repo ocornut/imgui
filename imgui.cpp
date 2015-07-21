@@ -473,11 +473,6 @@
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, cosf, sinf, floorf, ceilf
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #include <new>          // new (ptr)
-#if defined(_MSC_VER) || defined(__MINGW32__) 
-#include <malloc.h>     // alloca
-#else
-#include <alloca.h>     // alloca
-#endif
 #if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
 #include <stddef.h>     // intptr_t
 #else
@@ -609,9 +604,9 @@ static bool             InputIntN(const char* label, int* v, int components, ImG
 // Platform dependent default implementations
 //-----------------------------------------------------------------------------
 
-static const char*  GetClipboardTextFn_DefaultImpl();
-static void         SetClipboardTextFn_DefaultImpl(const char* text);
-static void         ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
+static const char*      GetClipboardTextFn_DefaultImpl();
+static void             SetClipboardTextFn_DefaultImpl(const char* text);
+static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 
 //-----------------------------------------------------------------------------
 // Context
@@ -619,12 +614,12 @@ static void         ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 
 // We access everything through this pointer (always assumed to be != NULL)
 // You can swap the pointer to a different context by calling ImGui::SetInternalState()
-static ImGuiState   GImDefaultState;
-ImGuiState*         GImGui = &GImDefaultState;
+static ImGuiState       GImDefaultState;
+ImGuiState*             GImGui = &GImDefaultState;
 
 // Statically allocated default font atlas. This is merely a maneuver to keep ImFontAtlas definition at the bottom of the .h file (otherwise it'd be inside ImGuiIO)
 // Also we wouldn't be able to new() one at this point, before users may define IO.MemAllocFn.
-static ImFontAtlas  GImDefaultFontAtlas;
+static ImFontAtlas      GImDefaultFontAtlas;
 
 //-----------------------------------------------------------------------------
 // User facing structures

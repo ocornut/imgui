@@ -19,6 +19,11 @@
 #include "imgui_internal.h"
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #include <new>          // new (ptr)
+#if defined(_MSC_VER) || defined(__MINGW32__) 
+#include <malloc.h>     // alloca
+#else
+#include <alloca.h>     // alloca
+#endif
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
