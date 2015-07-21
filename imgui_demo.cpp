@@ -19,6 +19,12 @@
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #define snprintf _snprintf
 #endif
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wint-to-void-pointer-cast" // warning : cast to 'void *' from smaller integer type 'int'
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"      // warning: cast to pointer from integer of different size
+#endif
 
 // Play it nice with Windows users. Notepad in 2015 still doesn't display text data with Unix-style \n.
 #ifdef _MSC_VER
@@ -1017,7 +1023,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 if (i > 0) ImGui::SameLine();
                 ImGui::BeginGroup();
                 ImGui::Text("%s", i == 0 ? "Top" : i == 1 ? "25%" : i == 2 ? "Center" : i == 3 ? "75%" : "Bottom");
-                ImGui::BeginChild(ImGui::GetID((void *)(intptr_t)i), ImVec2(ImGui::GetWindowWidth() * 0.17f, 200.0f), true);
+                ImGui::BeginChild(ImGui::GetID((void*)i), ImVec2(ImGui::GetWindowWidth() * 0.17f, 200.0f), true);
                 if (scroll_to)
                     ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + scroll_to_px, i * 0.25f);
                 for (int line = 0; line < 100; line++)
@@ -1846,7 +1852,7 @@ struct ExampleAppConsole
                 while (word_start > data->Buf)
                 {
                     const char c = word_start[-1];
-                    if (c == ' ' || c == '\t' || c == 0x3000 || c == ',' || c == ';')
+                    if (c == ' ' || c == '\t' || c == ',' || c == ';')
                         break;
                     word_start--;
                 }
