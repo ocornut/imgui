@@ -1168,7 +1168,8 @@ bool ImLoadFileToMemory(const char* filename, const char* file_open_mode, void**
 
     fclose(f);
     *out_file_data = file_data;
-    *out_file_size = file_size;
+    if (out_file_size)
+        *out_file_size = file_size;
 
     return true;
 }

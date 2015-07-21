@@ -82,7 +82,7 @@ int                 ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const Im
 
 // Helpers: Misc
 ImU32               ImHash(const void* data, int data_size, ImU32 seed);
-bool                ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, int* out_file_size, int padding_bytes);
+bool                ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, int* out_file_size = NULL, int padding_bytes = 0);
 bool                ImIsPointInTriangle(const ImVec2& p, const ImVec2& a, const ImVec2& b, const ImVec2& c);
 static inline bool  ImCharIsSpace(int c)            { return c == ' ' || c == '\t' || c == 0x3000; }
 static inline int   ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
