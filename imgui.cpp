@@ -538,11 +538,10 @@ static void             KeepAliveID(ImGuiID id);
 
 static bool             IsMouseHoveringRect(const ImRect& bb);
 static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
-static bool             IsMouseHoveringRect(const ImRect& rect);
 
 static inline ImGuiWindow*  GetCurrentWindow();
-static inline void          SetCurrentWindow(ImGuiWindow* window);
-static inline ImGuiWindow*  GetParentWindow();
+static ImGuiWindow*     GetParentWindow();
+static void             SetCurrentWindow(ImGuiWindow* window);
 static void             SetWindowScrollY(ImGuiWindow* window, float new_scroll_y);
 static void             SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiSetCond cond);
 static void             SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiSetCond cond);
@@ -554,7 +553,7 @@ static inline bool      IsWindowContentHoverable(ImGuiWindow* window);
 static void             ClearSetNextWindowData();
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
 static void             Scrollbar(ImGuiWindow* window);
-static bool             CloseWindowButton(bool* p_opened = NULL);
+static bool             CloseWindowButton(bool* p_opened);
 static void             FocusWindow(ImGuiWindow* window);
 
 static void             AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDrawList* draw_list);
@@ -574,10 +573,10 @@ static ImVec4           GetVisibleRect();
 
 static bool             BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags);
 static void             CloseInactivePopups();
-static ImGuiWindow*     GetFrontMostModalRootWindow();
 static void             ClosePopupToLevel(int remaining);
 static void             ClosePopup(ImGuiID id);
 static bool             IsPopupOpen(ImGuiID id);
+static ImGuiWindow*     GetFrontMostModalRootWindow();
 static ImVec2           FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size, ImGuiWindowFlags flags, int* last_dir, const ImRect& r_inner);
 
 static inline void      ParseFormatPrecision(const char* fmt, int& decimal_precision);
@@ -1576,7 +1575,7 @@ static inline ImGuiWindow* GetCurrentWindow()
     return g.CurrentWindow;
 }
 
-static inline void SetCurrentWindow(ImGuiWindow* window)
+static void SetCurrentWindow(ImGuiWindow* window)
 {
     ImGuiState& g = *GImGui;
     g.CurrentWindow = window;
@@ -1584,7 +1583,7 @@ static inline void SetCurrentWindow(ImGuiWindow* window)
         g.FontSize = window->CalcFontSize();
 }
 
-static inline ImGuiWindow* GetParentWindow()
+static ImGuiWindow* GetParentWindow()
 {
     ImGuiState& g = *GImGui;
     IM_ASSERT(g.CurrentWindowStack.Size >= 2);

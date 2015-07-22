@@ -30,7 +30,7 @@
 //#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 //---- Implement STB libraries in a namespace to avoid conflicts
-//#define IMGUI_STB_NAMESPACE     ImStb
+//#define IMGUI_STB_NAMESPACE     ImGuiStb
 
 //---- Define constructor and implicit cast operators to convert back<>forth from your math types and ImVec2/ImVec4.
 /*
