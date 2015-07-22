@@ -2046,5 +2046,7 @@ static void ShowExampleAppLongText(bool* opened)
 #else
 
 void ImGui::ShowTestWindow(bool*) {}
+void ImGui::ShowUserGuide(bool*) {}
+void ImGui::ShowStyleEditor(bool*) {}
 
 #endif
