@@ -9328,41 +9328,46 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         }
         _VtxCurrentIdx += (ImDrawIdx)vtx_count;
     }
-    else
-    {
-         // Non Anti-aliased Stroke
-        const int idx_count = count*6;
-        const int vtx_count = count*4;      // FIXME-OPT: Not sharing edges
-        PrimReserve(idx_count, vtx_count);
+	else
+	{
+		// Non Anti-aliased Stroke
+		const int idx_count = count*6;
+		const int vtx_count = count*4;      
+		PrimReserve(idx_count, vtx_count);
 
 		ImVec2 diff_prev;
-        for (int i1 = 0; i1 < count; i1++)
-        {			
-            const int i2 = (i1+1) == points_count ? 0 : i1+1; 		
-            const ImVec2& p1 = points[i1];
-            const ImVec2& p2 = points[i2];			
-            ImVec2 diff = p2 - p1;
-            diff *= ImInvLength(diff, 1.0f);
-			if (i1==0 || diff.x*diff_prev.x+diff.y*diff_prev.y<0.9f) diff_prev=diff;
-			
-            const float dx1 = diff_prev.x * (thickness * 0.5f);
-            const float dy1 = diff_prev.y * (thickness * 0.5f);
-			const float dx2 = diff.x * (thickness * 0.5f);
-            const float dy2 = diff.y * (thickness * 0.5f);
-            _VtxWritePtr[0].pos.x = p1.x + dy1; _VtxWritePtr[0].pos.y = p1.y - dx1; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
-            _VtxWritePtr[1].pos.x = p2.x + dy2; _VtxWritePtr[1].pos.y = p2.y - dx2; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col;
-            _VtxWritePtr[2].pos.x = p2.x - dy2; _VtxWritePtr[2].pos.y = p2.y + dx2; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col;
-            _VtxWritePtr[3].pos.x = p1.x - dy1; _VtxWritePtr[3].pos.y = p1.y + dx1; _VtxWritePtr[3].uv = uv; _VtxWritePtr[3].col = col;
-            _VtxWritePtr += 4;
-
-            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+2); 
-            _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+2); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+3); 
-            _IdxWritePtr += 6;
-            _VtxCurrentIdx += 4;
+		int num_smooth = 0;
+		for (int i1 = 0; i1 < count; i1++)
+		{			
+			const int i2 = (i1+1) == points_count ? 0 : i1+1; 		
+			const ImVec2& p1 = points[i1];
+			const ImVec2& p2 = points[i2];			
+			ImVec2 diff = p2 - p1;
+			diff *= ImInvLength(diff, 1.0f);
+			bool sharp = (i1==0 || diff.x*diff_prev.x+diff.y*diff_prev.y<0.9f);			
+			const float dx = diff.x * (thickness * 0.5f);
+			const float dy = diff.y * (thickness * 0.5f);
+			if (sharp) {
+				_VtxWritePtr[0].pos.x = p1.x + dy; _VtxWritePtr[0].pos.y = p1.y - dx; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
+				_VtxWritePtr[1].pos.x = p1.x - dy; _VtxWritePtr[1].pos.y = p1.y + dx; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col;
+				_VtxWritePtr+=2;
+			}
+			_VtxWritePtr[0].pos.x = p2.x + dy; _VtxWritePtr[0].pos.y = p2.y - dx; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
+			_VtxWritePtr[1].pos.x = p2.x - dy; _VtxWritePtr[1].pos.y = p2.y + dx; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col;
+			_VtxWritePtr += 2;
+			if (!sharp) {
+				_VtxCurrentIdx -= 2; // reuse 2 verts from the previous quad for smooth turns!
+				num_smooth++;
+			}
+			_IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+3); 
+			_IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+3); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+2); 
+			_IdxWritePtr += 6;
+			_VtxCurrentIdx += 4;
 
 			diff_prev=diff;
-        }
-    }
+		}
+		PrimReserve(0, -num_smooth*2); // un-reserve 2 verts for every smooth edge we found FIXME is this safe with a negative number?
+	}
 }
 
 void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col, bool anti_aliased)
