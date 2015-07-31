@@ -593,7 +593,7 @@ static bool             DragBehavior(const ImRect& frame_bb, ImGuiID id, float* 
 static bool             DragFloatN(const char* label, float* v, int components, float v_speed, float v_min, float v_max, const char* display_format, float power);
 static bool             DragIntN(const char* label, int* v, int components, float v_speed, int v_min, int v_max, const char* display_format);
 
-static bool             InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data);
+static bool             InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
 static bool             InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data);
 static void             InputTextApplyArithmeticOp(const char* buf, float *v);
 static int              InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end);
@@ -5556,7 +5556,7 @@ static void InputTextApplyArithmeticOp(const char* buf, float *v)
 }
 
 // Create text input in place of a slider (when CTRL+Clicking on slider)
-static bool SliderFloatAsInputText(const char* label, float* v, ImGuiID id, int decimal_precision)
+static bool SliderFloatAsInputText(const ImRect& aabb, const char* label, float* v, ImGuiID id, int decimal_precision)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -5570,7 +5570,7 @@ static bool SliderFloatAsInputText(const char* label, float* v, ImGuiID id, int 
     // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
     FocusableItemUnregister(window);
 
-    bool value_changed = ImGui::InputText(label, text_buf, IM_ARRAYSIZE(text_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
+    bool value_changed = InputTextEx(label, text_buf, (int)IM_ARRAYSIZE(text_buf), aabb.GetSize() - g.Style.FramePadding*2.0f, ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
     if (g.ScalarAsInputTextId == 0)
     {
         // First frame
@@ -5806,7 +5806,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         }
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
-        return SliderFloatAsInputText(label, v, id, decimal_precision);
+        return SliderFloatAsInputText(frame_bb, label, v, id, decimal_precision);
 
     ItemSize(total_bb, style.FramePadding.y);
 
@@ -6108,7 +6108,7 @@ bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, f
         }
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
-        return SliderFloatAsInputText(label, v, id, decimal_precision);
+        return SliderFloatAsInputText(frame_bb, label, v, id, decimal_precision);
 
     ItemSize(total_bb, style.FramePadding.y);
 
