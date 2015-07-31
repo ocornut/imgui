@@ -597,7 +597,7 @@ static bool             DragIntN(const char* label, int* v, int components, floa
 
 static bool             InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
 static bool             InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data);
-static void             InputTextApplyArithmeticOp(const char* buf, float *v);
+static void             InputTextApplyArithmeticOp(const char* buf, const char* initial_value_buf, float *v);
 static int              InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end);
 static ImVec2           InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL, ImVec2* out_offset = NULL, bool stop_on_new_line = false);
 static bool             InputFloatN(const char* label, float* v, int components, int decimal_precision, ImGuiInputTextFlags extra_flags);
@@ -5508,8 +5508,7 @@ ImGuiID ImGui::GetID(const void* ptr_id)
 }
 
 // User can input math operators (e.g. +100) to edit a numerical values.
-// NB: only call right after InputText because we are using its InitialValue storage
-static void InputTextApplyArithmeticOp(const char* buf, float *v)
+static void InputTextApplyArithmeticOp(const char* buf, const char* initial_value_buf, float *v)
 {
     while (ImCharIsSpace(*buf))
         buf++;
@@ -5532,7 +5531,7 @@ static void InputTextApplyArithmeticOp(const char* buf, float *v)
 
     float ref_v = *v;
     if (op)
-        if (sscanf(GImGui->InputTextState.InitialText.begin(), "%f", &ref_v) < 1)
+        if (sscanf(initial_value_buf, "%f", &ref_v) < 1)
             return;
 
     float op_v = 0.0f;
@@ -5582,9 +5581,7 @@ static bool InputFloatReplaceWidget(const ImRect& aabb, const char* label, float
         g.ScalarAsInputTextId = 0;
     }
     if (value_changed)
-    {
-        InputTextApplyArithmeticOp(text_buf, v);
-    }
+        InputTextApplyArithmeticOp(text_buf, g.InputTextState.InitialText.Data, v);
     return value_changed;
 }
 
@@ -7313,7 +7310,7 @@ bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast,
     const ImGuiInputTextFlags flags = extra_flags | (ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_AutoSelectAll);
     if (ImGui::InputText("", buf, IM_ARRAYSIZE(buf), flags))
     {
-        InputTextApplyArithmeticOp(buf, v);
+        InputTextApplyArithmeticOp(buf, g.InputTextState.InitialText.Data, v);
         value_changed = true;
     }
 
