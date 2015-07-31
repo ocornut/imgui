@@ -9197,6 +9197,7 @@ void ImDrawList::PopTextureID()
     UpdateTextureID();
 }
 
+// NB: this can be called with negative count for removing primitives (as long as the result does not underflow)
 void ImDrawList::PrimReserve(int idx_count, int vtx_count)
 {
     ImDrawCmd& draw_cmd = CmdBuffer.Data[CmdBuffer.Size-1];
@@ -9629,7 +9630,6 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     CmdBuffer.back().ElemCount -= idx_unused;
     _VtxWritePtr -= vtx_unused;
     _IdxWritePtr -= idx_unused;
-    _VtxCurrentIdx = (ImDrawIdx)VtxBuffer.Size;
 }
 
 // This is one of the few function breaking the encapsulation of ImDrawLst, but it is just so useful.
