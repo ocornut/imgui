@@ -5911,8 +5911,9 @@ static bool InputFloatReplaceWidget(const ImRect& aabb, const char* label, float
 }
 
 // Parse display precision back from the display format string
-static inline void ParseFormatPrecision(const char* fmt, int& decimal_precision)
+static inline int ParseFormatPrecision(const char* fmt, int default_precision)
 {
+    int precision = default_precision;
     while ((fmt = strchr(fmt, '%')) != NULL)
     {
         fmt++;
@@ -5921,12 +5922,13 @@ static inline void ParseFormatPrecision(const char* fmt, int& decimal_precision)
             fmt++;
         if (*fmt == '.')
         {
-            decimal_precision = atoi(fmt + 1);
-            if (decimal_precision < 0 || decimal_precision > 10)
-                decimal_precision = 3;
+            precision = atoi(fmt + 1);
+            if (precision < 0 || precision > 10)
+                precision = default_precision;
         }
         break;
     }
+    return precision;
 }
 
 static inline float RoundScalar(float value, int decimal_precision)
@@ -6107,8 +6109,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 
     if (!display_format)
         display_format = "%.3f";
-    int decimal_precision = 3;
-    ParseFormatPrecision(display_format, decimal_precision);
+    int decimal_precision = ParseFormatPrecision(display_format, 3);
 
     // Tabbing or CTRL-clicking on Slider turns it into an input box
     bool start_text_input = false;
@@ -6167,8 +6168,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
 
     if (!display_format)
         display_format = "%.3f";
-    int decimal_precision = 3;
-    ParseFormatPrecision(display_format, decimal_precision);
+    int decimal_precision = ParseFormatPrecision(display_format, 3);
 
     if (hovered && g.IO.MouseClicked[0])
     {
@@ -6410,8 +6410,7 @@ bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, f
 
     if (!display_format)
         display_format = "%.3f";
-    int decimal_precision = 3;
-    ParseFormatPrecision(display_format, decimal_precision);
+    int decimal_precision = ParseFormatPrecision(display_format, 3);
 
     // Tabbing or CTRL-clicking on Drag turns it into an input box
     bool start_text_input = false;
