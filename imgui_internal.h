@@ -3,16 +3,12 @@
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
 
 // Implement maths operators for ImVec2 (disabled by default to not collide with using IM_VEC2_CLASS_EXTRA along with your own math types+operators)
-//   #define IMGUI_ENABLE_MATH_OPERATORS
-// Implement maths functions:
-//   #define IMGUI_ENABLE_MATH_FUNCTIONS
+//   #define IMGUI_DEFINE_MATH_OPERATORS
 
 #pragma once
 
 #include <stdio.h>      // FILE*
-#ifdef IMGUI_DEFINE_MATH_FUNCTIONS
 #include <math.h>       // sqrtf()
-#endif
 
 //-----------------------------------------------------------------------------
 // Forward Declarations
@@ -35,7 +31,7 @@ typedef int ImGuiLayoutType;      // enum ImGuiLayoutType_
 typedef int ImGuiButtonFlags;     // enum ImGuiButtonFlags_
 
 //-------------------------------------------------------------------------
-// STB libraries implementation
+// STB libraries
 //-------------------------------------------------------------------------
 
 namespace ImGuiStb
@@ -113,7 +109,6 @@ static inline ImVec2& operator/=(ImVec2& lhs, const float rhs)                  
 static inline ImVec4 operator-(const ImVec4& lhs, const ImVec4& rhs)            { return ImVec4(lhs.x-rhs.x, lhs.y-rhs.y, lhs.z-rhs.z, lhs.w-lhs.w); }
 #endif
 
-#ifdef IMGUI_DEFINE_MATH_FUNCTIONS
 static inline int    ImMin(int lhs, int rhs)                                    { return lhs < rhs ? lhs : rhs; }
 static inline int    ImMax(int lhs, int rhs)                                    { return lhs >= rhs ? lhs : rhs; }
 static inline float  ImMin(float lhs, float rhs)                                { return lhs < rhs ? lhs : rhs; }
@@ -129,10 +124,9 @@ static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, const ImVec2& t)  
 static inline float  ImLengthSqr(const ImVec2& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y; }
 static inline float  ImLengthSqr(const ImVec4& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y + lhs.z*lhs.z + lhs.w*lhs.w; }
 static inline float  ImInvLength(const ImVec2& lhs, float fail_value)           { float d = lhs.x*lhs.x + lhs.y*lhs.y; if (d > 0.0f) return 1.0f / sqrtf(d); return fail_value; }
-#endif
 
 //-----------------------------------------------------------------------------
-// Declarations
+// Types
 //-----------------------------------------------------------------------------
 
 enum ImGuiButtonFlags_

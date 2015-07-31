@@ -468,7 +468,6 @@
 
 #include "imgui.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
-#define IMGUI_DEFINE_MATH_FUNCTIONS
 #include "imgui_internal.h"
 
 #include <ctype.h>      // toupper, isprint
@@ -5798,8 +5797,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         SetActiveID(id, window);
         FocusWindow(window);
 
-        const bool is_ctrl_down = g.IO.KeyCtrl;
-        if (tab_focus_requested || is_ctrl_down)
+        if (tab_focus_requested || g.IO.KeyCtrl)
         {
             start_text_input = true;
             g.ScalarAsInputTextId = 0;

@@ -14,9 +14,8 @@
 
 #include "imgui.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
-#define IMGUI_DEFINE_MATH_FUNCTIONS
-
 #include "imgui_internal.h"
+
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #include <new>          // new (ptr)
 #if defined(_MSC_VER) || defined(__MINGW32__) 
