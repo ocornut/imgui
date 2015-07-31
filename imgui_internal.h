@@ -212,7 +212,7 @@ struct ImGuiStyleMod
     ImVec2          PreviousValue;
 };
 
-// Data for BeginGroup()/EndGroup()
+// Stacked data for BeginGroup()/EndGroup()
 struct ImGuiGroupData
 {
     ImVec2          BackupCursorPos;
@@ -523,6 +523,7 @@ struct ImGuiDrawContext
     }
 };
 
+// Windows data
 struct ImGuiWindow
 {
     char*                   Name;

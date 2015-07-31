@@ -511,7 +511,7 @@
 // Forward Declarations
 //-------------------------------------------------------------------------
 
-static void             LogText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
+static void             LogRenderedText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
 static const char*      FindTextDisplayEnd(const char* text, const char* text_end = NULL);
 
 static void             RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
@@ -538,7 +538,6 @@ static void             FocusableItemUnregister(ImGuiWindow* window);
 static void             SetActiveID(ImGuiID id, ImGuiWindow* window);
 static void             KeepAliveID(ImGuiID id);
 
-static bool             IsMouseHoveringRect(const ImRect& bb);
 static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
 static inline ImGuiWindow*  GetCurrentWindow();
@@ -2306,7 +2305,7 @@ void ImGui::LogText(const char* fmt, ...)
 
 // Internal version that takes a position to decide on newline placement and pad items according to their depth.
 // We split text into individual lines to add current tree level padding
-static void LogText(const ImVec2& ref_pos, const char* text, const char* text_end)
+static void LogRenderedText(const ImVec2& ref_pos, const char* text, const char* text_end)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -2398,7 +2397,7 @@ static void RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
 
         // Log as text
         if (g.LogEnabled)
-            LogText(pos, text, text_display_end);
+            LogRenderedText(pos, text, text_display_end);
     }
 }
 
@@ -2415,7 +2414,7 @@ static void RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
     {
         window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_end, wrap_width);
         if (g.LogEnabled)
-            LogText(pos, text, text_end);
+            LogRenderedText(pos, text, text_end);
     }
 }
 
@@ -2454,7 +2453,7 @@ static void RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, cons
         window->DrawList->AddText(g.Font, g.FontSize, pos, window->Color(ImGuiCol_Text), text, text_display_end, 0.0f, NULL);
     }
     if (g.LogEnabled)
-        LogText(pos, text, text_display_end);
+        LogRenderedText(pos, text, text_display_end);
 }
 
 // Render a rectangle shaped with optional rounding and borders
@@ -2607,23 +2606,18 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 // Test if mouse cursor is hovering given rectangle
 // NB- Rectangle is clipped by our current clip setting
 // NB- Expand the rectangle to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
-static bool IsMouseHoveringRect(const ImRect& rect)
+bool ImGui::IsMouseHoveringRect(const ImVec2& rect_min, const ImVec2& rect_max)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
     // Clip
-    ImRect rect_clipped = rect;
+    ImRect rect_clipped(rect_min, rect_max);
     rect_clipped.Clip(window->ClipRect);
 
     // Expand for touch input
     const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
     return rect_for_touch.Contains(g.IO.MousePos);
-}
-
-bool ImGui::IsMouseHoveringRect(const ImVec2& rect_min, const ImVec2& rect_max)
-{
-    return IsMouseHoveringRect(ImRect(rect_min, rect_max));
 }
 
 bool ImGui::IsMouseHoveringWindow()
@@ -3022,7 +3016,7 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
 
     bool opened = ImGui::Begin(name, NULL, ImVec2(0.0f, 0.0f), alpha, flags);
     if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
-        GetCurrentWindow()->Flags &= ~ImGuiWindowFlags_ShowBorders;
+        g.CurrentWindow->Flags &= ~ImGuiWindowFlags_ShowBorders;
     if (!opened) // opened can be 'false' when the popup is completely clipped (e.g. zero size display)
         ImGui::EndPopup();
 
@@ -3442,7 +3436,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         // At this point we don't have a clipping rectangle setup yet, so we can use the title bar area for hit detection and drawing
         if (!(flags & ImGuiWindowFlags_NoTitleBar) && !(flags & ImGuiWindowFlags_NoCollapse))
         {
-            if (g.HoveredWindow == window && IsMouseHoveringRect(window->TitleBarRect()) && g.IO.MouseDoubleClicked[0])
+            ImRect title_bar_rect = window->TitleBarRect();
+            if (g.HoveredWindow == window && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max) && g.IO.MouseDoubleClicked[0])
             {
                 window->Collapsed = !window->Collapsed;
                 if (!(flags & ImGuiWindowFlags_NoSavedSettings))
@@ -4861,7 +4856,7 @@ static bool IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs)
     {
         ImGuiWindow* window = GetCurrentWindow();
         if (g.HoveredWindow == window || (flatten_childs && g.HoveredRootWindow == window->RootWindow))
-            if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && IsMouseHoveringRect(bb))
+            if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && ImGui::IsMouseHoveringRect(bb.Min, bb.Max))
                 if (IsWindowContentHoverable(g.HoveredRootWindow))
                     return true;
     }
@@ -5313,13 +5308,13 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
         {
             // NB: '##' is normally used to hide text (as a library-wide feature), so we need to specify the text range to make sure the ## aren't stripped out here.
             const char log_prefix[] = "\n##";
-            LogText(bb.Min + style.FramePadding, log_prefix, log_prefix+3);
+            LogRenderedText(bb.Min + style.FramePadding, log_prefix, log_prefix+3);
         }
         RenderTextClipped(bb.Min + style.FramePadding + ImVec2(g.FontSize + style.FramePadding.x*2,0), bb.Max, label, NULL, &label_size);
         if (g.LogEnabled)
         {
             const char log_suffix[] = "##";
-            LogText(bb.Min + style.FramePadding, log_suffix, log_suffix+2);
+            LogRenderedText(bb.Min + style.FramePadding, log_suffix, log_suffix+2);
         }
     }
     else
@@ -5329,7 +5324,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
             RenderFrame(bb.Min, bb.Max, col, false);
         RenderCollapseTriangle(bb.Min + ImVec2(style.FramePadding.x, g.FontSize*0.15f), opened, 0.70f, false);
         if (g.LogEnabled)
-            LogText(bb.Min, ">");
+            LogRenderedText(bb.Min, ">");
         RenderText(bb.Min + ImVec2(g.FontSize + style.FramePadding.x*2,0), label);
     }
 
@@ -5594,8 +5589,9 @@ static bool InputFloatReplaceWidget(const ImRect& aabb, const char* label, float
 }
 
 // Parse display precision back from the display format string
-static inline void ParseFormatPrecision(const char* fmt, int& decimal_precision)
+inline int ParseFormatPrecision(const char* fmt, int default_precision)
 {
+    int precision = default_precision;
     while ((fmt = strchr(fmt, '%')) != NULL)
     {
         fmt++;
@@ -5604,12 +5600,13 @@ static inline void ParseFormatPrecision(const char* fmt, int& decimal_precision)
             fmt++;
         if (*fmt == '.')
         {
-            decimal_precision = atoi(fmt + 1);
-            if (decimal_precision < 0 || decimal_precision > 10)
-                decimal_precision = 3;
+            precision = atoi(fmt + 1);
+            if (precision < 0 || precision > 10)
+                precision = default_precision;
         }
         break;
     }
+    return precision;
 }
 
 static inline float RoundScalar(float value, int decimal_precision)
@@ -5790,8 +5787,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 
     if (!display_format)
         display_format = "%.3f";
-    int decimal_precision = 3;
-    ParseFormatPrecision(display_format, decimal_precision);
+    int decimal_precision = ParseFormatPrecision(display_format, 3);
 
     // Tabbing or CTRL-clicking on Slider turns it into an input box
     bool start_text_input = false;
@@ -5850,8 +5846,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
 
     if (!display_format)
         display_format = "%.3f";
-    int decimal_precision = 3;
-    ParseFormatPrecision(display_format, decimal_precision);
+    int decimal_precision = ParseFormatPrecision(display_format, 3);
 
     if (hovered && g.IO.MouseClicked[0])
     {
@@ -6092,8 +6087,7 @@ bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, f
 
     if (!display_format)
         display_format = "%.3f";
-    int decimal_precision = 3;
-    ParseFormatPrecision(display_format, decimal_precision);
+    int decimal_precision = ParseFormatPrecision(display_format, 3);
 
     // Tabbing or CTRL-clicking on Drag turns it into an input box
     bool start_text_input = false;
@@ -6453,7 +6447,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
     }
 
     if (g.LogEnabled)
-        LogText(text_bb.GetTL(), *v ? "[x]" : "[ ]");
+        LogRenderedText(text_bb.GetTL(), *v ? "[x]" : "[ ]");
     RenderText(text_bb.GetTL(), label);
 
     return pressed;
@@ -6520,7 +6514,7 @@ bool ImGui::RadioButton(const char* label, bool active)
     }
 
     if (g.LogEnabled)
-        LogText(text_bb.GetTL(), active ? "(x)" : "( )");
+        LogRenderedText(text_bb.GetTL(), active ? "(x)" : "( )");
     RenderText(text_bb.GetTL(), label);
 
     return pressed;
@@ -7267,8 +7261,8 @@ static bool InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     }
 
     // Log as text
-    if (GImGui->LogEnabled)
-        LogText(render_pos, buf, NULL);
+    if (g.LogEnabled)
+        LogRenderedText(render_pos, buf, NULL);
 
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
@@ -8290,7 +8284,7 @@ static bool ItemAdd(const ImRect& bb, const ImGuiID* id)
 
     // This is a sensible default, but widgets are free to override it after calling ItemAdd()
     ImGuiState& g = *GImGui;
-    if (IsMouseHoveringRect(bb))
+    if (ImGui::IsMouseHoveringRect(bb.Min, bb.Max))
     {
         // Matching the behavior of IsHovered() but ignore if ActiveId==window->MoveID (we clicked on the window background)
         // So that clicking on items with no active id such as Text() still returns true with IsItemHovered()
