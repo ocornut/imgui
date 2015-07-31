@@ -5876,7 +5876,7 @@ static void InputTextApplyArithmeticOp(const char* buf, float *v)
 }
 
 // Create text input in place of a slider (when CTRL+Clicking on slider)
-static bool SliderFloatAsInputText(const ImRect& aabb, const char* label, float* v, ImGuiID id, int decimal_precision)
+static bool InputFloatReplaceWidget(const ImRect& aabb, const char* label, float* v, ImGuiID id, int decimal_precision)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -6118,15 +6118,14 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         SetActiveId(id, window);
         FocusWindow(window);
 
-        const bool is_ctrl_down = g.IO.KeyCtrl;
-        if (tab_focus_requested || is_ctrl_down)
+        if (tab_focus_requested || g.IO.KeyCtrl)
         {
             start_text_input = true;
             g.ScalarAsInputTextId = 0;
         }
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
-        return SliderFloatAsInputText(frame_bb, label, v, id, decimal_precision);
+        return InputFloatReplaceWidget(frame_bb, label, v, id, decimal_precision);
 
     ItemSize(total_bb, style.FramePadding.y);
 
@@ -6429,7 +6428,7 @@ bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, f
         }
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
-        return SliderFloatAsInputText(frame_bb, label, v, id, decimal_precision);
+        return InputFloatReplaceWidget(frame_bb, label, v, id, decimal_precision);
 
     ItemSize(total_bb, style.FramePadding.y);
 
