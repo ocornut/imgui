@@ -375,10 +375,12 @@
  - window: background options for child windows, border option (disable rounding)
  - window: resizing from any sides? + mouse cursor directives for app.
  - window: get size/pos helpers given names (see discussion in #249)
+ - window: a collapsed window can be stuck behing the main menu bar?
  - scrolling: add horizontal scroll
 !- scrolling: allow immediately effective change of scroll if we haven't appended items yet
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
  - widgets: clean up widgets internal toward exposing everything.
+ - widgets: add a disabled/read-only mode (#211) 
  - main: considering adding EndFrame()/Init(). some constructs are awkward in the implementation because of the lack of them.
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
@@ -413,7 +415,7 @@
  - tabs
  - separator: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
  - gauge: various forms of gauge/loading bars widgets
- - color: better color editor.
+ - color: add a better color picker (perhaps a popup).
  - plot: plotlines should use the polygon-stroke facilities (currently issues with averaging normals)
  - plot: make it easier for user to draw extra stuff into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
  - plot: "smooth" automatic scale over time, user give an input 0.0(full user scale) 1.0(full derived from value)
@@ -423,6 +425,7 @@
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar).
  - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
+ - slider: tint background based on value (e.g. v_min -> v_max, or use 0.0f either side of the sign)
  - dragfloat: up/down axis
  - text edit: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now.
  - text edit: centered text for slider as input text so it matches typical positioning.
@@ -445,6 +448,7 @@
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
 !- keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing
  - keyboard: full keyboard navigation and focus.
+ - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
  - input: rework IO to be able to pass actual events to fix temporal aliasing issues.
  - input: support track pad style scrolling & slider edit.
  - portability: big-endian test/support (#81)
