@@ -1,4 +1,4 @@
-﻿// ImGui library v1.44 WIP
+// ImGui library v1.44 WIP
 // Main code & documentation
 
 // See ImGui::ShowTestWindow() in imgui_demo.cpp for demo code.
@@ -8471,7 +8471,7 @@ float ImGui::GetColumnOffset(int column_index)
     const float t = window->DC.ColumnsOffsetsT[column_index];
 
     const float min_x = window->DC.ColumnsStartX;
-    const float max_x = window->Size.x - (g.Style.ScrollbarWidth);// - window->WindowPadding().x;
+    const float max_x = window->Size.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarWidth);// - window->WindowPadding().x;
     const float x = min_x + t * (max_x - min_x);
     return (float)(int)x;
 }
@@ -8487,7 +8487,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
 
     const float min_x = window->DC.ColumnsStartX;
-    const float max_x = window->Size.x - (g.Style.ScrollbarWidth);// - window->WindowPadding().x;
+    const float max_x = window->Size.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarWidth);// - window->WindowPadding().x;
     const float t = (offset - min_x) / (max_x - min_x);
     window->DC.StateStorage->SetFloat(column_id, t);
     window->DC.ColumnsOffsetsT[column_index] = t;
@@ -8895,6 +8895,8 @@ void ImGui::ShowMetricsWindow(bool* opened)
     }
     ImGui::End();
 }
+
+//-----------------------------------------------------------------------------
 
 //---- Include imgui_user.inl at the end of imgui.cpp
 //---- So you can include code that extends ImGui using its private data/functions.
