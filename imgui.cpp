@@ -10058,10 +10058,10 @@ bool    ImFontAtlas::Build()
             const ImWchar* in_range = &cfg.GlyphRanges[i * 2];
             stbtt_pack_range& range = tmp.Ranges[i];
             range.font_size = cfg.SizePixels;
-            range.first_unicode_char_in_range = in_range[0];
-            range.num_chars_in_range = (in_range[1] - in_range[0]) + 1;
+            range.first_unicode_codepoint_in_range = in_range[0];
+            range.num_chars = (in_range[1] - in_range[0]) + 1;
             range.chardata_for_range = buf_packedchars + buf_packedchars_n;
-            buf_packedchars_n += range.num_chars_in_range;
+            buf_packedchars_n += range.num_chars;
         }
 
         // Pack
@@ -10132,13 +10132,13 @@ bool    ImFontAtlas::Build()
         for (int i = 0; i < tmp.RangesCount; i++)
         {
             stbtt_pack_range& range = tmp.Ranges[i];
-            for (int char_idx = 0; char_idx < range.num_chars_in_range; char_idx += 1)
+            for (int char_idx = 0; char_idx < range.num_chars; char_idx += 1)
             {
                 const stbtt_packedchar& pc = range.chardata_for_range[char_idx];
                 if (!pc.x0 && !pc.x1 && !pc.y0 && !pc.y1)
                     continue;
 
-                const int codepoint = range.first_unicode_char_in_range + char_idx;
+                const int codepoint = range.first_unicode_codepoint_in_range + char_idx;
                 if (cfg.MergeMode && dst_font->FindGlyph((unsigned short)codepoint))
                     continue;
 
