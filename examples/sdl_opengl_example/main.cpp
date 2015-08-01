@@ -11,7 +11,7 @@ int main(int, char**)
     // Setup SDL
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
-        printf("Error: %s", SDL_GetError());
+        printf("Error: %s\n", SDL_GetError());
         return -1;
 	}
 
