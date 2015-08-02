@@ -10,7 +10,10 @@ int main(int, char**)
 {
     // Setup SDL
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+	{
+        printf("Error: %s\n", SDL_GetError());
         return -1;
+	}
 
     // Setup window
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
