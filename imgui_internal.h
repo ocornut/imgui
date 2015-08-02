@@ -156,6 +156,12 @@ enum ImGuiLayoutType_
     ImGuiLayoutType_Horizontal
 };
 
+enum ImGuiPlotType
+{
+    ImGuiPlotType_Lines,
+    ImGuiPlotType_Histogram
+};
+
 // 2D axis aligned bounding-box
 // NB: we can't rely on ImVec2 math operators and helpers (ImMin,ImMax..) being available here
 struct ImRect
@@ -594,3 +600,58 @@ public:
     ImU32       Color(ImGuiCol idx, float a=1.f) const  { ImVec4 c = GImGui->Style.Colors[idx]; c.w *= GImGui->Style.Alpha * a; return ImGui::ColorConvertFloat4ToU32(c); }
     ImU32       Color(const ImVec4& col) const          { ImVec4 c = col; c.w *= GImGui->Style.Alpha; return ImGui::ColorConvertFloat4ToU32(c); }
 };
+
+//-----------------------------------------------------------------------------
+// Internal API
+// No guarantee of forward compatibility here.
+//-----------------------------------------------------------------------------
+
+namespace ImGui
+{
+    IMGUI_API bool          ItemAdd(const ImRect& bb, const ImGuiID* id);
+    IMGUI_API void          ItemSize(const ImVec2& size, float text_offset_y = 0.0f);
+    IMGUI_API void          ItemSize(const ImRect& bb, float text_offset_y = 0.0f);
+    IMGUI_API bool          IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when_logged);
+    IMGUI_API bool          IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs = false);
+    IMGUI_API bool          FocusableItemRegister(ImGuiWindow* window, bool is_active, bool tab_stop = true);      // Return true if focus is requested
+    IMGUI_API void          FocusableItemUnregister(ImGuiWindow* window);
+    IMGUI_API ImVec2        CalcItemSize(ImVec2 size, float default_x, float default_y);
+    IMGUI_API float         CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x);
+
+    IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
+    IMGUI_API void          KeepAliveID(ImGuiID id);
+
+    IMGUI_API ImGuiWindow*  GetCurrentWindow();
+    IMGUI_API ImGuiWindow*  GetParentWindow();
+    IMGUI_API void          FocusWindow(ImGuiWindow* window);
+
+    IMGUI_API void          RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
+    IMGUI_API void          RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width);
+    IMGUI_API void          RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, ImGuiAlign align = ImGuiAlign_Default, const ImVec2* clip_min = NULL, const ImVec2* clip_max = NULL);
+    IMGUI_API void          RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
+    IMGUI_API void          RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
+    IMGUI_API void          RenderCheckMark(ImVec2 pos, ImU32 col);
+
+    IMGUI_API bool          ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, ImGuiButtonFlags flags = 0);
+    IMGUI_API bool          ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), ImGuiButtonFlags flags = 0);
+
+    IMGUI_API bool          SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, bool horizontal);
+    IMGUI_API bool          SliderFloatN(const char* label, float* v, int components, float v_min, float v_max, const char* display_format, float power);
+    IMGUI_API bool          SliderIntN(const char* label, int* v, int components, int v_min, int v_max, const char* display_format);
+
+    IMGUI_API bool          DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, int decimal_precision, float power);
+    IMGUI_API bool          DragFloatN(const char* label, float* v, int components, float v_speed, float v_min, float v_max, const char* display_format, float power);
+    IMGUI_API bool          DragIntN(const char* label, int* v, int components, float v_speed, int v_min, int v_max, const char* display_format);
+
+    IMGUI_API bool          InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
+    IMGUI_API bool          InputFloatN(const char* label, float* v, int components, int decimal_precision, ImGuiInputTextFlags extra_flags);
+    IMGUI_API bool          InputIntN(const char* label, int* v, int components, ImGuiInputTextFlags extra_flags);
+    IMGUI_API bool          InputFloatReplaceWidget(const ImRect& aabb, const char* label, float* v, ImGuiID id, int decimal_precision);
+
+    IMGUI_API void          PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size);
+
+    IMGUI_API int           ParseFormatPrecision(const char* fmt, int default_value);
+    IMGUI_API float         RoundScalar(float value, int decimal_precision);
+
+} // namespace ImGuiP
+
