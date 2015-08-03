@@ -965,10 +965,9 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     return Fonts.back();
 }
 
+// Default font ttf is compressed with stb_compress then base85 encoded (see extra_fonts/binary_to_compressed_c.cpp for encoder)
 static unsigned int stb_decompress_length(unsigned char *input);
 static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length);
-
-// Default font ttf is compressed with stb_compress then base85 encoded (see extra_fonts/binary_to_compressed_c.cpp for encoder)
 static const char*  GetDefaultCompressedFontDataTTFBase85();
 static unsigned int Decode85Byte(char c)                                    { return c >= '\\' ? c-36 : c-35; }
 static void         Decode85(const unsigned char* src, unsigned int* dst)   { for (; *src; src += 5) *dst++ = Decode85Byte(src[0]) + 85*(Decode85Byte(src[1]) + 85*(Decode85Byte(src[2]) + 85*(Decode85Byte(src[3]) + 85*Decode85Byte(src[4])))); }
@@ -976,22 +975,16 @@ static void         Decode85(const unsigned char* src, unsigned int* dst)   { fo
 // Load embedded ProggyClean.ttf at size 13
 ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 {
-    const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
-    int ttf_compressed_size = (((int)strlen(ttf_compressed_base85) + 4) / 5) * 4;
-    void* ttf_compressed = ImGui::MemAlloc(ttf_compressed_size);
-    Decode85((const unsigned char*)ttf_compressed_base85, (unsigned int*)ttf_compressed);
-
-    ImFontConfig font_cfg;
-    if (font_cfg_template)
-        font_cfg = *font_cfg_template;
-    else
+    ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
+    if (!font_cfg_template)
     {
         font_cfg.OversampleH = font_cfg.OversampleV = 1;
         font_cfg.PixelSnapH = true;
     }
     if (font_cfg.Name[0] == '\0') strcpy(font_cfg.Name, "<default>");
-    ImFont* font = AddFontFromMemoryCompressedTTF(ttf_compressed, ttf_compressed_size, 13.0f, &font_cfg, GetGlyphRangesDefault());
-    ImGui::MemFree(ttf_compressed);
+
+    const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
+    ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, 13.0f, &font_cfg, GetGlyphRangesDefault());
     return font;
 }
 
@@ -1037,6 +1030,16 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* compressed_ttf_d
     IM_ASSERT(font_cfg.FontData == NULL); 
     font_cfg.FontDataOwnedByAtlas = true;
     return AddFontFromMemoryTTF(buf_decompressed_data, (int)buf_decompressed_size, size_pixels, font_cfg_template, glyph_ranges);
+}
+
+ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(const char* compressed_ttf_data_base85, float size_pixels, const ImFontConfig* font_cfg, const ImWchar* glyph_ranges)
+{
+    int compressed_ttf_size = (((int)strlen(compressed_ttf_data_base85) + 4) / 5) * 4;
+    void* compressed_ttf = ImGui::MemAlloc(compressed_ttf_size);
+    Decode85((const unsigned char*)compressed_ttf_data_base85, (unsigned int*)compressed_ttf);
+    ImFont* font = AddFontFromMemoryCompressedTTF(compressed_ttf, compressed_ttf_size, size_pixels, font_cfg, glyph_ranges);
+    ImGui::MemFree(compressed_ttf);
+    return font;
 }
 
 bool    ImFontAtlas::Build()

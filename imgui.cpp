@@ -3610,10 +3610,12 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         else
         {
             ImU32 resize_col = 0;
+            const float resize_corner_size = ImMax(g.FontSize * 1.35f, window_rounding + 1.0f + g.FontSize * 0.2f);
             if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && !(flags & ImGuiWindowFlags_NoResize))
             {
                 // Manual resize
-                const ImRect resize_rect(window->Rect().GetBR()-ImVec2(14,14), window->Rect().GetBR());
+                const ImVec2 br = window->Rect().GetBR();
+                const ImRect resize_rect(br - ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f), br);
                 const ImGuiID resize_id = window->GetID("#RESIZE");
                 bool hovered, held;
                 ButtonBehavior(resize_rect, resize_id, &hovered, &held, true, ImGuiButtonFlags_FlattenChilds);
@@ -3687,12 +3689,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             // (after the input handling so we don't have a frame of latency)
             if (!(flags & ImGuiWindowFlags_NoResize))
             {
-                const float base_size = g.FontSize * 1.35f;
-                const float min_size = window_rounding + 1.0f + g.FontSize * 0.2f;
-                const float corner_size = ImMax(base_size, min_size);
                 const ImVec2 br = window->Rect().GetBR();
-                window->DrawList->PathLineTo(br + ImVec2(-corner_size, 0.0f));
-                window->DrawList->PathLineTo(br + ImVec2(0.0f, -corner_size));
+                window->DrawList->PathLineTo(br + ImVec2(-resize_corner_size, 0.0f));
+                window->DrawList->PathLineTo(br + ImVec2(0.0f, -resize_corner_size));
                 window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding, br.y - window_rounding), window_rounding, 0, 3);
                 window->DrawList->PathFill(resize_col);
             }
