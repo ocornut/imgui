@@ -2,6 +2,7 @@
 // See ImGui::ShowTestWindow() for sample code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
+// Releases change-log at https://github.com/ocornut/imgui/releases
 // Developed by Omar Cornut and ImGui contributors.
 
 /*
@@ -135,6 +136,7 @@
 
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
+ Also read releases logs https://github.com/ocornut/imgui/releases for more details.
  
  - 2015/07/18 (1.44) - fixed angles in ImDrawList::PathArcTo(), PathArcToFast() (introduced in 1.43) being off by an extra PI for no justifiable reason
  - 2015/07/14 (1.43) - add new ImFontAtlas::AddFont() API. For the old AddFont***, moved the 'font_no' parameter of ImFontAtlas::AddFont** functions to the ImFontConfig structure.
@@ -359,7 +361,7 @@
 
  - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will run the block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
- - tip: you can call Begin() multiple times with the same name during the same frame, it will keep appending to the same window.
+ - tip: you can call Begin() multiple times with the same name during the same frame, it will keep appending to the same window. this is also useful to set yourself in the context of a window (to get/set other settings)
  - tip: you can call Render() multiple times (e.g for VR renders).
  - tip: call and read the ShowTestWindow() code for more example of how to use ImGui!
 
@@ -375,7 +377,7 @@
  - window: background options for child windows, border option (disable rounding)
  - window: resizing from any sides? + mouse cursor directives for app.
  - window: get size/pos helpers given names (see discussion in #249)
- - window: a collapsed window can be stuck behing the main menu bar?
+ - window: a collapsed window can be stuck behind the main menu bar?
  - scrolling: add horizontal scroll
 !- scrolling: allow immediately effective change of scroll if we haven't appended items yet
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
