@@ -402,7 +402,6 @@
  - columns: user specify columns size (#125)
  - popup: border options. richer api like BeginChild() perhaps? (#197)
  - combo: sparse combo boxes (via function call?)
- - combo: turn child handling code into pop up helper
  - combo: contents should extends to fit label if combo widget is small
  - combo/listbox: keyboard control. need inputtext like non-active focus + key handling. considering keybord for custom listbox (pr #203)
  - listbox: multiple selection
@@ -5957,16 +5956,16 @@ static bool SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
 
     const bool is_non_linear = fabsf(power - 1.0f) > 0.0001f;
 
-    const float padding = horizontal ? style.FramePadding.x : style.FramePadding.y;
-    const float slider_sz = horizontal ? (frame_bb.GetWidth() - padding * 2.0f) : (frame_bb.GetHeight() - padding * 2.0f);
+    const float grab_padding = 2.0f;
+    const float slider_sz = horizontal ? (frame_bb.GetWidth() - grab_padding * 2.0f) : (frame_bb.GetHeight() - grab_padding * 2.0f);
     float grab_sz;
     if (decimal_precision > 0)
         grab_sz = ImMin(style.GrabMinSize, slider_sz);
     else
         grab_sz = ImMin(ImMax(1.0f * (slider_sz / (v_max-v_min+1.0f)), style.GrabMinSize), slider_sz);  // Integer sliders, if possible have the grab size represent 1 unit
     const float slider_usable_sz = slider_sz - grab_sz;
-    const float slider_usable_pos_min = (horizontal ? frame_bb.Min.x : frame_bb.Min.y) + padding + grab_sz*0.5f;
-    const float slider_usable_pos_max = (horizontal ? frame_bb.Max.x : frame_bb.Max.y) - padding - grab_sz*0.5f;
+    const float slider_usable_pos_min = (horizontal ? frame_bb.Min.x : frame_bb.Min.y) + grab_padding + grab_sz*0.5f;
+    const float slider_usable_pos_max = (horizontal ? frame_bb.Max.x : frame_bb.Max.y) - grab_padding - grab_sz*0.5f;
 
     bool value_changed = false;
 
@@ -6066,9 +6065,9 @@ static bool SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
     ImRect grab_bb;
     if (horizontal)
-        grab_bb = ImRect(ImVec2(grab_pos - grab_sz*0.5f, frame_bb.Min.y + 2.0f), ImVec2(grab_pos + grab_sz*0.5f, frame_bb.Max.y - 2.0f));
+        grab_bb = ImRect(ImVec2(grab_pos - grab_sz*0.5f, frame_bb.Min.y + grab_padding), ImVec2(grab_pos + grab_sz*0.5f, frame_bb.Max.y - grab_padding));
     else
-        grab_bb = ImRect(ImVec2(frame_bb.Min.x + 2.0f, grab_pos - grab_sz*0.5f), ImVec2(frame_bb.Max.x - 2.0f, grab_pos + grab_sz*0.5f));
+        grab_bb = ImRect(ImVec2(frame_bb.Min.x + grab_padding, grab_pos - grab_sz*0.5f), ImVec2(frame_bb.Max.x - grab_padding, grab_pos + grab_sz*0.5f));
     window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, window->Color(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), style.GrabRounding);
 
     return value_changed;
