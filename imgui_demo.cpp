@@ -34,17 +34,7 @@
 #define IM_NEWLINE "\n"
 #endif
 
-//-----------------------------------------------------------------------------
-// HELPERS
-// (We don't use imgui_internal.h here to make the demo code more trivially portable)
-//-----------------------------------------------------------------------------
-
 #define IM_ARRAYSIZE(_ARR)  ((int)(sizeof(_ARR)/sizeof(*_ARR)))
-
-static inline float ImMax(float lhs, float rhs)                                 { return lhs >= rhs ? lhs : rhs; }
-static inline float ImClamp(float v, float mn, float mx)                        { return (v < mn) ? mn : (v > mx) ? mx : v; }
-static int          ImStricmp(const char* str1, const char* str2)               { int d; while ((d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; } return d; }
-static int          ImStrnicmp(const char* str1, const char* str2, int count)   { int d = 0; while (count > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; count--; } return d; }
 
 //-----------------------------------------------------------------------------
 // DEMO CODE
@@ -449,8 +439,8 @@ void ImGui::ShowTestWindow(bool* opened)
             {
                 ImGui::BeginTooltip();
                 float focus_sz = 32.0f;
-                float focus_x = ImClamp(ImGui::GetMousePos().x - tex_screen_pos.x - focus_sz * 0.5f, 0.0f, tex_w - focus_sz);
-                float focus_y = ImClamp(ImGui::GetMousePos().y - tex_screen_pos.y - focus_sz * 0.5f, 0.0f, tex_h - focus_sz);
+                float focus_x = ImGui::GetMousePos().x - tex_screen_pos.x - focus_sz * 0.5f; if (focus_x < 0.0f) focus_x = 0.0f; else if (focus_x > tex_w - focus_sz) focus_x = tex_w - focus_sz;
+                float focus_y = ImGui::GetMousePos().y - tex_screen_pos.y - focus_sz * 0.5f; if (focus_y < 0.0f) focus_y = 0.0f; else if (focus_y > tex_h - focus_sz) focus_y = tex_h - focus_sz;
                 ImGui::Text("Min: (%.2f, %.2f)", focus_x, focus_y);
                 ImGui::Text("Max: (%.2f, %.2f)", focus_x + focus_sz, focus_y + focus_sz);
                 ImVec2 uv0 = ImVec2((focus_x) / tex_w, (focus_y) / tex_h);
@@ -1640,7 +1630,9 @@ static void ShowExampleAppCustomRendering(bool* opened)
     // However you can draw directly and poll mouse/keyboard by yourself. You can manipulate the cursor using GetCursorPos() and SetCursorPos().
     // If you only use the ImDrawList API, you can notify the owner window of its extends by using SetCursorPos(max).
     ImVec2 canvas_pos = ImGui::GetCursorScreenPos();            // ImDrawList API uses screen coordinates!
-    ImVec2 canvas_size = ImVec2(ImMax(50.0f,ImGui::GetWindowContentRegionMax().x-ImGui::GetCursorPos().x), ImMax(50.0f,ImGui::GetWindowContentRegionMax().y-ImGui::GetCursorPos().y));    // Resize canvas what's available
+    ImVec2 canvas_size = ImVec2(ImGui::GetContentRegionMax().x-ImGui::GetCursorPos().x, ImGui::GetContentRegionMax().y-ImGui::GetCursorPos().y);    // Resize canvas what's available
+    if (canvas_size.x < 50.0f) canvas_size.x = 50.0f;
+    if (canvas_size.y < 50.0f) canvas_size.y = 50.0f;
     draw_list->AddRectFilledMultiColor(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(0,0,0), ImColor(255,0,0), ImColor(255,255,0), ImColor(0,255,0));
     draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(255,255,255));
     bool adding_preview = false;
@@ -1795,6 +1787,9 @@ struct ExampleAppConsole
         ImGui::End();
     }
 
+    static int Stricmp(const char* str1, const char* str2)               { int d; while ((d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; } return d; }
+    static int Strnicmp(const char* str1, const char* str2, int count)   { int d = 0; while (count > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; count--; } return d; }
+
     void    ExecCommand(const char* command_line)
     {
         AddLog("# %s\n", command_line);
@@ -1802,7 +1797,7 @@ struct ExampleAppConsole
         // Insert into history. First find match and delete it so it can be pushed to the back. This isn't trying to be smart or optimal.
         HistoryPos = -1;
         for (int i = History.Size-1; i >= 0; i--)
-            if (ImStricmp(History[i], command_line) == 0)
+            if (Stricmp(History[i], command_line) == 0)
             {
                 free(History[i]);
                 History.erase(History.begin() + i);
@@ -1811,17 +1806,17 @@ struct ExampleAppConsole
         History.push_back(strdup(command_line));
 
         // Process command
-        if (ImStricmp(command_line, "CLEAR") == 0)
+        if (Stricmp(command_line, "CLEAR") == 0)
         {
             ClearLog();
         }
-        else if (ImStricmp(command_line, "HELP") == 0)
+        else if (Stricmp(command_line, "HELP") == 0)
         {
             AddLog("Commands:");
             for (int i = 0; i < Commands.Size; i++)
                 AddLog("- %s", Commands[i]);
         }
-        else if (ImStricmp(command_line, "HISTORY") == 0)
+        else if (Stricmp(command_line, "HISTORY") == 0)
         {
             for (int i = History.Size >= 10 ? History.Size - 10 : 0; i < History.Size; i++)
                 AddLog("%3d: %s\n", i, History[i]);
@@ -1861,7 +1856,7 @@ struct ExampleAppConsole
                 // Build a list of candidates
                 ImVector<const char*> candidates;
                 for (int i = 0; i < Commands.Size; i++)
-                    if (ImStrnicmp(Commands[i], word_start, (int)(word_end-word_start)) == 0)
+                    if (Strnicmp(Commands[i], word_start, (int)(word_end-word_start)) == 0)
                         candidates.push_back(Commands[i]);
 
                 if (candidates.Size == 0)
