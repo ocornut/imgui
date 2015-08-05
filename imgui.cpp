@@ -389,7 +389,6 @@
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
  - input text multi-line: way to dynamically grow the buffer without forcing the user to initially allocate for worse case (follow up on #200)
  - input text multi-line: line numbers? status bar? (follow up on #200)
-!- input number: large int not reliably supported because of int<>float conversions.
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
@@ -5829,9 +5828,57 @@ ImGuiID ImGui::GetID(const void* ptr_id)
     return GImGui->CurrentWindow->GetID(ptr_id);
 }
 
+enum ImGuiDataType
+{
+    ImGuiDataType_Int,
+    ImGuiDataType_Float
+};
+
+enum ImGuiDataTypeOp
+{
+    ImGuiDataTypeOp_Add,
+    ImGuiDataTypeOp_Sub
+};
+
+static inline void DataTypeFormat(ImGuiDataType data_type, void* data_ptr, int decimal_precision, char* buf, int buf_size)
+{
+    if (data_type == ImGuiDataType_Int)
+    {
+        if (decimal_precision < 0)
+            ImFormatString(buf, buf_size, "%d", *(int*)data_ptr);
+        else
+            ImFormatString(buf, buf_size, "%.*d", decimal_precision, *(int*)data_ptr);
+    }
+    else if (data_type == ImGuiDataType_Float)
+    {
+        if (decimal_precision < 0)
+            ImFormatString(buf, buf_size, "%f", *(float*)data_ptr);     // Ideally we'd have a minimum decimal precision of 1 to visually denote that it is a float, while hiding non-significant digits?
+        else
+            ImFormatString(buf, buf_size, "%.*f", decimal_precision, *(float*)data_ptr);
+    }
+}
+
+static void DataTypeApplyOp(ImGuiDataType data_type, ImGuiDataTypeOp op, void* value1, const void* value2)// Store into value1
+{
+    if (data_type == ImGuiDataType_Int)
+    {
+        if (op == ImGuiDataTypeOp_Add)
+            *(int*)value1 = *(int*)value1 + *(const int*)value2; 
+        else if (op == ImGuiDataTypeOp_Sub)
+            *(int*)value1 = *(int*)value1 - *(const int*)value2; 
+    }
+    else if (data_type == ImGuiDataType_Float)
+    {
+        if (op == ImGuiDataTypeOp_Add)
+            *(float*)value1 = *(float*)value1 + *(const float*)value2; 
+        else if (op == ImGuiDataTypeOp_Sub)
+            *(float*)value1 = *(float*)value1 - *(const float*)value2; 
+    }
+}
+
 // User can input math operators (e.g. +100) to edit a numerical values.
 // NB: only call right after InputText because we are using its InitialValue storage
-static void InputTextApplyArithmeticOp(const char* buf, float *v)
+static void DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr)
 {
     while (ImCharIsSpace(*buf))
         buf++;
@@ -5852,27 +5899,38 @@ static void InputTextApplyArithmeticOp(const char* buf, float *v)
     if (!buf[0])
         return;
 
-    float ref_v = *v;
-    if (op)
-        if (sscanf(GImGui->InputTextState.InitialText.begin(), "%f", &ref_v) < 1)
-            return;
-
-    float op_v = 0.0f;
-    if (sscanf(buf, "%f", &op_v) < 1)
-        return;
-
-    if (op == '+')
-        *v = ref_v + op_v;  // add (uses "+-" to substract)
-    else if (op == '*')
-        *v = ref_v * op_v;  // multiply
-    else if (op == '/')
+    if (data_type == ImGuiDataType_Int)
     {
-        if (op_v == 0.0f)   // divide
+        int* v = (int*)data_ptr;
+        int ref_v = *v;
+        if (op && sscanf(initial_value_buf, "%d", &ref_v) < 1)
+          	return;
+
+        // Store operand in a double so we can store a big integer (e.g. 2000000003) reliably as well as fractional value for multipliers (*1.1)
+        double op_v = 0.0f;
+        if (sscanf(buf, "%lf", &op_v) < 1)
             return;
-        *v = ref_v / op_v;
+
+        if (op == '+')      { *v = (int)(ref_v + op_v); }                   // Add (use "+-" to subtract)
+        else if (op == '*') { *v = (int)(ref_v * op_v); }                   // Multiply
+        else if (op == '/') { if (op_v != 0.0f) *v = (int)(ref_v / op_v); } // Divide
+        else                { *v = (int)op_v; }                             // Assign constant
     }
-    else
-        *v = op_v;          // Constant
+    else if (data_type == ImGuiDataType_Float)
+    {
+        float* v = (float*)data_ptr;
+        float ref_v = *v;
+        if (op && sscanf(initial_value_buf, "%f", &ref_v) < 1)
+            return;
+        float op_v = 0.0f;
+        if (sscanf(buf, "%f", &op_v) < 1)
+            return;
+
+        if (op == '+')      { *v = ref_v + op_v; }                      // Add (use "+-" to subtract)
+        else if (op == '*') { *v = ref_v * op_v; }                      // Multiply
+        else if (op == '/') { if (op_v != 0.0f) *v = ref_v / op_v; }    // Divide
+        else                { *v = op_v; }                              // Assign constant
+    }
 }
 
 // Create text input in place of a slider (when CTRL+Clicking on slider)
@@ -5904,9 +5962,7 @@ static bool InputFloatReplaceWidget(const ImRect& aabb, const char* label, float
         g.ScalarAsInputTextId = 0;
     }
     if (value_changed)
-    {
-        InputTextApplyArithmeticOp(text_buf, v);
-    }
+        DataTypeApplyOpFromText(text_buf, GImGui->InputTextState.InitialText.begin(), ImGuiDataType_Float, v);
     return value_changed;
 }
 
@@ -7608,7 +7664,7 @@ bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, co
     return ret;
 }
 
-bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags extra_flags)
+static bool InputScalarEx(const char* label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, int decimal_precision, ImGuiInputTextFlags extra_flags)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -7617,42 +7673,40 @@ bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast,
 
     const ImGuiStyle& style = g.Style;
     const float w = ImGui::CalcItemWidth();
-    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
 
     ImGui::BeginGroup();
     ImGui::PushID(label);
     const ImVec2 button_sz = ImVec2(g.FontSize, g.FontSize) + style.FramePadding * 2;
-    if (step > 0.0f)
+    if (step_ptr)
         ImGui::PushItemWidth(ImMax(1.0f, w - (button_sz.x + style.ItemInnerSpacing.x)*2));
 
     char buf[64];
-    if (decimal_precision < 0)
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "%f", *v);       // Ideally we'd have a minimum decimal precision of 1 to visually denote that it is a float, while hiding non-significant digits?
-    else
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "%.*f", decimal_precision, *v);
+    DataTypeFormat(data_type, data_ptr, decimal_precision, buf, IM_ARRAYSIZE(buf));
+
     bool value_changed = false;
     const ImGuiInputTextFlags flags = extra_flags | (ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_AutoSelectAll);
     if (ImGui::InputText("", buf, IM_ARRAYSIZE(buf), flags))
     {
-        InputTextApplyArithmeticOp(buf, v);
+        DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr);
         value_changed = true;
     }
 
     // Step buttons
-    if (step > 0.0f)
+    if (step_ptr)
     {
         ImGui::PopItemWidth();
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
         if (ButtonEx("-", button_sz, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
         {
-            *v -= g.IO.KeyCtrl && step_fast > 0.0f ? step_fast : step;
+            DataTypeApplyOp(data_type, ImGuiDataTypeOp_Sub, data_ptr, g.IO.KeyCtrl && step_fast_ptr ? step_fast_ptr : step_ptr);
             value_changed = true;
         }
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
         if (ButtonEx("+", button_sz, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
         {
-            *v += g.IO.KeyCtrl && step_fast > 0.0f ? step_fast : step;
+            DataTypeApplyOp(data_type, ImGuiDataTypeOp_Add, data_ptr, g.IO.KeyCtrl && step_fast_ptr ? step_fast_ptr : step_ptr);
             value_changed = true;
         }
     }
@@ -7669,13 +7723,14 @@ bool ImGui::InputFloat(const char* label, float *v, float step, float step_fast,
     return value_changed;
 }
 
-bool ImGui::InputInt(const char* label, int *v, int step, int step_fast, ImGuiInputTextFlags extra_flags)
+bool ImGui::InputFloat(const char* label, float* v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags extra_flags)
 {
-    float f = (float)*v;
-    const bool value_changed = ImGui::InputFloat(label, &f, (float)step, (float)step_fast, 0, extra_flags);
-    if (value_changed)
-        *v = (int)f;
-    return value_changed;
+    return InputScalarEx(label, ImGuiDataType_Float, (void*)v, (void*)(step>0.0f ? &step : NULL), (void*)(step_fast>0.0f ? &step_fast : NULL), decimal_precision, extra_flags);
+}
+
+bool ImGui::InputInt(const char* label, int* v, int step, int step_fast, ImGuiInputTextFlags extra_flags)
+{
+    return InputScalarEx(label, ImGuiDataType_Int, (void*)v, (void*)(step>0.0f ? &step : NULL), (void*)(step_fast>0.0f ? &step_fast : NULL), 0, extra_flags);
 }
 
 static bool InputFloatN(const char* label, float* v, int components, int decimal_precision, ImGuiInputTextFlags extra_flags)
