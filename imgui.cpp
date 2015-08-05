@@ -5990,10 +5990,10 @@ static inline int ParseFormatPrecision(const char* fmt, int default_precision)
 static inline float RoundScalar(float value, int decimal_precision)
 {
     // Round past decimal precision
-    //    0: 1, 1: 0.1, 2: 0.01, etc.
     // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
     // FIXME: Investigate better rounding methods
-    float min_step = 1.0f / powf(10.0f, (float)decimal_precision);
+    static const float min_steps[10] = { 1.0f, 0.1f, 0.01f, 0.001f, 0.0001f, 0.00001f, 0.000001f, 0.0000001f, 0.00000001f, 0.000000001f }; 
+    float min_step = (decimal_precision >= 0 && decimal_precision < 10) ? min_steps[decimal_precision] : (1.0f / powf(10.0f, (float)decimal_precision));
     bool negative = value < 0.0f;
     value = fabsf(value);
     float remainder = fmodf(value, min_step);
