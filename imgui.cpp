@@ -436,7 +436,6 @@
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file
  - style: store rounded corners in texture to use 1 quad per corner (filled and wireframe). so rounding have minor cost.
- - style: checkbox: padding for "active" color should be a multiplier of the 
  - style: colorbox not always square?
  - text: simple markup language for color change?
  - log: LogButtons() options for specifying depth and/or hiding depth slider
@@ -6764,7 +6763,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
     if (*v)
     {
         const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
-        const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
+        const float pad = ImMax(1.0f, (float)(int)(check_sz / 6.0f)); 
         window->DrawList->AddRectFilled(check_bb.Min+ImVec2(pad,pad), check_bb.Max-ImVec2(pad,pad), window->Color(ImGuiCol_CheckMark), style.FrameRounding);
     }
 
@@ -6825,7 +6824,7 @@ bool ImGui::RadioButton(const char* label, bool active)
     if (active)
     {
         const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
-        const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
+        const float pad = ImMax(1.0f, (float)(int)(check_sz / 6.0f)); 
         window->DrawList->AddCircleFilled(center, radius-pad, window->Color(ImGuiCol_CheckMark), 16);
     }
 
