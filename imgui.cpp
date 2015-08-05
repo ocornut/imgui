@@ -4,6 +4,7 @@
 // See ImGui::ShowTestWindow() in imgui_demo.cpp for demo code.
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
+// Releases change-log at https://github.com/ocornut/imgui/releases
 // Developed by Omar Cornut and ImGui contributors.
 
 /*
@@ -135,6 +136,7 @@
 
  Occasionally introducing changes that are breaking the API. The breakage are generally minor and easy to fix.
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
+ Also read releases logs https://github.com/ocornut/imgui/releases for more details.
  
  - 2015/08/05 (1.44) - split imgui.cpp into extra files: imgui_demo.cpp imgui_draw.cpp imgui_internal.h that you need to add to your project.
  - 2015/07/18 (1.44) - fixed angles in ImDrawList::PathArcTo(), PathArcToFast() (introduced in 1.43) being off by an extra PI for no justifiable reason
@@ -363,7 +365,7 @@
 
  - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will run the block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
- - tip: you can call Begin() multiple times with the same name during the same frame, it will keep appending to the same window.
+ - tip: you can call Begin() multiple times with the same name during the same frame, it will keep appending to the same window. this is also useful to set yourself in the context of a window (to get/set other settings)
  - tip: you can call Render() multiple times (e.g for VR renders).
  - tip: call and read the ShowTestWindow() code for more example of how to use ImGui!
 
@@ -379,7 +381,7 @@
  - window: background options for child windows, border option (disable rounding)
  - window: resizing from any sides? + mouse cursor directives for app.
  - window: get size/pos helpers given names (see discussion in #249)
- - window: a collapsed window can be stuck behing the main menu bar?
+ - window: a collapsed window can be stuck behind the main menu bar?
  - scrolling: add horizontal scroll
 !- scrolling: allow immediately effective change of scroll if we haven't appended items yet
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
@@ -396,6 +398,8 @@
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
  - input number: non-decimal input.
+ - input number: display and input as hexadecimal
+ - input number: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
  - text: proper alignment options
  - layout: horizontal layout helper (#97)
  - layout: more generic alignment state (left/right/centered) for single items?
@@ -406,7 +410,6 @@
  - columns: user specify columns size (#125)
  - popup: border options. richer api like BeginChild() perhaps? (#197)
  - combo: sparse combo boxes (via function call?)
- - combo: turn child handling code into pop up helper
  - combo: contents should extends to fit label if combo widget is small
  - combo/listbox: keyboard control. need inputtext like non-active focus + key handling. considering keybord for custom listbox (pr #203)
  - listbox: multiple selection
@@ -425,7 +428,6 @@
  - plot: "smooth" automatic scale over time, user give an input 0.0(full user scale) 1.0(full derived from value)
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms
- - inputfloat: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar).
  - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
@@ -440,7 +442,6 @@
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file
  - style: store rounded corners in texture to use 1 quad per corner (filled and wireframe). so rounding have minor cost.
- - style: checkbox: padding for "active" color should be a multiplier of the 
  - style: colorbox not always square?
  - text: simple markup language for color change?
  - log: LogButtons() options for specifying depth and/or hiding depth slider
@@ -5600,18 +5601,16 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
 
     const bool is_non_linear = fabsf(power - 1.0f) > 0.0001f;
 
-    const float padding = horizontal ? style.FramePadding.x : style.FramePadding.y;
-    const float slider_sz = horizontal ? (frame_bb.GetWidth() - padding * 2.0f) : (frame_bb.GetHeight() - padding * 2.0f);
+    const float grab_padding = 2.0f;
+    const float slider_sz = horizontal ? (frame_bb.GetWidth() - grab_padding * 2.0f) : (frame_bb.GetHeight() - grab_padding * 2.0f);
     float grab_sz;
     if (decimal_precision > 0)
         grab_sz = ImMin(style.GrabMinSize, slider_sz);
     else
         grab_sz = ImMin(ImMax(1.0f * (slider_sz / (v_max-v_min+1.0f)), style.GrabMinSize), slider_sz);  // Integer sliders, if possible have the grab size represent 1 unit
     const float slider_usable_sz = slider_sz - grab_sz;
-    const float slider_usable_pos_min = (horizontal ? frame_bb.Min.x : frame_bb.Min.y) + padding + grab_sz*0.5f;
-    const float slider_usable_pos_max = (horizontal ? frame_bb.Max.x : frame_bb.Max.y) - padding - grab_sz*0.5f;
-
-    bool value_changed = false;
+    const float slider_usable_pos_min = (horizontal ? frame_bb.Min.x : frame_bb.Min.y) + grab_padding + grab_sz*0.5f;
+    const float slider_usable_pos_max = (horizontal ? frame_bb.Max.x : frame_bb.Max.y) - grab_padding - grab_sz*0.5f;
 
     // For logarithmic sliders that cross over sign boundary we want the exponential increase to be symmetric around 0.0f
     float linear_zero_pos = 0.0f;   // 0.0->1.0f
@@ -5629,6 +5628,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     }
 
     // Process clicking on the slider
+    bool value_changed = false;
     if (g.ActiveId == id)
     {
         if (g.IO.MouseDown[0])
@@ -5709,9 +5709,9 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
     ImRect grab_bb;
     if (horizontal)
-        grab_bb = ImRect(ImVec2(grab_pos - grab_sz*0.5f, frame_bb.Min.y + 2.0f), ImVec2(grab_pos + grab_sz*0.5f, frame_bb.Max.y - 2.0f));
+        grab_bb = ImRect(ImVec2(grab_pos - grab_sz*0.5f, frame_bb.Min.y + grab_padding), ImVec2(grab_pos + grab_sz*0.5f, frame_bb.Max.y - grab_padding));
     else
-        grab_bb = ImRect(ImVec2(frame_bb.Min.x + 2.0f, grab_pos - grab_sz*0.5f), ImVec2(frame_bb.Max.x - 2.0f, grab_pos + grab_sz*0.5f));
+        grab_bb = ImRect(ImVec2(frame_bb.Min.x + grab_padding, grab_pos - grab_sz*0.5f), ImVec2(frame_bb.Max.x - grab_padding, grab_pos + grab_sz*0.5f));
     window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, window->Color(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), style.GrabRounding);
 
     return value_changed;
@@ -6021,7 +6021,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     return value_changed;
 }
 
-bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, float v_max, const char* display_format, float power)
+bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, float v_max, const char* display_format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6399,7 +6399,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
     if (*v)
     {
         const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
-        const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
+        const float pad = ImMax(1.0f, (float)(int)(check_sz / 6.0f)); 
         window->DrawList->AddRectFilled(check_bb.Min+ImVec2(pad,pad), check_bb.Max-ImVec2(pad,pad), window->Color(ImGuiCol_CheckMark), style.FrameRounding);
     }
 
@@ -6460,7 +6460,7 @@ bool ImGui::RadioButton(const char* label, bool active)
     if (active)
     {
         const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
-        const float pad = check_sz < 8.0f ? 1.0f : check_sz < 13.0f ? 2.0f : 3.0f;
+        const float pad = ImMax(1.0f, (float)(int)(check_sz / 6.0f)); 
         window->DrawList->AddCircleFilled(center, radius-pad, window->Color(ImGuiCol_CheckMark), 16);
     }
 
