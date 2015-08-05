@@ -640,7 +640,7 @@ struct ImGuiStyle
     IMGUI_API ImGuiStyle();
 };
 
-// This is where your app communicate with ImGui. Call ImGui::GetIO() to access.
+// This is where your app communicate with ImGui. Access via ImGui::GetIO().
 // Read 'Programmer guide' section in .cpp file for general usage.
 struct ImGuiIO
 {
@@ -695,7 +695,7 @@ struct ImGuiIO
     //------------------------------------------------------------------
 
     ImVec2      MousePos;                   // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
-    bool        MouseDown[5];               // Mouse buttons. ImGui itself only uses button 0 (left button). Others buttons allows to track if mouse is being used by your application + available to user as a convenience via IsMouse** API.
+    bool        MouseDown[5];               // Mouse buttons: left, right, middle + extras. ImGui itself mostly only uses left button (BeginPopupContext** are using right button). Others buttons allows us to track if the mouse is being used by your application + available to user as a convenience via IsMouse** API.
     float       MouseWheel;                 // Mouse wheel: 1 unit scrolls about 5 lines text. 
     bool        MouseDrawCursor;            // Request ImGui to draw a mouse cursor for you (if you are on a platform without a mouse cursor).
     bool        KeyCtrl;                    // Keyboard modifier pressed: Control
@@ -716,8 +716,8 @@ struct ImGuiIO
     bool        WantCaptureKeyboard;        // Widget is active (= ImGui will use your keyboard input)
     float       Framerate;                  // Framerate estimation, in frame per second. Rolling average estimation based on IO.DeltaTime over 120 frames
     int         MetricsAllocs;              // Number of active memory allocations
-    int         MetricsRenderVertices;      // Vertices processed during last call to Render()
-    int         MetricsRenderIndices;       // 
+    int         MetricsRenderVertices;      // Vertices output during last call to Render()
+    int         MetricsRenderIndices;       // Indices output during last call to Render() = number of triangles * 3
     int         MetricsActiveWindows;       // Number of visible windows (exclude child windows)
 
     //------------------------------------------------------------------
@@ -932,7 +932,7 @@ struct ImGuiTextEditCallbackData
 };
 
 // ImColor() is just a helper that implicity converts to either ImU32 (packed 4x1 byte) or ImVec4 (4x1 float)
-// None of the ImGui API are using ImColor directly but you can use it as a convenience to pass colors in either formats.
+// None of the ImGui API are using ImColor directly but you can use it as a convenience to pass colors in either ImU32 or ImVec4 formats.
 struct ImColor
 {
     ImVec4              Value;
@@ -955,8 +955,8 @@ struct ImColor
 //    clipper.End();
 struct ImGuiListClipper
 {
-    float ItemsHeight;
-    int ItemsCount, DisplayStart, DisplayEnd;
+    float   ItemsHeight;
+    int     ItemsCount, DisplayStart, DisplayEnd;
 
     ImGuiListClipper()                         { ItemsHeight = 0.0f; ItemsCount = DisplayStart = DisplayEnd = -1; }
     ImGuiListClipper(int count, float height)  { ItemsCount = -1; Begin(count, height); }
