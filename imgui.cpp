@@ -7735,7 +7735,7 @@ static bool InputScalarEx(const char* label, ImGuiDataType data_type, void* data
 bool ImGui::InputFloat(const char* label, float* v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags extra_flags)
 {
     char display_format[16];
-    if (decimal_precision)
+    if (decimal_precision < 0)
         strcpy(display_format, "%f");      // Ideally we'd have a minimum decimal precision of 1 to visually denote that this is a float, while hiding non-significant digits? %f doesn't have a minimum of 1
     else
         ImFormatString(display_format, 16, "%%%df", decimal_precision);
