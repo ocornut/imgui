@@ -5840,6 +5840,14 @@ enum ImGuiDataTypeOp
     ImGuiDataTypeOp_Sub
 };
 
+static inline void DataTypeFormat(ImGuiDataType data_type, void* data_ptr, const char* display_format, char* buf, int buf_size)
+{
+    if (data_type == ImGuiDataType_Int)
+        ImFormatString(buf, buf_size, display_format, *(int*)data_ptr);
+    else if (data_type == ImGuiDataType_Float)
+        ImFormatString(buf, buf_size, display_format, *(float*)data_ptr);
+}
+
 static inline void DataTypeFormat(ImGuiDataType data_type, void* data_ptr, int decimal_precision, char* buf, int buf_size)
 {
     if (data_type == ImGuiDataType_Int)
@@ -5878,7 +5886,7 @@ static void DataTypeApplyOp(ImGuiDataType data_type, ImGuiDataTypeOp op, void* v
 
 // User can input math operators (e.g. +100) to edit a numerical values.
 // NB: only call right after InputText because we are using its InitialValue storage
-static void DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr)
+static void DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format)
 {
     while (ImCharIsSpace(*buf))
         buf++;
@@ -5901,29 +5909,30 @@ static void DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
 
     if (data_type == ImGuiDataType_Int)
     {
+        if (!scalar_format) 
+            scalar_format = "%d";
         int* v = (int*)data_ptr;
         int ref_v = *v;
-        if (op && sscanf(initial_value_buf, "%d", &ref_v) < 1)
-          	return;
-
-        // Store operand in a double so we can store a big integer (e.g. 2000000003) reliably as well as fractional value for multipliers (*1.1)
-        double op_v = 0.0f;
-        if (sscanf(buf, "%lf", &op_v) < 1)
+        if (op && sscanf(initial_value_buf, scalar_format, &ref_v) < 1)
             return;
 
-        if (op == '+')      { *v = (int)(ref_v + op_v); }                   // Add (use "+-" to subtract)
-        else if (op == '*') { *v = (int)(ref_v * op_v); }                   // Multiply
-        else if (op == '/') { if (op_v != 0.0f) *v = (int)(ref_v / op_v); } // Divide
-        else                { *v = (int)op_v; }                             // Assign constant
+        // Store operand in a float so we can use fractional value for multipliers (*1.1), but constant always parsed as integer so we can fit big integers (e.g. 2000000003) past float precision
+        float op_v = 0.0f;
+        if (op == '+')      { if (sscanf(buf, "%f", &op_v) == 1) *v = (int)(ref_v + op_v); }                // Add (use "+-" to subtract)
+        else if (op == '*') { if (sscanf(buf, "%f", &op_v) == 1) *v = (int)(ref_v * op_v); }                // Multiply
+        else if (op == '/') { if (sscanf(buf, "%f", &op_v) == 1 && op_v != 0.0f) *v = (int)(ref_v / op_v); }// Divide
+        else                { if (sscanf(buf, scalar_format, &ref_v) == 1) *v = ref_v; }                    // Assign constant
     }
     else if (data_type == ImGuiDataType_Float)
     {
+        if (!scalar_format) 
+            scalar_format = "%f";
         float* v = (float*)data_ptr;
         float ref_v = *v;
-        if (op && sscanf(initial_value_buf, "%f", &ref_v) < 1)
+        if (op && sscanf(initial_value_buf, scalar_format, &ref_v) < 1)
             return;
         float op_v = 0.0f;
-        if (sscanf(buf, "%f", &op_v) < 1)
+        if (sscanf(buf, scalar_format, &op_v) < 1)
             return;
 
         if (op == '+')      { *v = ref_v + op_v; }                      // Add (use "+-" to subtract)
@@ -5934,21 +5943,19 @@ static void DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
 }
 
 // Create text input in place of a slider (when CTRL+Clicking on slider)
-static bool InputFloatReplaceWidget(const ImRect& aabb, const char* label, float* v, ImGuiID id, int decimal_precision)
+static bool InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label, ImGuiDataType data_type, void* data_ptr, ImGuiID id, int decimal_precision)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    char text_buf[64];
-    ImFormatString(text_buf, IM_ARRAYSIZE(text_buf), "%.*f", decimal_precision, *v);
-
+    // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
     SetActiveId(g.ScalarAsInputTextId, window);
     g.HoveredId = 0;
-
-    // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
     window->FocusItemUnregister();
 
-    bool value_changed = InputTextEx(label, text_buf, (int)IM_ARRAYSIZE(text_buf), aabb.GetSize() - g.Style.FramePadding*2.0f, ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
+    char buf[32];
+    DataTypeFormat(data_type, data_ptr, decimal_precision, buf, IM_ARRAYSIZE(buf));
+    bool value_changed = InputTextEx(label, buf, IM_ARRAYSIZE(buf), aabb.GetSize() - g.Style.FramePadding*2.0f, ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
     if (g.ScalarAsInputTextId == 0)
     {
         // First frame
@@ -5962,7 +5969,7 @@ static bool InputFloatReplaceWidget(const ImRect& aabb, const char* label, float
         g.ScalarAsInputTextId = 0;
     }
     if (value_changed)
-        DataTypeApplyOpFromText(text_buf, GImGui->InputTextState.InitialText.begin(), ImGuiDataType_Float, v);
+        DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr, NULL);
     return value_changed;
 }
 
@@ -6181,7 +6188,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         }
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
-        return InputFloatReplaceWidget(frame_bb, label, v, id, decimal_precision);
+        return InputScalarAsWidgetReplacement(frame_bb, label, ImGuiDataType_Float, v, id, decimal_precision);
 
     ItemSize(total_bb, style.FramePadding.y);
 
@@ -6481,11 +6488,10 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
         }
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
-        return InputFloatReplaceWidget(frame_bb, label, v, id, decimal_precision);
-
-    ItemSize(total_bb, style.FramePadding.y);
+        return InputScalarAsWidgetReplacement(frame_bb, label, ImGuiDataType_Float, v, id, decimal_precision);
 
     // Actual drag behavior
+    ItemSize(total_bb, style.FramePadding.y);
     const bool value_changed = DragBehavior(frame_bb, id, v, v_speed, v_min, v_max, decimal_precision, power);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
@@ -7664,7 +7670,8 @@ bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, co
     return ret;
 }
 
-static bool InputScalarEx(const char* label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, int decimal_precision, ImGuiInputTextFlags extra_flags)
+// NB: scalar_format here must be a simple "%xx" format string with no prefix/suffix (unlike the Drag/Slider functions "display_format" argument)
+static bool InputScalarEx(const char* label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, const char* scalar_format, ImGuiInputTextFlags extra_flags)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -7683,13 +7690,15 @@ static bool InputScalarEx(const char* label, ImGuiDataType data_type, void* data
         ImGui::PushItemWidth(ImMax(1.0f, w - (button_sz.x + style.ItemInnerSpacing.x)*2));
 
     char buf[64];
-    DataTypeFormat(data_type, data_ptr, decimal_precision, buf, IM_ARRAYSIZE(buf));
+    DataTypeFormat(data_type, data_ptr, scalar_format, buf, IM_ARRAYSIZE(buf));
 
     bool value_changed = false;
-    const ImGuiInputTextFlags flags = extra_flags | (ImGuiInputTextFlags_CharsDecimal|ImGuiInputTextFlags_AutoSelectAll);
-    if (ImGui::InputText("", buf, IM_ARRAYSIZE(buf), flags))
+    if (!(extra_flags & ImGuiInputTextFlags_CharsHexadecimal))
+        extra_flags |= ImGuiInputTextFlags_CharsDecimal;
+    extra_flags |= ImGuiInputTextFlags_AutoSelectAll;
+    if (ImGui::InputText("", buf, IM_ARRAYSIZE(buf), extra_flags))
     {
-        DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr);
+        DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr, scalar_format);
         value_changed = true;
     }
 
@@ -7725,12 +7734,18 @@ static bool InputScalarEx(const char* label, ImGuiDataType data_type, void* data
 
 bool ImGui::InputFloat(const char* label, float* v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags extra_flags)
 {
-    return InputScalarEx(label, ImGuiDataType_Float, (void*)v, (void*)(step>0.0f ? &step : NULL), (void*)(step_fast>0.0f ? &step_fast : NULL), decimal_precision, extra_flags);
+    char display_format[16];
+    if (decimal_precision)
+        strcpy(display_format, "%f");      // Ideally we'd have a minimum decimal precision of 1 to visually denote that this is a float, while hiding non-significant digits? %f doesn't have a minimum of 1
+    else
+        ImFormatString(display_format, 16, "%%%df", decimal_precision);
+    return InputScalarEx(label, ImGuiDataType_Float, (void*)v, (void*)(step>0.0f ? &step : NULL), (void*)(step_fast>0.0f ? &step_fast : NULL), display_format, extra_flags);
 }
 
 bool ImGui::InputInt(const char* label, int* v, int step, int step_fast, ImGuiInputTextFlags extra_flags)
 {
-    return InputScalarEx(label, ImGuiDataType_Int, (void*)v, (void*)(step>0.0f ? &step : NULL), (void*)(step_fast>0.0f ? &step_fast : NULL), 0, extra_flags);
+    const char* scalar_format = (extra_flags & ImGuiInputTextFlags_CharsHexadecimal) ? "%08X" : "%d";
+    return InputScalarEx(label, ImGuiDataType_Int, (void*)v, (void*)(step>0.0f ? &step : NULL), (void*)(step_fast>0.0f ? &step_fast : NULL), scalar_format, extra_flags);
 }
 
 static bool InputFloatN(const char* label, float* v, int components, int decimal_precision, ImGuiInputTextFlags extra_flags)
