@@ -81,108 +81,6 @@ void ImGui::ShowUserGuide()
         "  Use +- to subtract.\n");
 }
 
-void ImGui::ShowStyleEditor(ImGuiStyle* ref)
-{
-    ImGuiStyle& style = ImGui::GetStyle();
-
-    const ImGuiStyle def; // Default style
-    if (ImGui::Button("Revert Style"))
-        style = ref ? *ref : def;
-    if (ref)
-    {
-        ImGui::SameLine();
-        if (ImGui::Button("Save Style"))
-            *ref = style;
-    }
-
-    ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.55f);
-
-    if (ImGui::TreeNode("Rendering"))
-    {
-        ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines);
-        ImGui::Checkbox("Anti-aliased shapes", &style.AntiAliasedShapes);
-        ImGui::TreePop();
-    }
-
-    if (ImGui::TreeNode("Sizes"))
-    {
-        ImGui::SliderFloat("Alpha", &style.Alpha, 0.20f, 1.0f, "%.2f");                 // Not exposing zero here so user doesn't "lose" the UI. But application code could have a toggle to switch between zero and non-zero.
-        ImGui::SliderFloat2("WindowPadding", (float*)&style.WindowPadding, 0.0f, 20.0f, "%.0f");
-        ImGui::SliderFloat("WindowRounding", &style.WindowRounding, 0.0f, 16.0f, "%.0f");
-        ImGui::SliderFloat("ChildWindowRounding", &style.ChildWindowRounding, 0.0f, 16.0f, "%.0f");
-        ImGui::SliderFloat2("FramePadding", (float*)&style.FramePadding, 0.0f, 20.0f, "%.0f");
-        ImGui::SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 16.0f, "%.0f");
-        ImGui::SliderFloat2("ItemSpacing", (float*)&style.ItemSpacing, 0.0f, 20.0f, "%.0f");
-        ImGui::SliderFloat2("ItemInnerSpacing", (float*)&style.ItemInnerSpacing, 0.0f, 20.0f, "%.0f");
-        ImGui::SliderFloat2("TouchExtraPadding", (float*)&style.TouchExtraPadding, 0.0f, 10.0f, "%.0f");
-        ImGui::SliderFloat("IndentSpacing", &style.IndentSpacing, 0.0f, 30.0f, "%.0f");
-        ImGui::SliderFloat("ScrollbarWidth", &style.ScrollbarWidth, 1.0f, 20.0f, "%.0f");
-        ImGui::SliderFloat("ScrollbarRounding", &style.ScrollbarRounding, 0.0f, 16.0f, "%.0f");
-        ImGui::SliderFloat("GrabMinSize", &style.GrabMinSize, 1.0f, 20.0f, "%.0f");
-        ImGui::SliderFloat("GrabRounding", &style.GrabRounding, 0.0f, 16.0f, "%.0f");
-        ImGui::TreePop();
-    }
-
-    if (ImGui::TreeNode("Colors"))
-    {
-        static int output_dest = 0;
-        static bool output_only_modified = false;
-        if (ImGui::Button("Output Colors"))
-        {
-            if (output_dest == 0)
-                ImGui::LogToClipboard();
-            else
-                ImGui::LogToTTY();
-            ImGui::LogText("ImGuiStyle& style = ImGui::GetStyle();" IM_NEWLINE);
-            for (int i = 0; i < ImGuiCol_COUNT; i++)
-            {
-                const ImVec4& col = style.Colors[i];
-                const char* name = ImGui::GetStyleColName(i);
-                if (!output_only_modified || memcmp(&col, (ref ? &ref->Colors[i] : &def.Colors[i]), sizeof(ImVec4)) != 0)
-                    ImGui::LogText("style.Colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" IM_NEWLINE, name, 22 - strlen(name), "", col.x, col.y, col.z, col.w);
-            }
-            ImGui::LogFinish();
-        }
-        ImGui::SameLine(); ImGui::PushItemWidth(120); ImGui::Combo("##output_type", &output_dest, "To Clipboard\0To TTY"); ImGui::PopItemWidth();
-        ImGui::SameLine(); ImGui::Checkbox("Only Modified Fields", &output_only_modified);
-
-        static ImGuiColorEditMode edit_mode = ImGuiColorEditMode_RGB;
-        ImGui::RadioButton("RGB", &edit_mode, ImGuiColorEditMode_RGB);
-        ImGui::SameLine();
-        ImGui::RadioButton("HSV", &edit_mode, ImGuiColorEditMode_HSV);
-        ImGui::SameLine();
-        ImGui::RadioButton("HEX", &edit_mode, ImGuiColorEditMode_HEX);
-        //ImGui::Text("Tip: Click on colored square to change edit mode.");
-
-        static ImGuiTextFilter filter;
-        filter.Draw("Filter colors", 200);
-
-        ImGui::BeginChild("#colors", ImVec2(0, 300), true);
-        ImGui::PushItemWidth(-160);
-        ImGui::ColorEditMode(edit_mode);
-        for (int i = 0; i < ImGuiCol_COUNT; i++)
-        {
-            const char* name = ImGui::GetStyleColName(i);
-            if (!filter.PassFilter(name))
-                continue;
-            ImGui::PushID(i);
-            ImGui::ColorEdit4(name, (float*)&style.Colors[i], true);
-            if (memcmp(&style.Colors[i], (ref ? &ref->Colors[i] : &def.Colors[i]), sizeof(ImVec4)) != 0)
-            {
-                ImGui::SameLine(); if (ImGui::Button("Revert")) style.Colors[i] = ref ? ref->Colors[i] : def.Colors[i];
-                if (ref) { ImGui::SameLine(); if (ImGui::Button("Save")) ref->Colors[i] = style.Colors[i]; }
-            }
-            ImGui::PopID();
-        }
-        ImGui::PopItemWidth();
-        ImGui::EndChild();
-
-        ImGui::TreePop();
-    }
-
-    ImGui::PopItemWidth();
-}
-
 // Demonstrate most ImGui features (big function!)
 void ImGui::ShowTestWindow(bool* opened)
 {
@@ -1466,6 +1364,108 @@ void ImGui::ShowTestWindow(bool* opened)
     }
 
     ImGui::End();
+}
+
+void ImGui::ShowStyleEditor(ImGuiStyle* ref)
+{
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    const ImGuiStyle def; // Default style
+    if (ImGui::Button("Revert Style"))
+        style = ref ? *ref : def;
+    if (ref)
+    {
+        ImGui::SameLine();
+        if (ImGui::Button("Save Style"))
+            *ref = style;
+    }
+
+    ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.55f);
+
+    if (ImGui::TreeNode("Rendering"))
+    {
+        ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines);
+        ImGui::Checkbox("Anti-aliased shapes", &style.AntiAliasedShapes);
+        ImGui::TreePop();
+    }
+
+    if (ImGui::TreeNode("Sizes"))
+    {
+        ImGui::SliderFloat("Alpha", &style.Alpha, 0.20f, 1.0f, "%.2f");                 // Not exposing zero here so user doesn't "lose" the UI. But application code could have a toggle to switch between zero and non-zero.
+        ImGui::SliderFloat2("WindowPadding", (float*)&style.WindowPadding, 0.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat("WindowRounding", &style.WindowRounding, 0.0f, 16.0f, "%.0f");
+        ImGui::SliderFloat("ChildWindowRounding", &style.ChildWindowRounding, 0.0f, 16.0f, "%.0f");
+        ImGui::SliderFloat2("FramePadding", (float*)&style.FramePadding, 0.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 16.0f, "%.0f");
+        ImGui::SliderFloat2("ItemSpacing", (float*)&style.ItemSpacing, 0.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat2("ItemInnerSpacing", (float*)&style.ItemInnerSpacing, 0.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat2("TouchExtraPadding", (float*)&style.TouchExtraPadding, 0.0f, 10.0f, "%.0f");
+        ImGui::SliderFloat("IndentSpacing", &style.IndentSpacing, 0.0f, 30.0f, "%.0f");
+        ImGui::SliderFloat("ScrollbarWidth", &style.ScrollbarWidth, 1.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat("ScrollbarRounding", &style.ScrollbarRounding, 0.0f, 16.0f, "%.0f");
+        ImGui::SliderFloat("GrabMinSize", &style.GrabMinSize, 1.0f, 20.0f, "%.0f");
+        ImGui::SliderFloat("GrabRounding", &style.GrabRounding, 0.0f, 16.0f, "%.0f");
+        ImGui::TreePop();
+    }
+
+    if (ImGui::TreeNode("Colors"))
+    {
+        static int output_dest = 0;
+        static bool output_only_modified = false;
+        if (ImGui::Button("Output Colors"))
+        {
+            if (output_dest == 0)
+                ImGui::LogToClipboard();
+            else
+                ImGui::LogToTTY();
+            ImGui::LogText("ImGuiStyle& style = ImGui::GetStyle();" IM_NEWLINE);
+            for (int i = 0; i < ImGuiCol_COUNT; i++)
+            {
+                const ImVec4& col = style.Colors[i];
+                const char* name = ImGui::GetStyleColName(i);
+                if (!output_only_modified || memcmp(&col, (ref ? &ref->Colors[i] : &def.Colors[i]), sizeof(ImVec4)) != 0)
+                    ImGui::LogText("style.Colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" IM_NEWLINE, name, 22 - strlen(name), "", col.x, col.y, col.z, col.w);
+            }
+            ImGui::LogFinish();
+        }
+        ImGui::SameLine(); ImGui::PushItemWidth(120); ImGui::Combo("##output_type", &output_dest, "To Clipboard\0To TTY"); ImGui::PopItemWidth();
+        ImGui::SameLine(); ImGui::Checkbox("Only Modified Fields", &output_only_modified);
+
+        static ImGuiColorEditMode edit_mode = ImGuiColorEditMode_RGB;
+        ImGui::RadioButton("RGB", &edit_mode, ImGuiColorEditMode_RGB);
+        ImGui::SameLine();
+        ImGui::RadioButton("HSV", &edit_mode, ImGuiColorEditMode_HSV);
+        ImGui::SameLine();
+        ImGui::RadioButton("HEX", &edit_mode, ImGuiColorEditMode_HEX);
+        //ImGui::Text("Tip: Click on colored square to change edit mode.");
+
+        static ImGuiTextFilter filter;
+        filter.Draw("Filter colors", 200);
+
+        ImGui::BeginChild("#colors", ImVec2(0, 300), true);
+        ImGui::PushItemWidth(-160);
+        ImGui::ColorEditMode(edit_mode);
+        for (int i = 0; i < ImGuiCol_COUNT; i++)
+        {
+            const char* name = ImGui::GetStyleColName(i);
+            if (!filter.PassFilter(name))
+                continue;
+            ImGui::PushID(i);
+            ImGui::ColorEdit4(name, (float*)&style.Colors[i], true);
+            if (memcmp(&style.Colors[i], (ref ? &ref->Colors[i] : &def.Colors[i]), sizeof(ImVec4)) != 0)
+            {
+                ImGui::SameLine(); if (ImGui::Button("Revert")) style.Colors[i] = ref ? ref->Colors[i] : def.Colors[i];
+                if (ref) { ImGui::SameLine(); if (ImGui::Button("Save")) ref->Colors[i] = style.Colors[i]; }
+            }
+            ImGui::PopID();
+        }
+        ImGui::PopItemWidth();
+        ImGui::EndChild();
+
+        ImGui::TreePop();
+    }
+
+    ImGui::PopItemWidth();
 }
 
 static void ShowExampleAppMainMenuBar()
