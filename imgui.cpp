@@ -396,8 +396,6 @@
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
- - input number: non-decimal input.
- - input number: display and input as hexadecimal
  - input number: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
  - text: proper alignment options
  - layout: horizontal layout helper (#97)
@@ -410,7 +408,7 @@
  - popup: border options. richer api like BeginChild() perhaps? (#197)
  - combo: sparse combo boxes (via function call?)
  - combo: contents should extends to fit label if combo widget is small
- - combo/listbox: keyboard control. need inputtext like non-active focus + key handling. considering keybord for custom listbox (pr #203)
+ - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keybord for custom listbox (pr #203)
  - listbox: multiple selection
  - listbox: user may want to initial scroll to focus on the one selected value?
  - listbox: keyboard navigation.
@@ -5479,7 +5477,7 @@ enum ImGuiDataTypeOp
     ImGuiDataTypeOp_Sub
 };
 
-static inline void DataTypeFormat(ImGuiDataType data_type, void* data_ptr, const char* display_format, char* buf, int buf_size)
+static inline void DataTypeFormatString(ImGuiDataType data_type, void* data_ptr, const char* display_format, char* buf, int buf_size)
 {
     if (data_type == ImGuiDataType_Int)
         ImFormatString(buf, buf_size, display_format, *(int*)data_ptr);
@@ -5487,7 +5485,7 @@ static inline void DataTypeFormat(ImGuiDataType data_type, void* data_ptr, const
         ImFormatString(buf, buf_size, display_format, *(float*)data_ptr);
 }
 
-static inline void DataTypeFormat(ImGuiDataType data_type, void* data_ptr, int decimal_precision, char* buf, int buf_size)
+static inline void DataTypeFormatString(ImGuiDataType data_type, void* data_ptr, int decimal_precision, char* buf, int buf_size)
 {
     if (data_type == ImGuiDataType_Int)
     {
@@ -5592,7 +5590,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label
     FocusableItemUnregister(window);
 
     char buf[32];
-    DataTypeFormat(data_type, data_ptr, decimal_precision, buf, IM_ARRAYSIZE(buf));
+    DataTypeFormatString(data_type, data_ptr, decimal_precision, buf, IM_ARRAYSIZE(buf));
     bool value_changed = InputTextEx(label, buf, IM_ARRAYSIZE(buf), aabb.GetSize() - g.Style.FramePadding*2.0f, ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
     if (g.ScalarAsInputTextId == 0)
     {
@@ -7321,7 +7319,7 @@ bool ImGui::InputScalarEx(const char* label, ImGuiDataType data_type, void* data
         ImGui::PushItemWidth(ImMax(1.0f, w - (button_sz.x + style.ItemInnerSpacing.x)*2));
 
     char buf[64];
-    DataTypeFormat(data_type, data_ptr, scalar_format, buf, IM_ARRAYSIZE(buf));
+    DataTypeFormatString(data_type, data_ptr, scalar_format, buf, IM_ARRAYSIZE(buf));
 
     bool value_changed = false;
     if (!(extra_flags & ImGuiInputTextFlags_CharsHexadecimal))
@@ -7375,6 +7373,7 @@ bool ImGui::InputFloat(const char* label, float* v, float step, float step_fast,
 
 bool ImGui::InputInt(const char* label, int* v, int step, int step_fast, ImGuiInputTextFlags extra_flags)
 {
+    // Hexadecimal input provided as a convenience but the flag name is awkward. Typically you'd use InputText() to parse your own data, if you want to handle prefixes.
     const char* scalar_format = (extra_flags & ImGuiInputTextFlags_CharsHexadecimal) ? "%08X" : "%d";
     return InputScalarEx(label, ImGuiDataType_Int, (void*)v, (void*)(step>0.0f ? &step : NULL), (void*)(step_fast>0.0f ? &step_fast : NULL), scalar_format, extra_flags);
 }
