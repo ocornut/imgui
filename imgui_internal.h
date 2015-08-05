@@ -163,7 +163,7 @@ enum ImGuiPlotType
 };
 
 // 2D axis aligned bounding-box
-// NB: we can't rely on ImVec2 math operators and helpers (ImMin,ImMax..) being available here
+// NB: we can't rely on ImVec2 math operators being available here
 struct ImRect
 {
     ImVec2          Min;    // Upper-left
@@ -361,19 +361,19 @@ struct ImGuiState
     ImGuiID                 ScalarAsInputTextId;                // Temporary text input when CTRL+clicking on a slider, etc.
     ImGuiStorage            ColorEditModeStorage;               // Store user selection of color edit mode
     ImVec2                  ActiveClickDeltaToCenter;
-    float                   DragCurrentValue;                   // current dragged value, always float, not rounded by end-user precision settings
+    float                   DragCurrentValue;                   // Currently dragged value, always float, not rounded by end-user precision settings
     ImVec2                  DragLastMouseDelta;
-    float                   DragSpeedDefaultRatio;              // if speed == 0.0f, uses (max-min) * DragSpeedDefaultRatio
+    float                   DragSpeedDefaultRatio;              // If speed == 0.0f, uses (max-min) * DragSpeedDefaultRatio
     float                   DragSpeedScaleSlow;
     float                   DragSpeedScaleFast;
-    float                   ScrollbarClickDeltaToGrabCenter;    // distance between mouse and center of grab box, normalized in parent space
+    float                   ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space
     char                    Tooltip[1024];
-    char*                   PrivateClipboard;                   // if no custom clipboard handler is defined
+    char*                   PrivateClipboard;                   // If no custom clipboard handler is defined
 
     // Logging
     bool                    LogEnabled;
-    FILE*                   LogFile;
-    ImGuiTextBuffer*        LogClipboard;                       // pointer so our GImGui static constructor doesn't call heap allocators.
+    FILE*                   LogFile;                            // If != NULL log to stdout/ file 
+    ImGuiTextBuffer*        LogClipboard;                       // Else log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
     int                     LogStartDepth;
     int                     LogAutoExpandMaxDepth;
 
