@@ -115,6 +115,7 @@ namespace ImGui
     IMGUI_API bool          BeginChild(ImGuiID id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);                // "
     IMGUI_API void          EndChild();
     IMGUI_API ImVec2        GetContentRegionMax();                                              // window or current column boundaries, in windows coordinates
+    IMGUI_API ImVec2        GetContentRegionAvail();                                            // == GetContentRegionMax() - GetCursorPos()
     IMGUI_API ImVec2        GetWindowContentRegionMin();                                        // window boundaries, in windows coordinates
     IMGUI_API ImVec2        GetWindowContentRegionMax();
     IMGUI_API ImDrawList*   GetWindowDrawList();                                                // get rendering command-list if you want to append your own draw primitives

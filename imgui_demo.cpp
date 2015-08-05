@@ -719,7 +719,7 @@ void ImGui::ShowTestWindow(bool* opened)
                     ImGui::NextColumn();
                 char buf[32];
                 sprintf(buf, "%08x", i*5731);
-                ImGui::Button(buf, ImVec2(ImGui::GetContentRegionMax().x - ImGui::GetCursorPosX(), 0.0f));
+                ImGui::Button(buf, ImVec2(-1.0f, 0.0f));
             }
             ImGui::EndChild();
             ImGui::PopStyleVar();
@@ -1630,7 +1630,7 @@ static void ShowExampleAppCustomRendering(bool* opened)
     // However you can draw directly and poll mouse/keyboard by yourself. You can manipulate the cursor using GetCursorPos() and SetCursorPos().
     // If you only use the ImDrawList API, you can notify the owner window of its extends by using SetCursorPos(max).
     ImVec2 canvas_pos = ImGui::GetCursorScreenPos();            // ImDrawList API uses screen coordinates!
-    ImVec2 canvas_size = ImVec2(ImGui::GetContentRegionMax().x-ImGui::GetCursorPos().x, ImGui::GetContentRegionMax().y-ImGui::GetCursorPos().y);    // Resize canvas what's available
+    ImVec2 canvas_size = ImGui::GetContentRegionAvail();        // Resize canvas to what's available
     if (canvas_size.x < 50.0f) canvas_size.x = 50.0f;
     if (canvas_size.y < 50.0f) canvas_size.y = 50.0f;
     draw_list->AddRectFilledMultiColor(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(0,0,0), ImColor(255,0,0), ImColor(255,255,0), ImColor(0,255,0));

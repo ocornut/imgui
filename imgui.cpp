@@ -3051,20 +3051,19 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
     ImGuiWindow* window = GetCurrentWindow();
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_ChildWindow;
 
-    const ImVec2 content_max = window->Pos + ImGui::GetContentRegionMax();
-    const ImVec2 cursor_pos = window->Pos + ImGui::GetCursorPos();
+    const ImVec2 content_avail = ImGui::GetContentRegionAvail();
     ImVec2 size = size_arg;
     if (size.x <= 0.0f)
     {
         if (size.x == 0.0f)
             flags |= ImGuiWindowFlags_ChildWindowAutoFitX;
-        size.x = ImMax(content_max.x - cursor_pos.x, 4.0f) - fabsf(size.x); // Arbitrary minimum zeroish child size of 4.0f
+        size.x = ImMax(content_avail.x, 4.0f) - fabsf(size.x); // Arbitrary minimum zero-ish child size of 4.0f (0.0f causing too much issues)
     }
     if (size.y <= 0.0f)
     {
         if (size.y == 0.0f)
             flags |= ImGuiWindowFlags_ChildWindowAutoFitY;
-        size.y = ImMax(content_max.y - cursor_pos.y, 4.0f) - fabsf(size.y);
+        size.y = ImMax(content_avail.y, 4.0f) - fabsf(size.y);
     }
     if (border)
         flags |= ImGuiWindowFlags_ShowBorders;
@@ -3969,7 +3968,7 @@ float ImGui::CalcItemWidth()
     {
         // Align to a right-side limit. We include 1 frame padding in the calculation because this is how the width is always used (we add 2 frame padding to it), but we could move that responsibility to the widget as well.
         ImGuiState& g = *GImGui;
-        float width_to_right_edge = window->Pos.x + ImGui::GetContentRegionMax().x - window->DC.CursorPos.x;
+        float width_to_right_edge = ImGui::GetContentRegionAvail().x;
         w = ImMax(1.0f, width_to_right_edge + w - g.Style.FramePadding.x * 2.0f);
     }
     w = (float)(int)w;
@@ -4398,6 +4397,7 @@ void ImGui::SetNextWindowFocus()
     g.SetNextWindowFocus = true;
 }
 
+// In window space (not screen space!)
 ImVec2 ImGui::GetContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -4409,6 +4409,13 @@ ImVec2 ImGui::GetContentRegionMax()
     return mx;
 }
 
+inline ImVec2 ImGui::GetContentRegionAvail()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    return GetContentRegionMax() - (window->DC.CursorPos - window->Pos);
+}
+
+// In window space (not screen space!)
 ImVec2 ImGui::GetWindowContentRegionMin()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -7730,11 +7737,11 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected, boo
         return false;
 
     ImGuiState& g = *GImGui;
-    ImVec2 pos = ImGui::GetCursorScreenPos();
+    ImVec2 pos = window->DC.CursorPos;
     ImVec2 label_size = CalcTextSize(label, NULL, true);
     ImVec2 shortcut_size = shortcut ? CalcTextSize(shortcut, NULL) : ImVec2(0.0f, 0.0f);
     float w = window->MenuColumns.DeclColumns(label_size.x, shortcut_size.x, (float)(int)(g.FontSize * 1.20f)); // Feedback for next frame
-    float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
+    float extra_w = ImMax(0.0f, ImGui::GetContentRegionAvail().x - w);
 
     bool pressed = ImGui::Selectable(label, false, ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(w, 0.0f));
     if (shortcut_size.x > 0.0f)
@@ -7858,7 +7865,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     {
         popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
         float w = window->MenuColumns.DeclColumns(label_size.x, 0.0f, (float)(int)(g.FontSize * 1.20f)); // Feedback to next frame
-        float extra_w = ImMax(0.0f, window->Pos.x + ImGui::GetContentRegionMax().x - pos.x - w);
+        float extra_w = ImMax(0.0f, ImGui::GetContentRegionAvail().x - w);
         pressed = ImGui::Selectable(label, opened, ImGuiSelectableFlags_Menu | ImGuiSelectableFlags_DontClosePopups | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(w, 0.0f));
         if (!enabled) ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
         RenderCollapseTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), false);
