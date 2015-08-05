@@ -394,6 +394,8 @@
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
  - input number: non-decimal input.
+ - input number: display and input as hexadecimal
+ - input number: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
  - text: proper alignment options
  - layout: horizontal layout helper (#97)
  - layout: more generic alignment state (left/right/centered) for single items?
@@ -422,7 +424,6 @@
  - plot: "smooth" automatic scale over time, user give an input 0.0(full user scale) 1.0(full derived from value)
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
  - file selection widget -> build the tool in our codebase to improve model-dialog idioms
- - inputfloat: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar).
  - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
@@ -5969,8 +5970,6 @@ static bool SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     const float slider_usable_pos_min = (horizontal ? frame_bb.Min.x : frame_bb.Min.y) + grab_padding + grab_sz*0.5f;
     const float slider_usable_pos_max = (horizontal ? frame_bb.Max.x : frame_bb.Max.y) - grab_padding - grab_sz*0.5f;
 
-    bool value_changed = false;
-
     // For logarithmic sliders that cross over sign boundary we want the exponential increase to be symmetric around 0.0f
     float linear_zero_pos = 0.0f;   // 0.0->1.0f
     if (v_min * v_max < 0.0f)
@@ -5987,6 +5986,7 @@ static bool SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     }
 
     // Process clicking on the slider
+    bool value_changed = false;
     if (g.ActiveId == id)
     {
         if (g.IO.MouseDown[0])
@@ -6303,7 +6303,6 @@ bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const 
     return SliderIntN(label, v, 4, v_min, v_max, display_format);
 }
 
-// FIXME-WIP: Work in progress. May change API / behavior.
 static bool DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, int decimal_precision, float power)
 {
     ImGuiState& g = *GImGui;
@@ -6380,7 +6379,7 @@ static bool DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     return value_changed;
 }
 
-bool ImGui::DragFloat(const char* label, float *v, float v_speed, float v_min, float v_max, const char* display_format, float power)
+bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, float v_max, const char* display_format, float power)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
