@@ -5638,7 +5638,7 @@ inline float ImGui::RoundScalar(float value, int decimal_precision)
     // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
     // FIXME: Investigate better rounding methods
     static const float min_steps[10] = { 1.0f, 0.1f, 0.01f, 0.001f, 0.0001f, 0.00001f, 0.000001f, 0.0000001f, 0.00000001f, 0.000000001f }; 
-    float min_step = (decimal_precision >= 0 && decimal_precision < 10) ? min_steps[decimal_precision] : (1.0f / powf(10.0f, (float)decimal_precision));
+    float min_step = (decimal_precision >= 0 && decimal_precision < 10) ? min_steps[decimal_precision] : powf(10.0f, (float)-decimal_precision);
     bool negative = value < 0.0f;
     value = fabsf(value);
     float remainder = fmodf(value, min_step);
@@ -7366,7 +7366,7 @@ bool ImGui::InputScalarEx(const char* label, ImGuiDataType data_type, void* data
 bool ImGui::InputFloat(const char* label, float* v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags extra_flags)
 {
     char display_format[16];
-    if (decimal_precision)
+    if (decimal_precision < 0)
         strcpy(display_format, "%f");      // Ideally we'd have a minimum decimal precision of 1 to visually denote that this is a float, while hiding non-significant digits? %f doesn't have a minimum of 1
     else
         ImFormatString(display_format, 16, "%%%df", decimal_precision);
