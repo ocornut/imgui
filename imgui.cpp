@@ -230,6 +230,7 @@
       stb_rect_pack.h
       stb_textedit.h
       stb_truetype.h
+    Don't overwrite imconfig.h if you have modification to your copy.
     Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes. If you have a problem with a function, search for its name
     in the code, there will likely be a comment about it. Please report any issue to the GitHub page!
 
