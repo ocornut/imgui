@@ -544,10 +544,10 @@ static void             LoadSettings();
 static void             SaveSettings();
 static void             MarkSettingsDirty();
 
-static void             PushClipRect(const ImVec4& clip_rect, bool clipped_by_current = true);
+static void             PushClipRect(const ImRect& clip_rect, bool clipped_by_current = true);
 static void             PushColumnClipRect(int column_index = -1);
 static void             PopClipRect();
-static ImVec4           GetVisibleRect();
+static ImRect           GetVisibleRect();
 
 static bool             BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags);
 static void             CloseInactivePopups();
@@ -1622,7 +1622,7 @@ bool ImGui::IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    if (!bb.Overlaps(ImRect(window->ClipRect)))
+    if (!bb.Overlaps(window->ClipRect))
     {
         if (!id || *id != GImGui->ActiveId)
             if (clip_even_when_logged || !g.LogEnabled)
@@ -2194,23 +2194,22 @@ static void AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiW
     }
 }
 
-static void PushClipRect(const ImVec4& clip_rect, bool clipped)
+static void PushClipRect(const ImRect& clip_rect, bool clipped)
 {
     ImGuiWindow* window = ImGui::GetCurrentWindow();
 
-    ImVec4 cr = clip_rect;
+    ImRect cr = clip_rect;
     if (clipped)
     {
-        // Clip with existing clip rect
-        const ImVec4 cur_cr = window->ClipRect;
-        cr = ImVec4(ImMax(cr.x, cur_cr.x), ImMax(cr.y, cur_cr.y), ImMin(cr.z, cur_cr.z), ImMin(cr.w, cur_cr.w));
+        // Clip our argument with the current clip rect
+        cr.Clip(window->ClipRect);
     }
-    cr.z = ImMax(cr.x, cr.z);
-    cr.w = ImMax(cr.y, cr.w);
+    cr.Max.x = ImMax(cr.Min.x, cr.Max.x);
+    cr.Max.y = ImMax(cr.Min.y, cr.Max.y);
 
-    IM_ASSERT(cr.x <= cr.z && cr.y <= cr.w);
+    IM_ASSERT(cr.Min.x <= cr.Max.x && cr.Min.y <= cr.Max.y);
     window->ClipRect = cr;
-    window->DrawList->PushClipRect(cr);
+    window->DrawList->PushClipRect(ImVec4(cr.Min.x, cr.Min.y, cr.Max.x, cr.Max.y));
 }
 
 static void PopClipRect()
@@ -2646,11 +2645,8 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
     }
 
     const ImVec2 pos = window->DC.CursorPos;
-    const float clip_y1 = window->ClipRect.y;
-    const float clip_y2 = window->ClipRect.w;
-
-    int start = (int)((clip_y1 - pos.y) / items_height);
-    int end = (int)((clip_y2 - pos.y) / items_height);
+    int start = (int)((window->ClipRect.Min.y - pos.y) / items_height);
+    int end = (int)((window->ClipRect.Max.y - pos.y) / items_height);
     start = ImClamp(start, 0, items_count);
     end = ImClamp(end + 1, start, items_count);
     *out_items_display_start = start;
@@ -2937,12 +2933,12 @@ void ImGui::SetTooltip(const char* fmt, ...)
     va_end(args);
 }
 
-static ImVec4 GetVisibleRect()
+static ImRect GetVisibleRect()
 {
     ImGuiState& g = *GImGui;
     if (g.IO.DisplayVisibleMin.x != g.IO.DisplayVisibleMax.x && g.IO.DisplayVisibleMin.y != g.IO.DisplayVisibleMax.y)
-        return ImVec4(g.IO.DisplayVisibleMin.x, g.IO.DisplayVisibleMin.y, g.IO.DisplayVisibleMax.x, g.IO.DisplayVisibleMax.y);
-    return ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y);
+        return ImRect(g.IO.DisplayVisibleMin, g.IO.DisplayVisibleMax);
+    return ImRect(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y);
 }
 
 void ImGui::BeginTooltip()
@@ -3897,10 +3893,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->Collapsed = parent_window && parent_window->Collapsed;
 
         if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
-        {
-            const ImVec4 clip_rect_t = window->ClipRect;
-            window->Collapsed |= (clip_rect_t.x >= clip_rect_t.z || clip_rect_t.y >= clip_rect_t.w);
-        }
+            window->Collapsed |= (window->ClipRect.Min.x >= window->ClipRect.Max.x || window->ClipRect.Min.y >= window->ClipRect.Max.y);
 
         // We also hide the window from rendering because we've already added its border to the command list.
         // (we could perform the check earlier in the function but it is simpler at this point)
@@ -4780,17 +4773,17 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         const char* line = text;
         const float line_height = ImGui::GetTextLineHeight();
         const ImVec2 text_pos = window->DC.CursorPos + ImVec2(0.0f, window->DC.CurrentLineTextBaseOffset);
-        const ImVec4 clip_rect = window->ClipRect;
+        const ImRect clip_rect = window->ClipRect;
         ImVec2 text_size(0,0);
 
-        if (text_pos.y <= clip_rect.w)
+        if (text_pos.y <= clip_rect.Max.y)
         {
             ImVec2 pos = text_pos;
 
             // Lines to skip (can't skip when logging text)
             if (!g.LogEnabled)
             {
-                int lines_skippable = (int)((clip_rect.y - text_pos.y) / line_height);
+                int lines_skippable = (int)((clip_rect.Min.y - text_pos.y) / line_height);
                 if (lines_skippable > 0)
                 {
                     int lines_skipped = 0;
@@ -8325,8 +8318,7 @@ void ImGui::Dummy(const ImVec2& size)
 bool ImGui::IsRectVisible(const ImVec2& size)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    ImRect r(window->ClipRect);
-    return r.Overlaps(ImRect(window->DC.CursorPos, window->DC.CursorPos + size));
+    return window->ClipRect.Overlaps(ImRect(window->DC.CursorPos, window->DC.CursorPos + size));
 }
 
 void ImGui::BeginGroup()
