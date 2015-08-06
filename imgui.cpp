@@ -328,41 +328,43 @@
  Q: How can I load a different font than the default? (default is an embedded version of ProggyClean.ttf, rendered at size 13)
  A: Use the font atlas to load the TTF file you want:
 
-     io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
-     io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
+      io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
+      io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
 
  Q: How can I load multiple fonts?
  A: Use the font atlas to pack them into a single texture:
 
-     ImFont* font0 = io.Fonts->AddFontDefault();
-     ImFont* font1 = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
-     ImFont* font2 = io.Fonts->AddFontFromFileTTF("myfontfile2.ttf", size_in_pixels);
-     io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
-     // the first loaded font gets used by default
-     // use ImGui::PushFont()/ImGui::PopFont() to change the font at runtime
+      ImFont* font0 = io.Fonts->AddFontDefault();
+      ImFont* font1 = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
+      ImFont* font2 = io.Fonts->AddFontFromFileTTF("myfontfile2.ttf", size_in_pixels);
+      io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
+      // the first loaded font gets used by default
+      // use ImGui::PushFont()/ImGui::PopFont() to change the font at runtime
 
-     // Options
-     ImFontConfig config;
-     config.OversampleH = 3;
-     config.OversampleV = 3;
-     config.GlyphExtraSpacing.x = 1.0f;
-     io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, &config);
+      // Options
+      ImFontConfig config;
+      config.OversampleH = 3;
+      config.OversampleV = 3;
+      config.GlyphExtraSpacing.x = 1.0f;
+      io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, &config);
 
-     // Merging input from different fonts into one
-     ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
-     ImFontConfig config;
-     config.MergeMode = true;
-     io.Fonts->AddFontDefault();
-     io.Fonts->LoadFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
-     io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese());
+      // Combine multiple fonts into one
+      ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
+      ImFontConfig config;
+      config.MergeMode = true;
+      io.Fonts->AddFontDefault();
+      io.Fonts->LoadFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
+      io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese());
+
+    Read extra_fonts/README.txt or ImFontAtlas class for more details.
 
  Q: How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
  A: When loading a font, pass custom Unicode ranges to specify the glyphs to load. ImGui will support UTF-8 encoding across the board.
     Character input depends on you passing the right character code to io.AddInputCharacter(). The example applications do that.
 
-     io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());  // Load Japanese characters
-     io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
-     io.ImeWindowHandle = MY_HWND;      // To input using Microsoft IME, give ImGui the hwnd of your application
+      io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());  // Load Japanese characters
+      io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
+      io.ImeWindowHandle = MY_HWND;      // To input using Microsoft IME, give ImGui the hwnd of your application
 
  - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will run the block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
@@ -374,8 +376,8 @@
  ISSUES & TODO-LIST
  ==================
  Issue numbers (#) refer to github issues.
+ The list below consist mostly of notes of things to do before they are requested/discussed by users (at that point it usually happens on the github)
 
- - misc: merge or clarify ImVec4 vs ImRect?
  - window: autofit feedback loop when user relies on any dynamic layout (window width multiplier, column). maybe just clearly drop manual autofit?
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. 
  - window: allow resizing of child windows (possibly given min/max for each axis?)
@@ -430,7 +432,8 @@
  - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar).
  - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
  - slider: tint background based on value (e.g. v_min -> v_max, or use 0.0f either side of the sign)
- - dragfloat: up/down axis
+ - slider & drag: int data passing through a float
+ - drag float: up/down axis
  - text edit: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now.
  - text edit: centered text for slider as input text so it matches typical positioning.
  - text edit: flag to disable live update of the user buffer. 
@@ -454,7 +457,6 @@
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
  - input: rework IO to be able to pass actual events to fix temporal aliasing issues.
  - input: support track pad style scrolling & slider edit.
- - portability: big-endian test/support (#81)
  - memory: add a way to discard allocs of unused/transient windows. with the current architecture new windows (including popup, opened combos, listbox) perform at least 3 allocs.
  - misc: mark printf compiler attributes on relevant functions
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
@@ -558,9 +560,13 @@ static ImGuiWindow*     GetFrontMostModalRootWindow();
 static ImVec2           FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size, ImGuiWindowFlags flags, int* last_dir, const ImRect& r_inner);
 
 static bool             InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data);
-static void             InputTextApplyArithmeticOp(const char* buf, const char* initial_value_buf, float *v);
 static int              InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end);
 static ImVec2           InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL, ImVec2* out_offset = NULL, bool stop_on_new_line = false);
+
+static inline void      DataTypeFormatString(ImGuiDataType data_type, void* data_ptr, const char* display_format, char* buf, int buf_size);
+static inline void      DataTypeFormatString(ImGuiDataType data_type, void* data_ptr, int decimal_precision, char* buf, int buf_size);
+static void             DataTypeApplyOp(ImGuiDataType data_type, int op, void* value1, const void* value2);
+static void             DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format);
 
 //-----------------------------------------------------------------------------
 // Platform dependent default implementations
@@ -5545,12 +5551,6 @@ ImGuiID ImGui::GetID(const void* ptr_id)
     return GImGui->CurrentWindow->GetID(ptr_id);
 }
 
-enum ImGuiDataTypeOp
-{
-    ImGuiDataTypeOp_Add,
-    ImGuiDataTypeOp_Sub
-};
-
 static inline void DataTypeFormatString(ImGuiDataType data_type, void* data_ptr, const char* display_format, char* buf, int buf_size)
 {
     if (data_type == ImGuiDataType_Int)
@@ -5577,20 +5577,20 @@ static inline void DataTypeFormatString(ImGuiDataType data_type, void* data_ptr,
     }
 }
 
-static void DataTypeApplyOp(ImGuiDataType data_type, ImGuiDataTypeOp op, void* value1, const void* value2)// Store into value1
+static void DataTypeApplyOp(ImGuiDataType data_type, int op, void* value1, const void* value2)// Store into value1
 {
     if (data_type == ImGuiDataType_Int)
     {
-        if (op == ImGuiDataTypeOp_Add)
+        if (op == '+')
             *(int*)value1 = *(int*)value1 + *(const int*)value2; 
-        else if (op == ImGuiDataTypeOp_Sub)
+        else if (op == '-')
             *(int*)value1 = *(int*)value1 - *(const int*)value2; 
     }
     else if (data_type == ImGuiDataType_Float)
     {
-        if (op == ImGuiDataTypeOp_Add)
+        if (op == '+')
             *(float*)value1 = *(float*)value1 + *(const float*)value2; 
-        else if (op == ImGuiDataTypeOp_Sub)
+        else if (op == '-')
             *(float*)value1 = *(float*)value1 - *(const float*)value2; 
     }
 }
@@ -7412,13 +7412,13 @@ bool ImGui::InputScalarEx(const char* label, ImGuiDataType data_type, void* data
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
         if (ButtonEx("-", button_sz, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
         {
-            DataTypeApplyOp(data_type, ImGuiDataTypeOp_Sub, data_ptr, g.IO.KeyCtrl && step_fast_ptr ? step_fast_ptr : step_ptr);
+            DataTypeApplyOp(data_type, '-', data_ptr, g.IO.KeyCtrl && step_fast_ptr ? step_fast_ptr : step_ptr);
             value_changed = true;
         }
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
         if (ButtonEx("+", button_sz, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
         {
-            DataTypeApplyOp(data_type, ImGuiDataTypeOp_Add, data_ptr, g.IO.KeyCtrl && step_fast_ptr ? step_fast_ptr : step_ptr);
+            DataTypeApplyOp(data_type, '+', data_ptr, g.IO.KeyCtrl && step_fast_ptr ? step_fast_ptr : step_ptr);
             value_changed = true;
         }
     }
