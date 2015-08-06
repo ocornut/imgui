@@ -3,31 +3,69 @@
  Those are only provided as a convenience, you can load your own .TTF files.
 
 ---------------------------------
- LINKS
+ LOADING INSTRUCTIONS
 ---------------------------------
 
- Typefaces for source code beautification
-   https://github.com/chrissimpkins/codeface
+ Load default font with:
 
- Proggy Programming Fonts
-   http://upperbounds.net
+   ImGuiIO& io = ImGui::GetIO();
+   io.Fonts->AddFontDefault();
+
+ Load .TTF file with:
+
+   ImGuiIO& io = ImGui::GetIO();
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels);
+  
+ Detailed options:
+
+   ImFontConfig config;
+   config.OversampleH = 3;
+   config.OversampleV = 3;
+   config.GlyphExtraSpacing.x = 1.0f;
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, &config);
+
+ Combine two fonts into one:
+
+   // Load main font
+   io.Fonts->AddFontDefault();
+
+   // Add character ranges and merge into main font
+   ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
+   ImFontConfig config;
+   config.MergeMode = true;
+   io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, &config, io.Fonts->GetGlyphRangesJapanese());
+
+ Add a fourth parameter to bake specific font ranges only:
+
+   // Basic Latin, Extended Latin
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesDefault());
    
- Inconsolata
-   http://www.levien.com/type/myfonts/inconsolata.html
+   // Include full set of about 21000 CJK Unified Ideographs
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());
+   
+   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChinese());
 
- Adobe Source Code Pro: Monospaced font family for user interface and coding environments
-   https://github.com/adobe-fonts/source-code-pro
+ Offset font vertically by altering the io.Font->DisplayOffset value:
 
- Monospace/Fixed Width Programmer's Fonts
-   http://www.lowing.org/fonts/
-
- (Japanese) M+ fonts by Coji Morishita are free and include most useful Kanjis you would need.
-   http://mplus-fonts.sourceforge.jp/mplus-outline-fonts/index-en.html
-
- Or use Arial Unicode or other Unicode fonts provided with Windows for full characters coverage (not sure of their licensing).
+   ImFont* font = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels);
+   font->DisplayOffset.y += 1;   // Render 1 pixel down
 
 ---------------------------------
- INCLUDED FONTS
+ EMBED A FONT IN SOURCE CODE
+---------------------------------
+
+ Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array. Then load the font with:
+ 
+   ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
+   
+ Or 
+ 
+   ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_base85, size_pixels, ...);
+
+---------------------------------
+ INCLUDED FONT FILES
 ---------------------------------
 
  Cousine-Regular.ttf
@@ -54,52 +92,25 @@
    SIL OPEN FONT LICENSE Version 1.1
 
 ---------------------------------
- LOADING INSTRUCTIONS
+ LINKS
 ---------------------------------
 
- Load default font with:
+ Typefaces for source code beautification
+   https://github.com/chrissimpkins/codeface
 
-   ImGuiIO& io = ImGui::GetIO();
-   io.Fonts->AddFontDefault();
+ Proggy Programming Fonts
+   http://upperbounds.net
+   
+ Inconsolata
+   http://www.levien.com/type/myfonts/inconsolata.html
 
- Load .TTF file with:
+ Adobe Source Code Pro: Monospaced font family for user interface and coding environments
+   https://github.com/adobe-fonts/source-code-pro
 
-   ImGuiIO& io = ImGui::GetIO();
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels);
-  
- Detailed options:
+ Monospace/Fixed Width Programmer's Fonts
+   http://www.lowing.org/fonts/
 
-   ImFontConfig config;
-   config.OversampleH = 3;
-   config.OversampleV = 3;
-   config.GlyphExtraSpacing.x = 1.0f;
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, &config);
+ (Japanese) M+ fonts by Coji Morishita are free and include most useful Kanjis you would need.
+   http://mplus-fonts.sourceforge.jp/mplus-outline-fonts/index-en.html
 
- Merge two fonts:
-
-   // Load main font
-   io.Fonts->AddFontDefault();
-
-   // Add character ranges and merge into main font
-   ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
-   ImFontConfig config;
-   config.MergeMode = true;
-   io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, &config, io.Fonts->GetGlyphRangesJapanese());
-
- Add a fourth parameter to bake specific font ranges only:
-
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesDefault());   // Basic Latin, Extended Latin 
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());  // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChinese());   // Include full set of about 21000 CJK Unified Ideographs
-
- Offset font vertically by altering the io.Font->DisplayOffset value:
-
-   ImFont* font = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels);
-   font->DisplayOffset.y += 1;   // Render 1 pixel down
-
- If you want to embed the font in source code (e.g. in your engine, so it doesn't have file-system dependencies);
- Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array. Then load the font with:
- 
-   ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
-
+ Or use Arial Unicode or other Unicode fonts provided with Windows for full characters coverage (not sure of their licensing).

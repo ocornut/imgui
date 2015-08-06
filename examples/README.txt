@@ -10,13 +10,13 @@ TL;DR;
 ImGui is highly portable and only requires a few things to run:
  - Providing mouse/keyboard inputs
  - Load the font atlas texture into GPU memory
- - Providing a render function to process the drawing commands (we rendere indexed textured triangles)
- - Extra just as clipboard support, mouse cursor supports, Windows IME support.
+ - Providing a render function to render indexed textured triangles
+ - Optional: clipboard support, mouse cursor supports, Windows IME support, etc.
 So this is essentially what those examples are doing + the obligatory cruft for portability.
 
 Unfortunately in 2015 it is still a massive pain to create and maintain portable build files using
-external library like the ones we're using here. 
-For most example here I choose to provide Visual Studio 10 .sln files and Makefile for Linux/OSX. 
+external library like the ones we're using here to provide 3D rendering.
+For most examples here I choose to provide Visual Studio 10 .sln files and Makefile for Linux/OSX. 
 Please let me know if they don't work with your setup!
 You can probably just import the imgui_impl_xxx.cpp/.h files into your own codebase or compile those
 directly with a command-line compiler.
