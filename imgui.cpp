@@ -1527,7 +1527,7 @@ ImGuiID ImGuiWindow::GetID(const void* ptr)
     return id;
 }
 
-inline ImGuiWindow* ImGui::GetCurrentWindow()
+ImGuiWindow* ImGui::GetCurrentWindow()
 {
     // If this ever crash it probably means that ImGui::NewFrame() has never been called (which is illegal). We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
     ImGuiState& g = *GImGui;
@@ -4408,7 +4408,7 @@ ImVec2 ImGui::GetContentRegionMax()
     return mx;
 }
 
-inline ImVec2 ImGui::GetContentRegionAvail()
+ImVec2 ImGui::GetContentRegionAvail()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return GetContentRegionMax() - (window->DC.CursorPos - window->Pos);
@@ -4894,7 +4894,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     return pressed;
 }
 
-inline ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_x, float default_y)
+ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_x, float default_y)
 {
     ImGuiState& g = *GImGui;
     ImVec2 content_max;
@@ -5611,7 +5611,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label
 }
 
 // Parse display precision back from the display format string
-inline int ImGui::ParseFormatPrecision(const char* fmt, int default_precision)
+int ImGui::ParseFormatPrecision(const char* fmt, int default_precision)
 {
     int precision = default_precision;
     while ((fmt = strchr(fmt, '%')) != NULL)
@@ -5631,7 +5631,7 @@ inline int ImGui::ParseFormatPrecision(const char* fmt, int default_precision)
     return precision;
 }
 
-inline float ImGui::RoundScalar(float value, int decimal_precision)
+float ImGui::RoundScalar(float value, int decimal_precision)
 {
     // Round past decimal precision
     // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
@@ -8265,7 +8265,7 @@ void ImGui::ItemSize(const ImVec2& size, float text_offset_y)
     window->DC.CurrentLineHeight = window->DC.CurrentLineTextBaseOffset = 0.0f;
 }
 
-inline void ImGui::ItemSize(const ImRect& bb, float text_offset_y)
+void ImGui::ItemSize(const ImRect& bb, float text_offset_y)
 { 
     ItemSize(bb.GetSize(), text_offset_y); 
 }
