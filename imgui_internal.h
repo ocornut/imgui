@@ -614,22 +614,22 @@ public:
 
 namespace ImGui
 {
-    IMGUI_API bool          ItemAdd(const ImRect& bb, const ImGuiID* id);
+    IMGUI_API ImGuiWindow*  GetCurrentWindow();
+    IMGUI_API ImGuiWindow*  GetParentWindow();
+    IMGUI_API void          FocusWindow(ImGuiWindow* window);
+
+    IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
+    IMGUI_API void          KeepAliveID(ImGuiID id);
+
     IMGUI_API void          ItemSize(const ImVec2& size, float text_offset_y = 0.0f);
     IMGUI_API void          ItemSize(const ImRect& bb, float text_offset_y = 0.0f);
+    IMGUI_API bool          ItemAdd(const ImRect& bb, const ImGuiID* id);
     IMGUI_API bool          IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when_logged);
     IMGUI_API bool          IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs = false);
     IMGUI_API bool          FocusableItemRegister(ImGuiWindow* window, bool is_active, bool tab_stop = true);      // Return true if focus is requested
     IMGUI_API void          FocusableItemUnregister(ImGuiWindow* window);
     IMGUI_API ImVec2        CalcItemSize(ImVec2 size, float default_x, float default_y);
     IMGUI_API float         CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x);
-
-    IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
-    IMGUI_API void          KeepAliveID(ImGuiID id);
-
-    IMGUI_API ImGuiWindow*  GetCurrentWindow();
-    IMGUI_API ImGuiWindow*  GetParentWindow();
-    IMGUI_API void          FocusWindow(ImGuiWindow* window);
 
     IMGUI_API void          RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
     IMGUI_API void          RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width);
