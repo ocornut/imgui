@@ -14,7 +14,7 @@
  Load .TTF file with:
 
    ImGuiIO& io = ImGui::GetIO();
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels);
+   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
   
  Detailed options:
 
@@ -22,7 +22,7 @@
    config.OversampleH = 3;
    config.OversampleV = 3;
    config.GlyphExtraSpacing.x = 1.0f;
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, &config);
+   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
 
  Combine two fonts into one:
 
@@ -34,22 +34,22 @@
    ImFontConfig config;
    config.MergeMode = true;
    io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, &config, io.Fonts->GetGlyphRangesJapanese());
+   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config, io.Fonts->GetGlyphRangesJapanese());
 
  Add a fourth parameter to bake specific font ranges only:
 
    // Basic Latin, Extended Latin
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesDefault());
+   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesDefault());
    
    // Include full set of about 21000 CJK Unified Ideographs
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());
+   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());
    
    // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
-   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChinese());
+   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChinese());
 
  Offset font vertically by altering the io.Font->DisplayOffset value:
 
-   ImFont* font = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels);
+   ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
    font->DisplayOffset.y += 1;   // Render 1 pixel down
 
 ---------------------------------
