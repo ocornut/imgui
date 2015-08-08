@@ -18,10 +18,12 @@
 
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #include <new>          // new (ptr)
+#ifndef alloca
 #if defined(_MSC_VER) || defined(__MINGW32__) 
 #include <malloc.h>     // alloca
 #else
 #include <alloca.h>     // alloca
+#endif
 #endif
 
 #ifdef _MSC_VER
