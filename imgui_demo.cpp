@@ -25,6 +25,7 @@
 #endif
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"          // warning: cast to pointer from integer of different size
+#pragma GCC diagnostic ignored "-Wformat-security"              // warning : format string is not a string literal (potentially insecure)
 #endif
 
 // Play it nice with Windows users. Notepad in 2015 still doesn't display text data with Unix-style \n.
@@ -1702,7 +1703,7 @@ struct ExampleAppConsole
         ScrollToBottom = true;
     }
 
-    void    AddLog(const char* fmt, ...) IM_PRINTFARGS(2, 3)
+    void    AddLog(const char* fmt, ...) IM_PRINTFARGS(2)
     {
         char buf[1024];
         va_list args;

@@ -25,17 +25,15 @@
 #define IM_ASSERT(_EXPR)    assert(_EXPR)
 #endif
 
-#ifdef __GNUC__
-// warning : format string is not a string literal (potentially insecure)
-#pragma GCC diagnostic ignored "-Wformat-security"
-#define IM_PRINTFARGS(fmt, args) __attribute__((format(printf, fmt, args)))
-#else
-#define IM_PRINTFARGS(fmt, args)
-#endif
-
 // Define attributes of all API symbols declarations, e.g. for DLL under Windows.
 #ifndef IMGUI_API
 #define IMGUI_API
+#endif
+
+#if defined(__clang__) || defined(__GNUC__) 
+#define IM_PRINTFARGS(FMT) __attribute__((format(printf, FMT, (FMT+1))))
+#else
+#define IM_PRINTFARGS(FMT)
 #endif
 
 // Forward declarations
@@ -221,19 +219,19 @@ namespace ImGui
     IMGUI_API ImGuiID       GetID(const void* ptr_id);
 
     // Widgets
-    IMGUI_API void          Text(const char* fmt, ...) IM_PRINTFARGS(1, 2);
+    IMGUI_API void          Text(const char* fmt, ...) IM_PRINTFARGS(1);
     IMGUI_API void          TextV(const char* fmt, va_list args);
-    IMGUI_API void          TextColored(const ImVec4& col, const char* fmt, ...) IM_PRINTFARGS(2, 3);   // shortcut for PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
+    IMGUI_API void          TextColored(const ImVec4& col, const char* fmt, ...) IM_PRINTFARGS(2);  // shortcut for PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
     IMGUI_API void          TextColoredV(const ImVec4& col, const char* fmt, va_list args);
-    IMGUI_API void          TextDisabled(const char* fmt, ...) IM_PRINTFARGS(1, 2);                     // shortcut for PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]); Text(fmt, ...); PopStyleColor();
+    IMGUI_API void          TextDisabled(const char* fmt, ...) IM_PRINTFARGS(1);                    // shortcut for PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]); Text(fmt, ...); PopStyleColor();
     IMGUI_API void          TextDisabledV(const char* fmt, va_list args);
-    IMGUI_API void          TextWrapped(const char* fmt, ...) IM_PRINTFARGS(1, 2);                      // shortcut for PushTextWrapPos(0.0f); Text(fmt, ...); PopTextWrapPos();. Note that this won't work on an auto-resizing window if there's no other widgets to extend the window width, yoy may need to set a size using SetNextWindowSize().
+    IMGUI_API void          TextWrapped(const char* fmt, ...) IM_PRINTFARGS(1);                     // shortcut for PushTextWrapPos(0.0f); Text(fmt, ...); PopTextWrapPos();. Note that this won't work on an auto-resizing window if there's no other widgets to extend the window width, yoy may need to set a size using SetNextWindowSize().
     IMGUI_API void          TextWrappedV(const char* fmt, va_list args);
-    IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL);             // doesn't require null terminated string if 'text_end' is specified. no copy done to any bounded stack buffer, recommended for long chunks of text
-    IMGUI_API void          LabelText(const char* label, const char* fmt, ...) IM_PRINTFARGS(2, 3);     // display text+label aligned the same way as value+label widgets 
+    IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL);         // doesn't require null terminated string if 'text_end' is specified. no copy done to any bounded stack buffer, recommended for long chunks of text
+    IMGUI_API void          LabelText(const char* label, const char* fmt, ...) IM_PRINTFARGS(2);    // display text+label aligned the same way as value+label widgets 
     IMGUI_API void          LabelTextV(const char* label, const char* fmt, va_list args);
     IMGUI_API void          Bullet();
-    IMGUI_API void          BulletText(const char* fmt, ...) IM_PRINTFARGS(1, 2);
+    IMGUI_API void          BulletText(const char* fmt, ...) IM_PRINTFARGS(1);
     IMGUI_API void          BulletTextV(const char* fmt, va_list args);
     IMGUI_API bool          Button(const char* label, const ImVec2& size = ImVec2(0,0));
     IMGUI_API bool          SmallButton(const char* label);
@@ -295,15 +293,15 @@ namespace ImGui
     IMGUI_API bool          VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* display_format = "%.0f");
 
     // Widgets: Trees
-    IMGUI_API bool          TreeNode(const char* str_label_id);                                       // if returning 'true' the node is open and the user is responsible for calling TreePop
-    IMGUI_API bool          TreeNode(const char* str_id, const char* fmt, ...) IM_PRINTFARGS(2, 3);   // "
-    IMGUI_API bool          TreeNode(const void* ptr_id, const char* fmt, ...) IM_PRINTFARGS(2, 3);   // "
-    IMGUI_API bool          TreeNodeV(const char* str_id, const char* fmt, va_list args);             // "
-    IMGUI_API bool          TreeNodeV(const void* ptr_id, const char* fmt, va_list args);             // "
-    IMGUI_API void          TreePush(const char* str_id = NULL);                                      // already called by TreeNode(), but you can call Push/Pop yourself for layouting purpose
-    IMGUI_API void          TreePush(const void* ptr_id = NULL);                                      // "
+    IMGUI_API bool          TreeNode(const char* str_label_id);                                     // if returning 'true' the node is open and the user is responsible for calling TreePop
+    IMGUI_API bool          TreeNode(const char* str_id, const char* fmt, ...) IM_PRINTFARGS(2);    // "
+    IMGUI_API bool          TreeNode(const void* ptr_id, const char* fmt, ...) IM_PRINTFARGS(2);    // "
+    IMGUI_API bool          TreeNodeV(const char* str_id, const char* fmt, va_list args);           // "
+    IMGUI_API bool          TreeNodeV(const void* ptr_id, const char* fmt, va_list args);           // "
+    IMGUI_API void          TreePush(const char* str_id = NULL);                                    // already called by TreeNode(), but you can call Push/Pop yourself for layouting purpose
+    IMGUI_API void          TreePush(const void* ptr_id = NULL);                                    // "
     IMGUI_API void          TreePop();
-    IMGUI_API void          SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond = 0);                // set next tree node to be opened.
+    IMGUI_API void          SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond = 0);              // set next tree node to be opened.
 
     // Widgets: Selectable / Lists
     IMGUI_API bool          Selectable(const char* label, bool selected = false, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0,0));  // size.x==0.0: use remaining width, size.x>0.0: specify width. size.y==0.0: use label height, size.y>0.0: specify height 
@@ -323,7 +321,7 @@ namespace ImGui
     IMGUI_API void          Color(const char* prefix, unsigned int v);
 
     // Tooltip
-    IMGUI_API void          SetTooltip(const char* fmt, ...) IM_PRINTFARGS(1, 2);               // set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). last call wins
+    IMGUI_API void          SetTooltip(const char* fmt, ...) IM_PRINTFARGS(1);                  // set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). last call wins
     IMGUI_API void          SetTooltipV(const char* fmt, va_list args);
     IMGUI_API void          BeginTooltip();                                                     // use to create full-featured tooltip windows that aren't just text
     IMGUI_API void          EndTooltip();
@@ -354,7 +352,7 @@ namespace ImGui
     IMGUI_API void          LogToClipboard(int max_depth = -1);                                 // start logging to OS clipboard
     IMGUI_API void          LogFinish();                                                        // stop logging (close file, etc.)
     IMGUI_API void          LogButtons();                                                       // helper to display buttons for logging to tty/file/clipboard
-    IMGUI_API void          LogText(const char* fmt, ...) IM_PRINTFARGS(1, 2);                  // pass text data straight to log (without being displayed)
+    IMGUI_API void          LogText(const char* fmt, ...) IM_PRINTFARGS(1);                     // pass text data straight to log (without being displayed)
 
     // Utilities
     IMGUI_API bool          IsItemHovered();                                                    // was the last item hovered by mouse?
@@ -869,7 +867,7 @@ struct ImGuiTextBuffer
     int                 size() const { return Buf.Size-1; }
     bool                empty() { return size() >= 1; }
     void                clear() { Buf.clear(); Buf.push_back(0); }
-    IMGUI_API void      append(const char* fmt, ...) IM_PRINTFARGS(2, 3);
+    IMGUI_API void      append(const char* fmt, ...) IM_PRINTFARGS(2);
     IMGUI_API void      appendv(const char* fmt, va_list args);
 };
 
