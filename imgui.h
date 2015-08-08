@@ -1,4 +1,4 @@
-// ImGui library v1.44
+// ImGui library v1.45 WIP
 // Headers
 
 // See imgui.cpp file for documentation.
@@ -17,7 +17,7 @@
 #include <stdlib.h>         // NULL, malloc, free, qsort, atoi
 #include <string.h>         // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
-#define IMGUI_VERSION       "1.44"
+#define IMGUI_VERSION       "1.45 WIP"
 
 // Define assertion handler.
 #ifndef IM_ASSERT

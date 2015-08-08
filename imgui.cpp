@@ -1,4 +1,4 @@
-// ImGui library v1.44
+// ImGui library v1.45 WIP
 // Main code & documentation
 
 // See ImGui::ShowTestWindow() in imgui_demo.cpp for demo code.
