@@ -1,4 +1,4 @@
-// ImGui library v1.44 WIP
+// ImGui library v1.44
 // Internals
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
 
