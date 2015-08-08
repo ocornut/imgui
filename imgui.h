@@ -16,6 +16,7 @@
 #include <stddef.h>         // ptrdiff_t, NULL
 #include <stdlib.h>         // NULL, malloc, free, qsort, atoi
 #include <string.h>         // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
+#include <functional>       // std::function
 
 #define IMGUI_VERSION       "1.45 WIP"
 
@@ -682,21 +683,21 @@ struct ImGuiIO
 
     // REQUIRED: rendering function. 
     // See example code if you are unsure of how to implement this.
-    void        (*RenderDrawListsFn)(ImDrawData* data);      
+    std::function< void (ImDrawData* data) > RenderDrawListsFn;
 
     // Optional: access OS clipboard
     // (default to use native Win32 clipboard on Windows, otherwise uses a private clipboard. Override to access OS clipboard on other architectures)
-    const char* (*GetClipboardTextFn)();
-    void        (*SetClipboardTextFn)(const char* text);
+    std::function<const char* ()> GetClipboardTextFn;
+    std::function<void (const char* text)> SetClipboardTextFn;
 
     // Optional: override memory allocations. MemFreeFn() may be called with a NULL pointer.
     // (default to posix malloc/free)
-    void*       (*MemAllocFn)(size_t sz);
-    void        (*MemFreeFn)(void* ptr);
+    std::function<void* (size_t sz)> MemAllocFn;
+    std::function<void (void* ptr)> MemFreeFn;
 
     // Optional: notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME in Windows)
     // (default to use native imm32 api on Windows)
-    void        (*ImeSetInputScreenPosFn)(int x, int y);
+    std::function<void (int x, int y)> ImeSetInputScreenPosFn;
     void*       ImeWindowHandle;            // (Windows) Set this to your HWND to get automatic IME cursor positioning.
 
     //------------------------------------------------------------------
