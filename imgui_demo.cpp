@@ -22,6 +22,7 @@
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"    // warning : 'xx' is deprecated: The POSIX name for this item.. // for strdup used in demo code (so user can copy & paste the code)
 #pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"   // warning : cast to 'void *' from smaller integer type 'int'
+#pragma clang diagnostic ignored "-Wformat-security"            // warning : warning: format string is not a string literal
 #endif
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"          // warning: cast to pointer from integer of different size
