@@ -1121,7 +1121,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 selected = i;
             ImGui::NextColumn();
             ImGui::Text(names[i]); ImGui::NextColumn();
-            ImGui::Text(paths[i]); ImGui::NextColumn(); 
+            ImGui::Text(paths[i]); ImGui::NextColumn();
             ImGui::Text("...."); ImGui::NextColumn();
         }
         ImGui::Columns(1);
@@ -1424,7 +1424,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 const ImVec4& col = style.Colors[i];
                 const char* name = ImGui::GetStyleColName(i);
                 if (!output_only_modified || memcmp(&col, (ref ? &ref->Colors[i] : &def.Colors[i]), sizeof(ImVec4)) != 0)
-                    ImGui::LogText("style.Colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" IM_NEWLINE, name, 22 - strlen(name), "", col.x, col.y, col.z, col.w);
+                    ImGui::LogText("style.Colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" IM_NEWLINE, name, 22 - (int)strlen(name), "", col.x, col.y, col.z, col.w);
             }
             ImGui::LogFinish();
         }
@@ -1702,7 +1702,7 @@ struct ExampleAppConsole
         ScrollToBottom = true;
     }
 
-    void    AddLog(const char* fmt, ...)
+    void    AddLog(const char* fmt, ...) IM_PRINTFARGS(2, 3)
     {
         char buf[1024];
         va_list args;
@@ -1862,7 +1862,7 @@ struct ExampleAppConsole
                 if (candidates.Size == 0)
                 {
                     // No match
-                    AddLog("No match for \"%.*s\"!\n", word_end-word_start, word_start);
+                    AddLog("No match for \"%.*s\"!\n", (int)(word_end-word_start), word_start);
                 }
                 else if (candidates.Size == 1)
                 {

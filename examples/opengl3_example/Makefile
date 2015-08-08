@@ -22,7 +22,7 @@ ifeq ($(UNAME_S), Linux) #LINUX
 	LIBS = `pkg-config --static --libs glfw3`
 
 	CXXFLAGS = -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
-	CXXFLAGS += -Wall
+	CXXFLAGS += -Wall -Wformat
 	CFLAGS = $(CXXFLAGS)
 endif
 
@@ -33,7 +33,7 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	LIBS += -lglfw3
 
 	CXXFLAGS = -I../../ -I../libs/gl3w -I/usr/local/Cellar/glew/1.10.0/include -I/usr/local/include
-	CXXFLAGS += -Wall
+	CXXFLAGS += -Wall -Wformat
 #	CXXFLAGS += -D__APPLE__
 	CFLAGS = $(CXXFLAGS)
 endif
