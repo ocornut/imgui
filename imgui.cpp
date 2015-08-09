@@ -486,6 +486,7 @@
 #endif
 
 #ifdef _MSC_VER
+#pragma warning (disable: 4127) // condition expression is constant
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #define snprintf _snprintf
@@ -2180,6 +2181,15 @@ static void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDr
         if (draw_list->CmdBuffer.back().ElemCount == 0)
             draw_list->CmdBuffer.pop_back();
         out_render_list.push_back(draw_list);
+
+        if (sizeof(ImDrawIdx) < 4)
+        {
+            // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = 2 bytes = 64K vertices)
+            // If this assert triggers because you are drawing lots of stuff manually, a workaround is to use BeginChild()/EndChild() to put your draw commands in a new draw list
+            unsigned int max_vtx_idx = (unsigned int)1 << (sizeof(ImDrawIdx)*8);
+            IM_ASSERT(draw_list->_VtxCurrentIdx <= max_vtx_idx);
+        }
+
         GImGui->IO.MetricsRenderVertices += draw_list->VtxBuffer.Size;
         GImGui->IO.MetricsRenderIndices += draw_list->IdxBuffer.Size;
     }
