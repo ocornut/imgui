@@ -31,6 +31,9 @@
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #define snprintf _snprintf
 #endif
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
+#endif
 
 //-------------------------------------------------------------------------
 // STB libraries implementation
