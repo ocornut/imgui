@@ -725,7 +725,7 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
 #define IM_INT_MAX  (2147483647)
 
 // Play it nice with Windows users. Notepad in 2015 still doesn't display text data with Unix-style \n.
-#ifdef _MSC_VER
+#ifdef _WIN32
 #define IM_NEWLINE "\r\n"
 #else
 #define IM_NEWLINE "\n"
@@ -8706,13 +8706,17 @@ void ImGui::Color(const char* prefix, unsigned int v)
 // PLATFORM DEPENDANT HELPERS
 //-----------------------------------------------------------------------------
 
-#if defined(_MSC_VER) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS)
+#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS)
 
 #ifndef _WINDOWS_
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #endif
+#ifdef _MSC_VER
 #pragma comment(lib, "user32")
+#endif
 
 // Win32 API clipboard implementation
 static const char* GetClipboardTextFn_DefaultImpl()
@@ -8782,14 +8786,18 @@ static void SetClipboardTextFn_DefaultImpl(const char* text)
 
 #endif
 
-#if defined(_MSC_VER) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS)
+#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS)
 
 #ifndef _WINDOWS_
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #endif
-#include <Imm.h>
+#include <imm.h>
+#ifdef _MSC_VER
 #pragma comment(lib, "imm32")
+#endif
 
 static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
 {
