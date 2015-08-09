@@ -19,7 +19,7 @@
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #include <new>          // new (ptr)
 #ifndef alloca
-#if defined(_MSC_VER) || defined(__MINGW32__) 
+#if _WIN32
 #include <malloc.h>     // alloca
 #else
 #include <alloca.h>     // alloca

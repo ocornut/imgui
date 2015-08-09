@@ -6,7 +6,7 @@
 
 // GLFW
 #include <GLFW/glfw3.h>
-#ifdef _MSC_VER
+#ifdef _WIN32
 #undef APIENTRY
 #define GLFW_EXPOSE_NATIVE_WIN32
 #define GLFW_EXPOSE_NATIVE_WGL
@@ -198,7 +198,7 @@ bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
     io.RenderDrawListsFn = ImGui_ImplGlfw_RenderDrawLists;
     io.SetClipboardTextFn = ImGui_ImplGlfw_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplGlfw_GetClipboardText;
-#ifdef _MSC_VER
+#ifdef _WIN32
     io.ImeWindowHandle = glfwGetWin32Window(g_Window);
 #endif
 
