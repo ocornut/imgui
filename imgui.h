@@ -1013,8 +1013,10 @@ struct ImDrawCmd
     void*           UserCallbackData;       // The draw callback code can access this.
 };
 
-// Vertex index
+// Vertex index (override with, e.g. '#define ImDrawIdx unsigned int' in ImConfig)
+#ifndef ImDrawIdx
 typedef unsigned short ImDrawIdx;
+#endif
 
 // Vertex layout
 #ifndef IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT
