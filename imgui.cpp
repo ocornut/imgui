@@ -8706,19 +8706,19 @@ void ImGui::Color(const char* prefix, unsigned int v)
 // PLATFORM DEPENDANT HELPERS
 //-----------------------------------------------------------------------------
 
-#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS)
-
-#ifndef _WINDOWS_
-#ifndef WIN32_LEAN_AND_MEAN
+#if defined(_WIN32) && !defined(_WINDOWS_) && (!defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS) || !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS))
+#undef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
-#endif
 #include <windows.h>
 #endif
+
+// Win32 API clipboard implementation
+#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS)
+
 #ifdef _MSC_VER
 #pragma comment(lib, "user32")
 #endif
 
-// Win32 API clipboard implementation
 static const char* GetClipboardTextFn_DefaultImpl()
 {
     static char* buf_local = NULL;
@@ -8743,7 +8743,6 @@ static const char* GetClipboardTextFn_DefaultImpl()
     return buf_local;
 }
 
-// Win32 API clipboard implementation
 static void SetClipboardTextFn_DefaultImpl(const char* text)
 {
     if (!OpenClipboard(NULL))
@@ -8786,14 +8785,9 @@ static void SetClipboardTextFn_DefaultImpl(const char* text)
 
 #endif
 
+// Win32 API IME support (for Asian languages, etc.)
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS)
 
-#ifndef _WINDOWS_
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#endif
 #include <imm.h>
 #ifdef _MSC_VER
 #pragma comment(lib, "imm32")
