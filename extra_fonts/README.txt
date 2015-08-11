@@ -97,6 +97,9 @@
 
  Typefaces for source code beautification
    https://github.com/chrissimpkins/codeface
+ 
+ Programmation fonts
+   http://s9w.github.io/font_compare/
 
  Proggy Programming Fonts
    http://upperbounds.net
