@@ -2690,13 +2690,13 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 // Test if mouse cursor is hovering given rectangle
 // NB- Rectangle is clipped by our current clip setting
 // NB- Expand the rectangle to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
-bool ImGui::IsMouseHoveringRect(const ImVec2& rect_min, const ImVec2& rect_max)
+bool ImGui::IsMouseHoveringRect(const ImVec2& pos_min, const ImVec2& pos_max)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
     // Clip
-    ImRect rect_clipped(rect_min, rect_max);
+    ImRect rect_clipped(pos_min, pos_max);
     rect_clipped.Clip(window->ClipRect);
 
     // Expand for touch input
@@ -4603,10 +4603,10 @@ float ImGui::GetCursorPosY()
     return ImGui::GetCursorPos().y;
 }
 
-void ImGui::SetCursorPos(const ImVec2& pos)
+void ImGui::SetCursorPos(const ImVec2& local_pos)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.CursorPos = window->Pos + pos;
+    window->DC.CursorPos = window->Pos + local_pos;
     window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos);
 }
 
@@ -8380,11 +8380,11 @@ void ImGui::EndGroup()
 }
 
 // Gets back to previous line and continue with horizontal layout
-//      pos_x == 0   : follow on previous item
-//      pos_x != 0   : align to specified column
+//      local_pos_x == 0   : follow on previous item
+//      local_pos_x != 0   : align to specified column
 //      spacing_w < 0   : use default spacing if column_x==0, no spacing if column_x!=0
 //      spacing_w >= 0  : enforce spacing
-void ImGui::SameLine(float pos_x, float spacing_w)
+void ImGui::SameLine(float local_pos_x, float spacing_w)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -8392,10 +8392,10 @@ void ImGui::SameLine(float pos_x, float spacing_w)
     
     ImGuiState& g = *GImGui;
     float x, y;
-    if (pos_x != 0.0f)
+    if (local_pos_x != 0.0f)
     {
         if (spacing_w < 0.0f) spacing_w = 0.0f;
-        x = window->Pos.x + pos_x + spacing_w;
+        x = window->Pos.x + local_pos_x + spacing_w;
         y = window->DC.CursorPosPrevLine.y;
     }
     else
