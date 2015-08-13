@@ -358,14 +358,14 @@ namespace ImGui
     IMGUI_API bool          IsItemHovered();                                                    // was the last item hovered by mouse?
     IMGUI_API bool          IsItemHoveredRect();                                                // was the last item hovered by mouse? even if another item is active while we are hovering this
     IMGUI_API bool          IsItemActive();                                                     // was the last item active? (e.g. button being held, text field being edited- items that don't interact will always return false)
-    IMGUI_API bool          IsItemVisible();
+    IMGUI_API bool          IsItemVisible();                                                    // was the last item visible? (aka not out of sight due to clipping/scrolling.)
     IMGUI_API bool          IsAnyItemHovered();
     IMGUI_API bool          IsAnyItemActive();
     IMGUI_API ImVec2        GetItemRectMin();                                                   // get bounding rect of last item in screen space
     IMGUI_API ImVec2        GetItemRectMax();                                                   // "
     IMGUI_API ImVec2        GetItemRectSize();                                                  // "
-    IMGUI_API bool          IsWindowHovered();
-    IMGUI_API bool          IsWindowFocused();                                                  // is current window focused (differentiate child windows from each others)
+    IMGUI_API bool          IsWindowHovered();                                                  // is current window hovered and hoverable (not blocked by a popup) (differentiate child windows from each others)
+    IMGUI_API bool          IsWindowFocused();                                                  // is current window focused 
     IMGUI_API bool          IsRootWindowFocused();                                              // is current root window focused (top parent window in case of child windows)
     IMGUI_API bool          IsRootWindowOrAnyChildFocused();                                    // is current root window or any of its child (including current window) focused
     IMGUI_API bool          IsRectVisible(const ImVec2& size);                                  // test if rectangle of given size starting from cursor pos is visible (not clipped). to perform coarse clipping on user's side (as an optimization)
@@ -393,9 +393,9 @@ namespace ImGui
     IMGUI_API bool          IsMouseClicked(int button, bool repeat = false);                    // did mouse button clicked (went from !Down to Down)
     IMGUI_API bool          IsMouseDoubleClicked(int button);                                   // did mouse button double-clicked. a double-click returns false in IsMouseClicked(). uses io.MouseDoubleClickTime.
     IMGUI_API bool          IsMouseReleased(int button);                                        // did mouse button released (went from Down to !Down)
-    IMGUI_API bool          IsMouseHoveringWindow();                                            // is mouse hovering current window ("window" in API names always refer to current window)
-    IMGUI_API bool          IsMouseHoveringAnyWindow();                                         // is mouse hovering any active imgui window
-    IMGUI_API bool          IsMouseHoveringRect(const ImVec2& rect_min, const ImVec2& rect_max);// is mouse hovering given bounding rect
+    IMGUI_API bool          IsMouseHoveringWindow();                                            // is mouse hovering current window ("window" in API names always refer to current window). disregarding of any consideration of being blocked by a popup. (unlike IsWindowHovered() this will return true even if the window is blocked because of a popup)
+    IMGUI_API bool          IsMouseHoveringAnyWindow();                                         // is mouse hovering any visible window
+    IMGUI_API bool          IsMouseHoveringRect(const ImVec2& scr_min, const ImVec2& scr_max);  // is mouse hovering given bounding rect (in screen space). disregarding of any consideration of focus/window ordering/blocked by a popup.
     IMGUI_API bool          IsMouseDragging(int button = 0, float lock_threshold = -1.0f);      // is mouse dragging. if lock_threshold < -1.0f uses io.MouseDraggingThreshold
     IMGUI_API ImVec2        GetMousePos();                                                      // shortcut to ImGui::GetIO().MousePos provided by user, to be consistent with other calls
     IMGUI_API ImVec2        GetMouseDragDelta(int button = 0, float lock_threshold = -1.0f);    // dragging amount since clicking, also see: GetItemActiveDragDelta(). if lock_threshold < -1.0f uses io.MouseDraggingThreshold

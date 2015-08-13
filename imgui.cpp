@@ -4304,7 +4304,7 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
 bool ImGui::IsWindowHovered()
 {
     ImGuiState& g = *GImGui;
-    return g.HoveredWindow == g.CurrentWindow;
+    return g.HoveredWindow == g.CurrentWindow && IsWindowContentHoverable(g.HoveredRootWindow);
 }
 
 bool ImGui::IsWindowFocused()
