@@ -1982,7 +1982,6 @@ struct ExampleAppLog
         Filter.Draw("Filter", -100.0f);
         ImGui::Separator();
         ImGui::BeginChild("scrolling");
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,1));
         if (copy) ImGui::LogToClipboard();
 
         if (Filter.IsActive())
@@ -2005,7 +2004,6 @@ struct ExampleAppLog
         if (ScrollToBottom)
             ImGui::SetScrollHere(1.0f);
         ScrollToBottom = false;
-        ImGui::PopStyleVar();
         ImGui::EndChild();
         ImGui::End();
     }
