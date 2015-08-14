@@ -777,13 +777,13 @@ const ImWchar* ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin) 
     return buf_mid_line;
 }
 
-const char* ImStristr(const char* haystack, const char* needle, const char* needle_end)
+const char* ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end)
 {
     if (!needle_end)
         needle_end = needle + strlen(needle);
 
     const char un0 = (char)toupper(*needle);
-    while (*haystack)
+    while ((!haystack_end && *haystack) || (haystack_end && haystack < haystack_end))
     {
         if (toupper(*haystack) == un0)
         {
@@ -1326,13 +1326,13 @@ void ImGuiTextFilter::Build()
     }
 }
 
-bool ImGuiTextFilter::PassFilter(const char* val) const
+bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 {
     if (Filters.empty())
         return true;
 
-    if (val == NULL)
-        val = "";
+    if (text == NULL)
+        text = "";
 
     for (int i = 0; i != Filters.Size; i++)
     {
@@ -1342,13 +1342,13 @@ bool ImGuiTextFilter::PassFilter(const char* val) const
         if (f.front() == '-')
         {
             // Subtract
-            if (ImStristr(val, f.begin()+1, f.end()) != NULL)
+            if (ImStristr(text, text_end, f.begin()+1, f.end()) != NULL)
                 return false;
         }
         else
         {
             // Grep
-            if (ImStristr(val, f.begin(), f.end()) != NULL)
+            if (ImStristr(text, text_end, f.begin(), f.end()) != NULL)
                 return true;
         }
     }
@@ -2635,6 +2635,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
 
 // Helper to calculate coarse clipping of large list of evenly sized items. 
 // NB: Prefer using the ImGuiListClipper higher-level helper if you can!
+// NB: 'items_count' is only used to clamp the result, if you don't know your count you can use INT_MAX
 // If you are displaying thousands of items and you have a random access to the list, you can perform clipping yourself to save on CPU.
 // {
 //    float item_height = ImGui::GetTextLineHeightWithSpacing();

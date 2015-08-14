@@ -851,7 +851,7 @@ struct ImGuiTextFilter
     ImGuiTextFilter(const char* default_filter = "");
     void Clear() { InputBuf[0] = 0; Build(); }
     void Draw(const char* label = "Filter (inc,-exc)", float width = -1.0f);    // Helper calling InputText+Build
-    bool PassFilter(const char* val) const;
+    bool PassFilter(const char* text, const char* text_end = NULL) const;
     bool IsActive() const { return !Filters.empty(); }
     IMGUI_API void Build();
 };
@@ -862,6 +862,7 @@ struct ImGuiTextBuffer
     ImVector<char>      Buf;
 
     ImGuiTextBuffer()   { Buf.push_back(0); }
+    inline char         operator[](int i) { return Buf.Data[i]; }
     const char*         begin() const { return &Buf.front(); }
     const char*         end() const { return &Buf.back(); }      // Buf is zero-terminated, so end() will point on the zero-terminator
     int                 size() const { return Buf.Size-1; }
@@ -962,6 +963,7 @@ struct ImColor
 //    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) // display only visible items
 //        ImGui::Text("line number %d", i);
 //    clipper.End();
+// NB: 'count' is only used to clamp the result, if you don't know your count you can use INT_MAX
 struct ImGuiListClipper
 {
     float   ItemsHeight;

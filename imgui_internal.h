@@ -93,7 +93,7 @@ int                 ImStrnicmp(const char* str1, const char* str2, int count);
 char*               ImStrdup(const char* str);
 int                 ImStrlenW(const ImWchar* str);
 const ImWchar*      ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin); // Find beginning-of-line
-const char*         ImStristr(const char* haystack, const char* needle, const char* needle_end);
+const char*         ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end);
 int                 ImFormatString(char* buf, int buf_size, const char* fmt, ...) IM_PRINTFARGS(3);
 int                 ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args);
 
