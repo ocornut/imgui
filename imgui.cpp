@@ -1283,10 +1283,10 @@ ImGuiTextFilter::ImGuiTextFilter(const char* default_filter)
 
 void ImGuiTextFilter::Draw(const char* label, float width)
 {
-    if (width > 0.0f)
+    if (width != 0.0f)
         ImGui::PushItemWidth(width);
     ImGui::InputText(label, InputBuf, IM_ARRAYSIZE(InputBuf));
-    if (width > 0.0f)
+    if (width != 0.0f)
         ImGui::PopItemWidth();
     Build();
 }
