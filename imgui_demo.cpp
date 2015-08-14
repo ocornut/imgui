@@ -1982,26 +1982,19 @@ struct ExampleAppLog
         Filter.Draw("Filter", -100.0f);
         ImGui::Separator();
         ImGui::BeginChild("scrolling");
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,1));
         if (copy) ImGui::LogToClipboard();
 
-        // We provide coarse vertical clipping of the filtered result to make it a little faster.
         if (Filter.IsActive())
         {
-            int display_start = 0, display_end = 0, displayed_count = 0;
-            ImGui::CalcListClipping(INT_MAX, ImGui::GetTextLineHeight(), &display_start, &display_end);
             const char* buf_begin = Buf.begin();
             const char* line = buf_begin;
             for (int line_no = 0; line != NULL; line_no++)
             {
                 const char* line_end = (line_no < LineOffsets.Size) ? buf_begin + LineOffsets[line_no] : NULL;
                 if (Filter.PassFilter(line, line_end))
-                {
-                    if (displayed_count >= display_start && displayed_count < display_end)
-                        ImGui::TextUnformatted(line, line_end);
-                    displayed_count++;
-                }
-                line = line_end ? (line_end + 1) : NULL;
+                    ImGui::TextUnformatted(line, line_end);
+                line = line_end && line_end[1] ? line_end + 1 : NULL;
             }
         }
         else
