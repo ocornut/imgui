@@ -1952,16 +1952,22 @@ static void ShowExampleAppConsole(bool* opened)
 struct ExampleAppLog
 {
     ImGuiTextBuffer     Buf;
+    ImGuiTextFilter     Filter;
+    ImVector<int>       LineOffsets;        // Index to lines offset
     bool                ScrollToBottom;
 
-    void    Clear()     { Buf.clear(); }
+    void    Clear()     { Buf.clear(); LineOffsets.clear(); }
 
     void    AddLog(const char* fmt, ...) IM_PRINTFARGS(2)
     {
+        int old_size = Buf.size();
         va_list args;
         va_start(args, fmt);
         Buf.appendv(fmt, args);
         va_end(args);
+        for (int new_size = Buf.size(); old_size < new_size; old_size++)
+            if (Buf[old_size] == '\n')
+                LineOffsets.push_back(old_size);
         ScrollToBottom = true;
     }
 
@@ -1969,17 +1975,44 @@ struct ExampleAppLog
     {
         ImGui::SetNextWindowSize(ImVec2(500,400), ImGuiSetCond_FirstUseEver);
         ImGui::Begin(title, p_opened);
-        if (ImGui::Button("Clear")) Buf.clear();
+        if (ImGui::Button("Clear")) Clear();
         ImGui::SameLine();
         bool copy = ImGui::Button("Copy");
+        ImGui::SameLine();
+        Filter.Draw();
         ImGui::Separator();
         ImGui::BeginChild("scrolling");
-        if (copy)
-            ImGui::LogToClipboard();
-        ImGui::TextUnformatted(Buf.begin());
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+        if (copy) ImGui::LogToClipboard();
+
+        // We provide coarse vertical clipping of the filtered result to make it a little faster.
+        if (Filter.IsActive())
+        {
+            int display_start = 0, display_end = 0, displayed_count = 0;
+            ImGui::CalcListClipping(INT_MAX, ImGui::GetTextLineHeight(), &display_start, &display_end);
+            const char* buf_begin = Buf.begin();
+            const char* line = buf_begin;
+            for (int line_no = 0; line != NULL; line_no++)
+            {
+                const char* line_end = (line_no < LineOffsets.Size) ? buf_begin + LineOffsets[line_no] : NULL;
+                if (Filter.PassFilter(line, line_end))
+                {
+                    if (displayed_count >= display_start && displayed_count < display_end)
+                        ImGui::TextUnformatted(line, line_end);
+                    displayed_count++;
+                }
+                line = line_end ? (line_end + 1) : NULL;
+            }
+        }
+        else
+        {
+            ImGui::TextUnformatted(Buf.begin());
+        }
+
         if (ScrollToBottom)
             ImGui::SetScrollHere(1.0f);
         ScrollToBottom = false;
+        ImGui::PopStyleVar();
         ImGui::EndChild();
         ImGui::End();
     }
@@ -1994,7 +2027,8 @@ static void ShowExampleAppLog(bool* opened)
     float time = ImGui::GetTime();
     if (time - last_time >= 0.3f)
     {
-        log.AddLog("Hello, time is %.1f sec, rand() is %d\n", time, (int)rand());
+        const char* random_words[] = { "system", "info", "warning", "error", "fatal", "notice", "log" };
+        log.AddLog("[%s] Hello, time is %.1f, rand() %d\n", random_words[rand() % IM_ARRAYSIZE(random_words)], time, (int)rand());
         last_time = time;
     }
 
