@@ -102,10 +102,10 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     // Setup orthographic projection matrix
     D3DXMATRIXA16 mat;
     D3DXMatrixIdentity(&mat);
-    g_pd3dDevice->SetTransform(D3DTS_WORLD, &mat);
-    g_pd3dDevice->SetTransform(D3DTS_VIEW, &mat);
-    D3DXMatrixOrthoOffCenterLH(&mat, 0.5f, ImGui::GetIO().DisplaySize.x+0.5f, ImGui::GetIO().DisplaySize.y+0.5f, 0.5f, -1.0f, +1.0f);
-    g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &mat);
+    g_pd3dDevice->SetTransform( D3DTS_WORLD, &mat );
+    g_pd3dDevice->SetTransform( D3DTS_VIEW, &mat );
+    D3DXMatrixOrthoOffCenterLH( &mat, 0.5f, ImGui::GetIO().DisplaySize.x+0.5f, ImGui::GetIO().DisplaySize.y+0.5f, 0.5f, -1.0f, +1.0f );
+    g_pd3dDevice->SetTransform( D3DTS_PROJECTION, &mat );
 
     // Render command lists
     int vtx_offset = 0;
@@ -124,8 +124,8 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
             {
                 const RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
                 g_pd3dDevice->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->TextureId );
-                g_pd3dDevice->SetScissorRect(&r);
-                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.size(), idx_offset, pcmd->ElemCount/3);
+                g_pd3dDevice->SetScissorRect( &r );
+                g_pd3dDevice->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.size(), idx_offset, pcmd->ElemCount/3 );
             }
             idx_offset += pcmd->ElemCount;
         }
@@ -219,7 +219,7 @@ void ImGui_ImplDX9_Shutdown()
     g_hWnd = 0;
 }
 
-static void ImGui_ImplDX9_CreateFontsTexture()
+static bool ImGui_ImplDX9_CreateFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
 
@@ -231,16 +231,10 @@ static void ImGui_ImplDX9_CreateFontsTexture()
     // Create DX9 texture
     g_FontTexture = NULL;
     if (D3DXCreateTexture(g_pd3dDevice, width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &g_FontTexture) < 0)
-    {
-        IM_ASSERT(0);
-        return;
-    }
+        return false;
     D3DLOCKED_RECT tex_locked_rect;
     if (g_FontTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK) 
-    {	
-        IM_ASSERT(0); 
-        return; 
-    }
+        return false;
     for (int y = 0; y < height; y++)
         memcpy((unsigned char *)tex_locked_rect.pBits + tex_locked_rect.Pitch * y, pixels + (width * bytes_per_pixel) * y, (width * bytes_per_pixel));
     g_FontTexture->UnlockRect(0);
@@ -251,14 +245,15 @@ static void ImGui_ImplDX9_CreateFontsTexture()
     // Cleanup (don't clear the input data if you want to append new fonts later)
     io.Fonts->ClearInputData();
     io.Fonts->ClearTexData();
+    return true;
 }
 
 bool ImGui_ImplDX9_CreateDeviceObjects()
 {
     if (!g_pd3dDevice)
         return false;
-
-    ImGui_ImplDX9_CreateFontsTexture();
+    if (!ImGui_ImplDX9_CreateFontsTexture())
+        return false;
     return true;
 }
 
