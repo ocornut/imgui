@@ -2826,6 +2826,14 @@ ImVec2 ImGui::GetMousePos()
     return GImGui->IO.MousePos;
 }
 
+ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup()
+{
+    ImGuiState& g = *GImGui;
+	if (g.CurrentPopupStack.Size > 0)
+		return g.OpenedPopupStack[g.CurrentPopupStack.Size-1].MousePosOnOpen;
+	return g.IO.MousePos;
+}
+
 ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
 {
     ImGuiState& g = *GImGui;
@@ -2982,7 +2990,7 @@ void ImGui::OpenPopup(const char* str_id)
     ImGuiWindow* window = GetCurrentWindow();
     ImGuiID id = window->GetID(str_id);
     int current_stack_size = g.CurrentPopupStack.Size;
-    ImGuiPopupRef popup_ref = ImGuiPopupRef(id, window, window->GetID("##menus")); // Tagged as new ref because constructor sets Window to NULL (we are passing the ParentWindow info here)
+    ImGuiPopupRef popup_ref = ImGuiPopupRef(id, window, window->GetID("##menus"), g.IO.MousePos); // Tagged as new ref because constructor sets Window to NULL (we are passing the ParentWindow info here)
     if (g.OpenedPopupStack.Size < current_stack_size + 1)
         g.OpenedPopupStack.push_back(popup_ref);
     else if (g.OpenedPopupStack[current_stack_size].PopupID != id)
