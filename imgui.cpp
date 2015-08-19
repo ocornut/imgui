@@ -816,9 +816,9 @@ int ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args)
     return (w == -1) ? buf_size : w;
 }
 
-// Pass data_size==0 for zero-terminated string
+// Pass data_size==0 for zero-terminated strings
 // FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
-ImU32 ImHash(const void* data, int data_size, ImU32 seed = 0) 
+ImU32 ImHash(const void* data, int data_size, ImU32) 
 { 
     static ImU32 crc32_lut[256] = { 0 };
     if (!crc32_lut[1])

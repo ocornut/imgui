@@ -81,7 +81,7 @@ int                 ImTextCountCharsFromUtf8(const char* in_text, const char* in
 int                 ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string as UTF-8 code-points
 
 // Helpers: Misc
-ImU32               ImHash(const void* data, int data_size, ImU32 seed);
+ImU32               ImHash(const void* data, int data_size, ImU32 seed = 0);	// Pass data_size==0 for zero-terminated strings
 bool                ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, int* out_file_size = NULL, int padding_bytes = 0);
 bool                ImIsPointInTriangle(const ImVec2& p, const ImVec2& a, const ImVec2& b, const ImVec2& c);
 static inline bool  ImCharIsSpace(int c)            { return c == ' ' || c == '\t' || c == 0x3000; }
