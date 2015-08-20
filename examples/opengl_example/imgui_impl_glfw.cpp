@@ -127,10 +127,10 @@ void ImGui_ImplGlFw_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
     io.KeyAlt = io.KeysDown[GLFW_KEY_LEFT_ALT] || io.KeysDown[GLFW_KEY_RIGHT_ALT];
 }
 
-void ImGui_ImplGlfw_CharModsCallback(GLFWwindow*, unsigned int c, int mods)
+void ImGui_ImplGlfw_CharCallback(GLFWwindow*, unsigned int c)
 {
     ImGuiIO& io = ImGui::GetIO();
-    if ((mods & ~GLFW_MOD_SHIFT) == 0 && c > 0 && c < 0x10000)
+    if (c > 0 && c < 0x10000)
         io.AddInputCharacter((unsigned short)c);
 }
 
@@ -207,7 +207,7 @@ bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
         glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
         glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
         glfwSetKeyCallback(window, ImGui_ImplGlFw_KeyCallback);
-        glfwSetCharModsCallback(window, ImGui_ImplGlfw_CharModsCallback);
+        glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
     }
 
     return true;

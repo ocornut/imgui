@@ -17,4 +17,4 @@ bool        ImGui_ImplGlfwGL3_CreateDeviceObjects();
 void        ImGui_ImplGlfwGL3_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void        ImGui_ImplGlfwGL3_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void        ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-void        ImGui_ImplGlfwGL3_CharModsCallback(GLFWwindow* window, unsigned int c, int mods);
+void        ImGui_ImplGlfwGL3_CharCallback(GLFWwindow* window, unsigned int c);
