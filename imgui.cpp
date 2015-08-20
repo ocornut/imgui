@@ -7022,15 +7022,16 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (g.IO.InputCharacters[0])
         {
             // Process text input (before we check for Return because using some IME will effectively send a Return?)
-            for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
+            if (!is_ctrl_down && !is_alt_down)
             {
-                if (unsigned int c = (unsigned int)g.IO.InputCharacters[n])
-                {
-                    // Insert character if they pass filtering
-                    if (!InputTextFilterCharacter(&c, flags, callback, user_data))
-                        continue;
-                    edit_state.OnKeyPressed((int)c);
-                }
+                for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
+                    if (unsigned int c = (unsigned int)g.IO.InputCharacters[n])
+                    {
+                        // Insert character if they pass filtering
+                        if (!InputTextFilterCharacter(&c, flags, callback, user_data))
+                            continue;
+                        edit_state.OnKeyPressed((int)c);
+                    }
             }
 
             // Consume characters
