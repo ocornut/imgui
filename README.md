@@ -60,7 +60,7 @@ For Microsoft IME, pass your HWND to enable IME positioning:
 ```
 io.ImeWindowHandle = my_hwnd;
 ```
-![Japanese screenshot](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/code_sample_01_jp .png)
+![Japanese screenshot](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/code_sample_01_jp.png)
 
 References
 ----------
