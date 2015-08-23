@@ -396,6 +396,7 @@
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
  - input text multi-line: way to dynamically grow the buffer without forcing the user to initially allocate for worse case (follow up on #200)
  - input text multi-line: line numbers? status bar? (follow up on #200)
+ - input text: read-only mode (can still select/copy, always display input buffer)
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
@@ -776,13 +777,13 @@ const ImWchar* ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin) 
     return buf_mid_line;
 }
 
-const char* ImStristr(const char* haystack, const char* needle, const char* needle_end)
+const char* ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end)
 {
     if (!needle_end)
         needle_end = needle + strlen(needle);
 
     const char un0 = (char)toupper(*needle);
-    while (*haystack)
+    while ((!haystack_end && *haystack) || (haystack_end && haystack < haystack_end))
     {
         if (toupper(*haystack) == un0)
         {
@@ -815,9 +816,9 @@ int ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args)
     return (w == -1) ? buf_size : w;
 }
 
-// Pass data_size==0 for zero-terminated string
+// Pass data_size==0 for zero-terminated strings
 // FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
-ImU32 ImHash(const void* data, int data_size, ImU32 seed = 0)
+ImU32 ImHash(const void* data, int data_size, ImU32 seed)
 {
     static ImU32 crc32_lut[256] = { 0 };
     if (!crc32_lut[1])
@@ -1282,10 +1283,10 @@ ImGuiTextFilter::ImGuiTextFilter(const char* default_filter)
 
 void ImGuiTextFilter::Draw(const char* label, float width)
 {
-    if (width > 0.0f)
+    if (width != 0.0f)
         ImGui::PushItemWidth(width);
     ImGui::InputText(label, InputBuf, IM_ARRAYSIZE(InputBuf));
-    if (width > 0.0f)
+    if (width != 0.0f)
         ImGui::PopItemWidth();
     Build();
 }
@@ -1325,13 +1326,13 @@ void ImGuiTextFilter::Build()
     }
 }
 
-bool ImGuiTextFilter::PassFilter(const char* val) const
+bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 {
     if (Filters.empty())
         return true;
 
-    if (val == NULL)
-        val = "";
+    if (text == NULL)
+        text = "";
 
     for (int i = 0; i != Filters.Size; i++)
     {
@@ -1341,13 +1342,13 @@ bool ImGuiTextFilter::PassFilter(const char* val) const
         if (f.front() == '-')
         {
             // Subtract
-            if (ImStristr(val, f.begin()+1, f.end()) != NULL)
+            if (ImStristr(text, text_end, f.begin()+1, f.end()) != NULL)
                 return false;
         }
         else
         {
             // Grep
-            if (ImStristr(val, f.begin(), f.end()) != NULL)
+            if (ImStristr(text, text_end, f.begin(), f.end()) != NULL)
                 return true;
         }
     }
@@ -2635,6 +2636,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
 
 // Helper to calculate coarse clipping of large list of evenly sized items.
 // NB: Prefer using the ImGuiListClipper higher-level helper if you can!
+// NB: 'items_count' is only used to clamp the result, if you don't know your count you can use INT_MAX
 // If you are displaying thousands of items and you have a random access to the list, you can perform clipping yourself to save on CPU.
 // {
 //    float item_height = ImGui::GetTextLineHeightWithSpacing();
@@ -2691,13 +2693,13 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 // Test if mouse cursor is hovering given rectangle
 // NB- Rectangle is clipped by our current clip setting
 // NB- Expand the rectangle to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
-bool ImGui::IsMouseHoveringRect(const ImVec2& rect_min, const ImVec2& rect_max)
+bool ImGui::IsMouseHoveringRect(const ImVec2& pos_min, const ImVec2& pos_max)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
     // Clip
-    ImRect rect_clipped(rect_min, rect_max);
+    ImRect rect_clipped(pos_min, pos_max);
     rect_clipped.Clip(window->ClipRect);
 
     // Expand for touch input
@@ -2823,6 +2825,14 @@ bool ImGui::IsMouseDragging(int button, float lock_threshold)
 ImVec2 ImGui::GetMousePos()
 {
     return GImGui->IO.MousePos;
+}
+
+ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup()
+{
+    ImGuiState& g = *GImGui;
+	if (g.CurrentPopupStack.Size > 0)
+		return g.OpenedPopupStack[g.CurrentPopupStack.Size-1].MousePosOnOpen;
+	return g.IO.MousePos;
 }
 
 ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
@@ -2986,7 +2996,7 @@ void ImGui::OpenPopup(const char* str_id)
     ImGuiWindow* window = GetCurrentWindow();
     ImGuiID id = window->GetID(str_id);
     int current_stack_size = g.CurrentPopupStack.Size;
-    ImGuiPopupRef popup_ref = ImGuiPopupRef(id, window, window->GetID("##menus")); // Tagged as new ref because constructor sets Window to NULL (we are passing the ParentWindow info here)
+    ImGuiPopupRef popup_ref = ImGuiPopupRef(id, window, window->GetID("##menus"), g.IO.MousePos); // Tagged as new ref because constructor sets Window to NULL (we are passing the ParentWindow info here)
     if (g.OpenedPopupStack.Size < current_stack_size + 1)
         g.OpenedPopupStack.push_back(popup_ref);
     else if (g.OpenedPopupStack[current_stack_size].PopupID != id)
@@ -4310,7 +4320,7 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
 bool ImGui::IsWindowHovered()
 {
     ImGuiState& g = *GImGui;
-    return g.HoveredWindow == g.CurrentWindow;
+    return g.HoveredWindow == g.CurrentWindow && IsWindowContentHoverable(g.HoveredRootWindow);
 }
 
 bool ImGui::IsWindowFocused()
@@ -4609,10 +4619,10 @@ float ImGui::GetCursorPosY()
     return ImGui::GetCursorPos().y;
 }
 
-void ImGui::SetCursorPos(const ImVec2& pos)
+void ImGui::SetCursorPos(const ImVec2& local_pos)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.CursorPos = window->Pos + pos;
+    window->DC.CursorPos = window->Pos + local_pos;
     window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos);
 }
 
@@ -4678,6 +4688,7 @@ void ImGui::SetScrollFromPosY(float pos_y, float center_y_ratio)
     window->ScrollTargetCenterRatioY = center_y_ratio;
 }
 
+// center_y_ratio: 0.0f top of last item, 0.5f vertical center of last item, 1.0f bottom of last item.
 void ImGui::SetScrollHere(float center_y_ratio)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -7017,15 +7028,16 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (g.IO.InputCharacters[0])
         {
             // Process text input (before we check for Return because using some IME will effectively send a Return?)
-            for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
+            if (!is_ctrl_down && !is_alt_down)
             {
-                if (unsigned int c = (unsigned int)g.IO.InputCharacters[n])
-                {
-                    // Insert character if they pass filtering
-                    if (!InputTextFilterCharacter(&c, flags, callback, user_data))
-                        continue;
-                    edit_state.OnKeyPressed((int)c);
-                }
+                for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
+                    if (unsigned int c = (unsigned int)g.IO.InputCharacters[n])
+                    {
+                        // Insert character if they pass filtering
+                        if (!InputTextFilterCharacter(&c, flags, callback, user_data))
+                            continue;
+                        edit_state.OnKeyPressed((int)c);
+                    }
             }
 
             // Consume characters
@@ -8386,11 +8398,11 @@ void ImGui::EndGroup()
 }
 
 // Gets back to previous line and continue with horizontal layout
-//      pos_x == 0   : follow on previous item
-//      pos_x != 0   : align to specified column
+//      local_pos_x == 0   : follow on previous item
+//      local_pos_x != 0   : align to specified column
 //      spacing_w < 0   : use default spacing if column_x==0, no spacing if column_x!=0
 //      spacing_w >= 0  : enforce spacing
-void ImGui::SameLine(float pos_x, float spacing_w)
+void ImGui::SameLine(float local_pos_x, float spacing_w)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -8398,10 +8410,10 @@ void ImGui::SameLine(float pos_x, float spacing_w)
 
     ImGuiState& g = *GImGui;
     float x, y;
-    if (pos_x != 0.0f)
+    if (local_pos_x != 0.0f)
     {
         if (spacing_w < 0.0f) spacing_w = 0.0f;
-        x = window->Pos.x + pos_x + spacing_w;
+        x = window->Pos.x + local_pos_x + spacing_w;
         y = window->DC.CursorPosPrevLine.y;
     }
     else
@@ -8836,7 +8848,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
     {
         ImGui::Text("ImGui %s", ImGui::GetVersion());
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::Text("%d vertices, %d triangles", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices / 3);
+        ImGui::Text("%d vertices, %d indices (%d triangles)", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices, ImGui::GetIO().MetricsRenderIndices / 3);
         ImGui::Text("%d allocations", ImGui::GetIO().MetricsAllocs);
         static bool show_clip_rects = true;
         ImGui::Checkbox("Show clipping rectangles when hovering ImDrawList", &show_clip_rects);

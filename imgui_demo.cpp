@@ -44,6 +44,7 @@
 #ifndef IMGUI_DISABLE_TEST_WINDOWS
 
 static void ShowExampleAppConsole(bool* opened);
+static void ShowExampleAppLog(bool* opened);
 static void ShowExampleAppLayout(bool* opened);
 static void ShowExampleAppLongText(bool* opened);
 static void ShowExampleAppAutoResize(bool* opened);
@@ -89,6 +90,7 @@ void ImGui::ShowTestWindow(bool* opened)
     static bool show_app_metrics = false;
     static bool show_app_main_menu_bar = false;
     static bool show_app_console = false;
+    static bool show_app_log = false;
     static bool show_app_layout = false;
     static bool show_app_long_text = false;
     static bool show_app_auto_resize = false;
@@ -99,6 +101,7 @@ void ImGui::ShowTestWindow(bool* opened)
     if (show_app_metrics) ImGui::ShowMetricsWindow(&show_app_metrics);
     if (show_app_main_menu_bar) ShowExampleAppMainMenuBar();
     if (show_app_console) ShowExampleAppConsole(&show_app_console);
+    if (show_app_log) ShowExampleAppLog(&show_app_log);
     if (show_app_layout) ShowExampleAppLayout(&show_app_layout);
     if (show_app_long_text) ShowExampleAppLongText(&show_app_long_text);
     if (show_app_auto_resize) ShowExampleAppAutoResize(&show_app_auto_resize);
@@ -157,6 +160,7 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             ImGui::MenuItem("Main menu bar", NULL, &show_app_main_menu_bar);
             ImGui::MenuItem("Console", NULL, &show_app_console);
+            ImGui::MenuItem("Log", NULL, &show_app_log);
             ImGui::MenuItem("Simple layout", NULL, &show_app_layout);
             ImGui::MenuItem("Long text display", NULL, &show_app_long_text);
             ImGui::MenuItem("Auto-resizing window", NULL, &show_app_auto_resize);
@@ -1716,7 +1720,7 @@ struct ExampleAppConsole
         ScrollToBottom = true;
     }
 
-    void    Run(const char* title, bool* opened)
+    void    Draw(const char* title, bool* opened)
     {
         ImGui::SetNextWindowSize(ImVec2(520,600), ImGuiSetCond_FirstUseEver);
         if (!ImGui::Begin(title, opened))
@@ -1939,7 +1943,88 @@ struct ExampleAppConsole
 static void ShowExampleAppConsole(bool* opened)
 {
     static ExampleAppConsole console;
-    console.Run("Example: Console", opened);
+    console.Draw("Example: Console", opened);
+}
+
+// Usage:
+//  static ExampleAppLog my_log;
+//  my_log.AddLog("Hello %d world\n", 123);
+//  my_log.Draw("title");
+struct ExampleAppLog
+{
+    ImGuiTextBuffer     Buf;
+    ImGuiTextFilter     Filter;
+    ImVector<int>       LineOffsets;        // Index to lines offset
+    bool                ScrollToBottom;
+
+    void    Clear()     { Buf.clear(); LineOffsets.clear(); }
+
+    void    AddLog(const char* fmt, ...) IM_PRINTFARGS(2)
+    {
+        int old_size = Buf.size();
+        va_list args;
+        va_start(args, fmt);
+        Buf.appendv(fmt, args);
+        va_end(args);
+        for (int new_size = Buf.size(); old_size < new_size; old_size++)
+            if (Buf[old_size] == '\n')
+                LineOffsets.push_back(old_size);
+        ScrollToBottom = true;
+    }
+
+    void    Draw(const char* title, bool* p_opened = NULL)
+    {
+        ImGui::SetNextWindowSize(ImVec2(500,400), ImGuiSetCond_FirstUseEver);
+        ImGui::Begin(title, p_opened);
+        if (ImGui::Button("Clear")) Clear();
+        ImGui::SameLine();
+        bool copy = ImGui::Button("Copy");
+        ImGui::SameLine();
+        Filter.Draw("Filter", -100.0f);
+        ImGui::Separator();
+        ImGui::BeginChild("scrolling");
+        if (copy) ImGui::LogToClipboard();
+
+        if (Filter.IsActive())
+        {
+            const char* buf_begin = Buf.begin();
+            const char* line = buf_begin;
+            for (int line_no = 0; line != NULL; line_no++)
+            {
+                const char* line_end = (line_no < LineOffsets.Size) ? buf_begin + LineOffsets[line_no] : NULL;
+                if (Filter.PassFilter(line, line_end))
+                    ImGui::TextUnformatted(line, line_end);
+                line = line_end && line_end[1] ? line_end + 1 : NULL;
+            }
+        }
+        else
+        {
+            ImGui::TextUnformatted(Buf.begin());
+        }
+
+        if (ScrollToBottom)
+            ImGui::SetScrollHere(1.0f);
+        ScrollToBottom = false;
+        ImGui::EndChild();
+        ImGui::End();
+    }
+};
+
+static void ShowExampleAppLog(bool* opened)
+{
+    static ExampleAppLog log;
+
+    // Demo fill
+    static float last_time = -1.0f;
+    float time = ImGui::GetTime();
+    if (time - last_time >= 0.3f)
+    {
+        const char* random_words[] = { "system", "info", "warning", "error", "fatal", "notice", "log" };
+        log.AddLog("[%s] Hello, time is %.1f, rand() %d\n", random_words[rand() % IM_ARRAYSIZE(random_words)], time, (int)rand());
+        last_time = time;
+    }
+
+    log.Draw("Example: Log", opened);
 }
 
 static void ShowExampleAppLayout(bool* opened)
@@ -2000,7 +2085,7 @@ static void ShowExampleAppLongText(bool* opened)
     static ImGuiTextBuffer log;
     static int lines = 0;
     ImGui::Text("Printing unusually long amount of text.");
-    ImGui::Combo("Test type", &test_type, "Single call to TextUnformatted()\0Multiple calls to Text(), clipped manually\0Multiple calls to Text(), not clipped");
+    ImGui::Combo("Test type", &test_type, "Single call to TextUnformatted()\0Multiple calls to Text(), clipped manually\0Multiple calls to Text(), not clipped\0");
     ImGui::Text("Buffer contents: %d lines, %d bytes", lines, log.size());
     if (ImGui::Button("Clear")) { log.clear(); lines = 0; }
     ImGui::SameLine();

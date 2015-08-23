@@ -180,7 +180,7 @@ namespace ImGui
     IMGUI_API void          BeginGroup();                                                       // once closing a group it is seen as a single item (so you can use IsItemHovered() on a group, SameLine() between groups, etc.
     IMGUI_API void          EndGroup();
     IMGUI_API void          Separator();                                                        // horizontal line
-    IMGUI_API void          SameLine(float pos_x = 0.0f, float spacing_w = -1.0f);              // call between widgets or groups to layout them horizontally
+    IMGUI_API void          SameLine(float local_pos_x = 0.0f, float spacing_w = -1.0f);        // call between widgets or groups to layout them horizontally
     IMGUI_API void          Spacing();                                                          // add spacing
     IMGUI_API void          Dummy(const ImVec2& size);                                          // add a dummy item of given size
     IMGUI_API void          Indent();                                                           // move content position toward the right by style.IndentSpacing pixels
@@ -195,7 +195,7 @@ namespace ImGui
     IMGUI_API ImVec2        GetCursorPos();                                                     // cursor position is relative to window position
     IMGUI_API float         GetCursorPosX();                                                    // "
     IMGUI_API float         GetCursorPosY();                                                    // "
-    IMGUI_API void          SetCursorPos(const ImVec2& pos);                                    // "
+    IMGUI_API void          SetCursorPos(const ImVec2& local_pos);                              // "
     IMGUI_API void          SetCursorPosX(float x);                                             // "
     IMGUI_API void          SetCursorPosY(float y);                                             // "
     IMGUI_API ImVec2        GetCursorStartPos();                                                // initial cursor position
@@ -358,14 +358,14 @@ namespace ImGui
     IMGUI_API bool          IsItemHovered();                                                    // was the last item hovered by mouse?
     IMGUI_API bool          IsItemHoveredRect();                                                // was the last item hovered by mouse? even if another item is active while we are hovering this
     IMGUI_API bool          IsItemActive();                                                     // was the last item active? (e.g. button being held, text field being edited- items that don't interact will always return false)
-    IMGUI_API bool          IsItemVisible();
+    IMGUI_API bool          IsItemVisible();                                                    // was the last item visible? (aka not out of sight due to clipping/scrolling.)
     IMGUI_API bool          IsAnyItemHovered();
     IMGUI_API bool          IsAnyItemActive();
     IMGUI_API ImVec2        GetItemRectMin();                                                   // get bounding rect of last item in screen space
     IMGUI_API ImVec2        GetItemRectMax();                                                   // "
     IMGUI_API ImVec2        GetItemRectSize();                                                  // "
-    IMGUI_API bool          IsWindowHovered();
-    IMGUI_API bool          IsWindowFocused();                                                  // is current window focused (differentiate child windows from each others)
+    IMGUI_API bool          IsWindowHovered();                                                  // is current window hovered and hoverable (not blocked by a popup) (differentiate child windows from each others)
+    IMGUI_API bool          IsWindowFocused();                                                  // is current window focused 
     IMGUI_API bool          IsRootWindowFocused();                                              // is current root window focused (top parent window in case of child windows)
     IMGUI_API bool          IsRootWindowOrAnyChildFocused();                                    // is current root window or any of its child (including current window) focused
     IMGUI_API bool          IsRectVisible(const ImVec2& size);                                  // test if rectangle of given size starting from cursor pos is visible (not clipped). to perform coarse clipping on user's side (as an optimization)
@@ -393,11 +393,12 @@ namespace ImGui
     IMGUI_API bool          IsMouseClicked(int button, bool repeat = false);                    // did mouse button clicked (went from !Down to Down)
     IMGUI_API bool          IsMouseDoubleClicked(int button);                                   // did mouse button double-clicked. a double-click returns false in IsMouseClicked(). uses io.MouseDoubleClickTime.
     IMGUI_API bool          IsMouseReleased(int button);                                        // did mouse button released (went from Down to !Down)
-    IMGUI_API bool          IsMouseHoveringWindow();                                            // is mouse hovering current window ("window" in API names always refer to current window)
-    IMGUI_API bool          IsMouseHoveringAnyWindow();                                         // is mouse hovering any active imgui window
-    IMGUI_API bool          IsMouseHoveringRect(const ImVec2& rect_min, const ImVec2& rect_max);// is mouse hovering given bounding rect
+    IMGUI_API bool          IsMouseHoveringWindow();                                            // is mouse hovering current window ("window" in API names always refer to current window). disregarding of any consideration of being blocked by a popup. (unlike IsWindowHovered() this will return true even if the window is blocked because of a popup)
+    IMGUI_API bool          IsMouseHoveringAnyWindow();                                         // is mouse hovering any visible window
+    IMGUI_API bool          IsMouseHoveringRect(const ImVec2& pos_min, const ImVec2& pos_max);  // is mouse hovering given bounding rect (in screen space). clipped by current clipping settings. disregarding of consideration of focus/window ordering/blocked by a popup.
     IMGUI_API bool          IsMouseDragging(int button = 0, float lock_threshold = -1.0f);      // is mouse dragging. if lock_threshold < -1.0f uses io.MouseDraggingThreshold
     IMGUI_API ImVec2        GetMousePos();                                                      // shortcut to ImGui::GetIO().MousePos provided by user, to be consistent with other calls
+	IMGUI_API ImVec2		GetMousePosOnOpeningCurrentPopup();									// retrieve backup of mouse positioning at the time of opening popup we have BeginPopup() into
     IMGUI_API ImVec2        GetMouseDragDelta(int button = 0, float lock_threshold = -1.0f);    // dragging amount since clicking, also see: GetItemActiveDragDelta(). if lock_threshold < -1.0f uses io.MouseDraggingThreshold
     IMGUI_API void          ResetMouseDragDelta(int button = 0);                                //
     IMGUI_API ImGuiMouseCursor GetMouseCursor();                                                // get desired cursor type, reset in ImGui::NewFrame(), this updated during the frame. valid before Render(). If you use software rendering by setting io.MouseDrawCursor ImGui will render those for you
@@ -852,8 +853,8 @@ struct ImGuiTextFilter
 
     ImGuiTextFilter(const char* default_filter = "");
     void Clear() { InputBuf[0] = 0; Build(); }
-    void Draw(const char* label = "Filter (inc,-exc)", float width = -1.0f);    // Helper calling InputText+Build
-    bool PassFilter(const char* val) const;
+    void Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
+    bool PassFilter(const char* text, const char* text_end = NULL) const;
     bool IsActive() const { return !Filters.empty(); }
     IMGUI_API void Build();
 };
@@ -864,10 +865,11 @@ struct ImGuiTextBuffer
     ImVector<char>      Buf;
 
     ImGuiTextBuffer()   { Buf.push_back(0); }
+    inline char         operator[](int i) { return Buf.Data[i]; }
     const char*         begin() const { return &Buf.front(); }
     const char*         end() const { return &Buf.back(); }      // Buf is zero-terminated, so end() will point on the zero-terminator
-    int                 size() const { return Buf.Size-1; }
-    bool                empty() { return size() >= 1; }
+    int                 size() const { return Buf.Size - 1; }
+    bool                empty() { return Buf.Size >= 2; }
     void                clear() { Buf.clear(); Buf.push_back(0); }
     IMGUI_API void      append(const char* fmt, ...) IM_PRINTFARGS(2);
     IMGUI_API void      appendv(const char* fmt, va_list args);
@@ -964,6 +966,7 @@ struct ImColor
 //    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) // display only visible items
 //        ImGui::Text("line number %d", i);
 //    clipper.End();
+// NB: 'count' is only used to clamp the result, if you don't know your count you can use INT_MAX
 struct ImGuiListClipper
 {
     float   ItemsHeight;

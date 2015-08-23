@@ -54,13 +54,13 @@ Gallery
 ImGui can load TTF fonts. UTF-8 is supported for text display and input. Here using Arial Unicode font to display Japanese. Initialize custom font with:
 ```
 ImGuiIO& io = ImGui::GetIO();
-io.Fonts->AddFontFromFileTTF("ArialUni.ttf", 18.0f, io.Fonts->GetGlyphRangesJapanese());
+io.Fonts->AddFontFromFileTTF("ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
 ```
 For Microsoft IME, pass your HWND to enable IME positioning:
 ```
 io.ImeWindowHandle = my_hwnd;
 ```
-![Japanese screenshot](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/code_sample_01.png)
+![Japanese screenshot](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/code_sample_01_jp.png)
 
 References
 ----------
