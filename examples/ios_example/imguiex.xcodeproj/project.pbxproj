@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		197E1E871B8943FE00E3FE6A /* imgui_draw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 197E1E861B8943FE00E3FE6A /* imgui_draw.cpp */; };
+		197E1E891B89443600E3FE6A /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 197E1E881B89443600E3FE6A /* imgui_demo.cpp */; };
 		6D1E39171B35EEF10017B40F /* uSynergy.c in Sources */ = {isa = PBXBuildFile; fileRef = 6D1E39151B35EEF10017B40F /* uSynergy.c */; };
 		6D2FC55A1B2E632000C130BA /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FC5591B2E632000C130BA /* main.m */; };
 		6D2FC55D1B2E632000C130BA /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FC55C1B2E632000C130BA /* AppDelegate.m */; };
@@ -24,6 +26,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		197E1E861B8943FE00E3FE6A /* imgui_draw.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_draw.cpp; path = ../../imgui_draw.cpp; sourceTree = "<group>"; };
+		197E1E881B89443600E3FE6A /* imgui_demo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_demo.cpp; path = ../../../imgui_demo.cpp; sourceTree = "<group>"; };
 		6D1E39151B35EEF10017B40F /* uSynergy.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = uSynergy.c; sourceTree = "<group>"; };
 		6D1E39161B35EEF10017B40F /* uSynergy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = uSynergy.h; sourceTree = "<group>"; };
 		6D2FC5541B2E632000C130BA /* imguiex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = imguiex.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -95,6 +99,7 @@
 			children = (
 				6D2FC5811B2E63A100C130BA /* imgui_impl_ios.mm */,
 				6D2FC5821B2E63A100C130BA /* imgui_impl_ios.h */,
+				197E1E881B89443600E3FE6A /* imgui_demo.cpp */,
 				6D2FC5891B2E6A5500C130BA /* debug_hud.cpp */,
 				6D2FC58A1B2E6A5500C130BA /* debug_hud.h */,
 				6D2FC55B1B2E632000C130BA /* AppDelegate.h */,
@@ -126,6 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				6D2FC5851B2E64AB00C130BA /* imconfig.h */,
+				197E1E861B8943FE00E3FE6A /* imgui_draw.cpp */,
 				6D2FC5861B2E64AB00C130BA /* imgui.cpp */,
 				6D2FC5871B2E64AB00C130BA /* imgui.h */,
 			);
@@ -211,6 +217,8 @@
 				6D2FC55A1B2E632000C130BA /* main.m in Sources */,
 				6D2FC5881B2E64AB00C130BA /* imgui.cpp in Sources */,
 				6D2FC58B1B2E6A5500C130BA /* debug_hud.cpp in Sources */,
+				197E1E871B8943FE00E3FE6A /* imgui_draw.cpp in Sources */,
+				197E1E891B89443600E3FE6A /* imgui_demo.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
