@@ -1,6 +1,3 @@
-# manually compiled SDL main since we don't
-# want to conform to the link choices of the prebuilt lib
-
 project(imgui)
 
 add_library(imgui STATIC
