@@ -201,7 +201,7 @@ struct ImRect
     void            Expand(const ImVec2& amount)    { Min.x -= amount.x; Min.y -= amount.y; Max.x += amount.x; Max.y += amount.y; }
     void            Reduce(const ImVec2& amount)    { Min.x += amount.x; Min.y += amount.y; Max.x -= amount.x; Max.y -= amount.y; }
     void            Clip(const ImRect& clip)        { if (Min.x < clip.Min.x) Min.x = clip.Min.x; if (Min.y < clip.Min.y) Min.y = clip.Min.y; if (Max.x > clip.Max.x) Max.x = clip.Max.x; if (Max.y > clip.Max.y) Max.y = clip.Max.y; }
-    void            Round()                         { Min.x = (float)(int)Min.x; Min.y = (float)(int)Min.y; Max.x = (float)(int)Max.x; Max.y = (float)(int)Max.y; } 
+    void            Round()                         { Min.x = (float)(int)Min.x; Min.y = (float)(int)Min.y; Max.x = (float)(int)Max.x; Max.y = (float)(int)Max.y; }
     ImVec2          GetClosestPoint(ImVec2 p, bool on_edge) const
     {
         if (!on_edge && Contains(p))
@@ -383,7 +383,7 @@ struct ImGuiState
 
     // Logging
     bool                    LogEnabled;
-    FILE*                   LogFile;                            // If != NULL log to stdout/ file 
+    FILE*                   LogFile;                            // If != NULL log to stdout/ file
     ImGuiTextBuffer*        LogClipboard;                       // Else log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
     int                     LogStartDepth;
     int                     LogAutoExpandMaxDepth;
@@ -394,6 +394,7 @@ struct ImGuiState
     float                   FramerateSecPerFrameAccum;
     bool                    CaptureMouseNextFrame;              // explicit capture via CaptureInputs() sets those flags
     bool                    CaptureKeyboardNextFrame;
+    bool                    WantInputCharactersNextFrame;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
 
     ImGuiState()
@@ -456,7 +457,7 @@ struct ImGuiState
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
         FramerateSecPerFrameIdx = 0;
         FramerateSecPerFrameAccum = 0.0f;
-        CaptureMouseNextFrame = CaptureKeyboardNextFrame = false;
+        CaptureMouseNextFrame = CaptureKeyboardNextFrame = WantInputCharactersNextFrame = false;
     }
 };
 
@@ -563,14 +564,14 @@ struct ImGuiWindow
     bool                    Collapsed;                          // Set when collapsing window to become only title-bar
     bool                    SkipItems;                          // == Visible && !Collapsed
     int                     BeginCount;                         // Number of Begin() during the current frame (generally 0 or 1, 1+ if appending via multiple Begin/End pairs)
-    ImGuiID                 PopupID;                            // ID in the popup stack when this window is used as a popup/menu (because we use generic Name/ID for recycling) 
+    ImGuiID                 PopupID;                            // ID in the popup stack when this window is used as a popup/menu (because we use generic Name/ID for recycling)
     int                     AutoFitFramesX, AutoFitFramesY;
     bool                    AutoFitOnlyGrows;
     int                     AutoPosLastDirection;
     int                     HiddenFrames;
-    int                     SetWindowPosAllowFlags;             // bit ImGuiSetCond_*** specify if SetWindowPos() call will succeed with this particular flag. 
-    int                     SetWindowSizeAllowFlags;            // bit ImGuiSetCond_*** specify if SetWindowSize() call will succeed with this particular flag. 
-    int                     SetWindowCollapsedAllowFlags;       // bit ImGuiSetCond_*** specify if SetWindowCollapsed() call will succeed with this particular flag. 
+    int                     SetWindowPosAllowFlags;             // bit ImGuiSetCond_*** specify if SetWindowPos() call will succeed with this particular flag.
+    int                     SetWindowSizeAllowFlags;            // bit ImGuiSetCond_*** specify if SetWindowSize() call will succeed with this particular flag.
+    int                     SetWindowCollapsedAllowFlags;       // bit ImGuiSetCond_*** specify if SetWindowCollapsed() call will succeed with this particular flag.
     bool                    SetWindowPosCenterWanted;
 
     ImGuiDrawContext        DC;                                 // Temporary per-window data, reset at the beginning of the frame

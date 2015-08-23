@@ -56,8 +56,8 @@ static void ShowExampleMenuFile();
 
 static void ShowHelpMarker(const char* desc)
 {
-    ImGui::TextDisabled("(?)"); 
-    if (ImGui::IsItemHovered()) 
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
         ImGui::SetTooltip(desc);
 }
 
@@ -142,7 +142,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::End();
         return;
     }
-    
+
     //ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);    // 2/3 of the space for widget and 1/3 for labels
     ImGui::PushItemWidth(-140);                                 // Right align, keep 140 pixels for labels
 
@@ -189,7 +189,7 @@ void ImGui::ShowTestWindow(bool* opened)
     {
         ImGui::Checkbox("no titlebar", &no_titlebar); ImGui::SameLine(150);
         ImGui::Checkbox("no border", &no_border); ImGui::SameLine(300);
-        ImGui::Checkbox("no resize", &no_resize); 
+        ImGui::Checkbox("no resize", &no_resize);
         ImGui::Checkbox("no move", &no_move); ImGui::SameLine(150);
         ImGui::Checkbox("no scrollbar", &no_scrollbar); ImGui::SameLine(300);
         ImGui::Checkbox("no collapse", &no_collapse);
@@ -431,7 +431,7 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::Button("Button")) { printf("Clicked\n"); a ^= 1; }
         if (a)
         {
-            ImGui::SameLine(); 
+            ImGui::SameLine();
             ImGui::Text("Thanks for clicking me!");
         }
 
@@ -535,7 +535,7 @@ void ImGui::ShowTestWindow(bool* opened)
         static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
         ImGui::ColorEdit3("color 1", col1);
         ImGui::SameLine(); ShowHelpMarker("Click on the colored square to change edit mode.\nCTRL+click on individual component to input value.\n");
-        
+
         ImGui::ColorEdit4("color 2", col2);
 
         const char* listbox_items[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
@@ -668,21 +668,21 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::PlotLines("Frame Times", arr, IM_ARRAYSIZE(arr));
 
         static bool pause;
-        static ImVector<float> values; if (values.empty()) { values.resize(90); memset(values.Data, 0, values.Size*sizeof(float)); } 
-        static int values_offset = 0; 
-        if (!pause) 
+        static ImVector<float> values; if (values.empty()) { values.resize(90); memset(values.Data, 0, values.Size*sizeof(float)); }
+        static int values_offset = 0;
+        if (!pause)
         {
             static float refresh_time = ImGui::GetTime(); // Create dummy data at fixed 60 hz rate for the demo
             for (; ImGui::GetTime() > refresh_time + 1.0f/60.0f; refresh_time += 1.0f/60.0f)
             {
                 static float phase = 0.0f;
-                values[values_offset] = cosf(phase); 
-                values_offset = (values_offset+1)%values.Size; 
-                phase += 0.10f*values_offset; 
+                values[values_offset] = cosf(phase);
+                values_offset = (values_offset+1)%values.Size;
+                phase += 0.10f*values_offset;
             }
         }
         ImGui::PlotLines("##Graph", values.Data, values.Size, values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
-        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x); 
+        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
         ImGui::BeginGroup();
         ImGui::Text("Graph");
         ImGui::Checkbox("pause", &pause);
@@ -697,7 +697,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::Text("Without border");
             static int line = 50;
             bool goto_line = ImGui::Button("Goto");
-            ImGui::SameLine(); 
+            ImGui::SameLine();
             ImGui::PushItemWidth(100);
             goto_line |= ImGui::InputInt("##Line", &line, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue);
             ImGui::PopItemWidth();
@@ -778,7 +778,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::Text("can fit within a text block.");
 
             // Aligned to arbitrary position. Easy/cheap column.
-            ImGui::Text("Aligned"); 
+            ImGui::Text("Aligned");
             ImGui::SameLine(150); ImGui::Text("x=150");
             ImGui::SameLine(300); ImGui::Text("x=300");
             ImGui::Text("Aligned");
@@ -800,7 +800,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::Combo("Combo", &item, items, IM_ARRAYSIZE(items)); ImGui::SameLine();
             ImGui::SliderFloat("X", &f0, 0.0f,5.0f); ImGui::SameLine();
             ImGui::SliderFloat("Y", &f1, 0.0f,5.0f); ImGui::SameLine();
-            ImGui::SliderFloat("Z", &f2, 0.0f,5.0f); 
+            ImGui::SliderFloat("Z", &f2, 0.0f,5.0f);
             ImGui::PopItemWidth();
 
             ImGui::PushItemWidth(80);
@@ -812,7 +812,7 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::PushID(i);
                 ImGui::ListBox("", &selection[i], items, IM_ARRAYSIZE(items));
                 ImGui::PopID();
-                //if (ImGui::IsItemHovered()) ImGui::SetTooltip("ListBox %d hovered", i); 
+                //if (ImGui::IsItemHovered()) ImGui::SetTooltip("ListBox %d hovered", i);
             }
             ImGui::PopItemWidth();
 
@@ -869,9 +869,9 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Text Baseline Alignment"))
         {
-            ImGui::TextWrapped("(This is testing the vertical alignment that occurs on text to keep it at the same baseline as widgets. Lines only composed of text or \"small\" widgets fit in less vertical spaces than lines with normal widgets)"); 
+            ImGui::TextWrapped("(This is testing the vertical alignment that occurs on text to keep it at the same baseline as widgets. Lines only composed of text or \"small\" widgets fit in less vertical spaces than lines with normal widgets)");
 
-            ImGui::Text("One\nTwo\nThree"); ImGui::SameLine();            
+            ImGui::Text("One\nTwo\nThree"); ImGui::SameLine();
             ImGui::Text("Hello\nWorld"); ImGui::SameLine();
             ImGui::Text("Banana");
 
@@ -1037,8 +1037,8 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::Text("Value = %.3f (<-- right-click here)", value);
             if (ImGui::BeginPopupContextItem("item context menu"))
             {
-                if (ImGui::Selectable("Set to zero")) value = 0.0f; 
-                if (ImGui::Selectable("Set to PI")) value = 3.1415f; 
+                if (ImGui::Selectable("Set to zero")) value = 0.0f;
+                if (ImGui::Selectable("Set to PI")) value = 3.1415f;
                 ImGui::EndPopup();
             }
 
@@ -1058,7 +1058,7 @@ void ImGui::ShowTestWindow(bool* opened)
         }
 
         if (ImGui::TreeNode("Modals"))
-        {  
+        {
             ImGui::TextWrapped("Modal windows are like popups but the user cannot close them by clicking outside the window.");
 
             if (ImGui::Button("Delete.."))
@@ -1067,7 +1067,7 @@ void ImGui::ShowTestWindow(bool* opened)
             {
                 ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
                 ImGui::Separator();
-                
+
                 static bool dont_ask_me_next_time = false;
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
                 ImGui::Checkbox("Don't ask me next time", &dont_ask_me_next_time);
@@ -1166,24 +1166,24 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Separator();
 
         static int e = 0;
-        ImGui::Text("Hello"); 
+        ImGui::Text("Hello");
         ImGui::Button("Banana");
-        ImGui::RadioButton("radio a", &e, 0); 
+        ImGui::RadioButton("radio a", &e, 0);
         ImGui::NextColumn();
 
-        ImGui::Text("ImGui"); 
+        ImGui::Text("ImGui");
         ImGui::Button("Apple");
         ImGui::RadioButton("radio b", &e, 1);
         static float foo = 1.0f;
-        ImGui::InputFloat("red", &foo, 0.05f, 0, 3); 
+        ImGui::InputFloat("red", &foo, 0.05f, 0, 3);
         ImGui::Text("An extra line here.");
         ImGui::NextColumn();
-        
+
         ImGui::Text("Sailor");
         ImGui::Button("Corniflower");
         ImGui::RadioButton("radio c", &e, 2);
         static float bar = 1.0f;
-        ImGui::InputFloat("blue", &bar, 0.05f, 0, 3); 
+        ImGui::InputFloat("blue", &bar, 0.05f, 0, 3);
         ImGui::NextColumn();
 
         if (ImGui::CollapsingHeader("Category A")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
@@ -1286,11 +1286,11 @@ void ImGui::ShowTestWindow(bool* opened)
             bool focus_3 = ImGui::Button("Focus on 3");
             int has_focus = 0;
             static char buf[128] = "click on a button to set focus";
-            
+
             if (focus_1) ImGui::SetKeyboardFocusHere();
             ImGui::InputText("1", buf, IM_ARRAYSIZE(buf));
             if (ImGui::IsItemActive()) has_focus = 1;
-            
+
             if (focus_2) ImGui::SetKeyboardFocusHere();
             ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
             if (ImGui::IsItemActive()) has_focus = 2;
@@ -1302,7 +1302,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::PopAllowKeyboardFocus();
             if (has_focus)
                 ImGui::Text("Item with focus: %d", has_focus);
-            else 
+            else
                 ImGui::Text("Item with focus: <none>");
             ImGui::TextWrapped("Cursor & selection are preserved when refocusing last used item in code.");
             ImGui::TreePop();
@@ -1343,6 +1343,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
             ImGui::Text("WantCaptureMouse: %s", io.WantCaptureMouse ? "true" : "false");
             ImGui::Text("WantCaptureKeyboard: %s", io.WantCaptureKeyboard ? "true" : "false");
+            ImGui::Text("WantInputCharacters: %s", io.WantInputCharacters ? "true" : "false");
 
             ImGui::Button("Hover me\nto enforce\ninputs capture");
             if (ImGui::IsItemHovered())
@@ -1360,8 +1361,8 @@ void ImGui::ShowTestWindow(bool* opened)
             {
                 char label[32];
                 sprintf(label, "Mouse cursor %d", i);
-                ImGui::Bullet(); ImGui::Selectable(label, false); 
-                if (ImGui::IsItemHovered()) 
+                ImGui::Bullet(); ImGui::Selectable(label, false);
+                if (ImGui::IsItemHovered())
                     ImGui::SetMouseCursor(i);
             }
             ImGui::TreePop();
@@ -1577,7 +1578,7 @@ static void ShowExampleAppFixedOverlay(bool* opened)
     }
     ImGui::Text("Simple overlay\non the top-left side of the screen.");
     ImGui::Separator();
-    ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y); 
+    ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
     ImGui::End();
 }
 
@@ -1695,14 +1696,14 @@ struct ExampleAppConsole
     ~ExampleAppConsole()
     {
         ClearLog();
-        for (int i = 0; i < Items.Size; i++) 
-            free(History[i]); 
+        for (int i = 0; i < Items.Size; i++)
+            free(History[i]);
     }
 
     void    ClearLog()
     {
-        for (int i = 0; i < Items.Size; i++) 
-            free(Items[i]); 
+        for (int i = 0; i < Items.Size; i++)
+            free(Items[i]);
         Items.clear();
         ScrollToBottom = true;
     }
@@ -1733,8 +1734,8 @@ struct ExampleAppConsole
 
         // TODO: display items starting from the bottom
 
-        if (ImGui::SmallButton("Add Dummy Text")) { AddLog("%d some text", Items.Size); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine(); 
-        if (ImGui::SmallButton("Add Dummy Error")) AddLog("[error] something went wrong"); ImGui::SameLine(); 
+        if (ImGui::SmallButton("Add Dummy Text")) { AddLog("%d some text", Items.Size); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine();
+        if (ImGui::SmallButton("Add Dummy Error")) AddLog("[error] something went wrong"); ImGui::SameLine();
         if (ImGui::SmallButton("Clear")) ClearLog();
         //static float t = 0.0f; if (ImGui::GetTime() - t > 0.02f) { t = ImGui::GetTime(); AddLog("Spam %f", t); }
 
@@ -2053,7 +2054,7 @@ static void ShowExampleAppLayout(bool* opened)
         }
         ImGui::EndChild();
         ImGui::SameLine();
-        
+
         // right
         ImGui::BeginGroup();
             ImGui::BeginChild("item view", ImVec2(0, -ImGui::GetItemsLineHeightWithSpacing())); // Leave room for 1 line below us
@@ -2084,7 +2085,7 @@ static void ShowExampleAppLongText(bool* opened)
     static ImGuiTextBuffer log;
     static int lines = 0;
     ImGui::Text("Printing unusually long amount of text.");
-    ImGui::Combo("Test type", &test_type, "Single call to TextUnformatted()\0Multiple calls to Text(), clipped manually\0Multiple calls to Text(), not clipped\0"); 
+    ImGui::Combo("Test type", &test_type, "Single call to TextUnformatted()\0Multiple calls to Text(), clipped manually\0Multiple calls to Text(), not clipped\0");
     ImGui::Text("Buffer contents: %d lines, %d bytes", lines, log.size());
     if (ImGui::Button("Clear")) { log.clear(); lines = 0; }
     ImGui::SameLine();
