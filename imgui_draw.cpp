@@ -172,7 +172,7 @@ void ImDrawList::ChannelsMerge(int channel_count)
         return;
 
     ChannelsSetCurrent(0);
-    if (CmdBuffer.Size && CmdBuffer.back().ElemCount == 0) 
+    if (CmdBuffer.Size && CmdBuffer.back().ElemCount == 0)
         CmdBuffer.pop_back();
 
     int new_cmd_buffer_count = 0, new_idx_buffer_count = 0;
@@ -292,11 +292,11 @@ void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
     const ImVec2 b(c.x, a.y);
     const ImVec2 d(a.x, c.y);
-    _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+2); 
-    _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+2); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+3); 
-    _VtxWritePtr[0].pos = a; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col; 
-    _VtxWritePtr[1].pos = b; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col; 
-    _VtxWritePtr[2].pos = c; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col; 
+    _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+2);
+    _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+2); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+3);
+    _VtxWritePtr[0].pos = a; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
+    _VtxWritePtr[1].pos = b; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col;
+    _VtxWritePtr[2].pos = c; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col;
     _VtxWritePtr[3].pos = d; _VtxWritePtr[3].uv = uv; _VtxWritePtr[3].col = col;
     _VtxWritePtr += 4;
     _VtxCurrentIdx += 4;
@@ -309,11 +309,11 @@ void ImDrawList::PrimRectUV(const ImVec2& a, const ImVec2& c, const ImVec2& uv_a
     const ImVec2 d(a.x, c.y);
     const ImVec2 uv_b(uv_c.x, uv_a.y);
     const ImVec2 uv_d(uv_a.x, uv_c.y);
-    _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+2); 
-    _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+2); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+3); 
-    _VtxWritePtr[0].pos = a; _VtxWritePtr[0].uv = uv_a; _VtxWritePtr[0].col = col; 
-    _VtxWritePtr[1].pos = b; _VtxWritePtr[1].uv = uv_b; _VtxWritePtr[1].col = col; 
-    _VtxWritePtr[2].pos = c; _VtxWritePtr[2].uv = uv_c; _VtxWritePtr[2].col = col; 
+    _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+2);
+    _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+2); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+3);
+    _VtxWritePtr[0].pos = a; _VtxWritePtr[0].uv = uv_a; _VtxWritePtr[0].col = col;
+    _VtxWritePtr[1].pos = b; _VtxWritePtr[1].uv = uv_b; _VtxWritePtr[1].col = col;
+    _VtxWritePtr[2].pos = c; _VtxWritePtr[2].uv = uv_c; _VtxWritePtr[2].col = col;
     _VtxWritePtr[3].pos = d; _VtxWritePtr[3].uv = uv_d; _VtxWritePtr[3].col = col;
     _VtxWritePtr += 4;
     _VtxCurrentIdx += 4;
@@ -351,7 +351,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
         for (int i1 = 0; i1 < count; i1++)
         {
-            const int i2 = (i1+1) == points_count ? 0 : i1+1; 
+            const int i2 = (i1+1) == points_count ? 0 : i1+1;
             ImVec2 diff = points[i2] - points[i1];
             diff *= ImInvLength(diff, 1.0f);
             temp_normals[i1].x = diff.y;
@@ -428,7 +428,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             unsigned int idx1 = _VtxCurrentIdx;
             for (int i1 = 0; i1 < count; i1++)
             {
-                const int i2 = (i1+1) == points_count ? 0 : i1+1; 
+                const int i2 = (i1+1) == points_count ? 0 : i1+1;
                 unsigned int idx2 = (i1+1) == points_count ? _VtxCurrentIdx : idx1+4;
 
                 // Average normals
@@ -480,7 +480,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
         for (int i1 = 0; i1 < count; i1++)
         {
-            const int i2 = (i1+1) == points_count ? 0 : i1+1; 
+            const int i2 = (i1+1) == points_count ? 0 : i1+1;
             const ImVec2& p1 = points[i1];
             const ImVec2& p2 = points[i2];
             ImVec2 diff = p2 - p1;
@@ -494,8 +494,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             _VtxWritePtr[3].pos.x = p1.x - dy; _VtxWritePtr[3].pos.y = p1.y + dx; _VtxWritePtr[3].uv = uv; _VtxWritePtr[3].col = col;
             _VtxWritePtr += 4;
 
-            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+2); 
-            _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+2); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+3); 
+            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+2);
+            _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+2); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+3);
             _IdxWritePtr += 6;
             _VtxCurrentIdx += 4;
         }
@@ -578,7 +578,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         }
         for (int i = 2; i < points_count; i++)
         {
-            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+i-1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+i); 
+            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+i-1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+i);
             _IdxWritePtr += 3;
         }
         _VtxCurrentIdx += (ImDrawIdx)vtx_count;
@@ -900,7 +900,7 @@ void    ImFontAtlas::ClearFonts()
 
 void    ImFontAtlas::Clear()
 {
-    ClearInputData(); 
+    ClearInputData();
     ClearTexData();
     ClearFonts();
 }
@@ -1005,7 +1005,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
     if (font_cfg.Name[0] == '\0')
     {
-        const char* p; 
+        const char* p;
         for (p = filename + strlen(filename); p > filename && p[-1] != '/' && p[-1] != '\\'; p--) {}
         snprintf(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s", p);
     }
@@ -1016,7 +1016,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
 ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
 {
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
-    IM_ASSERT(font_cfg.FontData == NULL); 
+    IM_ASSERT(font_cfg.FontData == NULL);
     font_cfg.FontData = ttf_data;
     font_cfg.FontDataSize = ttf_size;
     font_cfg.SizePixels = size_pixels;
@@ -1032,7 +1032,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* compressed_ttf_d
     stb_decompress(buf_decompressed_data, (unsigned char*)compressed_ttf_data, (unsigned int)compressed_ttf_size);
 
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
-    IM_ASSERT(font_cfg.FontData == NULL); 
+    IM_ASSERT(font_cfg.FontData == NULL);
     font_cfg.FontDataOwnedByAtlas = true;
     return AddFontFromMemoryTTF(buf_decompressed_data, (int)buf_decompressed_size, size_pixels, font_cfg_template, glyph_ranges);
 }
@@ -1076,7 +1076,7 @@ bool    ImFontAtlas::Build()
         IM_ASSERT(cfg.DstFont && (!cfg.DstFont->IsLoaded() || cfg.DstFont->ContainerAtlas == this));
         const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)cfg.FontData, cfg.FontNo);
         IM_ASSERT(font_offset >= 0);
-        if (!stbtt_InitFont(&tmp.FontInfo, (unsigned char*)cfg.FontData, font_offset)) 
+        if (!stbtt_InitFont(&tmp.FontInfo, (unsigned char*)cfg.FontData, font_offset))
             return false;
 
         if (!cfg.GlyphRanges)
@@ -1226,7 +1226,7 @@ bool    ImFontAtlas::Build()
                 dst_font->Glyphs.resize(dst_font->Glyphs.Size + 1);
                 ImFont::Glyph& glyph = dst_font->Glyphs.back();
                 glyph.Codepoint = (ImWchar)codepoint;
-                glyph.X0 = q.x0; glyph.Y0 = q.y0; glyph.X1 = q.x1; glyph.Y1 = q.y1;                
+                glyph.X0 = q.x0; glyph.Y0 = q.y0; glyph.X1 = q.x1; glyph.Y1 = q.y1;
                 glyph.U0 = q.s0; glyph.V0 = q.t0; glyph.U1 = q.s1; glyph.V1 = q.t1;
                 glyph.Y0 += (float)(int)(dst_font->Ascent + off_y + 0.5f);
                 glyph.Y1 += (float)(int)(dst_font->Ascent + off_y + 0.5f);
@@ -1367,7 +1367,7 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesJapanese()
 {
     // Store the 1946 ideograms code points as successive offsets from the initial unicode codepoint 0x4E00. Each offset has an implicit +1.
     // This encoding helps us reduce the source code size.
-    static const short offsets_from_0x4E00[] = 
+    static const short offsets_from_0x4E00[] =
     {
         -1,0,1,3,0,0,0,0,1,0,5,1,1,0,7,4,6,10,0,1,9,9,7,1,3,19,1,10,7,1,0,1,0,5,1,0,6,4,2,6,0,0,12,6,8,0,3,5,0,1,0,9,0,0,8,1,1,3,4,5,13,0,0,8,2,17,
         4,3,1,1,9,6,0,0,0,2,1,3,2,22,1,9,11,1,13,1,3,12,0,5,9,2,0,6,12,5,3,12,4,1,2,16,1,1,4,6,5,3,0,6,13,15,5,12,8,14,0,0,6,15,3,6,0,18,8,1,6,14,1,
@@ -1867,8 +1867,8 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                     // NB: we are not calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
                     // inlined:
                     {
-                        idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2); 
-                        idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3); 
+                        idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2);
+                        idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3);
                         vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
                         vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
                         vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
@@ -2002,7 +2002,7 @@ static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsi
                 return 0;
             }
         }
-        IM_ASSERT(stb__dout <= output + olen); 
+        IM_ASSERT(stb__dout <= output + olen);
         if (stb__dout > output + olen)
             return 0;
     }
@@ -2105,7 +2105,7 @@ static const char proggy_clean_ttf_compressed_data_base85[11980+1] =
     "GT4CPGT4CPGT4CPGT4CPGT4CPGT4CP-qekC`.9kEg^+F$kwViFJTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5o,^<-28ZI'O?;xp"
     "O?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xp;7q-#lLYI:xvD=#";
 
-static const char* GetDefaultCompressedFontDataTTFBase85() 
-{ 
-    return proggy_clean_ttf_compressed_data_base85; 
+static const char* GetDefaultCompressedFontDataTTFBase85()
+{
+    return proggy_clean_ttf_compressed_data_base85;
 }

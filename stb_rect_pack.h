@@ -386,7 +386,7 @@ static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int widt
             }
          }
          tail = tail->next;
-      }         
+      }
    }
 
    fr.prev_link = best;
