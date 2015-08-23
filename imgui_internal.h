@@ -393,6 +393,7 @@ struct ImGuiState
     float                   FramerateSecPerFrameAccum;
     bool                    CaptureMouseNextFrame;              // explicit capture via CaptureInputs() sets those flags
     bool                    CaptureKeyboardNextFrame;
+    bool                    WantInputCharactersNextFrame;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
 
     ImGuiState()
@@ -455,7 +456,7 @@ struct ImGuiState
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
         FramerateSecPerFrameIdx = 0;
         FramerateSecPerFrameAccum = 0.0f;
-        CaptureMouseNextFrame = CaptureKeyboardNextFrame = false;
+        CaptureMouseNextFrame = CaptureKeyboardNextFrame = WantInputCharactersNextFrame = false;
     }
 };
 
