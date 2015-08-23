@@ -128,8 +128,10 @@
             // swap video buffer, etc.
         }
 
-   - after calling ImGui::NewFrame() you can read back 'io.WantCaptureMouse' and 'io.WantCaptureKeyboard' to tell if ImGui 
-     wants to use your inputs. if it does you can discard/hide the inputs from the rest of your application.
+   - after calling ImGui::NewFrame() you can read back flags from the IO structure  to tell how ImGui intends to use your inputs.
+     When 'io.WantCaptureMouse' or 'io.WantCaptureKeyboard' flags are set you may want to discard/hide the inputs from the rest of your application.
+     When 'io.WantInputsCharacters' is set to may want to notify your OS to popup an onscreen keyboard, if available.
+
 
  API BREAKING CHANGES
  ====================
@@ -1901,8 +1903,9 @@ void ImGui::NewFrame()
     bool mouse_owned_by_application = mouse_earliest_button_down != -1 && !g.IO.MouseDownOwned[mouse_earliest_button_down];
     g.IO.WantCaptureMouse = (!mouse_owned_by_application && g.HoveredWindow != NULL) || (!mouse_owned_by_application && mouse_any_down) || (g.ActiveId != 0) || (!g.OpenedPopupStack.empty()) || (g.CaptureMouseNextFrame);
     g.IO.WantCaptureKeyboard = (g.ActiveId != 0) || (g.CaptureKeyboardNextFrame);
+    g.IO.WantInputCharacters = ((g.InputTextState.Id != 0) && (g.InputTextState.Id == g.ActiveId)) || g.WantInputCharactersNextFrame;
     g.MouseCursor = ImGuiMouseCursor_Arrow;
-    g.CaptureMouseNextFrame = g.CaptureKeyboardNextFrame = false;
+    g.CaptureMouseNextFrame = g.CaptureKeyboardNextFrame = g.WantInputCharactersNextFrame = false;
 
     // If mouse was first clicked outside of ImGui bounds we also cancel out hovering.
     if (mouse_owned_by_application)
@@ -2872,6 +2875,11 @@ void ImGui::CaptureKeyboardFromApp()
 void ImGui::CaptureMouseFromApp()
 {
     GImGui->CaptureMouseNextFrame = true;
+}
+
+void ImGui::CaptureInputCharactersFromApp()
+{
+    GImGui->WantInputCharactersNextFrame = true;
 }
 
 bool ImGui::IsItemHovered()

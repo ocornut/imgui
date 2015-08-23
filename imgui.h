@@ -405,6 +405,7 @@ namespace ImGui
     IMGUI_API void          SetMouseCursor(ImGuiMouseCursor type);                              // set desired cursor type
     IMGUI_API void          CaptureKeyboardFromApp();                                           // manually enforce imgui setting the io.WantCaptureKeyboard flag next frame (your application needs to handle it). e.g. capture keyboard when your widget is being hovered.
     IMGUI_API void          CaptureMouseFromApp();                                              // manually enforce imgui setting the io.WantCaptureMouse flag next frame (your application needs to handle it).
+    IMGUI_API void          CaptureInputCharactersFromApp();                                    // manually enforce imgui setting the io.WantInputCharacters flag next frame (your application needs to handle it).
 
     // Helpers functions to access the MemAllocFn/MemFreeFn pointers in ImGui::GetIO()
     IMGUI_API void*         MemAlloc(size_t sz);
@@ -724,6 +725,7 @@ struct ImGuiIO
 
     bool        WantCaptureMouse;           // Mouse is hovering a window or widget is active (= ImGui will use your mouse input)
     bool        WantCaptureKeyboard;        // Widget is active (= ImGui will use your keyboard input)
+    bool        WantInputCharacters;        // Some text input widget is active, which will read input characters from the InputCharacters array.
     float       Framerate;                  // Framerate estimation, in frame per second. Rolling average estimation based on IO.DeltaTime over 120 frames
     int         MetricsAllocs;              // Number of active memory allocations
     int         MetricsRenderVertices;      // Vertices output during last call to Render()
