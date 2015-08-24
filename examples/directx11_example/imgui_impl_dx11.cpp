@@ -172,7 +172,7 @@ static void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     g_pd3dDeviceContext->VSSetShader(NULL, NULL, 0);
 }
 
-LRESULT ImGui_ImplDX11_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam)
+IMGUI_API LRESULT ImGui_ImplDX11_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
