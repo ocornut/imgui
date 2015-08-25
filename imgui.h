@@ -1040,6 +1040,7 @@ IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
 #endif
 
 // Draw channels are used by the Columns API to "split" the render list into different channels while building, so items of each column can be batched together.
+// You can also use them to simulate drawing layers and submit primitives in a different order than how they will be rendered.
 struct ImDrawChannel
 {
     ImVector<ImDrawCmd>     CmdBuffer;
@@ -1105,12 +1106,16 @@ struct ImDrawList
     inline    void  PathFill(ImU32 col)                                         { AddConvexPolyFilled(_Path.Data, _Path.Size, col, true); PathClear(); }
     inline    void  PathStroke(ImU32 col, bool closed, float thickness = 1.0f)  { AddPolyline(_Path.Data, _Path.Size, col, closed, thickness, true); PathClear(); }
 
+    // Channels
+    // - Use to simulate layers. By switching channels to can render out-of-order (e.g. submit foreground primitives before background primitives)
+    // - Use to minimize draw calls (e.g. if going back-and-forth between multiple non-overlapping clipping rectangles, prefer to append into separate channels then merge at the end)
+    IMGUI_API void  ChannelsSplit(int channels_count);
+    IMGUI_API void  ChannelsMerge();
+    IMGUI_API void  ChannelsSetCurrent(int channel_index);
+
     // Advanced
     IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);  // Your rendering function must check for 'UserCallback' in ImDrawCmd and call the function instead of rendering triangles.
     IMGUI_API void  AddDrawCmd();                                               // This is useful if you need to forcefully create a new draw call (to allow for dependent rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
-    IMGUI_API void  ChannelsSplit(int channels_count);
-    IMGUI_API void  ChannelsMerge();
-    IMGUI_API void  ChannelsSetCurrent(int idx);
 
     // Internal helpers
     // NB: all primitives needs to be reserved via PrimReserve() beforehand!
