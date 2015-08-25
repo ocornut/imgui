@@ -131,6 +131,7 @@ namespace ImGui
     IMGUI_API ImVec2        GetWindowPos();                                                     // get current window position in screen space (useful if you want to do your own drawing via the DrawList api)
     IMGUI_API ImVec2        GetWindowSize();                                                    // get current window size
     IMGUI_API float         GetWindowWidth();
+    IMGUI_API float         GetWindowHeight();
     IMGUI_API bool          IsWindowCollapsed();
 
     IMGUI_API void          SetNextWindowPos(const ImVec2& pos, ImGuiSetCond cond = 0);         // set next window position. call before Begin()
@@ -177,7 +178,7 @@ namespace ImGui
     IMGUI_API void          PopButtonRepeat();
 
     // Cursor / Layout
-    IMGUI_API void          BeginGroup();                                                       // once closing a group it is seen as a single item (so you can use IsItemHovered() on a group, SameLine() between groups, etc.
+    IMGUI_API void          BeginGroup();                                                       // lock horizontal starting position. once closing a group it is seen as a single item (so you can use IsItemHovered() on a group, SameLine() between groups, etc.
     IMGUI_API void          EndGroup();
     IMGUI_API void          Separator();                                                        // horizontal line
     IMGUI_API void          SameLine(float local_pos_x = 0.0f, float spacing_w = -1.0f);        // call between widgets or groups to layout them horizontally

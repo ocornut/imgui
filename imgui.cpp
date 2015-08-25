@@ -4353,6 +4353,12 @@ float ImGui::GetWindowWidth()
     return window->Size.x;
 }
 
+float ImGui::GetWindowHeight()
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->Size.y;
+}
+
 ImVec2 ImGui::GetWindowPos()
 {
     ImGuiState& g = *GImGui;
