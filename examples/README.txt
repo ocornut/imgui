@@ -1,10 +1,10 @@
 Those are standalone ready-to-build applications to demonstrate ImGui.
-Binaries of those demos are available from the main GitHub page.
-
+Binaries of some of those demos are available at http://www.miracleworld.net/imgui/binaries
+  
 TL;DR; 
  Refer to 'opengl_example' (not 'opengl3_example') to understand how the library is setup.
- Copy the imgui_impl_xxx.cpp/.h file you need if you are using one of the rendering backend used in an example.
- If you are using a different or your own backend, copy opengl_example/imgui_impl_opengl.cpp/.h to get started.
+ Copy the imgui_impl_xxx.cpp/.h files you need if you are using one of provided rendering/IO backends.
+ If using different or your own backend, copy opengl_example/imgui_impl_opengl.cpp/.h to get started.
  
 
 ImGui is highly portable and only requires a few things to run:
@@ -29,8 +29,9 @@ opengl_example/
 opengl3_example/
     OpenGL example, using GLFW/GL3W + programmable pipeline.
     This uses more modern OpenGL calls and custom shaders.
-    Even if your application is using modern OpenGL you are better off copying the code from the fixed pipeline version!
-    I don't think there is an advantage using this over the simpler example, but it is provided for reference.
+    Even if your application is using modern OpenGL you are better off copying the code from the fixed
+    pipeline version! I don't think there is an advantage using this over the simpler example, but it is 
+    provided for reference.
 
 directx9_example/
     DirectX9 example, Windows only.
@@ -41,7 +42,8 @@ directx11_example/
 	
 ios_example/
     iOS example.
-    Using Synergy to access keyboard/mouse data from server computer. Synergy keyboard integration is rather hacky.
+    Using Synergy to access keyboard/mouse data from server computer.
+    Synergy keyboard integration is rather hacky.
 
 sdl_opengl_example/
     SDL2 + OpenGL example.
