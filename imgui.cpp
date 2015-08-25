@@ -2836,9 +2836,9 @@ ImVec2 ImGui::GetMousePos()
 ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup()
 {
     ImGuiState& g = *GImGui;
-	if (g.CurrentPopupStack.Size > 0)
-		return g.OpenedPopupStack[g.CurrentPopupStack.Size-1].MousePosOnOpen;
-	return g.IO.MousePos;
+    if (g.CurrentPopupStack.Size > 0)
+        return g.OpenedPopupStack[g.CurrentPopupStack.Size-1].MousePosOnOpen;
+    return g.IO.MousePos;
 }
 
 ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
@@ -4409,7 +4409,7 @@ static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiSetCond 
     // Set
     if (size.x > 0.0f)
     {
-		window->AutoFitFramesX = 0;
+        window->AutoFitFramesX = 0;
         window->SizeFull.x = size.x;
     }
     else
@@ -4419,7 +4419,7 @@ static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiSetCond 
     }
     if (size.y > 0.0f)
     {
-		window->AutoFitFramesY = 0;
+        window->AutoFitFramesY = 0;
         window->SizeFull.y = size.y;
     }
     else
@@ -7636,7 +7636,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
 
     const ImRect value_bb(frame_bb.Min, frame_bb.Max - ImVec2(arrow_size, 0.0f));
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
-    RenderFrame(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y), frame_bb.Max, window->Color(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button), true, style.FrameRounding);	// FIXME-ROUNDING
+    RenderFrame(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y), frame_bb.Max, window->Color(hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button), true, style.FrameRounding); // FIXME-ROUNDING
     RenderCollapseTriangle(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y) + style.FramePadding, true);
 
     if (*current_item >= 0 && *current_item < items_count)
@@ -7662,7 +7662,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
             }
             else
             {
-            	FocusWindow(window);
+                FocusWindow(window);
                 ImGui::OpenPopup(label);
                 menu_toggled = true;
             }
@@ -8931,13 +8931,13 @@ void ImGui::ShowMetricsWindow(bool* opened)
             }
             ImGui::TreePop();
         }
-		if (ImGui::TreeNode("Basic state"))
-		{
-			ImGui::Text("FocusedWindow: '%s'", g.FocusedWindow ? g.FocusedWindow->Name : "NULL");
-			ImGui::Text("HoveredWindow: '%s'", g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
-			ImGui::Text("HoveredRootWindow: '%s'", g.HoveredRootWindow ? g.HoveredRootWindow->Name : "NULL");
-			ImGui::Text("HoveredID: 0x%08X/0x%08X", g.HoveredId, g.HoveredIdPreviousFrame); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
-			ImGui::Text("ActiveID: 0x%08X/0x%08X", g.ActiveId, g.ActiveIdPreviousFrame);
+        if (ImGui::TreeNode("Basic state"))
+        {
+            ImGui::Text("FocusedWindow: '%s'", g.FocusedWindow ? g.FocusedWindow->Name : "NULL");
+            ImGui::Text("HoveredWindow: '%s'", g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
+            ImGui::Text("HoveredRootWindow: '%s'", g.HoveredRootWindow ? g.HoveredRootWindow->Name : "NULL");
+            ImGui::Text("HoveredID: 0x%08X/0x%08X", g.HoveredId, g.HoveredIdPreviousFrame); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
+            ImGui::Text("ActiveID: 0x%08X/0x%08X", g.ActiveId, g.ActiveIdPreviousFrame);
             ImGui::TreePop();
         }
         g.DisableHideTextAfterDoubleHash--;

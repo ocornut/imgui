@@ -398,7 +398,7 @@ namespace ImGui
     IMGUI_API bool          IsMouseHoveringRect(const ImVec2& pos_min, const ImVec2& pos_max);  // is mouse hovering given bounding rect (in screen space). clipped by current clipping settings. disregarding of consideration of focus/window ordering/blocked by a popup.
     IMGUI_API bool          IsMouseDragging(int button = 0, float lock_threshold = -1.0f);      // is mouse dragging. if lock_threshold < -1.0f uses io.MouseDraggingThreshold
     IMGUI_API ImVec2        GetMousePos();                                                      // shortcut to ImGui::GetIO().MousePos provided by user, to be consistent with other calls
-	IMGUI_API ImVec2		GetMousePosOnOpeningCurrentPopup();									// retrieve backup of mouse positioning at the time of opening popup we have BeginPopup() into
+    IMGUI_API ImVec2        GetMousePosOnOpeningCurrentPopup();                                 // retrieve backup of mouse positioning at the time of opening popup we have BeginPopup() into
     IMGUI_API ImVec2        GetMouseDragDelta(int button = 0, float lock_threshold = -1.0f);    // dragging amount since clicking. if lock_threshold < -1.0f uses io.MouseDraggingThreshold
     IMGUI_API void          ResetMouseDragDelta(int button = 0);                                //
     IMGUI_API ImGuiMouseCursor GetMouseCursor();                                                // get desired cursor type, reset in ImGui::NewFrame(), this updated during the frame. valid before Render(). If you use software rendering by setting io.MouseDrawCursor ImGui will render those for you
@@ -1065,7 +1065,7 @@ struct ImDrawList
     ImDrawIdx*              _IdxWritePtr;       // [Internal] point within IdxBuffer.Data after each add command (to avoid using the ImVector<> operators too much)
     ImVector<ImVec4>        _ClipRectStack;     // [Internal]
     ImVector<ImTextureID>   _TextureIdStack;    // [Internal]
-    ImVector<ImVec2>        _Path;				// [Internal] current path building
+    ImVector<ImVec2>        _Path;              // [Internal] current path building
     int                     _ChannelCurrent;    // [Internal] current channel number (0)
     ImVector<ImDrawChannel> _Channels;          // [Internal] draw channels for columns API
 
