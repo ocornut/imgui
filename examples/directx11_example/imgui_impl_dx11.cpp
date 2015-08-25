@@ -189,6 +189,12 @@ IMGUI_API LRESULT ImGui_ImplDX11_WndProcHandler(HWND, UINT msg, WPARAM wParam, L
     case WM_RBUTTONUP:
         io.MouseDown[1] = false; 
         return true;
+    case WM_MBUTTONDOWN:
+        io.MouseDown[2] = true; 
+        return true;
+    case WM_MBUTTONUP:
+        io.MouseDown[2] = false; 
+        return true;
     case WM_MOUSEWHEEL:
         io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
         return true;
