@@ -1015,6 +1015,8 @@ struct ImDrawCmd
     ImTextureID     TextureId;              // User-provided texture ID. Set by user in ImfontAtlas::SetTexID() for fonts or passed to Image*() functions. Ignore if never using images or multiple fonts atlas.
     ImDrawCallback  UserCallback;           // If != NULL, call the function instead of rendering the vertices. clip_rect and texture_id will be set normally.
     void*           UserCallbackData;       // The draw callback code can access this.
+
+    ImDrawCmd() { ElemCount = 0; ClipRect.x = ClipRect.y = -8192.0f; ClipRect.z = ClipRect.w = +8192.0f; TextureId = NULL; UserCallback = NULL; UserCallbackData = NULL; }
 };
 
 // Vertex index (override with, e.g. '#define ImDrawIdx unsigned int' in ImConfig)
@@ -1066,8 +1068,9 @@ struct ImDrawList
     ImVector<ImVec4>        _ClipRectStack;     // [Internal]
     ImVector<ImTextureID>   _TextureIdStack;    // [Internal]
     ImVector<ImVec2>        _Path;              // [Internal] current path building
-    int                     _ChannelCurrent;    // [Internal] current channel number (0)
-    ImVector<ImDrawChannel> _Channels;          // [Internal] draw channels for columns API
+    int                     _ChannelsCurrent;   // [Internal] current channel number (0)
+    int                     _ChannelsCount;     // [Internal] number of active channels (1+)
+    ImVector<ImDrawChannel> _Channels;          // [Internal] draw channels for columns API (not resized down so _ChannelsCount may be smaller than _Channels.Size)
 
     ImDrawList() { _OwnerName = NULL; Clear(); }
     ~ImDrawList() { ClearFreeMemory(); }
@@ -1105,8 +1108,8 @@ struct ImDrawList
     // Advanced
     IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);  // Your rendering function must check for 'UserCallback' in ImDrawCmd and call the function instead of rendering triangles.
     IMGUI_API void  AddDrawCmd();                                               // This is useful if you need to forcefully create a new draw call (to allow for dependent rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
-    IMGUI_API void  ChannelsSplit(int channel_count);
-    IMGUI_API void  ChannelsMerge(int channel_count);
+    IMGUI_API void  ChannelsSplit(int channels_count);
+    IMGUI_API void  ChannelsMerge();
     IMGUI_API void  ChannelsSetCurrent(int idx);
 
     // Internal helpers

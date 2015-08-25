@@ -85,7 +85,7 @@ using namespace IMGUI_STB_NAMESPACE;
 // ImDrawList
 //-----------------------------------------------------------------------------
 
-static ImVec4 GNullClipRect(-9999.0f,-9999.0f, +9999.0f, +9999.0f);
+static ImVec4 GNullClipRect(-8192.0f, -8192.0f, +8192.0f, +8192.0f); // Large values that are easy to encode in a few bits+shift
 
 void ImDrawList::Clear()
 {
@@ -98,7 +98,8 @@ void ImDrawList::Clear()
     _ClipRectStack.resize(0);
     _TextureIdStack.resize(0);
     _Path.resize(0);
-    _ChannelCurrent = 0;
+    _ChannelsCurrent = 0;
+    _ChannelsCount = 1;
     // NB: Do not clear channels so our allocations are re-used after the first frame.
 }
 
@@ -113,7 +114,8 @@ void ImDrawList::ClearFreeMemory()
     _ClipRectStack.clear();
     _TextureIdStack.clear();
     _Path.clear();
-    _ChannelCurrent = 0;
+    _ChannelsCurrent = 0;
+    _ChannelsCount = 1;
     for (int i = 0; i < _Channels.Size; i++)
     {
         if (i == 0) memset(&_Channels[0], 0, sizeof(_Channels[0]));  // channel 0 is a copy of CmdBuffer/IdxBuffer, don't destruct again
@@ -126,11 +128,8 @@ void ImDrawList::ClearFreeMemory()
 void ImDrawList::AddDrawCmd()
 {
     ImDrawCmd draw_cmd;
-    draw_cmd.ElemCount = 0;
     draw_cmd.ClipRect = _ClipRectStack.Size ? _ClipRectStack.back() : GNullClipRect;
     draw_cmd.TextureId = _TextureIdStack.Size ? _TextureIdStack.back() : NULL;
-    draw_cmd.UserCallback = NULL;
-    draw_cmd.UserCallbackData = NULL;
 
     IM_ASSERT(draw_cmd.ClipRect.x <= draw_cmd.ClipRect.z && draw_cmd.ClipRect.y <= draw_cmd.ClipRect.w);
     CmdBuffer.push_back(draw_cmd);
@@ -151,24 +150,34 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
     AddDrawCmd();
 }
 
-void ImDrawList::ChannelsSplit(int channel_count)
+void ImDrawList::ChannelsSplit(int channels_count)
 {
-    IM_ASSERT(_ChannelCurrent == 0);
+    IM_ASSERT(_ChannelsCurrent == 0 && _ChannelsCount == 1);
     int old_channels_count = _Channels.Size;
-    if (old_channels_count < channel_count)
-        _Channels.resize(channel_count);
-    for (int i = 0; i < channel_count; i++)
+    if (old_channels_count < channels_count)
+        _Channels.resize(channels_count);
+    _ChannelsCount = channels_count;
+    for (int i = 0; i < channels_count; i++)
+    {
         if (i >= old_channels_count)
             new(&_Channels[i]) ImDrawChannel();
-        else
+        else if (i > 0)
             _Channels[i].CmdBuffer.resize(0), _Channels[i].IdxBuffer.resize(0);
+        if (_Channels[i].CmdBuffer.Size == 0)
+        {
+            ImDrawCmd draw_cmd;
+            draw_cmd.ClipRect = _ClipRectStack.back();
+            draw_cmd.TextureId = _TextureIdStack.back();
+            _Channels[i].CmdBuffer.push_back(draw_cmd);
+        }
+    }
 }
 
-void ImDrawList::ChannelsMerge(int channel_count)
+void ImDrawList::ChannelsMerge()
 {
     // Note that we never use or rely on channels.Size because it is merely a buffer that we never shrink back to 0 to keep all sub-buffers ready for use.
     // This is why this function takes 'channel_count' as a parameter of how many channels to merge (the user knows)
-    if (channel_count < 2)
+    if (_ChannelsCount <= 1)
         return;
 
     ChannelsSetCurrent(0);
@@ -176,7 +185,7 @@ void ImDrawList::ChannelsMerge(int channel_count)
         CmdBuffer.pop_back();
 
     int new_cmd_buffer_count = 0, new_idx_buffer_count = 0;
-    for (int i = 1; i < channel_count; i++)
+    for (int i = 1; i < _ChannelsCount; i++)
     {
         ImDrawChannel& ch = _Channels[i];
         if (ch.CmdBuffer.Size && ch.CmdBuffer.back().ElemCount == 0)
@@ -189,23 +198,24 @@ void ImDrawList::ChannelsMerge(int channel_count)
 
     ImDrawCmd* cmd_write = CmdBuffer.Data + CmdBuffer.Size - new_cmd_buffer_count;
     _IdxWritePtr = IdxBuffer.Data + IdxBuffer.Size - new_idx_buffer_count;
-    for (int i = 1; i < channel_count; i++)
+    for (int i = 1; i < _ChannelsCount; i++)
     {
         ImDrawChannel& ch = _Channels[i];
         if (int sz = ch.CmdBuffer.Size) { memcpy(cmd_write, ch.CmdBuffer.Data, sz * sizeof(ImDrawCmd)); cmd_write += sz; }
         if (int sz = ch.IdxBuffer.Size) { memcpy(_IdxWritePtr, ch.IdxBuffer.Data, sz * sizeof(ImDrawIdx)); _IdxWritePtr += sz; }
     }
     AddDrawCmd();
+    _ChannelsCount = 1;
 }
 
 void ImDrawList::ChannelsSetCurrent(int idx)
 {
-    if (_ChannelCurrent == idx) return;
-    memcpy(&_Channels.Data[_ChannelCurrent].CmdBuffer, &CmdBuffer, sizeof(CmdBuffer));
-    memcpy(&_Channels.Data[_ChannelCurrent].IdxBuffer, &IdxBuffer, sizeof(IdxBuffer));
-    _ChannelCurrent = idx;
-    memcpy(&CmdBuffer, &_Channels.Data[_ChannelCurrent].CmdBuffer, sizeof(CmdBuffer));
-    memcpy(&IdxBuffer, &_Channels.Data[_ChannelCurrent].IdxBuffer, sizeof(IdxBuffer));
+    if (_ChannelsCurrent == idx) return;
+    memcpy(&_Channels.Data[_ChannelsCurrent].CmdBuffer, &CmdBuffer, sizeof(CmdBuffer)); // copy 12 bytes, four times
+    memcpy(&_Channels.Data[_ChannelsCurrent].IdxBuffer, &IdxBuffer, sizeof(IdxBuffer));
+    _ChannelsCurrent = idx;
+    memcpy(&CmdBuffer, &_Channels.Data[_ChannelsCurrent].CmdBuffer, sizeof(CmdBuffer));
+    memcpy(&IdxBuffer, &_Channels.Data[_ChannelsCurrent].IdxBuffer, sizeof(IdxBuffer));
     _IdxWritePtr = IdxBuffer.Data + IdxBuffer.Size;
 }
 

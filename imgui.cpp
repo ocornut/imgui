@@ -8566,7 +8566,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             ItemSize(ImVec2(0,0));   // Advance to column 0
         ImGui::PopItemWidth();
         PopClipRect();
-        window->DrawList->ChannelsMerge(window->DC.ColumnsCount);
+        window->DrawList->ChannelsMerge();
 
         window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
         window->DC.CursorPos.y = window->DC.ColumnsCellMaxY;
