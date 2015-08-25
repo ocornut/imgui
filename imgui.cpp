@@ -2833,6 +2833,7 @@ ImVec2 ImGui::GetMousePos()
     return GImGui->IO.MousePos;
 }
 
+// NB: prefer to call right after BeginPopup(). At the time Selectable/MenuItem is activated, the popup is already closed!
 ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup()
 {
     ImGuiState& g = *GImGui;
