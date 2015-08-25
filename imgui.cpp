@@ -2258,12 +2258,12 @@ void ImGui::Render()
         {
             if (!(g.FocusedWindow && !g.FocusedWindow->WasActive && g.FocusedWindow->Active)) // Unless we just made a popup appear
             {
-                if (g.HoveredRootWindow != NULL)
+                if (g.HoveredRootWindow != NULL && !(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
                 {
                     g.MovedWindow = g.HoveredWindow;
                     SetActiveID(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
                 }
-                else if (g.FocusedWindow != NULL && GetFrontMostModalRootWindow() == NULL)
+                else if (g.HoveredRootWindow == NULL && g.FocusedWindow != NULL && GetFrontMostModalRootWindow() == NULL)
                 {
                     // Clicking on void disable focus
                     FocusWindow(NULL);
@@ -3176,7 +3176,7 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
 bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_ChildWindow;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_ChildWindow;
 
     const ImVec2 content_avail = ImGui::GetContentRegionAvail();
     ImVec2 size = size_arg;
@@ -3251,7 +3251,7 @@ bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size)
     const ImGuiStyle& style = g.Style;
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.Colors[ImGuiCol_FrameBg]);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, style.FrameRounding);
-    return ImGui::BeginChild(id, size);
+    return ImGui::BeginChild(id, size, false, ImGuiWindowFlags_NoMove);
 }
 
 void ImGui::EndChildFrame()
