@@ -2258,12 +2258,16 @@ void ImGui::Render()
         {
             if (!(g.FocusedWindow && !g.FocusedWindow->WasActive && g.FocusedWindow->Active)) // Unless we just made a popup appear
             {
-                if (g.HoveredRootWindow != NULL && !(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
+                if (g.HoveredRootWindow != NULL)
                 {
-                    g.MovedWindow = g.HoveredWindow;
-                    SetActiveID(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
+                    FocusWindow(g.HoveredWindow);
+                    if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
+                    {
+                        g.MovedWindow = g.HoveredWindow;
+                        SetActiveID(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
+                    }
                 }
-                else if (g.HoveredRootWindow == NULL && g.FocusedWindow != NULL && GetFrontMostModalRootWindow() == NULL)
+                else if (g.FocusedWindow != NULL && GetFrontMostModalRootWindow() == NULL)
                 {
                     // Clicking on void disable focus
                     FocusWindow(NULL);
