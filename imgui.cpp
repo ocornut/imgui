@@ -1039,6 +1039,12 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
     return bytes_count;
 }
 
+ImVec4 ImGui::ColorConvertU32ToFloat4(ImU32 in)
+{
+    float s = 1.0f/255.0f;
+    return ImVec4((in & 0xFF) * s, ((in >> 8) & 0xFF) * s, ((in >> 16) & 0xFF) * s, (in >> 24) * s);
+}
+
 ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in)
 {
     ImU32 out  = ((ImU32)(ImSaturate(in.x)*255.f));

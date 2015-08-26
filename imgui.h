@@ -381,6 +381,7 @@ namespace ImGui
     IMGUI_API bool          BeginChildFrame(ImGuiID id, const ImVec2& size);                    // helper to create a child window / scrolling region that looks like a normal widget frame
     IMGUI_API void          EndChildFrame();
 
+    IMGUI_API ImVec4        ColorConvertU32ToFloat4(ImU32 in);
     IMGUI_API ImU32         ColorConvertFloat4ToU32(const ImVec4& in);
     IMGUI_API void          ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v);
     IMGUI_API void          ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
@@ -950,7 +951,8 @@ struct ImColor
 {
     ImVec4              Value;
 
-    ImColor(int r, int g, int b, int a = 255)                       { Value.x = (float)r / 255.0f; Value.y = (float)g / 255.0f; Value.z = (float)b / 255.0f; Value.w = (float)a / 255.0f; }
+    ImColor(int r, int g, int b, int a = 255)                       { float sc = 1.0f/255.0f; Value.x = (float)r * sc; Value.y = (float)g * sc; Value.z = (float)b * sc; Value.w = (float)a * sc; }
+    ImColor(ImU32 rgba)                                             { float sc = 1.0f/255.0f; Value.x = (float)(rgba&0xFF) * sc; Value.y = (float)((rgba>>8)&0xFF) * sc; Value.z = (float)((rgba>>16)&0xFF) * sc; Value.w = (float)(rgba >> 24) * sc; }
     ImColor(float r, float g, float b, float a = 1.0f)              { Value.x = r; Value.y = g; Value.z = b; Value.w = a; }
     ImColor(const ImVec4& col)                                      { Value = col; }
     operator ImU32() const                                          { return ImGui::ColorConvertFloat4ToU32(Value); }
