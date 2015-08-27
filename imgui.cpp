@@ -882,45 +882,45 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
     }
     if ((*str & 0xe0) == 0xc0)
     {
-        *out_char = 0;
+        *out_char = 0xFFFD; // will be invalid but not end of string
         if (in_text_end && in_text_end - (const char*)str < 2) return 0;
-        if (*str < 0xc2) return 0;
+        if (*str < 0xc2) return 2;
         c = (unsigned int)((*str++ & 0x1f) << 6);
-        if ((*str & 0xc0) != 0x80) return 0;
+        if ((*str & 0xc0) != 0x80) return 2;
         c += (*str++ & 0x3f);
         *out_char = c;
         return 2;
     }
     if ((*str & 0xf0) == 0xe0)
     {
-        *out_char = 0;
-        if (in_text_end && in_text_end - (const char*)str < 3) return 0;
-        if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return 0;
-        if (*str == 0xed && str[1] > 0x9f) return 0; // str[1] < 0x80 is checked below
+        *out_char = 0xFFFD; // will be invalid but not end of string
+        if (in_text_end && in_text_end - (const char*)str < 3) return 0; 
+        if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return 3;
+        if (*str == 0xed && str[1] > 0x9f) return 3; // str[1] < 0x80 is checked below
         c = (unsigned int)((*str++ & 0x0f) << 12);
-        if ((*str & 0xc0) != 0x80) return 0;
+        if ((*str & 0xc0) != 0x80) return 3;
         c += (unsigned int)((*str++ & 0x3f) << 6);
-        if ((*str & 0xc0) != 0x80) return 0;
+        if ((*str & 0xc0) != 0x80) return 3;
         c += (*str++ & 0x3f);
         *out_char = c;
         return 3;
     }
     if ((*str & 0xf8) == 0xf0)
     {
-        *out_char = 0;
+        *out_char = 0xFFFD; // will be invalid but not end of string
         if (in_text_end && in_text_end - (const char*)str < 4) return 0;
-        if (*str > 0xf4) return 0;
-        if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return 0;
-        if (*str == 0xf4 && str[1] > 0x8f) return 0; // str[1] < 0x80 is checked below
+        if (*str > 0xf4) return 4;
+        if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return 4;
+        if (*str == 0xf4 && str[1] > 0x8f) return 4; // str[1] < 0x80 is checked below
         c = (unsigned int)((*str++ & 0x07) << 18);
-        if ((*str & 0xc0) != 0x80) return 0;
+        if ((*str & 0xc0) != 0x80) return 4;
         c += (unsigned int)((*str++ & 0x3f) << 12);
-        if ((*str & 0xc0) != 0x80) return 0;
+        if ((*str & 0xc0) != 0x80) return 4;
         c += (unsigned int)((*str++ & 0x3f) << 6);
-        if ((*str & 0xc0) != 0x80) return 0;
+        if ((*str & 0xc0) != 0x80) return 4;
         c += (*str++ & 0x3f);
         // utf-8 encodings of values used in surrogate pairs are invalid
-        if ((c & 0xFFFFF800) == 0xD800) return 0;
+        if ((c & 0xFFFFF800) == 0xD800) return 4;
         *out_char = c;
         return 4;
     }
