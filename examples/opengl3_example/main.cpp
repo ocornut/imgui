@@ -53,7 +53,6 @@ int main(int, char**)
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
-        ImGuiIO& io = ImGui::GetIO();
         glfwPollEvents();
         ImGui_ImplGlfwGL3_NewFrame();
 
@@ -86,7 +85,9 @@ int main(int, char**)
         }
 
         // Rendering
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui::Render();
