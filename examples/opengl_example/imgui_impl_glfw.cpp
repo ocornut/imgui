@@ -19,6 +19,7 @@ static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
 static float        g_MouseWheel = 0.0f;
 static GLuint       g_FontTexture = 0;
+static float        g_FramebufferScale[2] = { 1.0f, 1.0f };
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
@@ -72,7 +73,11 @@ static void ImGui_ImplGlfw_RenderDrawLists(ImDrawData* draw_data)
             else
             {
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
-                glScissor((int)pcmd->ClipRect.x, (int)(height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
+                // glScissor is in screen coordinates, so scale clip region to framebuffer
+                glScissor((int)pcmd->ClipRect.x * g_FramebufferScale[0],
+                          (int)(height - pcmd->ClipRect.w) * g_FramebufferScale[1],
+                          (int)(pcmd->ClipRect.z - pcmd->ClipRect.x) * g_FramebufferScale[0],
+                          (int)(pcmd->ClipRect.w - pcmd->ClipRect.y) * g_FramebufferScale[1]);
                 glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, idx_buffer);
             }
             idx_buffer += pcmd->ElemCount;
@@ -147,7 +152,8 @@ bool ImGui_ImplGlfw_CreateDeviceObjects()
     glGenTextures(1, &g_FontTexture);
     glBindTexture(GL_TEXTURE_2D, g_FontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // Prefer fonts and cursors to be pixelated but sharp on high DPI displays
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier
@@ -231,7 +237,9 @@ void ImGui_ImplGlfw_NewFrame()
     int display_w, display_h;
     glfwGetWindowSize(g_Window, &w, &h);
     glfwGetFramebufferSize(g_Window, &display_w, &display_h);
-    io.DisplaySize = ImVec2((float)display_w, (float)display_h);
+    io.DisplaySize = ImVec2((float)w, (float)h);
+    g_FramebufferScale[0] = display_w / w;
+    g_FramebufferScale[1] = display_h / h;
 
     // Setup time step
     double current_time =  glfwGetTime();
@@ -244,8 +252,7 @@ void ImGui_ImplGlfw_NewFrame()
     {
     	double mouse_x, mouse_y;
     	glfwGetCursorPos(g_Window, &mouse_x, &mouse_y);
-    	mouse_x *= (float)display_w / w;                        // Convert mouse coordinates to pixels
-    	mouse_y *= (float)display_h / h;
+    	// GLFW mouse coordinates are in screen space, not framebuffer pixel scale
     	io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);   // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
     }
     else
