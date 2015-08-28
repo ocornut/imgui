@@ -1343,7 +1343,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
             ImGui::Text("WantCaptureMouse: %s", io.WantCaptureMouse ? "true" : "false");
             ImGui::Text("WantCaptureKeyboard: %s", io.WantCaptureKeyboard ? "true" : "false");
-            ImGui::Text("WantInputCharacters: %s", io.WantInputCharacters ? "true" : "false");
+            ImGui::Text("WantTextInput: %s", io.WantTextInput ? "true" : "false");
 
             ImGui::Button("Hover me\nto enforce\ninputs capture");
             if (ImGui::IsItemHovered())

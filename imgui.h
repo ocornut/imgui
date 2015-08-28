@@ -728,7 +728,7 @@ struct ImGuiIO
 
     bool        WantCaptureMouse;           // Mouse is hovering a window or widget is active (= ImGui will use your mouse input)
     bool        WantCaptureKeyboard;        // Widget is active (= ImGui will use your keyboard input)
-    bool        WantInputCharacters;        // Some text input widget is active, which will read input characters from the InputCharacters array.
+    bool        WantTextInput;              // Some text input widget is active, which will read input characters from the InputCharacters array.
     float       Framerate;                  // Framerate estimation, in frame per second. Rolling average estimation based on IO.DeltaTime over 120 frames
     int         MetricsAllocs;              // Number of active memory allocations
     int         MetricsRenderVertices;      // Vertices output during last call to Render()
