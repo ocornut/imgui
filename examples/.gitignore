@@ -23,6 +23,7 @@ opengl3_example/x64/*
 *.sdf
 *.suo
 *.vcxproj.user
+*.o
 
 ## Ini files
 imgui.ini
