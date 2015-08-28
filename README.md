@@ -7,7 +7,7 @@ ImGui
 
 ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and self-contained (no external dependencies). It is based on an "immediate mode" graphical user interface paradigm which enables you to build user interfaces with ease.
 
-ImGui is designed to enable fast iteration and allow programmers to create "content creation" or "debug" tools (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal, and thus lacks certain features normally found in more high-level libraries.
+ImGui is designed to enable fast iteration and empower programmers to create content creation tools and visualization/debug tools (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal, and thus lacks certain features normally found in more high-level libraries.
 
 ImGui is particularly suited to integration in realtime 3D applications, fullscreen applications, embedded applications, games, or any applications on consoles platforms where operating system features are non-standard. 
 
@@ -36,7 +36,7 @@ ImGui allows you create elaborate tools as well as very short-lived ones. On the
 Demo
 ----
 
-You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at the features of ImGui, you can download binaries of the demo app here.
+You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at the features of ImGui, you can download Windows binaries of the demo app here.
 - [imgui-demo-binaries-20150716.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20150716.zip) (Windows binaries, ImGui 1.43 WIP 2015/07/16, 4 executables, 475 KB)
 
 
@@ -79,6 +79,7 @@ Frequently Asked Question
 - The documentation is at the top of imgui.cpp + effectively imgui.h.
 - Example code is in imgui_demo.cpp and particularly the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
 - Standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder. 
+- It obviously needs better documentation! Consider helping or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
 
 <b>How do you use ImGui on a platform that may not have a mouse or keyboard?</b>
 
