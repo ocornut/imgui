@@ -1392,6 +1392,10 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     {
         ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines);
         ImGui::Checkbox("Anti-aliased shapes", &style.AntiAliasedShapes);
+        ImGui::PushItemWidth(100);
+        ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, FLT_MAX, NULL, 2.0f);
+        if (style.CurveTessellationTol < 0.0f) style.CurveTessellationTol = 0.10f;
+        ImGui::PopItemWidth();
         ImGui::TreePop();
     }
 
