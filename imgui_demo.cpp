@@ -1645,6 +1645,9 @@ static void ShowExampleAppCustomRendering(bool* opened)
     if (canvas_size.y < 50.0f) canvas_size.y = 50.0f;
     draw_list->AddRectFilledMultiColor(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(0,0,0), ImColor(255,0,0), ImColor(255,255,0), ImColor(0,255,0));
     draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(255,255,255));
+
+    draw_list->AddBezierCurve(ImVec2(canvas_pos.x+20,canvas_pos.y+20), ImVec2(canvas_pos.x+100,canvas_pos.y+20), ImVec2(canvas_pos.x+canvas_size.x-100,canvas_pos.y+canvas_size.y-20), ImVec2(canvas_pos.x+canvas_size.x-20,canvas_pos.y+canvas_size.y-20), ImColor(255,200,0), 5.0f);
+
     bool adding_preview = false;
     ImGui::InvisibleButton("canvas", canvas_size);
     if (ImGui::IsItemHovered())
