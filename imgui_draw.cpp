@@ -665,9 +665,9 @@ static void PathBezierToCasteljau(ImVector<ImVec2>* path, float x1, float y1, fl
     }
 }
 
-void ImDrawList::PathBezierTo(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, int num_segments)
+void ImDrawList::PathBezierCurveTo(const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, int num_segments)
 {
-    PathLineToMergeDuplicate(p1);
+    ImVec2 p1 = _Path.back();
     if (num_segments == 0)
     {
         // Auto-tessellated
@@ -791,6 +791,16 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
     const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(centre, radius, 0.0f, a_max, num_segments);
     PathFill(col);
+}
+
+void ImDrawList::AddBezierCurve(const ImVec2& pos0, const ImVec2& cp0, const ImVec2& cp1, const ImVec2& pos1, ImU32 col, float thickness, int num_segments) 
+{ 
+    if ((col >> 24) == 0)
+        return;
+
+    PathLineTo(pos0); 
+    PathBezierCurveTo(cp0, cp1, pos1, num_segments); 
+    PathStroke(col, false, thickness); 
 }
 
 void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
