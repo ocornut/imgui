@@ -5304,24 +5304,13 @@ void ImGui::LogButtons()
         LogToClipboard(g.LogAutoExpandMaxDepth);
 }
 
-bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display_frame, bool default_open)
+bool ImGui::TreeNodeBehaviorIsOpened(ImGuiID id, ImGuiTreeNodeFlags flags)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return false;
-
-    ImGuiState& g = *GImGui;
-    const ImGuiStyle& style = g.Style;
-
-    IM_ASSERT(str_id != NULL || label != NULL);
-    if (str_id == NULL)
-        str_id = label;
-    if (label == NULL)
-        label = str_id;
-    const ImGuiID id = window->GetID(str_id);
-
     // We only write to the tree storage if the user clicks (or explicitely use SetNextTreeNode*** functions)
+    ImGuiState& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     ImGuiStorage* storage = window->DC.StateStorage;
+
     bool opened;
     if (g.SetNextTreeNodeOpenedCond != 0)
     {
@@ -5348,8 +5337,32 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     }
     else
     {
-        opened = storage->GetInt(id, default_open) != 0;
+        opened = storage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) ? 1 : 0) != 0;
     }
+
+    // When logging is enabled, we automatically expand tree nodes (but *NOT* collapsing headers.. seems like sensible behavior).
+    // NB- If we are above max depth we still allow manually opened nodes to be logged.
+    if (g.LogEnabled && !(flags & ImGuiTreeNodeFlags_NoAutoExpandOnLog) && window->DC.TreeDepth < g.LogAutoExpandMaxDepth)
+        opened = true;
+
+    return opened;
+}
+
+bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display_frame, bool default_open)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiState& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    IM_ASSERT(str_id != NULL || label != NULL);
+    if (str_id == NULL)
+        str_id = label;
+    if (label == NULL)
+        label = str_id;
+    const ImGuiID id = window->GetID(str_id);
 
     // Framed header expand a little outside the default padding
     const ImVec2 window_padding = window->WindowPadding;
@@ -5368,12 +5381,9 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     const ImRect text_bb(bb.Min, bb.Min + ImVec2(collapser_width + style.FramePadding.x*2*0 + (label_size.x > 0.0f ? label_size.x : 0.0f), label_size.y));
     ItemSize(ImVec2(text_bb.GetSize().x, bb.GetSize().y), display_frame ? style.FramePadding.y : 0.0f);
 
-    // When logging is enabled, if automatically expand tree nodes (but *NOT* collapsing headers.. seems like sensible behavior).
-    // NB- If we are above max depth we still allow manually opened nodes to be logged.
-    if (g.LogEnabled && !display_frame && window->DC.TreeDepth < g.LogAutoExpandMaxDepth)
-        opened = true;
-
     const ImRect interact_bb = display_frame ? bb : ImRect(text_bb.Min, text_bb.Max + ImVec2(style.FramePadding.x*2,0.0f)); // FIXME
+    bool opened = TreeNodeBehaviorIsOpened(id, (default_open ? ImGuiTreeNodeFlags_DefaultOpen : 0) | (display_frame ? ImGuiTreeNodeFlags_NoAutoExpandOnLog : 0));
+
     if (!ItemAdd(bb, &id))
     //if (!ItemAdd(interact_bb, &id))	// Correct but would prevent user from accessing rendered bb which may be of use
         return opened;
@@ -5383,7 +5393,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     if (pressed)
     {
         opened = !opened;
-        storage->SetInt(id, opened);
+        window->DC.StateStorage->SetInt(id, opened);
     }
 
     // Render

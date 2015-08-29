@@ -294,7 +294,7 @@ namespace ImGui
     IMGUI_API bool          VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* display_format = "%.0f");
 
     // Widgets: Trees
-    IMGUI_API bool          TreeNode(const char* str_label_id);                                     // if returning 'true' the node is open and the user is responsible for calling TreePop
+    IMGUI_API bool          TreeNode(const char* str_label_id);                                     // if returning 'true' the node is open and the user is responsible for calling TreePop()
     IMGUI_API bool          TreeNode(const char* str_id, const char* fmt, ...) IM_PRINTFARGS(2);    // "
     IMGUI_API bool          TreeNode(const void* ptr_id, const char* fmt, ...) IM_PRINTFARGS(2);    // "
     IMGUI_API bool          TreeNodeV(const char* str_id, const char* fmt, va_list args);           // "
