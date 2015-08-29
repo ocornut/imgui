@@ -2110,16 +2110,16 @@ static void ShowExampleAppLongText(bool* opened)
         ImGui::TextUnformatted(log.begin(), log.end());
         break;
     case 1:
-        // Multiple calls to Text(), manually coarsely clipped - demonstrate how to use the CalcListClipping() helper.
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
-        int display_start, display_end;
-        ImGui::CalcListClipping(lines, ImGui::GetTextLineHeight(), &display_start, &display_end);
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (display_start) * ImGui::GetTextLineHeight());
-        for (int i = display_start; i < display_end; i++)
-            ImGui::Text("%i The quick brown fox jumps over the lazy dog\n", i);
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (lines - display_end) * ImGui::GetTextLineHeight());
-        ImGui::PopStyleVar();
-        break;
+        {
+            // Multiple calls to Text(), manually coarsely clipped - demonstrate how to use the ImGuiListClipper helper.
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+            ImGuiListClipper clipper(lines, ImGui::GetTextLineHeight());
+            for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                ImGui::Text("%i The quick brown fox jumps over the lazy dog\n", i);
+            clipper.End();
+            ImGui::PopStyleVar();
+            break;
+        }
     case 2:
         // Multiple calls to Text(), not clipped (slow)
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
