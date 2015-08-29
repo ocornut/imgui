@@ -827,7 +827,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Groups"))
         {
-            ImGui::TextWrapped("(Using ImGui::BeginGroup()/EndGroup() to layout items)");
+            ImGui::TextWrapped("(Using ImGui::BeginGroup()/EndGroup() to layout items. BeginGroup() basically locks the horizontal position. EndGroup() bundled the whole group so that you can use functions such as IsItemHovered() on it.)");
             ImGui::BeginGroup();
             {
                 ImGui::BeginGroup();
@@ -903,7 +903,7 @@ void ImGui::ShowTestWindow(bool* opened)
 
         if (ImGui::TreeNode("Scrolling"))
         {
-            ImGui::TextWrapped("Use SetScrollHere() or SetScrollFromPosY() to scroll to a given position.");
+            ImGui::TextWrapped("(Use SetScrollHere() or SetScrollFromPosY() to scroll to a given position.)");
             static bool track = true;
             static int track_line = 50, scroll_to_px = 200;
             ImGui::Checkbox("Track", &track);
