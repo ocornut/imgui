@@ -5384,8 +5384,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     const ImRect interact_bb = display_frame ? bb : ImRect(text_bb.Min, text_bb.Max + ImVec2(style.FramePadding.x*2,0.0f)); // FIXME
     bool opened = TreeNodeBehaviorIsOpened(id, (default_open ? ImGuiTreeNodeFlags_DefaultOpen : 0) | (display_frame ? ImGuiTreeNodeFlags_NoAutoExpandOnLog : 0));
 
-    if (!ItemAdd(bb, &id))
-    //if (!ItemAdd(interact_bb, &id))	// Correct but would prevent user from accessing rendered bb which may be of use
+    if (!ItemAdd(interact_bb, &id))
         return opened;
 
     bool hovered, held;
