@@ -5364,8 +5364,8 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
         bb.Max.y += style.FramePadding.y * 2;
     }
 
-    // FIXME: we don't provide our width so that it doesn't get feed back into AutoFit. Should manage that better so we can still hover without extending ContentsSize
-    const ImRect text_bb(bb.Min, bb.Min + ImVec2(g.FontSize + style.FramePadding.x*2*2,0) + label_size);
+    const float collapser_width = g.FontSize + style.FramePadding.x*2;
+    const ImRect text_bb(bb.Min, bb.Min + ImVec2(collapser_width + style.FramePadding.x*2*0 + (label_size.x > 0.0f ? label_size.x : 0.0f), label_size.y));
     ItemSize(ImVec2(text_bb.GetSize().x, bb.GetSize().y), display_frame ? style.FramePadding.y : 0.0f);
 
     // When logging is enabled, if automatically expand tree nodes (but *NOT* collapsing headers.. seems like sensible behavior).
@@ -5373,11 +5373,13 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     if (g.LogEnabled && !display_frame && window->DC.TreeDepth < g.LogAutoExpandMaxDepth)
         opened = true;
 
+    const ImRect interact_bb = display_frame ? bb : ImRect(text_bb.Min, text_bb.Max + ImVec2(style.FramePadding.x*2,0.0f)); // FIXME
     if (!ItemAdd(bb, &id))
+    //if (!ItemAdd(interact_bb, &id))	// Correct but would prevent user from accessing rendered bb which may be of use
         return opened;
 
     bool hovered, held;
-    bool pressed = ButtonBehavior(display_frame ? bb : text_bb, id, &hovered, &held, false);
+    bool pressed = ButtonBehavior(interact_bb, id, &hovered, &held, false);
     if (pressed)
     {
         opened = !opened;
@@ -5397,7 +5399,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
             const char log_prefix[] = "\n##";
             LogRenderedText(bb.Min + style.FramePadding, log_prefix, log_prefix+3);
         }
-        RenderTextClipped(bb.Min + style.FramePadding + ImVec2(g.FontSize + style.FramePadding.x*2,0), bb.Max, label, NULL, &label_size);
+        RenderTextClipped(bb.Min + style.FramePadding + ImVec2(collapser_width,0), bb.Max, label, NULL, &label_size);
         if (g.LogEnabled)
         {
             const char log_suffix[] = "##";
@@ -5412,7 +5414,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
         RenderCollapseTriangle(bb.Min + ImVec2(style.FramePadding.x, g.FontSize*0.15f), opened, 0.70f, false);
         if (g.LogEnabled)
             LogRenderedText(bb.Min, ">");
-        RenderText(bb.Min + ImVec2(g.FontSize + style.FramePadding.x*2,0), label);
+        RenderText(bb.Min + ImVec2(collapser_width,0), label);
     }
 
     return opened;
