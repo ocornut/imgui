@@ -10,6 +10,7 @@
 
 #CXX = g++
 
+EXE = opengl3_example
 OBJS = main.o imgui_impl_glfw_gl3.o
 OBJS += ../../imgui.o ../../imgui_demo.o ../../imgui_draw.o
 OBJS += ../libs/gl3w/GL/gl3w.o
@@ -41,12 +42,12 @@ endif
 .cpp.o:
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-all:imgui_example
+all: $(EXE)
 	@echo Build complete for $(ECHO_MESSAGE)
 
-imgui_example:$(OBJS)
-	$(CXX) -o imgui_example $(OBJS) $(CXXFLAGS) $(LIBS)
+$(EXE): $(OBJS)
+	$(CXX) -o $(EXE) $(OBJS) $(CXXFLAGS) $(LIBS)
 
 clean:
-	rm $(OBJS)
+	rm $(EXE) $(OBJS)
 

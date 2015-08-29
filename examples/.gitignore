@@ -15,14 +15,17 @@ opengl_example/Debug/*
 opengl_example/Release/*
 opengl_example/ipch/*
 opengl_example/x64/*
+opengl_example/opengl_example
 opengl3_example/Debug/*
 opengl3_example/Release/*
 opengl3_example/ipch/*
 opengl3_example/x64/*
+opengl3_example/opengl3_example
 *.opensdf
 *.sdf
 *.suo
 *.vcxproj.user
+*.o
 
 ## Ini files
 imgui.ini
