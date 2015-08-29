@@ -140,6 +140,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2015/08/29 (1.45) - renamed style.ScrollbarWidth to style.ScrollbarSize
  - 2015/08/05 (1.44) - split imgui.cpp into extra files: imgui_demo.cpp imgui_draw.cpp imgui_internal.h that you need to add to your project.
  - 2015/07/18 (1.44) - fixed angles in ImDrawList::PathArcTo(), PathArcToFast() (introduced in 1.43) being off by an extra PI for no justifiable reason
  - 2015/07/14 (1.43) - add new ImFontAtlas::AddFont() API. For the old AddFont***, moved the 'font_no' parameter of ImFontAtlas::AddFont** functions to the ImFontConfig structure.
@@ -612,7 +613,7 @@ ImGuiStyle::ImGuiStyle()
     WindowFillAlphaDefault  = 0.70f;            // Default alpha of window background, if not specified in ImGui::Begin()
     IndentSpacing           = 22.0f;            // Horizontal spacing when e.g. entering a tree node
     ColumnsMinSpacing       = 6.0f;             // Minimum horizontal spacing between two columns
-    ScrollbarWidth          = 16.0f;            // Width of the vertical scrollbar
+    ScrollbarSize           = 16.0f;            // Width of the vertical scrollbar, Height of the horizontal scrollbar
     ScrollbarRounding       = 0.0f;             // Radius of grab corners rounding for scrollbar
     GrabMinSize             = 10.0f;            // Minimum width/height of a grab box for slider/scrollbar
     GrabRounding            = 0.0f;             // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
@@ -3586,7 +3587,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         {
             size_auto_fit = ImClamp(window->SizeContents + window->WindowPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - window->WindowPadding));
             if (size_auto_fit.y < window->SizeContents.y && !(flags & ImGuiWindowFlags_NoScrollbar))
-                size_auto_fit.x += style.ScrollbarWidth;
+                size_auto_fit.x += style.ScrollbarSize;
             size_auto_fit.y = ImMax(size_auto_fit.y - style.ItemSpacing.y, 0.0f);
         }
 
@@ -3919,7 +3920,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     if ((flags & ImGuiWindowFlags_ChildWindow) && (flags & ImGuiWindowFlags_ShowBorders))
         clip_rect.Min += ImVec2(1.0f,1.0f);
     if (window->ScrollbarY)
-        clip_rect.Max.x -= style.ScrollbarWidth;
+        clip_rect.Max.x -= style.ScrollbarSize;
     PushClipRect(clip_rect);
 
     // Clear 'accessed' flag last thing
@@ -3981,7 +3982,7 @@ static void Scrollbar(ImGuiWindow* window)
     const ImGuiID id = window->GetID("#SCROLLY");
 
     // Render background
-    ImRect bb(window->Rect().Max.x - style.ScrollbarWidth, window->Pos.y + window->TitleBarHeight()+1, window->Rect().Max.x, window->Rect().Max.y-1);
+    ImRect bb(window->Rect().Max.x - style.ScrollbarSize, window->Pos.y + window->TitleBarHeight()+1, window->Rect().Max.x, window->Rect().Max.y-1);
     window->DrawList->AddRectFilled(bb.Min, bb.Max, window->Color(ImGuiCol_ScrollbarBg));
     bb.Expand(-3.0f);
     const float scrollbar_height = bb.GetHeight();
@@ -8539,7 +8540,7 @@ float ImGui::GetColumnOffset(int column_index)
     const float t = window->DC.ColumnsOffsetsT[column_index];
 
     const float min_x = window->DC.ColumnsStartX;
-    const float max_x = window->Size.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarWidth);// - window->WindowPadding().x;
+    const float max_x = window->Size.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
     const float x = min_x + t * (max_x - min_x);
     return (float)(int)x;
 }
@@ -8555,7 +8556,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
 
     const float min_x = window->DC.ColumnsStartX;
-    const float max_x = window->Size.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarWidth);// - window->WindowPadding().x;
+    const float max_x = window->Size.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
     const float t = (offset - min_x) / (max_x - min_x);
     window->DC.StateStorage->SetFloat(column_id, t);
     window->DC.ColumnsOffsetsT[column_index] = t;
