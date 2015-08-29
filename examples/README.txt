@@ -2,7 +2,7 @@ Those are standalone ready-to-build applications to demonstrate ImGui.
 Binaries of some of those demos are available at http://www.miracleworld.net/imgui/binaries
   
 TL;DR; 
- Refer to 'opengl_example' (not 'opengl3_example') to understand how the library is setup.
+ Refer to 'opengl_example' to understand how the library is setup, because it is the simplest one.
  Copy the imgui_impl_xxx.cpp/.h files you need if you are using one of provided rendering/IO backends.
  If using different or your own backend, copy opengl_example/imgui_impl_opengl.cpp/.h to get started.
  
@@ -25,13 +25,12 @@ opengl_example/
     OpenGL example, using GLFW + fixed pipeline.
     This is simple and should work for all OpenGL enabled applications.
     Prefer following this example to learn how ImGui works!
+	(You can use this code in a GL3/GL4 context but make sure you disable the programmable pipeline
+	by calling "glUseProgram(0)" before ImGui::Render.)
 
 opengl3_example/
     OpenGL example, using GLFW/GL3W + programmable pipeline.
-    This uses more modern OpenGL calls and custom shaders.
-    Even if your application is using modern OpenGL you are better off copying the code from the fixed
-    pipeline version! I don't think there is an advantage using this over the simpler example, but it is 
-    provided for reference.
+    This uses more modern OpenGL calls and custom shaders. It's more messy.
 
 directx9_example/
     DirectX9 example, Windows only.

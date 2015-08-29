@@ -30,10 +30,15 @@ static unsigned int g_VboHandle = 0, g_VaoHandle = 0, g_ElementsHandle = 0;
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
 {
-    // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
-    GLint last_program, last_texture;
+    // Backup GL state
+    GLint last_program, last_texture, last_array_buffer, last_element_array_buffer, last_vertex_array;
     glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
+    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &last_element_array_buffer);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
+
+    // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -87,13 +92,13 @@ static void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
         }
     }
 
-    // Restore modified state
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    // Restore modified GL state
     glUseProgram(last_program);
-    glDisable(GL_SCISSOR_TEST);
     glBindTexture(GL_TEXTURE_2D, last_texture);
+    glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, last_element_array_buffer);
+    glBindVertexArray(last_vertex_array);
+    glDisable(GL_SCISSOR_TEST);
 }
 
 static const char* ImGui_ImplGlfwGL3_GetClipboardText()
@@ -162,6 +167,12 @@ void ImGui_ImplGlfwGL3_CreateFontsTexture()
 
 bool ImGui_ImplGlfwGL3_CreateDeviceObjects()
 {
+    // Backup GL state
+    GLint last_texture, last_array_buffer, last_vertex_array;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
+
     const GLchar *vertex_shader =
         "#version 330\n"
         "uniform mat4 ProjMtx;\n"
@@ -220,10 +231,13 @@ bool ImGui_ImplGlfwGL3_CreateDeviceObjects()
     glVertexAttribPointer(g_AttribLocationUV, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)OFFSETOF(ImDrawVert, uv));
     glVertexAttribPointer(g_AttribLocationColor, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)OFFSETOF(ImDrawVert, col));
 #undef OFFSETOF
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     ImGui_ImplGlfwGL3_CreateFontsTexture();
+
+    // Restore modified GL state
+    glBindTexture(GL_TEXTURE_2D, last_texture);
+    glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
+    glBindVertexArray(last_vertex_array);
 
     return true;
 }

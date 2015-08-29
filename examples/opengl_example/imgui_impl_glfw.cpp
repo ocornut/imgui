@@ -28,6 +28,8 @@ static void ImGui_ImplGlfw_RenderDrawLists(ImDrawData* draw_data)
     // We are using the OpenGL fixed pipeline to make the example code simpler to read!
     // A probable faster way to render would be to collate all vertices from all cmd_lists into a single vertex buffer.
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
+    GLint last_texture;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -87,7 +89,7 @@ static void ImGui_ImplGlfw_RenderDrawLists(ImDrawData* draw_data)
     glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D, last_texture);
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
     glMatrixMode(GL_PROJECTION);
@@ -147,6 +149,8 @@ bool ImGui_ImplGlfw_CreateDeviceObjects()
     io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
 
     // Create texture
+    GLint last_texture;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glGenTextures(1, &g_FontTexture);
     glBindTexture(GL_TEXTURE_2D, g_FontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -159,6 +163,7 @@ bool ImGui_ImplGlfw_CreateDeviceObjects()
     // Cleanup (don't clear the input data if you want to append new fonts later)
     io.Fonts->ClearInputData();
     io.Fonts->ClearTexData();
+    glBindTexture(GL_TEXTURE_2D, last_texture);
 
     return true;
 }
