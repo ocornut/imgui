@@ -701,7 +701,7 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::PushItemWidth(100);
             goto_line |= ImGui::InputInt("##Line", &line, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue);
             ImGui::PopItemWidth();
-            ImGui::BeginChild("Sub1", ImVec2(ImGui::GetWindowWidth() * 0.5f,300));
+            ImGui::BeginChild("Sub1", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.5f,300), false, ImGuiWindowFlags_HorizontalScrollbar);
             for (int i = 0; i < 100; i++)
             {
                 ImGui::Text("%04d: scrollable region", i);
@@ -940,6 +940,34 @@ void ImGui::ShowTestWindow(bool* opened)
                 ImGui::EndChild();
                 ImGui::EndGroup();
             }
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Horizontal Scrolling"))
+        {
+            ImGui::Bullet(); ImGui::TextWrapped("Horizontal scrolling for a window has to be enabled explicitly via the ImGuiWindowFlags_HorizontalScrollbar flag.");
+            ImGui::Bullet(); ImGui::TextWrapped("You most probably want to explicitly specify content width by calling SetNextWindowContentWidth() before Begin().");
+            ImGui::BeginChild("scrolling", ImVec2(0, 160), true, ImGuiWindowFlags_HorizontalScrollbar);
+            for (int line = 0; line < 7; line++)
+            {
+                // Display random stuff
+                int num_buttons = 10 + ((line & 1) ? line * 9 : line * 3);
+                for (int n = 0; n < num_buttons; n++)
+                {
+                    if (n > 0) ImGui::SameLine();
+                    ImGui::PushID(n + line * 1000);
+                    char num_buf[16];
+                    const char* label = (!(n%15)) ? "FizzBuzz" : (!(n%3)) ? "Fizz" : (!(n%5)) ? "Buzz" : itoa(n, num_buf, 10);
+                    float hue = n*0.05f;
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImColor::HSV(hue, 0.6f, 0.6f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImColor::HSV(hue, 0.7f, 0.7f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImColor::HSV(hue, 0.8f, 0.8f));
+                    ImGui::Button(label, ImVec2(40.0f + sinf((float)(line + n)) * 20.0f, 15.0f));
+                    ImGui::PopStyleColor(3);
+                    ImGui::PopID();
+                }
+            }
+            ImGui::EndChild();
             ImGui::TreePop();
         }
 
@@ -1762,7 +1790,7 @@ struct ExampleAppConsole
         // Display every line as a separate entry so we can change their color or add custom widgets. If you only want raw text you can use ImGui::TextUnformatted(log.begin(), log.end());
         // NB- if you have thousands of entries this approach may be too inefficient. You can seek and display only the lines that are visible - CalcListClipping() is a helper to compute this information.
         // If your items are of variable size you may want to implement code similar to what CalcListClipping() does. Or split your data into fixed height items to allow random-seeking into your list.
-        ImGui::BeginChild("ScrollingRegion", ImVec2(0,-ImGui::GetItemsLineHeightWithSpacing()));
+        ImGui::BeginChild("ScrollingRegion", ImVec2(0,-ImGui::GetItemsLineHeightWithSpacing()), false, ImGuiWindowFlags_HorizontalScrollbar);
         if (ImGui::BeginPopupContextWindow())
         {
             if (ImGui::Selectable("Clear")) ClearLog();
@@ -1994,7 +2022,7 @@ struct ExampleAppLog
         ImGui::SameLine();
         Filter.Draw("Filter", -100.0f);
         ImGui::Separator();
-        ImGui::BeginChild("scrolling");
+        ImGui::BeginChild("scrolling", ImVec2(0,0), false, ImGuiWindowFlags_HorizontalScrollbar);
         if (copy) ImGui::LogToClipboard();
 
         if (Filter.IsActive())
