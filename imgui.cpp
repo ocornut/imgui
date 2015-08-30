@@ -140,6 +140,9 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2015/08/29 (1.45) - with the addition of horizontal scrollbar we made various fixes to inconsistencies with dealing with position:
+                       GetCursorPos()/SetCursorPos() functions now include the scrolled amount. It shouldn't affect the majority of users, but take note that SetCursorPosX(100.0f) puts you at +100 from the starting x position which may include scrolling, not at +100 from the window left side.
+                       GetContentRegionMax()/GetWindowContentRegionMin()/GetWindowContentRegionMax() functions allow include the scrolled amount. Typically those were used in cases where no scrolling would happen so it may not be a problem, but watch out!
  - 2015/08/29 (1.45) - renamed style.ScrollbarWidth to style.ScrollbarSize
  - 2015/08/05 (1.44) - split imgui.cpp into extra files: imgui_demo.cpp imgui_draw.cpp imgui_internal.h that you need to add to your project.
  - 2015/07/18 (1.44) - fixed angles in ImDrawList::PathArcTo(), PathArcToFast() (introduced in 1.43) being off by an extra PI for no justifiable reason
@@ -537,7 +540,7 @@ static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWind
 static inline bool      IsWindowContentHoverable(ImGuiWindow* window);
 static void             ClearSetNextWindowData();
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
-static void             Scrollbar(ImGuiWindow* window);
+static void             Scrollbar(ImGuiWindow* window, bool horizontal);
 static bool             CloseWindowButton(bool* p_opened);
 
 static void             AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDrawList* draw_list);
@@ -1470,12 +1473,13 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Flags = 0;
     PosFloat = Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
-    SizeContents = ImVec2(0.0f, 0.0f);
+    SizeContents = SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     WindowPadding = ImVec2(0.0f, 0.0f);
     Scroll = ImVec2(0.0f, 0.0f);
     ScrollTargetRelY = FLT_MAX;
     ScrollTargetCenterRatioY = 0.5f;
-    ScrollbarY = false;
+    ScrollbarX = ScrollbarY = false;
+    ScrollbarSizes = ImVec2(0.0f, 0.0f);
     Active = WasActive = false;
     Accessed = false;
     Collapsed = false;
@@ -1576,7 +1580,7 @@ void ImGui::ItemSize(const ImVec2& size, float text_offset_y)
     const float line_height = ImMax(window->DC.CurrentLineHeight, size.y);
     const float text_base_offset = ImMax(window->DC.CurrentLineTextBaseOffset, text_offset_y);
     window->DC.CursorPosPrevLine = ImVec2(window->DC.CursorPos.x + size.x, window->DC.CursorPos.y);
-    window->DC.CursorPos = ImVec2((float)(int)(window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX), (float)(int)(window->DC.CursorPos.y + line_height + g.Style.ItemSpacing.y));
+    window->DC.CursorPos = ImVec2((float)(int)(window->Pos.x - window->Scroll.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX), (float)(int)(window->DC.CursorPos.y + line_height + g.Style.ItemSpacing.y));
     window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, window->DC.CursorPosPrevLine.x);
     window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y);
 
@@ -1708,9 +1712,9 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 
     ImGuiWindow* window = GetCurrentWindowRead();
     if (wrap_pos_x == 0.0f)
-        wrap_pos_x = ImGui::GetContentRegionMax().x;
-    if (wrap_pos_x > 0.0f)
-        wrap_pos_x += window->Pos.x; // wrap_pos_x is provided is window local space
+        wrap_pos_x = ImGui::GetContentRegionMax().x + window->Pos.x;
+    else if (wrap_pos_x > 0.0f)
+        wrap_pos_x += window->Pos.x - window->Scroll.x; // wrap_pos_x is provided is window local space
 
     const float wrap_width = wrap_pos_x > 0.0f ? ImMax(wrap_pos_x - pos.x, 0.00001f) : 0.0f;
     return wrap_width;
@@ -3083,7 +3087,7 @@ void ImGui::CloseCurrentPopup()
 static void ClearSetNextWindowData()
 {
     ImGuiState& g = *GImGui;
-    g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowCollapsedCond = g.SetNextWindowFocus = 0;
+    g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowContentSizeCond = g.SetNextWindowCollapsedCond = g.SetNextWindowFocus = 0;
 }
 
 static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
@@ -3429,6 +3433,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     IM_ASSERT(parent_window != NULL || !(flags & ImGuiWindowFlags_ChildWindow));
 
     const int current_frame = ImGui::GetFrameCount();
+    const bool first_begin_of_the_frame = (window->LastFrameDrawn != current_frame);
     bool window_was_visible = (window->LastFrameDrawn == current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
     if (flags & ImGuiWindowFlags_Popup)
     {
@@ -3466,6 +3471,15 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         ImGui::SetWindowSize(g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
         g.SetNextWindowSizeCond = 0;
     }
+    if (g.SetNextWindowContentSizeCond)
+    {
+        window->SizeContentsExplicit = g.SetNextWindowContentSizeVal;
+        g.SetNextWindowContentSizeCond = 0;
+    }
+    else if (first_begin_of_the_frame)
+    {
+        window->SizeContentsExplicit = ImVec2(0.0f, 0.0f);
+    }
     if (g.SetNextWindowCollapsedCond)
     {
         if (!window_was_visible) window->SetWindowCollapsedAllowFlags |= ImGuiSetCond_Appearing;
@@ -3494,7 +3508,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         bg_alpha = style.WindowFillAlphaDefault;
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
-    const bool first_begin_of_the_frame = (window->LastFrameDrawn != current_frame);
     if (first_begin_of_the_frame)
     {
         window->Active = true;
@@ -3548,9 +3561,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
         // SIZE
 
-        // Save contents size from last frame for auto-fitting
-        window->SizeContents = window_is_new ? ImVec2(0.0f, 0.0f) : window->DC.CursorMaxPos - window->Pos;
-        window->SizeContents.y += window->Scroll.y;
+        // Save contents size from last frame for auto-fitting (unless explicitly specified)
+        window->SizeContents.x = (window->SizeContentsExplicit.x != 0.0f) ? window->SizeContentsExplicit.x : ((window_is_new ? 0.0f : window->DC.CursorMaxPos.x - window->Pos.x) + window->Scroll.x);
+        window->SizeContents.y = (window->SizeContentsExplicit.y != 0.0f) ? window->SizeContentsExplicit.y : ((window_is_new ? 0.0f : window->DC.CursorMaxPos.y - window->Pos.y) + window->Scroll.y);
 
         // Hide popup/tooltip window when first appearing while we measure size (because we recycle them)
         if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && !window_was_visible)
@@ -3564,7 +3577,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             }
         }
 
-        // Lock window padding so that altering the ShowBorders flag for childs doesn't have side-effects.
+        // Lock window padding so that altering the ShowBorders flag for children doesn't have side-effects.
         window->WindowPadding = ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup))) ? ImVec2(0,0) : style.WindowPadding;
 
         // Calculate auto-fit size
@@ -3577,6 +3590,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         else
         {
             size_auto_fit = ImClamp(window->SizeContents + window->WindowPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - window->WindowPadding));
+            
+            // Handling case of auto fit window not fitting in screen on one axis, we are growing auto fit size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than DisplaySize-WindowPadding.
+            if (size_auto_fit.x < window->SizeContents.x && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar))
+                size_auto_fit.y += style.ScrollbarSize;
             if (size_auto_fit.y < window->SizeContents.y && !(flags & ImGuiWindowFlags_NoScrollbar))
                 size_auto_fit.x += style.ScrollbarSize;
             size_auto_fit.y = ImMax(size_auto_fit.y - style.ItemSpacing.y, 0.0f);
@@ -3647,7 +3664,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             if (parent_window->DC.MenuBarAppending)
                 rect_to_avoid = ImRect(-FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight(), FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight() + parent_window->MenuBarHeight());
             else
-                rect_to_avoid = ImRect(parent_window->Pos.x + style.ItemSpacing.x, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - style.ItemSpacing.x - parent_window->ScrollbarWidth(), FLT_MAX); // We want some overlap to convey the relative depth of each popup (here hard-coded to 4)
+                rect_to_avoid = ImRect(parent_window->Pos.x + style.ItemSpacing.x, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - style.ItemSpacing.x - parent_window->ScrollbarSizes.x, FLT_MAX); // We want some overlap to convey the relative depth of each popup (here hard-coded to 4)
             window->PosFloat = FindBestPopupWindowPos(window->PosFloat, window->Size, flags, &window->AutoPosLastDirection, rect_to_avoid);
         }
         else if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api && window_appearing_after_being_hidden)
@@ -3716,9 +3733,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             window->Scroll.y = window->ScrollTargetRelY - ((1.0f - center_ratio_y) * window->TitleBarHeight()) - (center_ratio_y * window->SizeFull.y);
             window->ScrollTargetRelY = FLT_MAX;
         }
-        window->Scroll.y = ImMax(window->Scroll.y, 0.0f);
+        window->Scroll = ImMax(window->Scroll, ImVec2(0.0f, 0.0f));
         if (!window->Collapsed && !window->SkipItems)
-            window->Scroll.y = ImMin(window->Scroll.y, ImMax(0.0f, window->SizeContents.y - window->SizeFull.y));
+            window->Scroll = ImMin(window->Scroll, ImMax(ImVec2(0.0f, 0.0f), window->SizeContents - window->SizeFull + window->ScrollbarSizes));
 
         // Modal window darkens what is behind them
         if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
@@ -3776,8 +3793,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 title_bar_rect = window->TitleBarRect();
             }
 
-            // Scrollbar
+            // Scrollbars
+            window->ScrollbarX = (window->SizeContents.x > window->Size.x - style.ScrollbarSize - window->WindowPadding.x) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar);
             window->ScrollbarY = (window->SizeContents.y > window->Size.y + style.ItemSpacing.y) && !(flags & ImGuiWindowFlags_NoScrollbar);
+            window->ScrollbarSizes = ImVec2(window->ScrollbarY ? style.ScrollbarSize : 0.0f, window->ScrollbarX ? style.ScrollbarSize : 0.0f);
 
             // Window background
             if (bg_alpha > 0.0f)
@@ -3789,7 +3808,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 else if ((flags & ImGuiWindowFlags_Popup) != 0)
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, bg_alpha), window_rounding);
                 else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size-ImVec2(window->ScrollbarWidth(),0.0f), window->Color(ImGuiCol_ChildWindowBg, bg_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size - window->ScrollbarSizes, window->Color(ImGuiCol_ChildWindowBg, bg_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
                 else
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, bg_alpha), window_rounding);
             }
@@ -3814,9 +3833,11 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                     window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_Border));
             }
 
-            // Scrollbar
+            // Scrollbars
+            if (window->ScrollbarX)
+                Scrollbar(window, true);
             if (window->ScrollbarY)
-                Scrollbar(window);
+                Scrollbar(window, false);
 
             // Render resize grip
             // (after the input handling so we don't have a frame of latency)
@@ -3833,7 +3854,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         // Setup drawing context
         window->DC.ColumnsStartX = window->WindowPadding.x;
         window->DC.ColumnsOffsetX = 0.0f;
-        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.ColumnsStartX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y) - ImVec2(0.0f, window->Scroll.y);
+        window->DC.CursorStartPos = window->Pos - window->Scroll + ImVec2(window->DC.ColumnsStartX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y);
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CursorMaxPos = window->DC.CursorStartPos;
@@ -3909,8 +3930,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     ImRect clip_rect(title_bar_rect.Min.x+0.5f+window->WindowPadding.x*0.5f, title_bar_rect.Max.y+window->MenuBarHeight()+0.5f, window->Pos.x+window->Size.x+0.5f-window->WindowPadding.x*0.5f, window->Pos.y+window->Size.y+0.5f);
     if ((flags & ImGuiWindowFlags_ChildWindow) && (flags & ImGuiWindowFlags_ShowBorders))
         clip_rect.Min += ImVec2(1.0f,1.0f);
-    if (window->ScrollbarY)
-        clip_rect.Max.x -= style.ScrollbarSize;
+    clip_rect.Max.x -= window->ScrollbarY ? style.ScrollbarSize : 0.0f;
+    clip_rect.Max.y -= window->ScrollbarX ? style.ScrollbarSize : 0.0f;
     PushClipRect(clip_rect);
 
     // Clear 'accessed' flag last thing
@@ -3965,23 +3986,34 @@ void ImGui::End()
 // Vertical scrollbar
 // The entire piece of code below is rather confusing because:
 // - We handle absolute seeking (when first clicking outside the grab) and relative manipulation (afterward or when clicking inside the grab)
-// - We store values as ratio and in a form that allows the window content to change while we are holding on a scrollbar
-static void Scrollbar(ImGuiWindow* window)
+// - We store values as normalized ratio and in a form that allows the window content to change while we are holding on a scrollbar
+// - We handle both horizontal and vertical scrollbars, which makes the terminology not ideal.
+static void Scrollbar(ImGuiWindow* window, bool horizontal)
 {
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID("#SCROLLY");
+    const ImGuiID id = window->GetID(horizontal ? "#SCROLLX" : "#SCROLLY");
 
     // Render background
-    ImRect bb(window->Rect().Max.x - style.ScrollbarSize, window->Pos.y + window->TitleBarHeight()+1, window->Rect().Max.x, window->Rect().Max.y-1);
+    bool other_scrollbar = (horizontal ? window->ScrollbarY : window->ScrollbarX);
+    float other_scrollbar_size_w = other_scrollbar ? style.ScrollbarSize : 0.0f;
+    const ImRect window_rect = window->Rect();
+    ImRect bb = horizontal
+        ? ImRect(window->Pos.x + 1, window_rect.Max.y - style.ScrollbarSize, window_rect.Max.x - 1 - other_scrollbar_size_w, window_rect.Max.y)
+        : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + window->TitleBarHeight()+1, window_rect.Max.x, window_rect.Max.y - 1 - other_scrollbar_size_w);
     window->DrawList->AddRectFilled(bb.Min, bb.Max, window->Color(ImGuiCol_ScrollbarBg));
     bb.Expand(-3.0f);
-    const float scrollbar_height = bb.GetHeight();
+
+    // V denote the main axis of the scrollbar
+    float scrollbar_size_v = horizontal ? bb.GetWidth() : bb.GetHeight();
+    float scroll_v = horizontal ? window->Scroll.x : window->Scroll.y;
+    float win_size_avail_v = (horizontal ? window->Size.x : window->Size.y) - other_scrollbar_size_w;
+    float win_size_contents_v = horizontal ? window->SizeContents.x : window->SizeContents.y;
 
     // The grabable box size generally represent the amount visible (vs the total scrollable amount)
     // But we maintain a minimum size in pixel to allow for the user to still aim inside.
-    const float grab_h_pixels = ImMin(ImMax(scrollbar_height * ImSaturate(window->Size.y / ImMax(window->SizeContents.y, window->Size.y)), style.GrabMinSize), scrollbar_height);
-    const float grab_h_norm = grab_h_pixels / scrollbar_height;
+    const float grab_h_pixels = ImMin(ImMax(scrollbar_size_v * ImSaturate(win_size_avail_v / ImMax(win_size_contents_v, win_size_avail_v)), style.GrabMinSize), scrollbar_size_v);
+    const float grab_h_norm = grab_h_pixels / scrollbar_size_v;
 
     // Handle input right away. None of the code of Begin() is relying on scrolling position before calling Scrollbar().
     bool held = false;
@@ -3989,46 +4021,58 @@ static void Scrollbar(ImGuiWindow* window)
     const bool previously_held = (g.ActiveId == id);
     ImGui::ButtonBehavior(bb, id, &hovered, &held, true);
 
-    const float scroll_max = ImMax(1.0f, window->SizeContents.y - window->Size.y);
-    float scroll_ratio = ImSaturate(window->Scroll.y / scroll_max);
-    float grab_y_norm = scroll_ratio * (scrollbar_height - grab_h_pixels) / scrollbar_height;
-    if (held)
+    float scroll_max = ImMax(1.0f, win_size_contents_v - win_size_avail_v);
+    float scroll_ratio = ImSaturate(scroll_v / scroll_max);
+    float grab_v_norm = scroll_ratio * (scrollbar_size_v - grab_h_pixels) / scrollbar_size_v;
+    if (held && grab_h_norm < 1.0f)
     {
-        const float clicked_y_norm = ImSaturate((g.IO.MousePos.y - bb.Min.y) / scrollbar_height);     // Click position in scrollbar space (0.0f->1.0f)
+        float scrollbar_pos_v = horizontal ? bb.Min.x : bb.Min.y;
+        float mouse_pos_v = horizontal ? g.IO.MousePos.x : g.IO.MousePos.y;
+        float* click_delta_to_grab_center_v = horizontal ? &g.ScrollbarClickDeltaToGrabCenter.x : &g.ScrollbarClickDeltaToGrabCenter.y;
+
+        // Click position in scrollbar normalized space (0.0f->1.0f)
+        const float clicked_v_norm = ImSaturate((mouse_pos_v - scrollbar_pos_v) / scrollbar_size_v);
         g.HoveredId = id;
 
         bool seek_absolute = false;
         if (!previously_held)
         {
             // On initial click calculate the distance between mouse and the center of the grab
-            if (clicked_y_norm >= grab_y_norm && clicked_y_norm <= grab_y_norm + grab_h_norm)
+            if (clicked_v_norm >= grab_v_norm && clicked_v_norm <= grab_v_norm + grab_h_norm)
             {
-                g.ScrollbarClickDeltaToGrabCenter = clicked_y_norm - grab_y_norm - grab_h_norm*0.5f;
+                *click_delta_to_grab_center_v = clicked_v_norm - grab_v_norm - grab_h_norm*0.5f;
             }
             else
             {
                 seek_absolute = true;
-                g.ScrollbarClickDeltaToGrabCenter = 0;
+                *click_delta_to_grab_center_v = 0.0f;
             }
         }
 
         // Apply scroll
-        // It is ok to modify ScrollY here because we are being called in Begin() after the calculation of SizeContents and before setting up our starting position
-        const float scroll_y_norm = ImSaturate((clicked_y_norm - g.ScrollbarClickDeltaToGrabCenter - grab_h_norm*0.5f) / (1.0f - grab_h_norm));
-        window->Scroll.y = (float)(int)(0.5f + scroll_y_norm * (window->SizeContents.y - window->Size.y));
+        // It is ok to modify Scroll here because we are being called in Begin() after the calculation of SizeContents and before setting up our starting position
+        const float scroll_v_norm = ImSaturate((clicked_v_norm - *click_delta_to_grab_center_v - grab_h_norm*0.5f) / (1.0f - grab_h_norm));
+        scroll_v = (float)(int)(0.5f + scroll_v_norm * scroll_max);//(win_size_contents_v - win_size_v));
+        if (horizontal)
+            window->Scroll.x = scroll_v;
+        else
+            window->Scroll.y = scroll_v;
 
         // Update values for rendering
-        scroll_ratio = ImSaturate(window->Scroll.y / scroll_max);
-        grab_y_norm = scroll_ratio * (scrollbar_height - grab_h_pixels) / scrollbar_height;
+        scroll_ratio = ImSaturate(scroll_v / scroll_max);
+        grab_v_norm = scroll_ratio * (scrollbar_size_v - grab_h_pixels) / scrollbar_size_v;
 
         // Update distance to grab now that we have seeked and saturated
         if (seek_absolute)
-            g.ScrollbarClickDeltaToGrabCenter = clicked_y_norm - grab_y_norm - grab_h_norm*0.5f;
+            *click_delta_to_grab_center_v = clicked_v_norm - grab_v_norm - grab_h_norm*0.5f;
     }
 
     // Render
     const ImU32 grab_col = window->Color(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
-    window->DrawList->AddRectFilled(ImVec2(bb.Min.x, ImLerp(bb.Min.y, bb.Max.y, grab_y_norm)), ImVec2(bb.Max.x, ImLerp(bb.Min.y, bb.Max.y, grab_y_norm) + grab_h_pixels), grab_col, style.ScrollbarRounding);
+    if (horizontal)
+        window->DrawList->AddRectFilled(ImVec2(ImLerp(bb.Min.x, bb.Max.x, grab_v_norm), bb.Min.y), ImVec2(ImLerp(bb.Min.x, bb.Max.x, grab_v_norm) + grab_h_pixels, bb.Max.y), grab_col, style.ScrollbarRounding);
+    else
+        window->DrawList->AddRectFilled(ImVec2(bb.Min.x, ImLerp(bb.Min.y, bb.Max.y, grab_v_norm)), ImVec2(bb.Max.x, ImLerp(bb.Min.y, bb.Max.y, grab_v_norm) + grab_h_pixels), grab_col, style.ScrollbarRounding);
 }
 
 // Moving window to front of display (which happens to be back of our sorted list)
@@ -4519,6 +4563,20 @@ void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiSetCond cond)
     g.SetNextWindowSizeCond = cond ? cond : ImGuiSetCond_Always;
 }
 
+void ImGui::SetNextWindowContentSize(const ImVec2& size)
+{
+    ImGuiState& g = *GImGui;
+    g.SetNextWindowContentSizeVal = size;
+    g.SetNextWindowContentSizeCond = ImGuiSetCond_Always;
+}
+
+void ImGui::SetNextWindowContentWidth(float width)
+{
+    ImGuiState& g = *GImGui;
+    g.SetNextWindowContentSizeVal = ImVec2(width, g.SetNextWindowContentSizeCond ? g.SetNextWindowContentSizeVal.y : 0.0f);
+    g.SetNextWindowContentSizeCond = ImGuiSetCond_Always;
+}
+
 void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiSetCond cond)
 {
     ImGuiState& g = *GImGui;
@@ -4536,11 +4594,13 @@ void ImGui::SetNextWindowFocus()
 ImVec2 ImGui::GetContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    ImVec2 mx = window->Size - window->WindowPadding;
+    ImVec2 content_region_size = ImVec2(window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x, window->SizeContentsExplicit.y ? window->SizeContentsExplicit.y : window->Size.y);
+    ImVec2 mx = content_region_size - window->Scroll - window->WindowPadding;
     if (window->DC.ColumnsCount != 1)
         mx.x = ImGui::GetColumnOffset(window->DC.ColumnsCurrent + 1) - window->WindowPadding.x;
     else
-        mx.x -= window->ScrollbarWidth();
+        mx.x -= window->ScrollbarSizes.x;
+    mx.y -= window->ScrollbarSizes.y;
     return mx;
 }
 
@@ -4559,15 +4619,20 @@ float ImGui::GetContentRegionAvailWidth()
 ImVec2 ImGui::GetWindowContentRegionMin()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return ImVec2(0, window->TitleBarHeight() + window->MenuBarHeight()) + window->WindowPadding;
+    return ImVec2(-window->Scroll.x, -window->Scroll.y + window->TitleBarHeight() + window->MenuBarHeight()) + window->WindowPadding;
 }
 
 ImVec2 ImGui::GetWindowContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    ImVec2 m = window->Size - window->WindowPadding;
-    m.x -= window->ScrollbarWidth();
+    ImVec2 content_region_size = ImVec2(window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x, window->SizeContentsExplicit.y ? window->SizeContentsExplicit.y : window->Size.y);
+    ImVec2 m = content_region_size - window->Scroll - window->WindowPadding - window->ScrollbarSizes;
     return m;
+}
+
+float ImGui::GetWindowContentRegionWidth()
+{
+    return GetWindowContentRegionMax().x - GetWindowContentRegionMin().x;
 }
 
 float ImGui::GetTextLineHeight()
@@ -4619,37 +4684,39 @@ void ImGui::SetWindowFontScale(float scale)
 ImVec2 ImGui::GetCursorPos()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return window->DC.CursorPos - window->Pos;
+    return window->DC.CursorPos - window->Pos + window->Scroll;
 }
 
 float ImGui::GetCursorPosX()
 {
-    return ImGui::GetCursorPos().x;
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->DC.CursorPos.x - window->Pos.x + window->Scroll.x;
 }
 
 float ImGui::GetCursorPosY()
 {
-    return ImGui::GetCursorPos().y;
+    ImGuiWindow* window = GetCurrentWindow();
+    return window->DC.CursorPos.y - window->Pos.y + window->Scroll.y;
 }
 
 void ImGui::SetCursorPos(const ImVec2& local_pos)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.CursorPos = window->Pos + local_pos;
+    window->DC.CursorPos = window->Pos - window->Scroll + local_pos;
     window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos);
 }
 
 void ImGui::SetCursorPosX(float x)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.CursorPos.x = window->Pos.x + x;
+    window->DC.CursorPos.x = window->Pos.x - window->Scroll.x + x;
     window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, window->DC.CursorPos.x);
 }
 
 void ImGui::SetCursorPosY(float y)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.CursorPos.y = window->Pos.y + y;
+    window->DC.CursorPos.y = window->Pos.y - window->Scroll.y + y;
     window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y);
 }
 
@@ -6944,7 +7011,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         }
         draw_window = GetCurrentWindow();
         draw_window->DC.CursorPos += style.FramePadding;
-        size.x -= draw_window->ScrollbarWidth();
+        size.x -= draw_window->ScrollbarSizes.x;
     }
     else
     {
@@ -8388,7 +8455,7 @@ void ImGui::BeginGroup()
     group_data.BackupLogLinePosY = window->DC.LogLinePosY;
     group_data.AdvanceCursor = true;
 
-    window->DC.ColumnsStartX = window->DC.CursorPos.x - window->Pos.x;
+    window->DC.ColumnsStartX = window->DC.CursorPos.x - window->Pos.x + window->Scroll.x;
     window->DC.CursorMaxPos = window->DC.CursorPos;
     window->DC.CurrentLineHeight = 0.0f;
     window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
@@ -8442,7 +8509,7 @@ void ImGui::SameLine(float local_pos_x, float spacing_w)
     if (local_pos_x != 0.0f)
     {
         if (spacing_w < 0.0f) spacing_w = 0.0f;
-        x = window->Pos.x + local_pos_x + spacing_w;
+        x = window->Pos.x - window->Scroll.x + local_pos_x + spacing_w;
         y = window->DC.CursorPosPrevLine.y;
     }
     else
@@ -8471,7 +8538,7 @@ void ImGui::NextColumn()
         window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
         if (++window->DC.ColumnsCurrent < window->DC.ColumnsCount)
         {
-            window->DC.ColumnsOffsetX = ImGui::GetColumnOffset(window->DC.ColumnsCurrent) - window->DC.ColumnsStartX + g.Style.ItemSpacing.x;
+            window->DC.ColumnsOffsetX = ImGui::GetColumnOffset(window->DC.ColumnsCurrent) - window->DC.ColumnsStartX + window->Scroll.x + g.Style.ItemSpacing.x;
             window->DrawList->ChannelsSetCurrent(window->DC.ColumnsCurrent);
         }
         else
@@ -8481,7 +8548,7 @@ void ImGui::NextColumn()
             window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY;
             window->DrawList->ChannelsSetCurrent(0);
         }
-        window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX);
+        window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.ColumnsStartX - window->Scroll.x + window->DC.ColumnsOffsetX);
         window->DC.CursorPos.y = window->DC.ColumnsCellMinY;
         window->DC.CurrentLineHeight = 0.0f;
         window->DC.CurrentLineTextBaseOffset = 0.0f;
@@ -8536,8 +8603,9 @@ float ImGui::GetColumnOffset(int column_index)
     IM_ASSERT(column_index < window->DC.ColumnsOffsetsT.Size);
     const float t = window->DC.ColumnsOffsetsT[column_index];
 
-    const float min_x = window->DC.ColumnsStartX;
-    const float max_x = window->Size.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
+    const float content_region_width = window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x;
+    const float min_x = window->DC.ColumnsStartX - window->Scroll.x;
+    const float max_x = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
     const float x = min_x + t * (max_x - min_x);
     return (float)(int)x;
 }
@@ -8552,8 +8620,9 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     IM_ASSERT(column_index < window->DC.ColumnsOffsetsT.Size);
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
 
-    const float min_x = window->DC.ColumnsStartX;
-    const float max_x = window->Size.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
+    const float content_region_width = window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x;
+    const float min_x = window->DC.ColumnsStartX - window->Scroll.x;
+    const float max_x = content_region_width - window->Scroll.x  - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
     const float t = (offset - min_x) / (max_x - min_x);
     window->DC.StateStorage->SetFloat(column_id, t);
     window->DC.ColumnsOffsetsT[column_index] = t;
@@ -8641,7 +8710,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     window->DC.ColumnsStartPos = window->DC.CursorPos;
     window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.CursorPos.y;
     window->DC.ColumnsOffsetX = 0.0f;
-    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX);
+    window->DC.CursorPos.x = (float)(int)(window->Pos.x - window->Scroll.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX);
 
     if (window->DC.ColumnsCount != 1)
     {
@@ -8672,7 +8741,7 @@ void ImGui::Indent()
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.ColumnsStartX += g.Style.IndentSpacing;
-    window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
+    window->DC.CursorPos.x = window->Pos.x - window->Scroll.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
 }
 
 void ImGui::Unindent()
@@ -8680,7 +8749,7 @@ void ImGui::Unindent()
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.ColumnsStartX -= g.Style.IndentSpacing;
-    window->DC.CursorPos.x = window->Pos.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
+    window->DC.CursorPos.x = window->Pos.x - window->Scroll.x + window->DC.ColumnsStartX + window->DC.ColumnsOffsetX;
 }
 
 void ImGui::TreePush(const char* str_id)

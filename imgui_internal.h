@@ -359,9 +359,11 @@ struct ImGuiState
     // Storage for SetNexWindow** and SetNextTreeNode*** functions
     ImVec2                  SetNextWindowPosVal;
     ImVec2                  SetNextWindowSizeVal;
+    ImVec2                  SetNextWindowContentSizeVal;
     bool                    SetNextWindowCollapsedVal;
     ImGuiSetCond            SetNextWindowPosCond;
     ImGuiSetCond            SetNextWindowSizeCond;
+    ImGuiSetCond            SetNextWindowContentSizeCond;
     ImGuiSetCond            SetNextWindowCollapsedCond;
     bool                    SetNextWindowFocus;
     bool                    SetNextTreeNodeOpenedVal;
@@ -384,7 +386,7 @@ struct ImGuiState
     float                   DragSpeedDefaultRatio;              // If speed == 0.0f, uses (max-min) * DragSpeedDefaultRatio
     float                   DragSpeedScaleSlow;
     float                   DragSpeedScaleFast;
-    float                   ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space
+    ImVec2                  ScrollbarClickDeltaToGrabCenter;   // Distance between mouse and center of grab box, normalized in parent space. Use storage?
     char                    Tooltip[1024];
     char*                   PrivateClipboard;                   // If no custom clipboard handler is defined
 
@@ -446,7 +448,7 @@ struct ImGuiState
         DragSpeedDefaultRatio = 0.01f;
         DragSpeedScaleSlow = 0.01f;
         DragSpeedScaleFast = 10.0f;
-        ScrollbarClickDeltaToGrabCenter = 0.0f;
+        ScrollbarClickDeltaToGrabCenter = ImVec2(0.0f, 0.0f);
         memset(Tooltip, 0, sizeof(Tooltip));
         PrivateClipboard = NULL;
 
@@ -558,12 +560,14 @@ struct ImGuiWindow
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
     ImVec2                  SizeFull;                           // Size when non collapsed
     ImVec2                  SizeContents;                       // Size of contents (== extents reach of the drawing cursor) from previous frame
+    ImVec2                  SizeContentsExplicit;               // Size of contents explicitly set by the user via SetNextWindowContentSize()
     ImVec2                  WindowPadding;                      // Window padding at the time of begin. We need to lock it, in particular manipulation of the ShowBorder would have an effect
     ImGuiID                 MoveID;                             // == window->GetID("#MOVE")
     ImVec2                  Scroll;
     float                   ScrollTargetRelY;                   // target scroll position. stored as cursor position with scrolling canceled out, so the highest point is always 0.0f. (FLT_MAX for no change)
     float                   ScrollTargetCenterRatioY;           // 0.0f = scroll so that target position is at top, 0.5f = scroll so that target position is centered
-    bool                    ScrollbarY;
+    bool                    ScrollbarX, ScrollbarY;
+    ImVec2                  ScrollbarSizes;                     // 
     bool                    Active;                             // Set to true on Begin()
     bool                    WasActive;
     bool                    Accessed;                           // Set to true when any widget access the current window
@@ -614,7 +618,6 @@ public:
     ImRect      TitleBarRect() const                    { return ImRect(Pos, ImVec2(Pos.x + SizeFull.x, Pos.y + TitleBarHeight())); }
     float       MenuBarHeight() const                   { return (Flags & ImGuiWindowFlags_MenuBar) ? CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f : 0.0f; }
     ImRect      MenuBarRect() const                     { float y1 = Pos.y + TitleBarHeight(); return ImRect(Pos.x, y1, Pos.x + SizeFull.x, y1 + MenuBarHeight()); }
-    float       ScrollbarWidth() const                  { return ScrollbarY ? GImGui->Style.ScrollbarSize : 0.0f; }
     ImU32       Color(ImGuiCol idx, float a=1.f) const  { ImVec4 c = GImGui->Style.Colors[idx]; c.w *= GImGui->Style.Alpha * a; return ImGui::ColorConvertFloat4ToU32(c); }
     ImU32       Color(const ImVec4& col) const          { ImVec4 c = col; c.w *= GImGui->Style.Alpha; return ImGui::ColorConvertFloat4ToU32(c); }
 };
