@@ -735,19 +735,24 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::TreeNode("Widgets Alignment"))
         {
             static float f = 0.0f;
-            ImGui::Text("Fixed: 100 pixels");
+            ImGui::Text("PushItemWidth(100)");
             ImGui::PushItemWidth(100);
             ImGui::InputFloat("float##1", &f);
             ImGui::PopItemWidth();
 
-            ImGui::Text("Proportional: 50%% of window width");
+            ImGui::Text("PushItemWidth(GetWindowWidth() * 0.5f);");
             ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.5f);
             ImGui::InputFloat("float##2", &f);
             ImGui::PopItemWidth();
 
-            ImGui::Text("Right-aligned: Leave 100 pixels for label");
-            ImGui::PushItemWidth(-100);
+            ImGui::Text("PushItemWidth(GetContentRegionAvailWidth() * 0.5f);");
+            ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() * 0.5f);
             ImGui::InputFloat("float##3", &f);
+            ImGui::PopItemWidth();
+
+            ImGui::Text("PushItemWidth(-100);");
+            ImGui::PushItemWidth(-100);
+            ImGui::InputFloat("float##4", &f);
             ImGui::PopItemWidth();
 
             ImGui::TreePop();
@@ -1205,7 +1210,7 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Separator();
         ImGui::Spacing();
 
-        // Word-wrapping
+        // Word wrapping
         ImGui::Text("Word-wrapping:");
         ImGui::Columns(2, "word-wrapping");
         ImGui::Separator();

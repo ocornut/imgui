@@ -124,6 +124,7 @@ namespace ImGui
     IMGUI_API ImVec2        GetContentRegionAvail();                                            // == GetContentRegionMax() - GetCursorPos()
     IMGUI_API ImVec2        GetWindowContentRegionMin();                                        // window boundaries, in windows coordinates
     IMGUI_API ImVec2        GetWindowContentRegionMax();
+    IMGUI_API float         GetContentRegionAvailWidth();                                       //
     IMGUI_API ImDrawList*   GetWindowDrawList();                                                // get rendering command-list if you want to append your own draw primitives
     IMGUI_API ImFont*       GetWindowFont();
     IMGUI_API float         GetWindowFontSize();                                                // size (also height in pixels) of current font with current scale applied

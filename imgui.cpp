@@ -4550,6 +4550,11 @@ ImVec2 ImGui::GetContentRegionAvail()
     return GetContentRegionMax() - (window->DC.CursorPos - window->Pos);
 }
 
+float ImGui::GetContentRegionAvailWidth()
+{
+    return GetContentRegionAvail().x;
+}
+
 // In window space (not screen space!)
 ImVec2 ImGui::GetWindowContentRegionMin()
 {
