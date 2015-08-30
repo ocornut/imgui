@@ -4956,7 +4956,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         text_pos.y += window->DC.CurrentLineTextBaseOffset;
 
         ImRect bb(text_pos, text_pos + text_size);
-        ItemSize(bb.GetSize());
+        ItemSize(text_size);
         if (!ItemAdd(bb, NULL))
             return;
 
