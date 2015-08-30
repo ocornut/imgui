@@ -128,7 +128,7 @@ void ImGui::ShowTestWindow(bool* opened)
     static float bg_alpha = 0.65f;
 
     // Demonstrate the various window flags. Typically you would just use the default.
-    ImGuiWindowFlags window_flags = 0;
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
     if (no_titlebar)  window_flags |= ImGuiWindowFlags_NoTitleBar;
     if (!no_border)   window_flags |= ImGuiWindowFlags_ShowBorders;
     if (no_resize)    window_flags |= ImGuiWindowFlags_NoResize;
