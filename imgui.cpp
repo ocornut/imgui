@@ -4593,13 +4593,10 @@ void ImGui::SetNextWindowFocus()
 ImVec2 ImGui::GetContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    ImVec2 content_region_size = ImVec2(window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x, window->SizeContentsExplicit.y ? window->SizeContentsExplicit.y : window->Size.y);
+    ImVec2 content_region_size = ImVec2(window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x - window->ScrollbarSizes.x, window->SizeContentsExplicit.y ? window->SizeContentsExplicit.y : window->Size.y - window->ScrollbarSizes.y);
     ImVec2 mx = content_region_size - window->Scroll - window->WindowPadding;
     if (window->DC.ColumnsCount != 1)
         mx.x = ImGui::GetColumnOffset(window->DC.ColumnsCurrent + 1) - window->WindowPadding.x;
-    else
-        mx.x -= window->ScrollbarSizes.x;
-    mx.y -= window->ScrollbarSizes.y;
     return mx;
 }
 
