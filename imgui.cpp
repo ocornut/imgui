@@ -4915,7 +4915,7 @@ void ImGui::LabelTextV(const char* label, const char* fmt, va_list args)
 
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const float w = ImGui::CalcItemWidth();
+    const float w = CalcItemWidth();
 
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImRect value_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2, label_size.y + style.FramePadding.y*2));
@@ -5906,7 +5906,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-    const float w = ImGui::CalcItemWidth();
+    const float w = CalcItemWidth();
 
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
@@ -6205,7 +6205,7 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-    const float w = ImGui::CalcItemWidth();
+    const float w = CalcItemWidth();
 
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
@@ -6415,7 +6415,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
 
     const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
     if (graph_size.x == 0.0f)
-        graph_size.x = ImGui::CalcItemWidth() + (style.FramePadding.x * 2);
+        graph_size.x = CalcItemWidth() + (style.FramePadding.x * 2);
     if (graph_size.y == 0.0f)
         graph_size.y = label_size.y + (style.FramePadding.y * 2);
 
@@ -6920,7 +6920,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool is_multiline = (flags & ImGuiInputTextFlags_Multiline) != 0;
 
     ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
-    ImVec2 size = CalcItemSize(size_arg, ImGui::CalcItemWidth(), is_multiline ? ImGui::GetTextLineHeight() * 8.0f : label_size.y); // Arbitrary default of 8 lines high for multi-line
+    ImVec2 size = CalcItemSize(size_arg, CalcItemWidth(), is_multiline ? ImGui::GetTextLineHeight() * 8.0f : label_size.y); // Arbitrary default of 8 lines high for multi-line
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + size + style.FramePadding*2.0f);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? (style.ItemInnerSpacing.x + label_size.x) : 0.0f, 0.0f));
 
@@ -7427,7 +7427,7 @@ bool ImGui::InputScalarEx(const char* label, ImGuiDataType data_type, void* data
 
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const float w = ImGui::CalcItemWidth();
+    const float w = CalcItemWidth();
     const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
 
@@ -7642,7 +7642,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-    const float w = ImGui::CalcItemWidth();
+    const float w = CalcItemWidth();
 
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y) + style.FramePadding*2.0f);
@@ -7834,7 +7834,7 @@ bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
     const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
 
     // Size default to hold ~7 items. Fractional number of items helps seeing that we can scroll down/up without looking at scrollbar.
-    ImVec2 size = CalcItemSize(size_arg, ImGui::CalcItemWidth() + style.FramePadding.x * 2.0f, ImGui::GetTextLineHeightWithSpacing() * 7.4f + style.ItemSpacing.y);
+    ImVec2 size = CalcItemSize(size_arg, CalcItemWidth() + style.FramePadding.x * 2.0f, ImGui::GetTextLineHeightWithSpacing() * 7.4f + style.ItemSpacing.y);
     ImVec2 frame_size = ImVec2(size.x, ImMax(size.y, label_size.y));
     ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + frame_size);
     ImRect bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
@@ -8179,7 +8179,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-    const float w_full = ImGui::CalcItemWidth();
+    const float w_full = CalcItemWidth();
     const float square_sz = (g.FontSize + style.FramePadding.y * 2.0f);
 
     ImGuiColorEditMode edit_mode = window->DC.ColorEditMode;
