@@ -3188,7 +3188,7 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_ChildWindow;
 
     const ImVec2 content_avail = ImGui::GetContentRegionAvail();
-    ImVec2 size = size_arg;
+    ImVec2 size = ImRound(size_arg);
     if (size.x <= 0.0f)
     {
         if (size.x == 0.0f)
