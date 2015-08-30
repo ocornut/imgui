@@ -128,7 +128,7 @@ void ImGui::ShowTestWindow(bool* opened)
     static float bg_alpha = 0.65f;
 
     // Demonstrate the various window flags. Typically you would just use the default.
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
+    ImGuiWindowFlags window_flags = 0;
     if (no_titlebar)  window_flags |= ImGuiWindowFlags_NoTitleBar;
     if (!no_border)   window_flags |= ImGuiWindowFlags_ShowBorders;
     if (no_resize)    window_flags |= ImGuiWindowFlags_NoResize;
@@ -946,7 +946,7 @@ void ImGui::ShowTestWindow(bool* opened)
         if (ImGui::TreeNode("Horizontal Scrolling"))
         {
             ImGui::Bullet(); ImGui::TextWrapped("Horizontal scrolling for a window has to be enabled explicitly via the ImGuiWindowFlags_HorizontalScrollbar flag.");
-            ImGui::Bullet(); ImGui::TextWrapped("You most probably want to explicitly specify content width by calling SetNextWindowContentWidth() before Begin().");
+            ImGui::Bullet(); ImGui::TextWrapped("You may want to explicitly specify content width by calling SetNextWindowContentWidth() before Begin().");
             ImGui::BeginChild("scrolling", ImVec2(0, 160), true, ImGuiWindowFlags_HorizontalScrollbar);
             for (int line = 0; line < 7; line++)
             {
