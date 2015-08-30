@@ -737,22 +737,22 @@ void ImGui::ShowTestWindow(bool* opened)
             static float f = 0.0f;
             ImGui::Text("PushItemWidth(100)");
             ImGui::PushItemWidth(100);
-            ImGui::InputFloat("float##1", &f);
+            ImGui::DragFloat("float##1", &f);
             ImGui::PopItemWidth();
 
             ImGui::Text("PushItemWidth(GetWindowWidth() * 0.5f);");
             ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.5f);
-            ImGui::InputFloat("float##2", &f);
+            ImGui::DragFloat("float##2", &f);
             ImGui::PopItemWidth();
 
             ImGui::Text("PushItemWidth(GetContentRegionAvailWidth() * 0.5f);");
             ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() * 0.5f);
-            ImGui::InputFloat("float##3", &f);
+            ImGui::DragFloat("float##3", &f);
             ImGui::PopItemWidth();
 
             ImGui::Text("PushItemWidth(-100);");
             ImGui::PushItemWidth(-100);
-            ImGui::InputFloat("float##4", &f);
+            ImGui::DragFloat("float##4", &f);
             ImGui::PopItemWidth();
 
             ImGui::TreePop();
