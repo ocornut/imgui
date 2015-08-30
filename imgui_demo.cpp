@@ -947,7 +947,9 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             ImGui::Bullet(); ImGui::TextWrapped("Horizontal scrolling for a window has to be enabled explicitly via the ImGuiWindowFlags_HorizontalScrollbar flag.");
             ImGui::Bullet(); ImGui::TextWrapped("You may want to explicitly specify content width by calling SetNextWindowContentWidth() before Begin().");
-            ImGui::BeginChild("scrolling", ImVec2(0, 160), true, ImGuiWindowFlags_HorizontalScrollbar);
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0f, 1.0f));
+            ImGui::BeginChild("scrolling", ImVec2(0, ImGui::GetItemsLineHeightWithSpacing()*7 + 30), true, ImGuiWindowFlags_HorizontalScrollbar);
             for (int line = 0; line < 7; line++)
             {
                 // Display random stuff
@@ -962,12 +964,13 @@ void ImGui::ShowTestWindow(bool* opened)
                     ImGui::PushStyleColor(ImGuiCol_Button, ImColor::HSV(hue, 0.6f, 0.6f));
                     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImColor::HSV(hue, 0.7f, 0.7f));
                     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImColor::HSV(hue, 0.8f, 0.8f));
-                    ImGui::Button(label, ImVec2(40.0f + sinf((float)(line + n)) * 20.0f, 15.0f));
+                    ImGui::Button(label, ImVec2(40.0f + sinf((float)(line + n)) * 20.0f, 0.0f));
                     ImGui::PopStyleColor(3);
                     ImGui::PopID();
                 }
             }
             ImGui::EndChild();
+            ImGui::PopStyleVar(2);
             float scroll_x_delta = 0.0f;
             ImGui::SmallButton("<<"); if (ImGui::IsItemActive()) scroll_x_delta = -ImGui::GetIO().DeltaTime * 1000.0f;
             ImGui::SameLine(); ImGui::Text("Scroll from code"); ImGui::SameLine(); 
