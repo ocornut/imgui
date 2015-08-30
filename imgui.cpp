@@ -1533,14 +1533,6 @@ ImGuiID ImGuiWindow::GetID(const void* ptr)
 // Internal API exposed in imgui_internal.h
 //-----------------------------------------------------------------------------
 
-ImGuiWindow* ImGui::GetCurrentWindow()
-{
-    // If this ever crash it probably means that ImGui::NewFrame() has never been called (which is illegal). We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
-    ImGuiState& g = *GImGui;
-    g.CurrentWindow->Accessed = true;
-    return g.CurrentWindow;
-}
-
 static void SetCurrentWindow(ImGuiWindow* window)
 {
     ImGuiState& g = *GImGui;
@@ -1638,7 +1630,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
 bool ImGui::IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when_logged)
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
 
     if (!bb.Overlaps(window->ClipRect))
     {
@@ -1654,7 +1646,7 @@ bool ImGui::IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs)
     ImGuiState& g = *GImGui;
     if (g.HoveredId == 0 || g.HoveredId == id)
     {
-        ImGuiWindow* window = GetCurrentWindow();
+        ImGuiWindow* window = GetCurrentWindowRead();
         if (g.HoveredWindow == window || (flatten_childs && g.HoveredRootWindow == window->RootWindow))
             if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && ImGui::IsMouseHoveringRect(bb.Min, bb.Max))
                 if (IsWindowContentHoverable(g.HoveredRootWindow))
@@ -1714,7 +1706,7 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
     if (wrap_pos_x < 0.0f)
         return 0.0f;
 
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     if (wrap_pos_x == 0.0f)
         wrap_pos_x = ImGui::GetContentRegionMax().x;
     if (wrap_pos_x > 0.0f)
@@ -2428,7 +2420,7 @@ void ImGui::LogText(const char* fmt, ...)
 static void LogRenderedText(const ImVec2& ref_pos, const char* text, const char* text_end)
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImGuiWindow* window = ImGui::GetCurrentWindowRead();
 
     if (!text_end)
         text_end = FindTextDisplayEnd(text, text_end);
@@ -2666,7 +2658,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
 void ImGui::CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end)
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     if (g.LogEnabled)
     {
         // If logging is active, do not perform any clipping
@@ -2712,7 +2704,7 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 bool ImGui::IsMouseHoveringRect(const ImVec2& pos_min, const ImVec2& pos_max)
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
 
     // Clip
     ImRect rect_clipped(pos_min, pos_max);
@@ -2726,8 +2718,7 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& pos_min, const ImVec2& pos_max)
 bool ImGui::IsMouseHoveringWindow()
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
-    return g.HoveredWindow == window;
+    return g.HoveredWindow == g.CurrentWindow;
 }
 
 bool ImGui::IsMouseHoveringAnyWindow()
@@ -2894,13 +2885,13 @@ void ImGui::CaptureMouseFromApp()
 
 bool ImGui::IsItemHovered()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.LastItemHoveredAndUsable;
 }
 
 bool ImGui::IsItemHoveredRect()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.LastItemHoveredRect;
 }
 
@@ -2909,7 +2900,7 @@ bool ImGui::IsItemActive()
     ImGuiState& g = *GImGui;
     if (g.ActiveId)
     {
-        ImGuiWindow* window = GetCurrentWindow();
+        ImGuiWindow* window = GetCurrentWindowRead();
         return g.ActiveId == window->DC.LastItemID;
     }
     return false;
@@ -2927,32 +2918,32 @@ bool ImGui::IsAnyItemActive()
 
 bool ImGui::IsItemVisible()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     ImRect r(window->ClipRect);
     return r.Overlaps(window->DC.LastItemRect);
 }
 
 ImVec2 ImGui::GetItemRectMin()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.LastItemRect.Min;
 }
 
 ImVec2 ImGui::GetItemRectMax()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.LastItemRect.Max;
 }
 
 ImVec2 ImGui::GetItemRectSize()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.LastItemRect.GetSize();
 }
 
 ImVec2 ImGui::CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge, float outward)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     ImRect rect = window->DC.LastItemRect;
     rect.Expand(outward);
     return rect.GetClosestPoint(pos, on_edge);
@@ -2990,7 +2981,7 @@ void ImGui::BeginTooltip()
 
 void ImGui::EndTooltip()
 {
-    IM_ASSERT(GetCurrentWindow()->Flags & ImGuiWindowFlags_Tooltip);
+    IM_ASSERT(GetCurrentWindowRead()->Flags & ImGuiWindowFlags_Tooltip);
     ImGui::End();
 }
 
@@ -4103,7 +4094,7 @@ void ImGui::PopItemWidth()
 
 float ImGui::CalcItemWidth()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     float w = window->DC.ItemWidth;
     if (w < 0.0f)
     {
@@ -4414,7 +4405,7 @@ void ImGui::SetWindowPos(const char* name, const ImVec2& pos, ImGuiSetCond cond)
 
 ImVec2 ImGui::GetWindowSize()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->Size;
 }
 
@@ -4544,7 +4535,7 @@ void ImGui::SetNextWindowFocus()
 // In window space (not screen space!)
 ImVec2 ImGui::GetContentRegionMax()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     ImVec2 mx = window->Size - window->WindowPadding;
     if (window->DC.ColumnsCount != 1)
         mx.x = ImGui::GetColumnOffset(window->DC.ColumnsCurrent + 1) - window->WindowPadding.x;
@@ -4555,20 +4546,20 @@ ImVec2 ImGui::GetContentRegionMax()
 
 ImVec2 ImGui::GetContentRegionAvail()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return GetContentRegionMax() - (window->DC.CursorPos - window->Pos);
 }
 
 // In window space (not screen space!)
 ImVec2 ImGui::GetWindowContentRegionMin()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return ImVec2(0, window->TitleBarHeight() + window->MenuBarHeight()) + window->WindowPadding;
 }
 
 ImVec2 ImGui::GetWindowContentRegionMax()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     ImVec2 m = window->Size - window->WindowPadding;
     m.x -= window->ScrollbarWidth();
     return m;
@@ -4622,7 +4613,7 @@ void ImGui::SetWindowFontScale(float scale)
 // Conversion happens as we pass the value to user, but it makes our naming convention confusing because GetCursorPos() == (DC.CursorPos - window.Pos). May want to rename 'DC.CursorPos'.
 ImVec2 ImGui::GetCursorPos()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.CursorPos - window->Pos;
 }
 
@@ -4659,13 +4650,13 @@ void ImGui::SetCursorPosY(float y)
 
 ImVec2 ImGui::GetCursorStartPos()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.CursorStartPos - window->Pos;
 }
 
 ImVec2 ImGui::GetCursorScreenPos()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.CursorPos;
 }
 
@@ -4677,13 +4668,13 @@ void ImGui::SetCursorScreenPos(const ImVec2& screen_pos)
 
 float ImGui::GetScrollY()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->ScrollY;
 }
 
 float ImGui::GetScrollMaxY()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->SizeContents.y - window->SizeFull.y;
 }
 
@@ -4728,7 +4719,7 @@ void ImGui::SetStateStorage(ImGuiStorage* tree)
 
 ImGuiStorage* ImGui::GetStateStorage()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.StateStorage;
 }
 
@@ -5197,9 +5188,9 @@ bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const I
 void ImGui::LogToTTY(int max_depth)
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
     if (g.LogEnabled)
         return;
+    ImGuiWindow* window = GetCurrentWindowRead();
 
     g.LogEnabled = true;
     g.LogFile = stdout;
@@ -5212,9 +5203,10 @@ void ImGui::LogToTTY(int max_depth)
 void ImGui::LogToFile(int max_depth, const char* filename)
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
     if (g.LogEnabled)
         return;
+    ImGuiWindow* window = GetCurrentWindowRead();
+
     if (!filename)
     {
         filename = g.IO.LogFilename;
@@ -5237,10 +5229,10 @@ void ImGui::LogToFile(int max_depth, const char* filename)
 // Start logging ImGui output to clipboard
 void ImGui::LogToClipboard(int max_depth)
 {
-    ImGuiWindow* window = GetCurrentWindow();
     ImGuiState& g = *GImGui;
     if (g.LogEnabled)
         return;
+    ImGuiWindow* window = GetCurrentWindowRead();
 
     g.LogEnabled = true;
     g.LogFile = NULL;
@@ -8370,7 +8362,7 @@ void ImGui::Dummy(const ImVec2& size)
 
 bool ImGui::IsRectVisible(const ImVec2& size)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->ClipRect.Overlaps(ImRect(window->DC.CursorPos, window->DC.CursorPos + size));
 }
 
@@ -8493,13 +8485,13 @@ void ImGui::NextColumn()
 
 int ImGui::GetColumnIndex()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.ColumnsCurrent;
 }
 
 int ImGui::GetColumnsCount()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.ColumnsCount;
 }
 
@@ -8508,7 +8500,7 @@ static float GetDraggedColumnOffset(int column_index)
     // Active (dragged) column always follow mouse. The reason we need this is that dragging a column to the right edge of an auto-resizing
     // window creates a feedback loop because we store normalized positions/ So while dragging we enforce absolute positioning
     ImGuiState& g = *GImGui;
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImGuiWindow* window = ImGui::GetCurrentWindowRead();
     IM_ASSERT(column_index > 0); // We cannot drag column 0. If you get this assert you may have a conflict between the ID of your columns and another widgets.
     IM_ASSERT(g.ActiveId == window->DC.ColumnsSetID + ImGuiID(column_index));
 
@@ -8521,7 +8513,7 @@ static float GetDraggedColumnOffset(int column_index)
 float ImGui::GetColumnOffset(int column_index)
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
 
@@ -8561,7 +8553,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
 
 float ImGui::GetColumnWidth(int column_index)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
 

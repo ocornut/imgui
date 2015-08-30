@@ -626,7 +626,8 @@ public:
 
 namespace ImGui
 {
-    IMGUI_API ImGuiWindow*  GetCurrentWindow();
+    inline    ImGuiWindow*  GetCurrentWindowRead()      { ImGuiState& g = *GImGui; return g.CurrentWindow; }        // If this ever crash it means that ImGui::NewFrame() has never been called (which is illegal). We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
+    inline    ImGuiWindow*  GetCurrentWindow()          { ImGuiState& g = *GImGui; g.CurrentWindow->Accessed = true; return g.CurrentWindow; }
     IMGUI_API ImGuiWindow*  GetParentWindow();
     IMGUI_API void          FocusWindow(ImGuiWindow* window);
 
