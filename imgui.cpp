@@ -3422,7 +3422,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window = CreateNewWindow(name, size_on_first_use, flags);
         window_is_new = true;
     }
-    window->Flags = (ImGuiWindowFlags)flags;
+
+    const int current_frame = ImGui::GetFrameCount();
+    const bool first_begin_of_the_frame = (window->LastFrameDrawn != current_frame);
+    if (first_begin_of_the_frame)
+        window->Flags = (ImGuiWindowFlags)flags;
+    else
+        flags = window->Flags;
 
     // Add to stack
     ImGuiWindow* parent_window = !g.CurrentWindowStack.empty() ? g.CurrentWindowStack.back() : NULL;
@@ -3431,8 +3437,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     CheckStacksSize(window, true);
     IM_ASSERT(parent_window != NULL || !(flags & ImGuiWindowFlags_ChildWindow));
 
-    const int current_frame = ImGui::GetFrameCount();
-    const bool first_begin_of_the_frame = (window->LastFrameDrawn != current_frame);
     bool window_was_visible = (window->LastFrameDrawn == current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
     if (flags & ImGuiWindowFlags_Popup)
     {
