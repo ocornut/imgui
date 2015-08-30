@@ -3910,7 +3910,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 ImGui::LogToClipboard();
         */
     }
-    window->BeginCount++;
 
     // Inner clipping rectangle
     // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
@@ -3926,6 +3925,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     // Clear 'accessed' flag last thing
     if (first_begin_of_the_frame)
         window->Accessed = false;
+    window->BeginCount++;
 
     // Child window can be out of sight and have "negative" clip windows.
     // Mark them as collapsed so commands are skipped earlier (we can't manually collapse because they have no title bar).
@@ -4450,8 +4450,7 @@ static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiSetCond 
 
 void ImGui::SetWindowSize(const ImVec2& size, ImGuiSetCond cond)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    SetWindowSize(window, size, cond);
+    SetWindowSize(GImGui->CurrentWindow, size, cond);
 }
 
 void ImGui::SetWindowSize(const char* name, const ImVec2& size, ImGuiSetCond cond)
@@ -4474,8 +4473,7 @@ static void SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiSetCond
 
 void ImGui::SetWindowCollapsed(bool collapsed, ImGuiSetCond cond)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    SetWindowCollapsed(window, collapsed, cond);
+    SetWindowCollapsed(GImGui->CurrentWindow, collapsed, cond);
 }
 
 bool ImGui::IsWindowCollapsed()
@@ -4492,8 +4490,7 @@ void ImGui::SetWindowCollapsed(const char* name, bool collapsed, ImGuiSetCond co
 
 void ImGui::SetWindowFocus()
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    FocusWindow(window);
+    FocusWindow(GImGui->CurrentWindow);
 }
 
 void ImGui::SetWindowFocus(const char* name)
