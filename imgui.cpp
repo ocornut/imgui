@@ -8397,7 +8397,7 @@ void ImGui::Separator()
         x1 += window->DC.ColumnsStartX;
 
     const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y));
-    ItemSize(ImVec2(0.0f, bb.GetSize().y)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit
+    ItemSize(ImVec2(0.0f, 0.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit   // FIXME: Height should be 1.0f not 0.0f ?
     if (!ItemAdd(bb, NULL))
     {
         if (window->DC.ColumnsCount > 1)
