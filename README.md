@@ -33,6 +33,8 @@ ImGui outputs vertex buffers and simple command-lists that you can render in you
 
 ImGui allows you create elaborate tools as well as very short-lived ones. On the extreme side of short-liveness: using the Edit&Continue feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, etc. 
 
+Some of the features supported in some way by ImGui: window management (ordering, moving, resizing, collapsing, persistent settings), button, slider, dragging value, checkbox, radio button, text input (with selection, clipboard support, and standard keyboard controls), multiline text input, filtering text input, tree nodes, collapsing header, word-wrapping, utf-8 text, images, selectable items, vertical and horizontal scrolling, sub-window with independant scrolling/clipping, ttf font loading, basic styling, logging any ui output into text data (clipboard/tty/file), hovering, tooltips, popup windows, modal windows, menu bars, menu items, context menus, combo boxes, list box, plotting lines and histograms, resizable columns, keyboard tabbing, dragging, simple drawing api (anti-aliased, with stroking, convex fill), and low-level primitives to create custom widgets.
+
 Demo
 ----
 
