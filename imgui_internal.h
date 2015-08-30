@@ -560,7 +560,7 @@ struct ImGuiWindow
     ImVec2                  SizeContents;                       // Size of contents (== extents reach of the drawing cursor) from previous frame
     ImVec2                  WindowPadding;                      // Window padding at the time of begin. We need to lock it, in particular manipulation of the ShowBorder would have an effect
     ImGuiID                 MoveID;                             // == window->GetID("#MOVE")
-    float                   ScrollY;
+    ImVec2                  Scroll;
     float                   ScrollTargetRelY;                   // target scroll position. stored as cursor position with scrolling canceled out, so the highest point is always 0.0f. (FLT_MAX for no change)
     float                   ScrollTargetCenterRatioY;           // 0.0f = scroll so that target position is at top, 0.5f = scroll so that target position is centered
     bool                    ScrollbarY;

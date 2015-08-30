@@ -1472,7 +1472,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContents = ImVec2(0.0f, 0.0f);
     WindowPadding = ImVec2(0.0f, 0.0f);
-    ScrollY = 0.0f;
+    Scroll = ImVec2(0.0f, 0.0f);
     ScrollTargetRelY = FLT_MAX;
     ScrollTargetCenterRatioY = 0.5f;
     ScrollbarY = false;
@@ -1939,7 +1939,7 @@ void ImGui::NewFrame()
             if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
             {
                 const int scroll_lines = (window->Flags & ImGuiWindowFlags_ComboBox) ? 3 : 5;
-                SetWindowScrollY(window, window->ScrollY - g.IO.MouseWheel * window->CalcFontSize() * scroll_lines);
+                SetWindowScrollY(window, window->Scroll.y - g.IO.MouseWheel * window->CalcFontSize() * scroll_lines);
             }
         }
     }
@@ -3550,7 +3550,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
         // Save contents size from last frame for auto-fitting
         window->SizeContents = window_is_new ? ImVec2(0.0f, 0.0f) : window->DC.CursorMaxPos - window->Pos;
-        window->SizeContents.y += window->ScrollY;
+        window->SizeContents.y += window->Scroll.y;
 
         // Hide popup/tooltip window when first appearing while we measure size (because we recycle them)
         if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && !window_was_visible)
@@ -3713,12 +3713,12 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         if (window->ScrollTargetRelY < FLT_MAX)
         {
             float center_ratio_y = window->ScrollTargetCenterRatioY;
-            window->ScrollY = window->ScrollTargetRelY - ((1.0f - center_ratio_y) * window->TitleBarHeight()) - (center_ratio_y * window->SizeFull.y);
+            window->Scroll.y = window->ScrollTargetRelY - ((1.0f - center_ratio_y) * window->TitleBarHeight()) - (center_ratio_y * window->SizeFull.y);
             window->ScrollTargetRelY = FLT_MAX;
         }
-        window->ScrollY = ImMax(window->ScrollY, 0.0f);
+        window->Scroll.y = ImMax(window->Scroll.y, 0.0f);
         if (!window->Collapsed && !window->SkipItems)
-            window->ScrollY = ImMin(window->ScrollY, ImMax(0.0f, window->SizeContents.y - window->SizeFull.y));
+            window->Scroll.y = ImMin(window->Scroll.y, ImMax(0.0f, window->SizeContents.y - window->SizeFull.y));
 
         // Modal window darkens what is behind them
         if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
@@ -3833,7 +3833,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         // Setup drawing context
         window->DC.ColumnsStartX = window->WindowPadding.x;
         window->DC.ColumnsOffsetX = 0.0f;
-        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.ColumnsStartX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y) - ImVec2(0.0f, window->ScrollY);
+        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.ColumnsStartX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y) - ImVec2(0.0f, window->Scroll.y);
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CursorMaxPos = window->DC.CursorStartPos;
@@ -3990,7 +3990,7 @@ static void Scrollbar(ImGuiWindow* window)
     ImGui::ButtonBehavior(bb, id, &hovered, &held, true);
 
     const float scroll_max = ImMax(1.0f, window->SizeContents.y - window->Size.y);
-    float scroll_ratio = ImSaturate(window->ScrollY / scroll_max);
+    float scroll_ratio = ImSaturate(window->Scroll.y / scroll_max);
     float grab_y_norm = scroll_ratio * (scrollbar_height - grab_h_pixels) / scrollbar_height;
     if (held)
     {
@@ -4015,10 +4015,10 @@ static void Scrollbar(ImGuiWindow* window)
         // Apply scroll
         // It is ok to modify ScrollY here because we are being called in Begin() after the calculation of SizeContents and before setting up our starting position
         const float scroll_y_norm = ImSaturate((clicked_y_norm - g.ScrollbarClickDeltaToGrabCenter - grab_h_norm*0.5f) / (1.0f - grab_h_norm));
-        window->ScrollY = (float)(int)(0.5f + scroll_y_norm * (window->SizeContents.y - window->Size.y));
+        window->Scroll.y = (float)(int)(0.5f + scroll_y_norm * (window->SizeContents.y - window->Size.y));
 
         // Update values for rendering
-        scroll_ratio = ImSaturate(window->ScrollY / scroll_max);
+        scroll_ratio = ImSaturate(window->Scroll.y / scroll_max);
         grab_y_norm = scroll_ratio * (scrollbar_height - grab_h_pixels) / scrollbar_height;
 
         // Update distance to grab now that we have seeked and saturated
@@ -4369,9 +4369,9 @@ ImVec2 ImGui::GetWindowPos()
 
 static void SetWindowScrollY(ImGuiWindow* window, float new_scroll_y)
 {
-    window->DC.CursorMaxPos.y += window->ScrollY;
-    window->ScrollY = new_scroll_y;
-    window->DC.CursorMaxPos.y -= window->ScrollY;
+    window->DC.CursorMaxPos.y += window->Scroll.y;
+    window->Scroll.y = new_scroll_y;
+    window->DC.CursorMaxPos.y -= window->Scroll.y;
 }
 
 static void SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiSetCond cond)
@@ -4669,7 +4669,7 @@ void ImGui::SetCursorScreenPos(const ImVec2& screen_pos)
 float ImGui::GetScrollY()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return window->ScrollY;
+    return window->Scroll.y;
 }
 
 float ImGui::GetScrollMaxY()
@@ -4690,7 +4690,7 @@ void ImGui::SetScrollFromPosY(float pos_y, float center_y_ratio)
     // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
     ImGuiWindow* window = GetCurrentWindow();
     IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
-    window->ScrollTargetRelY = (float)(int)(pos_y + window->ScrollY);
+    window->ScrollTargetRelY = (float)(int)(pos_y + window->Scroll.y);
     if (center_y_ratio <= 0.0f && window->ScrollTargetRelY <= window->WindowPadding.y)    // Minor hack to make "scroll to top" take account of WindowPadding, else it would scroll to (WindowPadding.y - ItemSpacing.y)
         window->ScrollTargetRelY = 0.0f;
     window->ScrollTargetCenterRatioY = center_y_ratio;
@@ -7069,8 +7069,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         const bool is_ctrl_only = is_ctrl_down && !is_alt_down && !is_shift_down;
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
-        else if (is_multiline && IsKeyPressedMap(ImGuiKey_UpArrow))     { if (is_ctrl_down) SetWindowScrollY(draw_window, draw_window->ScrollY - g.FontSize); else edit_state.OnKeyPressed(STB_TEXTEDIT_K_UP | k_mask); }
-        else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { if (is_ctrl_down) SetWindowScrollY(draw_window, draw_window->ScrollY + g.FontSize); else edit_state.OnKeyPressed(STB_TEXTEDIT_K_DOWN| k_mask); }
+        else if (is_multiline && IsKeyPressedMap(ImGuiKey_UpArrow))     { if (is_ctrl_down) SetWindowScrollY(draw_window, draw_window->Scroll.y - g.FontSize); else edit_state.OnKeyPressed(STB_TEXTEDIT_K_UP | k_mask); }
+        else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { if (is_ctrl_down) SetWindowScrollY(draw_window, draw_window->Scroll.y + g.FontSize); else edit_state.OnKeyPressed(STB_TEXTEDIT_K_DOWN| k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Home))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_End))                         { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Delete))                      { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
@@ -7315,13 +7315,13 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // Vertical scroll
             if (is_multiline)
             {
-                float scroll_y = draw_window->ScrollY;
+                float scroll_y = draw_window->Scroll.y;
                 if (cursor_offset.y - g.FontSize < scroll_y)
                     scroll_y = ImMax(0.0f, cursor_offset.y - g.FontSize);
                 else if (cursor_offset.y - size.y >= scroll_y)
                     scroll_y = cursor_offset.y - size.y;
-                draw_window->DC.CursorPos.y += (draw_window->ScrollY - scroll_y);   // To avoid a frame of lag
-                draw_window->ScrollY = scroll_y;
+                draw_window->DC.CursorPos.y += (draw_window->Scroll.y - scroll_y);   // To avoid a frame of lag
+                draw_window->Scroll.y = scroll_y;
                 render_pos.y = draw_window->DC.CursorPos.y;
             }
         }
