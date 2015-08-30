@@ -1475,8 +1475,8 @@ ImGuiWindow::ImGuiWindow(const char* name)
     SizeContents = SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     WindowPadding = ImVec2(0.0f, 0.0f);
     Scroll = ImVec2(0.0f, 0.0f);
-    ScrollTargetRelY = FLT_MAX;
-    ScrollTargetCenterRatioY = 0.5f;
+    ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
+    ScrollTargetCenterRatio = ImVec2(0.5f, 0.5f);
     ScrollbarX = ScrollbarY = false;
     ScrollbarSizes = ImVec2(0.0f, 0.0f);
     Active = WasActive = false;
@@ -3730,11 +3730,16 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = IM_INT_MAX;
 
         // Apply scrolling
-        if (window->ScrollTargetRelY < FLT_MAX)
+        if (window->ScrollTarget.x < FLT_MAX)
         {
-            float center_ratio_y = window->ScrollTargetCenterRatioY;
-            window->Scroll.y = window->ScrollTargetRelY - ((1.0f - center_ratio_y) * window->TitleBarHeight()) - (center_ratio_y * window->SizeFull.y);
-            window->ScrollTargetRelY = FLT_MAX;
+            window->Scroll.x = window->ScrollTarget.x;
+            window->ScrollTarget.x = FLT_MAX;
+        }
+        if (window->ScrollTarget.y < FLT_MAX)
+        {
+            float center_ratio = window->ScrollTargetCenterRatio.y;
+            window->Scroll.y = window->ScrollTarget.y - ((1.0f - center_ratio) * window->TitleBarHeight()) - (center_ratio * window->SizeFull.y);
+            window->ScrollTarget.y = FLT_MAX;
         }
         window->Scroll = ImMax(window->Scroll, ImVec2(0.0f, 0.0f));
         if (!window->Collapsed && !window->SkipItems)
@@ -4738,23 +4743,40 @@ void ImGui::SetCursorScreenPos(const ImVec2& screen_pos)
     window->DC.CursorPos = screen_pos;
 }
 
+float ImGui::GetScrollX()
+{
+    return GImGui->CurrentWindow->Scroll.x;
+}
+
 float ImGui::GetScrollY()
 {
+    return GImGui->CurrentWindow->Scroll.y;
+}
+
+float ImGui::GetScrollMaxX()
+{
     ImGuiWindow* window = GetCurrentWindowRead();
-    return window->Scroll.y;
+    return window->SizeContents.x - window->SizeFull.x - window->ScrollbarSizes.x;
 }
 
 float ImGui::GetScrollMaxY()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return window->SizeContents.y - window->SizeFull.y;
+    return window->SizeContents.y - window->SizeFull.y - window->ScrollbarSizes.y;
+}
+
+void ImGui::SetScrollX(float scroll_x)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->ScrollTarget.x = scroll_x;
+    window->ScrollTargetCenterRatio.x = 0.0f;
 }
 
 void ImGui::SetScrollY(float scroll_y)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->ScrollTargetRelY = scroll_y + window->TitleBarHeight(); // title bar height cancelled out when using ScrollTargetRelY
-    window->ScrollTargetCenterRatioY = 0.0f;
+    window->ScrollTarget.y = scroll_y + window->TitleBarHeight(); // title bar height canceled out when using ScrollTargetRelY
+    window->ScrollTargetCenterRatio.y = 0.0f;
 }
 
 void ImGui::SetScrollFromPosY(float pos_y, float center_y_ratio)
@@ -4762,10 +4784,10 @@ void ImGui::SetScrollFromPosY(float pos_y, float center_y_ratio)
     // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
     ImGuiWindow* window = GetCurrentWindow();
     IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
-    window->ScrollTargetRelY = (float)(int)(pos_y + window->Scroll.y);
-    if (center_y_ratio <= 0.0f && window->ScrollTargetRelY <= window->WindowPadding.y)    // Minor hack to make "scroll to top" take account of WindowPadding, else it would scroll to (WindowPadding.y - ItemSpacing.y)
-        window->ScrollTargetRelY = 0.0f;
-    window->ScrollTargetCenterRatioY = center_y_ratio;
+    window->ScrollTarget.y = (float)(int)(pos_y + window->Scroll.y);
+    if (center_y_ratio <= 0.0f && window->ScrollTarget.y <= window->WindowPadding.y)    // Minor hack to make "scroll to top" take account of WindowPadding, else it would scroll to (WindowPadding.y - ItemSpacing.y)
+        window->ScrollTarget.y = 0.0f;
+    window->ScrollTargetCenterRatio.y = center_y_ratio;
 }
 
 // center_y_ratio: 0.0f top of last item, 0.5f vertical center of last item, 1.0f bottom of last item.

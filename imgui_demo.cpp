@@ -912,7 +912,7 @@ void ImGui::ShowTestWindow(bool* opened)
             static bool track = true;
             static int track_line = 50, scroll_to_px = 200;
             ImGui::Checkbox("Track", &track);
-            ImGui::SameLine(130); track |= ImGui::DragInt("##line", &track_line, 0.25f, 0, 9999, "Line %.0f");
+            ImGui::SameLine(130); track |= ImGui::DragInt("##line", &track_line, 0.25f, 0, 99, "Line %.0f");
             bool scroll_to = ImGui::Button("Scroll To");
             ImGui::SameLine(130); scroll_to |= ImGui::DragInt("##pos_y", &scroll_to_px, 1.00f, 0, 9999, "y = %.0f px");
             if (scroll_to) track = false;
@@ -968,6 +968,16 @@ void ImGui::ShowTestWindow(bool* opened)
                 }
             }
             ImGui::EndChild();
+            float scroll_x_delta = 0.0f;
+            ImGui::SmallButton("<<"); if (ImGui::IsItemActive()) scroll_x_delta = -ImGui::GetIO().DeltaTime * 1000.0f;
+            ImGui::SameLine(); ImGui::Text("Scroll from code"); ImGui::SameLine(); 
+            ImGui::SmallButton(">>"); if (ImGui::IsItemActive()) scroll_x_delta = +ImGui::GetIO().DeltaTime * 1000.0f;
+            if (scroll_x_delta != 0.0f)
+            {
+                ImGui::BeginChild("scrolling"); // Demonstrate a trick: you can use Begin to set yourself in the context of another window (here we are already out of your child window)
+                ImGui::SetScrollX(ImGui::GetScrollX() + scroll_x_delta);
+                ImGui::End();
+            }
             ImGui::TreePop();
         }
 
