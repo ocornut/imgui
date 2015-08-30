@@ -1787,7 +1787,7 @@ void ImGui::NewFrame()
     IM_ASSERT(g.IO.RenderDrawListsFn != NULL);       // Must be implemented
     IM_ASSERT(g.IO.Fonts->Fonts.Size > 0);           // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
     IM_ASSERT(g.IO.Fonts->Fonts[0]->IsLoaded());     // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
-	IM_ASSERT(g.Style.CurveTessellationTol > 0.0f);  // Invalid
+    IM_ASSERT(g.Style.CurveTessellationTol > 0.0f);  // Invalid
 
     if (!g.Initialized)
     {
