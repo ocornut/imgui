@@ -5436,7 +5436,10 @@ void ImGui::Bullet()
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(line_height, line_height));
     ItemSize(bb);
     if (!ItemAdd(bb, NULL))
+    {
+        ImGui::SameLine(0, -1);
         return;
+    }
 
     // Render
     const float bullet_size = line_height*0.15f;
