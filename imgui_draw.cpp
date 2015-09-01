@@ -1,4 +1,4 @@
-// ImGui library v1.45 WIP
+// ImGui library v1.45
 // Drawing and font code
 
 // Contains implementation for

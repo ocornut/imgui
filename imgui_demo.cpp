@@ -1,4 +1,4 @@
-// ImGui library v1.45 WIP
+// ImGui library v1.45
 // Demo code
 
 // Don't remove this file from your project! It is useful reference code that you can execute.
