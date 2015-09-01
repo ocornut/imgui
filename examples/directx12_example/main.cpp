@@ -33,12 +33,6 @@ bool InitD3D12(ID3D12Device** _device
 	return false;
     }
 
-    HMODULE dxgidll = LoadLibraryA("dxgi.dll");
-    if (NULL == dxgidll)
-    {
-	return false;
-    }
-
     PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(d3d12dll, "D3D12CreateDevice");
     PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(d3d12dll, "D3D12GetDebugInterface");
     PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(d3d12dll, "D3D12SerializeRootSignature");
