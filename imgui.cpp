@@ -3532,8 +3532,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         {
             window->AutoPosLastDirection = -1;
 
-            if (!(flags & (ImGuiWindowFlags_ChildWindow|ImGuiWindowFlags_Tooltip)) || (flags & ImGuiWindowFlags_Popup))
-                FocusWindow(window);
+            if (!(flags & ImGuiWindowFlags_NoFocusOnAppearing))
+                if (!(flags & (ImGuiWindowFlags_ChildWindow|ImGuiWindowFlags_Tooltip)) || (flags & ImGuiWindowFlags_Popup))
+                    FocusWindow(window);
 
             // Popup first latch mouse position, will position itself when it appears next frame
             if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api)
