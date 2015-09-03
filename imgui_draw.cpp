@@ -157,12 +157,22 @@ void ImDrawList::ChannelsSplit(int channels_count)
     if (old_channels_count < channels_count)
         _Channels.resize(channels_count);
     _ChannelsCount = channels_count;
-    for (int i = 0; i < channels_count; i++)
+
+    // _Channels[] (24 bytes each) hold storage that we'll swap with this->_CmdBuffer/_IdxBuffer
+    // The content of _Channels[0] at this point doesn't matter. We clear it to make state tidy in a debugger but we don't strictly need to.
+    // When we switch to the next channel, we'll copy _CmdBuffer/_IdxBuffer into _Channels[0] and then _Channels[1] into _CmdBuffer/_IdxBuffer
+    memset(&_Channels[0], 0, sizeof(ImDrawChannel));
+    for (int i = 1; i < channels_count; i++)
     {
         if (i >= old_channels_count)
+        {
             new(&_Channels[i]) ImDrawChannel();
-        else if (i > 0)
-            _Channels[i].CmdBuffer.resize(0), _Channels[i].IdxBuffer.resize(0);
+        }
+        else
+        {
+            _Channels[i].CmdBuffer.resize(0);
+            _Channels[i].IdxBuffer.resize(0);
+        }
         if (_Channels[i].CmdBuffer.Size == 0)
         {
             ImDrawCmd draw_cmd;
