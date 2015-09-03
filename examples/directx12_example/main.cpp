@@ -242,6 +242,10 @@ LRESULT ImGui_ImplDX12_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lPar
     return 0;
 }
 
+static bool s_resizeRenderTargets = false;
+static UINT s_resizedWidth;  
+static UINT s_resizedHeight;  
+
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui_ImplDX12_WndProcHandler(hWnd, msg, wParam, lParam))
@@ -251,6 +255,9 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
 	case WM_SIZE:
 	    // Resize
+	    s_resizedWidth  = (UINT)LOWORD(lParam);
+	    s_resizedHeight = (UINT)HIWORD(lParam);
+	    s_resizeRenderTargets = true;
 	    return 0;
 	case WM_SYSCOMMAND:
 	    if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
@@ -387,6 +394,32 @@ int main(int, char**)
 	    DispatchMessage(&msg);
 	    continue;
 	}
+
+	// Resizing logic
+	if (s_resizeRenderTargets)
+	{
+	    for (uint32_t n = 0; n < FRAME_COUNT; n++)
+	    {
+		renderTargets[n]->Release(); // Have to release the resources before calling ResizeBuffers
+	    }
+            swapChain->ResizeBuffers(0, s_resizedWidth, s_resizedHeight, DXGI_FORMAT_UNKNOWN, 0);
+
+	    rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
+	    for (uint32_t n = 0; n < FRAME_COUNT; n++)
+	    {
+		swapChain->GetBuffer(n
+			, __uuidof(ID3D12Resource)
+			, (void**)&renderTargets[n]);
+		device->CreateRenderTargetView(renderTargets[n]
+			, nullptr
+			, rtvHandle);
+		rtvHandle.ptr += rtvDescriptorSize;
+	    }
+
+	    s_resizeRenderTargets = false;
+	    frameIndex = 0;
+	}
+
 
 	ImGui_ImplDX12_NewFrame();
 
