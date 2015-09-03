@@ -2704,14 +2704,15 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 // Test if mouse cursor is hovering given rectangle
 // NB- Rectangle is clipped by our current clip setting
 // NB- Expand the rectangle to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
-bool ImGui::IsMouseHoveringRect(const ImVec2& pos_min, const ImVec2& pos_max)
+bool ImGui::IsMouseHoveringRect(const ImVec2& pos_min, const ImVec2& pos_max, bool clip)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindowRead();
 
     // Clip
     ImRect rect_clipped(pos_min, pos_max);
-    rect_clipped.Clip(window->ClipRect);
+    if (clip)
+        rect_clipped.Clip(window->ClipRect);
 
     // Expand for touch input
     const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
