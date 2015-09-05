@@ -5,7 +5,9 @@
 // Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
 // Releases change-log at https://github.com/ocornut/imgui/releases
-// Developed by Omar Cornut and ImGui contributors.
+// Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
+// This library is free but I need your support to sustain development and maintenance.
+// If you work for a company, please consider financial support, e.g: https://www.patreon.com/imgui
 
 /*
 
