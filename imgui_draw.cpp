@@ -48,6 +48,11 @@ namespace IMGUI_STB_NAMESPACE
 {
 #endif
 
+#ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4456) // declaration of 'xx' hides previous local declaration
+#endif
+
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
@@ -74,6 +79,10 @@ namespace IMGUI_STB_NAMESPACE
 
 #ifdef __clang__
 #pragma clang diagnostic pop
+#endif
+
+#ifdef _MSC_VER
+#pragma warning (pop)
 #endif
 
 #ifdef IMGUI_STB_NAMESPACE
