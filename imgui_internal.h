@@ -496,14 +496,14 @@ struct ImGuiDrawContext
     ImGuiLayoutType         LayoutType;
 
     // We store the current settings outside of the vectors to increase memory locality (reduce cache misses). The vectors are rarely modified. Also it allows us to not heap allocate for short-lived windows which are not using those settings.
-    bool                    ButtonRepeat;           // == ButtonRepeatStack.back() [empty == false]
-    bool                    AllowKeyboardFocus;     // == AllowKeyboardFocusStack.back() [empty == true]
     float                   ItemWidth;              // == ItemWidthStack.back(). 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
     float                   TextWrapPos;            // == TextWrapPosStack.back() [empty == -1.0f]
-    ImVector<bool>          ButtonRepeatStack;
-    ImVector<bool>          AllowKeyboardFocusStack;
+    bool                    AllowKeyboardFocus;     // == AllowKeyboardFocusStack.back() [empty == true]
+    bool                    ButtonRepeat;           // == ButtonRepeatStack.back() [empty == false]
     ImVector<float>         ItemWidthStack;
     ImVector<float>         TextWrapPosStack;
+    ImVector<bool>          AllowKeyboardFocusStack;
+    ImVector<bool>          ButtonRepeatStack;
     ImVector<ImGuiGroupData>GroupStack;
     ImGuiColorEditMode      ColorEditMode;
     int                     StackSizesBackup[6];    // Store size of various stacks for asserting

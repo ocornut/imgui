@@ -3891,13 +3891,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->DC.ChildWindows.resize(0);
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
         window->DC.ItemWidth = window->ItemWidthDefault;
-        window->DC.ItemWidthStack.resize(0);
-        window->DC.ButtonRepeat = false;
-        window->DC.ButtonRepeatStack.resize(0);
-        window->DC.AllowKeyboardFocus = true;
-        window->DC.AllowKeyboardFocusStack.resize(0);
         window->DC.TextWrapPos = -1.0f; // disabled
+        window->DC.AllowKeyboardFocus = true;
+        window->DC.ButtonRepeat = false;
+        window->DC.ItemWidthStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
+        window->DC.AllowKeyboardFocusStack.resize(0);
+        window->DC.ButtonRepeatStack.resize(0);
         window->DC.ColorEditMode = ImGuiColorEditMode_UserSelect;
         window->DC.ColumnsCurrent = 0;
         window->DC.ColumnsCount = 1;
