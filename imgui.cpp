@@ -96,6 +96,7 @@
         io.DisplaySize.y = 1280.0f;
         io.DeltaTime = 1.0f/60.0f;
         io.IniFilename = "imgui.ini";
+        io.RenderDrawListsFn = my_render_function;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
         // TODO: Fill others settings of the io structure
 
         // Load texture
@@ -1769,6 +1770,12 @@ ImGuiStyle& ImGui::GetStyle()
     return GImGui->Style;
 }
 
+// Same value as passed to your RenderDrawListsFn() function. valid after Render() and until the next call to NewFrame()
+ImDrawData* ImGui::GetDrawData()
+{
+    return GImGui->RenderDrawData.Valid ? &GImGui->RenderDrawData : NULL;
+}
+
 float ImGui::GetTime()
 {
     return GImGui->Time;
@@ -1786,7 +1793,6 @@ void ImGui::NewFrame()
     // Check user data
     IM_ASSERT(g.IO.DeltaTime >= 0.0f);
     IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f);
-    IM_ASSERT(g.IO.RenderDrawListsFn != NULL);       // Must be implemented
     IM_ASSERT(g.IO.Fonts->Fonts.Size > 0);           // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
     IM_ASSERT(g.IO.Fonts->Fonts[0]->IsLoaded());     // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
     IM_ASSERT(g.Style.CurveTessellationTol > 0.0f);  // Invalid
@@ -1811,6 +1817,11 @@ void ImGui::NewFrame()
     g.OverlayDrawList.PushTextureID(g.IO.Fonts->TexID);
     g.OverlayDrawList.PushClipRectFullScreen();
     g.OverlayDrawList.AddDrawCmd();
+
+    // Mark rendering data as invalid to prevent user who may have a handle on it to use it
+    g.RenderDrawData.Valid = false;
+    g.RenderDrawData.CmdLists = NULL;
+    g.RenderDrawData.CmdListsCount = g.RenderDrawData.TotalVtxCount = g.RenderDrawData.TotalIdxCount = 0;
 
     // Update inputs state
     if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0)
@@ -2366,15 +2377,17 @@ void ImGui::Render()
         if (!g.OverlayDrawList.VtxBuffer.empty())
             AddDrawListToRenderList(g.RenderDrawLists[0], &g.OverlayDrawList);
 
-        // Render
-        if (!g.RenderDrawLists[0].empty())
+        // Setup draw data
+        g.RenderDrawData.Valid = true;
+        g.RenderDrawData.CmdLists = &g.RenderDrawLists[0][0];
+        g.RenderDrawData.CmdListsCount = g.RenderDrawLists[0].Size;
+        g.RenderDrawData.TotalVtxCount = g.IO.MetricsRenderVertices;
+        g.RenderDrawData.TotalIdxCount = g.IO.MetricsRenderIndices;
+
+        // Render. If user hasn't set a callback then they may retrieve the draw data via GetDrawData()
+        if (g.RenderDrawData.CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
         {
-            ImDrawData data;
-            data.CmdLists = &g.RenderDrawLists[0][0];
-            data.CmdListsCount = g.RenderDrawLists[0].Size;
-            data.TotalVtxCount = g.IO.MetricsRenderVertices;
-            data.TotalIdxCount = g.IO.MetricsRenderIndices;
-            g.IO.RenderDrawListsFn(&data);
+            g.IO.RenderDrawListsFn(&g.RenderDrawData);
         }
     }
 }

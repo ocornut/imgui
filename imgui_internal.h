@@ -371,6 +371,7 @@ struct ImGuiState
     ImGuiSetCond            SetNextTreeNodeOpenedCond;
 
     // Render
+    ImDrawData              RenderDrawData;                     // Main ImDrawData instance to pass render information to the user
     ImVector<ImDrawList*>   RenderDrawLists[3];
     float                   ModalWindowDarkeningRatio;
     ImDrawList              OverlayDrawList;                    // Optional software render of mouse cursors, if io.MouseDrawCursor is set + a few debug overlays
