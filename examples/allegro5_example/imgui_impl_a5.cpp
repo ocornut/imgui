@@ -29,7 +29,7 @@ struct ImDrawVertAllegro
     ALLEGRO_COLOR col;
 };
 
-static void ImGui_ImplA5_RenderDrawLists(ImDrawData* draw_data)
+void ImGui_ImplA5_RenderDrawLists(ImDrawData* draw_data)
 {
     int op, src, dst;
     al_get_blender(&op, &src, &dst);
@@ -186,7 +186,7 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_Y] = ALLEGRO_KEY_Y;
     io.KeyMap[ImGuiKey_Z] = ALLEGRO_KEY_Z;
 
-    io.RenderDrawListsFn = ImGui_ImplA5_RenderDrawLists;
+    io.RenderDrawListsFn = ImGui_ImplA5_RenderDrawLists;        // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
 #ifdef _WIN32
     io.ImeWindowHandle = al_get_win_window_handle(g_Display);
 #endif
