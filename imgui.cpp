@@ -94,12 +94,11 @@
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize.x = 1920.0f;
         io.DisplaySize.y = 1280.0f;
-        io.DeltaTime = 1.0f/60.0f;
         io.IniFilename = "imgui.ini";
         io.RenderDrawListsFn = my_render_function;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
         // TODO: Fill others settings of the io structure
 
-        // Load texture
+        // Load texture atlas
         unsigned char* pixels;
         int width, height, bytes_per_pixels;
         io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height, &bytes_per_pixels);
@@ -114,6 +113,7 @@
 
             // 2) TODO: fill all fields of IO structure and call NewFrame
             ImGuiIO& io = ImGui::GetIO();
+            io.DeltaTime = 1.0f/60.0f;
             io.MousePos = mouse_pos;
             io.MouseDown[0] = mouse_button_0;
             io.KeysDown[i] = ...
@@ -131,9 +131,9 @@
             // swap video buffer, etc.
         }
 
-   - after calling ImGui::NewFrame() you can read back flags from the IO structure  to tell how ImGui intends to use your inputs.
+   - after calling ImGui::NewFrame() you can read back flags from the IO structure to tell how ImGui intends to use your inputs.
      When 'io.WantCaptureMouse' or 'io.WantCaptureKeyboard' flags are set you may want to discard/hide the inputs from the rest of your application.
-     When 'io.WantInputsCharacters' is set to may want to notify your OS to popup an onscreen keyboard, if available.
+     When 'io.WantInputsCharacters' is set to may want to notify your OS to popup an on-screen keyboard, if available.
 
 
  API BREAKING CHANGES
@@ -143,7 +143,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2015/08/29 (1.45) - with the addition of horizontal scrollbar we made various fixes to inconsistencies with dealing with position:
+ - 2015/08/29 (1.45) - with the addition of horizontal scrollbar we made various fixes to inconsistencies with dealing with cursor position.
                        GetCursorPos()/SetCursorPos() functions now include the scrolled amount. It shouldn't affect the majority of users, but take note that SetCursorPosX(100.0f) puts you at +100 from the starting x position which may include scrolling, not at +100 from the window left side.
                        GetContentRegionMax()/GetWindowContentRegionMin()/GetWindowContentRegionMax() functions allow include the scrolled amount. Typically those were used in cases where no scrolling would happen so it may not be a problem, but watch out!
  - 2015/08/29 (1.45) - renamed style.ScrollbarWidth to style.ScrollbarSize
@@ -239,7 +239,7 @@
       stb_rect_pack.h
       stb_textedit.h
       stb_truetype.h
-    Don't overwrite imconfig.h if you have modification to your copy.
+    Don't overwrite imconfig.h if you have made modification to your copy.
     Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes. If you have a problem with a function, search for its name
     in the code, there will likely be a comment about it. Please report any issue to the GitHub page!
 
@@ -257,32 +257,37 @@
    - ID are uniquely scoped within windows, tree nodes, etc. so no conflict can happen if you have two buttons called "OK" in two different windows
      or in two different locations of a tree.
 
-   - if you have a same ID twice in the same location, you'll have a conflict:
+   - If you have a same ID twice in the same location, you'll have a conflict:
 
        Button("OK");
        Button("OK");           // ID collision! Both buttons will be treated as the same.
 
      Fear not! this is easy to solve and there are many ways to solve it!
 
-   - when passing a label you can optionally specify extra unique ID information within string itself. This helps solving the simpler collision cases.
+   - When passing a label you can optionally specify extra unique ID information within string itself. This helps solving the simpler collision cases.
      use "##" to pass a complement to the ID that won't be visible to the end-user:
 
-       Button("Play##0");      // Label = "Play",   ID = hash of "Play##0"
-       Button("Play##1");      // Label = "Play",   ID = hash of "Play##1" (different from above)
+       Button("Play");         // Label = "Play",   ID = hash of "Play"
+       Button("Play##foo1");   // Label = "Play",   ID = hash of "Play##foo1" (different from above)
+       Button("Play##foo2");   // Label = "Play",   ID = hash of "Play##foo2" (different from above)
 
-   - so if you want to hide the label but need an ID:
+   - If you want to completely hide the label, but still need an ID:
 
-       Checkbox("##On", &b);   // Label = "",       ID = hash of "##On"
+       Checkbox("##On", &b);   // Label = "",       ID = hash of "##On" (no label!)
 
-   - occasionally (rarely) you might want change a label while preserving a constant ID. This allows you to animate labels.
-     use "###" to pass a label that isn't part of ID:
+   - Occasionally/rarely you might want change a label while preserving a constant ID. This allows you to animate labels.
+     For example you may want to include varying information in a window title bar (and windows are uniquely identified by their ID.. obviously)
+     Use "###" to pass a label that isn't part of ID:
 
        Button("Hello###ID";   // Label = "Hello",  ID = hash of "ID"
        Button("World###ID";   // Label = "World",  ID = hash of "ID" (same as above)
+	   
+	   sprintf(buf, "My game (%f FPS)###MyGame");
+	   Begin(buf);            // Variable label,   ID = hash of "MyGame"
 
-   - use PushID() / PopID() to create scopes and avoid ID conflicts within the same Window.
-     this is the most convenient way of distinguish ID if you are iterating and creating many UI elements.
-     you can push a pointer, a string or an integer value. remember that ID are formed from the addition of everything in the ID stack!
+   - Use PushID() / PopID() to create scopes and avoid ID conflicts within the same Window.
+     This is the most convenient way of distinguishing ID if you are iterating and creating many UI elements.
+     You can push a pointer, a string or an integer value. Remember that ID are formed from the concatenation of everything in the ID stack!
 
        for (int i = 0; i < 100; i++)
        {
@@ -307,7 +312,7 @@
          PopID();
        }
 
-   - more example showing that you can stack multiple prefixes into the ID stack:
+   - More example showing that you can stack multiple prefixes into the ID stack:
 
        Button("Click");     // Label = "Click",  ID = hash of "Click"
        PushID("node");
@@ -317,7 +322,7 @@
          PopID();
        PopID();
 
-   - tree nodes implicitly creates a scope for you by calling PushID().
+   - Tree nodes implicitly creates a scope for you by calling PushID().
 
        Button("Click");     // Label = "Click",  ID = hash of "Click"
        if (TreeNode("node"))
@@ -326,8 +331,8 @@
          TreePop();
        }
 
-   - when working with trees, ID are used to preserve the opened/closed state of each tree node.
-     depending on your use cases you may want to use strings, indices or pointers as ID.
+   - When working with trees, ID are used to preserve the opened/closed state of each tree node.
+     Depending on your use cases you may want to use strings, indices or pointers as ID.
       e.g. when displaying a single object that may change over time (1-1 relationship), using a static string as ID will preserve your node open/closed state when the targeted object change.
       e.g. when displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state differently. experiment and see what makes more sense!
 
@@ -337,12 +342,14 @@
  Q: How can I load a different font than the default? (default is an embedded version of ProggyClean.ttf, rendered at size 13)
  A: Use the font atlas to load the TTF file you want:
 
+      ImGuiIO& io = ImGui::GetIO();
       io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
       io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
 
  Q: How can I load multiple fonts?
  A: Use the font atlas to pack them into a single texture:
 
+      ImGuiIO& io = ImGui::GetIO();
       ImFont* font0 = io.Fonts->AddFontDefault();
       ImFont* font1 = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
       ImFont* font2 = io.Fonts->AddFontFromFileTTF("myfontfile2.ttf", size_in_pixels);
@@ -367,7 +374,7 @@
 
     Read extra_fonts/README.txt or ImFontAtlas class for more details.
 
- Q: How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
+ Q: How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?
  A: When loading a font, pass custom Unicode ranges to specify the glyphs to load. ImGui will support UTF-8 encoding across the board.
     Character input depends on you passing the right character code to io.AddInputCharacter(). The example applications do that.
 
@@ -377,9 +384,9 @@
 
  - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will run the block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
- - tip: you can call Begin() multiple times with the same name during the same frame, it will keep appending to the same window. this is also useful to set yourself in the context of a window (to get/set other settings)
+ - tip: you can call Begin() multiple times with the same name during the same frame, it will keep appending to the same window. this is also useful to set yourself in the context of another window (to get/set other settings)
  - tip: you can call Render() multiple times (e.g for VR renders).
- - tip: call and read the ShowTestWindow() code for more example of how to use ImGui!
+ - tip: call and read the ShowTestWindow() code in imgui_demo.cpp for more example of how to use ImGui!
 
 
  ISSUES & TODO-LIST

@@ -26,7 +26,6 @@ static GLuint       g_FontTexture = 0;
 void ImGui_ImplGlfw_RenderDrawLists(ImDrawData* draw_data)
 {
     // We are using the OpenGL fixed pipeline to make the example code simpler to read!
-    // A probable faster way to render would be to collate all vertices from all cmd_lists into a single vertex buffer.
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
     GLint last_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
@@ -143,12 +142,12 @@ bool ImGui_ImplGlfw_CreateDeviceObjects()
 {
     ImGuiIO& io = ImGui::GetIO();
 
-    // Build texture
+    // Build texture atlas
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
 
-    // Create texture
+    // Create OpenGL texture
     GLint last_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glGenTextures(1, &g_FontTexture);

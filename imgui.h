@@ -3,7 +3,7 @@
 
 // See imgui.cpp file for documentation.
 // See ImGui::ShowTestWindow() in imgui_demo.cpp for demo code.
-// Read 'Programmer guide' in .cpp for notes on how to setup ImGui in your codebase.
+// Read 'Programmer guide' in imgui.cpp for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
 
 #pragma once
