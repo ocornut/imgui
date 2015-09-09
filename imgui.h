@@ -487,6 +487,7 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_CtrlEnterForNewLine = 1 << 11,  // In multi-line mode, allow exiting edition by pressing Enter. Ctrl+Enter to add new line (by default adds new lines with Enter).
     ImGuiInputTextFlags_NoHorizontalScroll  = 1 << 12,  // Disable following the cursor horizontally
     ImGuiInputTextFlags_AlwaysInsertMode    = 1 << 13,  // Insert mode
+    ImGuiInputTextFlags_ReadOnly            = 1 << 14,  // Read-only mode
     // [Internal]
     ImGuiInputTextFlags_Multiline           = 1 << 20   // For internal use by InputTextMultiline()
 };
@@ -939,6 +940,7 @@ struct ImGuiTextEditCallbackData
     ImGuiInputTextFlags EventFlag;      // One of ImGuiInputTextFlags_Callback* // Read-only
     ImGuiInputTextFlags Flags;          // What user passed to InputText()      // Read-only
     void*               UserData;       // What user passed to InputText()      // Read-only
+    bool                ReadOnly;       // Read-only mode                       // Read-only
 
     // CharFilter event:
     ImWchar             EventChar;      // Character input                      // Read-write (replace character or set to zero)
