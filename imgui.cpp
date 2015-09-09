@@ -2380,7 +2380,7 @@ void ImGui::Render()
 
         // Setup draw data
         g.RenderDrawData.Valid = true;
-        g.RenderDrawData.CmdLists = &g.RenderDrawLists[0][0];
+        g.RenderDrawData.CmdLists = (g.RenderDrawLists[0].Size > 0) ? &g.RenderDrawLists[0][0] : NULL;
         g.RenderDrawData.CmdListsCount = g.RenderDrawLists[0].Size;
         g.RenderDrawData.TotalVtxCount = g.IO.MetricsRenderVertices;
         g.RenderDrawData.TotalIdxCount = g.IO.MetricsRenderIndices;
