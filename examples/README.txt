@@ -14,9 +14,12 @@ ImGui is highly portable and only requires a few things to run:
  - Optional: clipboard support, mouse cursor supports, Windows IME support, etc.
 So this is essentially what those examples are doing + the obligatory cruft for portability.
 
-Unfortunately in 2015 it is still a massive pain to create and maintain portable build files using
-external library like the ones we're using here to provide 3D rendering.
-For most examples here I choose to provide Visual Studio 10 .sln files and Makefile for Linux/OSX. 
+Unfortunately in 2015 it is still tedious to create and maintain portable build files using external 
+libraries (the kind we're using here to create a window and render 3D triangles) without relying on 
+third party software. For most examples here I choose to provide:
+ - Makefiles for Linux/OSX
+ - Batch files for Visual Studio 2008+
+ - A .sln project file for Visual Studio 2010+ 
 Please let me know if they don't work with your setup!
 You can probably just import the imgui_impl_xxx.cpp/.h files into your own codebase or compile those
 directly with a command-line compiler.
