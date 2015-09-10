@@ -65,7 +65,7 @@ namespace ImGuiStb
 // Context
 //-----------------------------------------------------------------------------
 
-extern ImGuiState*  GImGui;
+extern IMGUI_API ImGuiState*  GImGui;
 
 //-----------------------------------------------------------------------------
 // Helpers
@@ -75,28 +75,28 @@ extern ImGuiState*  GImGui;
 #define IM_PI                   3.14159265358979323846f
 
 // Helpers: UTF-8 <> wchar
-int                 ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
-int                 ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
-int                 ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_remaining = NULL);   // return input UTF-8 bytes count
-int                 ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
-int                 ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string as UTF-8 code-points
+IMGUI_API int           ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
+IMGUI_API int           ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
+IMGUI_API int           ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_remaining = NULL);   // return input UTF-8 bytes count
+IMGUI_API int           ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
+IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string as UTF-8 code-points
 
 // Helpers: Misc
-ImU32               ImHash(const void* data, int data_size, ImU32 seed = 0);    // Pass data_size==0 for zero-terminated strings
-bool                ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, int* out_file_size = NULL, int padding_bytes = 0);
-bool                ImIsPointInTriangle(const ImVec2& p, const ImVec2& a, const ImVec2& b, const ImVec2& c);
-static inline bool  ImCharIsSpace(int c)            { return c == ' ' || c == '\t' || c == 0x3000; }
-static inline int   ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
+IMGUI_API ImU32         ImHash(const void* data, int data_size, ImU32 seed = 0);    // Pass data_size==0 for zero-terminated strings
+IMGUI_API bool          ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, int* out_file_size = NULL, int padding_bytes = 0);
+IMGUI_API bool          ImIsPointInTriangle(const ImVec2& p, const ImVec2& a, const ImVec2& b, const ImVec2& c);
+static inline bool      ImCharIsSpace(int c)            { return c == ' ' || c == '\t' || c == 0x3000; }
+static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 
 // Helpers: String
-int                 ImStricmp(const char* str1, const char* str2);
-int                 ImStrnicmp(const char* str1, const char* str2, int count);
-char*               ImStrdup(const char* str);
-int                 ImStrlenW(const ImWchar* str);
-const ImWchar*      ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin); // Find beginning-of-line
-const char*         ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end);
-int                 ImFormatString(char* buf, int buf_size, const char* fmt, ...) IM_PRINTFARGS(3);
-int                 ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args);
+IMGUI_API int           ImStricmp(const char* str1, const char* str2);
+IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, int count);
+IMGUI_API char*         ImStrdup(const char* str);
+IMGUI_API int           ImStrlenW(const ImWchar* str);
+IMGUI_API const ImWchar*ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin); // Find beginning-of-line
+IMGUI_API const char*   ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end);
+IMGUI_API int           ImFormatString(char* buf, int buf_size, const char* fmt, ...) IM_PRINTFARGS(3);
+IMGUI_API int           ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args);
 
 // Helpers: Math
 // We are keeping those not leaking to the user by default, in the case the user has implicit cast operators between ImVec2 and its own types (when IM_VEC2_CLASS_EXTRA is defined)
@@ -182,7 +182,7 @@ enum ImGuiDataType
 
 // 2D axis aligned bounding-box
 // NB: we can't rely on ImVec2 math operators being available here
-struct ImRect
+struct IMGUI_API ImRect
 {
     ImVec2          Min;    // Upper-left
     ImVec2          Max;    // Lower-right
@@ -249,21 +249,21 @@ struct ImGuiGroupData
 };
 
 // Simple column measurement currently used for MenuItem() only. This is very short-sighted for now and not a generic helper.
-struct ImGuiSimpleColumns
+struct IMGUI_API ImGuiSimpleColumns
 {
-    int             Count;
-    float           Spacing;
-    float           Width, NextWidth;
-    float           Pos[8], NextWidths[8];
+    int                 Count;
+    float               Spacing;
+    float               Width, NextWidth;
+    float               Pos[8], NextWidths[8];
 
     ImGuiSimpleColumns();
-    void            Update(int count, float spacing, bool clear);
-    float           DeclColumns(float w0, float w1, float w2);
-    float           CalcExtraSpace(float avail_w);
+    void                Update(int count, float spacing, bool clear);
+    float               DeclColumns(float w0, float w1, float w2);
+    float               CalcExtraSpace(float avail_w);
 };
 
 // Internal state of the currently focused/edited text input box
-struct ImGuiTextEditState
+struct IMGUI_API ImGuiTextEditState
 {
     ImGuiID             Id;                             // widget id owning the text state
     ImVector<ImWchar>   Text;                           // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
@@ -552,7 +552,7 @@ struct ImGuiDrawContext
 };
 
 // Windows data
-struct ImGuiWindow
+struct IMGUI_API ImGuiWindow
 {
     char*                   Name;
     ImGuiID                 ID;
