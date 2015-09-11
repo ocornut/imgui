@@ -7093,6 +7093,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // Start edition
             // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
             // From the moment we focused we are ignoring the content of 'buf'
+            const int prev_len_w = edit_state.CurLenW;
             edit_state.Text.resize(buf_size);        // wchar count <= utf-8 count
             edit_state.InitialText.resize(buf_size); // utf-8
             ImFormatString(edit_state.InitialText.Data, edit_state.InitialText.Size, "%s", buf);
@@ -7102,21 +7103,24 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             edit_state.InputCursorScreenPos = ImVec2(-1.f, -1.f);
             edit_state.CursorAnimReset();
 
-            if (edit_state.Id != id)
-            {
-                edit_state.Id = id;
-                edit_state.ScrollX = 0.f;
-                stb_textedit_initialize_state(&edit_state.StbState, !is_multiline);
-                if (!is_multiline && focus_requested_by_code)
-                    select_all = true;
-            }
-            else
+            // Preserve cursor position and undo/redo stack if we come back to same widget
+            // FIXME: We should probably compare the whole buffer to be on the safety side. Comparing buf (utf8) and edit_state.Text (wchar).
+            const bool recycle_state = (edit_state.Id == id) && (prev_len_w == edit_state.CurLenW);
+            if (recycle_state)
             {
                 // Recycle existing cursor/selection/undo stack but clamp position
                 // Note a single mouse click will override the cursor/position immediately by calling stb_textedit_click handler.
                 edit_state.StbState.cursor = ImMin(edit_state.StbState.cursor, edit_state.CurLenW);
                 edit_state.StbState.select_start = ImMin(edit_state.StbState.select_start, edit_state.CurLenW);
                 edit_state.StbState.select_end = ImMin(edit_state.StbState.select_end, edit_state.CurLenW);
+            }
+            else
+            {
+                edit_state.Id = id;
+                edit_state.ScrollX = 0.f;
+                stb_textedit_initialize_state(&edit_state.StbState, !is_multiline);
+                if (!is_multiline && focus_requested_by_code)
+                    select_all = true;
             }
             if (flags & ImGuiInputTextFlags_AlwaysInsertMode)
                 edit_state.StbState.insert_mode = true;
@@ -7218,8 +7222,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 edit_state.OnKeyPressed((int)c);
         }
         else if (IsKeyPressedMap(ImGuiKey_Escape))                              { SetActiveID(0); cancel_edit = true; }
-        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
-        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
+        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
+        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_A))                   { edit_state.SelectAll(); edit_state.CursorFollow = true; }
         else if (is_ctrl_only && ((IsKeyPressedMap(ImGuiKey_X) && is_editable) || IsKeyPressedMap(ImGuiKey_C)) && (!is_multiline || edit_state.HasSelection()))
         {
