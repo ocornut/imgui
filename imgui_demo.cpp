@@ -206,9 +206,8 @@ void ImGui::ShowTestWindow(bool* opened)
         {
             ImGui::TextWrapped("Tip: Load fonts with io.Fonts->AddFontFromFileTTF().");
             ImFontAtlas* atlas = ImGui::GetIO().Fonts;
-            if (ImGui::TreeNode("Atlas texture"))
+            if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
             {
-                ImGui::Text("%dx%d pixels", atlas->TexWidth, atlas->TexHeight);
                 ImGui::Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0,0), ImVec2(1,1), ImColor(255,255,255,255), ImColor(255,255,255,128));
                 ImGui::TreePop();
             }

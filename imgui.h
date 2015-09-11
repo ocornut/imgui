@@ -1230,8 +1230,9 @@ struct ImFontAtlas
     void*                       TexID;              // User data to refer to the texture once it has been uploaded to user's graphic systems. It ia passed back to you during rendering.
     unsigned char*              TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
     unsigned int*               TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
-    int                         TexWidth;
-    int                         TexHeight;
+    int                         TexWidth;           // Texture width calculated during Build().
+    int                         TexHeight;          // Texture height calculated during Build().
+    int                         TexDesiredWidth;    // Texture width desired by user before Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height.
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel (part of the TexExtraData block)
     ImVector<ImFont*>           Fonts;
 

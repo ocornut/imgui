@@ -954,7 +954,7 @@ ImFontAtlas::ImFontAtlas()
     TexID = NULL;
     TexPixelsAlpha8 = NULL;
     TexPixelsRGBA32 = NULL;
-    TexWidth = TexHeight = 0;
+    TexWidth = TexHeight = TexDesiredWidth = 0;
     TexUvWhitePixel = ImVec2(0, 0);
 }
 
@@ -1195,7 +1195,7 @@ bool    ImFontAtlas::Build()
     }
 
     // Start packing
-    TexWidth = (total_glyph_count > 1000) ? 1024 : 512;  // Width doesn't actually matters.
+    TexWidth = (TexDesiredWidth > 0) ? TexDesiredWidth : (total_glyph_count > 2000) ? 2048 : (total_glyph_count > 1000) ? 1024 : 512;  // Width doesn't actually matters much but some API/GPU have texture size limitations, and increasing width can decrease height.
     TexHeight = 0;
     const int max_tex_height = 1024*32;
     stbtt_pack_context spc;
