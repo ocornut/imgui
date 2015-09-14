@@ -426,11 +426,12 @@
  - popup: border options. richer api like BeginChild() perhaps? (#197)
  - combo: sparse combo boxes (via function call?)
  - combo: contents should extends to fit label if combo widget is small
- - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keybord for custom listbox (pr #203)
+ - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
  - listbox: multiple selection
  - listbox: user may want to initial scroll to focus on the one selected value?
  - listbox: keyboard navigation.
  - listbox: scrolling should track modified selection.
+ ! menus/popups: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331)
  - menus: local shortcuts, global shortcuts (#126)
  - menus: icons
  - menus: menubars: some sort of priority / effect of main menu-bar on desktop size?
@@ -1303,14 +1304,16 @@ ImGuiTextFilter::ImGuiTextFilter(const char* default_filter)
     }
 }
 
-void ImGuiTextFilter::Draw(const char* label, float width)
+bool ImGuiTextFilter::Draw(const char* label, float width)
 {
     if (width != 0.0f)
         ImGui::PushItemWidth(width);
-    ImGui::InputText(label, InputBuf, IM_ARRAYSIZE(InputBuf));
+    bool value_changed = ImGui::InputText(label, InputBuf, IM_ARRAYSIZE(InputBuf));
     if (width != 0.0f)
         ImGui::PopItemWidth();
-    Build();
+    if (value_changed)
+        Build();
+    return value_changed;
 }
 
 void ImGuiTextFilter::TextRange::split(char separator, ImVector<TextRange>& out)

@@ -868,7 +868,7 @@ struct ImGuiTextFilter
 
     ImGuiTextFilter(const char* default_filter = "");
     void Clear() { InputBuf[0] = 0; Build(); }
-    void Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
+    bool Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
     bool PassFilter(const char* text, const char* text_end = NULL) const;
     bool IsActive() const { return !Filters.empty(); }
     IMGUI_API void Build();
