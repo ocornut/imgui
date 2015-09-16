@@ -7177,7 +7177,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (g.IO.InputCharacters[0])
         {
             // Process text input (before we check for Return because using some IME will effectively send a Return?)
-            if (!is_ctrl_down && !is_alt_down && is_editable)
+            if (!is_ctrl_down && is_editable)
             {
                 for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
                     if (unsigned int c = (unsigned int)g.IO.InputCharacters[n])
