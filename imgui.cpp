@@ -2262,68 +2262,76 @@ static void PopClipRect()
     window->ClipRect = window->DrawList->_ClipRectStack.back();
 }
 
+// This is normally called by Render(). You may want to call it directly if you want to avoid calling Render() but the gain will be very minimal.
+void ImGui::EndFrame()
+{
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
+    IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // ImGui::EndFrame() called multiple times, or forgot to call ImGui::NewFrame() again
+
+    g.FrameCountEnded = g.FrameCount;
+
+    // Hide implicit "Debug" window if it hasn't been used
+    IM_ASSERT(g.CurrentWindowStack.Size == 1);    // Mismatched Begin/End
+    if (g.CurrentWindow && !g.CurrentWindow->Accessed)
+        g.CurrentWindow->Active = false;
+    ImGui::End();
+
+    // Click to focus window and start moving (after we're done with all our widgets)
+    if (!g.ActiveId)
+        g.MovedWindow = NULL;
+    if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
+    {
+        if (!(g.FocusedWindow && !g.FocusedWindow->WasActive && g.FocusedWindow->Active)) // Unless we just made a popup appear
+        {
+            if (g.HoveredRootWindow != NULL)
+            {
+                FocusWindow(g.HoveredWindow);
+                if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
+                {
+                    g.MovedWindow = g.HoveredWindow;
+                    SetActiveID(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
+                }
+            }
+            else if (g.FocusedWindow != NULL && GetFrontMostModalRootWindow() == NULL)
+            {
+                // Clicking on void disable focus
+                FocusWindow(NULL);
+            }
+        }
+    }
+
+    // Sort the window list so that all child windows are after their parent
+    // We cannot do that on FocusWindow() because childs may not exist yet
+    g.WindowsSortBuffer.resize(0);
+    g.WindowsSortBuffer.reserve(g.Windows.Size);
+    for (int i = 0; i != g.Windows.Size; i++)
+    {
+        ImGuiWindow* window = g.Windows[i];
+        if (window->Flags & ImGuiWindowFlags_ChildWindow)       // if a child is active its parent will add it
+            if (window->Active)
+                continue;
+        AddWindowToSortedBuffer(g.WindowsSortBuffer, window);
+    }
+    IM_ASSERT(g.Windows.Size == g.WindowsSortBuffer.Size);  // we done something wrong
+    g.Windows.swap(g.WindowsSortBuffer);
+
+    // Clear Input data for next frame
+    g.IO.MouseWheel = 0.0f;
+    memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
+}
+
 void ImGui::Render()
 {
     ImGuiState& g = *GImGui;
-    IM_ASSERT(g.Initialized);                           // Forgot to call ImGui::NewFrame()
+    IM_ASSERT(g.Initialized);   // Forgot to call ImGui::NewFrame()
 
-    const bool first_render_of_the_frame = (g.FrameCountRendered != g.FrameCount);
+    if (g.FrameCountEnded != g.FrameCount)
+        ImGui::EndFrame();
     g.FrameCountRendered = g.FrameCount;
 
-    if (first_render_of_the_frame)
-    {
-        // Hide implicit "Debug" window if it hasn't been used
-        IM_ASSERT(g.CurrentWindowStack.Size == 1);    // Mismatched Begin/End
-        if (g.CurrentWindow && !g.CurrentWindow->Accessed)
-            g.CurrentWindow->Active = false;
-        ImGui::End();
-
-        // Click to focus window and start moving (after we're done with all our widgets)
-        if (!g.ActiveId)
-            g.MovedWindow = NULL;
-        if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
-        {
-            if (!(g.FocusedWindow && !g.FocusedWindow->WasActive && g.FocusedWindow->Active)) // Unless we just made a popup appear
-            {
-                if (g.HoveredRootWindow != NULL)
-                {
-                    FocusWindow(g.HoveredWindow);
-                    if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
-                    {
-                        g.MovedWindow = g.HoveredWindow;
-                        SetActiveID(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
-                    }
-                }
-                else if (g.FocusedWindow != NULL && GetFrontMostModalRootWindow() == NULL)
-                {
-                    // Clicking on void disable focus
-                    FocusWindow(NULL);
-                }
-            }
-        }
-
-        // Sort the window list so that all child windows are after their parent
-        // We cannot do that on FocusWindow() because childs may not exist yet
-        g.WindowsSortBuffer.resize(0);
-        g.WindowsSortBuffer.reserve(g.Windows.Size);
-        for (int i = 0; i != g.Windows.Size; i++)
-        {
-            ImGuiWindow* window = g.Windows[i];
-            if (window->Flags & ImGuiWindowFlags_ChildWindow)       // if a child is active its parent will add it
-                if (window->Active)
-                    continue;
-            AddWindowToSortedBuffer(g.WindowsSortBuffer, window);
-        }
-        IM_ASSERT(g.Windows.Size == g.WindowsSortBuffer.Size);  // we done something wrong
-        g.Windows.swap(g.WindowsSortBuffer);
-
-        // Clear Input data for next frame
-        g.IO.MouseWheel = 0.0f;
-        memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
-    }
-
     // Skip render altogether if alpha is 0.0
-    // Note that vertex buffers have been created and are wasted, so it is best practice that you don't create windows in the first place, or respond to Begin() returning false.
+    // Note that vertex buffers have been created and are wasted, so it is best practice that you don't create windows in the first place, or consistently respond to Begin() returning false.
     if (g.Style.Alpha > 0.0f)
     {
         // Render tooltip
@@ -2363,13 +2371,13 @@ void ImGui::Render()
         for (int i = 1; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
         {
             ImVector<ImDrawList*>& layer = g.RenderDrawLists[i];
-            if (!layer.empty())
-            {
-                memcpy(&g.RenderDrawLists[0][n], &layer[0], layer.Size * sizeof(ImDrawList*));
-                n += layer.Size;
-            }
+            if (layer.empty())
+                continue;
+            memcpy(&g.RenderDrawLists[0][n], &layer[0], layer.Size * sizeof(ImDrawList*));
+            n += layer.Size;
         }
 
+        // Draw software mouse cursor if requested
         if (g.IO.MouseDrawCursor)
         {
             const ImGuiMouseCursorData& cursor_data = g.MouseCursorData[g.MouseCursor];
@@ -2395,9 +2403,7 @@ void ImGui::Render()
 
         // Render. If user hasn't set a callback then they may retrieve the draw data via GetDrawData()
         if (g.RenderDrawData.CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
-        {
             g.IO.RenderDrawListsFn(&g.RenderDrawData);
-        }
     }
 }
 
@@ -3433,8 +3439,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 {
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
+    IM_ASSERT(name != NULL);                        // Window name required
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
-    IM_ASSERT(name != NULL);                        // Must pass a name
+    IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // Called ImGui::Render() or ImGui::EndFrame() and haven't called ImGui::NewFrame() again yet
 
     if (flags & ImGuiWindowFlags_NoInputs)
         flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;

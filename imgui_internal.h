@@ -331,6 +331,7 @@ struct ImGuiState
 
     float                   Time;
     int                     FrameCount;
+    int                     FrameCountEnded;
     int                     FrameCountRendered;
     ImVector<ImGuiWindow*>  Windows;
     ImVector<ImGuiWindow*>  WindowsSortBuffer;
@@ -416,7 +417,7 @@ struct ImGuiState
 
         Time = 0.0f;
         FrameCount = 0;
-        FrameCountRendered = -1;
+        FrameCountEnded = FrameCountRendered = -1;
         CurrentWindow = NULL;
         FocusedWindow = NULL;
         HoveredWindow = NULL;
@@ -631,13 +632,19 @@ public:
 
 namespace ImGui
 {
-    inline    ImGuiWindow*  GetCurrentWindowRead()      { ImGuiState& g = *GImGui; return g.CurrentWindow; }        // If this ever crash it means that ImGui::NewFrame() has never been called (which is illegal). We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
+    // We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
+    // If this ever crash because g.CurrentWindow is NULL it means that either
+    // - ImGui::NewFrame() has never been called, which is illegal.
+    // - You are calling ImGui functions after ImGui::Render() and before the next ImGui::NewFrame(), which is also illegal.
+    inline    ImGuiWindow*  GetCurrentWindowRead()      { ImGuiState& g = *GImGui; return g.CurrentWindow; }
     inline    ImGuiWindow*  GetCurrentWindow()          { ImGuiState& g = *GImGui; g.CurrentWindow->Accessed = true; return g.CurrentWindow; }
     IMGUI_API ImGuiWindow*  GetParentWindow();
     IMGUI_API void          FocusWindow(ImGuiWindow* window);
 
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          KeepAliveID(ImGuiID id);
+
+    IMGUI_API void          EndFrame();                 // This automatically called by Render()
 
     IMGUI_API void          ItemSize(const ImVec2& size, float text_offset_y = 0.0f);
     IMGUI_API void          ItemSize(const ImRect& bb, float text_offset_y = 0.0f);
