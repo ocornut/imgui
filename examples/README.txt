@@ -52,3 +52,8 @@ sdl_opengl_example/
 
 allegro5_example/
     Allegro 5 example.
+
+sdl_emscripten_example/
+    SDL2 + OpenGL ES 2 (WebGL compatible) + Emscripten example.
+    Main event loop is different in Emscripten.
+    OpenGL ES 2 differs slightly from opengl3_example/ code
