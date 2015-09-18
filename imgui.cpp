@@ -2269,7 +2269,13 @@ void ImGui::EndFrame()
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // ImGui::EndFrame() called multiple times, or forgot to call ImGui::NewFrame() again
 
-    g.FrameCountEnded = g.FrameCount;
+    // Render tooltip
+    if (g.Tooltip[0])
+    {
+        ImGui::BeginTooltip();
+        ImGui::TextUnformatted(g.Tooltip);
+        ImGui::EndTooltip();
+    }
 
     // Hide implicit "Debug" window if it hasn't been used
     IM_ASSERT(g.CurrentWindowStack.Size == 1);    // Mismatched Begin/End
@@ -2319,6 +2325,8 @@ void ImGui::EndFrame()
     // Clear Input data for next frame
     g.IO.MouseWheel = 0.0f;
     memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
+
+    g.FrameCountEnded = g.FrameCount;
 }
 
 void ImGui::Render()
@@ -2334,14 +2342,6 @@ void ImGui::Render()
     // Note that vertex buffers have been created and are wasted, so it is best practice that you don't create windows in the first place, or consistently respond to Begin() returning false.
     if (g.Style.Alpha > 0.0f)
     {
-        // Render tooltip
-        if (g.Tooltip[0])
-        {
-            ImGui::BeginTooltip();
-            ImGui::TextUnformatted(g.Tooltip);
-            ImGui::EndTooltip();
-        }
-
         // Gather windows to render
         g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
         for (int i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
