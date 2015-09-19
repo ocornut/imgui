@@ -7127,7 +7127,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             else
             {
                 edit_state.Id = id;
-                edit_state.ScrollX = 0.f;
+                edit_state.ScrollX = 0.0f;
                 stb_textedit_initialize_state(&edit_state.StbState, !is_multiline);
                 if (!is_multiline && focus_requested_by_code)
                     select_all = true;
@@ -7447,9 +7447,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             {
                 const float scroll_increment_x = size.x * 0.25f;
                 if (cursor_offset.x < edit_state.ScrollX)
-                    edit_state.ScrollX = ImMax(0.0f, cursor_offset.x - scroll_increment_x);
+                    edit_state.ScrollX = (float)(int)ImMax(0.0f, cursor_offset.x - scroll_increment_x);
                 else if (cursor_offset.x - size.x >= edit_state.ScrollX)
-                    edit_state.ScrollX = cursor_offset.x - size.x + scroll_increment_x;
+                    edit_state.ScrollX = (float)(int)(cursor_offset.x - size.x + scroll_increment_x);
             }
             else
             {
