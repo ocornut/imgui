@@ -7177,6 +7177,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         {
             stb_textedit_drag(&edit_state, &edit_state.StbState, mouse_x, mouse_y);
             edit_state.CursorAnimReset();
+            edit_state.CursorFollow = true;
         }
         if (edit_state.SelectedAllMouseLock && !io.MouseDown[0])
             edit_state.SelectedAllMouseLock = false;
