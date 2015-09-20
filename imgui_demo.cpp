@@ -684,13 +684,29 @@ void ImGui::ShowTestWindow(bool* opened)
                 phase += 0.10f*values_offset;
             }
         }
-        ImGui::PlotLines("##Graph", values.Data, values.Size, values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
+        ImGui::PlotLines("##Lines", values.Data, values.Size, values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
         ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
         ImGui::BeginGroup();
-        ImGui::Text("Graph");
+        ImGui::Text("Lines");
         ImGui::Checkbox("pause", &pause);
         ImGui::EndGroup();
         ImGui::PlotHistogram("Histogram", arr, IM_ARRAYSIZE(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0,80));
+
+        // Use functions to generate output
+        // FIXME: This is rather awkward because current plot API only pass in indices. We probably want an API passing floats and user provide sample rate/count.
+        struct Funcs
+        {
+            static float Sin(void*, int i) { return sinf(i * 0.1f); }
+            static float Saw(void*, int i) { return (i & 1) ? 1.0f : 0.0f; }
+        };
+        static int func_type = 0, display_count = 70;
+        ImGui::Separator();
+        ImGui::PushItemWidth(100); ImGui::Combo("func", &func_type, "Sin\0Saw\0"); ImGui::PopItemWidth();
+        ImGui::SameLine();
+        ImGui::SliderInt("Sample count", &display_count, 1, 500);
+        float (*func)(void*, int) = (func_type == 0) ? Funcs::Sin : Funcs::Saw;
+        ImGui::PlotLines("Lines", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0,80));
+        ImGui::PlotHistogram("Histogram", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0,80));
     }
 
     if (ImGui::CollapsingHeader("Layout"))
