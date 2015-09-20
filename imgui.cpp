@@ -6604,7 +6604,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
 
     float v0 = values_getter(data, (0 + values_offset) % values_count);
     float t0 = 0.0f;
-    ImVec2 p0 = ImVec2( t0, 1.0f - ImSaturate((v0 - scale_min) / (scale_max - scale_min)) );
+    ImVec2 tp0 = ImVec2( t0, 1.0f - ImSaturate((v0 - scale_min) / (scale_max - scale_min)) );    // Point in the normalized space of our target rectangle
 
     const ImU32 col_base = window->Color((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLines : ImGuiCol_PlotHistogram);
     const ImU32 col_hovered = window->Color((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLinesHovered : ImGuiCol_PlotHistogramHovered);
@@ -6612,19 +6612,27 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
     for (int n = 0; n < res_w; n++)
     {
         const float t1 = t0 + t_step;
-        const int v_idx = (int)(t0 * item_count + 0.5f);
-        IM_ASSERT(v_idx >= 0 && v_idx < values_count);
-        const float v1 = values_getter(data, (v_idx + values_offset + 1) % values_count);
-        const ImVec2 p1 = ImVec2( t1, 1.0f - ImSaturate((v1 - scale_min) / (scale_max - scale_min)) );
+        const int v1_idx = (int)(t0 * item_count + 0.5f);
+        IM_ASSERT(v1_idx >= 0 && v1_idx < values_count);
+        const float v1 = values_getter(data, (v1_idx + values_offset + 1) % values_count);
+        const ImVec2 tp1 = ImVec2( t1, 1.0f - ImSaturate((v1 - scale_min) / (scale_max - scale_min)) );
 
-        // NB- Draw calls are merged together by the DrawList system.
+        // NB: Draw calls are merged together by the DrawList system. Still, we should render our batch are lower level to save a bit of CPU.
+        ImVec2 pos0 = ImLerp(inner_bb.Min, inner_bb.Max, tp0);
+        ImVec2 pos1 = ImLerp(inner_bb.Min, inner_bb.Max, (plot_type == ImGuiPlotType_Lines) ? tp1 : ImVec2(tp1.x, 1.0f));
         if (plot_type == ImGuiPlotType_Lines)
-            window->DrawList->AddLine(ImLerp(inner_bb.Min, inner_bb.Max, p0), ImLerp(inner_bb.Min, inner_bb.Max, p1), v_hovered == v_idx ? col_hovered : col_base);
+        {
+            window->DrawList->AddLine(pos0, pos1, v_hovered == v1_idx ? col_hovered : col_base);
+        }
         else if (plot_type == ImGuiPlotType_Histogram)
-            window->DrawList->AddRectFilled(ImLerp(inner_bb.Min, inner_bb.Max, p0), ImLerp(inner_bb.Min, inner_bb.Max, ImVec2(p1.x, 1.0f))+ImVec2(-1,0), v_hovered == v_idx ? col_hovered : col_base);
+        {
+            if (pos1.x >= pos0.x + 2.0f)
+                pos1.x -= 1.0f;
+            window->DrawList->AddRectFilled(pos0, pos1, v_hovered == v1_idx ? col_hovered : col_base);
+        }
 
         t0 = t1;
-        p0 = p1;
+        tp0 = tp1;
     }
 
     // Text overlay
