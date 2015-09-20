@@ -6613,7 +6613,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
     for (int n = 0; n < res_w; n++)
     {
         const float t1 = t0 + t_step;
-        const int v_idx = (int)(t0 * values_count);
+        const int v_idx = (int)(t0 * values_count + 0.5f);
         IM_ASSERT(v_idx >= 0 && v_idx < values_count);
         const float v1 = values_getter(data, (v_idx + values_offset + 1) % values_count);
         const ImVec2 p1 = ImVec2( t1, 1.0f - ImSaturate((v1 - scale_min) / (scale_max - scale_min)) );
