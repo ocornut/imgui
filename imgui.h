@@ -867,11 +867,11 @@ struct ImGuiTextFilter
     int                 CountGrep;
 
     ImGuiTextFilter(const char* default_filter = "");
-    void Clear() { InputBuf[0] = 0; Build(); }
-    bool Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
-    bool PassFilter(const char* text, const char* text_end = NULL) const;
-    bool IsActive() const { return !Filters.empty(); }
-    IMGUI_API void Build();
+    void                Clear() { InputBuf[0] = 0; Build(); }
+    bool                Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
+    bool                PassFilter(const char* text, const char* text_end = NULL) const;
+    bool                IsActive() const { return !Filters.empty(); }
+    IMGUI_API void      Build();
 };
 
 // Helper: Text buffer for logging/accumulating text
@@ -955,9 +955,9 @@ struct ImGuiTextEditCallbackData
     int                 SelectionEnd;   //                                      // Read-write
 
     // NB: calling those function loses selection.
-    void DeleteChars(int pos, int bytes_count);
-    void InsertChars(int pos, const char* text, const char* text_end = NULL);
-    bool HasSelection() const { return SelectionStart != SelectionEnd; }
+    void    DeleteChars(int pos, int bytes_count);
+    void    InsertChars(int pos, const char* text, const char* text_end = NULL);
+    bool    HasSelection() const { return SelectionStart != SelectionEnd; }
 };
 
 // ImColor() is just a helper that implicity converts to either ImU32 (packed 4x1 byte) or ImVec4 (4x1 float)
