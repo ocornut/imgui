@@ -14,6 +14,11 @@
 #include <stdio.h>      // FILE*
 #include <math.h>       // sqrtf()
 
+#ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4251) // class 'xxx' needs to have dll-interface to be used by clients of struct 'xxx' // when IMGUI_API is set to__declspec(dllexport)
+#endif
+
 //-----------------------------------------------------------------------------
 // Forward Declarations
 //-----------------------------------------------------------------------------
@@ -474,7 +479,7 @@ struct ImGuiState
 
 // Transient per-window data, reset at the beginning of the frame
 // FIXME: That's theory, in practice the delimitation between ImGuiWindow and ImGuiDrawContext is quite tenuous and could be reconsidered.
-struct ImGuiDrawContext
+struct IMGUI_API ImGuiDrawContext
 {
     ImVec2                  CursorPos;
     ImVec2                  CursorPosPrevLine;
@@ -690,3 +695,6 @@ namespace ImGui
 
 } // namespace ImGuiP
 
+#ifdef _MSC_VER
+#pragma warning (pop)
+#endif
