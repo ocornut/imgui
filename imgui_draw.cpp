@@ -1458,6 +1458,18 @@ const ImWchar*   ImFontAtlas::GetGlyphRangesDefault()
     return &ranges[0];
 }
 
+const ImWchar*  ImFontAtlas::GetGlyphRangesKorean()
+{
+    static const ImWchar ranges[] =
+    {
+        0x0020, 0x00FF, // Basic Latin + Latin Supplement
+        0x3131, 0x3163, // Korean alphabets
+        0xAC00, 0xD79D, // Korean characters
+        0,
+    };
+    return &ranges[0];
+}
+
 const ImWchar*  ImFontAtlas::GetGlyphRangesChinese()
 {
     static const ImWchar ranges[] =

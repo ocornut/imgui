@@ -1221,6 +1221,7 @@ struct ImFontAtlas
     // Helpers to retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
     // (Those functions could be static but aren't so most users don't have to refer to the ImFontAtlas:: name ever if in their code; just using io.Fonts->)
     IMGUI_API const ImWchar*    GetGlyphRangesDefault();    // Basic Latin, Extended Latin
+    IMGUI_API const ImWchar*    GetGlyphRangesKorean();     // Default + Korean characters
     IMGUI_API const ImWchar*    GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
     IMGUI_API const ImWchar*    GetGlyphRangesChinese();    // Japanese + full set of about 21000 CJK Unified Ideographs
     IMGUI_API const ImWchar*    GetGlyphRangesCyrillic();   // Default + about 400 Cyrillic characters
