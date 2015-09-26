@@ -14,6 +14,11 @@
 #include <stdio.h>      // FILE*
 #include <math.h>       // sqrtf()
 
+#ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4251) // class 'xxx' needs to have dll-interface to be used by clients of struct 'xxx' // when IMGUI_API is set to__declspec(dllexport)
+#endif
+
 //-----------------------------------------------------------------------------
 // Forward Declarations
 //-----------------------------------------------------------------------------
@@ -83,7 +88,7 @@ IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, cons
 
 // Helpers: Misc
 IMGUI_API ImU32         ImHash(const void* data, int data_size, ImU32 seed = 0);    // Pass data_size==0 for zero-terminated strings
-IMGUI_API bool          ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, int* out_file_size = NULL, int padding_bytes = 0);
+IMGUI_API void*         ImLoadFileToMemory(const char* filename, const char* file_open_mode, int* out_file_size = NULL, int padding_bytes = 0);
 IMGUI_API bool          ImIsPointInTriangle(const ImVec2& p, const ImVec2& a, const ImVec2& b, const ImVec2& c);
 static inline bool      ImCharIsSpace(int c)            { return c == ' ' || c == '\t' || c == 0x3000; }
 static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
@@ -331,6 +336,7 @@ struct ImGuiState
 
     float                   Time;
     int                     FrameCount;
+    int                     FrameCountEnded;
     int                     FrameCountRendered;
     ImVector<ImGuiWindow*>  Windows;
     ImVector<ImGuiWindow*>  WindowsSortBuffer;
@@ -416,7 +422,7 @@ struct ImGuiState
 
         Time = 0.0f;
         FrameCount = 0;
-        FrameCountRendered = -1;
+        FrameCountEnded = FrameCountRendered = -1;
         CurrentWindow = NULL;
         FocusedWindow = NULL;
         HoveredWindow = NULL;
@@ -473,7 +479,7 @@ struct ImGuiState
 
 // Transient per-window data, reset at the beginning of the frame
 // FIXME: That's theory, in practice the delimitation between ImGuiWindow and ImGuiDrawContext is quite tenuous and could be reconsidered.
-struct ImGuiDrawContext
+struct IMGUI_API ImGuiDrawContext
 {
     ImVec2                  CursorPos;
     ImVec2                  CursorPosPrevLine;
@@ -631,13 +637,19 @@ public:
 
 namespace ImGui
 {
-    inline    ImGuiWindow*  GetCurrentWindowRead()      { ImGuiState& g = *GImGui; return g.CurrentWindow; }        // If this ever crash it means that ImGui::NewFrame() has never been called (which is illegal). We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
+    // We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
+    // If this ever crash because g.CurrentWindow is NULL it means that either
+    // - ImGui::NewFrame() has never been called, which is illegal.
+    // - You are calling ImGui functions after ImGui::Render() and before the next ImGui::NewFrame(), which is also illegal.
+    inline    ImGuiWindow*  GetCurrentWindowRead()      { ImGuiState& g = *GImGui; return g.CurrentWindow; }
     inline    ImGuiWindow*  GetCurrentWindow()          { ImGuiState& g = *GImGui; g.CurrentWindow->Accessed = true; return g.CurrentWindow; }
     IMGUI_API ImGuiWindow*  GetParentWindow();
     IMGUI_API void          FocusWindow(ImGuiWindow* window);
 
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          KeepAliveID(ImGuiID id);
+
+    IMGUI_API void          EndFrame();                 // This automatically called by Render()
 
     IMGUI_API void          ItemSize(const ImVec2& size, float text_offset_y = 0.0f);
     IMGUI_API void          ItemSize(const ImRect& bb, float text_offset_y = 0.0f);
@@ -683,3 +695,6 @@ namespace ImGui
 
 } // namespace ImGuiP
 
+#ifdef _MSC_VER
+#pragma warning (pop)
+#endif

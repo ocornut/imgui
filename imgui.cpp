@@ -19,7 +19,8 @@
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - How do I update to a newer version of ImGui?
    - Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
-   - Why is my text output blurry?
+   - I integrated ImGui in my engine and the text or lines are blurry..
+   - I integrated ImGui in my engine and some elements are disappearing when I move windows around..
    - How can I load a different font than the default?
    - How can I load multiple fonts?
    - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
@@ -336,8 +337,12 @@
       e.g. when displaying a single object that may change over time (1-1 relationship), using a static string as ID will preserve your node open/closed state when the targeted object change.
       e.g. when displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state differently. experiment and see what makes more sense!
 
- Q: Why is my text output blurry?
- A: In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
+ Q: I integrated ImGui in my engine and the text or lines are blurry..
+ A: In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
+    Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
+
+ Q. I integrated ImGui in my engine and some elements are disappearing when I move windows around..
+    Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1,y1,x2,y2) and NOT as (x1,y1,width,height).
 
  Q: How can I load a different font than the default? (default is an embedded version of ProggyClean.ttf, rendered at size 13)
  A: Use the font atlas to load the TTF file you want:
@@ -426,11 +431,12 @@
  - popup: border options. richer api like BeginChild() perhaps? (#197)
  - combo: sparse combo boxes (via function call?)
  - combo: contents should extends to fit label if combo widget is small
- - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keybord for custom listbox (pr #203)
+ - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
  - listbox: multiple selection
  - listbox: user may want to initial scroll to focus on the one selected value?
  - listbox: keyboard navigation.
  - listbox: scrolling should track modified selection.
+ ! menus/popups: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331)
  - menus: local shortcuts, global shortcuts (#126)
  - menus: icons
  - menus: menubars: some sort of priority / effect of main menu-bar on desktop size?
@@ -1122,21 +1128,21 @@ void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float&
 
 // Load file content into memory
 // Memory allocated with ImGui::MemAlloc(), must be freed by user using ImGui::MemFree()
-bool ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, int* out_file_size, int padding_bytes)
+void* ImLoadFileToMemory(const char* filename, const char* file_open_mode, int* out_file_size, int padding_bytes)
 {
-    IM_ASSERT(filename && file_open_mode && out_file_data && out_file_size);
-    *out_file_data = NULL;
-    *out_file_size = 0;
+    IM_ASSERT(filename && file_open_mode);
+    if (out_file_size)
+        *out_file_size = 0;
 
     FILE* f;
     if ((f = fopen(filename, file_open_mode)) == NULL)
-        return false;
+        return NULL;
 
     long file_size_signed;
     if (fseek(f, 0, SEEK_END) || (file_size_signed = ftell(f)) == -1 || fseek(f, 0, SEEK_SET))
     {
         fclose(f);
-        return false;
+        return NULL;
     }
 
     int file_size = (int)file_size_signed;
@@ -1144,23 +1150,22 @@ bool ImLoadFileToMemory(const char* filename, const char* file_open_mode, void**
     if (file_data == NULL)
     {
         fclose(f);
-        return false;
+        return NULL;
     }
     if (fread(file_data, 1, (size_t)file_size, f) != (size_t)file_size)
     {
         fclose(f);
         ImGui::MemFree(file_data);
-        return false;
+        return NULL;
     }
     if (padding_bytes > 0)
         memset((void *)(((char*)file_data) + file_size), 0, padding_bytes);
 
     fclose(f);
-    *out_file_data = file_data;
     if (out_file_size)
         *out_file_size = file_size;
 
-    return true;
+    return file_data;
 }
 
 //-----------------------------------------------------------------------------
@@ -1304,14 +1309,16 @@ ImGuiTextFilter::ImGuiTextFilter(const char* default_filter)
     }
 }
 
-void ImGuiTextFilter::Draw(const char* label, float width)
+bool ImGuiTextFilter::Draw(const char* label, float width)
 {
     if (width != 0.0f)
         ImGui::PushItemWidth(width);
-    ImGui::InputText(label, InputBuf, IM_ARRAYSIZE(InputBuf));
+    bool value_changed = ImGui::InputText(label, InputBuf, IM_ARRAYSIZE(InputBuf));
     if (width != 0.0f)
         ImGui::PopItemWidth();
-    Build();
+    if (value_changed)
+        Build();
+    return value_changed;
 }
 
 void ImGuiTextFilter::TextRange::split(char separator, ImVector<TextRange>& out)
@@ -1840,10 +1847,10 @@ void ImGui::NewFrame()
     g.IO.MousePosPrev = g.IO.MousePos;
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
     {
+        g.IO.MouseClicked[i] = g.IO.MouseDown[i] && g.IO.MouseDownDuration[i] < 0.0f;
+        g.IO.MouseReleased[i] = !g.IO.MouseDown[i] && g.IO.MouseDownDurationPrev[i] >= 0.0f;
         g.IO.MouseDownDurationPrev[i] = g.IO.MouseDownDuration[i];
         g.IO.MouseDownDuration[i] = g.IO.MouseDown[i] ? (g.IO.MouseDownDuration[i] < 0.0f ? 0.0f : g.IO.MouseDownDuration[i] + g.IO.DeltaTime) : -1.0f;
-        g.IO.MouseClicked[i] = g.IO.MouseDownDuration[i] == 0.0f;
-        g.IO.MouseReleased[i] = g.IO.MouseDownDurationPrev[i] >= 0.0f && !g.IO.MouseDown[i];
         g.IO.MouseDoubleClicked[i] = false;
         if (g.IO.MouseClicked[i])
         {
@@ -2084,9 +2091,9 @@ static void LoadSettings()
     if (!filename)
         return;
 
-    char* file_data;
     int file_size;
-    if (!ImLoadFileToMemory(filename, "rb", (void**)&file_data, &file_size, 1))
+    char* file_data = (char*)ImLoadFileToMemory(filename, "rb", &file_size, 1);
+    if (!file_data)
         return;
 
     ImGuiIniData* settings = NULL;
@@ -2260,78 +2267,86 @@ static void PopClipRect()
     window->ClipRect = window->DrawList->_ClipRectStack.back();
 }
 
+// This is normally called by Render(). You may want to call it directly if you want to avoid calling Render() but the gain will be very minimal.
+void ImGui::EndFrame()
+{
+    ImGuiState& g = *GImGui;
+    IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
+    IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // ImGui::EndFrame() called multiple times, or forgot to call ImGui::NewFrame() again
+
+    // Render tooltip
+    if (g.Tooltip[0])
+    {
+        ImGui::BeginTooltip();
+        ImGui::TextUnformatted(g.Tooltip);
+        ImGui::EndTooltip();
+    }
+
+    // Hide implicit "Debug" window if it hasn't been used
+    IM_ASSERT(g.CurrentWindowStack.Size == 1);    // Mismatched Begin/End
+    if (g.CurrentWindow && !g.CurrentWindow->Accessed)
+        g.CurrentWindow->Active = false;
+    ImGui::End();
+
+    // Click to focus window and start moving (after we're done with all our widgets)
+    if (!g.ActiveId)
+        g.MovedWindow = NULL;
+    if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
+    {
+        if (!(g.FocusedWindow && !g.FocusedWindow->WasActive && g.FocusedWindow->Active)) // Unless we just made a popup appear
+        {
+            if (g.HoveredRootWindow != NULL)
+            {
+                FocusWindow(g.HoveredWindow);
+                if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
+                {
+                    g.MovedWindow = g.HoveredWindow;
+                    SetActiveID(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
+                }
+            }
+            else if (g.FocusedWindow != NULL && GetFrontMostModalRootWindow() == NULL)
+            {
+                // Clicking on void disable focus
+                FocusWindow(NULL);
+            }
+        }
+    }
+
+    // Sort the window list so that all child windows are after their parent
+    // We cannot do that on FocusWindow() because childs may not exist yet
+    g.WindowsSortBuffer.resize(0);
+    g.WindowsSortBuffer.reserve(g.Windows.Size);
+    for (int i = 0; i != g.Windows.Size; i++)
+    {
+        ImGuiWindow* window = g.Windows[i];
+        if (window->Flags & ImGuiWindowFlags_ChildWindow)       // if a child is active its parent will add it
+            if (window->Active)
+                continue;
+        AddWindowToSortedBuffer(g.WindowsSortBuffer, window);
+    }
+    IM_ASSERT(g.Windows.Size == g.WindowsSortBuffer.Size);  // we done something wrong
+    g.Windows.swap(g.WindowsSortBuffer);
+
+    // Clear Input data for next frame
+    g.IO.MouseWheel = 0.0f;
+    memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
+
+    g.FrameCountEnded = g.FrameCount;
+}
+
 void ImGui::Render()
 {
     ImGuiState& g = *GImGui;
-    IM_ASSERT(g.Initialized);                           // Forgot to call ImGui::NewFrame()
+    IM_ASSERT(g.Initialized);   // Forgot to call ImGui::NewFrame()
 
-    const bool first_render_of_the_frame = (g.FrameCountRendered != g.FrameCount);
+    if (g.FrameCountEnded != g.FrameCount)
+        ImGui::EndFrame();
     g.FrameCountRendered = g.FrameCount;
 
-    if (first_render_of_the_frame)
-    {
-        // Hide implicit "Debug" window if it hasn't been used
-        IM_ASSERT(g.CurrentWindowStack.Size == 1);    // Mismatched Begin/End
-        if (g.CurrentWindow && !g.CurrentWindow->Accessed)
-            g.CurrentWindow->Active = false;
-        ImGui::End();
-
-        // Click to focus window and start moving (after we're done with all our widgets)
-        if (!g.ActiveId)
-            g.MovedWindow = NULL;
-        if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
-        {
-            if (!(g.FocusedWindow && !g.FocusedWindow->WasActive && g.FocusedWindow->Active)) // Unless we just made a popup appear
-            {
-                if (g.HoveredRootWindow != NULL)
-                {
-                    FocusWindow(g.HoveredWindow);
-                    if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
-                    {
-                        g.MovedWindow = g.HoveredWindow;
-                        SetActiveID(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
-                    }
-                }
-                else if (g.FocusedWindow != NULL && GetFrontMostModalRootWindow() == NULL)
-                {
-                    // Clicking on void disable focus
-                    FocusWindow(NULL);
-                }
-            }
-        }
-
-        // Sort the window list so that all child windows are after their parent
-        // We cannot do that on FocusWindow() because childs may not exist yet
-        g.WindowsSortBuffer.resize(0);
-        g.WindowsSortBuffer.reserve(g.Windows.Size);
-        for (int i = 0; i != g.Windows.Size; i++)
-        {
-            ImGuiWindow* window = g.Windows[i];
-            if (window->Flags & ImGuiWindowFlags_ChildWindow)       // if a child is active its parent will add it
-                if (window->Active)
-                    continue;
-            AddWindowToSortedBuffer(g.WindowsSortBuffer, window);
-        }
-        IM_ASSERT(g.Windows.Size == g.WindowsSortBuffer.Size);  // we done something wrong
-        g.Windows.swap(g.WindowsSortBuffer);
-
-        // Clear Input data for next frame
-        g.IO.MouseWheel = 0.0f;
-        memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
-    }
-
     // Skip render altogether if alpha is 0.0
-    // Note that vertex buffers have been created and are wasted, so it is best practice that you don't create windows in the first place, or respond to Begin() returning false.
+    // Note that vertex buffers have been created and are wasted, so it is best practice that you don't create windows in the first place, or consistently respond to Begin() returning false.
     if (g.Style.Alpha > 0.0f)
     {
-        // Render tooltip
-        if (g.Tooltip[0])
-        {
-            ImGui::BeginTooltip();
-            ImGui::TextUnformatted(g.Tooltip);
-            ImGui::EndTooltip();
-        }
-
         // Gather windows to render
         g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
         for (int i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
@@ -2361,13 +2376,13 @@ void ImGui::Render()
         for (int i = 1; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
         {
             ImVector<ImDrawList*>& layer = g.RenderDrawLists[i];
-            if (!layer.empty())
-            {
-                memcpy(&g.RenderDrawLists[0][n], &layer[0], layer.Size * sizeof(ImDrawList*));
-                n += layer.Size;
-            }
+            if (layer.empty())
+                continue;
+            memcpy(&g.RenderDrawLists[0][n], &layer[0], layer.Size * sizeof(ImDrawList*));
+            n += layer.Size;
         }
 
+        // Draw software mouse cursor if requested
         if (g.IO.MouseDrawCursor)
         {
             const ImGuiMouseCursorData& cursor_data = g.MouseCursorData[g.MouseCursor];
@@ -2393,9 +2408,7 @@ void ImGui::Render()
 
         // Render. If user hasn't set a callback then they may retrieve the draw data via GetDrawData()
         if (g.RenderDrawData.CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
-        {
             g.IO.RenderDrawListsFn(&g.RenderDrawData);
-        }
     }
 }
 
@@ -3431,8 +3444,9 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 {
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
+    IM_ASSERT(name != NULL);                        // Window name required
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
-    IM_ASSERT(name != NULL);                        // Must pass a name
+    IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // Called ImGui::Render() or ImGui::EndFrame() and haven't called ImGui::NewFrame() again yet
 
     if (flags & ImGuiWindowFlags_NoInputs)
         flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
@@ -6566,16 +6580,15 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
 
     RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
-    int res_w = ImMin((int)graph_size.x, values_count);
-    if (plot_type == ImGuiPlotType_Lines)
-        res_w -= 1;
+    int res_w = ImMin((int)graph_size.x, values_count) + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0);
+    int item_count = values_count + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0);
 
     // Tooltip on hover
     int v_hovered = -1;
     if (IsHovered(inner_bb, 0))
     {
         const float t = ImClamp((g.IO.MousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x), 0.0f, 0.9999f);
-        const int v_idx = (int)(t * (values_count + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0)));
+        const int v_idx = (int)(t * item_count);
         IM_ASSERT(v_idx >= 0 && v_idx < values_count);
 
         const float v0 = values_getter(data, (v_idx + values_offset) % values_count);
@@ -6591,7 +6604,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
 
     float v0 = values_getter(data, (0 + values_offset) % values_count);
     float t0 = 0.0f;
-    ImVec2 p0 = ImVec2( t0, 1.0f - ImSaturate((v0 - scale_min) / (scale_max - scale_min)) );
+    ImVec2 tp0 = ImVec2( t0, 1.0f - ImSaturate((v0 - scale_min) / (scale_max - scale_min)) );    // Point in the normalized space of our target rectangle
 
     const ImU32 col_base = window->Color((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLines : ImGuiCol_PlotHistogram);
     const ImU32 col_hovered = window->Color((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLinesHovered : ImGuiCol_PlotHistogramHovered);
@@ -6599,19 +6612,27 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
     for (int n = 0; n < res_w; n++)
     {
         const float t1 = t0 + t_step;
-        const int v_idx = (int)(t0 * values_count);
-        IM_ASSERT(v_idx >= 0 && v_idx < values_count);
-        const float v1 = values_getter(data, (v_idx + values_offset + 1) % values_count);
-        const ImVec2 p1 = ImVec2( t1, 1.0f - ImSaturate((v1 - scale_min) / (scale_max - scale_min)) );
+        const int v1_idx = (int)(t0 * item_count + 0.5f);
+        IM_ASSERT(v1_idx >= 0 && v1_idx < values_count);
+        const float v1 = values_getter(data, (v1_idx + values_offset + 1) % values_count);
+        const ImVec2 tp1 = ImVec2( t1, 1.0f - ImSaturate((v1 - scale_min) / (scale_max - scale_min)) );
 
-        // NB- Draw calls are merged together by the DrawList system.
+        // NB: Draw calls are merged together by the DrawList system. Still, we should render our batch are lower level to save a bit of CPU.
+        ImVec2 pos0 = ImLerp(inner_bb.Min, inner_bb.Max, tp0);
+        ImVec2 pos1 = ImLerp(inner_bb.Min, inner_bb.Max, (plot_type == ImGuiPlotType_Lines) ? tp1 : ImVec2(tp1.x, 1.0f));
         if (plot_type == ImGuiPlotType_Lines)
-            window->DrawList->AddLine(ImLerp(inner_bb.Min, inner_bb.Max, p0), ImLerp(inner_bb.Min, inner_bb.Max, p1), v_hovered == v_idx ? col_hovered : col_base);
+        {
+            window->DrawList->AddLine(pos0, pos1, v_hovered == v1_idx ? col_hovered : col_base);
+        }
         else if (plot_type == ImGuiPlotType_Histogram)
-            window->DrawList->AddRectFilled(ImLerp(inner_bb.Min, inner_bb.Max, p0), ImLerp(inner_bb.Min, inner_bb.Max, ImVec2(p1.x, 1.0f))+ImVec2(-1,0), v_hovered == v_idx ? col_hovered : col_base);
+        {
+            if (pos1.x >= pos0.x + 2.0f)
+                pos1.x -= 1.0f;
+            window->DrawList->AddRectFilled(pos0, pos1, v_hovered == v1_idx ? col_hovered : col_base);
+        }
 
         t0 = t1;
-        p0 = p1;
+        tp0 = tp1;
     }
 
     // Text overlay
@@ -7094,6 +7115,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // Start edition
             // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
             // From the moment we focused we are ignoring the content of 'buf'
+            const int prev_len_w = edit_state.CurLenW;
             edit_state.Text.resize(buf_size);        // wchar count <= utf-8 count
             edit_state.InitialText.resize(buf_size); // utf-8
             ImFormatString(edit_state.InitialText.Data, edit_state.InitialText.Size, "%s", buf);
@@ -7103,21 +7125,24 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             edit_state.InputCursorScreenPos = ImVec2(-1.f, -1.f);
             edit_state.CursorAnimReset();
 
-            if (edit_state.Id != id)
-            {
-                edit_state.Id = id;
-                edit_state.ScrollX = 0.f;
-                stb_textedit_initialize_state(&edit_state.StbState, !is_multiline);
-                if (!is_multiline && focus_requested_by_code)
-                    select_all = true;
-            }
-            else
+            // Preserve cursor position and undo/redo stack if we come back to same widget
+            // FIXME: We should probably compare the whole buffer to be on the safety side. Comparing buf (utf8) and edit_state.Text (wchar).
+            const bool recycle_state = (edit_state.Id == id) && (prev_len_w == edit_state.CurLenW);
+            if (recycle_state)
             {
                 // Recycle existing cursor/selection/undo stack but clamp position
                 // Note a single mouse click will override the cursor/position immediately by calling stb_textedit_click handler.
                 edit_state.StbState.cursor = ImMin(edit_state.StbState.cursor, edit_state.CurLenW);
                 edit_state.StbState.select_start = ImMin(edit_state.StbState.select_start, edit_state.CurLenW);
                 edit_state.StbState.select_end = ImMin(edit_state.StbState.select_end, edit_state.CurLenW);
+            }
+            else
+            {
+                edit_state.Id = id;
+                edit_state.ScrollX = 0.0f;
+                stb_textedit_initialize_state(&edit_state.StbState, !is_multiline);
+                if (!is_multiline && focus_requested_by_code)
+                    select_all = true;
             }
             if (flags & ImGuiInputTextFlags_AlwaysInsertMode)
                 edit_state.StbState.insert_mode = true;
@@ -7164,6 +7189,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         {
             stb_textedit_drag(&edit_state, &edit_state.StbState, mouse_x, mouse_y);
             edit_state.CursorAnimReset();
+            edit_state.CursorFollow = true;
         }
         if (edit_state.SelectedAllMouseLock && !io.MouseDown[0])
             edit_state.SelectedAllMouseLock = false;
@@ -7171,7 +7197,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (g.IO.InputCharacters[0])
         {
             // Process text input (before we check for Return because using some IME will effectively send a Return?)
-            if (!is_ctrl_down && !is_alt_down && is_editable)
+            if (!is_ctrl_down && is_editable)
             {
                 for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
                     if (unsigned int c = (unsigned int)g.IO.InputCharacters[n])
@@ -7219,8 +7245,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 edit_state.OnKeyPressed((int)c);
         }
         else if (IsKeyPressedMap(ImGuiKey_Escape))                              { SetActiveID(0); cancel_edit = true; }
-        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
-        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
+        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
+        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_A))                   { edit_state.SelectAll(); edit_state.CursorFollow = true; }
         else if (is_ctrl_only && ((IsKeyPressedMap(ImGuiKey_X) && is_editable) || IsKeyPressedMap(ImGuiKey_C)) && (!is_multiline || edit_state.HasSelection()))
         {
@@ -7433,9 +7459,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             {
                 const float scroll_increment_x = size.x * 0.25f;
                 if (cursor_offset.x < edit_state.ScrollX)
-                    edit_state.ScrollX = ImMax(0.0f, cursor_offset.x - scroll_increment_x);
+                    edit_state.ScrollX = (float)(int)ImMax(0.0f, cursor_offset.x - scroll_increment_x);
                 else if (cursor_offset.x - size.x >= edit_state.ScrollX)
-                    edit_state.ScrollX = cursor_offset.x - size.x + scroll_increment_x;
+                    edit_state.ScrollX = (float)(int)(cursor_offset.x - size.x + scroll_increment_x);
             }
             else
             {

@@ -75,8 +75,8 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 - [Jari Komppa's tutorial on building an ImGui library](http://iki.fi/sol/imgui/).
 - [Casey Muratori's original video that popularized the concept](https://mollyrocket.com/861).
 
-Frequently Asked Question
--------------------------
+Frequently Asked Question (FAQ)
+-------------------------------
 
 <b>Where is the documentation?</b>
 
@@ -91,7 +91,11 @@ I recommend using [Synergy](http://synergy-project.org) ([sources](https://githu
 
 <b>I integrated ImGui in my engine and the text or lines are blurry..</b>
 
-In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
+In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f). Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
+
+<b>I integrated ImGui in my engine and some elements are disappearing when I move windows around..</b>
+
+Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1,y1,x2,y2) and NOT as (x1,y1,width,height).
 
 <b>Can you create elaborate/serious tools with ImGui?</b>
 
@@ -134,6 +138,8 @@ Credits
 -------
 
 Developed by [Omar Cornut](http://www.miracleworld.net) and every direct or indirect contributors to the GitHub. The early version of this library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com). 
+
+I first discovered imgui principles at [Q-Games](http://www.q-games.com) where Atman had dropped his own simple imgui implementation in the codebase, which I spent quite some time improving and thinking about. It turned out that Atman was exposed to the concept directly by working with Casey. When I moved to Media Molecule I rewrote a new library trying to overcome the flaws and limitations of the first one I've worked with. It became this library and since then I have spent an unreasonable amount of time iterating on it. 
 
 Embeds [ProggyClean.ttf](http://upperbounds.net) font by Tristan Grimmer (MIT license).
 

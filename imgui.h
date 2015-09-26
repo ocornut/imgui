@@ -867,11 +867,11 @@ struct ImGuiTextFilter
     int                 CountGrep;
 
     ImGuiTextFilter(const char* default_filter = "");
-    void Clear() { InputBuf[0] = 0; Build(); }
-    void Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
-    bool PassFilter(const char* text, const char* text_end = NULL) const;
-    bool IsActive() const { return !Filters.empty(); }
-    IMGUI_API void Build();
+    void                Clear() { InputBuf[0] = 0; Build(); }
+    bool                Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
+    bool                PassFilter(const char* text, const char* text_end = NULL) const;
+    bool                IsActive() const { return !Filters.empty(); }
+    IMGUI_API void      Build();
 };
 
 // Helper: Text buffer for logging/accumulating text
@@ -955,9 +955,9 @@ struct ImGuiTextEditCallbackData
     int                 SelectionEnd;   //                                      // Read-write
 
     // NB: calling those function loses selection.
-    void DeleteChars(int pos, int bytes_count);
-    void InsertChars(int pos, const char* text, const char* text_end = NULL);
-    bool HasSelection() const { return SelectionStart != SelectionEnd; }
+    void    DeleteChars(int pos, int bytes_count);
+    void    InsertChars(int pos, const char* text, const char* text_end = NULL);
+    bool    HasSelection() const { return SelectionStart != SelectionEnd; }
 };
 
 // ImColor() is just a helper that implicity converts to either ImU32 (packed 4x1 byte) or ImVec4 (4x1 float)
@@ -1221,6 +1221,7 @@ struct ImFontAtlas
     // Helpers to retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
     // (Those functions could be static but aren't so most users don't have to refer to the ImFontAtlas:: name ever if in their code; just using io.Fonts->)
     IMGUI_API const ImWchar*    GetGlyphRangesDefault();    // Basic Latin, Extended Latin
+    IMGUI_API const ImWchar*    GetGlyphRangesKorean();     // Default + Korean characters
     IMGUI_API const ImWchar*    GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
     IMGUI_API const ImWchar*    GetGlyphRangesChinese();    // Japanese + full set of about 21000 CJK Unified Ideographs
     IMGUI_API const ImWchar*    GetGlyphRangesCyrillic();   // Default + about 400 Cyrillic characters
@@ -1230,8 +1231,9 @@ struct ImFontAtlas
     void*                       TexID;              // User data to refer to the texture once it has been uploaded to user's graphic systems. It ia passed back to you during rendering.
     unsigned char*              TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
     unsigned int*               TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
-    int                         TexWidth;
-    int                         TexHeight;
+    int                         TexWidth;           // Texture width calculated during Build().
+    int                         TexHeight;          // Texture height calculated during Build().
+    int                         TexDesiredWidth;    // Texture width desired by user before Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height.
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel (part of the TexExtraData block)
     ImVector<ImFont*>           Fonts;
 

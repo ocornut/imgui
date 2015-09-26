@@ -159,6 +159,69 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
     AddDrawCmd();
 }
 
+void ImDrawList::UpdateClipRect()
+{
+    ImDrawCmd* current_cmd = CmdBuffer.Size ? &CmdBuffer.back() : NULL;
+    if (!current_cmd || (current_cmd->ElemCount != 0) || current_cmd->UserCallback != NULL)
+    {
+        AddDrawCmd();
+    }
+    else
+    {
+        ImVec4 current_clip_rect = _ClipRectStack.Size ? _ClipRectStack.back() : GNullClipRect;
+        if (CmdBuffer.Size >= 2 && ImLengthSqr(CmdBuffer.Data[CmdBuffer.Size-2].ClipRect - current_clip_rect) < 0.00001f)
+            CmdBuffer.pop_back();
+        else
+            current_cmd->ClipRect = current_clip_rect;
+    }
+}
+
+// Scissoring. The values in clip_rect are x1, y1, x2, y2.
+void ImDrawList::PushClipRect(const ImVec4& clip_rect)
+{
+    _ClipRectStack.push_back(clip_rect);
+    UpdateClipRect();
+}
+
+void ImDrawList::PushClipRectFullScreen()
+{
+    PushClipRect(GNullClipRect);
+
+    // FIXME-OPT: This would be more correct but we're not supposed to access ImGuiState from here?
+    //ImGuiState& g = *GImGui;
+    //PushClipRect(GetVisibleRect());
+}
+
+void ImDrawList::PopClipRect()
+{
+    IM_ASSERT(_ClipRectStack.Size > 0);
+    _ClipRectStack.pop_back();
+    UpdateClipRect();
+}
+
+void ImDrawList::UpdateTextureID()
+{
+    ImDrawCmd* current_cmd = CmdBuffer.Size ? &CmdBuffer.back() : NULL;
+    const ImTextureID texture_id = _TextureIdStack.Size ? _TextureIdStack.back() : NULL;
+    if (!current_cmd || (current_cmd->ElemCount != 0 && current_cmd->TextureId != texture_id) || current_cmd->UserCallback != NULL)
+        AddDrawCmd();
+    else
+        current_cmd->TextureId = texture_id;
+}
+
+void ImDrawList::PushTextureID(const ImTextureID& texture_id)
+{
+    _TextureIdStack.push_back(texture_id);
+    UpdateTextureID();
+}
+
+void ImDrawList::PopTextureID()
+{
+    IM_ASSERT(_TextureIdStack.Size > 0);
+    _TextureIdStack.pop_back();
+    UpdateTextureID();
+}
+
 void ImDrawList::ChannelsSplit(int channels_count)
 {
     IM_ASSERT(_ChannelsCurrent == 0 && _ChannelsCount == 1);
@@ -195,7 +258,6 @@ void ImDrawList::ChannelsSplit(int channels_count)
 void ImDrawList::ChannelsMerge()
 {
     // Note that we never use or rely on channels.Size because it is merely a buffer that we never shrink back to 0 to keep all sub-buffers ready for use.
-    // This is why this function takes 'channel_count' as a parameter of how many channels to merge (the user knows)
     if (_ChannelsCount <= 1)
         return;
 
@@ -236,69 +298,6 @@ void ImDrawList::ChannelsSetCurrent(int idx)
     memcpy(&CmdBuffer, &_Channels.Data[_ChannelsCurrent].CmdBuffer, sizeof(CmdBuffer));
     memcpy(&IdxBuffer, &_Channels.Data[_ChannelsCurrent].IdxBuffer, sizeof(IdxBuffer));
     _IdxWritePtr = IdxBuffer.Data + IdxBuffer.Size;
-}
-
-void ImDrawList::UpdateClipRect()
-{
-    ImDrawCmd* current_cmd = CmdBuffer.Size ? &CmdBuffer.back() : NULL;
-    if (!current_cmd || (current_cmd->ElemCount != 0) || current_cmd->UserCallback != NULL)
-    {
-        AddDrawCmd();
-    }
-    else
-    {
-        ImVec4 current_clip_rect = _ClipRectStack.Size ? _ClipRectStack.back() : GNullClipRect;
-        if (CmdBuffer.Size >= 2 && ImLengthSqr(CmdBuffer.Data[CmdBuffer.Size-2].ClipRect - current_clip_rect) < 0.00001f)
-            CmdBuffer.pop_back();
-        else
-            current_cmd->ClipRect = current_clip_rect;
-    }
-}
-
-// Scissoring. The values in clip_rect are x1, y1, x2, y2.
-void ImDrawList::PushClipRect(const ImVec4& clip_rect)
-{
-    _ClipRectStack.push_back(clip_rect);
-    UpdateClipRect();
-}
-
-void ImDrawList::PushClipRectFullScreen()
-{
-    PushClipRect(GNullClipRect);
-
-    // This would be more correct but we're not supposed to access ImGuiState from here?
-    //ImGuiState& g = *GImGui;
-    //PushClipRect(GetVisibleRect());
-}
-
-void ImDrawList::PopClipRect()
-{
-    IM_ASSERT(_ClipRectStack.Size > 0);
-    _ClipRectStack.pop_back();
-    UpdateClipRect();
-}
-
-void ImDrawList::UpdateTextureID()
-{
-    ImDrawCmd* current_cmd = CmdBuffer.Size ? &CmdBuffer.back() : NULL;
-    const ImTextureID texture_id = _TextureIdStack.Size ? _TextureIdStack.back() : NULL;
-    if (!current_cmd || (current_cmd->ElemCount != 0 && current_cmd->TextureId != texture_id) || current_cmd->UserCallback != NULL)
-        AddDrawCmd();
-    else
-        current_cmd->TextureId = texture_id;
-}
-
-void ImDrawList::PushTextureID(const ImTextureID& texture_id)
-{
-    _TextureIdStack.push_back(texture_id);
-    UpdateTextureID();
-}
-
-void ImDrawList::PopTextureID()
-{
-    IM_ASSERT(_TextureIdStack.Size > 0);
-    _TextureIdStack.pop_back();
-    UpdateTextureID();
 }
 
 // NB: this can be called with negative count for removing primitives (as long as the result does not underflow)
@@ -357,7 +356,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
     anti_aliased &= GImGui->Style.AntiAliasedLines;
-    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false;
+    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false; // Debug
 
     int count = points_count;
     if (!closed)
@@ -535,7 +534,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
 {
     const ImVec2 uv = GImGui->FontTexUvWhitePixel;
     anti_aliased &= GImGui->Style.AntiAliasedShapes;
-    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false;
+    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false; // Debug
 
     if (anti_aliased)
     {
@@ -786,6 +785,7 @@ void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec
 {
     if ((col >> 24) == 0)
         return;
+
     PathLineTo(a);
     PathLineTo(b);
     PathLineTo(c);
@@ -834,7 +834,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 
     IM_ASSERT(font->ContainerAtlas->TexID == _TextureIdStack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
-    // reserve vertices for worse case
+    // reserve vertices for worse case (over-reserving is useful and easily amortized)
     const int char_count = (int)(text_end - text_begin);
     const int vtx_count_max = char_count * 4;
     const int idx_count_max = char_count * 6;
@@ -853,7 +853,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     font->RenderText(font_size, pos, col, clip_rect, text_begin, text_end, this, wrap_width, cpu_fine_clip_rect != NULL);
 
     // give back unused vertices
-    // FIXME-OPT
+    // FIXME-OPT: clean this up
     VtxBuffer.resize((int)(_VtxWritePtr - VtxBuffer.Data));
     IdxBuffer.resize((int)(_IdxWritePtr - IdxBuffer.Data));
     int vtx_unused = vtx_count_max - (VtxBuffer.Size - vtx_begin);
@@ -869,7 +869,8 @@ void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, c
 {
     if ((col >> 24) == 0)
         return;
-    AddText(ImGui::GetWindowFont(), ImGui::GetWindowFontSize(), pos, col, text_begin, text_end);
+
+    AddText(GImGui->Font, GImGui->FontSize, pos, col, text_begin, text_end);
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
@@ -927,7 +928,7 @@ void ImDrawData::ScaleClipRects(const ImVec2& scale)
 }
 
 //-----------------------------------------------------------------------------
-// ImFontAtlias
+// ImFontAtlas
 //-----------------------------------------------------------------------------
 
 ImFontConfig::ImFontConfig()
@@ -953,7 +954,7 @@ ImFontAtlas::ImFontAtlas()
     TexID = NULL;
     TexPixelsAlpha8 = NULL;
     TexPixelsRGBA32 = NULL;
-    TexWidth = TexHeight = 0;
+    TexWidth = TexHeight = TexDesiredWidth = 0;
     TexUvWhitePixel = ImVec2(0, 0);
 }
 
@@ -971,14 +972,14 @@ void    ImFontAtlas::ClearInputData()
             ConfigData[i].FontData = NULL;
         }
 
-        // When clearing this we lose access to the font name and other information used to build the font.
-        for (int i = 0; i < Fonts.Size; i++)
-            if (Fonts[i]->ConfigData >= ConfigData.Data && Fonts[i]->ConfigData < ConfigData.Data + ConfigData.Size)
-            {
-                Fonts[i]->ConfigData = NULL;
-                Fonts[i]->ConfigDataCount = 0;
-            }
-            ConfigData.clear();
+    // When clearing this we lose access to the font name and other information used to build the font.
+    for (int i = 0; i < Fonts.Size; i++)
+        if (Fonts[i]->ConfigData >= ConfigData.Data && Fonts[i]->ConfigData < ConfigData.Data + ConfigData.Size)
+        {
+            Fonts[i]->ConfigData = NULL;
+            Fonts[i]->ConfigDataCount = 0;
+        }
+    ConfigData.clear();
 }
 
 void    ImFontAtlas::ClearTexData()
@@ -1010,7 +1011,7 @@ void    ImFontAtlas::Clear()
 
 void    ImFontAtlas::GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
 {
-    // Lazily build
+    // Build atlas on demand
     if (TexPixelsAlpha8 == NULL)
     {
         if (ConfigData.empty())
@@ -1026,8 +1027,8 @@ void    ImFontAtlas::GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_wid
 
 void    ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
 {
-    // Lazily convert to RGBA32 format
-    // Although it is likely to be the most commonly used format, our font rendering is 8 bpp
+    // Convert to RGBA32 format on demand
+    // Although it is likely to be the most commonly used format, our font rendering is 1 channel / 8 bpp
     if (!TexPixelsRGBA32)
     {
         unsigned char* pixels;
@@ -1073,14 +1074,14 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     return Fonts.back();
 }
 
-// Default font ttf is compressed with stb_compress then base85 encoded (see extra_fonts/binary_to_compressed_c.cpp for encoder)
+// Default font TTF is compressed with stb_compress then base85 encoded (see extra_fonts/binary_to_compressed_c.cpp for encoder)
 static unsigned int stb_decompress_length(unsigned char *input);
 static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length);
 static const char*  GetDefaultCompressedFontDataTTFBase85();
 static unsigned int Decode85Byte(char c)                                    { return c >= '\\' ? c-36 : c-35; }
 static void         Decode85(const unsigned char* src, unsigned int* dst)   { for (; *src; src += 5) *dst++ = Decode85Byte(src[0]) + 85*(Decode85Byte(src[1]) + 85*(Decode85Byte(src[2]) + 85*(Decode85Byte(src[3]) + 85*Decode85Byte(src[4])))); }
 
-// Load embedded ProggyClean.ttf at size 13
+// Load embedded ProggyClean.ttf at size 13, disable oversampling
 ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 {
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
@@ -1098,9 +1099,9 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 
 ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
 {
-    void* data = NULL;
     int data_size = 0;
-    if (!ImLoadFileToMemory(filename, "rb", (void**)&data, &data_size, 0))
+    void* data = ImLoadFileToMemory(filename, "rb", &data_size, 0);
+    if (!data)
     {
         IM_ASSERT(0); // Could not load file.
         return NULL;
@@ -1108,6 +1109,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
     if (font_cfg.Name[0] == '\0')
     {
+        // Store a short copy of filename into into the font name for convenience
         const char* p;
         for (p = filename + strlen(filename); p > filename && p[-1] != '/' && p[-1] != '\\'; p--) {}
         snprintf(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s", p);
@@ -1115,7 +1117,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
     return AddFontFromMemoryTTF(data, data_size, size_pixels, &font_cfg, glyph_ranges);
 }
 
-// Transfer ownership of 'ttf_data' to ImFontAtlas, will be deleted after Build()
+// NBM Transfer ownership of 'ttf_data' to ImFontAtlas, unless font_cfg_template->FontDataOwnedByAtlas == false. Owned TTF buffer will be deleted after Build().
 ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
 {
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
@@ -1182,6 +1184,7 @@ bool    ImFontAtlas::Build()
         if (!stbtt_InitFont(&tmp.FontInfo, (unsigned char*)cfg.FontData, font_offset))
             return false;
 
+        // Count glyphs
         if (!cfg.GlyphRanges)
             cfg.GlyphRanges = GetGlyphRangesDefault();
         for (const ImWchar* in_range = cfg.GlyphRanges; in_range[0] && in_range[1]; in_range += 2)
@@ -1192,7 +1195,7 @@ bool    ImFontAtlas::Build()
     }
 
     // Start packing
-    TexWidth = (total_glyph_count > 1000) ? 1024 : 512;  // Width doesn't actually matters.
+    TexWidth = (TexDesiredWidth > 0) ? TexDesiredWidth : (total_glyph_count > 2000) ? 2048 : (total_glyph_count > 1000) ? 1024 : 512;  // Width doesn't actually matters much but some API/GPU have texture size limitations, and increasing width can decrease height.
     TexHeight = 0;
     const int max_tex_height = 1024*32;
     stbtt_pack_context spc;
@@ -1216,7 +1219,7 @@ bool    ImFontAtlas::Build()
     memset(buf_rects, 0, total_glyph_count * sizeof(stbrp_rect));              // Unnecessary but let's clear this for the sake of sanity.
     memset(buf_ranges, 0, total_glyph_range_count * sizeof(stbtt_pack_range));
 
-    // First font pass: pack all glyphs (no rendering at this point, we are working with glyph sizes only)
+    // First font pass: pack all glyphs (no rendering at this point, we are working with rectangles in an infinitely tall texture at this point)
     for (int input_i = 0; input_i < ConfigData.Size; input_i++)
     {
         ImFontConfig& cfg = ConfigData[input_i];
@@ -1354,7 +1357,8 @@ bool    ImFontAtlas::Build()
 
 void ImFontAtlas::RenderCustomTexData(int pass, void* p_rects)
 {
-    // . = white layer, X = black layer, others are blank
+    // A work of art lies ahead! (. = white layer, X = black layer, others are blank)
+    // The white texels on the top left are the ones we'll use everywhere in ImGui to render filled shapes.
     const int TEX_DATA_W = 90;
     const int TEX_DATA_H = 27;
     const char texture_data[TEX_DATA_W*TEX_DATA_H+1] =
@@ -1410,35 +1414,36 @@ void ImFontAtlas::RenderCustomTexData(int pass, void* p_rects)
                 TexPixelsAlpha8[offset0] = texture_data[n] == '.' ? 0xFF : 0x00;
                 TexPixelsAlpha8[offset1] = texture_data[n] == 'X' ? 0xFF : 0x00;
             }
-            const ImVec2 tex_uv_scale(1.0f / TexWidth, 1.0f / TexHeight);
-            TexUvWhitePixel = ImVec2((r.x + 0.5f) * tex_uv_scale.x, (r.y + 0.5f) * tex_uv_scale.y);
+        const ImVec2 tex_uv_scale(1.0f / TexWidth, 1.0f / TexHeight);
+        TexUvWhitePixel = ImVec2((r.x + 0.5f) * tex_uv_scale.x, (r.y + 0.5f) * tex_uv_scale.y);
 
-            const ImVec2 cursor_datas[ImGuiMouseCursor_Count_][3] =
-            {
-                // Pos ........ Size ......... Offset ......
-                { ImVec2(0,3),  ImVec2(12,19), ImVec2( 0, 0) }, // ImGuiMouseCursor_Arrow
-                { ImVec2(13,0), ImVec2(7,16),  ImVec2( 4, 8) }, // ImGuiMouseCursor_TextInput
-                { ImVec2(31,0), ImVec2(23,23), ImVec2(11,11) }, // ImGuiMouseCursor_Move
-                { ImVec2(21,0), ImVec2( 9,23), ImVec2( 5,11) }, // ImGuiMouseCursor_ResizeNS
-                { ImVec2(55,18),ImVec2(23, 9), ImVec2(11, 5) }, // ImGuiMouseCursor_ResizeEW
-                { ImVec2(73,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNESW
-                { ImVec2(55,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNWSE
-            };
+        // Setup mouse cursors
+        const ImVec2 cursor_datas[ImGuiMouseCursor_Count_][3] =
+        {
+            // Pos ........ Size ......... Offset ......
+            { ImVec2(0,3),  ImVec2(12,19), ImVec2( 0, 0) }, // ImGuiMouseCursor_Arrow
+            { ImVec2(13,0), ImVec2(7,16),  ImVec2( 4, 8) }, // ImGuiMouseCursor_TextInput
+            { ImVec2(31,0), ImVec2(23,23), ImVec2(11,11) }, // ImGuiMouseCursor_Move
+            { ImVec2(21,0), ImVec2( 9,23), ImVec2( 5,11) }, // ImGuiMouseCursor_ResizeNS
+            { ImVec2(55,18),ImVec2(23, 9), ImVec2(11, 5) }, // ImGuiMouseCursor_ResizeEW
+            { ImVec2(73,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNESW
+            { ImVec2(55,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNWSE
+        };
 
-            for (int type = 0; type < ImGuiMouseCursor_Count_; type++)
-            {
-                ImGuiMouseCursorData& cursor_data = GImGui->MouseCursorData[type];
-                ImVec2 pos = cursor_datas[type][0] + ImVec2((float)r.x, (float)r.y);
-                const ImVec2 size = cursor_datas[type][1];
-                cursor_data.Type = type;
-                cursor_data.Size = size;
-                cursor_data.HotOffset = cursor_datas[type][2];
-                cursor_data.TexUvMin[0] = (pos) * tex_uv_scale;
-                cursor_data.TexUvMax[0] = (pos + size) * tex_uv_scale;
-                pos.x += TEX_DATA_W+1;
-                cursor_data.TexUvMin[1] = (pos) * tex_uv_scale;
-                cursor_data.TexUvMax[1] = (pos + size) * tex_uv_scale;
-            }
+        for (int type = 0; type < ImGuiMouseCursor_Count_; type++)
+        {
+            ImGuiMouseCursorData& cursor_data = GImGui->MouseCursorData[type];
+            ImVec2 pos = cursor_datas[type][0] + ImVec2((float)r.x, (float)r.y);
+            const ImVec2 size = cursor_datas[type][1];
+            cursor_data.Type = type;
+            cursor_data.Size = size;
+            cursor_data.HotOffset = cursor_datas[type][2];
+            cursor_data.TexUvMin[0] = (pos) * tex_uv_scale;
+            cursor_data.TexUvMax[0] = (pos + size) * tex_uv_scale;
+            pos.x += TEX_DATA_W+1;
+            cursor_data.TexUvMin[1] = (pos) * tex_uv_scale;
+            cursor_data.TexUvMax[1] = (pos + size) * tex_uv_scale;
+        }
     }
 }
 
@@ -1448,6 +1453,18 @@ const ImWchar*   ImFontAtlas::GetGlyphRangesDefault()
     static const ImWchar ranges[] =
     {
         0x0020, 0x00FF, // Basic Latin + Latin Supplement
+        0,
+    };
+    return &ranges[0];
+}
+
+const ImWchar*  ImFontAtlas::GetGlyphRangesKorean()
+{
+    static const ImWchar ranges[] =
+    {
+        0x0020, 0x00FF, // Basic Latin + Latin Supplement
+        0x3131, 0x3163, // Korean alphabets
+        0xAC00, 0xD79D, // Korean characters
         0,
     };
     return &ranges[0];
@@ -1602,7 +1619,7 @@ void ImFont::BuildLookupTable()
     }
 
     // Create a glyph to handle TAB
-    // FIXME: Needs proper TAB handling but it needs to be contextualized (can arbitrary say that each string starts at "column 0"
+    // FIXME: Needs proper TAB handling but it needs to be contextualized (or we could arbitrary say that each string starts at "column 0" ?)
     if (FindGlyph((unsigned short)' '))
     {
         if (Glyphs.back().Codepoint != '\t')   // So we can call this function multiple times
@@ -1782,7 +1799,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
             }
         }
 
-        // Decode and advance source (handle unlikely UTF-8 decoding failure by skipping to the next byte)
+        // Decode and advance source
         const char* prev_s = s;
         unsigned int c = (unsigned int)*s;
         if (c < 0x80)
@@ -1885,7 +1902,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             }
         }
 
-        // Decode and advance source (handle unlikely UTF-8 decoding failure by skipping to the next byte)
+        // Decode and advance source
         unsigned int c = (unsigned int)*s;
         if (c < 0x80)
         {
@@ -1924,7 +1941,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             // Clipping on Y is more likely
             if (c != ' ' && c != '\t')
             {
-                // We don't do a second finer clipping test on the Y axis (todo: do some measurement see if it is worth it, probably not)
+                // We don't do a second finer clipping test on the Y axis (TODO: do some measurement see if it is worth it, probably not)
                 float y1 = (float)(y + glyph->Y0 * scale);
                 float y2 = (float)(y + glyph->Y1 * scale);
 
@@ -1938,7 +1955,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                     float u2 = glyph->U1;
                     float v2 = glyph->V1;
 
-                    // CPU side clipping used to fit text in their frame when the frame is too small. Only does clipping for axis aligned quads
+                    // CPU side clipping used to fit text in their frame when the frame is too small. Only does clipping for axis aligned quads.
                     if (cpu_fine_clip)
                     {
                         if (x1 < clip_rect.x)
