@@ -1774,6 +1774,11 @@ void ImGui::SetInternalState(void* state, bool construct)
     GImGui = (ImGuiState*)state;
 }
 
+void* ImGui::GetDefaultInternalState()
+{
+    return &GImDefaultState;
+}
+
 ImGuiIO& ImGui::GetIO()
 {
     return GImGui->IO;
