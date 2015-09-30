@@ -188,7 +188,7 @@
  - 2015/03/17 (1.36) - renamed GetItemBoxMin()/GetItemBoxMax()/IsMouseHoveringBox() to GetItemRectMin()/GetItemRectMax()/IsMouseHoveringRect(). Kept inline redirection function (will obsolete).
  - 2015/03/15 (1.36) - renamed style.TreeNodeSpacing to style.IndentSpacing, ImGuiStyleVar_TreeNodeSpacing to ImGuiStyleVar_IndentSpacing
  - 2015/03/13 (1.36) - renamed GetWindowIsFocused() to IsWindowFocused(). Kept inline redirection function (will obsolete).
- - 2015/03/08 (1.35) - renamed style.ScrollBarWidth to style.ScrollbarWidth
+ - 2015/03/08 (1.35) - renamed style.ScrollBarWidth to style.ScrollbarWidth (casing)
  - 2015/02/27 (1.34) - renamed OpenNextNode(bool) to SetNextTreeNodeOpened(bool, ImGuiSetCond). Kept inline redirection function (will obsolete).
  - 2015/02/27 (1.34) - renamed ImGuiSetCondition_*** to ImGuiSetCond_***, and _FirstUseThisSession becomes _Once.
  - 2015/02/11 (1.32) - changed text input callback ImGuiTextEditCallback return type from void-->int. reserved for future use, return 0 for now.
@@ -4045,8 +4045,8 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
     float other_scrollbar_size_w = other_scrollbar ? style.ScrollbarSize : 0.0f;
     const ImRect window_rect = window->Rect();
     ImRect bb = horizontal
-        ? ImRect(window->Pos.x + 0, window_rect.Max.y - style.ScrollbarSize, window_rect.Max.x - 0- other_scrollbar_size_w, window_rect.Max.y)
-        : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + window->TitleBarHeight() + 0, window_rect.Max.x, window_rect.Max.y - 0 - other_scrollbar_size_w);
+        ? ImRect(window->Pos.x, window_rect.Max.y - style.ScrollbarSize, window_rect.Max.x - other_scrollbar_size_w, window_rect.Max.y)
+        : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + window->TitleBarHeight(), window_rect.Max.x, window_rect.Max.y - other_scrollbar_size_w);
 
     float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
 	int window_rounding_corners;
@@ -4055,7 +4055,7 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
 	else
 	    window_rounding_corners = ((window->Flags & ImGuiWindowFlags_NoTitleBar) ? 2 : 0) | (other_scrollbar ? 0 : 4);
 	window->DrawList->AddRectFilled(bb.Min, bb.Max, window->Color(ImGuiCol_ScrollbarBg), window_rounding, window_rounding_corners);
-    bb.Expand(-3.0f);
+    bb.Reduce(ImVec2(ImClamp((float)(int)((bb.Max.x - bb.Min.x - 2.0f) * 0.5f), 0.0f, 3.0f), ImClamp((float)(int)((bb.Max.y - bb.Min.y - 2.0f) * 0.5f), 0.0f, 3.0f)));
 
     // V denote the main axis of the scrollbar
     float scrollbar_size_v = horizontal ? bb.GetWidth() : bb.GetHeight();
