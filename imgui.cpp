@@ -3854,7 +3854,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 else if ((flags & ImGuiWindowFlags_Popup) != 0)
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, bg_alpha), window_rounding);
                 else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size - window->ScrollbarSizes, window->Color(ImGuiCol_ChildWindowBg, bg_alpha), window_rounding, window->ScrollbarY ? (1|8) : (0xF));
+                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_ChildWindowBg, bg_alpha), window_rounding);
                 else
                     window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, bg_alpha), window_rounding);
             }
@@ -4045,9 +4045,22 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
     float other_scrollbar_size_w = other_scrollbar ? style.ScrollbarSize : 0.0f;
     const ImRect window_rect = window->Rect();
     ImRect bb = horizontal
-        ? ImRect(window->Pos.x + 1, window_rect.Max.y - style.ScrollbarSize, window_rect.Max.x - 1 - other_scrollbar_size_w, window_rect.Max.y)
-        : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + window->TitleBarHeight()+1, window_rect.Max.x, window_rect.Max.y - 1 - other_scrollbar_size_w);
-    window->DrawList->AddRectFilled(bb.Min, bb.Max, window->Color(ImGuiCol_ScrollbarBg));
+        ? ImRect(window->Pos.x + 0, window_rect.Max.y - style.ScrollbarSize, window_rect.Max.x - 0- other_scrollbar_size_w, window_rect.Max.y)
+        : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + window->TitleBarHeight() + 0, window_rect.Max.x, window_rect.Max.y - 0 - other_scrollbar_size_w);
+
+    float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
+	int window_rounding_corners = 0;
+	if (horizontal)
+	{
+		if (!other_scrollbar) window_rounding_corners |= 4;
+		window_rounding_corners |= 8;
+	}
+	else
+	{
+		if (window->Flags & ImGuiWindowFlags_NoTitleBar) window_rounding_corners |= 2;
+		if (!other_scrollbar) window_rounding_corners |= 4;
+	}
+	window->DrawList->AddRectFilled(bb.Min, bb.Max, window->Color(ImGuiCol_ScrollbarBg), window_rounding, window_rounding_corners);
     bb.Expand(-3.0f);
 
     // V denote the main axis of the scrollbar
