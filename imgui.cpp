@@ -5814,8 +5814,8 @@ static void DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     }
     else if (data_type == ImGuiDataType_Float)
     {
-        if (!scalar_format)
-            scalar_format = "%f";
+        // For floats we have to ignore format with precision (e.g. "%.2f") because sscanf doesn't take them in
+        scalar_format = "%f";
         float* v = (float*)data_ptr;
         float ref_v = *v;
         if (op && sscanf(initial_value_buf, scalar_format, &ref_v) < 1)
@@ -7642,7 +7642,7 @@ bool ImGui::InputFloat(const char* label, float* v, float step, float step_fast,
     if (decimal_precision < 0)
         strcpy(display_format, "%f");      // Ideally we'd have a minimum decimal precision of 1 to visually denote that this is a float, while hiding non-significant digits? %f doesn't have a minimum of 1
     else
-        ImFormatString(display_format, 16, "%%%df", decimal_precision);
+        ImFormatString(display_format, 16, "%%.%df", decimal_precision);
     return InputScalarEx(label, ImGuiDataType_Float, (void*)v, (void*)(step>0.0f ? &step : NULL), (void*)(step_fast>0.0f ? &step_fast : NULL), display_format, extra_flags);
 }
 
