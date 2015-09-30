@@ -4049,17 +4049,11 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
         : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + window->TitleBarHeight() + 0, window_rect.Max.x, window_rect.Max.y - 0 - other_scrollbar_size_w);
 
     float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
-	int window_rounding_corners = 0;
+	int window_rounding_corners;
 	if (horizontal)
-	{
-		if (!other_scrollbar) window_rounding_corners |= 4;
-		window_rounding_corners |= 8;
-	}
+	    window_rounding_corners = 8 | (other_scrollbar ? 0 : 4);
 	else
-	{
-		if (window->Flags & ImGuiWindowFlags_NoTitleBar) window_rounding_corners |= 2;
-		if (!other_scrollbar) window_rounding_corners |= 4;
-	}
+	    window_rounding_corners = ((window->Flags & ImGuiWindowFlags_NoTitleBar) ? 2 : 0) | (other_scrollbar ? 0 : 4);
 	window->DrawList->AddRectFilled(bb.Min, bb.Max, window->Color(ImGuiCol_ScrollbarBg), window_rounding, window_rounding_corners);
     bb.Expand(-3.0f);
 
