@@ -3973,7 +3973,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
     // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
     const ImRect title_bar_rect = window->TitleBarRect();
-    ImRect clip_rect(title_bar_rect.Min.x+0.5f+window->WindowPadding.x*0.5f, title_bar_rect.Max.y+window->MenuBarHeight()+0.5f, window->Pos.x+window->Size.x+0.5f-window->WindowPadding.x*0.5f, window->Pos.y+window->Size.y+0.5f);
+    ImRect clip_rect(title_bar_rect.Min.x+0.5f+window->WindowPadding.x*0.5f, title_bar_rect.Max.y+window->MenuBarHeight()+0.5f, window->Pos.x+window->Size.x-window->WindowPadding.x*0.5f, window->Pos.y+window->Size.y);
     if ((flags & ImGuiWindowFlags_ChildWindow) && (flags & ImGuiWindowFlags_ShowBorders))
         clip_rect.Min += ImVec2(1.0f,1.0f);
     clip_rect.Max.x -= window->ScrollbarY ? style.ScrollbarSize : 0.0f;
