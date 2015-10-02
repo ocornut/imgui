@@ -4149,9 +4149,9 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         if (g.ActiveId != 0 && g.ActiveIdWindow && g.ActiveIdWindow->RootWindow != window)
             ImGui::SetActiveID(0);
 
-    if (g.Windows.back() == window)
+    // Bring to front
+    if ((window->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus) || g.Windows.back() == window)
         return;
-
     for (int i = 0; i < g.Windows.Size; i++)
         if (g.Windows[i] == window)
         {
