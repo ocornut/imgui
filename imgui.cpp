@@ -7123,8 +7123,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
             // From the moment we focused we are ignoring the content of 'buf'
             const int prev_len_w = edit_state.CurLenW;
-            edit_state.Text.resize(buf_size);        // wchar count <= utf-8 count
-            edit_state.InitialText.resize(buf_size); // utf-8
+            edit_state.Text.resize(buf_size+1);        // wchar count <= utf-8 count. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
+            edit_state.InitialText.resize(buf_size+1); // utf-8. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
             ImFormatString(edit_state.InitialText.Data, edit_state.InitialText.Size, "%s", buf);
             const char* buf_end = NULL;
             edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.Data, edit_state.Text.Size, buf, NULL, &buf_end);
