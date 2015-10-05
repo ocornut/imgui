@@ -8520,7 +8520,9 @@ void ImGui::Dummy(const ImVec2& size)
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
-    ItemSize(size);
+    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
+    ItemSize(bb);
+    ItemAdd(bb, NULL);
 }
 
 bool ImGui::IsRectVisible(const ImVec2& size)
