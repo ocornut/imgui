@@ -282,9 +282,9 @@
 
        Button("Hello###ID";   // Label = "Hello",  ID = hash of "ID"
        Button("World###ID";   // Label = "World",  ID = hash of "ID" (same as above)
-	   
-	   sprintf(buf, "My game (%f FPS)###MyGame");
-	   Begin(buf);            // Variable label,   ID = hash of "MyGame"
+       
+       sprintf(buf, "My game (%f FPS)###MyGame");
+       Begin(buf);            // Variable label,   ID = hash of "MyGame"
 
    - Use PushID() / PopID() to create scopes and avoid ID conflicts within the same Window.
      This is the most convenient way of distinguishing ID if you are iterating and creating many UI elements.
@@ -1572,9 +1572,16 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window = NULL)
 {
     ImGuiState& g = *GImGui;
     g.ActiveId = id;
-    g.ActiveIdIsFocusedOnly = false;
+    g.ActiveIdAllowHoveringOthers = false;
     g.ActiveIdIsJustActivated = true;
     g.ActiveIdWindow = window;
+}
+
+void ImGui::SetHoveredID(ImGuiID id)
+{
+    ImGuiState& g = *GImGui;
+    g.HoveredId = id;
+    g.HoveredIdAllowHoveringOthers = false;
 }
 
 void ImGui::KeepAliveID(ImGuiID id)
@@ -1635,7 +1642,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
         window->DC.LastItemHoveredRect = true;
         window->DC.LastItemHoveredAndUsable = false;
         if (g.HoveredRootWindow == window->RootWindow)
-            if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdIsFocusedOnly || (g.ActiveId == window->MoveID))
+            if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdAllowHoveringOthers || (g.ActiveId == window->MoveID))
                 if (IsWindowContentHoverable(window))
                     window->DC.LastItemHoveredAndUsable = true;
     }
@@ -1664,11 +1671,11 @@ bool ImGui::IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when
 bool ImGui::IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs)
 {
     ImGuiState& g = *GImGui;
-    if (g.HoveredId == 0 || g.HoveredId == id)
+    if (g.HoveredId == 0 || g.HoveredId == id || g.HoveredIdAllowHoveringOthers)
     {
         ImGuiWindow* window = GetCurrentWindowRead();
         if (g.HoveredWindow == window || (flatten_childs && g.HoveredRootWindow == window->RootWindow))
-            if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdIsFocusedOnly) && ImGui::IsMouseHoveringRect(bb.Min, bb.Max))
+            if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdAllowHoveringOthers) && ImGui::IsMouseHoveringRect(bb.Min, bb.Max))
                 if (IsWindowContentHoverable(g.HoveredRootWindow))
                     return true;
     }
@@ -1885,6 +1892,7 @@ void ImGui::NewFrame()
     // Clear reference to active widget if the widget isn't alive anymore
     g.HoveredIdPreviousFrame = g.HoveredId;
     g.HoveredId = 0;
+    g.HoveredIdAllowHoveringOthers = false;
     if (!g.ActiveIdIsAlive && g.ActiveIdPreviousFrame == g.ActiveId && g.ActiveId != 0)
         SetActiveID(0);
     g.ActiveIdPreviousFrame = g.ActiveId;
@@ -4049,12 +4057,12 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
         : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + window->TitleBarHeight(), window_rect.Max.x, window_rect.Max.y - other_scrollbar_size_w);
 
     float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
-	int window_rounding_corners;
-	if (horizontal)
-	    window_rounding_corners = 8 | (other_scrollbar ? 0 : 4);
-	else
-	    window_rounding_corners = ((window->Flags & ImGuiWindowFlags_NoTitleBar) ? 2 : 0) | (other_scrollbar ? 0 : 4);
-	window->DrawList->AddRectFilled(bb.Min, bb.Max, window->Color(ImGuiCol_ScrollbarBg), window_rounding, window_rounding_corners);
+    int window_rounding_corners;
+    if (horizontal)
+        window_rounding_corners = 8 | (other_scrollbar ? 0 : 4);
+    else
+        window_rounding_corners = ((window->Flags & ImGuiWindowFlags_NoTitleBar) ? 2 : 0) | (other_scrollbar ? 0 : 4);
+    window->DrawList->AddRectFilled(bb.Min, bb.Max, window->Color(ImGuiCol_ScrollbarBg), window_rounding, window_rounding_corners);
     bb.Reduce(ImVec2(ImClamp((float)(int)((bb.Max.x - bb.Min.x - 2.0f) * 0.5f), 0.0f, 3.0f), ImClamp((float)(int)((bb.Max.y - bb.Min.y - 2.0f) * 0.5f), 0.0f, 3.0f)));
 
     // V denote the main axis of the scrollbar
@@ -4085,7 +4093,7 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
 
         // Click position in scrollbar normalized space (0.0f->1.0f)
         const float clicked_v_norm = ImSaturate((mouse_pos_v - scrollbar_pos_v) / scrollbar_size_v);
-        g.HoveredId = id;
+        ImGui::SetHoveredID(id);
 
         bool seek_absolute = false;
         if (!previously_held)
@@ -5107,7 +5115,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     const bool hovered = IsHovered(bb, id, (flags & ImGuiButtonFlags_FlattenChilds) != 0);
     if (hovered)
     {
-        g.HoveredId = id;
+        SetHoveredID(id);
         if (allow_key_modifiers || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
             if (g.IO.MouseClicked[0])
@@ -5846,7 +5854,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label
 
     // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
     SetActiveID(g.ScalarAsInputTextId, window);
-    g.HoveredId = 0;
+    SetHoveredID(0);
     FocusableItemUnregister(window);
 
     char buf[32];
@@ -5857,7 +5865,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label
         // First frame
         IM_ASSERT(g.ActiveId == id);    // InputText ID expected to match the Slider ID (else we'd need to store them both, which is also possible)
         g.ScalarAsInputTextId = g.ActiveId;
-        g.HoveredId = id;
+        SetHoveredID(id);
     }
     else if (g.ActiveId != g.ScalarAsInputTextId)
     {
@@ -6063,7 +6071,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 
     const bool hovered = IsHovered(frame_bb, id);
     if (hovered)
-        g.HoveredId = id;
+        SetHoveredID(id);
 
     if (!display_format)
         display_format = "%.3f";
@@ -6122,7 +6130,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
 
     const bool hovered = IsHovered(frame_bb, id);
     if (hovered)
-        g.HoveredId = id;
+        SetHoveredID(id);
 
     if (!display_format)
         display_format = "%.3f";
@@ -6363,7 +6371,7 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
 
     const bool hovered = IsHovered(frame_bb, id);
     if (hovered)
-        g.HoveredId = id;
+        SetHoveredID(id);
 
     if (!display_format)
         display_format = "%.3f";
@@ -7108,7 +7116,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool hovered = IsHovered(frame_bb, id);
     if (hovered)
     {
-        g.HoveredId = id;
+        SetHoveredID(id);
         g.MouseCursor = ImGuiMouseCursor_TextInput;
     }
     const bool user_clicked = hovered && io.MouseClicked[0];
@@ -7176,7 +7184,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
         // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
         // Down the line we should have a cleaner concept of focused vs active in the library.
-        g.ActiveIdIsFocusedOnly = !io.MouseDown[0];
+        g.ActiveIdAllowHoveringOthers = !io.MouseDown[0];
 
         // Edit in progress
         const float mouse_x = (g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + edit_state.ScrollX;
@@ -7835,7 +7843,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     bool menu_toggled = false;
     if (hovered)
     {
-        g.HoveredId = id;
+        SetHoveredID(id);
         if (g.IO.MouseClicked[0])
         {
             SetActiveID(0);
@@ -8520,6 +8528,7 @@ void ImGui::Dummy(const ImVec2& size)
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
+    
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
     ItemSize(bb);
     ItemAdd(bb, NULL);
