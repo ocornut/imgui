@@ -3298,13 +3298,13 @@ void ImGui::EndChild()
 }
 
 // Helper to create a child window / scrolling region that looks like a normal widget frame.
-bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size)
+bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags extra_flags)
 {
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, style.Colors[ImGuiCol_FrameBg]);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, style.FrameRounding);
-    return ImGui::BeginChild(id, size, false, ImGuiWindowFlags_NoMove);
+    return ImGui::BeginChild(id, size, false, ImGuiWindowFlags_NoMove | extra_flags);
 }
 
 void ImGui::EndChildFrame()
