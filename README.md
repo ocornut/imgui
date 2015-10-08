@@ -3,7 +3,7 @@ ImGui
 [![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 [![Coverity Status](https://scan.coverity.com/projects/4720/badge.svg)](https://scan.coverity.com/projects/4720)
 
-<sub>(This library is free but I need your support to sustain development and maintenance. If you work for a company, please consider financial support)</sub>
+(This library is free but I need your support to sustain its development - there's lots of desirable new features and maintenance to do. If you work for a company using ImGui or have the means to do so, please consider financial support)
 
 [![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui) [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
