@@ -1079,7 +1079,17 @@ static unsigned int stb_decompress_length(unsigned char *input);
 static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length);
 static const char*  GetDefaultCompressedFontDataTTFBase85();
 static unsigned int Decode85Byte(char c)                                    { return c >= '\\' ? c-36 : c-35; }
-static void         Decode85(const unsigned char* src, unsigned int* dst)   { for (; *src; src += 5) *dst++ = Decode85Byte(src[0]) + 85*(Decode85Byte(src[1]) + 85*(Decode85Byte(src[2]) + 85*(Decode85Byte(src[3]) + 85*Decode85Byte(src[4])))); }
+static void         Decode85(const unsigned char* src, unsigned char* dst)  
+{
+	for (; *src; src += 5)
+	{
+		unsigned int tmp = Decode85Byte(src[0]) + 85*(Decode85Byte(src[1]) + 85*(Decode85Byte(src[2]) + 85*(Decode85Byte(src[3]) + 85*Decode85Byte(src[4]))));
+		*dst++ = ((tmp >> 0) & 0xFF);
+		*dst++ = ((tmp >> 8) & 0xFF);
+		*dst++ = ((tmp >> 16) & 0xFF);
+		*dst++ = ((tmp >> 24) & 0xFF);
+	}
+}
 
 // Load embedded ProggyClean.ttf at size 13, disable oversampling
 ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
@@ -1146,7 +1156,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(const char* compressed
 {
     int compressed_ttf_size = (((int)strlen(compressed_ttf_data_base85) + 4) / 5) * 4;
     void* compressed_ttf = ImGui::MemAlloc(compressed_ttf_size);
-    Decode85((const unsigned char*)compressed_ttf_data_base85, (unsigned int*)compressed_ttf);
+    Decode85((const unsigned char*)compressed_ttf_data_base85, (unsigned char*)compressed_ttf);
     ImFont* font = AddFontFromMemoryCompressedTTF(compressed_ttf, compressed_ttf_size, size_pixels, font_cfg, glyph_ranges);
     ImGui::MemFree(compressed_ttf);
     return font;
