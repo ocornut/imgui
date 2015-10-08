@@ -38,6 +38,15 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	CFLAGS = $(CXXFLAGS)
 endif
 
+ifeq ($(UNAME_S), MINGW64_NT-6.3)
+   ECHO_MESSAGE = "Windows"
+   LIBS = -lglfw3 -lgdi32 -lopengl32 -limm32
+
+   CXXFLAGS = -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
+   CXXFLAGS += -Wall -Wformat
+   CFLAGS = $(CXXFLAGS)
+endif
+
 .cpp.o:
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
