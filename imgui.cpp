@@ -704,6 +704,10 @@ ImGuiIO::ImGuiIO()
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
     MouseDragThreshold = 6.0f;
+    for (int i = 0; i < IM_ARRAYSIZE(MouseDownDuration); i++)
+        MouseDownDuration[i] = MouseDownDurationPrev[i] = -1.0f;
+    for (int i = 0; i < IM_ARRAYSIZE(KeysDownDuration); i++)
+        KeysDownDuration[i] = KeysDownDurationPrev[i] = -1.0f;
     for (int i = 0; i < ImGuiKey_COUNT; i++)
         KeyMap[i] = -1;
     KeyRepeatDelay = 0.250f;
