@@ -52,3 +52,7 @@ sdl_opengl_example/
 
 allegro5_example/
     Allegro 5 example.
+	 
+marmalade_example/
+    Marmalade example using IwGx
+	 
