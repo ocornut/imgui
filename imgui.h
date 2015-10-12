@@ -416,9 +416,11 @@ namespace ImGui
     IMGUI_API void          CaptureKeyboardFromApp();                                           // manually enforce imgui setting the io.WantCaptureKeyboard flag next frame (your application needs to handle it). e.g. capture keyboard when your widget is being hovered.
     IMGUI_API void          CaptureMouseFromApp();                                              // manually enforce imgui setting the io.WantCaptureMouse flag next frame (your application needs to handle it).
 
-    // Helpers functions to access the MemAllocFn/MemFreeFn pointers in ImGui::GetIO()
+    // Helpers functions to access functions pointers in ImGui::GetIO()
     IMGUI_API void*         MemAlloc(size_t sz);
     IMGUI_API void          MemFree(void* ptr);
+    IMGUI_API const char*   GetClipboardText();
+    IMGUI_API void          SetClipboardText(const char* text);
 
     // Internal state/context access - if you want to use multiple ImGui context, or share context between modules (e.g. DLL), or allocate the memory yourself
     IMGUI_API const char*   GetVersion();

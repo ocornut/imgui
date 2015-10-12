@@ -1761,6 +1761,17 @@ void ImGui::MemFree(void* ptr)
     return GImGui->IO.MemFreeFn(ptr);
 }
 
+const char* ImGui::GetClipboardText()
+{
+    return GImGui->IO.GetClipboardTextFn ? GImGui->IO.GetClipboardTextFn() : "";
+}
+
+void ImGui::SetClipboardText(const char* text)
+{
+    if (GImGui->IO.SetClipboardTextFn)
+        GImGui->IO.SetClipboardTextFn(text);
+}
+
 const char* ImGui::GetVersion()
 {
     return IMGUI_VERSION;
