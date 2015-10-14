@@ -14,7 +14,7 @@
 #include <math.h>               // sqrtf, fabsf, fmodf, powf, cosf, sinf, floorf, ceilf
 #include <stdio.h>              // vsnprintf, sscanf, printf
 
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #define snprintf _snprintf
 #endif

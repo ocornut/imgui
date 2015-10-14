@@ -13,7 +13,6 @@ define _snprintf=snprintf
 options
 {
     optimise-speed=1
-    cxx11
 }
 
 includepaths
