@@ -7086,6 +7086,20 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
     return true;
 }
 
+static void SwapTextBufferWithAsterisks(char*& buf, const char*& buf_end)
+{
+	static char password_asterisks[256] = "\0";
+	if (password_asterisks[0] == 0)
+		memset(password_asterisks, '*', 255);
+
+	unsigned l = strlen(buf);
+	if (l > 255)
+		l = 255;
+
+	buf = password_asterisks;
+	buf_end = buf + l;
+}
+
 // Edit a string of text
 bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
@@ -7103,6 +7117,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const ImGuiID id = window->GetID(label);
     const bool is_multiline = (flags & ImGuiInputTextFlags_Multiline) != 0;
     const bool is_editable = (flags & ImGuiInputTextFlags_ReadOnly) == 0;
+	const bool is_password = !is_multiline && (flags & ImGuiInputTextFlags_Password) != 0;
 
     ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
     ImVec2 size = CalcItemSize(size_arg, CalcItemWidth(), is_multiline ? ImGui::GetTextLineHeight() * 8.0f : label_size.y); // Arbitrary default of 8 lines high for multi-line
@@ -7291,7 +7306,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_A))                   { edit_state.SelectAll(); edit_state.CursorFollow = true; }
-        else if (is_ctrl_only && ((IsKeyPressedMap(ImGuiKey_X) && is_editable) || IsKeyPressedMap(ImGuiKey_C)) && (!is_multiline || edit_state.HasSelection()))
+        else if (is_ctrl_only && !is_password && ((IsKeyPressedMap(ImGuiKey_X) && is_editable) || IsKeyPressedMap(ImGuiKey_C)) && (!is_multiline || edit_state.HasSelection()))
         {
             // Cut, Copy
             const bool cut = IsKeyPressedMap(ImGuiKey_X);
@@ -7561,7 +7576,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             }
         }
 
-        draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, draw_window->Color(ImGuiCol_Text), buf, buf+edit_state.CurLenA, 0.0f, is_multiline ? NULL : &clip_rect);
+		const char* buf_end = buf + edit_state.CurLenA;
+		if (is_password)
+			SwapTextBufferWithAsterisks(buf, buf_end);
+
+        draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, draw_window->Color(ImGuiCol_Text), buf, buf_end, 0.0f, is_multiline ? NULL : &clip_rect);
 
         // Draw blinking cursor
         ImVec2 cursor_screen_pos = render_pos + cursor_offset - render_scroll;
@@ -7581,6 +7600,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         const char* buf_end = NULL;
         if (is_multiline)
             text_size = ImVec2(size.x, InputTextCalcTextLenAndLineCount(buf, &buf_end) * g.FontSize); // We don't need width
+
+		if (is_password)
+			SwapTextBufferWithAsterisks(buf, buf_end);
+
         draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos, draw_window->Color(ImGuiCol_Text), buf, buf_end, 0.0f, is_multiline ? NULL : &clip_rect);
     }
 
