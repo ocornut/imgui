@@ -26,7 +26,7 @@
 #endif
 #endif
 
-#if defined(_MSC_VER) && !defined(__S3E__)
+#if defined(_MSC_VER)
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #define snprintf _snprintf
@@ -291,6 +291,7 @@ void ImDrawList::ChannelsMerge()
 
 void ImDrawList::ChannelsSetCurrent(int idx)
 {
+    IM_ASSERT(idx < _ChannelsCount);
     if (_ChannelsCurrent == idx) return;
     memcpy(&_Channels.Data[_ChannelsCurrent].CmdBuffer, &CmdBuffer, sizeof(CmdBuffer)); // copy 12 bytes, four times
     memcpy(&_Channels.Data[_ChannelsCurrent].IdxBuffer, &IdxBuffer, sizeof(IdxBuffer));

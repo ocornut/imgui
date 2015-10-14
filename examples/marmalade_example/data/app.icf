@@ -20,6 +20,8 @@
 MemSize=6000000
 MemSizeDebug=6000000
 DispFixRot=FixedLandscape
+
+# emulate iphone 5 resolution, change these settings to emulate other display resolution
 WinWidth=1136
 WinHeight=640
 

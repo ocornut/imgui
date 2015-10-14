@@ -8,36 +8,38 @@
 define IMGUI_DISABLE_INCLUDE_IMCONFIG_H
 define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS
 define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS
+define _snprintf=snprintf
 
 options
 {
-	optimise-speed=1
+    optimise-speed=1
+    cxx11
 }
 
 includepaths
 {
-	../..
+    ../..
 }
 
 subprojects
 {
-	iwgx
+    iwgx
 }
 
 files
 {
-	(.)
-	["imgui"]
-	../../imgui.cpp
-	../../imgui_demo.cpp
-	../../imgui_draw.cpp
-	../../imconfig.h
-	../../imgui.h
+    (.)
+    ["imgui"]
+    ../../imgui.cpp
+    ../../imgui_demo.cpp
+    ../../imgui_draw.cpp
+    ../../imconfig.h
+    ../../imgui.h
    ../../imgui_internal.h
 
-	["imgui","Marmalade binding"]
-	imgui_impl_marmalade.h
-	imgui_impl_marmalade.cpp
-	main.cpp
+    ["imgui","Marmalade binding"]
+    imgui_impl_marmalade.h
+    imgui_impl_marmalade.cpp
+    main.cpp
 
 }

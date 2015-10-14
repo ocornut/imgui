@@ -14,7 +14,7 @@
 #include <stdio.h>      // FILE*
 #include <math.h>       // sqrtf()
 
-#if defined(_MSC_VER) && !defined(__S3E__)
+#if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable: 4251) // class 'xxx' needs to have dll-interface to be used by clients of struct 'xxx' // when IMGUI_API is set to__declspec(dllexport)
 #endif
@@ -698,6 +698,6 @@ namespace ImGui
 
 } // namespace ImGuiP
 
-#if defined(_MSC_VER) && !defined(__S3E__)
+#if defined(_MSC_VER)
 #pragma warning (pop)
 #endif
