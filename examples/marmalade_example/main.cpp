@@ -15,7 +15,7 @@
 int main(int, char**)
 {
     // Setup ImGui binding
-	ImGui_Marmalade_Init(true);
+    ImGui_Marmalade_Init(true);
 
     // Load Fonts
     // (see extra_fonts/README.txt for more details)
@@ -40,12 +40,12 @@ int main(int, char**)
     // Main loop
     while (true)
     {
-		 if( s3eDeviceCheckQuitRequest() )
-			 break;
+         if( s3eDeviceCheckQuitRequest() )
+             break;
 
-		 s3eKeyboardUpdate() ;
-		  s3ePointerUpdate() ;
-		  ImGui_Marmalade_NewFrame();
+         s3eKeyboardUpdate() ;
+         s3ePointerUpdate() ;
+         ImGui_Marmalade_NewFrame();
 
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
@@ -76,12 +76,12 @@ int main(int, char**)
         }
 
         // Rendering
-		  IwGxSetColClear(clear_color.x*255,clear_color.y*255,clear_color.z*255,clear_color.w*255) ;
+        IwGxSetColClear(clear_color.x*255,clear_color.y*255,clear_color.z*255,clear_color.w*255) ;
         IwGxClear();
-		  ImGui::Render();
+        ImGui::Render();
         IwGxSwapBuffers();
 
-		  s3eDeviceYield(0) ;
+        s3eDeviceYield(0) ;
     }
 
     // Cleanup
