@@ -11,7 +11,6 @@
 #include <s3ePointer.h>
 #include <IwGx.h>
 
-
 int main(int, char**)
 {
     // Setup ImGui binding
@@ -40,11 +39,11 @@ int main(int, char**)
     // Main loop
     while (true)
     {
-         if( s3eDeviceCheckQuitRequest() )
+         if (s3eDeviceCheckQuitRequest())
              break;
 
-         s3eKeyboardUpdate() ;
-         s3ePointerUpdate() ;
+         s3eKeyboardUpdate();
+         s3ePointerUpdate();
          ImGui_Marmalade_NewFrame();
 
         // 1. Show a simple window
@@ -81,7 +80,7 @@ int main(int, char**)
         ImGui::Render();
         IwGxSwapBuffers();
 
-        s3eDeviceYield(0) ;
+        s3eDeviceYield(0);
     }
 
     // Cleanup
