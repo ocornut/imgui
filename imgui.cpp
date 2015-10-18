@@ -3521,13 +3521,15 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         g.CurrentPopupStack.push_back(popup_ref);
         window->PopupID = popup_ref.PopupID;
     }
+    
+    const bool window_appearing_after_being_hidden = (window->HiddenFrames == 1);
 
     // Process SetNextWindow***() calls
     bool window_pos_set_by_api = false, window_size_set_by_api = false;
     if (g.SetNextWindowPosCond)
     {
         const ImVec2 backup_cursor_pos = window->DC.CursorPos;                  // FIXME: not sure of the exact reason of this anymore :( need to look into that.
-        if (!window_was_active) window->SetWindowPosAllowFlags |= ImGuiSetCond_Appearing;
+        if (!window_was_active || window_appearing_after_being_hidden) window->SetWindowPosAllowFlags |= ImGuiSetCond_Appearing;
         window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) != 0;
         if (window_pos_set_by_api && ImLengthSqr(g.SetNextWindowPosVal - ImVec2(-FLT_MAX,-FLT_MAX)) < 0.001f)
         {
@@ -3543,7 +3545,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     }
     if (g.SetNextWindowSizeCond)
     {
-        if (!window_was_active) window->SetWindowSizeAllowFlags |= ImGuiSetCond_Appearing;
+        if (!window_was_active || window_appearing_after_being_hidden) window->SetWindowSizeAllowFlags |= ImGuiSetCond_Appearing;
         window_size_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0;
         SetWindowSize(window, g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
         g.SetNextWindowSizeCond = 0;
@@ -3559,7 +3561,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     }
     if (g.SetNextWindowCollapsedCond)
     {
-        if (!window_was_active) window->SetWindowCollapsedAllowFlags |= ImGuiSetCond_Appearing;
+        if (!window_was_active || window_appearing_after_being_hidden) window->SetWindowCollapsedAllowFlags |= ImGuiSetCond_Appearing;
         SetWindowCollapsed(window, g.SetNextWindowCollapsedVal, g.SetNextWindowCollapsedCond);
         g.SetNextWindowCollapsedCond = 0;
     }
@@ -3633,10 +3635,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             window->Collapsed = false;
         }
 
-        const bool window_appearing_after_being_hidden = (window->HiddenFrames == 1);
-        if (window->HiddenFrames > 0)
-            window->HiddenFrames--;
-
         // SIZE
 
         // Save contents size from last frame for auto-fitting (unless explicitly specified)
@@ -3644,6 +3642,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->SizeContents.y = (window->SizeContentsExplicit.y != 0.0f) ? window->SizeContentsExplicit.y : ((window_is_new ? 0.0f : window->DC.CursorMaxPos.y - window->Pos.y) + window->Scroll.y);
 
         // Hide popup/tooltip window when first appearing while we measure size (because we recycle them)
+        if (window->HiddenFrames > 0)
+            window->HiddenFrames--;
         if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && !window_was_active)
         {
             window->HiddenFrames = 1;
