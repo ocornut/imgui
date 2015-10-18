@@ -7458,35 +7458,38 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
         {
             // Count lines + find lines numbers of cursor and select_start
-            int matches_remaining = 0;
-            int matches_line_no[2] = { -1, -999 };
-            const ImWchar* matches_ptr[2] = { NULL, NULL };
-            matches_ptr[0] = text_begin + edit_state.StbState.cursor; matches_remaining++;
+            const ImWchar* searches_input_cursor_ptr[2];
+            searches_input_cursor_ptr[0] = text_begin + edit_state.StbState.cursor;
+            searches_input_cursor_ptr[1] = NULL;
+            int searches_remaining = 1;
+            int searches_result_line_number[2] = { -1, -999 };
             if (edit_state.StbState.select_start != edit_state.StbState.select_end)
             {
-                matches_ptr[1] = text_begin + ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end);
-                matches_line_no[1] = -1;
-                matches_remaining++;
+                searches_input_cursor_ptr[1] = text_begin + ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end);
+                searches_result_line_number[1] = -1;
+                searches_remaining++;
             }
-            matches_remaining += is_multiline ? 1 : 0;     // So that we never exit the loop until all lines are counted.
 
+            // Iterate all lines to find our line numbers
+            // In multi-line mode, we never exit the loop until all lines are counted, so add one extra to the counter.
+            searches_remaining += is_multiline ? 1 : 0;
             int line_count = 0;
             for (const ImWchar* s = text_begin; s < text_end+1; s++)
                 if ((*s) == '\n' || s == text_end)
                 {
                     line_count++;
-                    if (matches_line_no[0] == -1 && s >= matches_ptr[0]) { matches_line_no[0] = line_count; if (--matches_remaining <= 0) break; }
-                    if (matches_line_no[1] == -1 && s >= matches_ptr[1]) { matches_line_no[1] = line_count; if (--matches_remaining <= 0) break; }
+                    if (searches_result_line_number[0] == -1 && s >= searches_input_cursor_ptr[0]) { searches_result_line_number[0] = line_count; if (--searches_remaining <= 0) break; }
+                    if (searches_result_line_number[1] == -1 && s >= searches_input_cursor_ptr[1]) { searches_result_line_number[1] = line_count; if (--searches_remaining <= 0) break; }
                 }
 
-            // Calculate 2d position
-            IM_ASSERT(matches_line_no[0] != -1);
-            cursor_offset.x = InputTextCalcTextSizeW(ImStrbolW(matches_ptr[0], text_begin), matches_ptr[0]).x;
-            cursor_offset.y = matches_line_no[0] * g.FontSize;
-            if (matches_line_no[1] >= 0)
+            // Calculate 2d position by finding the beginning of the line and measuring distance
+            IM_ASSERT(searches_result_line_number[0] != -1);
+            cursor_offset.x = InputTextCalcTextSizeW(ImStrbolW(searches_input_cursor_ptr[0], text_begin), searches_input_cursor_ptr[0]).x;
+            cursor_offset.y = searches_result_line_number[0] * g.FontSize;
+            if (searches_result_line_number[1] >= 0)
             {
-                select_start_offset.x = InputTextCalcTextSizeW(ImStrbolW(matches_ptr[1], text_begin), matches_ptr[1]).x;
-                select_start_offset.y = matches_line_no[1] * g.FontSize;
+                select_start_offset.x = InputTextCalcTextSizeW(ImStrbolW(searches_input_cursor_ptr[1], text_begin), searches_input_cursor_ptr[1]).x;
+                select_start_offset.y = searches_result_line_number[1] * g.FontSize;
             }
 
             // Calculate text height
