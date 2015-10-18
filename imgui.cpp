@@ -7456,42 +7456,43 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         // - Measure text height (for scrollbar)
         // We are attempting to do most of that in **one main pass** to minimize the computation cost (non-negligible for large amount of text) + 2nd pass for selection rendering (we could merge them by an extra refactoring effort)
         const ImWchar* text_begin = edit_state.Text.Data;
-        const ImWchar* text_end = text_begin + edit_state.CurLenW;
         ImVec2 cursor_offset, select_start_offset;
 
         {
-            // Count lines + find lines numbers of cursor and select_start
-            const ImWchar* searches_input_cursor_ptr[2];
-            searches_input_cursor_ptr[0] = text_begin + edit_state.StbState.cursor;
-            searches_input_cursor_ptr[1] = NULL;
+            // Count lines + find lines numbers straddling 'cursor' and 'select_start' position.
+            const ImWchar* searches_input_ptr[2];
+            searches_input_ptr[0] = text_begin + edit_state.StbState.cursor;
+            searches_input_ptr[1] = NULL;
             int searches_remaining = 1;
             int searches_result_line_number[2] = { -1, -999 };
             if (edit_state.StbState.select_start != edit_state.StbState.select_end)
             {
-                searches_input_cursor_ptr[1] = text_begin + ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end);
+                searches_input_ptr[1] = text_begin + ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end);
                 searches_result_line_number[1] = -1;
                 searches_remaining++;
             }
 
             // Iterate all lines to find our line numbers
-            // In multi-line mode, we never exit the loop until all lines are counted, so add one extra to the counter.
+            // In multi-line mode, we never exit the loop until all lines are counted, so add one extra to the searches_remaining counter.
             searches_remaining += is_multiline ? 1 : 0;
             int line_count = 0;
-            for (const ImWchar* s = text_begin; s < text_end+1; s++)
-                if ((*s) == '\n' || s == text_end)
+            for (const ImWchar* s = text_begin; *s != 0; s++)
+                if (*s == '\n')
                 {
                     line_count++;
-                    if (searches_result_line_number[0] == -1 && s >= searches_input_cursor_ptr[0]) { searches_result_line_number[0] = line_count; if (--searches_remaining <= 0) break; }
-                    if (searches_result_line_number[1] == -1 && s >= searches_input_cursor_ptr[1]) { searches_result_line_number[1] = line_count; if (--searches_remaining <= 0) break; }
+                    if (searches_result_line_number[0] == -1 && s >= searches_input_ptr[0]) { searches_result_line_number[0] = line_count; if (--searches_remaining <= 0) break; }
+                    if (searches_result_line_number[1] == -1 && s >= searches_input_ptr[1]) { searches_result_line_number[1] = line_count; if (--searches_remaining <= 0) break; }
                 }
+            line_count++;
+            if (searches_result_line_number[0] == -1) searches_result_line_number[0] = line_count;
+            if (searches_result_line_number[1] == -1) searches_result_line_number[1] = line_count;
 
             // Calculate 2d position by finding the beginning of the line and measuring distance
-            IM_ASSERT(searches_result_line_number[0] != -1);
-            cursor_offset.x = InputTextCalcTextSizeW(ImStrbolW(searches_input_cursor_ptr[0], text_begin), searches_input_cursor_ptr[0]).x;
+            cursor_offset.x = InputTextCalcTextSizeW(ImStrbolW(searches_input_ptr[0], text_begin), searches_input_ptr[0]).x;
             cursor_offset.y = searches_result_line_number[0] * g.FontSize;
             if (searches_result_line_number[1] >= 0)
             {
-                select_start_offset.x = InputTextCalcTextSizeW(ImStrbolW(searches_input_cursor_ptr[1], text_begin), searches_input_cursor_ptr[1]).x;
+                select_start_offset.x = InputTextCalcTextSizeW(ImStrbolW(searches_input_ptr[1], text_begin), searches_input_ptr[1]).x;
                 select_start_offset.y = searches_result_line_number[1] * g.FontSize;
             }
 
