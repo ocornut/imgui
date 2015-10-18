@@ -3536,7 +3536,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
         else
         {
-            ImGui::SetWindowPos(g.SetNextWindowPosVal, g.SetNextWindowPosCond);
+            SetWindowPos(window, g.SetNextWindowPosVal, g.SetNextWindowPosCond);
         }
         window->DC.CursorPos = backup_cursor_pos;
         g.SetNextWindowPosCond = 0;
@@ -3545,7 +3545,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     {
         if (!window_was_active) window->SetWindowSizeAllowFlags |= ImGuiSetCond_Appearing;
         window_size_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0;
-        ImGui::SetWindowSize(g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
+        SetWindowSize(window, g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
         g.SetNextWindowSizeCond = 0;
     }
     if (g.SetNextWindowContentSizeCond)
@@ -3560,7 +3560,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     if (g.SetNextWindowCollapsedCond)
     {
         if (!window_was_active) window->SetWindowCollapsedAllowFlags |= ImGuiSetCond_Appearing;
-        ImGui::SetWindowCollapsed(g.SetNextWindowCollapsedVal, g.SetNextWindowCollapsedCond);
+        SetWindowCollapsed(window, g.SetNextWindowCollapsedVal, g.SetNextWindowCollapsedCond);
         g.SetNextWindowCollapsedCond = 0;
     }
     if (g.SetNextWindowFocus)
