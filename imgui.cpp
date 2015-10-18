@@ -7089,7 +7089,7 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
 }
 
 // Edit a string of text
-// FIXME: This is rather complex partly because we are doing UTF8 > u16 > UTF8 conversions on the go to more easily handle stb_textedit calls. Ideally we should stay in UTF8 space all the time. 
+// FIXME: This is rather complex partly because we are doing UTF8 > u16 > UTF8 conversions on the go to more easily handle stb_textedit calls. Ideally we should stay in UTF-8 all the time. 
 bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -7177,9 +7177,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             {
                 // Recycle existing cursor/selection/undo stack but clamp position
                 // Note a single mouse click will override the cursor/position immediately by calling stb_textedit_click handler.
-                edit_state.StbState.cursor = ImMin(edit_state.StbState.cursor, edit_state.CurLenW);
-                edit_state.StbState.select_start = ImMin(edit_state.StbState.select_start, edit_state.CurLenW);
-                edit_state.StbState.select_end = ImMin(edit_state.StbState.select_end, edit_state.CurLenW);
+                edit_state.CursorClamp();
             }
             else
             {
@@ -7210,6 +7208,16 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
     if (g.ActiveId == id)
     {
+        if (!is_editable && !g.ActiveIdIsJustActivated)
+        {
+            // When read-only we always use the live data passed to the function
+            edit_state.Text.resize(buf_size+1);
+            const char* buf_end = NULL;
+            edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.Data, edit_state.Text.Size, buf, NULL, &buf_end);
+            edit_state.CurLenA = (int)(buf_end - buf);
+            edit_state.CursorClamp();
+        }
+
         edit_state.BufSizeA = buf_size;
 
         // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
