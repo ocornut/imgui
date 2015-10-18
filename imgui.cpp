@@ -1083,10 +1083,10 @@ ImVec4 ImGui::ColorConvertU32ToFloat4(ImU32 in)
 
 ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in)
 {
-    ImU32 out  = ((ImU32)(ImSaturate(in.x)*255.f));
-    out |= ((ImU32)(ImSaturate(in.y)*255.f) << 8);
-    out |= ((ImU32)(ImSaturate(in.z)*255.f) << 16);
-    out |= ((ImU32)(ImSaturate(in.w)*255.f) << 24);
+    ImU32 out  = ((ImU32)(ImSaturate(in.x)*255.f+0.5f));
+    out |= ((ImU32)(ImSaturate(in.y)*255.f+0.5f) << 8);
+    out |= ((ImU32)(ImSaturate(in.z)*255.f+0.5f) << 16);
+    out |= ((ImU32)(ImSaturate(in.w)*255.f+0.5f) << 24);
     return out;
 }
 
@@ -8339,6 +8339,7 @@ void ImGui::EndMenu()
 }
 
 // A little colored square. Return true when clicked.
+// FIXME: May want to display/ignore the alpha component in the color display? Yet show it in the tooltip.
 bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_border)
 {
     ImGuiWindow* window = GetCurrentWindow();
