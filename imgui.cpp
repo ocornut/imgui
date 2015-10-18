@@ -4081,7 +4081,9 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
     const float border_offset = (window->Flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
     ImRect bb = horizontal
         ? ImRect(window->Pos.x + border_offset, window_rect.Max.y - style.ScrollbarSize, window_rect.Max.x - other_scrollbar_size_w, window_rect.Max.y)
-        : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + window->TitleBarHeight() + border_offset, window_rect.Max.x, window_rect.Max.y - other_scrollbar_size_w);
+        : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + border_offset, window_rect.Max.x, window_rect.Max.y - other_scrollbar_size_w);
+    if (!horizontal)
+        bb.Min.y += window->TitleBarHeight() + ((window->Flags & ImGuiWindowFlags_MenuBar) ? window->MenuBarHeight() - border_offset : 0.0f);
 
     float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
     int window_rounding_corners;
