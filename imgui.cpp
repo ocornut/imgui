@@ -761,6 +761,8 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
 // HELPERS
 //-----------------------------------------------------------------------------
 
+#define IM_F32_TO_INT8(_VAL)  ((int)((_VAL) * 255.0f + 0.5f))
+
 #define IM_INT_MIN  (-2147483647-1)
 #define IM_INT_MAX  (2147483647)
 
@@ -1083,10 +1085,11 @@ ImVec4 ImGui::ColorConvertU32ToFloat4(ImU32 in)
 
 ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in)
 {
-    ImU32 out  = ((ImU32)(ImSaturate(in.x)*255.f+0.5f));
-    out |= ((ImU32)(ImSaturate(in.y)*255.f+0.5f) << 8);
-    out |= ((ImU32)(ImSaturate(in.z)*255.f+0.5f) << 16);
-    out |= ((ImU32)(ImSaturate(in.w)*255.f+0.5f) << 24);
+    ImU32 out;
+    out  = ((ImU32)IM_F32_TO_INT8(ImSaturate(in.x)));
+    out |= ((ImU32)IM_F32_TO_INT8(ImSaturate(in.y))) << 8;
+    out |= ((ImU32)IM_F32_TO_INT8(ImSaturate(in.z))) << 16;
+    out |= ((ImU32)IM_F32_TO_INT8(ImSaturate(in.w))) << 24;
     return out;
 }
 
@@ -8360,13 +8363,7 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
     RenderFrame(bb.Min, bb.Max, window->Color(col), outline_border, style.FrameRounding);
 
     if (hovered)
-    {
-        int ix = (int)(col.x * 255.0f + 0.5f);
-        int iy = (int)(col.y * 255.0f + 0.5f);
-        int iz = (int)(col.z * 255.0f + 0.5f);
-        int iw = (int)(col.w * 255.0f + 0.5f);
-        ImGui::SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col.x, col.y, col.z, col.w, ix, iy, iz, iw);
-    }
+        ImGui::SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col.x, col.y, col.z, col.w, IM_F32_TO_INT8(col.x), IM_F32_TO_INT8(col.y), IM_F32_TO_INT8(col.z), IM_F32_TO_INT8(col.z));
 
     return pressed;
 }
@@ -8408,7 +8405,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     if (edit_mode == ImGuiColorEditMode_HSV)
         ImGui::ColorConvertRGBtoHSV(f[0], f[1], f[2], f[0], f[1], f[2]);
 
-    int i[4] = { (int)(f[0] * 255.0f + 0.5f), (int)(f[1] * 255.0f + 0.5f), (int)(f[2] * 255.0f + 0.5f), (int)(f[3] * 255.0f + 0.5f) };
+    int i[4] = { IM_F32_TO_INT8(f[0]), IM_F32_TO_INT8(f[1]), IM_F32_TO_INT8(f[2]), IM_F32_TO_INT8(f[3]) };
 
     int components = alpha ? 4 : 3;
     bool value_changed = false;
@@ -8481,6 +8478,10 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     const ImVec4 col_display(col[0], col[1], col[2], 1.0f);
     if (ImGui::ColorButton(col_display))
         g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3); // Don't set local copy of 'edit_mode' right away!
+    
+    // Recreate our own tooltip over's ColorButton() one because we want to display correct alpha here
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%08X", col[0], col[1], col[2], col[3], IM_F32_TO_INT8(col[0]), IM_F32_TO_INT8(col[1]), IM_F32_TO_INT8(col[2]), IM_F32_TO_INT8(col[3]));
 
     if (window->DC.ColorEditMode == ImGuiColorEditMode_UserSelectShowButton)
     {
@@ -8950,6 +8951,7 @@ void ImGui::Value(const char* prefix, float v, const char* float_format)
     }
 }
 
+// FIXME: May want to remove those helpers?
 void ImGui::Color(const char* prefix, const ImVec4& v)
 {
     ImGui::Text("%s: (%.2f,%.2f,%.2f,%.2f)", prefix, v.x, v.y, v.z, v.w);
