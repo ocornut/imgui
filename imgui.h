@@ -953,7 +953,7 @@ struct ImGuiTextEditCallbackData
     ImGuiKey            EventKey;       // Key pressed (Up/Down/TAB)            // Read-only
     char*               Buf;            // Current text                         // Read-write (pointed data only)
     int                 BufSize;        //                                      // Read-only
-    bool                BufDirty;       // Set if you modify Buf directly       // Write
+    bool                BufDirty;       // Must set if you modify Buf directly  // Write
     int                 CursorPos;      //                                      // Read-write
     int                 SelectionStart; //                                      // Read-write (== to SelectionEnd when no selection)
     int                 SelectionEnd;   //                                      // Read-write

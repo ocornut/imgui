@@ -7087,6 +7087,7 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
 }
 
 // Edit a string of text
+// FIXME: This is rather complex partly because we are doing UTF8 > u16 > UTF8 conversions on the go to more easily handle stb_textedit calls. Ideally we should stay in UTF8 space all the time. 
 bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -7256,6 +7257,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
         }
 
+        // Handle various key-presses
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
         const bool is_ctrl_only = is_ctrl_down && !is_alt_down && !is_shift_down;
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
@@ -7264,8 +7266,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { if (is_ctrl_down) SetWindowScrollY(draw_window, draw_window->Scroll.y + g.FontSize); else edit_state.OnKeyPressed(STB_TEXTEDIT_K_DOWN| k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Home))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_End))                         { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Delete) && is_editable)      { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Backspace) && is_editable)   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_Delete) && is_editable)       { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_Backspace) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Enter))
         {
             bool ctrl_enter_for_new_line = (flags & ImGuiInputTextFlags_CtrlEnterForNewLine) != 0;
@@ -7274,16 +7276,16 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 SetActiveID(0);
                 enter_pressed = true;
             }
-            else if (is_editable) // New line
+            else if (is_editable)
             {
-                unsigned int c = '\n';
+                unsigned int c = '\n'; // Insert new line
                 if (InputTextFilterCharacter(&c, flags, callback, user_data))
                     edit_state.OnKeyPressed((int)c);
             }
         }
         else if ((flags & ImGuiInputTextFlags_AllowTabInput) && IsKeyPressedMap(ImGuiKey_Tab) && !is_ctrl_down && !is_shift_down && !is_alt_down && is_editable)
         {
-            unsigned int c = '\t';
+            unsigned int c = '\t'; // Insert TAB
             if (InputTextFilterCharacter(&c, flags, callback, user_data))
                 edit_state.OnKeyPressed((int)c);
         }
@@ -7358,7 +7360,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         {
             // Apply new value immediately - copy modified buffer back
             // Note that as soon as we can focus into the input box, the in-widget value gets priority over any underlying modification of the input buffer
-            // FIXME: We actually always render 'buf' in RenderTextScrolledClipped
+            // FIXME: We actually always render 'buf' when calling DrawList->AddText
             // FIXME-OPT: CPU waste to do this every time the widget is active, should mark dirty state from the stb_textedit callbacks
             if (is_editable)
             {
@@ -7428,6 +7430,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 }
             }
 
+            // Copy back to user buffer
             if (is_editable && strcmp(edit_state.TempTextBuffer.Data, buf) != 0)
             {
                 ImFormatString(buf, buf_size, "%s", edit_state.TempTextBuffer.Data);
@@ -7439,9 +7442,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     if (!is_multiline)
         RenderFrame(frame_bb.Min, frame_bb.Max, window->Color(ImGuiCol_FrameBg), true, style.FrameRounding);
 
+    // Render
+    const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x + style.FramePadding.x*2.0f, frame_bb.Min.y + size.y + style.FramePadding.y*2.0f);
     ImVec2 render_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
-
-    ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x + style.FramePadding.x*2.0f, frame_bb.Min.y + size.y + style.FramePadding.y*2.0f);
     ImVec2 text_size(0.f, 0.f);
     if (g.ActiveId == id || (edit_state.Id == id && is_multiline && g.ActiveId == draw_window->GetID("#SCROLLY")))
     {
@@ -7528,7 +7531,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             }
         }
         edit_state.CursorFollow = false;
-        ImVec2 render_scroll = ImVec2(edit_state.ScrollX, 0.0f);
+        const ImVec2 render_scroll = ImVec2(edit_state.ScrollX, 0.0f);
 
         // Draw selection
         if (edit_state.StbState.select_start != edit_state.StbState.select_end)
