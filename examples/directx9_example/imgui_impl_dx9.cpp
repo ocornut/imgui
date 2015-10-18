@@ -285,6 +285,7 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
         tex->Release();
         ImGui::GetIO().Fonts->TexID = 0;
     }
+    g_FontTexture = NULL;
 }
 
 void ImGui_ImplDX9_NewFrame()
