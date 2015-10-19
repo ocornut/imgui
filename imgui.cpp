@@ -8481,7 +8481,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     
     // Recreate our own tooltip over's ColorButton() one because we want to display correct alpha here
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%08X", col[0], col[1], col[2], col[3], IM_F32_TO_INT8(col[0]), IM_F32_TO_INT8(col[1]), IM_F32_TO_INT8(col[2]), IM_F32_TO_INT8(col[3]));
+        ImGui::SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col[0], col[1], col[2], col[3], IM_F32_TO_INT8(col[0]), IM_F32_TO_INT8(col[1]), IM_F32_TO_INT8(col[2]), IM_F32_TO_INT8(col[3]));
 
     if (window->DC.ColorEditMode == ImGuiColorEditMode_UserSelectShowButton)
     {
