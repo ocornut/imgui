@@ -8,13 +8,11 @@ compiler:
   - gcc
   - clang
 
-addons:
-  apt:
-    packages:
-      - libglfw3-dev
-      - libxrandr-dev
-      - libxi-dev
-      - libxxf86vm-dev
+addons.apt.packages:
+  - libglfw3-dev
+  - libxrandr-dev
+  - libxi-dev
+  - libxxf86vm-dev
     
 script: 
   - make -C examples/opengl_example
