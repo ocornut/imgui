@@ -30,7 +30,9 @@
    io.Fonts->AddFontDefault();
 
    // Add character ranges and merge into main font
-   ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
+   // The ranges array is not copied by the AddFont* functions and is used lazily
+   // so ensure it is available for duration of font usage
+   static const ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
    ImFontConfig config;
    config.MergeMode = true;
    io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
