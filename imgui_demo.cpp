@@ -1734,7 +1734,7 @@ static void ShowExampleAppCustomRendering(bool* opened)
     if (ImGui::IsItemHovered())
     {
         ImVec2 mouse_pos_in_canvas = ImVec2(ImGui::GetIO().MousePos.x - canvas_pos.x, ImGui::GetIO().MousePos.y - canvas_pos.y);
-        if (!adding_line && ImGui::GetIO().MouseClicked[0])
+        if (!adding_line && ImGui::IsMouseClicked(0))
         {
             points.push_back(mouse_pos_in_canvas);
             adding_line = true;
@@ -1746,9 +1746,9 @@ static void ShowExampleAppCustomRendering(bool* opened)
             if (!ImGui::GetIO().MouseDown[0])
                 adding_line = adding_preview = false;
         }
-        if (ImGui::GetIO().MouseClicked[1] && !points.empty())
+        if (ImGui::IsMouseClicked(1) && !points.empty())
         {
-            adding_line = false;
+            adding_line = adding_preview = false;
             points.pop_back();
             points.pop_back();
         }
