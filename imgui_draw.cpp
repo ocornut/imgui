@@ -18,7 +18,7 @@
 
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #include <new>          // new (ptr)
-#ifndef alloca
+#if !defined(alloca) && !defined(__FreeBSD__)
 #if _WIN32
 #include <malloc.h>     // alloca
 #else
