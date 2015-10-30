@@ -148,7 +148,8 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_FlattenChilds      = 1 << 3,
     ImGuiButtonFlags_DontClosePopups    = 1 << 4,
     ImGuiButtonFlags_Disabled           = 1 << 5,
-    ImGuiButtonFlags_AlignTextBaseLine  = 1 << 6
+    ImGuiButtonFlags_AlignTextBaseLine  = 1 << 6,
+    ImGuiButtonFlags_NoKeyModifiers     = 1 << 7
 };
 
 enum ImGuiTreeNodeFlags_
@@ -673,7 +674,7 @@ namespace ImGui
     IMGUI_API void          RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
     IMGUI_API void          RenderCheckMark(ImVec2 pos, ImU32 col);
 
-    IMGUI_API bool          ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, bool allow_key_modifiers, ImGuiButtonFlags flags = 0);
+    IMGUI_API bool          ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, ImGuiButtonFlags flags = 0);
     IMGUI_API bool          ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), ImGuiButtonFlags flags = 0);
 
     IMGUI_API bool          SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, bool horizontal);
