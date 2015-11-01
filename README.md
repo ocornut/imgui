@@ -59,9 +59,8 @@ ImGui can load TTF fonts. UTF-8 is supported for text display and input. Here us
 ```
 ImGuiIO& io = ImGui::GetIO();
 io.Fonts->AddFontFromFileTTF("ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
-```
-For Microsoft IME, pass your HWND to enable IME positioning:
-```
+
+// For Microsoft IME, pass your HWND to enable IME positioning:
 io.ImeWindowHandle = my_hwnd;
 ```
 ![Japanese screenshot](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/code_sample_01_jp.png)
@@ -74,6 +73,8 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 - [A presentation by Rickard Gustafsson and Johannes Algelind](http://www.cse.chalmers.se/edu/year/2011/course/TDA361/Advanced%20Computer%20Graphics/IMGUI.pdf).
 - [Jari Komppa's tutorial on building an ImGui library](http://iki.fi/sol/imgui/).
 - [Casey Muratori's original video that popularized the concept](https://mollyrocket.com/861).
+
+See the [Links page](https://github.com/ocornut/imgui/wiki/Links) for third-party bindings to different languages and frameworks.
 
 Frequently Asked Question (FAQ)
 -------------------------------
@@ -105,7 +106,7 @@ ImGui is very programmer centric and the immediate-mode GUI paradigm might requi
 
 <b>Is ImGui fast?</b>
 
-Down to the fundation of its visual design, ImGui is engineered to be fairly performant both in term of CPU and GPU usage. Running elaborate code and creating elaborate UI will of course have a cost but ImGui aims to minimize it.
+Probably fast enough for most uses. Down to the fundation of its visual design, ImGui is engineered to be fairly performant both in term of CPU and GPU usage. Running elaborate code and creating elaborate UI will of course have a cost but ImGui aims to minimize it.
 
 Mileage may vary but the following screenshot can give you a rough idea of the cost of running and rendering UI code (In the case of a trivial demo application like this one, your driver/os setup are likely to be the bottleneck. Testing performance as part of a real application is recommended).
 
@@ -113,7 +114,7 @@ Mileage may vary but the following screenshot can give you a rough idea of the c
 
 This is showing framerate for the full application loop on my 2011 iMac running Windows 7, OpenGL, AMD Radeon HD 6700M with an optimized executable. In contrast, librairies featuring higher-quality rendering and layouting techniques may have a higher resources footprint.
 
-If you intend to display large lists of items (say, 1000+) it can be beneficial for your code to perform clipping manually - using helpers such as ImGuiListClipper - in order to avoid submitting them to ImGui in the first place. Even though ImGui will discard your clipped items it still needs to calculate their size and that overhead will add up if you have thousands of items. If you can handle clipping and height positionning yourself then browsing a list with millions of items isn't a problem.
+If you intend to display large lists of items (say, 1000+) it can be beneficial for your code to perform clipping manually - one way is using helpers such as ImGuiListClipper - in order to avoid submitting them to ImGui in the first place. Even though ImGui will discard your clipped items it still needs to calculate their size and that overhead will add up if you have thousands of items. If you can handle clipping and height positionning yourself then browsing a list with millions of items isn't a problem.
 
 <b>Can you reskin the look of ImGui?</b>
 
@@ -123,7 +124,7 @@ You can alter the look of the interface to some degree: changing colors, sizes, 
 
 ImGui takes advantage of a few C++ features for convenience but nothing anywhere Boost-insanity/quagmire. In particular, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience but could be removed.
 
-Shall someone really need to use ImGui from another language, there is an unofficial but reasonably maintained [c-api for ImGui](https://github.com/Extrawurst/cimgui) by Stephan Dilly. I would suggest using your target language functionality to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. It was really designed with C++ in mind and may not make the same amount of sense with another language.
+There is an unofficial but reasonably maintained [c-api for ImGui](https://github.com/Extrawurst/cimgui) by Stephan Dilly. I would suggest using your target language functionality to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. It was really designed with C++ in mind and may not make the same amount of sense with another language. Also see [Links](https://github.com/ocornut/imgui/wiki/Links) for third-party bindings to other languages.
 
 Donate
 ------
