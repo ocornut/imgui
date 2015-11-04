@@ -125,21 +125,21 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
         return 0;
     }
-    return DefWindowProc(hWnd, msg, wParam, lParam);
+    return DefWindowProcW(hWnd, msg, wParam, lParam);
 }
 
 int main(int, char**)
 {
     // Create application window
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, LoadCursor(NULL, IDC_ARROW), NULL, NULL, L"ImGui Example", NULL };
-    RegisterClassEx(&wc);
-    HWND hwnd = CreateWindow(L"ImGui Example", L"ImGui DirectX11 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+    WNDCLASSEXW wc = { sizeof(WNDCLASSEXW), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, LoadCursor(NULL, IDC_ARROW), NULL, NULL, L"ImGui Example", NULL };
+    RegisterClassExW(&wc);
+    HWND hwnd = CreateWindowW(L"ImGui Example", L"ImGui DirectX11 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
 
     // Initialize Direct3D
     if (CreateDeviceD3D(hwnd) < 0)
     {
         CleanupDeviceD3D();
-        UnregisterClass(L"ImGui Example", wc.hInstance);
+        UnregisterClassW(L"ImGui Example", wc.hInstance);
         return 1;
     }
 
@@ -219,7 +219,7 @@ int main(int, char**)
 
     ImGui_ImplDX11_Shutdown();
     CleanupDeviceD3D();
-    UnregisterClass(L"ImGui Example", wc.hInstance);
+    UnregisterClassW(L"ImGui Example", wc.hInstance);
 
     return 0;
 }
