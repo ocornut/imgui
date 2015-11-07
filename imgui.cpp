@@ -2040,6 +2040,12 @@ void ImGui::NewFrame()
 void ImGui::Shutdown()
 {
     ImGuiState& g = *GImGui;
+
+    // The fonts atlas can be used prior to calling NewFrame(), so we clear it even if g.Initialized is FALSE (which would happen if we never called NewFrame)
+    if (g.IO.Fonts) // Testing for NULL to allow user to NULLify in case of running Shutdown() on multiple contexts. Bit hacky.
+        g.IO.Fonts->Clear();
+
+    // Cleanup of other data are conditional on actually having used ImGui.
     if (!g.Initialized)
         return;
 
@@ -2087,9 +2093,6 @@ void ImGui::Shutdown()
         g.LogClipboard->~ImGuiTextBuffer();
         ImGui::MemFree(g.LogClipboard);
     }
-
-    if (g.IO.Fonts) // Testing for NULL to allow user to NULLify in case of running Shutdown() on multiple contexts. Bit hacky.
-        g.IO.Fonts->Clear();
 
     g.Initialized = false;
 }
