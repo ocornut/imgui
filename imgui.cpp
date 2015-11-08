@@ -419,6 +419,7 @@
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
+ - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
  - input text multi-line: way to dynamically grow the buffer without forcing the user to initially allocate for worse case (follow up on #200)
  - input text multi-line: line numbers? status bar? (follow up on #200)
  - input number: optional range min/max for Input*() functions
@@ -477,6 +478,7 @@
  - style: color-box not always square?
  - style: a concept of "compact style" that the end-user can easily rely on (e.g. PushStyleCompact()?) that maps to other settings? avoid implementing duplicate helpers such as SmallCheckbox(), etc.
  - text: simple markup language for color change?
+ - font: helper to add glyph redirect/replacements (e.g. redirect alternate apostrophe unicode code points to ascii one, etc.)
  - log: LogButtons() options for specifying depth and/or hiding depth slider
  - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
  - log: be able to log anything (e.g. right-click on a window/tree-node, shows context menu? log into tty/file/clipboard)
