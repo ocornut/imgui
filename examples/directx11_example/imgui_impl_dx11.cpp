@@ -132,7 +132,7 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     unsigned int offset = 0;
     g_pd3dDeviceContext->IASetInputLayout(g_pInputLayout);
     g_pd3dDeviceContext->IASetVertexBuffers(0, 1, &g_pVB, &stride, &offset);
-    g_pd3dDeviceContext->IASetIndexBuffer(g_pIB, DXGI_FORMAT_R16_UINT, 0);
+    g_pd3dDeviceContext->IASetIndexBuffer(g_pIB, sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, 0);
     g_pd3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     g_pd3dDeviceContext->VSSetShader(g_pVertexShader, NULL, 0);
     g_pd3dDeviceContext->VSSetConstantBuffers(0, 1, &g_pVertexConstantBuffer);

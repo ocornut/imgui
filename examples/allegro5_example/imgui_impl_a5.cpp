@@ -56,7 +56,8 @@ void ImGui_ImplA5_RenderDrawLists(ImDrawData* draw_data)
             vertices[i] = v;
         }
 
-        // FIXME-OPT: Unfortunately Allegro doesn't support 16-bit vertices
+        // FIXME-OPT: Unfortunately Allegro doesn't support 16-bit indices
+        // You can also use '#define ImDrawIdx unsigned int' in imconfig.h and request ImGui to output 32-bit indices
         static ImVector<int> indices;
         indices.resize(cmd_list->IdxBuffer.size());
         for (int i = 0; i < cmd_list->IdxBuffer.size(); ++i) 
