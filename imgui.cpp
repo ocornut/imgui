@@ -5592,7 +5592,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     else
     {
         // Unframed typed for tree nodes
-        if ((held && hovered) || hovered)
+        if (hovered)
             RenderFrame(bb.Min, bb.Max, col, false);
         RenderCollapseTriangle(bb.Min + ImVec2(style.FramePadding.x, g.FontSize*0.15f), opened, 0.70f, false);
         if (g.LogEnabled)
