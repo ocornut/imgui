@@ -10,9 +10,10 @@
 #endif
 
 #include "imgui.h"
-#include <ctype.h>              // toupper, isprint
-#include <math.h>               // sqrtf, fabsf, fmodf, powf, cosf, sinf, floorf, ceilf
-#include <stdio.h>              // vsnprintf, sscanf, printf
+#include <ctype.h>          // toupper, isprint
+#include <math.h>           // sqrtf, fabsf, fmodf, powf, cosf, sinf, floorf, ceilf
+#include <stdio.h>          // vsnprintf, sscanf, printf
+#include <stdlib.h>         // NULL, malloc, free, qsort, atoi
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen

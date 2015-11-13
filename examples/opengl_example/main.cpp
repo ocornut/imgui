@@ -15,7 +15,7 @@ int main(int, char**)
     // Setup window
     glfwSetErrorCallback(error_callback);
     if (!glfwInit())
-        exit(1);
+        return 1;
     GLFWwindow* window = glfwCreateWindow(1280, 720, "ImGui OpenGL2 example", NULL, NULL);
     glfwMakeContextCurrent(window);
 

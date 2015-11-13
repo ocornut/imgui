@@ -16,7 +16,7 @@ int main(int, char**)
     // Setup window
     glfwSetErrorCallback(error_callback);
     if (!glfwInit())
-        exit(1);
+        return 1;
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
