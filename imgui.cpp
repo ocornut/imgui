@@ -430,13 +430,13 @@
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
  - layout: horizontal layout helper (#97)
+ - layout: horizontal flow until no space left (#404)
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills) (#125)
  - columns: columns header to act as button (~sort op) and allow resize/reorder (#125)
  - columns: user specify columns size (#125)
- - popup: border options. richer api like BeginChild() perhaps? (#197)
  - combo: sparse combo boxes (via function call?)
  - combo: contents should extends to fit label if combo widget is small
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
@@ -444,7 +444,9 @@
  - listbox: user may want to initial scroll to focus on the one selected value?
  - listbox: keyboard navigation.
  - listbox: scrolling should track modified selection.
--! menus/popups: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331)
+!- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
+ - popups: add variant using global identifier similar to Begin/End (#402)
+ - popups: border options. richer api like BeginChild() perhaps? (#197)
  - menus: local shortcuts, global shortcuts (#126)
  - menus: icons
  - menus: menubars: some sort of priority / effect of main menu-bar on desktop size?
@@ -5364,7 +5366,7 @@ bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const I
 
     // Render
     const ImU32 col = window->Color((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-    RenderFrame(bb.Min, bb.Max, col);
+    RenderFrame(bb.Min, bb.Max, col, true, ImClamp((float)ImMin(padding.x, padding.y), 0.0f, style.FrameRounding));
     if (bg_col.w > 0.0f)
         window->DrawList->AddRectFilled(image_bb.Min, image_bb.Max, window->Color(bg_col));
     window->DrawList->AddImage(user_texture_id, image_bb.Min, image_bb.Max, uv0, uv1, window->Color(tint_col));
