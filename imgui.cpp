@@ -3075,6 +3075,8 @@ static bool IsPopupOpen(ImGuiID id)
     return opened;
 }
 
+// Mark popup as open. Popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
+// Popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
 // One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
 void ImGui::OpenPopup(const char* str_id)
 {
