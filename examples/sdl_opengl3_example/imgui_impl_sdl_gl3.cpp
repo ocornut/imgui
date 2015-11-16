@@ -3,9 +3,9 @@
 
 #include <SDL.h>
 #include <SDL_syswm.h>
-#include <GL/glew.h>
+#include <GL/gl3w.h>
 #include "imgui.h"
-#include "imgui_impl_sdlogl3.h"
+#include "imgui_impl_sdl_gl3.h"
 
 // Data
 static SDL_Window*  g_Window = NULL;
@@ -21,7 +21,7 @@ static unsigned int g_VboHandle = 0, g_VaoHandle = 0, g_ElementsHandle = 0;
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-void ImGui_ImplSdlOgl3_RenderDrawLists(ImDrawData* draw_data)
+void ImGui_ImplSdlGL3_RenderDrawLists(ImDrawData* draw_data)
 {
 	// Backup GL state
 	GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
@@ -106,17 +106,17 @@ void ImGui_ImplSdlOgl3_RenderDrawLists(ImDrawData* draw_data)
 	if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
 }
 
-static const char* ImGui_ImplSdlOgl3_GetClipboardText()
+static const char* ImGui_ImplSdlGL3_GetClipboardText()
 {
 	return SDL_GetClipboardText();
 }
 
-static void ImGui_ImplSdlOgl3_SetClipboardText(const char* text)
+static void ImGui_ImplSdlGL3_SetClipboardText(const char* text)
 {
 	SDL_SetClipboardText(text);
 }
 
-bool ImGui_ImplSdlOgl3_ProcessEvent(SDL_Event* event)
+bool ImGui_ImplSdlGL3_ProcessEvent(SDL_Event* event)
 {
 	ImGuiIO& io = ImGui::GetIO();
 	switch (event->type)
@@ -156,7 +156,7 @@ bool ImGui_ImplSdlOgl3_ProcessEvent(SDL_Event* event)
 	return false;
 }
 
-void ImGui_ImplSdlOgl3_CreateFontsTexture()
+void ImGui_ImplSdlGL3_CreateFontsTexture()
 {
 	ImGuiIO& io = ImGui::GetIO();
 
@@ -180,7 +180,7 @@ void ImGui_ImplSdlOgl3_CreateFontsTexture()
 	io.Fonts->ClearTexData();
 }
 
-bool ImGui_ImplSdlOgl3_CreateDeviceObjects()
+bool ImGui_ImplSdlGL3_CreateDeviceObjects()
 {
 	// Backup GL state
 	GLint last_texture, last_array_buffer, last_vertex_array;
@@ -247,7 +247,7 @@ bool ImGui_ImplSdlOgl3_CreateDeviceObjects()
 	glVertexAttribPointer(g_AttribLocationColor, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)OFFSETOF(ImDrawVert, col));
 #undef OFFSETOF
 
-	ImGui_ImplSdlOgl3_CreateFontsTexture();
+	ImGui_ImplSdlGL3_CreateFontsTexture();
 
 	// Restore modified GL state
 	glBindTexture(GL_TEXTURE_2D, last_texture);
@@ -257,7 +257,7 @@ bool ImGui_ImplSdlOgl3_CreateDeviceObjects()
 	return true;
 }
 
-void    ImGui_ImplSdlOgl3_InvalidateDeviceObjects()
+void    ImGui_ImplSdlGL3_InvalidateDeviceObjects()
 {
 	if (g_FontTexture)
 	{
@@ -267,7 +267,7 @@ void    ImGui_ImplSdlOgl3_InvalidateDeviceObjects()
 	}
 }
 
-bool    ImGui_ImplSdlOgl3_Init(SDL_Window *window)
+bool    ImGui_ImplSdlGL3_Init(SDL_Window *window)
 {
 	g_Window = window;
 	
@@ -292,9 +292,9 @@ bool    ImGui_ImplSdlOgl3_Init(SDL_Window *window)
 	io.KeyMap[ImGuiKey_Y] = SDLK_y;
 	io.KeyMap[ImGuiKey_Z] = SDLK_z;
 
-	io.RenderDrawListsFn = ImGui_ImplSdlOgl3_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
-	io.SetClipboardTextFn = ImGui_ImplSdlOgl3_SetClipboardText;
-	io.GetClipboardTextFn = ImGui_ImplSdlOgl3_GetClipboardText;
+	io.RenderDrawListsFn = ImGui_ImplSdlGL3_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
+	io.SetClipboardTextFn = ImGui_ImplSdlGL3_SetClipboardText;
+	io.GetClipboardTextFn = ImGui_ImplSdlGL3_GetClipboardText;
 
 #ifdef _WIN32
 	SDL_SysWMinfo wmInfo;
@@ -306,7 +306,7 @@ bool    ImGui_ImplSdlOgl3_Init(SDL_Window *window)
 	return true;
 }
 
-void ImGui_ImplSdlOgl3_Shutdown()
+void ImGui_ImplSdlGL3_Shutdown()
 {
 	if (g_VaoHandle) glDeleteVertexArrays(1, &g_VaoHandle);
 	if (g_VboHandle) glDeleteBuffers(1, &g_VboHandle);
@@ -333,10 +333,10 @@ void ImGui_ImplSdlOgl3_Shutdown()
 	ImGui::Shutdown();
 }
 
-void ImGui_ImplSdlOgl3_NewFrame(SDL_Window *window)
+void ImGui_ImplSdlGL3_NewFrame(SDL_Window *window)
 {
 	if (!g_FontTexture)
-		ImGui_ImplSdlOgl3_CreateDeviceObjects();
+		ImGui_ImplSdlGL3_CreateDeviceObjects();
 
 	ImGuiIO& io = ImGui::GetIO();
 

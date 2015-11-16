@@ -1,10 +1,10 @@
 // ImGui - standalone example application for SDL2 + OpenGL
 
 #include <imgui.h>
-#include "imgui_impl_sdlogl3.h"
+#include "imgui_impl_sdl_gl3.h"
 #include <stdio.h>
+#include <GL/gl3w.h>
 #include <SDL.h>
-#include <GL/glew.h>
 
 int main(int, char**)
 {
@@ -23,11 +23,12 @@ int main(int, char**)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	SDL_DisplayMode current;
 	SDL_GetCurrentDisplayMode(0, &current);
-	SDL_Window *window = SDL_CreateWindow("ImGui SDL2+OpenGL example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
+	SDL_Window *window = SDL_CreateWindow("ImGui SDL2+OpenGL3 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
 	SDL_GLContext glcontext = SDL_GL_CreateContext(window);
+    gl3wInit();
 
     // Setup ImGui binding
-    ImGui_ImplSdlOgl3_Init(window);
+    ImGui_ImplSdlGL3_Init(window);
 
     // Load Fonts
     // (see extra_fonts/README.txt for more details)
@@ -56,11 +57,11 @@ int main(int, char**)
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
-            ImGui_ImplSdlOgl3_ProcessEvent(&event);
+            ImGui_ImplSdlGL3_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
                 done = true;
         }
-        ImGui_ImplSdlOgl3_NewFrame(window);
+        ImGui_ImplSdlGL3_NewFrame(window);
 
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
@@ -99,7 +100,7 @@ int main(int, char**)
     }
 
     // Cleanup
-    ImGui_ImplSdlOgl3_Shutdown();
+    ImGui_ImplSdlGL3_Shutdown();
     SDL_GL_DeleteContext(glcontext);  
 	SDL_DestroyWindow(window);
 	SDL_Quit();
