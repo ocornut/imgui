@@ -3,10 +3,9 @@
 
 - On Windows with Visual Studio's CLI
 
-\<sdl2path\> is your SDL2 folder.
-
 ```
-cl /MD /I <sdl2path\include> /I ..\.. main.cpp imgui_impl_sdl.cpp ..\..\imgui*.cpp /link /LIBPATH:<sdl2path\lib> SDL2.lib SDL2main.lib
+set SDL2DIR=path_to_your_sdl2_folder
+cl /Zi /MD /I %SDL2DIR%\include> /I ..\.. main.cpp imgui_impl_sdl.cpp ..\..\imgui*.cpp /link /LIBPATH:%SDL2DIR%\lib SDL2.lib SDL2main.lib
 ```
 
 - On Linux and similar Unixes

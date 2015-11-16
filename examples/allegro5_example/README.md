@@ -9,8 +9,7 @@ g++ -I ../imgui main.cpp imgui_impl_a5.cpp ../imgui/imgui*.cpp -lallegro -lalleg
 
 - On Windows with Visual Studio's CLI
 
-\<a5path\> is your allegro5 folder.
-
 ```
-cl /MD /I <a5path\include> /I ..\imgui main.cpp imgui_impl_a5.cpp ..\imgui\imgui*.cpp /link /LIBPATH:<a5path\lib> allegro-5.0.10-monolith-md.lib user32.lib
+set ALLEGRODIR=path_to_your_allegro5_folder
+cl /Zi /MD /I %ALLEGRODIR%\include /I ..\.. main.cpp imgui_impl_a5.cpp ..\..\imgui*.cpp /link /LIBPATH:%ALLEGRODIR%\lib allegro-5.0.10-monolith-md.lib user32.lib
 ```
