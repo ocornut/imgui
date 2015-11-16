@@ -28,6 +28,7 @@ opengl3_example/opengl3_example
 *.o
 *.obj
 *.exe
+*.pdb
 
 ## Ini files
 imgui.ini
