@@ -50,6 +50,9 @@ ios_example/
 sdl_opengl_example/
     SDL2 + OpenGL example.
 
+sdl_opengl_example/
+    SDL2 + OpenGL3 example.
+
 allegro5_example/
     Allegro 5 example.
 	 
