@@ -61,7 +61,7 @@ int main(int, char**)
             if (event.type == SDL_QUIT)
                 done = true;
         }
-        ImGui_ImplSdlGL3_NewFrame(window);
+        ImGui_ImplSdlGL3_NewFrame();
 
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
