@@ -417,6 +417,13 @@ void ImGui::ShowTestWindow(bool* opened)
             static char buf5[64] = ""; ImGui::InputText("no blank", buf5, 64, ImGuiInputTextFlags_CharsNoBlank);
             struct TextFilters { static int FilterImGuiLetters(ImGuiTextEditCallbackData* data) { if (data->EventChar < 256 && strchr("imgui", (char)data->EventChar)) return 0; return 1; } };
             static char buf6[64] = ""; ImGui::InputText("\"imgui\" letters", buf6, 64, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterImGuiLetters);
+
+            ImGui::Text("Password input");
+            static char bufpass[64] = "password123"; 
+            ImGui::InputText("password", bufpass, 64, ImGuiInputTextFlags_Password);
+            ImGui::SameLine(); ShowHelpMarker("Display all characters as '*'.\nDisable clipboard cut and copy.\nDisable logging.\n");
+            ImGui::InputText("password (clear)", bufpass, 64);
+
             ImGui::TreePop();
         }
 

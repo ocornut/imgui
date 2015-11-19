@@ -490,6 +490,7 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_NoHorizontalScroll  = 1 << 12,  // Disable following the cursor horizontally
     ImGuiInputTextFlags_AlwaysInsertMode    = 1 << 13,  // Insert mode
     ImGuiInputTextFlags_ReadOnly            = 1 << 14,  // Read-only mode
+    ImGuiInputTextFlags_Password            = 1 << 15,  // Password mode, display all characters as '*'
     // [Internal]
     ImGuiInputTextFlags_Multiline           = 1 << 20   // For internal use by InputTextMultiline()
 };

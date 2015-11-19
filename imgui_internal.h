@@ -395,6 +395,7 @@ struct ImGuiState
 
     // Widget state
     ImGuiTextEditState      InputTextState;
+    ImFont                  InputTextPasswordFont;
     ImGuiID                 ScalarAsInputTextId;                // Temporary text input when CTRL+clicking on a slider, etc.
     ImGuiStorage            ColorEditModeStorage;               // Store user selection of color edit mode
     ImVec2                  ActiveClickDeltaToCenter;

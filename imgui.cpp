@@ -7121,6 +7121,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const ImGuiID id = window->GetID(label);
     const bool is_multiline = (flags & ImGuiInputTextFlags_Multiline) != 0;
     const bool is_editable = (flags & ImGuiInputTextFlags_ReadOnly) == 0;
+    const bool is_password = (flags & ImGuiInputTextFlags_Password) != 0;
 
     ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
     ImVec2 size = CalcItemSize(size_arg, CalcItemWidth(), is_multiline ? ImGui::GetTextLineHeight() * 8.0f : label_size.y); // Arbitrary default of 8 lines high for multi-line
@@ -7146,6 +7147,23 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         ItemSize(total_bb, style.FramePadding.y);
         if (!ItemAdd(total_bb, &id))
             return false;
+    }
+
+    // Password pushes a temporary font with only a fallback glyph
+    if (is_password)
+    {
+        const ImFont::Glyph* glyph = g.Font->FindGlyph('*');
+        ImFont* password_font = &g.InputTextPasswordFont;
+        password_font->FontSize = g.Font->FontSize;
+        password_font->Scale = g.Font->Scale;
+        password_font->DisplayOffset = g.Font->DisplayOffset;
+        password_font->Ascent = g.Font->Ascent;
+        password_font->Descent = g.Font->Descent;
+        password_font->ContainerAtlas = g.Font->ContainerAtlas;
+        password_font->FallbackGlyph = glyph;
+        password_font->FallbackXAdvance = glyph->XAdvance;
+        IM_ASSERT(password_font->Glyphs.empty() && password_font->IndexXAdvance.empty() && password_font->IndexLookup.empty());
+        ImGui::PushFont(password_font);
     }
 
     // NB: we are only allowed to access 'edit_state' if we are the active widget.
@@ -7318,7 +7336,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
         else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_A))                   { edit_state.SelectAll(); edit_state.CursorFollow = true; }
-        else if (is_ctrl_only && ((IsKeyPressedMap(ImGuiKey_X) && is_editable) || IsKeyPressedMap(ImGuiKey_C)) && (!is_multiline || edit_state.HasSelection()))
+        else if (is_ctrl_only && !is_password && ((IsKeyPressedMap(ImGuiKey_X) && is_editable) || IsKeyPressedMap(ImGuiKey_C)) && (!is_multiline || edit_state.HasSelection()))
         {
             // Cut, Copy
             const bool cut = IsKeyPressedMap(ImGuiKey_X);
@@ -7623,8 +7641,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         ImGui::EndGroup();
     }
 
+    if (is_password)
+        ImGui::PopFont();
+
     // Log as text
-    if (g.LogEnabled)
+    if (g.LogEnabled && !is_password)
         LogRenderedText(render_pos, buf, NULL);
 
     if (label_size.x > 0)
