@@ -84,7 +84,7 @@ Frequently Asked Question (FAQ)
 - The documentation is at the top of imgui.cpp + effectively imgui.h. 
 - Example code is in imgui_demo.cpp and particularly the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
 - Standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder. 
-- It obviously needs better documentation! Consider helping or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
+- We obviously needs better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
 
 <b>How do I update to a newer version of ImGui?</b>
 <br><b>Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)</b>
@@ -92,6 +92,7 @@ Frequently Asked Question (FAQ)
 <br><b>I integrated ImGui in my engine and some elements are disappearing when I move windows around..</b>
 <br><b>How can I load a different font than the default?</b>
 <br><b>How can I load multiple fonts?</b>
+<br><b>How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?</b>
 
 See the FAQ in imgui.cpp for answers.
 
