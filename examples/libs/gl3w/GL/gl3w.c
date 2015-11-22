@@ -82,7 +82,7 @@ static void *get_proc(const char *proc)
 {
 	void *res;
 
-	res = glXGetProcAddress((const GLubyte *) proc);
+	res = (void*)glXGetProcAddress((const GLubyte *) proc);
 	if (!res)
 		res = dlsym(libgl, proc);
 	return res;
