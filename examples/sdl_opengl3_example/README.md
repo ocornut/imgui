@@ -11,7 +11,7 @@ cl /Zi /MD /I ..\.. /I ..\libs\gl3w /I %SDL2DIR%\include main.cpp imgui_impl_sdl
 - On Linux and similar Unixes
 
 ```
-c++ `sdl2-config --cflags` -I ../.. -I ../libs/gl3w main.cpp imgui_impl_sdl_gl3.cpp ../../imgui*.cpp ../libs/gl3w/GL/gl3w.c `sdl2-config --libs` -lGL -o sdl2example
+c++ `sdl2-config --cflags` -I ../.. -I ../libs/gl3w main.cpp imgui_impl_sdl_gl3.cpp ../../imgui*.cpp ../libs/gl3w/GL/gl3w.c `sdl2-config --libs` -lGL -ldl -o sdl2example
 ```
 
 - On Mac OS X
