@@ -81,22 +81,23 @@ Frequently Asked Question (FAQ)
 
 <b>Where is the documentation?</b>
 
-- The documentation is at the top of imgui.cpp + effectively imgui.h.
+- The documentation is at the top of imgui.cpp + effectively imgui.h. 
 - Example code is in imgui_demo.cpp and particularly the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
 - Standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder. 
 - It obviously needs better documentation! Consider helping or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
 
+<b>How do I update to a newer version of ImGui?</b>
+<br><b>Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)</b>
+<br><b>I integrated ImGui in my engine and the text or lines are blurry..</b>
+<br><b>I integrated ImGui in my engine and some elements are disappearing when I move windows around..</b>
+<br><b>How can I load a different font than the default?</b>
+<br><b>How can I load multiple fonts?</b>
+
+See the FAQ in imgui.cpp for answers.
+
 <b>How do you use ImGui on a platform that may not have a mouse or keyboard?</b>
 
 I recommend using [Synergy](http://synergy-project.org) ([sources](https://github.com/synergy/synergy)). In particular, the _src/micro/uSynergy.c_ file contains a small client that you can use on any platform to connect to your host PC. You can seamlessly use your PC input devices from a video game console or a tablet. ImGui allows to increase the hit box of widgets (via the _TouchPadding_ setting) to accommodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.
-
-<b>I integrated ImGui in my engine and the text or lines are blurry..</b>
-
-In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f). Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
-
-<b>I integrated ImGui in my engine and some elements are disappearing when I move windows around..</b>
-
-Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1,y1,x2,y2) and NOT as (x1,y1,width,height).
 
 <b>Can you create elaborate/serious tools with ImGui?</b>
 
