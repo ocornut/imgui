@@ -97,6 +97,10 @@
  LINKS
 ---------------------------------
 
+ Icon fonts
+   https://fortawesome.github.io/Font-Awesome/
+   https://github.com/SamBrishes/kenney-icon-font
+
  Typefaces for source code beautification
    https://github.com/chrissimpkins/codeface
  
