@@ -6135,8 +6135,12 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
             g.ScalarAsInputTextId = 0;
         }
     }
-    if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
-        return InputScalarAsWidgetReplacement(frame_bb, label, ImGuiDataType_Float, v, id, decimal_precision);
+    if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id)) {
+        bool ret = InputScalarAsWidgetReplacement(frame_bb, label, ImGuiDataType_Float, v, id, decimal_precision);
+        if(ret && v_min < v_max)
+            *v = ImClamp(*v, v_min, v_max);
+        return ret;
+    }
 
     ItemSize(total_bb, style.FramePadding.y);
 
@@ -6435,8 +6439,12 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
             g.ScalarAsInputTextId = 0;
         }
     }
-    if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
-        return InputScalarAsWidgetReplacement(frame_bb, label, ImGuiDataType_Float, v, id, decimal_precision);
+    if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id)) {
+        bool ret = InputScalarAsWidgetReplacement(frame_bb, label, ImGuiDataType_Float, v, id, decimal_precision);
+        if(ret && v_min < v_max)
+            *v = ImClamp(*v, v_min, v_max);
+        return ret;
+    }
 
     // Actual drag behavior
     ItemSize(total_bb, style.FramePadding.y);
