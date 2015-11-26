@@ -260,7 +260,14 @@ struct ImGuiGroupData
     bool            AdvanceCursor;
 };
 
-// Simple column measurement currently used for MenuItem() only. This is very short-sighted for now and not a generic helper.
+// Per column data for Columns()
+struct ImGuiColumnData
+{
+    float           OffsetNorm;     // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
+    //float         IndentX;
+};
+
+// Simple column measurement currently used for MenuItem() only. This is very short-sighted for now and NOT a generic helper.
 struct IMGUI_API ImGuiSimpleColumns
 {
     int                 Count;
@@ -534,7 +541,7 @@ struct IMGUI_API ImGuiDrawContext
     float                   ColumnsCellMaxY;
     bool                    ColumnsShowBorders;
     ImGuiID                 ColumnsSetID;
-    ImVector<float>         ColumnsOffsetsT;        // Columns offset normalized 0.0 (far left) -> 1.0 (far right)
+    ImVector<ImGuiColumnData> ColumnsData;
 
     ImGuiDrawContext()
     {

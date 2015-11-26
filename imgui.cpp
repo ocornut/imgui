@@ -8779,8 +8779,8 @@ float ImGui::GetColumnOffset(int column_index)
     }
 
     // Read from cache
-    IM_ASSERT(column_index < window->DC.ColumnsOffsetsT.Size);
-    const float t = window->DC.ColumnsOffsetsT[column_index];
+    IM_ASSERT(column_index < window->DC.ColumnsData.Size);
+    const float t = window->DC.ColumnsData[column_index].OffsetNorm;
 
     const float content_region_width = window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x;
     const float min_x = window->DC.IndentX;
@@ -8796,7 +8796,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
 
-    IM_ASSERT(column_index < window->DC.ColumnsOffsetsT.Size);
+    IM_ASSERT(column_index < window->DC.ColumnsData.Size);
     const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
 
     const float content_region_width = window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x;
@@ -8804,7 +8804,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     const float max_x = content_region_width - window->Scroll.x  - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
     const float t = (offset - min_x) / (max_x - min_x);
     window->DC.StateStorage->SetFloat(column_id, t);
-    window->DC.ColumnsOffsetsT[column_index] = t;
+    window->DC.ColumnsData[column_index].OffsetNorm = t;
 }
 
 float ImGui::GetColumnWidth(int column_index)
@@ -8832,6 +8832,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
+    IM_ASSERT(columns_count >= 1);
 
     if (window->DC.ColumnsCount != 1)
     {
@@ -8894,14 +8895,14 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     if (window->DC.ColumnsCount != 1)
     {
         // Cache column offsets
-        window->DC.ColumnsOffsetsT.resize(columns_count + 1);
+        window->DC.ColumnsData.resize(columns_count + 1);
         for (int column_index = 0; column_index < columns_count + 1; column_index++)
         {
             const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
             KeepAliveID(column_id);
             const float default_t = column_index / (float)window->DC.ColumnsCount;
             const float t = window->DC.StateStorage->GetFloat(column_id, default_t);      // Cheaply store our floating point value inside the integer (could store an union into the map?)
-            window->DC.ColumnsOffsetsT[column_index] = t;
+            window->DC.ColumnsData[column_index].OffsetNorm = t;
         }
         window->DrawList->ChannelsSplit(window->DC.ColumnsCount);
         PushColumnClipRect();
@@ -8909,9 +8910,9 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     }
     else
     {
-        window->DC.ColumnsOffsetsT.resize(2);
-        window->DC.ColumnsOffsetsT[0] = 0.0f;
-        window->DC.ColumnsOffsetsT[1] = 1.0f;
+        window->DC.ColumnsData.resize(2);
+        window->DC.ColumnsData[0].OffsetNorm = 0.0f;
+        window->DC.ColumnsData[1].OffsetNorm = 1.0f;
     }
 }
 
