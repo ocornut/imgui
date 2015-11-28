@@ -8785,7 +8785,7 @@ float ImGui::GetColumnOffset(int column_index)
 
     const float content_region_width = window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x;
     const float min_x = window->DC.IndentX;
-    const float max_x = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0.0f : window->ScrollbarSizes.x);// - window->WindowPadding().x;
+    const float max_x = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0.0f : g.Style.ScrollbarSize);// - window->WindowPadding().x;
     const float x = min_x + t * (max_x - min_x);
     return (float)(int)x;
 }
