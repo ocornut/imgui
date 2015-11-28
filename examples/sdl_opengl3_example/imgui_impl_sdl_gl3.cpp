@@ -356,7 +356,7 @@ void ImGui_ImplSdlGL3_NewFrame()
 	g_Time = current_time;
 
 	// Setup inputs
-	// (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
+	// (we already got mouse wheel, keyboard keys & characters from SDL_PollEvent())
 	int mx, my;
 	Uint32 mouseMask = SDL_GetMouseState(&mx, &my);
 	if (SDL_GetWindowFlags(g_Window) & SDL_WINDOW_MOUSE_FOCUS)
