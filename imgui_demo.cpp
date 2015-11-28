@@ -1200,143 +1200,185 @@ void ImGui::ShowTestWindow(bool* opened)
     if (ImGui::CollapsingHeader("Columns"))
     {
         // Basic columns
-        ImGui::Text("Basic:");
-        ImGui::Columns(4, "mycolumns");
-        ImGui::Separator();
-        ImGui::Text("ID"); ImGui::NextColumn();
-        ImGui::Text("Name"); ImGui::NextColumn();
-        ImGui::Text("Path"); ImGui::NextColumn();
-        ImGui::Text("Flags"); ImGui::NextColumn();
-        ImGui::Separator();
-        const char* names[3] = { "One", "Two", "Three" };
-        const char* paths[3] = { "/path/one", "/path/two", "/path/three" };
-        static int selected = -1;
-        for (int i = 0; i < 3; i++)
+        if (ImGui::TreeNode("Basic"))
         {
-            char label[32];
-            sprintf(label, "%04d", i);
-            if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns))
-                selected = i;
-            ImGui::NextColumn();
-            ImGui::Text(names[i]); ImGui::NextColumn();
-            ImGui::Text(paths[i]); ImGui::NextColumn();
-            ImGui::Text("...."); ImGui::NextColumn();
+            ImGui::Columns(4, "mycolumns");
+            ImGui::Separator();
+            ImGui::Text("ID"); ImGui::NextColumn();
+            ImGui::Text("Name"); ImGui::NextColumn();
+            ImGui::Text("Path"); ImGui::NextColumn();
+            ImGui::Text("Flags"); ImGui::NextColumn();
+            ImGui::Separator();
+            const char* names[3] = { "One", "Two", "Three" };
+            const char* paths[3] = { "/path/one", "/path/two", "/path/three" };
+            static int selected = -1;
+            for (int i = 0; i < 3; i++)
+            {
+                char label[32];
+                sprintf(label, "%04d", i);
+                if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns))
+                    selected = i;
+                ImGui::NextColumn();
+                ImGui::Text(names[i]); ImGui::NextColumn();
+                ImGui::Text(paths[i]); ImGui::NextColumn();
+                ImGui::Text("...."); ImGui::NextColumn();
+            }
+            ImGui::Columns(1);
+            ImGui::Separator();
+            ImGui::TreePop();
         }
-        ImGui::Columns(1);
-
-        ImGui::Separator();
-        ImGui::Spacing();
 
         // Scrolling columns
         /*
-        ImGui::Text("Scrolling:");
-        ImGui::BeginChild("##header", ImVec2(0, ImGui::GetTextLineHeightWithSpacing()+ImGui::GetStyle().ItemSpacing.y));
-        ImGui::Columns(3);
-        ImGui::Text("ID"); ImGui::NextColumn();
-        ImGui::Text("Name"); ImGui::NextColumn();
-        ImGui::Text("Path"); ImGui::NextColumn();
-        ImGui::Columns(1);
-        ImGui::Separator();
-        ImGui::EndChild();
-        ImGui::BeginChild("##scrollingregion", ImVec2(0, 60));
-        ImGui::Columns(3);
-        for (int i = 0; i < 10; i++)
+        if (ImGui::TreeNode("Scrolling"))
         {
-            ImGui::Text("%04d", i); ImGui::NextColumn();
-            ImGui::Text("Foobar"); ImGui::NextColumn();
-            ImGui::Text("/path/foobar/%04d/", i); ImGui::NextColumn();
+            ImGui::BeginChild("##header", ImVec2(0, ImGui::GetTextLineHeightWithSpacing()+ImGui::GetStyle().ItemSpacing.y));
+            ImGui::Columns(3);
+            ImGui::Text("ID"); ImGui::NextColumn();
+            ImGui::Text("Name"); ImGui::NextColumn();
+            ImGui::Text("Path"); ImGui::NextColumn();
+            ImGui::Columns(1);
+            ImGui::Separator();
+            ImGui::EndChild();
+            ImGui::BeginChild("##scrollingregion", ImVec2(0, 60));
+            ImGui::Columns(3);
+            for (int i = 0; i < 10; i++)
+            {
+                ImGui::Text("%04d", i); ImGui::NextColumn();
+                ImGui::Text("Foobar"); ImGui::NextColumn();
+                ImGui::Text("/path/foobar/%04d/", i); ImGui::NextColumn();
+            }
+            ImGui::Columns(1);
+            ImGui::EndChild();
+            ImGui::TreePop();
         }
-        ImGui::Columns(1);
-        ImGui::EndChild();
-
-        ImGui::Separator();
-        ImGui::Spacing();
         */
 
         // Create multiple items in a same cell before switching to next column
-        ImGui::Text("Mixed items:");
-        ImGui::Columns(3, "mixed");
-        ImGui::Separator();
+        if (ImGui::TreeNode("Mixed items"))
+        {
+            ImGui::Columns(3, "mixed");
+            ImGui::Separator();
 
-        static int e = 0;
-        ImGui::Text("Hello");
-        ImGui::Button("Banana");
-        ImGui::RadioButton("radio a", &e, 0);
-        ImGui::NextColumn();
+            ImGui::Text("Hello");
+            ImGui::Button("Banana");
+            ImGui::NextColumn();
 
-        ImGui::Text("ImGui");
-        ImGui::Button("Apple");
-        ImGui::RadioButton("radio b", &e, 1);
-        static float foo = 1.0f;
-        ImGui::InputFloat("red", &foo, 0.05f, 0, 3);
-        ImGui::Text("An extra line here.");
-        ImGui::NextColumn();
+            ImGui::Text("ImGui");
+            ImGui::Button("Apple");
+            static float foo = 1.0f;
+            ImGui::InputFloat("red", &foo, 0.05f, 0, 3);
+            ImGui::Text("An extra line here.");
+            ImGui::NextColumn();
 
-        ImGui::Text("Sailor");
-        ImGui::Button("Corniflower");
-        ImGui::RadioButton("radio c", &e, 2);
-        static float bar = 1.0f;
-        ImGui::InputFloat("blue", &bar, 0.05f, 0, 3);
-        ImGui::NextColumn();
+            ImGui::Text("Sailor");
+            ImGui::Button("Corniflower");
+            static float bar = 1.0f;
+            ImGui::InputFloat("blue", &bar, 0.05f, 0, 3);
+            ImGui::NextColumn();
 
-        if (ImGui::CollapsingHeader("Category A")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
-        if (ImGui::CollapsingHeader("Category B")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
-        if (ImGui::CollapsingHeader("Category C")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
-        ImGui::Columns(1);
-
-        ImGui::Separator();
-        ImGui::Spacing();
-
-        // Tree items
-        ImGui::Text("Tree items:"); 
-        ImGui::SameLine(); ShowHelpMarker("Whole tree inside single cell");
-        ImGui::Columns(2, "tree items"); 
-        ImGui::Separator();
-        if (ImGui::TreeNode("Hello")) { ImGui::BulletText("Sailor"); ImGui::TreePop(); } ImGui::NextColumn();
-        if (ImGui::TreeNode("Bonjour")) { ImGui::BulletText("Marin"); ImGui::TreePop(); } ImGui::NextColumn();
-        ImGui::Columns(1);
-
-        ImGui::Separator();
-        ImGui::Spacing();
+            if (ImGui::CollapsingHeader("Category A")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+            if (ImGui::CollapsingHeader("Category B")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+            if (ImGui::CollapsingHeader("Category C")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+            ImGui::Columns(1);
+            ImGui::Separator();
+            ImGui::TreePop();
+        }
 
         // Word wrapping
-        ImGui::Text("Word-wrapping:");
-        ImGui::Columns(2, "word-wrapping");
-        ImGui::Separator();
-        ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
-        ImGui::Text("Hello Left");
-        ImGui::NextColumn();
-        ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
-        ImGui::Text("Hello Right");
-        ImGui::Columns(1);
-
-        ImGui::Separator();
-        ImGui::Spacing();
-
-        if (ImGui::TreeNode("Inside a tree.."))
+        if (ImGui::TreeNode("Word-wrapping"))
         {
-            if (ImGui::TreeNode("node 1 (with borders)"))
+            ImGui::Columns(2, "word-wrapping");
+            ImGui::Separator();
+            ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
+            ImGui::TextWrapped("Hello Left");
+            ImGui::NextColumn();
+            ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
+            ImGui::TextWrapped("Hello Right");
+            ImGui::Columns(1);
+            ImGui::Separator();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Borders"))
+        {
+            static bool h_borders = true;
+            static bool v_borders = true;
+            ImGui::Checkbox("horizontal", &h_borders);
+            ImGui::SameLine();
+            ImGui::Checkbox("vertical", &v_borders);
+            ImGui::Columns(4, NULL, v_borders);
+            if (h_borders) ImGui::Separator();
+            for (int i = 0; i < 8; i++)
             {
-                ImGui::Columns(4);
-                for (int i = 0; i < 8; i++)
-                {
-                    ImGui::Text("%c%c%c", 'a'+i, 'a'+i, 'a'+i);
-                    ImGui::NextColumn();
-                }
-                ImGui::Columns(1);
-                ImGui::TreePop();
+                ImGui::Text("%c%c%c", 'a'+i, 'a'+i, 'a'+i);
+                ImGui::NextColumn();
             }
-            if (ImGui::TreeNode("node 2 (without borders)"))
+            ImGui::Columns(1);
+            if (h_borders) ImGui::Separator();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Property tree"))
+        {
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2,2));
+            ImGui::Columns(2);
+            ImGui::Separator();
+
+            ImGui::Text("Item1"); ImGui::NextColumn();
+            ImGui::Text("value1"); ImGui::NextColumn();
+
+            // Iterate dummy objects with dummy members (all the same data)
+            static float members[6] = { 0.0f,1.0f,3.1416f,100.0f,999.0f };
+            for (int obj_i = 0; obj_i < 3; obj_i++)
             {
-                ImGui::Columns(4, NULL, false);
-                for (int i = 0; i < 8; i++)
+                ImGui::PushID(obj_i);
+                bool opened = ImGui::TreeNode("Object", "Object%d", obj_i);
+                ImGui::NextColumn();
+                ImGui::Text("my tailor is rich");
+                ImGui::NextColumn();
+                if (opened) 
                 {
-                    ImGui::Text("%c%c%c", 'a'+i, 'a'+i, 'a'+i);
-                    ImGui::NextColumn();
+                    for (int i = 0; i < 6; i++)
+                    {
+                        ImGui::PushID(i);
+                        ImGui::AlignFirstTextHeightToWidgets();
+                        // Here we use a Selectable (instead of Text) to highlight on hover
+                        //ImGui::Text("Field%d", i);
+                        char label[32];
+                        sprintf(label, "Field%d", i);
+                        ImGui::Selectable(label);
+                        ImGui::NextColumn();
+                        ImGui::PushItemWidth(-1);
+                        if (i >= 3)
+                            ImGui::InputFloat("##value", &members[i], 1.0f);
+                        else
+                            ImGui::DragFloat("##value", &members[i], 0.01f);
+                        ImGui::PopItemWidth();
+                        ImGui::NextColumn();
+                        ImGui::PopID();
+                    }
+                    ImGui::TreePop();
                 }
-                ImGui::Columns(1);
-                ImGui::TreePop();
+                ImGui::PopID();
             }
+
+            ImGui::Columns(1);
+            ImGui::Separator();
+            ImGui::PopStyleVar();
+            ImGui::TreePop();
+        }
+
+        bool opened = ImGui::TreeNode("Tree within single cell");
+        ImGui::SameLine(); ShowHelpMarker("NB: Tree node must be poped before ending the cell.\nThere's no storage of state per-cell.");
+        if (opened)
+        {
+            ImGui::Columns(2, "tree items"); 
+            ImGui::Separator();
+            if (ImGui::TreeNode("Hello")) { ImGui::BulletText("Sailor"); ImGui::TreePop(); } ImGui::NextColumn();
+            if (ImGui::TreeNode("Bonjour")) { ImGui::BulletText("Marin"); ImGui::TreePop(); } ImGui::NextColumn();
+            ImGui::Columns(1);
+            ImGui::Separator();
             ImGui::TreePop();
         }
     }
