@@ -8881,10 +8881,13 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
         }
     }
 
-    // Set state for first column
-    ImGui::PushID(0x11223344); // Differentiate column ID with an arbitrary/random prefix for cases where users name their columns set the same as another non-scope widget
-    window->DC.ColumnsSetID = window->GetID(id ? id : "");
+    // Differentiate column ID with an arbitrary prefix for cases where users name their columns set the same as another widget. 
+    // In addition, when an identifier isn't explicitly provided we include the number of columns in the hash to make it uniquer.
+    ImGui::PushID(0x11223347 + (id ? 0 : columns_count)); 
+    window->DC.ColumnsSetID = window->GetID(id ? id : "columns");
     ImGui::PopID();
+
+    // Set state for first column
     window->DC.ColumnsCurrent = 0;
     window->DC.ColumnsCount = columns_count;
     window->DC.ColumnsShowBorders = border;
