@@ -410,6 +410,7 @@
  - window: get size/pos helpers given names (see discussion in #249)
  - window: a collapsed window can be stuck behind the main menu bar?
  - window: detect extra End() call that pop the "Debug" window out and assert at call site instead of later.
+ - draw-list: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
 !- scrolling: allow immediately effective change of scroll if we haven't appended items yet
  - splitter: formalize the splitter idiom into an official api (we want to handle n-way split)
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
@@ -8718,6 +8719,7 @@ void ImGui::NextColumn()
         window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
         if (++window->DC.ColumnsCurrent < window->DC.ColumnsCount)
         {
+            // Columns 1+ cancel out IndentX
             window->DC.ColumnsOffsetX = ImGui::GetColumnOffset(window->DC.ColumnsCurrent) - window->DC.IndentX + g.Style.ItemSpacing.x;
             window->DrawList->ChannelsSetCurrent(window->DC.ColumnsCurrent);
         }
@@ -8734,7 +8736,7 @@ void ImGui::NextColumn()
         window->DC.CurrentLineTextBaseOffset = 0.0f;
 
         PushColumnClipRect();
-        ImGui::PushItemWidth(ImGui::GetColumnWidth() * 0.65f);  // FIXME
+        ImGui::PushItemWidth(ImGui::GetColumnWidth() * 0.65f);  // FIXME: Move on columns setup
     }
 }
 
@@ -8779,33 +8781,24 @@ float ImGui::GetColumnOffset(int column_index)
             return GetDraggedColumnOffset(column_index);
     }
 
-    // Read from cache
     IM_ASSERT(column_index < window->DC.ColumnsData.Size);
     const float t = window->DC.ColumnsData[column_index].OffsetNorm;
-
-    const float content_region_width = window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x;
-    const float min_x = window->DC.IndentX;
-    const float max_x = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0.0f : g.Style.ScrollbarSize);// - window->WindowPadding().x;
-    const float x = min_x + t * (max_x - min_x);
-    return (float)(int)x;
+    const float x_offset = window->DC.ColumnsMinX + t * (window->DC.ColumnsMaxX - window->DC.ColumnsMinX);
+    return (float)(int)x_offset;
 }
 
 void ImGui::SetColumnOffset(int column_index, float offset)
 {
-    ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
 
     IM_ASSERT(column_index < window->DC.ColumnsData.Size);
-    const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
-
-    const float content_region_width = window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x;
-    const float min_x = window->DC.IndentX;
-    const float max_x = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
-    const float t = (offset - min_x) / (max_x - min_x);
-    window->DC.StateStorage->SetFloat(column_id, t);
+    const float t = (offset - window->DC.ColumnsMinX) / (window->DC.ColumnsMaxX - window->DC.ColumnsMinX);
     window->DC.ColumnsData[column_index].OffsetNorm = t;
+
+    const ImGuiID column_id = window->DC.ColumnsSetID + ImGuiID(column_index);
+    window->DC.StateStorage->SetFloat(column_id, t);
 }
 
 float ImGui::GetColumnWidth(int column_index)
@@ -8891,6 +8884,10 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     window->DC.ColumnsCurrent = 0;
     window->DC.ColumnsCount = columns_count;
     window->DC.ColumnsShowBorders = border;
+
+    const float content_region_width = window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x;
+    window->DC.ColumnsMinX = window->DC.IndentX; // Lock our horizontal range
+    window->DC.ColumnsMaxX = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
     window->DC.ColumnsStartPosY = window->DC.CursorPos.y;
     window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.CursorPos.y;
     window->DC.ColumnsOffsetX = 0.0f;

@@ -536,6 +536,8 @@ struct IMGUI_API ImGuiDrawContext
     float                   ColumnsOffsetX;         // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
     int                     ColumnsCurrent;
     int                     ColumnsCount;
+    float                   ColumnsMinX;
+    float                   ColumnsMaxX;
     float                   ColumnsStartPosY;
     float                   ColumnsCellMinY;
     float                   ColumnsCellMaxY;
@@ -568,6 +570,7 @@ struct IMGUI_API ImGuiDrawContext
         ColumnsOffsetX = 0.0f;
         ColumnsCurrent = 0;
         ColumnsCount = 1;
+        ColumnsMinX = ColumnsMaxX = 0.0f;
         ColumnsStartPosY = 0.0f;
         ColumnsCellMinY = ColumnsCellMaxY = 0.0f;
         ColumnsShowBorders = true;
