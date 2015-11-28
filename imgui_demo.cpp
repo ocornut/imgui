@@ -1288,8 +1288,9 @@ void ImGui::ShowTestWindow(bool* opened)
         ImGui::Spacing();
 
         // Tree items
-        ImGui::Text("Tree items:");
-        ImGui::Columns(2, "tree items");
+        ImGui::Text("Tree items:"); 
+        ImGui::SameLine(); ShowHelpMarker("Whole tree inside single cell");
+        ImGui::Columns(2, "tree items"); 
         ImGui::Separator();
         if (ImGui::TreeNode("Hello")) { ImGui::BulletText("Sailor"); ImGui::TreePop(); } ImGui::NextColumn();
         if (ImGui::TreeNode("Bonjour")) { ImGui::BulletText("Marin"); ImGui::TreePop(); } ImGui::NextColumn();

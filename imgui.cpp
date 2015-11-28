@@ -3970,8 +3970,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         window->DC.ColorEditMode = ImGuiColorEditMode_UserSelect;
         window->DC.ColumnsCurrent = 0;
         window->DC.ColumnsCount = 1;
-        window->DC.ColumnsStartPos = window->DC.CursorPos;
-        window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.ColumnsStartPos.y;
+        window->DC.ColumnsStartPosY = window->DC.CursorPos.y;
+        window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.ColumnsStartPosY;
         window->DC.TreeDepth = 0;
         window->DC.StateStorage = &window->StateStorage;
         window->DC.GroupStack.resize(0);
@@ -4695,6 +4695,7 @@ void ImGui::SetNextWindowFocus()
 }
 
 // In window space (not screen space!)
+// FIXME-OPT: Could cache and maintain it (pretty much only change on columns change)
 ImVec2 ImGui::GetContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
@@ -8752,7 +8753,7 @@ int ImGui::GetColumnsCount()
 static float GetDraggedColumnOffset(int column_index)
 {
     // Active (dragged) column always follow mouse. The reason we need this is that dragging a column to the right edge of an auto-resizing
-    // window creates a feedback loop because we store normalized positions/ So while dragging we enforce absolute positioning
+    // window creates a feedback loop because we store normalized positions. So while dragging we enforce absolute positioning.
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = ImGui::GetCurrentWindowRead();
     IM_ASSERT(column_index > 0); // We cannot drag column 0. If you get this assert you may have a conflict between the ID of your columns and another widgets.
@@ -8784,7 +8785,7 @@ float ImGui::GetColumnOffset(int column_index)
 
     const float content_region_width = window->SizeContentsExplicit.x ? window->SizeContentsExplicit.x : window->Size.x;
     const float min_x = window->DC.IndentX;
-    const float max_x = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
+    const float max_x = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0.0f : window->ScrollbarSizes.x);// - window->WindowPadding().x;
     const float x = min_x + t * (max_x - min_x);
     return (float)(int)x;
 }
@@ -8849,7 +8850,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     // Draw columns borders and handle resize at the time of "closing" a columns set
     if (window->DC.ColumnsCount != columns_count && window->DC.ColumnsCount != 1 && window->DC.ColumnsShowBorders && !window->SkipItems)
     {
-        const float y1 = window->DC.ColumnsStartPos.y;
+        const float y1 = window->DC.ColumnsStartPosY;
         const float y2 = window->DC.CursorPos.y;
         for (int i = 1; i < window->DC.ColumnsCount; i++)
         {
@@ -8887,7 +8888,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     window->DC.ColumnsCurrent = 0;
     window->DC.ColumnsCount = columns_count;
     window->DC.ColumnsShowBorders = border;
-    window->DC.ColumnsStartPos = window->DC.CursorPos;
+    window->DC.ColumnsStartPosY = window->DC.CursorPos.y;
     window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.CursorPos.y;
     window->DC.ColumnsOffsetX = 0.0f;
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
