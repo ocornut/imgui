@@ -1328,9 +1328,9 @@ void ImGui::ShowTestWindow(bool* opened)
             ImGui::TreePop();
         }
 
-        bool opened = ImGui::TreeNode("Tree within single cell");
+        bool node_opened = ImGui::TreeNode("Tree within single cell");
         ImGui::SameLine(); ShowHelpMarker("NB: Tree node must be poped before ending the cell.\nThere's no storage of state per-cell.");
-        if (opened)
+        if (node_opened)
         {
             ImGui::Columns(2, "tree items"); 
             ImGui::Separator();
