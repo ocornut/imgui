@@ -1,7 +1,8 @@
 // ImGui - standalone example application for Marmalade
+// If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
+
 // Copyright (C) 2015 by Giovanni Zito
 // This file is part of ImGui
-// https://github.com/ocornut/imgui
 
 #include <imgui.h>
 #include "imgui_impl_marmalade.h"
