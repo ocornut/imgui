@@ -52,4 +52,7 @@
       <Filter>imgui</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\README.txt" />
+  </ItemGroup>
 </Project>

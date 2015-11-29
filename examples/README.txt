@@ -2,15 +2,17 @@ Those are standalone ready-to-build applications to demonstrate ImGui.
 Binaries of some of those demos are available at http://www.miracleworld.net/imgui/binaries
 
 TL;DR; 
- Newcomers, read 'Programmer guide' imgui.cpp for notes on how to setup ImGui in your codebase.
- Refer to 'opengl_example' to understand how the library is setup, because it is the simplest one.
- Copy the imgui_impl_xxx.cpp/.h files you need if you are using one of provided rendering/IO backends.
- If using different or your own backend, copy opengl_example/imgui_impl_opengl.cpp/.h to get started.
- 
+ - Newcomers, read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup ImGui in your codebase.
+ - Refer to 'opengl_example' to understand how the library is setup, it is the simplest one.
+   The other examples requires more boilerplate and are harder to read.
+ - If you are using of the backend provided here, so you can copy the imgui_impl_xxx.cpp/h files
+   to your project and use them unmodified.
+ - If you have your own engine, you probably want to start from 'opengl_example' and adapt it to 
+   your engine, but you can read the other examples as well.
 
 ImGui is highly portable and only requires a few things to run:
  - Providing mouse/keyboard inputs
- - Load the font atlas texture into GPU memory
+ - Load the font atlas texture into graphics memory
  - Providing a render function to render indexed textured triangles
  - Optional: clipboard support, mouse cursor supports, Windows IME support, etc.
 So this is essentially what those examples are doing + the obligatory cruft for portability.

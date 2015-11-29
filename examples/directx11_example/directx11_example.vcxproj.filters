@@ -39,4 +39,7 @@
       <Filter>imgui</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\README.txt" />
+  </ItemGroup>
 </Project>

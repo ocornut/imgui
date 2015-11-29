@@ -150,6 +150,9 @@
     <ClInclude Include="..\..\imgui_internal.h" />
     <ClInclude Include="imgui_impl_dx9.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\README.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
