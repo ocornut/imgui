@@ -414,6 +414,7 @@
  - window: get size/pos helpers given names (see discussion in #249)
  - window: a collapsed window can be stuck behind the main menu bar?
  - window: detect extra End() call that pop the "Debug" window out and assert at call site instead of later.
+ - window: consider renaming "GetWindowFont" which conflict with old Windows #define (#340)
  - window/tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
  - draw-list: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
 !- scrolling: allow immediately effective change of scroll if we haven't appended items yet
@@ -5545,6 +5546,7 @@ bool ImGui::TreeNodeBehaviorIsOpened(ImGuiID id, ImGuiTreeNodeFlags flags)
     return opened;
 }
 
+// FIXME: Split into CollapsingHeader(label, default_open?) and TreeNodeBehavior(label), obsolete the 4 parameters function.
 bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display_frame, bool default_open)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -7122,7 +7124,7 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
 }
 
 // Edit a string of text
-// FIXME: This is rather complex partly because we are doing UTF8 > u16 > UTF8 conversions on the go to more easily handle stb_textedit calls. Ideally we should stay in UTF-8 all the time. 
+// FIXME: Rather messy function partly because we are doing UTF8 > u16 > UTF8 conversions on the go to more easily handle stb_textedit calls. Ideally we should stay in UTF-8 all the time. See https://github.com/nothings/stb/issues/188
 bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -7141,7 +7143,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool is_editable = (flags & ImGuiInputTextFlags_ReadOnly) == 0;
     const bool is_password = (flags & ImGuiInputTextFlags_Password) != 0;
 
-    ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
+    const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
     ImVec2 size = CalcItemSize(size_arg, CalcItemWidth(), is_multiline ? ImGui::GetTextLineHeight() * 8.0f : label_size.y); // Arbitrary default of 8 lines high for multi-line
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + size + style.FramePadding*2.0f);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? (style.ItemInnerSpacing.x + label_size.x) : 0.0f, 0.0f));
@@ -7210,7 +7212,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         {
             // Start edition
             // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
-            // From the moment we focused we are ignoring the content of 'buf'
+            // From the moment we focused we are ignoring the content of 'buf' (unless we are in read-only mode)
             const int prev_len_w = edit_state.CurLenW;
             edit_state.Text.resize(buf_size+1);        // wchar count <= utf-8 count. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
             edit_state.InitialText.resize(buf_size+1); // utf-8. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
@@ -7271,7 +7273,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         edit_state.BufSizeA = buf_size;
 
         // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
-        // Down the line we should have a cleaner concept of focused vs active in the library.
+        // Down the line we should have a cleaner library-wide concept of Selected vs Active.
         g.ActiveIdAllowHoveringOthers = !io.MouseDown[0];
 
         // Edit in progress
@@ -7419,9 +7421,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         else
         {
             // Apply new value immediately - copy modified buffer back
-            // Note that as soon as we can focus into the input box, the in-widget value gets priority over any underlying modification of the input buffer
-            // FIXME: We actually always render 'buf' when calling DrawList->AddText
-            // FIXME-OPT: CPU waste to do this every time the widget is active, should mark dirty state from the stb_textedit callbacks
+            // Note that as soon as the input box is active, the in-widget value gets priority over any underlying modification of the input buffer
+            // FIXME: We actually always render 'buf' when calling DrawList->AddText, making the comment above incorrect.
+            // FIXME-OPT: CPU waste to do this every time the widget is active, should mark dirty state from the stb_textedit callbacks.
             if (is_editable)
             {
                 edit_state.TempTextBuffer.resize(edit_state.Text.Size * 4);
