@@ -32,11 +32,11 @@
    // Add character ranges and merge into main font
    // The ranges array is not copied by the AddFont* functions and is used lazily
    // so ensure it is available for duration of font usage
-   static const ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
+   static const ImWchar icons_ranges[] = { 0xf000, 0xf3ff, 0 }; // will not be copied by AddFont* so keep in scope.
    ImFontConfig config;
    config.MergeMode = true;
-   io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
-   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config, io.Fonts->GetGlyphRangesJapanese());
+   io.Fonts->AddFontFromFileTTF("DroidSans.ttf", 18.0f, &config, io.Fonts->GetGlyphRangesJapanese());
+   io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 18.0f, &config, icons_ranges);
 
  Add a fourth parameter to bake specific font ranges only:
 

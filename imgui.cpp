@@ -80,7 +80,8 @@
  - customization: PushStyleColor()/PushStyleVar() or the style editor to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme).
 
  - getting started:
-   - initialisation: call ImGui::GetIO() to retrieve the ImGuiIO structure and fill the fields marked 'Settings'.
+   - init: call ImGui::GetIO() to retrieve the ImGuiIO structure and fill the fields marked 'Settings'.
+   - init: call io.Fonts->GetTexDataAsRGBA32(...) and load the font texture pixels into graphics memory.
    - every frame:
       1/ in your mainloop or right after you got your keyboard/mouse info, call ImGui::GetIO() and fill the fields marked 'Input'
       2/ call ImGui::NewFrame().
@@ -101,6 +102,7 @@
         // TODO: Fill others settings of the io structure
 
         // Load texture atlas
+        // There is a default font so you don't need to care about choosing a font yet
         unsigned char* pixels;
         int width, height;
         io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height);
