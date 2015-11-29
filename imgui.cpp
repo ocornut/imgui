@@ -5555,6 +5555,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
 
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
+    const ImVec2 padding = display_frame ? style.FramePadding : ImVec2(style.FramePadding.x, 0.0f);
 
     IM_ASSERT(str_id != NULL || label != NULL);
     if (str_id == NULL)
@@ -5563,23 +5564,25 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
         label = str_id;
     const ImGuiID id = window->GetID(str_id);
 
-    // Framed header expand a little outside the default padding
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
-    const float text_base_offset_y = display_frame ? ImMax(0.0f, window->DC.CurrentLineTextBaseOffset - style.FramePadding.y) : window->DC.CurrentLineTextBaseOffset; // Acquire before ItemAdd()
-    const float frame_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), label_size.y + (display_frame ? style.FramePadding.y * 2 : 0.0f)); // We vertically grow up to current line height up the typical widget height.
+    const float text_base_offset_y = ImMax(0.0f, window->DC.CurrentLineTextBaseOffset - padding.y);
+    const float frame_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), label_size.y + padding.y*2); // We vertically grow up to current line height up the typical widget height.
     ImRect frame_bb = ImRect(window->DC.CursorPos, ImVec2(window->Pos.x + GetContentRegionMax().x, window->DC.CursorPos.y + frame_height));
     if (display_frame)
     {
+        // Framed header expand a little outside the default padding
         frame_bb.Min.x -= (float)(int)(window->WindowPadding.x*0.5f) - 1;
         frame_bb.Max.x += (float)(int)(window->WindowPadding.x*0.5f) - 1;
     }
 
-    const float collapser_width = g.FontSize + style.FramePadding.x*2;
-    const float text_width = collapser_width + (label_size.x > 0.0f ? label_size.x + style.FramePadding.x*2: 0.0f);   // Include collapser
+    const float collapser_width = g.FontSize + padding.x*2;
+    const float text_width = collapser_width + (label_size.x > 0.0f ? label_size.x + padding.x*2: 0.0f);   // Include collapser
     const ImVec2 layout_size = ImVec2(text_width, frame_height);
     ItemSize(layout_size, text_base_offset_y);
 
-    const ImRect interact_bb = display_frame ? frame_bb : ImRect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + text_width + style.ItemSpacing.x*2, frame_bb.Max.y);   // Arbitrary allowing to click past 2 worth of ItemSpacing
+    // For regular tree nodes, we arbitrary allow to click past 2 worth of ItemSpacing
+    // (Ideally we'd want to add a flag for the user to specify we want want the hit test to be done up to the right side of the content or not)
+    const ImRect interact_bb = display_frame ? frame_bb : ImRect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + text_width + style.ItemSpacing.x*2, frame_bb.Max.y);
     bool opened = TreeNodeBehaviorIsOpened(id, (default_open ? ImGuiTreeNodeFlags_DefaultOpen : 0) | (display_frame ? ImGuiTreeNodeFlags_NoAutoExpandOnLog : 0));
     if (!ItemAdd(interact_bb, &id))
         return opened;
@@ -5598,8 +5601,8 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     {
         // Framed type
         RenderFrame(frame_bb.Min, frame_bb.Max, col, true, style.FrameRounding);
-        RenderCollapseTriangle(frame_bb.Min + style.FramePadding + ImVec2(0.0f, text_base_offset_y), opened, 1.0f, true);
-        const ImVec2 text_pos = frame_bb.Min + style.FramePadding + ImVec2(collapser_width, text_base_offset_y);
+        RenderCollapseTriangle(frame_bb.Min + padding + ImVec2(0.0f, text_base_offset_y), opened, 1.0f, true);
+        const ImVec2 text_pos = frame_bb.Min + padding + ImVec2(collapser_width, text_base_offset_y);
         if (g.LogEnabled)
         {
             // NB: '##' is normally used to hide text (as a library-wide feature), so we need to specify the text range to make sure the ## aren't stripped out here.
@@ -5620,7 +5623,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
         if (hovered)
             RenderFrame(frame_bb.Min, frame_bb.Max, col, false);
 
-        RenderCollapseTriangle(frame_bb.Min + ImVec2(style.FramePadding.x, g.FontSize*0.15f + text_base_offset_y), opened, 0.70f, false);
+        RenderCollapseTriangle(frame_bb.Min + ImVec2(padding.x, g.FontSize*0.15f + text_base_offset_y), opened, 0.70f, false);
         if (g.LogEnabled)
             LogRenderedText(frame_bb.Min + ImVec2(collapser_width, text_base_offset_y), ">");
         RenderText(frame_bb.Min + ImVec2(collapser_width, text_base_offset_y), label);
