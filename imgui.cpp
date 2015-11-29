@@ -2,7 +2,7 @@
 // Main code & documentation
 
 // See ImGui::ShowTestWindow() in imgui_demo.cpp for demo code.
-// Read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
+// Newcomers, read 'Programmer guide' below for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
 // Releases change-log at https://github.com/ocornut/imgui/releases
 // Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
@@ -76,18 +76,19 @@
  - read the FAQ below this section!
  - your code creates the UI, if your code doesn't run the UI is gone! == very dynamic UI, no construction/destructions steps, less data retention on your side, no state duplication, less sync, less bugs.
  - call and read ImGui::ShowTestWindow() for demo code demonstrating most features.
- - see examples/ folder for standalone sample applications. e.g. examples/opengl_example/
+ - see examples/ folder for standalone sample applications. Prefer reading examples/opengl_example/ first at it is the simplest.
  - customization: PushStyleColor()/PushStyleVar() or the style editor to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme).
 
  - getting started:
-   - initialisation: call ImGui::GetIO() to retrieve the ImGuiIO structure and fill the 'Settings' data.
+   - initialisation: call ImGui::GetIO() to retrieve the ImGuiIO structure and fill the fields marked 'Settings'.
    - every frame:
-      1/ in your mainloop or right after you got your keyboard/mouse info, call ImGui::GetIO() and fill the 'Input' data, then call ImGui::NewFrame().
-      2/ use any ImGui function you want between NewFrame() and Render()
-      3/ ImGui::Render() to render all the accumulated command-lists. it will call your RenderDrawListFn handler that you set in the IO structure.
+      1/ in your mainloop or right after you got your keyboard/mouse info, call ImGui::GetIO() and fill the fields marked 'Input'
+      2/ call ImGui::NewFrame().
+      3/ use any ImGui function you want between NewFrame() and Render()
+      4/ call ImGui::Render() to render all the accumulated command-lists. it will call your RenderDrawListFn handler that you set in the IO structure.
    - all rendering information are stored into command-lists until ImGui::Render() is called.
    - ImGui never touches or know about your GPU state. the only function that knows about GPU is the RenderDrawListFn handler that you must provide.
-   - effectively it means you can create widgets at any time in your code, regardless of "update" vs "render" considerations.
+   - effectively it means you can create widgets at any time in your code, regardless of considerations of being in "update" vs "render" phases.
    - refer to the examples applications in the examples/ folder for instruction on how to setup your code.
    - a typical application skeleton may be:
 
@@ -101,31 +102,32 @@
 
         // Load texture atlas
         unsigned char* pixels;
-        int width, height, bytes_per_pixels;
-        io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height, &bytes_per_pixels);
-        // TODO: copy texture to graphics memory.
-        // TODO: store your texture pointer/identifier in 'io.Fonts->TexID'
+        int width, height;
+        io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height);
+        // TODO: At this points you've got a texture pointed to by 'pixels' and you need to upload that your your graphic system 
+        // TODO: Store your texture pointer/identifier (whatever your engine uses) in 'io.Fonts->TexID'
 
         // Application main loop
         while (true)
         {
-            // 1) get low-level input
-            // e.g. on Win32, GetKeyboardState(), or poll your events, etc.
-
-            // 2) TODO: fill all fields of IO structure and call NewFrame
+            // 1) get low-level inputs (e.g. on Win32, GetKeyboardState(), or poll your events, etc.)
+            // TODO: fill all fields of IO structure and call NewFrame
             ImGuiIO& io = ImGui::GetIO();
             io.DeltaTime = 1.0f/60.0f;
             io.MousePos = mouse_pos;
             io.MouseDown[0] = mouse_button_0;
+            io.MouseDown[1] = mouse_button_1;
             io.KeysDown[i] = ...
+
+            // 2) call NewFrame(), after this point you can use ImGui::* functions anytime
             ImGui::NewFrame();
 
-            // 3) most of your application code here - you can use any of ImGui::* functions at any point in the frame
+            // 3) most of your application code here
             ImGui::Begin("My window");
             ImGui::Text("Hello, world.");
             ImGui::End();
-            GameUpdate();
-            GameRender();
+            MyGameUpdate(); // may use ImGui functions
+            MyGameRender(); // may use ImGui functions
 
             // 4) render & swap video buffers
             ImGui::Render();
@@ -439,6 +441,8 @@
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills) (#125)
  - columns: columns header to act as button (~sort op) and allow resize/reorder (#125)
  - columns: user specify columns size (#125)
+ - columns: flag to add horizontal separator above/below?
+ - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
  - combo: sparse combo boxes (via function call?)
  - combo: contents should extends to fit label if combo widget is small
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)

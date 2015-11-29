@@ -1,7 +1,8 @@
 Those are standalone ready-to-build applications to demonstrate ImGui.
 Binaries of some of those demos are available at http://www.miracleworld.net/imgui/binaries
-  
+
 TL;DR; 
+ Newcomers, read 'Programmer guide' imgui.cpp for notes on how to setup ImGui in your codebase.
  Refer to 'opengl_example' to understand how the library is setup, because it is the simplest one.
  Copy the imgui_impl_xxx.cpp/.h files you need if you are using one of provided rendering/IO backends.
  If using different or your own backend, copy opengl_example/imgui_impl_opengl.cpp/.h to get started.
