@@ -1988,6 +1988,7 @@ void ImGui::NewFrame()
     g.IO.WantTextInput = (g.ActiveId != 0 && g.InputTextState.Id == g.ActiveId);
     g.MouseCursor = ImGuiMouseCursor_Arrow;
     g.CaptureMouseNextFrame = g.CaptureKeyboardNextFrame = false;
+    g.OsImePosRequest = ImVec2(1.0f, 1.0f); // OS Input Method Editor showing on top-left of our window by default
 
     // If mouse was first clicked outside of ImGui bounds we also cancel out hovering.
     if (mouse_owned_by_application)
@@ -2336,6 +2337,13 @@ void ImGui::EndFrame()
         ImGui::EndTooltip();
     }
 
+    // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
+    if (g.IO.ImeSetInputScreenPosFn && ImLengthSqr(g.OsImePosRequest - g.OsImePosSet) > 0.0001f)
+    {
+        g.IO.ImeSetInputScreenPosFn((int)g.OsImePosRequest.x, (int)g.OsImePosRequest.y);   
+        g.OsImePosSet = g.OsImePosRequest;
+    }
+
     // Hide implicit "Debug" window if it hasn't been used
     IM_ASSERT(g.CurrentWindowStack.Size == 1);    // Mismatched Begin/End
     if (g.CurrentWindow && !g.CurrentWindow->Accessed)
@@ -2373,9 +2381,8 @@ void ImGui::EndFrame()
     for (int i = 0; i != g.Windows.Size; i++)
     {
         ImGuiWindow* window = g.Windows[i];
-        if (window->Flags & ImGuiWindowFlags_ChildWindow)       // if a child is active its parent will add it
-            if (window->Active)
-                continue;
+        if (window->Active && (window->Flags & ImGuiWindowFlags_ChildWindow))       // if a child is active its parent will add it
+            continue;
         AddWindowToSortedBuffer(g.WindowsSortBuffer, window);
     }
     IM_ASSERT(g.Windows.Size == g.WindowsSortBuffer.Size);  // we done something wrong
@@ -7209,7 +7216,6 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             const char* buf_end = NULL;
             edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.Data, edit_state.Text.Size, buf, NULL, &buf_end);
             edit_state.CurLenA = (int)(buf_end - buf); // We can't get the result from ImFormatString() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
-            edit_state.InputCursorScreenPos = ImVec2(-1.f, -1.f);
             edit_state.CursorAnimReset();
 
             // Preserve cursor position and undo/redo stack if we come back to same widget
@@ -7628,11 +7634,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (cursor_is_visible)
             draw_window->DrawList->AddLine(cursor_screen_pos + ImVec2(0.0f,-g.FontSize+0.5f), cursor_screen_pos + ImVec2(0.0f,-1.5f), window->Color(ImGuiCol_Text));
 
-        // Notify OS of text input position for advanced IME
-        if (is_editable && io.ImeSetInputScreenPosFn && ImLengthSqr(edit_state.InputCursorScreenPos - cursor_screen_pos) > 0.0001f)
-            io.ImeSetInputScreenPosFn((int)cursor_screen_pos.x - 1, (int)(cursor_screen_pos.y - g.FontSize));   // -1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.
-
-        edit_state.InputCursorScreenPos = cursor_screen_pos;
+        // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
+        if (is_editable)
+            g.OsImePosRequest = ImVec2(cursor_screen_pos.x - 1, cursor_screen_pos.y - g.FontSize);    
     }
     else
     {

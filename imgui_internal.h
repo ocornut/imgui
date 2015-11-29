@@ -294,7 +294,6 @@ struct IMGUI_API ImGuiTextEditState
     ImGuiStb::STB_TexteditState   StbState;
     float               CursorAnim;
     bool                CursorFollow;
-    ImVec2              InputCursorScreenPos;       // Cursor position in screen space to be used by IME callback.
     bool                SelectedAllMouseLock;
 
     ImGuiTextEditState()                            { memset(this, 0, sizeof(*this)); }
@@ -414,6 +413,7 @@ struct ImGuiState
     ImVec2                  ScrollbarClickDeltaToGrabCenter;   // Distance between mouse and center of grab box, normalized in parent space. Use storage?
     char                    Tooltip[1024];
     char*                   PrivateClipboard;                   // If no custom clipboard handler is defined
+    ImVec2                  OsImePosRequest, OsImePosSet;       // Cursor position request & last passed to the OS Input Method Editor
 
     // Logging
     bool                    LogEnabled;
@@ -477,6 +477,7 @@ struct ImGuiState
         ScrollbarClickDeltaToGrabCenter = ImVec2(0.0f, 0.0f);
         memset(Tooltip, 0, sizeof(Tooltip));
         PrivateClipboard = NULL;
+        OsImePosRequest = OsImePosSet = ImVec2(-1.0f, -1.0f);
 
         ModalWindowDarkeningRatio = 0.0f;
         OverlayDrawList._OwnerName = "##Overlay"; // Give it a name for debugging
