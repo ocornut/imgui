@@ -2616,6 +2616,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
     }
 }
 
+// Handle clipping on CPU immediately (vs typically let the GPU clip the triangles that are overlapping the clipping rectangle edges)
 void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, ImGuiAlign align, const ImVec2* clip_min, const ImVec2* clip_max)
 {
     // Hide anything after a '##' string
@@ -5563,26 +5564,26 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     if (label == NULL)
         label = str_id;
     const ImGuiID id = window->GetID(str_id);
-
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
+
+    // We vertically grow up to current line height up the typical widget height.
     const float text_base_offset_y = ImMax(0.0f, window->DC.CurrentLineTextBaseOffset - padding.y);
-    const float frame_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), label_size.y + padding.y*2); // We vertically grow up to current line height up the typical widget height.
-    ImRect frame_bb = ImRect(window->DC.CursorPos, ImVec2(window->Pos.x + GetContentRegionMax().x, window->DC.CursorPos.y + frame_height));
+    const float frame_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), label_size.y + padding.y*2);
+    ImRect bb = ImRect(window->DC.CursorPos, ImVec2(window->Pos.x + GetContentRegionMax().x, window->DC.CursorPos.y + frame_height));
     if (display_frame)
     {
         // Framed header expand a little outside the default padding
-        frame_bb.Min.x -= (float)(int)(window->WindowPadding.x*0.5f) - 1;
-        frame_bb.Max.x += (float)(int)(window->WindowPadding.x*0.5f) - 1;
+        bb.Min.x -= (float)(int)(window->WindowPadding.x*0.5f) - 1;
+        bb.Max.x += (float)(int)(window->WindowPadding.x*0.5f) - 1;
     }
 
     const float collapser_width = g.FontSize + padding.x*2;
-    const float text_width = collapser_width + (label_size.x > 0.0f ? label_size.x + padding.x*2: 0.0f);   // Include collapser
-    const ImVec2 layout_size = ImVec2(text_width, frame_height);
-    ItemSize(layout_size, text_base_offset_y);
+    const float text_width = collapser_width + (label_size.x > 0.0f ? label_size.x + padding.x*2 : 0.0f);   // Include collapser
+    ItemSize(ImVec2(text_width, frame_height), text_base_offset_y);
 
     // For regular tree nodes, we arbitrary allow to click past 2 worth of ItemSpacing
     // (Ideally we'd want to add a flag for the user to specify we want want the hit test to be done up to the right side of the content or not)
-    const ImRect interact_bb = display_frame ? frame_bb : ImRect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + text_width + style.ItemSpacing.x*2, frame_bb.Max.y);
+    const ImRect interact_bb = display_frame ? bb : ImRect(bb.Min.x, bb.Min.y, bb.Min.x + text_width + style.ItemSpacing.x*2, bb.Max.y);
     bool opened = TreeNodeBehaviorIsOpened(id, (default_open ? ImGuiTreeNodeFlags_DefaultOpen : 0) | (display_frame ? ImGuiTreeNodeFlags_NoAutoExpandOnLog : 0));
     if (!ItemAdd(interact_bb, &id))
         return opened;
@@ -5597,36 +5598,36 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
 
     // Render
     const ImU32 col = window->Color((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
+    const ImVec2 text_pos = bb.Min + padding + ImVec2(collapser_width, text_base_offset_y);
     if (display_frame)
     {
         // Framed type
-        RenderFrame(frame_bb.Min, frame_bb.Max, col, true, style.FrameRounding);
-        RenderCollapseTriangle(frame_bb.Min + padding + ImVec2(0.0f, text_base_offset_y), opened, 1.0f, true);
-        const ImVec2 text_pos = frame_bb.Min + padding + ImVec2(collapser_width, text_base_offset_y);
+        RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
+        RenderCollapseTriangle(bb.Min + padding + ImVec2(0.0f, text_base_offset_y), opened, 1.0f, true);
         if (g.LogEnabled)
         {
             // NB: '##' is normally used to hide text (as a library-wide feature), so we need to specify the text range to make sure the ## aren't stripped out here.
             const char log_prefix[] = "\n##";
             const char log_suffix[] = "##";
             LogRenderedText(text_pos, log_prefix, log_prefix+3);
-            RenderTextClipped(text_pos, frame_bb.Max, label, NULL, &label_size);
-            LogRenderedText(text_pos, log_suffix, log_suffix+2);
+            RenderTextClipped(text_pos, bb.Max, label, NULL, &label_size);
+            LogRenderedText(text_pos, log_suffix+1, log_suffix+3);
         }
         else
         {
-            RenderTextClipped(text_pos, frame_bb.Max, label, NULL, &label_size);
+            RenderTextClipped(text_pos, bb.Max, label, NULL, &label_size);
         }
     }
     else
     {
         // Unframed typed for tree nodes
         if (hovered)
-            RenderFrame(frame_bb.Min, frame_bb.Max, col, false);
+            RenderFrame(bb.Min, bb.Max, col, false);
 
-        RenderCollapseTriangle(frame_bb.Min + ImVec2(padding.x, g.FontSize*0.15f + text_base_offset_y), opened, 0.70f, false);
+        RenderCollapseTriangle(bb.Min + ImVec2(padding.x, g.FontSize*0.15f + text_base_offset_y), opened, 0.70f, false);
         if (g.LogEnabled)
-            LogRenderedText(frame_bb.Min + ImVec2(collapser_width, text_base_offset_y), ">");
-        RenderText(frame_bb.Min + ImVec2(collapser_width, text_base_offset_y), label);
+            LogRenderedText(text_pos, ">");
+        RenderText(text_pos, label);
     }
 
     return opened;
