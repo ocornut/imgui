@@ -5565,19 +5565,19 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImVec2 pos_min = window->DC.CursorPos;
     const ImVec2 pos_max = window->Pos + GetContentRegionMax();
-    ImRect bb = ImRect(pos_min, ImVec2(pos_max.x, pos_min.y + label_size.y));
+    ImRect frame_bb = ImRect(pos_min, ImVec2(pos_max.x, pos_min.y + label_size.y));
     if (display_frame)
     {
-        bb.Min.x -= (float)(int)(window_padding.x*0.5f) - 1;
-        bb.Max.x += (float)(int)(window_padding.x*0.5f) - 1;
-        bb.Max.y += style.FramePadding.y * 2;
+        frame_bb.Min.x -= (float)(int)(window_padding.x*0.5f) - 1;
+        frame_bb.Max.x += (float)(int)(window_padding.x*0.5f) - 1;
+        frame_bb.Max.y += style.FramePadding.y * 2;
     }
 
     const float collapser_width = g.FontSize + style.FramePadding.x*2;
-    const ImRect text_bb(bb.Min, bb.Min + ImVec2(collapser_width + style.FramePadding.x*2*0 + (label_size.x > 0.0f ? label_size.x : 0.0f), label_size.y));
-    ItemSize(ImVec2(text_bb.GetSize().x, bb.GetSize().y), display_frame ? style.FramePadding.y : 0.0f);
+    const ImRect text_bb(frame_bb.Min, frame_bb.Min + ImVec2(collapser_width + style.FramePadding.x*2*0 + (label_size.x > 0.0f ? label_size.x : 0.0f), label_size.y));
+    ItemSize(ImVec2(text_bb.GetSize().x, frame_bb.GetSize().y), display_frame ? style.FramePadding.y : 0.0f);
 
-    const ImRect interact_bb = display_frame ? bb : ImRect(text_bb.Min, text_bb.Max + ImVec2(style.FramePadding.x*2,0.0f)); // FIXME
+    const ImRect interact_bb = display_frame ? frame_bb : ImRect(text_bb.Min, text_bb.Max + ImVec2(style.FramePadding.x*2,0.0f)); // FIXME
     bool opened = TreeNodeBehaviorIsOpened(id, (default_open ? ImGuiTreeNodeFlags_DefaultOpen : 0) | (display_frame ? ImGuiTreeNodeFlags_NoAutoExpandOnLog : 0));
 
     if (!ItemAdd(interact_bb, &id))
@@ -5596,30 +5596,30 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     if (display_frame)
     {
         // Framed type
-        RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
-        RenderCollapseTriangle(bb.Min + style.FramePadding, opened, 1.0f, true);
+        RenderFrame(frame_bb.Min, frame_bb.Max, col, true, style.FrameRounding);
+        RenderCollapseTriangle(frame_bb.Min + style.FramePadding, opened, 1.0f, true);
         if (g.LogEnabled)
         {
             // NB: '##' is normally used to hide text (as a library-wide feature), so we need to specify the text range to make sure the ## aren't stripped out here.
             const char log_prefix[] = "\n##";
-            LogRenderedText(bb.Min + style.FramePadding, log_prefix, log_prefix+3);
+            LogRenderedText(frame_bb.Min + style.FramePadding, log_prefix, log_prefix+3);
         }
-        RenderTextClipped(bb.Min + style.FramePadding + ImVec2(collapser_width,0), bb.Max, label, NULL, &label_size);
+        RenderTextClipped(frame_bb.Min + style.FramePadding + ImVec2(collapser_width,0), frame_bb.Max, label, NULL, &label_size);
         if (g.LogEnabled)
         {
             const char log_suffix[] = "##";
-            LogRenderedText(bb.Min + style.FramePadding, log_suffix, log_suffix+2);
+            LogRenderedText(frame_bb.Min + style.FramePadding, log_suffix, log_suffix+2);
         }
     }
     else
     {
         // Unframed typed for tree nodes
         if (hovered)
-            RenderFrame(bb.Min, bb.Max, col, false);
-        RenderCollapseTriangle(bb.Min + ImVec2(style.FramePadding.x, g.FontSize*0.15f), opened, 0.70f, false);
+            RenderFrame(frame_bb.Min, frame_bb.Max, col, false);
+        RenderCollapseTriangle(frame_bb.Min + ImVec2(style.FramePadding.x, g.FontSize*0.15f), opened, 0.70f, false);
         if (g.LogEnabled)
-            LogRenderedText(bb.Min, ">");
-        RenderText(bb.Min + ImVec2(collapser_width,0), label);
+            LogRenderedText(frame_bb.Min, ">");
+        RenderText(frame_bb.Min + ImVec2(collapser_width,0), label);
     }
 
     return opened;
