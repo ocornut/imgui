@@ -4274,7 +4274,7 @@ float ImGui::CalcItemWidth()
 static void SetCurrentFont(ImFont* font)
 {
     ImGuiState& g = *GImGui;
-    IM_ASSERT(font && font->IsLoaded());
+    IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
     IM_ASSERT(font->Scale > 0.0f);
     g.Font = font;
     g.FontBaseSize = g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale;
