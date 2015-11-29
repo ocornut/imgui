@@ -1,0 +1,29 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 18
+    buildToolsVersion "22.0.1"
+
+    defaultConfig {
+        applicationId "org.imgui.android"
+        minSdkVersion 10
+        targetSdkVersion 18
+
+        ndk {
+            moduleName 'main'
+        }
+
+    }
+
+    sourceSets.main {
+        jni.srcDirs = []
+        jniLibs.srcDir 'src/main/libs'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-AppActivity.txt'), 'proguard-rules.txt'
+        }
+    }
+}
