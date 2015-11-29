@@ -224,14 +224,13 @@ IMGUI_API LRESULT ImGui_ImplDX11_WndProcHandler(HWND, UINT msg, WPARAM wParam, L
 
 static void ImGui_ImplDX11_CreateFontsTexture()
 {
+    // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
-
-    // Build
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
-    // Create DX11 texture
+    // Upload texture to graphics system
     {
         D3D11_TEXTURE2D_DESC texDesc;
         ZeroMemory(&texDesc, sizeof(texDesc));
@@ -280,10 +279,6 @@ static void ImGui_ImplDX11_CreateFontsTexture()
         samplerDesc.MaxLOD = 0.f;
         g_pd3dDevice->CreateSamplerState(&samplerDesc, &g_pFontSampler);
     }
-
-    // Cleanup (don't clear the input data if you want to append new fonts later)
-    io.Fonts->ClearInputData();
-    io.Fonts->ClearTexData();
 }
 
 bool    ImGui_ImplDX11_CreateDeviceObjects()

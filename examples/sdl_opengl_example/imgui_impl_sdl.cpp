@@ -146,14 +146,15 @@ bool ImGui_ImplSdl_ProcessEvent(SDL_Event* event)
 
 bool ImGui_ImplSdl_CreateDeviceObjects()
 {
+    // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
-
-    // Build texture
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
 
-    // Create texture
+    // Upload texture to graphics system
+    GLint last_texture;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glGenTextures(1, &g_FontTexture);
     glBindTexture(GL_TEXTURE_2D, g_FontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -163,9 +164,8 @@ bool ImGui_ImplSdl_CreateDeviceObjects()
     // Store our identifier
     io.Fonts->TexID = (void *)(intptr_t)g_FontTexture;
 
-    // Cleanup (don't clear the input data if you want to append new fonts later)
-	io.Fonts->ClearInputData();
-	io.Fonts->ClearTexData();
+    // Restore state
+    glBindTexture(GL_TEXTURE_2D, last_texture);
 
     return true;
 }

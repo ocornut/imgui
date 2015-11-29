@@ -167,14 +167,13 @@ int32 ImGui_Marmalade_CharCallback(void* SystemData, void* userData)
 
 bool ImGui_Marmalade_CreateDeviceObjects()
 {
-    ImGuiIO& io = ImGui::GetIO();
-
     // Build texture atlas
+    ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
-    // Create texture
+    // Upload texture to graphics system
     g_FontTexture = new CIwTexture();
     g_FontTexture->SetModifiable(true);
     CIwImage& image = g_FontTexture->GetImage();
@@ -187,12 +186,8 @@ bool ImGui_Marmalade_CreateDeviceObjects()
     g_FontTexture->SetFiltering(false);
     g_FontTexture->Upload();
 
-    // Store the pointer
+    // Store our identifier
     io.Fonts->TexID = (void *)g_FontTexture;
-
-    // Cleanup (don't clear the input data if you want to append new fonts later)
-    io.Fonts->ClearInputData();
-    io.Fonts->ClearTexData();
 
     return true;
 }

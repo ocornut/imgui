@@ -230,14 +230,13 @@ void ImGui_ImplDX9_Shutdown()
 
 static bool ImGui_ImplDX9_CreateFontsTexture()
 {
+    // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
-
-    // Build
     unsigned char* pixels;
     int width, height, bytes_per_pixel;
     io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height, &bytes_per_pixel);
 
-    // Create DX9 texture
+    // Upload texture to graphics system
     g_FontTexture = NULL;
     if (D3DXCreateTexture(g_pd3dDevice, width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &g_FontTexture) < 0)
         return false;
@@ -251,9 +250,6 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     // Store our identifier
     io.Fonts->TexID = (void *)g_FontTexture;
 
-    // Cleanup (don't clear the input data if you want to append new fonts later)
-    io.Fonts->ClearInputData();
-    io.Fonts->ClearTexData();
     return true;
 }
 

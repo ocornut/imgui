@@ -145,14 +145,13 @@ void ImGui_ImplGlfw_CharCallback(GLFWwindow*, unsigned int c)
 
 bool ImGui_ImplGlfw_CreateDeviceObjects()
 {
-    ImGuiIO& io = ImGui::GetIO();
-
     // Build texture atlas
+    ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
 
-    // Create OpenGL texture
+    // Upload texture to graphics system
     GLint last_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glGenTextures(1, &g_FontTexture);
@@ -164,9 +163,7 @@ bool ImGui_ImplGlfw_CreateDeviceObjects()
     // Store our identifier
     io.Fonts->TexID = (void *)(intptr_t)g_FontTexture;
 
-    // Cleanup (don't clear the input data if you want to append new fonts later)
-    io.Fonts->ClearInputData();
-    io.Fonts->ClearTexData();
+    // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
 
     return true;

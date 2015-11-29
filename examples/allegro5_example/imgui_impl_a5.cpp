@@ -88,9 +88,8 @@ void ImGui_ImplA5_RenderDrawLists(ImDrawData* draw_data)
 
 bool Imgui_ImplA5_CreateDeviceObjects()
 {
+    // Build texture atlas
     ImGuiIO &io = ImGui::GetIO();
-
-    // Build texture
     unsigned char *pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
@@ -124,10 +123,6 @@ bool Imgui_ImplA5_CreateDeviceObjects()
     // Store our identifier
     io.Fonts->TexID = (void*)cloned_img;
     g_Texture = cloned_img;
-
-    // Cleanup (don't clear the input data if you want to append new fonts later)
-    io.Fonts->ClearInputData();
-    io.Fonts->ClearTexData();
 
     // Create an invisible mouse cursor
     // Because al_hide_mouse_cursor() seems to mess up with the actual inputs..
