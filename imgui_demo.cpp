@@ -2191,16 +2191,15 @@ static void ShowExampleAppPropertyEditor(bool* opened)
     ImGui::Columns(2);
     ImGui::Separator();
 
-    ImGui::Text("Item1"); ImGui::NextColumn();
-    ImGui::Text("value1"); ImGui::NextColumn();
-
     struct funcs
     {
         static void ShowDummyObject(const char* prefix, ImU32 uid)
         {
-            ImGui::PushID(uid); // Use object uid as identifier. Most commonly you could also use the object pointer as a base ID.
+            ImGui::PushID(uid);                      // Use object uid as identifier. Most commonly you could also use the object pointer as a base ID.
+            ImGui::AlignFirstTextHeightToWidgets();  // Text and Tree nodes are less high than regular widgets, here we add vertical spacing to make the tree lines equal high.
             bool opened = ImGui::TreeNode("Object", "%s_%u", prefix, uid);
             ImGui::NextColumn();
+            ImGui::AlignFirstTextHeightToWidgets();
             ImGui::Text("my sailor is rich");
             ImGui::NextColumn();
             if (opened) 
