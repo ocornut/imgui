@@ -133,7 +133,7 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
     g_pd3dDevice->IASetInputLayout(g_pInputLayout);
     g_pd3dDevice->IASetVertexBuffers(0, 1, &g_pVB, &stride, &offset);
     g_pd3dDevice->IASetIndexBuffer(g_pIB, sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, 0);
-    g_pd3dDevice->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    g_pd3dDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     g_pd3dDevice->VSSetShader(g_pVertexShader);
     g_pd3dDevice->VSSetConstantBuffers(0, 1, &g_pVertexConstantBuffer);
     g_pd3dDevice->PSSetShader(g_pPixelShader);
@@ -256,7 +256,7 @@ static void ImGui_ImplDX10_CreateFontsTexture()
         D3D10_SHADER_RESOURCE_VIEW_DESC srvDesc;
         ZeroMemory(&srvDesc, sizeof(srvDesc));
         srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
         srvDesc.Texture2D.MipLevels = texDesc.MipLevels;
         srvDesc.Texture2D.MostDetailedMip = 0;
         g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &g_pFontTextureView);
