@@ -1,4 +1,4 @@
-// stb_truetype.h - v1.07 - public domain
+// stb_truetype.h - v1.08 - public domain
 // authored from 2009-2015 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -39,13 +39,16 @@
 //       Omar Cornut
 //       github:aloucks
 //       Peter LaValle
+//       Sergey Popov
 //       Giumo X. Clanjor
+//       Higor Euripedes
 //
 //   Misc other:
 //       Ryan Gordon
 //
 // VERSION HISTORY
 //
+//   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
 //   1.07 (2015-08-01) allow PackFontRanges to accept arrays of sparse codepoints;
 //                     variant PackFontRanges to pack and render in separate phases;
 //                     fix stbtt_GetFontOFfsetForIndex (never worked for non-0 input?);
@@ -802,7 +805,16 @@ typedef struct
    unsigned char *pixels;
 } stbtt__bitmap;
 
-STBTT_DEF void stbtt_Rasterize(stbtt__bitmap *result, float flatness_in_pixels, stbtt_vertex *vertices, int num_verts, float scale_x, float scale_y, float shift_x, float shift_y, int x_off, int y_off, int invert, void *userdata);
+// rasterize a shape with quadratic beziers into a bitmap
+STBTT_DEF void stbtt_Rasterize(stbtt__bitmap *result,        // 1-channel bitmap to draw into
+                               float flatness_in_pixels,     // allowable error of curve in pixels
+                               stbtt_vertex *vertices,       // array of vertices defining shape
+                               int num_verts,                // number of vertices in above array
+                               float scale_x, float scale_y, // scale applied to input vertices
+                               float shift_x, float shift_y, // translation applied to input vertices
+                               int x_off, int y_off,         // another translation applied to input
+                               int invert,                   // if non-zero, vertically flip shape
+                               void *userdata);              // context for to STBTT_MALLOC
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -1684,7 +1696,7 @@ static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, i
    //STBTT_assert(e->y0 <= start_point);
    if (!z) return z;
    z->fdx = dxdy;
-   z->fdy = (1/dxdy);
+   z->fdy = dxdy != 0.0f ? (1.0f/dxdy) : 0.0f;
    z->fx = e->x0 + dxdy * (start_point - e->y0);
    z->fx -= off_x;
    z->direction = e->invert ? 1.0f : -1.0f;
@@ -1745,7 +1757,7 @@ static void stbtt__fill_active_edges(unsigned char *scanline, int len, stbtt__ac
 
 static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)
 {
-   stbtt__hheap hh = { 0 };
+   stbtt__hheap hh = { 0, 0, 0 };
    stbtt__active_edge *active = NULL;
    int y,j=0;
    int max_weight = (255 / vsubsample);  // weight per vertical scanline
@@ -1907,7 +1919,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
          float dx = e->fdx;
          float xb = x0 + dx;
          float x_top, x_bottom;
-         float y0,y1;
+         float sy0,sy1;
          float dy = e->fdy;
          STBTT_assert(e->sy <= y_bottom && e->ey >= y_top);
 
@@ -1916,17 +1928,17 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
          // line with y_top, but that may be off the line segment.
          if (e->sy > y_top) {
             x_top = x0 + dx * (e->sy - y_top);
-            y0 = e->sy;
+            sy0 = e->sy;
          } else {
             x_top = x0;
-            y0 = y_top;
+            sy0 = y_top;
          }
          if (e->ey < y_bottom) {
             x_bottom = x0 + dx * (e->ey - y_top);
-            y1 = e->ey;
+            sy1 = e->ey;
          } else {
             x_bottom = xb;
-            y1 = y_bottom;
+            sy1 = y_bottom;
          }
 
          if (x_top >= 0 && x_bottom >= 0 && x_top < len && x_bottom < len) {
@@ -1936,7 +1948,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
                float height;
                // simple case, only spans one pixel
                int x = (int) x_top;
-               height = y1 - y0;
+               height = sy1 - sy0;
                STBTT_assert(x >= 0 && x < len);
                scanline[x] += e->direction * (1-((x_top - x) + (x_bottom-x))/2)  * height;
                scanline_fill[x] += e->direction * height; // everything right of this pixel is filled
@@ -1947,9 +1959,9 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
                if (x_top > x_bottom) {
                   // flip scanline vertically; signed area is the same
                   float t;
-                  y0 = y_bottom - (y0 - y_top);
-                  y1 = y_bottom - (y1 - y_top);
-                  t = y0, y0 = y1, y1 = t;
+                  sy0 = y_bottom - (sy0 - y_top);
+                  sy1 = y_bottom - (sy1 - y_top);
+                  t = sy0, sy0 = sy1, sy1 = t;
                   t = x_bottom, x_bottom = x_top, x_top = t;
                   dx = -dx;
                   dy = -dy;
@@ -1963,7 +1975,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
 
                sign = e->direction;
                // area of the rectangle covered from y0..y_crossing
-               area = sign * (y_crossing-y0);
+               area = sign * (y_crossing-sy0);
                // area of the triangle (x_top,y0), (x+1,y0), (x+1,y_crossing)
                scanline[x1] += area * (1-((x_top - x1)+(x1+1-x1))/2);
 
@@ -1976,9 +1988,9 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
 
                STBTT_assert(fabs(area) <= 1.01f);
 
-               scanline[x2] += area + sign * (1-((x2-x2)+(x_bottom-x2))/2) * (y1-y_crossing);
+               scanline[x2] += area + sign * (1-((x2-x2)+(x_bottom-x2))/2) * (sy1-y_crossing);
 
-               scanline_fill[x2] += sign * (y1-y0);
+               scanline_fill[x2] += sign * (sy1-sy0);
             }
          } else {
             // if edge goes outside of box we're drawing, we require
@@ -2048,7 +2060,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
 static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)
 {
    (void)vsubsample;
-   stbtt__hheap hh = { 0 };
+   stbtt__hheap hh = { 0, 0, 0 };
    stbtt__active_edge *active = NULL;
    int y,j=0, i;
    float scanline_data[129], *scanline, *scanline2;
@@ -2088,11 +2100,13 @@ static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e,
 
       // insert all edges that start before the bottom of this scanline
       while (e->y0 <= scan_y_bottom) {
-         stbtt__active_edge *z = stbtt__new_active(&hh, e, off_x, scan_y_top, userdata);
-         STBTT_assert(z->ey >= scan_y_top);
-         // insert at front
-         z->next = active;
-         active = z;
+         if (e->y0 != e->y1) {
+            stbtt__active_edge *z = stbtt__new_active(&hh, e, off_x, scan_y_top, userdata);
+            STBTT_assert(z->ey >= scan_y_top);
+            // insert at front
+            z->next = active;
+            active = z;
+         }
          ++e;
       }
 
@@ -2835,7 +2849,7 @@ STBTT_DEF int stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, stbtt_fon
       ranges[i].v_oversample = (unsigned char) spc->v_oversample;
       for (j=0; j < ranges[i].num_chars; ++j) {
          int x0,y0,x1,y1;
-         int codepoint = ranges[i].first_unicode_codepoint_in_range ? ranges[i].first_unicode_codepoint_in_range + j : ranges[i].array_of_unicode_codepoints[j];
+         int codepoint = ranges[i].array_of_unicode_codepoints == NULL ? ranges[i].first_unicode_codepoint_in_range + j : ranges[i].array_of_unicode_codepoints[j];
          int glyph = stbtt_FindGlyphIndex(info, codepoint);
          stbtt_GetGlyphBitmapBoxSubpixel(info,glyph,
                                          scale * spc->h_oversample,
@@ -2876,7 +2890,7 @@ STBTT_DEF int stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, stbtt
          if (r->was_packed) {
             stbtt_packedchar *bc = &ranges[i].chardata_for_range[j];
             int advance, lsb, x0,y0,x1,y1;
-            int codepoint = ranges[i].first_unicode_codepoint_in_range ? ranges[i].first_unicode_codepoint_in_range + j : ranges[i].array_of_unicode_codepoints[j];
+            int codepoint = ranges[i].array_of_unicode_codepoints == NULL ? ranges[i].first_unicode_codepoint_in_range + j : ranges[i].array_of_unicode_codepoints[j];
             int glyph = stbtt_FindGlyphIndex(info, codepoint);
             stbrp_coord pad = (stbrp_coord) spc->padding;
 
@@ -3179,6 +3193,7 @@ STBTT_DEF int stbtt_FindMatchingFont(const unsigned char *font_collection, const
 
 // FULL VERSION HISTORY
 //
+//   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
 //   1.07 (2015-08-01) allow PackFontRanges to accept arrays of sparse codepoints;
 //                     allow PackFontRanges to pack and render in separate phases;
 //                     fix stbtt_GetFontOFfsetForIndex (never worked for non-0 input?);
