@@ -1,7 +1,7 @@
 // ImGui Win32 + DirectX10 binding
-// You can copy and use unmodified imgui_impl_* files in your project. 
+// You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
-// See main.cpp for an example of using this.
+// If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
 #include "imgui.h"
@@ -44,8 +44,6 @@ struct VERTEX_CONSTANT_BUFFER
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
 {
-    void* vtx_resourceData;
-    void* idx_resourceData;
     // Create and grow vertex/index buffers if needed
     if (!g_pVB || g_VertexBufferSize < draw_data->TotalVtxCount)
     {
@@ -58,7 +56,7 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
         desc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
         desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
         desc.MiscFlags = 0;
-        if (g_pd3dDevice->CreateBuffer(&desc, nullptr, &g_pVB) < 0)
+        if (g_pd3dDevice->CreateBuffer(&desc, NULL, &g_pVB) < 0)
             return;
     }
 
@@ -72,14 +70,16 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
         bufferDesc.ByteWidth = g_IndexBufferSize * sizeof(ImDrawIdx);
         bufferDesc.BindFlags = D3D10_BIND_INDEX_BUFFER;
         bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
-        if (g_pd3dDevice->CreateBuffer(&bufferDesc, nullptr, &g_pIB) < 0)
+        if (g_pd3dDevice->CreateBuffer(&bufferDesc, NULL, &g_pIB) < 0)
             return;
     }
 
-    g_pVB->Map(D3D10_MAP_WRITE_DISCARD, 0, &vtx_resourceData);
-    g_pIB->Map(D3D10_MAP_WRITE_DISCARD, 0, &idx_resourceData);
-    ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resourceData;
-    ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resourceData;
+    // Copy and convert all vertices into a single contiguous buffer
+    ImDrawVert* vtx_dst = NULL;
+    ImDrawIdx* idx_dst = NULL;
+    g_pVB->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&vtx_dst);
+    g_pIB->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&idx_dst);
+
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -88,26 +88,26 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
         vtx_dst += cmd_list->VtxBuffer.size();
         idx_dst += cmd_list->IdxBuffer.size();
     }
-
     g_pVB->Unmap();
     g_pIB->Unmap();
 
     // Setup orthographic projection matrix into our constant buffer
     {
-        void* pmappedResource;
-        g_pVertexConstantBuffer->Map(D3D10_MAP_WRITE_DISCARD, 0, &pmappedResource);
+        void* mappedResource;
+        if (g_pVertexConstantBuffer->Map(D3D10_MAP_WRITE_DISCARD, 0, &mappedResource) != S_OK)
+            return;
 
-        VERTEX_CONSTANT_BUFFER* pConstantBuffer = (VERTEX_CONSTANT_BUFFER*)pmappedResource;
+        VERTEX_CONSTANT_BUFFER* pConstantBuffer = (VERTEX_CONSTANT_BUFFER*)mappedResource;
         const float L = 0.0f;
         const float R = ImGui::GetIO().DisplaySize.x;
         const float B = ImGui::GetIO().DisplaySize.y;
         const float T = 0.0f;
         const float mvp[4][4] =
         {
-            { 2.0f / (R - L),   0.0f,           0.0f,       0.0f },
-            { 0.0f,         2.0f / (T - B),     0.0f,       0.0f, },
+            { 2.0f/(R-L),   0.0f,           0.0f,       0.0f },
+            { 0.0f,         2.0f/(T-B),     0.0f,       0.0f },
             { 0.0f,         0.0f,           0.5f,       0.0f },
-            { (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
+            { (R+L)/(L-R),  (T+B)/(B-T),    0.5f,       1.0f },
         };
         memcpy(&pConstantBuffer->mvp, mvp, sizeof(mvp));
         g_pVertexConstantBuffer->Unmap();
@@ -346,7 +346,7 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
             cbDesc.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
             cbDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
             cbDesc.MiscFlags = 0;
-            g_pd3dDevice->CreateBuffer(&cbDesc, nullptr, &g_pVertexConstantBuffer);
+            g_pd3dDevice->CreateBuffer(&cbDesc, NULL, &g_pVertexConstantBuffer);
         }
     }
 
