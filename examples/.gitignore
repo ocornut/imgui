@@ -7,6 +7,10 @@ directx9_example/Debug/*
 directx9_example/Release/*
 directx9_example/ipch/*
 directx9_example/x64/*
+directx10_example/Debug/*
+directx10_example/Release/*
+directx10_example/ipch/*
+directx10_example/x64/*
 directx11_example/Debug/*
 directx11_example/Release/*
 directx11_example/ipch/*

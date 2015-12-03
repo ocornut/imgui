@@ -41,6 +41,10 @@ opengl3_example/
 directx9_example/
     DirectX9 example, Windows only.
 	
+directx10_example/
+    DirectX10 example, Windows only.
+    This is quite long and tedious, because: DirectX10.
+
 directx11_example/
     DirectX11 example, Windows only.
     This is quite long and tedious, because: DirectX11.
