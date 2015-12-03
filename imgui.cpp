@@ -1606,7 +1606,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window = NULL)
 {
     ImGuiState& g = *GImGui;
     g.ActiveId = id;
-    g.ActiveIdAllowHoveringOthers = false;
+    g.ActiveIdAllowOverlap = false;
     g.ActiveIdIsJustActivated = true;
     g.ActiveIdWindow = window;
 }
@@ -1615,7 +1615,7 @@ void ImGui::SetHoveredID(ImGuiID id)
 {
     ImGuiState& g = *GImGui;
     g.HoveredId = id;
-    g.HoveredIdAllowHoveringOthers = false;
+    g.HoveredIdAllowOverlap = false;
 }
 
 void ImGui::KeepAliveID(ImGuiID id)
@@ -1676,7 +1676,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
         window->DC.LastItemHoveredRect = true;
         window->DC.LastItemHoveredAndUsable = false;
         if (g.HoveredRootWindow == window->RootWindow)
-            if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdAllowHoveringOthers || (g.ActiveId == window->MoveID))
+            if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdAllowOverlap || (g.ActiveId == window->MoveID))
                 if (IsWindowContentHoverable(window))
                     window->DC.LastItemHoveredAndUsable = true;
     }
@@ -1705,11 +1705,11 @@ bool ImGui::IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when
 bool ImGui::IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs)
 {
     ImGuiState& g = *GImGui;
-    if (g.HoveredId == 0 || g.HoveredId == id || g.HoveredIdAllowHoveringOthers)
+    if (g.HoveredId == 0 || g.HoveredId == id || g.HoveredIdAllowOverlap)
     {
         ImGuiWindow* window = GetCurrentWindowRead();
         if (g.HoveredWindow == window || (flatten_childs && g.HoveredRootWindow == window->RootWindow))
-            if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdAllowHoveringOthers) && ImGui::IsMouseHoveringRect(bb.Min, bb.Max))
+            if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdAllowOverlap) && ImGui::IsMouseHoveringRect(bb.Min, bb.Max))
                 if (IsWindowContentHoverable(g.HoveredRootWindow))
                     return true;
     }
@@ -1937,7 +1937,7 @@ void ImGui::NewFrame()
     // Clear reference to active widget if the widget isn't alive anymore
     g.HoveredIdPreviousFrame = g.HoveredId;
     g.HoveredId = 0;
-    g.HoveredIdAllowHoveringOthers = false;
+    g.HoveredIdAllowOverlap = false;
     if (!g.ActiveIdIsAlive && g.ActiveIdPreviousFrame == g.ActiveId && g.ActiveId != 0)
         SetActiveID(0);
     g.ActiveIdPreviousFrame = g.ActiveId;
@@ -3025,6 +3025,16 @@ bool ImGui::IsItemVisible()
     ImGuiWindow* window = GetCurrentWindowRead();
     ImRect r(window->ClipRect);
     return r.Overlaps(window->DC.LastItemRect);
+}
+
+// Allow last item to be overlapped by a subsequent item. Both may be activated during the same frame before the later one takes priority.
+void ImGui::SetItemAllowOverlap()
+{
+    ImGuiState& g = *GImGui;
+    if (g.HoveredId == g.CurrentWindow->DC.LastItemID)
+        g.HoveredIdAllowOverlap = true;
+    if (g.ActiveId == g.CurrentWindow->DC.LastItemID)
+        g.ActiveIdAllowOverlap = true;
 }
 
 ImVec2 ImGui::GetItemRectMin()
@@ -7279,7 +7289,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
         // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
         // Down the line we should have a cleaner library-wide concept of Selected vs Active.
-        g.ActiveIdAllowHoveringOthers = !io.MouseDown[0];
+        g.ActiveIdAllowOverlap = !io.MouseDown[0];
 
         // Edit in progress
         const float mouse_x = (g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + edit_state.ScrollX;

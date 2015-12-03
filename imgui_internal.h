@@ -360,13 +360,13 @@ struct ImGuiState
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs
     ImGuiWindow*            HoveredRootWindow;                  // Will catch mouse inputs (for focus/move only)
     ImGuiID                 HoveredId;                          // Hovered widget
-    bool                    HoveredIdAllowHoveringOthers;
+    bool                    HoveredIdAllowOverlap;
     ImGuiID                 HoveredIdPreviousFrame;
     ImGuiID                 ActiveId;                           // Active widget
     ImGuiID                 ActiveIdPreviousFrame;
     bool                    ActiveIdIsAlive;
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
-    bool                    ActiveIdAllowHoveringOthers;        // Set only by active widget
+    bool                    ActiveIdAllowOverlap;               // Set only by active widget
     ImGuiWindow*            ActiveIdWindow;
     ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window. Pointer is only valid if ActiveID is the "#MOVE" identifier of a window.
     ImVector<ImGuiIniData>  Settings;                           // .ini Settings
@@ -445,13 +445,13 @@ struct ImGuiState
         HoveredWindow = NULL;
         HoveredRootWindow = NULL;
         HoveredId = 0;
-        HoveredIdAllowHoveringOthers = false;
+        HoveredIdAllowOverlap = false;
         HoveredIdPreviousFrame = 0;
         ActiveId = 0;
         ActiveIdPreviousFrame = 0;
         ActiveIdIsAlive = false;
         ActiveIdIsJustActivated = false;
-        ActiveIdAllowHoveringOthers = false;
+        ActiveIdAllowOverlap = false;
         ActiveIdWindow = NULL;
         MovedWindow = NULL;
         SettingsDirtyTimer = 0.0f;
@@ -683,6 +683,7 @@ namespace ImGui
     IMGUI_API void          FocusableItemUnregister(ImGuiWindow* window);
     IMGUI_API ImVec2        CalcItemSize(ImVec2 size, float default_x, float default_y);
     IMGUI_API float         CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x);
+    IMGUI_API void          SetItemAllowOverlap();      // Allow last item to be overlapped by a subsequent item
 
     // NB: All position are in absolute pixels coordinates (not window coordinates)
     IMGUI_API void          RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
