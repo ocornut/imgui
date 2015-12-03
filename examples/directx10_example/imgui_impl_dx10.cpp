@@ -110,7 +110,6 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
             { (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
         };
         memcpy(&pConstantBuffer->mvp, mvp, sizeof(mvp));
-        D3D10_MAPPED_TEXTURE2D texMap;
         g_pVertexConstantBuffer->Unmap();
     }
 
@@ -118,8 +117,8 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
     {
         D3D10_VIEWPORT vp;
         memset(&vp, 0, sizeof(D3D10_VIEWPORT));
-        vp.Width = ImGui::GetIO().DisplaySize.x;
-        vp.Height = ImGui::GetIO().DisplaySize.y;
+        vp.Width = (UINT)ImGui::GetIO().DisplaySize.x;
+        vp.Height = (UINT)ImGui::GetIO().DisplaySize.y;
         vp.MinDepth = 0.0f;
         vp.MaxDepth = 1.0f;
         vp.TopLeftX = 0;

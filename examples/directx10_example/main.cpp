@@ -58,11 +58,7 @@ HRESULT CreateDeviceD3D(HWND hWnd)
     }
 
     UINT createDeviceFlags = 0;
-#ifdef _DEBUG
-    createDeviceFlags |= D3D10_CREATE_DEVICE_DEBUG;
-#endif
-    D3D_FEATURE_LEVEL featureLevel;
-    const D3D_FEATURE_LEVEL featureLevelArray[1] = { D3D_FEATURE_LEVEL_10_1, };
+    //createDeviceFlags |= D3D10_CREATE_DEVICE_DEBUG;
     if (D3D10CreateDeviceAndSwapChain(NULL, D3D10_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, D3D10_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice) != S_OK)
         return E_FAIL;
 
