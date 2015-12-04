@@ -464,6 +464,7 @@
  - tabs
  - separator: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
  - gauge: various forms of gauge/loading bars widgets
+ - color: the color helpers/typing is a mess and needs sorting out.
  - color: add a better color picker
  - plot: PlotLines() should use the polygon-stroke facilities (currently issues with averaging normals)
  - plot: make it easier for user to draw extra stuff into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
@@ -3925,16 +3926,18 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             // Window background
             if (bg_alpha > 0.0f)
             {
+                ImGuiCol col_idx;
                 if ((flags & ImGuiWindowFlags_ComboBox) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_ComboBg, bg_alpha), window_rounding);
+                    col_idx = ImGuiCol_ComboBg;
                 else if ((flags & ImGuiWindowFlags_Tooltip) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_TooltipBg, bg_alpha), window_rounding);
+                    col_idx = ImGuiCol_TooltipBg;
                 else if ((flags & ImGuiWindowFlags_Popup) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, bg_alpha), window_rounding);
+                    col_idx = ImGuiCol_WindowBg;
                 else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_ChildWindowBg, bg_alpha), window_rounding);
+                    col_idx = ImGuiCol_ChildWindowBg;
                 else
-                    window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_WindowBg, bg_alpha), window_rounding);
+                    col_idx = ImGuiCol_WindowBg;
+                window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, window->Color(col_idx, bg_alpha), window_rounding);
             }
 
             // Title bar
