@@ -148,6 +148,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2015/12/04 (1.47) - renamed Color() helpers to ValueColor() - dangerously named, rarely used and probably to be made obsolete.
  - 2015/08/29 (1.45) - with the addition of horizontal scrollbar we made various fixes to inconsistencies with dealing with cursor position.
                        GetCursorPos()/SetCursorPos() functions now include the scrolled amount. It shouldn't affect the majority of users, but take note that SetCursorPosX(100.0f) puts you at +100 from the starting x position which may include scrolling, not at +100 from the window left side.
                        GetContentRegionMax()/GetWindowContentRegionMin()/GetWindowContentRegionMax() functions allow include the scrolled amount. Typically those were used in cases where no scrolling would happen so it may not be a problem, but watch out!
@@ -9015,14 +9016,14 @@ void ImGui::Value(const char* prefix, float v, const char* float_format)
 }
 
 // FIXME: May want to remove those helpers?
-void ImGui::Color(const char* prefix, const ImVec4& v)
+void ImGui::ValueColor(const char* prefix, const ImVec4& v)
 {
     ImGui::Text("%s: (%.2f,%.2f,%.2f,%.2f)", prefix, v.x, v.y, v.z, v.w);
     ImGui::SameLine();
     ImGui::ColorButton(v, true);
 }
 
-void ImGui::Color(const char* prefix, unsigned int v)
+void ImGui::ValueColor(const char* prefix, unsigned int v)
 {
     ImGui::Text("%s: %08X", prefix, v);
     ImGui::SameLine();
