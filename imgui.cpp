@@ -9183,21 +9183,22 @@ void ImGui::ShowMetricsWindow(bool* opened)
                 for (const ImDrawCmd* pcmd = draw_list->CmdBuffer.begin(); pcmd < draw_list->CmdBuffer.end(); elem_offset += pcmd->ElemCount, pcmd++)
                 {
                     if (pcmd->UserCallback)
-                        ImGui::BulletText("Callback %p, user_data %p", pcmd->UserCallback, pcmd->UserCallbackData);
-                    else
                     {
-                        ImGui::BulletText("Draw %d indexed vtx, tex = %p, clip_rect = (%.0f,%.0f)..(%.0f,%.0f)", pcmd->ElemCount, pcmd->TextureId, pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
-                        if (show_clip_rects && ImGui::IsItemHovered())
-                        {
-                            ImRect clip_rect = pcmd->ClipRect;
-                            ImRect vtxs_rect;
-                            for (int i = elem_offset; i < elem_offset + (int)pcmd->ElemCount; i++)
-                                vtxs_rect.Add(draw_list->VtxBuffer[draw_list->IdxBuffer[i]].pos);
-                            GImGui->OverlayDrawList.PushClipRectFullScreen();
-                            clip_rect.Round(); GImGui->OverlayDrawList.AddRect(clip_rect.Min, clip_rect.Max, ImColor(255,255,0));
-                            vtxs_rect.Round(); GImGui->OverlayDrawList.AddRect(vtxs_rect.Min, vtxs_rect.Max, ImColor(255,0,255));
-                            GImGui->OverlayDrawList.PopClipRect();
-                        }
+                        ImGui::BulletText("Callback %p, user_data %p", pcmd->UserCallback, pcmd->UserCallbackData);
+                        continue;
+                    }
+                    ImGui::BulletText("Draw %d %s vtx, tex = %p, clip_rect = (%.0f,%.0f)..(%.0f,%.0f)", pcmd->ElemCount, draw_list->IdxBuffer.Size > 0 ? "indexed" : "non-indexed", pcmd->TextureId, pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
+                    if (show_clip_rects && ImGui::IsItemHovered())
+                    {
+                        ImRect clip_rect = pcmd->ClipRect;
+                        ImRect vtxs_rect;
+                        ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
+                        for (int i = elem_offset; i < elem_offset + (int)pcmd->ElemCount; i++)
+                            vtxs_rect.Add(draw_list->VtxBuffer[idx_buffer ? idx_buffer[i] : i].pos);
+                        GImGui->OverlayDrawList.PushClipRectFullScreen();
+                        clip_rect.Round(); GImGui->OverlayDrawList.AddRect(clip_rect.Min, clip_rect.Max, ImColor(255,255,0));
+                        vtxs_rect.Round(); GImGui->OverlayDrawList.AddRect(vtxs_rect.Min, vtxs_rect.Max, ImColor(255,0,255));
+                        GImGui->OverlayDrawList.PopClipRect();
                     }
                 }
                 ImGui::TreePop();
