@@ -7046,6 +7046,7 @@ void ImGuiTextEditState::OnKeyPressed(int key)
 {
     stb_textedit_key(this, &StbState, key);
     CursorFollow = true;
+    SelectedAllMouseLock = true;
     CursorAnimReset();
 }
 
