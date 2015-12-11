@@ -437,6 +437,8 @@ static void stb_textedit_click(STB_TEXTEDIT_STRING *str, STB_TexteditState *stat
 static void stb_textedit_drag(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, float x, float y)
 {
    int p = stb_text_locate_coord(str, x, y);
+   if (state->select_start == state->select_end)
+      state->select_start = state->cursor;
    state->cursor = state->select_end = p;
 }
 
