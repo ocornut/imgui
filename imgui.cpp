@@ -5594,7 +5594,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     }
 
     const float collapser_width = g.FontSize + (display_frame ? padding.x*2 : padding.x);
-    const float text_width = collapser_width + (label_size.x > 0.0f ? label_size.x + padding.x*2 : 0.0f);   // Include collapser
+    const float text_width = g.FontSize + (label_size.x > 0.0f ? label_size.x + padding.x*2 : 0.0f);   // Include collapser
     ItemSize(ImVec2(text_width, frame_height), text_base_offset_y);
 
     // For regular tree nodes, we arbitrary allow to click past 2 worth of ItemSpacing
