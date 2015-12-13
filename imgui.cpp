@@ -6777,6 +6777,41 @@ void ImGui::PlotHistogram(const char* label, float (*values_getter)(void* data, 
     PlotEx(ImGuiPlotType_Histogram, label, values_getter, data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
 }
 
+// size_arg (for each axis) < 0.0f: align to end, 0.0f: auto, > 0.0f: specified size
+void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* overlay)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    ImGuiState& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    ImVec2 pos = window->DC.CursorPos;
+    const ImRect bb(pos, pos + CalcItemSize(size_arg, CalcItemWidth() + style.FramePadding.x*2.0f, g.FontSize + style.FramePadding.y*2.0f));
+    ItemSize(bb, style.FramePadding.y);
+    if (!ItemAdd(bb, NULL))
+        return;
+
+    // Render
+    fraction = ImSaturate(fraction);
+    const ImVec2 fill_br = ImVec2(ImLerp(bb.Min.x, bb.Max.x, fraction), bb.Max.y);
+    RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+    RenderFrame(bb.Min, fill_br, GetColorU32(ImGuiCol_PlotHistogram), false, style.FrameRounding);
+
+    // Default displaying the fraction as percentage string, but user can override it
+    char overlay_buf[32];
+    if (!overlay)
+    {
+        ImFormatString(overlay_buf, IM_ARRAYSIZE(overlay_buf), "%.0f%%", fraction*100+0.01f);
+        overlay = overlay_buf;
+    }
+    
+    ImVec2 overlay_size = CalcTextSize(overlay, NULL);
+    if (overlay_size.x > 0.0f)
+        RenderTextClipped(ImVec2(ImClamp(fill_br.x + style.ItemSpacing.x, bb.Min.x, bb.Max.x - overlay_size.x - style.ItemInnerSpacing.x), bb.Min.y), bb.Max, overlay, NULL, &overlay_size, ImGuiAlign_Left|ImGuiAlign_VCenter, &bb.Min, &bb.Max);
+}
+
 bool ImGui::Checkbox(const char* label, bool* v)
 {
     ImGuiWindow* window = GetCurrentWindow();
