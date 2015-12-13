@@ -3875,12 +3875,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         if (window->Collapsed)
         {
             // Draw title bar only
-            window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_TitleBgCollapsed), window_rounding);
-            if (flags & ImGuiWindowFlags_ShowBorders)
-            {
-                window->DrawList->AddRect(title_bar_rect.GetTL()+ImVec2(1,1), title_bar_rect.GetBR()+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
-                window->DrawList->AddRect(title_bar_rect.GetTL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_Border), window_rounding);
-            }
+            RenderFrame(title_bar_rect.GetTL(), title_bar_rect.GetBR(),  window->Color(ImGuiCol_TitleBgCollapsed), true, window_rounding);
         }
         else
         {
@@ -3951,15 +3946,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
                 window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), window->Color(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, 1|2);
             }
 
-            // Borders
-            if (flags & ImGuiWindowFlags_ShowBorders)
-            {
-                window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size+ImVec2(1,1), window->Color(ImGuiCol_BorderShadow), window_rounding);
-                window->DrawList->AddRect(window->Pos, window->Pos+window->Size, window->Color(ImGuiCol_Border), window_rounding);
-                if (!(flags & ImGuiWindowFlags_NoTitleBar))
-                    window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), window->Color(ImGuiCol_Border));
-            }
-
             // Scrollbars
             if (window->ScrollbarX)
                 Scrollbar(window, true);
@@ -3970,11 +3956,21 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             // (after the input handling so we don't have a frame of latency)
             if (!(flags & ImGuiWindowFlags_NoResize))
             {
+                const float border_size = (window->Flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
                 const ImVec2 br = window->Rect().GetBR();
-                window->DrawList->PathLineTo(br + ImVec2(-resize_corner_size, 0.0f));
-                window->DrawList->PathLineTo(br + ImVec2(0.0f, -resize_corner_size));
-                window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding, br.y - window_rounding), window_rounding, 0, 3);
+                window->DrawList->PathLineTo(br + ImVec2(-resize_corner_size, -border_size));
+                window->DrawList->PathLineTo(br + ImVec2(-border_size, -resize_corner_size));
+                window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding - border_size, br.y - window_rounding - border_size), window_rounding, 0, 3);
                 window->DrawList->PathFill(resize_col);
+            }
+
+            // Borders
+            if (flags & ImGuiWindowFlags_ShowBorders)
+            {
+                window->DrawList->AddRect(window->Pos+ImVec2(1,1), window->Pos+window->Size, window->Color(ImGuiCol_BorderShadow), window_rounding);
+                window->DrawList->AddRect(window->Pos, window->Pos+window->Size-ImVec2(1,1), window->Color(ImGuiCol_Border), window_rounding);
+                if (!(flags & ImGuiWindowFlags_NoTitleBar))
+                    window->DrawList->AddLine(title_bar_rect.GetBL()+ImVec2(1,0), title_bar_rect.GetBR()-ImVec2(1,0), window->Color(ImGuiCol_Border));
             }
         }
 
@@ -4054,11 +4050,13 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
     // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
     const ImRect title_bar_rect = window->TitleBarRect();
-    ImRect clip_rect(title_bar_rect.Min.x+0.5f+window->WindowPadding.x*0.5f, title_bar_rect.Max.y+window->MenuBarHeight()+0.5f, window->Pos.x+window->Size.x-window->WindowPadding.x*0.5f, window->Pos.y+window->Size.y);
-    if ((flags & ImGuiWindowFlags_ChildWindow) && (flags & ImGuiWindowFlags_ShowBorders))
-        clip_rect.Min += ImVec2(1.0f,1.0f);
-    clip_rect.Max.x -= window->ScrollbarY ? style.ScrollbarSize : 0.0f;
-    clip_rect.Max.y -= window->ScrollbarX ? style.ScrollbarSize : 0.0f;
+    const float border_size = (flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
+    ImRect clip_rect;
+    clip_rect.Min.x = title_bar_rect.Min.x + 0.5f + ImMax(border_size, window->WindowPadding.x*0.5f);
+    clip_rect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + 0.5f + border_size;
+    clip_rect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x - ImMax(border_size, window->WindowPadding.x*0.5f);
+    clip_rect.Max.y = window->Pos.y + window->Size.y - border_size - window->ScrollbarSizes.y;
+
     PushClipRect(clip_rect);
 
     // Clear 'accessed' flag last thing
@@ -4125,12 +4123,12 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
     bool other_scrollbar = (horizontal ? window->ScrollbarY : window->ScrollbarX);
     float other_scrollbar_size_w = other_scrollbar ? style.ScrollbarSize : 0.0f;
     const ImRect window_rect = window->Rect();
-    const float border_offset = (window->Flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
+    const float border_size = (window->Flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
     ImRect bb = horizontal
-        ? ImRect(window->Pos.x + border_offset, window_rect.Max.y - style.ScrollbarSize, window_rect.Max.x - other_scrollbar_size_w, window_rect.Max.y)
-        : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + border_offset, window_rect.Max.x, window_rect.Max.y - other_scrollbar_size_w);
+        ? ImRect(window->Pos.x + border_size, window_rect.Max.y - style.ScrollbarSize, window_rect.Max.x - other_scrollbar_size_w - border_size, window_rect.Max.y - border_size)
+        : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + border_size, window_rect.Max.x - border_size, window_rect.Max.y - other_scrollbar_size_w - border_size);
     if (!horizontal)
-        bb.Min.y += window->TitleBarHeight() + ((window->Flags & ImGuiWindowFlags_MenuBar) ? window->MenuBarHeight() - border_offset : 0.0f);
+        bb.Min.y += window->TitleBarHeight() + ((window->Flags & ImGuiWindowFlags_MenuBar) ? window->MenuBarHeight() - border_size : 0.0f);
 
     float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
     int window_rounding_corners;
