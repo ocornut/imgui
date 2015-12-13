@@ -991,6 +991,15 @@ void ImGui::ShowTestWindow(bool* p_opened)
             ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##2");
             if (tree_opened) { for (int i = 0; i < 6; i++) ImGui::BulletText("Item %d..", i); ImGui::TreePop(); }   // Dummy tree data
 
+            // Bullet
+            ImGui::Button("Button##3"); 
+            ImGui::SameLine(0.0f, spacing); 
+            ImGui::BulletText("Bullet text");
+
+            ImGui::AlignFirstTextHeightToWidgets();
+            ImGui::BulletText("Node");
+            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##4");
+
             ImGui::TreePop();
         }
 
@@ -2261,6 +2270,7 @@ static void ShowExampleAppPropertyEditor(bool* opened)
                         //ImGui::Text("Field_%d", i);
                         char label[32];
                         sprintf(label, "Field_%d", i);
+                        ImGui::Bullet();
                         ImGui::Selectable(label);
                         ImGui::NextColumn();
                         ImGui::PushItemWidth(-1);
