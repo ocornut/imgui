@@ -477,6 +477,7 @@
  - slider: tint background based on value (e.g. v_min -> v_max, or use 0.0f either side of the sign)
  - slider & drag: int data passing through a float
  - drag float: up/down axis
+ - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
  - text edit: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now.
  - text edit: centered text for slider as input text so it matches typical positioning.
  - text edit: flag to disable live update of the user buffer.
@@ -492,6 +493,7 @@
  - style: color-box not always square?
  - style: a concept of "compact style" that the end-user can easily rely on (e.g. PushStyleCompact()?) that maps to other settings? avoid implementing duplicate helpers such as SmallCheckbox(), etc.
  - style: try to make PushStyleVar() more robust to incorrect parameters (to be more friendly to edit & continues situation).
+ - style: global scale setting.
  - text: simple markup language for color change?
  - font: helper to add glyph redirect/replacements (e.g. redirect alternate apostrophe unicode code points to ascii one, etc.)
  - log: LogButtons() options for specifying depth and/or hiding depth slider
@@ -2743,6 +2745,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
     const float character_spacing_x = 1.0f * font_scale;
     if (text_size.x > 0.0f)
         text_size.x -= character_spacing_x;
+    text_size.x = (float)(int)(text_size.x + 0.95f);
 
     return text_size;
 }
