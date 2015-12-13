@@ -8275,7 +8275,8 @@ bool ImGui::BeginMenuBar()
     ImGui::BeginGroup(); // Save position
     ImGui::PushID("##menubar");
     ImRect rect = window->MenuBarRect();
-    PushClipRect(ImVec4(rect.Min.x+0.5f, rect.Min.y-0.5f, rect.Max.x+0.5f, rect.Max.y-1.5f), false);
+    float border_size = (window->Flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
+    PushClipRect(ImVec4(rect.Min.x+0.5f, rect.Min.y-0.5f+border_size, rect.Max.x+0.5f, rect.Max.y-0.5f), false);
     window->DC.CursorPos = ImVec2(rect.Min.x + window->DC.MenuBarOffsetX, rect.Min.y);// + g.Style.FramePadding.y);
     window->DC.LayoutType = ImGuiLayoutType_Horizontal;
     window->DC.MenuBarAppending = true;
