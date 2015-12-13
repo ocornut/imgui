@@ -94,7 +94,6 @@ void ImGui::ShowUserGuide()
 void ImGui::ShowTestWindow(bool* p_opened)
 {
     // Examples apps
-    static bool show_app_metrics = false;
     static bool show_app_main_menu_bar = false;
     static bool show_app_console = false;
     static bool show_app_log = false;
@@ -103,10 +102,13 @@ void ImGui::ShowTestWindow(bool* p_opened)
     static bool show_app_long_text = false;
     static bool show_app_auto_resize = false;
     static bool show_app_fixed_overlay = false;
-    static bool show_app_custom_rendering = false;
     static bool show_app_manipulating_window_title = false;
+    static bool show_app_custom_rendering = false;
+    static bool show_app_style_editor = false;
+
+    static bool show_app_metrics = false;
     static bool show_app_about = false;
-    if (show_app_metrics) ImGui::ShowMetricsWindow(&show_app_metrics);
+
     if (show_app_main_menu_bar) ShowExampleAppMainMenuBar();
     if (show_app_console) ShowExampleAppConsole(&show_app_console);
     if (show_app_log) ShowExampleAppLog(&show_app_log);
@@ -117,6 +119,9 @@ void ImGui::ShowTestWindow(bool* p_opened)
     if (show_app_fixed_overlay) ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
     if (show_app_manipulating_window_title) ShowExampleAppManipulatingWindowTitle(&show_app_manipulating_window_title);
     if (show_app_custom_rendering) ShowExampleAppCustomRendering(&show_app_custom_rendering);
+
+    if (show_app_metrics) ImGui::ShowMetricsWindow(&show_app_metrics);
+    if (show_app_style_editor) { ImGui::Begin("Style Editor", &show_app_style_editor); ImGui::ShowStyleEditor(); ImGui::End(); }
     if (show_app_about)
     {
         ImGui::Begin("About ImGui", &show_app_about, ImGuiWindowFlags_AlwaysAutoResize);
@@ -182,6 +187,7 @@ void ImGui::ShowTestWindow(bool* p_opened)
         if (ImGui::BeginMenu("Help"))
         {
             ImGui::MenuItem("Metrics", NULL, &show_app_metrics);
+            ImGui::MenuItem("Style Editor", NULL, &show_app_style_editor);
             ImGui::MenuItem("About ImGui", NULL, &show_app_about);
             ImGui::EndMenu();
         }
@@ -1512,6 +1518,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::SliderFloat("Alpha", &style.Alpha, 0.20f, 1.0f, "%.2f");                 // Not exposing zero here so user doesn't "lose" the UI. But application code could have a toggle to switch between zero and non-zero.
         ImGui::SliderFloat2("WindowPadding", (float*)&style.WindowPadding, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat("WindowRounding", &style.WindowRounding, 0.0f, 16.0f, "%.0f");
+        ImGui::SliderFloat("WindowFillAlphaDefault", &style.WindowFillAlphaDefault, 0.0f, 1.0f, "%.2f");
         ImGui::SliderFloat("ChildWindowRounding", &style.ChildWindowRounding, 0.0f, 16.0f, "%.0f");
         ImGui::SliderFloat2("FramePadding", (float*)&style.FramePadding, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 16.0f, "%.0f");
@@ -1530,7 +1537,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     {
         static int output_dest = 0;
         static bool output_only_modified = false;
-        if (ImGui::Button("Output Colors"))
+        if (ImGui::Button("Copy Colors"))
         {
             if (output_dest == 0)
                 ImGui::LogToClipboard();
