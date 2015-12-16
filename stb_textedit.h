@@ -1,5 +1,6 @@
 // [ImGui] this is a slightly modified version of stb_truetype.h 1.4
 // [ImGui] we made a fix for using the END key on multi-line text edit, see https://github.com/ocornut/imgui/issues/275
+// [ImGui] we made a fix for using keyboard while using mouse, see https://github.com/nothings/stb/pull/209
 
 // stb_textedit.h - v1.4  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
