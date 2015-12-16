@@ -94,7 +94,7 @@ using namespace IMGUI_STB_NAMESPACE;
 // ImDrawList
 //-----------------------------------------------------------------------------
 
-static ImVec4 GNullClipRect(-8192.0f, -8192.0f, +8192.0f, +8192.0f); // Large values that are easy to encode in a few bits+shift
+static const ImVec4 GNullClipRect(-8192.0f, -8192.0f, +8192.0f, +8192.0f); // Large values that are easy to encode in a few bits+shift
 
 void ImDrawList::Clear()
 {
@@ -134,11 +134,15 @@ void ImDrawList::ClearFreeMemory()
     _Channels.clear();
 }
 
+// Use macros because C++ is a terrible language, we want guaranteed inline, no code in header, and no overhead in Debug mode
+#define GetCurrentClipRect()    (_ClipRectStack.Size ? _ClipRectStack.Data[_ClipRectStack.Size-1]  : GNullClipRect)
+#define GetCurrentTextureId()   (_TextureIdStack.Size ? _TextureIdStack.Data[_TextureIdStack.Size-1] : NULL)
+
 void ImDrawList::AddDrawCmd()
 {
     ImDrawCmd draw_cmd;
-    draw_cmd.ClipRect = _ClipRectStack.Size ? _ClipRectStack.back() : GNullClipRect;
-    draw_cmd.TextureId = _TextureIdStack.Size ? _TextureIdStack.back() : NULL;
+    draw_cmd.ClipRect = GetCurrentClipRect();
+    draw_cmd.TextureId = GetCurrentTextureId();
 
     IM_ASSERT(draw_cmd.ClipRect.x <= draw_cmd.ClipRect.z && draw_cmd.ClipRect.y <= draw_cmd.ClipRect.w);
     CmdBuffer.push_back(draw_cmd);
@@ -155,26 +159,51 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
     current_cmd->UserCallback = callback;
     current_cmd->UserCallbackData = callback_data;
 
-    // Force a new command after us (we function this way so that the most common calls AddLine, AddRect, etc. always have a command to add to without doing any check).
-    AddDrawCmd();
+    AddDrawCmd(); // Force a new command after us (see comment below)
 }
 
+// Our scheme may appears a bit unusual, basically we want the most-common calls AddLine AddRect etc. to not have to perform any check so we always have a command ready in the stack.
+// The cost of figuring out if a new command has to be added or if we can merge is paid in those Update** functions only.
 void ImDrawList::UpdateClipRect()
 {
-    ImDrawCmd* current_cmd = CmdBuffer.Size ? &CmdBuffer.back() : NULL;
-    if (!current_cmd || (current_cmd->ElemCount != 0) || current_cmd->UserCallback != NULL)
+    // If current command is used with different settings we need to add a new command
+    const ImVec4 curr_clip_rect = GetCurrentClipRect();
+    ImDrawCmd* curr_cmd = CmdBuffer.Size > 0 ? &CmdBuffer.Data[CmdBuffer.Size-1] : NULL;
+    if (!curr_cmd || (curr_cmd->ElemCount != 0 && memcmp(&curr_cmd->ClipRect, &curr_clip_rect, sizeof(ImVec4)) != 0) || curr_cmd->UserCallback != NULL)
     {
         AddDrawCmd();
+        return;
     }
+
+    // Try to merge with previous command if it matches, else use current command
+    ImDrawCmd* prev_cmd = CmdBuffer.Size > 1 ? &CmdBuffer.Data[CmdBuffer.Size-2] : NULL;
+    if (prev_cmd && memcmp(&prev_cmd->ClipRect, &curr_clip_rect, sizeof(ImVec4)) == 0 && prev_cmd->TextureId == GetCurrentTextureId())
+        CmdBuffer.pop_back();
     else
-    {
-        ImVec4 current_clip_rect = _ClipRectStack.Size ? _ClipRectStack.back() : GNullClipRect;
-        if (CmdBuffer.Size >= 2 && ImLengthSqr(CmdBuffer.Data[CmdBuffer.Size-2].ClipRect - current_clip_rect) < 0.00001f)
-            CmdBuffer.pop_back();
-        else
-            current_cmd->ClipRect = current_clip_rect;
-    }
+        curr_cmd->ClipRect = curr_clip_rect;
 }
+
+void ImDrawList::UpdateTextureID()
+{
+    // If current command is used with different settings we need to add a new command
+    const ImTextureID curr_texture_id = GetCurrentTextureId();
+    ImDrawCmd* curr_cmd = CmdBuffer.Size ? &CmdBuffer.back() : NULL;
+    if (!curr_cmd || (curr_cmd->ElemCount != 0 && curr_cmd->TextureId != curr_texture_id) || curr_cmd->UserCallback != NULL)
+    {
+        AddDrawCmd();
+        return;
+    }
+ 
+    // Try to merge with previous command if it matches, else use current command
+    ImDrawCmd* prev_cmd = CmdBuffer.Size > 1 ? &CmdBuffer.Data[CmdBuffer.Size-2] : NULL;
+    if (prev_cmd && prev_cmd->TextureId == curr_texture_id && memcmp(&prev_cmd->ClipRect, &GetCurrentClipRect(), sizeof(ImVec4)) == 0)
+        CmdBuffer.pop_back();
+    else
+        curr_cmd->TextureId = curr_texture_id;
+}
+
+#undef GetCurrentClipRect
+#undef GetCurrentTextureId
 
 // Scissoring. The values in clip_rect are x1, y1, x2, y2.
 void ImDrawList::PushClipRect(const ImVec4& clip_rect)
@@ -197,16 +226,6 @@ void ImDrawList::PopClipRect()
     IM_ASSERT(_ClipRectStack.Size > 0);
     _ClipRectStack.pop_back();
     UpdateClipRect();
-}
-
-void ImDrawList::UpdateTextureID()
-{
-    ImDrawCmd* current_cmd = CmdBuffer.Size ? &CmdBuffer.back() : NULL;
-    const ImTextureID texture_id = _TextureIdStack.Size ? _TextureIdStack.back() : NULL;
-    if (!current_cmd || (current_cmd->ElemCount != 0 && current_cmd->TextureId != texture_id) || current_cmd->UserCallback != NULL)
-        AddDrawCmd();
-    else
-        current_cmd->TextureId = texture_id;
 }
 
 void ImDrawList::PushTextureID(const ImTextureID& texture_id)
