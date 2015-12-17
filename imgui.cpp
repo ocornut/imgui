@@ -3407,9 +3407,10 @@ static ImVec2 FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size,
 {
     const ImGuiStyle& style = GImGui->Style;
 
-    // Clamp into visible area while not overlapping the cursor
+    // Clamp into visible area while not overlapping the cursor. Safety padding is optional if our popup size won't fit without it.
     ImRect r_outer(GetVisibleRect());
-    r_outer.Reduce(style.DisplaySafeAreaPadding);
+    ImVec2 safe_padding = style.DisplaySafeAreaPadding;
+    r_outer.Reduce(ImVec2((size.x - r_outer.GetWidth() > safe_padding.x*2) ? safe_padding.x : 0.0f, (size.y - r_outer.GetHeight() > safe_padding.y*2) ? safe_padding.y : 0.0f));
     ImVec2 base_pos_clamped = ImClamp(base_pos, r_outer.Min, r_outer.Max - size);
 
     for (int n = (*last_dir != -1) ? -1 : 0; n < 4; n++)   // Right, down, up, left. Favor last used direction.
@@ -3712,7 +3713,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         }
         else
         {
-            size_auto_fit = ImClamp(window->SizeContents + window->WindowPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - window->WindowPadding));
+            size_auto_fit = ImClamp(window->SizeContents + window->WindowPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - g.Style.DisplaySafeAreaPadding));
             
             // Handling case of auto fit window not fitting in screen on one axis, we are growing auto fit size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than DisplaySize-WindowPadding.
             if (size_auto_fit.x < window->SizeContents.x && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar))
