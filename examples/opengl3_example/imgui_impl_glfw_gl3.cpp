@@ -60,11 +60,12 @@ void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
 
     // Handle cases of screen coordinates != from framebuffer coordinates (e.g. retina displays)
     ImGuiIO& io = ImGui::GetIO();
-    float fb_height = io.DisplaySize.y * io.DisplayFramebufferScale.y;
+    int fb_width = (int)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
+    int fb_height = (int)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
     draw_data->ScaleClipRects(io.DisplayFramebufferScale);
 
     // Setup viewport, orthographic projection matrix
-    glViewport(0, 0, (GLsizei)io.DisplaySize.x, (GLsizei)io.DisplaySize.y);
+    glViewport(0, 0, (GLsizei)fb_width, (GLsizei)fb_height);
     const float ortho_projection[4][4] =
     {
         { 2.0f/io.DisplaySize.x, 0.0f,                   0.0f, 0.0f },
