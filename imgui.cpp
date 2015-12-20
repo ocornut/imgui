@@ -3111,10 +3111,11 @@ static bool IsPopupOpen(ImGuiID id)
     return opened;
 }
 
-// Mark popup as open. Popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
+// Mark popup as open (toggle toward open state). 
+// Popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
 // Popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
 // One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
-void ImGui::OpenPopup(const char* str_id)
+void ImGui::OpenPopupEx(const char* str_id, bool reopen_existing)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -3123,11 +3124,16 @@ void ImGui::OpenPopup(const char* str_id)
     ImGuiPopupRef popup_ref = ImGuiPopupRef(id, window, window->GetID("##menus"), g.IO.MousePos); // Tagged as new ref because constructor sets Window to NULL (we are passing the ParentWindow info here)
     if (g.OpenedPopupStack.Size < current_stack_size + 1)
         g.OpenedPopupStack.push_back(popup_ref);
-    else if (g.OpenedPopupStack[current_stack_size].PopupID != id)
+    else if (reopen_existing || g.OpenedPopupStack[current_stack_size].PopupID != id)
     {
         g.OpenedPopupStack.resize(current_stack_size+1);
         g.OpenedPopupStack[current_stack_size] = popup_ref;
     }
+}
+
+void ImGui::OpenPopup(const char* str_id)
+{
+    ImGui::OpenPopupEx(str_id, false);
 }
 
 static void CloseInactivePopups()
@@ -3276,10 +3282,12 @@ void ImGui::EndPopup()
         ImGui::PopStyleVar();
 }
 
+// FIXME: Allow to reopen existing, would need to a/ read DC.LastItemHoveredRect instead of DC.LastItemHoveredAndUsable and b/ add parameter to API (more tricky)
 bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
 {
-    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(mouse_button))
-        ImGui::OpenPopup(str_id);
+    ImGuiWindow* window = GetCurrentWindowRead();
+    if (window->DC.LastItemHoveredAndUsable && ImGui::IsMouseClicked(mouse_button))
+        ImGui::OpenPopupEx(str_id, false);
     return ImGui::BeginPopup(str_id);
 }
 
@@ -3288,7 +3296,7 @@ bool ImGui::BeginPopupContextWindow(bool also_over_items, const char* str_id, in
     if (!str_id) str_id = "window_context_menu";
     if (ImGui::IsMouseHoveringWindow() && ImGui::IsMouseClicked(mouse_button))
         if (also_over_items || !ImGui::IsAnyItemHovered())
-            ImGui::OpenPopup(str_id);
+            ImGui::OpenPopupEx(str_id, true);
     return ImGui::BeginPopup(str_id);
 }
 
@@ -3296,7 +3304,7 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
 {
     if (!str_id) str_id = "void_context_menu";
     if (!ImGui::IsMouseHoveringAnyWindow() && ImGui::IsMouseClicked(mouse_button))
-        ImGui::OpenPopup(str_id);
+        ImGui::OpenPopupEx(str_id, true);
     return ImGui::BeginPopup(str_id);
 }
 
