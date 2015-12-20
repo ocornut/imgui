@@ -3207,7 +3207,7 @@ void ImGui::CloseCurrentPopup()
     ClosePopupToLevel(popup_idx);
 }
 
-static void ClearSetNextWindowData()
+static inline void ClearSetNextWindowData()
 {
     ImGuiState& g = *GImGui;
     g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowContentSizeCond = g.SetNextWindowCollapsedCond = g.SetNextWindowFocus = 0;
@@ -3282,11 +3282,16 @@ void ImGui::EndPopup()
         ImGui::PopStyleVar();
 }
 
-// FIXME: Allow to reopen existing, would need to a/ read DC.LastItemHoveredRect instead of DC.LastItemHoveredAndUsable and b/ add parameter to API (more tricky)
+// This is a helper to handle the most simple case of associating one named popup to one given widget.
+// 1. If you have many possible popups (for different "instances" of a same widget, or for wholly different widgets), you may be better off handling 
+//    this yourself so you can store data relative to the widget that opened the popup instead of choosing different popup identifiers.
+// 2. If you want right-clicking on the same item to reopen the popup at new location, use the same code replacing IsItemHovered() with IsItemHoveredRect().
+//    Because: hovering an item in a window below the popup won't normally trigger is hovering behavior/coloring. The pattern of ignoring the fact that 
+//    the item isn't interactable (because it is blocked by the active popup) may useful in some situation when e.g. large canvas as one item, content of menu
+//    driven by click position.
 bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
-    if (window->DC.LastItemHoveredAndUsable && ImGui::IsMouseClicked(mouse_button))
+    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(mouse_button))
         ImGui::OpenPopupEx(str_id, false);
     return ImGui::BeginPopup(str_id);
 }
