@@ -3285,7 +3285,8 @@ void ImGui::EndPopup()
 // This is a helper to handle the most simple case of associating one named popup to one given widget.
 // 1. If you have many possible popups (for different "instances" of a same widget, or for wholly different widgets), you may be better off handling 
 //    this yourself so you can store data relative to the widget that opened the popup instead of choosing different popup identifiers.
-// 2. If you want right-clicking on the same item to reopen the popup at new location, use the same code replacing IsItemHovered() with IsItemHoveredRect().
+// 2. If you want right-clicking on the same item to reopen the popup at new location, use the same code replacing IsItemHovered() with IsItemHoveredRect()
+//    and passing true to the OpenPopupEx().
 //    Because: hovering an item in a window below the popup won't normally trigger is hovering behavior/coloring. The pattern of ignoring the fact that 
 //    the item isn't interactable (because it is blocked by the active popup) may useful in some situation when e.g. large canvas as one item, content of menu
 //    driven by click position.
