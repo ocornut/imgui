@@ -1,7 +1,7 @@
-// ImGui library v1.47 WIP
-// Internals
-// You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
+// dear imgui, v1.47 WIP
+// (internals)
 
+// You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
 // Implement maths operators for ImVec2 (disabled by default to not collide with using IM_VEC2_CLASS_EXTRA along with your own math types+operators)
 //   #define IMGUI_DEFINE_MATH_OPERATORS
 

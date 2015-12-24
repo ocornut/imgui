@@ -1,5 +1,5 @@
-// ImGui library v1.47 WIP
-// Headers
+// dear imgui, v1.47 WIP
+// (headers)
 
 // See imgui.cpp file for documentation.
 // See ImGui::ShowTestWindow() in imgui_demo.cpp for demo code.

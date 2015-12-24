@@ -1,5 +1,5 @@
-// ImGui library v1.47 WIP
-// Demo code
+// dear imgui, v1.47 WIP
+// (demo code)
 
 // Don't remove this file from your project! It is useful reference code that you can execute.
 // You can call ImGui::ShowTestWindow() in your code to learn about various features of ImGui.
@@ -125,7 +125,7 @@ void ImGui::ShowTestWindow(bool* p_opened)
     if (show_app_about)
     {
         ImGui::Begin("About ImGui", &show_app_about, ImGuiWindowFlags_AlwaysAutoResize);
-        ImGui::Text("ImGui %s", ImGui::GetVersion());
+        ImGui::Text("dear imgui, %s", ImGui::GetVersion());
         ImGui::Separator();
         ImGui::Text("By Omar Cornut and all github contributors.");
         ImGui::Text("ImGui is licensed under the MIT License, see LICENSE for more information.");
@@ -160,7 +160,7 @@ void ImGui::ShowTestWindow(bool* p_opened)
     //ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);    // 2/3 of the space for widget and 1/3 for labels
     ImGui::PushItemWidth(-140);                                 // Right align, keep 140 pixels for labels
 
-    ImGui::Text("ImGui says hello.");
+    ImGui::Text("Dear ImGui says hello.");
 
     // Menu
     if (ImGui::BeginMenuBar())

@@ -1,5 +1,5 @@
-// ImGui library v1.47 WIP
-// Drawing and font code
+// dear imgui, v1.47 WIP
+// (drawing and font code)
 
 // Contains implementation for
 // - ImDrawList
