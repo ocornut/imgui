@@ -219,7 +219,7 @@ namespace ImGui
 
     // ID scopes
     // If you are creating widgets in a loop you most likely want to push a unique identifier so ImGui can differentiate them.
-    // You can also use "##extra" within your widget name to distinguish them from each others. Read the FAQ for more details.
+    // You can also use the "##foobar" syntax within widget label to distinguish them from each others. Read "A primer on the use of labels/IDs" in the FAQ for more details.
     IMGUI_API void          PushID(const char* str_id);                                         // push identifier into the ID stack. IDs are hash of the *entire* stack!
     IMGUI_API void          PushID(const char* str_id_begin, const char* str_id_end);
     IMGUI_API void          PushID(const void* ptr_id);
