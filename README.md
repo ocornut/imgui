@@ -1,5 +1,4 @@
-dear imgui,
-=====
+![dear imgui](https://cloud.githubusercontent.com/assets/8225057/9827582/8df73ae8-58db-11e5-8d6d-5f63b48dcc95.png)
 
 [![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 [![Coverity Status](https://scan.coverity.com/projects/4720/badge.svg)](https://scan.coverity.com/projects/4720)
