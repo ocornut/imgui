@@ -599,9 +599,7 @@ static void             LoadSettings();
 static void             SaveSettings();
 static void             MarkSettingsDirty();
 
-static void             PushClipRect(const ImRect& clip_rect, bool clipped_by_current = true);
 static void             PushColumnClipRect(int column_index = -1);
-static void             PopClipRect();
 static ImRect           GetVisibleRect();
 
 static bool             BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags);
@@ -2304,12 +2302,12 @@ static void AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiW
     }
 }
 
-static void PushClipRect(const ImRect& clip_rect, bool clipped)
+void ImGui::PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_existing_clip_rect)
 {
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindow();
 
-    ImRect cr = clip_rect;
-    if (clipped)
+    ImRect cr(clip_rect_min, clip_rect_max);
+    if (intersect_with_existing_clip_rect)
     {
         // Clip our argument with the current clip rect
         cr.Clip(window->ClipRect);
@@ -2322,9 +2320,9 @@ static void PushClipRect(const ImRect& clip_rect, bool clipped)
     window->DrawList->PushClipRect(ImVec4(cr.Min.x, cr.Min.y, cr.Max.x, cr.Max.y));
 }
 
-static void PopClipRect()
+void ImGui::PopClipRect()
 {
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindow();
     window->DrawList->PopClipRect();
     window->ClipRect = window->DrawList->_ClipRectStack.back();
 }
@@ -2595,10 +2593,7 @@ void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
     const int text_len = (int)(text_display_end - text);
     if (text_len > 0)
     {
-        // Render
         window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end);
-
-        // Log as text
         if (g.LogEnabled)
             LogRenderedText(pos, text, text_display_end);
     }
@@ -3422,8 +3417,8 @@ static ImVec2 FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size,
     const ImGuiStyle& style = GImGui->Style;
 
     // Clamp into visible area while not overlapping the cursor. Safety padding is optional if our popup size won't fit without it.
-    ImRect r_outer(GetVisibleRect());
     ImVec2 safe_padding = style.DisplaySafeAreaPadding;
+    ImRect r_outer(GetVisibleRect());
     r_outer.Reduce(ImVec2((size.x - r_outer.GetWidth() > safe_padding.x*2) ? safe_padding.x : 0.0f, (size.y - r_outer.GetHeight() > safe_padding.y*2) ? safe_padding.y : 0.0f));
     ImVec2 base_pos_clamped = ImClamp(base_pos, r_outer.Min, r_outer.Max - size);
 
@@ -3658,10 +3653,11 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
         // Setup texture, outer clipping rectangle
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
+        ImRect fullscreen_rect(GetVisibleRect());
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_ComboBox|ImGuiWindowFlags_Popup)))
-            PushClipRect(parent_window->ClipRect);
+            PushClipRect(parent_window->ClipRect.Min, parent_window->ClipRect.Max, true);
         else
-            PushClipRect(GetVisibleRect());
+            PushClipRect(fullscreen_rect.Min, fullscreen_rect.Max, true);
 
         // New windows appears in front
         if (!window_was_active)
@@ -3883,7 +3879,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         // Modal window darkens what is behind them
         if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
         {
-            ImRect fullscreen_rect = GetVisibleRect();
+            ImRect fullscreen_rect(GetVisibleRect());
             window->DrawList->AddRectFilled(fullscreen_rect.Min, fullscreen_rect.Max, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
         }
 
@@ -4075,7 +4071,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     clip_rect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x - ImMax(border_size, window->WindowPadding.x*0.5f);
     clip_rect.Max.y = window->Pos.y + window->Size.y - border_size - window->ScrollbarSizes.y;
 
-    PushClipRect(clip_rect);
+    PushClipRect(clip_rect.Min, clip_rect.Max, true);
 
     // Clear 'accessed' flag last thing
     if (first_begin_of_the_frame)
@@ -8329,7 +8325,7 @@ bool ImGui::BeginMenuBar()
     ImGui::PushID("##menubar");
     ImRect rect = window->MenuBarRect();
     float border_size = (window->Flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
-    PushClipRect(ImVec4(rect.Min.x+0.5f, rect.Min.y-0.5f+border_size, rect.Max.x+0.5f, rect.Max.y-0.5f), false);
+    PushClipRect(ImVec2(rect.Min.x+0.5f, rect.Min.y-0.5f+border_size), ImVec2(rect.Max.x+0.5f, rect.Max.y-0.5f), false);
     window->DC.CursorPos = ImVec2(rect.Min.x + window->DC.MenuBarOffsetX, rect.Min.y);// + g.Style.FramePadding.y);
     window->DC.LayoutType = ImGuiLayoutType_Horizontal;
     window->DC.MenuBarAppending = true;
@@ -8905,7 +8901,7 @@ static void PushColumnClipRect(int column_index)
 
     const float x1 = window->Pos.x + ImGui::GetColumnOffset(column_index) - 1;
     const float x2 = window->Pos.x + ImGui::GetColumnOffset(column_index+1) - 1;
-    PushClipRect(ImVec4(x1,-FLT_MAX,x2,+FLT_MAX));
+    ImGui::PushClipRect(ImVec2(x1,-FLT_MAX), ImVec2(x2,+FLT_MAX), true);
 }
 
 void ImGui::Columns(int columns_count, const char* id, bool border)
