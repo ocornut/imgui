@@ -9310,8 +9310,8 @@ void ImGui::ShowMetricsWindow(bool* opened)
 
 //-----------------------------------------------------------------------------
 
-//---- Include imgui_user.inl at the end of imgui.cpp
-//---- So you can include code that extends ImGui using its private data/functions.
+// Include imgui_user.inl at the end of imgui.cpp to access private data/functions that aren't exposed.
+// Prefer just including imgui_internal.h from your code rather than using this define. If a declaration is missing from imgui_internal.h add it or request it on the github.
 #ifdef IMGUI_INCLUDE_IMGUI_USER_INL
 #include "imgui_user.inl"
 #endif
