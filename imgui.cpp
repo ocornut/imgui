@@ -3514,7 +3514,10 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
         window->AutoFitOnlyGrows = (window->AutoFitFramesX > 0) || (window->AutoFitFramesY > 0);
     }
 
-    g.Windows.push_back(window);
+    if (flags & ImGuiWindowFlags_NoBringToFrontOnFocus)
+        g.Windows.insert(g.Windows.begin(), window); // Quite slow but rare and only once
+    else
+        g.Windows.push_back(window);
     return window;
 }
 
