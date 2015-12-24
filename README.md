@@ -1,5 +1,6 @@
-ImGui
+dear imgui,
 =====
+
 [![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 [![Coverity Status](https://scan.coverity.com/projects/4720/badge.svg)](https://scan.coverity.com/projects/4720)
 
@@ -7,7 +8,7 @@ ImGui
 
 [![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui) [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
-ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is fast, portable, renderer agnostic and self-contained (no external dependencies).
+dear imgui (AKA ImGui), is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is fast, portable, renderer agnostic and self-contained (no external dependencies).
 
 ImGui is designed to enable fast iteration and empower programmers to create content creation tools and visualization/debug tools (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal, and thus lacks certain features normally found in more high-level libraries.
 
@@ -84,6 +85,10 @@ Frequently Asked Question (FAQ)
 - Standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder. 
 - We obviously needs better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
 
+<b>Why the odd dual naming, "dear imgui" vs "ImGui"?</b>
+
+The library started its life and is best known as "ImGui" only due to the fact that I didn't give it a proper name when I released it. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations. It seemed confusing and unfair to hog the name. To reduce the ambiguity without affecting existing codebases, I have decided on an alternate, longer name "dear imgui" that people can use to refer to this specific library in ambiguous situations.
+
 <b>How do I update to a newer version of ImGui?</b>
 <br><b>Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)</b>
 <br><b>I integrated ImGui in my engine and the text or lines are blurry..</b>
@@ -102,7 +107,7 @@ I recommend using [Synergy](http://synergy-project.org) ([sources](https://githu
 
 Yes. I have written data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools).
 
-ImGui is very programmer centric and the immediate-mode GUI paradigm might requires a bit of adaptation before you can realize its full potential. Many programmers have unfortunately been taught by their environment to make unnecessarily complicated things. ImGui is about making things that are simple, efficient and powerful.
+ImGui is very programmer centric and the immediate-mode GUI paradigm might requires you to readjust some habits before you can realize its full potential. Many programmers have unfortunately been taught by their environment to make unnecessarily complicated things. ImGui is about making things that are simple, efficient and powerful.
 
 <b>Is ImGui fast?</b>
 
@@ -161,4 +166,4 @@ And other supporters; thanks!
 License
 -------
 
-ImGui is licensed under the MIT License, see LICENSE for more information.
+Dear ImGui is licensed under the MIT License, see LICENSE for more information.
