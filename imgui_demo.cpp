@@ -1,4 +1,4 @@
-// dear imgui, v1.47 WIP
+// dear imgui, v1.47
 // (demo code)
 
 // Don't remove this file from your project! It is useful reference code that you can execute.
