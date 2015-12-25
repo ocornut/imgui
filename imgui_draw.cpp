@@ -205,7 +205,7 @@ void ImDrawList::UpdateTextureID()
 #undef GetCurrentClipRect
 #undef GetCurrentTextureId
 
-// Scissoring. The values in clip_rect are x1, y1, x2, y2.
+// Scissoring. The values in clip_rect are x1, y1, x2, y2. Only apply to rendering! Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
 void ImDrawList::PushClipRect(const ImVec4& clip_rect)
 {
     _ClipRectStack.push_back(clip_rect);
