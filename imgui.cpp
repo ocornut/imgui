@@ -3793,7 +3793,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         if (window_pos_center)
         {
             // Center (any sort of window)
-            ImRect fullscreen_rect(GetVisibleRect());
             SetWindowPos(ImMax(style.DisplaySafeAreaPadding, fullscreen_rect.GetCenter() - window->SizeFull * 0.5f));
         }
         else if (flags & ImGuiWindowFlags_ChildMenu)
@@ -3883,10 +3882,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
         // Modal window darkens what is behind them
         if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
-        {
-            ImRect fullscreen_rect(GetVisibleRect());
             window->DrawList->AddRectFilled(fullscreen_rect.Min, fullscreen_rect.Max, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
-        }
 
         // Draw window + handle manual resize
         ImRect title_bar_rect = window->TitleBarRect();

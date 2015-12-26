@@ -161,7 +161,7 @@ enum ImGuiTreeNodeFlags_
 
 enum ImGuiSliderFlags_
 {
-    ImGuiSliderFlags_Vertical               = 1 << 0,
+    ImGuiSliderFlags_Vertical               = 1 << 0
 };
 
 enum ImGuiSelectableFlagsPrivate_
