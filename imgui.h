@@ -1,4 +1,4 @@
-// dear imgui, v1.47
+// dear imgui, v1.48 WIP
 // (headers)
 
 // See imgui.cpp file for documentation.
@@ -16,7 +16,7 @@
 #include <stddef.h>         // ptrdiff_t, NULL
 #include <string.h>         // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
-#define IMGUI_VERSION       "1.47"
+#define IMGUI_VERSION       "1.48 WIP"
 
 // Define assertion handler.
 #ifndef IM_ASSERT

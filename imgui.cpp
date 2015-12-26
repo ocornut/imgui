@@ -1,4 +1,4 @@
-// dear imgui, v1.47
+// dear imgui, v1.48 WIP
 // (main code and documentation)
 
 // See ImGui::ShowTestWindow() in imgui_demo.cpp for demo code.
