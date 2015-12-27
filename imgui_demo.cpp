@@ -1780,7 +1780,7 @@ static void ShowExampleAppCustomRendering(bool* opened)
     ImGui::Text("Primitives");
     static float sz = 36.0f;
     static ImVec4 col = ImVec4(1.0f,1.0f,0.4f,1.0f);
-    ImGui::DragFloat("Size", &sz, 0.2f, 1.0f, 72.0f, "%.0f"); 
+    ImGui::DragFloat("Size", &sz, 0.2f, 2.0f, 72.0f, "%.0f"); 
     ImGui::ColorEdit3("Color", &col.x);
     {
         const ImVec2 p = ImGui::GetCursorScreenPos();
