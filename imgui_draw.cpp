@@ -771,11 +771,12 @@ void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thic
     PathStroke(col, false, thickness);
 }
 
+// a: upper-left, b: lower-right. we don't render 1 px sized rectangles properly.
 void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
 {
     if ((col >> 24) == 0)
         return;
-    PathRect(a + ImVec2(0.5f,0.5f), b + ImVec2(0.5f,0.5f), rounding, rounding_corners);
+    PathRect(a + ImVec2(0.5f,0.5f), b - ImVec2(0.5f,0.5f), rounding, rounding_corners);
     PathStroke(col, true);
 }
 
