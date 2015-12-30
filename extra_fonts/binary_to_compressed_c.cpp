@@ -79,7 +79,6 @@ bool binary_to_compressed_c(const char* filename, const char* symbol, bool use_b
     if (use_base85_encoding)
     {
         fprintf(out, "static const char %s_%sdata_base85[%d+1] =\n    \"", symbol, compressed_str, (int)((compressed_sz+3)/4)*5);
-        int column = 0;
         for (int i = 0; i < compressed_sz; i += 4)
         {
             unsigned int d = *(unsigned int*)(compressed + i);

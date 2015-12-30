@@ -774,7 +774,7 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
     const int wchars_buf_len = sizeof(ImGuiIO::InputCharacters) / sizeof(ImWchar);
     ImWchar wchars[wchars_buf_len];
     ImTextStrFromUtf8(wchars, wchars_buf_len, utf8_chars, NULL);
-    for (int i = 0; wchars[i] != 0 && i < wchars_buf_len; i++)
+    for (int i = 0; i < wchars_buf_len && wchars[i] != 0; i++)
         AddInputCharacter(wchars[i]);
 }
 
@@ -7323,7 +7323,6 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     }
 
     bool value_changed = false;
-    bool cancel_edit = false;
     bool enter_pressed = false;
 
     if (g.ActiveId == id)
@@ -7388,6 +7387,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         }
 
         // Handle various key-presses
+        bool cancel_edit = false;
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
         const bool is_ctrl_only = is_ctrl_down && !is_alt_down && !is_shift_down;
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
