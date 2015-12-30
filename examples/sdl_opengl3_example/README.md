@@ -18,5 +18,5 @@ c++ `sdl2-config --cflags` -I ../.. -I ../libs/gl3w main.cpp imgui_impl_sdl_gl3.
 
 ```
 brew install sdl2
-c++ `sdl2-config --cflags` -I ../.. -I ../libs/gl3w main.cpp imgui_impl_sdl_gl3.cpp ../../imgui*.cpp ../libs/gl3w/GL/gl3w.c `sdl2-config --libs` -framework OpenGl -o sdl2example
+c++ `sdl2-config --cflags` -I ../.. -I ../libs/gl3w main.cpp imgui_impl_sdl_gl3.cpp ../../imgui*.cpp ../libs/gl3w/GL/gl3w.c `sdl2-config --libs` -framework OpenGl -framework CoreFoundation -o sdl2example
 ```
