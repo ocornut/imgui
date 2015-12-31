@@ -3208,7 +3208,8 @@ void ImGui::CloseCurrentPopup()
 static inline void ClearSetNextWindowData()
 {
     ImGuiState& g = *GImGui;
-    g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowContentSizeCond = g.SetNextWindowCollapsedCond = g.SetNextWindowFocus = 0;
+    g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowContentSizeCond = g.SetNextWindowCollapsedCond = 0;
+    g.SetNextWindowFocus = false;
 }
 
 static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
@@ -3243,6 +3244,11 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
 
 bool ImGui::BeginPopup(const char* str_id)
 {
+    if (GImGui->OpenedPopupStack.Size <= GImGui->CurrentPopupStack.Size)	// Early out for performance
+    {
+        ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
+        return false;
+    }
     return BeginPopupEx(str_id, ImGuiWindowFlags_ShowBorders);
 }
 
