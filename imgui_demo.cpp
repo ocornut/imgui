@@ -223,8 +223,7 @@ void ImGui::ShowTestWindow(bool* p_opened)
 
         if (ImGui::TreeNode("Fonts", "Fonts (%d)", ImGui::GetIO().Fonts->Fonts.Size))
         {
-            ImGui::SameLine();
-            ShowHelpMarker("Tip: Load fonts with io.Fonts->AddFontFromFileTTF()\nbefore calling io.Fonts->GetTex* functions.");
+            ImGui::SameLine(); ShowHelpMarker("Tip: Load fonts with io.Fonts->AddFontFromFileTTF()\nbefore calling io.Fonts->GetTex* functions.");
             ImFontAtlas* atlas = ImGui::GetIO().Fonts;
             if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
             {
@@ -812,24 +811,34 @@ void ImGui::ShowTestWindow(bool* p_opened)
         if (ImGui::TreeNode("Widgets Width"))
         {
             static float f = 0.0f;
-            ImGui::Text("PushItemWidth(100)");
+            ImGui::Text("PushItemWidth(100)"); 
+            ImGui::SameLine(); ShowHelpMarker("Fixed width.");
             ImGui::PushItemWidth(100);
             ImGui::DragFloat("float##1", &f);
             ImGui::PopItemWidth();
 
-            ImGui::Text("PushItemWidth(GetWindowWidth() * 0.5f);");
+            ImGui::Text("PushItemWidth(GetWindowWidth() * 0.5f)");
+            ImGui::SameLine(); ShowHelpMarker("Half of window width.");
             ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.5f);
             ImGui::DragFloat("float##2", &f);
             ImGui::PopItemWidth();
 
-            ImGui::Text("PushItemWidth(GetContentRegionAvailWidth() * 0.5f);");
+            ImGui::Text("PushItemWidth(GetContentRegionAvailWidth() * 0.5f)");
+            ImGui::SameLine(); ShowHelpMarker("Half of available width.\n(~ right-cursor_pos)\n(works within a column set)");
             ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() * 0.5f);
             ImGui::DragFloat("float##3", &f);
             ImGui::PopItemWidth();
 
-            ImGui::Text("PushItemWidth(-100);");
+            ImGui::Text("PushItemWidth(-100)");
+            ImGui::SameLine(); ShowHelpMarker("Align to right edge minus 100");
             ImGui::PushItemWidth(-100);
             ImGui::DragFloat("float##4", &f);
+            ImGui::PopItemWidth();
+
+            ImGui::Text("PushItemWidth(-1)");
+            ImGui::SameLine(); ShowHelpMarker("Align to right edge");
+            ImGui::PushItemWidth(-1);
+            ImGui::DragFloat("float##5", &f);
             ImGui::PopItemWidth();
 
             ImGui::TreePop();
