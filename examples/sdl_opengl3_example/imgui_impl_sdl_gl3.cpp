@@ -159,6 +159,7 @@ bool ImGui_ImplSdlGL3_ProcessEvent(SDL_Event* event)
 		io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
 		io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
 		io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
+		io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
 		return true;
 	}
 	}
@@ -295,7 +296,7 @@ void    ImGui_ImplSdlGL3_InvalidateDeviceObjects()
 bool    ImGui_ImplSdlGL3_Init(SDL_Window *window)
 {
 	g_Window = window;
-	
+
 	ImGuiIO& io = ImGui::GetIO();
 	io.KeyMap[ImGuiKey_Tab] = SDLK_TAB;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
 	io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
