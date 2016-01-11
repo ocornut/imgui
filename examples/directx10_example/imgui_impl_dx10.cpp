@@ -474,7 +474,7 @@ void ImGui_ImplDX10_Shutdown()
 
 void ImGui_ImplDX10_NewFrame()
 {
-    if (!g_pVB)
+    if (!g_pFontSampler)
         ImGui_ImplDX10_CreateDeviceObjects();
 
     ImGuiIO& io = ImGui::GetIO();
