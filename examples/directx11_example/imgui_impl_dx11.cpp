@@ -472,7 +472,7 @@ void ImGui_ImplDX11_Shutdown()
 
 void ImGui_ImplDX11_NewFrame()
 {
-    if (!g_pVB)
+    if (!g_pFontSampler)
         ImGui_ImplDX11_CreateDeviceObjects();
 
     ImGuiIO& io = ImGui::GetIO();
