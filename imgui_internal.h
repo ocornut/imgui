@@ -371,7 +371,6 @@ struct ImGuiState
     ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window. Pointer is only valid if ActiveID is the "#MOVE" identifier of a window.
     ImVector<ImGuiIniData>  Settings;                           // .ini Settings
     float                   SettingsDirtyTimer;                 // Save .ini settinngs on disk when time reaches zero
-    int                     DisableHideTextAfterDoubleHash;
     ImVector<ImGuiColMod>   ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
     ImVector<ImGuiStyleMod> StyleModifiers;                     // Stack for PushStyleVar()/PopStyleVar()
     ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont()
@@ -455,7 +454,6 @@ struct ImGuiState
         ActiveIdWindow = NULL;
         MovedWindow = NULL;
         SettingsDirtyTimer = 0.0f;
-        DisableHideTextAfterDoubleHash = 0;
 
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
         SetNextWindowSizeVal = ImVec2(0.0f, 0.0f);

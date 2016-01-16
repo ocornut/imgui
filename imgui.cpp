@@ -2488,17 +2488,8 @@ static const char*  FindTextDisplayEnd(const char* text, const char* text_end)
     if (!text_end)
         text_end = (const char*)-1;
 
-    ImGuiState& g = *GImGui;
-    if (g.DisableHideTextAfterDoubleHash > 0)
-    {
-        while (text_display_end < text_end && *text_display_end != '\0')
-            text_display_end++;
-    }
-    else
-    {
-        while (text_display_end < text_end && *text_display_end != '\0' && (text_display_end[0] != '#' || text_display_end[1] != '#'))
-            text_display_end++;
-    }
+    while (text_display_end < text_end && *text_display_end != '\0' && (text_display_end[0] != '#' || text_display_end[1] != '#'))
+        text_display_end++;
     return text_display_end;
 }
 
@@ -5601,8 +5592,9 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
         str_id = label;
     if (label == NULL)
         label = str_id;
+    const bool label_hide_text_after_double_hash = (label == str_id); // Only search and hide text after ## if we have passed label and ID separately, otherwise allow "##" within format string.
     const ImGuiID id = window->GetID(str_id);
-    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const ImVec2 label_size = CalcTextSize(label, NULL, label_hide_text_after_double_hash); 
 
     // We vertically grow up to current line height up the typical widget height.
     const float text_base_offset_y = ImMax(0.0f, window->DC.CurrentLineTextBaseOffset - padding.y); // Latch before ItemSize changes it
@@ -5665,7 +5657,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
         RenderCollapseTriangle(bb.Min + ImVec2(padding.x, g.FontSize*0.15f + text_base_offset_y), opened, 0.70f, false);
         if (g.LogEnabled)
             LogRenderedText(text_pos, ">");
-        RenderText(text_pos, label);
+        RenderText(text_pos, label, NULL, label_hide_text_after_double_hash);
     }
 
     return opened;
@@ -9288,7 +9280,6 @@ void ImGui::ShowMetricsWindow(bool* opened)
         };
 
         ImGuiState& g = *GImGui;                // Access private state
-        g.DisableHideTextAfterDoubleHash++;     // Not exposed (yet). Disable processing that hides text after '##' markers.
         Funcs::NodeWindows(g.Windows, "Windows");
         if (ImGui::TreeNode("DrawList", "Active DrawLists (%d)", g.RenderDrawLists[0].Size))
         {
@@ -9314,7 +9305,6 @@ void ImGui::ShowMetricsWindow(bool* opened)
             ImGui::Text("ActiveID: 0x%08X/0x%08X", g.ActiveId, g.ActiveIdPreviousFrame);
             ImGui::TreePop();
         }
-        g.DisableHideTextAfterDoubleHash--;
     }
     ImGui::End();
 }
