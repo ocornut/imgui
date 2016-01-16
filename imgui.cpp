@@ -2736,6 +2736,8 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
 
     ImFont* font = g.Font;
     const float font_size = g.FontSize;
+    if (text == text_display_end)
+        return ImVec2(0.0f, font_size);
     ImVec2 text_size = font->CalcTextSizeA(font_size, FLT_MAX, wrap_width, text, text_display_end, NULL);
 
     // Cancel out character spacing for the last character of a line (it is baked into glyph->XAdvance field)
@@ -6667,7 +6669,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
 
-    const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
     if (graph_size.x == 0.0f)
         graph_size.x = CalcItemWidth() + (style.FramePadding.x * 2);
     if (graph_size.y == 0.0f)
