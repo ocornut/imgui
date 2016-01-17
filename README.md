@@ -45,6 +45,8 @@ You should be able to build the examples from sources (tested on Windows/Mac/Lin
 Gallery
 -------
 
+See the [Screenshots Thread](https://github.com/ocornut/imgui/issues/123) for some user creations.
+
 ![screenshot 1](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/examples_04.png)
 ![screenshot 2](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_01.png)
 ![screenshot 3](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_02.png)
