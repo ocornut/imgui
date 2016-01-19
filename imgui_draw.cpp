@@ -863,20 +863,18 @@ void ImDrawList::AddBezierCurve(const ImVec2& pos0, const ImVec2& cp0, const ImV
     PathStroke(col, false, thickness); 
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
+void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, ImStr text, float wrap_width, const ImVec4* cpu_fine_clip_rect)
 {
     if ((col >> 24) == 0)
         return;
 
-    if (text_end == NULL)
-        text_end = text_begin + strlen(text_begin);
-    if (text_begin == text_end)
+    if (text.empty())
         return;
 
     IM_ASSERT(font->ContainerAtlas->TexID == _TextureIdStack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
     // reserve vertices for worse case (over-reserving is useful and easily amortized)
-    const int char_count = (int)(text_end - text_begin);
+    const int char_count = (int)text.size();
     const int vtx_count_max = char_count * 4;
     const int idx_count_max = char_count * 6;
     const int vtx_begin = VtxBuffer.Size;
@@ -891,7 +889,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
-    font->RenderText(font_size, pos, col, clip_rect, text_begin, text_end, this, wrap_width, cpu_fine_clip_rect != NULL);
+    font->RenderText(font_size, pos, col, clip_rect, text, this, wrap_width, cpu_fine_clip_rect != NULL);
 
     // give back unused vertices
     // FIXME-OPT: clean this up
@@ -906,12 +904,12 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 }
 
 // This is one of the few function breaking the encapsulation of ImDrawLst, but it is just so useful.
-void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
+void ImDrawList::AddText(const ImVec2& pos, ImU32 col, ImStr text)
 {
     if ((col >> 24) == 0)
         return;
 
-    AddText(GImGui->Font, GImGui->FontSize, pos, col, text_begin, text_end);
+    AddText(GImGui->Font, GImGui->FontSize, pos, col, text);
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
@@ -1900,10 +1898,9 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
     return text_size;
 }
 
-void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawList* draw_list, float wrap_width, bool cpu_fine_clip) const
+void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, ImStr text, ImDrawList* draw_list, float wrap_width, bool cpu_fine_clip) const
 {
-    if (!text_end)
-        text_end = text_begin + strlen(text_begin);
+    const char* text_end = text.end();
 
     // Align to be pixel perfect
     pos.x = (float)(int)pos.x + DisplayOffset.x;
@@ -1922,7 +1919,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
     ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
     unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
 
-    const char* s = text_begin;
+    const char* s = text.begin();
     if (!word_wrap_enabled && y + line_height < clip_rect.y)
         while (s < text_end && *s != '\n')  // Fast-forward to next line
             s++;
