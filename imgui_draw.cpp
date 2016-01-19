@@ -1707,7 +1707,7 @@ const ImFont::Glyph* ImFont::FindGlyph(unsigned short c) const
     return FallbackGlyph;
 }
 
-const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const
+const char* ImFont::CalcWordWrapPositionA(float scale, ImStr text, float wrap_width) const
 {
     // Simple word-wrapping for English, not full-featured. Please submit failing cases!
     // FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
@@ -1728,11 +1728,12 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
     float word_width = 0.0f;
     float blank_width = 0.0f;
 
-    const char* word_end = text;
+    const char* text_end = text.end();
+    const char* word_end = text.begin();
     const char* prev_word_end = NULL;
     bool inside_word = true;
 
-    const char* s = text;
+    const char* s = text.begin();
     while (s < text_end)
     {
         unsigned int c = (unsigned int)*s;
@@ -1804,10 +1805,9 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
     return s;
 }
 
-ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining) const
+ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, ImStr text, const char** remaining) const
 {
-    if (!text_end)
-        text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
+    const char* text_end = text.end();
 
     const float line_height = size;
     const float scale = size / FontSize;
@@ -1818,7 +1818,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
 
-    const char* s = text_begin;
+    const char* s = text.begin();
     while (s < text_end)
     {
         if (word_wrap_enabled)
@@ -1826,7 +1826,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
             {
-                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - line_width);
+                word_wrap_eol = CalcWordWrapPositionA(scale, ImStr(s, text_end), wrap_width - line_width);
                 if (word_wrap_eol == s) // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
                     word_wrap_eol++;    // +1 may not be a character start point in UTF-8 but it's ok because we use s >= word_wrap_eol below
             }
@@ -1930,7 +1930,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
             {
-                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - (x - pos.x));
+                word_wrap_eol = CalcWordWrapPositionA(scale, ImStr(s, text_end), wrap_width - (x - pos.x));
                 if (word_wrap_eol == s) // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
                     word_wrap_eol++;    // +1 may not be a character start point in UTF-8 but it's ok because we use s >= word_wrap_eol below
             }

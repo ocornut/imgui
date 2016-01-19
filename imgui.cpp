@@ -2745,18 +2745,18 @@ ImVec2 ImGui::CalcTextSize(ImStr text, bool hide_text_after_double_hash, float w
 {
     ImGuiState& g = *GImGui;
 
-    const char* text_begin = text.begin();
     const char* text_display_end;
     if (hide_text_after_double_hash)
-        text_display_end = FindTextDisplayEnd(ImStr(text_begin, text.end()));      // Hide anything after a '##' string
+        text_display_end = FindTextDisplayEnd(text);      // Hide anything after a '##' string
     else
         text_display_end = text.end();
 
+    text = ImStr(text.begin(), text_display_end);
     ImFont* font = g.Font;
     const float font_size = g.FontSize;
-    if (text_begin == text_display_end)
+    if (text.empty())
         return ImVec2(0.0f, font_size);
-    ImVec2 text_size = font->CalcTextSizeA(font_size, FLT_MAX, wrap_width, text_begin, text_display_end, NULL);
+    ImVec2 text_size = font->CalcTextSizeA(font_size, FLT_MAX, wrap_width, text, NULL);
 
     // Cancel out character spacing for the last character of a line (it is baked into glyph->XAdvance field)
     const float font_scale = font_size / font->FontSize;
