@@ -352,7 +352,10 @@ void ImGui_ImplSdlGL3_NewFrame()
     int w, h;
     SDL_GetWindowSize(g_Window, &w, &h);
     io.DisplaySize = ImVec2((float)w, (float)h);
-    io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+
+    int glW, glH;
+    SDL_GL_GetDrawableSize(window, &glW, &glH);
+    io.DisplayFramebufferScale = ImVec2(glW / io.DisplaySize.x, glH / io.DisplaySize.y);
 
     // Setup time step
     Uint32	time = SDL_GetTicks();
