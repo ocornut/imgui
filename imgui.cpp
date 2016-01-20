@@ -643,6 +643,9 @@ ImGuiState*             GImGui = &GImDefaultState;
 // Also we wouldn't be able to new() one at this point, before users may define IO.MemAllocFn.
 static ImFontAtlas      GImDefaultFontAtlas;
 
+// Static CRC look up table used by ImHash
+static ImU32 ImCrc32Lut[256];
+
 //-----------------------------------------------------------------------------
 // User facing structures
 //-----------------------------------------------------------------------------
@@ -773,7 +776,7 @@ void ImGuiIO::AddInputCharactersUTF8(ImStr utf8_chars)
     // We can't pass more wchars than ImGuiIO::InputCharacters[] can hold so don't convert more
     const int wchars_buf_len = sizeof(ImGuiIO::InputCharacters) / sizeof(ImWchar);
     ImWchar wchars[wchars_buf_len];
-    ImTextStrFromUtf8(wchars, wchars_buf_len, utf8_chars.begin(), utf8_chars.end());
+    ImTextStrFromUtf8(wchars, wchars_buf_len, utf8_chars.Begin, utf8_chars.CalculateEnd());
     for (int i = 0; i < wchars_buf_len && wchars[i] != 0; i++)
         AddInputCharacter(wchars[i]);
 }
@@ -816,12 +819,13 @@ int ImStrnicmp(const char* str1, const char* str2, int count)
     return d;
 }
 
-char* ImStrdup(ImStr str)
+char* ImStrdup(ImStr str) // std.End must not be NULL
 {
-    char *buff = (char*)ImGui::MemAlloc(str.size() + 1);
+    const int str_size = str.End - str.Begin;
+    char *buff = (char*)ImGui::MemAlloc(str_size + 1);
     IM_ASSERT(buff);
-    memcpy(buff, str.data(), str.size());
-    buff[str.size()] = '\0';
+    memcpy(buff, str.Begin, str_size);
+    buff[str_size] = '\0';
     return buff;
 }
 
@@ -878,9 +882,8 @@ int ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args)
     return (w == -1) ? buf_size : w;
 }
 
-static ImU32* GetCrc32Lut()
+static void InitImCrc32Lut(ImU32* crc32_lut)
 {
-    static ImU32 crc32_lut[256] = { 0 };
     if (!crc32_lut[1])
     {
         const ImU32 polynomial = 0xEDB88320;
@@ -892,14 +895,17 @@ static ImU32* GetCrc32Lut()
             crc32_lut[i] = crc;
         }
     }
-    return crc32_lut;
 }
 
 // Pass data_size==0 for zero-terminated strings
 // FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
+// FIXME-IMSTR: Reduce code duplication here without compromising perf
 ImU32 ImHash(const void* data, int data_size, ImU32 seed)
 {
-    const ImU32* crc32_lut = GetCrc32Lut();
+    if (!ImCrc32Lut[1])
+    {
+        InitImCrc32Lut(ImCrc32Lut);
+    }
 
     seed = ~seed;
     ImU32 crc = seed;
@@ -909,7 +915,7 @@ ImU32 ImHash(const void* data, int data_size, ImU32 seed)
     {
         // Known size
         while (data_size--)
-            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *current++];
+            crc = (crc >> 8) ^ ImCrc32Lut[(crc & 0xFF) ^ *current++];
     }
     else
     {
@@ -923,34 +929,47 @@ ImU32 ImHash(const void* data, int data_size, ImU32 seed)
             if (c == '#' && current[0] == '#' && current[1] == '#')
                 crc = seed;
 
-            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
+            crc = (crc >> 8) ^ ImCrc32Lut[(crc & 0xFF) ^ c];
         }
     }
     return ~crc;
 }
 
-// Performs hash of ImStr data
-ImU32 ImHash(ImStr data, ImU32 seed)
+ImU32 ImHash(ImStr str, ImU32 seed)
 {
-    const ImU32* crc32_lut = GetCrc32Lut();
+    if (!ImCrc32Lut[1])
+    {
+        InitImCrc32Lut(ImCrc32Lut);
+    }
 
     seed = ~seed;
     ImU32 crc = seed;
 
-    const unsigned char* current = (const unsigned char*)data.begin();
-    const unsigned char* end = (const unsigned char*)data.end();
+    const unsigned char* current = (const unsigned char*)str.Begin;
 
-    for (;current < end; ++current)
+    if (str.End != NULL)
     {
-        const char c = *current;
-        // We support a syntax of "label###id" where only "###id" is included in the hash, and only "label" gets displayed.
-        // Because this syntax is rarely used we are optimizing for the common case.
-        // - If we reach ### in the string we discard the hash so far and reset to the seed.
-        // - We don't do 'current += 2; continue;' after handling ### to keep the code smaller.
-        if (c == '#' && current[0] == '#' && current[1] == '#')
-            crc = seed;
+        // String slice
+        const unsigned char* end = (const unsigned char*)str.End;
+        for (;current < end; ++current)
+        {
+            const char c = *current;
+            if (c == '#' && current[0] == '#' && current[1] == '#')
+                crc = seed;
 
-        crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
+            crc = (crc >> 8) ^ ImCrc32Lut[(crc & 0xFF) ^ c];
+        }
+    }
+    else
+    {
+        // Zero-terminated string
+        while (unsigned char c = *current++)
+        {
+            if (c == '#' && current[0] == '#' && current[1] == '#')
+                crc = seed;
+
+            crc = (crc >> 8) ^ ImCrc32Lut[(crc & 0xFF) ^ c];
+        }
     }
 
     return ~crc;
@@ -1554,6 +1573,7 @@ float ImGuiSimpleColumns::CalcExtraSpace(float avail_w)
 
 ImGuiWindow::ImGuiWindow(ImStr name)
 {
+    name.CalculateEnd();
     Name = ImStrdup(name);
     ID = ImHash(name, 0);
     IDStack.push_back(ID);
@@ -1609,7 +1629,7 @@ ImGuiWindow::~ImGuiWindow()
 ImGuiID ImGuiWindow::GetID(ImStr str)
 {
     ImGuiID seed = IDStack.back();
-    ImGuiID id = ImHash(str.data(), str.size(), seed);
+    ImGuiID id = ImHash(str, seed);
     ImGui::KeepAliveID(id);
     return id;
 }
@@ -2170,6 +2190,7 @@ static ImGuiIniData* AddWindowSettings(ImStr name)
 {
     GImGui->Settings.resize(GImGui->Settings.Size + 1);
     ImGuiIniData* ini = &GImGui->Settings.back();
+    name.CalculateEnd();
     ini->Name = ImStrdup(name);
     ini->ID = ImHash(name, 0);
     ini->Collapsed = false;
@@ -2518,12 +2539,25 @@ void ImGui::Render()
 // Find the optional ## from which we stop displaying text.
 static const char*  FindTextDisplayEnd(ImStr text)
 {
-    const char* text_display_end = text.begin();
-    const char* text_end = text.end();
+    const char* text_display_end = text.Begin;
 
-    while (text_display_end < text_end && *text_display_end != '\0' && (text_display_end[0] != '#' || text_display_end[1] != '#'))
-        text_display_end++;
-    return text_display_end;
+    if (text.End == NULL)
+    {
+        // Null-terminated string
+        while (*text_display_end && (text_display_end[0] != '#' || text_display_end[1] != '#'))
+            text_display_end++;
+        return text_display_end;
+    }
+    else
+    {
+        // String slice
+        for (;text_display_end < text.End - 1; text_display_end++)
+        {
+            if (text_display_end[0] == '#' && text_display_end[1] == '#')
+                return text_display_end;
+        }
+        return text.End;
+    }
 }
 
 // Pass text data straight to log (without being displayed)
@@ -2556,8 +2590,9 @@ static void LogRenderedText(const ImVec2& ref_pos, ImStr text)
     const bool log_new_line = ref_pos.y > window->DC.LogLinePosY+1;
     window->DC.LogLinePosY = ref_pos.y;
 
-    const char* text_remaining = text.begin();
-    const char* text_end = text.end();
+    const char* text_remaining = text.Begin;
+    const char* text_end = text.End;
+    IM_ASSERT(text_end != NULL);
 
     if (g.LogStartDepth > window->DC.TreeDepth)  // Re-adjust padding if we have popped out of our starting depth
         g.LogStartDepth = window->DC.TreeDepth;
@@ -2574,7 +2609,7 @@ static void LogRenderedText(const ImVec2& ref_pos, ImStr text)
         if (line_end >= text_end)
             line_end = NULL;
 
-        const bool is_first_line = (text.begin() == text_remaining);
+        const bool is_first_line = (text.Begin == text_remaining);
         bool is_last_line = false;
         if (line_end == NULL)
         {
@@ -2605,11 +2640,11 @@ void ImGui::RenderText(ImVec2 pos, ImStr text, bool hide_text_after_hash)
 
     // Hide anything after a '##' string
     if (hide_text_after_hash)
-    {
-        text = ImStr(text.begin(), FindTextDisplayEnd(text));
-    }
+        text.End = FindTextDisplayEnd(text);
+    else
+        text.CalculateEnd();
 
-    if (!text.empty())
+    if (text.Begin != text.End)
     {
         window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text);
         if (g.LogEnabled)
@@ -2622,7 +2657,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, ImStr text, float wrap_width)
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    if (text.size() > 0)
+    if (text.Begin != text.CalculateEnd())
     {
         window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, wrap_width);
         if (g.LogEnabled)
@@ -2634,8 +2669,8 @@ void ImGui::RenderTextWrapped(ImVec2 pos, ImStr text, float wrap_width)
 void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, ImStr text, const ImVec2* text_size_if_known, ImGuiAlign align, const ImVec2* clip_min, const ImVec2* clip_max)
 {
     // Hide anything after a '##' string
-    text = ImStr(text.begin(), FindTextDisplayEnd(text));
-    if (text.empty())
+    text.End = FindTextDisplayEnd(text);
+    if (text.Begin == text.End)
         return;
 
     ImGuiState& g = *GImGui;
@@ -2744,11 +2779,13 @@ ImVec2 ImGui::CalcTextSize(ImStr text, bool hide_text_after_double_hash, float w
     ImGuiState& g = *GImGui;
 
     if (hide_text_after_double_hash)
-        text = ImStr(text.begin(), FindTextDisplayEnd(text));      // Hide anything after a '##' string
+        text.End = FindTextDisplayEnd(text);      // Hide anything after a '##' string
+    else
+        text.CalculateEnd();
 
     ImFont* font = g.Font;
     const float font_size = g.FontSize;
-    if (text.empty())
+    if (text.Begin == text.End)
         return ImVec2(0.0f, font_size);
     ImVec2 text_size = font->CalcTextSizeA(font_size, FLT_MAX, wrap_width, text, NULL);
 
@@ -3355,8 +3392,8 @@ bool ImGui::BeginChild(ImStr str_id, const ImVec2& size_arg, bool border, ImGuiW
         flags |= ImGuiWindowFlags_ShowBorders;
     flags |= extra_flags;
 
-    char title[256];
-    ImFormatString(title, IM_ARRAYSIZE(title), "%s.%.*s", window->Name, (int)str_id.size(), str_id.data());
+    char buf[256];
+    ImStr title(buf, ImFormatString(buf, IM_ARRAYSIZE(buf), "%s.%.*s", window->Name, (int)(str_id.CalculateEnd() - str_id.Begin), str_id.Begin));
 
     const float alpha = 1.0f;
     bool ret = ImGui::Begin(title, NULL, size, alpha, flags);
@@ -3369,8 +3406,8 @@ bool ImGui::BeginChild(ImStr str_id, const ImVec2& size_arg, bool border, ImGuiW
 
 bool ImGui::BeginChild(ImGuiID id, const ImVec2& size, bool border, ImGuiWindowFlags extra_flags)
 {
-    char str_id[32];
-    ImFormatString(str_id, IM_ARRAYSIZE(str_id), "child_%08x", id);
+    char buf[32];
+    ImStr str_id(buf, buf + ImFormatString(buf, IM_ARRAYSIZE(buf), "child_%08x", id));
     bool ret = ImGui::BeginChild(str_id, size, border, extra_flags);
     return ret;
 }
@@ -4700,7 +4737,7 @@ void ImGui::SetWindowFocus()
 
 void ImGui::SetWindowFocus(ImStr name)
 {
-    if (name.data() != NULL)
+    if (name.Begin != NULL)
     {
         ImGuiWindow* window = FindWindowByName(name);
         if (window)
@@ -5056,9 +5093,9 @@ void ImGui::TextUnformatted(ImStr text)
         return;
 
     ImGuiState& g = *GImGui;
-    IM_ASSERT(text.data() != NULL);
-    const char* text_begin = text.begin();
-    const char* text_end = text.end();
+    IM_ASSERT(text.Begin != NULL);
+    const char* text_begin = text.Begin;
+    const char* text_end = text.CalculateEnd();
 
     const float wrap_pos_x = window->DC.TextWrapPos;
     const bool wrap_enabled = wrap_pos_x >= 0.0f;
@@ -5611,12 +5648,12 @@ bool ImGui::CollapsingHeader(ImStr label, ImStr str_id, bool display_frame, bool
     const ImGuiStyle& style = g.Style;
     const ImVec2 padding = display_frame ? style.FramePadding : ImVec2(style.FramePadding.x, 0.0f);
 
-    IM_ASSERT(str_id.data() != NULL || label.data() != NULL);
-    if (str_id.data() == NULL)
+    IM_ASSERT(str_id.Begin != NULL || label.Begin != NULL);
+    if (str_id.Begin == NULL)
         str_id = label;
-    if (label.data() == NULL)
+    if (label.Begin == NULL)
         label = str_id;
-    const bool label_hide_text_after_double_hash = (label.begin() == str_id.begin()); // Only search and hide text after ## if we have passed label and ID separately, otherwise allow "##" within format string.
+    const bool label_hide_text_after_double_hash = (label.Begin == str_id.Begin); // Only search and hide text after ## if we have passed label and ID separately, otherwise allow "##" within format string.
     const ImGuiID id = window->GetID(str_id);
     const ImVec2 label_size = CalcTextSize(label, label_hide_text_after_double_hash); 
 
@@ -5755,7 +5792,7 @@ bool ImGui::TreeNodeV(ImStr str_id, const char* fmt, va_list args)
 
     ImGuiState& g = *GImGui;
     ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    if (str_id.empty())
+    if (str_id.Begin == str_id.CalculateEnd())
         str_id = fmt;
 
     ImGui::PushID(str_id);
@@ -5811,7 +5848,7 @@ bool ImGui::TreeNode(const void* ptr_id, const char* fmt, ...)
 
 bool ImGui::TreeNode(ImStr str_label_id)
 {
-    return TreeNode(str_label_id, "%.*s", (int)str_label_id.size(), str_label_id.data());
+    return TreeNode(str_label_id, "%.*s", (int)(str_label_id.CalculateEnd() - str_label_id.Begin), str_label_id.Begin);
 }
 
 void ImGui::SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond)
@@ -6324,7 +6361,8 @@ bool ImGui::SliderFloatN(ImStr label, float* v, int components, float v_min, flo
     }
     ImGui::PopID();
 
-    ImGui::TextUnformatted(ImStr(label.begin(), FindTextDisplayEnd(label)));
+    label.End = FindTextDisplayEnd(label);
+    ImGui::TextUnformatted(label);
     ImGui::EndGroup();
 
     return value_changed;
@@ -6366,7 +6404,8 @@ bool ImGui::SliderIntN(ImStr label, int* v, int components, int v_min, int v_max
     }
     ImGui::PopID();
 
-    ImGui::TextUnformatted(ImStr(label.begin(), FindTextDisplayEnd(label)));
+    label.End = FindTextDisplayEnd(label);
+    ImGui::TextUnformatted(label);
     ImGui::EndGroup();
 
     return value_changed;
@@ -6546,7 +6585,8 @@ bool ImGui::DragFloatN(ImStr label, float* v, int components, float v_speed, flo
     }
     ImGui::PopID();
 
-    ImGui::TextUnformatted(ImStr(label.begin(), FindTextDisplayEnd(label)));
+    label.End = FindTextDisplayEnd(label);
+    ImGui::TextUnformatted(label);
     ImGui::EndGroup();
 
     return value_changed;
@@ -6585,7 +6625,8 @@ bool ImGui::DragFloatRange2(ImStr label, float* v_current_min, float* v_current_
     ImGui::PopItemWidth();
     ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
 
-    ImGui::TextUnformatted(ImStr(label.begin(), FindTextDisplayEnd(label)));
+    label.End = FindTextDisplayEnd(label);
+    ImGui::TextUnformatted(label);
     ImGui::EndGroup();
     ImGui::PopID();
 
@@ -6624,7 +6665,8 @@ bool ImGui::DragIntN(ImStr label, int* v, int components, float v_speed, int v_m
     }
     ImGui::PopID();
 
-    ImGui::TextUnformatted(ImStr(label.begin(), FindTextDisplayEnd(label)));
+    label.End = FindTextDisplayEnd(label);
+    ImGui::TextUnformatted(label);
     ImGui::EndGroup();
 
     return value_changed;
@@ -6663,7 +6705,8 @@ bool ImGui::DragIntRange2(ImStr label, int* v_current_min, int* v_current_max, f
     ImGui::PopItemWidth();
     ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
 
-    ImGui::TextUnformatted(ImStr(label.begin(), FindTextDisplayEnd(label)));
+    label.End = FindTextDisplayEnd(label);
+    ImGui::TextUnformatted(label);
     ImGui::EndGroup();
     ImGui::PopID();
 
@@ -7878,7 +7921,8 @@ bool ImGui::InputFloatN(ImStr label, float* v, int components, int decimal_preci
     ImGui::PopID();
 
     window->DC.CurrentLineTextBaseOffset = ImMax(window->DC.CurrentLineTextBaseOffset, g.Style.FramePadding.y);
-    ImGui::TextUnformatted(ImStr(label.begin(), FindTextDisplayEnd(label)));
+    label.End = FindTextDisplayEnd(label);
+    ImGui::TextUnformatted(label);
     ImGui::EndGroup();
 
     return value_changed;
@@ -7921,7 +7965,8 @@ bool ImGui::InputIntN(ImStr label, int* v, int components, ImGuiInputTextFlags e
     ImGui::PopID();
 
     window->DC.CurrentLineTextBaseOffset = ImMax(window->DC.CurrentLineTextBaseOffset, g.Style.FramePadding.y);
-    ImGui::TextUnformatted(ImStr(label.begin(), FindTextDisplayEnd(label)));
+    label.End = FindTextDisplayEnd(label);
+    ImGui::TextUnformatted(label);
     ImGui::EndGroup();
 
     return value_changed;
@@ -8639,7 +8684,8 @@ bool ImGui::ColorEdit4(ImStr label, float col[4], bool alpha)
         ImGui::SameLine(0, style.ItemInnerSpacing.x);
     }
 
-    ImGui::TextUnformatted(ImStr(label.begin(), FindTextDisplayEnd(label)));
+    label.End = FindTextDisplayEnd(label);
+    ImGui::TextUnformatted(label);
 
     // Convert back
     for (int n = 0; n < 4; n++)
@@ -9044,7 +9090,7 @@ void ImGui::TreePush(ImStr str_id)
     ImGuiWindow* window = GetCurrentWindow();
     ImGui::Indent();
     window->DC.TreeDepth++;
-    PushID(str_id.data() ? str_id : "#TreePush");
+    PushID(str_id.Begin ? str_id : "#TreePush");
 }
 
 void ImGui::TreePush(const void* ptr_id)
@@ -9065,17 +9111,17 @@ void ImGui::TreePop()
 
 void ImGui::Value(ImStr prefix, bool b)
 {
-    ImGui::Text("%.*s: %s", (int)prefix.size(), prefix.data(), (b ? "true" : "false"));
+    ImGui::Text("%.*s: %s", (int)(prefix.CalculateEnd() - prefix.Begin), prefix.Begin, (b ? "true" : "false"));
 }
 
 void ImGui::Value(ImStr prefix, int v)
 {
-    ImGui::Text("%.*s: %d", (int)prefix.size(), prefix.data(), v);
+    ImGui::Text("%.*s: %d", (int)(prefix.CalculateEnd() - prefix.Begin), prefix.Begin, v);
 }
 
 void ImGui::Value(ImStr prefix, unsigned int v)
 {
-    ImGui::Text("%.*s: %d", (int)prefix.size(), prefix.data(), v);
+    ImGui::Text("%.*s: %d", (int)(prefix.CalculateEnd() - prefix.Begin), prefix.Begin, v);
 }
 
 void ImGui::Value(ImStr prefix, float v, const char* float_format)
@@ -9088,21 +9134,21 @@ void ImGui::Value(ImStr prefix, float v, const char* float_format)
     }
     else
     {
-        ImGui::Text("%.*s: %.3f", (int)prefix.size(), prefix.data(), v);
+        ImGui::Text("%.*s: %.3f", (int)(prefix.CalculateEnd() - prefix.Begin), prefix.Begin, v);
     }
 }
 
 // FIXME: May want to remove those helpers?
 void ImGui::ValueColor(ImStr prefix, const ImVec4& v)
 {
-    ImGui::Text("%.*s: (%.2f,%.2f,%.2f,%.2f)", (int)prefix.size(), prefix.data(), v.x, v.y, v.z, v.w);
+    ImGui::Text("%.*s: (%.2f,%.2f,%.2f,%.2f)", (int)(prefix.CalculateEnd() - prefix.Begin), prefix.Begin, v.x, v.y, v.z, v.w);
     ImGui::SameLine();
     ImGui::ColorButton(v, true);
 }
 
 void ImGui::ValueColor(ImStr prefix, unsigned int v)
 {
-    ImGui::Text("%.*s: %08X", (int)prefix.size(), prefix.data(), v);
+    ImGui::Text("%.*s: %08X", (int)(prefix.CalculateEnd() - prefix.Begin), prefix.Begin, v);
     ImGui::SameLine();
 
     ImVec4 col;

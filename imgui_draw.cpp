@@ -873,13 +873,14 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     if ((col >> 24) == 0)
         return;
 
-    if (text.empty())
+    const int text_size = text.CalculateEnd() - text.Begin;
+    if (text_size == 0)
         return;
 
     IM_ASSERT(font->ContainerAtlas->TexID == _TextureIdStack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
     // reserve vertices for worse case (over-reserving is useful and easily amortized)
-    const int char_count = (int)text.size();
+    const int char_count = text_size;
     const int vtx_count_max = char_count * 4;
     const int idx_count_max = char_count * 6;
     const int vtx_begin = VtxBuffer.Size;
@@ -1738,12 +1739,12 @@ const char* ImFont::CalcWordWrapPositionA(float scale, ImStr text, float wrap_wi
     float word_width = 0.0f;
     float blank_width = 0.0f;
 
-    const char* text_end = text.end();
-    const char* word_end = text.begin();
+    const char* text_end = text.CalculateEnd();
+    const char* word_end = text.Begin;
     const char* prev_word_end = NULL;
     bool inside_word = true;
 
-    const char* s = text.begin();
+    const char* s = text.Begin;
     while (s < text_end)
     {
         unsigned int c = (unsigned int)*s;
@@ -1822,7 +1823,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
 
 ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, ImStr text, const char** remaining) const
 {
-    const char* text_end = text.end();
+    const char* text_end = text.CalculateEnd();
 
     const float line_height = size;
     const float scale = size / FontSize;
@@ -1833,7 +1834,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, ImSt
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
 
-    const char* s = text.begin();
+    const char* s = text.Begin;
     while (s < text_end)
     {
         if (word_wrap_enabled)
@@ -1920,7 +1921,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
 
 void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, ImStr text, ImDrawList* draw_list, float wrap_width, bool cpu_fine_clip) const
 {
-    const char* text_end = text.end();
+    const char* text_end = text.CalculateEnd();
 
     // Align to be pixel perfect
     pos.x = (float)(int)pos.x + DisplayOffset.x;
@@ -1939,7 +1940,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
     ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
     unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
 
-    const char* s = text.begin();
+    const char* s = text.Begin;
     if (!word_wrap_enabled && y + line_height < clip_rect.y)
         while (s < text_end && *s != '\n')  // Fast-forward to next line
             s++;

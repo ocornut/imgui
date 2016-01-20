@@ -87,33 +87,12 @@ struct ImVec4
 
 struct ImStr
 {
-    const char* b;
-    const char* e;
-    ImStr() { b = e = ""; }
-    ImStr(const char* _b) { b = _b; e = b ? _b + strlen(_b) : _b; }
-    ImStr(const char* _b, const char* _e) { b = _b; e = _e ? _e : _b + strlen(_b); }
-    ImStr(const char* _b, size_t size) { b = _b; e = _b + size; }
-    const char* data() const { return b; }
-    size_t size() const { return e - b; }
-    bool empty() const { return b == e; }
-    const char* begin() const { IM_ASSERT(b); return b; }
-    const char* end() const { IM_ASSERT(b); return e; }
-    const char* strchr(char c) const
-    {
-        for (const char* i = b; b < e; ++i)
-        {
-            if (*i == c)
-                return i;
-        }
-        return NULL;
-    }
-    ImStr substr(size_t pos, size_t count = ~(0u)) const
-    {
-        IM_ASSERT(pos <= count);
-        const char* _b = b + pos;
-        const char* _e = _b + count;
-        return ImStr(_b, _e < e ? _e : e);
-    }
+    const char* Begin;
+    const char* End;
+    ImStr(const char* b) { Begin = b; End = NULL; }
+    ImStr(const char* b, const char* e) { Begin = b; End = e; }
+    ImStr(const char* b, size_t size) { Begin = b; End = b + size; }
+    const char* CalculateEnd() { if (End == NULL) End = Begin + strlen(Begin); return End; }
 };
 
 // Helpers at bottom of the file:
