@@ -863,6 +863,11 @@ void ImDrawList::AddBezierCurve(const ImVec2& pos0, const ImVec2& cp0, const ImV
     PathStroke(col, false, thickness); 
 }
 
+void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
+{
+    AddText(font, font_size, pos, col, ImStr(text_begin, text_end), wrap_width, cpu_fine_clip_rect);
+}
+
 void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, ImStr text, float wrap_width, const ImVec4* cpu_fine_clip_rect)
 {
     if ((col >> 24) == 0)
@@ -1707,6 +1712,11 @@ const ImFont::Glyph* ImFont::FindGlyph(unsigned short c) const
     return FallbackGlyph;
 }
 
+const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const
+{
+    return CalcWordWrapPositionA(scale, ImStr(text, text_end), wrap_width);
+}
+
 const char* ImFont::CalcWordWrapPositionA(float scale, ImStr text, float wrap_width) const
 {
     // Simple word-wrapping for English, not full-featured. Please submit failing cases!
@@ -1805,6 +1815,11 @@ const char* ImFont::CalcWordWrapPositionA(float scale, ImStr text, float wrap_wi
     return s;
 }
 
+ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining) const
+{
+    return CalcTextSizeA(size, max_width, wrap_width, ImStr(text_begin, text_end), remaining);
+}
+
 ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, ImStr text, const char** remaining) const
 {
     const char* text_end = text.end();
@@ -1896,6 +1911,11 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, ImSt
         *remaining = s;
 
     return text_size;
+}
+
+void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawList* draw_list, float wrap_width, bool cpu_fine_clip) const
+{
+    RenderText(size, pos, col, clip_rect, ImStr(text_begin, text_end), draw_list, wrap_width, cpu_fine_clip);
 }
 
 void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, ImStr text, ImDrawList* draw_list, float wrap_width, bool cpu_fine_clip) const

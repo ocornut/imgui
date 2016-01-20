@@ -418,6 +418,7 @@ namespace ImGui
     IMGUI_API const char*   GetStyleColName(ImGuiCol idx);
     IMGUI_API ImVec2        CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge = false, float outward = +0.0f);   // utility to find the closest point the last item bounding rectangle edge. useful to visually link items
     IMGUI_API ImVec2        CalcTextSize(ImStr text, bool hide_text_after_double_hash = false, float wrap_width = -1.0f); // TODO: This works incorrectly if people call with CalcTextSize(ImStr, NULL);
+    IMGUI_API ImVec2        CalcTextSize(const char* text, const char* text_end, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
     IMGUI_API void          CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end);    // calculate coarse clipping for large list of evenly sized items. Prefer using the ImGuiListClipper higher-level helper if you can.
 
     IMGUI_API bool          BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags extra_flags = 0);	// helper to create a child window / scrolling region that looks like a normal widget frame
@@ -1154,6 +1155,7 @@ struct ImDrawList
     IMGUI_API void  AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
     IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, ImStr text);
     IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, ImStr text, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
+    IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL); // Deprecated for ImStr version
     IMGUI_API void  AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0 = ImVec2(0,0), const ImVec2& uv1 = ImVec2(1,1), ImU32 col = 0xFFFFFFFF);
     IMGUI_API void  AddPolyline(const ImVec2* points, const int num_points, ImU32 col, bool closed, float thickness, bool anti_aliased);
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, const int num_points, ImU32 col, bool anti_aliased);
@@ -1329,8 +1331,11 @@ struct ImFont
 
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
     // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
+    IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // Deprecated
     IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, ImStr text, const char** remaining = NULL) const; // utf8
+    IMGUI_API const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const; // TODO: Deprecated
     IMGUI_API const char*       CalcWordWrapPositionA(float scale, ImStr text, float wrap_width) const;
+    IMGUI_API void              RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawList* draw_list, float wrap_width = 0.0f, bool cpu_fine_clip = false) const; // TODO: Deprecated
     IMGUI_API void              RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, ImStr text, ImDrawList* draw_list, float wrap_width = 0.0f, bool cpu_fine_clip = false) const;
 };
 

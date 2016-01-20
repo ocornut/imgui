@@ -2739,6 +2739,11 @@ void ImGui::RenderCheckMark(ImVec2 pos, ImU32 col)
     window->DrawList->PathStroke(col, false);
 }
 
+ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_text_after_double_hash, float wrap_width)
+{
+    return CalcTextSize(ImStr(text, text_end), hide_text_after_double_hash, wrap_width);
+}
+
 // Calculate text size. Text can be multi-line. Optionally ignore text after a ## marker.
 // CalcTextSize("") should return ImVec2(0.0f, GImGui->FontSize)
 ImVec2 ImGui::CalcTextSize(ImStr text, bool hide_text_after_double_hash, float wrap_width)
@@ -5833,6 +5838,11 @@ void ImGui::PushID(ImStr str_id)
     window->IDStack.push_back(window->GetID(str_id));
 }
 
+void ImGui::PushID(const char* str_id_begin, const char* str_id_end)
+{
+    PushID(ImStr(str_id_begin, str_id_end));
+}
+
 void ImGui::PushID(const void* ptr_id)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -8274,16 +8284,18 @@ bool ImGui::ListBox(ImStr label, int* current_item, bool (*items_getter)(void*, 
     return value_changed;
 }
 
-bool ImGui::MenuItem(ImStr label, const char* shortcut, bool selected, bool enabled)
+bool ImGui::MenuItem(ImStr label, const char* cshortcut, bool selected, bool enabled)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
 
+    // TODO: take as ImStr
+    ImStr shortcut(cshortcut);
     ImGuiState& g = *GImGui;
     ImVec2 pos = window->DC.CursorPos;
     ImVec2 label_size = CalcTextSize(label, true);
-    ImVec2 shortcut_size = shortcut ? CalcTextSize(shortcut) : ImVec2(0.0f, 0.0f);
+    ImVec2 shortcut_size = cshortcut ? CalcTextSize(shortcut) : ImVec2(0.0f, 0.0f);
     float w = window->MenuColumns.DeclColumns(label_size.x, shortcut_size.x, (float)(int)(g.FontSize * 1.20f)); // Feedback for next frame
     float extra_w = ImMax(0.0f, ImGui::GetContentRegionAvail().x - w);
 
