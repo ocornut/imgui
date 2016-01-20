@@ -240,6 +240,10 @@ void ImGui_ImplSdl_NewFrame(SDL_Window *window)
     SDL_GetWindowSize(window, &w, &h);
     io.DisplaySize = ImVec2((float)w, (float)h);
 
+    int glW, glH;
+    SDL_GL_GetDrawableSize(window, &glW, &glH);
+    io.DisplayFramebufferScale = ImVec2(glW / io.DisplaySize.x, glH / io.DisplaySize.y);
+
     // Setup time step
     Uint32	time = SDL_GetTicks();
     double current_time = time / 1000.0;
