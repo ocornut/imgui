@@ -2604,22 +2604,16 @@ void ImGui::RenderText(ImVec2 pos, ImStr text, bool hide_text_after_hash)
     ImGuiWindow* window = GetCurrentWindow();
 
     // Hide anything after a '##' string
-    const char* text_display_end;
     if (hide_text_after_hash)
     {
-        text_display_end = FindTextDisplayEnd(text);
-    }
-    else
-    {
-        text_display_end = text.end();
+        text = ImStr(text.begin(), FindTextDisplayEnd(text));
     }
 
-    const int text_len = (int)(text_display_end - text.begin());
-    if (text_len > 0)
+    if (!text.empty())
     {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), ImStr(text.begin(), text_display_end));
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text);
         if (g.LogEnabled)
-            LogRenderedText(pos, ImStr(text.begin(), text_display_end));
+            LogRenderedText(pos, text);
     }
 }
 
@@ -2640,9 +2634,8 @@ void ImGui::RenderTextWrapped(ImVec2 pos, ImStr text, float wrap_width)
 void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, ImStr text, const ImVec2* text_size_if_known, ImGuiAlign align, const ImVec2* clip_min, const ImVec2* clip_max)
 {
     // Hide anything after a '##' string
-    const char* text_display_end = FindTextDisplayEnd(text);
-    const int text_len = (int)(text_display_end - text.begin());
-    if (text_len == 0)
+    text = ImStr(text.begin(), FindTextDisplayEnd(text));
+    if (text.empty())
         return;
 
     ImGuiState& g = *GImGui;
@@ -2650,7 +2643,7 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, ImSt
 
     // Perform CPU side clipping for single clipped element to avoid using scissor state
     ImVec2 pos = pos_min;
-    const ImVec2 text_size = text_size_if_known ? *text_size_if_known : ImGui::CalcTextSize(ImStr(text.begin(), text_display_end), false, 0.0f);
+    const ImVec2 text_size = text_size_if_known ? *text_size_if_known : ImGui::CalcTextSize(text, false, 0.0f);
 
     if (!clip_max) clip_max = &pos_max;
     bool need_clipping = (pos.x + text_size.x >= clip_max->x) || (pos.y + text_size.y >= clip_max->y);
@@ -2665,14 +2658,14 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, ImSt
     if (need_clipping)
     {
         ImVec4 fine_clip_rect(clip_min->x, clip_min->y, clip_max->x, clip_max->y);
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), ImStr(text.begin(), text_display_end), 0.0f, &fine_clip_rect);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, 0.0f, &fine_clip_rect);
     }
     else
     {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), ImStr(text.begin(), text_display_end), 0.0f, NULL);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, 0.0f, NULL);
     }
     if (g.LogEnabled)
-        LogRenderedText(pos, ImStr(text.begin(), text_display_end));
+        LogRenderedText(pos, text);
 }
 
 // Render a rectangle shaped with optional rounding and borders
@@ -2750,13 +2743,9 @@ ImVec2 ImGui::CalcTextSize(ImStr text, bool hide_text_after_double_hash, float w
 {
     ImGuiState& g = *GImGui;
 
-    const char* text_display_end;
     if (hide_text_after_double_hash)
-        text_display_end = FindTextDisplayEnd(text);      // Hide anything after a '##' string
-    else
-        text_display_end = text.end();
+        text = ImStr(text.begin(), FindTextDisplayEnd(text));      // Hide anything after a '##' string
 
-    text = ImStr(text.begin(), text_display_end);
     ImFont* font = g.Font;
     const float font_size = g.FontSize;
     if (text.empty())
