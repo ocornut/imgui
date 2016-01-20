@@ -1244,8 +1244,9 @@ bool    ImFontAtlas::Build()
         }
     }
 
-    // Start packing
-    TexWidth = (TexDesiredWidth > 0) ? TexDesiredWidth : (total_glyph_count > 2000) ? 2048 : (total_glyph_count > 1000) ? 1024 : 512;  // Width doesn't actually matters much but some API/GPU have texture size limitations, and increasing width can decrease height.
+    // Start packing. We need a known width for the skyline algorithm. Using a cheap heuristic here to decide of width. User can override TexDesiredWidth if they wish.
+    // After packing is done, width shouldn't matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
+    TexWidth = (TexDesiredWidth > 0) ? TexDesiredWidth : (total_glyph_count > 4000) ? 4096 : (total_glyph_count > 2000) ? 2048 : (total_glyph_count > 1000) ? 1024 : 512;
     TexHeight = 0;
     const int max_tex_height = 1024*32;
     stbtt_pack_context spc;

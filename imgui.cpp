@@ -359,6 +359,7 @@
 
  Q: How can I load multiple fonts?
  A: Use the font atlas to pack them into a single texture:
+    (Read extra_fonts/README.txt and the code in ImFontAtlas for more details.)
 
       ImGuiIO& io = ImGui::GetIO();
       ImFont* font0 = io.Fonts->AddFontDefault();
@@ -371,7 +372,7 @@
       // Options
       ImFontConfig config;
       config.OversampleH = 3;
-      config.OversampleV = 3;
+      config.OversampleV = 1;
       config.GlyphExtraSpacing.x = 1.0f;
       io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, &config);
 
@@ -382,8 +383,6 @@
       io.Fonts->AddFontDefault();
       io.Fonts->LoadFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
       io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese());
-
-    Read extra_fonts/README.txt or ImFontAtlas class for more details.
 
  Q: How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?
  A: When loading a font, pass custom Unicode ranges to specify the glyphs to load. ImGui will support UTF-8 encoding across the board.
