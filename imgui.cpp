@@ -8106,7 +8106,7 @@ bool ImGui::Selectable(ImStr label, bool selected, ImGuiSelectableFlags flags, c
         PopClipRect();
 
     ImGuiID id = window->GetID(label);
-    ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
+    ImVec2 label_size = ImGui::CalcTextSize(label, true);
     ImVec2 size(size_arg.x != 0.0f ? size_arg.x : label_size.x, size_arg.y != 0.0f ? size_arg.y : label_size.y);
     ImVec2 pos = window->DC.CursorPos;
     pos.y += window->DC.CurrentLineTextBaseOffset;
