@@ -899,7 +899,6 @@ static void InitImCrc32Lut(ImU32* crc32_lut)
 
 // Pass data_size==0 for zero-terminated strings
 // FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
-// FIXME-IMSTR: Reduce code duplication here without compromising perf
 ImU32 ImHash(const void* data, int data_size, ImU32 seed)
 {
     if (!ImCrc32Lut[1])
@@ -919,6 +918,7 @@ ImU32 ImHash(const void* data, int data_size, ImU32 seed)
     }
     else
     {
+        // FIXME-IMSTR: It's likely that this code path is not used anymore
         // Zero-terminated string
         while (unsigned char c = *current++)
         {
@@ -951,9 +951,9 @@ ImU32 ImHash(ImStr str, ImU32 seed)
     {
         // String slice
         const unsigned char* end = (const unsigned char*)str.End;
-        for (;current < end; ++current)
+        while (current < end)
         {
-            const char c = *current;
+            unsigned char c = *current++;
             if (c == '#' && current[0] == '#' && current[1] == '#')
                 crc = seed;
 
