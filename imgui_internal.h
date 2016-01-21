@@ -98,9 +98,11 @@ static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |=
 // Helpers: String
 IMGUI_API int           ImStricmp(const char* str1, const char* str2);
 IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, int count);
-IMGUI_API char*         ImStrdup(ImStr str); // ImStr.End must not be NULL
+IMGUI_API char*         ImStrdup(const char* str, const char* str_end); // str and str_end must not be NULL
+IMGUI_API int           ImStrcpy(char* buf, int buf_size, const char* str, const char* str_end); // str and str_end must not be NULL
 IMGUI_API int           ImStrlenW(const ImWchar* str);
 IMGUI_API const ImWchar*ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin); // Find beginning-of-line
+IMGUI_API const char*   ImStrchr(const char* str, const char* str_end, char c); // str and str_end must not be NULL
 IMGUI_API const char*   ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end);
 IMGUI_API int           ImFormatString(char* buf, int buf_size, const char* fmt, ...) IM_PRINTFARGS(3);
 IMGUI_API int           ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args);
@@ -706,24 +708,24 @@ namespace ImGui
     IMGUI_API bool          ButtonEx(ImStr label, const ImVec2& size_arg = ImVec2(0,0), ImGuiButtonFlags flags = 0);
 
     IMGUI_API bool          SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, ImGuiSliderFlags flags = 0);
-    IMGUI_API bool          SliderFloatN(ImStr label, float* v, int components, float v_min, float v_max, const char* display_format, float power);
-    IMGUI_API bool          SliderIntN(ImStr label, int* v, int components, int v_min, int v_max, const char* display_format);
+    IMGUI_API bool          SliderFloatN(ImStr label, float* v, int components, float v_min, float v_max, ImStr display_format, float power);
+    IMGUI_API bool          SliderIntN(ImStr label, int* v, int components, int v_min, int v_max, ImStr display_format);
 
     IMGUI_API bool          DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, int decimal_precision, float power);
-    IMGUI_API bool          DragFloatN(ImStr label, float* v, int components, float v_speed, float v_min, float v_max, const char* display_format, float power);
-    IMGUI_API bool          DragIntN(ImStr label, int* v, int components, float v_speed, int v_min, int v_max, const char* display_format);
+    IMGUI_API bool          DragFloatN(ImStr label, float* v, int components, float v_speed, float v_min, float v_max, ImStr display_format, float power);
+    IMGUI_API bool          DragIntN(ImStr label, int* v, int components, float v_speed, int v_min, int v_max, ImStr display_format);
 
     IMGUI_API bool          InputTextEx(ImStr label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
     IMGUI_API bool          InputFloatN(ImStr label, float* v, int components, int decimal_precision, ImGuiInputTextFlags extra_flags);
     IMGUI_API bool          InputIntN(ImStr label, int* v, int components, ImGuiInputTextFlags extra_flags);
-    IMGUI_API bool          InputScalarEx(ImStr label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, const char* scalar_format, ImGuiInputTextFlags extra_flags);
+    IMGUI_API bool          InputScalarEx(ImStr label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, ImStr scalar_format, ImGuiInputTextFlags extra_flags);
     IMGUI_API bool          InputScalarAsWidgetReplacement(const ImRect& aabb, ImStr label, ImGuiDataType data_type, void* data_ptr, ImGuiID id, int decimal_precision);
 
     IMGUI_API bool          TreeNodeBehaviorIsOpened(ImGuiID id, ImGuiTreeNodeFlags flags = 0);                     // Consume previous SetNextTreeNodeOpened() data, if any. May return true when logging
 
     IMGUI_API void          PlotEx(ImGuiPlotType plot_type, ImStr label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, ImStr overlay_text, float scale_min, float scale_max, ImVec2 graph_size);
 
-    IMGUI_API int           ParseFormatPrecision(const char* fmt, int default_value);
+    IMGUI_API int           ParseFormatPrecision(const char* fmt, const char* fmt_end, int default_value);
     IMGUI_API float         RoundScalar(float value, int decimal_precision);
 
 } // namespace ImGuiP

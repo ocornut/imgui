@@ -278,16 +278,16 @@ namespace ImGui
     IMGUI_API void          ProgressBar(float fraction, const ImVec2& size_arg = ImVec2(-1,0), ImStr overlay = NULL);
 
     // Widgets: Drags (tip: ctrl+click on a drag box to input with keyboard. manually input values aren't clamped, can go off-bounds)
-    IMGUI_API bool          DragFloat(ImStr label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f", float power = 1.0f);     // If v_min >= v_max we have no bound
-    IMGUI_API bool          DragFloat2(ImStr label, float v[2], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          DragFloat3(ImStr label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          DragFloat4(ImStr label, float v[4], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          DragFloatRange2(ImStr label, float* v_current_min, float* v_current_max, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* display_format = "%.3f", const char* display_format_max = NULL, float power = 1.0f);
-    IMGUI_API bool          DragInt(ImStr label, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");                                       // If v_min >= v_max we have no bound
-    IMGUI_API bool          DragInt2(ImStr label, int v[2], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");
-    IMGUI_API bool          DragInt3(ImStr label, int v[3], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");
-    IMGUI_API bool          DragInt4(ImStr label, int v[4], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");
-    IMGUI_API bool          DragIntRange2(ImStr label, int* v_current_min, int* v_current_max, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* display_format = "%.0f", const char* display_format_max = NULL);
+    IMGUI_API bool          DragFloat(ImStr label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr display_format = "%.3f", float power = 1.0f);     // If v_min >= v_max we have no bound
+    IMGUI_API bool          DragFloat2(ImStr label, float v[2], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          DragFloat3(ImStr label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          DragFloat4(ImStr label, float v[4], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          DragFloatRange2(ImStr label, float* v_current_min, float* v_current_max, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr display_format = "%.3f", ImStr display_format_max = NULL, float power = 1.0f);
+    IMGUI_API bool          DragInt(ImStr label, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStr display_format = "%.0f");                                       // If v_min >= v_max we have no bound
+    IMGUI_API bool          DragInt2(ImStr label, int v[2], float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStr display_format = "%.0f");
+    IMGUI_API bool          DragInt3(ImStr label, int v[3], float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStr display_format = "%.0f");
+    IMGUI_API bool          DragInt4(ImStr label, int v[4], float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStr display_format = "%.0f");
+    IMGUI_API bool          DragIntRange2(ImStr label, int* v_current_min, int* v_current_max, float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStr display_format = "%.0f", ImStr display_format_max = NULL);
 
     // Widgets: Input with Keyboard
     IMGUI_API bool          InputText(ImStr label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
@@ -302,17 +302,17 @@ namespace ImGui
     IMGUI_API bool          InputInt4(ImStr label, int v[4], ImGuiInputTextFlags extra_flags = 0);
 
     // Widgets: Sliders (tip: ctrl+click on a slider to input with keyboard. manually input values aren't clamped, can go off-bounds)
-    IMGUI_API bool          SliderFloat(ImStr label, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);     // adjust display_format to decorate the value with a prefix or a suffix. Use power!=1.0 for logarithmic sliders
-    IMGUI_API bool          SliderFloat2(ImStr label, float v[2], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          SliderFloat3(ImStr label, float v[3], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          SliderFloat4(ImStr label, float v[4], float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          SliderFloat(ImStr label, float* v, float v_min, float v_max, ImStr display_format = "%.3f", float power = 1.0f);     // adjust display_format to decorate the value with a prefix or a suffix. Use power!=1.0 for logarithmic sliders
+    IMGUI_API bool          SliderFloat2(ImStr label, float v[2], float v_min, float v_max, ImStr display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          SliderFloat3(ImStr label, float v[3], float v_min, float v_max, ImStr display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          SliderFloat4(ImStr label, float v[4], float v_min, float v_max, ImStr display_format = "%.3f", float power = 1.0f);
     IMGUI_API bool          SliderAngle(ImStr label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f);
-    IMGUI_API bool          SliderInt(ImStr label, int* v, int v_min, int v_max, const char* display_format = "%.0f");
-    IMGUI_API bool          SliderInt2(ImStr label, int v[2], int v_min, int v_max, const char* display_format = "%.0f");
-    IMGUI_API bool          SliderInt3(ImStr label, int v[3], int v_min, int v_max, const char* display_format = "%.0f");
-    IMGUI_API bool          SliderInt4(ImStr label, int v[4], int v_min, int v_max, const char* display_format = "%.0f");
-    IMGUI_API bool          VSliderFloat(ImStr label, const ImVec2& size, float* v, float v_min, float v_max, const char* display_format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          VSliderInt(ImStr label, const ImVec2& size, int* v, int v_min, int v_max, const char* display_format = "%.0f");
+    IMGUI_API bool          SliderInt(ImStr label, int* v, int v_min, int v_max, ImStr display_format = "%.0f");
+    IMGUI_API bool          SliderInt2(ImStr label, int v[2], int v_min, int v_max, ImStr display_format = "%.0f");
+    IMGUI_API bool          SliderInt3(ImStr label, int v[3], int v_min, int v_max, ImStr display_format = "%.0f");
+    IMGUI_API bool          SliderInt4(ImStr label, int v[4], int v_min, int v_max, ImStr display_format = "%.0f");
+    IMGUI_API bool          VSliderFloat(ImStr label, const ImVec2& size, float* v, float v_min, float v_max, ImStr display_format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          VSliderInt(ImStr label, const ImVec2& size, int* v, int v_min, int v_max, ImStr display_format = "%.0f");
 
     // Widgets: Trees
     IMGUI_API bool          TreeNode(ImStr str_label_id);                                     // if returning 'true' the node is open and the user is responsible for calling TreePop()
@@ -338,7 +338,7 @@ namespace ImGui
     IMGUI_API void          Value(ImStr prefix, bool b);
     IMGUI_API void          Value(ImStr prefix, int v);
     IMGUI_API void          Value(ImStr prefix, unsigned int v);
-    IMGUI_API void          Value(ImStr prefix, float v, const char* float_format = NULL);
+    IMGUI_API void          Value(ImStr prefix, float v, ImStr float_format = NULL);
     IMGUI_API void          ValueColor(ImStr prefix, const ImVec4& v);
     IMGUI_API void          ValueColor(ImStr prefix, unsigned int v);
 

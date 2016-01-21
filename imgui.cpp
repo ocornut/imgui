@@ -819,14 +819,22 @@ int ImStrnicmp(const char* str1, const char* str2, int count)
     return d;
 }
 
-char* ImStrdup(ImStr str) // std.End must not be NULL
+char* ImStrdup(const char* str, const char* str_end)
 {
-    const int str_size = str.End - str.Begin;
+    const int str_size = str_end - str;
     char *buff = (char*)ImGui::MemAlloc(str_size + 1);
     IM_ASSERT(buff);
-    memcpy(buff, str.Begin, str_size);
+    memcpy(buff, str, str_size);
     buff[str_size] = '\0';
     return buff;
+}
+
+int ImStrcpy(char* buf, int buf_size, const char* str, const char* str_end)
+{
+    const int str_size = ImMin(buf_size - 1, str_end - str);
+    memcpy(buf, str, str_size);
+    buf[str_size] = '\0';
+    return str_size;
 }
 
 int ImStrlenW(const ImWchar* str)
@@ -841,6 +849,16 @@ const ImWchar* ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin) 
     while (buf_mid_line > buf_begin && buf_mid_line[-1] != '\n')
         buf_mid_line--;
     return buf_mid_line;
+}
+
+const char* ImStrchr(const char* str, const char* str_end, char c)
+{
+    for (const char* s = str; s < str_end; s++)
+    {
+        if (*s == c)
+            return s;
+    }
+    return NULL;
 }
 
 const char* ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end)
@@ -1573,8 +1591,7 @@ float ImGuiSimpleColumns::CalcExtraSpace(float avail_w)
 
 ImGuiWindow::ImGuiWindow(ImStr name)
 {
-    name.CalcEnd();
-    Name = ImStrdup(name);
+    Name = ImStrdup(name.Begin, name.CalcEnd());
     ID = ImHash(name, 0);
     IDStack.push_back(ID);
     MoveID = GetID("#MOVE");
@@ -2190,8 +2207,7 @@ static ImGuiIniData* AddWindowSettings(ImStr name)
 {
     GImGui->Settings.resize(GImGui->Settings.Size + 1);
     ImGuiIniData* ini = &GImGui->Settings.back();
-    name.CalcEnd();
-    ini->Name = ImStrdup(name);
+    ini->Name = ImStrdup(name.Begin, name.CalcEnd());
     ini->ID = ImHash(name, 0);
     ini->Collapsed = false;
     ini->Pos = ImVec2(FLT_MAX,FLT_MAX);
@@ -6031,10 +6047,10 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, ImStr label, ImGu
 }
 
 // Parse display precision back from the display format string
-int ImGui::ParseFormatPrecision(const char* fmt, int default_precision)
+int ImGui::ParseFormatPrecision(const char* fmt, const char* fmt_end, int default_precision)
 {
     int precision = default_precision;
-    while ((fmt = strchr(fmt, '%')) != NULL)
+    while ((fmt = ImStrchr(fmt, fmt_end, '%')) != NULL)
     {
         fmt++;
         if (fmt[0] == '%') { fmt++; continue; } // Ignore "%%"
@@ -6201,7 +6217,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
 //   "%.3f"         1.234
 //   "%5.2f secs"   01.23 secs
 //   "Gold: %.0f"   Gold: 1
-bool ImGui::SliderFloat(ImStr label, float* v, float v_min, float v_max, const char* display_format, float power)
+bool ImGui::SliderFloat(ImStr label, float* v, float v_min, float v_max, ImStr display_format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6227,9 +6243,10 @@ bool ImGui::SliderFloat(ImStr label, float* v, float v_min, float v_max, const c
     if (hovered)
         SetHoveredID(id);
 
-    if (!display_format)
-        display_format = "%.3f";
-    int decimal_precision = ParseFormatPrecision(display_format, 3);
+    if (!display_format.Begin)
+        display_format.Begin = "%.3f";
+
+    int decimal_precision = ParseFormatPrecision(display_format.Begin, display_format.CalcEnd(), 3);
 
     // Tabbing or CTRL-clicking on Slider turns it into an input box
     bool start_text_input = false;
@@ -6253,9 +6270,13 @@ bool ImGui::SliderFloat(ImStr label, float* v, float v_min, float v_max, const c
     // Actual slider behavior + render grab
     const bool value_changed = SliderBehavior(frame_bb, id, v, v_min, v_max, power, decimal_precision);
 
+    // Write display format to null terminated buffer
+    char fmt_buf[64];
+    ImStrcpy(fmt_buf, IM_ARRAYSIZE(fmt_buf), display_format.Begin, display_format.CalcEnd());
+
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
-    const char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), display_format, *v);
+    const char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), fmt_buf, *v);
     RenderTextClipped(frame_bb.Min, frame_bb.Max, ImStr(value_buf, value_buf_end), NULL, ImGuiAlign_Center|ImGuiAlign_VCenter);
 
     if (label_size.x > 0.0f)
@@ -6264,7 +6285,7 @@ bool ImGui::SliderFloat(ImStr label, float* v, float v_min, float v_max, const c
     return value_changed;
 }
 
-bool ImGui::VSliderFloat(ImStr label, const ImVec2& size, float* v, float v_min, float v_max, const char* display_format, float power)
+bool ImGui::VSliderFloat(ImStr label, const ImVec2& size, float* v, float v_min, float v_max, ImStr display_format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6286,9 +6307,9 @@ bool ImGui::VSliderFloat(ImStr label, const ImVec2& size, float* v, float v_min,
     if (hovered)
         SetHoveredID(id);
 
-    if (!display_format)
-        display_format = "%.3f";
-    int decimal_precision = ParseFormatPrecision(display_format, 3);
+    if (!display_format.Begin)
+        display_format.Begin = "%.3f";
+    int decimal_precision = ParseFormatPrecision(display_format.Begin, display_format.CalcEnd(), 3);
 
     if (hovered && g.IO.MouseClicked[0])
     {
@@ -6299,10 +6320,14 @@ bool ImGui::VSliderFloat(ImStr label, const ImVec2& size, float* v, float v_min,
     // Actual slider behavior + render grab
     bool value_changed = SliderBehavior(frame_bb, id, v, v_min, v_max, power, decimal_precision, ImGuiSliderFlags_Vertical);
 
+    // Write display format to null terminated buffer
+    char fmt_buf[64];
+    ImStrcpy(fmt_buf, IM_ARRAYSIZE(fmt_buf), display_format.Begin, display_format.CalcEnd());
+
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     // For the vertical slider we allow centered text to overlap the frame padding
     char value_buf[64];
-    char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), display_format, *v);
+    char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), fmt_buf, *v);
     RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, ImStr(value_buf, value_buf_end), NULL, ImGuiAlign_Center);
 
     if (label_size.x > 0.0f)
@@ -6319,20 +6344,20 @@ bool ImGui::SliderAngle(ImStr label, float* v_rad, float v_degrees_min, float v_
     return value_changed;
 }
 
-bool ImGui::SliderInt(ImStr label, int* v, int v_min, int v_max, const char* display_format)
+bool ImGui::SliderInt(ImStr label, int* v, int v_min, int v_max, ImStr display_format)
 {
-    if (!display_format)
-        display_format = "%.0f";
+    if (!display_format.Begin)
+        display_format.Begin = "%.0f";
     float v_f = (float)*v;
     bool value_changed = ImGui::SliderFloat(label, &v_f, (float)v_min, (float)v_max, display_format, 1.0f);
     *v = (int)v_f;
     return value_changed;
 }
 
-bool ImGui::VSliderInt(ImStr label, const ImVec2& size, int* v, int v_min, int v_max, const char* display_format)
+bool ImGui::VSliderInt(ImStr label, const ImVec2& size, int* v, int v_min, int v_max, ImStr display_format)
 {
-    if (!display_format)
-        display_format = "%.0f";
+    if (!display_format.Begin)
+        display_format.Begin = "%.0f";
     float v_f = (float)*v;
     bool value_changed = ImGui::VSliderFloat(label, size, &v_f, (float)v_min, (float)v_max, display_format, 1.0f);
     *v = (int)v_f;
@@ -6340,7 +6365,7 @@ bool ImGui::VSliderInt(ImStr label, const ImVec2& size, int* v, int v_min, int v
 }
 
 // Add multiple sliders on 1 line for compact edition of multiple components
-bool ImGui::SliderFloatN(ImStr label, float* v, int components, float v_min, float v_max, const char* display_format, float power)
+bool ImGui::SliderFloatN(ImStr label, float* v, int components, float v_min, float v_max, ImStr display_format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6368,22 +6393,22 @@ bool ImGui::SliderFloatN(ImStr label, float* v, int components, float v_min, flo
     return value_changed;
 }
 
-bool ImGui::SliderFloat2(ImStr label, float v[2], float v_min, float v_max, const char* display_format, float power)
+bool ImGui::SliderFloat2(ImStr label, float v[2], float v_min, float v_max, ImStr display_format, float power)
 {
     return SliderFloatN(label, v, 2, v_min, v_max, display_format, power);
 }
 
-bool ImGui::SliderFloat3(ImStr label, float v[3], float v_min, float v_max, const char* display_format, float power)
+bool ImGui::SliderFloat3(ImStr label, float v[3], float v_min, float v_max, ImStr display_format, float power)
 {
     return SliderFloatN(label, v, 3, v_min, v_max, display_format, power);
 }
 
-bool ImGui::SliderFloat4(ImStr label, float v[4], float v_min, float v_max, const char* display_format, float power)
+bool ImGui::SliderFloat4(ImStr label, float v[4], float v_min, float v_max, ImStr display_format, float power)
 {
     return SliderFloatN(label, v, 4, v_min, v_max, display_format, power);
 }
 
-bool ImGui::SliderIntN(ImStr label, int* v, int components, int v_min, int v_max, const char* display_format)
+bool ImGui::SliderIntN(ImStr label, int* v, int components, int v_min, int v_max, ImStr display_format)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6411,17 +6436,17 @@ bool ImGui::SliderIntN(ImStr label, int* v, int components, int v_min, int v_max
     return value_changed;
 }
 
-bool ImGui::SliderInt2(ImStr label, int v[2], int v_min, int v_max, const char* display_format)
+bool ImGui::SliderInt2(ImStr label, int v[2], int v_min, int v_max, ImStr display_format)
 {
     return SliderIntN(label, v, 2, v_min, v_max, display_format);
 }
 
-bool ImGui::SliderInt3(ImStr label, int v[3], int v_min, int v_max, const char* display_format)
+bool ImGui::SliderInt3(ImStr label, int v[3], int v_min, int v_max, ImStr display_format)
 {
     return SliderIntN(label, v, 3, v_min, v_max, display_format);
 }
 
-bool ImGui::SliderInt4(ImStr label, int v[4], int v_min, int v_max, const char* display_format)
+bool ImGui::SliderInt4(ImStr label, int v[4], int v_min, int v_max, ImStr display_format)
 {
     return SliderIntN(label, v, 4, v_min, v_max, display_format);
 }
@@ -6501,7 +6526,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     return value_changed;
 }
 
-bool ImGui::DragFloat(ImStr label, float* v, float v_speed, float v_min, float v_max, const char* display_format, float power)
+bool ImGui::DragFloat(ImStr label, float* v, float v_speed, float v_min, float v_max, ImStr display_format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6528,9 +6553,10 @@ bool ImGui::DragFloat(ImStr label, float* v, float v_speed, float v_min, float v
     if (hovered)
         SetHoveredID(id);
 
-    if (!display_format)
-        display_format = "%.3f";
-    int decimal_precision = ParseFormatPrecision(display_format, 3);
+    if (!display_format.Begin)
+        display_format.Begin = "%.3f";
+
+    int decimal_precision = ParseFormatPrecision(display_format.Begin, display_format.CalcEnd(), 3);
 
     // Tabbing or CTRL-clicking on Drag turns it into an input box
     bool start_text_input = false;
@@ -6553,9 +6579,13 @@ bool ImGui::DragFloat(ImStr label, float* v, float v_speed, float v_min, float v
     ItemSize(total_bb, style.FramePadding.y);
     const bool value_changed = DragBehavior(frame_bb, id, v, v_speed, v_min, v_max, decimal_precision, power);
 
+    // Write display format to null terminated buffer
+    char fmt_buf[64];
+    ImStrcpy(fmt_buf, IM_ARRAYSIZE(fmt_buf), display_format.Begin, display_format.CalcEnd());
+
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
-    const char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), display_format, *v);
+    const char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), fmt_buf, *v);
     RenderTextClipped(frame_bb.Min, frame_bb.Max, ImStr(value_buf, value_buf_end), NULL, ImGuiAlign_Center|ImGuiAlign_VCenter);
 
     if (label_size.x > 0.0f)
@@ -6564,7 +6594,7 @@ bool ImGui::DragFloat(ImStr label, float* v, float v_speed, float v_min, float v
     return value_changed;
 }
 
-bool ImGui::DragFloatN(ImStr label, float* v, int components, float v_speed, float v_min, float v_max, const char* display_format, float power)
+bool ImGui::DragFloatN(ImStr label, float* v, int components, float v_speed, float v_min, float v_max, ImStr display_format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6592,22 +6622,22 @@ bool ImGui::DragFloatN(ImStr label, float* v, int components, float v_speed, flo
     return value_changed;
 }
 
-bool ImGui::DragFloat2(ImStr label, float v[2], float v_speed, float v_min, float v_max, const char* display_format, float power)
+bool ImGui::DragFloat2(ImStr label, float v[2], float v_speed, float v_min, float v_max, ImStr display_format, float power)
 {
     return DragFloatN(label, v, 2, v_speed, v_min, v_max, display_format, power);
 }
 
-bool ImGui::DragFloat3(ImStr label, float v[3], float v_speed, float v_min, float v_max, const char* display_format, float power)
+bool ImGui::DragFloat3(ImStr label, float v[3], float v_speed, float v_min, float v_max, ImStr display_format, float power)
 {
     return DragFloatN(label, v, 3, v_speed, v_min, v_max, display_format, power);
 }
 
-bool ImGui::DragFloat4(ImStr label, float v[4], float v_speed, float v_min, float v_max, const char* display_format, float power)
+bool ImGui::DragFloat4(ImStr label, float v[4], float v_speed, float v_min, float v_max, ImStr display_format, float power)
 {
     return DragFloatN(label, v, 4, v_speed, v_min, v_max, display_format, power);
 }
 
-bool ImGui::DragFloatRange2(ImStr label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* display_format, const char* display_format_max, float power)
+bool ImGui::DragFloatRange2(ImStr label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, ImStr display_format, ImStr display_format_max, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6621,7 +6651,7 @@ bool ImGui::DragFloatRange2(ImStr label, float* v_current_min, float* v_current_
     bool value_changed = ImGui::DragFloat("##min", v_current_min, v_speed, (v_min >= v_max) ? -FLT_MAX : v_min, (v_min >= v_max) ? *v_current_max : ImMin(v_max, *v_current_max), display_format, power);
     ImGui::PopItemWidth();
     ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
-    value_changed |= ImGui::DragFloat("##max", v_current_max, v_speed, (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min), (v_min >= v_max) ? FLT_MAX : v_max, display_format_max ? display_format_max : display_format, power);
+    value_changed |= ImGui::DragFloat("##max", v_current_max, v_speed, (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min), (v_min >= v_max) ? FLT_MAX : v_max, display_format_max.Begin ? display_format_max : display_format, power);
     ImGui::PopItemWidth();
     ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
 
@@ -6634,17 +6664,17 @@ bool ImGui::DragFloatRange2(ImStr label, float* v_current_min, float* v_current_
 }
 
 // NB: v_speed is float to allow adjusting the drag speed with more precision
-bool ImGui::DragInt(ImStr label, int* v, float v_speed, int v_min, int v_max, const char* display_format)
+bool ImGui::DragInt(ImStr label, int* v, float v_speed, int v_min, int v_max, ImStr display_format)
 {
-    if (!display_format)
-        display_format = "%.0f";
+    if (!display_format.Begin)
+        display_format.Begin = "%.0f";
     float v_f = (float)*v;
     bool value_changed = ImGui::DragFloat(label, &v_f, v_speed, (float)v_min, (float)v_max, display_format);
     *v = (int)v_f;
     return value_changed;
 }
 
-bool ImGui::DragIntN(ImStr label, int* v, int components, float v_speed, int v_min, int v_max, const char* display_format)
+bool ImGui::DragIntN(ImStr label, int* v, int components, float v_speed, int v_min, int v_max, ImStr display_format)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6672,22 +6702,22 @@ bool ImGui::DragIntN(ImStr label, int* v, int components, float v_speed, int v_m
     return value_changed;
 }
 
-bool ImGui::DragInt2(ImStr label, int v[2], float v_speed, int v_min, int v_max, const char* display_format)
+bool ImGui::DragInt2(ImStr label, int v[2], float v_speed, int v_min, int v_max, ImStr display_format)
 {
     return DragIntN(label, v, 2, v_speed, v_min, v_max, display_format);
 }
 
-bool ImGui::DragInt3(ImStr label, int v[3], float v_speed, int v_min, int v_max, const char* display_format)
+bool ImGui::DragInt3(ImStr label, int v[3], float v_speed, int v_min, int v_max, ImStr display_format)
 {
     return DragIntN(label, v, 3, v_speed, v_min, v_max, display_format);
 }
 
-bool ImGui::DragInt4(ImStr label, int v[4], float v_speed, int v_min, int v_max, const char* display_format)
+bool ImGui::DragInt4(ImStr label, int v[4], float v_speed, int v_min, int v_max, ImStr display_format)
 {
     return DragIntN(label, v, 4, v_speed, v_min, v_max, display_format);
 }
 
-bool ImGui::DragIntRange2(ImStr label, int* v_current_min, int* v_current_max, float v_speed, int v_min, int v_max, const char* display_format, const char* display_format_max)
+bool ImGui::DragIntRange2(ImStr label, int* v_current_min, int* v_current_max, float v_speed, int v_min, int v_max, ImStr display_format, ImStr display_format_max)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6701,7 +6731,7 @@ bool ImGui::DragIntRange2(ImStr label, int* v_current_min, int* v_current_max, f
     bool value_changed = ImGui::DragInt("##min", v_current_min, v_speed, (v_min >= v_max) ? IM_INT_MIN : v_min, (v_min >= v_max) ? *v_current_max : ImMin(v_max, *v_current_max), display_format);
     ImGui::PopItemWidth();
     ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
-    value_changed |= ImGui::DragInt("##max", v_current_max, v_speed, (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min), (v_min >= v_max) ? IM_INT_MAX : v_max, display_format_max ? display_format_max : display_format);
+    value_changed |= ImGui::DragInt("##max", v_current_max, v_speed, (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min), (v_min >= v_max) ? IM_INT_MAX : v_max, display_format_max.Begin ? display_format_max : display_format);
     ImGui::PopItemWidth();
     ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
 
@@ -7820,7 +7850,7 @@ bool ImGui::InputTextMultiline(ImStr label, char* buf, size_t buf_size, const Im
 }
 
 // NB: scalar_format here must be a simple "%xx" format string with no prefix/suffix (unlike the Drag/Slider functions "display_format" argument)
-bool ImGui::InputScalarEx(ImStr label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, const char* scalar_format, ImGuiInputTextFlags extra_flags)
+bool ImGui::InputScalarEx(ImStr label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, ImStr scalar_format, ImGuiInputTextFlags extra_flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -7838,8 +7868,12 @@ bool ImGui::InputScalarEx(ImStr label, ImGuiDataType data_type, void* data_ptr, 
     if (step_ptr)
         ImGui::PushItemWidth(ImMax(1.0f, w - (button_sz.x + style.ItemInnerSpacing.x)*2));
 
+    // Write display format to null terminated buffer
+    char fmt_buf[64];
+    ImStrcpy(fmt_buf, IM_ARRAYSIZE(fmt_buf), scalar_format.Begin, scalar_format.CalcEnd());
+
     char buf[64];
-    DataTypeFormatString(data_type, data_ptr, scalar_format, buf, IM_ARRAYSIZE(buf));
+    DataTypeFormatString(data_type, data_ptr, fmt_buf, buf, IM_ARRAYSIZE(buf));
 
     bool value_changed = false;
     if (!(extra_flags & ImGuiInputTextFlags_CharsHexadecimal))
@@ -7847,7 +7881,7 @@ bool ImGui::InputScalarEx(ImStr label, ImGuiDataType data_type, void* data_ptr, 
     extra_flags |= ImGuiInputTextFlags_AutoSelectAll;
     if (ImGui::InputText("", buf, IM_ARRAYSIZE(buf), extra_flags))
     {
-        DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr, scalar_format);
+        DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr, fmt_buf);
         value_changed = true;
     }
 
@@ -9122,12 +9156,12 @@ void ImGui::Value(ImStr prefix, unsigned int v)
     ImGui::Text("%.*s: %d", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, v);
 }
 
-void ImGui::Value(ImStr prefix, float v, const char* float_format)
+void ImGui::Value(ImStr prefix, float v, ImStr float_format)
 {
-    if (float_format)
+    if (float_format.Begin)
     {
         char fmt[64];
-        ImFormatString(fmt, IM_ARRAYSIZE(fmt), "%%s: %s", float_format);
+        ImFormatString(fmt, IM_ARRAYSIZE(fmt), "%%s: %.*s", (int)(float_format.CalcEnd() - float_format.Begin), float_format.Begin);
         ImGui::Text(fmt, prefix, v);
     }
     else
