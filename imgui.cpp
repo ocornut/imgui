@@ -3352,18 +3352,18 @@ bool ImGui::BeginPopupContextItem(ImStr str_id, int mouse_button)
     return ImGui::BeginPopup(str_id);
 }
 
-bool ImGui::BeginPopupContextWindow(bool also_over_items, const char* str_id, int mouse_button)
+bool ImGui::BeginPopupContextWindow(bool also_over_items, ImStr str_id, int mouse_button)
 {
-    if (!str_id) str_id = "window_context_menu";
+    if (!str_id.Begin) str_id.Begin = "window_context_menu";
     if (ImGui::IsMouseHoveringWindow() && ImGui::IsMouseClicked(mouse_button))
         if (also_over_items || !ImGui::IsAnyItemHovered())
             ImGui::OpenPopupEx(str_id, true);
     return ImGui::BeginPopup(str_id);
 }
 
-bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
+bool ImGui::BeginPopupContextVoid(ImStr str_id, int mouse_button)
 {
-    if (!str_id) str_id = "void_context_menu";
+    if (!str_id.Begin) str_id.Begin = "void_context_menu";
     if (!ImGui::IsMouseHoveringAnyWindow() && ImGui::IsMouseClicked(mouse_button))
         ImGui::OpenPopupEx(str_id, true);
     return ImGui::BeginPopup(str_id);
@@ -5024,8 +5024,8 @@ void ImGui::TextV(const char* fmt, va_list args)
         return;
 
     ImGuiState& g = *GImGui;
-    const char* text_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    TextUnformatted(g.TempBuffer, text_end);
+    ImStr text(g.TempBuffer, ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args));
+    TextUnformatted(text);
 }
 
 void ImGui::Text(const char* fmt, ...)
@@ -6713,7 +6713,7 @@ bool ImGui::DragIntRange2(ImStr label, int* v_current_min, int* v_current_max, f
     return value_changed;
 }
 
-void ImGui::PlotEx(ImGuiPlotType plot_type, ImStr label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size)
+void ImGui::PlotEx(ImGuiPlotType plot_type, ImStr label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, ImStr overlay_text, float scale_min, float scale_max, ImVec2 graph_size)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6810,7 +6810,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, ImStr label, float (*values_getter)(
     }
 
     // Text overlay
-    if (overlay_text)
+    if (overlay_text.Begin)
         RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, overlay_text, NULL, ImGuiAlign_Center);
 
     if (label_size.x > 0.0f)
@@ -6832,30 +6832,30 @@ static float Plot_ArrayGetter(void* data, int idx)
     return v;
 }
 
-void ImGui::PlotLines(ImStr label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, int stride)
+void ImGui::PlotLines(ImStr label, const float* values, int values_count, int values_offset, ImStr overlay_text, float scale_min, float scale_max, ImVec2 graph_size, int stride)
 {
     ImGuiPlotArrayGetterData data(values, stride);
     PlotEx(ImGuiPlotType_Lines, label, &Plot_ArrayGetter, (void*)&data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
 }
 
-void ImGui::PlotLines(ImStr label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size)
+void ImGui::PlotLines(ImStr label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, ImStr overlay_text, float scale_min, float scale_max, ImVec2 graph_size)
 {
     PlotEx(ImGuiPlotType_Lines, label, values_getter, data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
 }
 
-void ImGui::PlotHistogram(ImStr label, const float* values, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size, int stride)
+void ImGui::PlotHistogram(ImStr label, const float* values, int values_count, int values_offset, ImStr overlay_text, float scale_min, float scale_max, ImVec2 graph_size, int stride)
 {
     ImGuiPlotArrayGetterData data(values, stride);
     PlotEx(ImGuiPlotType_Histogram, label, &Plot_ArrayGetter, (void*)&data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
 }
 
-void ImGui::PlotHistogram(ImStr label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size)
+void ImGui::PlotHistogram(ImStr label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, ImStr overlay_text, float scale_min, float scale_max, ImVec2 graph_size)
 {
     PlotEx(ImGuiPlotType_Histogram, label, values_getter, data, values_count, values_offset, overlay_text, scale_min, scale_max, graph_size);
 }
 
 // size_arg (for each axis) < 0.0f: align to end, 0.0f: auto, > 0.0f: specified size
-void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* overlay)
+void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, ImStr overlay)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6878,10 +6878,9 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
 
     // Default displaying the fraction as percentage string, but user can override it
     char overlay_buf[32];
-    if (!overlay)
+    if (!overlay.Begin)
     {
-        ImFormatString(overlay_buf, IM_ARRAYSIZE(overlay_buf), "%.0f%%", fraction*100+0.01f);
-        overlay = overlay_buf;
+        overlay = ImStr(overlay_buf, ImFormatString(overlay_buf, IM_ARRAYSIZE(overlay_buf), "%.0f%%", fraction*100+0.01f));
     }
     
     ImVec2 overlay_size = CalcTextSize(overlay);
@@ -8318,18 +8317,17 @@ bool ImGui::ListBox(ImStr label, int* current_item, bool (*items_getter)(void*, 
     return value_changed;
 }
 
-bool ImGui::MenuItem(ImStr label, const char* cshortcut, bool selected, bool enabled)
+bool ImGui::MenuItem(ImStr label, ImStr shortcut, bool selected, bool enabled)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
 
     // TODO: take as ImStr
-    ImStr shortcut(cshortcut);
     ImGuiState& g = *GImGui;
     ImVec2 pos = window->DC.CursorPos;
     ImVec2 label_size = CalcTextSize(label, true);
-    ImVec2 shortcut_size = cshortcut ? CalcTextSize(shortcut) : ImVec2(0.0f, 0.0f);
+    ImVec2 shortcut_size = shortcut.Begin ? CalcTextSize(shortcut) : ImVec2(0.0f, 0.0f);
     float w = window->MenuColumns.DeclColumns(label_size.x, shortcut_size.x, (float)(int)(g.FontSize * 1.20f)); // Feedback for next frame
     float extra_w = ImMax(0.0f, ImGui::GetContentRegionAvail().x - w);
 
@@ -8347,7 +8345,7 @@ bool ImGui::MenuItem(ImStr label, const char* cshortcut, bool selected, bool ena
     return pressed;
 }
 
-bool ImGui::MenuItem(ImStr label, const char* shortcut, bool* p_selected, bool enabled)
+bool ImGui::MenuItem(ImStr label, ImStr shortcut, bool* p_selected, bool enabled)
 {
     if (ImGui::MenuItem(label, shortcut, p_selected ? *p_selected : false, enabled))
     {
@@ -8976,7 +8974,7 @@ static void PushColumnClipRect(int column_index)
     ImGui::PushClipRect(ImVec2(x1,-FLT_MAX), ImVec2(x2,+FLT_MAX), true);
 }
 
-void ImGui::Columns(int columns_count, const char* id, bool border)
+void ImGui::Columns(int columns_count, ImStr id, bool border)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -9030,8 +9028,8 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 
     // Differentiate column ID with an arbitrary prefix for cases where users name their columns set the same as another widget. 
     // In addition, when an identifier isn't explicitly provided we include the number of columns in the hash to make it uniquer.
-    ImGui::PushID(0x11223347 + (id ? 0 : columns_count)); 
-    window->DC.ColumnsSetID = window->GetID(id ? id : "columns");
+    ImGui::PushID(0x11223347 + (id.Begin ? 0 : columns_count));
+    window->DC.ColumnsSetID = window->GetID(id.Begin ? id.Begin : "columns");
     ImGui::PopID();
 
     // Set state for first column
