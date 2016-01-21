@@ -3134,6 +3134,12 @@ ImVec2 ImGui::CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge, float ou
 }
 
 // Tooltip is stored and turned into a BeginTooltip()/EndTooltip() sequence at the end of the frame. Each call override previous value.
+void ImGui::SetTooltip(ImStr text)
+{
+    ImGuiState& g = *GImGui;
+    ImStrcpy(g.Tooltip, IM_ARRAYSIZE(g.Tooltip), text.Begin, text.CalcEnd());
+}
+
 void ImGui::SetTooltipV(const char* fmt, va_list args)
 {
     ImGuiState& g = *GImGui;
@@ -5033,6 +5039,11 @@ ImGuiStorage* ImGui::GetStateStorage()
     return window->DC.StateStorage;
 }
 
+void ImGui::Text(ImStr text)
+{
+    TextUnformatted(text);
+}
+
 void ImGui::TextV(const char* fmt, va_list args)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -5052,6 +5063,13 @@ void ImGui::Text(const char* fmt, ...)
     va_end(args);
 }
 
+void ImGui::TextColored(const ImVec4& col, ImStr text)
+{
+    ImGui::PushStyleColor(ImGuiCol_Text, col);
+    TextUnformatted(text);
+    ImGui::PopStyleColor();
+}
+
 void ImGui::TextColoredV(const ImVec4& col, const char* fmt, va_list args)
 {
     ImGui::PushStyleColor(ImGuiCol_Text, col);
@@ -5067,6 +5085,13 @@ void ImGui::TextColored(const ImVec4& col, const char* fmt, ...)
     va_end(args);
 }
 
+void ImGui::TextDisabled(ImStr text)
+{
+    ImGui::PushStyleColor(ImGuiCol_Text, GImGui->Style.Colors[ImGuiCol_TextDisabled]);
+    TextUnformatted(text);
+    ImGui::PopStyleColor();
+}
+
 void ImGui::TextDisabledV(const char* fmt, va_list args)
 {
     ImGui::PushStyleColor(ImGuiCol_Text, GImGui->Style.Colors[ImGuiCol_TextDisabled]);
@@ -5080,6 +5105,13 @@ void ImGui::TextDisabled(const char* fmt, ...)
     va_start(args, fmt);
     TextDisabledV(fmt, args);
     va_end(args);
+}
+
+void ImGui::TextWrapped(ImStr text)
+{
+    ImGui::PushTextWrapPos(0.0f);
+    TextUnformatted(text);
+    ImGui::PopTextWrapPos();
 }
 
 void ImGui::TextWrappedV(const char* fmt, va_list args)
@@ -5220,30 +5252,59 @@ void ImGui::AlignFirstTextHeightToWidgets()
     ImGui::SameLine(0, 0);
 }
 
-// Add a label+text combo aligned to other label+value widgets
-void ImGui::LabelTextV(ImStr label, const char* fmt, va_list args)
+static inline bool CalcLabelTextSize(ImStr label, const ImGuiWindow* window, const ImGuiStyle& style, ImVec2& label_size, ImRect& value_bb)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    const float w = ImGui::CalcItemWidth();
+
+    label_size = ImGui::CalcTextSize(label, true);
+    value_bb = ImRect(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2, label_size.y + style.FramePadding.y*2));
+    const ImRect total_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2 + (label_size.x > 0.0f ? style.ItemInnerSpacing.x : 0.0f), style.FramePadding.y*2) + label_size);
+    ImGui::ItemSize(total_bb, style.FramePadding.y);
+    if (!ImGui::ItemAdd(total_bb, NULL))
+        return false;
+
+    return true;
+}
+
+static inline void RenderLabelText(ImStr label, ImStr text, const ImGuiStyle& style, const ImVec2& label_size, const ImRect& value_bb)
+{
+    ImGui::RenderTextClipped(value_bb.Min, value_bb.Max, text, NULL, ImGuiAlign_VCenter);
+    if (label_size.x > 0.0f)
+        ImGui::RenderText(ImVec2(value_bb.Max.x + style.ItemInnerSpacing.x, value_bb.Min.y + style.FramePadding.y), label);
+}
+
+// Add a label+text combo aligned to other label+value widgets
+void ImGui::LabelText(ImStr label, ImStr value_text)
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
     if (window->SkipItems)
         return;
 
+    ImVec2 label_size;
+    ImRect value_bb;
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const float w = CalcItemWidth();
-
-    const ImVec2 label_size = CalcTextSize(label, true);
-    const ImRect value_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2, label_size.y + style.FramePadding.y*2));
-    const ImRect total_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2 + (label_size.x > 0.0f ? style.ItemInnerSpacing.x : 0.0f), style.FramePadding.y*2) + label_size);
-    ItemSize(total_bb, style.FramePadding.y);
-    if (!ItemAdd(total_bb, NULL))
+    if (!CalcLabelTextSize(label, window, style, label_size, value_bb))
         return;
 
-    // Render
-    const char* value_text_begin = &g.TempBuffer[0];
-    const char* value_text_end = value_text_begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    RenderTextClipped(value_bb.Min, value_bb.Max, ImStr(value_text_begin, value_text_end), NULL, ImGuiAlign_VCenter);
-    if (label_size.x > 0.0f)
-        RenderText(ImVec2(value_bb.Max.x + style.ItemInnerSpacing.x, value_bb.Min.y + style.FramePadding.y), label);
+    RenderLabelText(label, value_text, style, label_size, value_bb);
+}
+
+void ImGui::LabelTextV(ImStr label, const char* fmt, va_list args)
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    ImVec2 label_size;
+    ImRect value_bb;
+    ImGuiState& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    if (!CalcLabelTextSize(label, window, style, label_size, value_bb))
+        return;
+
+    const ImStr value_text(&g.TempBuffer[0], ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args));
+    RenderLabelText(label, value_text, style, label_size, value_bb);
 }
 
 void ImGui::LabelText(ImStr label, const char* fmt, ...)
@@ -5765,6 +5826,34 @@ void ImGui::Bullet()
     ImGui::SameLine(0, style.FramePadding.x*2);
 }
 
+static inline void RenderBulletText(ImStr text, ImGuiWindow* window)
+{
+    ImGuiState& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    const ImVec2 label_size = ImGui::CalcTextSize(text, true);
+    const float text_base_offset_y = ImMax(0.0f, window->DC.CurrentLineTextBaseOffset); // Latch before ItemSize changes it
+    const float line_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
+    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize + (label_size.x > 0.0f ? (label_size.x + style.FramePadding.x*2) : 0.0f), ImMax(line_height, label_size.y)));  // Empty text doesn't add padding
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, NULL))
+        return;
+
+    // Render
+    const float bullet_size = g.FontSize*0.15f;
+    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f), bullet_size, ImGui::GetColorU32(ImGuiCol_Text));
+    ImGui::RenderText(bb.Min+ImVec2(g.FontSize + style.FramePadding.x*2, text_base_offset_y), text);
+}
+
+// Text with a little bullet aligned to the typical tree node.
+void ImGui::BulletText(ImStr text)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    RenderBulletText(text, window);
+}
 // Text with a little bullet aligned to the typical tree node.
 void ImGui::BulletTextV(const char* fmt, va_list args)
 {
@@ -5773,22 +5862,8 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
         return;
 
     ImGuiState& g = *GImGui;
-    const ImGuiStyle& style = g.Style;
-
-    const char* text_begin = g.TempBuffer;
-    const char* text_end = text_begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    const ImVec2 label_size = CalcTextSize(ImStr(text_begin, text_end), true);
-    const float text_base_offset_y = ImMax(0.0f, window->DC.CurrentLineTextBaseOffset); // Latch before ItemSize changes it
-    const float line_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
-    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize + (label_size.x > 0.0f ? (label_size.x + style.FramePadding.x*2) : 0.0f), ImMax(line_height, label_size.y)));  // Empty text doesn't add padding
-    ItemSize(bb);
-    if (!ItemAdd(bb, NULL))
-        return;
-
-    // Render
-    const float bullet_size = g.FontSize*0.15f;
-    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f), bullet_size, GetColorU32(ImGuiCol_Text));
-    RenderText(bb.Min+ImVec2(g.FontSize + style.FramePadding.x*2, text_base_offset_y), ImStr(text_begin, text_end));
+    const ImStr text(g.TempBuffer,  ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args));
+    RenderBulletText(text, window);
 }
 
 void ImGui::BulletText(const char* fmt, ...)
@@ -5799,7 +5874,31 @@ void ImGui::BulletText(const char* fmt, ...)
     va_end(args);
 }
 
+static inline bool OpenTreeNode(ImStr str_id, ImStr text)
+{
+    if (str_id.Begin == str_id.CalcEnd())
+        str_id = text;
+
+    ImGui::PushID(str_id);
+    const bool opened = ImGui::CollapsingHeader(text, "", false);
+    ImGui::PopID();
+
+    if (opened)
+        ImGui::TreePush(str_id);
+
+    return opened;
+}
+
 // If returning 'true' the node is open and the user is responsible for calling TreePop
+bool ImGui::TreeNode(ImStr str_id, ImStr text)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    return OpenTreeNode(str_id, text);
+}
+
 bool ImGui::TreeNodeV(ImStr str_id, const char* fmt, va_list args)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -5807,18 +5906,9 @@ bool ImGui::TreeNodeV(ImStr str_id, const char* fmt, va_list args)
         return false;
 
     ImGuiState& g = *GImGui;
-    ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    if (str_id.Begin == str_id.CalcEnd())
-        str_id = fmt;
+    const ImStr text(g.TempBuffer, ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args));
 
-    ImGui::PushID(str_id);
-    const bool opened = ImGui::CollapsingHeader(g.TempBuffer, "", false);
-    ImGui::PopID();
-
-    if (opened)
-        ImGui::TreePush(str_id);
-
-    return opened;
+    return OpenTreeNode(str_id, text);
 }
 
 bool ImGui::TreeNode(ImStr str_id, const char* fmt, ...)
@@ -5830,6 +5920,21 @@ bool ImGui::TreeNode(ImStr str_id, const char* fmt, ...)
     return s;
 }
 
+static inline bool OpenTreeNode(const void* ptr_id, ImStr text)
+{
+    if (!ptr_id)
+        ptr_id = text.Begin;
+
+    ImGui::PushID(ptr_id);
+    const bool opened = ImGui::CollapsingHeader(text, "", false);
+    ImGui::PopID();
+
+    if (opened)
+        ImGui::TreePush(ptr_id);
+
+    return opened;
+}
+
 // If returning 'true' the node is open and the user is responsible for calling TreePop
 bool ImGui::TreeNodeV(const void* ptr_id, const char* fmt, va_list args)
 {
@@ -5838,19 +5943,9 @@ bool ImGui::TreeNodeV(const void* ptr_id, const char* fmt, va_list args)
         return false;
 
     ImGuiState& g = *GImGui;
-    ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
+    const ImStr text(g.TempBuffer, ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args));
 
-    if (!ptr_id)
-        ptr_id = fmt;
-
-    ImGui::PushID(ptr_id);
-    const bool opened = ImGui::CollapsingHeader(g.TempBuffer, "", false);
-    ImGui::PopID();
-
-    if (opened)
-        ImGui::TreePush(ptr_id);
-
-    return opened;
+    return OpenTreeNode(ptr_id, text);
 }
 
 bool ImGui::TreeNode(const void* ptr_id, const char* fmt, ...)
