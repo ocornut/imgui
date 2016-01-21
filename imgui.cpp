@@ -776,7 +776,7 @@ void ImGuiIO::AddInputCharactersUTF8(ImStr utf8_chars)
     // We can't pass more wchars than ImGuiIO::InputCharacters[] can hold so don't convert more
     const int wchars_buf_len = sizeof(ImGuiIO::InputCharacters) / sizeof(ImWchar);
     ImWchar wchars[wchars_buf_len];
-    ImTextStrFromUtf8(wchars, wchars_buf_len, utf8_chars.Begin, utf8_chars.CalculateEnd());
+    ImTextStrFromUtf8(wchars, wchars_buf_len, utf8_chars.Begin, utf8_chars.CalcEnd());
     for (int i = 0; i < wchars_buf_len && wchars[i] != 0; i++)
         AddInputCharacter(wchars[i]);
 }
@@ -1573,7 +1573,7 @@ float ImGuiSimpleColumns::CalcExtraSpace(float avail_w)
 
 ImGuiWindow::ImGuiWindow(ImStr name)
 {
-    name.CalculateEnd();
+    name.CalcEnd();
     Name = ImStrdup(name);
     ID = ImHash(name, 0);
     IDStack.push_back(ID);
@@ -2190,7 +2190,7 @@ static ImGuiIniData* AddWindowSettings(ImStr name)
 {
     GImGui->Settings.resize(GImGui->Settings.Size + 1);
     ImGuiIniData* ini = &GImGui->Settings.back();
-    name.CalculateEnd();
+    name.CalcEnd();
     ini->Name = ImStrdup(name);
     ini->ID = ImHash(name, 0);
     ini->Collapsed = false;
@@ -2642,7 +2642,7 @@ void ImGui::RenderText(ImVec2 pos, ImStr text, bool hide_text_after_hash)
     if (hide_text_after_hash)
         text.End = FindTextDisplayEnd(text);
     else
-        text.CalculateEnd();
+        text.CalcEnd();
 
     if (text.Begin != text.End)
     {
@@ -2657,7 +2657,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, ImStr text, float wrap_width)
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    if (text.Begin != text.CalculateEnd())
+    if (text.Begin != text.CalcEnd())
     {
         window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, wrap_width);
         if (g.LogEnabled)
@@ -2781,7 +2781,7 @@ ImVec2 ImGui::CalcTextSize(ImStr text, bool hide_text_after_double_hash, float w
     if (hide_text_after_double_hash)
         text.End = FindTextDisplayEnd(text);      // Hide anything after a '##' string
     else
-        text.CalculateEnd();
+        text.CalcEnd();
 
     ImFont* font = g.Font;
     const float font_size = g.FontSize;
@@ -3393,7 +3393,7 @@ bool ImGui::BeginChild(ImStr str_id, const ImVec2& size_arg, bool border, ImGuiW
     flags |= extra_flags;
 
     char buf[256];
-    ImStr title(buf, ImFormatString(buf, IM_ARRAYSIZE(buf), "%s.%.*s", window->Name, (int)(str_id.CalculateEnd() - str_id.Begin), str_id.Begin));
+    ImStr title(buf, ImFormatString(buf, IM_ARRAYSIZE(buf), "%s.%.*s", window->Name, (int)(str_id.CalcEnd() - str_id.Begin), str_id.Begin));
 
     const float alpha = 1.0f;
     bool ret = ImGui::Begin(title, NULL, size, alpha, flags);
@@ -5095,7 +5095,7 @@ void ImGui::TextUnformatted(ImStr text)
     ImGuiState& g = *GImGui;
     IM_ASSERT(text.Begin != NULL);
     const char* text_begin = text.Begin;
-    const char* text_end = text.CalculateEnd();
+    const char* text_end = text.CalcEnd();
 
     const float wrap_pos_x = window->DC.TextWrapPos;
     const bool wrap_enabled = wrap_pos_x >= 0.0f;
@@ -5792,7 +5792,7 @@ bool ImGui::TreeNodeV(ImStr str_id, const char* fmt, va_list args)
 
     ImGuiState& g = *GImGui;
     ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    if (str_id.Begin == str_id.CalculateEnd())
+    if (str_id.Begin == str_id.CalcEnd())
         str_id = fmt;
 
     ImGui::PushID(str_id);
@@ -5848,7 +5848,7 @@ bool ImGui::TreeNode(const void* ptr_id, const char* fmt, ...)
 
 bool ImGui::TreeNode(ImStr str_label_id)
 {
-    return TreeNode(str_label_id, "%.*s", (int)(str_label_id.CalculateEnd() - str_label_id.Begin), str_label_id.Begin);
+    return TreeNode(str_label_id, "%.*s", (int)(str_label_id.CalcEnd() - str_label_id.Begin), str_label_id.Begin);
 }
 
 void ImGui::SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond)
@@ -9111,17 +9111,17 @@ void ImGui::TreePop()
 
 void ImGui::Value(ImStr prefix, bool b)
 {
-    ImGui::Text("%.*s: %s", (int)(prefix.CalculateEnd() - prefix.Begin), prefix.Begin, (b ? "true" : "false"));
+    ImGui::Text("%.*s: %s", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, (b ? "true" : "false"));
 }
 
 void ImGui::Value(ImStr prefix, int v)
 {
-    ImGui::Text("%.*s: %d", (int)(prefix.CalculateEnd() - prefix.Begin), prefix.Begin, v);
+    ImGui::Text("%.*s: %d", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, v);
 }
 
 void ImGui::Value(ImStr prefix, unsigned int v)
 {
-    ImGui::Text("%.*s: %d", (int)(prefix.CalculateEnd() - prefix.Begin), prefix.Begin, v);
+    ImGui::Text("%.*s: %d", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, v);
 }
 
 void ImGui::Value(ImStr prefix, float v, const char* float_format)
@@ -9134,21 +9134,21 @@ void ImGui::Value(ImStr prefix, float v, const char* float_format)
     }
     else
     {
-        ImGui::Text("%.*s: %.3f", (int)(prefix.CalculateEnd() - prefix.Begin), prefix.Begin, v);
+        ImGui::Text("%.*s: %.3f", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, v);
     }
 }
 
 // FIXME: May want to remove those helpers?
 void ImGui::ValueColor(ImStr prefix, const ImVec4& v)
 {
-    ImGui::Text("%.*s: (%.2f,%.2f,%.2f,%.2f)", (int)(prefix.CalculateEnd() - prefix.Begin), prefix.Begin, v.x, v.y, v.z, v.w);
+    ImGui::Text("%.*s: (%.2f,%.2f,%.2f,%.2f)", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, v.x, v.y, v.z, v.w);
     ImGui::SameLine();
     ImGui::ColorButton(v, true);
 }
 
 void ImGui::ValueColor(ImStr prefix, unsigned int v)
 {
-    ImGui::Text("%.*s: %08X", (int)(prefix.CalculateEnd() - prefix.Begin), prefix.Begin, v);
+    ImGui::Text("%.*s: %08X", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, v);
     ImGui::SameLine();
 
     ImVec4 col;

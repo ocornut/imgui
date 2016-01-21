@@ -92,7 +92,7 @@ struct ImStr
     ImStr(const char* b) { Begin = b; End = NULL; }
     ImStr(const char* b, const char* e) { Begin = b; End = e; }
     ImStr(const char* b, size_t size) { Begin = b; End = b + size; }
-    const char* CalculateEnd() { if (End == NULL) End = Begin + strlen(Begin); return End; }
+    const char* CalcEnd() { if (End == NULL) End = Begin + strlen(Begin); return End; }
 };
 
 // Helpers at bottom of the file:

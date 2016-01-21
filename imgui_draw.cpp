@@ -873,7 +873,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     if ((col >> 24) == 0)
         return;
 
-    const int text_size = text.CalculateEnd() - text.Begin;
+    const int text_size = text.CalcEnd() - text.Begin;
     if (text_size == 0)
         return;
 
@@ -1739,7 +1739,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, ImStr text, float wrap_wi
     float word_width = 0.0f;
     float blank_width = 0.0f;
 
-    const char* text_end = text.CalculateEnd();
+    const char* text_end = text.CalcEnd();
     const char* word_end = text.Begin;
     const char* prev_word_end = NULL;
     bool inside_word = true;
@@ -1823,7 +1823,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
 
 ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, ImStr text, const char** remaining) const
 {
-    const char* text_end = text.CalculateEnd();
+    const char* text_end = text.CalcEnd();
 
     const float line_height = size;
     const float scale = size / FontSize;
@@ -1921,7 +1921,7 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
 
 void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, ImStr text, ImDrawList* draw_list, float wrap_width, bool cpu_fine_clip) const
 {
-    const char* text_end = text.CalculateEnd();
+    const char* text_end = text.CalcEnd();
 
     // Align to be pixel perfect
     pos.x = (float)(int)pos.x + DisplayOffset.x;
