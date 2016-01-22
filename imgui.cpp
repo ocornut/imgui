@@ -508,6 +508,7 @@
  - keyboard: full keyboard navigation and focus.
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
  - input: rework IO system to be able to pass actual ordered/timestamped events.
+ - input: allow to decide and pass explicit double-clicks (e.g. for windows by the CS_DBLCLKS style).
  - input: support track pad style scrolling & slider edit.
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
@@ -5353,7 +5354,7 @@ static bool CloseWindowButton(bool* p_opened)
     }
 
     if (p_opened != NULL && pressed)
-        *p_opened = !*p_opened;
+        *p_opened = false;
 
     return pressed;
 }
