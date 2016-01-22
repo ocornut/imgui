@@ -1592,8 +1592,6 @@ float ImGuiSimpleColumns::CalcExtraSpace(float avail_w)
 
 ImGuiWindow::ImGuiWindow(ImStr name)
 {
-    if (!name.End)
-        name.End = name.Begin + strlen(name.Begin);
     Name = ImStrdup(name.Begin, name.End);
     ID = ImHash(name, 0);
     IDStack.push_back(ID);
@@ -2210,8 +2208,6 @@ static ImGuiIniData* AddWindowSettings(ImStr name)
 {
     GImGui->Settings.resize(GImGui->Settings.Size + 1);
     ImGuiIniData* ini = &GImGui->Settings.back();
-    if (!name.End)
-        name.End = name.Begin + strlen(name.Begin);
     ini->Name = ImStrdup(name.Begin, name.End);
     ini->ID = ImHash(name, 0);
     ini->Collapsed = false;
@@ -2561,24 +2557,11 @@ void ImGui::Render()
 static const char*  FindTextDisplayEnd(ImStr text)
 {
     const char* text_display_end = text.Begin;
+    const char* text_end = text.End ? text.End : (const char*)-1;
 
-    if (text.End == NULL)
-    {
-        // Null-terminated string
-        while (*text_display_end && (text_display_end[0] != '#' || text_display_end[1] != '#'))
-            text_display_end++;
-        return text_display_end;
-    }
-    else
-    {
-        // String slice
-        for (;text_display_end < text.End - 1; text_display_end++)
-        {
-            if (text_display_end[0] == '#' && text_display_end[1] == '#')
-                return text_display_end;
-        }
-        return text.End;
-    }
+    while (text_display_end < text_end && *text_display_end != '\0' && (text_display_end[0] != '#' || text_display_end[1] != '#'))
+        text_display_end++;
+    return text_display_end;
 }
 
 // Pass text data straight to log (without being displayed)
@@ -2608,12 +2591,13 @@ static void LogRenderedText(const ImVec2& ref_pos, ImStr text)
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = ImGui::GetCurrentWindowRead();
 
+    if (!text.End)
+        text.End = FindTextDisplayEnd(text);
+
     const bool log_new_line = ref_pos.y > window->DC.LogLinePosY+1;
     window->DC.LogLinePosY = ref_pos.y;
 
     const char* text_remaining = text.Begin;
-    const char* text_end = text.End;
-    IM_ASSERT(text_end != NULL);
 
     if (g.LogStartDepth > window->DC.TreeDepth)  // Re-adjust padding if we have popped out of our starting depth
         g.LogStartDepth = window->DC.TreeDepth;
@@ -2622,12 +2606,12 @@ static void LogRenderedText(const ImVec2& ref_pos, ImStr text)
     {
         // Split the string. Each new line (after a '\n') is followed by spacing corresponding to the current depth of our log entry.
         const char* line_end = text_remaining;
-        while (line_end < text_end)
+        while (line_end < text.End)
             if (*line_end == '\n')
                 break;
             else
                 line_end++;
-        if (line_end >= text_end)
+        if (line_end >= text.End)
             line_end = NULL;
 
         const bool is_first_line = (text.Begin == text_remaining);
@@ -2635,7 +2619,7 @@ static void LogRenderedText(const ImVec2& ref_pos, ImStr text)
         if (line_end == NULL)
         {
             is_last_line = true;
-            line_end = text_end;
+            line_end = text.End;
         }
         if (line_end != NULL && !(is_last_line && (line_end - text_remaining)==0))
         {
@@ -2663,7 +2647,7 @@ void ImGui::RenderText(ImVec2 pos, ImStr text, bool hide_text_after_hash)
     if (hide_text_after_hash)
         text.End = FindTextDisplayEnd(text);
     else if (!text.End)
-        text.End = text.Begin + strlen(text.Begin);
+        text.End = text.Begin + strlen(text.Begin); // FIXME-OPT
 
     if (text.Begin != text.End)
     {
@@ -2679,9 +2663,10 @@ void ImGui::RenderTextWrapped(ImVec2 pos, ImStr text, float wrap_width)
     ImGuiWindow* window = GetCurrentWindow();
 
     if (!text.End)
-        text.End = text.Begin + strlen(text.Begin);
+        text.End = text.Begin + strlen(text.Begin); // FIXME-OPT
 
-    if (text.Begin != text.End)
+    const int text_len = (int)(text.End - text.Begin);
+    if (text_len > 0)
     {
         window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, wrap_width);
         if (g.LogEnabled)
@@ -2694,7 +2679,8 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, ImSt
 {
     // Hide anything after a '##' string
     text.End = FindTextDisplayEnd(text);
-    if (text.Begin == text.End)
+    const int text_len = (int)(text.End - text.Begin);
+    if (text_len == 0)
         return;
 
     ImGuiState& g = *GImGui;
@@ -2804,8 +2790,6 @@ ImVec2 ImGui::CalcTextSize(ImStr text, bool hide_text_after_double_hash, float w
 
     if (hide_text_after_double_hash)
         text.End = FindTextDisplayEnd(text);      // Hide anything after a '##' string
-    else if (!text.End)
-        text.End = text.Begin + strlen(text.Begin);
 
     ImFont* font = g.Font;
     const float font_size = g.FontSize;
@@ -3422,11 +3406,12 @@ bool ImGui::BeginChild(ImStr str_id, const ImVec2& size_arg, bool border, ImGuiW
         flags |= ImGuiWindowFlags_ShowBorders;
     flags |= extra_flags;
 
-    if (!str_id.End)
-        str_id.End = str_id.Begin + strlen(str_id.Begin);
-
+    ImStr title;
     char buf[256];
-    ImStr title(buf, ImFormatString(buf, IM_ARRAYSIZE(buf), "%s.%.*s", window->Name, (int)(str_id.End - str_id.Begin), str_id.Begin));
+    if (!str_id.End)
+        title = ImStr(buf, ImFormatString(buf, IM_ARRAYSIZE(buf), "%s.%s", window->Name, str_id.Begin));
+    else
+        title = ImStr(buf, ImFormatString(buf, IM_ARRAYSIZE(buf), "%s.%.*s", window->Name, (int)(str_id.End - str_id.Begin), str_id.Begin));
 
     const float alpha = 1.0f;
     bool ret = ImGui::Begin(title, NULL, size, alpha, flags);
@@ -3632,6 +3617,7 @@ bool ImGui::Begin(ImStr name, bool* p_opened, const ImVec2& size_on_first_use, f
 {
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
+    IM_ASSERT(name.Begin != NULL);                  // Window name required
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // Called ImGui::Render() or ImGui::EndFrame() and haven't called ImGui::NewFrame() again yet
 
@@ -4770,7 +4756,7 @@ void ImGui::SetWindowFocus()
 
 void ImGui::SetWindowFocus(ImStr name)
 {
-    if (name.Begin != NULL)
+    if (name.Begin)
     {
         ImGuiWindow* window = FindWindowByName(name);
         if (window)
@@ -5154,7 +5140,7 @@ void ImGui::TextUnformatted(ImStr text)
     ImGuiState& g = *GImGui;
     IM_ASSERT(text.Begin != NULL);
     if (!text.End)
-        text.End = text.Begin + strlen(text.Begin);
+        text.End = text.Begin + strlen(text.Begin); // FIXME-OPT
 
     const float wrap_pos_x = window->DC.TextWrapPos;
     const bool wrap_enabled = wrap_pos_x >= 0.0f;
@@ -5743,7 +5729,7 @@ bool ImGui::CollapsingHeader(ImStr label, ImStr str_id, bool display_frame, bool
         label = str_id;
     const bool label_hide_text_after_double_hash = (label.Begin == str_id.Begin); // Only search and hide text after ## if we have passed label and ID separately, otherwise allow "##" within format string.
     const ImGuiID id = window->GetID(str_id);
-    const ImVec2 label_size = CalcTextSize(label, label_hide_text_after_double_hash); 
+    const ImVec2 label_size = CalcTextSize(label, label_hide_text_after_double_hash);
 
     // We vertically grow up to current line height up the typical widget height.
     const float text_base_offset_y = ImMax(0.0f, window->DC.CurrentLineTextBaseOffset - padding.y); // Latch before ItemSize changes it
@@ -8498,7 +8484,6 @@ bool ImGui::MenuItem(ImStr label, ImStr shortcut, bool selected, bool enabled)
     if (window->SkipItems)
         return false;
 
-    // TODO: take as ImStr
     ImGuiState& g = *GImGui;
     ImVec2 pos = window->DC.CursorPos;
     ImVec2 label_size = CalcTextSize(label, true);

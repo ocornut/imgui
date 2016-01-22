@@ -873,9 +873,8 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     if ((col >> 24) == 0)
         return;
 
-    if (!text.End)
+    if (text.End == NULL)
         text.End = text.Begin + strlen(text.Begin);
-
     if (text.Begin == text.End)
         return;
 
@@ -1741,12 +1740,12 @@ const char* ImFont::CalcWordWrapPositionA(float scale, ImStr text, float wrap_wi
     float word_width = 0.0f;
     float blank_width = 0.0f;
 
-    if (!text.End)
-        text.End = text.Begin + strlen(text.Begin);
-
     const char* word_end = text.Begin;
     const char* prev_word_end = NULL;
     bool inside_word = true;
+
+    if (!text.End)
+        text.End = text.Begin + strlen(text.Begin);
 
     const char* s = text.Begin;
     while (s < text.End)
@@ -1828,7 +1827,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
 ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, ImStr text, const char** remaining) const
 {
     if (!text.End)
-        text.End = text.Begin + strlen(text.Begin);
+        text.End = text.Begin + strlen(text.Begin); // FIXME-OPT: Need to avoid this.
 
     const float line_height = size;
     const float scale = size / FontSize;
