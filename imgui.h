@@ -89,6 +89,7 @@ struct ImStr
 {
     const char* Begin;
     const char* End;
+    ImStr() { Begin = End = NULL; }
     ImStr(const char* b) { Begin = b; End = NULL; }
     ImStr(const char* b, const char* e) { Begin = b; End = e; }
     ImStr(const char* b, size_t size) { Begin = b; End = b + size; }
@@ -270,9 +271,10 @@ namespace ImGui
     IMGUI_API bool          CheckboxFlags(ImStr label, unsigned int* flags, unsigned int flags_value);
     IMGUI_API bool          RadioButton(ImStr label, bool active);
     IMGUI_API bool          RadioButton(ImStr label, int* v, int v_button);
+    IMGUI_API bool          Combo(ImStr label, int* current_item, const ImStr* items, int items_count, int height_in_items = -1);
     IMGUI_API bool          Combo(ImStr label, int* current_item, const char** items, int items_count, int height_in_items = -1);
     IMGUI_API bool          Combo(ImStr label, int* current_item, const char* items_separated_by_zeros, int height_in_items = -1);      // separate items with \0, end item-list with \0\0
-    IMGUI_API bool          Combo(ImStr label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);
+    IMGUI_API bool          Combo(ImStr label, int* current_item, bool (*items_getter)(void* data, int idx, ImStr* out_text), void* data, int items_count, int height_in_items = -1);
     IMGUI_API bool          ColorButton(const ImVec4& col, bool small_height = false, bool outline_border = true);
     IMGUI_API bool          ColorEdit3(ImStr label, float col[3]);
     IMGUI_API bool          ColorEdit4(ImStr label, float col[4], bool show_alpha = true);
@@ -336,8 +338,9 @@ namespace ImGui
     // Widgets: Selectable / Lists
     IMGUI_API bool          Selectable(ImStr label, bool selected = false, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0,0));  // size.x==0.0: use remaining width, size.x>0.0: specify width. size.y==0.0: use label height, size.y>0.0: specify height
     IMGUI_API bool          Selectable(ImStr label, bool* p_selected, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0,0));
+    IMGUI_API bool          ListBox(ImStr label, int* current_item, const ImStr* items, int items_count, int height_in_items = -1);
     IMGUI_API bool          ListBox(ImStr label, int* current_item, const char** items, int items_count, int height_in_items = -1);
-    IMGUI_API bool          ListBox(ImStr label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);
+    IMGUI_API bool          ListBox(ImStr label, int* current_item, bool (*items_getter)(void* data, int idx, ImStr* out_text), void* data, int items_count, int height_in_items = -1);
     IMGUI_API bool          ListBoxHeader(ImStr label, const ImVec2& size = ImVec2(0,0)); // use if you want to reimplement ListBox() will custom data or interactions. make sure to call ListBoxFooter() afterwards.
     IMGUI_API bool          ListBoxHeader(ImStr label, int items_count, int height_in_items = -1); // "
     IMGUI_API void          ListBoxFooter();                                                    // terminate the scrolling region

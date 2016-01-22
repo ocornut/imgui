@@ -8115,7 +8115,15 @@ bool ImGui::InputInt4(ImStr label, int v[4], ImGuiInputTextFlags extra_flags)
     return InputIntN(label, v, 4, extra_flags);
 }
 
-static bool Items_ArrayGetter(void* data, int idx, const char** out_text)
+static bool Items_ImStrArrayGetter(void* data, int idx, ImStr* out_text)
+{
+    const ImStr* items = (ImStr*)data;
+    if (out_text)
+        *out_text = items[idx];
+    return true;
+}
+
+static bool Items_CStrArrayGetter(void* data, int idx, ImStr* out_text)
 {
     const char** items = (const char**)data;
     if (out_text)
@@ -8123,7 +8131,7 @@ static bool Items_ArrayGetter(void* data, int idx, const char** out_text)
     return true;
 }
 
-static bool Items_SingleStringGetter(void* data, int idx, const char** out_text)
+static bool Items_SingleCStrGetter(void* data, int idx, ImStr* out_text)
 {
     // FIXME-OPT: we could pre-compute the indices to fasten this. But only 1 active combo means the waste is limited.
     const char* items_separated_by_zeros = (const char*)data;
@@ -8139,14 +8147,21 @@ static bool Items_SingleStringGetter(void* data, int idx, const char** out_text)
     if (!*p)
         return false;
     if (out_text)
-        *out_text = p;
+        *out_text = ImStr(p);
     return true;
+}
+
+// Combo box helper allowing to pass an array of ImStr.
+bool ImGui::Combo(ImStr label, int* current_item, const ImStr* items, int items_count, int height_in_items)
+{
+    const bool value_changed = Combo(label, current_item, Items_ImStrArrayGetter, (void*)items, items_count, height_in_items);
+    return value_changed;
 }
 
 // Combo box helper allowing to pass an array of strings.
 bool ImGui::Combo(ImStr label, int* current_item, const char** items, int items_count, int height_in_items)
 {
-    const bool value_changed = Combo(label, current_item, Items_ArrayGetter, (void*)items, items_count, height_in_items);
+    const bool value_changed = Combo(label, current_item, Items_CStrArrayGetter, (void*)items, items_count, height_in_items);
     return value_changed;
 }
 
@@ -8160,12 +8175,12 @@ bool ImGui::Combo(ImStr label, int* current_item, const char* items_separated_by
         p += strlen(p) + 1;
         items_count++;
     }
-    bool value_changed = Combo(label, current_item, Items_SingleStringGetter, (void*)items_separated_by_zeros, items_count, height_in_items);
+    bool value_changed = Combo(label, current_item, Items_SingleCStrGetter, (void*)items_separated_by_zeros, items_count, height_in_items);
     return value_changed;
 }
 
 // Combo box function.
-bool ImGui::Combo(ImStr label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+bool ImGui::Combo(ImStr label, int* current_item, bool (*items_getter)(void*, int, ImStr*), void* data, int items_count, int height_in_items)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -8193,7 +8208,7 @@ bool ImGui::Combo(ImStr label, int* current_item, bool (*items_getter)(void*, in
 
     if (*current_item >= 0 && *current_item < items_count)
     {
-        const char* item_text;
+        ImStr item_text;
         if (items_getter(data, *current_item, &item_text))
             RenderTextClipped(frame_bb.Min + style.FramePadding, value_bb.Max, item_text, NULL);
     }
@@ -8244,7 +8259,7 @@ bool ImGui::Combo(ImStr label, int* current_item, bool (*items_getter)(void*, in
             {
                 ImGui::PushID((void*)(intptr_t)i);
                 const bool item_selected = (i == *current_item);
-                const char* item_text;
+                ImStr item_text;
                 if (!items_getter(data, i, &item_text))
                     item_text = "*Unknown item*";
                 if (ImGui::Selectable(item_text, item_selected))
@@ -8412,13 +8427,19 @@ void ImGui::ListBoxFooter()
     ImGui::EndGroup();
 }
 
-bool ImGui::ListBox(ImStr label, int* current_item, const char** items, int items_count, int height_items)
+bool ImGui::ListBox(ImStr label, int* current_item, const ImStr* items, int items_count, int height_items)
 {
-    const bool value_changed = ListBox(label, current_item, Items_ArrayGetter, (void*)items, items_count, height_items);
+    const bool value_changed = ListBox(label, current_item, Items_ImStrArrayGetter, (void*)items, items_count, height_items);
     return value_changed;
 }
 
-bool ImGui::ListBox(ImStr label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+bool ImGui::ListBox(ImStr label, int* current_item, const char** items, int items_count, int height_items)
+{
+    const bool value_changed = ListBox(label, current_item, Items_CStrArrayGetter, (void*)items, items_count, height_items);
+    return value_changed;
+}
+
+bool ImGui::ListBox(ImStr label, int* current_item, bool (*items_getter)(void*, int, ImStr*), void* data, int items_count, int height_in_items)
 {
     if (!ImGui::ListBoxHeader(label, items_count, height_in_items))
         return false;
@@ -8429,7 +8450,7 @@ bool ImGui::ListBox(ImStr label, int* current_item, bool (*items_getter)(void*, 
     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
     {
         const bool item_selected = (i == *current_item);
-        const char* item_text;
+        ImStr item_text;
         if (!items_getter(data, i, &item_text))
             item_text = "*Unknown item*";
 
