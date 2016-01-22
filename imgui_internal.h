@@ -98,11 +98,11 @@ static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |=
 // Helpers: String
 IMGUI_API int           ImStricmp(const char* str1, const char* str2);
 IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, int count);
-IMGUI_API char*         ImStrdup(const char* str, const char* str_end); // str and str_end must not be NULL
-IMGUI_API int           ImStrcpy(char* buf, int buf_size, const char* str, const char* str_end); // str and str_end must not be NULL
+IMGUI_API char*         ImStrdup(const char* str, const char* str_end);
+IMGUI_API char*         ImStrcpy(char* buf, int buf_size, const char* str, const char* str_end); // str_end may be NULL
 IMGUI_API int           ImStrlenW(const ImWchar* str);
 IMGUI_API const ImWchar*ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin); // Find beginning-of-line
-IMGUI_API const char*   ImStrchr(const char* str, const char* str_end, char c); // str and str_end must not be NULL
+IMGUI_API const char*   ImStrchr(const char* str, const char* str_end, char c); // str_end must not be NULL
 IMGUI_API const char*   ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end);
 IMGUI_API int           ImFormatString(char* buf, int buf_size, const char* fmt, ...) IM_PRINTFARGS(3);
 IMGUI_API int           ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args);

@@ -776,7 +776,7 @@ void ImGuiIO::AddInputCharactersUTF8(ImStr utf8_chars)
     // We can't pass more wchars than ImGuiIO::InputCharacters[] can hold so don't convert more
     const int wchars_buf_len = sizeof(ImGuiIO::InputCharacters) / sizeof(ImWchar);
     ImWchar wchars[wchars_buf_len];
-    ImTextStrFromUtf8(wchars, wchars_buf_len, utf8_chars.Begin, utf8_chars.CalcEnd());
+    ImTextStrFromUtf8(wchars, wchars_buf_len, utf8_chars.Begin, utf8_chars.End);
     for (int i = 0; i < wchars_buf_len && wchars[i] != 0; i++)
         AddInputCharacter(wchars[i]);
 }
@@ -821,7 +821,7 @@ int ImStrnicmp(const char* str1, const char* str2, int count)
 
 char* ImStrdup(const char* str, const char* str_end)
 {
-    const int str_size = str_end - str;
+    const int str_size = str_end ? str_end - str : strlen(str);
     char *buff = (char*)ImGui::MemAlloc(str_size + 1);
     IM_ASSERT(buff);
     memcpy(buff, str, str_size);
@@ -829,12 +829,13 @@ char* ImStrdup(const char* str, const char* str_end)
     return buff;
 }
 
-int ImStrcpy(char* buf, int buf_size, const char* str, const char* str_end)
+char* ImStrcpy(char* buf, int buf_size, const char* str, const char* str_end)
 {
-    const int str_size = ImMin(buf_size - 1, str_end - str);
-    memcpy(buf, str, str_size);
-    buf[str_size] = '\0';
-    return str_size;
+    const int str_size = str_end ? str_end - str : strlen(str);
+    const int cpy_size = ImMin(buf_size - 1, str_size);
+    memcpy(buf, str, cpy_size);
+    buf[cpy_size] = '\0';
+    return buf;
 }
 
 int ImStrlenW(const ImWchar* str)
@@ -1591,7 +1592,9 @@ float ImGuiSimpleColumns::CalcExtraSpace(float avail_w)
 
 ImGuiWindow::ImGuiWindow(ImStr name)
 {
-    Name = ImStrdup(name.Begin, name.CalcEnd());
+    if (!name.End)
+        name.End = name.Begin + strlen(name.Begin);
+    Name = ImStrdup(name.Begin, name.End);
     ID = ImHash(name, 0);
     IDStack.push_back(ID);
     MoveID = GetID("#MOVE");
@@ -2207,7 +2210,9 @@ static ImGuiIniData* AddWindowSettings(ImStr name)
 {
     GImGui->Settings.resize(GImGui->Settings.Size + 1);
     ImGuiIniData* ini = &GImGui->Settings.back();
-    ini->Name = ImStrdup(name.Begin, name.CalcEnd());
+    if (!name.End)
+        name.End = name.Begin + strlen(name.Begin);
+    ini->Name = ImStrdup(name.Begin, name.End);
     ini->ID = ImHash(name, 0);
     ini->Collapsed = false;
     ini->Pos = ImVec2(FLT_MAX,FLT_MAX);
@@ -2657,8 +2662,8 @@ void ImGui::RenderText(ImVec2 pos, ImStr text, bool hide_text_after_hash)
     // Hide anything after a '##' string
     if (hide_text_after_hash)
         text.End = FindTextDisplayEnd(text);
-    else
-        text.CalcEnd();
+    else if (!text.End)
+        text.End = text.Begin + strlen(text.Begin);
 
     if (text.Begin != text.End)
     {
@@ -2673,7 +2678,10 @@ void ImGui::RenderTextWrapped(ImVec2 pos, ImStr text, float wrap_width)
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    if (text.Begin != text.CalcEnd())
+    if (!text.End)
+        text.End = text.Begin + strlen(text.Begin);
+
+    if (text.Begin != text.End)
     {
         window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, wrap_width);
         if (g.LogEnabled)
@@ -2796,8 +2804,8 @@ ImVec2 ImGui::CalcTextSize(ImStr text, bool hide_text_after_double_hash, float w
 
     if (hide_text_after_double_hash)
         text.End = FindTextDisplayEnd(text);      // Hide anything after a '##' string
-    else
-        text.CalcEnd();
+    else if (!text.End)
+        text.End = text.Begin + strlen(text.Begin);
 
     ImFont* font = g.Font;
     const float font_size = g.FontSize;
@@ -3137,7 +3145,7 @@ ImVec2 ImGui::CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge, float ou
 void ImGui::SetTooltip(ImStr text)
 {
     ImGuiState& g = *GImGui;
-    ImStrcpy(g.Tooltip, IM_ARRAYSIZE(g.Tooltip), text.Begin, text.CalcEnd());
+    ImStrcpy(g.Tooltip, IM_ARRAYSIZE(g.Tooltip), text.Begin, text.End);
 }
 
 void ImGui::SetTooltipV(const char* fmt, va_list args)
@@ -3414,8 +3422,11 @@ bool ImGui::BeginChild(ImStr str_id, const ImVec2& size_arg, bool border, ImGuiW
         flags |= ImGuiWindowFlags_ShowBorders;
     flags |= extra_flags;
 
+    if (!str_id.End)
+        str_id.End = str_id.Begin + strlen(str_id.Begin);
+
     char buf[256];
-    ImStr title(buf, ImFormatString(buf, IM_ARRAYSIZE(buf), "%s.%.*s", window->Name, (int)(str_id.CalcEnd() - str_id.Begin), str_id.Begin));
+    ImStr title(buf, ImFormatString(buf, IM_ARRAYSIZE(buf), "%s.%.*s", window->Name, (int)(str_id.End - str_id.Begin), str_id.Begin));
 
     const float alpha = 1.0f;
     bool ret = ImGui::Begin(title, NULL, size, alpha, flags);
@@ -5142,18 +5153,18 @@ void ImGui::TextUnformatted(ImStr text)
 
     ImGuiState& g = *GImGui;
     IM_ASSERT(text.Begin != NULL);
-    const char* text_begin = text.Begin;
-    const char* text_end = text.CalcEnd();
+    if (!text.End)
+        text.End = text.Begin + strlen(text.Begin);
 
     const float wrap_pos_x = window->DC.TextWrapPos;
     const bool wrap_enabled = wrap_pos_x >= 0.0f;
-    if (text_end - text_begin > 2000 && !wrap_enabled)
+    if (text.End - text.Begin > 2000 && !wrap_enabled)
     {
         // Long text!
         // Perform manual coarse clipping to optimize for long multi-line text
         // From this point we will only compute the width of lines that are visible. Optimization only available when word-wrapping is disabled.
         // We also don't vertically center the text within the line full height, which is unlikely to matter because we are likely the biggest and only item on the line.
-        const char* line = text_begin;
+        const char* line = text.Begin;
         const float line_height = ImGui::GetTextLineHeight();
         const ImVec2 text_pos = window->DC.CursorPos + ImVec2(0.0f, window->DC.CurrentLineTextBaseOffset);
         const ImRect clip_rect = window->ClipRect;
@@ -5170,7 +5181,7 @@ void ImGui::TextUnformatted(ImStr text)
                 if (lines_skippable > 0)
                 {
                     int lines_skipped = 0;
-                    while (line < text_end && lines_skipped < lines_skippable)
+                    while (line < text.End && lines_skipped < lines_skippable)
                     {
                         const char* line_end = strchr(line, '\n');
                         line = line_end + 1;
@@ -5181,10 +5192,10 @@ void ImGui::TextUnformatted(ImStr text)
             }
 
             // Lines to render
-            if (line < text_end)
+            if (line < text.End)
             {
                 ImRect line_rect(pos, pos + ImVec2(ImGui::GetWindowWidth(), line_height));
-                while (line < text_end)
+                while (line < text.End)
                 {
                     const char* line_end = strchr(line, '\n');
                     if (IsClippedEx(line_rect, NULL, false))
@@ -5194,7 +5205,7 @@ void ImGui::TextUnformatted(ImStr text)
                     text_size.x = ImMax(text_size.x, line_size.x);
                     RenderText(pos, ImStr(line, line_end), false);
                     if (!line_end)
-                        line_end = text_end;
+                        line_end = text.End;
                     line = line_end + 1;
                     line_rect.Min.y += line_height;
                     line_rect.Max.y += line_height;
@@ -5203,11 +5214,11 @@ void ImGui::TextUnformatted(ImStr text)
 
                 // Count remaining lines
                 int lines_skipped = 0;
-                while (line < text_end)
+                while (line < text.End)
                 {
                     const char* line_end = strchr(line, '\n');
                     if (!line_end)
-                        line_end = text_end;
+                        line_end = text.End;
                     line = line_end + 1;
                     lines_skipped++;
                 }
@@ -5224,7 +5235,7 @@ void ImGui::TextUnformatted(ImStr text)
     else
     {
         const float wrap_width = wrap_enabled ? CalcWrapWidthForPos(window->DC.CursorPos, wrap_pos_x) : 0.0f;
-        const ImVec2 text_size = CalcTextSize(ImStr(text_begin, text_end), false, wrap_width);
+        const ImVec2 text_size = CalcTextSize(text, false, wrap_width);
 
         // Account of baseline offset
         ImVec2 text_pos = window->DC.CursorPos;
@@ -5236,7 +5247,7 @@ void ImGui::TextUnformatted(ImStr text)
             return;
 
         // Render (we don't hide text after ## in this end-user function)
-        RenderTextWrapped(bb.Min, ImStr(text_begin, text_end), wrap_width);
+        RenderTextWrapped(bb.Min, text, wrap_width);
     }
 }
 
@@ -5876,7 +5887,9 @@ void ImGui::BulletText(const char* fmt, ...)
 
 static inline bool OpenTreeNode(ImStr str_id, ImStr text)
 {
-    if (str_id.Begin == str_id.CalcEnd())
+    if (!str_id.End)
+        str_id.End = str_id.Begin + strlen(str_id.Begin);
+    if (str_id.Begin == str_id.End)
         str_id = text;
 
     ImGui::PushID(str_id);
@@ -5959,7 +5972,9 @@ bool ImGui::TreeNode(const void* ptr_id, const char* fmt, ...)
 
 bool ImGui::TreeNode(ImStr str_label_id)
 {
-    return TreeNode(str_label_id, "%.*s", (int)(str_label_id.CalcEnd() - str_label_id.Begin), str_label_id.Begin);
+    if (!str_label_id.End)
+        str_label_id.End = str_label_id.Begin + strlen(str_label_id.Begin);
+    return TreeNode(str_label_id, "%.*s", (int)(str_label_id.End - str_label_id.Begin), str_label_id.Begin);
 }
 
 void ImGui::SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond)
@@ -6341,7 +6356,10 @@ bool ImGui::SliderFloat(ImStr label, float* v, float v_min, float v_max, ImStr d
     if (!display_format.Begin)
         display_format.Begin = "%.3f";
 
-    int decimal_precision = ParseFormatPrecision(display_format.Begin, display_format.CalcEnd(), 3);
+    if (!display_format.End)
+        display_format.End = display_format.Begin + strlen(display_format.Begin);
+
+    int decimal_precision = ParseFormatPrecision(display_format.Begin, display_format.End, 3);
 
     // Tabbing or CTRL-clicking on Slider turns it into an input box
     bool start_text_input = false;
@@ -6367,7 +6385,7 @@ bool ImGui::SliderFloat(ImStr label, float* v, float v_min, float v_max, ImStr d
 
     // Write display format to null terminated buffer
     char fmt_buf[64];
-    ImStrcpy(fmt_buf, IM_ARRAYSIZE(fmt_buf), display_format.Begin, display_format.CalcEnd());
+    ImStrcpy(fmt_buf, IM_ARRAYSIZE(fmt_buf), display_format.Begin, display_format.End);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
@@ -6404,7 +6422,11 @@ bool ImGui::VSliderFloat(ImStr label, const ImVec2& size, float* v, float v_min,
 
     if (!display_format.Begin)
         display_format.Begin = "%.3f";
-    int decimal_precision = ParseFormatPrecision(display_format.Begin, display_format.CalcEnd(), 3);
+
+    if (!display_format.End)
+        display_format.End = display_format.Begin + strlen(display_format.Begin);
+
+    int decimal_precision = ParseFormatPrecision(display_format.Begin, display_format.End, 3);
 
     if (hovered && g.IO.MouseClicked[0])
     {
@@ -6417,7 +6439,7 @@ bool ImGui::VSliderFloat(ImStr label, const ImVec2& size, float* v, float v_min,
 
     // Write display format to null terminated buffer
     char fmt_buf[64];
-    ImStrcpy(fmt_buf, IM_ARRAYSIZE(fmt_buf), display_format.Begin, display_format.CalcEnd());
+    ImStrcpy(fmt_buf, IM_ARRAYSIZE(fmt_buf), display_format.Begin, display_format.End);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     // For the vertical slider we allow centered text to overlap the frame padding
@@ -6651,7 +6673,10 @@ bool ImGui::DragFloat(ImStr label, float* v, float v_speed, float v_min, float v
     if (!display_format.Begin)
         display_format.Begin = "%.3f";
 
-    int decimal_precision = ParseFormatPrecision(display_format.Begin, display_format.CalcEnd(), 3);
+    if (!display_format.End)
+        display_format.End = display_format.Begin + strlen(display_format.Begin);
+
+    int decimal_precision = ParseFormatPrecision(display_format.Begin, display_format.End, 3);
 
     // Tabbing or CTRL-clicking on Drag turns it into an input box
     bool start_text_input = false;
@@ -6676,7 +6701,7 @@ bool ImGui::DragFloat(ImStr label, float* v, float v_speed, float v_min, float v
 
     // Write display format to null terminated buffer
     char fmt_buf[64];
-    ImStrcpy(fmt_buf, IM_ARRAYSIZE(fmt_buf), display_format.Begin, display_format.CalcEnd());
+    ImStrcpy(fmt_buf, IM_ARRAYSIZE(fmt_buf), display_format.Begin, display_format.End);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
@@ -7965,7 +7990,7 @@ bool ImGui::InputScalarEx(ImStr label, ImGuiDataType data_type, void* data_ptr, 
 
     // Write display format to null terminated buffer
     char fmt_buf[64];
-    ImStrcpy(fmt_buf, IM_ARRAYSIZE(fmt_buf), scalar_format.Begin, scalar_format.CalcEnd());
+    ImStrcpy(fmt_buf, IM_ARRAYSIZE(fmt_buf), scalar_format.Begin, scalar_format.End);
 
     char buf[64];
     DataTypeFormatString(data_type, data_ptr, fmt_buf, buf, IM_ARRAYSIZE(buf));
@@ -9259,17 +9284,20 @@ void ImGui::TreePop()
 
 void ImGui::Value(ImStr prefix, bool b)
 {
-    ImGui::Text("%.*s: %s", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, (b ? "true" : "false"));
+    const int size = prefix.End ? (int)(prefix.End - prefix.Begin) : strlen(prefix.Begin);
+    ImGui::Text("%.*s: %s", size, prefix.Begin, (b ? "true" : "false"));
 }
 
 void ImGui::Value(ImStr prefix, int v)
 {
-    ImGui::Text("%.*s: %d", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, v);
+    const int size = prefix.End ? (int)(prefix.End - prefix.Begin) : strlen(prefix.Begin);
+    ImGui::Text("%.*s: %d", size, prefix.Begin, v);
 }
 
 void ImGui::Value(ImStr prefix, unsigned int v)
 {
-    ImGui::Text("%.*s: %d", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, v);
+    const int size = prefix.End ? (int)(prefix.End - prefix.Begin) : strlen(prefix.Begin);
+    ImGui::Text("%.*s: %d", size, prefix.Begin, v);
 }
 
 void ImGui::Value(ImStr prefix, float v, ImStr float_format)
@@ -9277,26 +9305,30 @@ void ImGui::Value(ImStr prefix, float v, ImStr float_format)
     if (float_format.Begin)
     {
         char fmt[64];
-        ImFormatString(fmt, IM_ARRAYSIZE(fmt), "%%s: %.*s", (int)(float_format.CalcEnd() - float_format.Begin), float_format.Begin);
+        const int size = float_format.End ? (int)(float_format.End - float_format.Begin) : strlen(float_format.Begin);
+        ImFormatString(fmt, IM_ARRAYSIZE(fmt), "%%s: %.*s", size, float_format.Begin);
         ImGui::Text(fmt, prefix, v);
     }
     else
     {
-        ImGui::Text("%.*s: %.3f", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, v);
+        const int size = prefix.End ? (int)(prefix.End - prefix.Begin) : strlen(prefix.Begin);
+        ImGui::Text("%.*s: %.3f", size, prefix.Begin, v);
     }
 }
 
 // FIXME: May want to remove those helpers?
 void ImGui::ValueColor(ImStr prefix, const ImVec4& v)
 {
-    ImGui::Text("%.*s: (%.2f,%.2f,%.2f,%.2f)", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, v.x, v.y, v.z, v.w);
+    const int size = prefix.End ? (int)(prefix.End - prefix.Begin) : strlen(prefix.Begin);
+    ImGui::Text("%.*s: (%.2f,%.2f,%.2f,%.2f)", size, prefix.Begin, v.x, v.y, v.z, v.w);
     ImGui::SameLine();
     ImGui::ColorButton(v, true);
 }
 
 void ImGui::ValueColor(ImStr prefix, unsigned int v)
 {
-    ImGui::Text("%.*s: %08X", (int)(prefix.CalcEnd() - prefix.Begin), prefix.Begin, v);
+    const int size = prefix.End ? (int)(prefix.End - prefix.Begin) : strlen(prefix.Begin);
+    ImGui::Text("%.*s: %08X", size, prefix.Begin, v);
     ImGui::SameLine();
 
     ImVec4 col;
