@@ -29,7 +29,7 @@
 #define IM_ASSERT(_EXPR)    assert(_EXPR)
 #endif
 
-// Some compilers support applying printf-style warnings to user functions
+// Some compilers support applying printf-style warnings to user functions.
 #if defined(__clang__) || defined(__GNUC__)
 #define IM_PRINTFARGS(FMT) __attribute__((format(printf, FMT, (FMT+1))))
 #else
@@ -37,39 +37,50 @@
 #endif
 
 // Forward declarations
-struct ImDrawCmd;
-struct ImDrawList;
-struct ImDrawData;
-struct ImFont;
-struct ImFontAtlas;
-struct ImColor;
-struct ImGuiIO;
-struct ImGuiStorage;
-struct ImGuiStyle;
+struct ImDrawChannel;               // Temporary storage for outputting drawing commands out of order, used by ImDrawList::ChannelsSplit()
+struct ImDrawCmd;                   // A single draw command within a parent ImDrawList (generally maps to 1 GPU draw call)
+struct ImDrawData;                  // All draw command lists required to render the frame
+struct ImDrawList;                  // A single draw command list (generally one per window)
+struct ImDrawVert;                  // A single vertex (20 bytes by default, override layout with IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT)
+struct ImFont;                      // Runtime data for a single font within a parent ImFontAtlas
+struct ImFontAtlas;                 // Runtime data for multiple fonts, bake multiple fonts into a single texture, TTF font loader
+struct ImFontConfig;                // Configuration data when adding a font or merging fonts
+struct ImColor;                     // Helper functions to create a color that can be converted to either u32 or float4
+struct ImGuiIO;                     // Main configuration and I/O between your application and ImGui
+struct ImGuiOnceUponAFrame;         // Simple helper for running a block of code not more than once a frame, used by IMGUI_ONCE_UPON_A_FRAME macro
+struct ImGuiStorage;                // Simple custom key value storage
+struct ImGuiStyle;                  // Runtime data for styling/colors
+struct ImGuiTextFilter;             // Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
+struct ImGuiTextBuffer;             // Text buffer for logging/accumulating text
+struct ImGuiTextEditCallbackData;   // Shared state of ImGui::InputText() when using custom callbacks (advanced)
+struct ImGuiListClipper;            // Helper to manually clip large list of items
 
+// Enumerations (declared as int for compatibility and to not pollute the top of this file)
 typedef unsigned int ImU32;
 typedef unsigned short ImWchar;     // character for keyboard input/display
 typedef void* ImTextureID;          // user data to refer to a texture (e.g. store your texture handle/id)
 typedef ImU32 ImGuiID;              // unique ID used by widgets (typically hashed from a stack of string)
-typedef int ImGuiCol;               // enum ImGuiCol_
-typedef int ImGuiStyleVar;          // enum ImGuiStyleVar_
-typedef int ImGuiKey;               // enum ImGuiKey_
-typedef int ImGuiAlign;             // enum ImGuiAlign_
-typedef int ImGuiColorEditMode;     // enum ImGuiColorEditMode_
-typedef int ImGuiMouseCursor;       // enum ImGuiMouseCursor_
-typedef int ImGuiWindowFlags;       // enum ImGuiWindowFlags_
-typedef int ImGuiSetCond;           // enum ImGuiSetCond_
-typedef int ImGuiInputTextFlags;    // enum ImGuiInputTextFlags_
-typedef int ImGuiSelectableFlags;   // enum ImGuiSelectableFlags_
-struct ImGuiTextEditCallbackData;   // for advanced uses of InputText()
+typedef int ImGuiCol;               // a color identifier for styling       // enum ImGuiCol_
+typedef int ImGuiStyleVar;          // a variable identifier for styling    // enum ImGuiStyleVar_
+typedef int ImGuiKey;               // a key identifier (ImGui-side enum)   // enum ImGuiKey_
+typedef int ImGuiAlign;             // alignment                            // enum ImGuiAlign_
+typedef int ImGuiColorEditMode;     // color edit mode for ColorEdit*()     // enum ImGuiColorEditMode_
+typedef int ImGuiMouseCursor;       // a mouse cursor identifier            // enum ImGuiMouseCursor_
+typedef int ImGuiWindowFlags;       // window flags for Begin*()            // enum ImGuiWindowFlags_
+typedef int ImGuiSetCond;           // condition flags for Set*()           // enum ImGuiSetCond_
+typedef int ImGuiInputTextFlags;    // flags for InputText*()               // enum ImGuiInputTextFlags_
+typedef int ImGuiSelectableFlags;   // flags for Selectable()               // enum ImGuiSelectableFlags_
 typedef int (*ImGuiTextEditCallback)(ImGuiTextEditCallbackData *data);
+
+// Others helpers at bottom of the file:
+// class ImVector<>                 // Lightweight std::vector like class.
+// IMGUI_ONCE_UPON_A_FRAME          // Execute a block of code once per frame only (convenient for creating UI within deep-nested code that runs multiple times)
 
 struct ImVec2
 {
     float x, y;
     ImVec2() { x = y = 0.0f; }
     ImVec2(float _x, float _y) { x = _x; y = _y; }
-
 #ifdef IM_VEC2_CLASS_EXTRA          // Define constructor and implicit cast operators in imconfig.h to convert back<>forth from your math types and ImVec2.
     IM_VEC2_CLASS_EXTRA
 #endif
@@ -80,24 +91,10 @@ struct ImVec4
     float x, y, z, w;
     ImVec4() { x = y = z = w = 0.0f; }
     ImVec4(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
-
 #ifdef IM_VEC4_CLASS_EXTRA          // Define constructor and implicit cast operators in imconfig.h to convert back<>forth from your math types and ImVec4.
     IM_VEC4_CLASS_EXTRA
 #endif
 };
-
-// Helpers at bottom of the file:
-// - class ImVector<>                   // Lightweight std::vector like class.
-// - IMGUI_ONCE_UPON_A_FRAME            // Execute a block of code once per frame only (convenient for creating UI within deep-nested code that runs multiple times)
-// - struct ImGuiTextFilter             // Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
-// - struct ImGuiTextBuffer             // Text buffer for logging/accumulating text
-// - struct ImGuiStorage                // Custom key value storage (if you need to alter open/close states manually)
-// - struct ImGuiTextEditCallbackData   // Shared state of ImGui::InputText() when using custom callbacks
-// - struct ImGuiListClipper            // Helper to manually clip large list of items.
-// - struct ImColor                     // Helper functions to created packed 32-bit RGBA color values
-// - struct ImDrawList                  // Draw command list
-// - struct ImFontAtlas                 // Bake multiple fonts into a single texture, TTF font loader, bake glyphs into bitmap
-// - struct ImFont                      // Single font
 
 // ImGui end-user API
 // In a namespace so that user can add extra functions in a separate file (e.g. Value() helpers for your vector or common types)
@@ -838,7 +835,7 @@ public:
     inline iterator             insert(const_iterator it, const value_type& v)  { IM_ASSERT(it >= Data && it <= Data+Size); const ptrdiff_t off = it - Data; if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); if (off < (int)Size) memmove(Data + off + 1, Data + off, ((size_t)Size - (size_t)off) * sizeof(value_type)); Data[off] = v; Size++; return Data + off; }
 };
 
-// Helper: execute a block of code once a frame only
+// Helper: execute a block of code at maximum once a frame
 // Convenient if you want to quickly create an UI within deep-nested code that runs multiple times every frame.
 // Usage:
 //   IMGUI_ONCE_UPON_A_FRAME
@@ -920,30 +917,30 @@ struct ImGuiStorage
         Pair(ImGuiID _key, float _val_f) { key = _key; val_f = _val_f; }
         Pair(ImGuiID _key, void* _val_p) { key = _key; val_p = _val_p; }
     };
-    ImVector<Pair>    Data;
+    ImVector<Pair>      Data;
 
     // - Get***() functions find pair, never add/allocate. Pairs are sorted so a query is O(log N)
     // - Set***() functions find pair, insertion on demand if missing.
     // - Sorted insertion is costly but should amortize. A typical frame shouldn't need to insert any new pair.
-    IMGUI_API void    Clear();
-    IMGUI_API int     GetInt(ImGuiID key, int default_val = 0) const;
-    IMGUI_API void    SetInt(ImGuiID key, int val);
-    IMGUI_API float   GetFloat(ImGuiID key, float default_val = 0.0f) const;
-    IMGUI_API void    SetFloat(ImGuiID key, float val);
-    IMGUI_API void*   GetVoidPtr(ImGuiID key) const; // default_val is NULL
-    IMGUI_API void    SetVoidPtr(ImGuiID key, void* val);
+    IMGUI_API void      Clear();
+    IMGUI_API int       GetInt(ImGuiID key, int default_val = 0) const;
+    IMGUI_API void      SetInt(ImGuiID key, int val);
+    IMGUI_API float     GetFloat(ImGuiID key, float default_val = 0.0f) const;
+    IMGUI_API void      SetFloat(ImGuiID key, float val);
+    IMGUI_API void*     GetVoidPtr(ImGuiID key) const; // default_val is NULL
+    IMGUI_API void      SetVoidPtr(ImGuiID key, void* val);
 
     // - Get***Ref() functions finds pair, insert on demand if missing, return pointer. Useful if you intend to do Get+Set.
     // - References are only valid until a new value is added to the storage. Calling a Set***() function or a Get***Ref() function invalidates the pointer.
     // - A typical use case where this is convenient:
     //      float* pvar = ImGui::GetFloatRef(key); ImGui::SliderFloat("var", pvar, 0, 100.0f); some_var += *pvar;
     // - You can also use this to quickly create temporary editable values during a session of using Edit&Continue, without restarting your application.
-    IMGUI_API int*    GetIntRef(ImGuiID key, int default_val = 0);
-    IMGUI_API float*  GetFloatRef(ImGuiID key, float default_val = 0);
-    IMGUI_API void**  GetVoidPtrRef(ImGuiID key, void* default_val = NULL);
+    IMGUI_API int*      GetIntRef(ImGuiID key, int default_val = 0);
+    IMGUI_API float*    GetFloatRef(ImGuiID key, float default_val = 0);
+    IMGUI_API void**    GetVoidPtrRef(ImGuiID key, void* default_val = NULL);
 
     // Use on your own storage if you know only integer are being stored (open/close all tree nodes)
-    IMGUI_API void    SetAllInt(int val);
+    IMGUI_API void      SetAllInt(int val);
 };
 
 // Shared state of InputText(), passed to callback when a ImGuiInputTextFlags_Callback* flag is used.
@@ -1037,13 +1034,12 @@ struct ImGuiListClipper
 
 // Draw callbacks for advanced uses.
 // NB- You most likely do NOT need to use draw callbacks just to create your own widget or customized UI rendering (you can poke into the draw list for that)
-// Draw callback are useful for example if you want to render a complex 3D scene inside a UI element.
+// Draw callback may be useful for example, if you want to render a complex 3D scene inside a UI element, change your GPU render state, etc.
 // The expected behavior from your rendering loop is:
 //   if (cmd.UserCallback != NULL)
 //       cmd.UserCallback(parent_list, cmd);
 //   else
 //       RenderTriangles()
-// It is up to you to decide if your rendering loop or the callback should be responsible for backup/restoring rendering state.
 typedef void (*ImDrawCallback)(const ImDrawList* parent_list, const ImDrawCmd* cmd);
 
 // Typically, 1 command = 1 gpu draw call (unless command is a callback)
@@ -1072,9 +1068,9 @@ struct ImDrawVert
     ImU32   col;
 };
 #else
-// You can change the vertex format layout by defining IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT in imconfig.h
+// You can override the vertex format layout by defining IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT in imconfig.h
 // The code expect ImVec2 pos (8 bytes), ImVec2 uv (8 bytes), ImU32 col (4 bytes), but you can re-order them or add other fields as needed to simplify integration in your engine.
-// The type has to be described by the #define (you can either declare the struct or use a typedef)
+// The type has to be described within the macro (you can either declare the struct or use a typedef)
 IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
 #endif
 
@@ -1092,7 +1088,6 @@ struct ImDrawChannel
 // If you want to add custom rendering within a window, you can use ImGui::GetWindowDrawList() to access the current draw list and add your own primitives.
 // You can interleave normal ImGui:: calls and adding primitives to the current draw list.
 // All positions are in screen coordinates (0,0=top-left, 1 pixel per unit). Primitives are always added to the list and not culled (culling is done at render time and at a higher-level by ImGui:: functions).
-// Note that this only gives you access to rendering polygons. If your intent is to create custom widgets and the publicly exposed functions/data aren't sufficient, you can add code in imgui_user.inl
 struct ImDrawList
 {
     // This is what you have to render
@@ -1114,7 +1109,7 @@ struct ImDrawList
 
     ImDrawList() { _OwnerName = NULL; Clear(); }
     ~ImDrawList() { ClearFreeMemory(); }
-    IMGUI_API void  PushClipRect(const ImVec4& clip_rect);          // Scissoring. The values are x1, y1, x2, y2. Only apply to rendering. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
+    IMGUI_API void  PushClipRect(const ImVec4& clip_rect);  // Scissoring. Note that the values are (x1,y1,x2,y2) and NOT (x1,y1,w,h). This is passed down to your render function but not used for CPU-side clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
     IMGUI_API void  PushClipRectFullScreen();
     IMGUI_API void  PopClipRect();
     IMGUI_API void  PushTextureID(const ImTextureID& texture_id);
