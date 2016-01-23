@@ -18,17 +18,18 @@
 
 #define IMGUI_VERSION       "1.48 WIP"
 
+// Define attributes of all API symbols declarations, e.g. for DLL under Windows.
+#ifndef IMGUI_API
+#define IMGUI_API
+#endif
+
 // Define assertion handler.
 #ifndef IM_ASSERT
 #include <assert.h>
 #define IM_ASSERT(_EXPR)    assert(_EXPR)
 #endif
 
-// Define attributes of all API symbols declarations, e.g. for DLL under Windows.
-#ifndef IMGUI_API
-#define IMGUI_API
-#endif
-
+// Some compilers support applying printf-style warnings to user functions
 #if defined(__clang__) || defined(__GNUC__)
 #define IM_PRINTFARGS(FMT) __attribute__((format(printf, FMT, (FMT+1))))
 #else
@@ -1027,6 +1028,12 @@ struct ImGuiListClipper
 // Draw List
 // Hold a series of drawing commands. The user provides a renderer for ImDrawData which essentially contains an array of ImDrawList.
 //-----------------------------------------------------------------------------
+
+// Helpers macros to generate 32-bits encoded colors
+#define IM_COL32(R,G,B,A)    (((ImU32)(A)<<24) | ((ImU32)(B)<<16) | ((ImU32)(G)<<8) | ((ImU32)(R)))
+#define IM_COL32_WHITE       (0xFFFFFFFF)
+#define IM_COL32_BLACK       (0xFF000000)
+#define IM_COL32_BLACK_TRANS (0x00000000)    // Transparent black
 
 // Draw callbacks for advanced uses.
 // NB- You most likely do NOT need to use draw callbacks just to create your own widget or customized UI rendering (you can poke into the draw list for that)
