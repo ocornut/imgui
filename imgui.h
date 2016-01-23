@@ -235,7 +235,8 @@ namespace ImGui
     IMGUI_API void          PushID(const void* ptr_id);
     IMGUI_API void          PushID(int int_id);
     IMGUI_API void          PopID();
-    IMGUI_API ImGuiID       GetID(ImStr str_id);                                          // calculate unique ID (hash of whole ID stack + given parameter). useful if you want to query into ImGuiStorage yourself. otherwise rarely needed
+    IMGUI_API ImGuiID       GetID(const char* str_id, const char* str_id_end);                                          // calculate unique ID (hash of whole ID stack + given parameter). useful if you want to query into ImGuiStorage yourself. otherwise rarely needed
+    IMGUI_API ImGuiID       GetID(ImStr str_id);
     IMGUI_API ImGuiID       GetID(const void* ptr_id);
 
     // Widgets
@@ -273,6 +274,7 @@ namespace ImGui
     IMGUI_API bool          Combo(ImStr label, int* current_item, const ImStr* items, int items_count, int height_in_items = -1);
     IMGUI_API bool          Combo(ImStr label, int* current_item, const char** items, int items_count, int height_in_items = -1);
     IMGUI_API bool          Combo(ImStr label, int* current_item, const char* items_separated_by_zeros, int height_in_items = -1);      // separate items with \0, end item-list with \0\0
+    IMGUI_API bool          Combo(ImStr label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);
     IMGUI_API bool          Combo(ImStr label, int* current_item, bool (*items_getter)(void* data, int idx, ImStr* out_text), void* data, int items_count, int height_in_items = -1);
     IMGUI_API bool          ColorButton(const ImVec4& col, bool small_height = false, bool outline_border = true);
     IMGUI_API bool          ColorEdit3(ImStr label, float col[3]);
@@ -339,6 +341,7 @@ namespace ImGui
     IMGUI_API bool          Selectable(ImStr label, bool* p_selected, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0,0));
     IMGUI_API bool          ListBox(ImStr label, int* current_item, const ImStr* items, int items_count, int height_in_items = -1);
     IMGUI_API bool          ListBox(ImStr label, int* current_item, const char** items, int items_count, int height_in_items = -1);
+    IMGUI_API bool          ListBox(ImStr label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);
     IMGUI_API bool          ListBox(ImStr label, int* current_item, bool (*items_getter)(void* data, int idx, ImStr* out_text), void* data, int items_count, int height_in_items = -1);
     IMGUI_API bool          ListBoxHeader(ImStr label, const ImVec2& size = ImVec2(0,0)); // use if you want to reimplement ListBox() will custom data or interactions. make sure to call ListBoxFooter() afterwards.
     IMGUI_API bool          ListBoxHeader(ImStr label, int items_count, int height_in_items = -1); // "
@@ -1144,6 +1147,7 @@ struct ImDrawList
     IMGUI_API void  AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
     IMGUI_API void  AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12);
     IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, ImStr text);
+    IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, const char* text, const char* text_end);
     IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, ImStr text, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
     IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL); // Deprecated for ImStr version
     IMGUI_API void  AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0 = ImVec2(0,0), const ImVec2& uv1 = ImVec2(1,1), ImU32 col = 0xFFFFFFFF);

@@ -8162,6 +8162,26 @@ static bool Items_SingleCStrGetter(void* data, int idx, ImStr* out_text)
     return true;
 }
 
+struct Items_CStrArrayClosureState
+{
+    void* data;
+    bool (*items_getter)(void*, int, const char**);
+};
+
+static bool Items_CStrArrayClosureGetter(void* data, int idx, ImStr* out_text)
+{
+    Items_CStrArrayClosureState* state = (Items_CStrArrayClosureState*)data;
+    const char** items = (const char**)state->data;
+    return (*state->items_getter)(items, idx, &out_text->Begin);
+}
+
+// Combo box function compatible with old callback signature
+bool ImGui::Combo(ImStr label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+{
+    Items_CStrArrayClosureState state = { data, items_getter };
+    return Combo(label, current_item, Items_CStrArrayClosureGetter, &state, items_count, height_in_items);
+}
+
 // Combo box helper allowing to pass an array of ImStr.
 bool ImGui::Combo(ImStr label, int* current_item, const ImStr* items, int items_count, int height_in_items)
 {
@@ -8448,6 +8468,12 @@ bool ImGui::ListBox(ImStr label, int* current_item, const char** items, int item
 {
     const bool value_changed = ListBox(label, current_item, Items_CStrArrayGetter, (void*)items, items_count, height_items);
     return value_changed;
+}
+
+bool ImGui::ListBox(ImStr label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+{
+    Items_CStrArrayClosureState state = { data, items_getter };
+    return ListBox(label, current_item, Items_CStrArrayClosureGetter, &state, items_count, height_in_items);
 }
 
 bool ImGui::ListBox(ImStr label, int* current_item, bool (*items_getter)(void*, int, ImStr*), void* data, int items_count, int height_in_items)
