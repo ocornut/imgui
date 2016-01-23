@@ -8521,7 +8521,6 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
         edit_mode = g.ColorEditModeStorage.GetInt(id, 0) % 3;
 
     float f[4] = { col[0], col[1], col[2], col[3] };
-
     if (edit_mode == ImGuiColorEditMode_HSV)
         ImGui::ColorConvertRGBtoHSV(f[0], f[1], f[2], f[0], f[1], f[2]);
 
@@ -8610,14 +8609,14 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
         const char* button_titles[3] = { "RGB", "HSV", "HEX" };
         if (ButtonEx(button_titles[edit_mode], ImVec2(0,0), ImGuiButtonFlags_DontClosePopups))
             g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3); // Don't set local copy of 'edit_mode' right away!
-        ImGui::SameLine();
-    }
-    else
-    {
-        ImGui::SameLine(0, style.ItemInnerSpacing.x);
     }
 
-    ImGui::TextUnformatted(label, FindTextDisplayEnd(label));
+    const char* label_display_end = FindTextDisplayEnd(label);
+    if (label != label_display_end)
+    {
+        ImGui::SameLine(0, (window->DC.ColorEditMode == ImGuiColorEditMode_UserSelectShowButton) ? -1.0f : style.ItemInnerSpacing.x);
+        ImGui::TextUnformatted(label, label_display_end);
+    }
 
     // Convert back
     for (int n = 0; n < 4; n++)
