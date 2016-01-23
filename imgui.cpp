@@ -8580,18 +8580,19 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
             else
                 ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X", i[0], i[1], i[2]);
             ImGui::PushItemWidth(w_slider_all - style.ItemInnerSpacing.x);
-            value_changed |= ImGui::InputText("##Text", buf, IM_ARRAYSIZE(buf), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
+            if (ImGui::InputText("##Text", buf, IM_ARRAYSIZE(buf), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase))
+            {
+                value_changed |= true;
+                char* p = buf;
+                while (*p == '#' || ImCharIsSpace(*p))
+                    p++;
+                i[0] = i[1] = i[2] = i[3] = 0;
+                if (alpha)
+                    sscanf(p, "%02X%02X%02X%02X", (unsigned int*)&i[0], (unsigned int*)&i[1], (unsigned int*)&i[2], (unsigned int*)&i[3]); // Treat at unsigned (%X is unsigned)
+                else
+                    sscanf(p, "%02X%02X%02X", (unsigned int*)&i[0], (unsigned int*)&i[1], (unsigned int*)&i[2]);
+            }
             ImGui::PopItemWidth();
-            char* p = buf;
-            while (*p == '#' || ImCharIsSpace(*p))
-                p++;
-
-            // Treat at unsigned (%X is unsigned)
-            i[0] = i[1] = i[2] = i[3] = 0;
-            if (alpha)
-                sscanf(p, "%02X%02X%02X%02X", (unsigned int*)&i[0], (unsigned int*)&i[1], (unsigned int*)&i[2], (unsigned int*)&i[3]);
-            else
-                sscanf(p, "%02X%02X%02X", (unsigned int*)&i[0], (unsigned int*)&i[1], (unsigned int*)&i[2]);
         }
         break;
     }
