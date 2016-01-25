@@ -141,8 +141,8 @@ static inline ImVec2 ImRound(ImVec2 v)                                          
 // Defining a custom placement new() with a dummy parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
 #ifdef IMGUI_DEFINE_PLACEMENT_NEW
 struct ImPlacementNewDummy {};
-static inline void* operator new(size_t, ImPlacementNewDummy, void* ptr) { return ptr; }
-static inline void operator delete(void*, ImPlacementNewDummy, void*) {}
+inline void* operator new(size_t, ImPlacementNewDummy, void* ptr) { return ptr; }
+inline void operator delete(void*, ImPlacementNewDummy, void*) {}
 #define IM_PLACEMENT_NEW(_PTR)  new(ImPlacementNewDummy() ,_PTR)
 #endif
 
