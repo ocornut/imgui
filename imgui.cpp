@@ -529,13 +529,13 @@
 
 #include "imgui.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_PLACEMENT_NEW
 #include "imgui_internal.h"
 
 #include <ctype.h>      // toupper, isprint
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, cosf, sinf, floorf, ceilf
 #include <stdlib.h>     // NULL, malloc, free, qsort, atoi
 #include <stdio.h>      // vsnprintf, sscanf, printf
-#include <new>          // new (ptr)
 #if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
 #include <stddef.h>     // intptr_t
 #else
@@ -1555,7 +1555,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     FontWindowScale = 1.0f;
 
     DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
-    new(DrawList) ImDrawList();
+    IM_PLACEMENT_NEW(DrawList) ImDrawList();
     DrawList->_OwnerName = Name;
     RootWindow = NULL;
     RootNonPopupWindow = NULL;
@@ -1829,7 +1829,7 @@ size_t ImGui::GetInternalStateSize()
 void ImGui::SetInternalState(void* state, bool construct)
 {
     if (construct)
-        new (state) ImGuiState();
+        IM_PLACEMENT_NEW(state) ImGuiState();
     GImGui = (ImGuiState*)state;
 }
 
@@ -1874,7 +1874,7 @@ void ImGui::NewFrame()
     {
         // Initialize on first frame
         g.LogClipboard = (ImGuiTextBuffer*)ImGui::MemAlloc(sizeof(ImGuiTextBuffer));
-        new(g.LogClipboard) ImGuiTextBuffer();
+        IM_PLACEMENT_NEW(g.LogClipboard) ImGuiTextBuffer();
 
         IM_ASSERT(g.Settings.empty());
         LoadSettings();
@@ -3461,7 +3461,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 
     // Create window the first time
     ImGuiWindow* window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
-    new(window) ImGuiWindow(name);
+    IM_PLACEMENT_NEW(window) ImGuiWindow(name);
     window->Flags = flags;
 
     if (flags & ImGuiWindowFlags_NoSavedSettings)

@@ -14,10 +14,10 @@
 
 #include "imgui.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_PLACEMENT_NEW
 #include "imgui_internal.h"
 
 #include <stdio.h>      // vsnprintf, sscanf, printf
-#include <new>          // new (ptr)
 #if !defined(alloca) && !defined(__FreeBSD__)
 #ifdef _WIN32
 #include <malloc.h>     // alloca
@@ -266,7 +266,7 @@ void ImDrawList::ChannelsSplit(int channels_count)
     {
         if (i >= old_channels_count)
         {
-            new(&_Channels[i]) ImDrawChannel();
+            IM_PLACEMENT_NEW(&_Channels[i]) ImDrawChannel();
         }
         else
         {
@@ -1097,7 +1097,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     if (!font_cfg->MergeMode)
     {
         ImFont* font = (ImFont*)ImGui::MemAlloc(sizeof(ImFont));
-        new (font) ImFont();
+        IM_PLACEMENT_NEW(font) ImFont();
         Fonts.push_back(font);
     }
 

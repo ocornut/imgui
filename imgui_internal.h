@@ -137,6 +137,15 @@ static inline float  ImLengthSqr(const ImVec4& lhs)                             
 static inline float  ImInvLength(const ImVec2& lhs, float fail_value)           { float d = lhs.x*lhs.x + lhs.y*lhs.y; if (d > 0.0f) return 1.0f / sqrtf(d); return fail_value; }
 static inline ImVec2 ImRound(ImVec2 v)                                          { return ImVec2((float)(int)v.x, (float)(int)v.y); }
 
+// We call C++ constructor on own allocated memory via the placement "new(ptr) Type()" syntax.
+// Defining a custom placement new() with a dummy parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
+#ifdef IMGUI_DEFINE_PLACEMENT_NEW
+struct ImPlacementNewDummy {};
+static inline void* operator new(size_t, ImPlacementNewDummy, void* ptr) { return ptr; }
+static inline void operator delete(void*, ImPlacementNewDummy, void*) {}
+#define IM_PLACEMENT_NEW(_PTR)  new(ImPlacementNewDummy() ,_PTR)
+#endif
+
 //-----------------------------------------------------------------------------
 // Types
 //-----------------------------------------------------------------------------
