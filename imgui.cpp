@@ -676,6 +676,8 @@ ImGuiStyle::ImGuiStyle()
 
     Colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
     Colors[ImGuiCol_TextDisabled]           = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
+    Colors[ImGuiCol_TextHovered]            = ImVec4(0.90f, 0.90f, 0.40f, 1.00f);
+    Colors[ImGuiCol_TextActive]             = ImVec4(1.00f, 1.00f, 0.00f, 1.00f);
     Colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
     Colors[ImGuiCol_ChildWindowBg]          = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     Colors[ImGuiCol_Border]                 = ImVec4(0.70f, 0.70f, 0.70f, 0.65f);
@@ -4468,6 +4470,8 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     {
     case ImGuiCol_Text: return "Text";
     case ImGuiCol_TextDisabled: return "TextDisabled";
+    case ImGuiCol_TextHovered: return "TextHovered";
+    case ImGuiCol_TextActive: return "TextActive";
     case ImGuiCol_WindowBg: return "WindowBg";
     case ImGuiCol_ChildWindowBg: return "ChildWindowBg";
     case ImGuiCol_Border: return "Border";
@@ -5007,6 +5011,36 @@ void ImGui::TextDisabled(const char* fmt, ...)
     va_end(args);
 }
 
+void ImGui::TextHoveredV(const char* fmt, va_list args)
+{
+    ImGui::PushStyleColor(ImGuiCol_Text, GImGui->Style.Colors[ImGuiCol_TextHovered]);
+    TextV(fmt, args);
+    ImGui::PopStyleColor();
+}
+
+void ImGui::TextHovered(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    TextDisabledV(fmt, args);
+    va_end(args);
+}
+
+void ImGui::TextActiveV(const char* fmt, va_list args)
+{
+    ImGui::PushStyleColor(ImGuiCol_Text, GImGui->Style.Colors[ImGuiCol_TextActive]);
+    TextV(fmt, args);
+    ImGui::PopStyleColor();
+}
+
+void ImGui::TextActive(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    TextDisabledV(fmt, args);
+    va_end(args);
+}
+
 void ImGui::TextWrappedV(const char* fmt, va_list args)
 {
     ImGui::PushTextWrapPos(0.0f);
@@ -5281,7 +5315,10 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     // Render
     const ImU32 col = GetColorU32((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
+
+	ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[(hovered && held) ? ImGuiCol_TextActive : hovered ? ImGuiCol_TextHovered : ImGuiCol_Text]);
     RenderTextClipped(bb.Min, bb.Max, label, NULL, &label_size, ImGuiAlign_Center | ImGuiAlign_VCenter);
+	ImGui::PopStyleColor();
 
     // Automatically close popups
     //if (pressed && !(flags & ImGuiButtonFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
@@ -5627,6 +5664,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     // Render
     const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
     const ImVec2 text_pos = bb.Min + padding + ImVec2(collapser_width, text_base_offset_y);
+	ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[(held && hovered) ? ImGuiCol_TextActive : hovered ? ImGuiCol_TextHovered : ImGuiCol_Text]);
     if (display_frame)
     {
         // Framed type
@@ -5657,6 +5695,7 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
             LogRenderedText(text_pos, ">");
         RenderText(text_pos, label, NULL, label_hide_text_after_double_hash);
     }
+	ImGui::PopStyleColor();
 
     return opened;
 }
@@ -6496,7 +6535,10 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
     const char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), display_format, *v);
+
+	ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[g.ActiveId == id ? ImGuiCol_TextActive : g.HoveredId == id ? ImGuiCol_TextHovered : ImGuiCol_Text]);
     RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImGuiAlign_Center|ImGuiAlign_VCenter);
+	ImGui::PopStyleColor();
 
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
@@ -8138,9 +8180,13 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         bb_with_spacing.Max.x -= (ImGui::GetContentRegionMax().x - max_x);
     }
 
-    if (flags & ImGuiSelectableFlags_Disabled) ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
+    if (flags & ImGuiSelectableFlags_Disabled)
+		ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
+	else
+		ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[(held && hovered) ? ImGuiCol_TextActive : hovered ? ImGuiCol_TextHovered : ImGuiCol_Text]);
+
     RenderTextClipped(bb.Min, bb_with_spacing.Max, label, NULL, &label_size);
-    if (flags & ImGuiSelectableFlags_Disabled) ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
 
     // Automatically close popups
     if (pressed && !(flags & ImGuiSelectableFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
