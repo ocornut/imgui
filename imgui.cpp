@@ -2289,7 +2289,8 @@ static void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDr
         // If this assert triggers because you are drawing lots of stuff manually, A) workaround by calling BeginChild()/EndChild() to put your draw commands in multiple draw lists, B) #define ImDrawIdx to a 'unsigned int' in imconfig.h and render accordingly.
         const unsigned long long int max_vtx_idx = (unsigned long long int)1L << (sizeof(ImDrawIdx)*8);
         (void)max_vtx_idx;
-        IM_ASSERT((unsigned long long int)draw_list->_VtxCurrentIdx <= max_vtx_idx); // Too many vertices in same ImDrawList
+        IM_ASSERT((int)draw_list->_VtxCurrentIdx == draw_list->VtxBuffer.Size);         // Sanity check. Bug or mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc.
+        IM_ASSERT((unsigned long long int)draw_list->_VtxCurrentIdx <= max_vtx_idx);    // Too many vertices in same ImDrawList. See comment above.
 
         GImGui->IO.MetricsRenderVertices += draw_list->VtxBuffer.Size;
         GImGui->IO.MetricsRenderIndices += draw_list->IdxBuffer.Size;

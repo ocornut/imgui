@@ -903,7 +903,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     CmdBuffer.back().ElemCount -= idx_unused;
     _VtxWritePtr -= vtx_unused;
     _IdxWritePtr -= idx_unused;
-    _VtxCurrentIdx = (ImDrawIdx)VtxBuffer.Size;
+    _VtxCurrentIdx = (unsigned int)VtxBuffer.Size;
 }
 
 // This is one of the few function breaking the encapsulation of ImDrawLst, but it is just so useful.
