@@ -17,6 +17,7 @@
  - PROGRAMMER GUIDE (read me!)
  - API BREAKING CHANGES (read me when you update!)
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
+   - How can I help?
    - How do I update to a newer version of ImGui?
    - Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
    - I integrated ImGui in my engine and the text or lines are blurry..
@@ -237,6 +238,10 @@
  FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
  ======================================
 
+ Q: How can I help?
+ A: - If you are experienced enough with ImGui and with C/C++, look at the todo list and see how you want/can help!
+    - Become a Patron/donate. Convince your company to become a Patron or provide serious funding for development time.
+
  Q: How do I update to a newer version of ImGui?
  A: Overwrite the following files:
       imgui.cpp
@@ -402,9 +407,10 @@
 
  ISSUES & TODO-LIST
  ==================
- Issue numbers (#) refer to github issues.
+ Issue numbers (#) refer to github issues listed at https://github.com/ocornut/imgui/issues
  The list below consist mostly of notes of things to do before they are requested/discussed by users (at that point it usually happens on the github)
 
+ - doc: add a proper documentation+regression testing system (#435)
  - window: maximum window size settings (per-axis). for large popups in particular user may not want the popup to fill all space.
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. perhaps a lightweight explicit cleanup pass.
  - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis).
@@ -421,7 +427,7 @@
  - window/tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
  - draw-list: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
 !- scrolling: allow immediately effective change of scroll if we haven't appended items yet
- - splitter: formalize the splitter idiom into an official api (we want to handle n-way split)
+ - splitter/separator: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
  - widgets: clean up widgets internal toward exposing everything.
  - widgets: add disabled and read-only modes (#211)
@@ -444,13 +450,14 @@
  - layout: horizontal flow until no space left (#404)
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
+ - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
+ - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
- - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills) (#125)
- - columns: columns header to act as button (~sort op) and allow resize/reorder (#125)
- - columns: user specify columns size (#125)
+ - columns: columns header to act as button (~sort op) and allow resize/reorder (#513, #125)
+ - columns: user specify columns size (#513, #125)
  - columns: flag to add horizontal separator above/below?
  - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
- - combo: sparse combo boxes (via function call?)
+ - combo: sparse combo boxes (via function call?) / iterators
  - combo: contents should extends to fit label if combo widget is small
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
  - listbox: multiple selection
@@ -460,15 +467,16 @@
 !- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
  - popups: add variant using global identifier similar to Begin/End (#402)
  - popups: border options. richer api like BeginChild() perhaps? (#197)
- - menus: local shortcuts, global shortcuts (#126)
+ - menus: local shortcuts, global shortcuts (#456, #126)
  - menus: icons
  - menus: menubars: some sort of priority / effect of main menu-bar on desktop size?
  - statusbar: add a per-window status bar helper similar to what menubar does.
- - tabs
+ - tabs (#261, #351)
  - separator: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
- - gauge: various forms of gauge/loading bars widgets
  - color: the color helpers/typing is a mess and needs sorting out.
- - color: add a better color picker
+ - color: add a better color picker (#346)
+ - node/graph editor (#306)
+ - pie menus patterns (#434)
  - plot: PlotLines() should use the polygon-stroke facilities (currently issues with averaging normals)
  - plot: make it easier for user to draw extra stuff into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
  - plot: "smooth" automatic scale over time, user give an input 0.0(full user scale) 1.0(full derived from value)
@@ -491,12 +499,14 @@
  - textwrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (git issue #249)
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file
+ - style: add window shadows.
  - style/optimization: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding.
  - style: color-box not always square?
  - style: a concept of "compact style" that the end-user can easily rely on (e.g. PushStyleCompact()?) that maps to other settings? avoid implementing duplicate helpers such as SmallCheckbox(), etc.
  - style: try to make PushStyleVar() more robust to incorrect parameters (to be more friendly to edit & continues situation).
  - style: global scale setting.
  - text: simple markup language for color change?
+ - font: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
  - font: helper to add glyph redirect/replacements (e.g. redirect alternate apostrophe unicode code points to ascii one, etc.)
  - log: LogButtons() options for specifying depth and/or hiding depth slider
  - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
@@ -506,7 +516,7 @@
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
 !- keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing
- - keyboard: full keyboard navigation and focus.
+ - keyboard: full keyboard navigation and focus. (#323)
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
  - input: rework IO system to be able to pass actual ordered/timestamped events.
  - input: allow to decide and pass explicit double-clicks (e.g. for windows by the CS_DBLCLKS style).
@@ -515,6 +525,7 @@
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - style editor: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space? (#438)
  - style editor: color child window height expressed in multiple of line height.
+ - remote: make a system like RemoteImGui first-class citizen/project (#75)
  - drawlist: user probably can't call Clear() because we expect a texture to be pushed in the stack.
  - examples: directx9/directx11: save/restore device state more thoroughly.
  - optimization: use another hash function than crc32, e.g. FNV1a
@@ -2280,15 +2291,19 @@ static void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDr
 {
     if (!draw_list->CmdBuffer.empty() && !draw_list->VtxBuffer.empty())
     {
-        if (draw_list->CmdBuffer.back().ElemCount == 0)
+        // Remove trailing command if unused
+        ImDrawCmd& last_cmd = draw_list->CmdBuffer.back();
+        if (last_cmd.ElemCount == 0 && last_cmd.UserCallback == NULL)
             draw_list->CmdBuffer.pop_back();
+
         out_render_list.push_back(draw_list);
 
         // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = 2 bytes = 64K vertices)
         // If this assert triggers because you are drawing lots of stuff manually, A) workaround by calling BeginChild()/EndChild() to put your draw commands in multiple draw lists, B) #define ImDrawIdx to a 'unsigned int' in imconfig.h and render accordingly.
         const unsigned long long int max_vtx_idx = (unsigned long long int)1L << (sizeof(ImDrawIdx)*8);
         (void)max_vtx_idx;
-        IM_ASSERT((unsigned long long int)draw_list->_VtxCurrentIdx <= max_vtx_idx); // Too many vertices in same ImDrawList
+        IM_ASSERT((int)draw_list->_VtxCurrentIdx == draw_list->VtxBuffer.Size);         // Sanity check. Bug or mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc.
+        IM_ASSERT((unsigned long long int)draw_list->_VtxCurrentIdx <= max_vtx_idx);    // Too many vertices in same ImDrawList. See comment above.
 
         GImGui->IO.MetricsRenderVertices += draw_list->VtxBuffer.Size;
         GImGui->IO.MetricsRenderIndices += draw_list->IdxBuffer.Size;
@@ -7617,7 +7632,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
 
     // Render
-    const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x + style.FramePadding.x*2.0f, frame_bb.Min.y + size.y + style.FramePadding.y*2.0f);
+    const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x, frame_bb.Min.y + size.y); // Not using frame_bb.Max because we have adjusted size
     ImVec2 render_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
     ImVec2 text_size(0.f, 0.f);
     if (g.ActiveId == id || (edit_state.Id == id && is_multiline && g.ActiveId == draw_window->GetID("#SCROLLY")))
