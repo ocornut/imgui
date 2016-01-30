@@ -2278,8 +2278,11 @@ static void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDr
 {
     if (!draw_list->CmdBuffer.empty() && !draw_list->VtxBuffer.empty())
     {
-        if (draw_list->CmdBuffer.back().ElemCount == 0)
+        // Remove trailing command if unused
+        ImDrawCmd& last_cmd = draw_list->CmdBuffer.back();
+        if (last_cmd.ElemCount == 0 && last_cmd.UserCallback == NULL)
             draw_list->CmdBuffer.pop_back();
+
         out_render_list.push_back(draw_list);
 
         // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = 2 bytes = 64K vertices)
