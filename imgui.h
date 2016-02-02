@@ -374,6 +374,7 @@ namespace ImGui
     IMGUI_API ImVec2        GetItemRectMin();                                                   // get bounding rect of last item in screen space
     IMGUI_API ImVec2        GetItemRectMax();                                                   // "
     IMGUI_API ImVec2        GetItemRectSize();                                                  // "
+    IMGUI_API void          SetItemAllowOverlap();                                              // allow last item to be overlapped by a subsequent item. sometimes useful with invisible buttons, selectables, etc. to catch unused area.
     IMGUI_API bool          IsWindowHovered();                                                  // is current window hovered and hoverable (not blocked by a popup) (differentiate child windows from each others)
     IMGUI_API bool          IsWindowFocused();                                                  // is current window focused
     IMGUI_API bool          IsRootWindowFocused();                                              // is current root window focused (top parent window in case of child windows)

@@ -692,7 +692,6 @@ namespace ImGui
     IMGUI_API void          FocusableItemUnregister(ImGuiWindow* window);
     IMGUI_API ImVec2        CalcItemSize(ImVec2 size, float default_x, float default_y);
     IMGUI_API float         CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x);
-    IMGUI_API void          SetItemAllowOverlap();      // Allow last item to be overlapped by a subsequent item
 
     IMGUI_API void          OpenPopupEx(const char* str_id, bool reopen_existing);
 
