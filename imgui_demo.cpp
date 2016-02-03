@@ -441,9 +441,9 @@ void ImGui::ShowTestWindow(bool* p_opened)
 
             ImGui::Text("Password input");
             static char bufpass[64] = "password123"; 
-            ImGui::InputText("password", bufpass, 64, ImGuiInputTextFlags_Password);
+            ImGui::InputText("password", bufpass, 64, ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsNoBlank);
             ImGui::SameLine(); ShowHelpMarker("Display all characters as '*'.\nDisable clipboard cut and copy.\nDisable logging.\n");
-            ImGui::InputText("password (clear)", bufpass, 64);
+            ImGui::InputText("password (clear)", bufpass, 64, ImGuiInputTextFlags_CharsNoBlank);
 
             ImGui::TreePop();
         }
