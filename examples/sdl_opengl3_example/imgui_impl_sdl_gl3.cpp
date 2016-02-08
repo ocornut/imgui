@@ -309,6 +309,7 @@ bool    ImGui_ImplSdlGL3_Init(SDL_Window *window)
 	io.KeyMap[ImGuiKey_Delete] = SDLK_DELETE;
 	io.KeyMap[ImGuiKey_Backspace] = SDLK_BACKSPACE;
 	io.KeyMap[ImGuiKey_Enter] = SDLK_RETURN;
+    io.KeyMap[ImGuiKey_KP_Enter] = SDLK_KP_ENTER;
 	io.KeyMap[ImGuiKey_Escape] = SDLK_ESCAPE;
 	io.KeyMap[ImGuiKey_A] = SDLK_a;
 	io.KeyMap[ImGuiKey_C] = SDLK_c;
