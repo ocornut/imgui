@@ -1894,6 +1894,11 @@ struct ExampleAppConsole
             free(History[i]);
     }
 
+    // Portable helpers
+    static int   Stricmp(const char* str1, const char* str2)         { int d; while ((d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; } return d; }
+    static int   Strnicmp(const char* str1, const char* str2, int n) { int d = 0; while (n > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; n--; } return d; }
+    static char* Strdup(const char *str)                             { size_t len = strlen(str) + 1; void* buff = ImGui::MemAlloc(len); return (char*)memcpy(buff, (const void*)str, len); }
+
     void    ClearLog()
     {
         for (int i = 0; i < Items.Size; i++)
@@ -1910,7 +1915,7 @@ struct ExampleAppConsole
         vsnprintf(buf, IM_ARRAYSIZE(buf), fmt, args);
         buf[IM_ARRAYSIZE(buf)-1] = 0;
         va_end(args);
-        Items.push_back(strdup(buf));
+        Items.push_back(Strdup(buf));
         ScrollToBottom = true;
     }
 
@@ -1987,9 +1992,6 @@ struct ExampleAppConsole
         ImGui::End();
     }
 
-    static int Stricmp(const char* str1, const char* str2)               { int d; while ((d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; } return d; }
-    static int Strnicmp(const char* str1, const char* str2, int count)   { int d = 0; while (count > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; count--; } return d; }
-
     void    ExecCommand(const char* command_line)
     {
         AddLog("# %s\n", command_line);
@@ -2003,7 +2005,7 @@ struct ExampleAppConsole
                 History.erase(History.begin() + i);
                 break;
             }
-        History.push_back(strdup(command_line));
+        History.push_back(Strdup(command_line));
 
         // Process command
         if (Stricmp(command_line, "CLEAR") == 0)

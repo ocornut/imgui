@@ -830,10 +830,9 @@ int ImStrnicmp(const char* str1, const char* str2, int count)
 
 char* ImStrdup(const char *str)
 {
-    char *buff = (char*)ImGui::MemAlloc(strlen(str) + 1);
-    IM_ASSERT(buff);
-    strcpy(buff, str);
-    return buff;
+    size_t len = strlen(str) + 1;
+    void* buff = ImGui::MemAlloc(len);
+    return (char*)memcpy(buff, (const void*)str, len);
 }
 
 int ImStrlenW(const ImWchar* str)
