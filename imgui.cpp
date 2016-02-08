@@ -107,7 +107,7 @@
         unsigned char* pixels;
         int width, height;
         io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height);
-        // TODO: At this points you've got a texture pointed to by 'pixels' and you need to upload that your your graphic system 
+        // TODO: At this points you've got a texture pointed to by 'pixels' and you need to upload that your your graphic system
         // TODO: Store your texture pointer/identifier (whatever your engine uses) in 'io.Fonts->TexID'
 
         // Application main loop
@@ -294,7 +294,7 @@
 
        Button("Hello###ID";   // Label = "Hello",  ID = hash of "ID"
        Button("World###ID";   // Label = "World",  ID = hash of "ID" (same as above)
-       
+
        sprintf(buf, "My game (%f FPS)###MyGame");
        Begin(buf);            // Variable label,   ID = hash of "MyGame"
 
@@ -432,7 +432,7 @@
  - widgets: clean up widgets internal toward exposing everything.
  - widgets: add disabled and read-only modes (#211)
  - main: considering adding EndFrame()/Init(). some constructs are awkward in the implementation because of the lack of them.
- - main: make it so that a frame with no window registered won't refocus every window on subsequent frames (~bump LastFrameActive of all windows). 
+ - main: make it so that a frame with no window registered won't refocus every window on subsequent frames (~bump LastFrameActive of all windows).
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
@@ -765,6 +765,20 @@ ImGuiIO::ImGuiIO()
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
     ImeSetInputScreenPosFn = ImeSetInputScreenPosFn_DefaultImpl;
+
+
+    // set defaults based on whether we are compiled for OS X or not:
+    // 1. text editing cursor movement is done with alt instead of ctrl
+    // 2. text editing shortcuts (copy/paste/cut) is done with cmd instead of ctrl
+    // 3. double click selects by word instead of whole thing
+    // 4. multiselection in lists uses cmd instead of ctrl
+
+#ifdef __APPLE__
+    WordMovementUsesAltKey = true;
+    ShortcutsUseSuperKey = true;
+    DoubleClickSelectsWord = true;
+    MultiSelectUsesSuperKey = true;
+#endif
 }
 
 // Pass in translated ASCII characters for text input.
@@ -964,7 +978,7 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
     if ((*str & 0xf0) == 0xe0)
     {
         *out_char = 0xFFFD; // will be invalid but not end of string
-        if (in_text_end && in_text_end - (const char*)str < 3) return 1; 
+        if (in_text_end && in_text_end - (const char*)str < 3) return 1;
         if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return 3;
         if (*str == 0xed && str[1] > 0x9f) return 3; // str[1] < 0x80 is checked below
         c = (unsigned int)((*str++ & 0x0f) << 12);
@@ -2364,7 +2378,7 @@ void ImGui::EndFrame()
     // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
     if (g.IO.ImeSetInputScreenPosFn && ImLengthSqr(g.OsImePosRequest - g.OsImePosSet) > 0.0001f)
     {
-        g.IO.ImeSetInputScreenPosFn((int)g.OsImePosRequest.x, (int)g.OsImePosRequest.y);   
+        g.IO.ImeSetInputScreenPosFn((int)g.OsImePosRequest.x, (int)g.OsImePosRequest.y);
         g.OsImePosSet = g.OsImePosRequest;
     }
 
@@ -3118,7 +3132,7 @@ static bool IsPopupOpen(ImGuiID id)
     return opened;
 }
 
-// Mark popup as open (toggle toward open state). 
+// Mark popup as open (toggle toward open state).
 // Popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
 // Popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
 // One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
@@ -3296,11 +3310,11 @@ void ImGui::EndPopup()
 }
 
 // This is a helper to handle the most simple case of associating one named popup to one given widget.
-// 1. If you have many possible popups (for different "instances" of a same widget, or for wholly different widgets), you may be better off handling 
+// 1. If you have many possible popups (for different "instances" of a same widget, or for wholly different widgets), you may be better off handling
 //    this yourself so you can store data relative to the widget that opened the popup instead of choosing different popup identifiers.
 // 2. If you want right-clicking on the same item to reopen the popup at new location, use the same code replacing IsItemHovered() with IsItemHoveredRect()
 //    and passing true to the OpenPopupEx().
-//    Because: hovering an item in a window below the popup won't normally trigger is hovering behavior/coloring. The pattern of ignoring the fact that 
+//    Because: hovering an item in a window below the popup won't normally trigger is hovering behavior/coloring. The pattern of ignoring the fact that
 //    the item isn't interactable (because it is blocked by the active popup) may useful in some situation when e.g. large canvas as one item, content of menu
 //    driven by click position.
 bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
@@ -3593,7 +3607,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         g.CurrentPopupStack.push_back(popup_ref);
         window->PopupID = popup_ref.PopupID;
     }
-    
+
     const bool window_appearing_after_being_hidden = (window->HiddenFrames == 1);
 
     // Process SetNextWindow***() calls
@@ -3741,7 +3755,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         else
         {
             size_auto_fit = ImClamp(window->SizeContents + window->WindowPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - g.Style.DisplaySafeAreaPadding));
-            
+
             // Handling case of auto fit window not fitting in screen on one axis, we are growing auto fit size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than DisplaySize-WindowPadding.
             if (size_auto_fit.x < window->SizeContents.x && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar))
                 size_auto_fit.y += style.ScrollbarSize;
@@ -6834,7 +6848,7 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
         ImFormatString(overlay_buf, IM_ARRAYSIZE(overlay_buf), "%.0f%%", fraction*100+0.01f);
         overlay = overlay_buf;
     }
-    
+
     ImVec2 overlay_size = CalcTextSize(overlay, NULL);
     if (overlay_size.x > 0.0f)
         RenderTextClipped(ImVec2(ImClamp(fill_br.x + style.ItemSpacing.x, bb.Min.x, bb.Max.x - overlay_size.x - style.ItemInnerSpacing.x), bb.Min.y), bb.Max, overlay, NULL, &overlay_size, ImGuiAlign_Left|ImGuiAlign_VCenter, &bb.Min, &bb.Max);
@@ -7103,6 +7117,7 @@ static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const Im
 #define STB_TEXTEDIT_K_SHIFT        0x20000
 
 #define STB_TEXTEDIT_IMPLEMENTATION
+#define STB_TEXTEDIT_DIFFERENTIATE_LEFT_AND_RIGHT_WORD_BOUNDARY
 #include "stb_textedit.h"
 
 }
@@ -7276,6 +7291,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool is_ctrl_down = io.KeyCtrl;
     const bool is_shift_down = io.KeyShift;
     const bool is_alt_down = io.KeyAlt;
+    const bool is_super_down = io.KeySuper;
     const bool focus_requested = FocusableItemRegister(window, g.ActiveId == id, (flags & (ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_AllowTabInput)) == 0);    // Using completion callback disable keyboard tabbing
     const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
     const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
@@ -7363,10 +7379,17 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         const float mouse_x = (g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + edit_state.ScrollX;
         const float mouse_y = (is_multiline ? (g.IO.MousePos.y - draw_window->DC.CursorPos.y - style.FramePadding.y) : (g.FontSize*0.5f));
 
-        if (select_all || (hovered && io.MouseDoubleClicked[0]))
+        if (select_all || (hovered && !io.DoubleClickSelectsWord && io.MouseDoubleClicked[0]))
         {
             edit_state.SelectAll();
             edit_state.SelectedAllMouseLock = true;
+        }
+        else if (hovered && io.DoubleClickSelectsWord && io.MouseDoubleClicked[0])
+        {
+            // select a word only.
+            // simulate a wordselect left, then a wordselect right with shift.
+            edit_state.OnKeyPressed(STB_TEXTEDIT_K_WORDLEFT);
+            edit_state.OnKeyPressed(STB_TEXTEDIT_K_WORDRIGHT | STB_TEXTEDIT_K_SHIFT);
         }
         else if (io.MouseClicked[0] && !edit_state.SelectedAllMouseLock)
         {
@@ -7405,9 +7428,13 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         // Handle various key-presses
         bool cancel_edit = false;
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
-        const bool is_ctrl_only = is_ctrl_down && !is_alt_down && !is_shift_down;
-        if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
+        const bool is_shortcutkey_only = (io.ShortcutsUseSuperKey ? (is_super_down && !is_alt_down && !is_shift_down && !is_ctrl_down) : (is_ctrl_down && !is_alt_down && !is_shift_down && !is_super_down));
+
+        const bool is_wordmove_key_down = (io.WordMovementUsesAltKey ? io.KeyAlt : io.KeyCtrl);
+
+
+        if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed(is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed(is_wordmove_key_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
         else if (is_multiline && IsKeyPressedMap(ImGuiKey_UpArrow))     { if (is_ctrl_down) SetWindowScrollY(draw_window, draw_window->Scroll.y - g.FontSize); else edit_state.OnKeyPressed(STB_TEXTEDIT_K_UP | k_mask); }
         else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { if (is_ctrl_down) SetWindowScrollY(draw_window, draw_window->Scroll.y + g.FontSize); else edit_state.OnKeyPressed(STB_TEXTEDIT_K_DOWN| k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Home))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
@@ -7435,11 +7462,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             if (InputTextFilterCharacter(&c, flags, callback, user_data))
                 edit_state.OnKeyPressed((int)c);
         }
-        else if (IsKeyPressedMap(ImGuiKey_Escape))                              { SetActiveID(0); cancel_edit = true; }
-        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
-        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
-        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_A))                   { edit_state.SelectAll(); edit_state.CursorFollow = true; }
-        else if (is_ctrl_only && !is_password && ((IsKeyPressedMap(ImGuiKey_X) && is_editable) || IsKeyPressedMap(ImGuiKey_C)) && (!is_multiline || edit_state.HasSelection()))
+        else if (IsKeyPressedMap(ImGuiKey_Escape))                                     { SetActiveID(0); cancel_edit = true; }
+        else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
+        else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
+        else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_A))                   { edit_state.SelectAll(); edit_state.CursorFollow = true; }
+        else if (is_shortcutkey_only && !is_password && ((IsKeyPressedMap(ImGuiKey_X) && is_editable) || IsKeyPressedMap(ImGuiKey_C)) && (!is_multiline || edit_state.HasSelection()))
         {
             // Cut, Copy
             const bool cut = IsKeyPressedMap(ImGuiKey_X);
@@ -7461,7 +7488,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 stb_textedit_cut(&edit_state, &edit_state.StbState);
             }
         }
-        else if (is_ctrl_only && IsKeyPressedMap(ImGuiKey_V) && is_editable)
+        else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_V) && is_editable)
         {
             // Paste
             if (g.IO.GetClipboardTextFn)
@@ -7724,7 +7751,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
         // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
         if (is_editable)
-            g.OsImePosRequest = ImVec2(cursor_screen_pos.x - 1, cursor_screen_pos.y - g.FontSize);    
+            g.OsImePosRequest = ImVec2(cursor_screen_pos.x - 1, cursor_screen_pos.y - g.FontSize);
     }
     else
     {
@@ -8610,7 +8637,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     const ImVec4 col_display(col[0], col[1], col[2], 1.0f);
     if (ImGui::ColorButton(col_display))
         g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3); // Don't set local copy of 'edit_mode' right away!
-    
+
     // Recreate our own tooltip over's ColorButton() one because we want to display correct alpha here
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col[0], col[1], col[2], col[3], IM_F32_TO_INT8(col[0]), IM_F32_TO_INT8(col[1]), IM_F32_TO_INT8(col[2]), IM_F32_TO_INT8(col[3]));
@@ -8707,7 +8734,7 @@ void ImGui::Dummy(const ImVec2& size)
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
-    
+
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
     ItemSize(bb);
     ItemAdd(bb, NULL);
@@ -8971,9 +8998,9 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
         }
     }
 
-    // Differentiate column ID with an arbitrary prefix for cases where users name their columns set the same as another widget. 
+    // Differentiate column ID with an arbitrary prefix for cases where users name their columns set the same as another widget.
     // In addition, when an identifier isn't explicitly provided we include the number of columns in the hash to make it uniquer.
-    ImGui::PushID(0x11223347 + (id ? 0 : columns_count)); 
+    ImGui::PushID(0x11223347 + (id ? 0 : columns_count));
     window->DC.ColumnsSetID = window->GetID(id ? id : "columns");
     ImGui::PopID();
 

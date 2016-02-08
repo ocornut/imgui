@@ -17,7 +17,7 @@
 // texts, as its performance does not scale and it has limited undo).
 //
 // Non-trivial behaviors are modelled after Windows text controls.
-// 
+//
 //
 // LICENSE
 //
@@ -196,20 +196,20 @@
 //          call this with the mouse x,y on a mouse down; it will update the cursor
 //          and reset the selection start/end to the cursor point. the x,y must
 //          be relative to the text widget, with (0,0) being the top left.
-//     
+//
 //      drag:
 //          call this with the mouse x,y on a mouse drag/up; it will update the
 //          cursor and the selection end point
-//     
+//
 //      cut:
 //          call this to delete the current selection; returns true if there was
 //          one. you should FIRST copy the current selection to the system paste buffer.
 //          (To copy, just copy the current selection out of the string yourself.)
-//     
+//
 //      paste:
 //          call this to paste text at the current cursor point or over the current
 //          selection if there is one.
-//     
+//
 //      key:
 //          call this for keyboard inputs sent to the textfield. you can use it
 //          for "key down" events or for "translated" key events. if you need to
@@ -218,7 +218,7 @@
 //          various definitions like STB_TEXTEDIT_K_LEFT have the is-key-event bit
 //          set, and make STB_TEXTEDIT_KEYTOCHAR check that the is-key-event bit is
 //          clear.
-//     
+//
 //   When rendering, you can read the cursor position and selection state from
 //   the STB_TexteditState.
 //
@@ -596,15 +596,51 @@ static void stb_textedit_move_to_last(STB_TEXTEDIT_STRING *str, STB_TexteditStat
 }
 
 #ifdef STB_TEXTEDIT_IS_SPACE
+#ifdef STB_TEXTEDIT_DIFFERENTIATE_LEFT_AND_RIGHT_WORD_BOUNDARY
+static int is_word_boundary_from_right(STB_TEXTEDIT_STRING* _str, int _idx)
+{
+   if(_idx > 0)
+   {
+      return (STB_TEXTEDIT_IS_SPACE(STB_TEXTEDIT_GETCHAR(_str, _idx - 1))
+         && !STB_TEXTEDIT_IS_SPACE(STB_TEXTEDIT_GETCHAR(_str, _idx)));
+   }
+   else
+   {
+      return 1;
+   }
+}
+
+// this tests the opposite, ie. right arrow.
+static int is_word_boundary_from_left(STB_TEXTEDIT_STRING* _str, int _idx)
+{
+   if(_idx > 0)
+   {
+      return (!STB_TEXTEDIT_IS_SPACE(STB_TEXTEDIT_GETCHAR(_str, _idx - 1))
+         && STB_TEXTEDIT_IS_SPACE(STB_TEXTEDIT_GETCHAR(_str, _idx)));
+   }
+   else
+   {
+      return 1;
+   }
+}
+
+#define WORD_BOUNDARY_FUNC_PREV is_word_boundary_from_right
+#define WORD_BOUNDARY_FUNC_NEXT is_word_boundary_from_left
+
+#else
 static int is_word_boundary( STB_TEXTEDIT_STRING *_str, int _idx )
 {
    return _idx > 0 ? (STB_TEXTEDIT_IS_SPACE( STB_TEXTEDIT_GETCHAR(_str,_idx-1) ) && !STB_TEXTEDIT_IS_SPACE( STB_TEXTEDIT_GETCHAR(_str, _idx) ) ) : 1;
 }
 
+#define WORD_BOUNDARY_FUNC_PREV is_word_boundary
+#define WORD_BOUNDARY_FUNC_NEXT is_word_boundary
+#endif
+
 static int stb_textedit_move_to_word_previous( STB_TEXTEDIT_STRING *_str, STB_TexteditState *_state )
 {
    int c = _state->cursor - 1;
-   while( c >= 0 && !is_word_boundary( _str, c ) )
+   while( c >= 0 && !WORD_BOUNDARY_FUNC_PREV( _str, c ) )
       --c;
 
    if( c < 0 )
@@ -617,7 +653,7 @@ static int stb_textedit_move_to_word_next( STB_TEXTEDIT_STRING *_str, STB_Texted
 {
    const int len = STB_TEXTEDIT_STRINGLEN(_str);
    int c = _state->cursor+1;
-   while( c < len && !is_word_boundary( _str, c ) )
+   while( c < len && !WORD_BOUNDARY_FUNC_NEXT( _str, c ) )
       ++c;
 
    if( c > len )
@@ -705,7 +741,7 @@ retry:
          state->insert_mode = !state->insert_mode;
          break;
 #endif
-         
+
       case STB_TEXTEDIT_K_UNDO:
          stb_text_undo(str, state);
          state->has_preferred_x = 0;
@@ -720,7 +756,7 @@ retry:
          // if currently there's a selection, move cursor to start of selection
          if (STB_TEXT_HAS_SELECTION(state))
             stb_textedit_move_to_first(state);
-         else 
+         else
             if (state->cursor > 0)
                --state->cursor;
          state->has_preferred_x = 0;
@@ -757,7 +793,7 @@ retry:
          break;
 
       case STB_TEXTEDIT_K_WORDRIGHT:
-         if (STB_TEXT_HAS_SELECTION(state)) 
+         if (STB_TEXT_HAS_SELECTION(state))
             stb_textedit_move_to_last(str, state);
          else {
             state->cursor = stb_textedit_move_to_word_next(str, state);
@@ -845,7 +881,7 @@ retry:
          }
          break;
       }
-         
+
       case STB_TEXTEDIT_K_UP:
       case STB_TEXTEDIT_K_UP | STB_TEXTEDIT_K_SHIFT: {
          StbFindState find;
@@ -922,7 +958,7 @@ retry:
          }
          state->has_preferred_x = 0;
          break;
-         
+
       case STB_TEXTEDIT_K_TEXTSTART:
          state->cursor = state->select_start = state->select_end = 0;
          state->has_preferred_x = 0;
@@ -933,7 +969,7 @@ retry:
          state->select_start = state->select_end = 0;
          state->has_preferred_x = 0;
          break;
-        
+
       case STB_TEXTEDIT_K_TEXTSTART | STB_TEXTEDIT_K_SHIFT:
          stb_textedit_prep_selection_at_cursor(state);
          state->cursor = state->select_end = 0;
