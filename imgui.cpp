@@ -2286,25 +2286,26 @@ static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, 
 
 static void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDrawList* draw_list)
 {
-    if (!draw_list->CmdBuffer.empty() && !draw_list->VtxBuffer.empty())
+    if (draw_list->CmdBuffer.empty())
+        return;
+
+    // Remove trailing command if unused
+    ImDrawCmd& last_cmd = draw_list->CmdBuffer.back();
+    if (last_cmd.ElemCount == 0 && last_cmd.UserCallback == NULL)
     {
-        // Remove trailing command if unused
-        ImDrawCmd& last_cmd = draw_list->CmdBuffer.back();
-        if (last_cmd.ElemCount == 0 && last_cmd.UserCallback == NULL)
-            draw_list->CmdBuffer.pop_back();
-
-        out_render_list.push_back(draw_list);
-
-        // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = 2 bytes = 64K vertices)
-        // If this assert triggers because you are drawing lots of stuff manually, A) workaround by calling BeginChild()/EndChild() to put your draw commands in multiple draw lists, B) #define ImDrawIdx to a 'unsigned int' in imconfig.h and render accordingly.
-        const unsigned long long int max_vtx_idx = (unsigned long long int)1L << (sizeof(ImDrawIdx)*8);
-        (void)max_vtx_idx;
-        IM_ASSERT((int)draw_list->_VtxCurrentIdx == draw_list->VtxBuffer.Size);         // Sanity check. Bug or mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc.
-        IM_ASSERT((unsigned long long int)draw_list->_VtxCurrentIdx <= max_vtx_idx);    // Too many vertices in same ImDrawList. See comment above.
-
-        GImGui->IO.MetricsRenderVertices += draw_list->VtxBuffer.Size;
-        GImGui->IO.MetricsRenderIndices += draw_list->IdxBuffer.Size;
+        draw_list->CmdBuffer.pop_back();
+        if (draw_list->CmdBuffer.empty())
+            return;
     }
+
+    // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = 2 bytes = 64K vertices)
+    // If this assert triggers because you are drawing lots of stuff manually, A) workaround by calling BeginChild()/EndChild() to put your draw commands in multiple draw lists, B) #define ImDrawIdx to a 'unsigned int' in imconfig.h and render accordingly.
+    IM_ASSERT((int)draw_list->_VtxCurrentIdx == draw_list->VtxBuffer.Size);                                                 // Sanity check. Bug or mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc.
+    IM_ASSERT((unsigned long long int)draw_list->_VtxCurrentIdx <= ((unsigned long long int)1L << (sizeof(ImDrawIdx)*8)));  // Too many vertices in same ImDrawList. See comment above.
+
+    out_render_list.push_back(draw_list);
+    GImGui->IO.MetricsRenderVertices += draw_list->VtxBuffer.Size;
+    GImGui->IO.MetricsRenderIndices += draw_list->IdxBuffer.Size;
 }
 
 static void AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiWindow* window)
