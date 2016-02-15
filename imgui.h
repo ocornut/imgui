@@ -523,6 +523,7 @@ enum ImGuiKey_
     ImGuiKey_Delete,    // for text edit
     ImGuiKey_Backspace, // for text edit
     ImGuiKey_Enter,     // for text edit
+    ImGuiKey_KP_Enter,  // for text edit
     ImGuiKey_Escape,    // for text edit
     ImGuiKey_A,         // for text edit CTRL+A: select all
     ImGuiKey_C,         // for text edit CTRL+C: copy
