@@ -103,9 +103,9 @@ void ImGui_ImplSdlGL3_RenderDrawLists(ImDrawData* draw_data)
 	// Restore modified GL state
 	glUseProgram(last_program);
 	glBindTexture(GL_TEXTURE_2D, last_texture);
+    glBindVertexArray(last_vertex_array);
 	glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, last_element_array_buffer);
-	glBindVertexArray(last_vertex_array);
 	glBlendEquationSeparate(last_blend_equation_rgb, last_blend_equation_alpha);
 	glBlendFunc(last_blend_src, last_blend_dst);
 	if (last_enable_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
