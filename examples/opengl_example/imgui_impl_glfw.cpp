@@ -28,6 +28,14 @@ static GLuint       g_FontTexture = 0;
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 void ImGui_ImplGlfw_RenderDrawLists(ImDrawData* draw_data)
 {
+    ImGuiIO& io = ImGui::GetIO();
+    int fb_width = (int) (io.DisplaySize.x * io.DisplayFramebufferScale.x);
+    int fb_height = (int) (io.DisplaySize.y * io.DisplayFramebufferScale.y);
+
+    // Window is hidden or minimized.
+    if (fb_width == 0 || fb_height == 0)
+        return;
+
     // We are using the OpenGL fixed pipeline to make the example code simpler to read!
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
     GLint last_texture; glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
@@ -45,9 +53,6 @@ void ImGui_ImplGlfw_RenderDrawLists(ImDrawData* draw_data)
     //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context
 
     // Handle cases of screen coordinates != from framebuffer coordinates (e.g. retina displays)
-    ImGuiIO& io = ImGui::GetIO();
-    int fb_width = (int)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
-    int fb_height = (int)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
     draw_data->ScaleClipRects(io.DisplayFramebufferScale);
 
     // Setup viewport, orthographic projection matrix
@@ -242,7 +247,7 @@ void ImGui_ImplGlfw_NewFrame()
     glfwGetWindowSize(g_Window, &w, &h);
     glfwGetFramebufferSize(g_Window, &display_w, &display_h);
     io.DisplaySize = ImVec2((float)w, (float)h);
-    io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
+    io.DisplayFramebufferScale = ImVec2(w ? ((float) display_w / w) : 0, h ? ((float) display_h / h) : 0);
 
     // Setup time step
     double current_time =  glfwGetTime();
