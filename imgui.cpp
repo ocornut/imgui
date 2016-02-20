@@ -3459,9 +3459,9 @@ static ImVec2 FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size,
     return pos;
 }
 
-static ImGuiWindow* FindWindowByName(const char* name)
+ImGuiWindow* ImGui::FindWindowByName(const char* name)
 {
-    // FIXME-OPT: Store sorted hashes -> pointers.
+    // FIXME-OPT: Store sorted hashes -> pointers so we can do a bissection in a contiguous block 
     ImGuiState& g = *GImGui;
     ImGuiID id = ImHash(name, 0);
     for (int i = 0; i < g.Windows.Size; i++)
