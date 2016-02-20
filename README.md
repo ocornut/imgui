@@ -126,7 +126,7 @@ If you intend to display large lists of items (say, 1000+) it can be beneficial 
 
 You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. 
 
-This is [LumixEngine](https://github.com/nem0/LumixEngine]) with a minor skinning hack + a docking/tabs extension (both of which you can find in the Issues section and will eventually be merged).
+This is [LumixEngine](https://github.com/nem0/LumixEngine) with a minor skinning hack + a docking/tabs extension (both of which you can find in the Issues section and will eventually be merged).
 
 [![Skinning in LumixEngine](https://cloud.githubusercontent.com/assets/8225057/13198792/92808c5c-d812-11e5-9507-16b63918b05b.jpg)](https://cloud.githubusercontent.com/assets/8225057/13044612/59f07aec-d3cf-11e5-8ccb-39adf2e13e69.png)
 
