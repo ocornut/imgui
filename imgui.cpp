@@ -595,7 +595,6 @@ static void             SetWindowScrollY(ImGuiWindow* window, float new_scroll_y
 static void             SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiSetCond cond);
 static void             SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiSetCond cond);
 static void             SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiSetCond cond);
-static ImGuiWindow*     FindWindowByName(const char* name);
 static ImGuiWindow*     FindHoveredWindow(ImVec2 pos, bool excluding_childs);
 static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags);
 static inline bool      IsWindowContentHoverable(ImGuiWindow* window);
