@@ -577,7 +577,7 @@ void ImGui::ShowTestWindow(bool* p_opened)
         static float col1[3] = { 1.0f,0.0f,0.2f };
         static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
         ImGui::ColorEdit3("color 1", col1);
-        ImGui::SameLine(); ShowHelpMarker("Click on the colored square to change edit mode.\nCTRL+click on individual component to input value.\n");
+        ImGui::SameLine(); ShowHelpMarker("Click on the colored square to open a color picker.\nRight-click on the colored square to show options.\nCTRL+click on individual component to input value.\n");
 
         ImGui::ColorEdit4("color 2", col2);
 
@@ -1598,12 +1598,12 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::SameLine(); ImGui::PushItemWidth(120); ImGui::Combo("##output_type", &output_dest, "To Clipboard\0To TTY"); ImGui::PopItemWidth();
         ImGui::SameLine(); ImGui::Checkbox("Only Modified Fields", &output_only_modified);
 
-        static ImGuiColorEditMode edit_mode = ImGuiColorEditMode_RGB;
-        ImGui::RadioButton("RGB", &edit_mode, ImGuiColorEditMode_RGB);
+        static ImGuiColorEditFlags color_edit_flags = ImGuiColorEditFlags_RGB;
+        ImGui::RadioButton("RGB", &color_edit_flags, ImGuiColorEditFlags_RGB);
         ImGui::SameLine();
-        ImGui::RadioButton("HSV", &edit_mode, ImGuiColorEditMode_HSV);
+        ImGui::RadioButton("HSV", &color_edit_flags, ImGuiColorEditFlags_HSV);
         ImGui::SameLine();
-        ImGui::RadioButton("HEX", &edit_mode, ImGuiColorEditMode_HEX);
+        ImGui::RadioButton("HEX", &color_edit_flags, ImGuiColorEditFlags_HEX);
         //ImGui::Text("Tip: Click on colored square to change edit mode.");
 
         static ImGuiTextFilter filter;
@@ -1611,14 +1611,13 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
         ImGui::BeginChild("#colors", ImVec2(0, 300), true);
         ImGui::PushItemWidth(-160);
-        ImGui::ColorEditMode(edit_mode);
         for (int i = 0; i < ImGuiCol_COUNT; i++)
         {
             const char* name = ImGui::GetStyleColName(i);
             if (!filter.PassFilter(name))
                 continue;
             ImGui::PushID(i);
-            ImGui::ColorEdit4(name, (float*)&style.Colors[i], true);
+            ImGui::ColorEdit4(name, (float*)&style.Colors[i], color_edit_flags | ImGuiColorEditFlags_Alpha | ImGuiColorEditFlags_NoOptions);
             if (memcmp(&style.Colors[i], (ref ? &ref->Colors[i] : &def.Colors[i]), sizeof(ImVec4)) != 0)
             {
                 ImGui::SameLine(); if (ImGui::Button("Revert")) style.Colors[i] = ref ? ref->Colors[i] : def.Colors[i];
