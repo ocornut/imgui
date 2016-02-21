@@ -8525,15 +8525,20 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     const float w_full = CalcItemWidth();
     const float square_sz_with_spacing = (flags & ImGuiColorEditFlags_NoColorSquare) ? 0.0f : (g.FontSize + style.FramePadding.y * 2.0f + style.ItemInnerSpacing.x);
 
-    // If no mode is specified default to RGB
+    // If no mode is specified, defaults to RGB
     if (!(flags & ImGuiColorEditFlags_ModeMask_))
         flags |= ImGuiColorEditFlags_RGB;
+
+    // If we're not showing any slider there's no point in querying color mode, nor showing the options menu, nor doing any HSV conversions
+    if (flags & ImGuiColorEditFlags_NoSliders)
+        flags = (flags & (~ImGuiColorEditFlags_ModeMask_)) | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_NoOptions;
 
     // Read back edit mode from persistent storage
     if (!(flags & ImGuiColorEditFlags_NoOptions))
         flags = (flags & (~ImGuiColorEditFlags_ModeMask_)) | (g.ColorEditModeStorage.GetInt(id, (flags & ImGuiColorEditFlags_ModeMask_)) & ImGuiColorEditFlags_ModeMask_);
 
-    IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags_ModeMask_))); // Check that exactly one of RGB/HSV/HEX is set
+    // Check that exactly one of RGB/HSV/HEX is set
+    IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags_ModeMask_))); // 
 
     float f[4] = { col[0], col[1], col[2], col[3] };
     if (flags & ImGuiColorEditFlags_HSV)
@@ -8548,7 +8553,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     ImGui::BeginGroup();
     ImGui::PushID(label);
 
-    if (flags & (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV))
+    if ((flags & (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV)) != 0 && (flags & ImGuiColorEditFlags_NoSliders) == 0)
     {
         // RGB/HSV 0..255 Sliders
         const float w_items_all = w_full - square_sz_with_spacing;
@@ -8577,7 +8582,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         ImGui::PopItemWidth();
         ImGui::PopItemWidth();
     }
-    else if (flags & ImGuiColorEditFlags_HEX)
+    else if ((flags & ImGuiColorEditFlags_HEX) != 0 && (flags & ImGuiColorEditFlags_NoSliders) == 0)
     {
         // RGB Hexadecimal Input
         const float w_slider_all = w_full - square_sz_with_spacing;
@@ -8607,7 +8612,8 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     bool picker_active = false;
     if (!(flags & ImGuiColorEditFlags_NoColorSquare))
     {
-        ImGui::SameLine(0, style.ItemInnerSpacing.x);
+        if (!(flags & ImGuiColorEditFlags_NoSliders))
+            ImGui::SameLine(0, style.ItemInnerSpacing.x);
 
         const ImVec4 col_display(col[0], col[1], col[2], 1.0f);
         if (ImGui::ColorButton(col_display))
