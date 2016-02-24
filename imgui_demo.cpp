@@ -1891,7 +1891,7 @@ struct ExampleAppConsole
     {
         ClearLog();
         for (int i = 0; i < Items.Size; i++)
-            free(History[i]);
+            ImGui::MemFree(History[i]);
     }
 
     // Portable helpers
@@ -1902,7 +1902,7 @@ struct ExampleAppConsole
     void    ClearLog()
     {
         for (int i = 0; i < Items.Size; i++)
-            free(Items[i]);
+            ImGui::MemFree(Items[i]);
         Items.clear();
         ScrollToBottom = true;
     }
@@ -2001,7 +2001,7 @@ struct ExampleAppConsole
         for (int i = History.Size-1; i >= 0; i--)
             if (Stricmp(History[i], command_line) == 0)
             {
-                free(History[i]);
+                ImGui::MemFree(History[i]);
                 History.erase(History.begin() + i);
                 break;
             }
