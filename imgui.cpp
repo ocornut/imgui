@@ -5076,6 +5076,8 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                     while (line < text_end && lines_skipped < lines_skippable)
                     {
                         const char* line_end = strchr(line, '\n');
+                        if (!line_end)
+                            line_end = text_end;
                         line = line_end + 1;
                         lines_skipped++;
                     }
