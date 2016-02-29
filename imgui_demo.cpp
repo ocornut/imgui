@@ -713,7 +713,9 @@ void ImGui::ShowTestWindow(bool* p_opened)
         static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
         ImGui::PlotLines("Frame Times", arr, IM_ARRAYSIZE(arr));
 
-        static ImVector<float> values; if (values.empty()) { values.resize(90); memset(values.Data, 0, values.Size*sizeof(float)); }
+        // Create a dummy array of contiguous float values to plot
+        // Tip: If your float aren't contiguous but part of a structure, you can pass a pointer to your first float and the sizeof() of your structure in the Stride parameter.
+        static float values[90] = { 0 };
         static int values_offset = 0;
         if (animate)
         {
@@ -722,11 +724,11 @@ void ImGui::ShowTestWindow(bool* p_opened)
             {
                 static float phase = 0.0f;
                 values[values_offset] = cosf(phase);
-                values_offset = (values_offset+1)%values.Size;
+                values_offset = (values_offset+1) % IM_ARRAYSIZE(values);
                 phase += 0.10f*values_offset;
             }
         }
-        ImGui::PlotLines("Lines", values.Data, values.Size, values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
+        ImGui::PlotLines("Lines", values, IM_ARRAYSIZE(values), values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
         ImGui::PlotHistogram("Histogram", arr, IM_ARRAYSIZE(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0,80));
 
         // Use functions to generate output
