@@ -152,14 +152,15 @@ inline void operator delete(void*, ImPlacementNewDummy, void*) {}
 
 enum ImGuiButtonFlags_
 {
-    ImGuiButtonFlags_Repeat             = 1 << 0,
-    ImGuiButtonFlags_PressedOnClick     = 1 << 1,   // return pressed on click only (default requires click+release)
-    ImGuiButtonFlags_PressedOnRelease   = 1 << 2,   // return pressed on release only (default requires click+release)
-    ImGuiButtonFlags_FlattenChilds      = 1 << 3,
-    ImGuiButtonFlags_DontClosePopups    = 1 << 4,
-    ImGuiButtonFlags_Disabled           = 1 << 5,
-    ImGuiButtonFlags_AlignTextBaseLine  = 1 << 6,
-    ImGuiButtonFlags_NoKeyModifiers     = 1 << 7
+    ImGuiButtonFlags_Repeat                 = 1 << 0,
+    ImGuiButtonFlags_PressedOnClick         = 1 << 1,   // return pressed on click only (default requires click+release)
+    ImGuiButtonFlags_PressedOnRelease       = 1 << 2,   // return pressed on release only (default requires click+release)
+    ImGuiButtonFlags_FlattenChilds          = 1 << 3,
+    ImGuiButtonFlags_DontClosePopups        = 1 << 4,
+    ImGuiButtonFlags_Disabled               = 1 << 5,
+    ImGuiButtonFlags_AlignTextBaseLine      = 1 << 6,
+    ImGuiButtonFlags_NoKeyModifiers         = 1 << 7,
+    ImGuiButtonFlags_PressedOnDoubleClick   = 1 << 8
 };
 
 enum ImGuiTreeNodeFlags_
@@ -176,10 +177,10 @@ enum ImGuiSliderFlags_
 enum ImGuiSelectableFlagsPrivate_
 {
     // NB: need to be in sync with last value of ImGuiSelectableFlags_
-    ImGuiSelectableFlags_Menu               = 1 << 2,
-    ImGuiSelectableFlags_MenuItem           = 1 << 3,
-    ImGuiSelectableFlags_Disabled           = 1 << 4,
-    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 5
+    ImGuiSelectableFlags_Menu               = 1 << 3,
+    ImGuiSelectableFlags_MenuItem           = 1 << 4,
+    ImGuiSelectableFlags_Disabled           = 1 << 5,
+    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 6
 };
 
 // FIXME: this is in development, not exposed/functional as a generic feature yet.

@@ -5226,7 +5226,11 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         SetHoveredID(id);
         if (!(flags & ImGuiButtonFlags_NoKeyModifiers) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
-            if (g.IO.MouseClicked[0])
+            if (g.IO.MouseDoubleClicked[0] && (flags & ImGuiButtonFlags_PressedOnDoubleClick))
+            {
+                pressed = true;
+            }
+            else if (g.IO.MouseClicked[0])
             {
                 if (flags & ImGuiButtonFlags_PressedOnClick)
                 {
@@ -8143,6 +8147,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_Menu) button_flags |= ImGuiButtonFlags_PressedOnClick;
     if (flags & ImGuiSelectableFlags_MenuItem) button_flags |= ImGuiButtonFlags_PressedOnClick|ImGuiButtonFlags_PressedOnRelease;
     if (flags & ImGuiSelectableFlags_Disabled) button_flags |= ImGuiButtonFlags_Disabled;
+    if (flags & ImGuiSelectableFlags_HandleDoubleClick) button_flags |= ImGuiButtonFlags_PressedOnDoubleClick;
     bool hovered, held;
     bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, button_flags);
     if (flags & ImGuiSelectableFlags_Disabled)
