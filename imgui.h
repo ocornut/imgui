@@ -415,8 +415,8 @@ namespace ImGui
     IMGUI_API void          ResetMouseDragDelta(int button = 0);                                //
     IMGUI_API ImGuiMouseCursor GetMouseCursor();                                                // get desired cursor type, reset in ImGui::NewFrame(), this updated during the frame. valid before Render(). If you use software rendering by setting io.MouseDrawCursor ImGui will render those for you
     IMGUI_API void          SetMouseCursor(ImGuiMouseCursor type);                              // set desired cursor type
-    IMGUI_API void          CaptureKeyboardFromApp();                                           // manually enforce imgui setting the io.WantCaptureKeyboard flag next frame (your application needs to handle it). e.g. capture keyboard when your widget is being hovered.
-    IMGUI_API void          CaptureMouseFromApp();                                              // manually enforce imgui setting the io.WantCaptureMouse flag next frame (your application needs to handle it).
+    IMGUI_API void          CaptureKeyboardFromApp(bool capture = true);                        // manually override io.WantCaptureKeyboard flag next frame (said flag is entirely left for your application handle). e.g. force capture keyboard when your widget is being hovered.
+    IMGUI_API void          CaptureMouseFromApp(bool capture = true);                           // manually override io.WantCaptureMouse flag next frame (said flag is entirely left for your application handle).
 
     // Helpers functions to access functions pointers in ImGui::GetIO()
     IMGUI_API void*         MemAlloc(size_t sz);

@@ -1990,7 +1990,7 @@ void ImGui::NewFrame()
     }
 
     // Are we using inputs? Tell user so they can capture/discard the inputs away from the rest of their application.
-    // When clicking outside of a window we assume the click is owned by the application and won't request capture.
+    // When clicking outside of a window we assume the click is owned by the application and won't request capture. We need to track click ownership.
     int mouse_earliest_button_down = -1;
     bool mouse_any_down = false;
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
@@ -2002,16 +2002,19 @@ void ImGui::NewFrame()
             if (mouse_earliest_button_down == -1 || g.IO.MouseClickedTime[mouse_earliest_button_down] > g.IO.MouseClickedTime[i])
                 mouse_earliest_button_down = i;
     }
-    bool mouse_owned_by_application = mouse_earliest_button_down != -1 && !g.IO.MouseDownOwned[mouse_earliest_button_down];
-    g.IO.WantCaptureMouse = (!mouse_owned_by_application && g.HoveredWindow != NULL) || (!mouse_owned_by_application && mouse_any_down) || (g.ActiveId != 0) || (!g.OpenedPopupStack.empty()) || (g.CaptureMouseNextFrame);
-    g.IO.WantCaptureKeyboard = (g.ActiveId != 0) || (g.CaptureKeyboardNextFrame);
+    bool mouse_avail_to_imgui = (mouse_earliest_button_down == -1) || g.IO.MouseDownOwned[mouse_earliest_button_down];
+    if (g.CaptureMouseNextFrame != -1)
+        g.IO.WantCaptureMouse = (g.CaptureMouseNextFrame != 0);
+    else
+        g.IO.WantCaptureMouse = (mouse_avail_to_imgui && (g.HoveredWindow != NULL || mouse_any_down)) || (g.ActiveId != 0) || (!g.OpenedPopupStack.empty());
+    g.IO.WantCaptureKeyboard = (g.CaptureKeyboardNextFrame != -1) ? (g.CaptureKeyboardNextFrame != 0) : (g.ActiveId != 0);
     g.IO.WantTextInput = (g.ActiveId != 0 && g.InputTextState.Id == g.ActiveId);
     g.MouseCursor = ImGuiMouseCursor_Arrow;
-    g.CaptureMouseNextFrame = g.CaptureKeyboardNextFrame = false;
+    g.CaptureMouseNextFrame = g.CaptureKeyboardNextFrame = -1;
     g.OsImePosRequest = ImVec2(1.0f, 1.0f); // OS Input Method Editor showing on top-left of our window by default
 
     // If mouse was first clicked outside of ImGui bounds we also cancel out hovering.
-    if (mouse_owned_by_application)
+    if (!mouse_avail_to_imgui)
         g.HoveredWindow = g.HoveredRootWindow = NULL;
 
     // Scale & Scrolling
@@ -2990,14 +2993,14 @@ void ImGui::SetMouseCursor(ImGuiMouseCursor cursor_type)
     GImGui->MouseCursor = cursor_type;
 }
 
-void ImGui::CaptureKeyboardFromApp()
+void ImGui::CaptureKeyboardFromApp(bool capture)
 {
-    GImGui->CaptureKeyboardNextFrame = true;
+    GImGui->CaptureKeyboardNextFrame = capture ? 1 : 0;
 }
 
-void ImGui::CaptureMouseFromApp()
+void ImGui::CaptureMouseFromApp(bool capture)
 {
-    GImGui->CaptureMouseNextFrame = true;
+    GImGui->CaptureMouseNextFrame = capture ? 1 : 0;
 }
 
 bool ImGui::IsItemHovered()

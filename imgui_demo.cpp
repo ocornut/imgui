@@ -1503,10 +1503,14 @@ void ImGui::ShowTestWindow(bool* p_opened)
             ImGui::Text("WantCaptureKeyboard: %s", io.WantCaptureKeyboard ? "true" : "false");
             ImGui::Text("WantTextInput: %s", io.WantTextInput ? "true" : "false");
 
-            ImGui::Button("Hover me\nto enforce\ninputs capture");
+            ImGui::Button("Hovering me sets the\nkeyboard capture flag");
             if (ImGui::IsItemHovered())
-                ImGui::CaptureKeyboardFromApp();
-
+                ImGui::CaptureKeyboardFromApp(true);
+            ImGui::SameLine();
+            ImGui::Button("Holding me clears the\nthe keyboard capture flag");
+            if (ImGui::IsItemActive())
+                ImGui::CaptureKeyboardFromApp(false);
+            
             ImGui::TreePop();
         }
 

@@ -434,8 +434,8 @@ struct ImGuiState
     float                   FramerateSecPerFrame[120];          // calculate estimate of framerate for user
     int                     FramerateSecPerFrameIdx;
     float                   FramerateSecPerFrameAccum;
-    bool                    CaptureMouseNextFrame;              // explicit capture via CaptureInputs() sets those flags
-    bool                    CaptureKeyboardNextFrame;
+    int                     CaptureMouseNextFrame;              // explicit capture via CaptureInputs() sets those flags
+    int                     CaptureKeyboardNextFrame;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
 
     ImGuiState()
@@ -501,7 +501,7 @@ struct ImGuiState
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
         FramerateSecPerFrameIdx = 0;
         FramerateSecPerFrameAccum = 0.0f;
-        CaptureMouseNextFrame = CaptureKeyboardNextFrame = false;
+        CaptureMouseNextFrame = CaptureKeyboardNextFrame = -1;
         memset(TempBuffer, 0, sizeof(TempBuffer));
     }
 };
