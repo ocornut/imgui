@@ -3382,12 +3382,11 @@ void ImGui::EndChild()
     else
     {
         // When using auto-filling child window, we don't provide full width/height to ItemSize so that it doesn't feed back into automatic size-fitting.
-        ImGuiState& g = *GImGui;
         ImVec2 sz = ImGui::GetWindowSize();
-        if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitX) // Arbitrary minimum zeroish child size of 4.0f
-            sz.x = ImMax(4.0f, sz.x - g.Style.WindowPadding.x);
+        if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitX) // Arbitrary minimum zero-ish child size of 4.0f causes less trouble than a 0.0f
+            sz.x = ImMax(4.0f, sz.x);
         if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitY)
-            sz.y = ImMax(4.0f, sz.y - g.Style.WindowPadding.y);
+            sz.y = ImMax(4.0f, sz.y);
 
         ImGui::End();
 
