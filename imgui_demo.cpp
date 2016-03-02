@@ -397,11 +397,9 @@ void ImGui::ShowTestWindow(bool* p_opened)
                 ImGui::Selectable("2. I am selectable", &selected[1]);
                 ImGui::Text("3. I am not selectable");
                 ImGui::Selectable("4. I am selectable", &selected[2]);
-                if (ImGui::Selectable("5. I am double clickable", selected[3], ImGuiSelectableFlags_HandleDoubleClick))
-                {
+                if (ImGui::Selectable("5. I am double clickable", selected[3], ImGuiSelectableFlags_AllowDoubleClick))
                     if (ImGui::IsMouseDoubleClicked(0))
                         selected[3] = !selected[3];
-                }
                 ImGui::TreePop();
             }
             if (ImGui::TreeNode("Rendering more text into the same block"))
