@@ -149,6 +149,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2016/03/02 (1.48) - InputText() completion/history/always callbacks: if you modify the text buffer manually (without using DeleteChars()/InsertChars() helper) you need to maintain the BufTextLen field. added an assert.
  - 2016/01/23 (1.48) - fixed not honoring exact width passed to PushItemWidth(), previously it would add extra FramePadding.x*2 over that width. if you had manual pixel-perfect alignment in place it might affect you.
  - 2015/12/27 (1.48) - fixed ImDrawList::AddRect() which used to render a rectangle 1 px too large on each axis.
  - 2015/12/04 (1.47) - renamed Color() helpers to ValueColor() - dangerously named, rarely used and probably to be made obsolete.
@@ -7117,41 +7118,41 @@ void ImGuiTextEditState::OnKeyPressed(int key)
 
 // Public API to manipulate UTF-8 text
 // We expose UTF-8 to the user (unlike the STB_TEXTEDIT_* functions which are manipulating wchar)
+// FIXME: The existence of this rarely exercised code path is a bit of a nuisance.
 void ImGuiTextEditCallbackData::DeleteChars(int pos, int bytes_count)
 {
+    IM_ASSERT(pos + bytes_count <= BufTextLen);
     char* dst = Buf + pos;
     const char* src = Buf + pos + bytes_count;
     while (char c = *src++)
         *dst++ = c;
     *dst = '\0';
 
-    BufDirty = true;
     if (CursorPos + bytes_count >= pos)
         CursorPos -= bytes_count;
     else if (CursorPos >= pos)
         CursorPos = pos;
     SelectionStart = SelectionEnd = CursorPos;
+    BufDirty = true;
+    BufTextLen -= bytes_count;
 }
 
 void ImGuiTextEditCallbackData::InsertChars(int pos, const char* new_text, const char* new_text_end)
 {
-    const int text_len = (int)strlen(Buf);
-    if (!new_text_end)
-        new_text_end = new_text + strlen(new_text);
-    const int new_text_len = (int)(new_text_end - new_text);
-
-    if (new_text_len + text_len + 1 >= BufSize)
+    const int new_text_len = new_text_end ? (int)(new_text_end - new_text) : (int)strlen(new_text);
+    if (new_text_len + BufTextLen + 1 >= BufSize)
         return;
 
-    if (text_len != pos)
-        memmove(Buf + pos + new_text_len, Buf + pos, (size_t)(text_len - pos));
+    if (BufTextLen != pos)
+        memmove(Buf + pos + new_text_len, Buf + pos, (size_t)(BufTextLen - pos));
     memcpy(Buf + pos, new_text, (size_t)new_text_len * sizeof(char));
-    Buf[text_len + new_text_len] = '\0';
+    Buf[BufTextLen + new_text_len] = '\0';
 
-    BufDirty = true;
     if (CursorPos >= pos)
         CursorPos += new_text_len;
     SelectionStart = SelectionEnd = CursorPos;
+    BufDirty = true;
+    BufTextLen += new_text_len;
 }
 
 // Return false to discard a character.
@@ -7543,6 +7544,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 if (event_key != ImGuiKey_COUNT || (flags & ImGuiInputTextFlags_CallbackAlways) != 0)
                 {
                     ImGuiTextEditCallbackData callback_data;
+                    memset(&callback_data, 0, sizeof(ImGuiTextEditCallbackData));
                     callback_data.EventFlag = event_flag;
                     callback_data.Flags = flags;
                     callback_data.UserData = user_data;
@@ -7550,10 +7552,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
                     callback_data.EventKey = event_key;
                     callback_data.Buf = edit_state.TempTextBuffer.Data;
+                    callback_data.BufTextLen = edit_state.CurLenA;
                     callback_data.BufSize = edit_state.BufSizeA;
                     callback_data.BufDirty = false;
 
-                    // We have to convert from position from wchar to UTF-8 positions
+                    // We have to convert from wchar-positions to UTF-8-positions, which can be pretty slow (an incentive to ditch the ImWchar buffer, see https://github.com/nothings/stb/issues/188)
                     ImWchar* text = edit_state.Text.Data;
                     const int utf8_cursor_pos = callback_data.CursorPos = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.cursor);
                     const int utf8_selection_start = callback_data.SelectionStart = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.select_start);
@@ -7571,8 +7574,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     if (callback_data.SelectionEnd != utf8_selection_end)      edit_state.StbState.select_end = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionEnd);
                     if (callback_data.BufDirty)
                     {
-                        edit_state.CurLenW = ImTextStrFromUtf8(text, edit_state.Text.Size, edit_state.TempTextBuffer.Data, NULL);
-                        edit_state.CurLenA = (int)strlen(edit_state.TempTextBuffer.Data);
+                        IM_ASSERT(callback_data.BufTextLen == (int)strlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
+                        edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.Data, edit_state.Text.Size, callback_data.Buf, NULL);
+                        edit_state.CurLenA = callback_data.BufTextLen;  // Assume correct length and valid UTF-8 from user, saves us an extra strlen()
                         edit_state.CursorAnimReset();
                     }
                 }
