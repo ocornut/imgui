@@ -160,7 +160,7 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_DontClosePopups        = 1 << 5,   // disable automatically closing parent popup on press
     ImGuiButtonFlags_Disabled               = 1 << 6,   // disable interaction
     ImGuiButtonFlags_AlignTextBaseLine      = 1 << 7,   // vertically align button to match text baseline - ButtonEx() only
-    ImGuiButtonFlags_NoKeyModifiers         = 1 << 8,   // disable interaction if a key modifier is held
+    ImGuiButtonFlags_NoKeyModifiers         = 1 << 8    // disable interaction if a key modifier is held
 };
 
 enum ImGuiTreeNodeFlags_
