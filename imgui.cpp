@@ -149,6 +149,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2016/03/02 (1.48) - InputText() completion/history/always callbacks: if you modify the text buffer manually (without using DeleteChars()/InsertChars() helper) you need to maintain the BufTextLen field. added an assert.
  - 2016/02/21 (1.48) - removed ColorEditMode() and ImGuiColorEditMode in favor of ImGuiColorEditFlags and parameters to ColorEdit*() functions
                      - replaced ColorEdit4() third parameter 'bool show_alpha=true' to 'ImGuiColorEditFlags flags=0x01' where ImGuiColorEditFlags_Alpha=0x01 for dodgy compatibility
  - 2016/01/23 (1.48) - fixed not honoring exact width passed to PushItemWidth(), previously it would add extra FramePadding.x*2 over that width. if you had manual pixel-perfect alignment in place it might affect you.
@@ -438,6 +439,7 @@
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
+ - input text: reorganise event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
  - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
  - input text multi-line: way to dynamically grow the buffer without forcing the user to initially allocate for worse case (follow up on #200)
  - input text multi-line: line numbers? status bar? (follow up on #200)
@@ -1991,7 +1993,7 @@ void ImGui::NewFrame()
     }
 
     // Are we using inputs? Tell user so they can capture/discard the inputs away from the rest of their application.
-    // When clicking outside of a window we assume the click is owned by the application and won't request capture.
+    // When clicking outside of a window we assume the click is owned by the application and won't request capture. We need to track click ownership.
     int mouse_earliest_button_down = -1;
     bool mouse_any_down = false;
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
@@ -2003,16 +2005,19 @@ void ImGui::NewFrame()
             if (mouse_earliest_button_down == -1 || g.IO.MouseClickedTime[mouse_earliest_button_down] > g.IO.MouseClickedTime[i])
                 mouse_earliest_button_down = i;
     }
-    bool mouse_owned_by_application = mouse_earliest_button_down != -1 && !g.IO.MouseDownOwned[mouse_earliest_button_down];
-    g.IO.WantCaptureMouse = (!mouse_owned_by_application && g.HoveredWindow != NULL) || (!mouse_owned_by_application && mouse_any_down) || (g.ActiveId != 0) || (!g.OpenedPopupStack.empty()) || (g.CaptureMouseNextFrame);
-    g.IO.WantCaptureKeyboard = (g.ActiveId != 0) || (g.CaptureKeyboardNextFrame);
+    bool mouse_avail_to_imgui = (mouse_earliest_button_down == -1) || g.IO.MouseDownOwned[mouse_earliest_button_down];
+    if (g.CaptureMouseNextFrame != -1)
+        g.IO.WantCaptureMouse = (g.CaptureMouseNextFrame != 0);
+    else
+        g.IO.WantCaptureMouse = (mouse_avail_to_imgui && (g.HoveredWindow != NULL || mouse_any_down)) || (g.ActiveId != 0) || (!g.OpenedPopupStack.empty());
+    g.IO.WantCaptureKeyboard = (g.CaptureKeyboardNextFrame != -1) ? (g.CaptureKeyboardNextFrame != 0) : (g.ActiveId != 0);
     g.IO.WantTextInput = (g.ActiveId != 0 && g.InputTextState.Id == g.ActiveId);
     g.MouseCursor = ImGuiMouseCursor_Arrow;
-    g.CaptureMouseNextFrame = g.CaptureKeyboardNextFrame = false;
+    g.CaptureMouseNextFrame = g.CaptureKeyboardNextFrame = -1;
     g.OsImePosRequest = ImVec2(1.0f, 1.0f); // OS Input Method Editor showing on top-left of our window by default
 
     // If mouse was first clicked outside of ImGui bounds we also cancel out hovering.
-    if (mouse_owned_by_application)
+    if (!mouse_avail_to_imgui)
         g.HoveredWindow = g.HoveredRootWindow = NULL;
 
     // Scale & Scrolling
@@ -2991,14 +2996,14 @@ void ImGui::SetMouseCursor(ImGuiMouseCursor cursor_type)
     GImGui->MouseCursor = cursor_type;
 }
 
-void ImGui::CaptureKeyboardFromApp()
+void ImGui::CaptureKeyboardFromApp(bool capture)
 {
-    GImGui->CaptureKeyboardNextFrame = true;
+    GImGui->CaptureKeyboardNextFrame = capture ? 1 : 0;
 }
 
-void ImGui::CaptureMouseFromApp()
+void ImGui::CaptureMouseFromApp(bool capture)
 {
-    GImGui->CaptureMouseNextFrame = true;
+    GImGui->CaptureMouseNextFrame = capture ? 1 : 0;
 }
 
 bool ImGui::IsItemHovered()
@@ -3384,12 +3389,11 @@ void ImGui::EndChild()
     else
     {
         // When using auto-filling child window, we don't provide full width/height to ItemSize so that it doesn't feed back into automatic size-fitting.
-        ImGuiState& g = *GImGui;
         ImVec2 sz = ImGui::GetWindowSize();
-        if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitX) // Arbitrary minimum zeroish child size of 4.0f
-            sz.x = ImMax(4.0f, sz.x - g.Style.WindowPadding.x);
+        if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitX) // Arbitrary minimum zero-ish child size of 4.0f causes less trouble than a 0.0f
+            sz.x = ImMax(4.0f, sz.x);
         if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitY)
-            sz.y = ImMax(4.0f, sz.y - g.Style.WindowPadding.y);
+            sz.y = ImMax(4.0f, sz.y);
 
         ImGui::End();
 
@@ -5077,6 +5081,8 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                     while (line < text_end && lines_skipped < lines_skippable)
                     {
                         const char* line_end = strchr(line, '\n');
+                        if (!line_end)
+                            line_end = text_end;
                         line = line_end + 1;
                         lines_skipped++;
                     }
@@ -5222,7 +5228,11 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         SetHoveredID(id);
         if (!(flags & ImGuiButtonFlags_NoKeyModifiers) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
-            if (g.IO.MouseClicked[0])
+            if (g.IO.MouseDoubleClicked[0] && (flags & ImGuiButtonFlags_PressedOnDoubleClick))
+            {
+                pressed = true;
+            }
+            else if (g.IO.MouseClicked[0])
             {
                 if (flags & ImGuiButtonFlags_PressedOnClick)
                 {
@@ -7117,41 +7127,41 @@ void ImGuiTextEditState::OnKeyPressed(int key)
 
 // Public API to manipulate UTF-8 text
 // We expose UTF-8 to the user (unlike the STB_TEXTEDIT_* functions which are manipulating wchar)
+// FIXME: The existence of this rarely exercised code path is a bit of a nuisance.
 void ImGuiTextEditCallbackData::DeleteChars(int pos, int bytes_count)
 {
+    IM_ASSERT(pos + bytes_count <= BufTextLen);
     char* dst = Buf + pos;
     const char* src = Buf + pos + bytes_count;
     while (char c = *src++)
         *dst++ = c;
     *dst = '\0';
 
-    BufDirty = true;
     if (CursorPos + bytes_count >= pos)
         CursorPos -= bytes_count;
     else if (CursorPos >= pos)
         CursorPos = pos;
     SelectionStart = SelectionEnd = CursorPos;
+    BufDirty = true;
+    BufTextLen -= bytes_count;
 }
 
 void ImGuiTextEditCallbackData::InsertChars(int pos, const char* new_text, const char* new_text_end)
 {
-    const int text_len = (int)strlen(Buf);
-    if (!new_text_end)
-        new_text_end = new_text + strlen(new_text);
-    const int new_text_len = (int)(new_text_end - new_text);
-
-    if (new_text_len + text_len + 1 >= BufSize)
+    const int new_text_len = new_text_end ? (int)(new_text_end - new_text) : (int)strlen(new_text);
+    if (new_text_len + BufTextLen + 1 >= BufSize)
         return;
 
-    if (text_len != pos)
-        memmove(Buf + pos + new_text_len, Buf + pos, (size_t)(text_len - pos));
+    if (BufTextLen != pos)
+        memmove(Buf + pos + new_text_len, Buf + pos, (size_t)(BufTextLen - pos));
     memcpy(Buf + pos, new_text, (size_t)new_text_len * sizeof(char));
-    Buf[text_len + new_text_len] = '\0';
+    Buf[BufTextLen + new_text_len] = '\0';
 
-    BufDirty = true;
     if (CursorPos >= pos)
         CursorPos += new_text_len;
     SelectionStart = SelectionEnd = CursorPos;
+    BufDirty = true;
+    BufTextLen += new_text_len;
 }
 
 // Return false to discard a character.
@@ -7539,10 +7549,13 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     event_flag = ImGuiInputTextFlags_CallbackHistory;
                     event_key = ImGuiKey_DownArrow;
                 }
+                else if (flags & ImGuiInputTextFlags_CallbackAlways)
+                    event_flag = ImGuiInputTextFlags_CallbackAlways;
 
-                if (event_key != ImGuiKey_COUNT || (flags & ImGuiInputTextFlags_CallbackAlways) != 0)
+                if (event_flag)
                 {
                     ImGuiTextEditCallbackData callback_data;
+                    memset(&callback_data, 0, sizeof(ImGuiTextEditCallbackData));
                     callback_data.EventFlag = event_flag;
                     callback_data.Flags = flags;
                     callback_data.UserData = user_data;
@@ -7550,10 +7563,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
                     callback_data.EventKey = event_key;
                     callback_data.Buf = edit_state.TempTextBuffer.Data;
+                    callback_data.BufTextLen = edit_state.CurLenA;
                     callback_data.BufSize = edit_state.BufSizeA;
                     callback_data.BufDirty = false;
 
-                    // We have to convert from position from wchar to UTF-8 positions
+                    // We have to convert from wchar-positions to UTF-8-positions, which can be pretty slow (an incentive to ditch the ImWchar buffer, see https://github.com/nothings/stb/issues/188)
                     ImWchar* text = edit_state.Text.Data;
                     const int utf8_cursor_pos = callback_data.CursorPos = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.cursor);
                     const int utf8_selection_start = callback_data.SelectionStart = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.select_start);
@@ -7571,8 +7585,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     if (callback_data.SelectionEnd != utf8_selection_end)      edit_state.StbState.select_end = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionEnd);
                     if (callback_data.BufDirty)
                     {
-                        edit_state.CurLenW = ImTextStrFromUtf8(text, edit_state.Text.Size, edit_state.TempTextBuffer.Data, NULL);
-                        edit_state.CurLenA = (int)strlen(edit_state.TempTextBuffer.Data);
+                        IM_ASSERT(callback_data.BufTextLen == (int)strlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
+                        edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.Data, edit_state.Text.Size, callback_data.Buf, NULL);
+                        edit_state.CurLenA = callback_data.BufTextLen;  // Assume correct length and valid UTF-8 from user, saves us an extra strlen()
                         edit_state.CursorAnimReset();
                     }
                 }
@@ -8136,6 +8151,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_Menu) button_flags |= ImGuiButtonFlags_PressedOnClick;
     if (flags & ImGuiSelectableFlags_MenuItem) button_flags |= ImGuiButtonFlags_PressedOnClick|ImGuiButtonFlags_PressedOnRelease;
     if (flags & ImGuiSelectableFlags_Disabled) button_flags |= ImGuiButtonFlags_Disabled;
+    if (flags & ImGuiSelectableFlags_AllowDoubleClick) button_flags |= ImGuiButtonFlags_PressedOnDoubleClick;
     bool hovered, held;
     bool pressed = ButtonBehavior(bb_with_spacing, id, &hovered, &held, button_flags);
     if (flags & ImGuiSelectableFlags_Disabled)
