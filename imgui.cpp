@@ -6413,6 +6413,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
                 g.DragLastMouseDelta = ImVec2(0.f, 0.f);
             }
 
+            float v_cur = g.DragCurrentValue;
             const ImVec2 mouse_drag_delta = ImGui::GetMouseDragDelta(0, 1.0f);
             if (fabsf(mouse_drag_delta.x - g.DragLastMouseDelta.x) > 0.0f)
             {
@@ -6424,7 +6425,6 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
                 if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
                     speed = speed * g.DragSpeedScaleSlow;
 
-                float v_cur = g.DragCurrentValue;
                 float delta = (mouse_drag_delta.x - g.DragLastMouseDelta.x) * speed;
                 if (fabsf(power - 1.0f) > 0.001f)
                 {
@@ -6446,14 +6446,14 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
                 if (v_min < v_max)
                     v_cur = ImClamp(v_cur, v_min, v_max);
                 g.DragCurrentValue = v_cur;
+            }
 
-                // Round to user desired precision, then apply
-                v_cur = RoundScalar(v_cur, decimal_precision);
-                if (*v != v_cur)
-                {
-                    *v = v_cur;
-                    value_changed = true;
-                }
+            // Round to user desired precision, then apply
+            v_cur = RoundScalar(v_cur, decimal_precision);
+            if (*v != v_cur)
+            {
+                *v = v_cur;
+                value_changed = true;
             }
         }
         else
