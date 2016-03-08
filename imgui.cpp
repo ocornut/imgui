@@ -19,7 +19,7 @@
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - How can I help?
    - How do I update to a newer version of ImGui?
-   - Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
+   - Can I have multiple widgets with the same label? Can I have widget without a label? (Yes) / A primer on the use of labels/IDs in ImGui.
    - I integrated ImGui in my engine and the text or lines are blurry..
    - I integrated ImGui in my engine and some elements are disappearing when I move windows around..
    - How can I load a different font than the default?
@@ -426,6 +426,7 @@
  - window: detect extra End() call that pop the "Debug" window out and assert at call site instead of later.
  - window: consider renaming "GetWindowFont" which conflict with old Windows #define (#340)
  - window/tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
+ - window: increase minimum size of a window with menus or fix the menu rendering so that it doesn't look odd.
  - draw-list: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
 !- scrolling: allow immediately effective change of scroll if we haven't appended items yet
  - splitter/separator: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
@@ -437,7 +438,7 @@
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
- - input text: reorganise event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
+ - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
  - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
  - input text multi-line: way to dynamically grow the buffer without forcing the user to initially allocate for worse case (follow up on #200)
  - input text multi-line: line numbers? status bar? (follow up on #200)
@@ -445,6 +446,7 @@
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
  - input number: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
+ - button: provide a button that looks framed.
  - text: proper alignment options
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
@@ -452,6 +454,7 @@
  - layout: horizontal flow until no space left (#404)
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
+ - layout: BeginGroup() needs a border option.
  - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
  - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
@@ -469,9 +472,11 @@
 !- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
  - popups: add variant using global identifier similar to Begin/End (#402)
  - popups: border options. richer api like BeginChild() perhaps? (#197)
+ - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last prefered button" and may teleport when moving mouse
  - menus: local shortcuts, global shortcuts (#456, #126)
  - menus: icons
  - menus: menubars: some sort of priority / effect of main menu-bar on desktop size?
+ - menus: calling BeginMenu() twice with a same name doesn't seem to append nicely
  - statusbar: add a per-window status bar helper similar to what menubar does.
  - tabs (#261, #351)
  - separator: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
@@ -495,6 +500,7 @@
  - text edit: flag to disable live update of the user buffer.
  - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
  - tree node / optimization: avoid formatting when clipped.
+ - tree node: clarify spacing, perhaps provide API to query exact spacing. provide API to draw the primitive. same with Bullet().
  - tree node: tree-node/header right-most side doesn't take account of horizontal scrolling.
  - tree node: add treenode/treepush int variants? because (void*) cast from int warns on some platforms/settings
  - tree node / selectable render mismatch which is visible if you use them both next to each other (e.g. cf. property viewer)
@@ -525,6 +531,7 @@
  - input: support track pad style scrolling & slider edit.
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
+ - misc: provide HoveredTime and ActivatedTime to ease the creation of animations.
  - style editor: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space? (#438)
  - style editor: color child window height expressed in multiple of line height.
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
