@@ -9,7 +9,7 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
 
 # GLFW
-set(GLFW_DIR ../../../glfw)
+set(GLFW_DIR ../../../glfw) # Set this to point to a up-to-date GLFW repo
 option(GLFW_BUILD_EXAMPLES "Build the GLFW example programs" OFF)
 option(GLFW_BUILD_TESTS "Build the GLFW test programs" OFF)
 option(GLFW_BUILD_DOCS "Build the GLFW documentation" OFF)
@@ -23,12 +23,12 @@ set(IMGUI_DIR ../../)
 include_directories(${IMGUI_DIR})
 
 # Libraries
-if(WIN32)
-  set(LIBRARIES "glfw;vulkan-${MAJOR}")
-elseif(UNIX)
-  set(LIBRARIES "glfw;vulkan")
-else()
-endif()
+find_library(VULKAN_LIBRARY
+  NAMES vulkan vulkan-1)
+set(LIBRARIES "glfw;${VULKAN_LIBRARY}")
+
+# Use vulkan headers from glfw:
+include_directories(${GLFW_DIR}/deps)
 
 file(GLOB sources *.cpp)
 
