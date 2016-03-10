@@ -228,7 +228,7 @@ static uint32_t ImGui_ImplGlfwVulkan_MemoryType(VkMemoryPropertyFlags properties
         if((prop.memoryTypes[i].propertyFlags & properties) == properties &&
            type_bits & (1<<i))
             return i;
-    return 0;
+    return 0xffffffff; // Unable to find memoryType
 }
 static void ImGui_ImplGlfwVulkan_VkResult(VkResult err)
 {
@@ -603,27 +603,24 @@ bool ImGui_ImplGlfwVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
         ImGui_ImplGlfwVulkan_VkResult(err);
         vkUnmapMemory(g_Device, g_UploadBufferMemory);
     }
-    // Upload Barrier:
+    // Copy to Image:
     {
-        VkImageMemoryBarrier image_barrier[1] = {};
-        image_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        image_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        image_barrier[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        image_barrier[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        image_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_barrier[0].image = g_FontImage;
-        image_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        image_barrier[0].subresourceRange.levelCount = 1;
-        image_barrier[0].subresourceRange.layerCount = 1;
+        VkImageMemoryBarrier copy_barrier[1] = {};
+        copy_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        copy_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        copy_barrier[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        copy_barrier[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        copy_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        copy_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        copy_barrier[0].image = g_FontImage;
+        copy_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copy_barrier[0].subresourceRange.levelCount = 1;
+        copy_barrier[0].subresourceRange.layerCount = 1;
         vkCmdPipelineBarrier(command_buffer,
                              VK_PIPELINE_STAGE_HOST_BIT,
                              VK_PIPELINE_STAGE_TRANSFER_BIT,
                              0,
-                             0, NULL, 0, NULL, 1, image_barrier);
-    }
-    // Copy to Image:
-    {
+                             0, NULL, 0, NULL, 1, copy_barrier);
         VkBufferImageCopy region = {};
         region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         region.imageSubresource.layerCount = 1;
@@ -634,26 +631,23 @@ bool ImGui_ImplGlfwVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
                                g_FontImage,
                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                1, &region);
-    }
-    // Usage Barrier:
-    {
-        VkImageMemoryBarrier image_barrier[1] = {};
-        image_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        image_barrier[0].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        image_barrier[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        image_barrier[0].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        image_barrier[0].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        image_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_barrier[0].image = g_FontImage;
-        image_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        image_barrier[0].subresourceRange.levelCount = 1;
-        image_barrier[0].subresourceRange.layerCount = 1;
+        VkImageMemoryBarrier use_barrier[1] = {};
+        use_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        use_barrier[0].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        use_barrier[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        use_barrier[0].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        use_barrier[0].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        use_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        use_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        use_barrier[0].image = g_FontImage;
+        use_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        use_barrier[0].subresourceRange.levelCount = 1;
+        use_barrier[0].subresourceRange.layerCount = 1;
         vkCmdPipelineBarrier(command_buffer,
                              VK_PIPELINE_STAGE_TRANSFER_BIT,
                              VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                              0,
-                             0, NULL, 0, NULL, 1, image_barrier);
+                             0, NULL, 0, NULL, 1, use_barrier);
     }
     io.Fonts->TexID = (void *)(intptr_t)g_FontImage;
 
@@ -685,7 +679,6 @@ bool ImGui_ImplGlfwVulkan_CreateDeviceObjects()
         err = vkCreateShaderModule(g_Device, &frag_info, g_Allocator, &frag_module);
         ImGui_ImplGlfwVulkan_VkResult(err);
     }
-
     if(!g_FontSampler){
         VkSamplerCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -703,7 +696,6 @@ bool ImGui_ImplGlfwVulkan_CreateDeviceObjects()
                               &g_FontSampler);
         ImGui_ImplGlfwVulkan_VkResult(err);
     }
-
     if(!g_DescriptorSetLayout){
         VkSampler sampler[1] = {g_FontSampler};
         VkDescriptorSetLayoutBinding binding[1] = {};
@@ -721,6 +713,7 @@ bool ImGui_ImplGlfwVulkan_CreateDeviceObjects()
                                           &g_DescriptorSetLayout);
         ImGui_ImplGlfwVulkan_VkResult(err);
     }
+    // Create Descriptor Set:
     {
         VkDescriptorSetAllocateInfo alloc_info = {};
         alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
