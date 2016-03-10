@@ -605,14 +605,6 @@ bool ImGui_ImplGlfwVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
     }
     // Upload Barrier:
     {
-        VkBufferMemoryBarrier buffer_barrier[1] = {};
-        buffer_barrier[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-        buffer_barrier[0].srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-        buffer_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        buffer_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        buffer_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        buffer_barrier[0].buffer = g_UploadBuffer;
-        buffer_barrier[0].size = upload_size;
         VkImageMemoryBarrier image_barrier[1] = {};
         image_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         image_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -628,7 +620,7 @@ bool ImGui_ImplGlfwVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
                              VK_PIPELINE_STAGE_HOST_BIT,
                              VK_PIPELINE_STAGE_TRANSFER_BIT,
                              0,
-                             0, NULL, 1, buffer_barrier, 1, image_barrier);
+                             0, NULL, 0, NULL, 1, image_barrier);
     }
     // Copy to Image:
     {

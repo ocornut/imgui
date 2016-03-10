@@ -312,14 +312,6 @@ static void frame_begin()
         check_vk_result(err);
     }
     {
-        vkDestroySemaphore(g_Device, g_Semaphore[g_FrameIndex], g_Allocator);
-        VkSemaphoreCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-        err = vkCreateSemaphore(g_Device, &info, g_Allocator,
-                                &g_Semaphore[g_FrameIndex]);
-        check_vk_result(err);
-    }
-    {
         err = vkAcquireNextImageKHR(
             g_Device, g_Swapchain,
             UINT64_MAX,
