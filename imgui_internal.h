@@ -152,14 +152,15 @@ inline void operator delete(void*, ImPlacementNewDummy, void*) {}
 
 enum ImGuiButtonFlags_
 {
-    ImGuiButtonFlags_Repeat             = 1 << 0,
-    ImGuiButtonFlags_PressedOnClick     = 1 << 1,   // return pressed on click only (default requires click+release)
-    ImGuiButtonFlags_PressedOnRelease   = 1 << 2,   // return pressed on release only (default requires click+release)
-    ImGuiButtonFlags_FlattenChilds      = 1 << 3,
-    ImGuiButtonFlags_DontClosePopups    = 1 << 4,
-    ImGuiButtonFlags_Disabled           = 1 << 5,
-    ImGuiButtonFlags_AlignTextBaseLine  = 1 << 6,
-    ImGuiButtonFlags_NoKeyModifiers     = 1 << 7
+    ImGuiButtonFlags_Repeat                 = 1 << 0,   // hold to repeat
+    ImGuiButtonFlags_PressedOnClick         = 1 << 1,   // return pressed on click (default requires click+release)
+    ImGuiButtonFlags_PressedOnRelease       = 1 << 2,   // return pressed on release (default requires click+release)
+    ImGuiButtonFlags_PressedOnDoubleClick   = 1 << 3,   // return pressed on double-click (default requires click+release)
+    ImGuiButtonFlags_FlattenChilds          = 1 << 4,   // allow interaction even if a child window is overlapping
+    ImGuiButtonFlags_DontClosePopups        = 1 << 5,   // disable automatically closing parent popup on press
+    ImGuiButtonFlags_Disabled               = 1 << 6,   // disable interaction
+    ImGuiButtonFlags_AlignTextBaseLine      = 1 << 7,   // vertically align button to match text baseline - ButtonEx() only
+    ImGuiButtonFlags_NoKeyModifiers         = 1 << 8    // disable interaction if a key modifier is held
 };
 
 enum ImGuiTreeNodeFlags_
@@ -176,10 +177,10 @@ enum ImGuiSliderFlags_
 enum ImGuiSelectableFlagsPrivate_
 {
     // NB: need to be in sync with last value of ImGuiSelectableFlags_
-    ImGuiSelectableFlags_Menu               = 1 << 2,
-    ImGuiSelectableFlags_MenuItem           = 1 << 3,
-    ImGuiSelectableFlags_Disabled           = 1 << 4,
-    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 5
+    ImGuiSelectableFlags_Menu               = 1 << 3,
+    ImGuiSelectableFlags_MenuItem           = 1 << 4,
+    ImGuiSelectableFlags_Disabled           = 1 << 5,
+    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 6
 };
 
 // FIXME: this is in development, not exposed/functional as a generic feature yet.
@@ -434,8 +435,8 @@ struct ImGuiState
     float                   FramerateSecPerFrame[120];          // calculate estimate of framerate for user
     int                     FramerateSecPerFrameIdx;
     float                   FramerateSecPerFrameAccum;
-    bool                    CaptureMouseNextFrame;              // explicit capture via CaptureInputs() sets those flags
-    bool                    CaptureKeyboardNextFrame;
+    int                     CaptureMouseNextFrame;              // explicit capture via CaptureInputs() sets those flags
+    int                     CaptureKeyboardNextFrame;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
 
     ImGuiState()
@@ -501,7 +502,7 @@ struct ImGuiState
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
         FramerateSecPerFrameIdx = 0;
         FramerateSecPerFrameAccum = 0.0f;
-        CaptureMouseNextFrame = CaptureKeyboardNextFrame = false;
+        CaptureMouseNextFrame = CaptureKeyboardNextFrame = -1;
         memset(TempBuffer, 0, sizeof(TempBuffer));
     }
 };
@@ -675,6 +676,7 @@ namespace ImGui
     inline    ImGuiWindow*  GetCurrentWindowRead()      { ImGuiState& g = *GImGui; return g.CurrentWindow; }
     inline    ImGuiWindow*  GetCurrentWindow()          { ImGuiState& g = *GImGui; g.CurrentWindow->Accessed = true; return g.CurrentWindow; }
     IMGUI_API ImGuiWindow*  GetParentWindow();
+    IMGUI_API ImGuiWindow*  FindWindowByName(const char* name);
     IMGUI_API void          FocusWindow(ImGuiWindow* window);
 
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
@@ -692,7 +694,6 @@ namespace ImGui
     IMGUI_API void          FocusableItemUnregister(ImGuiWindow* window);
     IMGUI_API ImVec2        CalcItemSize(ImVec2 size, float default_x, float default_y);
     IMGUI_API float         CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x);
-    IMGUI_API void          SetItemAllowOverlap();      // Allow last item to be overlapped by a subsequent item
 
     IMGUI_API void          OpenPopupEx(const char* str_id, bool reopen_existing);
 
