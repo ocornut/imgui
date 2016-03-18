@@ -6907,12 +6907,14 @@ bool ImGui::Checkbox(const char* label, bool* v)
 
 bool ImGui::CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value)
 {
-    bool v = (*flags & flags_value) ? true : false;
+    bool v = ((*flags & flags_value) == flags_value);
     bool pressed = ImGui::Checkbox(label, &v);
-    if (v)
-        *flags |= flags_value;
-    else
-        *flags &= ~flags_value;
+    if(pressed) {
+        if (v)
+            *flags |= flags_value;
+        else
+            *flags &= ~flags_value;
+    }
     return pressed;
 }
 
