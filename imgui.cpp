@@ -6909,12 +6909,14 @@ bool ImGui::CheckboxFlags(const char* label, unsigned int* flags, unsigned int f
 {
     bool v = ((*flags & flags_value) == flags_value);
     bool pressed = ImGui::Checkbox(label, &v);
-    if(pressed) {
+    if (pressed)
+    {
         if (v)
             *flags |= flags_value;
         else
             *flags &= ~flags_value;
     }
+    
     return pressed;
 }
 
