@@ -2826,13 +2826,13 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 // Test if mouse cursor is hovering given rectangle
 // NB- Rectangle is clipped by our current clip setting
 // NB- Expand the rectangle to be generous on imprecise inputs systems (g.Style.TouchExtraPadding)
-bool ImGui::IsMouseHoveringRect(const ImVec2& pos_min, const ImVec2& pos_max, bool clip)
+bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool clip)
 {
     ImGuiState& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindowRead();
 
     // Clip
-    ImRect rect_clipped(pos_min, pos_max);
+    ImRect rect_clipped(r_min, r_max);
     if (clip)
         rect_clipped.Clip(window->ClipRect);
 
@@ -8798,33 +8798,31 @@ void ImGui::EndGroup()
 }
 
 // Gets back to previous line and continue with horizontal layout
-//      local_pos_x == 0   : follow on previous item
-//      local_pos_x != 0   : align to specified column
+//      pos_x == 0      : follow on previous item
+//      pos_x != 0      : align to specified column
 //      spacing_w < 0   : use default spacing if column_x==0, no spacing if column_x!=0
 //      spacing_w >= 0  : enforce spacing
-void ImGui::SameLine(float local_pos_x, float spacing_w)
+void ImGui::SameLine(float pos_x, float spacing_w)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
 
     ImGuiState& g = *GImGui;
-    float x, y;
-    if (local_pos_x != 0.0f)
+    if (pos_x != 0.0f)
     {
         if (spacing_w < 0.0f) spacing_w = 0.0f;
-        x = window->Pos.x - window->Scroll.x + local_pos_x + spacing_w;
-        y = window->DC.CursorPosPrevLine.y;
+        window->DC.CursorPos.x = window->Pos.x - window->Scroll.x + pos_x + spacing_w;
+        window->DC.CursorPos.y = window->DC.CursorPosPrevLine.y;
     }
     else
     {
         if (spacing_w < 0.0f) spacing_w = g.Style.ItemSpacing.x;
-        x = window->DC.CursorPosPrevLine.x + spacing_w;
-        y = window->DC.CursorPosPrevLine.y;
+        window->DC.CursorPos.x = window->DC.CursorPosPrevLine.x + spacing_w;
+        window->DC.CursorPos.y = window->DC.CursorPosPrevLine.y;
     }
     window->DC.CurrentLineHeight = window->DC.PrevLineHeight;
     window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset;
-    window->DC.CursorPos = ImVec2(x, y);
 }
 
 void ImGui::NextColumn()

@@ -906,7 +906,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     _VtxCurrentIdx = (unsigned int)VtxBuffer.Size;
 }
 
-// This is one of the few function breaking the encapsulation of ImDrawLst, but it is just so useful.
+// [Uses global ImGui state] This is one of the few function breaking the encapsulation of ImDrawLst, but it is just so useful.
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
 {
     if ((col >> 24) == 0)
