@@ -683,6 +683,8 @@ namespace ImGui
     IMGUI_API void          SetHoveredID(ImGuiID id);
     IMGUI_API void          KeepAliveID(ImGuiID id);
 
+    const char*             FindTextDisplayEnd(const char* text, const char* text_end = NULL);
+
     IMGUI_API void          EndFrame();                 // Automatically called by Render()
 
     IMGUI_API void          ItemSize(const ImVec2& size, float text_offset_y = 0.0f);
