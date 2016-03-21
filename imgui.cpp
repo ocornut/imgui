@@ -4838,6 +4838,11 @@ float ImGui::GetFontSize()
     return GImGui->FontSize;
 }
 
+ImVec2 ImGui::GetFontTexUvWhitePixel()
+{
+    return GImGui->FontTexUvWhitePixel;
+}
+
 void ImGui::SetWindowFontScale(float scale)
 {
     ImGuiState& g = *GImGui;
