@@ -874,6 +874,13 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     if (text_begin == text_end)
         return;
 
+    // Note: This is one of the few instance of breaking the encapsulation of ImDrawList, as we pull this from ImGui state, but it is just SO useful.
+    // Might just move Font/FontSize to ImDrawList?
+    if (font == NULL)
+        font = GImGui->Font;
+    if (font_size == 0.0f)
+        font_size = GImGui->FontSize;
+
     IM_ASSERT(font->ContainerAtlas->TexID == _TextureIdStack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
     // reserve vertices for worse case (over-reserving is useful and easily amortized)
@@ -906,12 +913,8 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     _VtxCurrentIdx = (unsigned int)VtxBuffer.Size;
 }
 
-// [Uses global ImGui state] This is one of the few function breaking the encapsulation of ImDrawLst, but it is just so useful.
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
 {
-    if ((col >> 24) == 0)
-        return;
-
     AddText(GImGui->Font, GImGui->FontSize, pos, col, text_begin, text_end);
 }
 
