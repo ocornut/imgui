@@ -103,9 +103,9 @@ namespace ImGui
     // Main
     IMGUI_API ImGuiIO&      GetIO();
     IMGUI_API ImGuiStyle&   GetStyle();
-    IMGUI_API ImDrawData*   GetDrawData();                              // same value as passed to your RenderDrawListsFn() function. valid after Render() and until the next call to NewFrame()
+    IMGUI_API ImDrawData*   GetDrawData();                              // same value as passed to your io.RenderDrawListsFn() function. valid after Render() and until the next call to NewFrame().
     IMGUI_API void          NewFrame();
-    IMGUI_API void          Render();
+    IMGUI_API void          Render();                                   // finalize rendering data, then call your io.RenderDrawListsFn() function if set. 
     IMGUI_API void          Shutdown();
     IMGUI_API void          ShowUserGuide();                            // help block
     IMGUI_API void          ShowStyleEditor(ImGuiStyle* ref = NULL);    // style editor block
