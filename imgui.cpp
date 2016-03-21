@@ -2508,8 +2508,7 @@ void ImGui::Render()
     }
 }
 
-// Find the optional ## from which we stop displaying text.
-const char*  ImGui::FindTextDisplayEnd(const char* text, const char* text_end)
+const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end)
 {
     const char* text_display_end = text;
     if (!text_end)
@@ -2548,7 +2547,7 @@ static void LogRenderedText(const ImVec2& ref_pos, const char* text, const char*
     ImGuiWindow* window = ImGui::GetCurrentWindowRead();
 
     if (!text_end)
-        text_end = ImGui::FindTextDisplayEnd(text, text_end);
+        text_end = ImGui::FindRenderedTextEnd(text, text_end);
 
     const bool log_new_line = ref_pos.y > window->DC.LogLinePosY+1;
     window->DC.LogLinePosY = ref_pos.y;
@@ -2602,7 +2601,7 @@ void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
     const char* text_display_end;
     if (hide_text_after_hash)
     {
-        text_display_end = ImGui::FindTextDisplayEnd(text, text_end);
+        text_display_end = FindRenderedTextEnd(text, text_end);
     }
     else
     {
@@ -2641,7 +2640,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
 void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, ImGuiAlign align, const ImVec2* clip_min, const ImVec2* clip_max)
 {
     // Hide anything after a '##' string
-    const char* text_display_end = ImGui::FindTextDisplayEnd(text, text_end);
+    const char* text_display_end = FindRenderedTextEnd(text, text_end);
     const int text_len = (int)(text_display_end - text);
     if (text_len == 0)
         return;
@@ -2748,7 +2747,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
 
     const char* text_display_end;
     if (hide_text_after_double_hash)
-        text_display_end = ImGui::FindTextDisplayEnd(text, text_end);      // Hide anything after a '##' string
+        text_display_end = FindRenderedTextEnd(text, text_end);      // Hide anything after a '##' string
     else
         text_display_end = text_end;
 
@@ -6333,7 +6332,7 @@ bool ImGui::SliderFloatN(const char* label, float* v, int components, float v_mi
     }
     ImGui::PopID();
 
-    ImGui::TextUnformatted(label, ImGui::FindTextDisplayEnd(label));
+    ImGui::TextUnformatted(label, FindRenderedTextEnd(label));
     ImGui::EndGroup();
 
     return value_changed;
@@ -6375,7 +6374,7 @@ bool ImGui::SliderIntN(const char* label, int* v, int components, int v_min, int
     }
     ImGui::PopID();
 
-    ImGui::TextUnformatted(label, ImGui::FindTextDisplayEnd(label));
+    ImGui::TextUnformatted(label, FindRenderedTextEnd(label));
     ImGui::EndGroup();
 
     return value_changed;
@@ -6555,7 +6554,7 @@ bool ImGui::DragFloatN(const char* label, float* v, int components, float v_spee
     }
     ImGui::PopID();
 
-    ImGui::TextUnformatted(label, ImGui::FindTextDisplayEnd(label));
+    ImGui::TextUnformatted(label, FindRenderedTextEnd(label));
     ImGui::EndGroup();
 
     return value_changed;
@@ -6594,7 +6593,7 @@ bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_cu
     ImGui::PopItemWidth();
     ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
 
-    ImGui::TextUnformatted(label, ImGui::FindTextDisplayEnd(label));
+    ImGui::TextUnformatted(label, FindRenderedTextEnd(label));
     ImGui::EndGroup();
     ImGui::PopID();
 
@@ -6633,7 +6632,7 @@ bool ImGui::DragIntN(const char* label, int* v, int components, float v_speed, i
     }
     ImGui::PopID();
 
-    ImGui::TextUnformatted(label, ImGui::FindTextDisplayEnd(label));
+    ImGui::TextUnformatted(label, FindRenderedTextEnd(label));
     ImGui::EndGroup();
 
     return value_changed;
@@ -6672,7 +6671,7 @@ bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_
     ImGui::PopItemWidth();
     ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
 
-    ImGui::TextUnformatted(label, ImGui::FindTextDisplayEnd(label));
+    ImGui::TextUnformatted(label, FindRenderedTextEnd(label));
     ImGui::EndGroup();
     ImGui::PopID();
 
@@ -7892,7 +7891,7 @@ bool ImGui::InputFloatN(const char* label, float* v, int components, int decimal
     ImGui::PopID();
 
     window->DC.CurrentLineTextBaseOffset = ImMax(window->DC.CurrentLineTextBaseOffset, g.Style.FramePadding.y);
-    ImGui::TextUnformatted(label, ImGui::FindTextDisplayEnd(label));
+    ImGui::TextUnformatted(label, FindRenderedTextEnd(label));
     ImGui::EndGroup();
 
     return value_changed;
@@ -7935,7 +7934,7 @@ bool ImGui::InputIntN(const char* label, int* v, int components, ImGuiInputTextF
     ImGui::PopID();
 
     window->DC.CurrentLineTextBaseOffset = ImMax(window->DC.CurrentLineTextBaseOffset, g.Style.FramePadding.y);
-    ImGui::TextUnformatted(label, ImGui::FindTextDisplayEnd(label));
+    ImGui::TextUnformatted(label, FindRenderedTextEnd(label));
     ImGui::EndGroup();
 
     return value_changed;
@@ -8646,7 +8645,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
             g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3); // Don't set local copy of 'edit_mode' right away!
     }
 
-    const char* label_display_end = ImGui::FindTextDisplayEnd(label);
+    const char* label_display_end = FindRenderedTextEnd(label);
     if (label != label_display_end)
     {
         ImGui::SameLine(0, (window->DC.ColorEditMode == ImGuiColorEditMode_UserSelectShowButton) ? -1.0f : style.ItemInnerSpacing.x);
