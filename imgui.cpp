@@ -8635,7 +8635,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         ImGui::PopItemWidth();
     }
 
-    const char* label_display_end = FindTextDisplayEnd(label);
+    const char* label_display_end = FindRenderedTextEnd(label);
 
     bool picker_active = false;
     if (!(flags & ImGuiColorEditFlags_NoColorSquare))
