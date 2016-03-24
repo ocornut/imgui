@@ -266,7 +266,10 @@
     It could be an identifier to your OpenGL texture (cast GLuint to void*), a pointer to your custom engine material (cast MyMaterial* to void*), etc.
     At the end of the chain, your renderer takes this void* to cast it back into whatever it needs to select a current texture to render.
     Refer to examples applications, where each renderer (in a imgui_impl_xxxx.cpp file) is treating ImTextureID as a different thing.
-    c++ tip: OpenGL uses integers to identify textures. You can safely store an integer into a void*, just cast it to void*, don't take it's address!
+    (c++ tip: OpenGL uses integers to identify textures. You can safely store an integer into a void*, just cast it to void*, don't take it's address!)
+    To display a custom image/texture within an ImGui window, you may use ImGui::Image(), ImGui::ImageButton(), ImDrawList::AddImage() functions.
+    ImGui will generate the geometry and draw calls using the ImTextureID that you passed and which your renderer can use.
+    It is your responsibility to get textures uploaded to your GPU.
 
  Q: Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
  A: Yes. A primer on the use of labels/IDs in ImGui..
