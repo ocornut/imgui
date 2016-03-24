@@ -19,9 +19,10 @@
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - How can I help?
    - How do I update to a newer version of ImGui?
+   - What is ImTextureID and how do I display an image?
    - Can I have multiple widgets with the same label? Can I have widget without a label? (Yes) / A primer on the use of labels/IDs in ImGui.
    - I integrated ImGui in my engine and the text or lines are blurry..
-   - I integrated ImGui in my engine and some elements are disappearing when I move windows around..
+   - I integrated ImGui in my engine and some elements are clipping or disappearing when I move windows around..
    - How can I load a different font than the default?
    - How can I load multiple fonts?
    - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
@@ -258,6 +259,15 @@
     Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes. If you have a problem with a function, search for its name
     in the code, there will likely be a comment about it. Please report any issue to the GitHub page!
 
+
+ Q: What is ImTextureID and how do I display an image?
+ A: ImTextureID is a void* used to pass renderer-agnostic texture references around until it hits your render function.
+    ImGui knows nothing about what those bits represent, it just passes them around. It is up to you to decide what you want the void* to carry!
+    It could be an identifier to your OpenGL texture (cast GLuint to void*), a pointer to your custom engine material (cast MyMaterial* to void*), etc.
+    At the end of the chain, your renderer takes this void* to cast it back into whatever it needs to select a current texture to render.
+    Refer to examples applications, where each renderer (in a imgui_impl_xxxx.cpp file) is treating ImTextureID as a different thing.
+    c++ tip: OpenGL uses integers to identify textures. You can safely store an integer into a void*, just cast it to void*, don't take it's address!
+
  Q: Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
  A: Yes. A primer on the use of labels/IDs in ImGui..
 
@@ -355,8 +365,8 @@
  A: In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
     Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
 
- Q. I integrated ImGui in my engine and some elements are disappearing when I move windows around..
-    Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1,y1,x2,y2) and NOT as (x1,y1,width,height).
+ Q: I integrated ImGui in my engine and some elements are clipping or disappearing when I move windows around..
+ A: Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1,y1,x2,y2) and NOT as (x1,y1,width,height).
 
  Q: How can I load a different font than the default? (default is an embedded version of ProggyClean.ttf, rendered at size 13)
  A: Use the font atlas to load the TTF file you want:

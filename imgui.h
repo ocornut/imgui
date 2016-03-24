@@ -58,7 +58,7 @@ struct ImGuiListClipper;            // Helper to manually clip large list of ite
 // Enumerations (declared as int for compatibility and to not pollute the top of this file)
 typedef unsigned int ImU32;
 typedef unsigned short ImWchar;     // character for keyboard input/display
-typedef void* ImTextureID;          // user data to refer to a texture (e.g. store your texture handle/id)
+typedef void* ImTextureID;          // user data to identify a texture (this is whatever to you want it to be! read the FAQ about ImTextureID in imgui.cpp)
 typedef ImU32 ImGuiID;              // unique ID used by widgets (typically hashed from a stack of string)
 typedef int ImGuiCol;               // a color identifier for styling       // enum ImGuiCol_
 typedef int ImGuiStyleVar;          // a variable identifier for styling    // enum ImGuiStyleVar_
