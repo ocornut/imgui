@@ -185,7 +185,7 @@ void    ImGui_ImplSdl_InvalidateDeviceObjects()
     }
 }
 
-bool    ImGui_ImplSdl_Init(SDL_Window *window)
+bool    ImGui_ImplSdl_Init(SDL_Window* window)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = SDLK_TAB;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
