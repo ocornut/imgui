@@ -652,7 +652,7 @@ static ImVec2           InputTextCalcTextSizeW(const ImWchar* text_begin, const 
 static inline void      DataTypeFormatString(ImGuiDataType data_type, void* data_ptr, const char* display_format, char* buf, int buf_size);
 static inline void      DataTypeFormatString(ImGuiDataType data_type, void* data_ptr, int decimal_precision, char* buf, int buf_size);
 static void             DataTypeApplyOp(ImGuiDataType data_type, int op, void* value1, const void* value2);
-static void             DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format);
+static bool             DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format);
 
 //-----------------------------------------------------------------------------
 // Platform dependent default implementations
@@ -5931,7 +5931,7 @@ static void DataTypeApplyOp(ImGuiDataType data_type, int op, void* value1, const
 }
 
 // User can input math operators (e.g. +100) to edit a numerical values.
-static void DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format)
+static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format)
 {
     while (ImCharIsSpace(*buf))
         buf++;
@@ -5950,41 +5950,47 @@ static void DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
         op = 0;
     }
     if (!buf[0])
-        return;
+        return false;
 
     if (data_type == ImGuiDataType_Int)
     {
         if (!scalar_format)
             scalar_format = "%d";
         int* v = (int*)data_ptr;
-        int ref_v = *v;
-        if (op && sscanf(initial_value_buf, scalar_format, &ref_v) < 1)
-            return;
+        const int old_v = *v;
+        int arg0 = *v;
+        if (op && sscanf(initial_value_buf, scalar_format, &arg0) < 1)
+            return false;
 
         // Store operand in a float so we can use fractional value for multipliers (*1.1), but constant always parsed as integer so we can fit big integers (e.g. 2000000003) past float precision
-        float op_v = 0.0f;
-        if (op == '+')      { if (sscanf(buf, "%f", &op_v) == 1) *v = (int)(ref_v + op_v); }                // Add (use "+-" to subtract)
-        else if (op == '*') { if (sscanf(buf, "%f", &op_v) == 1) *v = (int)(ref_v * op_v); }                // Multiply
-        else if (op == '/') { if (sscanf(buf, "%f", &op_v) == 1 && op_v != 0.0f) *v = (int)(ref_v / op_v); }// Divide
-        else                { if (sscanf(buf, scalar_format, &ref_v) == 1) *v = ref_v; }                    // Assign constant
+        float arg1 = 0.0f;
+        if (op == '+')      { if (sscanf(buf, "%f", &arg1) == 1) *v = (int)(arg0 + arg1); }                // Add (use "+-" to subtract)
+        else if (op == '*') { if (sscanf(buf, "%f", &arg1) == 1) *v = (int)(arg0 * arg1); }                // Multiply
+        else if (op == '/') { if (sscanf(buf, "%f", &arg1) == 1 && arg1 != 0.0f) *v = (int)(arg0 / arg1); }// Divide
+        else                { if (sscanf(buf, scalar_format, &arg0) == 1) *v = arg0; }                     // Assign constant
+        return (old_v != *v);
     }
     else if (data_type == ImGuiDataType_Float)
     {
         // For floats we have to ignore format with precision (e.g. "%.2f") because sscanf doesn't take them in
         scalar_format = "%f";
         float* v = (float*)data_ptr;
-        float ref_v = *v;
-        if (op && sscanf(initial_value_buf, scalar_format, &ref_v) < 1)
-            return;
-        float op_v = 0.0f;
-        if (sscanf(buf, scalar_format, &op_v) < 1)
-            return;
+        const float old_v = *v;
+        float arg0 = *v;
+        if (op && sscanf(initial_value_buf, scalar_format, &arg0) < 1)
+            return false;
 
-        if (op == '+')      { *v = ref_v + op_v; }                      // Add (use "+-" to subtract)
-        else if (op == '*') { *v = ref_v * op_v; }                      // Multiply
-        else if (op == '/') { if (op_v != 0.0f) *v = ref_v / op_v; }    // Divide
-        else                { *v = op_v; }                              // Assign constant
+        float arg1 = 0.0f;
+        if (sscanf(buf, scalar_format, &arg1) < 1)
+            return false;
+        if (op == '+')      { *v = arg0 + arg1; }                    // Add (use "+-" to subtract)
+        else if (op == '*') { *v = arg0 * arg1; }                    // Multiply
+        else if (op == '/') { if (arg1 != 0.0f) *v = arg0 / arg1; }  // Divide
+        else                { *v = arg1; }                           // Assign constant
+        return (old_v != *v);
     }
+
+    return false;
 }
 
 // Create text input in place of a slider (when CTRL+Clicking on slider)
@@ -6000,7 +6006,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label
 
     char buf[32];
     DataTypeFormatString(data_type, data_ptr, decimal_precision, buf, IM_ARRAYSIZE(buf));
-    bool value_changed = InputTextEx(label, buf, IM_ARRAYSIZE(buf), aabb.GetSize(), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
+    bool text_value_changed = InputTextEx(label, buf, IM_ARRAYSIZE(buf), aabb.GetSize(), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
     if (g.ScalarAsInputTextId == 0)
     {
         // First frame
@@ -6013,9 +6019,9 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label
         // Release
         g.ScalarAsInputTextId = 0;
     }
-    if (value_changed)
-        DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr, NULL);
-    return value_changed;
+    if (text_value_changed)
+        return DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr, NULL);
+    return false;
 }
 
 // Parse display precision back from the display format string
@@ -7837,10 +7843,7 @@ bool ImGui::InputScalarEx(const char* label, ImGuiDataType data_type, void* data
         extra_flags |= ImGuiInputTextFlags_CharsDecimal;
     extra_flags |= ImGuiInputTextFlags_AutoSelectAll;
     if (ImGui::InputText("", buf, IM_ARRAYSIZE(buf), extra_flags))
-    {
-        DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr, scalar_format);
-        value_changed = true;
-    }
+        value_changed = DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr, scalar_format);
 
     // Step buttons
     if (step_ptr)
