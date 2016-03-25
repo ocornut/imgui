@@ -350,12 +350,11 @@ void ImGui_ImplSdlGL3_NewFrame()
 
     // Setup display size (every frame to accommodate for window resizing)
     int w, h;
+    int display_w, display_h;
     SDL_GetWindowSize(g_Window, &w, &h);
+    SDL_GL_GetDrawableSize(g_Window, &display_w, &display_h);
     io.DisplaySize = ImVec2((float)w, (float)h);
-
-    int glW, glH;
-    SDL_GL_GetDrawableSize(window, &glW, &glH);
-    io.DisplayFramebufferScale = ImVec2(glW / io.DisplaySize.x, glH / io.DisplaySize.y);
+    io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, h > 0 ? ((float)display_h / h) : 0);
 
     // Setup time step
     Uint32	time = SDL_GetTicks();
