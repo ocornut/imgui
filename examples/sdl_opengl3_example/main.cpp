@@ -98,7 +98,7 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplSdlGL3_Shutdown();
-    SDL_GL_DeleteContext(glcontext);  
+    SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(window);
     SDL_Quit();
 

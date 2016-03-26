@@ -163,7 +163,7 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
             {
                 const D3D11_RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
                 g_pd3dDeviceContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->TextureId);
-                g_pd3dDeviceContext->RSSetScissorRects(1, &r); 
+                g_pd3dDeviceContext->RSSetScissorRects(1, &r);
                 g_pd3dDeviceContext->DrawIndexed(pcmd->ElemCount, idx_offset, vtx_offset);
             }
             idx_offset += pcmd->ElemCount;
@@ -292,7 +292,7 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
 
     // Create the vertex shader
     {
-        static const char* vertexShader = 
+        static const char* vertexShader =
             "cbuffer vertexBuffer : register(b0) \
             {\
             float4x4 ProjectionMatrix; \

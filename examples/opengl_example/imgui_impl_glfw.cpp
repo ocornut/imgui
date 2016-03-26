@@ -265,7 +265,7 @@ void ImGui_ImplGlfw_NewFrame()
     {
         io.MousePos = ImVec2(-1,-1);
     }
-   
+
     for (int i = 0; i < 3; i++)
     {
         io.MouseDown[i] = g_MousePressed[i] || glfwGetMouseButton(g_Window, i) != 0;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
