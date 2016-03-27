@@ -50,6 +50,8 @@ See the [Screenshots Thread](https://github.com/ocornut/imgui/issues/123) for so
 ![screenshot 1](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_01.png)
 ![screenshot 2](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_02.png)
 
+[![profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler-880.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler.png)
+
 ![screenshot 2](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_01.png)
 ![screenshot 3](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_02.png)
 ![screenshot 4](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_03.png)
