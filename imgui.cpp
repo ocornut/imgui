@@ -8741,7 +8741,7 @@ bool ImGui::ColorPicker3(const char* label, float col[3], ImGuiColorEditFlags fl
     float col4[4] = { col[0], col[1], col[2], 1.0f };
     if (!ColorPicker4(label, col4, flags & ~ImGuiColorEditFlags_Alpha))
         return false;
-    col[0] = col4[1]; col[1] = col4[1]; col[2] = col4[2];
+    col[0] = col4[0]; col[1] = col4[1]; col[2] = col4[2];
     return true;
 }
 
