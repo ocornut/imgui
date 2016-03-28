@@ -8755,6 +8755,9 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     ImGuiStyle& style = ImGui::GetStyle();
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
+    ImGui::PushID(label);
+    ImGui::BeginGroup();
+
     // Setup
     bool alpha = (flags & ImGuiColorEditFlags_Alpha) != 0;
     ImVec2 picker_pos = ImGui::GetCursorScreenPos();
@@ -8768,7 +8771,6 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
 
     // Color matrix logic
     bool value_changed = false, hsv_changed = false;
-    ImGui::BeginGroup();
     ImGui::InvisibleButton("sv", ImVec2(sv_picker_size, sv_picker_size));
     if (ImGui::IsItemActive())
     {
@@ -8874,7 +8876,9 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     draw_list->AddLine(ImVec2(p.x + CROSSHAIR_SIZE, p.y), ImVec2(p.x + 2, p.y), IM_COL32_WHITE);
     draw_list->AddLine(ImVec2(p.x, p.y + CROSSHAIR_SIZE), ImVec2(p.x, p.y + 2), IM_COL32_WHITE);
     draw_list->AddLine(ImVec2(p.x, p.y - CROSSHAIR_SIZE), ImVec2(p.x, p.y - 2), IM_COL32_WHITE);
+
     ImGui::EndGroup();
+    ImGui::PopID();
 
     return value_changed;
 }
