@@ -58,7 +58,7 @@ int main(int, char**)
             if (event.type == SDL_QUIT)
                 done = true;
         }
-        ImGui_ImplSdlGL3_NewFrame();
+        ImGui_ImplSdlGL3_NewFrame(window);
 
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
@@ -98,7 +98,7 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplSdlGL3_Shutdown();
-    SDL_GL_DeleteContext(glcontext);  
+    SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(window);
     SDL_Quit();
 

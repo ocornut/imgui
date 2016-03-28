@@ -21,7 +21,7 @@ void CreateRenderTarget()
     g_pSwapChain->GetDesc(&sd);
 
     // Create the render target
-    ID3D10Texture2D* pBackBuffer;               
+    ID3D10Texture2D* pBackBuffer;
     D3D10_RENDER_TARGET_VIEW_DESC render_target_view_desc;
     ZeroMemory(&render_target_view_desc, sizeof(render_target_view_desc));
     render_target_view_desc.Format = sd.BufferDesc.Format;

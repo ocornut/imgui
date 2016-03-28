@@ -9,7 +9,7 @@
 
 int main(int, char**)
 {
-    // Setup Allegro 
+    // Setup Allegro
     al_init();
     al_install_keyboard();
     al_install_mouse();
@@ -41,7 +41,7 @@ int main(int, char**)
 
     // Main loop
     bool running = true;
-    while (running) 
+    while (running)
     {
         ALLEGRO_EVENT ev;
         while (al_get_next_event(queue, &ev))
@@ -70,7 +70,7 @@ int main(int, char**)
         }
 
         // 2. Show another simple window, this time using an explicit Begin/End pair
-        if (show_another_window) 
+        if (show_another_window)
         {
             ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiSetCond_FirstUseEver);
             ImGui::Begin("Another Window", &show_another_window);
@@ -79,7 +79,7 @@ int main(int, char**)
         }
 
         // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
-        if (show_test_window) 
+        if (show_test_window)
         {
             ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
             ImGui::ShowTestWindow(&show_test_window);

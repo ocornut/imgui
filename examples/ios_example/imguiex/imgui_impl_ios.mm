@@ -1,6 +1,7 @@
-//
-//  imgui_impl_ios.cpp
-//  imguiex
+// ImGui iOS+OpenGL+Synergy binding
+// In this binding, ImTextureID is used to store an OpenGL 'GLuint' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
+// Providing a standalone iOS application with Synergy integration makes this sample more verbose than others. It also hasn't been tested as much.
+// Refer to other examples to get an easier understanding of how to integrate ImGui into your existing application.
 
 #import <OpenGLES/ES3/gl.h>
 #import <OpenGLES/ES3/glext.h>
