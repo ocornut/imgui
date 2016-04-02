@@ -679,6 +679,8 @@ namespace ImGui
     IMGUI_API ImGuiWindow*  FindWindowByName(const char* name);
     IMGUI_API void          FocusWindow(ImGuiWindow* window);
 
+    IMGUI_API void          EndFrame();                 // Ends the ImGui frame. Automatically called by Render()! you most likely don't need to ever call that yourself directly. If you don't need to render you can call EndFrame() but you'll have wasted CPU already. If you don't need to render, don't create any windows instead!
+
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          SetHoveredID(ImGuiID id);
     IMGUI_API void          KeepAliveID(ImGuiID id);
