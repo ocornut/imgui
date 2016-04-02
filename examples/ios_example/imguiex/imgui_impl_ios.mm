@@ -263,10 +263,10 @@ void ImGui_KeyboardCallback(uSynergyCookie cookie, uint16_t key,
 //    printf("Synergy: keyboard callback: 0x%02X (%s)", scanCode, down?"true":"false");
     ImGuiIO& io = ImGui::GetIO();
     io.KeysDown[key] = down;
-    io.KeyShift = modifiers & USYNERGY_MODIFIER_SHIFT;
-    io.KeyCtrl = modifiers & USYNERGY_MODIFIER_CTRL;
-    io.KeyAlt = modifiers & USYNERGY_MODIFIER_ALT;
-    
+    io.KeyShift = (modifiers & USYNERGY_MODIFIER_SHIFT);
+    io.KeyCtrl = (modifiers & USYNERGY_MODIFIER_CTRL);
+    io.KeyAlt = (modifiers & USYNERGY_MODIFIER_ALT);
+    io.KeySuper = (modifiers & USYNERGY_MODIFIER_WIN);
     
     // Add this as keyboard input
     if ((down) && (key) && (scanCode<256) && !(modifiers & USYNERGY_MODIFIER_CTRL)) 
