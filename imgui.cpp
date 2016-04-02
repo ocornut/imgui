@@ -792,6 +792,7 @@ ImGuiIO::ImGuiIO()
 #ifdef __APPLE__
     WordMovementUsesAltKey = true;      // Text editing cursor movement using Alt instead of Ctrl
     ShortcutsUseSuperKey = true;        // Shortcuts using Cmd/Super instead of Ctrl
+    DoubleClickSelectsWord = true;      // Double click selects by word instead of selecting whole text
 #endif
 }
 
@@ -7414,10 +7415,16 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         const float mouse_x = (g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + edit_state.ScrollX;
         const float mouse_y = (is_multiline ? (g.IO.MousePos.y - draw_window->DC.CursorPos.y - style.FramePadding.y) : (g.FontSize*0.5f));
 
-        if (select_all || (hovered && io.MouseDoubleClicked[0]))
+        if (select_all || (hovered && !io.DoubleClickSelectsWord && io.MouseDoubleClicked[0]))
         {
             edit_state.SelectAll();
             edit_state.SelectedAllMouseLock = true;
+        }
+        else if (hovered && io.DoubleClickSelectsWord && io.MouseDoubleClicked[0])
+        {
+            // Select a word only, OS X style (by simulating keystrokes)
+            edit_state.OnKeyPressed(STB_TEXTEDIT_K_WORDLEFT);
+            edit_state.OnKeyPressed(STB_TEXTEDIT_K_WORDRIGHT | STB_TEXTEDIT_K_SHIFT);
         }
         else if (io.MouseClicked[0] && !edit_state.SelectedAllMouseLock)
         {
