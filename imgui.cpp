@@ -790,9 +790,10 @@ ImGuiIO::ImGuiIO()
 
     // Set OS X style defaults based on __APPLE__ compile time flag
 #ifdef __APPLE__
-    WordMovementUsesAltKey = true;      // Text editing cursor movement using Alt instead of Ctrl
-    ShortcutsUseSuperKey = true;        // Shortcuts using Cmd/Super instead of Ctrl
-    DoubleClickSelectsWord = true;      // Double click selects by word instead of selecting whole text
+    WordMovementUsesAltKey = true;      // OS X style: Text editing cursor movement using Alt instead of Ctrl
+    ShortcutsUseSuperKey = true;        // OS X style: Shortcuts using Cmd/Super instead of Ctrl
+    DoubleClickSelectsWord = true;      // OS X style: Double click selects by word instead of selecting whole text
+    MultiSelectUsesSuperKey = true;     // OS X style: Multi-selection in lists uses Cmd/Super instead of Ctrl 
 #endif
 }
 
