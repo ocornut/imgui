@@ -986,7 +986,8 @@ struct ImGuiTextEditCallbackData
     bool    HasSelection() const { return SelectionStart != SelectionEnd; }
 };
 
-// ImColor() is just a helper that implicity converts to either ImU32 (packed 4x1 byte) or ImVec4 (4x1 float)
+// ImColor() helper to implicity converts colors to either ImU32 (packed 4x1 byte) or ImVec4 (4x1 float)
+// Avoid storing ImColor! Store either u32 of ImVec4. This is not a full-featured color class.
 // None of the ImGui API are using ImColor directly but you can use it as a convenience to pass colors in either ImU32 or ImVec4 formats.
 struct ImColor
 {

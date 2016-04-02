@@ -439,6 +439,7 @@
 !- window: begin with *p_opened == false should return false.
  - window: get size/pos helpers given names (see discussion in #249)
  - window: a collapsed window can be stuck behind the main menu bar?
+ - window: when window is small, prioritize resize button over close button.
  - window: detect extra End() call that pop the "Debug" window out and assert at call site instead of later.
  - window/tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
  - window: increase minimum size of a window with menus or fix the menu rendering so that it doesn't look odd.
@@ -448,15 +449,19 @@
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
  - widgets: clean up widgets internal toward exposing everything.
  - widgets: add disabled and read-only modes (#211)
- - main: considering adding EndFrame()/Init(). some constructs are awkward in the implementation because of the lack of them.
- - main: make it so that a frame with no window registered won't refocus every window on subsequent frames (~bump LastFrameActive of all windows).
+ - main: considering adding an Init() function? some constructs are awkward in the implementation because of the lack of them.
+!- main: make it so that a frame with no window registered won't refocus every window on subsequent frames (~bump LastFrameActive of all windows).
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
- - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
+ - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now.
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
+ - input text: flag to disable live update of the user buffer (also applies to float/int text input) 
+ - input text: resize behavior - field could stretch when being edited? hover tooltip shows more text?
+ - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
  - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
  - input text multi-line: way to dynamically grow the buffer without forcing the user to initially allocate for worse case (follow up on #200)
  - input text multi-line: line numbers? status bar? (follow up on #200)
+ - input text: allow centering/positioning text so that ctrl+clicking Drag or Slider keeps the textual value at the same pixel position.
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
@@ -495,7 +500,7 @@
  - statusbar: add a per-window status bar helper similar to what menubar does.
  - tabs (#261, #351)
  - separator: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
- - color: the color helpers/typing is a mess and needs sorting out.
+!- color: the color helpers/typing is a mess and needs sorting out.
  - color: add a better color picker (#346)
  - node/graph editor (#306)
  - pie menus patterns (#434)
@@ -510,14 +515,11 @@
  - slider & drag: int data passing through a float
  - drag float: up/down axis
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
- - text edit: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now.
- - text edit: centered text for slider as input text so it matches typical positioning.
- - text edit: flag to disable live update of the user buffer.
- - text edit: field resize behavior - field could stretch when being edited? hover tooltip shows more text?
  - tree node / optimization: avoid formatting when clipped.
  - tree node: clarify spacing, perhaps provide API to query exact spacing. provide API to draw the primitive. same with Bullet().
  - tree node: tree-node/header right-most side doesn't take account of horizontal scrolling.
  - tree node: add treenode/treepush int variants? because (void*) cast from int warns on some platforms/settings
+ - tree node: try to apply scrolling at time of TreePop() if node was just opened and end of node is past scrolling limits?
  - tree node / selectable render mismatch which is visible if you use them both next to each other (e.g. cf. property viewer)
  - textwrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (git issue #249)
  - settings: write more decent code to allow saving/loading new fields
@@ -527,6 +529,7 @@
  - style: color-box not always square?
  - style: a concept of "compact style" that the end-user can easily rely on (e.g. PushStyleCompact()?) that maps to other settings? avoid implementing duplicate helpers such as SmallCheckbox(), etc.
  - style: try to make PushStyleVar() more robust to incorrect parameters (to be more friendly to edit & continues situation).
+ - style/opt: PopStyleVar could be optimized by having GetStyleVar returns the type, using a table mapping stylevar enum to data type.
  - style: global scale setting.
  - text: simple markup language for color change?
  - font: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
@@ -550,7 +553,8 @@
  - style editor: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space? (#438)
  - style editor: color child window height expressed in multiple of line height.
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
- - drawlist: user probably can't call Clear() because we expect a texture to be pushed in the stack.
+!- demo: custom render demo pushes a clipping rectangle past parent window bounds. expose ImGui::PushClipRect() from imgui_internal.h?
+ - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
  - examples: directx9/directx11: save/restore device state more thoroughly.
  - optimization: use another hash function than crc32, e.g. FNV1a
  - optimization/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
