@@ -134,36 +134,37 @@ bool ImGui_ImplSdlGL3_ProcessEvent(SDL_Event* event)
     switch (event->type)
     {
     case SDL_MOUSEWHEEL:
-    {
-        if (event->wheel.y > 0)
-            g_MouseWheel = 1;
-        if (event->wheel.y < 0)
-            g_MouseWheel = -1;
-        return true;
-    }
+        {
+            if (event->wheel.y > 0)
+                g_MouseWheel = 1;
+            if (event->wheel.y < 0)
+                g_MouseWheel = -1;
+            return true;
+        }
     case SDL_MOUSEBUTTONDOWN:
-    {
-        if (event->button.button == SDL_BUTTON_LEFT) g_MousePressed[0] = true;
-        if (event->button.button == SDL_BUTTON_RIGHT) g_MousePressed[1] = true;
-        if (event->button.button == SDL_BUTTON_MIDDLE) g_MousePressed[2] = true;
-        return true;
-    }
+        {
+            if (event->button.button == SDL_BUTTON_LEFT) g_MousePressed[0] = true;
+            if (event->button.button == SDL_BUTTON_RIGHT) g_MousePressed[1] = true;
+            if (event->button.button == SDL_BUTTON_MIDDLE) g_MousePressed[2] = true;
+            return true;
+        }
     case SDL_TEXTINPUT:
-    {
-        ImGuiIO& io = ImGui::GetIO();
-        io.AddInputCharactersUTF8(event->text.text);
-        return true;
-    }
+        {
+            ImGuiIO& io = ImGui::GetIO();
+            io.AddInputCharactersUTF8(event->text.text);
+            return true;
+        }
     case SDL_KEYDOWN:
     case SDL_KEYUP:
-    {
-        int key = event->key.keysym.sym & ~SDLK_SCANCODE_MASK;
-        io.KeysDown[key] = (event->type == SDL_KEYDOWN);
-        io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
-        io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
-        io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
-        return true;
-    }
+        {
+            int key = event->key.keysym.sym & ~SDLK_SCANCODE_MASK;
+            io.KeysDown[key] = (event->type == SDL_KEYDOWN);
+            io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
+            io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
+            io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
+            io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
+            return true;
+        }
     }
     return false;
 }

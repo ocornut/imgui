@@ -1,4 +1,4 @@
-// stb_truetype.h - v1.08 - public domain
+// stb_truetype.h - v1.10 - public domain
 // authored from 2009-2015 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -21,6 +21,10 @@
 //   Mikko Mononen: compound shape support, more cmap formats
 //   Tor Andersson: kerning, subpixel rendering
 //
+//   Misc other:
+//       Ryan Gordon
+//       Simon Glass
+//
 //   Bug/warning reports/fixes:
 //       "Zer" on mollyrocket (with fix)
 //       Cass Everitt
@@ -42,12 +46,13 @@
 //       Sergey Popov
 //       Giumo X. Clanjor
 //       Higor Euripedes
-//
-//   Misc other:
-//       Ryan Gordon
+//       Thomas Fields
+//       Derek Vinyard
 //
 // VERSION HISTORY
 //
+//   1.10 (2016-04-02) user-defined fabs(); rare memory leak; remove duplicate typedef
+//   1.09 (2016-01-16) warning fix; avoid crash on outofmem; use allocation userdata properly
 //   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
 //   1.07 (2015-08-01) allow PackFontRanges to accept arrays of sparse codepoints;
 //                     variant PackFontRanges to pack and render in separate phases;
@@ -65,9 +70,9 @@
 //
 // LICENSE
 //
-//   This software is in the public domain. Where that dedication is not
-//   recognized, you are granted a perpetual, irrevocable license to copy,
-//   distribute, and modify this file as you see fit.
+//   This software is dual-licensed to the public domain and under the following
+//   license: you are granted a perpetual, irrevocable license to copy, modify,
+//   publish, and distribute this file as you see fit.
 //
 // USAGE
 //
@@ -403,6 +408,11 @@ int main(int arg, char **argv)
    #define STBTT_sqrt(x)      sqrt(x)
    #endif
 
+   #ifndef STBTT_fabs
+   #include <math.h>
+   #define STBTT_fabs(x)      fabs(x)
+   #endif
+
    // #define your own functions "STBTT_malloc" / "STBTT_free" to avoid malloc.h
    #ifndef STBTT_malloc
    #include <stdlib.h>
@@ -626,7 +636,7 @@ STBTT_DEF int stbtt_GetFontOffsetForIndex(const unsigned char *data, int index);
 
 // The following structure is defined publically so you can declare one on
 // the stack or as a global or etc, but you should treat it as opaque.
-typedef struct stbtt_fontinfo
+struct stbtt_fontinfo
 {
    void           * userdata;
    unsigned char  * data;              // pointer to .ttf file
@@ -637,7 +647,7 @@ typedef struct stbtt_fontinfo
    int loca,head,glyf,hhea,hmtx,kern; // table locations as offset from start of .ttf
    int index_map;                     // a cmap mapping for our chosen character encoding
    int indexToLocFormat;              // format needed to map from glyph index to glyph
-} stbtt_fontinfo;
+};
 
 STBTT_DEF int stbtt_InitFont(stbtt_fontinfo *info, const unsigned char *data, int offset);
 // Given an offset into the file that defines a font, this function builds
@@ -1556,7 +1566,7 @@ STBTT_DEF void stbtt_FreeShape(const stbtt_fontinfo *info, stbtt_vertex *v)
 
 STBTT_DEF void stbtt_GetGlyphBitmapBoxSubpixel(const stbtt_fontinfo *font, int glyph, float scale_x, float scale_y,float shift_x, float shift_y, int *ix0, int *iy0, int *ix1, int *iy1)
 {
-   int x0,y0,x1,y1;
+   int x0=0,y0=0,x1,y1; // =0 suppresses compiler warning
    if (!stbtt_GetGlyphBox(font, glyph, &x0,&y0,&x1,&y1)) {
       // e.g. space character
       if (ix0) *ix0 = 0;
@@ -1672,6 +1682,7 @@ static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, i
 {
    stbtt__active_edge *z = (stbtt__active_edge *) stbtt__hheap_alloc(hh, sizeof(*z), userdata);
    float dxdy = (e->x1 - e->x0) / (e->y1 - e->y0);
+   STBTT_assert(z != NULL);
    if (!z) return z;
    
    // round dx down to avoid overshooting
@@ -1693,6 +1704,7 @@ static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, i
 {
    stbtt__active_edge *z = (stbtt__active_edge *) stbtt__hheap_alloc(hh, sizeof(*z), userdata);
    float dxdy = (e->x1 - e->x0) / (e->y1 - e->y0);
+   STBTT_assert(z != NULL);
    //STBTT_assert(e->y0 <= start_point);
    if (!z) return z;
    z->fdx = dxdy;
@@ -1817,21 +1829,23 @@ static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e,
          while (e->y0 <= scan_y) {
             if (e->y1 > scan_y) {
                stbtt__active_edge *z = stbtt__new_active(&hh, e, off_x, scan_y, userdata);
-               // find insertion point
-               if (active == NULL)
-                  active = z;
-               else if (z->x < active->x) {
-                  // insert at front
-                  z->next = active;
-                  active = z;
-               } else {
-                  // find thing to insert AFTER
-                  stbtt__active_edge *p = active;
-                  while (p->next && p->next->x < z->x)
-                     p = p->next;
-                  // at this point, p->next->x is NOT < z->x
-                  z->next = p->next;
-                  p->next = z;
+               if (z != NULL) {
+                  // find insertion point
+                  if (active == NULL)
+                     active = z;
+                  else if (z->x < active->x) {
+                     // insert at front
+                     z->next = active;
+                     active = z;
+                  } else {
+                     // find thing to insert AFTER
+                     stbtt__active_edge *p = active;
+                     while (p->next && p->next->x < z->x)
+                        p = p->next;
+                     // at this point, p->next->x is NOT < z->x
+                     z->next = p->next;
+                     p->next = z;
+                  }
                }
             }
             ++e;
@@ -1986,7 +2000,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
                }
                y_crossing += dy * (x2 - (x1+1));
 
-               STBTT_assert(fabs(area) <= 1.01f);
+               STBTT_assert(STBTT_fabs(area) <= 1.01f);
 
                scanline[x2] += area + sign * (1-((x2-x2)+(x_bottom-x2))/2) * (sy1-y_crossing);
 
@@ -2102,10 +2116,12 @@ static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e,
       while (e->y0 <= scan_y_bottom) {
          if (e->y0 != e->y1) {
             stbtt__active_edge *z = stbtt__new_active(&hh, e, off_x, scan_y_top, userdata);
-            STBTT_assert(z->ey >= scan_y_top);
-            // insert at front
-            z->next = active;
-            active = z;
+            if (z != NULL) {
+               STBTT_assert(z->ey >= scan_y_top);
+               // insert at front
+               z->next = active;
+               active = z;
+            }
          }
          ++e;
       }
@@ -2121,7 +2137,7 @@ static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e,
             int m;
             sum += scanline2[i];
             k = scanline[i] + sum;
-            k = (float) fabs(k)*255 + 0.5f;
+            k = (float) STBTT_fabs(k)*255 + 0.5f;
             m = (int) k;
             if (m > 255) m = 255;
             result->pixels[j*result->stride + i] = (unsigned char) m;
@@ -2422,7 +2438,10 @@ STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixel(const stbtt_fontinfo *info
 
    if (scale_x == 0) scale_x = scale_y;
    if (scale_y == 0) {
-      if (scale_x == 0) return NULL;
+      if (scale_x == 0) {
+         STBTT_free(vertices, info->userdata);
+         return NULL;
+      }
       scale_y = scale_x;
    }
 
@@ -2514,6 +2533,7 @@ STBTT_DEF int stbtt_BakeFontBitmap(const unsigned char *data, int offset,  // fo
    float scale;
    int x,y,bottom_y, i;
    stbtt_fontinfo f;
+   f.userdata = NULL;
    if (!stbtt_InitFont(&f, data, offset))
       return -1;
    STBTT_memset(pixels, 0, pw*ph); // background of 0 around pixels
@@ -2707,6 +2727,7 @@ static void stbtt__h_prefilter(unsigned char *pixels, int w, int h, int stride_i
    unsigned char buffer[STBTT_MAX_OVERSAMPLE];
    int safe_w = w - kernel_width;
    int j;
+   STBTT_memset(buffer, 0, STBTT_MAX_OVERSAMPLE); // suppress bogus warning from VS2013 -analyze
    for (j=0; j < h; ++j) {
       int i;
       unsigned int total;
@@ -2768,6 +2789,7 @@ static void stbtt__v_prefilter(unsigned char *pixels, int w, int h, int stride_i
    unsigned char buffer[STBTT_MAX_OVERSAMPLE];
    int safe_h = h - kernel_width;
    int j;
+   STBTT_memset(buffer, 0, STBTT_MAX_OVERSAMPLE); // suppress bogus warning from VS2013 -analyze
    for (j=0; j < w; ++j) {
       int i;
       unsigned int total;
@@ -2976,6 +2998,7 @@ STBTT_DEF int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontd
    if (rects == NULL)
       return 0;
 
+   info.userdata = spc->user_allocator_context;
    stbtt_InitFont(&info, fontdata, stbtt_GetFontOffsetForIndex(fontdata,font_index));
 
    n = stbtt_PackFontRangesGatherRects(spc, &info, ranges, num_ranges, rects);
@@ -3193,6 +3216,10 @@ STBTT_DEF int stbtt_FindMatchingFont(const unsigned char *font_collection, const
 
 // FULL VERSION HISTORY
 //
+//   1.10 (2016-04-02) allow user-defined fabs() replacement
+//                     fix memory leak if fontsize=0.0
+//                     fix warning from duplicate typedef
+//   1.09 (2016-01-16) warning fix; avoid crash on outofmem; use alloc userdata for PackFontRanges
 //   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
 //   1.07 (2015-08-01) allow PackFontRanges to accept arrays of sparse codepoints;
 //                     allow PackFontRanges to pack and render in separate phases;
