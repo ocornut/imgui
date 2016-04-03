@@ -152,6 +152,8 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2016/04/03 (1.48) - removed style.WindowFillAlphaDefault setting which was redundant. Bake default BG alpha inside style.Colors[ImGuiCol_WindowBg] and all other Bg color values. (ref github issue #337).
+ - 2016/04/03 (1.48) - renamed ImGuiCol_TooltipBg to ImGuiCol_PopupBg, used by popups/menus and tooltips. popups/menus were previously using ImGuiCol_WindowBg. (ref github issue #337)
  - 2016/03/21 (1.48) - renamed GetWindowFont() to GetFont(), GetWindowFontSize() to GetFontSize(). Kept inline redirection function (will obsolete).
  - 2016/03/02 (1.48) - InputText() completion/history/always callbacks: if you modify the text buffer manually (without using DeleteChars()/InsertChars() helper) you need to maintain the BufTextLen field. added an assert.
  - 2016/01/23 (1.48) - fixed not honoring exact width passed to PushItemWidth(), previously it would add extra FramePadding.x*2 over that width. if you had manual pixel-perfect alignment in place it might affect you.
@@ -699,7 +701,6 @@ ImGuiStyle::ImGuiStyle()
     ItemSpacing             = ImVec2(8,4);      // Horizontal and vertical spacing between widgets/lines
     ItemInnerSpacing        = ImVec2(4,4);      // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
     TouchExtraPadding       = ImVec2(0,0);      // Expand reactive bounding box for touch-based system where touch position is not accurate enough. Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget. So don't grow this too much!
-    WindowFillAlphaDefault  = 0.70f;            // Default alpha of window background, if not specified in ImGui::Begin()
     IndentSpacing           = 22.0f;            // Horizontal spacing when e.g. entering a tree node
     ColumnsMinSpacing       = 6.0f;             // Minimum horizontal spacing between two columns
     ScrollbarSize           = 16.0f;            // Width of the vertical scrollbar, Height of the horizontal scrollbar
@@ -714,8 +715,9 @@ ImGuiStyle::ImGuiStyle()
 
     Colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
     Colors[ImGuiCol_TextDisabled]           = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
-    Colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    Colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 0.70f);
     Colors[ImGuiCol_ChildWindowBg]          = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    Colors[ImGuiCol_PopupBg]                = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
     Colors[ImGuiCol_Border]                 = ImVec4(0.70f, 0.70f, 0.70f, 0.65f);
     Colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     Colors[ImGuiCol_FrameBg]                = ImVec4(0.80f, 0.80f, 0.80f, 0.30f);   // Background of checkbox, radio button, plot, slider, text input
@@ -753,7 +755,6 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_PlotHistogram]          = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
     Colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
     Colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.00f, 0.00f, 1.00f, 0.35f);
-    Colors[ImGuiCol_TooltipBg]              = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
     Colors[ImGuiCol_ModalWindowDarkening]   = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 }
 
@@ -3138,9 +3139,8 @@ static ImRect GetVisibleRect()
 
 void ImGui::BeginTooltip()
 {
-    ImGuiState& g = *GImGui;
     ImGuiWindowFlags flags = ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
-    ImGui::Begin("##Tooltip", NULL, ImVec2(0,0), g.Style.Colors[ImGuiCol_TooltipBg].w, flags);
+    ImGui::Begin("##Tooltip", NULL, flags);
 }
 
 void ImGui::EndTooltip()
@@ -3278,9 +3278,8 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
         ImFormatString(name, 20, "##menu_%d", g.CurrentPopupStack.Size);    // Recycle windows based on depth
     else
         ImFormatString(name, 20, "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
-    float alpha = 1.0f;
 
-    bool opened = ImGui::Begin(name, NULL, ImVec2(0.0f, 0.0f), alpha, flags);
+    bool opened = ImGui::Begin(name, NULL, flags);
     if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
         g.CurrentWindow->Flags &= ~ImGuiWindowFlags_ShowBorders;
     if (!opened) // opened can be 'false' when the popup is completely clipped (e.g. zero size display)
@@ -3311,7 +3310,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_opened, ImGuiWindowFlags e
     }
 
     ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_Modal|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings;
-    bool opened = ImGui::Begin(name, p_opened, ImVec2(0.0f, 0.0f), -1.0f, flags);
+    bool opened = ImGui::Begin(name, p_opened, flags);
     if (!opened || (p_opened && !*p_opened)) // Opened can be 'false' when the popup is completely clipped (e.g. zero size display)
     {
         ImGui::EndPopup();
@@ -3391,8 +3390,7 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
     char title[256];
     ImFormatString(title, IM_ARRAYSIZE(title), "%s.%s", window->Name, str_id);
 
-    const float alpha = 1.0f;
-    bool ret = ImGui::Begin(title, NULL, size, alpha, flags);
+    bool ret = ImGui::Begin(title, NULL, size, -1.0f, flags);
 
     if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
         GetCurrentWindow()->Flags &= ~ImGuiWindowFlags_ShowBorders;
@@ -3692,10 +3690,6 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     window->RootWindow = g.CurrentWindowStack[root_idx];
     window->RootNonPopupWindow = g.CurrentWindowStack[root_non_popup_idx];      // This is merely for displaying the TitleBgActive color.
 
-    // Default alpha
-    if (bg_alpha < 0.0f)
-        bg_alpha = style.WindowFillAlphaDefault;
-
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
     {
@@ -3987,21 +3981,20 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             window->BorderSize = (flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
 
             // Window background
-            if (bg_alpha > 0.0f)
-            {
-                ImGuiCol col_idx;
-                if ((flags & ImGuiWindowFlags_ComboBox) != 0)
-                    col_idx = ImGuiCol_ComboBg;
-                else if ((flags & ImGuiWindowFlags_Tooltip) != 0)
-                    col_idx = ImGuiCol_TooltipBg;
-                else if ((flags & ImGuiWindowFlags_Popup) != 0)
-                    col_idx = ImGuiCol_WindowBg;
-                else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
-                    col_idx = ImGuiCol_ChildWindowBg;
-                else
-                    col_idx = ImGuiCol_WindowBg;
-                window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, GetColorU32(col_idx, bg_alpha), window_rounding);
-            }
+            // Default alpha
+            ImGuiCol bg_color_idx = ImGuiCol_WindowBg;
+            if ((flags & ImGuiWindowFlags_ComboBox) != 0)
+                bg_color_idx = ImGuiCol_ComboBg;
+            else if ((flags & ImGuiWindowFlags_Tooltip) != 0 || (flags & ImGuiWindowFlags_Popup) != 0)
+                bg_color_idx = ImGuiCol_PopupBg;
+            else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
+                bg_color_idx = ImGuiCol_ChildWindowBg;
+            ImVec4 bg_color = style.Colors[bg_color_idx];
+            if (bg_alpha >= 0.0f)
+                bg_color.w = bg_alpha;
+            bg_color.w *= style.Alpha;
+            if (bg_color.w > 0.0f)
+                window->DrawList->AddRectFilled(window->Pos, window->Pos+window->Size, ColorConvertFloat4ToU32(bg_color), window_rounding);
 
             // Title bar
             if (!(flags & ImGuiWindowFlags_NoTitleBar))
@@ -4522,6 +4515,7 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     case ImGuiCol_TextDisabled: return "TextDisabled";
     case ImGuiCol_WindowBg: return "WindowBg";
     case ImGuiCol_ChildWindowBg: return "ChildWindowBg";
+    case ImGuiCol_PopupBg: return "PopupBg";
     case ImGuiCol_Border: return "Border";
     case ImGuiCol_BorderShadow: return "BorderShadow";
     case ImGuiCol_FrameBg: return "FrameBg";
@@ -4559,7 +4553,6 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     case ImGuiCol_PlotHistogram: return "PlotHistogram";
     case ImGuiCol_PlotHistogramHovered: return "PlotHistogramHovered";
     case ImGuiCol_TextSelectedBg: return "TextSelectedBg";
-    case ImGuiCol_TooltipBg: return "TooltipBg";
     case ImGuiCol_ModalWindowDarkening: return "ModalWindowDarkening";
     }
     IM_ASSERT(0);
@@ -8501,7 +8494,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     bool want_open = false, want_close = false;
     if (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
     {
-        // Implement http://bjk5.com/post/44698559168/breaking-down-amazons-mega-dropdown to avoid using timers so menus feel more reactive.
+        // Implement http://bjk5.com/post/44698559168/breaking-down-amazons-mega-dropdown to avoid using timers, so menus feels more reactive.
         bool moving_within_opened_triangle = false;
         if (g.HoveredWindow == window && g.OpenedPopupStack.Size > g.CurrentPopupStack.Size && g.OpenedPopupStack[g.CurrentPopupStack.Size].ParentWindow == window)
         {
