@@ -46,6 +46,8 @@ struct VERTEX_CONSTANT_BUFFER
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
 {
+    ID3D11DeviceContext* ctx = g_pd3dDeviceContext;
+
     // Create and grow vertex/index buffers if needed
     if (!g_pVB || g_VertexBufferSize < draw_data->TotalVtxCount)
     {
@@ -65,21 +67,21 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     {
         if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
         g_IndexBufferSize = draw_data->TotalIdxCount + 10000;
-        D3D11_BUFFER_DESC bufferDesc;
-        memset(&bufferDesc, 0, sizeof(D3D11_BUFFER_DESC));
-        bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-        bufferDesc.ByteWidth = g_IndexBufferSize * sizeof(ImDrawIdx);
-        bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-        bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        if (g_pd3dDevice->CreateBuffer(&bufferDesc, NULL, &g_pIB) < 0)
+        D3D11_BUFFER_DESC buffer_desc;
+        memset(&buffer_desc, 0, sizeof(D3D11_BUFFER_DESC));
+        buffer_desc.Usage = D3D11_USAGE_DYNAMIC;
+        buffer_desc.ByteWidth = g_IndexBufferSize * sizeof(ImDrawIdx);
+        buffer_desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+        buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        if (g_pd3dDevice->CreateBuffer(&buffer_desc, NULL, &g_pIB) < 0)
             return;
     }
 
     // Copy and convert all vertices into a single contiguous buffer
     D3D11_MAPPED_SUBRESOURCE vtx_resource, idx_resource;
-    if (g_pd3dDeviceContext->Map(g_pVB, 0, D3D11_MAP_WRITE_DISCARD, 0, &vtx_resource) != S_OK)
+    if (ctx->Map(g_pVB, 0, D3D11_MAP_WRITE_DISCARD, 0, &vtx_resource) != S_OK)
         return;
-    if (g_pd3dDeviceContext->Map(g_pIB, 0, D3D11_MAP_WRITE_DISCARD, 0, &idx_resource) != S_OK)
+    if (ctx->Map(g_pIB, 0, D3D11_MAP_WRITE_DISCARD, 0, &idx_resource) != S_OK)
         return;
     ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource.pData;
     ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource.pData;
@@ -91,33 +93,31 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
         vtx_dst += cmd_list->VtxBuffer.size();
         idx_dst += cmd_list->IdxBuffer.size();
     }
-    g_pd3dDeviceContext->Unmap(g_pVB, 0);
-    g_pd3dDeviceContext->Unmap(g_pIB, 0);
+    ctx->Unmap(g_pVB, 0);
+    ctx->Unmap(g_pIB, 0);
 
     // Setup orthographic projection matrix into our constant buffer
     {
-        D3D11_MAPPED_SUBRESOURCE mappedResource;
-        if (g_pd3dDeviceContext->Map(g_pVertexConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource) != S_OK)
+        D3D11_MAPPED_SUBRESOURCE mapped_resource;
+        if (ctx->Map(g_pVertexConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource) != S_OK)
             return;
-
-        VERTEX_CONSTANT_BUFFER* pConstantBuffer = (VERTEX_CONSTANT_BUFFER*)mappedResource.pData;
-        const float L = 0.0f;
-        const float R = ImGui::GetIO().DisplaySize.x;
-        const float B = ImGui::GetIO().DisplaySize.y;
-        const float T = 0.0f;
-        const float mvp[4][4] =
+        VERTEX_CONSTANT_BUFFER* constant_buffer = (VERTEX_CONSTANT_BUFFER*)mapped_resource.pData;
+        float L = 0.0f;
+        float R = ImGui::GetIO().DisplaySize.x;
+        float B = ImGui::GetIO().DisplaySize.y;
+        float T = 0.0f;
+        float mvp[4][4] =
         {
             { 2.0f/(R-L),   0.0f,           0.0f,       0.0f },
             { 0.0f,         2.0f/(T-B),     0.0f,       0.0f },
             { 0.0f,         0.0f,           0.5f,       0.0f },
             { (R+L)/(L-R),  (T+B)/(B-T),    0.5f,       1.0f },
         };
-        memcpy(&pConstantBuffer->mvp, mvp, sizeof(mvp));
-        g_pd3dDeviceContext->Unmap(g_pVertexConstantBuffer, 0);
+        memcpy(&constant_buffer->mvp, mvp, sizeof(mvp));
+        ctx->Unmap(g_pVertexConstantBuffer, 0);
     }
 
     // Backup DX state that will be modified to restore it afterwards (unfortunately this is very ugly looking and verbose. Close your eyes!)
-    ID3D11DeviceContext* ctx = g_pd3dDeviceContext;
     struct BACKUP_DX11_STATE
     {
         UINT                        ScissorRectsCount, ViewportsCount;
@@ -157,34 +157,31 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     ctx->IAGetInputLayout(&old.InputLayout);
 
     // Setup viewport
-    {
-        D3D11_VIEWPORT vp;
-        memset(&vp, 0, sizeof(D3D11_VIEWPORT));
-        vp.Width = ImGui::GetIO().DisplaySize.x;
-        vp.Height = ImGui::GetIO().DisplaySize.y;
-        vp.MinDepth = 0.0f;
-        vp.MaxDepth = 1.0f;
-        vp.TopLeftX = 0;
-        vp.TopLeftY = 0;
-        g_pd3dDeviceContext->RSSetViewports(1, &vp);
-    }
+    D3D11_VIEWPORT vp;
+    memset(&vp, 0, sizeof(D3D11_VIEWPORT));
+    vp.Width = ImGui::GetIO().DisplaySize.x;
+    vp.Height = ImGui::GetIO().DisplaySize.y;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    vp.TopLeftX = vp.TopLeftY = 0.0f;
+    ctx->RSSetViewports(1, &vp);
 
     // Bind shader and vertex buffers
     unsigned int stride = sizeof(ImDrawVert);
     unsigned int offset = 0;
-    g_pd3dDeviceContext->IASetInputLayout(g_pInputLayout);
-    g_pd3dDeviceContext->IASetVertexBuffers(0, 1, &g_pVB, &stride, &offset);
-    g_pd3dDeviceContext->IASetIndexBuffer(g_pIB, sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, 0);
-    g_pd3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    g_pd3dDeviceContext->VSSetShader(g_pVertexShader, NULL, 0);
-    g_pd3dDeviceContext->VSSetConstantBuffers(0, 1, &g_pVertexConstantBuffer);
-    g_pd3dDeviceContext->PSSetShader(g_pPixelShader, NULL, 0);
-    g_pd3dDeviceContext->PSSetSamplers(0, 1, &g_pFontSampler);
+    ctx->IASetInputLayout(g_pInputLayout);
+    ctx->IASetVertexBuffers(0, 1, &g_pVB, &stride, &offset);
+    ctx->IASetIndexBuffer(g_pIB, sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, 0);
+    ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ctx->VSSetShader(g_pVertexShader, NULL, 0);
+    ctx->VSSetConstantBuffers(0, 1, &g_pVertexConstantBuffer);
+    ctx->PSSetShader(g_pPixelShader, NULL, 0);
+    ctx->PSSetSamplers(0, 1, &g_pFontSampler);
 
     // Setup render state
-    const float blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
-    g_pd3dDeviceContext->OMSetBlendState(g_pBlendState, blendFactor, 0xffffffff);
-    g_pd3dDeviceContext->RSSetState(g_pRasterizerState);
+    const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
+    ctx->OMSetBlendState(g_pBlendState, blend_factor, 0xffffffff);
+    ctx->RSSetState(g_pRasterizerState);
 
     // Render command lists
     int vtx_offset = 0;
@@ -202,9 +199,9 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
             else
             {
                 const D3D11_RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
-                g_pd3dDeviceContext->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->TextureId);
-                g_pd3dDeviceContext->RSSetScissorRects(1, &r);
-                g_pd3dDeviceContext->DrawIndexed(pcmd->ElemCount, idx_offset, vtx_offset);
+                ctx->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->TextureId);
+                ctx->RSSetScissorRects(1, &r);
+                ctx->DrawIndexed(pcmd->ElemCount, idx_offset, vtx_offset);
             }
             idx_offset += pcmd->ElemCount;
         }
