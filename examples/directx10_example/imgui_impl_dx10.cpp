@@ -277,33 +277,33 @@ static void ImGui_ImplDX10_CreateFontsTexture()
 
     // Create DX10 texture
     {
-        D3D10_TEXTURE2D_DESC texDesc;
-        ZeroMemory(&texDesc, sizeof(texDesc));
-        texDesc.Width = width;
-        texDesc.Height = height;
-        texDesc.MipLevels = 1;
-        texDesc.ArraySize = 1;
-        texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        texDesc.SampleDesc.Count = 1;
-        texDesc.Usage = D3D10_USAGE_DEFAULT;
-        texDesc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
-        texDesc.CPUAccessFlags = 0;
+        D3D10_TEXTURE2D_DESC desc;
+        ZeroMemory(&desc, sizeof(desc));
+        desc.Width = width;
+        desc.Height = height;
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D10_USAGE_DEFAULT;
+        desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
+        desc.CPUAccessFlags = 0;
 
         ID3D10Texture2D *pTexture = NULL;
         D3D10_SUBRESOURCE_DATA subResource;
         subResource.pSysMem = pixels;
-        subResource.SysMemPitch = texDesc.Width * 4;
+        subResource.SysMemPitch = desc.Width * 4;
         subResource.SysMemSlicePitch = 0;
-        g_pd3dDevice->CreateTexture2D(&texDesc, &subResource, &pTexture);
+        g_pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
 
         // Create texture view
-        D3D10_SHADER_RESOURCE_VIEW_DESC srvDesc;
-        ZeroMemory(&srvDesc, sizeof(srvDesc));
-        srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        srvDesc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Texture2D.MipLevels = texDesc.MipLevels;
-        srvDesc.Texture2D.MostDetailedMip = 0;
-        g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &g_pFontTextureView);
+        D3D10_SHADER_RESOURCE_VIEW_DESC srv_desc;
+        ZeroMemory(&srv_desc, sizeof(srv_desc));
+        srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        srv_desc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
+        srv_desc.Texture2D.MipLevels = desc.MipLevels;
+        srv_desc.Texture2D.MostDetailedMip = 0;
+        g_pd3dDevice->CreateShaderResourceView(pTexture, &srv_desc, &g_pFontTextureView);
         pTexture->Release();
     }
 
@@ -312,17 +312,17 @@ static void ImGui_ImplDX10_CreateFontsTexture()
 
     // Create texture sampler
     {
-        D3D10_SAMPLER_DESC samplerDesc;
-        ZeroMemory(&samplerDesc, sizeof(samplerDesc));
-        samplerDesc.Filter = D3D10_FILTER_MIN_MAG_MIP_LINEAR;
-        samplerDesc.AddressU = D3D10_TEXTURE_ADDRESS_WRAP;
-        samplerDesc.AddressV = D3D10_TEXTURE_ADDRESS_WRAP;
-        samplerDesc.AddressW = D3D10_TEXTURE_ADDRESS_WRAP;
-        samplerDesc.MipLODBias = 0.f;
-        samplerDesc.ComparisonFunc = D3D10_COMPARISON_ALWAYS;
-        samplerDesc.MinLOD = 0.f;
-        samplerDesc.MaxLOD = 0.f;
-        g_pd3dDevice->CreateSamplerState(&samplerDesc, &g_pFontSampler);
+        D3D10_SAMPLER_DESC desc;
+        ZeroMemory(&desc, sizeof(desc));
+        desc.Filter = D3D10_FILTER_MIN_MAG_MIP_LINEAR;
+        desc.AddressU = D3D10_TEXTURE_ADDRESS_WRAP;
+        desc.AddressV = D3D10_TEXTURE_ADDRESS_WRAP;
+        desc.AddressW = D3D10_TEXTURE_ADDRESS_WRAP;
+        desc.MipLODBias = 0.f;
+        desc.ComparisonFunc = D3D10_COMPARISON_ALWAYS;
+        desc.MinLOD = 0.f;
+        desc.MaxLOD = 0.f;
+        g_pd3dDevice->CreateSamplerState(&desc, &g_pFontSampler);
     }
 
     // Cleanup (don't clear the input data if you want to append new fonts later)
@@ -374,24 +374,24 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
             return false;
 
         // Create the input layout
-        D3D10_INPUT_ELEMENT_DESC localLayout[] = {
+        D3D10_INPUT_ELEMENT_DESC local_layout[] = 
+        {
             { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->pos), D3D10_INPUT_PER_VERTEX_DATA, 0 },
             { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->uv),  D3D10_INPUT_PER_VERTEX_DATA, 0 },
             { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (size_t)(&((ImDrawVert*)0)->col), D3D10_INPUT_PER_VERTEX_DATA, 0 },
         };
-
-        if (g_pd3dDevice->CreateInputLayout(localLayout, 3, g_pVertexShaderBlob->GetBufferPointer(), g_pVertexShaderBlob->GetBufferSize(), &g_pInputLayout) != S_OK)
+        if (g_pd3dDevice->CreateInputLayout(local_layout, 3, g_pVertexShaderBlob->GetBufferPointer(), g_pVertexShaderBlob->GetBufferSize(), &g_pInputLayout) != S_OK)
             return false;
 
         // Create the constant buffer
         {
-            D3D10_BUFFER_DESC cbDesc;
-            cbDesc.ByteWidth = sizeof(VERTEX_CONSTANT_BUFFER);
-            cbDesc.Usage = D3D10_USAGE_DYNAMIC;
-            cbDesc.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
-            cbDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
-            cbDesc.MiscFlags = 0;
-            g_pd3dDevice->CreateBuffer(&cbDesc, NULL, &g_pVertexConstantBuffer);
+            D3D10_BUFFER_DESC desc;
+            desc.ByteWidth = sizeof(VERTEX_CONSTANT_BUFFER);
+            desc.Usage = D3D10_USAGE_DYNAMIC;
+            desc.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
+            desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+            desc.MiscFlags = 0;
+            g_pd3dDevice->CreateBuffer(&desc, NULL, &g_pVertexConstantBuffer);
         }
     }
 
