@@ -79,4 +79,8 @@ allegro5_example/
 	 
 marmalade_example/
     Marmalade example using IwGx
-	 
+    
+vulkan_example/
+	Vulkan example.
+	This is quite long and tedious, because: Vulkan.
+
