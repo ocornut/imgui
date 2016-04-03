@@ -116,6 +116,46 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
         g_pd3dDeviceContext->Unmap(g_pVertexConstantBuffer, 0);
     }
 
+    // Capture all the state that will be modified to restore it afterwards
+    UINT oldNumScissorRects = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+    D3D11_RECT oldScissorRects[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
+    g_pd3dDeviceContext->RSGetScissorRects(&oldNumScissorRects, oldScissorRects);
+    ID3D11ShaderResourceView* pOldPSSRV0;
+    g_pd3dDeviceContext->PSGetShaderResources(0, 1, &pOldPSSRV0);
+    ID3D11RasterizerState* pOldRS;
+    g_pd3dDeviceContext->RSGetState(&pOldRS);
+    ID3D11BlendState* pOldBlendState;
+    FLOAT oldBlendFactor[4];
+    UINT oldSampleMask;
+    g_pd3dDeviceContext->OMGetBlendState(&pOldBlendState, oldBlendFactor, &oldSampleMask);
+    ID3D11SamplerState* pOldPSSampler;
+    g_pd3dDeviceContext->PSGetSamplers(0, 1, &pOldPSSampler);
+    ID3D11PixelShader* pOldPS;
+    ID3D11ClassInstance* pOldPSInstances[256]; // max according to PSSetShader documentation
+    UINT oldNumPSInstances = 256;
+    g_pd3dDeviceContext->PSGetShader(&pOldPS, pOldPSInstances, &oldNumPSInstances);
+    ID3D11Buffer* pOldVSCBV;
+    g_pd3dDeviceContext->VSGetConstantBuffers(0, 1, &pOldVSCBV);
+    ID3D11VertexShader* pOldVS;
+    ID3D11ClassInstance* pOldVSInstances[256]; // max according to VSSetShader documentation
+    UINT oldNumVSInstances = 256;
+    g_pd3dDeviceContext->VSGetShader(&pOldVS, pOldVSInstances, &oldNumVSInstances);
+    D3D11_PRIMITIVE_TOPOLOGY oldPrimitiveTopology;
+    g_pd3dDeviceContext->IAGetPrimitiveTopology(&oldPrimitiveTopology);
+    ID3D11Buffer* pOldIndexBuffer;
+    DXGI_FORMAT oldIndexBufferFormat;
+    UINT oldIndexBufferOffset;
+    g_pd3dDeviceContext->IAGetIndexBuffer(&pOldIndexBuffer, &oldIndexBufferFormat, &oldIndexBufferOffset);
+    ID3D11Buffer* pOldVertexBuffer;
+    UINT oldVertexBufferStride;
+    UINT oldVertexBufferOffset;
+    g_pd3dDeviceContext->IAGetVertexBuffers(0, 1, &pOldVertexBuffer, &oldVertexBufferStride, &oldVertexBufferOffset);
+    ID3D11InputLayout* pOldInputLayout;
+    g_pd3dDeviceContext->IAGetInputLayout(&pOldInputLayout);
+    UINT oldNumViewports = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+    D3D11_VIEWPORT oldViewports[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
+    g_pd3dDeviceContext->RSGetViewports(&oldNumViewports, oldViewports);
+
     // Setup viewport
     {
         D3D11_VIEWPORT vp;
@@ -172,9 +212,31 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     }
 
     // Restore modified state
-    g_pd3dDeviceContext->IASetInputLayout(NULL);
-    g_pd3dDeviceContext->PSSetShader(NULL, NULL, 0);
-    g_pd3dDeviceContext->VSSetShader(NULL, NULL, 0);
+    g_pd3dDeviceContext->RSSetScissorRects(oldNumScissorRects, oldScissorRects);
+    g_pd3dDeviceContext->PSSetShaderResources(0, 1, &pOldPSSRV0);
+    if (pOldPSSRV0) pOldPSSRV0->Release();
+    g_pd3dDeviceContext->RSSetState(pOldRS);
+    if (pOldRS) pOldRS->Release();
+    g_pd3dDeviceContext->OMSetBlendState(pOldBlendState, oldBlendFactor, oldSampleMask);
+    if (pOldBlendState) pOldBlendState->Release();
+    g_pd3dDeviceContext->PSSetSamplers(0, 1, &pOldPSSampler);
+    if (pOldPSSampler) pOldPSSampler->Release();
+    g_pd3dDeviceContext->PSSetShader(pOldPS, pOldPSInstances, oldNumPSInstances);
+    if (pOldPS) pOldPS->Release();
+    for (UINT i = 0; i < oldNumPSInstances; i++) if (pOldPSInstances[i]) pOldPSInstances[i]->Release();
+    g_pd3dDeviceContext->VSSetConstantBuffers(0, 1, &pOldVSCBV);
+    if (pOldVSCBV) pOldVSCBV->Release();
+    g_pd3dDeviceContext->VSSetShader(pOldVS, pOldVSInstances, oldNumVSInstances);
+    if (pOldVS) pOldVS->Release();
+    for (UINT i = 0; i < oldNumVSInstances; i++) if (pOldVSInstances[i]) pOldVSInstances[i]->Release();
+    g_pd3dDeviceContext->IASetPrimitiveTopology(oldPrimitiveTopology);
+    g_pd3dDeviceContext->IASetIndexBuffer(pOldIndexBuffer, oldIndexBufferFormat, oldIndexBufferOffset);
+    if (pOldIndexBuffer) pOldIndexBuffer->Release();
+    g_pd3dDeviceContext->IASetVertexBuffers(0, 1, &pOldVertexBuffer, &oldVertexBufferStride, &oldVertexBufferOffset);
+    if (pOldVertexBuffer) pOldVertexBuffer->Release();
+    g_pd3dDeviceContext->IASetInputLayout(pOldInputLayout);
+    if (pOldInputLayout) pOldInputLayout->Release();
+    g_pd3dDeviceContext->RSSetViewports(oldNumViewports, oldViewports);
 }
 
 IMGUI_API LRESULT ImGui_ImplDX11_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam)
