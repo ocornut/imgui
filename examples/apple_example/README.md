@@ -1,4 +1,4 @@
-# iOS example
+# iOS / OSX example
 
 ## Introduction
 
@@ -16,6 +16,13 @@ Synergy (remote keyboard/mouse) is not required, but it's pretty hard to use ImG
 0. Enter the name or the IP of your synergy host
 0. If you had previously connected to a server, you may need to kill and re-start the app.
 
+## How to Run on OSX
+
+* Make sure you have install `brew`, if not, please refer to [Homebrew Website](http://brew.sh)
+* Run the command: `brew install glfw3`
+* Double click `imguiex.xcodeproj` and select `imguiex-osx` scheme
+* Click `Run` button
+
 ## Notes and TODOs
 
 Things that would be nice but I didn't get around to doing:
@@ -25,7 +32,7 @@ Things that would be nice but I didn't get around to doing:
 * Graceful disconnect/reconnect from uSynergy.
 * Copy/Paste not well-supported
 
-## C++ on iOS
+## C++ on iOS / OSX
 ImGui is a c++ library. If you want to include it directly, rename your Obj-C file to have the ".mm" extension. 
 
 Alternatively, you can wrap your debug code in a C interface, this is what I am demonstrating here with the "debug_hud.h" interface. Either approach works, use whatever you prefer.
