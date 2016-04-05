@@ -63,9 +63,9 @@ directx11_example/
     DirectX11 example, Windows only.
     This is quite long and tedious, because: DirectX11.
 	
-ios_example/
-    iOS example.
-    Using Synergy to access keyboard/mouse data from server computer.
+apple_example/
+    OSX & iOS example.
+    On iOS, Using Synergy to access keyboard/mouse data from server computer.
     Synergy keyboard integration is rather hacky.
 
 sdl_opengl_example/
