@@ -1652,7 +1652,7 @@ ImGuiWindow* ImGui::GetParentWindow()
 {
     ImGuiState& g = *GImGui;
     IM_ASSERT(g.CurrentWindowStack.Size >= 2);
-    return g.CurrentWindowStack[g.CurrentWindowStack.Size - 2];
+    return g.CurrentWindowStack[(unsigned int)g.CurrentWindowStack.Size - 2];
 }
 
 void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window = NULL)
