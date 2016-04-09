@@ -30,7 +30,7 @@
 //#define IMGUI_STB_NAMESPACE     ImGuiStb
 
 //---- Define constructor and implicit cast operators to convert back<>forth from your math types and ImVec2/ImVec4.
-/*
+
 #define IM_VEC2_CLASS_EXTRA                                                 \
         ImVec2(const EaseCore::Vec2 & f) { x = f.x; y = f.y; }				\
         operator EaseCore::Vec2() const { return EaseCore::Vec2(x,y); }

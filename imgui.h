@@ -341,7 +341,7 @@ namespace ImGui
     // Tooltips
     IMGUI_API void          SetTooltip(const char* fmt, ...) IM_PRINTFARGS(1);                  // set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). last call wins
     IMGUI_API void          SetTooltipV(const char* fmt, va_list args);
-    IMGUI_API void          BeginTooltip();                                                     // use to create full-featured tooltip windows that aren't just text
+    IMGUI_API void          BeginTooltip(ImGuiWindowFlags options=0);                           // use to create full-featured tooltip windows that aren't just text
     IMGUI_API void          EndTooltip();
 
     // Menus
