@@ -30,15 +30,16 @@
 //#define IMGUI_STB_NAMESPACE     ImGuiStb
 
 //---- Define constructor and implicit cast operators to convert back<>forth from your math types and ImVec2/ImVec4.
-
-#define IM_VEC2_CLASS_EXTRA                                                 \
-        ImVec2(const EaseCore::Vec2 & f) { x = f.x; y = f.y; }				\
-        operator EaseCore::Vec2() const { return EaseCore::Vec2(x,y); }
-
-#define IM_VEC4_CLASS_EXTRA															\
-        ImVec4(const EaseCore::Vec4 & f) { x = f.x; y = f.y; z = f.z; w = f.w; }	\
-        EaseCore::Vec4  ToVec4() const { return EaseCore::Vec4(x,y,z,w); }         \
-        operator EaseCore::Vec4() const { return EaseCore::Vec4(x,y,z,w); }
+#ifdef EASE_CORE_DEFINED
+	#define IM_VEC2_CLASS_EXTRA                                                 \
+	        ImVec2(const EaseCore::Vec2 & f) { x = f.x; y = f.y; }				\
+	        operator EaseCore::Vec2() const { return EaseCore::Vec2(x,y); }
+	
+	#define IM_VEC4_CLASS_EXTRA															\
+	        ImVec4(const EaseCore::Vec4 & f) { x = f.x; y = f.y; z = f.z; w = f.w; }	\
+	        EaseCore::Vec4  ToVec4() const { return EaseCore::Vec4(x,y,z,w); }         \
+	        operator EaseCore::Vec4() const { return EaseCore::Vec4(x,y,z,w); }
+#endif
 
 // Indices
 #define ImDrawIdx unsigned int
