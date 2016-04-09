@@ -356,7 +356,7 @@ struct ImGuiState
     ImFont*                 Font;                               // (Shortcut) == FontStack.empty() ? IO.Font : FontStack.back()
     float                   FontSize;                           // (Shortcut) == FontBaseSize * g.CurrentWindow->FontWindowScale == window->FontSize()
     float                   FontBaseSize;                       // (Shortcut) == IO.FontGlobalScale * Font->Scale * Font->FontSize. Size of characters.
-    ImVec2                  FontTexUvWhitePixel;                // (Shortcut) == Font->TexUvForWhite
+    ImVec2                  FontTexUvWhitePixel;                // (Shortcut) == Font->TexUvWhitePixel
 
     float                   Time;
     int                     FrameCount;
@@ -679,11 +679,11 @@ namespace ImGui
     IMGUI_API ImGuiWindow*  FindWindowByName(const char* name);
     IMGUI_API void          FocusWindow(ImGuiWindow* window);
 
+    IMGUI_API void          EndFrame();                 // Ends the ImGui frame. Automatically called by Render()! you most likely don't need to ever call that yourself directly. If you don't need to render you can call EndFrame() but you'll have wasted CPU already. If you don't need to render, don't create any windows instead!
+
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          SetHoveredID(ImGuiID id);
     IMGUI_API void          KeepAliveID(ImGuiID id);
-
-    IMGUI_API void          EndFrame();                 // Automatically called by Render()
 
     IMGUI_API void          ItemSize(const ImVec2& size, float text_offset_y = 0.0f);
     IMGUI_API void          ItemSize(const ImRect& bb, float text_offset_y = 0.0f);
@@ -708,6 +708,7 @@ namespace ImGui
     IMGUI_API void          RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
     IMGUI_API void          RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale = 1.0f, bool shadow = false);
     IMGUI_API void          RenderCheckMark(ImVec2 pos, ImU32 col);
+    IMGUI_API const char*   FindRenderedTextEnd(const char* text, const char* text_end = NULL); // Find the optional ## from which we stop displaying text.
 
     IMGUI_API void          PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_existing_clip_rect = true);
     IMGUI_API void          PopClipRect();

@@ -1,5 +1,10 @@
 Those are standalone ready-to-build applications to demonstrate ImGui.
-Binaries of some of those demos are available at http://www.miracleworld.net/imgui/binaries
+Binaries of some of those demos: http://www.miracleworld.net/imgui/binaries
+
+Third party languages and frameworks bindings: https://github.com/ocornut/imgui/wiki/Links
+(languages: C, .net, rust, D, Python, Lua..)
+(frameworks: DX12, Vulkan, Cinder, OpenGLES, openFrameworks, Cocos2d-x, SFML, Flexium, NanoRT, Irrlicht..)
+(extras: RemoteImGui, ImWindow, imgui_wm..)
 
 TL;DR; 
  - Newcomers, read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup ImGui in your codebase.
@@ -58,9 +63,9 @@ directx11_example/
     DirectX11 example, Windows only.
     This is quite long and tedious, because: DirectX11.
 	
-ios_example/
-    iOS example.
-    Using Synergy to access keyboard/mouse data from server computer.
+apple_example/
+    OSX & iOS example.
+    On iOS, Using Synergy to access keyboard/mouse data from server computer.
     Synergy keyboard integration is rather hacky.
 
 sdl_opengl_example/
@@ -74,4 +79,8 @@ allegro5_example/
 	 
 marmalade_example/
     Marmalade example using IwGx
-	 
+    
+vulkan_example/
+	Vulkan example.
+	This is quite long and tedious, because: Vulkan.
+

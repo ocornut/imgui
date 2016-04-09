@@ -47,7 +47,11 @@ Gallery
 
 See the [Screenshots Thread](https://github.com/ocornut/imgui/issues/123) for some user creations.
 
-![screenshot 1](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/examples_04.png)
+![screenshot 1](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_01.png)
+![screenshot 2](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_02.png)
+
+[![profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler-880.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler.png)
+
 ![screenshot 2](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_01.png)
 ![screenshot 3](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_02.png)
 ![screenshot 4](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_03.png)
@@ -158,13 +162,16 @@ Embeds [stb_textedit.h, stb_truetype.h, stb_rectpack.h](https://github.com/nothi
 
 Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. And everybody posting feedback, questions and patches on the GitHub.
 
-ImGui development is financially supported on [**Patreon**](http://www.patreon.com/imgui).
+Ongoing ImGui development is financially supported on [**Patreon**](http://www.patreon.com/imgui).
 
-Special supporters:
-- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Stefano Cristiano.
+Double-chocolate sponsors:
+- Media Molecule, Mobigame
 
-And:
-- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm.
+Salty caramel supporters:
+- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Stefano Cristiano, Chris Genova, ikrima
+
+Caramel supporters:
+- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm, Farhan Wali, Jeff Roberts, Matt Reyer, Colin Riley.
 
 And other supporters; thanks!
 
