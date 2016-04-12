@@ -880,8 +880,8 @@ struct ImGuiTextFilter
         const char* end() const { return e; }
         bool empty() const { return b == e; }
         char front() const { return *b; }
-        static bool isblank(char c) { return c == ' ' || c == '\t'; }
-        void trim_blanks() { while (b < e && isblank(*b)) b++; while (e > b && isblank(*(e-1))) e--; }
+        static bool is_blank(char c) { return c == ' ' || c == '\t'; }
+        void trim_blanks() { while (b < e && is_blank(*b)) b++; while (e > b && is_blank(*(e-1))) e--; }
         IMGUI_API void split(char separator, ImVector<TextRange>& out);
     };
 

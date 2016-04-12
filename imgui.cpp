@@ -534,6 +534,7 @@
  - style: try to make PushStyleVar() more robust to incorrect parameters (to be more friendly to edit & continues situation).
  - style/opt: PopStyleVar could be optimized by having GetStyleVar returns the type, using a table mapping stylevar enum to data type.
  - style: global scale setting.
+ - style: WindowPadding needs to be EVEN needs the 0.5 multiplier probably have a subtle effect on clip rectangle
  - text: simple markup language for color change?
  - font: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
  - font: helper to add glyph redirect/replacements (e.g. redirect alternate apostrophe unicode code points to ascii one, etc.)
@@ -558,7 +559,8 @@
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
 !- demo: custom render demo pushes a clipping rectangle past parent window bounds. expose ImGui::PushClipRect() from imgui_internal.h?
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
- - examples: directx9/directx11: save/restore device state more thoroughly.
+ - examples: directx9: save/restore device state more thoroughly.
+ - examples: window minimize, maximize (#583)
  - optimization: use another hash function than crc32, e.g. FNV1a
  - optimization/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
  - optimization: turn some the various stack vectors into statically-sized arrays
