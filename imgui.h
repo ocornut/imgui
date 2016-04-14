@@ -433,6 +433,7 @@ namespace ImGui
     IMGUI_API void*         GetInternalState();
     IMGUI_API size_t        GetInternalStateSize();
     IMGUI_API void          SetInternalState(void* state, bool construct = false);
+    IMGUI_API void*         GetDefaultInternalState();
 
     // Obsolete (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
