@@ -1,3 +1,4 @@
+#include "pch.h"
 // dear imgui, v1.49 WIP
 // (main code and documentation)
 
@@ -9190,6 +9191,11 @@ void ImGui::ValueColor(const char* prefix, unsigned int v)
 #undef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#endif
+
+#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS
+#define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS
 #endif
 
 // Win32 API clipboard implementation
