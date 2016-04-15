@@ -42,6 +42,7 @@ static ID3D11RasterizerState*   g_pRasterizerState = NULL;
 static ID3D11BlendState*        g_pBlendState = NULL;
 static ID3D11DepthStencilState* g_pDepthStencilState = NULL;
 static int                      g_VertexBufferSize = 5000, g_IndexBufferSize = 10000;
+static DXGI_MODE_ROTATION       g_eSwapChainRotation = DXGI_MODE_ROTATION::DXGI_MODE_ROTATION_UNSPECIFIED;
 
 struct VERTEX_CONSTANT_BUFFER
 {
@@ -103,24 +104,60 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     ctx->Unmap(g_pVB, 0);
     ctx->Unmap(g_pIB, 0);
 
-    // Setup orthographic projection matrix into our constant buffer
+    // Setup pixel to normalized device coordinate matrix into our constant
+    // buffer. Typically we're mapping (0,0),(w,h) => (-1,+1),(+1,-1) but if
+    // the swap chain rotation has been set to match the actual monitor
+    // rotation then we need to map the pixel coordinates to rotated NDC
+    // coordinates.
     {
+        auto size = ImGui::GetIO().DisplaySize;
+        float mvp[4][4] = { };
+        mvp[2][2] = +1.0f;
+        mvp[3][3] = +1.0f;
+        switch (g_eSwapChainRotation)
+        {
+            case DXGI_MODE_ROTATION_IDENTITY:
+            {
+                mvp[0][0] = +2.0f / size.x;
+                mvp[1][1] = -2.0f / size.y;
+                mvp[3][0] = -1.0f;
+                mvp[3][1] = +1.0f;
+            }
+            break;
+
+            case DXGI_MODE_ROTATION_ROTATE90:
+            {
+                mvp[0][1] = -2.0f / size.x;
+                mvp[1][0] = -2.0f / size.y;
+                mvp[3][0] = +1.0f;
+                mvp[3][1] = +1.0f;
+            }
+            break;
+
+            case DXGI_MODE_ROTATION_ROTATE180:
+            {
+                mvp[0][0] = -2.0f / size.x;
+                mvp[1][1] = +2.0f / size.y;
+                mvp[3][0] = +1.0f;
+                mvp[3][1] = -1.0f;
+            }
+            break;
+
+            case DXGI_MODE_ROTATION_ROTATE270:
+            {
+                mvp[0][1] = +2.0f / size.x;
+                mvp[1][0] = +2.0f / size.y;
+                mvp[3][0] = -1.0f;
+                mvp[3][1] = -1.0f;
+            }
+            break;
+        }
+
         D3D11_MAPPED_SUBRESOURCE mapped_resource;
         if (ctx->Map(g_pVertexConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource) != S_OK)
             return;
         VERTEX_CONSTANT_BUFFER* constant_buffer = (VERTEX_CONSTANT_BUFFER*)mapped_resource.pData;
-        float L = 0.0f;
-        float R = ImGui::GetIO().DisplaySize.x;
-        float B = ImGui::GetIO().DisplaySize.y;
-        float T = 0.0f;
-        float mvp[4][4] =
-        {
-            { 2.0f/(R-L),   0.0f,           0.0f,       0.0f },
-            { 0.0f,         2.0f/(T-B),     0.0f,       0.0f },
-            { 0.0f,         0.0f,           0.5f,       0.0f },
-            { (R+L)/(L-R),  (T+B)/(B-T),    0.5f,       1.0f },
-        };
-        memcpy(&constant_buffer->mvp, mvp, sizeof(mvp));
+        memcpy(&constant_buffer->mvp, &mvp, sizeof(mvp));
         ctx->Unmap(g_pVertexConstantBuffer, 0);
     }
 
@@ -169,8 +206,25 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     // Setup viewport
     D3D11_VIEWPORT vp;
     memset(&vp, 0, sizeof(D3D11_VIEWPORT));
-    vp.Width = ImGui::GetIO().DisplaySize.x;
-    vp.Height = ImGui::GetIO().DisplaySize.y;
+    auto size = ImGui::GetIO().DisplaySize;
+    switch (g_eSwapChainRotation)
+    {
+        case DXGI_MODE_ROTATION_IDENTITY:
+        case DXGI_MODE_ROTATION_ROTATE180:
+        {
+            vp.Width =  size.x;
+            vp.Height = size.y;
+        }
+        break;
+
+        case DXGI_MODE_ROTATION_ROTATE90:
+        case DXGI_MODE_ROTATION_ROTATE270:
+        {
+            vp.Width =  size.y;
+            vp.Height = size.x;
+        }
+        break;
+    }
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     vp.TopLeftX = vp.TopLeftY = 0.0f;
@@ -209,9 +263,62 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
             }
             else
             {
-                const D3D11_RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
-                ctx->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->TextureId);
+                D3D11_RECT r;
+
+                switch (g_eSwapChainRotation)
+                {
+                    case DXGI_MODE_ROTATION_IDENTITY:
+                    {
+                        r =
+                        {
+                            (LONG)pcmd->ClipRect.x,
+                            (LONG)pcmd->ClipRect.y,
+                            (LONG)pcmd->ClipRect.z,
+                            (LONG)pcmd->ClipRect.w
+                        };
+                    }
+                    break;
+
+                    case DXGI_MODE_ROTATION_ROTATE90:
+                    {
+                        r =
+                        {
+                            (LONG)pcmd->ClipRect.w,
+                            (LONG)pcmd->ClipRect.x,
+                            (LONG)pcmd->ClipRect.y,
+                            (LONG)pcmd->ClipRect.z
+                        };
+                    }
+                    break;
+
+                    case DXGI_MODE_ROTATION_ROTATE180:
+                    {
+                        r =
+                        {
+                            (LONG)pcmd->ClipRect.z,
+                            (LONG)pcmd->ClipRect.w,
+                            (LONG)pcmd->ClipRect.x,
+                            (LONG)pcmd->ClipRect.y
+                        };
+                    }
+                    break;
+
+                    case DXGI_MODE_ROTATION_ROTATE270:
+                    {
+                        r =
+                        {
+                            (LONG)pcmd->ClipRect.y,
+                            (LONG)pcmd->ClipRect.z,
+                            (LONG)pcmd->ClipRect.w,
+                            (LONG)pcmd->ClipRect.x
+                        };
+                    }
+                    break;
+                }
+
                 ctx->RSSetScissorRects(1, &r);
+
+                ctx->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->TextureId);
                 ctx->DrawIndexed(pcmd->ElemCount, idx_offset, vtx_offset);
             }
             idx_offset += pcmd->ElemCount;
@@ -490,10 +597,30 @@ void ImGui_ImplDX11_Shutdown()
     g_pd3dDeviceContext = NULL;
 }
 
-void ImGui_ImplDX11_NewFrame(float width, float height)
+void ImGui_ImplDX11_NewFrame(float width, float height, DXGI_MODE_ROTATION eSwapChainRotation)
 {
     if (!g_pFontSampler)
         ImGui_ImplDX11_CreateDeviceObjects();
+
+    switch (eSwapChainRotation)
+    {
+        case DXGI_MODE_ROTATION_IDENTITY:
+        case DXGI_MODE_ROTATION_ROTATE90:
+        case DXGI_MODE_ROTATION_ROTATE180:
+        case DXGI_MODE_ROTATION_ROTATE270:
+        {
+            g_eSwapChainRotation = eSwapChainRotation;
+        }
+        break;
+
+        default:
+        {
+            // Make sure this is set to something we handle.
+            // We should really have an assert or something...
+            g_eSwapChainRotation = DXGI_MODE_ROTATION_IDENTITY;
+        }
+        break;
+    }
 
     ImGuiIO& io = ImGui::GetIO();
 

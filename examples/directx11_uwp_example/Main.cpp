@@ -91,7 +91,9 @@ bool Main::Render()
 
     // ImGui - draw
     auto size = m_deviceResources->GetOutputSize();
-    ImGui_ImplDX11_NewFrame(size.Width, size.Height);
+    DXGI_MODE_ROTATION swapChainRotation = DXGI_MODE_ROTATION_IDENTITY;
+    m_deviceResources->GetSwapChain()->GetRotation(&swapChainRotation); // can fail (see docs) but ignore & just use default
+    ImGui_ImplDX11_NewFrame(size.Width, size.Height, swapChainRotation);
     ImGui::Text("Hello World!");
     ImGui::Button("OK");
     static float f = 0.0f;
