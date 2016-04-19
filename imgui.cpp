@@ -1575,6 +1575,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     MoveID = GetID("#MOVE");
 
     Flags = 0;
+    IndexWithinParent = 0;
     PosFloat = Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContents = SizeContentsExplicit = ImVec2(0.0f, 0.0f);
@@ -2305,7 +2306,7 @@ static int ChildWindowComparer(const void* lhs, const void* rhs)
         return d;
     if (int d = (a->Flags & ImGuiWindowFlags_ComboBox) - (b->Flags & ImGuiWindowFlags_ComboBox))
         return d;
-    return 0;
+    return (a->IndexWithinParent - b->IndexWithinParent);
 }
 
 static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, ImGuiWindow* window)
@@ -3696,6 +3697,7 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     if (first_begin_of_the_frame)
     {
         window->Active = true;
+        window->IndexWithinParent = 0;
         window->BeginCount = 0;
         window->DrawList->Clear();
         window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
@@ -3826,7 +3828,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
 
         // Position child window
         if (flags & ImGuiWindowFlags_ChildWindow)
+        {
+            window->IndexWithinParent = parent_window->DC.ChildWindows.Size;
             parent_window->DC.ChildWindows.push_back(window);
+        }
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
         {
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
