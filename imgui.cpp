@@ -633,7 +633,6 @@ static inline bool      IsWindowContentHoverable(ImGuiWindow* window);
 static void             ClearSetNextWindowData();
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
 static void             Scrollbar(ImGuiWindow* window, bool horizontal);
-static bool             CloseWindowButton(bool* p_opened);
 
 static void             AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDrawList* draw_list);
 static void             AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiWindow* window);
@@ -4082,7 +4081,12 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
             if (p_opened != NULL)
-                CloseWindowButton(p_opened);
+            {
+                const float pad = 2.0f;
+                const float rad = (window->TitleBarHeight() - pad*2.0f) * 0.5f;
+                if (CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-pad - rad, pad + rad), rad))
+                    *p_opened = false;
+            }
 
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
             if (!(flags & ImGuiWindowFlags_NoCollapse))
@@ -5389,13 +5393,11 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size_arg)
 }
 
 // Upper-right button to close a window.
-static bool CloseWindowButton(bool* p_opened)
+bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
 {
     ImGuiWindow* window = ImGui::GetCurrentWindow();
 
-    const ImGuiID id = window->GetID("#CLOSE");
-    const float size = window->TitleBarHeight() - 4.0f;
-    const ImRect bb(window->Rect().GetTR() + ImVec2(-2.0f-size,2.0f), window->Rect().GetTR() + ImVec2(-2.0f,2.0f+size));
+    const ImRect bb(pos - ImVec2(radius,radius), pos + ImVec2(radius,radius));
 
     bool hovered, held;
     bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held);
@@ -5403,17 +5405,14 @@ static bool CloseWindowButton(bool* p_opened)
     // Render
     const ImU32 col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_CloseButtonActive : hovered ? ImGuiCol_CloseButtonHovered : ImGuiCol_CloseButton);
     const ImVec2 center = bb.GetCenter();
-    window->DrawList->AddCircleFilled(center, ImMax(2.0f,size*0.5f), col, 16);
+    window->DrawList->AddCircleFilled(center, ImMax(2.0f, radius), col, 12);
 
-    const float cross_extent = (size * 0.5f * 0.7071f) - 1.0f;
+    const float cross_extent = (radius * 0.7071f) - 1.0f;
     if (hovered)
     {
         window->DrawList->AddLine(center + ImVec2(+cross_extent,+cross_extent), center + ImVec2(-cross_extent,-cross_extent), ImGui::GetColorU32(ImGuiCol_Text));
         window->DrawList->AddLine(center + ImVec2(+cross_extent,-cross_extent), center + ImVec2(-cross_extent,+cross_extent), ImGui::GetColorU32(ImGuiCol_Text));
     }
-
-    if (p_opened != NULL && pressed)
-        *p_opened = false;
 
     return pressed;
 }
