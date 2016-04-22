@@ -1940,6 +1940,22 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
     return text_size;
 }
 
+void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, unsigned short c) const
+{
+    if (c == ' ' || c == '\t' || c == '\n' || c == '\r') // Match behavior of RenderText(), those 4 codepoints are hard-coded.
+        return;
+    if (const Glyph* glyph = FindGlyph(c))
+    {
+        float scale = (size >= 0.0f) ? (size / FontSize) : 1.0f;
+        pos.x = (float)(int)pos.x + DisplayOffset.x;
+        pos.y = (float)(int)pos.y + DisplayOffset.y;
+        ImVec2 pos_tl(pos.x + glyph->X0 * scale, pos.y + glyph->Y0 * scale);
+        ImVec2 pos_br(pos.x + glyph->X1 * scale, pos.y + glyph->Y1 * scale);
+        draw_list->PrimReserve(6, 4);
+        draw_list->PrimRectUV(pos_tl, pos_br, ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
+    }
+}
+
 void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawList* draw_list, float wrap_width, bool cpu_fine_clip) const
 {
     if (!text_end)
@@ -2034,11 +2050,11 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             if (c != ' ' && c != '\t')
             {
                 // We don't do a second finer clipping test on the Y axis as we've already skipped anything before clip_rect.y and exit once we pass clip_rect.w
-                float y1 = (float)(y + glyph->Y0 * scale);
-                float y2 = (float)(y + glyph->Y1 * scale);
+                float y1 = y + glyph->Y0 * scale;
+                float y2 = y + glyph->Y1 * scale;
 
-                float x1 = (float)(x + glyph->X0 * scale);
-                float x2 = (float)(x + glyph->X1 * scale);
+                float x1 = x + glyph->X0 * scale;
+                float x2 = x + glyph->X1 * scale;
                 if (x1 <= clip_rect.z && x2 >= clip_rect.x)
                 {
                     // Render a character
