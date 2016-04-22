@@ -7797,10 +7797,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, GetColorU32(ImGuiCol_Text), buf, buf+edit_state.CurLenA, 0.0f, is_multiline ? NULL : &clip_rect);
 
         // Draw blinking cursor
-        ImVec2 cursor_screen_pos = render_pos + cursor_offset - render_scroll;
         bool cursor_is_visible = (g.InputTextState.CursorAnim <= 0.0f) || fmodf(g.InputTextState.CursorAnim, 1.20f) <= 0.80f;
-        if (cursor_is_visible)
-            draw_window->DrawList->AddLine(cursor_screen_pos + ImVec2(0.0f,-g.FontSize+0.5f), cursor_screen_pos + ImVec2(0.0f,-1.5f), GetColorU32(ImGuiCol_Text));
+        ImVec2 cursor_screen_pos = render_pos + cursor_offset - render_scroll;
+        ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y-g.FontSize+0.5f, cursor_screen_pos.x, cursor_screen_pos.y-1.5f);
+        if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
+            draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.Max, GetColorU32(ImGuiCol_Text));
 
         // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
         if (is_editable)
