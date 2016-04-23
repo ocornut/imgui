@@ -1286,15 +1286,6 @@ struct ImFontAtlas
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
 struct ImFont
 {
-    // Members: Settings
-    float                       FontSize;           // <user set>      // Height of characters, set during loading (don't change after loading)
-    float                       Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
-    ImVec2                      DisplayOffset;      // = (0.0f,1.0f)   // Offset font rendering by xx pixels
-    ImWchar                     FallbackChar;       // = '?'           // Replacement glyph if one isn't found. Only set via SetFallbackChar()
-    ImFontConfig*               ConfigData;         //                 // Pointer within ImFontAtlas->ConfigData
-    int                         ConfigDataCount;    //
-
-    // Members: Runtime data
     struct Glyph
     {
         ImWchar                 Codepoint;
@@ -1302,13 +1293,23 @@ struct ImFont
         float                   X0, Y0, X1, Y1;
         float                   U0, V0, U1, V1;     // Texture coordinates
     };
-    float                       Ascent, Descent;    // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize]
-    ImFontAtlas*                ContainerAtlas;     // What we has been loaded into
-    ImVector<Glyph>             Glyphs;
+
+    // Members: Hot ~62/78 bytes
+    float                       FontSize;           // <user set>   // Height of characters, set during loading (don't change after loading)
+    float                       Scale;              // = 1.f        // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
+    ImVec2                      DisplayOffset;      // = (0.f,1.f)  // Offset font rendering by xx pixels
+    ImVector<Glyph>             Glyphs;             //              // All glyphs.
+    ImVector<float>             IndexXAdvance;      //              // Sparse. Glyphs->XAdvance in a directly indexable way (more cache-friendly, for CalcTextSize functions which are often bottleneck in large UI).
+    ImVector<int>               IndexLookup;        //              // Sparse. Index glyphs by Unicode code-point.
     const Glyph*                FallbackGlyph;      // == FindGlyph(FontFallbackChar)
-    float                       FallbackXAdvance;   //
-    ImVector<float>             IndexXAdvance;      // Sparse. Glyphs->XAdvance directly indexable (more cache-friendly that reading from Glyphs, for CalcTextSize functions which are often bottleneck in large UI)
-    ImVector<int>               IndexLookup;        // Sparse. Index glyphs by Unicode code-point.
+    float                       FallbackXAdvance;   // == FallbackGlyph->XAdvance
+    ImWchar                     FallbackChar;       // = '?'        // Replacement glyph if one isn't found. Only set via SetFallbackChar()
+
+    // Members: Cold ~18/26 bytes
+    short                       ConfigDataCount;    // ~ 1          // Number of ImFontConfig involved in creating this font. Bigger than 1 when merging multiple font sources into one ImFont.
+    ImFontConfig*               ConfigData;         //              // Pointer within ContainerAtlas->ConfigData
+    ImFontAtlas*                ContainerAtlas;     //              // What we has been loaded into
+    float                       Ascent, Descent;    //              // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize]
 
     // Methods
     IMGUI_API ImFont();

@@ -1725,7 +1725,7 @@ const ImFont::Glyph* ImFont::FindGlyph(unsigned short c) const
     {
         const int i = IndexLookup[c];
         if (i != -1)
-            return &Glyphs[i];
+            return &Glyphs.Data[i];
     }
     return FallbackGlyph;
 }
