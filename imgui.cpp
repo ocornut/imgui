@@ -2372,13 +2372,14 @@ void ImGui::PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_ma
     ImGuiWindow* window = GetCurrentWindow();
 
     ImRect cr(clip_rect_min, clip_rect_max);
-    if (intersect_with_existing_clip_rect)
-    {
-        // Clip our argument with the current clip rect
+    if (intersect_with_existing_clip_rect)      // Clip our argument with the current clip rect
         cr.Clip(window->ClipRect);
-    }
     cr.Max.x = ImMax(cr.Min.x, cr.Max.x);
     cr.Max.y = ImMax(cr.Min.y, cr.Max.y);
+    cr.Min.x = (float)(int)(cr.Min.x + 0.5f);   // Round (expecting to round down). Ensure that e.g. (int)(max.x-min.x) in user code produce correct result.
+    cr.Min.y = (float)(int)(cr.Min.y + 0.5f);
+    cr.Max.x = (float)(int)(cr.Max.x + 0.5f);
+    cr.Max.y = (float)(int)(cr.Max.y + 0.5f);
 
     IM_ASSERT(cr.Min.x <= cr.Max.x && cr.Min.y <= cr.Max.y);
     window->ClipRect = cr;
@@ -4127,10 +4128,10 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     const ImRect title_bar_rect = window->TitleBarRect();
     const float border_size = window->BorderSize;
     ImRect clip_rect;
-    clip_rect.Min.x = title_bar_rect.Min.x + 0.5f + ImMax(border_size, window->WindowPadding.x*0.5f);
-    clip_rect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + 0.5f + border_size;
-    clip_rect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x - ImMax(border_size, window->WindowPadding.x*0.5f);
-    clip_rect.Max.y = window->Pos.y + window->Size.y - border_size - window->ScrollbarSizes.y;
+    clip_rect.Min.x = title_bar_rect.Min.x + ImMax(border_size, (float)(int)(window->WindowPadding.x*0.5f));
+    clip_rect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + border_size;
+    clip_rect.Max.x = window->Pos.x + window->Size.x + window->ScrollbarSizes.x - ImMax(border_size, (float)(int)(window->WindowPadding.x*0.5f));
+    clip_rect.Max.y = window->Pos.y + window->Size.y + border_size - window->ScrollbarSizes.y;
     PushClipRect(clip_rect.Min, clip_rect.Max, true);
 
     // Clear 'accessed' flag last thing
@@ -8431,7 +8432,7 @@ bool ImGui::BeginMenuBar()
     ImGui::BeginGroup(); // Save position
     ImGui::PushID("##menubar");
     ImRect rect = window->MenuBarRect();
-    PushClipRect(ImVec2(rect.Min.x+0.5f, rect.Min.y-0.5f+window->BorderSize), ImVec2(rect.Max.x+0.5f, rect.Max.y-0.5f), false);
+    PushClipRect(ImVec2(rect.Min.x, rect.Min.y + window->BorderSize), ImVec2(rect.Max.x, rect.Max.y), false);
     window->DC.CursorPos = ImVec2(rect.Min.x + window->DC.MenuBarOffsetX, rect.Min.y);// + g.Style.FramePadding.y);
     window->DC.LayoutType = ImGuiLayoutType_Horizontal;
     window->DC.MenuBarAppending = true;
