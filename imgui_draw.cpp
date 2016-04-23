@@ -918,14 +918,6 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 
     IM_ASSERT(font->ContainerAtlas->TexID == _TextureIdStack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
-    // reserve vertices for worse case (over-reserving is useful and easily amortized)
-    const int char_count = (int)(text_end - text_begin);
-    const int vtx_count_max = char_count * 4;
-    const int idx_count_max = char_count * 6;
-    const int vtx_begin = VtxBuffer.Size;
-    const int idx_begin = IdxBuffer.Size;
-    PrimReserve(idx_count_max, vtx_count_max);
-
     ImVec4 clip_rect = _ClipRectStack.back();
     if (cpu_fine_clip_rect)
     {
@@ -934,18 +926,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
-    font->RenderText(font_size, pos, col, clip_rect, text_begin, text_end, this, wrap_width, cpu_fine_clip_rect != NULL);
-
-    // give back unused vertices
-    // FIXME-OPT: clean this up
-    VtxBuffer.resize((int)(_VtxWritePtr - VtxBuffer.Data));
-    IdxBuffer.resize((int)(_IdxWritePtr - IdxBuffer.Data));
-    int vtx_unused = vtx_count_max - (VtxBuffer.Size - vtx_begin);
-    int idx_unused = idx_count_max - (IdxBuffer.Size - idx_begin);
-    CmdBuffer.back().ElemCount -= idx_unused;
-    _VtxWritePtr -= vtx_unused;
-    _IdxWritePtr -= idx_unused;
-    _VtxCurrentIdx = (unsigned int)VtxBuffer.Size;
+    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL);
 }
 
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
@@ -1956,7 +1937,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     }
 }
 
-void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawList* draw_list, float wrap_width, bool cpu_fine_clip) const
+void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin);
@@ -1974,14 +1955,22 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
 
-    ImDrawVert* vtx_write = draw_list->_VtxWritePtr;
-    ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
-    unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
-
+    // Skip non-visible lines
     const char* s = text_begin;
     if (!word_wrap_enabled && y + line_height < clip_rect.y)
         while (s < text_end && *s != '\n')  // Fast-forward to next line
             s++;
+
+    // Reserve vertices for remaining worse case (over-reserving is useful and easily amortized)
+    const int vtx_count_max = (int)(text_end - s) * 4;
+    const int idx_count_max = (int)(text_end - s) * 6;
+    const int idx_expected_size = draw_list->IdxBuffer.Size + idx_count_max;
+    draw_list->PrimReserve(idx_count_max, vtx_count_max);
+
+    ImDrawVert* vtx_write = draw_list->_VtxWritePtr;
+    ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
+    unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
+
     while (s < text_end)
     {
         if (word_wrap_enabled)
@@ -2050,11 +2039,10 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
             if (c != ' ' && c != '\t')
             {
                 // We don't do a second finer clipping test on the Y axis as we've already skipped anything before clip_rect.y and exit once we pass clip_rect.w
-                float y1 = y + glyph->Y0 * scale;
-                float y2 = y + glyph->Y1 * scale;
-
                 float x1 = x + glyph->X0 * scale;
                 float x2 = x + glyph->X1 * scale;
+                float y1 = y + glyph->Y0 * scale;
+                float y2 = y + glyph->Y1 * scale;
                 if (x1 <= clip_rect.z && x2 >= clip_rect.x)
                 {
                     // Render a character
@@ -2113,9 +2101,13 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
         x += char_width;
     }
 
+    // Give back unused vertices
+    draw_list->VtxBuffer.resize((int)(vtx_write - draw_list->VtxBuffer.Data));
+    draw_list->IdxBuffer.resize((int)(idx_write - draw_list->IdxBuffer.Data));
+    draw_list->CmdBuffer[draw_list->CmdBuffer.Size-1].ElemCount -= (idx_expected_size - draw_list->IdxBuffer.Size);
     draw_list->_VtxWritePtr = vtx_write;
-    draw_list->_VtxCurrentIdx = vtx_current_idx;
     draw_list->_IdxWritePtr = idx_write;
+    draw_list->_VtxCurrentIdx = (unsigned int)draw_list->VtxBuffer.Size;
 }
 
 //-----------------------------------------------------------------------------

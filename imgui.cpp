@@ -2339,9 +2339,13 @@ static void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDr
             return;
     }
 
+    // Draw list sanity check. Detect mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc.
+    IM_ASSERT(draw_list->_VtxWritePtr == draw_list->VtxBuffer.Data + draw_list->VtxBuffer.Size);
+    IM_ASSERT(draw_list->_IdxWritePtr == draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size);
+    IM_ASSERT((int)draw_list->_VtxCurrentIdx == draw_list->VtxBuffer.Size);                   
+
     // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = 2 bytes = 64K vertices)
     // If this assert triggers because you are drawing lots of stuff manually, A) workaround by calling BeginChild()/EndChild() to put your draw commands in multiple draw lists, B) #define ImDrawIdx to a 'unsigned int' in imconfig.h and render accordingly.
-    IM_ASSERT((int)draw_list->_VtxCurrentIdx == draw_list->VtxBuffer.Size);                   // Sanity check. Bug or mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc.
     IM_ASSERT((int64_t)draw_list->_VtxCurrentIdx <= ((int64_t)1L << (sizeof(ImDrawIdx)*8)));  // Too many vertices in same ImDrawList. See comment above.
     
     out_render_list.push_back(draw_list);
