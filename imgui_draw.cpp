@@ -1675,6 +1675,7 @@ void ImFont::BuildLookupTable()
     for (int i = 0; i != Glyphs.Size; i++)
         max_codepoint = ImMax(max_codepoint, (int)Glyphs[i].Codepoint);
 
+    IM_ASSERT(Glyphs.Size < 32*1024);
     IndexXAdvance.clear();
     IndexXAdvance.resize(max_codepoint + 1);
     IndexLookup.clear();
@@ -1682,13 +1683,13 @@ void ImFont::BuildLookupTable()
     for (int i = 0; i < max_codepoint + 1; i++)
     {
         IndexXAdvance[i] = -1.0f;
-        IndexLookup[i] = -1;
+        IndexLookup[i] = (short)-1;
     }
     for (int i = 0; i < Glyphs.Size; i++)
     {
         int codepoint = (int)Glyphs[i].Codepoint;
         IndexXAdvance[codepoint] = Glyphs[i].XAdvance;
-        IndexLookup[codepoint] = i;
+        IndexLookup[codepoint] = (short)i;
     }
 
     // Create a glyph to handle TAB
@@ -1702,7 +1703,7 @@ void ImFont::BuildLookupTable()
         tab_glyph.Codepoint = '\t';
         tab_glyph.XAdvance *= 4;
         IndexXAdvance[(int)tab_glyph.Codepoint] = (float)tab_glyph.XAdvance;
-        IndexLookup[(int)tab_glyph.Codepoint] = (int)(Glyphs.Size-1);
+        IndexLookup[(int)tab_glyph.Codepoint] = (short)(Glyphs.Size-1);
     }
 
     FallbackGlyph = NULL;
@@ -1723,7 +1724,7 @@ const ImFont::Glyph* ImFont::FindGlyph(unsigned short c) const
 {
     if (c < IndexLookup.Size)
     {
-        const int i = IndexLookup[c];
+        const short i = IndexLookup[c];
         if (i != -1)
             return &Glyphs.Data[i];
     }
