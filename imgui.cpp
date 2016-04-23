@@ -3376,7 +3376,7 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_ChildWindow;
 
     const ImVec2 content_avail = ImGui::GetContentRegionAvail();
-    ImVec2 size = ImRound(size_arg);
+    ImVec2 size = ImFloor(size_arg);
     if (size.x <= 0.0f)
     {
         if (size.x == 0.0f)
@@ -9351,8 +9351,8 @@ void ImGui::ShowMetricsWindow(bool* opened)
                         ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
                         for (int i = elem_offset; i < elem_offset + (int)pcmd->ElemCount; i++)
                             vtxs_rect.Add(draw_list->VtxBuffer[idx_buffer ? idx_buffer[i] : i].pos);
-                        clip_rect.Round(); overlay_draw_list->AddRect(clip_rect.Min, clip_rect.Max, ImColor(255,255,0));
-                        vtxs_rect.Round(); overlay_draw_list->AddRect(vtxs_rect.Min, vtxs_rect.Max, ImColor(255,0,255));
+                        clip_rect.Floor(); overlay_draw_list->AddRect(clip_rect.Min, clip_rect.Max, ImColor(255,255,0));
+                        vtxs_rect.Floor(); overlay_draw_list->AddRect(vtxs_rect.Min, vtxs_rect.Max, ImColor(255,0,255));
                     }
                     if (!draw_opened)
                         continue;
