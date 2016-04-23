@@ -4130,8 +4130,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     ImRect clip_rect;
     clip_rect.Min.x = title_bar_rect.Min.x + ImMax(border_size, (float)(int)(window->WindowPadding.x*0.5f));
     clip_rect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + border_size;
-    clip_rect.Max.x = window->Pos.x + window->Size.x + window->ScrollbarSizes.x - ImMax(border_size, (float)(int)(window->WindowPadding.x*0.5f));
-    clip_rect.Max.y = window->Pos.y + window->Size.y + border_size - window->ScrollbarSizes.y;
+    clip_rect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x - ImMax(border_size, (float)(int)(window->WindowPadding.x*0.5f));
+    clip_rect.Max.y = window->Pos.y + window->Size.y - border_size - window->ScrollbarSizes.y;
     PushClipRect(clip_rect.Min, clip_rect.Max, true);
 
     // Clear 'accessed' flag last thing
