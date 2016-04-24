@@ -5726,65 +5726,6 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     return opened;
 }
 
-void ImGui::Bullet()
-{
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return;
-
-    ImGuiState& g = *GImGui;
-    const ImGuiStyle& style = g.Style;
-    const float line_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
-    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize, line_height));
-    ItemSize(bb);
-    if (!ItemAdd(bb, NULL))
-    {
-        ImGui::SameLine(0, style.FramePadding.x*2);
-        return;
-    }
-
-    // Render
-    const float bullet_size = g.FontSize*0.15f;
-    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f), bullet_size, GetColorU32(ImGuiCol_Text));
-
-    // Stay on same line
-    ImGui::SameLine(0, style.FramePadding.x*2);
-}
-
-// Text with a little bullet aligned to the typical tree node.
-void ImGui::BulletTextV(const char* fmt, va_list args)
-{
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return;
-
-    ImGuiState& g = *GImGui;
-    const ImGuiStyle& style = g.Style;
-
-    const char* text_begin = g.TempBuffer;
-    const char* text_end = text_begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    const ImVec2 label_size = CalcTextSize(text_begin, text_end, true);
-    const float text_base_offset_y = ImMax(0.0f, window->DC.CurrentLineTextBaseOffset); // Latch before ItemSize changes it
-    const float line_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
-    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize + (label_size.x > 0.0f ? (label_size.x + style.FramePadding.x*2) : 0.0f), ImMax(line_height, label_size.y)));  // Empty text doesn't add padding
-    ItemSize(bb);
-    if (!ItemAdd(bb, NULL))
-        return;
-
-    // Render
-    const float bullet_size = g.FontSize*0.15f;
-    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f), bullet_size, GetColorU32(ImGuiCol_Text));
-    RenderText(bb.Min+ImVec2(g.FontSize + style.FramePadding.x*2, text_base_offset_y), text_begin, text_end);
-}
-
-void ImGui::BulletText(const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    BulletTextV(fmt, args);
-    va_end(args);
-}
-
 // If returning 'true' the node is open and the user is responsible for calling TreePop
 bool ImGui::TreeNodeV(const char* str_id, const char* fmt, va_list args)
 {
@@ -5904,6 +5845,65 @@ ImGuiID ImGui::GetID(const char* str_id_begin, const char* str_id_end)
 ImGuiID ImGui::GetID(const void* ptr_id)
 {
     return GImGui->CurrentWindow->GetID(ptr_id);
+}
+
+void ImGui::Bullet()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    ImGuiState& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const float line_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
+    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize, line_height));
+    ItemSize(bb);
+    if (!ItemAdd(bb, NULL))
+    {
+        ImGui::SameLine(0, style.FramePadding.x*2);
+        return;
+    }
+
+    // Render
+    const float bullet_size = g.FontSize*0.15f;
+    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f), bullet_size, GetColorU32(ImGuiCol_Text));
+
+    // Stay on same line
+    ImGui::SameLine(0, style.FramePadding.x*2);
+}
+
+// Text with a little bullet aligned to the typical tree node.
+void ImGui::BulletTextV(const char* fmt, va_list args)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    ImGuiState& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    const char* text_begin = g.TempBuffer;
+    const char* text_end = text_begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
+    const ImVec2 label_size = CalcTextSize(text_begin, text_end, true);
+    const float text_base_offset_y = ImMax(0.0f, window->DC.CurrentLineTextBaseOffset); // Latch before ItemSize changes it
+    const float line_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
+    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize + (label_size.x > 0.0f ? (label_size.x + style.FramePadding.x*2) : 0.0f), ImMax(line_height, label_size.y)));  // Empty text doesn't add padding
+    ItemSize(bb);
+    if (!ItemAdd(bb, NULL))
+        return;
+
+    // Render
+    const float bullet_size = g.FontSize*0.15f;
+    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f), bullet_size, GetColorU32(ImGuiCol_Text));
+    RenderText(bb.Min+ImVec2(g.FontSize + style.FramePadding.x*2, text_base_offset_y), text_begin, text_end);
+}
+
+void ImGui::BulletText(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    BulletTextV(fmt, args);
+    va_end(args);
 }
 
 static inline void DataTypeFormatString(ImGuiDataType data_type, void* data_ptr, const char* display_format, char* buf, int buf_size)
