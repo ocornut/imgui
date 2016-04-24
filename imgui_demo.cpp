@@ -268,7 +268,7 @@ void ImGui::ShowTestWindow(bool* p_opened)
 
     if (ImGui::CollapsingHeader("Widgets"))
     {
-        if (ImGui::TreeNode("Tree"))
+        if (ImGui::TreeNode("Trees"))
         {
             for (int i = 0; i < 5; i++)
             {
@@ -412,7 +412,7 @@ void ImGui::ShowTestWindow(bool* p_opened)
                 for (int i = 0; i < 16; i++)
                 {
                     ImGui::PushID(i);
-                    if (ImGui::Selectable("Me", &selected[i], 0, ImVec2(50,50)))
+                    if (ImGui::Selectable("Sailor", &selected[i], 0, ImVec2(50,50)))
                     {
                         int x = i % 4, y = i / 4;
                         if (x > 0) selected[i - 1] ^= 1;

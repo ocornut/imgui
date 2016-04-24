@@ -4016,6 +4016,8 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
             {
                 ImRect menu_bar_rect = window->MenuBarRect();
                 window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, 1|2);
+                if (flags & ImGuiWindowFlags_ShowBorders)
+                    window->DrawList->AddLine(menu_bar_rect.GetBL()-ImVec2(0,0), menu_bar_rect.GetBR()-ImVec2(0,0), GetColorU32(ImGuiCol_Border));
             }
 
             // Scrollbars
@@ -4203,7 +4205,7 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
         ? ImRect(window->Pos.x + border_size, window_rect.Max.y - style.ScrollbarSize, window_rect.Max.x - other_scrollbar_size_w - border_size, window_rect.Max.y - border_size)
         : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + border_size, window_rect.Max.x - border_size, window_rect.Max.y - other_scrollbar_size_w - border_size);
     if (!horizontal)
-        bb.Min.y += window->TitleBarHeight() + ((window->Flags & ImGuiWindowFlags_MenuBar) ? window->MenuBarHeight() - border_size : 0.0f);
+        bb.Min.y += window->TitleBarHeight() + ((window->Flags & ImGuiWindowFlags_MenuBar) ? window->MenuBarHeight() : 0.0f);
 
     float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildWindowRounding : style.WindowRounding;
     int window_rounding_corners;
