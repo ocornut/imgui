@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Gallery</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="css/agency.css" rel="stylesheet">
+
+    <!-- Custom Fonts -->
+    <link href="font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css">
+    <link href='https://fonts.googleapis.com/css?family=Kaushan+Script' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Roboto+Slab:400,100,300,700' rel='stylesheet' type='text/css'>
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+<body id="page-top" class="index">
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header page-scroll">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand page-scroll" href="index.html">dear imgui</a>
+            </div>
+
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="hidden">
+                        <a href="#page-top"></a>
+                    </li>
+                    <li>
+                        <a class="page-scroll" href="Demo.html">Demo</a>
+                    </li>
+                    <li>
+                        <a class="page-scroll" href="Gallery.html">Gallery</a>
+                    </li>
+                    <li>
+                        <a class="page-scroll" href="References.html">References</a>
+                    </li>
+                    <li>
+                        <a class="page-scroll" href="Question.html">Question</a>
+                    </li>
+                    <li>
+                        <a class="page-scroll" href="Credits.html">Credits</a>
+                    </li>
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container-fluid -->
+    </nav>
+
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="intro-text">
+                <div class="intro-lead-in">Welcome To Dear Imgui Library!</div>
+                <div style="font-size:large; ">It is a bloat-free graphical user interface library for C++</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Services Section -->
+    <section id="services">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12 text-center">
+                    <h2 class="section-heading">Gallery</h2>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    
+
+                    <p style="font-size: medium; "> See the  <a href="https://github.com/ocornut/imgui/issues/123" target="_blank">Screenshots Thread</a> for some user creations. </p>
+                    <br><br>
+                    <center><img src="img/examples_01.png" class="img-thumbnail" height="600" width="800" ></center>
+                    <center><img src="img/examples_02.png" class="img-thumbnail" height="600" width="800" ></center>
+                    <center><img src="img/profiler-880.jpg" class="img-thumbnail" height="300" width="800" ></center>
+                    <center><img src="img/test_window_01.png" class="img-thumbnail" height="800" width="600" ></center>
+                    <center><img src="img/test_window_02.png" class="img-thumbnail" height="800" width="600" ></center>
+                    <center><img src="img/test_window_03.png" class="img-thumbnail" height="800" width="600" ></center>
+                    <center><img src="img/test_window_05_menus.png" class="img-thumbnail" height="300" width="600" ></center>
+                    <center><img src="img/skinning_sample_02.png" class="img-thumbnail" height="800" width="600" ></center>
+                    <center><img src="img/96f0fb7c-07d0-11e5-95d6-41c6a1595e5a.png" class="img-thumbnail" height="800" width="600" ></center>
+                    <br><br>
+                    <p style="font-size: medium; "> ImGui can load TTF fonts. UTF-8 is supported for text display and input. Here using Arial Unicode font to display Japanese. Initialize custom font with: </p>
+
+                    <div class="jumbotron">
+                            <code style="font-size: medium; color:blue; background: none;">
+                                ImGuiIO&amp;  io = ImGui::GetIO(); <br>
+                                io.Fonts->AddFontFromFileTTF("ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());<br>
+
+                                // For Microsoft IME, pass your HWND to enable IME positioning:<br>
+                                io.ImeWindowHandle = my_hwnd;<br>
+                            </code>
+                    </div>
+
+                    <center><img src="img/code_sample_01_jp.png" class="img-thumbnail" height="300" width="800" ></center>
+
+                </div>
+
+                
+            </div>
+        </div>
+    </section>
+
+    <footer style="background-color: black; color: white;">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <span class="copyright">Dear ImGui is licensed under the MIT License</span>
+                </div>
+                
+            </div>
+        </div>
+    </footer>
+
+    
+
+    <!-- jQuery -->
+    <script src="js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="js/bootstrap.min.js"></script>
+
+    <!-- Plugin JavaScript -->
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.3/jquery.easing.min.js"></script>
+    <script src="js/classie.js"></script>
+    <script src="js/cbpAnimatedHeader.js"></script>
+
+    <!-- Contact Form JavaScript -->
+    <script src="js/jqBootstrapValidation.js"></script>
+    <script src="js/contact_me.js"></script>
+
+    <!-- Custom Theme JavaScript -->
+    <script src="js/agency.js"></script>
+
+</body>
+
+</html>
