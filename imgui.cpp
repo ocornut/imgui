@@ -8813,6 +8813,7 @@ bool ImGui::IsRectVisible(const ImVec2& size)
     return window->ClipRect.Overlaps(ImRect(window->DC.CursorPos, window->DC.CursorPos + size));
 }
 
+// Lock horizontal starting position + EndGroup() wraps group bounding box into one "item" (so you can use IsItemHovered() on a group, SameLine() between groups, etc.)
 void ImGui::BeginGroup()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -9056,7 +9057,6 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             {
                 if (g.ActiveIdIsJustActivated)
                     g.ActiveClickDeltaToCenter.x = x - g.IO.MousePos.x;
-
                 x = GetDraggedColumnOffset(i);
                 SetColumnOffset(i, x);
             }
