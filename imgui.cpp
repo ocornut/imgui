@@ -411,12 +411,16 @@
       io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese());
 
  Q: How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?
- A: When loading a font, pass custom Unicode ranges to specify the glyphs to load. ImGui will support UTF-8 encoding across the board.
-    Character input depends on you passing the right character code to io.AddInputCharacter(). The example applications do that.
+ A: When loading a font, pass custom Unicode ranges to specify the glyphs to load. 
+    All strings passed need to use UTF-8 encoding. Specifying literal in your source code using a local code page (such as CP-923 for Japanese CP-1251 for Cyrillic) will not work.
+    In C++11 you can encode a string literal in UTF-8 by using the u8"hello" syntax. Otherwise you can convert yourself to UTF-8 or load text data from file already saved as UTF-8.
+    You can also try to remap your local codepage characters to their Unicode codepoint using font->AddRemapChar(), but international users may have problems reading/editing your source code.
 
       io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());  // Load Japanese characters
       io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
       io.ImeWindowHandle = MY_HWND;      // To input using Microsoft IME, give ImGui the hwnd of your application
+
+    As for text input, depends on you passing the right character code to io.AddInputCharacter(). The example applications do that.
 
  - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will run the block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
