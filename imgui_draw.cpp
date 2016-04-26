@@ -214,20 +214,33 @@ void ImDrawList::UpdateTextureID()
 #undef GetCurrentClipRect
 #undef GetCurrentTextureId
 
-// Scissoring. The values in clip_rect are x1, y1, x2, y2. Only apply to rendering! Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
-void ImDrawList::PushClipRect(const ImVec4& clip_rect)
+// Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
+void ImDrawList::PushClipRect(ImVec2 cr_min, ImVec2 cr_max, bool intersect_with_current_clip_rect)
 {
-    _ClipRectStack.push_back(clip_rect);
+    ImVec4 cr(cr_min.x, cr_min.y, cr_max.x, cr_max.y);
+    if (intersect_with_current_clip_rect && _ClipRectStack.Size)
+    {
+        ImVec4 current = _ClipRectStack.Data[_ClipRectStack.Size-1];
+        if (cr.x < current.x) cr.x = current.x;
+        if (cr.y < current.y) cr.y = current.y;
+        if (cr.z > current.z) cr.z = current.z;
+        if (cr.w > current.w) cr.w = current.w;
+    }
+    cr.z = ImMax(cr.x, cr.z);
+    cr.w = ImMax(cr.y, cr.w);
+    cr.x = (float)(int)(cr.x + 0.5f);   // Round (expecting to round down). Ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
+    cr.y = (float)(int)(cr.y + 0.5f);
+    cr.z = (float)(int)(cr.z + 0.5f);
+    cr.w = (float)(int)(cr.w + 0.5f);
+
+    _ClipRectStack.push_back(cr);
     UpdateClipRect();
 }
 
 void ImDrawList::PushClipRectFullScreen()
 {
-    PushClipRect(GNullClipRect);
-
-    // FIXME-OPT: This would be more correct but we're not supposed to access ImGuiState from here?
-    //ImGuiState& g = *GImGui;
-    //PushClipRect(GetVisibleRect());
+    PushClipRect(ImVec2(GNullClipRect.x, GNullClipRect.y), ImVec2(GNullClipRect.z, GNullClipRect.w));
+    //PushClipRect(GetVisibleRect());   // FIXME-OPT: This would be more correct but we're not supposed to access ImGuiState from here?
 }
 
 void ImDrawList::PopClipRect()
