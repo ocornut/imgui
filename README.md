@@ -39,7 +39,7 @@ Demo
 ----
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at the features of ImGui, you can download Windows binaries of the demo app here.
-- [imgui-demo-binaries-20151226.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20151226.zip) (Windows binaries, ImGui 1.47 2015/12/26, 4 executables, 515 KB)
+- [imgui-demo-binaries-20160410.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20160410.zip) (Windows binaries, ImGui 1.48+ 2016/04/10, 4 executables, 534 KB)
 
 
 Gallery

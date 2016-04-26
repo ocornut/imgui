@@ -53,6 +53,15 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
             return;
     }
 
+    // Backup some DX9 state (not all!)
+    // FIXME: Backup/restore everything else
+    D3DRENDERSTATETYPE last_render_state_to_backup[] = { D3DRS_CULLMODE, D3DRS_LIGHTING, D3DRS_ZENABLE, D3DRS_ALPHABLENDENABLE, D3DRS_ALPHATESTENABLE, D3DRS_BLENDOP, D3DRS_SRCBLEND, D3DRS_DESTBLEND, D3DRS_SCISSORTESTENABLE };
+    DWORD last_render_state_values[ARRAYSIZE(last_render_state_to_backup)] = { 0 };
+    IDirect3DPixelShader9* last_ps; g_pd3dDevice->GetPixelShader( &last_ps );
+    IDirect3DVertexShader9* last_vs; g_pd3dDevice->GetVertexShader( &last_vs );
+    for (int n = 0; n < ARRAYSIZE(last_render_state_to_backup); n++)
+        g_pd3dDevice->GetRenderState(last_render_state_to_backup[n], &last_render_state_values[n]);
+
     // Copy and convert all vertices into a single contiguous buffer
     CUSTOMVERTEX* vtx_dst;
     ImDrawIdx* idx_dst;
@@ -91,8 +100,8 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     g_pd3dDevice->SetRenderState( D3DRS_LIGHTING, false );
     g_pd3dDevice->SetRenderState( D3DRS_ZENABLE, false );
     g_pd3dDevice->SetRenderState( D3DRS_ALPHABLENDENABLE, true );
-    g_pd3dDevice->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD );
     g_pd3dDevice->SetRenderState( D3DRS_ALPHATESTENABLE, false );
+    g_pd3dDevice->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD );
     g_pd3dDevice->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
     g_pd3dDevice->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
     g_pd3dDevice->SetRenderState( D3DRS_SCISSORTESTENABLE, true );
@@ -137,6 +146,12 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
         }
         vtx_offset += cmd_list->VtxBuffer.size();
     }
+
+    // Restore some modified DX9 state (not all!)
+    g_pd3dDevice->SetPixelShader( last_ps );
+    g_pd3dDevice->SetVertexShader( last_vs );
+    for (int n = 0; n < ARRAYSIZE(last_render_state_to_backup); n++)
+        g_pd3dDevice->SetRenderState(last_render_state_to_backup[n], last_render_state_values[n]);
 }
 
 IMGUI_API LRESULT ImGui_ImplDX9_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam)
