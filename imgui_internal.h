@@ -204,8 +204,8 @@ enum ImGuiDataType
 
 enum ImChangeItemType
 {
-	ImChangeItemType_Check,
-	ImChangeItemType_Mask,
+    ImChangeItemType_Check,
+    ImChangeItemType_Mask,
 };
 
 // 2D axis aligned bounding-box
@@ -356,8 +356,8 @@ struct ImGuiPopupRef
 // Change info
 struct ImChangeItem
 {
-	ImChangeItemType Type;
-	ImU32            Flags;
+    ImChangeItemType Type;
+    ImU32            Flags;
 };
 
 // Main state for ImGui
@@ -642,7 +642,7 @@ struct IMGUI_API ImGuiWindow
 
     ImGuiDrawContext        DC;                                 // Temporary per-window data, reset at the beginning of the frame
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
-	ImVector<ImChangeItem>  ChangeStack;                        // Change (checking) stack.
+    ImVector<ImChangeItem>  ChangeStack;                        // Change (checking) stack.
     ImRect                  ClipRect;                           // = DrawList->clip_rect_stack.back(). Scissoring / clipping rectangle. x1, y1, x2, y2.
     ImRect                  ClippedWindowRect;                  // = ClipRect just after setup in Begin()
     int                     LastFrameActive;

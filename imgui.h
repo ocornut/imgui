@@ -334,12 +334,12 @@ namespace ImGui
     IMGUI_API void          ValueColor(const char* prefix, const ImVec4& v);
     IMGUI_API void          ValueColor(const char* prefix, unsigned int v);
 
-	// Widgets: Change checking. Use this to check for changes coming from multiple widgets at once.
-	IMGUI_API void          BeginChangeCheck();
-	IMGUI_API ImU32         EndChangeCheck();
-	IMGUI_API void          BeginChangeMask(ImU32 mask); // which flags to let through from changes inside
-	IMGUI_API void          EndChangeMask();
-	IMGUI_API void          TriggerChangeCheck(ImU32 mask = 0xffffffff); // trigger the check as any widget would
+    // Widgets: Change checking. Use this to check for changes coming from multiple widgets at once.
+    IMGUI_API void          BeginChangeCheck();
+    IMGUI_API ImU32         EndChangeCheck();
+    IMGUI_API void          BeginChangeMask(ImU32 mask); // which flags to let through from changes inside
+    IMGUI_API void          EndChangeMask();
+    IMGUI_API void          TriggerChangeCheck(ImU32 mask = 0xffffffff); // trigger the check as any widget would
 
     // Tooltips
     IMGUI_API void          SetTooltip(const char* fmt, ...) IM_PRINTFARGS(1);                  // set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). last call wins
