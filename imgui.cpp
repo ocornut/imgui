@@ -3210,8 +3210,8 @@ static void CloseInactivePopups()
 static ImGuiWindow* GetFrontMostModalRootWindow()
 {
     ImGuiState& g = *GImGui;
-    if (!g.OpenedPopupStack.empty())
-        if (ImGuiWindow* front_most_popup = g.OpenedPopupStack.back().Window)
+    for (int n = g.OpenedPopupStack.Size-1; n >= 0; n--)
+        if (ImGuiWindow* front_most_popup = g.OpenedPopupStack.Data[n].Window)
             if (front_most_popup->Flags & ImGuiWindowFlags_Modal)
                 return front_most_popup;
     return NULL;
