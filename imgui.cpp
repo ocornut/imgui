@@ -9346,8 +9346,8 @@ void ImGui::ShowMetricsWindow(bool* opened)
                         ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
                         for (int i = elem_offset; i < elem_offset + (int)pcmd->ElemCount; i++)
                             vtxs_rect.Add(draw_list->VtxBuffer[idx_buffer ? idx_buffer[i] : i].pos);
-                        clip_rect.Floor(); overlay_draw_list->AddRect(clip_rect.Min, clip_rect.Max, ImColor(255,255,0));
-                        vtxs_rect.Floor(); overlay_draw_list->AddRect(vtxs_rect.Min, vtxs_rect.Max, ImColor(255,0,255));
+                        clip_rect.Floor(); overlay_draw_list->AddRect(clip_rect.Min, clip_rect.Max, IM_COL32(255,255,0,255));
+                        vtxs_rect.Floor(); overlay_draw_list->AddRect(vtxs_rect.Min, vtxs_rect.Max, IM_COL32(255,0,255,255));
                     }
                     if (!draw_opened)
                         continue;
@@ -9363,7 +9363,7 @@ void ImGui::ShowMetricsWindow(bool* opened)
                         }
                         ImGui::Selectable(buf, false);
                         if (ImGui::IsItemHovered())
-                            overlay_draw_list->AddPolyline(triangles_pos, 3, ImColor(255,255,0), true, 1.0f, false);  // Add triangle without AA, more readable for large-thin triangle
+                            overlay_draw_list->AddPolyline(triangles_pos, 3, IM_COL32(255,255,0,255), true, 1.0f, false);  // Add triangle without AA, more readable for large-thin triangle
                     }
                     ImGui::TreePop();
                 }
