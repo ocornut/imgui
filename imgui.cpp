@@ -552,6 +552,7 @@
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
 !- keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing
  - keyboard: full keyboard navigation and focus. (#323)
+ - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
  - input: rework IO system to be able to pass actual ordered/timestamped events.
  - input: allow to decide and pass explicit double-clicks (e.g. for windows by the CS_DBLCLKS style).
@@ -2371,6 +2372,7 @@ static void AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiW
     }
 }
 
+// When using this function it is sane to ensure that float are perfectly rounded to integer values, to that e.g. (int)(max.x-min.x) in user's render produce correct result.
 void ImGui::PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -4121,11 +4123,11 @@ bool ImGui::Begin(const char* name, bool* p_opened, const ImVec2& size_on_first_
     // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
     const ImRect title_bar_rect = window->TitleBarRect();
     const float border_size = window->BorderSize;
-    ImRect clip_rect;
-    clip_rect.Min.x = title_bar_rect.Min.x + ImMax(border_size, (float)(int)(window->WindowPadding.x*0.5f));
-    clip_rect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + border_size;
-    clip_rect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x - ImMax(border_size, (float)(int)(window->WindowPadding.x*0.5f));
-    clip_rect.Max.y = window->Pos.y + window->Size.y - border_size - window->ScrollbarSizes.y;
+    ImRect clip_rect; // Force round to ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
+    clip_rect.Min.x = ImFloor(0.5f + title_bar_rect.Min.x + ImMax(border_size, ImFloor(window->WindowPadding.x*0.5f)));
+    clip_rect.Min.y = ImFloor(0.5f + title_bar_rect.Max.y + window->MenuBarHeight() + border_size);
+    clip_rect.Max.x = ImFloor(0.5f + window->Pos.x + window->Size.x - window->ScrollbarSizes.x - ImMax(border_size, ImFloor(window->WindowPadding.x*0.5f)));
+    clip_rect.Max.y = ImFloor(0.5f + window->Pos.y + window->Size.y - window->ScrollbarSizes.y - border_size);
     PushClipRect(clip_rect.Min, clip_rect.Max, true);
 
     // Clear 'accessed' flag last thing
@@ -8426,7 +8428,7 @@ bool ImGui::BeginMenuBar()
     ImGui::BeginGroup(); // Save position
     ImGui::PushID("##menubar");
     ImRect rect = window->MenuBarRect();
-    PushClipRect(ImVec2(rect.Min.x, rect.Min.y + window->BorderSize), ImVec2(rect.Max.x, rect.Max.y), false);
+    PushClipRect(ImVec2(ImFloor(rect.Min.x+0.5f), ImFloor(rect.Min.y + window->BorderSize + 0.5f)), ImVec2(ImFloor(rect.Max.x+0.5f), ImFloor(rect.Max.y+0.5f)), false);
     window->DC.CursorPos = ImVec2(rect.Min.x + window->DC.MenuBarOffsetX, rect.Min.y);// + g.Style.FramePadding.y);
     window->DC.LayoutType = ImGuiLayoutType_Horizontal;
     window->DC.MenuBarAppending = true;
@@ -8989,7 +8991,7 @@ float ImGui::GetColumnWidth(int column_index)
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
 
-    const float w = GetColumnOffset(column_index+1) - GetColumnOffset(column_index);
+    float w = GetColumnOffset(column_index+1) - GetColumnOffset(column_index);
     return w;
 }
 
@@ -8999,8 +9001,8 @@ static void PushColumnClipRect(int column_index)
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
 
-    const float x1 = window->Pos.x + ImGui::GetColumnOffset(column_index) - 1;
-    const float x2 = window->Pos.x + ImGui::GetColumnOffset(column_index+1) - 1;
+    float x1 = ImFloor(0.5f + window->Pos.x + ImGui::GetColumnOffset(column_index) - 1.0f);
+    float x2 = ImFloor(0.5f + window->Pos.x + ImGui::GetColumnOffset(column_index+1) - 1.0f);
     ImGui::PushClipRect(ImVec2(x1,-FLT_MAX), ImVec2(x2,+FLT_MAX), true);
 }
 

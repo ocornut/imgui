@@ -135,6 +135,7 @@ static inline ImVec2 ImLerp(const ImVec2& a, const ImVec2& b, const ImVec2& t)  
 static inline float  ImLengthSqr(const ImVec2& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y; }
 static inline float  ImLengthSqr(const ImVec4& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y + lhs.z*lhs.z + lhs.w*lhs.w; }
 static inline float  ImInvLength(const ImVec2& lhs, float fail_value)           { float d = lhs.x*lhs.x + lhs.y*lhs.y; if (d > 0.0f) return 1.0f / sqrtf(d); return fail_value; }
+static inline float  ImFloor(float f)                                           { return (float)(int)f; }
 static inline ImVec2 ImFloor(ImVec2 v)                                          { return ImVec2((float)(int)v.x, (float)(int)v.y); }
 
 // We call C++ constructor on own allocated memory via the placement "new(ptr) Type()" syntax.

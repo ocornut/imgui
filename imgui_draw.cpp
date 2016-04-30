@@ -228,10 +228,6 @@ void ImDrawList::PushClipRect(ImVec2 cr_min, ImVec2 cr_max, bool intersect_with_
     }
     cr.z = ImMax(cr.x, cr.z);
     cr.w = ImMax(cr.y, cr.w);
-    cr.x = (float)(int)(cr.x + 0.5f);   // Round (expecting to round down). Ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
-    cr.y = (float)(int)(cr.y + 0.5f);
-    cr.z = (float)(int)(cr.z + 0.5f);
-    cr.w = (float)(int)(cr.w + 0.5f);
 
     _ClipRectStack.push_back(cr);
     UpdateClipRect();
