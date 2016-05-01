@@ -154,15 +154,16 @@ inline void operator delete(void*, ImPlacementNewDummy, void*) {}
 enum ImGuiButtonFlags_
 {
     ImGuiButtonFlags_Repeat                 = 1 << 0,   // hold to repeat
-    ImGuiButtonFlags_PressedOnClick         = 1 << 1,   // return pressed on click (default requires click+release)
-    ImGuiButtonFlags_PressedOnRelease       = 1 << 2,   // return pressed on release (default requires click+release)
-    ImGuiButtonFlags_PressedOnDoubleClick   = 1 << 3,   // return pressed on double-click (default requires click+release)
-    ImGuiButtonFlags_FlattenChilds          = 1 << 4,   // allow interaction even if a child window is overlapping
-    ImGuiButtonFlags_DontClosePopups        = 1 << 5,   // disable automatically closing parent popup on press
-    ImGuiButtonFlags_Disabled               = 1 << 6,   // disable interaction
-    ImGuiButtonFlags_AlignTextBaseLine      = 1 << 7,   // vertically align button to match text baseline - ButtonEx() only
-    ImGuiButtonFlags_NoKeyModifiers         = 1 << 8,   // disable interaction if a key modifier is held
-    ImGuiButtonFlags_AllowOverlapMode       = 1 << 9    // require previous frame HoveredId to either match id or be null before being usable
+    ImGuiButtonFlags_PressedOnClickRelease  = 1 << 1,   // (default) return pressed on click+release on same item (default if no PressedOn** flag is set)
+    ImGuiButtonFlags_PressedOnClick         = 1 << 2,   // return pressed on click (default requires click+release)
+    ImGuiButtonFlags_PressedOnRelease       = 1 << 3,   // return pressed on release (default requires click+release)
+    ImGuiButtonFlags_PressedOnDoubleClick   = 1 << 4,   // return pressed on double-click (default requires click+release)
+    ImGuiButtonFlags_FlattenChilds          = 1 << 5,   // allow interaction even if a child window is overlapping
+    ImGuiButtonFlags_DontClosePopups        = 1 << 6,   // disable automatically closing parent popup on press
+    ImGuiButtonFlags_Disabled               = 1 << 7,   // disable interaction
+    ImGuiButtonFlags_AlignTextBaseLine      = 1 << 8,   // vertically align button to match text baseline - ButtonEx() only
+    ImGuiButtonFlags_NoKeyModifiers         = 1 << 9,   // disable interaction if a key modifier is held
+    ImGuiButtonFlags_AllowOverlapMode       = 1 << 10   // require previous frame HoveredId to either match id or be null before being usable
 };
 
 enum ImGuiSliderFlags_
