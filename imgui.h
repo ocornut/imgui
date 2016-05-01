@@ -238,6 +238,10 @@ namespace ImGui
     IMGUI_API void          TextColoredV(const ImVec4& col, const char* fmt, va_list args);
     IMGUI_API void          TextDisabled(const char* fmt, ...) IM_PRINTFARGS(1);                    // shortcut for PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]); Text(fmt, ...); PopStyleColor();
     IMGUI_API void          TextDisabledV(const char* fmt, va_list args);
+    IMGUI_API void          TextHovered(const char* fmt, ...) IM_PRINTFARGS(1);                    // shortcut for PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextHovered]); Text(fmt, ...); PopStyleColor();
+    IMGUI_API void          TextHoveredV(const char* fmt, va_list args);
+    IMGUI_API void          TextActive(const char* fmt, ...) IM_PRINTFARGS(1);                    // shortcut for PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextActive]); Text(fmt, ...); PopStyleColor();
+    IMGUI_API void          TextActiveV(const char* fmt, va_list args);
     IMGUI_API void          TextWrapped(const char* fmt, ...) IM_PRINTFARGS(1);                     // shortcut for PushTextWrapPos(0.0f); Text(fmt, ...); PopTextWrapPos();. Note that this won't work on an auto-resizing window if there's no other widgets to extend the window width, yoy may need to set a size using SetNextWindowSize().
     IMGUI_API void          TextWrappedV(const char* fmt, va_list args);
     IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL);         // doesn't require null terminated string if 'text_end' is specified. no copy done to any bounded stack buffer, recommended for long chunks of text
@@ -337,7 +341,7 @@ namespace ImGui
     // Tooltips
     IMGUI_API void          SetTooltip(const char* fmt, ...) IM_PRINTFARGS(1);                  // set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). last call wins
     IMGUI_API void          SetTooltipV(const char* fmt, va_list args);
-    IMGUI_API void          BeginTooltip();                                                     // use to create full-featured tooltip windows that aren't just text
+    IMGUI_API void          BeginTooltip(ImGuiWindowFlags options=0);                           // use to create full-featured tooltip windows that aren't just text
     IMGUI_API void          EndTooltip();
 
     // Menus
@@ -553,6 +557,8 @@ enum ImGuiCol_
     ImGuiCol_WindowBg,              // Background of normal windows
     ImGuiCol_ChildWindowBg,         // Background of child windows
     ImGuiCol_PopupBg,               // Background of popups, menus, tooltips windows
+    ImGuiCol_TextHovered,
+    ImGuiCol_TextActive,
     ImGuiCol_Border,
     ImGuiCol_BorderShadow,
     ImGuiCol_FrameBg,               // Background of checkbox, radio button, plot, slider, text input
