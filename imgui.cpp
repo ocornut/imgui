@@ -1722,8 +1722,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.LastItemID = id ? *id : 0;
     window->DC.LastItemRect = bb;
-    window->DC.LastItemHoveredAndUsable = false;
-    window->DC.LastItemHoveredRect = false;
+    window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = false;
     if (IsClippedEx(bb, id, false))
         return false;
 
@@ -3054,6 +3053,11 @@ bool ImGui::IsItemActive()
         return g.ActiveId == window->DC.LastItemID;
     }
     return false;
+}
+
+bool ImGui::IsItemClicked(int mouse_button)
+{
+    return IsMouseClicked(mouse_button) && IsItemHovered();
 }
 
 bool ImGui::IsAnyItemHovered()
