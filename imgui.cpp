@@ -5262,14 +5262,6 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
 
     bool pressed = false;
     bool hovered = IsHovered(bb, id, (flags & ImGuiButtonFlags_FlattenChilds) != 0);
-
-    // AllowOverlap mode (rarely used) requires previous frame HoveredId to be null or to match. This allows using patterns where a later submitted widget overlaps a previous one.
-    if (hovered && (flags & ImGuiButtonFlags_AllowOverlapMode) && (g.HoveredIdPreviousFrame != id && g.HoveredIdPreviousFrame != 0))
-    {
-        SetHoveredID(id);
-        hovered = false;
-    }
-
     if (hovered)
     {
         SetHoveredID(id);
@@ -5318,6 +5310,10 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             SetActiveID(0);
         }
     }
+
+    // AllowOverlap mode (rarely used) requires previous frame HoveredId to be null or to match. This allows using patterns where a later submitted widget overlaps a previous one.
+    if (hovered && (flags & ImGuiButtonFlags_AllowOverlapMode) && (g.HoveredIdPreviousFrame != id && g.HoveredIdPreviousFrame != 0))
+        hovered = pressed = held = false;
 
     if (out_hovered) *out_hovered = hovered;
     if (out_held) *out_held = held;
@@ -5688,6 +5684,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         opened = !opened;
         window->DC.StateStorage->SetInt(id, opened);
     }
+    if (flags & ImGuiTreeNodeFlags_AllowOverlapMode)
+        SetItemAllowOverlap();
 
     // Render
     const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
@@ -5752,7 +5750,6 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_open, ImGuiTreeNodeFlags
     {
         // Create a small overlapping close button // FIXME: We can evolve this into user accessible helpers to add extra buttons on title bars, headers, etc.
         ImGuiState& g = *GImGui;
-        SetItemAllowOverlap();
         float button_sz = g.FontSize * 0.5f;
         if (CloseButton(window->GetID((void*)(intptr_t)(id+1)), ImVec2(window->DC.LastItemRect.Max.x - g.Style.FramePadding.x - button_sz, window->DC.LastItemRect.Min.y + g.Style.FramePadding.y + button_sz), button_sz))
             *p_open = false;
