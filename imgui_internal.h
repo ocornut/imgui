@@ -161,13 +161,8 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_DontClosePopups        = 1 << 5,   // disable automatically closing parent popup on press
     ImGuiButtonFlags_Disabled               = 1 << 6,   // disable interaction
     ImGuiButtonFlags_AlignTextBaseLine      = 1 << 7,   // vertically align button to match text baseline - ButtonEx() only
-    ImGuiButtonFlags_NoKeyModifiers         = 1 << 8    // disable interaction if a key modifier is held
-};
-
-enum ImGuiTreeNodeFlags_
-{
-    ImGuiTreeNodeFlags_DefaultOpen          = 1 << 0,
-    ImGuiTreeNodeFlags_NoAutoExpandOnLog    = 1 << 1
+    ImGuiButtonFlags_NoKeyModifiers         = 1 << 8,   // disable interaction if a key modifier is held
+    ImGuiButtonFlags_AllowOverlapMode       = 1 << 9    // require previous frame HoveredId to either match id or be null before being usable
 };
 
 enum ImGuiSliderFlags_
@@ -730,7 +725,9 @@ namespace ImGui
     IMGUI_API bool          InputScalarEx(const char* label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, const char* scalar_format, ImGuiInputTextFlags extra_flags);
     IMGUI_API bool          InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label, ImGuiDataType data_type, void* data_ptr, ImGuiID id, int decimal_precision);
 
+    IMGUI_API bool          TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end = NULL);
     IMGUI_API bool          TreeNodeBehaviorIsOpened(ImGuiID id, ImGuiTreeNodeFlags flags = 0);                     // Consume previous SetNextTreeNodeOpened() data, if any. May return true when logging
+    IMGUI_API void          TreePushRawID(ImGuiID id);
 
     IMGUI_API void          PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size);
 

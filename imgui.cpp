@@ -152,6 +152,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2016/05/01 (1.49) - obsoleted old signature of CollapsingHeader(const char* label, const char* str_id = NULL, bool display_frame = true, bool default_open = false) as extra parameters were badly designed and rarely used. You can replace the "default_open = true" flag in new API with CollapsingHeader(label, ImGuiTreeNodeFlags_DefaultOpen).
  - 2016/04/26 (1.49) - changed ImDrawList::PushClipRect(ImVec4 rect) to ImDraw::PushClipRect(Imvec2 min,ImVec2 max,bool intersect_with_current_clip_rect=false). Note that higher-level ImGui::PushClipRect() is preferable because it will clip at logic/widget level, whereas ImDrawList::PushClipRect() only affect your renderer.
  - 2016/04/03 (1.48) - removed style.WindowFillAlphaDefault setting which was redundant. Bake default BG alpha inside style.Colors[ImGuiCol_WindowBg] and all other Bg color values. (ref github issue #337).
  - 2016/04/03 (1.48) - renamed ImGuiCol_TooltipBg to ImGuiCol_PopupBg, used by popups/menus and tooltips. popups/menus were previously using ImGuiCol_WindowBg. (ref github issue #337)
@@ -5260,7 +5261,15 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     }
 
     bool pressed = false;
-    const bool hovered = IsHovered(bb, id, (flags & ImGuiButtonFlags_FlattenChilds) != 0);
+    bool hovered = IsHovered(bb, id, (flags & ImGuiButtonFlags_FlattenChilds) != 0);
+
+    // AllowOverlap mode (rarely used) requires previous frame HoveredId to be null or to match. This allows using patterns where a later submitted widget overlaps a previous one.
+    if (hovered && (flags & ImGuiButtonFlags_AllowOverlapMode) && (g.HoveredIdPreviousFrame != id && g.HoveredIdPreviousFrame != 0))
+    {
+        SetHoveredID(id);
+        hovered = false;
+    }
+
     if (hovered)
     {
         SetHoveredID(id);
@@ -5626,14 +5635,13 @@ bool ImGui::TreeNodeBehaviorIsOpened(ImGuiID id, ImGuiTreeNodeFlags flags)
 
     // When logging is enabled, we automatically expand tree nodes (but *NOT* collapsing headers.. seems like sensible behavior).
     // NB- If we are above max depth we still allow manually opened nodes to be logged.
-    if (g.LogEnabled && !(flags & ImGuiTreeNodeFlags_NoAutoExpandOnLog) && window->DC.TreeDepth < g.LogAutoExpandMaxDepth)
+    if (g.LogEnabled && !(flags & ImGuiTreeNodeFlags_NoAutoOpenOnLog) && window->DC.TreeDepth < g.LogAutoExpandMaxDepth)
         opened = true;
 
     return opened;
 }
 
-// FIXME: Split into CollapsingHeader(label, default_open?) and TreeNodeBehavior(label), obsolete the 4 parameters function.
-bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display_frame, bool default_open)
+bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -5641,20 +5649,16 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
 
     ImGuiState& g = *GImGui;
     const ImGuiStyle& style = g.Style;
+    const bool display_frame = (flags & ImGuiTreeNodeFlags_Framed) != 0;
     const ImVec2 padding = display_frame ? style.FramePadding : ImVec2(style.FramePadding.x, 0.0f);
 
-    IM_ASSERT(str_id != NULL || label != NULL);
-    if (str_id == NULL)
-        str_id = label;
-    if (label == NULL)
-        label = str_id;
-    const bool label_hide_text_after_double_hash = (label == str_id); // Only search and hide text after ## if we have passed label and ID separately, otherwise allow "##" within format string.
-    const ImGuiID id = window->GetID(str_id);
-    const ImVec2 label_size = CalcTextSize(label, NULL, label_hide_text_after_double_hash);
+    if (!label_end)
+        label_end = FindRenderedTextEnd(label);
+    const ImVec2 label_size = CalcTextSize(label, label_end, false);
 
     // We vertically grow up to current line height up the typical widget height.
     const float text_base_offset_y = ImMax(0.0f, window->DC.CurrentLineTextBaseOffset - padding.y); // Latch before ItemSize changes it
-    const float frame_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), label_size.y + padding.y*2);
+    const float frame_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + style.FramePadding.y*2), label_size.y + padding.y*2);
     ImRect bb = ImRect(window->DC.CursorPos, ImVec2(window->Pos.x + GetContentRegionMax().x, window->DC.CursorPos.y + frame_height));
     if (display_frame)
     {
@@ -5670,12 +5674,15 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
     // For regular tree nodes, we arbitrary allow to click past 2 worth of ItemSpacing
     // (Ideally we'd want to add a flag for the user to specify we want want the hit test to be done up to the right side of the content or not)
     const ImRect interact_bb = display_frame ? bb : ImRect(bb.Min.x, bb.Min.y, bb.Min.x + text_width + style.ItemSpacing.x*2, bb.Max.y);
-    bool opened = TreeNodeBehaviorIsOpened(id, (default_open ? ImGuiTreeNodeFlags_DefaultOpen : 0) | (display_frame ? ImGuiTreeNodeFlags_NoAutoExpandOnLog : 0));
+    bool opened = TreeNodeBehaviorIsOpened(id, flags);
     if (!ItemAdd(interact_bb, &id))
+    {
+        if (opened && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
+            TreePushRawID(id);
         return opened;
+    }
 
-    bool hovered, held;
-    bool pressed = ButtonBehavior(interact_bb, id, &hovered, &held, ImGuiButtonFlags_NoKeyModifiers);
+    bool hovered, held, pressed = ButtonBehavior(interact_bb, id, &hovered, &held, ImGuiButtonFlags_NoKeyModifiers | ((flags & ImGuiTreeNodeFlags_AllowOverlapMode) ? ImGuiButtonFlags_AllowOverlapMode : 0));
     if (pressed)
     {
         opened = !opened;
@@ -5696,12 +5703,12 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
             const char log_prefix[] = "\n##";
             const char log_suffix[] = "##";
             LogRenderedText(text_pos, log_prefix, log_prefix+3);
-            RenderTextClipped(text_pos, bb.Max, label, NULL, &label_size);
+            RenderTextClipped(text_pos, bb.Max, label, label_end, &label_size);
             LogRenderedText(text_pos, log_suffix+1, log_suffix+3);
         }
         else
         {
-            RenderTextClipped(text_pos, bb.Max, label, NULL, &label_size);
+            RenderTextClipped(text_pos, bb.Max, label, label_end, &label_size);
         }
     }
     else
@@ -5713,13 +5720,47 @@ bool ImGui::CollapsingHeader(const char* label, const char* str_id, bool display
         RenderCollapseTriangle(bb.Min + ImVec2(padding.x, g.FontSize*0.15f + text_base_offset_y), opened, 0.70f, false);
         if (g.LogEnabled)
             LogRenderedText(text_pos, ">");
-        RenderText(text_pos, label, NULL, label_hide_text_after_double_hash);
+        RenderText(text_pos, label, label_end, false);
+    }
+
+    if (opened && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
+        TreePushRawID(id);
+    return opened;
+}
+
+bool ImGui::CollapsingHeader(const char* label, ImGuiTreeNodeFlags flags)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    return TreeNodeBehavior(window->GetID(label), flags | ImGuiTreeNodeFlags_CollapsingHeader | ImGuiTreeNodeFlags_NoTreePushOnOpen, label);
+}
+
+bool ImGui::CollapsingHeader(const char* label, bool* p_open, ImGuiTreeNodeFlags flags)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    if (p_open && !*p_open)
+        return false;
+
+    ImGuiID id = window->GetID(label);
+    bool opened = TreeNodeBehavior(id, flags | ImGuiTreeNodeFlags_CollapsingHeader | ImGuiTreeNodeFlags_NoTreePushOnOpen | (p_open ? ImGuiTreeNodeFlags_AllowOverlapMode : 0), label);
+    if (p_open)
+    {
+        // Create a small overlapping close button // FIXME: We can evolve this into user accessible helpers to add extra buttons on title bars, headers, etc.
+        ImGuiState& g = *GImGui;
+        SetItemAllowOverlap();
+        float button_sz = g.FontSize * 0.5f;
+        if (CloseButton(window->GetID((void*)(intptr_t)(id+1)), ImVec2(window->DC.LastItemRect.Max.x - g.Style.FramePadding.x - button_sz, window->DC.LastItemRect.Min.y + g.Style.FramePadding.y + button_sz), button_sz))
+            *p_open = false;
     }
 
     return opened;
 }
 
-// If returning 'true' the node is open and the user is responsible for calling TreePop
 bool ImGui::TreeNodeV(const char* str_id, const char* fmt, va_list args)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -5727,30 +5768,10 @@ bool ImGui::TreeNodeV(const char* str_id, const char* fmt, va_list args)
         return false;
 
     ImGuiState& g = *GImGui;
-    ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    if (!str_id || !str_id[0])
-        str_id = fmt;
-
-    ImGui::PushID(str_id);
-    const bool opened = ImGui::CollapsingHeader(g.TempBuffer, "", false);
-    ImGui::PopID();
-
-    if (opened)
-        ImGui::TreePush(str_id);
-
-    return opened;
+    const char* label_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
+    return TreeNodeBehavior(window->GetID(str_id), 0, g.TempBuffer, label_end);
 }
 
-bool ImGui::TreeNode(const char* str_id, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    bool s = TreeNodeV(str_id, fmt, args);
-    va_end(args);
-    return s;
-}
-
-// If returning 'true' the node is open and the user is responsible for calling TreePop
 bool ImGui::TreeNodeV(const void* ptr_id, const char* fmt, va_list args)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -5758,18 +5779,16 @@ bool ImGui::TreeNodeV(const void* ptr_id, const char* fmt, va_list args)
         return false;
 
     ImGuiState& g = *GImGui;
-    ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
+    const char* label_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
+    return TreeNodeBehavior(window->GetID(ptr_id ? ptr_id : fmt), 0, g.TempBuffer, label_end);
+}
 
-    if (!ptr_id)
-        ptr_id = fmt;
-
-    ImGui::PushID(ptr_id);
-    const bool opened = ImGui::CollapsingHeader(g.TempBuffer, "", false);
-    ImGui::PopID();
-
-    if (opened)
-        ImGui::TreePush(ptr_id);
-
+bool ImGui::TreeNode(const char* str_id, const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    bool opened = TreeNodeV(str_id, fmt, args);
+    va_end(args);
     return opened;
 }
 
@@ -5777,14 +5796,18 @@ bool ImGui::TreeNode(const void* ptr_id, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    bool s = TreeNodeV(ptr_id, fmt, args);
+    bool opened = TreeNodeV(ptr_id, fmt, args);
     va_end(args);
-    return s;
+    return opened;
 }
 
-bool ImGui::TreeNode(const char* str_label_id)
+bool ImGui::TreeNode(const char* label)
 {
-    return TreeNode(str_label_id, "%s", str_label_id);
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    return TreeNodeBehavior(window->GetID(label), 0, label, NULL);
 }
 
 void ImGui::SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond)
@@ -9125,6 +9148,14 @@ void ImGui::TreePush(const void* ptr_id)
     ImGui::Indent();
     window->DC.TreeDepth++;
     PushID(ptr_id ? ptr_id : (const void*)"#TreePush");
+}
+
+void ImGui::TreePushRawID(ImGuiID id)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    ImGui::Indent();
+    window->DC.TreeDepth++;
+    window->IDStack.push_back(id);
 }
 
 void ImGui::TreePop()

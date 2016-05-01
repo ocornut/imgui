@@ -284,6 +284,23 @@ void ImGui::ShowTestWindow(bool* p_opened)
             ImGui::TreePop();
         }
 
+        if (ImGui::TreeNode("Collapsing Headers"))
+        {
+            static bool closable_group = true;
+            if (ImGui::CollapsingHeader("Header"))
+            {
+                ImGui::Checkbox("Enable extra group", &closable_group);
+                for (int i = 0; i < 5; i++)
+                    ImGui::Text("Some content %d", i);
+            }
+            if (ImGui::CollapsingHeader("Header with a close button", &closable_group))
+            {
+                for (int i = 0; i < 5; i++)
+                    ImGui::Text("More content %d", i);
+            }
+            ImGui::TreePop();
+        }
+
         if (ImGui::TreeNode("Bullets"))
         {
             ImGui::BulletText("Bullet point 1");
