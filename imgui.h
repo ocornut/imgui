@@ -518,7 +518,7 @@ enum ImGuiInputTextFlags_
 // Flags for ImGui::TreeNode*(), ImGui::CollapsingHeader*()
 enum ImGuiTreeNodeFlags_
 {
-    ImGuiTreeNodeFlags_Selected             = 1 << 0,   // FIXME: TODO
+    ImGuiTreeNodeFlags_Selected             = 1 << 0,   // Draw as selected
     ImGuiTreeNodeFlags_Framed               = 1 << 1,   // Full colored frame (e.g. for CollapsingHeader)
     ImGuiTreeNodeFlags_AllowOverlapMode     = 1 << 2,   // Hit testing to allow subsequent widgets to overlap this one
     ImGuiTreeNodeFlags_NoTreePushOnOpen     = 1 << 3,   // Don't do a TreePush() when opened (e.g. for CollapsingHeader) = no extra indent nor pushing on ID stack
