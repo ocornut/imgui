@@ -5915,8 +5915,8 @@ void ImGui::Bullet()
     }
 
     // Render
-    const float bullet_size = g.FontSize*0.15f;
-    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f), bullet_size, GetColorU32(ImGuiCol_Text));
+    const float bullet_size = g.FontSize*0.20f;
+    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f), bullet_size, GetColorU32(ImGuiCol_Text), 8);
 
     // Stay on same line
     ImGui::SameLine(0, style.FramePadding.x*2);
@@ -5943,8 +5943,8 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
         return;
 
     // Render
-    const float bullet_size = g.FontSize*0.15f;
-    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f), bullet_size, GetColorU32(ImGuiCol_Text));
+    const float bullet_size = g.FontSize*0.20f;
+    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f), bullet_size, GetColorU32(ImGuiCol_Text), 8);
     RenderText(bb.Min+ImVec2(g.FontSize + style.FramePadding.x*2, text_base_offset_y), text_begin, text_end);
 }
 
