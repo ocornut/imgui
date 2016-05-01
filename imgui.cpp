@@ -1721,28 +1721,22 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.LastItemID = id ? *id : 0;
     window->DC.LastItemRect = bb;
+    window->DC.LastItemHoveredAndUsable = false;
+    window->DC.LastItemHoveredRect = false;
     if (IsClippedEx(bb, id, false))
-    {
-        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = false;
         return false;
-    }
 
     // This is a sensible default, but widgets are free to override it after calling ItemAdd()
     ImGuiState& g = *GImGui;
     if (IsMouseHoveringRect(bb.Min, bb.Max))
     {
-        // Matching the behavior of IsHovered() but ignore if ActiveId==window->MoveID (we clicked on the window background)
+        // Matching the behavior of IsHovered() but allow if ActiveId==window->MoveID (we clicked on the window background)
         // So that clicking on items with no active id such as Text() still returns true with IsItemHovered()
         window->DC.LastItemHoveredRect = true;
-        window->DC.LastItemHoveredAndUsable = false;
         if (g.HoveredRootWindow == window->RootWindow)
             if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdAllowOverlap || (g.ActiveId == window->MoveID))
                 if (IsWindowContentHoverable(window))
                     window->DC.LastItemHoveredAndUsable = true;
-    }
-    else
-    {
-        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = false;
     }
 
     return true;
@@ -1754,14 +1748,13 @@ bool ImGui::IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when
     ImGuiWindow* window = GetCurrentWindowRead();
 
     if (!bb.Overlaps(window->ClipRect))
-    {
         if (!id || *id != GImGui->ActiveId)
             if (clip_even_when_logged || !g.LogEnabled)
                 return true;
-    }
     return false;
 }
 
+// NB: This is an internal helper. The user-facing IsItemHovered() is using data emitted from ItemAdd(), with a slightly different logic.
 bool ImGui::IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs)
 {
     ImGuiState& g = *GImGui;
