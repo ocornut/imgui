@@ -270,16 +270,45 @@ void ImGui::ShowTestWindow(bool* p_opened)
     {
         if (ImGui::TreeNode("Trees"))
         {
-            for (int i = 0; i < 5; i++)
+            if (ImGui::TreeNode("Basic trees"))
             {
-                if (ImGui::TreeNode((void*)(intptr_t)i, "Child %d", i))
+                for (int i = 0; i < 5; i++)
+                    if (ImGui::TreeNode((void*)(intptr_t)i, "Child %d", i))
+                    {
+                        ImGui::Text("blah blah");
+                        ImGui::SameLine(); 
+                        if (ImGui::SmallButton("print")) printf("Child %d pressed", i);
+                        ImGui::TreePop();
+                    }
+                ImGui::TreePop();
+            }
+
+            if (ImGui::TreeNode("With selectable nodes"))
+            {
+                ShowHelpMarker("Click to select, CTRL+Click to toggle, double-click to open");
+                static int selection_mask = 0x02;   // Dumb representation of what may be user-side selection state. You may carry selection state inside or outside your objects in whatever format you see fit.
+                int node_clicked = -1;
+                for (int i = 0; i < 5; i++)
                 {
-                    ImGui::Text("blah blah");
-                    ImGui::SameLine();
-                    if (ImGui::SmallButton("print"))
-                        printf("Child %d pressed", i);
-                    ImGui::TreePop();
+                    ImGuiTreeNodeFlags node_flags = ((selection_mask & (1 << i)) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+                    bool opened = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Child %d", i);
+                    if (ImGui::IsItemClicked()) 
+                        node_clicked = i;
+                    if (opened)
+                    {
+                        ImGui::Text("blah blah");
+                        ImGui::TreePop();
+                    }
                 }
+                if (node_clicked != -1)
+                {
+                    // Update selection state. Process outside of tree loop to avoid visual inconsistencies during the clicking-frame.
+                    if (ImGui::GetIO().KeyCtrl)
+                        selection_mask ^= (1 << node_clicked);  // CTRL+click to toggle
+                    else
+                        selection_mask = (1 << node_clicked);   // Click to single-select
+                }
+                ImGui::TreePop();
             }
             ImGui::TreePop();
         }
