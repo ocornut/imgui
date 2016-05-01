@@ -699,12 +699,14 @@ namespace ImGui
     inline IMGUI_API ImU32  GetColorU32(const ImVec4& col)              { ImVec4 c = col; c.w *= GImGui->Style.Alpha; return ImGui::ColorConvertFloat4ToU32(c); }
 
     // NB: All position are in absolute pixels coordinates (not window coordinates)
-    // FIXME: Refactor all RenderText* functions into one.
+    // FIXME: All those functions are a mess and needs to be refactored into something decent. Avoid use outside of imgui.cpp!
+    // We need: a sort of symbol library, preferably baked into font atlas when possible + decent text rendering helpers.
     IMGUI_API void          RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
     IMGUI_API void          RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width);
     IMGUI_API void          RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, ImGuiAlign align = ImGuiAlign_Default, const ImVec2* clip_min = NULL, const ImVec2* clip_max = NULL);
     IMGUI_API void          RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
     IMGUI_API void          RenderCollapseTriangle(ImVec2 pos, bool opened, float scale = 1.0f, bool shadow = false);
+    IMGUI_API void          RenderBullet(ImVec2 pos);
     IMGUI_API void          RenderCheckMark(ImVec2 pos, ImU32 col);
     IMGUI_API const char*   FindRenderedTextEnd(const char* text, const char* text_end = NULL); // Find the optional ## from which we stop displaying text.
 

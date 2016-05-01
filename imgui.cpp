@@ -2741,6 +2741,12 @@ void ImGui::RenderCollapseTriangle(ImVec2 p_min, bool opened, float scale, bool 
     window->DrawList->AddTriangleFilled(a, b, c, GetColorU32(ImGuiCol_Text));
 }
 
+void ImGui::RenderBullet(ImVec2 pos)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DrawList->AddCircleFilled(pos, GImGui->FontSize*0.20f, GetColorU32(ImGuiCol_Text), 8);
+}
+
 void ImGui::RenderCheckMark(ImVec2 pos, ImU32 col)
 {
     ImGuiState& g = *GImGui;
@@ -5929,12 +5935,9 @@ void ImGui::Bullet()
         return;
     }
 
-    // Render
-    const float bullet_size = g.FontSize*0.20f;
-    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f), bullet_size, GetColorU32(ImGuiCol_Text), 8);
-
-    // Stay on same line
-    ImGui::SameLine(0, style.FramePadding.x*2);
+    // Render and stay on same line
+    RenderBullet(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f));
+    SameLine(0, style.FramePadding.x*2);
 }
 
 // Text with a little bullet aligned to the typical tree node.
@@ -5958,8 +5961,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
         return;
 
     // Render
-    const float bullet_size = g.FontSize*0.20f;
-    window->DrawList->AddCircleFilled(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f), bullet_size, GetColorU32(ImGuiCol_Text), 8);
+    RenderBullet(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f));
     RenderText(bb.Min+ImVec2(g.FontSize + style.FramePadding.x*2, text_base_offset_y), text_begin, text_end);
 }
 
