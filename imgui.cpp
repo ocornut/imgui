@@ -5682,7 +5682,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         return opened;
     }
 
-    bool hovered, held, pressed = ButtonBehavior(interact_bb, id, &hovered, &held, ImGuiButtonFlags_NoKeyModifiers | ((flags & ImGuiTreeNodeFlags_AllowOverlapMode) ? ImGuiButtonFlags_AllowOverlapMode : 0));
+    ImGuiButtonFlags button_flags = ImGuiButtonFlags_NoKeyModifiers | ((flags & ImGuiTreeNodeFlags_AllowOverlapMode) ? ImGuiButtonFlags_AllowOverlapMode : 0) | ((flags & ImGuiTreeNodeFlags_OpenOnDoubleClick) ? ImGuiButtonFlags_PressedOnDoubleClick : 0);
+    bool hovered, held, pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags);
     if (pressed)
     {
         opened = !opened;

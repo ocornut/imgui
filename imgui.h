@@ -530,6 +530,11 @@ enum ImGuiTreeNodeFlags_
     ImGuiTreeNodeFlags_NoTreePushOnOpen     = 1 << 3,   // Don't do a TreePush() when opened (e.g. for CollapsingHeader) = no extra indent nor pushing on ID stack
     ImGuiTreeNodeFlags_NoAutoOpenOnLog      = 1 << 4,   // Don't automatically and temporarily open node when Logging is active (by default logging will automatically open tree nodes).
     ImGuiTreeNodeFlags_DefaultOpen          = 1 << 5,   // Default node to be opened
+    ImGuiTreeNodeFlags_OpenOnDoubleClick    = 1 << 6,   // Double-click to open node
+    //ImGuiTreeNodeFlags_OpenOnArrowOnly    = 1 << 7,   // FIXME: TODO: Can only click by 
+    //ImGuiTreeNodeFlags_UnindentArrow      = 1 << 8,   // FIXME: TODO
+    //ImGuITreeNodeFlags_SpanAllAvailWidth  = 1 << 9,   // FIXME: TODO: Extend hit box horizontally even if not framed
+    //ImGuiTreeNodeFlags_NoScrollOnOpen     = 1 << 10,  // FIXME: TODO: Automatically scroll on TreePop() if node got just opened and contents is not visible
     ImGuiTreeNodeFlags_CollapsingHeader     = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_NoAutoOpenOnLog
 };
 
