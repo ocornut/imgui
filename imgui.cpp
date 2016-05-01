@@ -5871,6 +5871,17 @@ bool ImGui::TreeNode(const char* label)
     return TreeNodeBehavior(window->GetID(label), 0, label, NULL);
 }
 
+float ImGui::GetTreeNodeToLabelSpacing(ImGuiTreeNodeFlags flags)
+{
+    ImGuiState& g = *GImGui;
+    float off_from_start;
+    if (flags & ImGuiTreeNodeFlags_Framed)
+        off_from_start = g.FontSize + (g.Style.FramePadding.x * 3.0f) - ((float)(int)(g.CurrentWindow->WindowPadding.x*0.5f) - 1);
+    else
+        off_from_start = g.FontSize + (g.Style.FramePadding.x * 2.0f);
+    return off_from_start;
+}
+
 void ImGui::SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond)
 {
     ImGuiState& g = *GImGui;

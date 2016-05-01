@@ -321,6 +321,7 @@ namespace ImGui
     IMGUI_API void          TreePush(const void* ptr_id = NULL);                                    // "
     IMGUI_API void          TreePop();
     IMGUI_API void          SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond = 0);              // set next tree node/collapsing header to be opened.
+    IMGUI_API float         GetTreeNodeToLabelSpacing(ImGuiTreeNodeFlags flags = 0);                // return horizontal distance between cursor and text label due to collapsing node. == (g.FontSize + style.FramePadding.x*2) for a regular unframed TreeNode
     IMGUI_API bool          CollapsingHeader(const char* label, ImGuiTreeNodeFlags flags = 0);      // if returning 'true' the header is open. user doesn't have to call TreePop().
     IMGUI_API bool          CollapsingHeader(const char* label, bool* p_open, ImGuiTreeNodeFlags flags = 0); // when 'p_open' isn't NULL, display an additional small close button on upper right of the header
 
