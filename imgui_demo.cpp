@@ -291,11 +291,14 @@ void ImGui::ShowTestWindow(bool* p_opened)
                 for (int i = 0; i < 6; i++)
                 {
                     ImGuiTreeNodeFlags node_flags = ((selection_mask & (1 << i)) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-                    bool opened = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Child %d", i);
+                    if (i >= 3)
+                        node_flags |= ImGuiTreeNodeFlags_AlwaysOpen;
+                    bool opened = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable %s %d", (i >= 3) ? "Leaf" : "Node", i);
                     if (ImGui::IsItemClicked()) 
                         node_clicked = i;
                     if (opened)
                     {
+                        ImGui::Text("Blah blah");
                         ImGui::Text("Blah blah");
                         ImGui::TreePop();
                     }
