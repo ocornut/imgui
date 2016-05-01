@@ -285,18 +285,18 @@ void ImGui::ShowTestWindow(bool* p_opened)
 
             if (ImGui::TreeNode("With selectable nodes"))
             {
-                ShowHelpMarker("Click to select, CTRL+Click to toggle, double-click to open");
+                ShowHelpMarker("Click to select, CTRL+Click to toggle, click on arrows to open");
                 static int selection_mask = 0x02;   // Dumb representation of what may be user-side selection state. You may carry selection state inside or outside your objects in whatever format you see fit.
                 int node_clicked = -1;
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < 6; i++)
                 {
-                    ImGuiTreeNodeFlags node_flags = ((selection_mask & (1 << i)) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+                    ImGuiTreeNodeFlags node_flags = ((selection_mask & (1 << i)) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
                     bool opened = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Child %d", i);
                     if (ImGui::IsItemClicked()) 
                         node_clicked = i;
                     if (opened)
                     {
-                        ImGui::Text("blah blah");
+                        ImGui::Text("Blah blah");
                         ImGui::TreePop();
                     }
                 }

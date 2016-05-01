@@ -5677,12 +5677,27 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         return opened;
     }
 
-    ImGuiButtonFlags button_flags = ImGuiButtonFlags_NoKeyModifiers | ((flags & ImGuiTreeNodeFlags_AllowOverlapMode) ? ImGuiButtonFlags_AllowOverlapMode : 0) | ((flags & ImGuiTreeNodeFlags_OpenOnDoubleClick) ? ImGuiButtonFlags_PressedOnDoubleClick : 0);
+    // Flags that affects opening behavior:
+    // - 0(default) ..................... single-click anywhere to open
+    // - OpenOnDoubleClick .............. double-click anywhere to open
+    // - OpenOnArrow .................... single-click on arrow to open
+    // - OpenOnDoubleClick|OpenOnArrow .. single-click on arrow or double-click anywhere to open
+    ImGuiButtonFlags button_flags = ImGuiButtonFlags_NoKeyModifiers | ((flags & ImGuiTreeNodeFlags_AllowOverlapMode) ? ImGuiButtonFlags_AllowOverlapMode : 0);
+    if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
+        button_flags |= ImGuiButtonFlags_PressedOnDoubleClick | ((flags & ImGuiTreeNodeFlags_OpenOnArrow) ? ImGuiButtonFlags_PressedOnClickRelease : 0);
     bool hovered, held, pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags);
     if (pressed)
     {
-        opened = !opened;
-        window->DC.StateStorage->SetInt(id, opened);
+        bool toggled = !(flags & (ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick));
+        if (flags & ImGuiTreeNodeFlags_OpenOnArrow)
+            toggled |= IsMouseHoveringRect(interact_bb.Min, ImVec2(interact_bb.Min.x + collapser_width, interact_bb.Max.y));
+        if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
+            toggled |= g.IO.MouseDoubleClicked[0];
+        if (toggled)
+        {
+            opened = !opened;
+            window->DC.StateStorage->SetInt(id, opened);
+        }
     }
     if (flags & ImGuiTreeNodeFlags_AllowOverlapMode)
         SetItemAllowOverlap();
