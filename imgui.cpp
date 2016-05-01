@@ -4579,15 +4579,19 @@ bool ImGui::IsWindowFocused()
 bool ImGui::IsRootWindowFocused()
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* root_window = g.CurrentWindow->RootWindow;
-    return g.FocusedWindow == root_window;
+    return g.FocusedWindow == g.CurrentWindow->RootWindow;
 }
 
 bool ImGui::IsRootWindowOrAnyChildFocused()
 {
     ImGuiState& g = *GImGui;
-    ImGuiWindow* root_window = g.CurrentWindow->RootWindow;
-    return g.FocusedWindow && g.FocusedWindow->RootWindow == root_window;
+    return g.FocusedWindow && g.FocusedWindow->RootWindow == g.CurrentWindow->RootWindow;
+}
+
+bool ImGui::IsRootWindowOrAnyChildHovered()
+{
+    ImGuiState& g = *GImGui;
+    return g.HoveredRootWindow && (g.HoveredRootWindow == g.CurrentWindow->RootWindow) && IsWindowContentHoverable(g.HoveredRootWindow);
 }
 
 float ImGui::GetWindowWidth()
