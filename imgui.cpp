@@ -5762,7 +5762,16 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_open, ImGuiTreeNodeFlags
     return opened;
 }
 
-bool ImGui::TreeNodeV(const char* str_id, const char* fmt, va_list args)
+bool ImGui::TreeNodeEx(const char* label, ImGuiTreeNodeFlags flags)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    return TreeNodeBehavior(window->GetID(label), flags, label, NULL);
+}
+
+bool ImGui::TreeNodeExV(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -5770,25 +5779,53 @@ bool ImGui::TreeNodeV(const char* str_id, const char* fmt, va_list args)
 
     ImGuiState& g = *GImGui;
     const char* label_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    return TreeNodeBehavior(window->GetID(str_id), 0, g.TempBuffer, label_end);
+    return TreeNodeBehavior(window->GetID(str_id), flags, g.TempBuffer, label_end);
+}
+
+bool ImGui::TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiState& g = *GImGui;
+    const char* label_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
+    return TreeNodeBehavior(window->GetID(ptr_id), flags, g.TempBuffer, label_end);
+}
+
+bool ImGui::TreeNodeV(const char* str_id, const char* fmt, va_list args)
+{
+    return TreeNodeExV(str_id, 0, fmt, args);
 }
 
 bool ImGui::TreeNodeV(const void* ptr_id, const char* fmt, va_list args)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return false;
+    return TreeNodeExV(ptr_id, 0, fmt, args);
+}
 
-    ImGuiState& g = *GImGui;
-    const char* label_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    return TreeNodeBehavior(window->GetID(ptr_id ? ptr_id : fmt), 0, g.TempBuffer, label_end);
+bool ImGui::TreeNodeEx(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    bool opened = TreeNodeExV(str_id, flags, fmt, args);
+    va_end(args);
+    return opened;
+}
+
+bool ImGui::TreeNodeEx(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    bool opened = TreeNodeExV(ptr_id, flags, fmt, args);
+    va_end(args);
+    return opened;
 }
 
 bool ImGui::TreeNode(const char* str_id, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    bool opened = TreeNodeV(str_id, fmt, args);
+    bool opened = TreeNodeExV(str_id, 0, fmt, args);
     va_end(args);
     return opened;
 }
@@ -5797,7 +5834,7 @@ bool ImGui::TreeNode(const void* ptr_id, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    bool opened = TreeNodeV(ptr_id, fmt, args);
+    bool opened = TreeNodeExV(ptr_id, 0, fmt, args);
     va_end(args);
     return opened;
 }
