@@ -6,13 +6,15 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
-#include <imgui.h>
+#include "imgui.h"
 #include "imgui_impl_dx9.h"
 
 // DirectX
-#include <d3dx9.h>
+#include <d3d9.h>
+#include <DirectXMath.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
+#include <string>
 
 // Data
 static HWND                     g_hWnd = 0;
@@ -26,9 +28,9 @@ static int                      g_VertexBufferSize = 5000, g_IndexBufferSize = 1
 
 struct CUSTOMVERTEX
 {
-    D3DXVECTOR3 pos;
-    D3DCOLOR    col;
-    D3DXVECTOR2 uv;
+    DirectX::XMFLOAT3 pos;
+    D3DCOLOR col;
+    DirectX::XMFLOAT2 uv;
 };
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
 
@@ -57,8 +59,8 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     // FIXME: Backup/restore everything else
     D3DRENDERSTATETYPE last_render_state_to_backup[] = { D3DRS_CULLMODE, D3DRS_LIGHTING, D3DRS_ZENABLE, D3DRS_ALPHABLENDENABLE, D3DRS_ALPHATESTENABLE, D3DRS_BLENDOP, D3DRS_SRCBLEND, D3DRS_DESTBLEND, D3DRS_SCISSORTESTENABLE };
     DWORD last_render_state_values[ARRAYSIZE(last_render_state_to_backup)] = { 0 };
-    IDirect3DPixelShader9* last_ps; g_pd3dDevice->GetPixelShader( &last_ps );
-    IDirect3DVertexShader9* last_vs; g_pd3dDevice->GetVertexShader( &last_vs );
+    IDirect3DPixelShader9* last_ps; g_pd3dDevice->GetPixelShader(&last_ps);
+    IDirect3DVertexShader9* last_vs; g_pd3dDevice->GetVertexShader(&last_vs);
     for (int n = 0; n < ARRAYSIZE(last_render_state_to_backup); n++)
         g_pd3dDevice->GetRenderState(last_render_state_to_backup[n], &last_render_state_values[n]);
 
@@ -78,7 +80,7 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
             vtx_dst->pos.x = vtx_src->pos.x;
             vtx_dst->pos.y = vtx_src->pos.y;
             vtx_dst->pos.z = 0.0f;
-            vtx_dst->col = (vtx_src->col & 0xFF00FF00) | ((vtx_src->col & 0xFF0000)>>16) | ((vtx_src->col & 0xFF) << 16);     // RGBA --> ARGB for DirectX9
+            vtx_dst->col = (vtx_src->col & 0xFF00FF00) | ((vtx_src->col & 0xFF0000) >> 16) | ((vtx_src->col & 0xFF) << 16);     // RGBA --> ARGB for DirectX9
             vtx_dst->uv.x = vtx_src->uv.x;
             vtx_dst->uv.y = vtx_src->uv.y;
             vtx_dst++;
@@ -89,38 +91,37 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     }
     g_pVB->Unlock();
     g_pIB->Unlock();
-    g_pd3dDevice->SetStreamSource( 0, g_pVB, 0, sizeof( CUSTOMVERTEX ) );
-    g_pd3dDevice->SetIndices( g_pIB );
-    g_pd3dDevice->SetFVF( D3DFVF_CUSTOMVERTEX );
+    g_pd3dDevice->SetStreamSource(0, g_pVB, 0, sizeof(CUSTOMVERTEX));
+    g_pd3dDevice->SetIndices(g_pIB);
+    g_pd3dDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
 
     // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
-    g_pd3dDevice->SetPixelShader( NULL );
-    g_pd3dDevice->SetVertexShader( NULL );
-    g_pd3dDevice->SetRenderState( D3DRS_CULLMODE, D3DCULL_NONE );
-    g_pd3dDevice->SetRenderState( D3DRS_LIGHTING, false );
-    g_pd3dDevice->SetRenderState( D3DRS_ZENABLE, false );
-    g_pd3dDevice->SetRenderState( D3DRS_ALPHABLENDENABLE, true );
-    g_pd3dDevice->SetRenderState( D3DRS_ALPHATESTENABLE, false );
-    g_pd3dDevice->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD );
-    g_pd3dDevice->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
-    g_pd3dDevice->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
-    g_pd3dDevice->SetRenderState( D3DRS_SCISSORTESTENABLE, true );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_MODULATE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_TEXTURE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
-    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
-    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+    g_pd3dDevice->SetPixelShader(NULL);
+    g_pd3dDevice->SetVertexShader(NULL);
+    g_pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+    g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, false);
+    g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, false);
+    g_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+    g_pd3dDevice->SetRenderState(D3DRS_ALPHATESTENABLE, false);
+    g_pd3dDevice->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+    g_pd3dDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+    g_pd3dDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    g_pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
+    g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+    g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+    g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+    g_pd3dDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+    g_pd3dDevice->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+    g_pd3dDevice->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+    g_pd3dDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    g_pd3dDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 
     // Setup orthographic projection matrix
-    D3DXMATRIXA16 mat;
-    D3DXMatrixIdentity(&mat);
-    g_pd3dDevice->SetTransform( D3DTS_WORLD, &mat );
-    g_pd3dDevice->SetTransform( D3DTS_VIEW, &mat );
-    D3DXMatrixOrthoOffCenterLH( &mat, 0.5f, ImGui::GetIO().DisplaySize.x+0.5f, ImGui::GetIO().DisplaySize.y+0.5f, 0.5f, -1.0f, +1.0f );
-    g_pd3dDevice->SetTransform( D3DTS_PROJECTION, &mat );
+    auto mat = DirectX::XMMatrixIdentity();
+    g_pd3dDevice->SetTransform(D3DTS_WORLD, (D3DMATRIX*)&mat);
+    g_pd3dDevice->SetTransform(D3DTS_VIEW, (D3DMATRIX*)&mat);
+    mat = DirectX::XMMatrixOrthographicOffCenterLH(0.5f, ImGui::GetIO().DisplaySize.x + 0.5f, ImGui::GetIO().DisplaySize.y + 0.5f, 0.5f, -1.0f, +1.0f);
+    g_pd3dDevice->SetTransform(D3DTS_PROJECTION, (D3DMATRIX*)&mat);
 
     // Render command lists
     int vtx_offset = 0;
@@ -138,9 +139,9 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
             else
             {
                 const RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
-                g_pd3dDevice->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->TextureId );
-                g_pd3dDevice->SetScissorRect( &r );
-                g_pd3dDevice->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.size(), idx_offset, pcmd->ElemCount/3 );
+                g_pd3dDevice->SetTexture(0, (LPDIRECT3DTEXTURE9)pcmd->TextureId);
+                g_pd3dDevice->SetScissorRect(&r);
+                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.size(), idx_offset, pcmd->ElemCount / 3);
             }
             idx_offset += pcmd->ElemCount;
         }
@@ -148,8 +149,8 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     }
 
     // Restore some modified DX9 state (not all!)
-    g_pd3dDevice->SetPixelShader( last_ps );
-    g_pd3dDevice->SetVertexShader( last_vs );
+    g_pd3dDevice->SetPixelShader(last_ps);
+    g_pd3dDevice->SetVertexShader(last_vs);
     for (int n = 0; n < ARRAYSIZE(last_render_state_to_backup); n++)
         g_pd3dDevice->SetRenderState(last_render_state_to_backup[n], last_render_state_values[n]);
 }
@@ -256,7 +257,8 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
 
     // Upload texture to graphics system
     g_FontTexture = NULL;
-    if (D3DXCreateTexture(g_pd3dDevice, width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8B8G8R8, D3DPOOL_DEFAULT, &g_FontTexture) < 0)
+    HRESULT hr = g_pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &g_FontTexture, NULL);
+    if (!g_FontTexture || hr != D3D_OK)
         return false;
     D3DLOCKED_RECT tex_locked_rect;
     if (g_FontTexture->LockRect(0, &tex_locked_rect, NULL, 0) != D3D_OK)
