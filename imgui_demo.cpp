@@ -49,15 +49,15 @@
 
 #ifndef IMGUI_DISABLE_TEST_WINDOWS
 
-static void ShowExampleAppConsole(bool* opened);
-static void ShowExampleAppLog(bool* opened);
-static void ShowExampleAppLayout(bool* opened);
-static void ShowExampleAppPropertyEditor(bool* opened);
-static void ShowExampleAppLongText(bool* opened);
-static void ShowExampleAppAutoResize(bool* opened);
-static void ShowExampleAppFixedOverlay(bool* opened);
-static void ShowExampleAppManipulatingWindowTitle(bool* opened);
-static void ShowExampleAppCustomRendering(bool* opened);
+static void ShowExampleAppConsole(bool* p_open);
+static void ShowExampleAppLog(bool* p_open);
+static void ShowExampleAppLayout(bool* p_open);
+static void ShowExampleAppPropertyEditor(bool* p_open);
+static void ShowExampleAppLongText(bool* p_open);
+static void ShowExampleAppAutoResize(bool* p_open);
+static void ShowExampleAppFixedOverlay(bool* p_open);
+static void ShowExampleAppManipulatingWindowTitle(bool* p_open);
+static void ShowExampleAppCustomRendering(bool* p_open);
 static void ShowExampleAppMainMenuBar();
 static void ShowExampleMenuFile();
 
@@ -91,7 +91,7 @@ void ImGui::ShowUserGuide()
 }
 
 // Demonstrate most ImGui features (big function!)
-void ImGui::ShowTestWindow(bool* p_opened)
+void ImGui::ShowTestWindow(bool* p_open)
 {
     // Examples apps
     static bool show_app_main_menu_bar = false;
@@ -150,7 +150,7 @@ void ImGui::ShowTestWindow(bool* p_opened)
     if (no_collapse)  window_flags |= ImGuiWindowFlags_NoCollapse;
     if (!no_menu)     window_flags |= ImGuiWindowFlags_MenuBar;
     ImGui::SetNextWindowSize(ImVec2(550,680), ImGuiSetCond_FirstUseEver);
-    if (!ImGui::Begin("ImGui Demo", p_opened, window_flags))
+    if (!ImGui::Begin("ImGui Demo", p_open, window_flags))
     {
         // Early out if the window is collapsed, as an optimization.
         ImGui::End();
@@ -293,12 +293,12 @@ void ImGui::ShowTestWindow(bool* p_opened)
                     ImGuiTreeNodeFlags node_flags = ((selection_mask & (1 << i)) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
                     if (i >= 3)
                         node_flags |= ImGuiTreeNodeFlags_AlwaysOpen;
-                    bool opened = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable %s %d", (i >= 3) ? "Leaf" : "Node", i);
+                    bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable %s %d", (i >= 3) ? "Leaf" : "Node", i);
                     if (ImGui::IsItemClicked()) 
                         node_clicked = i;
-                    if (opened)
+                    if (node_open)
                     {
-                        ImGui::Text("Blah blah");
+                        ImGui::Text("Selectable Blah blah");
                         ImGui::Text("Blah blah");
                         ImGui::TreePop();
                     }
@@ -1046,9 +1046,9 @@ void ImGui::ShowTestWindow(bool* p_opened)
             if (ImGui::TreeNode("Node##1")) { for (int i = 0; i < 6; i++) ImGui::BulletText("Item %d..", i); ImGui::TreePop(); }    // Dummy tree data
 
             ImGui::AlignFirstTextHeightToWidgets();         // Vertically align text node a bit lower so it'll be vertically centered with upcoming widget. Otherwise you can use SmallButton (smaller fit).
-            bool tree_opened = ImGui::TreeNode("Node##2");  // Common mistake to avoid: if we want to SameLine after TreeNode we need to do it before we add child content.
+            bool node_open = ImGui::TreeNode("Node##2");  // Common mistake to avoid: if we want to SameLine after TreeNode we need to do it before we add child content.
             ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##2");
-            if (tree_opened) { for (int i = 0; i < 6; i++) ImGui::BulletText("Item %d..", i); ImGui::TreePop(); }   // Dummy tree data
+            if (node_open) { for (int i = 0; i < 6; i++) ImGui::BulletText("Item %d..", i); ImGui::TreePop(); }   // Dummy tree data
 
             // Bullet
             ImGui::Button("Button##3");
@@ -1437,9 +1437,9 @@ void ImGui::ShowTestWindow(bool* p_opened)
             ImGui::TreePop();
         }
 
-        bool node_opened = ImGui::TreeNode("Tree within single cell");
+        bool node_open = ImGui::TreeNode("Tree within single cell");
         ImGui::SameLine(); ShowHelpMarker("NB: Tree node must be poped before ending the cell.\nThere's no storage of state per-cell.");
-        if (node_opened)
+        if (node_open)
         {
             ImGui::Columns(2, "tree items");
             ImGui::Separator();
@@ -1766,9 +1766,9 @@ static void ShowExampleMenuFile()
     if (ImGui::MenuItem("Quit", "Alt+F4")) {}
 }
 
-static void ShowExampleAppAutoResize(bool* opened)
+static void ShowExampleAppAutoResize(bool* p_open)
 {
-    if (!ImGui::Begin("Example: Auto-resizing window", opened, ImGuiWindowFlags_AlwaysAutoResize))
+    if (!ImGui::Begin("Example: Auto-resizing window", p_open, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::End();
         return;
@@ -1782,10 +1782,10 @@ static void ShowExampleAppAutoResize(bool* opened)
     ImGui::End();
 }
 
-static void ShowExampleAppFixedOverlay(bool* opened)
+static void ShowExampleAppFixedOverlay(bool* p_open)
 {
     ImGui::SetNextWindowPos(ImVec2(10,10));
-    if (!ImGui::Begin("Example: Fixed Overlay", opened, ImVec2(0,0), 0.3f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings))
+    if (!ImGui::Begin("Example: Fixed Overlay", p_open, ImVec2(0,0), 0.3f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings))
     {
         ImGui::End();
         return;
@@ -1796,9 +1796,9 @@ static void ShowExampleAppFixedOverlay(bool* opened)
     ImGui::End();
 }
 
-static void ShowExampleAppManipulatingWindowTitle(bool* opened)
+static void ShowExampleAppManipulatingWindowTitle(bool* p_open)
 {
-    (void)opened;
+    (void)p_open;
 
     // By default, Windows are uniquely identified by their title.
     // You can use the "##" and "###" markers to manipulate the display/ID. Read FAQ at the top of this file!
@@ -1823,10 +1823,10 @@ static void ShowExampleAppManipulatingWindowTitle(bool* opened)
     ImGui::End();
 }
 
-static void ShowExampleAppCustomRendering(bool* opened)
+static void ShowExampleAppCustomRendering(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(350,560), ImGuiSetCond_FirstUseEver);
-    if (!ImGui::Begin("Example: Custom rendering", opened))
+    if (!ImGui::Begin("Example: Custom rendering", p_open))
     {
         ImGui::End();
         return;
@@ -1975,10 +1975,10 @@ struct ExampleAppConsole
         ScrollToBottom = true;
     }
 
-    void    Draw(const char* title, bool* opened)
+    void    Draw(const char* title, bool* p_open)
     {
         ImGui::SetNextWindowSize(ImVec2(520,600), ImGuiSetCond_FirstUseEver);
-        if (!ImGui::Begin(title, opened))
+        if (!ImGui::Begin(title, p_open))
         {
             ImGui::End();
             return;
@@ -2191,10 +2191,10 @@ struct ExampleAppConsole
     }
 };
 
-static void ShowExampleAppConsole(bool* opened)
+static void ShowExampleAppConsole(bool* p_open)
 {
     static ExampleAppConsole console;
-    console.Draw("Example: Console", opened);
+    console.Draw("Example: Console", p_open);
 }
 
 // Usage:
@@ -2223,10 +2223,10 @@ struct ExampleAppLog
         ScrollToBottom = true;
     }
 
-    void    Draw(const char* title, bool* p_opened = NULL)
+    void    Draw(const char* title, bool* p_open = NULL)
     {
         ImGui::SetNextWindowSize(ImVec2(500,400), ImGuiSetCond_FirstUseEver);
-        ImGui::Begin(title, p_opened);
+        ImGui::Begin(title, p_open);
         if (ImGui::Button("Clear")) Clear();
         ImGui::SameLine();
         bool copy = ImGui::Button("Copy");
@@ -2261,7 +2261,7 @@ struct ExampleAppLog
     }
 };
 
-static void ShowExampleAppLog(bool* opened)
+static void ShowExampleAppLog(bool* p_open)
 {
     static ExampleAppLog log;
 
@@ -2275,19 +2275,19 @@ static void ShowExampleAppLog(bool* opened)
         last_time = time;
     }
 
-    log.Draw("Example: Log", opened);
+    log.Draw("Example: Log", p_open);
 }
 
-static void ShowExampleAppLayout(bool* opened)
+static void ShowExampleAppLayout(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(500, 440), ImGuiSetCond_FirstUseEver);
-    if (ImGui::Begin("Example: Layout", opened, ImGuiWindowFlags_MenuBar))
+    if (ImGui::Begin("Example: Layout", p_open, ImGuiWindowFlags_MenuBar))
     {
         if (ImGui::BeginMenuBar())
         {
             if (ImGui::BeginMenu("File"))
             {
-                if (ImGui::MenuItem("Close")) *opened = false;
+                if (ImGui::MenuItem("Close")) *p_open = false;
                 ImGui::EndMenu();
             }
             ImGui::EndMenuBar();
@@ -2323,10 +2323,10 @@ static void ShowExampleAppLayout(bool* opened)
     ImGui::End();
 }
 
-static void ShowExampleAppPropertyEditor(bool* opened)
+static void ShowExampleAppPropertyEditor(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(430,450), ImGuiSetCond_FirstUseEver);
-    if (!ImGui::Begin("Example: Property editor", opened))
+    if (!ImGui::Begin("Example: Property editor", p_open))
     {
         ImGui::End();
         return;
@@ -2344,12 +2344,12 @@ static void ShowExampleAppPropertyEditor(bool* opened)
         {
             ImGui::PushID(uid);                      // Use object uid as identifier. Most commonly you could also use the object pointer as a base ID.
             ImGui::AlignFirstTextHeightToWidgets();  // Text and Tree nodes are less high than regular widgets, here we add vertical spacing to make the tree lines equal high.
-            bool is_opened = ImGui::TreeNode("Object", "%s_%u", prefix, uid);
+            bool node_open = ImGui::TreeNode("Object", "%s_%u", prefix, uid);
             ImGui::NextColumn();
             ImGui::AlignFirstTextHeightToWidgets();
             ImGui::Text("my sailor is rich");
             ImGui::NextColumn();
-            if (is_opened)
+            if (node_open)
             {
                 static float dummy_members[8] = { 0.0f,0.0f,1.0f,3.1416f,100.0f,999.0f };
                 for (int i = 0; i < 8; i++)
@@ -2395,10 +2395,10 @@ static void ShowExampleAppPropertyEditor(bool* opened)
     ImGui::End();
 }
 
-static void ShowExampleAppLongText(bool* opened)
+static void ShowExampleAppLongText(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(520,600), ImGuiSetCond_FirstUseEver);
-    if (!ImGui::Begin("Example: Long text display", opened))
+    if (!ImGui::Begin("Example: Long text display", p_open))
     {
         ImGui::End();
         return;
