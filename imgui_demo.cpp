@@ -217,47 +217,6 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Fonts", "Fonts (%d)", ImGui::GetIO().Fonts->Fonts.Size))
-        {
-            ImGui::SameLine(); ShowHelpMarker("Tip: Load fonts with io.Fonts->AddFontFromFileTTF()\nbefore calling io.Fonts->GetTex* functions.");
-            ImFontAtlas* atlas = ImGui::GetIO().Fonts;
-            if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
-            {
-                ImGui::Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0,0), ImVec2(1,1), ImColor(255,255,255,255), ImColor(255,255,255,128));
-                ImGui::TreePop();
-            }
-            ImGui::PushItemWidth(100);
-            for (int i = 0; i < atlas->Fonts.Size; i++)
-            {
-                ImFont* font = atlas->Fonts[i];
-                ImGui::BulletText("Font %d: \'%s\', %.2f px, %d glyphs", i, font->ConfigData ? font->ConfigData[0].Name : "", font->FontSize, font->Glyphs.Size);
-                ImGui::TreePush((void*)(intptr_t)i);
-                if (i > 0) { ImGui::SameLine(); if (ImGui::SmallButton("Set as default")) { atlas->Fonts[i] = atlas->Fonts[0]; atlas->Fonts[0] = font; } }
-                ImGui::PushFont(font);
-                ImGui::Text("The quick brown fox jumps over the lazy dog");
-                ImGui::PopFont();
-                if (ImGui::TreeNode("Details"))
-                {
-                    ImGui::DragFloat("font scale", &font->Scale, 0.005f, 0.3f, 2.0f, "%.1f");             // scale only this font
-                    ImGui::Text("Ascent: %f, Descent: %f, Height: %f", font->Ascent, font->Descent, font->Ascent - font->Descent);
-                    ImGui::Text("Fallback character: '%c' (%d)", font->FallbackChar, font->FallbackChar);
-                    for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
-                    {
-                        ImFontConfig* cfg = &font->ConfigData[config_i];
-                        ImGui::BulletText("Input %d: \'%s\'\nOversample: (%d,%d), PixelSnapH: %d", config_i, cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH);
-                    }
-                    ImGui::TreePop();
-                }
-                ImGui::TreePop();
-            }
-            static float window_scale = 1.0f;
-            ImGui::DragFloat("this window scale", &window_scale, 0.005f, 0.3f, 2.0f, "%.1f");              // scale only this window
-            ImGui::DragFloat("global scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.1f"); // scale everything
-            ImGui::PopItemWidth();
-            ImGui::SetWindowFontScale(window_scale);
-            ImGui::TreePop();
-        }
-
         if (ImGui::TreeNode("Logging"))
         {
             ImGui::TextWrapped("The logging API redirects all text output so you can easily capture the content of a window or a block. Tree nodes can be automatically expanded. You can also call ImGui::LogText() to output directly to the log without a visual output.");
@@ -1682,6 +1641,47 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::PopItemWidth();
         ImGui::EndChild();
 
+        ImGui::TreePop();
+    }
+
+    if (ImGui::TreeNode("Fonts", "Fonts (%d)", ImGui::GetIO().Fonts->Fonts.Size))
+    {
+        ImGui::SameLine(); ShowHelpMarker("Tip: Load fonts with io.Fonts->AddFontFromFileTTF()\nbefore calling io.Fonts->GetTex* functions.");
+        ImFontAtlas* atlas = ImGui::GetIO().Fonts;
+        if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
+        {
+            ImGui::Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0,0), ImVec2(1,1), ImColor(255,255,255,255), ImColor(255,255,255,128));
+            ImGui::TreePop();
+        }
+        ImGui::PushItemWidth(100);
+        for (int i = 0; i < atlas->Fonts.Size; i++)
+        {
+            ImFont* font = atlas->Fonts[i];
+            ImGui::BulletText("Font %d: \'%s\', %.2f px, %d glyphs", i, font->ConfigData ? font->ConfigData[0].Name : "", font->FontSize, font->Glyphs.Size);
+            ImGui::TreePush((void*)(intptr_t)i);
+            if (i > 0) { ImGui::SameLine(); if (ImGui::SmallButton("Set as default")) { atlas->Fonts[i] = atlas->Fonts[0]; atlas->Fonts[0] = font; } }
+            ImGui::PushFont(font);
+            ImGui::Text("The quick brown fox jumps over the lazy dog");
+            ImGui::PopFont();
+            if (ImGui::TreeNode("Details"))
+            {
+                ImGui::DragFloat("font scale", &font->Scale, 0.005f, 0.3f, 2.0f, "%.1f");             // scale only this font
+                ImGui::Text("Ascent: %f, Descent: %f, Height: %f", font->Ascent, font->Descent, font->Ascent - font->Descent);
+                ImGui::Text("Fallback character: '%c' (%d)", font->FallbackChar, font->FallbackChar);
+                for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
+                {
+                    ImFontConfig* cfg = &font->ConfigData[config_i];
+                    ImGui::BulletText("Input %d: \'%s\'\nOversample: (%d,%d), PixelSnapH: %d", config_i, cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH);
+                }
+                ImGui::TreePop();
+            }
+            ImGui::TreePop();
+        }
+        static float window_scale = 1.0f;
+        ImGui::DragFloat("this window scale", &window_scale, 0.005f, 0.3f, 2.0f, "%.1f");              // scale only this window
+        ImGui::DragFloat("global scale", &ImGui::GetIO().FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.1f"); // scale everything
+        ImGui::PopItemWidth();
+        ImGui::SetWindowFontScale(window_scale);
         ImGui::TreePop();
     }
 
