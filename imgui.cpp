@@ -20,12 +20,13 @@
    - How can I help?
    - How do I update to a newer version of ImGui?
    - What is ImTextureID and how do I display an image?
-   - Can I have multiple widgets with the same label? Can I have widget without a label? (Yes) / A primer on the use of labels/IDs in ImGui.
    - I integrated ImGui in my engine and the text or lines are blurry..
    - I integrated ImGui in my engine and some elements are clipping or disappearing when I move windows around..
+   - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on the purpose of labels/IDs.
    - How can I load a different font than the default?
    - How can I load multiple fonts?
    - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
+   - How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
  - ISSUES & TODO-LIST
  - CODE
 
@@ -278,6 +279,13 @@
     ImGui will generate the geometry and draw calls using the ImTextureID that you passed and which your renderer can use.
     It is your responsibility to get textures uploaded to your GPU.
 
+ Q: I integrated ImGui in my engine and the text or lines are blurry..
+ A: In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
+    Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
+
+ Q: I integrated ImGui in my engine and some elements are clipping or disappearing when I move windows around..
+ A: Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1,y1,x2,y2) and NOT as (x1,y1,width,height).
+
  Q: Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
  A: Yes. A primer on the use of labels/IDs in ImGui..
 
@@ -371,13 +379,6 @@
       e.g. when displaying a single object that may change over time (1-1 relationship), using a static string as ID will preserve your node open/closed state when the targeted object change.
       e.g. when displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state differently. experiment and see what makes more sense!
 
- Q: I integrated ImGui in my engine and the text or lines are blurry..
- A: In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
-    Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
-
- Q: I integrated ImGui in my engine and some elements are clipping or disappearing when I move windows around..
- A: Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1,y1,x2,y2) and NOT as (x1,y1,width,height).
-
  Q: How can I load a different font than the default? (default is an embedded version of ProggyClean.ttf, rendered at size 13)
  A: Use the font atlas to load the TTF file you want:
 
@@ -423,6 +424,10 @@
       io.ImeWindowHandle = MY_HWND;      // To input using Microsoft IME, give ImGui the hwnd of your application
 
     As for text input, depends on you passing the right character code to io.AddInputCharacter(). The example applications do that.
+
+ Q: How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
+ A: The easiest way is to create a dummy window. Call Begin() with NoTitleBar|NoResize|NoMove|NoScrollbar|NoSavedSettings|NoInputs flag, zero background alpha, 
+    then retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
 
  - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will run the block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
@@ -565,6 +570,7 @@
  - style editor: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space? (#438)
  - style editor: color child window height expressed in multiple of line height.
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
+ - drawlist: move Font, FontSize, FontTexUvWhitePixel inside ImDrawList and make it self-contained (apart from drawing settings?)
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
  - examples: directx9: save/restore device state more thoroughly.
  - examples: window minimize, maximize (#583)
