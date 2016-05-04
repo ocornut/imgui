@@ -8911,7 +8911,7 @@ void ImGui::BeginGroup()
     group_data.BackupLogLinePosY = window->DC.LogLinePosY;
     group_data.AdvanceCursor = true;
 
-    window->DC.IndentX = window->DC.CursorPos.x - window->Pos.x;
+    window->DC.IndentX = window->DC.CursorPos.x - window->Pos.x - window->DC.ColumnsOffsetX;
     window->DC.CursorMaxPos = window->DC.CursorPos;
     window->DC.CurrentLineHeight = 0.0f;
     window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
