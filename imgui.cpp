@@ -2007,8 +2007,35 @@ void ImGui::NewFrame()
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = false;
     g.ActiveIdIsJustActivated = false;
-    if (!g.ActiveId)
+
+    // Handle user moving window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
+    if (g.MovedWindowMoveId && g.MovedWindowMoveId == g.ActiveId)
+    {
+        KeepAliveID(g.MovedWindowMoveId);
+        IM_ASSERT(g.MovedWindow && g.MovedWindow->RootWindow);
+        IM_ASSERT(g.MovedWindow->RootWindow->MoveID == g.MovedWindowMoveId);
+        if (g.IO.MouseDown[0])
+        {
+            if (!(g.MovedWindow->Flags & ImGuiWindowFlags_NoMove))
+            {
+                g.MovedWindow->PosFloat += g.IO.MouseDelta;
+                if (!(g.MovedWindow->Flags & ImGuiWindowFlags_NoSavedSettings))
+                    MarkSettingsDirty();
+            }
+            FocusWindow(g.MovedWindow);
+        }
+        else
+        {
+            SetActiveID(0);
+            g.MovedWindow = NULL;
+            g.MovedWindowMoveId = 0;
+        }
+    }
+    else
+    {
         g.MovedWindow = NULL;
+        g.MovedWindowMoveId = 0;
+    }
 
     // Delay saving settings so we don't spam disk too much
     if (g.SettingsDirtyTimer > 0.0f)
@@ -2019,11 +2046,11 @@ void ImGui::NewFrame()
     }
 
     // Find the window we are hovering. Child windows can extend beyond the limit of their parent so we need to derive HoveredRootWindow from HoveredWindow
-    g.HoveredWindow = FindHoveredWindow(g.IO.MousePos, false);
+    g.HoveredWindow = g.MovedWindow ? g.MovedWindow : FindHoveredWindow(g.IO.MousePos, false);
     if (g.HoveredWindow && (g.HoveredWindow->Flags & ImGuiWindowFlags_ChildWindow))
         g.HoveredRootWindow = g.HoveredWindow->RootWindow;
     else
-        g.HoveredRootWindow = FindHoveredWindow(g.IO.MousePos, true);
+        g.HoveredRootWindow = g.MovedWindow ? g.MovedWindow->RootWindow : FindHoveredWindow(g.IO.MousePos, true);
 
     if (ImGuiWindow* modal_window = GetFrontMostModalRootWindow())
     {
@@ -2420,8 +2447,6 @@ void ImGui::EndFrame()
     ImGui::End();
 
     // Click to focus window and start moving (after we're done with all our widgets)
-    if (!g.ActiveId)
-        g.MovedWindow = NULL;
     if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
     {
         if (!(g.FocusedWindow && !g.FocusedWindow->WasActive && g.FocusedWindow->Active)) // Unless we just made a popup appear
@@ -2432,7 +2457,8 @@ void ImGui::EndFrame()
                 if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
                 {
                     g.MovedWindow = g.HoveredWindow;
-                    SetActiveID(g.HoveredRootWindow->MoveID, g.HoveredRootWindow);
+                    g.MovedWindowMoveId = g.HoveredRootWindow->MoveID;
+                    SetActiveID(g.MovedWindowMoveId, g.HoveredRootWindow);
                 }
             }
             else if (g.FocusedWindow != NULL && GetFrontMostModalRootWindow() == NULL)
@@ -2842,6 +2868,7 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
 }
 
 // Find window given position, search front-to-back
+// FIXME: Note that we have a lag here because WindowRectClipped is updated in Begin() so windows moved by user via SetWindowPos() and not SetNextWindowPos() will have that rectangle lagging by a frame at the time FindHoveredWindow() is called, aka before the next Begin(). Moving window thankfully isn't affected.
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 {
     ImGuiState& g = *GImGui;
@@ -2856,7 +2883,7 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
             continue;
 
         // Using the clipped AABB so a child window will typically be clipped by its parent.
-        ImRect bb(window->ClippedWindowRect.Min - g.Style.TouchExtraPadding, window->ClippedWindowRect.Max + g.Style.TouchExtraPadding);
+        ImRect bb(window->WindowRectClipped.Min - g.Style.TouchExtraPadding, window->WindowRectClipped.Max + g.Style.TouchExtraPadding);
         if (bb.Contains(pos))
             return window;
     }
@@ -3884,28 +3911,6 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 window->PosFloat = g.IO.MousePos + ImVec2(2,2); // If there's not enough room, for tooltip we prefer avoiding the cursor at all cost even if it means that part of the tooltip won't be visible.
         }
 
-        // User moving window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
-        KeepAliveID(window->MoveID);
-        if (g.ActiveId == window->MoveID)
-        {
-            if (g.IO.MouseDown[0])
-            {
-                if (!(flags & ImGuiWindowFlags_NoMove))
-                {
-                    window->PosFloat += g.IO.MouseDelta;
-                    if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                        MarkSettingsDirty();
-                }
-                IM_ASSERT(g.MovedWindow != NULL);
-                FocusWindow(g.MovedWindow);
-            }
-            else
-            {
-                SetActiveID(0);
-                g.MovedWindow = NULL;   // Not strictly necessary but doing it for sanity.
-            }
-        }
-
         // Clamp position so it stays visible
         if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
         {
@@ -4120,8 +4125,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         }
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
-        window->ClippedWindowRect = window->Rect();
-        window->ClippedWindowRect.Clip(window->ClipRect);
+        window->WindowRectClipped = window->Rect();
+        window->WindowRectClipped.Clip(window->ClipRect);
 
         // Pressing CTRL+C while holding on a window copy its content to the clipboard
         // This works but 1. doesn't handle multiple Begin/End pairs, 2. recursing into another Begin/End pair - so we need to work that out and add better logging scope.
@@ -4158,7 +4163,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         window->Collapsed = parent_window && parent_window->Collapsed;
 
         if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
-            window->Collapsed |= (window->ClippedWindowRect.Min.x >= window->ClippedWindowRect.Max.x || window->ClippedWindowRect.Min.y >= window->ClippedWindowRect.Max.y);
+            window->Collapsed |= (window->WindowRectClipped.Min.x >= window->WindowRectClipped.Max.x || window->WindowRectClipped.Min.y >= window->WindowRectClipped.Max.y);
 
         // We also hide the window from rendering because we've already added its border to the command list.
         // (we could perform the check earlier in the function but it is simpler at this point)

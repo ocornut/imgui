@@ -375,7 +375,8 @@ struct ImGuiState
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
     bool                    ActiveIdAllowOverlap;               // Set only by active widget
     ImGuiWindow*            ActiveIdWindow;
-    ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window. Pointer is only valid if ActiveID is the "#MOVE" identifier of a window.
+    ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window.
+    ImGuiID                 MovedWindowMoveId;                  // == MovedWindow->RootWindow->MoveId
     ImVector<ImGuiIniData>  Settings;                           // .ini Settings
     float                   SettingsDirtyTimer;                 // Save .ini settinngs on disk when time reaches zero
     ImVector<ImGuiColMod>   ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
@@ -460,6 +461,7 @@ struct ImGuiState
         ActiveIdAllowOverlap = false;
         ActiveIdWindow = NULL;
         MovedWindow = NULL;
+        MovedWindowMoveId = 0;
         SettingsDirtyTimer = 0.0f;
 
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
@@ -627,7 +629,7 @@ struct IMGUI_API ImGuiWindow
     ImGuiDrawContext        DC;                                 // Temporary per-window data, reset at the beginning of the frame
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
     ImRect                  ClipRect;                           // = DrawList->clip_rect_stack.back(). Scissoring / clipping rectangle. x1, y1, x2, y2.
-    ImRect                  ClippedWindowRect;                  // = ClipRect just after setup in Begin()
+    ImRect                  WindowRectClipped;                  // = WindowRect just after setup in Begin(). == window->Rect() for root window.
     int                     LastFrameActive;
     float                   ItemWidthDefault;
     ImGuiSimpleColumns      MenuColumns;                        // Simplified columns storage for menu items
