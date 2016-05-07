@@ -6274,7 +6274,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
                 {
                     // Positive: rescale to the positive range before powering
                     float a;
-                    if (fabsf(linear_zero_pos - 1.0f) > 1.e-6)
+                    if (fabsf(linear_zero_pos - 1.0f) > 1.e-6f)
                         a = (normalized_pos - linear_zero_pos) / (1.0f - linear_zero_pos);
                     else
                         a = normalized_pos;
