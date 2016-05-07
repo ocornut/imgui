@@ -70,7 +70,7 @@ namespace ImGuiStb
 // Context
 //-----------------------------------------------------------------------------
 
-extern IMGUI_API ImGuiState*  GImGui;     // current implicit ImGui context pointer
+extern IMGUI_API ImGuiContext*  GImGui;     // current implicit ImGui context pointer
 
 //-----------------------------------------------------------------------------
 // Helpers
@@ -344,7 +344,7 @@ struct ImGuiPopupRef
 };
 
 // Main state for ImGui
-struct ImGuiState
+struct ImGuiContext
 {
     bool                    Initialized;
     ImGuiIO                 IO;
@@ -436,7 +436,7 @@ struct ImGuiState
     int                     CaptureKeyboardNextFrame;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
 
-    ImGuiState()
+    ImGuiContext()
     {
         Initialized = false;
         Font = NULL;
@@ -672,8 +672,8 @@ namespace ImGui
     // If this ever crash because g.CurrentWindow is NULL it means that either
     // - ImGui::NewFrame() has never been called, which is illegal.
     // - You are calling ImGui functions after ImGui::Render() and before the next ImGui::NewFrame(), which is also illegal.
-    inline    ImGuiWindow*  GetCurrentWindowRead()      { ImGuiState& g = *GImGui; return g.CurrentWindow; }
-    inline    ImGuiWindow*  GetCurrentWindow()          { ImGuiState& g = *GImGui; g.CurrentWindow->Accessed = true; return g.CurrentWindow; }
+    inline    ImGuiWindow*  GetCurrentWindowRead()      { ImGuiContext& g = *GImGui; return g.CurrentWindow; }
+    inline    ImGuiWindow*  GetCurrentWindow()          { ImGuiContext& g = *GImGui; g.CurrentWindow->Accessed = true; return g.CurrentWindow; }
     IMGUI_API ImGuiWindow*  GetParentWindow();
     IMGUI_API ImGuiWindow*  FindWindowByName(const char* name);
     IMGUI_API void          FocusWindow(ImGuiWindow* window);
