@@ -378,7 +378,7 @@ struct ImGuiState
     ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window.
     ImGuiID                 MovedWindowMoveId;                  // == MovedWindow->RootWindow->MoveId
     ImVector<ImGuiIniData>  Settings;                           // .ini Settings
-    float                   SettingsDirtyTimer;                 // Save .ini settinngs on disk when time reaches zero
+    float                   SettingsDirtyTimer;                 // Save .ini Settings on disk when time reaches zero
     ImVector<ImGuiColMod>   ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
     ImVector<ImGuiStyleMod> StyleModifiers;                     // Stack for PushStyleVar()/PopStyleVar()
     ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont()
@@ -417,7 +417,7 @@ struct ImGuiState
     float                   DragSpeedDefaultRatio;              // If speed == 0.0f, uses (max-min) * DragSpeedDefaultRatio
     float                   DragSpeedScaleSlow;
     float                   DragSpeedScaleFast;
-    ImVec2                  ScrollbarClickDeltaToGrabCenter;   // Distance between mouse and center of grab box, normalized in parent space. Use storage?
+    ImVec2                  ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
     char                    Tooltip[1024];
     char*                   PrivateClipboard;                   // If no custom clipboard handler is defined
     ImVec2                  OsImePosRequest, OsImePosSet;       // Cursor position request & last passed to the OS Input Method Editor

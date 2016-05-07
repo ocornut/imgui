@@ -158,7 +158,7 @@ namespace ImGui
     IMGUI_API void          SetScrollY(float scroll_y);                                         // set scrolling amount [0..GetScrollMaxY()]
     IMGUI_API void          SetScrollHere(float center_y_ratio = 0.5f);                         // adjust scrolling amount to make current cursor position visible. center_y_ratio=0.0: top, 0.5: center, 1.0: bottom.
     IMGUI_API void          SetScrollFromPosY(float pos_y, float center_y_ratio = 0.5f);        // adjust scrolling amount to make given position valid. use GetCursorPos() or GetCursorStartPos()+offset to get valid positions.
-    IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget
+    IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget. Use negative 'offset' to access previous widgets.
     IMGUI_API void          SetStateStorage(ImGuiStorage* tree);                                // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it)
     IMGUI_API ImGuiStorage* GetStateStorage();
 
@@ -948,7 +948,7 @@ struct ImGuiTextBuffer
     IMGUI_API void      appendv(const char* fmt, va_list args);
 };
 
-// Helper: Key->value storage
+// Helper: Simple Key->value storage
 // - Store collapse state for a tree (Int 0/1)
 // - Store color edit options (Int using values in ImGuiColorEditMode enum).
 // - Custom user storage for temporary values.
@@ -956,6 +956,7 @@ struct ImGuiTextBuffer
 // Declare your own storage if:
 // - You want to manipulate the open/close state of a particular sub-tree in your interface (tree node uses Int 0/1 to store their state).
 // - You want to store custom debug data easily without adding or editing structures in your code.
+// Types are NOT stored, so it is up to you to make sure your Key don't collide with different types.
 struct ImGuiStorage
 {
     struct Pair
@@ -970,7 +971,7 @@ struct ImGuiStorage
 
     // - Get***() functions find pair, never add/allocate. Pairs are sorted so a query is O(log N)
     // - Set***() functions find pair, insertion on demand if missing.
-    // - Sorted insertion is costly but should amortize. A typical frame shouldn't need to insert any new pair.
+    // - Sorted insertion is costly, paid once. A typical frame shouldn't need to insert any new pair.
     IMGUI_API void      Clear();
     IMGUI_API int       GetInt(ImGuiID key, int default_val = 0) const;
     IMGUI_API void      SetInt(ImGuiID key, int val);

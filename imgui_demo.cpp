@@ -1030,9 +1030,11 @@ void ImGui::ShowTestWindow(bool* p_open)
             static bool track = true;
             static int track_line = 50, scroll_to_px = 200;
             ImGui::Checkbox("Track", &track);
+            ImGui::PushItemWidth(100);
             ImGui::SameLine(130); track |= ImGui::DragInt("##line", &track_line, 0.25f, 0, 99, "Line %.0f");
             bool scroll_to = ImGui::Button("Scroll To");
             ImGui::SameLine(130); scroll_to |= ImGui::DragInt("##pos_y", &scroll_to_px, 1.00f, 0, 9999, "y = %.0f px");
+            ImGui::PopItemWidth();
             if (scroll_to) track = false;
 
             for (int i = 0; i < 5; i++)
