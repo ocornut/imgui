@@ -11,9 +11,9 @@
 
 // DirectX
 #include <d3d11.h>
-#include <d3dcompiler.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
+#include <string>
 
 // Data
 static INT64                    g_Time = 0;
@@ -332,12 +332,27 @@ static void ImGui_ImplDX11_CreateFontsTexture()
     }
 }
 
+typedef HRESULT (__stdcall *D3DCompile_t)(LPCVOID, SIZE_T, LPCSTR, D3D_SHADER_MACRO*, ID3DInclude*, LPCSTR, LPCSTR, UINT, UINT, ID3DBlob**, ID3DBlob*);
+
 bool    ImGui_ImplDX11_CreateDeviceObjects()
 {
     if (!g_pd3dDevice)
         return false;
     if (g_pFontSampler)
         ImGui_ImplDX11_InvalidateDeviceObjects();
+
+	HMODULE hDll = NULL;
+	D3DCompile_t D3DCompile = NULL;
+	int i = 47;
+	std::wstring m;
+	while((!hDll || !D3DCompile) && i > 30){
+		m = L"d3dcompiler_" + std::to_wstring(i) + L".dll";
+		hDll = LoadLibrary(m.c_str());
+		if(hDll){
+			D3DCompile = (D3DCompile_t)GetProcAddress(hDll, "D3DCompile");
+		}
+		i--;
+	}
 
     // Create the vertex shader
     {
