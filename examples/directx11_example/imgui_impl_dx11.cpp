@@ -9,9 +9,11 @@
 #include <imgui.h>
 #include "imgui_impl_dx11.h"
 
+// For sprintf
+#include <stdio.h>
+
 // DirectX
 #include <d3d11.h>
-#include <d3dcompiler.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
@@ -338,12 +340,30 @@ static void ImGui_ImplDX11_CreateFontsTexture()
     }
 }
 
+typedef HRESULT (__stdcall *D3DCompile_t)(LPCVOID, SIZE_T, LPCSTR, D3D_SHADER_MACRO*, ID3DInclude*, LPCSTR, LPCSTR, UINT, UINT, ID3DBlob**, ID3DBlob*);
+
 bool    ImGui_ImplDX11_CreateDeviceObjects()
 {
     if (!g_pd3dDevice)
         return false;
     if (g_pFontSampler)
         ImGui_ImplDX11_InvalidateDeviceObjects();
+
+    // Detect which d3dcompiler_XX.dll is present in the system and grab a pointer to D3DCompile.
+    // Without this, you must link d3dcompiler.lib with the project.
+    D3DCompile_t D3DCompile = NULL;
+    {
+        char dllBuffer[20];
+        for (int i = 47; i > 30 && !D3DCompile; i--)
+        {
+            sprintf(dllBuffer, "d3dcompiler_%d.dll", i);
+            HMODULE hDll = LoadLibraryA(dllBuffer);
+            if (hDll)
+                D3DCompile = (D3DCompile_t)GetProcAddress(hDll, "D3DCompile");
+        }
+        if (!D3DCompile)
+            return false;
+    }
 
     // Create the vertex shader
     {
