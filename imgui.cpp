@@ -153,6 +153,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2016/05/07 (1.49) - removed confusing set of GetInternalState(), GetInternalStateSize(), SetInternalState() functions. Now using CreateContext(), DestroyContext(), GetCurrentContext(), SetCurrentContext().
  - 2016/05/02 (1.49) - renamed SetNextTreeNodeOpened() to SetNextTreeNodeOpen(), no redirection.
  - 2016/05/01 (1.49) - obsoleted old signature of CollapsingHeader(const char* label, const char* str_id = NULL, bool display_frame = true, bool default_open = false) as extra parameters were badly designed and rarely used. You can replace the "default_open = true" flag in new API with CollapsingHeader(label, ImGuiTreeNodeFlags_DefaultOpen).
  - 2016/04/26 (1.49) - changed ImDrawList::PushClipRect(ImVec4 rect) to ImDraw::PushClipRect(Imvec2 min,ImVec2 max,bool intersect_with_current_clip_rect=false). Note that higher-level ImGui::PushClipRect() is preferable because it will clip at logic/widget level, whereas ImDrawList::PushClipRect() only affect your renderer.
@@ -694,12 +695,12 @@ static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 //-----------------------------------------------------------------------------
 
 // We access everything through this pointer (always assumed to be != NULL)
-// You can swap the pointer to a different context by calling ImGui::SetInternalState()
-static ImGuiState       GImDefaultState;
-ImGuiState*             GImGui = &GImDefaultState;
+// You can swap the pointer to a different context by calling ImGui::SetCurrentContext()
+static ImGuiState       GImDefaultContext;
+ImGuiState*             GImGui = &GImDefaultContext;
 
 // Statically allocated default font atlas. This is merely a maneuver to keep ImFontAtlas definition at the bottom of the .h file (otherwise it'd be inside ImGuiIO)
-// Also we wouldn't be able to new() one at this point, before users may define IO.MemAllocFn.
+// Also we wouldn't be able to new() one at this point, before users have a chance to setup their allocator.
 static ImFontAtlas      GImDefaultFontAtlas;
 
 //-----------------------------------------------------------------------------
@@ -1888,21 +1889,33 @@ const char* ImGui::GetVersion()
 
 // Internal state access - if you want to share ImGui state between modules (e.g. DLL) or allocate it yourself
 // Note that we still point to some static data and members (such as GFontAtlas), so the state instance you end up using will point to the static data within its module
-void* ImGui::GetInternalState()
+ImGuiState* ImGui::GetCurrentContext()
 {
     return GImGui;
 }
 
-size_t ImGui::GetInternalStateSize()
+void ImGui::SetCurrentContext(ImGuiState* ctx)
 {
-    return sizeof(ImGuiState);
+    GImGui = ctx;
 }
 
-void ImGui::SetInternalState(void* state, bool construct)
+ImGuiState* ImGui::CreateContext(void* (*malloc_fn)(size_t), void (*free_fn)(void*))
 {
-    if (construct)
-        IM_PLACEMENT_NEW(state) ImGuiState();
-    GImGui = (ImGuiState*)state;
+    if (!malloc_fn) malloc_fn = malloc;
+    ImGuiState* ctx = (ImGuiState*)malloc_fn(sizeof(ImGuiState));
+    IM_PLACEMENT_NEW(ctx) ImGuiState();
+    ctx->IO.MemAllocFn = malloc_fn;
+    ctx->IO.MemFreeFn = free_fn ? free_fn : free;
+    return ctx;
+}
+
+void ImGui::DestroyContext(ImGuiState* ctx)
+{
+    void (*free_fn)(void*) = ctx->IO.MemFreeFn;
+    ctx->~ImGuiState();
+    free_fn(ctx);
+    if (GImGui == ctx)
+        GImGui = NULL;
 }
 
 ImGuiIO& ImGui::GetIO()

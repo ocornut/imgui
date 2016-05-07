@@ -54,6 +54,7 @@ struct ImGuiTextFilter;             // Parse and apply text filters. In format "
 struct ImGuiTextBuffer;             // Text buffer for logging/accumulating text
 struct ImGuiTextEditCallbackData;   // Shared state of ImGui::InputText() when using custom callbacks (advanced)
 struct ImGuiListClipper;            // Helper to manually clip large list of items
+struct ImGuiState;                  // ImGui context (opaque)
 
 // Enumerations (declared as int for compatibility and to not pollute the top of this file)
 typedef unsigned int ImU32;
@@ -442,11 +443,12 @@ namespace ImGui
     IMGUI_API const char*   GetClipboardText();
     IMGUI_API void          SetClipboardText(const char* text);
 
-    // Internal state/context access - if you want to use multiple ImGui context, or share context between modules (e.g. DLL), or allocate the memory yourself
+    // Internal context access - if you want to use multiple context, share context between modules (e.g. DLL). There is a default context created and active by default.
     IMGUI_API const char*   GetVersion();
-    IMGUI_API void*         GetInternalState();
-    IMGUI_API size_t        GetInternalStateSize();
-    IMGUI_API void          SetInternalState(void* state, bool construct = false);
+    IMGUI_API ImGuiState*   CreateContext(void* (*malloc_fn)(size_t) = NULL, void (*free_fn)(void*) = NULL);
+    IMGUI_API void          DestroyContext(ImGuiState* ctx);
+    IMGUI_API ImGuiState*   GetCurrentContext();
+    IMGUI_API void          SetCurrentContext(ImGuiState* ctx);
 
     // Obsolete (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS

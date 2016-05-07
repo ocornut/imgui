@@ -33,7 +33,6 @@ struct ImGuiTextEditState;
 struct ImGuiIniData;
 struct ImGuiMouseCursorData;
 struct ImGuiPopupRef;
-struct ImGuiState;
 struct ImGuiWindow;
 
 typedef int ImGuiLayoutType;      // enum ImGuiLayoutType_
@@ -71,7 +70,7 @@ namespace ImGuiStb
 // Context
 //-----------------------------------------------------------------------------
 
-extern IMGUI_API ImGuiState*  GImGui;
+extern IMGUI_API ImGuiState*  GImGui;     // current implicit ImGui context pointer
 
 //-----------------------------------------------------------------------------
 // Helpers
@@ -144,7 +143,7 @@ static inline ImVec2 ImFloor(ImVec2 v)                                          
 struct ImPlacementNewDummy {};
 inline void* operator new(size_t, ImPlacementNewDummy, void* ptr) { return ptr; }
 inline void operator delete(void*, ImPlacementNewDummy, void*) {}
-#define IM_PLACEMENT_NEW(_PTR)  new(ImPlacementNewDummy() ,_PTR)
+#define IM_PLACEMENT_NEW(_PTR)  new(ImPlacementNewDummy(), _PTR)
 #endif
 
 //-----------------------------------------------------------------------------
@@ -274,7 +273,7 @@ struct ImGuiColumnData
     //float     IndentX;
 };
 
-// Simple column measurement currently used for MenuItem() only. This is very short-sighted for now and NOT a generic helper.
+// Simple column measurement currently used for MenuItem() only. This is very short-sighted/throw-away code and NOT a generic helper.
 struct IMGUI_API ImGuiSimpleColumns
 {
     int         Count;
@@ -283,9 +282,9 @@ struct IMGUI_API ImGuiSimpleColumns
     float       Pos[8], NextWidths[8];
 
     ImGuiSimpleColumns();
-    void       Update(int count, float spacing, bool clear);
-    float      DeclColumns(float w0, float w1, float w2);
-    float      CalcExtraSpace(float avail_w);
+    void        Update(int count, float spacing, bool clear);
+    float       DeclColumns(float w0, float w1, float w2);
+    float       CalcExtraSpace(float avail_w);
 };
 
 // Internal state of the currently focused/edited text input box
