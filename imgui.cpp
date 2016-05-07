@@ -1313,6 +1313,11 @@ int ImGuiStorage::GetInt(ImU32 key, int default_val) const
     return it->val_i;
 }
 
+bool ImGuiStorage::GetBool(ImU32 key, bool default_val) const
+{
+    return GetInt(key, default_val ? 1 : 0) != 0;
+}
+
 float ImGuiStorage::GetFloat(ImU32 key, float default_val) const
 {
     ImVector<Pair>::iterator it = LowerBound(const_cast<ImVector<ImGuiStorage::Pair>&>(Data), key);
@@ -1336,6 +1341,11 @@ int* ImGuiStorage::GetIntRef(ImGuiID key, int default_val)
     if (it == Data.end() || it->key != key)
         it = Data.insert(it, Pair(key, default_val));
     return &it->val_i;
+}
+
+bool* ImGuiStorage::GetBoolRef(ImGuiID key, bool default_val)
+{
+    return (bool*)GetIntRef(key, default_val ? 1 : 0);
 }
 
 float* ImGuiStorage::GetFloatRef(ImGuiID key, float default_val)
@@ -1364,6 +1374,11 @@ void ImGuiStorage::SetInt(ImU32 key, int val)
         return;
     }
     it->val_i = val;
+}
+
+void ImGuiStorage::SetBool(ImU32 key, bool val)
+{
+    SetInt(key, val ? 1 : 0);
 }
 
 void ImGuiStorage::SetFloat(ImU32 key, float val)
