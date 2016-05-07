@@ -9,11 +9,13 @@
 #include <imgui.h>
 #include "imgui_impl_dx11.h"
 
+// For sprintf
+#include <stdio.h>
+
 // DirectX
 #include <d3d11.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
-#include <string>
 
 // Data
 static INT64                    g_Time = 0;
@@ -341,18 +343,21 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
     if (g_pFontSampler)
         ImGui_ImplDX11_InvalidateDeviceObjects();
 
-	HMODULE hDll = NULL;
-	D3DCompile_t D3DCompile = NULL;
-	int i = 47;
-	std::wstring m;
-	while((!hDll || !D3DCompile) && i > 30){
-		m = L"d3dcompiler_" + std::to_wstring(i) + L".dll";
-		hDll = LoadLibrary(m.c_str());
-		if(hDll){
-			D3DCompile = (D3DCompile_t)GetProcAddress(hDll, "D3DCompile");
-		}
-		i--;
-	}
+    // Detect which d3dcompiler_XX.dll is present in the system and grab a pointer to D3DCompile.
+    // Without this, you must link d3dcompiler.lib with the project.
+    D3DCompile_t D3DCompile = NULL;
+    {
+        char dllBuffer[20];
+        for (int i = 47; i > 30 && !D3DCompile; i--)
+        {
+            sprintf(dllBuffer, "d3dcompiler_%d.dll", i);
+            HMODULE hDll = LoadLibraryA(dllBuffer);
+            if (hDll)
+                D3DCompile = (D3DCompile_t)GetProcAddress(hDll, "D3DCompile");
+        }
+        if (!D3DCompile)
+            return false;
+    }
 
     // Create the vertex shader
     {
