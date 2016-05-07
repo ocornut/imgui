@@ -34,8 +34,8 @@ static ID3D11SamplerState*      g_pFontSampler = NULL;
 static ID3D11ShaderResourceView*g_pFontTextureView = NULL;
 static ID3D11RasterizerState*   g_pRasterizerState = NULL;
 static ID3D11BlendState*        g_pBlendState = NULL;
+static ID3D11DepthStencilState* g_pDepthStencilState = NULL;
 static int                      g_VertexBufferSize = 5000, g_IndexBufferSize = 10000;
-static ID3D11DepthStencilState* g_pDSState = NULL;
 
 struct VERTEX_CONSTANT_BUFFER
 {
@@ -128,6 +128,8 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
         ID3D11BlendState*           BlendState;
         FLOAT                       BlendFactor[4];
         UINT                        SampleMask;
+        UINT                        StencilRef;
+        ID3D11DepthStencilState*    DepthStencilState;
         ID3D11ShaderResourceView*   PSShaderResource;
         ID3D11SamplerState*         PSSampler;
         ID3D11PixelShader*          PS;
@@ -139,8 +141,6 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
         UINT                        IndexBufferOffset, VertexBufferStride, VertexBufferOffset;
         DXGI_FORMAT                 IndexBufferFormat;
         ID3D11InputLayout*          InputLayout;
-        ID3D11DepthStencilState*    DepthStencilState;
-        UINT                        StencilRef;
     };
     BACKUP_DX11_STATE old;
     old.ScissorRectsCount = old.ViewportsCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
@@ -148,6 +148,7 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     ctx->RSGetViewports(&old.ViewportsCount, old.Viewports);
     ctx->RSGetState(&old.RS);
     ctx->OMGetBlendState(&old.BlendState, old.BlendFactor, &old.SampleMask);
+    ctx->OMGetDepthStencilState(&old.DepthStencilState, &old.StencilRef);
     ctx->PSGetShaderResources(0, 1, &old.PSShaderResource);
     ctx->PSGetSamplers(0, 1, &old.PSSampler);
     old.PSInstancesCount = old.VSInstancesCount = 256;
@@ -158,7 +159,6 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     ctx->IAGetIndexBuffer(&old.IndexBuffer, &old.IndexBufferFormat, &old.IndexBufferOffset);
     ctx->IAGetVertexBuffers(0, 1, &old.VertexBuffer, &old.VertexBufferStride, &old.VertexBufferOffset);
     ctx->IAGetInputLayout(&old.InputLayout);
-    ctx->OMGetDepthStencilState(&old.DepthStencilState, &old.StencilRef);
 
     // Setup viewport
     D3D11_VIEWPORT vp;
@@ -185,8 +185,8 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     // Setup render state
     const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
     ctx->OMSetBlendState(g_pBlendState, blend_factor, 0xffffffff);
+    ctx->OMSetDepthStencilState(g_pDepthStencilState, 0);
     ctx->RSSetState(g_pRasterizerState);
-    ctx->OMSetDepthStencilState( g_pDSState, 1 );
 
     // Render command lists
     int vtx_offset = 0;
@@ -218,6 +218,7 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     ctx->RSSetViewports(old.ViewportsCount, old.Viewports);
     ctx->RSSetState(old.RS); if (old.RS) old.RS->Release();
     ctx->OMSetBlendState(old.BlendState, old.BlendFactor, old.SampleMask); if (old.BlendState) old.BlendState->Release();
+    ctx->OMSetDepthStencilState(old.DepthStencilState, old.StencilRef); if (old.DepthStencilState) old.DepthStencilState->Release();
     ctx->PSSetShaderResources(0, 1, &old.PSShaderResource); if (old.PSShaderResource) old.PSShaderResource->Release();
     ctx->PSSetSamplers(0, 1, &old.PSSampler); if (old.PSSampler) old.PSSampler->Release();
     ctx->PSSetShader(old.PS, old.PSInstances, old.PSInstancesCount); if (old.PS) old.PS->Release();
@@ -229,7 +230,6 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     ctx->IASetIndexBuffer(old.IndexBuffer, old.IndexBufferFormat, old.IndexBufferOffset); if (old.IndexBuffer) old.IndexBuffer->Release();
     ctx->IASetVertexBuffers(0, 1, &old.VertexBuffer, &old.VertexBufferStride, &old.VertexBufferOffset); if (old.VertexBuffer) old.VertexBuffer->Release();
     ctx->IASetInputLayout(old.InputLayout); if (old.InputLayout) old.InputLayout->Release();
-    ctx->OMSetDepthStencilState(old.DepthStencilState, old.StencilRef);
 }
 
 IMGUI_API LRESULT ImGui_ImplDX11_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -454,16 +454,15 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
         g_pd3dDevice->CreateRasterizerState(&desc, &g_pRasterizerState);
     }
 
-
     // Create Depth-Stencil State
     {
         D3D11_DEPTH_STENCIL_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
-        desc.StencilEnable = false;
         desc.DepthEnable = true;
         desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
         desc.DepthFunc = D3D11_COMPARISON_ALWAYS;
-        g_pd3dDevice->CreateDepthStencilState( &desc, &g_pDSState );
+        desc.StencilEnable = false;
+        g_pd3dDevice->CreateDepthStencilState(&desc, &g_pDepthStencilState);
     }
 
     ImGui_ImplDX11_CreateFontsTexture();
@@ -482,6 +481,7 @@ void    ImGui_ImplDX11_InvalidateDeviceObjects()
     if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
 
     if (g_pBlendState) { g_pBlendState->Release(); g_pBlendState = NULL; }
+    if (g_pDepthStencilState) { g_pDepthStencilState->Release(); g_pDepthStencilState = NULL; }
     if (g_pRasterizerState) { g_pRasterizerState->Release(); g_pRasterizerState = NULL; }
     if (g_pPixelShader) { g_pPixelShader->Release(); g_pPixelShader = NULL; }
     if (g_pPixelShaderBlob) { g_pPixelShaderBlob->Release(); g_pPixelShaderBlob = NULL; }
@@ -489,7 +489,6 @@ void    ImGui_ImplDX11_InvalidateDeviceObjects()
     if (g_pInputLayout) { g_pInputLayout->Release(); g_pInputLayout = NULL; }
     if (g_pVertexShader) { g_pVertexShader->Release(); g_pVertexShader = NULL; }
     if (g_pVertexShaderBlob) { g_pVertexShaderBlob->Release(); g_pVertexShaderBlob = NULL; }
-    if (g_pDSState) { g_pDSState->Release(); g_pDSState = NULL; }
 }
 
 bool    ImGui_ImplDX11_Init(void* hwnd, ID3D11Device* device, ID3D11DeviceContext* device_context)
