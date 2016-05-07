@@ -41,6 +41,8 @@
 #endif
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
+#pragma GCC diagnostic ignored "-Wdouble-promotion"         // warning: implicit conversion from 'float' to 'double' when passing argument to function
+#pragma GCC diagnostic ignored "-Wconversion"               // warning: conversion to 'xxxx' from 'xxxx' may alter its value
 #endif
 
 //-------------------------------------------------------------------------
