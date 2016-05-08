@@ -2459,7 +2459,7 @@ static void ShowExampleAppLongText(bool* p_open)
 #else
 
 void ImGui::ShowTestWindow(bool*) {}
-void ImGui::ShowUserGuide(bool*) {}
-void ImGui::ShowStyleEditor(bool*) {}
+void ImGui::ShowUserGuide() {}
+void ImGui::ShowStyleEditor(ImGuiStyle*) {}
 
 #endif
