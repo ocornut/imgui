@@ -444,6 +444,7 @@ namespace ImGui
     IMGUI_API void          SetClipboardText(const char* text);
 
     // Internal context access - if you want to use multiple context, share context between modules (e.g. DLL). There is a default context created and active by default.
+    // All contexts share a same ImFontAtlas by default. If you want different font atlas, you can new() them and overwrite the GetIO().Fonts variable of an ImGui context.
     IMGUI_API const char*   GetVersion();
     IMGUI_API ImGuiContext* CreateContext(void* (*malloc_fn)(size_t) = NULL, void (*free_fn)(void*) = NULL);
     IMGUI_API void          DestroyContext(ImGuiContext* ctx);

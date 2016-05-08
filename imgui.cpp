@@ -696,14 +696,14 @@ static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 // Context
 //-----------------------------------------------------------------------------
 
-// We access everything through this pointer (always assumed to be != NULL)
-// You can swap the pointer to a different context by calling ImGui::SetCurrentContext()
+// Default context, default font atlas.
+// New contexts always point by default to this font atlas. It can be changed by reassigning the GetIO().Fonts variable.
 static ImGuiContext     GImDefaultContext;
-ImGuiContext*           GImGui = &GImDefaultContext;
-
-// Statically allocated default font atlas. This is merely a maneuver to keep ImFontAtlas definition at the bottom of the .h file (otherwise it'd be inside ImGuiIO)
-// Also we wouldn't be able to new() one at this point, before users have a chance to setup their allocator.
 static ImFontAtlas      GImDefaultFontAtlas;
+
+// Current context pointer. Implicitely used by all ImGui functions. Always assumed to be != NULL. Change to a different context by calling ImGui::SetCurrentContext()
+// ImGui is currently not thread-safe because of this variable. If you want thread-safety to allow N threads to access N different contexts, you might work around it by (A) having two instances of the ImGui code under different namespaces or (B) change this variable to be TLS. Further development aim to make this context pointer explicit to all calls. Also read https://github.com/ocornut/imgui/issues/586
+ImGuiContext*           GImGui = &GImDefaultContext;
 
 //-----------------------------------------------------------------------------
 // User facing structures
