@@ -636,7 +636,8 @@ struct IMGUI_API ImGuiWindow
     float                   FontWindowScale;                    // Scale multiplier per-window
     ImDrawList*             DrawList;
     ImGuiWindow*            RootWindow;                         // If we are a child window, this is pointing to the first non-child parent window. Else point to ourself.
-    ImGuiWindow*            RootNonPopupWindow;                 // If we are a child widnow, this is pointing to the first non-child non-popup parent window. Else point to ourself.
+    ImGuiWindow*            RootNonPopupWindow;                 // If we are a child window, this is pointing to the first non-child non-popup parent window. Else point to ourself.
+    ImGuiWindow*            ParentWindow;                       // If we are a child window, this is pointing to our parent window. Else point to NULL.
 
     // Focus
     int                     FocusIdxAllCounter;                 // Start at -1 and increase as assigned via FocusItemRegister()

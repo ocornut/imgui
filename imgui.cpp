@@ -1641,6 +1641,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     DrawList->_OwnerName = Name;
     RootWindow = NULL;
     RootNonPopupWindow = NULL;
+    ParentWindow = NULL;
 
     FocusIdxAllCounter = FocusIdxTabCounter = -1;
     FocusIdxAllRequestCurrent = FocusIdxTabRequestCurrent = IM_INT_MAX;
@@ -3759,6 +3760,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
     for (root_non_popup_idx = root_idx; root_non_popup_idx > 0; root_non_popup_idx--)
         if (!(g.CurrentWindowStack[root_non_popup_idx]->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
             break;
+    window->ParentWindow = parent_window;
     window->RootWindow = g.CurrentWindowStack[root_idx];
     window->RootNonPopupWindow = g.CurrentWindowStack[root_non_popup_idx];      // This is merely for displaying the TitleBgActive color.
 
