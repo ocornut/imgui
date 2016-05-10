@@ -2085,7 +2085,10 @@ void ImGui::NewFrame()
     if (ImGuiWindow* modal_window = GetFrontMostModalRootWindow())
     {
         g.ModalWindowDarkeningRatio = ImMin(g.ModalWindowDarkeningRatio + g.IO.DeltaTime * 6.0f, 1.0f);
-        if (g.HoveredRootWindow != modal_window)
+        ImGuiWindow* window = g.HoveredRootWindow;
+        while (window && window != modal_window)
+            window = window->ParentWindow;
+        if (!window)
             g.HoveredRootWindow = g.HoveredWindow = NULL;
     }
     else
