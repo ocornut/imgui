@@ -9179,7 +9179,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
                 continue;
 
             bool hovered, held;
-            ButtonBehavior(column_rect, column_id, &hovered, &held, true);
+            ButtonBehavior(column_rect, column_id, &hovered, &held);
             if (hovered || held)
                 g.MouseCursor = ImGuiMouseCursor_ResizeEW;
 
