@@ -1218,7 +1218,7 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::EndPopup();
             }
 
-            static ImVec4 color = ImColor(1.0f, 0.0f, 1.0f, 1.0f);
+            static ImVec4 color = ImColor(0.8f, 0.5f, 1.0f, 1.0f);
             ImGui::ColorButton(color);
             if (ImGui::BeginPopupContextItem("color context menu"))
             {
