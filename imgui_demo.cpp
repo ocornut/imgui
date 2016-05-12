@@ -1554,9 +1554,11 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 {
     ImGuiStyle& style = ImGui::GetStyle();
 
-    const ImGuiStyle def; // Default style
+    // You can pass in a reference ImGuiStyle structure to compare to, revert to and save to (else it compares to the default style)
+    const ImGuiStyle default_style; // Default style
     if (ImGui::Button("Revert Style"))
-        style = ref ? *ref : def;
+        style = ref ? *ref : default_style;
+
     if (ref)
     {
         ImGui::SameLine();
@@ -1611,7 +1613,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             {
                 const ImVec4& col = style.Colors[i];
                 const char* name = ImGui::GetStyleColName(i);
-                if (!output_only_modified || memcmp(&col, (ref ? &ref->Colors[i] : &def.Colors[i]), sizeof(ImVec4)) != 0)
+                if (!output_only_modified || memcmp(&col, (ref ? &ref->Colors[i] : &default_style.Colors[i]), sizeof(ImVec4)) != 0)
                     ImGui::LogText("style.Colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" IM_NEWLINE, name, 22 - (int)strlen(name), "", col.x, col.y, col.z, col.w);
             }
             ImGui::LogFinish();
@@ -1640,9 +1642,9 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 continue;
             ImGui::PushID(i);
             ImGui::ColorEdit4(name, (float*)&style.Colors[i], true);
-            if (memcmp(&style.Colors[i], (ref ? &ref->Colors[i] : &def.Colors[i]), sizeof(ImVec4)) != 0)
+            if (memcmp(&style.Colors[i], (ref ? &ref->Colors[i] : &default_style.Colors[i]), sizeof(ImVec4)) != 0)
             {
-                ImGui::SameLine(); if (ImGui::Button("Revert")) style.Colors[i] = ref ? ref->Colors[i] : def.Colors[i];
+                ImGui::SameLine(); if (ImGui::Button("Revert")) style.Colors[i] = ref ? ref->Colors[i] : default_style.Colors[i];
                 if (ref) { ImGui::SameLine(); if (ImGui::Button("Save")) ref->Colors[i] = style.Colors[i]; }
             }
             ImGui::PopID();
