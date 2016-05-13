@@ -9507,12 +9507,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                         ImGui::BulletText("Callback %p, user_data %p", pcmd->UserCallback, pcmd->UserCallbackData);
                         continue;
                     }
+                    ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
                     bool pcmd_node_open = ImGui::TreeNode((void*)(pcmd - draw_list->CmdBuffer.begin()), "Draw %-4d %s vtx, tex = %p, clip_rect = (%.0f,%.0f)..(%.0f,%.0f)", pcmd->ElemCount, draw_list->IdxBuffer.Size > 0 ? "indexed" : "non-indexed", pcmd->TextureId, pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
                     if (show_clip_rects && ImGui::IsItemHovered())
                     {
                         ImRect clip_rect = pcmd->ClipRect;
                         ImRect vtxs_rect;
-                        ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
                         for (int i = elem_offset; i < elem_offset + (int)pcmd->ElemCount; i++)
                             vtxs_rect.Add(draw_list->VtxBuffer[idx_buffer ? idx_buffer[i] : i].pos);
                         clip_rect.Floor(); overlay_draw_list->AddRect(clip_rect.Min, clip_rect.Max, IM_COL32(255,255,0,255));
@@ -9520,20 +9520,22 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     }
                     if (!pcmd_node_open)
                         continue;
-                    for (int i = elem_offset; i+2 < elem_offset + (int)pcmd->ElemCount; i += 3)
+                    ImGuiListClipper clipper(pcmd->ElemCount/3, ImGui::GetTextLineHeight()*3 + ImGui::GetStyle().ItemSpacing.y); // Manually coarse clip our print out of individual vertices to save CPU, only items that may be visible.
+                    for (int prim = clipper.DisplayStart, vtx_i = elem_offset + clipper.DisplayStart*3; prim < clipper.DisplayEnd; prim++)
                     {
-                        ImVec2 triangles_pos[3];
                         char buf[300], *buf_p = buf;
-                        for (int n = 0; n < 3; n++)
+                        ImVec2 triangles_pos[3];
+                        for (int n = 0; n < 3; n++, vtx_i++)
                         {
-                            ImDrawVert& v = draw_list->VtxBuffer[(draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data[i+n] : i+n];
+                            ImDrawVert& v = draw_list->VtxBuffer[idx_buffer ? idx_buffer[vtx_i] : vtx_i];
                             triangles_pos[n] = v.pos;
-                            buf_p += sprintf(buf_p, "vtx %04d { pos = (%8.2f,%8.2f), uv = (%.6f,%.6f), col = %08X }\n", i+n, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
+                            buf_p += sprintf(buf_p, "%s %04d { pos = (%8.2f,%8.2f), uv = (%.6f,%.6f), col = %08X }\n", (n == 0) ? "vtx" : "   ", vtx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
                         }
                         ImGui::Selectable(buf, false);
                         if (ImGui::IsItemHovered())
                             overlay_draw_list->AddPolyline(triangles_pos, 3, IM_COL32(255,255,0,255), true, 1.0f, false);  // Add triangle without AA, more readable for large-thin triangle
                     }
+                    clipper.End();
                     ImGui::TreePop();
                 }
                 overlay_draw_list->PopClipRect();
