@@ -5357,7 +5357,11 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                 pressed = true;
                 SetActiveID(0);
             }
-            if ((flags & ImGuiButtonFlags_Repeat) && g.ActiveId == id && ImGui::IsMouseClicked(0, true))
+
+            // 'Repeat' mode acts when held regardless of _PressedOn flags
+            // FIXME: Need to clarify the repeat behavior with those differents flags. Currently the typical PressedOnClickRelease+Repeat will add an extra click on final release (hardly noticeable with repeat rate, but technically an issue)
+            // Relies on repeat behavior of IsMouseClicked() but we may as well do it ourselves if we end up exposing finer RepeatDelay/RepeatRate settings.
+            if ((flags & ImGuiButtonFlags_Repeat) && g.ActiveId == id && g.IO.MouseDownDuration[0] > 0.0f && ImGui::IsMouseClicked(0, true))
                 pressed = true;
         }
     }
