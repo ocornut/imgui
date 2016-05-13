@@ -5341,7 +5341,12 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         SetHoveredID(id);
         if (!(flags & ImGuiButtonFlags_NoKeyModifiers) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
-            if ((flags & ImGuiButtonFlags_PressedOnClickRelease) && g.IO.MouseClicked[0])   // Most common type
+            //                        | CLICKING        | HOLDING with ImGuiButtonFlags_Repeat
+            // PressedOnClickRelease  |  <on release>*  |  <on repeat> <on repeat> .. (NOT on release)  <-- MOST COMMON! (*) only if both click/release were over bounds
+            // PressedOnClick         |  <on click>     |  <on click> <on repeat> <on repeat> ..
+            // PressedOnRelease       |  <on release>   |  <on repeat> <on repeat> .. (NOT on release)
+            // PressedOnDoubleClick   |  <on dclick>    |  <on dclick> <on repeat> <on repeat> ..
+            if ((flags & ImGuiButtonFlags_PressedOnClickRelease) && g.IO.MouseClicked[0])
             {
                 SetActiveID(id, window); // Hold on ID
                 FocusWindow(window);
@@ -5354,13 +5359,13 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             }
             if ((flags & ImGuiButtonFlags_PressedOnRelease) && g.IO.MouseReleased[0])
             {
-                pressed = true;
+                if (!((flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[0] >= g.IO.KeyRepeatDelay))  // Repeat mode trumps <on release>
+                    pressed = true;
                 SetActiveID(0);
             }
 
-            // 'Repeat' mode acts when held regardless of _PressedOn flags
-            // FIXME: Need to clarify the repeat behavior with those differents flags. Currently the typical PressedOnClickRelease+Repeat will add an extra click on final release (hardly noticeable with repeat rate, but technically an issue)
-            // Relies on repeat behavior of IsMouseClicked() but we may as well do it ourselves if we end up exposing finer RepeatDelay/RepeatRate settings.
+            // 'Repeat' mode acts when held regardless of _PressedOn flags (see table above). 
+            // Relies on repeat logic of IsMouseClicked() but we may as well do it ourselves if we end up exposing finer RepeatDelay/RepeatRate settings.
             if ((flags & ImGuiButtonFlags_Repeat) && g.ActiveId == id && g.IO.MouseDownDuration[0] > 0.0f && ImGui::IsMouseClicked(0, true))
                 pressed = true;
         }
@@ -5376,7 +5381,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         else
         {
             if (hovered && (flags & ImGuiButtonFlags_PressedOnClickRelease))
-                pressed = true;
+                if (!((flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[0] >= g.IO.KeyRepeatDelay))  // Repeat mode trumps <on release>
+                    pressed = true;
             SetActiveID(0);
         }
     }
