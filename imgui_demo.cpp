@@ -2002,7 +2002,8 @@ struct ExampleAppConsole
 
         if (ImGui::SmallButton("Add Dummy Text")) { AddLog("%d some text", Items.Size); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine();
         if (ImGui::SmallButton("Add Dummy Error")) AddLog("[error] something went wrong"); ImGui::SameLine();
-        if (ImGui::SmallButton("Clear")) ClearLog();
+        if (ImGui::SmallButton("Clear")) ClearLog(); ImGui::SameLine();
+        if (ImGui::SmallButton("Scroll to bottom")) ScrollToBottom = true;
         //static float t = 0.0f; if (ImGui::GetTime() - t > 0.02f) { t = ImGui::GetTime(); AddLog("Spam %f", t); }
 
         ImGui::Separator();
