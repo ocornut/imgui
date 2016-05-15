@@ -2440,7 +2440,7 @@ static void ShowExampleAppLongText(bool* p_open)
         {
             // Multiple calls to Text(), manually coarsely clipped - demonstrate how to use the ImGuiListClipper helper.
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
-            ImGuiListClipper clipper(lines, ImGui::GetTextLineHeight());
+            ImGuiListClipper clipper(lines, ImGui::GetTextLineHeightWithSpacing()); // Here we changed spacing is zero anyway so we could use GetTextLineHeight(), but _WithSpacing() is typically more correct
             for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
                 ImGui::Text("%i The quick brown fox jumps over the lazy dog\n", i);
             clipper.End();
