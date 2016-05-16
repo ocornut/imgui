@@ -1644,9 +1644,7 @@ void ImGuiListClipper::End()
 {
     if (ItemsCount < 0)
         return;
-    float cur_y = ImGui::GetCursorPosY(); (void)cur_y;
-    float expected_display_end_y = StartPosY + DisplayEnd * ItemsHeight;
-    IM_ASSERT(fabsf(cur_y - expected_display_end_y) < 1.0f);        // if this triggers, it probably means your items have varying height (in which case you can't use this helper) or the explicit height you have passed was incorrect.
+    // In theory here we should assert that ImGui::GetCursorPosY() == StartPosY + DisplayEnd * ItemsHeight, but it feels saner to just seek at the end and not assert/crash the user.
     if (ItemsCount < INT_MAX)
         SetCursorPosYAndSetupDummyPrevLine(StartPosY + ItemsCount * ItemsHeight, ItemsHeight); // advance cursor
     ItemsCount = -1;
