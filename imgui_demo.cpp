@@ -143,6 +143,7 @@ void ImGui::ShowTestWindow(bool* p_open)
     static bool no_scrollbar = false;
     static bool no_collapse = false;
     static bool no_menu = false;
+    static int version = 0;
 
     // Demonstrate the various window flags. Typically you would just use the default.
     ImGuiWindowFlags window_flags = 0;
@@ -160,6 +161,7 @@ void ImGui::ShowTestWindow(bool* p_open)
         ImGui::End();
         return;
     }
+    ImGui::BeginChangeCheck();
 
     //ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);    // 2/3 of the space for widget and 1/3 for labels
     ImGui::PushItemWidth(-140);                                 // Right align, keep 140 pixels for labels
@@ -195,6 +197,10 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::MenuItem("About ImGui", NULL, &show_app_about);
             ImGui::EndMenu();
         }
+        char bfr[32];
+        sprintf(bfr, "[data version %d]", version);
+        if (ImGui::BeginMenu(bfr))
+            ImGui::EndMenu();
         ImGui::EndMenuBar();
     }
 
@@ -712,6 +718,45 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::PopStyleVar();
 
             ImGui::Indent();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Change checks"))
+        {
+            static float group1changed = 0;
+            static float group2changed = 0;
+            static bool cc_value1 = 1;
+            static int cc_value2 = 0;
+            static float cc_value3 = 3.14f;
+
+            ImGui::TextColored(ImVec4(1, 1, 1, group1changed * 0.8f + 0.2f), "Group 1 changed");
+            ImGui::TextColored(ImVec4(1, 1, 1, group2changed * 0.8f + 0.2f), "Group 2 changed");
+
+            ImGui::BeginChangeCheck();
+
+            ImGui::Checkbox("Group 1 / 2 value", &cc_value1);
+
+            ImGui::BeginChangeMask(2);
+            ImGui::RadioButton("Group 2", &cc_value2, 0);
+            ImGui::SameLine();
+            ImGui::RadioButton("value", &cc_value2, 1);
+            ImGui::EndChangeMask();
+
+            ImGui::BeginChangeMask(1);
+            ImGui::SliderFloat("Group 1 value", &cc_value3, -10, 10);
+            ImGui::EndChangeMask();
+
+            ImU32 results = ImGui::EndChangeCheck();
+            if (results & 1)
+                group1changed = 1;
+            if (results & 2)
+                group2changed = 1;
+
+            if (group1changed > 0)
+                group1changed -= ImGui::GetIO().DeltaTime;
+            if (group2changed > 0)
+                group2changed -= ImGui::GetIO().DeltaTime;
+
             ImGui::TreePop();
         }
     }
@@ -1547,6 +1592,8 @@ void ImGui::ShowTestWindow(bool* p_open)
         }
     }
 
+    if (ImGui::EndChangeCheck())
+        version++;
     ImGui::End();
 }
 

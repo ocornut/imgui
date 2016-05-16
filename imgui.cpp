@@ -3201,6 +3201,53 @@ ImVec2 ImGui::CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge, float ou
     return rect.GetClosestPoint(pos, on_edge);
 }
 
+// Change checks
+void ImGui::BeginChangeCheck()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    ImChangeItem ci = { ImChangeItemType_Check, 0 };
+    window->ChangeStack.push_back(ci);
+}
+
+ImU32 ImGui::EndChangeCheck()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    IM_ASSERT(window->ChangeStack.size() > 0);
+    IM_ASSERT(window->ChangeStack.back().Type == ImChangeItemType_Check);
+    ImU32 flags = window->ChangeStack.back().Flags;
+    window->ChangeStack.pop_back();
+    return flags;
+}
+
+void ImGui::BeginChangeMask(ImU32 mask)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    ImChangeItem ci = { ImChangeItemType_Mask, mask };
+    window->ChangeStack.push_back(ci);
+}
+
+void ImGui::EndChangeMask()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    IM_ASSERT(window->ChangeStack.size() > 0);
+    IM_ASSERT(window->ChangeStack.back().Type == ImChangeItemType_Mask);
+    window->ChangeStack.pop_back();
+}
+
+void ImGui::TriggerChangeCheck(ImU32 mask)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    int at = window->ChangeStack.size() - 1;
+    while (mask && at >= 0)
+    {
+        if (window->ChangeStack[at].Type == ImChangeItemType_Check)
+            window->ChangeStack[at].Flags |= mask;
+        else
+            mask &= window->ChangeStack[at].Flags;
+        at--;
+    }
+}
+
 // Tooltip is stored and turned into a BeginTooltip()/EndTooltip() sequence at the end of the frame. Each call override previous value.
 void ImGui::SetTooltipV(const char* fmt, va_list args)
 {
@@ -3545,6 +3592,7 @@ static void CheckStacksSize(ImGuiWindow* window, bool write)
     ImGuiContext& g = *GImGui;
     int* p_backup = &window->DC.StackSizesBackup[0];
     { int current = window->IDStack.Size;       if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopID()
+    { int current = window->ChangeStack.Size;   if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot EndChangeCheck()/EndChangeMask()
     { int current = window->DC.GroupStack.Size; if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot EndGroup()
     { int current = g.CurrentPopupStack.Size;   if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot EndPopup()/EndMenu()
     { int current = g.ColorModifiers.Size;      if (write) *p_backup = current; else IM_ASSERT(*p_backup == current); p_backup++; }    // User forgot PopStyleColor()
@@ -6362,6 +6410,8 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
         grab_bb = ImRect(ImVec2(frame_bb.Min.x + grab_padding, grab_pos - grab_sz*0.5f), ImVec2(frame_bb.Max.x - grab_padding, grab_pos + grab_sz*0.5f));
     window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, GetColorU32(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), style.GrabRounding);
 
+    if (value_changed)
+        TriggerChangeCheck();
     return value_changed;
 }
 
@@ -6430,6 +6480,8 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
+    if (value_changed)
+        TriggerChangeCheck();
     return value_changed;
 }
 
@@ -6476,6 +6528,8 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
+    if (value_changed)
+        TriggerChangeCheck();
     return value_changed;
 }
 
@@ -6664,6 +6718,8 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
         }
     }
 
+    if (value_changed)
+        TriggerChangeCheck();
     return value_changed;
 }
 
@@ -7097,6 +7153,8 @@ bool ImGui::Checkbox(const char* label, bool* v)
     if (label_size.x > 0.0f)
         RenderText(text_bb.GetTL(), label);
 
+    if (pressed)
+        TriggerChangeCheck();
     return pressed;
 }
 
@@ -7169,6 +7227,8 @@ bool ImGui::RadioButton(const char* label, bool active)
     if (label_size.x > 0.0f)
         RenderText(text_bb.GetTL(), label);
 
+    if (pressed)
+        TriggerChangeCheck();
     return pressed;
 }
 
@@ -7993,10 +8053,14 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
+    bool trigger;
     if ((flags & ImGuiInputTextFlags_EnterReturnsTrue) != 0)
-        return enter_pressed;
+        trigger = enter_pressed;
     else
-        return value_changed;
+        trigger = value_changed;
+    if (trigger)
+        TriggerChangeCheck();
+    return trigger;
 }
 
 bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
@@ -8066,6 +8130,8 @@ bool ImGui::InputScalarEx(const char* label, ImGuiDataType data_type, void* data
     }
     ImGui::EndGroup();
 
+    if (value_changed)
+        TriggerChangeCheck();
     return value_changed;
 }
 
@@ -8326,6 +8392,8 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         }
         ImGui::PopStyleVar();
     }
+    if (value_changed)
+        TriggerChangeCheck();
     return value_changed;
 }
 
@@ -8414,6 +8482,7 @@ bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags
     if (ImGui::Selectable(label, *p_selected, flags, size_arg))
     {
         *p_selected = !*p_selected;
+        TriggerChangeCheck();
         return true;
     }
     return false;
@@ -8509,6 +8578,8 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
     }
     clipper.End();
     ImGui::ListBoxFooter();
+    if (value_changed)
+        TriggerChangeCheck();
     return value_changed;
 }
 
@@ -8744,6 +8815,8 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
     if (hovered)
         ImGui::SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col.x, col.y, col.z, col.w, IM_F32_TO_INT8(col.x), IM_F32_TO_INT8(col.y), IM_F32_TO_INT8(col.z), IM_F32_TO_INT8(col.z));
 
+    if (pressed)
+        TriggerChangeCheck();
     return pressed;
 }
 
@@ -8890,6 +8963,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
         col[2] = f[2];
         if (alpha)
             col[3] = f[3];
+        TriggerChangeCheck();
     }
 
     ImGui::PopID();

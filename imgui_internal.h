@@ -198,6 +198,12 @@ enum ImGuiDataType
     ImGuiDataType_Float
 };
 
+enum ImChangeItemType
+{
+    ImChangeItemType_Check,
+    ImChangeItemType_Mask,
+};
+
 // 2D axis aligned bounding-box
 // NB: we can't rely on ImVec2 math operators being available here
 struct IMGUI_API ImRect
@@ -341,6 +347,13 @@ struct ImGuiPopupRef
     ImVec2          MousePosOnOpen; // Copy of mouse position at the time of opening popup
 
     ImGuiPopupRef(ImGuiID id, ImGuiWindow* parent_window, ImGuiID parent_menu_set, const ImVec2& mouse_pos) { PopupID = id; Window = NULL; ParentWindow = parent_window; ParentMenuSet = parent_menu_set; MousePosOnOpen = mouse_pos; }
+};
+
+// Change info
+struct ImChangeItem
+{
+    ImChangeItemType Type;
+    ImU32            Flags;
 };
 
 // Main state for ImGui
@@ -540,7 +553,7 @@ struct IMGUI_API ImGuiDrawContext
     ImVector<bool>          ButtonRepeatStack;
     ImVector<ImGuiGroupData>GroupStack;
     ImGuiColorEditMode      ColorEditMode;
-    int                     StackSizesBackup[6];    // Store size of various stacks for asserting
+    int                     StackSizesBackup[7];    // Store size of various stacks for asserting
 
     float                   IndentX;                // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
     float                   ColumnsOffsetX;         // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
@@ -627,6 +640,7 @@ struct IMGUI_API ImGuiWindow
 
     ImGuiDrawContext        DC;                                 // Temporary per-window data, reset at the beginning of the frame
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
+    ImVector<ImChangeItem>  ChangeStack;                        // Change (checking) stack.
     ImRect                  ClipRect;                           // = DrawList->clip_rect_stack.back(). Scissoring / clipping rectangle. x1, y1, x2, y2.
     ImRect                  WindowRectClipped;                  // = WindowRect just after setup in Begin(). == window->Rect() for root window.
     int                     LastFrameActive;
