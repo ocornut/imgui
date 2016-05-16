@@ -1608,6 +1608,88 @@ float ImGuiSimpleColumns::CalcExtraSpace(float avail_w)
 }
 
 //-----------------------------------------------------------------------------
+// ImGuiListClipper
+//-----------------------------------------------------------------------------
+
+static void SetCursorPosYAndSetupDummyPrevLine(float pos_y, float line_height)
+{
+    // Setting those fields so that SetScrollHere() can properly function after the end of our clipper usage.
+    // If we end up needing more accurate data (to e.g. use SameLine) we may as well make the clipper have a fourth step to let user process and display the last item in their list.
+    ImGui::SetCursorPosY(pos_y);
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    window->DC.CursorPosPrevLine.y = window->DC.CursorPos.y - line_height;
+    window->DC.PrevLineHeight = (line_height - GImGui->Style.ItemSpacing.y);
+}
+
+// Use case A: Begin() called from constructor with items_height<0, then called again from Sync() in StepNo 1
+// Use case B: Begin() called from constructor with items_height>0
+// FIXME-LEGACY: Ideally we should remove the Begin/End functions but they are part of the legacy API we still support. This is why some of the code in Step() calling Begin() and reassign some fields, spaghetti style.
+void ImGuiListClipper::Begin(int count, float items_height)
+{
+    StartPosY = ImGui::GetCursorPosY();
+    ItemsHeight = items_height;
+    ItemsCount = count;
+    StepNo = 0;
+    DisplayEnd = DisplayStart = -1;
+    if (ItemsHeight > 0.0f)
+    {
+        ImGui::CalcListClipping(ItemsCount, ItemsHeight, &DisplayStart, &DisplayEnd); // calculate how many to clip/display
+        if (DisplayStart > 0)
+            SetCursorPosYAndSetupDummyPrevLine(StartPosY + DisplayStart * ItemsHeight, ItemsHeight); // advance cursor
+        StepNo = 2;
+    }
+}
+
+void ImGuiListClipper::End()
+{
+    if (ItemsCount < 0)
+        return;
+    float cur_y = ImGui::GetCursorPosY(); (void)cur_y;
+    float expected_display_end_y = StartPosY + DisplayEnd * ItemsHeight;
+    IM_ASSERT(fabsf(cur_y - expected_display_end_y) < 1.0f);        // if this triggers, it probably means your items have varying height (in which case you can't use this helper) or the explicit height you have passed was incorrect.
+    if (ItemsCount < INT_MAX)
+        SetCursorPosYAndSetupDummyPrevLine(StartPosY + ItemsCount * ItemsHeight, ItemsHeight); // advance cursor
+    ItemsCount = -1;
+    StepNo = 3;
+}
+
+bool ImGuiListClipper::Step()
+{
+    if (ItemsCount == 0 || ImGui::GetCurrentWindowRead()->SkipItems)
+    {
+        ItemsCount = -1; 
+        return false; 
+    }
+    if (StepNo == 0) // Step 0: the clipper let you process the first element, regardless of it being visible or not, so we can measure the element height.
+    {
+        DisplayStart = 0;
+        DisplayEnd = 1;
+        StartPosY = ImGui::GetCursorPosY();
+        StepNo = 1;
+        return true;
+    }
+    if (StepNo == 1) // Step 1: the clipper infer height from first element, calculate the actual range of elements to display, and position the cursor before the first element.
+    {
+        if (ItemsCount == 1) { ItemsCount = -1; return false; }
+        float items_height = ImGui::GetCursorPosY() - StartPosY;
+        IM_ASSERT(items_height > 0.0f);   // If this triggers, it means Item 0 hasn't moved the cursor vertically
+        ImGui::SetCursorPosY(StartPosY);  // Rewind cursor so we can Begin() again, this time with a known height.
+        Begin(ItemsCount, items_height);
+        StepNo = 3;
+        return true;
+    }
+    if (StepNo == 2) // Step 2: dummy step only required if an explicit items_height was passed to constructor or Begin() and user still call Step(). Does nothing and switch to Step 3.
+    {
+        IM_ASSERT(DisplayStart >= 0 && DisplayEnd >= 0);
+        StepNo = 3;
+        return true;
+    }
+    if (StepNo == 3) // Step 3: the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd), advance the cursor to the end of the list and then returns 'false' to end the loop.
+        End();
+    return false;
+}
+
+//-----------------------------------------------------------------------------
 // ImGuiWindow
 //-----------------------------------------------------------------------------
 
@@ -2878,18 +2960,8 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
 }
 
 // Helper to calculate coarse clipping of large list of evenly sized items.
-// NB: Prefer using the ImGuiListClipper higher-level helper if you can!
+// NB: Prefer using the ImGuiListClipper higher-level helper if you can! Read comments and instructions there on how those use this sort of pattern.
 // NB: 'items_count' is only used to clamp the result, if you don't know your count you can use INT_MAX
-// If you are displaying thousands of items and you have a random access to the list, you can perform clipping yourself to save on CPU.
-// {
-//    float item_height = ImGui::GetTextLineHeightWithSpacing();
-//    int display_start, display_end;
-//    ImGui::CalcListClipping(count, item_height, &display_start, &display_end);            // calculate how many to clip/display
-//    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (display_start) * item_height);         // advance cursor
-//    for (int i = display_start; i < display_end; i++)                                     // display only visible items
-//        // TODO: display visible item
-//    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (count - display_end) * item_height);   // advance cursor
-// }
 void ImGui::CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end)
 {
     ImGuiContext& g = *GImGui;
@@ -2899,6 +2971,11 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
         // If logging is active, do not perform any clipping
         *out_items_display_start = 0;
         *out_items_display_end = items_count;
+        return;
+    }
+    if (window->SkipItems)
+    {
+        *out_items_display_start = *out_items_display_end = 0;
         return;
     }
 
@@ -8492,22 +8569,22 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
     // Assume all items have even height (= 1 line of text). If you need items of different or variable sizes you can create a custom version of ListBox() in your code without using the clipper.
     bool value_changed = false;
     ImGuiListClipper clipper(items_count, ImGui::GetTextLineHeightWithSpacing());
-    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
-    {
-        const bool item_selected = (i == *current_item);
-        const char* item_text;
-        if (!items_getter(data, i, &item_text))
-            item_text = "*Unknown item*";
-
-        ImGui::PushID(i);
-        if (ImGui::Selectable(item_text, item_selected))
+    while (clipper.Step())
+        for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
         {
-            *current_item = i;
-            value_changed = true;
+            const bool item_selected = (i == *current_item);
+            const char* item_text;
+            if (!items_getter(data, i, &item_text))
+                item_text = "*Unknown item*";
+
+            ImGui::PushID(i);
+            if (ImGui::Selectable(item_text, item_selected))
+            {
+                *current_item = i;
+                value_changed = true;
+            }
+            ImGui::PopID();
         }
-        ImGui::PopID();
-    }
-    clipper.End();
     ImGui::ListBoxFooter();
     return value_changed;
 }
@@ -9520,22 +9597,22 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     }
                     if (!pcmd_node_open)
                         continue;
-                    ImGuiListClipper clipper(pcmd->ElemCount/3, ImGui::GetTextLineHeight()*3 + ImGui::GetStyle().ItemSpacing.y); // Manually coarse clip our print out of individual vertices to save CPU, only items that may be visible.
-                    for (int prim = clipper.DisplayStart, vtx_i = elem_offset + clipper.DisplayStart*3; prim < clipper.DisplayEnd; prim++)
-                    {
-                        char buf[300], *buf_p = buf;
-                        ImVec2 triangles_pos[3];
-                        for (int n = 0; n < 3; n++, vtx_i++)
+                    ImGuiListClipper clipper(pcmd->ElemCount/3); // Manually coarse clip our print out of individual vertices to save CPU, only items that may be visible.
+                    while (clipper.Step())
+                        for (int prim = clipper.DisplayStart, vtx_i = elem_offset + clipper.DisplayStart*3; prim < clipper.DisplayEnd; prim++)
                         {
-                            ImDrawVert& v = draw_list->VtxBuffer[idx_buffer ? idx_buffer[vtx_i] : vtx_i];
-                            triangles_pos[n] = v.pos;
-                            buf_p += sprintf(buf_p, "%s %04d { pos = (%8.2f,%8.2f), uv = (%.6f,%.6f), col = %08X }\n", (n == 0) ? "vtx" : "   ", vtx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
+                            char buf[300], *buf_p = buf;
+                            ImVec2 triangles_pos[3];
+                            for (int n = 0; n < 3; n++, vtx_i++)
+                            {
+                                ImDrawVert& v = draw_list->VtxBuffer[idx_buffer ? idx_buffer[vtx_i] : vtx_i];
+                                triangles_pos[n] = v.pos;
+                                buf_p += sprintf(buf_p, "%s %04d { pos = (%8.2f,%8.2f), uv = (%.6f,%.6f), col = %08X }\n", (n == 0) ? "vtx" : "   ", vtx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
+                            }
+                            ImGui::Selectable(buf, false);
+                            if (ImGui::IsItemHovered())
+                                overlay_draw_list->AddPolyline(triangles_pos, 3, IM_COL32(255,255,0,255), true, 1.0f, false);  // Add triangle without AA, more readable for large-thin triangle
                         }
-                        ImGui::Selectable(buf, false);
-                        if (ImGui::IsItemHovered())
-                            overlay_draw_list->AddPolyline(triangles_pos, 3, IM_COL32(255,255,0,255), true, 1.0f, false);  // Add triangle without AA, more readable for large-thin triangle
-                    }
-                    clipper.End();
                     ImGui::TreePop();
                 }
                 overlay_draw_list->PopClipRect();
