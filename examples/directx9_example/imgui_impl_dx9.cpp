@@ -58,14 +58,10 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
             return;
     }
 
-    // Backup some DX9 state (not all!)
-    // FIXME: Backup/restore everything else
-    D3DRENDERSTATETYPE last_render_state_to_backup[] = { D3DRS_CULLMODE, D3DRS_LIGHTING, D3DRS_ZENABLE, D3DRS_ALPHABLENDENABLE, D3DRS_ALPHATESTENABLE, D3DRS_BLENDOP, D3DRS_SRCBLEND, D3DRS_DESTBLEND, D3DRS_SCISSORTESTENABLE };
-    DWORD last_render_state_values[ARRAYSIZE(last_render_state_to_backup)] = { 0 };
-    IDirect3DPixelShader9* last_ps; g_pd3dDevice->GetPixelShader( &last_ps );
-    IDirect3DVertexShader9* last_vs; g_pd3dDevice->GetVertexShader( &last_vs );
-    for (int n = 0; n < ARRAYSIZE(last_render_state_to_backup); n++)
-        g_pd3dDevice->GetRenderState(last_render_state_to_backup[n], &last_render_state_values[n]);
+    // Backup the DX9 state
+    IDirect3DStateBlock9* d3d9_state_block = NULL;
+    if (g_pd3dDevice->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
+        return;
 
     // Copy and convert all vertices into a single contiguous buffer
     CUSTOMVERTEX* vtx_dst;
@@ -94,30 +90,30 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     }
     g_pVB->Unlock();
     g_pIB->Unlock();
-    g_pd3dDevice->SetStreamSource( 0, g_pVB, 0, sizeof( CUSTOMVERTEX ) );
-    g_pd3dDevice->SetIndices( g_pIB );
-    g_pd3dDevice->SetFVF( D3DFVF_CUSTOMVERTEX );
+    g_pd3dDevice->SetStreamSource(0, g_pVB, 0, sizeof(CUSTOMVERTEX));
+    g_pd3dDevice->SetIndices(g_pIB);
+    g_pd3dDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
 
     // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
-    g_pd3dDevice->SetPixelShader( NULL );
-    g_pd3dDevice->SetVertexShader( NULL );
-    g_pd3dDevice->SetRenderState( D3DRS_CULLMODE, D3DCULL_NONE );
-    g_pd3dDevice->SetRenderState( D3DRS_LIGHTING, false );
-    g_pd3dDevice->SetRenderState( D3DRS_ZENABLE, false );
-    g_pd3dDevice->SetRenderState( D3DRS_ALPHABLENDENABLE, true );
-    g_pd3dDevice->SetRenderState( D3DRS_ALPHATESTENABLE, false );
-    g_pd3dDevice->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD );
-    g_pd3dDevice->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
-    g_pd3dDevice->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
-    g_pd3dDevice->SetRenderState( D3DRS_SCISSORTESTENABLE, true );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_MODULATE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_TEXTURE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
-    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
-    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+    g_pd3dDevice->SetPixelShader(NULL);
+    g_pd3dDevice->SetVertexShader(NULL);
+    g_pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+    g_pd3dDevice->SetRenderState(D3DRS_LIGHTING, false);
+    g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, false);
+    g_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+    g_pd3dDevice->SetRenderState(D3DRS_ALPHATESTENABLE, false);
+    g_pd3dDevice->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+    g_pd3dDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+    g_pd3dDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    g_pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
+    g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+    g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+    g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+    g_pd3dDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+    g_pd3dDevice->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+    g_pd3dDevice->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+    g_pd3dDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+    g_pd3dDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 
     // Setup orthographic projection matrix
     // Being agnostic of whether <d3dx9.h> or <DirectXMath.h> can be used, we aren't relying on D3DXMatrixIdentity()/D3DXMatrixOrthoOffCenterLH() or DirectX::XMMatrixIdentity()/DirectX::XMMatrixOrthographicOffCenterLH()
@@ -152,20 +148,18 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
             else
             {
                 const RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
-                g_pd3dDevice->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->TextureId );
-                g_pd3dDevice->SetScissorRect( &r );
-                g_pd3dDevice->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.size(), idx_offset, pcmd->ElemCount/3 );
+                g_pd3dDevice->SetTexture(0, (LPDIRECT3DTEXTURE9)pcmd->TextureId);
+                g_pd3dDevice->SetScissorRect(&r);
+                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.size(), idx_offset, pcmd->ElemCount/3);
             }
             idx_offset += pcmd->ElemCount;
         }
         vtx_offset += cmd_list->VtxBuffer.size();
     }
 
-    // Restore some modified DX9 state (not all!)
-    g_pd3dDevice->SetPixelShader( last_ps );
-    g_pd3dDevice->SetVertexShader( last_vs );
-    for (int n = 0; n < ARRAYSIZE(last_render_state_to_backup); n++)
-        g_pd3dDevice->SetRenderState(last_render_state_to_backup[n], last_render_state_values[n]);
+    // Restore the DX9 state
+    d3d9_state_block->Apply();
+    d3d9_state_block->Release();
 }
 
 IMGUI_API LRESULT ImGui_ImplDX9_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam)
