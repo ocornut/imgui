@@ -9122,6 +9122,17 @@ void ImGui::SameLine(float pos_x, float spacing_w)
     window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset;
 }
 
+void ImGui::NewLine()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+    if (window->DC.CurrentLineHeight > 0.0f)     // In the event that we are on a line with items that is smaller that FontSize high, we will preserve its height.
+        ItemSize(ImVec2(0,0));
+    else
+        ItemSize(ImVec2(0.0f, GImGui->FontSize));
+}
+
 void ImGui::NextColumn()
 {
     ImGuiWindow* window = GetCurrentWindow();
