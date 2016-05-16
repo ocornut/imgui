@@ -1049,16 +1049,17 @@ struct ImColor
 };
 
 // Helper: Manually clip large list of items.
-// If you are displaying thousands of evenly spaced items and you have a random access to the list, you can perform clipping yourself to save on CPU.
-// The clipper calculates the range of visible items and advance the cursor to compensate for the non-visible items we have skipped.
+// If you are submitting lots of evenly spaced items and you have a random access to the list, you can perform coarse clipping based on visibility to save yourself from processing those items at all.
+// The clipper calculates the range of visible items and advance the cursor to compensate for the non-visible items we have skipped. 
+// ImGui already clip items based on their bounds but it needs to measure text size to do so. Coarse clipping before submission makes this cost and your own data fetching/submission cost null.
 // Usage:
 //     ImGuiListClipper clipper(1000);  // we have 1000 elements, evenly spaced.
 //     while (clipper.Step())
 //         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
 //             ImGui::Text("line number %d", i);
-// - Step 0: the clipper let you process the first element, regardless of it being visible or not, so we can measure the element height.
+// - Step 0: the clipper let you process the first element, regardless of it being visible or not, so we can measure the element height (step skipped if we passed a known height as second arg to constructor).
 // - Step 1: the clipper infer height from first element, calculate the actual range of elements to display, and position the cursor before the first element.
-// - Step 2: dummy step only required if an explicit items_height was passed to constructor or Begin() and user still call Step(). Does nothing and switch to Step 3.
+// - (Step 2: dummy step only required if an explicit items_height was passed to constructor or Begin() and user call Step(). Does nothing and switch to Step 3.)
 // - Step 3: the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd), advance the cursor to the end of the list and then returns 'false' to end the loop.
 struct ImGuiListClipper
 {
