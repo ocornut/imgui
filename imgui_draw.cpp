@@ -1141,7 +1141,8 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 
     ConfigData.push_back(*font_cfg);
     ImFontConfig& new_font_cfg = ConfigData.back();
-    new_font_cfg.DstFont = Fonts.back();
+	if (!new_font_cfg.DstFont)
+	    new_font_cfg.DstFont = Fonts.back();
     if (!new_font_cfg.FontDataOwnedByAtlas)
     {
         new_font_cfg.FontData = ImGui::MemAlloc(new_font_cfg.FontDataSize);
@@ -1151,7 +1152,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 
     // Invalidate texture
     ClearTexData();
-    return Fonts.back();
+    return new_font_cfg.DstFont;
 }
 
 // Default font TTF is compressed with stb_compress then base85 encoded (see extra_fonts/binary_to_compressed_c.cpp for encoder)
