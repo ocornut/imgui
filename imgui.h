@@ -52,7 +52,8 @@ struct ImGuiStorage;                // Simple custom key value storage
 struct ImGuiStyle;                  // Runtime data for styling/colors
 struct ImGuiTextFilter;             // Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
 struct ImGuiTextBuffer;             // Text buffer for logging/accumulating text
-struct ImGuiTextEditCallbackData;   // Shared state of ImGui::InputText() when using custom callbacks (advanced)
+struct ImGuiTextEditCallbackData;   // Shared state of ImGui::InputText() when using custom ImGuiTextEditCallback (rare/advanced use)
+struct ImGuiSizeConstraintCallbackData;// Structure used to constraint window size in custom ways when using custom ImGuiSizeConstraintCallback (rare/advanced use)
 struct ImGuiListClipper;            // Helper to manually clip large list of items
 struct ImGuiContext;                // ImGui context (opaque)
 
@@ -73,6 +74,7 @@ typedef int ImGuiInputTextFlags;    // flags for InputText*()               // e
 typedef int ImGuiSelectableFlags;   // flags for Selectable()               // enum ImGuiSelectableFlags_
 typedef int ImGuiTreeNodeFlags;     // flags for TreeNode*(), Collapsing*() // enum ImGuiTreeNodeFlags_
 typedef int (*ImGuiTextEditCallback)(ImGuiTextEditCallbackData *data);
+typedef void (*ImGuiSizeConstraintCallback)(ImGuiSizeConstraintCallbackData* data);
 
 // Others helpers at bottom of the file:
 // class ImVector<>                 // Lightweight std::vector like class.
@@ -138,6 +140,7 @@ namespace ImGui
     IMGUI_API void          SetNextWindowPos(const ImVec2& pos, ImGuiSetCond cond = 0);         // set next window position. call before Begin()
     IMGUI_API void          SetNextWindowPosCenter(ImGuiSetCond cond = 0);                      // set next window position to be centered on screen. call before Begin()
     IMGUI_API void          SetNextWindowSize(const ImVec2& size, ImGuiSetCond cond = 0);       // set next window size. set axis to 0.0f to force an auto-fit on this axis. call before Begin()
+    IMGUI_API void          SetNextWindowSizeConstraint(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeConstraintCallback custom_callback = NULL, void* custom_callback_data = NULL); // set next window size limits. use -1,-1 on either X/Y axis to preserve the current size. Use callback to apply non-trivial programmatic constraints.
     IMGUI_API void          SetNextWindowContentSize(const ImVec2& size);                       // set next window content size (enforce the range of scrollbars). set axis to 0.0f to leave it automatic. call before Begin()
     IMGUI_API void          SetNextWindowContentWidth(float width);                             // set next window content width (enforce the range of horizontal scrollbar). call before Begin()
     IMGUI_API void          SetNextWindowCollapsed(bool collapsed, ImGuiSetCond cond = 0);      // set next window collapsed state. call before Begin()
@@ -1027,6 +1030,16 @@ struct ImGuiTextEditCallbackData
     void    DeleteChars(int pos, int bytes_count);
     void    InsertChars(int pos, const char* text, const char* text_end = NULL);
     bool    HasSelection() const { return SelectionStart != SelectionEnd; }
+};
+
+// Resizing callback data to apply custom constraint. As enabled by SetNextWindowSizeConstraint(). Callback is called during the next Begin().
+// NB: For basic min/max size constraint on each axis you don't need to use the callback! The SetNextWindowSizeConstraint() parameters are enough.
+struct ImGuiSizeConstraintCallbackData
+{
+    void*   UserData;       // Read-only.   What user passed to SetNextWindowSizeConstraint()
+    ImVec2  Pos;            // Read-only.	Window position, for reference.
+    ImVec2  CurrentSize;    // Read-only.	Current window size.
+    ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
 };
 
 // ImColor() helper to implicity converts colors to either ImU32 (packed 4x1 byte) or ImVec4 (4x1 float)

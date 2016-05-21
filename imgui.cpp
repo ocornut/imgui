@@ -457,7 +457,6 @@
  The list below consist mostly of notes of things to do before they are requested/discussed by users (at that point it usually happens on the github)
 
  - doc: add a proper documentation+regression testing system (#435)
- - window: maximum window size settings (per-axis). for large popups in particular user may not want the popup to fill all space.
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. perhaps a lightweight explicit cleanup pass.
  - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis).
  - window: auto-fit feedback loop when user relies on any dynamic layout (window width multiplier, column) appears weird to end-user. clarify.
@@ -3416,7 +3415,7 @@ static inline void ClearSetNextWindowData()
 {
     ImGuiContext& g = *GImGui;
     g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowContentSizeCond = g.SetNextWindowCollapsedCond = 0;
-    g.SetNextWindowFocus = false;
+    g.SetNextWindowSizeConstraint = g.SetNextWindowFocus = false;
 }
 
 static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
@@ -3731,6 +3730,31 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
     return window;
 }
 
+static void ApplySizeFullWithConstraint(ImGuiWindow* window, ImVec2 new_size)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.SetNextWindowSizeConstraint)
+    {
+        // Using -1,-1 on either X/Y axis to preserve the current size.
+        ImRect cr = g.SetNextWindowSizeConstraintRect;
+        new_size.x = (cr.Min.x >= 0 && cr.Max.x >= 0) ? ImClamp(new_size.x, cr.Min.x, cr.Max.x) : window->SizeFull.x;
+        new_size.y = (cr.Min.y >= 0 && cr.Max.y >= 0) ? ImClamp(new_size.y, cr.Min.y, cr.Max.y) : window->SizeFull.y;
+        if (g.SetNextWindowSizeConstraintCallback)
+        {
+            ImGuiSizeConstraintCallbackData data;
+            data.UserData = g.SetNextWindowSizeConstraintCallbackUserData;
+            data.Pos = window->Pos;
+            data.CurrentSize = window->SizeFull;
+            data.DesiredSize = new_size;
+            g.SetNextWindowSizeConstraintCallback(&data);
+            new_size = data.DesiredSize;
+        }
+    }
+    if (!(window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_AlwaysAutoResize)))
+        new_size = ImMax(new_size, g.Style.WindowMinSize);
+    window->SizeFull = new_size;
+}
+
 // Push a new ImGui window to add widgets to.
 // - A default window called "Debug" is automatically stacked at the beginning of every frame so you can use widgets without explicitly calling a Begin/End pair.
 // - Begin/End can be called multiple times during the frame with the same window name to append content.
@@ -3972,9 +3996,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             }
         }
 
-        // Apply window size constraints and final size
-        if (!(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_AlwaysAutoResize)))
-            window->SizeFull = ImMax(window->SizeFull, style.WindowMinSize);
+        // Apply minimum/maximum window size constraints and final size
+        ApplySizeFullWithConstraint(window, window->SizeFull);
         window->Size = window->Collapsed ? window->TitleBarRect().GetSize() : window->SizeFull;
         
         // POSITION
@@ -4096,7 +4119,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0])
                 {
                     // Manual auto-fit when double-clicking
-                    window->SizeFull = size_auto_fit;
+                    ApplySizeFullWithConstraint(window, size_auto_fit);
                     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkSettingsDirty();
                     SetActiveID(0);
@@ -4104,7 +4127,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 else if (held)
                 {
                     // We don't use an incremental MouseDelta but rather compute an absolute target size based on mouse position
-                    window->SizeFull = ImMax((g.IO.MousePos - g.ActiveIdClickOffset + resize_rect.GetSize()) - window->Pos, style.WindowMinSize);
+                    ApplySizeFullWithConstraint(window, (g.IO.MousePos - g.ActiveIdClickOffset + resize_rect.GetSize()) - window->Pos);
                     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkSettingsDirty();
                 }
@@ -4177,6 +4200,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
 
         // Setup drawing context
         window->DC.IndentX = 0.0f + window->WindowPadding.x - window->Scroll.x;
+		window->DC.GroupOffsetX = 0.0f;
         window->DC.ColumnsOffsetX = 0.0f;
         window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.IndentX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y - window->Scroll.y);
         window->DC.CursorPos = window->DC.CursorStartPos;
@@ -4268,6 +4292,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
     if (first_begin_of_the_frame)
         window->Accessed = false;
     window->BeginCount++;
+    g.SetNextWindowSizeConstraint = false;
 
     // Child window can be out of sight and have "negative" clip windows.
     // Mark them as collapsed so commands are skipped earlier (we can't manually collapse because they have no title bar).
@@ -4904,6 +4929,15 @@ void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiSetCond cond)
     ImGuiContext& g = *GImGui;
     g.SetNextWindowSizeVal = size;
     g.SetNextWindowSizeCond = cond ? cond : ImGuiSetCond_Always;
+}
+
+void ImGui::SetNextWindowSizeConstraint(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeConstraintCallback custom_callback, void* custom_callback_user_data)
+{
+    ImGuiContext& g = *GImGui;
+    g.SetNextWindowSizeConstraint = true;
+    g.SetNextWindowSizeConstraintRect = ImRect(size_min, size_max);
+    g.SetNextWindowSizeConstraintCallback = custom_callback;
+    g.SetNextWindowSizeConstraintCallbackUserData = custom_callback_user_data;
 }
 
 void ImGui::SetNextWindowContentSize(const ImVec2& size)

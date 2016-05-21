@@ -46,6 +46,7 @@
 #endif
 
 #define IM_ARRAYSIZE(_ARR)  ((int)(sizeof(_ARR)/sizeof(*_ARR)))
+#define IM_MAX(_A,_B)       (((_A) >= (_B)) ? (_A) : (_B))
 
 //-----------------------------------------------------------------------------
 // DEMO CODE
@@ -59,6 +60,7 @@ static void ShowExampleAppLayout(bool* p_open);
 static void ShowExampleAppPropertyEditor(bool* p_open);
 static void ShowExampleAppLongText(bool* p_open);
 static void ShowExampleAppAutoResize(bool* p_open);
+static void ShowExampleAppConstrainedResize(bool* p_open);
 static void ShowExampleAppFixedOverlay(bool* p_open);
 static void ShowExampleAppManipulatingWindowTitle(bool* p_open);
 static void ShowExampleAppCustomRendering(bool* p_open);
@@ -105,6 +107,7 @@ void ImGui::ShowTestWindow(bool* p_open)
     static bool show_app_property_editor = false;
     static bool show_app_long_text = false;
     static bool show_app_auto_resize = false;
+    static bool show_app_constrained_resize = false;
     static bool show_app_fixed_overlay = false;
     static bool show_app_manipulating_window_title = false;
     static bool show_app_custom_rendering = false;
@@ -120,6 +123,7 @@ void ImGui::ShowTestWindow(bool* p_open)
     if (show_app_property_editor) ShowExampleAppPropertyEditor(&show_app_property_editor);
     if (show_app_long_text) ShowExampleAppLongText(&show_app_long_text);
     if (show_app_auto_resize) ShowExampleAppAutoResize(&show_app_auto_resize);
+    if (show_app_constrained_resize) ShowExampleAppConstrainedResize(&show_app_constrained_resize);
     if (show_app_fixed_overlay) ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
     if (show_app_manipulating_window_title) ShowExampleAppManipulatingWindowTitle(&show_app_manipulating_window_title);
     if (show_app_custom_rendering) ShowExampleAppCustomRendering(&show_app_custom_rendering);
@@ -183,6 +187,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::MenuItem("Property editor", NULL, &show_app_property_editor);
             ImGui::MenuItem("Long text display", NULL, &show_app_long_text);
             ImGui::MenuItem("Auto-resizing window", NULL, &show_app_auto_resize);
+            ImGui::MenuItem("Constrained-resizing window", NULL, &show_app_constrained_resize);
             ImGui::MenuItem("Simple overlay", NULL, &show_app_fixed_overlay);
             ImGui::MenuItem("Manipulating window title", NULL, &show_app_manipulating_window_title);
             ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
@@ -1790,6 +1795,43 @@ static void ShowExampleAppAutoResize(bool* p_open)
     ImGui::SliderInt("Number of lines", &lines, 1, 20);
     for (int i = 0; i < lines; i++)
         ImGui::Text("%*sThis is line %d", i*4, "", i); // Pad with space to extend size horizontally
+    ImGui::End();
+}
+
+static void ShowExampleAppConstrainedResize(bool* p_open)
+{
+    struct CustomConstraints // Helper functions to demonstrate programmatic constraints
+    {
+        static void Square(ImGuiSizeConstraintCallbackData* data) { data->DesiredSize = ImVec2(IM_MAX(data->DesiredSize.x, data->DesiredSize.y), IM_MAX(data->DesiredSize.x, data->DesiredSize.y)); }
+        static void Step(ImGuiSizeConstraintCallbackData* data)   { float step = (float)(int)data->UserData; data->DesiredSize = ImVec2((int)(data->DesiredSize.x / step + 0.5f) * step, (int)(data->DesiredSize.y / step + 0.5f) * step); }
+    };
+
+    static int type = 0;
+    if (type == 0) ImGui::SetNextWindowSizeConstraint(ImVec2(-1, 0),    ImVec2(-1, FLT_MAX));      // Vertical only
+    if (type == 1) ImGui::SetNextWindowSizeConstraint(ImVec2(0, -1),    ImVec2(FLT_MAX, -1));      // Horizontal only
+    if (type == 2) ImGui::SetNextWindowSizeConstraint(ImVec2(100, 100), ImVec2(FLT_MAX, FLT_MAX)); // Width > 100, Height > 100
+    if (type == 3) ImGui::SetNextWindowSizeConstraint(ImVec2(300, 0),   ImVec2(400, FLT_MAX));     // Width 300-400
+    if (type == 4) ImGui::SetNextWindowSizeConstraint(ImVec2(0, 0),     ImVec2(FLT_MAX, FLT_MAX), CustomConstraints::Square);          // Always Square
+    if (type == 5) ImGui::SetNextWindowSizeConstraint(ImVec2(0, 0),     ImVec2(FLT_MAX, FLT_MAX), CustomConstraints::Step, (void*)100);// Fixed Step
+
+    if (ImGui::Begin("Example: Constrained Resize", p_open))
+    {
+        const char* desc[] = 
+        {
+            "Resize vertical only",
+            "Resize horizontal only",
+            "Width > 100, Height > 100",
+            "Width 300-400",
+            "Custom: Always Square",
+            "Custom: Fixed Steps (100)",
+        };
+        ImGui::Combo("Constraint", &type, desc, IM_ARRAYSIZE(desc)); 
+        if (ImGui::Button("200x200")) ImGui::SetWindowSize(ImVec2(200,200)); ImGui::SameLine();
+        if (ImGui::Button("500x500")) ImGui::SetWindowSize(ImVec2(500,500)); ImGui::SameLine();
+        if (ImGui::Button("800x200")) ImGui::SetWindowSize(ImVec2(800,200));
+        for (int i = 0; i < 10; i++) 
+            ImGui::Text("Hello, sailor! Making this line long enough for the example.");
+    }
     ImGui::End();
 }
 

@@ -394,6 +394,10 @@ struct ImGuiContext
     ImGuiSetCond            SetNextWindowSizeCond;
     ImGuiSetCond            SetNextWindowContentSizeCond;
     ImGuiSetCond            SetNextWindowCollapsedCond;
+    ImRect                  SetNextWindowSizeConstraintRect;           // Valid if 'SetNextWindowSizeConstraint' is true
+    ImGuiSizeConstraintCallback SetNextWindowSizeConstraintCallback;
+    void*                       SetNextWindowSizeConstraintCallbackUserData;
+    bool                    SetNextWindowSizeConstraint;
     bool                    SetNextWindowFocus;
     bool                    SetNextTreeNodeOpenVal;
     ImGuiSetCond            SetNextTreeNodeOpenCond;
@@ -472,6 +476,8 @@ struct ImGuiContext
         SetNextWindowContentSizeCond = 0;
         SetNextWindowCollapsedCond = 0;
         SetNextWindowFocus = false;
+        SetNextWindowSizeConstraintCallback = NULL;
+        SetNextWindowSizeConstraintCallbackUserData = NULL;
         SetNextTreeNodeOpenVal = false;
         SetNextTreeNodeOpenCond = 0;
 
