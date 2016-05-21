@@ -373,6 +373,7 @@ struct ImGuiContext
     bool                    ActiveIdIsAlive;
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
     bool                    ActiveIdAllowOverlap;               // Set only by active widget
+    ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
     ImGuiWindow*            ActiveIdWindow;
     ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window.
     ImGuiID                 MovedWindowMoveId;                  // == MovedWindow->RootWindow->MoveId
@@ -410,7 +411,6 @@ struct ImGuiContext
     ImFont                  InputTextPasswordFont;
     ImGuiID                 ScalarAsInputTextId;                // Temporary text input when CTRL+clicking on a slider, etc.
     ImGuiStorage            ColorEditModeStorage;               // Store user selection of color edit mode
-    ImVec2                  ActiveClickDeltaToCenter;
     float                   DragCurrentValue;                   // Currently dragged value, always float, not rounded by end-user precision settings
     ImVec2                  DragLastMouseDelta;
     float                   DragSpeedDefaultRatio;              // If speed == 0.0f, uses (max-min) * DragSpeedDefaultRatio
@@ -458,6 +458,7 @@ struct ImGuiContext
         ActiveIdIsAlive = false;
         ActiveIdIsJustActivated = false;
         ActiveIdAllowOverlap = false;
+        ActiveIdClickOffset = ImVec2(-1,-1);
         ActiveIdWindow = NULL;
         MovedWindow = NULL;
         MovedWindowMoveId = 0;
@@ -475,7 +476,6 @@ struct ImGuiContext
         SetNextTreeNodeOpenCond = 0;
 
         ScalarAsInputTextId = 0;
-        ActiveClickDeltaToCenter = ImVec2(0.0f, 0.0f);
         DragCurrentValue = 0.0f;
         DragLastMouseDelta = ImVec2(0.0f, 0.0f);
         DragSpeedDefaultRatio = 0.01f;

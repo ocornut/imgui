@@ -3993,7 +3993,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
         {
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
-            window->Size = window->SizeFull = size_on_first_use; // NB: argument name 'size_on_first_use' misleading here, it's really just 'size' as provided by user.
+            window->Size = window->SizeFull = size_on_first_use; // NB: argument name 'size_on_first_use' misleading here, it's really just 'size' as provided by user passed via BeginChild()->Begin().
         }
 
         bool window_pos_center = false;
@@ -4108,7 +4108,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 }
                 else if (held)
                 {
-                    window->SizeFull = ImMax(window->SizeFull + g.IO.MouseDelta, style.WindowMinSize);
+                    // We don't use an incremental MouseDelta but rather compute an absolute target size based on mouse position
+                    window->SizeFull = ImMax((g.IO.MousePos - g.ActiveIdClickOffset + resize_rect.GetSize()) - window->Pos, style.WindowMinSize);
                     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkSettingsDirty();
                 }
@@ -5423,6 +5424,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             {
                 SetActiveID(id, window); // Hold on ID
                 FocusWindow(window);
+                g.ActiveIdClickOffset = g.IO.MousePos - bb.Min;
             }
             if (((flags & ImGuiButtonFlags_PressedOnClick) && g.IO.MouseClicked[0]) || ((flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseDoubleClicked[0]))
             {
@@ -9188,7 +9190,7 @@ static float GetDraggedColumnOffset(int column_index)
     IM_ASSERT(column_index > 0); // We cannot drag column 0. If you get this assert you may have a conflict between the ID of your columns and another widgets.
     IM_ASSERT(g.ActiveId == window->DC.ColumnsSetID + ImGuiID(column_index));
 
-    float x = g.IO.MousePos.x + g.ActiveClickDeltaToCenter.x - window->Pos.x;
+    float x = g.IO.MousePos.x - g.ActiveIdClickOffset.x - window->Pos.x;
     x = ImClamp(x, ImGui::GetColumnOffset(column_index-1)+g.Style.ColumnsMinSpacing, ImGui::GetColumnOffset(column_index+1)-g.Style.ColumnsMinSpacing);
 
     return (float)(int)x;
@@ -9293,7 +9295,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             if (held)
             {
                 if (g.ActiveIdIsJustActivated)
-                    g.ActiveClickDeltaToCenter.x = x - g.IO.MousePos.x;
+                    g.ActiveIdClickOffset.x -= 4;   // Store from center of column line
                 x = GetDraggedColumnOffset(i);
                 SetColumnOffset(i, x);
             }

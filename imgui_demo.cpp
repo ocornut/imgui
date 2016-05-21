@@ -1807,10 +1807,8 @@ static void ShowExampleAppFixedOverlay(bool* p_open)
     ImGui::End();
 }
 
-static void ShowExampleAppManipulatingWindowTitle(bool* p_open)
+static void ShowExampleAppManipulatingWindowTitle(bool*)
 {
-    (void)p_open;
-
     // By default, Windows are uniquely identified by their title.
     // You can use the "##" and "###" markers to manipulate the display/ID. Read FAQ at the top of this file!
 
