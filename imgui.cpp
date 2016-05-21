@@ -3953,7 +3953,6 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 window->SizeFull.x = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.x, size_auto_fit.x) : size_auto_fit.x;
             if (window->AutoFitFramesY > 0)
                 window->SizeFull.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
-            window->Size = window->TitleBarRect().GetSize();
         }
         else
         {
@@ -3971,17 +3970,13 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                     MarkSettingsDirty();
             }
-            window->Size = window->SizeFull;
         }
 
-        // Minimum window size
+        // Apply window size constraints and final size
         if (!(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_AlwaysAutoResize)))
-        {
             window->SizeFull = ImMax(window->SizeFull, style.WindowMinSize);
-            if (!window->Collapsed)
-                window->Size = window->SizeFull;
-        }
-
+        window->Size = window->Collapsed ? window->TitleBarRect().GetSize() : window->SizeFull;
+        
         // POSITION
 
         // Position child window
