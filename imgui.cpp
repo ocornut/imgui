@@ -153,9 +153,10 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2016/05/12 (1.49) - title bar (using TitleBg/TitleBgActive colors) isn't rendered over a window background (WindowBg color) anymore. 
-                       If your TitleBg/TitleBgActive alpha was 1.0f or you are using the default theme it will not affect you. However if your TitleBg/TitleBgActive alpha was <1.0f you need to tweak your custom theme to readjust for the fact that we don't draw a WindowBg background behind the title bar.
-                       This helper function will convert an old TitleBg/TitleBgActive color into a new one with the same visual output, given that color and the WindowBg color.
+ - 2016/05/12 (1.49) - title bar (using ImGuiCol_TitleBg/ImGuiCol_TitleBgActive colors) isn't rendered over a window background (ImGuiCol_WindowBg color) anymore. 
+                       If your TitleBg/TitleBgActive alpha was 1.0f or you are using the default theme it will not affect you. 
+                       However if your TitleBg/TitleBgActive alpha was <1.0f you need to tweak your custom theme to readjust for the fact that we don't draw a WindowBg background behind the title bar.
+                       This helper function will convert an old TitleBg/TitleBgActive color into a new one with the same visual output, given the OLD color and the OLD WindowBg color.
                            ImVec4 ConvertTitleBgCol(const ImVec4& win_bg_col, const ImVec4& title_bg_col)
                            {
                                float new_a = 1.0f - ((1.0f - win_bg_col.w) * (1.0f - title_bg_col.w)), k = title_bg_col.w / new_a;
@@ -578,7 +579,7 @@
  - keyboard: full keyboard navigation and focus. (#323)
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
- - input: rework IO system to be able to pass actual ordered/timestamped events.
+ - input: rework IO system to be able to pass actual ordered/timestamped events. (~#335, #71)
  - input: allow to decide and pass explicit double-clicks (e.g. for windows by the CS_DBLCLKS style).
  - input: support track pad style scrolling & slider edit.
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
@@ -591,6 +592,7 @@
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
  - examples: directx9: save/restore device state more thoroughly.
  - examples: window minimize, maximize (#583)
+ - optimization: add a flag to disable most of rendering, for the case where the user expect to skip it (#335)
  - optimization: use another hash function than crc32, e.g. FNV1a
  - optimization/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
  - optimization: turn some the various stack vectors into statically-sized arrays
