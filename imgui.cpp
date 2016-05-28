@@ -6043,19 +6043,20 @@ bool ImGui::TreeNode(const char* label)
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
-
     return TreeNodeBehavior(window->GetID(label), 0, label, NULL);
 }
 
-float ImGui::GetTreeNodeToLabelSpacing(ImGuiTreeNodeFlags flags)
+void ImGui::TreeAdvanceToLabelPos()
 {
     ImGuiContext& g = *GImGui;
-    float off_from_start;
-    if (flags & ImGuiTreeNodeFlags_Framed)
-        off_from_start = g.FontSize + (g.Style.FramePadding.x * 3.0f) - ((float)(int)(g.CurrentWindow->WindowPadding.x*0.5f) - 1);
-    else
-        off_from_start = g.FontSize + (g.Style.FramePadding.x * 2.0f);
-    return off_from_start;
+    g.CurrentWindow->DC.CursorPos.x += GetTreeNodeToLabelSpacing();
+}
+
+// Horizontal distance preceeding label when using TreeNode() or Bullet()
+float ImGui::GetTreeNodeToLabelSpacing()
+{
+    ImGuiContext& g = *GImGui;
+    return g.FontSize + (g.Style.FramePadding.x * 2.0f);
 }
 
 void ImGui::SetNextTreeNodeOpen(bool is_open, ImGuiSetCond cond)
