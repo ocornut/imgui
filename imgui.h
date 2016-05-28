@@ -195,10 +195,10 @@ namespace ImGui
     IMGUI_API void          Separator();                                                        // horizontal line
     IMGUI_API void          SameLine(float pos_x = 0.0f, float spacing_w = -1.0f);              // call between widgets or groups to layout them horizontally
     IMGUI_API void          NewLine();                                                          // undo a SameLine()
-    IMGUI_API void          Spacing();                                                          // add spacing
+    IMGUI_API void          Spacing();                                                          // add vertical spacing
     IMGUI_API void          Dummy(const ImVec2& size);                                          // add a dummy item of given size
-    IMGUI_API void          Indent();                                                           // move content position toward the right by style.IndentSpacing pixels
-    IMGUI_API void          Unindent();                                                         // move content position back to the left (cancel Indent)
+    IMGUI_API void          Indent();                                                           // move content position toward the right by style.IndentSpacing
+    IMGUI_API void          Unindent();                                                         // move content position back to the left by style.IndentSpacing
     IMGUI_API void          BeginGroup();                                                       // lock horizontal starting position + capture group bounding box into one "item" (so you can use IsItemHovered() or layout primitives such as SameLine() on whole group, etc.)
     IMGUI_API void          EndGroup();
     IMGUI_API ImVec2        GetCursorPos();                                                     // cursor position is relative to window position
@@ -208,7 +208,7 @@ namespace ImGui
     IMGUI_API void          SetCursorPosX(float x);                                             // "
     IMGUI_API void          SetCursorPosY(float y);                                             // "
     IMGUI_API ImVec2        GetCursorStartPos();                                                // initial cursor position
-    IMGUI_API ImVec2        GetCursorScreenPos();                                               // cursor position in absolute screen coordinates [0..io.DisplaySize]
+    IMGUI_API ImVec2        GetCursorScreenPos();                                               // cursor position in absolute screen coordinates [0..io.DisplaySize] (useful to work with ImDrawList API)
     IMGUI_API void          SetCursorScreenPos(const ImVec2& pos);                              // cursor position in absolute screen coordinates [0..io.DisplaySize]
     IMGUI_API void          AlignFirstTextHeightToWidgets();                                    // call once if the first item on the line is a Text() item and you want to vertically lower it to match subsequent (bigger) widgets
     IMGUI_API float         GetTextLineHeight();                                                // height of font == GetWindowFontSize()
@@ -216,7 +216,7 @@ namespace ImGui
     IMGUI_API float         GetItemsLineHeightWithSpacing();                                    // distance (in pixels) between 2 consecutive lines of standard height widgets == GetWindowFontSize() + GetStyle().FramePadding.y*2 + GetStyle().ItemSpacing.y
 
     // Columns
-    // You can also use SameLine(pos_x) for simplified columning. The columns API is still work-in-progress.
+    // You can also use SameLine(pos_x) for simplified columning. The columns API is still work-in-progress and rather lacking.
     IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border = true);  // setup number of columns. use an identifier to distinguish multiple column sets. close with Columns(1).
     IMGUI_API void          NextColumn();                                                       // next column
     IMGUI_API int           GetColumnIndex();                                                   // get current column index
@@ -252,7 +252,7 @@ namespace ImGui
     IMGUI_API void          Bullet();                                                               // draw a small circle and keep the cursor on the same line. advance you by the same distance as an empty TreeNode() call.
     IMGUI_API void          BulletText(const char* fmt, ...) IM_PRINTFARGS(1);
     IMGUI_API void          BulletTextV(const char* fmt, va_list args);
-    IMGUI_API bool          Button(const char* label, const ImVec2& size = ImVec2(0,0));
+    IMGUI_API bool          Button(const char* label, const ImVec2& size = ImVec2(0,0));            // button
     IMGUI_API bool          SmallButton(const char* label);                                         // button with FramePadding=(0,0)
     IMGUI_API bool          InvisibleButton(const char* str_id, const ImVec2& size);
     IMGUI_API void          Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0,0), const ImVec2& uv1 = ImVec2(1,1), const ImVec4& tint_col = ImVec4(1,1,1,1), const ImVec4& border_col = ImVec4(0,0,0,0));
@@ -458,7 +458,7 @@ namespace ImGui
 
     // Obsolete (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    static inline bool      CollapsingHeader(const char* label, const char* str_id, bool display_frame = true, bool default_open = false) { (void)str_id; (void)display_frame; ImGuiTreeNodeFlags default_open_flags = 1<<5; return CollapsingHeader(label, (default_open ? default_open_flags : 0)); } // OBSOLETE 1.49+
+    static inline bool      CollapsingHeader(const char* label, const char* str_id, bool framed = true, bool default_open = false) { (void)str_id; (void)framed; ImGuiTreeNodeFlags default_open_flags = 1<<5; return CollapsingHeader(label, (default_open ? default_open_flags : 0)); } // OBSOLETE 1.49+
     static inline ImFont*   GetWindowFont() { return GetFont(); }                              // OBSOLETE 1.48+
     static inline float     GetWindowFontSize() { return GetFontSize(); }                      // OBSOLETE 1.48+
     static inline void      OpenNextNode(bool open) { ImGui::SetNextTreeNodeOpen(open, 0); }   // OBSOLETE 1.34+
@@ -659,6 +659,7 @@ enum ImGuiAlign_
 };
 
 // Enumeration for ColorEditMode()
+// FIXME-OBSOLETE: Will be replaced by future color/picker api
 enum ImGuiColorEditMode_
 {
     ImGuiColorEditMode_UserSelect = -2,
