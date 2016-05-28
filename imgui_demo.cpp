@@ -253,22 +253,34 @@ void ImGui::ShowTestWindow(bool* p_open)
 
             if (ImGui::TreeNode("With selectable nodes"))
             {
-                ShowHelpMarker("Click to select, CTRL+Click to toggle, click on arrows to open");
-                static int selection_mask = 0x02;   // Dumb representation of what may be user-side selection state. You may carry selection state inside or outside your objects in whatever format you see fit.
-                int node_clicked = -1;
+                ShowHelpMarker("This is a more standard looking tree with selectable nodes.\nClick to select, CTRL+Click to toggle, click on arrows or double-click to open.");
+                ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, ImGui::GetFontSize()*3); // Increase spacing to differentiate leaves from expanded contents.
+                static int selection_mask = (1 << 2); // Dumb representation of what may be user-side selection state. You may carry selection state inside or outside your objects in whatever format you see fit.
+                int node_clicked = -1;                // Temporary storage of what node we have clicked to process selection at the end of the loop. May be a pointer to your own node type, etc.
                 for (int i = 0; i < 6; i++)
                 {
+                    // Disable the default open on single-click behavior and pass in Selected flag according to our selection state.
                     ImGuiTreeNodeFlags node_flags = ((selection_mask & (1 << i)) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-                    if (i >= 3)
-                        node_flags |= ImGuiTreeNodeFlags_AlwaysOpen;
-                    bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable %s %d", (i >= 3) ? "Leaf" : "Node", i);
-                    if (ImGui::IsItemClicked()) 
-                        node_clicked = i;
-                    if (node_open)
+                    if (i < 3)
                     {
-                        ImGui::Text("Selectable Blah blah");
-                        ImGui::Text("Blah blah");
-                        ImGui::TreePop();
+                        // Node
+                        bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Node %d", i);
+                        if (ImGui::IsItemClicked()) 
+                            node_clicked = i;
+                        if (node_open)
+                        {
+                            ImGui::Text("Blah blah\nBlah Blah");
+                            ImGui::TreePop();
+                        }
+                    }
+                    else
+                    {
+                        // Leaf: Here we use the ImGuiTreeNodeFlags_Leaf functionality + ImGuiTreeNodeFlags_NoTreePushOnOpen to avoid testing return value and doing a TreePop
+                        // The only reason we have a TreeNode at all is to allow selection of the leaf. Otherwise we can use BulletText() or a simple Text() element offset by GetTreeNodeToLabelSpacing()
+                        node_flags |= ImGuiTreeNodeFlags_Leaf|ImGuiTreeNodeFlags_NoTreePushOnOpen;
+                        ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Leaf %d", i);
+                        if (ImGui::IsItemClicked()) 
+                            node_clicked = i;
                     }
                 }
                 if (node_clicked != -1)
@@ -276,9 +288,10 @@ void ImGui::ShowTestWindow(bool* p_open)
                     // Update selection state. Process outside of tree loop to avoid visual inconsistencies during the clicking-frame.
                     if (ImGui::GetIO().KeyCtrl)
                         selection_mask ^= (1 << node_clicked);          // CTRL+click to toggle
-                    else if (!(selection_mask & (1 << node_clicked)))   // If there is already a selection don't replace we clicked node is part of it
+                    else //if (!(selection_mask & (1 << node_clicked))) // Depending on selection behavior you want, this commented bit preserve selection when clicking on item that is part of the selection
                         selection_mask = (1 << node_clicked);           // Click to single-select
                 }
+                ImGui::PopStyleVar();
                 ImGui::TreePop();
             }
             ImGui::TreePop();

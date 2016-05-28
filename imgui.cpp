@@ -5776,7 +5776,7 @@ void ImGui::LogButtons()
 
 bool ImGui::TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags)
 {
-    if (flags & ImGuiTreeNodeFlags_AlwaysOpen)
+    if (flags & ImGuiTreeNodeFlags_Leaf)
         return true;
 
     // We only write to the tree storage if the user clicks (or explicitely use SetNextTreeNode*** functions)
@@ -5871,7 +5871,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
         button_flags |= ImGuiButtonFlags_PressedOnDoubleClick | ((flags & ImGuiTreeNodeFlags_OpenOnArrow) ? ImGuiButtonFlags_PressedOnClickRelease : 0);
     bool hovered, held, pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags);
-    if (pressed && !(flags & ImGuiTreeNodeFlags_AlwaysOpen))
+    if (pressed && !(flags & ImGuiTreeNodeFlags_Leaf))
     {
         bool toggled = !(flags & (ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick));
         if (flags & ImGuiTreeNodeFlags_OpenOnArrow)
@@ -5915,9 +5915,9 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         if (hovered || (flags & ImGuiTreeNodeFlags_Selected))
             RenderFrame(bb.Min, bb.Max, col, false);
 
-        if (flags & ImGuiTreeNodeFlags_AlwaysOpen)
+        if (flags & ImGuiTreeNodeFlags_Bullet)
             RenderBullet(bb.Min + ImVec2(text_offset_x * 0.5f, g.FontSize*0.50f + text_base_offset_y));
-        else
+        else if (!(flags & ImGuiTreeNodeFlags_Leaf))
             RenderCollapseTriangle(bb.Min + ImVec2(padding.x, g.FontSize*0.15f + text_base_offset_y), is_open, 0.70f, false);
         if (g.LogEnabled)
             LogRenderedText(text_pos, ">");
