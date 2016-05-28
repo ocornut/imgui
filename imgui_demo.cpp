@@ -251,16 +251,22 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::TreePop();
             }
 
-            if (ImGui::TreeNode("With selectable nodes"))
+            if (ImGui::TreeNode("Advanced, with Selectable nodes"))
             {
                 ShowHelpMarker("This is a more standard looking tree with selectable nodes.\nClick to select, CTRL+Click to toggle, click on arrows or double-click to open.");
-                ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, ImGui::GetFontSize()*3); // Increase spacing to differentiate leaves from expanded contents.
+                static bool align_label_with_current_x_position = false;
+                ImGui::Checkbox("Align label with current X position)", &align_label_with_current_x_position);
+                ImGui::Text("Hello!");
+                if (align_label_with_current_x_position)
+                    ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
+
                 static int selection_mask = (1 << 2); // Dumb representation of what may be user-side selection state. You may carry selection state inside or outside your objects in whatever format you see fit.
                 int node_clicked = -1;                // Temporary storage of what node we have clicked to process selection at the end of the loop. May be a pointer to your own node type, etc.
+                ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, ImGui::GetFontSize()*3); // Increase spacing to differentiate leaves from expanded contents.
                 for (int i = 0; i < 6; i++)
                 {
                     // Disable the default open on single-click behavior and pass in Selected flag according to our selection state.
-                    ImGuiTreeNodeFlags node_flags = ((selection_mask & (1 << i)) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+                    ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ((selection_mask & (1 << i)) ? ImGuiTreeNodeFlags_Selected : 0);
                     if (i < 3)
                     {
                         // Node
@@ -290,6 +296,8 @@ void ImGui::ShowTestWindow(bool* p_open)
                         selection_mask = (1 << node_clicked);           // Click to single-select
                 }
                 ImGui::PopStyleVar();
+                if (align_label_with_current_x_position)
+                    ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
                 ImGui::TreePop();
             }
             ImGui::TreePop();

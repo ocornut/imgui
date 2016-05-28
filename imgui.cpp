@@ -5847,7 +5847,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         bb.Max.x += (float)(int)(window->WindowPadding.x*0.5f) - 1;
     }
 
-    const float text_offset_x = g.FontSize + (display_frame ? padding.x*3 : padding.x*2);             // Collapser arrow width + Spacing
+    const float text_offset_x = (g.FontSize + (display_frame ? padding.x*3 : padding.x*2));   // Collapser arrow width + Spacing
     const float text_width = g.FontSize + (label_size.x > 0.0f ? label_size.x + padding.x*2 : 0.0f);   // Include collapser
     ItemSize(ImVec2(text_width, frame_height), text_base_offset_y);
 
