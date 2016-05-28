@@ -275,9 +275,9 @@ void ImGui::ShowTestWindow(bool* p_open)
                 {
                     // Update selection state. Process outside of tree loop to avoid visual inconsistencies during the clicking-frame.
                     if (ImGui::GetIO().KeyCtrl)
-                        selection_mask ^= (1 << node_clicked);  // CTRL+click to toggle
-                    else
-                        selection_mask = (1 << node_clicked);   // Click to single-select
+                        selection_mask ^= (1 << node_clicked);          // CTRL+click to toggle
+                    else if (!(selection_mask & (1 << node_clicked)))   // If there is already a selection don't replace we clicked node is part of it
+                        selection_mask = (1 << node_clicked);           // Click to single-select
                 }
                 ImGui::TreePop();
             }
