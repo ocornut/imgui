@@ -4932,7 +4932,7 @@ void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiSetCond cond)
     g.SetNextWindowSizeCond = cond ? cond : ImGuiSetCond_Always;
 }
 
-void ImGui::SetNextWindowSizeConstraint(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeConstraintCallback custom_callback, void* custom_callback_user_data)
+void ImGui::SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeConstraintCallback custom_callback, void* custom_callback_user_data)
 {
     ImGuiContext& g = *GImGui;
     g.SetNextWindowSizeConstraint = true;
