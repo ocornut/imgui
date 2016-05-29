@@ -4201,6 +4201,12 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             }
         }
 
+        // Update ContentsRegionMax. All the variable it depends on are set above in this function.
+        window->ContentsRegionRect.Min.x = -window->Scroll.x + window->WindowPadding.x;
+        window->ContentsRegionRect.Min.x = -window->Scroll.y + window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y;
+        window->ContentsRegionRect.Max.x = (window->SizeContentsExplicit.x != 0.0f ? window->SizeContentsExplicit.x : window->Size.x - window->ScrollbarSizes.x) - window->Scroll.x - window->WindowPadding.x; 
+        window->ContentsRegionRect.Max.y = (window->SizeContentsExplicit.y != 0.0f ? window->SizeContentsExplicit.y : window->Size.y - window->ScrollbarSizes.y) - window->Scroll.y - window->WindowPadding.y; 
+
         // Setup drawing context
         window->DC.IndentX = 0.0f + window->WindowPadding.x - window->Scroll.x;
         window->DC.ColumnsOffsetX = 0.0f;
@@ -4970,12 +4976,10 @@ void ImGui::SetNextWindowFocus()
 }
 
 // In window space (not screen space!)
-// FIXME-OPT: Could cache and maintain it (pretty much only change on columns change)
 ImVec2 ImGui::GetContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    ImVec2 content_region_size = ImVec2(window->SizeContentsExplicit.x != 0.0f ? window->SizeContentsExplicit.x : window->Size.x - window->ScrollbarSizes.x, window->SizeContentsExplicit.y != 0.0f ? window->SizeContentsExplicit.y : window->Size.y - window->ScrollbarSizes.y);
-    ImVec2 mx = content_region_size - window->Scroll - window->WindowPadding;
+    ImVec2 mx = window->ContentsRegionRect.Max;
     if (window->DC.ColumnsCount != 1)
         mx.x = ImGui::GetColumnOffset(window->DC.ColumnsCurrent + 1) - window->WindowPadding.x;
     return mx;
@@ -4996,20 +5000,19 @@ float ImGui::GetContentRegionAvailWidth()
 ImVec2 ImGui::GetWindowContentRegionMin()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return ImVec2(-window->Scroll.x, -window->Scroll.y + window->TitleBarHeight() + window->MenuBarHeight()) + window->WindowPadding;
+    return window->ContentsRegionRect.Min;
 }
 
 ImVec2 ImGui::GetWindowContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    ImVec2 content_region_size = ImVec2(window->SizeContentsExplicit.x != 0.0f ? window->SizeContentsExplicit.x : window->Size.x, window->SizeContentsExplicit.y != 0.0f ? window->SizeContentsExplicit.y : window->Size.y);
-    ImVec2 m = content_region_size - window->Scroll - window->WindowPadding - window->ScrollbarSizes;
-    return m;
+    return window->ContentsRegionRect.Max;
 }
 
 float ImGui::GetWindowContentRegionWidth()
 {
-    return GetWindowContentRegionMax().x - GetWindowContentRegionMin().x;
+    ImGuiWindow* window = GetCurrentWindowRead();
+    return window->ContentsRegionRect.Max.x - window->ContentsRegionRect.Min.x;
 }
 
 float ImGui::GetTextLineHeight()
