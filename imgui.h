@@ -36,6 +36,11 @@
 #define IM_PRINTFARGS(FMT)
 #endif
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast"
+#endif
+
 // Forward declarations
 struct ImDrawChannel;               // Temporary storage for outputting drawing commands out of order, used by ImDrawList::ChannelsSplit()
 struct ImDrawCmd;                   // A single draw command within a parent ImDrawList (generally maps to 1 GPU draw call)
@@ -1384,6 +1389,10 @@ struct ImFont
     IMGUI_API void              GrowIndex(int new_size);
     IMGUI_API void              AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst = true); // Makes 'dst' character/glyph points to 'src' character/glyph. Currently needs to be called AFTER fonts have been built.
 };
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 //---- Include imgui_user.h at the end of imgui.h
 //---- So you can include code that extends ImGui using any of the types declared above.

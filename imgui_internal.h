@@ -19,6 +19,13 @@
 #pragma warning (disable: 4251) // class 'xxx' needs to have dll-interface to be used by clients of struct 'xxx' // when IMGUI_API is set to__declspec(dllexport)
 #endif
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"        // for stb_textedit.h
+#pragma clang diagnostic ignored "-Wmissing-prototypes"     // for stb_textedit.h
+#pragma clang diagnostic ignored "-Wold-style-cast"
+#endif
+
 //-----------------------------------------------------------------------------
 // Forward Declarations
 //-----------------------------------------------------------------------------
@@ -47,22 +54,12 @@ typedef int ImGuiSliderFlags;     // enum ImGuiSliderFlags_
 namespace ImGuiStb
 {
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
-#pragma clang diagnostic ignored "-Wmissing-prototypes"
-#endif
-
 #undef STB_TEXTEDIT_STRING
 #undef STB_TEXTEDIT_CHARTYPE
 #define STB_TEXTEDIT_STRING             ImGuiTextEditState
 #define STB_TEXTEDIT_CHARTYPE           ImWchar
 #define STB_TEXTEDIT_GETWIDTH_NEWLINE   -1.0f
 #include "stb_textedit.h"
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 } // namespace ImGuiStb
 
@@ -746,7 +743,11 @@ namespace ImGui
     IMGUI_API int           ParseFormatPrecision(const char* fmt, int default_value);
     IMGUI_API float         RoundScalar(float value, int decimal_precision);
 
-} // namespace ImGuiP
+} // namespace ImGui
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 #ifdef _MSC_VER
 #pragma warning (pop)
