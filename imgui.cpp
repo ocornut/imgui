@@ -4203,9 +4203,9 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
 
         // Update ContentsRegionMax. All the variable it depends on are set above in this function.
         window->ContentsRegionRect.Min.x = -window->Scroll.x + window->WindowPadding.x;
-        window->ContentsRegionRect.Min.x = -window->Scroll.y + window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y;
-        window->ContentsRegionRect.Max.x = (window->SizeContentsExplicit.x != 0.0f ? window->SizeContentsExplicit.x : window->Size.x - window->ScrollbarSizes.x) - window->Scroll.x - window->WindowPadding.x; 
-        window->ContentsRegionRect.Max.y = (window->SizeContentsExplicit.y != 0.0f ? window->SizeContentsExplicit.y : window->Size.y - window->ScrollbarSizes.y) - window->Scroll.y - window->WindowPadding.y; 
+        window->ContentsRegionRect.Min.x = -window->Scroll.y + window->WindowPadding.y + window->TitleBarHeight() + window->MenuBarHeight();
+        window->ContentsRegionRect.Max.x = -window->Scroll.x - window->WindowPadding.x + (window->SizeContentsExplicit.x != 0.0f ? window->SizeContentsExplicit.x : ImMax(window->SizeContents.x, window->Size.x - window->ScrollbarSizes.x)); 
+        window->ContentsRegionRect.Max.y = -window->Scroll.y - window->WindowPadding.y + (window->SizeContentsExplicit.y != 0.0f ? window->SizeContentsExplicit.y : ImMax(window->SizeContents.y, window->Size.y - window->ScrollbarSizes.y)); 
 
         // Setup drawing context
         window->DC.IndentX = 0.0f + window->WindowPadding.x - window->Scroll.x;
