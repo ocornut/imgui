@@ -12,7 +12,7 @@
 #endif
 
 #include <stdio.h>      // FILE*
-#include <math.h>       // sqrtf()
+#include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf, sinf
 
 #ifdef _MSC_VER
 #pragma warning (push)

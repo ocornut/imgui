@@ -610,7 +610,6 @@
 #include "imgui_internal.h"
 
 #include <ctype.h>      // toupper, isprint
-#include <math.h>       // sqrtf, fabsf, fmodf, powf, cosf, sinf, floorf, ceilf
 #include <stdlib.h>     // NULL, malloc, free, qsort, atoi
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #include <limits.h>     // INT_MIN, INT_MAX
@@ -9129,10 +9128,10 @@ void ImGui::EndGroup()
 }
 
 // Gets back to previous line and continue with horizontal layout
-//      pos_x == 0      : follow on previous item
-//      pos_x != 0      : align to specified column
-//      spacing_w < 0   : use default spacing if column_x==0, no spacing if column_x!=0
-//      spacing_w >= 0  : enforce spacing
+//      pos_x == 0      : follow right after previous item
+//      pos_x != 0      : align to specified x position
+//      spacing_w < 0   : use default spacing if pos_x == 0, no spacing if pos_x != 0
+//      spacing_w >= 0  : enforce spacing amount
 void ImGui::SameLine(float pos_x, float spacing_w)
 {
     ImGuiWindow* window = GetCurrentWindow();
