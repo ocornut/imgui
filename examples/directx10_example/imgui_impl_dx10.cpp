@@ -1,4 +1,6 @@
 // ImGui Win32 + DirectX10 binding
+// In this binding, ImTextureID is used to store a 'ID3D10ShaderResourceView*' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
+
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
@@ -44,6 +46,8 @@ struct VERTEX_CONSTANT_BUFFER
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
 {
+    ID3D10Device* ctx = g_pd3dDevice;
+
     // Create and grow vertex/index buffers if needed
     if (!g_pVB || g_VertexBufferSize < draw_data->TotalVtxCount)
     {
@@ -56,7 +60,7 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
         desc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
         desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
         desc.MiscFlags = 0;
-        if (g_pd3dDevice->CreateBuffer(&desc, NULL, &g_pVB) < 0)
+        if (ctx->CreateBuffer(&desc, NULL, &g_pVB) < 0)
             return;
     }
 
@@ -64,13 +68,13 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
     {
         if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
         g_IndexBufferSize = draw_data->TotalIdxCount + 10000;
-        D3D10_BUFFER_DESC bufferDesc;
-        memset(&bufferDesc, 0, sizeof(D3D10_BUFFER_DESC));
-        bufferDesc.Usage = D3D10_USAGE_DYNAMIC;
-        bufferDesc.ByteWidth = g_IndexBufferSize * sizeof(ImDrawIdx);
-        bufferDesc.BindFlags = D3D10_BIND_INDEX_BUFFER;
-        bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
-        if (g_pd3dDevice->CreateBuffer(&bufferDesc, NULL, &g_pIB) < 0)
+        D3D10_BUFFER_DESC desc;
+        memset(&desc, 0, sizeof(D3D10_BUFFER_DESC));
+        desc.Usage = D3D10_USAGE_DYNAMIC;
+        desc.ByteWidth = g_IndexBufferSize * sizeof(ImDrawIdx);
+        desc.BindFlags = D3D10_BIND_INDEX_BUFFER;
+        desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+        if (ctx->CreateBuffer(&desc, NULL, &g_pIB) < 0)
             return;
     }
 
@@ -79,7 +83,6 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
     ImDrawIdx* idx_dst = NULL;
     g_pVB->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&vtx_dst);
     g_pIB->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&idx_dst);
-
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -93,11 +96,10 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
 
     // Setup orthographic projection matrix into our constant buffer
     {
-        void* mappedResource;
-        if (g_pVertexConstantBuffer->Map(D3D10_MAP_WRITE_DISCARD, 0, &mappedResource) != S_OK)
+        void* mapped_resource;
+        if (g_pVertexConstantBuffer->Map(D3D10_MAP_WRITE_DISCARD, 0, &mapped_resource) != S_OK)
             return;
-
-        VERTEX_CONSTANT_BUFFER* pConstantBuffer = (VERTEX_CONSTANT_BUFFER*)mappedResource;
+        VERTEX_CONSTANT_BUFFER* constant_buffer = (VERTEX_CONSTANT_BUFFER*)mapped_resource;
         const float L = 0.0f;
         const float R = ImGui::GetIO().DisplaySize.x;
         const float B = ImGui::GetIO().DisplaySize.y;
@@ -109,39 +111,72 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
             { 0.0f,         0.0f,           0.5f,       0.0f },
             { (R+L)/(L-R),  (T+B)/(B-T),    0.5f,       1.0f },
         };
-        memcpy(&pConstantBuffer->mvp, mvp, sizeof(mvp));
+        memcpy(&constant_buffer->mvp, mvp, sizeof(mvp));
         g_pVertexConstantBuffer->Unmap();
     }
 
-    // Setup viewport
+    // Backup DX state that will be modified to restore it afterwards (unfortunately this is very ugly looking and verbose. Close your eyes!)
+    struct BACKUP_DX10_STATE
     {
-        D3D10_VIEWPORT vp;
-        memset(&vp, 0, sizeof(D3D10_VIEWPORT));
-        vp.Width = (UINT)ImGui::GetIO().DisplaySize.x;
-        vp.Height = (UINT)ImGui::GetIO().DisplaySize.y;
-        vp.MinDepth = 0.0f;
-        vp.MaxDepth = 1.0f;
-        vp.TopLeftX = 0;
-        vp.TopLeftY = 0;
-        g_pd3dDevice->RSSetViewports(1, &vp);
-    }
+        UINT                        ScissorRectsCount, ViewportsCount;
+        D3D10_RECT                  ScissorRects[D3D10_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
+        D3D10_VIEWPORT              Viewports[D3D10_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
+        ID3D10RasterizerState*      RS;
+        ID3D10BlendState*           BlendState;
+        FLOAT                       BlendFactor[4];
+        UINT                        SampleMask;
+        ID3D10ShaderResourceView*   PSShaderResource;
+        ID3D10SamplerState*         PSSampler;
+        ID3D10PixelShader*          PS;
+        ID3D10VertexShader*         VS;
+        D3D10_PRIMITIVE_TOPOLOGY    PrimitiveTopology;
+        ID3D10Buffer*               IndexBuffer, *VertexBuffer, *VSConstantBuffer;
+        UINT                        IndexBufferOffset, VertexBufferStride, VertexBufferOffset;
+        DXGI_FORMAT                 IndexBufferFormat;
+        ID3D10InputLayout*          InputLayout;
+    };
+    BACKUP_DX10_STATE old;
+    old.ScissorRectsCount = old.ViewportsCount = D3D10_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+    ctx->RSGetScissorRects(&old.ScissorRectsCount, old.ScissorRects);
+    ctx->RSGetViewports(&old.ViewportsCount, old.Viewports);
+    ctx->RSGetState(&old.RS);
+    ctx->OMGetBlendState(&old.BlendState, old.BlendFactor, &old.SampleMask);
+    ctx->PSGetShaderResources(0, 1, &old.PSShaderResource);
+    ctx->PSGetSamplers(0, 1, &old.PSSampler);
+    ctx->PSGetShader(&old.PS);
+    ctx->VSGetShader(&old.VS);
+    ctx->VSGetConstantBuffers(0, 1, &old.VSConstantBuffer);
+    ctx->IAGetPrimitiveTopology(&old.PrimitiveTopology);
+    ctx->IAGetIndexBuffer(&old.IndexBuffer, &old.IndexBufferFormat, &old.IndexBufferOffset);
+    ctx->IAGetVertexBuffers(0, 1, &old.VertexBuffer, &old.VertexBufferStride, &old.VertexBufferOffset);
+    ctx->IAGetInputLayout(&old.InputLayout);
+
+    // Setup viewport
+    D3D10_VIEWPORT vp;
+    memset(&vp, 0, sizeof(D3D10_VIEWPORT));
+    vp.Width = (UINT)ImGui::GetIO().DisplaySize.x;
+    vp.Height = (UINT)ImGui::GetIO().DisplaySize.y;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    vp.TopLeftX = vp.TopLeftY = 0;
+    ctx->RSSetViewports(1, &vp);
 
     // Bind shader and vertex buffers
     unsigned int stride = sizeof(ImDrawVert);
     unsigned int offset = 0;
-    g_pd3dDevice->IASetInputLayout(g_pInputLayout);
-    g_pd3dDevice->IASetVertexBuffers(0, 1, &g_pVB, &stride, &offset);
-    g_pd3dDevice->IASetIndexBuffer(g_pIB, sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, 0);
-    g_pd3dDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    g_pd3dDevice->VSSetShader(g_pVertexShader);
-    g_pd3dDevice->VSSetConstantBuffers(0, 1, &g_pVertexConstantBuffer);
-    g_pd3dDevice->PSSetShader(g_pPixelShader);
-    g_pd3dDevice->PSSetSamplers(0, 1, &g_pFontSampler);
+    ctx->IASetInputLayout(g_pInputLayout);
+    ctx->IASetVertexBuffers(0, 1, &g_pVB, &stride, &offset);
+    ctx->IASetIndexBuffer(g_pIB, sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, 0);
+    ctx->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ctx->VSSetShader(g_pVertexShader);
+    ctx->VSSetConstantBuffers(0, 1, &g_pVertexConstantBuffer);
+    ctx->PSSetShader(g_pPixelShader);
+    ctx->PSSetSamplers(0, 1, &g_pFontSampler);
 
     // Setup render state
-    const float blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
-    g_pd3dDevice->OMSetBlendState(g_pBlendState, blendFactor, 0xffffffff);
-    g_pd3dDevice->RSSetState(g_pRasterizerState);
+    const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
+    ctx->OMSetBlendState(g_pBlendState, blend_factor, 0xffffffff);
+    ctx->RSSetState(g_pRasterizerState);
 
     // Render command lists
     int vtx_offset = 0;
@@ -159,19 +194,29 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
             else
             {
                 const D3D10_RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
-                g_pd3dDevice->PSSetShaderResources(0, 1, (ID3D10ShaderResourceView**)&pcmd->TextureId);
-                g_pd3dDevice->RSSetScissorRects(1, &r);
-                g_pd3dDevice->DrawIndexed(pcmd->ElemCount, idx_offset, vtx_offset);
+                ctx->PSSetShaderResources(0, 1, (ID3D10ShaderResourceView**)&pcmd->TextureId);
+                ctx->RSSetScissorRects(1, &r);
+                ctx->DrawIndexed(pcmd->ElemCount, idx_offset, vtx_offset);
             }
             idx_offset += pcmd->ElemCount;
         }
         vtx_offset += cmd_list->VtxBuffer.size();
     }
 
-    // Restore modified state
-    g_pd3dDevice->IASetInputLayout(NULL);
-    g_pd3dDevice->PSSetShader(NULL);
-    g_pd3dDevice->VSSetShader(NULL);
+    // Restore modified DX state
+    ctx->RSSetScissorRects(old.ScissorRectsCount, old.ScissorRects);
+    ctx->RSSetViewports(old.ViewportsCount, old.Viewports);
+    ctx->RSSetState(old.RS); if (old.RS) old.RS->Release();
+    ctx->OMSetBlendState(old.BlendState, old.BlendFactor, old.SampleMask); if (old.BlendState) old.BlendState->Release();
+    ctx->PSSetShaderResources(0, 1, &old.PSShaderResource); if (old.PSShaderResource) old.PSShaderResource->Release();
+    ctx->PSSetSamplers(0, 1, &old.PSSampler); if (old.PSSampler) old.PSSampler->Release();
+    ctx->PSSetShader(old.PS); if (old.PS) old.PS->Release();
+    ctx->VSSetShader(old.VS); if (old.VS) old.VS->Release();
+    ctx->VSSetConstantBuffers(0, 1, &old.VSConstantBuffer); if (old.VSConstantBuffer) old.VSConstantBuffer->Release();
+    ctx->IASetPrimitiveTopology(old.PrimitiveTopology);
+    ctx->IASetIndexBuffer(old.IndexBuffer, old.IndexBufferFormat, old.IndexBufferOffset); if (old.IndexBuffer) old.IndexBuffer->Release();
+    ctx->IASetVertexBuffers(0, 1, &old.VertexBuffer, &old.VertexBufferStride, &old.VertexBufferOffset); if (old.VertexBuffer) old.VertexBuffer->Release();
+    ctx->IASetInputLayout(old.InputLayout); if (old.InputLayout) old.InputLayout->Release();
 }
 
 IMGUI_API LRESULT ImGui_ImplDX10_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -232,33 +277,33 @@ static void ImGui_ImplDX10_CreateFontsTexture()
 
     // Create DX10 texture
     {
-        D3D10_TEXTURE2D_DESC texDesc;
-        ZeroMemory(&texDesc, sizeof(texDesc));
-        texDesc.Width = width;
-        texDesc.Height = height;
-        texDesc.MipLevels = 1;
-        texDesc.ArraySize = 1;
-        texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        texDesc.SampleDesc.Count = 1;
-        texDesc.Usage = D3D10_USAGE_DEFAULT;
-        texDesc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
-        texDesc.CPUAccessFlags = 0;
+        D3D10_TEXTURE2D_DESC desc;
+        ZeroMemory(&desc, sizeof(desc));
+        desc.Width = width;
+        desc.Height = height;
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D10_USAGE_DEFAULT;
+        desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
+        desc.CPUAccessFlags = 0;
 
         ID3D10Texture2D *pTexture = NULL;
         D3D10_SUBRESOURCE_DATA subResource;
         subResource.pSysMem = pixels;
-        subResource.SysMemPitch = texDesc.Width * 4;
+        subResource.SysMemPitch = desc.Width * 4;
         subResource.SysMemSlicePitch = 0;
-        g_pd3dDevice->CreateTexture2D(&texDesc, &subResource, &pTexture);
+        g_pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture);
 
         // Create texture view
-        D3D10_SHADER_RESOURCE_VIEW_DESC srvDesc;
-        ZeroMemory(&srvDesc, sizeof(srvDesc));
-        srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        srvDesc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Texture2D.MipLevels = texDesc.MipLevels;
-        srvDesc.Texture2D.MostDetailedMip = 0;
-        g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, &g_pFontTextureView);
+        D3D10_SHADER_RESOURCE_VIEW_DESC srv_desc;
+        ZeroMemory(&srv_desc, sizeof(srv_desc));
+        srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        srv_desc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
+        srv_desc.Texture2D.MipLevels = desc.MipLevels;
+        srv_desc.Texture2D.MostDetailedMip = 0;
+        g_pd3dDevice->CreateShaderResourceView(pTexture, &srv_desc, &g_pFontTextureView);
         pTexture->Release();
     }
 
@@ -267,17 +312,17 @@ static void ImGui_ImplDX10_CreateFontsTexture()
 
     // Create texture sampler
     {
-        D3D10_SAMPLER_DESC samplerDesc;
-        ZeroMemory(&samplerDesc, sizeof(samplerDesc));
-        samplerDesc.Filter = D3D10_FILTER_MIN_MAG_MIP_LINEAR;
-        samplerDesc.AddressU = D3D10_TEXTURE_ADDRESS_WRAP;
-        samplerDesc.AddressV = D3D10_TEXTURE_ADDRESS_WRAP;
-        samplerDesc.AddressW = D3D10_TEXTURE_ADDRESS_WRAP;
-        samplerDesc.MipLODBias = 0.f;
-        samplerDesc.ComparisonFunc = D3D10_COMPARISON_ALWAYS;
-        samplerDesc.MinLOD = 0.f;
-        samplerDesc.MaxLOD = 0.f;
-        g_pd3dDevice->CreateSamplerState(&samplerDesc, &g_pFontSampler);
+        D3D10_SAMPLER_DESC desc;
+        ZeroMemory(&desc, sizeof(desc));
+        desc.Filter = D3D10_FILTER_MIN_MAG_MIP_LINEAR;
+        desc.AddressU = D3D10_TEXTURE_ADDRESS_WRAP;
+        desc.AddressV = D3D10_TEXTURE_ADDRESS_WRAP;
+        desc.AddressW = D3D10_TEXTURE_ADDRESS_WRAP;
+        desc.MipLODBias = 0.f;
+        desc.ComparisonFunc = D3D10_COMPARISON_ALWAYS;
+        desc.MinLOD = 0.f;
+        desc.MaxLOD = 0.f;
+        g_pd3dDevice->CreateSamplerState(&desc, &g_pFontSampler);
     }
 
     // Cleanup (don't clear the input data if you want to append new fonts later)
@@ -329,24 +374,24 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
             return false;
 
         // Create the input layout
-        D3D10_INPUT_ELEMENT_DESC localLayout[] = {
+        D3D10_INPUT_ELEMENT_DESC local_layout[] = 
+        {
             { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->pos), D3D10_INPUT_PER_VERTEX_DATA, 0 },
             { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->uv),  D3D10_INPUT_PER_VERTEX_DATA, 0 },
             { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (size_t)(&((ImDrawVert*)0)->col), D3D10_INPUT_PER_VERTEX_DATA, 0 },
         };
-
-        if (g_pd3dDevice->CreateInputLayout(localLayout, 3, g_pVertexShaderBlob->GetBufferPointer(), g_pVertexShaderBlob->GetBufferSize(), &g_pInputLayout) != S_OK)
+        if (g_pd3dDevice->CreateInputLayout(local_layout, 3, g_pVertexShaderBlob->GetBufferPointer(), g_pVertexShaderBlob->GetBufferSize(), &g_pInputLayout) != S_OK)
             return false;
 
         // Create the constant buffer
         {
-            D3D10_BUFFER_DESC cbDesc;
-            cbDesc.ByteWidth = sizeof(VERTEX_CONSTANT_BUFFER);
-            cbDesc.Usage = D3D10_USAGE_DYNAMIC;
-            cbDesc.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
-            cbDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
-            cbDesc.MiscFlags = 0;
-            g_pd3dDevice->CreateBuffer(&cbDesc, NULL, &g_pVertexConstantBuffer);
+            D3D10_BUFFER_DESC desc;
+            desc.ByteWidth = sizeof(VERTEX_CONSTANT_BUFFER);
+            desc.Usage = D3D10_USAGE_DYNAMIC;
+            desc.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
+            desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+            desc.MiscFlags = 0;
+            g_pd3dDevice->CreateBuffer(&desc, NULL, &g_pVertexConstantBuffer);
         }
     }
 
@@ -494,6 +539,7 @@ void ImGui_ImplDX10_NewFrame()
     io.KeyCtrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     io.KeyShift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
     io.KeyAlt = (GetKeyState(VK_MENU) & 0x8000) != 0;
+    io.KeySuper = false;
     // io.KeysDown : filled by WM_KEYDOWN/WM_KEYUP events
     // io.MousePos : filled by WM_MOUSEMOVE events
     // io.MouseDown : filled by WM_*BUTTON* events

@@ -47,7 +47,11 @@ Gallery
 
 See the [Screenshots Thread](https://github.com/ocornut/imgui/issues/123) for some user creations.
 
-![screenshot 1](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/examples_04.png)
+![screenshot 1](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_01.png)
+![screenshot 2](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_02.png)
+
+[![profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler-880.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler.png)
+
 ![screenshot 2](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_01.png)
 ![screenshot 3](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_02.png)
 ![screenshot 4](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_03.png)
@@ -126,6 +130,10 @@ If you intend to display large lists of items (say, 1000+) it can be beneficial 
 
 You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. 
 
+This is [LumixEngine](https://github.com/nem0/LumixEngine) with a minor skinning hack + a docking/tabs extension (both of which you can find in the Issues section and will eventually be merged).
+
+[![Skinning in LumixEngine](https://cloud.githubusercontent.com/assets/8225057/13198792/92808c5c-d812-11e5-9507-16b63918b05b.jpg)](https://cloud.githubusercontent.com/assets/8225057/13044612/59f07aec-d3cf-11e5-8ccb-39adf2e13e69.png)
+
 <b>Why using C++ (as opposed to C)?</b>
 
 ImGui takes advantage of a few C++ features for convenience but nothing anywhere Boost-insanity/quagmire. In particular, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience but could be removed.
@@ -154,13 +162,16 @@ Embeds [stb_textedit.h, stb_truetype.h, stb_rectpack.h](https://github.com/nothi
 
 Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. And everybody posting feedback, questions and patches on the GitHub.
 
-ImGui development is financially supported on [**Patreon**](http://www.patreon.com/imgui).
+Ongoing ImGui development is financially supported on [**Patreon**](http://www.patreon.com/imgui).
 
-Special supporters:
-- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Stefano Cristiano.
+Double-chocolate sponsors:
+- Media Molecule, Mobigame
 
-And:
-- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm.
+Salty caramel supporters:
+- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Stefano Cristiano, Chris Genova, ikrima
+
+Caramel supporters:
+- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm, Farhan Wali, Jeff Roberts, Matt Reyer, Colin Riley.
 
 And other supporters; thanks!
 

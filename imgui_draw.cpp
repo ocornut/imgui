@@ -1,4 +1,4 @@
-// dear imgui, v1.48 WIP
+// dear imgui, v1.48
 // (drawing and font code)
 
 // Contains implementation for
@@ -14,11 +14,11 @@
 
 #include "imgui.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_PLACEMENT_NEW
 #include "imgui_internal.h"
 
 #include <stdio.h>      // vsnprintf, sscanf, printf
-#include <new>          // new (ptr)
-#if !defined(alloca) && !defined(__FreeBSD__)
+#if !defined(alloca) && !defined(__FreeBSD__) && !defined(__DragonFly__)
 #ifdef _WIN32
 #include <malloc.h>     // alloca
 #else
@@ -37,7 +37,7 @@
 #pragma clang diagnostic ignored "-Wfloat-equal"            // warning : comparing floating point with == or != is unsafe   // storing and comparing against same constants ok.
 #pragma clang diagnostic ignored "-Wglobal-constructors"    // warning : declaration requires a global destructor           // similar to above, not sure what the exact difference it.
 #pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion changes signedness             //
-#pragma clang diagnostic ignored "-Wreserved-id-macro"      // warning : macro name is a reserved identifier                //
+//#pragma clang diagnostic ignored "-Wreserved-id-macro"    // warning : macro name is a reserved identifier                //
 #endif
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
@@ -202,7 +202,7 @@ void ImDrawList::UpdateTextureID()
         AddDrawCmd();
         return;
     }
- 
+
     // Try to merge with previous command if it matches, else use current command
     ImDrawCmd* prev_cmd = CmdBuffer.Size > 1 ? curr_cmd - 1 : NULL;
     if (prev_cmd && prev_cmd->TextureId == curr_texture_id && memcmp(&prev_cmd->ClipRect, &GetCurrentClipRect(), sizeof(ImVec4)) == 0 && prev_cmd->UserCallback == NULL)
@@ -266,7 +266,7 @@ void ImDrawList::ChannelsSplit(int channels_count)
     {
         if (i >= old_channels_count)
         {
-            new(&_Channels[i]) ImDrawChannel();
+            IM_PLACEMENT_NEW(&_Channels[i]) ImDrawChannel();
         }
         else
         {
@@ -344,6 +344,7 @@ void ImDrawList::PrimReserve(int idx_count, int vtx_count)
     _IdxWritePtr = IdxBuffer.Data + idx_buffer_size;
 }
 
+// Fully unrolled with inline call to keep our debug builds decently fast.
 void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
 {
     ImVec2 b(c.x, a.y), d(a.x, c.y), uv(GImGui->FontTexUvWhitePixel);
@@ -701,11 +702,11 @@ static void PathBezierToCasteljau(ImVector<ImVec2>* path, float x1, float y1, fl
 {
     float dx = x4 - x1;
     float dy = y4 - y1;
-    float d2 = ((x2 - x4) * dy - (y2 - y4) * dx); 
-    float d3 = ((x3 - x4) * dy - (y3 - y4) * dx); 
+    float d2 = ((x2 - x4) * dy - (y2 - y4) * dx);
+    float d3 = ((x3 - x4) * dy - (y3 - y4) * dx);
     d2 = (d2 >= 0) ? d2 : -d2;
     d3 = (d3 >= 0) ? d3 : -d3;
-    if ((d2+d3) * (d2+d3) < tess_tol * (dx*dx + dy*dy)) 
+    if ((d2+d3) * (d2+d3) < tess_tol * (dx*dx + dy*dy))
     {
         path->push_back(ImVec2(x4, y4));
     }
@@ -718,8 +719,8 @@ static void PathBezierToCasteljau(ImVector<ImVec2>* path, float x1, float y1, fl
         float x234 = (x23+x34)*0.5f,    y234 = (y23+y34)*0.5f;
         float x1234 = (x123+x234)*0.5f, y1234 = (y123+y234)*0.5f;
 
-        PathBezierToCasteljau(path, x1,y1,        x12,y12,    x123,y123,  x1234,y1234, tess_tol, level+1); 
-        PathBezierToCasteljau(path, x1234,y1234,  x234,y234,  x34,y34,    x4,y4,       tess_tol, level+1); 
+        PathBezierToCasteljau(path, x1,y1,        x12,y12,    x123,y123,  x1234,y1234, tess_tol, level+1);
+        PathBezierToCasteljau(path, x1234,y1234,  x234,y234,  x34,y34,    x4,y4,       tess_tol, level+1);
     }
 }
 
@@ -783,12 +784,12 @@ void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thic
 }
 
 // a: upper-left, b: lower-right. we don't render 1 px sized rectangles properly.
-void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
+void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners, float thickness)
 {
     if ((col >> 24) == 0)
         return;
     PathRect(a + ImVec2(0.5f,0.5f), b - ImVec2(0.5f,0.5f), rounding, rounding_corners);
-    PathStroke(col, true);
+    PathStroke(col, true, thickness);
 }
 
 void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
@@ -822,6 +823,17 @@ void ImDrawList::AddRectFilledMultiColor(const ImVec2& a, const ImVec2& c, ImU32
     PrimWriteVtx(ImVec2(a.x, c.y), uv, col_bot_left);
 }
 
+void ImDrawList::AddTriangle(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col, float thickness)
+{
+    if ((col >> 24) == 0)
+        return;
+
+    PathLineTo(a);
+    PathLineTo(b);
+    PathLineTo(c);
+    PathStroke(col, true, thickness);
+}
+
 void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col)
 {
     if ((col >> 24) == 0)
@@ -833,14 +845,14 @@ void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec
     PathFill(col);
 }
 
-void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments)
+void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments, float thickness)
 {
     if ((col >> 24) == 0)
         return;
 
     const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(centre, radius-0.5f, 0.0f, a_max, num_segments);
-    PathStroke(col, true);
+    PathStroke(col, true, thickness);
 }
 
 void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments)
@@ -853,14 +865,14 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
     PathFill(col);
 }
 
-void ImDrawList::AddBezierCurve(const ImVec2& pos0, const ImVec2& cp0, const ImVec2& cp1, const ImVec2& pos1, ImU32 col, float thickness, int num_segments) 
-{ 
+void ImDrawList::AddBezierCurve(const ImVec2& pos0, const ImVec2& cp0, const ImVec2& cp1, const ImVec2& pos1, ImU32 col, float thickness, int num_segments)
+{
     if ((col >> 24) == 0)
         return;
 
-    PathLineTo(pos0); 
-    PathBezierCurveTo(cp0, cp1, pos1, num_segments); 
-    PathStroke(col, false, thickness); 
+    PathLineTo(pos0);
+    PathBezierCurveTo(cp0, cp1, pos1, num_segments);
+    PathStroke(col, false, thickness);
 }
 
 void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
@@ -877,6 +889,13 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
         text.End = text.Begin + strlen(text.Begin);
     if (text.Begin == text.End)
         return;
+
+    // Note: This is one of the few instance of breaking the encapsulation of ImDrawList, as we pull this from ImGui state, but it is just SO useful.
+    // Might just move Font/FontSize to ImDrawList?
+    if (font == NULL)
+        font = GImGui->Font;
+    if (font_size == 0.0f)
+        font_size = GImGui->FontSize;
 
     IM_ASSERT(font->ContainerAtlas->TexID == _TextureIdStack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
@@ -907,24 +926,18 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     CmdBuffer.back().ElemCount -= idx_unused;
     _VtxWritePtr -= vtx_unused;
     _IdxWritePtr -= idx_unused;
-    _VtxCurrentIdx = (ImDrawIdx)VtxBuffer.Size;
+    _VtxCurrentIdx = (unsigned int)VtxBuffer.Size;
 }
 
 // This is one of the few function breaking the encapsulation of ImDrawLst, but it is just so useful.
-void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text, const char* text_end)
-{
-    if ((col >> 24) == 0)
-        return;
-
-    AddText(GImGui->Font, GImGui->FontSize, pos, col, text, text_end);
-}
-
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, ImStr text)
 {
-    if ((col >> 24) == 0)
-        return;
-
     AddText(GImGui->Font, GImGui->FontSize, pos, col, text);
+}
+
+void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
+{
+    AddText(GImGui->Font, GImGui->FontSize, pos, col, text_begin, text_end);
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
@@ -1109,7 +1122,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     if (!font_cfg->MergeMode)
     {
         ImFont* font = (ImFont*)ImGui::MemAlloc(sizeof(ImFont));
-        new (font) ImFont();
+        IM_PLACEMENT_NEW(font) ImFont();
         Fonts.push_back(font);
     }
 
@@ -1133,7 +1146,7 @@ static unsigned int stb_decompress_length(unsigned char *input);
 static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length);
 static const char*  GetDefaultCompressedFontDataTTFBase85();
 static unsigned int Decode85Byte(char c)                                    { return c >= '\\' ? c-36 : c-35; }
-static void         Decode85(const unsigned char* src, unsigned char* dst)  
+static void         Decode85(const unsigned char* src, unsigned char* dst)
 {
     while (*src)
     {
@@ -1257,8 +1270,9 @@ bool    ImFontAtlas::Build()
         }
     }
 
-    // Start packing
-    TexWidth = (TexDesiredWidth > 0) ? TexDesiredWidth : (total_glyph_count > 2000) ? 2048 : (total_glyph_count > 1000) ? 1024 : 512;  // Width doesn't actually matters much but some API/GPU have texture size limitations, and increasing width can decrease height.
+    // Start packing. We need a known width for the skyline algorithm. Using a cheap heuristic here to decide of width. User can override TexDesiredWidth if they wish.
+    // After packing is done, width shouldn't matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
+    TexWidth = (TexDesiredWidth > 0) ? TexDesiredWidth : (total_glyph_count > 4000) ? 4096 : (total_glyph_count > 2000) ? 2048 : (total_glyph_count > 1000) ? 1024 : 512;
     TexHeight = 0;
     const int max_tex_height = 1024*32;
     stbtt_pack_context spc;
@@ -2021,10 +2035,10 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
         {
             char_width = glyph->XAdvance * scale;
 
-            // Clipping on Y is more likely
+            // Arbitrarily assume that both space and tabs are empty glyphs as an optimization
             if (c != ' ' && c != '\t')
             {
-                // We don't do a second finer clipping test on the Y axis (TODO: do some measurement see if it is worth it, probably not)
+                // We don't do a second finer clipping test on the Y axis as we've already skipped anything before clip_rect.y and exit once we pass clip_rect.w
                 float y1 = (float)(y + glyph->Y0 * scale);
                 float y2 = (float)(y + glyph->Y1 * scale);
 
@@ -2068,8 +2082,8 @@ void ImFont::RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_re
                         }
                     }
 
-                    // NB: we are not calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
-                    // inlined:
+                    // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
+                    // Inlined here:
                     {
                         idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2);
                         idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3);

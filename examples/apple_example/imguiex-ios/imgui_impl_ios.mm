@@ -1,6 +1,7 @@
-//
-//  imgui_impl_ios.cpp
-//  imguiex
+// ImGui iOS+OpenGL+Synergy binding
+// In this binding, ImTextureID is used to store an OpenGL 'GLuint' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
+// Providing a standalone iOS application with Synergy integration makes this sample more verbose than others. It also hasn't been tested as much.
+// Refer to other examples to get an easier understanding of how to integrate ImGui into your existing application.
 
 #import <OpenGLES/ES3/gl.h>
 #import <OpenGLES/ES3/glext.h>
@@ -262,10 +263,10 @@ void ImGui_KeyboardCallback(uSynergyCookie cookie, uint16_t key,
 //    printf("Synergy: keyboard callback: 0x%02X (%s)", scanCode, down?"true":"false");
     ImGuiIO& io = ImGui::GetIO();
     io.KeysDown[key] = down;
-    io.KeyShift = modifiers & USYNERGY_MODIFIER_SHIFT;
-    io.KeyCtrl = modifiers & USYNERGY_MODIFIER_CTRL;
-    io.KeyAlt = modifiers & USYNERGY_MODIFIER_ALT;
-    
+    io.KeyShift = (modifiers & USYNERGY_MODIFIER_SHIFT);
+    io.KeyCtrl = (modifiers & USYNERGY_MODIFIER_CTRL);
+    io.KeyAlt = (modifiers & USYNERGY_MODIFIER_ALT);
+    io.KeySuper = (modifiers & USYNERGY_MODIFIER_WIN);
     
     // Add this as keyboard input
     if ((down) && (key) && (scanCode<256) && !(modifiers & USYNERGY_MODIFIER_CTRL)) 
