@@ -268,9 +268,9 @@ STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, 
 }
 
 // find minimum y position if it starts at x1
-static int stbrp__skyline_find_min_y(stbrp_context *c, stbrp_node *first, int x0, int width, int *pwaste)
+static int stbrp__skyline_find_min_y(stbrp_context *, stbrp_node *first, int x0, int width, int *pwaste)
 {
-   (void)c;
+   //(void)c;
    stbrp_node *node = first;
    int x1 = x0 + width;
    int min_y, visited_width, waste_area;

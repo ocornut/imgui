@@ -4,7 +4,6 @@
 #include <imgui.h>
 #include "imgui_impl_dx11.h"
 #include <d3d11.h>
-#include <d3dcompiler.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 #include <tchar.h>
@@ -64,27 +63,6 @@ HRESULT CreateDeviceD3D(HWND hWnd)
     const D3D_FEATURE_LEVEL featureLevelArray[1] = { D3D_FEATURE_LEVEL_11_0, };
     if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, 1, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext) != S_OK)
         return E_FAIL;
-
-    // Setup rasterizer
-    {
-        D3D11_RASTERIZER_DESC RSDesc;
-        memset(&RSDesc, 0, sizeof(D3D11_RASTERIZER_DESC));
-        RSDesc.FillMode = D3D11_FILL_SOLID;
-        RSDesc.CullMode = D3D11_CULL_NONE;
-        RSDesc.FrontCounterClockwise = FALSE;
-        RSDesc.DepthBias = 0;
-        RSDesc.SlopeScaledDepthBias = 0.0f;
-        RSDesc.DepthBiasClamp = 0;
-        RSDesc.DepthClipEnable = TRUE;
-        RSDesc.ScissorEnable = TRUE;
-        RSDesc.AntialiasedLineEnable = FALSE;
-        RSDesc.MultisampleEnable = (sd.SampleDesc.Count > 1) ? TRUE : FALSE;
-
-        ID3D11RasterizerState* pRState = NULL;
-        g_pd3dDevice->CreateRasterizerState(&RSDesc, &pRState);
-        g_pd3dDeviceContext->RSSetState(pRState);
-        pRState->Release();
-    }
 
     CreateRenderTarget();
 

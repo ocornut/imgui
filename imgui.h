@@ -1,4 +1,4 @@
-// dear imgui, v1.48
+// dear imgui, v1.49
 // (headers)
 
 // See imgui.cpp file for documentation.
@@ -16,7 +16,7 @@
 #include <stddef.h>         // ptrdiff_t, NULL
 #include <string.h>         // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
-#define IMGUI_VERSION       "1.48"
+#define IMGUI_VERSION       "1.49"
 
 // Define attributes of all API symbols declarations, e.g. for DLL under Windows.
 #ifndef IMGUI_API
@@ -36,6 +36,11 @@
 #define IM_PRINTFARGS(FMT)
 #endif
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast"
+#endif
+
 // Forward declarations
 struct ImDrawChannel;               // Temporary storage for outputting drawing commands out of order, used by ImDrawList::ChannelsSplit()
 struct ImDrawCmd;                   // A single draw command within a parent ImDrawList (generally maps to 1 GPU draw call)
@@ -52,8 +57,10 @@ struct ImGuiStorage;                // Simple custom key value storage
 struct ImGuiStyle;                  // Runtime data for styling/colors
 struct ImGuiTextFilter;             // Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
 struct ImGuiTextBuffer;             // Text buffer for logging/accumulating text
-struct ImGuiTextEditCallbackData;   // Shared state of ImGui::InputText() when using custom callbacks (advanced)
+struct ImGuiTextEditCallbackData;   // Shared state of ImGui::InputText() when using custom ImGuiTextEditCallback (rare/advanced use)
+struct ImGuiSizeConstraintCallbackData;// Structure used to constraint window size in custom ways when using custom ImGuiSizeConstraintCallback (rare/advanced use)
 struct ImGuiListClipper;            // Helper to manually clip large list of items
+struct ImGuiContext;                // ImGui context (opaque)
 
 // Enumerations (declared as int for compatibility and to not pollute the top of this file)
 typedef unsigned int ImU32;
@@ -70,7 +77,9 @@ typedef int ImGuiWindowFlags;       // window flags for Begin*()            // e
 typedef int ImGuiSetCond;           // condition flags for Set*()           // enum ImGuiSetCond_
 typedef int ImGuiInputTextFlags;    // flags for InputText*()               // enum ImGuiInputTextFlags_
 typedef int ImGuiSelectableFlags;   // flags for Selectable()               // enum ImGuiSelectableFlags_
+typedef int ImGuiTreeNodeFlags;     // flags for TreeNode*(), Collapsing*() // enum ImGuiTreeNodeFlags_
 typedef int (*ImGuiTextEditCallback)(ImGuiTextEditCallbackData *data);
+typedef void (*ImGuiSizeConstraintCallback)(ImGuiSizeConstraintCallbackData* data);
 
 // Others helpers at bottom of the file:
 // class ImVector<>                 // Lightweight std::vector like class.
@@ -118,16 +127,16 @@ namespace ImGui
     IMGUI_API void          Render();                                   // ends the ImGui frame, finalize rendering data, then call your io.RenderDrawListsFn() function if set.
     IMGUI_API void          Shutdown();
     IMGUI_API void          ShowUserGuide();                            // help block
-    IMGUI_API void          ShowStyleEditor(ImGuiStyle* ref = NULL);    // style editor block
-    IMGUI_API void          ShowTestWindow(bool* opened = NULL);        // test window demonstrating ImGui features
-    IMGUI_API void          ShowMetricsWindow(bool* opened = NULL);     // metrics window for debugging ImGui
+    IMGUI_API void          ShowStyleEditor(ImGuiStyle* ref = NULL);    // style editor block. you can pass in a reference ImGuiStyle structure to compare to, revert to and save to (else it uses the default style)
+    IMGUI_API void          ShowTestWindow(bool* p_open = NULL);        // test window demonstrating ImGui features
+    IMGUI_API void          ShowMetricsWindow(bool* p_open = NULL);     // metrics window for debugging ImGui
 
     // Window
-    IMGUI_API bool          Begin(ImStr name, bool* p_opened = NULL, ImGuiWindowFlags flags = 0);                                                   // push window to the stack and start appending to it. see .cpp for details. return false when window is collapsed, so you can early out in your code. 'bool* p_opened' creates a widget on the upper-right to close the window (which sets your bool to false).
-    IMGUI_API bool          Begin(ImStr name, bool* p_opened, const ImVec2& size_on_first_use, float bg_alpha = -1.0f, ImGuiWindowFlags flags = 0); // OBSOLETE. this is the older/longer API. the extra parameters aren't very relevant. call SetNextWindowSize() instead if you want to set a window size. For regular windows, 'size_on_first_use' only applies to the first time EVER the window is created and probably not what you want! might obsolete this API eventually.
-    IMGUI_API void          End();                                                                                                                        // finish appending to current window, pop it off the window stack.
-    IMGUI_API bool          BeginChild(ImStr str_id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);      // begin a scrolling region. size==0.0f: use remaining window size, size<0.0f: use remaining window size minus abs(size). size>0.0f: fixed size. each axis can use a different mode, e.g. ImVec2(0,400).
-    IMGUI_API bool          BeginChild(ImGuiID id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);              // "
+    IMGUI_API bool          Begin(ImStr name, bool* p_open = NULL, ImGuiWindowFlags flags = 0);                                                   // push window to the stack and start appending to it. see .cpp for details. return false when window is collapsed, so you can early out in your code. 'bool* p_open' creates a widget on the upper-right to close the window (which sets your bool to false).
+    IMGUI_API bool          Begin(ImStr name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha = -1.0f, ImGuiWindowFlags flags = 0); // OBSOLETE. this is the older/longer API. the extra parameters aren't very relevant. call SetNextWindowSize() instead if you want to set a window size. For regular windows, 'size_on_first_use' only applies to the first time EVER the window is created and probably not what you want! might obsolete this API eventually.
+    IMGUI_API void          End();                                                                                                                      // finish appending to current window, pop it off the window stack.
+    IMGUI_API bool          BeginChild(ImStr str_id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);    // begin a scrolling region. size==0.0f: use remaining window size, size<0.0f: use remaining window size minus abs(size). size>0.0f: fixed size. each axis can use a different mode, e.g. ImVec2(0,400).
+    IMGUI_API bool          BeginChild(ImGuiID id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags extra_flags = 0);            // "
     IMGUI_API void          EndChild();
     IMGUI_API ImVec2        GetContentRegionMax();                                              // current content boundaries (typically window boundaries including scrolling, or current column boundaries), in windows coordinates
     IMGUI_API ImVec2        GetContentRegionAvail();                                            // == GetContentRegionMax() - GetCursorPos()
@@ -146,14 +155,15 @@ namespace ImGui
     IMGUI_API void          SetNextWindowPos(const ImVec2& pos, ImGuiSetCond cond = 0);         // set next window position. call before Begin()
     IMGUI_API void          SetNextWindowPosCenter(ImGuiSetCond cond = 0);                      // set next window position to be centered on screen. call before Begin()
     IMGUI_API void          SetNextWindowSize(const ImVec2& size, ImGuiSetCond cond = 0);       // set next window size. set axis to 0.0f to force an auto-fit on this axis. call before Begin()
+    IMGUI_API void          SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeConstraintCallback custom_callback = NULL, void* custom_callback_data = NULL); // set next window size limits. use -1,-1 on either X/Y axis to preserve the current size. Use callback to apply non-trivial programmatic constraints.
     IMGUI_API void          SetNextWindowContentSize(const ImVec2& size);                       // set next window content size (enforce the range of scrollbars). set axis to 0.0f to leave it automatic. call before Begin()
     IMGUI_API void          SetNextWindowContentWidth(float width);                             // set next window content width (enforce the range of horizontal scrollbar). call before Begin()
     IMGUI_API void          SetNextWindowCollapsed(bool collapsed, ImGuiSetCond cond = 0);      // set next window collapsed state. call before Begin()
     IMGUI_API void          SetNextWindowFocus();                                               // set next window to be focused / front-most. call before Begin()
-    IMGUI_API void          SetWindowPos(const ImVec2& pos, ImGuiSetCond cond = 0);             // set current window position - call within Begin()/End(). may incur tearing
-    IMGUI_API void          SetWindowSize(const ImVec2& size, ImGuiSetCond cond = 0);           // set current window size. set to ImVec2(0,0) to force an auto-fit. may incur tearing
-    IMGUI_API void          SetWindowCollapsed(bool collapsed, ImGuiSetCond cond = 0);          // set current window collapsed state
-    IMGUI_API void          SetWindowFocus();                                                   // set current window to be focused / front-most
+    IMGUI_API void          SetWindowPos(const ImVec2& pos, ImGuiSetCond cond = 0);             // (not recommended) set current window position - call within Begin()/End(). prefer using SetNextWindowPos(), as this may incur tearing and side-effects.
+    IMGUI_API void          SetWindowSize(const ImVec2& size, ImGuiSetCond cond = 0);           // (not recommended) set current window size - call within Begin()/End(). set to ImVec2(0,0) to force an auto-fit. prefer using SetNextWindowSize(), as this may incur tearing and minor side-effects.    
+    IMGUI_API void          SetWindowCollapsed(bool collapsed, ImGuiSetCond cond = 0);          // (not recommended) set current window collapsed state. prefer using SetNextWindowCollapsed().
+    IMGUI_API void          SetWindowFocus();                                                   // (not recommended) set current window to be focused / front-most. prefer using SetNextWindowFocus().
     IMGUI_API void          SetWindowPos(ImStr name, const ImVec2& pos, ImGuiSetCond cond = 0);      // set named window position.
     IMGUI_API void          SetWindowSize(ImStr name, const ImVec2& size, ImGuiSetCond cond = 0);    // set named window size. set axis to 0.0f to force an auto-fit on this axis.
     IMGUI_API void          SetWindowCollapsed(ImStr name, bool collapsed, ImGuiSetCond cond = 0);   // set named window collapsed state
@@ -167,7 +177,7 @@ namespace ImGui
     IMGUI_API void          SetScrollY(float scroll_y);                                         // set scrolling amount [0..GetScrollMaxY()]
     IMGUI_API void          SetScrollHere(float center_y_ratio = 0.5f);                         // adjust scrolling amount to make current cursor position visible. center_y_ratio=0.0: top, 0.5: center, 1.0: bottom.
     IMGUI_API void          SetScrollFromPosY(float pos_y, float center_y_ratio = 0.5f);        // adjust scrolling amount to make given position valid. use GetCursorPos() or GetCursorStartPos()+offset to get valid positions.
-    IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget
+    IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget. Use negative 'offset' to access previous widgets.
     IMGUI_API void          SetStateStorage(ImGuiStorage* tree);                                // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it)
     IMGUI_API ImGuiStorage* GetStateStorage();
 
@@ -197,14 +207,15 @@ namespace ImGui
     IMGUI_API void          PopButtonRepeat();
 
     // Cursor / Layout
-    IMGUI_API void          BeginGroup();                                                       // lock horizontal starting position. once closing a group it is seen as a single item (so you can use IsItemHovered() on a group, SameLine() between groups, etc.
-    IMGUI_API void          EndGroup();
     IMGUI_API void          Separator();                                                        // horizontal line
     IMGUI_API void          SameLine(float pos_x = 0.0f, float spacing_w = -1.0f);              // call between widgets or groups to layout them horizontally
-    IMGUI_API void          Spacing();                                                          // add spacing
+    IMGUI_API void          NewLine();                                                          // undo a SameLine()
+    IMGUI_API void          Spacing();                                                          // add vertical spacing
     IMGUI_API void          Dummy(const ImVec2& size);                                          // add a dummy item of given size
-    IMGUI_API void          Indent();                                                           // move content position toward the right by style.IndentSpacing pixels
-    IMGUI_API void          Unindent();                                                         // move content position back to the left (cancel Indent)
+    IMGUI_API void          Indent(float indent_w = 0.0f);                                      // move content position toward the right, by style.IndentSpacing or indent_w if >0
+    IMGUI_API void          Unindent(float indent_w = 0.0f);                                    // move content position back to the left, by style.IndentSpacing or indent_w if >0
+    IMGUI_API void          BeginGroup();                                                       // lock horizontal starting position + capture group bounding box into one "item" (so you can use IsItemHovered() or layout primitives such as SameLine() on whole group, etc.)
+    IMGUI_API void          EndGroup();
     IMGUI_API ImVec2        GetCursorPos();                                                     // cursor position is relative to window position
     IMGUI_API float         GetCursorPosX();                                                    // "
     IMGUI_API float         GetCursorPosY();                                                    // "
@@ -212,7 +223,7 @@ namespace ImGui
     IMGUI_API void          SetCursorPosX(float x);                                             // "
     IMGUI_API void          SetCursorPosY(float y);                                             // "
     IMGUI_API ImVec2        GetCursorStartPos();                                                // initial cursor position
-    IMGUI_API ImVec2        GetCursorScreenPos();                                               // cursor position in absolute screen coordinates [0..io.DisplaySize]
+    IMGUI_API ImVec2        GetCursorScreenPos();                                               // cursor position in absolute screen coordinates [0..io.DisplaySize] (useful to work with ImDrawList API)
     IMGUI_API void          SetCursorScreenPos(const ImVec2& pos);                              // cursor position in absolute screen coordinates [0..io.DisplaySize]
     IMGUI_API void          AlignFirstTextHeightToWidgets();                                    // call once if the first item on the line is a Text() item and you want to vertically lower it to match subsequent (bigger) widgets
     IMGUI_API float         GetTextLineHeight();                                                // height of font == GetWindowFontSize()
@@ -220,7 +231,7 @@ namespace ImGui
     IMGUI_API float         GetItemsLineHeightWithSpacing();                                    // distance (in pixels) between 2 consecutive lines of standard height widgets == GetWindowFontSize() + GetStyle().FramePadding.y*2 + GetStyle().ItemSpacing.y
 
     // Columns
-    // You can also use SameLine(pos_x) for simplified columning. The columns API is still work-in-progress.
+    // You can also use SameLine(pos_x) for simplified columning. The columns API is still work-in-progress and rather lacking.
     IMGUI_API void          Columns(int count = 1, ImStr id = NULL, bool border = true);  // setup number of columns. use an identifier to distinguish multiple column sets. close with Columns(1).
     IMGUI_API void          NextColumn();                                                       // next column
     IMGUI_API int           GetColumnIndex();                                                   // get current column index
@@ -255,20 +266,19 @@ namespace ImGui
     IMGUI_API void          TextWrapped(const char* fmt, ...) IM_PRINTFARGS(1);                     // shortcut for PushTextWrapPos(0.0f); Text(fmt, ...); PopTextWrapPos();. Note that this won't work on an auto-resizing window if there's no other widgets to extend the window width, yoy may need to set a size using SetNextWindowSize().
     IMGUI_API void          TextWrappedV(const char* fmt, va_list args);
     IMGUI_API void          TextUnformatted(ImStr text);
-    IMGUI_API void          TextUnformatted(const char* text, const char* text_end);         // doesn't require null terminated string if 'text_end' is specified. no copy done to any bounded stack buffer, recommended for long chunks of text
+    IMGUI_API void          TextUnformatted(const char* text, const char* text_end);                // doesn't require null terminated string if 'text_end' is specified. no copy done to any bounded stack buffer, recommended for long chunks of text
     IMGUI_API void          LabelText(ImStr label, ImStr text);
-    IMGUI_API void          LabelText(ImStr label, const char* fmt, ...) IM_PRINTFARGS(2);    // display text+label aligned the same way as value+label widgets
+    IMGUI_API void          LabelText(ImStr label, const char* fmt, ...) IM_PRINTFARGS(2);          // display text+label aligned the same way as value+label widgets
     IMGUI_API void          LabelTextV(ImStr label, const char* fmt, va_list args);
-    IMGUI_API void          Bullet();                                                               // draw a small circle and keep the cursor on the same line. advance you by the same distance as an empty TreeNode() call.
+    IMGUI_API void          Bullet();                                                               // draw a small circle and keep the cursor on the same line. advance cursor x position by GetTreeNodeToLabelSpacing(), same distance that TreeNode() uses
     IMGUI_API void          BulletText(ImStr text);
-    IMGUI_API void          BulletText(const char* fmt, ...) IM_PRINTFARGS(1);
+    IMGUI_API void          BulletText(const char* fmt, ...) IM_PRINTFARGS(1);                      // shortcut for Bullet()+Text()
     IMGUI_API void          BulletTextV(const char* fmt, va_list args);
-    IMGUI_API bool          Button(ImStr label, const ImVec2& size = ImVec2(0,0));
-    IMGUI_API bool          SmallButton(ImStr label);
+    IMGUI_API bool          Button(ImStr label, const ImVec2& size = ImVec2(0,0));                  // button
+    IMGUI_API bool          SmallButton(ImStr label);                                               // button with FramePadding=(0,0)
     IMGUI_API bool          InvisibleButton(ImStr str_id, const ImVec2& size);
     IMGUI_API void          Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0,0), const ImVec2& uv1 = ImVec2(1,1), const ImVec4& tint_col = ImVec4(1,1,1,1), const ImVec4& border_col = ImVec4(0,0,0,0));
     IMGUI_API bool          ImageButton(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0,0),  const ImVec2& uv1 = ImVec2(1,1), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0,0,0,0), const ImVec4& tint_col = ImVec4(1,1,1,1));    // <0 frame_padding uses default frame padding settings. 0 for no padding
-    IMGUI_API bool          CollapsingHeader(ImStr label, ImStr str_id = NULL, bool display_frame = true, bool default_open = false);
     IMGUI_API bool          Checkbox(ImStr label, bool* v);
     IMGUI_API bool          CheckboxFlags(ImStr label, unsigned int* flags, unsigned int flags_value);
     IMGUI_API bool          RadioButton(ImStr label, bool active);
@@ -276,12 +286,12 @@ namespace ImGui
     IMGUI_API bool          Combo(ImStr label, int* current_item, const ImStr* items, int items_count, int height_in_items = -1);
     IMGUI_API bool          Combo(ImStr label, int* current_item, const char** items, int items_count, int height_in_items = -1);
     IMGUI_API bool          Combo(ImStr label, int* current_item, const char* items_separated_by_zeros, int height_in_items = -1);      // separate items with \0, end item-list with \0\0
-    IMGUI_API bool          Combo(ImStr label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);
     IMGUI_API bool          Combo(ImStr label, int* current_item, bool (*items_getter)(void* data, int idx, ImStr* out_text), void* data, int items_count, int height_in_items = -1);
+    IMGUI_API bool          Combo(ImStr label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);
     IMGUI_API bool          ColorButton(const ImVec4& col, bool small_height = false, bool outline_border = true);
-    IMGUI_API bool          ColorEdit3(ImStr label, float col[3]);
-    IMGUI_API bool          ColorEdit4(ImStr label, float col[4], bool show_alpha = true);
-    IMGUI_API void          ColorEditMode(ImGuiColorEditMode mode);                                 // FIXME-OBSOLETE: This is inconsistent with most of the API and should be obsoleted.
+    IMGUI_API bool          ColorEdit3(ImStr label, float col[3]);                            // Hint: 'float col[3]' function argument is same as 'float* col'. You can pass address of first element out of a contiguous set, e.g. &myvector.x
+    IMGUI_API bool          ColorEdit4(ImStr label, float col[4], bool show_alpha = true);    // "
+    IMGUI_API void          ColorEditMode(ImGuiColorEditMode mode);                                 // FIXME-OBSOLETE: This is inconsistent with most of the API and will be obsoleted/replaced.
     IMGUI_API void          PlotLines(ImStr label, const float* values, int values_count, int values_offset = 0, ImStr overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), int stride = sizeof(float));
     IMGUI_API void          PlotLines(ImStr label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset = 0, ImStr overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0));
     IMGUI_API void          PlotHistogram(ImStr label, const float* values, int values_count, int values_offset = 0, ImStr overlay_text = NULL, float scale_min = FLT_MAX, float scale_max = FLT_MAX, ImVec2 graph_size = ImVec2(0,0), int stride = sizeof(float));
@@ -289,6 +299,7 @@ namespace ImGui
     IMGUI_API void          ProgressBar(float fraction, const ImVec2& size_arg = ImVec2(-1,0), ImStr overlay = NULL);
 
     // Widgets: Drags (tip: ctrl+click on a drag box to input with keyboard. manually input values aren't clamped, can go off-bounds)
+    // For all the Float2/Float3/Float4/Int2/Int3/Int4 versions of every functions, remember than a 'float v[3]' function argument is the same as 'float* v'. You can pass address of your first element out of a contiguous set, e.g. &myvector.x
     IMGUI_API bool          DragFloat(ImStr label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr display_format = "%.3f", float power = 1.0f);     // If v_min >= v_max we have no bound
     IMGUI_API bool          DragFloat2(ImStr label, float v[2], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr display_format = "%.3f", float power = 1.0f);
     IMGUI_API bool          DragFloat3(ImStr label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr display_format = "%.3f", float power = 1.0f);
@@ -326,16 +337,25 @@ namespace ImGui
     IMGUI_API bool          VSliderInt(ImStr label, const ImVec2& size, int* v, int v_min, int v_max, ImStr display_format = "%.0f");
 
     // Widgets: Trees
-    IMGUI_API bool          TreeNode(ImStr str_label_id);                                     // if returning 'true' the node is open and the user is responsible for calling TreePop().
+    IMGUI_API bool          TreeNode(ImStr label);                                                  // if returning 'true' the node is open and the tree id is pushed into the id stack. user is responsible for calling TreePop().
     IMGUI_API bool          TreeNode(ImStr str_id, ImStr text);
-    IMGUI_API bool          TreeNode(ImStr str_id, const char* fmt, ...) IM_PRINTFARGS(2);    // read the FAQ about why and how to use ID. to align arbitrary text at the same level as a TreeNode() you can use Bullet().
+    IMGUI_API bool          TreeNode(ImStr str_id, const char* fmt, ...) IM_PRINTFARGS(2);          // read the FAQ about why and how to use ID. to align arbitrary text at the same level as a TreeNode() you can use Bullet().
     IMGUI_API bool          TreeNode(const void* ptr_id, const char* fmt, ...) IM_PRINTFARGS(2);    // "
-    IMGUI_API bool          TreeNodeV(ImStr str_id, const char* fmt, va_list args);           // "
+    IMGUI_API bool          TreeNodeV(ImStr str_id, const char* fmt, va_list args);                 // "
     IMGUI_API bool          TreeNodeV(const void* ptr_id, const char* fmt, va_list args);           // "
-    IMGUI_API void          TreePush(ImStr str_id = NULL);                                    // already called by TreeNode(), but you can call Push/Pop yourself for layouting purpose
+    IMGUI_API bool          TreeNodeEx(ImStr label, ImGuiTreeNodeFlags flags = 0);
+    IMGUI_API bool          TreeNodeEx(ImStr str_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_PRINTFARGS(3);
+    IMGUI_API bool          TreeNodeEx(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_PRINTFARGS(3);
+    IMGUI_API bool          TreeNodeExV(ImStr str_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args);
+    IMGUI_API bool          TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args);
+    IMGUI_API void          TreePush(ImStr str_id = NULL);                                          // ~ Indent()+PushId(). Already called by TreeNode() when returning true, but you can call Push/Pop yourself for layout purpose
     IMGUI_API void          TreePush(const void* ptr_id = NULL);                                    // "
-    IMGUI_API void          TreePop();
-    IMGUI_API void          SetNextTreeNodeOpened(bool opened, ImGuiSetCond cond = 0);              // set next tree node/collapsing header to be opened.
+    IMGUI_API void          TreePop();                                                              // ~ Unindent()+PopId()
+    IMGUI_API void          TreeAdvanceToLabelPos();                                                // advance cursor x position by GetTreeNodeToLabelSpacing()
+    IMGUI_API float         GetTreeNodeToLabelSpacing();                                            // horizontal distance preceeding label when using TreeNode*() or Bullet() == (g.FontSize + style.FramePadding.x*2) for a regular unframed TreeNode
+    IMGUI_API void          SetNextTreeNodeOpen(bool is_open, ImGuiSetCond cond = 0);               // set next TreeNode/CollapsingHeader open state.
+    IMGUI_API bool          CollapsingHeader(ImStr label, ImGuiTreeNodeFlags flags = 0);            // if returning 'true' the header is open. doesn't indent nor push on ID stack. user doesn't have to call TreePop().
+    IMGUI_API bool          CollapsingHeader(ImStr label, bool* p_open, ImGuiTreeNodeFlags flags = 0); // when 'p_open' isn't NULL, display an additional small close button on upper right of the header
 
     // Widgets: Selectable / Lists
     IMGUI_API bool          Selectable(ImStr label, bool selected = false, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0,0));  // size.x==0.0: use remaining width, size.x>0.0: specify width. size.y==0.0: use label height, size.y>0.0: specify height
@@ -373,16 +393,16 @@ namespace ImGui
     IMGUI_API bool          MenuItem(ImStr label, ImStr shortcut, bool* p_selected, bool enabled = true);              // return true when activated + toggle (*p_selected) if p_selected != NULL
 
     // Popups
-    IMGUI_API void          OpenPopup(ImStr str_id);                                      // mark popup as open. popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block. popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
-    IMGUI_API bool          BeginPopup(ImStr str_id);                                     // return true if popup if opened and start outputting to it. only call EndPopup() if BeginPopup() returned true!
-    IMGUI_API bool          BeginPopupModal(ImStr name, bool* p_opened = NULL, ImGuiWindowFlags extra_flags = 0);             // modal dialog (can't close them by clicking outside)
-    IMGUI_API bool          BeginPopupContextItem(ImStr str_id, int mouse_button = 1);                                        // helper to open and begin popup when clicked on last item. read comments in .cpp!
-    IMGUI_API bool          BeginPopupContextWindow(bool also_over_items = true, ImStr str_id = NULL, int mouse_button = 1);  // helper to open and begin popup when clicked on current window.
-    IMGUI_API bool          BeginPopupContextVoid(ImStr str_id = NULL, int mouse_button = 1);                                 // helper to open and begin popup when clicked in void (no window).
+    IMGUI_API void          OpenPopup(ImStr str_id);                                            // mark popup as open. popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block. popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
+    IMGUI_API bool          BeginPopup(ImStr str_id);                                           // return true if the popup is open, and you can start outputting to it. only call EndPopup() if BeginPopup() returned true!
+    IMGUI_API bool          BeginPopupModal(ImStr name, bool* p_open = NULL, ImGuiWindowFlags extra_flags = 0);                     // modal dialog (can't close them by clicking outside)
+    IMGUI_API bool          BeginPopupContextItem(ImStr str_id, int mouse_button = 1);                                              // helper to open and begin popup when clicked on last item. read comments in .cpp!
+    IMGUI_API bool          BeginPopupContextWindow(bool also_over_items = true, ImStr str_id = NULL, int mouse_button = 1);        // helper to open and begin popup when clicked on current window.
+    IMGUI_API bool          BeginPopupContextVoid(ImStr str_id = NULL, int mouse_button = 1);                                       // helper to open and begin popup when clicked in void (no window).
     IMGUI_API void          EndPopup();
     IMGUI_API void          CloseCurrentPopup();                                                // close the popup we have begin-ed into. clicking on a MenuItem or Selectable automatically close the current popup.
 
-    // Logging: all text output from interface is redirected to tty/file/clipboard. Tree nodes are automatically opened.
+    // Logging: all text output from interface is redirected to tty/file/clipboard. By default, tree nodes are automatically opened during logging.
     IMGUI_API void          LogToTTY(int max_depth = -1);                                       // start logging to tty
     IMGUI_API void          LogToFile(int max_depth = -1, const char* filename = NULL);         // start logging to file
     IMGUI_API void          LogToClipboard(int max_depth = -1);                                 // start logging to OS clipboard
@@ -390,10 +410,15 @@ namespace ImGui
     IMGUI_API void          LogButtons();                                                       // helper to display buttons for logging to tty/file/clipboard
     IMGUI_API void          LogText(const char* fmt, ...) IM_PRINTFARGS(1);                     // pass text data straight to log (without being displayed)
 
+    // Clipping
+    IMGUI_API void          PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect);
+    IMGUI_API void          PopClipRect();
+
     // Utilities
     IMGUI_API bool          IsItemHovered();                                                    // was the last item hovered by mouse?
     IMGUI_API bool          IsItemHoveredRect();                                                // was the last item hovered by mouse? even if another item is active or window is blocked by popup while we are hovering this
     IMGUI_API bool          IsItemActive();                                                     // was the last item active? (e.g. button being held, text field being edited- items that don't interact will always return false)
+    IMGUI_API bool          IsItemClicked(int mouse_button = 0);                                // was the last item clicked? (e.g. button/node just clicked on)
     IMGUI_API bool          IsItemVisible();                                                    // was the last item visible? (aka not out of sight due to clipping/scrolling.)
     IMGUI_API bool          IsAnyItemHovered();
     IMGUI_API bool          IsAnyItemActive();
@@ -403,8 +428,9 @@ namespace ImGui
     IMGUI_API void          SetItemAllowOverlap();                                              // allow last item to be overlapped by a subsequent item. sometimes useful with invisible buttons, selectables, etc. to catch unused area.
     IMGUI_API bool          IsWindowHovered();                                                  // is current window hovered and hoverable (not blocked by a popup) (differentiate child windows from each others)
     IMGUI_API bool          IsWindowFocused();                                                  // is current window focused
-    IMGUI_API bool          IsRootWindowFocused();                                              // is current root window focused (top parent window in case of child windows)
+    IMGUI_API bool          IsRootWindowFocused();                                              // is current root window focused (root = top-most parent of a child, otherwise self)
     IMGUI_API bool          IsRootWindowOrAnyChildFocused();                                    // is current root window or any of its child (including current window) focused
+    IMGUI_API bool          IsRootWindowOrAnyChildHovered();                                    // is current root window or any of its child (including current window) hovered and hoverable (not blocked by a popup)
     IMGUI_API bool          IsRectVisible(const ImVec2& size);                                  // test if rectangle of given size starting from cursor pos is visible (not clipped). to perform coarse clipping on user's side (as an optimization)
     IMGUI_API bool          IsPosHoveringAnyWindow(const ImVec2& pos);                          // is given position hovering any active imgui window
     IMGUI_API float         GetTime();
@@ -451,17 +477,20 @@ namespace ImGui
     IMGUI_API const char*   GetClipboardText();
     IMGUI_API void          SetClipboardText(const char* text);
 
-    // Internal state/context access - if you want to use multiple ImGui context, or share context between modules (e.g. DLL), or allocate the memory yourself
+    // Internal context access - if you want to use multiple context, share context between modules (e.g. DLL). There is a default context created and active by default.
+    // All contexts share a same ImFontAtlas by default. If you want different font atlas, you can new() them and overwrite the GetIO().Fonts variable of an ImGui context.
     IMGUI_API const char*   GetVersion();
-    IMGUI_API void*         GetInternalState();
-    IMGUI_API size_t        GetInternalStateSize();
-    IMGUI_API void          SetInternalState(void* state, bool construct = false);
+    IMGUI_API ImGuiContext* CreateContext(void* (*malloc_fn)(size_t) = NULL, void (*free_fn)(void*) = NULL);
+    IMGUI_API void          DestroyContext(ImGuiContext* ctx);
+    IMGUI_API ImGuiContext* GetCurrentContext();
+    IMGUI_API void          SetCurrentContext(ImGuiContext* ctx);
 
     // Obsolete (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    static inline bool      CollapsingHeader(const char* label, const char* str_id, bool framed = true, bool default_open = false) { (void)str_id; (void)framed; ImGuiTreeNodeFlags default_open_flags = 1<<5; return CollapsingHeader(label, (default_open ? default_open_flags : 0)); } // OBSOLETE 1.49+
     static inline ImFont*   GetWindowFont() { return GetFont(); }                              // OBSOLETE 1.48+
     static inline float     GetWindowFontSize() { return GetFontSize(); }                      // OBSOLETE 1.48+
-    static inline void      OpenNextNode(bool open) { ImGui::SetNextTreeNodeOpened(open, 0); } // OBSOLETE 1.34+
+    static inline void      OpenNextNode(bool open) { ImGui::SetNextTreeNodeOpen(open, 0); }   // OBSOLETE 1.34+
     static inline bool      GetWindowIsFocused() { return ImGui::IsWindowFocused(); }          // OBSOLETE 1.36+
     static inline bool      GetWindowCollapsed() { return ImGui::IsWindowCollapsed(); }        // OBSOLETE 1.39+
     static inline ImVec2    GetItemBoxMin() { return GetItemRectMin(); }                       // OBSOLETE 1.36+
@@ -528,6 +557,24 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_Password            = 1 << 15,  // Password mode, display all characters as '*'
     // [Internal]
     ImGuiInputTextFlags_Multiline           = 1 << 20   // For internal use by InputTextMultiline()
+};
+
+// Flags for ImGui::TreeNodeEx(), ImGui::CollapsingHeader*()
+enum ImGuiTreeNodeFlags_
+{
+    ImGuiTreeNodeFlags_Selected             = 1 << 0,   // Draw as selected
+    ImGuiTreeNodeFlags_Framed               = 1 << 1,   // Full colored frame (e.g. for CollapsingHeader)
+    ImGuiTreeNodeFlags_AllowOverlapMode     = 1 << 2,   // Hit testing to allow subsequent widgets to overlap this one
+    ImGuiTreeNodeFlags_NoTreePushOnOpen     = 1 << 3,   // Don't do a TreePush() when open (e.g. for CollapsingHeader) = no extra indent nor pushing on ID stack
+    ImGuiTreeNodeFlags_NoAutoOpenOnLog      = 1 << 4,   // Don't automatically and temporarily open node when Logging is active (by default logging will automatically open tree nodes)
+    ImGuiTreeNodeFlags_DefaultOpen          = 1 << 5,   // Default node to be open
+    ImGuiTreeNodeFlags_OpenOnDoubleClick    = 1 << 6,   // Need double-click to open node
+    ImGuiTreeNodeFlags_OpenOnArrow          = 1 << 7,   // Only open when clicking on the arrow part. If ImGuiTreeNodeFlags_OpenOnDoubleClick is also set, single-click arrow or double-click all box to open.
+    ImGuiTreeNodeFlags_Leaf                 = 1 << 8,   // No collapsing, no arrow (use as a convenience for leaf nodes). 
+    ImGuiTreeNodeFlags_Bullet               = 1 << 9,   // Display a bullet instead of arrow
+    //ImGuITreeNodeFlags_SpanAllAvailWidth  = 1 << 10,  // FIXME: TODO: Extend hit box horizontally even if not framed
+    //ImGuiTreeNodeFlags_NoScrollOnOpen     = 1 << 11,  // FIXME: TODO: Disable automatic scroll on TreePop() if node got just open and contents is not visible
+    ImGuiTreeNodeFlags_CollapsingHeader     = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_NoAutoOpenOnLog
 };
 
 // Flags for ImGui::Selectable()
@@ -641,6 +688,7 @@ enum ImGuiAlign_
 };
 
 // Enumeration for ColorEditMode()
+// FIXME-OBSOLETE: Will be replaced by future color/picker api
 enum ImGuiColorEditMode_
 {
     ImGuiColorEditMode_UserSelect = -2,
@@ -686,7 +734,7 @@ struct ImGuiStyle
     ImVec2      ItemSpacing;                // Horizontal and vertical spacing between widgets/lines
     ImVec2      ItemInnerSpacing;           // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
     ImVec2      TouchExtraPadding;          // Expand reactive bounding box for touch-based system where touch position is not accurate enough. Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget. So don't grow this too much!
-    float       IndentSpacing;              // Horizontal indentation when e.g. entering a tree node
+    float       IndentSpacing;              // Horizontal indentation when e.g. entering a tree node. Generally == (FontSize + FramePadding.x*2).
     float       ColumnsMinSpacing;          // Minimum horizontal spacing between two columns
     float       ScrollbarSize;              // Width of the vertical scrollbar, Height of the horizontal scrollbar
     float       ScrollbarRounding;          // Radius of grab corners for scrollbar
@@ -719,7 +767,7 @@ struct ImGuiIO
     float         MouseDoubleClickMaxDist;  // = 6.0f               // Distance threshold to stay in to validate a double-click, in pixels.
     float         MouseDragThreshold;       // = 6.0f               // Distance threshold before considering we are dragging
     int           KeyMap[ImGuiKey_COUNT];   // <unset>              // Map of indices into the KeysDown[512] entries array
-    float         KeyRepeatDelay;           // = 0.250f             // When holding a key/button, time before it starts repeating, in seconds. (for actions where 'repeat' is active)
+    float         KeyRepeatDelay;           // = 0.250f             // When holding a key/button, time before it starts repeating, in seconds (for buttons in Repeat mode, etc.).
     float         KeyRepeatRate;            // = 0.020f             // When holding a key/button, rate at which it repeats, in seconds.
     void*         UserData;                 // = NULL               // Store your own data for retrieval by callbacks.
 
@@ -730,7 +778,7 @@ struct ImGuiIO
     ImVec2        DisplayVisibleMin;        // <unset> (0.0f,0.0f)  // If you use DisplaySize as a virtual space larger than your screen, set DisplayVisibleMin/Max to the visible area.
     ImVec2        DisplayVisibleMax;        // <unset> (0.0f,0.0f)  // If the values are the same, we defaults to Min=(0.0f) and Max=DisplaySize
 
-	// Advanced/subtle behaviors
+    // Advanced/subtle behaviors
     bool          WordMovementUsesAltKey;   // = defined(__APPLE__) // OS X style: Text editing cursor movement using Alt instead of Ctrl
     bool          ShortcutsUseSuperKey;     // = defined(__APPLE__) // OS X style: Shortcuts using Cmd/Super instead of Ctrl
     bool          DoubleClickSelectsWord;   // = defined(__APPLE__) // OS X style: Double click selects by word instead of selecting whole text
@@ -777,8 +825,8 @@ struct ImGuiIO
 
     // Functions
     IMGUI_API void AddInputCharacter(ImWchar c);                        // Helper to add a new character into InputCharacters[]
-    IMGUI_API void AddInputCharactersUTF8(ImStr utf8_chars);      // Helper to add new characters into InputCharacters[] from an UTF-8 string
-    IMGUI_API void ClearInputCharacters() { InputCharacters[0] = 0; }   // Helper to clear the text input buffer
+    IMGUI_API void AddInputCharactersUTF8(ImStr utf8_chars);            // Helper to add new characters into InputCharacters[] from an UTF-8 string
+    inline void    ClearInputCharacters() { InputCharacters[0] = 0; }   // Helper to clear the text input buffer
 
     //------------------------------------------------------------------
     // Output - Retrieve after calling NewFrame(), you can use them to discard inputs or hide them from the rest of your application
@@ -903,8 +951,8 @@ struct ImGuiTextFilter
         const char* end() const { return e; }
         bool empty() const { return b == e; }
         char front() const { return *b; }
-        static bool isblank(char c) { return c == ' ' || c == '\t'; }
-        void trim_blanks() { while (b < e && isblank(*b)) b++; while (e > b && isblank(*(e-1))) e--; }
+        static bool is_blank(char c) { return c == ' ' || c == '\t'; }
+        void trim_blanks() { while (b < e && is_blank(*b)) b++; while (e > b && is_blank(*(e-1))) e--; }
         IMGUI_API void split(char separator, ImVector<TextRange>& out);
     };
 
@@ -938,7 +986,7 @@ struct ImGuiTextBuffer
     IMGUI_API void      appendv(const char* fmt, va_list args);
 };
 
-// Helper: Key->value storage
+// Helper: Simple Key->value storage
 // - Store collapse state for a tree (Int 0/1)
 // - Store color edit options (Int using values in ImGuiColorEditMode enum).
 // - Custom user storage for temporary values.
@@ -946,6 +994,7 @@ struct ImGuiTextBuffer
 // Declare your own storage if:
 // - You want to manipulate the open/close state of a particular sub-tree in your interface (tree node uses Int 0/1 to store their state).
 // - You want to store custom debug data easily without adding or editing structures in your code.
+// Types are NOT stored, so it is up to you to make sure your Key don't collide with different types.
 struct ImGuiStorage
 {
     struct Pair
@@ -960,10 +1009,12 @@ struct ImGuiStorage
 
     // - Get***() functions find pair, never add/allocate. Pairs are sorted so a query is O(log N)
     // - Set***() functions find pair, insertion on demand if missing.
-    // - Sorted insertion is costly but should amortize. A typical frame shouldn't need to insert any new pair.
+    // - Sorted insertion is costly, paid once. A typical frame shouldn't need to insert any new pair.
     IMGUI_API void      Clear();
     IMGUI_API int       GetInt(ImGuiID key, int default_val = 0) const;
     IMGUI_API void      SetInt(ImGuiID key, int val);
+    IMGUI_API bool      GetBool(ImGuiID key, bool default_val = false) const;
+    IMGUI_API void      SetBool(ImGuiID key, bool val);
     IMGUI_API float     GetFloat(ImGuiID key, float default_val = 0.0f) const;
     IMGUI_API void      SetFloat(ImGuiID key, float val);
     IMGUI_API void*     GetVoidPtr(ImGuiID key) const; // default_val is NULL
@@ -975,7 +1026,8 @@ struct ImGuiStorage
     //      float* pvar = ImGui::GetFloatRef(key); ImGui::SliderFloat("var", pvar, 0, 100.0f); some_var += *pvar;
     // - You can also use this to quickly create temporary editable values during a session of using Edit&Continue, without restarting your application.
     IMGUI_API int*      GetIntRef(ImGuiID key, int default_val = 0);
-    IMGUI_API float*    GetFloatRef(ImGuiID key, float default_val = 0);
+    IMGUI_API bool*     GetBoolRef(ImGuiID key, bool default_val = false);
+    IMGUI_API float*    GetFloatRef(ImGuiID key, float default_val = 0.0f);
     IMGUI_API void**    GetVoidPtrRef(ImGuiID key, void* default_val = NULL);
 
     // Use on your own storage if you know only integer are being stored (open/close all tree nodes)
@@ -1010,7 +1062,18 @@ struct ImGuiTextEditCallbackData
     bool    HasSelection() const { return SelectionStart != SelectionEnd; }
 };
 
+// Resizing callback data to apply custom constraint. As enabled by SetNextWindowSizeConstraints(). Callback is called during the next Begin().
+// NB: For basic min/max size constraint on each axis you don't need to use the callback! The SetNextWindowSizeConstraints() parameters are enough.
+struct ImGuiSizeConstraintCallbackData
+{
+    void*   UserData;       // Read-only.   What user passed to SetNextWindowSizeConstraints()
+    ImVec2  Pos;            // Read-only.	Window position, for reference.
+    ImVec2  CurrentSize;    // Read-only.	Current window size.
+    ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
+};
+
 // ImColor() helper to implicity converts colors to either ImU32 (packed 4x1 byte) or ImVec4 (4x1 float)
+// Prefer using IM_COL32() macros if you want a guaranteed compile-time ImU32 for usage with ImDrawList API.
 // Avoid storing ImColor! Store either u32 of ImVec4. This is not a full-featured color class.
 // None of the ImGui API are using ImColor directly but you can use it as a convenience to pass colors in either ImU32 or ImVec4 formats.
 struct ImColor
@@ -1031,36 +1094,33 @@ struct ImColor
 };
 
 // Helper: Manually clip large list of items.
-// If you are displaying thousands of even spaced items and you have a random access to the list, you can perform clipping yourself to save on CPU.
+// If you are submitting lots of evenly spaced items and you have a random access to the list, you can perform coarse clipping based on visibility to save yourself from processing those items at all.
+// The clipper calculates the range of visible items and advance the cursor to compensate for the non-visible items we have skipped. 
+// ImGui already clip items based on their bounds but it needs to measure text size to do so. Coarse clipping before submission makes this cost and your own data fetching/submission cost null.
 // Usage:
-//    ImGuiListClipper clipper(count, ImGui::GetTextLineHeightWithSpacing());
-//    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) // display only visible items
-//        ImGui::Text("line number %d", i);
-//    clipper.End();
-// NB: 'count' is only used to clamp the result, if you don't know your count you can use INT_MAX
+//     ImGuiListClipper clipper(1000);  // we have 1000 elements, evenly spaced.
+//     while (clipper.Step())
+//         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+//             ImGui::Text("line number %d", i);
+// - Step 0: the clipper let you process the first element, regardless of it being visible or not, so we can measure the element height (step skipped if we passed a known height as second arg to constructor).
+// - Step 1: the clipper infer height from first element, calculate the actual range of elements to display, and position the cursor before the first element.
+// - (Step 2: dummy step only required if an explicit items_height was passed to constructor or Begin() and user call Step(). Does nothing and switch to Step 3.)
+// - Step 3: the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd), advance the cursor to the end of the list and then returns 'false' to end the loop.
 struct ImGuiListClipper
 {
+    float   StartPosY;
     float   ItemsHeight;
-    int     ItemsCount, DisplayStart, DisplayEnd;
+    int     ItemsCount, StepNo, DisplayStart, DisplayEnd;
 
-    ImGuiListClipper()                         { ItemsHeight = 0.0f; ItemsCount = DisplayStart = DisplayEnd = -1; }
-    ImGuiListClipper(int count, float height)  { ItemsCount = -1; Begin(count, height); }
-    ~ImGuiListClipper()                        { IM_ASSERT(ItemsCount == -1); } // user forgot to call End()
+    // items_count:  Use -1 to ignore (you can call Begin later). Use INT_MAX if you don't know how many items you have (in which case the cursor won't be advanced in the final step).
+    // items_height: Use -1.0f to be calculated automatically on first step. Otherwise pass in the distance between your items, typically GetTextLineHeightWithSpacing() or GetItemsLineHeightWithSpacing().
+    // If you don't specify an items_height, you NEED to call Step(). If you specify items_height you may call the old Begin()/End() api directly, but prefer calling Step().
+    ImGuiListClipper(int items_count = -1, float items_height = -1.0f)  { Begin(items_count, items_height); } // NB: Begin() initialize every fields (as we allow user to call Begin/End multiple times on a same instance if they want).
+    ~ImGuiListClipper()                                                 { IM_ASSERT(ItemsCount == -1); }      // Assert if user forgot to call End() or Step() until false.
 
-    void Begin(int count, float height)        // items_height: generally pass GetTextLineHeightWithSpacing() or GetItemsLineHeightWithSpacing()
-    {
-        IM_ASSERT(ItemsCount == -1);
-        ItemsCount = count;
-        ItemsHeight = height;
-        ImGui::CalcListClipping(ItemsCount, ItemsHeight, &DisplayStart, &DisplayEnd); // calculate how many to clip/display
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + DisplayStart * ItemsHeight);    // advance cursor
-    }
-    void End()
-    {
-        IM_ASSERT(ItemsCount >= 0);
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ItemsCount - DisplayEnd) * ItemsHeight); // advance cursor
-        ItemsCount = -1;
-    }
+    IMGUI_API bool Step();                                              // Call until it returns false. The DisplayStart/DisplayEnd fields will be set and you can process/draw those items.
+    IMGUI_API void Begin(int items_count, float items_height = -1.0f);  // Automatically called by constructor if you passed 'items_count' or by Step() in Step 1.
+    IMGUI_API void End();                                               // Automatically called on the last call of Step() that returns false.
 };
 
 //-----------------------------------------------------------------------------
@@ -1076,12 +1136,8 @@ struct ImGuiListClipper
 
 // Draw callbacks for advanced uses.
 // NB- You most likely do NOT need to use draw callbacks just to create your own widget or customized UI rendering (you can poke into the draw list for that)
-// Draw callback may be useful for example, if you want to render a complex 3D scene inside a UI element, change your GPU render state, etc.
-// The expected behavior from your rendering loop is:
-//   if (cmd.UserCallback != NULL)
-//       cmd.UserCallback(parent_list, cmd);
-//   else
-//       RenderTriangles()
+// Draw callback may be useful for example, A) Change your GPU render state, B) render a complex 3D scene inside a UI element (without an intermediate texture/render target), etc.
+// The expected behavior from your rendering function is 'if (cmd.UserCallback != NULL) cmd.UserCallback(parent_list, cmd); else RenderTriangles()'
 typedef void (*ImDrawCallback)(const ImDrawList* parent_list, const ImDrawCmd* cmd);
 
 // Typically, 1 command = 1 gpu draw call (unless command is a callback)
@@ -1096,7 +1152,7 @@ struct ImDrawCmd
     ImDrawCmd() { ElemCount = 0; ClipRect.x = ClipRect.y = -8192.0f; ClipRect.z = ClipRect.w = +8192.0f; TextureId = NULL; UserCallback = NULL; UserCallbackData = NULL; }
 };
 
-// Vertex index (override with, e.g. '#define ImDrawIdx unsigned int' in ImConfig)
+// Vertex index (override with '#define ImDrawIdx unsigned int' inside in imconfig.h)
 #ifndef ImDrawIdx
 typedef unsigned short ImDrawIdx;
 #endif
@@ -1151,7 +1207,7 @@ struct ImDrawList
 
     ImDrawList() { _OwnerName = NULL; Clear(); }
     ~ImDrawList() { ClearFreeMemory(); }
-    IMGUI_API void  PushClipRect(const ImVec4& clip_rect);  // Scissoring. Note that the values are (x1,y1,x2,y2) and NOT (x1,y1,w,h). This is passed down to your render function but not used for CPU-side clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
+    IMGUI_API void  PushClipRect(ImVec2 clip_rect_min, ImVec2 clip_rect_max, bool intersect_with_current_clip_rect = false);  // Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
     IMGUI_API void  PushClipRectFullScreen();
     IMGUI_API void  PopClipRect();
     IMGUI_API void  PushTextureID(const ImTextureID& texture_id);
@@ -1162,6 +1218,8 @@ struct ImDrawList
     IMGUI_API void  AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding = 0.0f, int rounding_corners = 0x0F, float thickness = 1.0f);   // a: upper-left, b: lower-right
     IMGUI_API void  AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding = 0.0f, int rounding_corners = 0x0F);                     // a: upper-left, b: lower-right
     IMGUI_API void  AddRectFilledMultiColor(const ImVec2& a, const ImVec2& b, ImU32 col_upr_left, ImU32 col_upr_right, ImU32 col_bot_right, ImU32 col_bot_left);
+    IMGUI_API void  AddQuad(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, ImU32 col, float thickness = 1.0f);
+    IMGUI_API void  AddQuadFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, ImU32 col);
     IMGUI_API void  AddTriangle(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col, float thickness = 1.0f);
     IMGUI_API void  AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col);
     IMGUI_API void  AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments = 12, float thickness = 1.0f);
@@ -1205,9 +1263,9 @@ struct ImDrawList
     IMGUI_API void  PrimRect(const ImVec2& a, const ImVec2& b, ImU32 col);      // Axis aligned rectangle (composed of two triangles)
     IMGUI_API void  PrimRectUV(const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col);
     IMGUI_API void  PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, const ImVec2& uv_a, const ImVec2& uv_b, const ImVec2& uv_c, const ImVec2& uv_d, ImU32 col);
-    inline    void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)     { PrimWriteIdx((ImDrawIdx)_VtxCurrentIdx); PrimWriteVtx(pos, uv, col); }
     inline    void  PrimWriteVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col){ _VtxWritePtr->pos = pos; _VtxWritePtr->uv = uv; _VtxWritePtr->col = col; _VtxWritePtr++; _VtxCurrentIdx++; }
     inline    void  PrimWriteIdx(ImDrawIdx idx)                                 { *_IdxWritePtr = idx; _IdxWritePtr++; }
+    inline    void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)     { PrimWriteIdx((ImDrawIdx)_VtxCurrentIdx); PrimWriteVtx(pos, uv, col); }
     IMGUI_API void  UpdateClipRect();
     IMGUI_API void  UpdateTextureID();
 };
@@ -1237,7 +1295,7 @@ struct ImFontConfig
     int             OversampleH, OversampleV;   // 3, 1     // Rasterize at higher quality for sub-pixel positioning. We don't use sub-pixel positions on the Y axis.
     bool            PixelSnapH;                 // false    // Align every character to pixel boundary (if enabled, set OversampleH/V to 1)
     ImVec2          GlyphExtraSpacing;          // 0, 0     // Extra spacing (in pixels) between glyphs
-    const ImWchar*  GlyphRanges;                //          // List of Unicode range (2 value per range, values are inclusive, zero-terminated list)
+    const ImWchar*  GlyphRanges;                //          // Pointer to a user-provided list of Unicode range (2 value per range, values are inclusive, zero-terminated list). THE ARRAY DATA NEEDS TO PERSIST AS LONG AS THE FONT IS ALIVE.
     bool            MergeMode;                  // false    // Merge into previous ImFont, so you can combine multiple inputs font into one ImFont (e.g. ASCII font + icons + Japanese glyphs).
     bool            MergeGlyphCenterV;          // false    // When merging (multiple ImFontInput for one ImFont), vertically center new glyphs instead of aligning their baseline
 
@@ -1256,6 +1314,7 @@ struct ImFontConfig
 //  3. Upload the pixels data into a texture within your graphics system.
 //  4. Call SetTexID(my_tex_id); and pass the pointer/identifier to your texture. This value will be passed back to you during rendering to identify the texture.
 //  5. Call ClearTexData() to free textures memory on the heap.
+// NB: If you use a 'glyph_ranges' array you need to make sure that your array persist up until the ImFont is cleared. We only copy the pointer, not the data.
 struct ImFontAtlas
 {
     IMGUI_API ImFontAtlas();
@@ -1281,7 +1340,7 @@ struct ImFontAtlas
     void                        SetTexID(void* id)  { TexID = id; }
 
     // Helpers to retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
-    // (Those functions could be static but aren't so most users don't have to refer to the ImFontAtlas:: name ever if in their code; just using io.Fonts->)
+    // NB: Make sure that your string are UTF-8 and NOT in your local code page. See FAQ for details.
     IMGUI_API const ImWchar*    GetGlyphRangesDefault();    // Basic Latin, Extended Latin
     IMGUI_API const ImWchar*    GetGlyphRangesKorean();     // Default + Korean characters
     IMGUI_API const ImWchar*    GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
@@ -1309,15 +1368,6 @@ struct ImFontAtlas
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
 struct ImFont
 {
-    // Members: Settings
-    float                       FontSize;           // <user set>      // Height of characters, set during loading (don't change after loading)
-    float                       Scale;              // = 1.0f          // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
-    ImVec2                      DisplayOffset;      // = (0.0f,1.0f)   // Offset font rendering by xx pixels
-    ImWchar                     FallbackChar;       // = '?'           // Replacement glyph if one isn't found. Only set via SetFallbackChar()
-    ImFontConfig*               ConfigData;         //                 // Pointer within ImFontAtlas->ConfigData
-    int                         ConfigDataCount;    //
-
-    // Members: Runtime data
     struct Glyph
     {
         ImWchar                 Codepoint;
@@ -1325,33 +1375,49 @@ struct ImFont
         float                   X0, Y0, X1, Y1;
         float                   U0, V0, U1, V1;     // Texture coordinates
     };
-    float                       Ascent, Descent;    // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize]
-    ImFontAtlas*                ContainerAtlas;     // What we has been loaded into
-    ImVector<Glyph>             Glyphs;
+
+    // Members: Hot ~62/78 bytes
+    float                       FontSize;           // <user set>   // Height of characters, set during loading (don't change after loading)
+    float                       Scale;              // = 1.f        // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
+    ImVec2                      DisplayOffset;      // = (0.f,1.f)  // Offset font rendering by xx pixels
+    ImVector<Glyph>             Glyphs;             //              // All glyphs.
+    ImVector<float>             IndexXAdvance;      //              // Sparse. Glyphs->XAdvance in a directly indexable way (more cache-friendly, for CalcTextSize functions which are often bottleneck in large UI).
+    ImVector<short>             IndexLookup;        //              // Sparse. Index glyphs by Unicode code-point.
     const Glyph*                FallbackGlyph;      // == FindGlyph(FontFallbackChar)
-    float                       FallbackXAdvance;   //
-    ImVector<float>             IndexXAdvance;      // Sparse. Glyphs->XAdvance directly indexable (more cache-friendly that reading from Glyphs, for CalcTextSize functions which are often bottleneck in large UI)
-    ImVector<int>               IndexLookup;        // Sparse. Index glyphs by Unicode code-point.
+    float                       FallbackXAdvance;   // == FallbackGlyph->XAdvance
+    ImWchar                     FallbackChar;       // = '?'        // Replacement glyph if one isn't found. Only set via SetFallbackChar()
+
+    // Members: Cold ~18/26 bytes
+    short                       ConfigDataCount;    // ~ 1          // Number of ImFontConfig involved in creating this font. Bigger than 1 when merging multiple font sources into one ImFont.
+    ImFontConfig*               ConfigData;         //              // Pointer within ContainerAtlas->ConfigData
+    ImFontAtlas*                ContainerAtlas;     //              // What we has been loaded into
+    float                       Ascent, Descent;    //              // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize]
 
     // Methods
     IMGUI_API ImFont();
     IMGUI_API ~ImFont();
     IMGUI_API void              Clear();
     IMGUI_API void              BuildLookupTable();
-    IMGUI_API const Glyph*      FindGlyph(unsigned short c) const;
+    IMGUI_API const Glyph*      FindGlyph(ImWchar c) const;
     IMGUI_API void              SetFallbackChar(ImWchar c);
-    float                       GetCharAdvance(unsigned short c) const  { return ((int)c < IndexXAdvance.Size) ? IndexXAdvance[(int)c] : FallbackXAdvance; }
-    bool                        IsLoaded() const                        { return ContainerAtlas != NULL; }
+    float                       GetCharAdvance(ImWchar c) const     { return ((int)c < IndexXAdvance.Size) ? IndexXAdvance[(int)c] : FallbackXAdvance; }
+    bool                        IsLoaded() const                    { return ContainerAtlas != NULL; }
 
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
     // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
-    IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // Deprecated
     IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, ImStr text, const char** remaining = NULL) const; // utf8
-    IMGUI_API const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const; // TODO: Deprecated
     IMGUI_API const char*       CalcWordWrapPositionA(float scale, ImStr text, float wrap_width) const;
-    IMGUI_API void              RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, ImDrawList* draw_list, float wrap_width = 0.0f, bool cpu_fine_clip = false) const; // TODO: Deprecated
-    IMGUI_API void              RenderText(float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, ImStr text, ImDrawList* draw_list, float wrap_width = 0.0f, bool cpu_fine_clip = false) const;
+    IMGUI_API void              RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, unsigned short c) const;
+    IMGUI_API void              RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, ImStr text, float wrap_width = 0.0f, bool cpu_fine_clip = false) const;
+
+    // Private
+    IMGUI_API void              GrowIndex(int new_size);
+    IMGUI_API void              AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst = true); // Makes 'dst' character/glyph points to 'src' character/glyph. Currently needs to be called AFTER fonts have been built.
 };
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 //---- Include imgui_user.h at the end of imgui.h
 //---- So you can include code that extends ImGui using any of the types declared above.

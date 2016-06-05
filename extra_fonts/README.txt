@@ -1,8 +1,12 @@
 
  The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' that you can use without any external files.
- Those are only provided as a convenience, you can load your own .TTF files.
+ The files in this folder are only provided as a convenience, you can use any of your own .TTF files.
 
  Fonts are rasterized in a single texture at the time of calling either of io.Fonts.GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
+
+ If you want to use icons in ImGui, a good idea is to merge an icon font within your main font, and refer to icons directly in your strings.
+ You can use headers files with definitions for popular icon fonts codepoints, by Juliette Foucaut, at https://github.com/juliettef/IconFontCppHeaders
+
 
 ---------------------------------
  LOADING INSTRUCTIONS
@@ -35,10 +39,10 @@
 
  Combine two fonts into one:
 
-   // Load main font
+   // Load a first font
    io.Fonts->AddFontDefault();
 
-   // Add character ranges and merge into main font
+   // Add character ranges and merge into the previous font
    // The ranges array is not copied by the AddFont* functions and is used lazily
    // so ensure it is available for duration of font usage
    static const ImWchar icons_ranges[] = { 0xf000, 0xf3ff, 0 }; // will not be copied by AddFont* so keep in scope.
@@ -63,6 +67,16 @@
    ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
    font->DisplayOffset.y += 1;   // Render 1 pixel down
 
+
+---------------------------------
+ REMAP CODEPOINTS
+---------------------------------
+
+ All your strings needs to use UTF-8 encoding. Specifying literal in your source code using a local code page (such as CP-923 for Japanese CP-1251 for Cyrillic) will not work.
+ In C++11 you can encode a string literal in UTF-8 by using the u8"hello" syntax. Otherwise you can convert yourself to UTF-8 or load text data from file already saved as UTF-8.
+ You can also try to remap your local codepage characters to their Unicode codepoint using font->AddRemapChar(), but international users may have problems reading/editing your source code.
+
+
 ---------------------------------
  EMBED A FONT IN SOURCE CODE
 ---------------------------------
@@ -75,8 +89,9 @@
  
    ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_base85, size_pixels, ...);
 
+
 ---------------------------------
- INCLUDED FONT FILES
+ FONT FILES INCLUDED IN THIS FOLDER
 ---------------------------------
 
  Cousine-Regular.ttf
@@ -102,6 +117,7 @@
    Copyright (c) 2012, Jonathan Pinhorn
    SIL OPEN FONT LICENSE Version 1.1
 
+
 ---------------------------------
  LINKS
 ---------------------------------
@@ -109,6 +125,7 @@
  Icon fonts
    https://fortawesome.github.io/Font-Awesome/
    https://github.com/SamBrishes/kenney-icon-font
+   https://design.google.com/icons/
 
  Typefaces for source code beautification
    https://github.com/chrissimpkins/codeface

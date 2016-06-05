@@ -40,6 +40,7 @@ void ImGui_ImplSdlGL3_RenderDrawLists(ImDrawData* draw_data)
     // Backup GL state
     GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
     GLint last_texture; glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+    GLint last_active_texture; glGetIntegerv(GL_ACTIVE_TEXTURE, &last_active_texture);
     GLint last_array_buffer; glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
     GLint last_element_array_buffer; glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &last_element_array_buffer);
     GLint last_vertex_array; glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
@@ -105,6 +106,7 @@ void ImGui_ImplSdlGL3_RenderDrawLists(ImDrawData* draw_data)
 
     // Restore modified GL state
     glUseProgram(last_program);
+    glActiveTexture(last_active_texture);
     glBindTexture(GL_TEXTURE_2D, last_texture);
     glBindVertexArray(last_vertex_array);
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
@@ -328,6 +330,8 @@ bool    ImGui_ImplSdlGL3_Init(SDL_Window* window)
     SDL_VERSION(&wmInfo.version);
     SDL_GetWindowWMInfo(window, &wmInfo);
     io.ImeWindowHandle = wmInfo.info.win.window;
+#else
+    (void)window;
 #endif
 
     return true;

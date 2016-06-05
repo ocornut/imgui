@@ -5,7 +5,6 @@
 #include "imgui_impl_dx10.h"
 #include <d3d10_1.h>
 #include <d3d10.h>
-#include <d3dcompiler.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 #include <tchar.h>
@@ -62,27 +61,6 @@ HRESULT CreateDeviceD3D(HWND hWnd)
     //createDeviceFlags |= D3D10_CREATE_DEVICE_DEBUG;
     if (D3D10CreateDeviceAndSwapChain(NULL, D3D10_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, D3D10_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice) != S_OK)
         return E_FAIL;
-
-    // Setup rasterizer
-    {
-        D3D10_RASTERIZER_DESC RSDesc;
-        memset(&RSDesc, 0, sizeof(D3D10_RASTERIZER_DESC));
-        RSDesc.FillMode = D3D10_FILL_SOLID;
-        RSDesc.CullMode = D3D10_CULL_NONE;
-        RSDesc.FrontCounterClockwise = FALSE;
-        RSDesc.DepthBias = 0;
-        RSDesc.SlopeScaledDepthBias = 0.0f;
-        RSDesc.DepthBiasClamp = 0;
-        RSDesc.DepthClipEnable = TRUE;
-        RSDesc.ScissorEnable = TRUE;
-        RSDesc.AntialiasedLineEnable = FALSE;
-        RSDesc.MultisampleEnable = (sd.SampleDesc.Count > 1) ? TRUE : FALSE;
-
-        ID3D10RasterizerState* pRState = NULL;
-        g_pd3dDevice->CreateRasterizerState(&RSDesc, &pRState);
-        g_pd3dDevice->RSSetState(pRState);
-        pRState->Release();
-    }
 
     CreateRenderTarget();
 
