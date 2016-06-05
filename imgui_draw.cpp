@@ -918,11 +918,6 @@ void ImDrawList::AddBezierCurve(const ImVec2& pos0, const ImVec2& cp0, const ImV
     PathStroke(col, false, thickness);
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
-{
-    AddText(font, font_size, pos, col, ImStr(text_begin, text_end), wrap_width, cpu_fine_clip_rect);
-}
-
 void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, ImStr text, float wrap_width, const ImVec4* cpu_fine_clip_rect)
 {
     if ((col >> 24) == 0)
@@ -957,11 +952,6 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, ImStr text)
 {
     AddText(GImGui->Font, GImGui->FontSize, pos, col, text);
-}
-
-void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
-{
-    AddText(GImGui->Font, GImGui->FontSize, pos, col, text_begin, text_end);
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
