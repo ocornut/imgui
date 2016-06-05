@@ -680,7 +680,7 @@ static void             MarkSettingsDirty();
 static void             PushColumnClipRect(int column_index = -1);
 static ImRect           GetVisibleRect();
 
-static bool             BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags);
+static bool             BeginPopupEx(ImStr str_id, ImGuiWindowFlags extra_flags);
 static void             CloseInactivePopups();
 static void             ClosePopupToLevel(int remaining);
 static void             ClosePopup(ImGuiID id);
@@ -5491,27 +5491,6 @@ void ImGui::AlignFirstTextHeightToWidgets()
     SameLine(0, 0);
 }
 
-static inline bool CalcLabelTextSize(ImStr label, const ImGuiWindow* window, const ImGuiStyle& style, ImVec2& label_size, ImRect& value_bb)
-{
-    const float w = ImGui::CalcItemWidth();
-
-    label_size = ImGui::CalcTextSize(label, true);
-    value_bb = ImRect(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2, label_size.y + style.FramePadding.y*2));
-    const ImRect total_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + style.FramePadding.x*2 + (label_size.x > 0.0f ? style.ItemInnerSpacing.x : 0.0f), style.FramePadding.y*2) + label_size);
-    ImGui::ItemSize(total_bb, style.FramePadding.y);
-    if (!ImGui::ItemAdd(total_bb, NULL))
-        return false;
-
-    return true;
-}
-
-static inline void RenderLabelText(ImStr label, ImStr text, const ImGuiStyle& style, const ImVec2& label_size, const ImRect& value_bb)
-{
-    ImGui::RenderTextClipped(value_bb.Min, value_bb.Max, text, NULL, ImGuiAlign_VCenter);
-    if (label_size.x > 0.0f)
-        ImGui::RenderText(ImVec2(value_bb.Max.x + style.ItemInnerSpacing.x, value_bb.Min.y + style.FramePadding.y), label);
-}
-
 // Add a label+text combo aligned to other label+value widgets
 void ImGui::LabelTextV(ImStr label, const char* fmt, va_list args)
 {
@@ -9653,17 +9632,17 @@ void ImGui::Value(ImStr prefix, unsigned int v)
 
 void ImGui::Value(ImStr prefix, float v, ImStr float_format)
 {
+    const int prefix_size = prefix.End ? (int)(prefix.End - prefix.Begin) : strlen(prefix.Begin);
     if (float_format.Begin)
     {
         char fmt[64];
-        const int size = float_format.End ? (int)(float_format.End - float_format.Begin) : strlen(float_format.Begin);
-        ImFormatString(fmt, IM_ARRAYSIZE(fmt), "%%s: %.*s", size, float_format.Begin);
-        Text(fmt, prefix, v);
+        const int fmt_size = float_format.End ? (int)(float_format.End - float_format.Begin) : strlen(float_format.Begin);
+        ImFormatString(fmt, IM_ARRAYSIZE(fmt), "%%s: %.*s", fmt_size, float_format.Begin);
+        Text(fmt, prefix_size, prefix.Begin, v);
     }
     else
     {
-        const int size = prefix.End ? (int)(prefix.End - prefix.Begin) : strlen(prefix.Begin);
-        Text("%.*s: %.3f", size, prefix.Begin, v);
+        Text("%.*s: %.3f", prefix_size, prefix.Begin, v);
     }
 }
 
