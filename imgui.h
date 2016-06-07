@@ -1357,7 +1357,7 @@ struct ImFont
     ImVec2                      DisplayOffset;      // = (0.f,1.f)  // Offset font rendering by xx pixels
     ImVector<Glyph>             Glyphs;             //              // All glyphs.
     ImVector<float>             IndexXAdvance;      //              // Sparse. Glyphs->XAdvance in a directly indexable way (more cache-friendly, for CalcTextSize functions which are often bottleneck in large UI).
-    ImVector<short>             IndexLookup;        //              // Sparse. Index glyphs by Unicode code-point.
+    ImVector<unsigned short>    IndexLookup;        //              // Sparse. Index glyphs by Unicode code-point.
     const Glyph*                FallbackGlyph;      // == FindGlyph(FontFallbackChar)
     float                       FallbackXAdvance;   // == FallbackGlyph->XAdvance
     ImWchar                     FallbackChar;       // = '?'        // Replacement glyph if one isn't found. Only set via SetFallbackChar()
