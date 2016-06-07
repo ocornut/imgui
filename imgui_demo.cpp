@@ -1312,7 +1312,22 @@ void ImGui::ShowTestWindow(bool* p_open)
         // Basic columns
         if (ImGui::TreeNode("Basic"))
         {
-            ImGui::Columns(4, "mycolumns");
+            ImGui::Text("Without border:");
+            ImGui::Columns(3, "mycolumns3", false);  // 3-ways, no border
+            ImGui::Separator();
+            for (int n = 0; n < 14; n++)
+            {
+                char label[32];
+                sprintf(label, "Item %d", n);
+                if (ImGui::Selectable(label)) {}
+                //if (ImGui::Button(label, ImVec2(-1,0))) {}
+                ImGui::NextColumn();
+            }
+            ImGui::Columns(1);
+            ImGui::Separator();
+
+            ImGui::Text("With border:");
+            ImGui::Columns(4, "mycolumns"); // 4-ways, with border
             ImGui::Separator();
             ImGui::Text("ID"); ImGui::NextColumn();
             ImGui::Text("Name"); ImGui::NextColumn();
