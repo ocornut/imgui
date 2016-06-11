@@ -460,7 +460,7 @@
 
  - doc: add a proper documentation+regression testing system (#435)
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. perhaps a lightweight explicit cleanup pass.
- - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis).
+ - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis) (#690)
  - window: auto-fit feedback loop when user relies on any dynamic layout (window width multiplier, column) appears weird to end-user. clarify.
  - window: allow resizing of child windows (possibly given min/max for each axis?)
  - window: background options for child windows, border option (disable rounding)
@@ -5245,9 +5245,10 @@ void ImGui::TextDisabled(const char* fmt, ...)
 
 void ImGui::TextWrappedV(const char* fmt, va_list args)
 {
-    PushTextWrapPos(0.0f);
+    bool need_wrap = (GImGui->CurrentWindow->DC.TextWrapPos < 0.0f);    // Keep existing wrap position is one ia already set
+    if (need_wrap) PushTextWrapPos(0.0f);
     TextV(fmt, args);
-    PopTextWrapPos();
+    if (need_wrap) PopTextWrapPos();
 }
 
 void ImGui::TextWrapped(const char* fmt, ...)
