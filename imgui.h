@@ -693,9 +693,9 @@ enum ImGuiMouseCursor_
 enum ImGuiSetCond_
 {
     ImGuiSetCond_Always        = 1 << 0, // Set the variable
-    ImGuiSetCond_Once          = 1 << 1, // Only set the variable on the first call per runtime session
-    ImGuiSetCond_FirstUseEver  = 1 << 2, // Only set the variable if the window doesn't exist in the .ini file
-    ImGuiSetCond_Appearing     = 1 << 3  // Only set the variable if the window is appearing after being inactive (or the first time)
+    ImGuiSetCond_Once          = 1 << 1, // Set the variable once per runtime session (only the first call with succeed)
+    ImGuiSetCond_FirstUseEver  = 1 << 2, // Set the variable if the window has no saved data (if doesn't exist in the .ini file)
+    ImGuiSetCond_Appearing     = 1 << 3  // Set the variable if the window is appearing after being hidden/inactive (or the first time)
 };
 
 struct ImGuiStyle
