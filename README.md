@@ -119,7 +119,7 @@ ImGui is very programmer centric and the immediate-mode GUI paradigm might requi
 
 <b>Is ImGui fast?</b>
 
-Probably fast enough for most uses. Down to the fundation of its visual design, ImGui is engineered to be fairly performant both in term of CPU and GPU usage. Running elaborate code and creating elaborate UI will of course have a cost but ImGui aims to minimize it.
+Probably fast enough for most uses. Down to the foundation of its visual design, ImGui is engineered to be fairly performant both in term of CPU and GPU usage. Running elaborate code and creating elaborate UI will of course have a cost but ImGui aims to minimize it.
 
 Mileage may vary but the following screenshot can give you a rough idea of the cost of running and rendering UI code (In the case of a trivial demo application like this one, your driver/os setup are likely to be the bottleneck. Testing performance as part of a real application is recommended).
 
