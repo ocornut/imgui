@@ -863,7 +863,8 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
 // HELPERS
 //-----------------------------------------------------------------------------
 
-#define IM_F32_TO_INT8(_VAL)  ((int)((_VAL) * 255.0f + 0.5f))
+#define IM_F32_TO_INT8_UNBOUND(_VAL)    ((int)((_VAL) * 255.0f + ((_VAL)>=0 ? 0.5f : -0.5f)))   // Unsaturated, for display purpose 
+#define IM_F32_TO_INT8_SAT(_VAL)        ((int)(ImSaturate(_VAL) * 255.0f + 0.5f))               // Saturated, always output 0..255
 
 // Play it nice with Windows users. Notepad in 2015 still doesn't display text data with Unix-style \n.
 #ifdef _WIN32
@@ -1184,10 +1185,10 @@ ImVec4 ImGui::ColorConvertU32ToFloat4(ImU32 in)
 ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in)
 {
     ImU32 out;
-    out  = ((ImU32)IM_F32_TO_INT8(ImSaturate(in.x)));
-    out |= ((ImU32)IM_F32_TO_INT8(ImSaturate(in.y))) << 8;
-    out |= ((ImU32)IM_F32_TO_INT8(ImSaturate(in.z))) << 16;
-    out |= ((ImU32)IM_F32_TO_INT8(ImSaturate(in.w))) << 24;
+    out  = ((ImU32)IM_F32_TO_INT8_SAT(in.x));
+    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.y)) << 8;
+    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.z)) << 16;
+    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.w)) << 24;
     return out;
 }
 
@@ -7944,8 +7945,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     {
         edit_state.CursorAnim += g.IO.DeltaTime;
 
-        // We need to:
-        // - Display the text (this can be more easily clipped)
+        // This is going to be messy. We need to:
+        // - Display the text (this alone can be more easily clipped)
         // - Handle scrolling, highlight selection, display cursor (those all requires some form of 1d->2d cursor position calculation)
         // - Measure text height (for scrollbar)
         // We are attempting to do most of that in **one main pass** to minimize the computation cost (non-negligible for large amount of text) + 2nd pass for selection rendering (we could merge them by an extra refactoring effort)
@@ -8110,14 +8111,12 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
     IM_ASSERT(!(flags & ImGuiInputTextFlags_Multiline)); // call InputTextMultiline()
-    bool ret = InputTextEx(label, buf, (int)buf_size, ImVec2(0,0), flags, callback, user_data);
-    return ret;
+    return InputTextEx(label, buf, (int)buf_size, ImVec2(0,0), flags, callback, user_data);
 }
 
 bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
 {
-    bool ret = InputTextEx(label, buf, (int)buf_size, size, flags | ImGuiInputTextFlags_Multiline, callback, user_data);
-    return ret;
+    return InputTextEx(label, buf, (int)buf_size, size, flags | ImGuiInputTextFlags_Multiline, callback, user_data);
 }
 
 // NB: scalar_format here must be a simple "%xx" format string with no prefix/suffix (unlike the Drag/Slider functions "display_format" argument)
@@ -8851,7 +8850,7 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
     RenderFrame(bb.Min, bb.Max, GetColorU32(col), outline_border, style.FrameRounding);
 
     if (hovered)
-        SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col.x, col.y, col.z, col.w, IM_F32_TO_INT8(col.x), IM_F32_TO_INT8(col.y), IM_F32_TO_INT8(col.z), IM_F32_TO_INT8(col.z));
+        SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col.x, col.y, col.z, col.w, IM_F32_TO_INT8_SAT(col.x), IM_F32_TO_INT8_SAT(col.y), IM_F32_TO_INT8_SAT(col.z), IM_F32_TO_INT8_SAT(col.z));
 
     return pressed;
 }
@@ -8892,7 +8891,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
     if (edit_mode == ImGuiColorEditMode_HSV)
         ColorConvertRGBtoHSV(f[0], f[1], f[2], f[0], f[1], f[2]);
 
-    int i[4] = { IM_F32_TO_INT8(f[0]), IM_F32_TO_INT8(f[1]), IM_F32_TO_INT8(f[2]), IM_F32_TO_INT8(f[3]) };
+    int i[4] = { IM_F32_TO_INT8_UNBOUND(f[0]), IM_F32_TO_INT8_UNBOUND(f[1]), IM_F32_TO_INT8_UNBOUND(f[2]), IM_F32_TO_INT8_UNBOUND(f[3]) };
 
     int components = alpha ? 4 : 3;
     bool value_changed = false;
@@ -8969,7 +8968,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
 
     // Recreate our own tooltip over's ColorButton() one because we want to display correct alpha here
     if (IsItemHovered())
-        SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col[0], col[1], col[2], col[3], IM_F32_TO_INT8(col[0]), IM_F32_TO_INT8(col[1]), IM_F32_TO_INT8(col[2]), IM_F32_TO_INT8(col[3]));
+        SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col[0], col[1], col[2], col[3], IM_F32_TO_INT8_SAT(col[0]), IM_F32_TO_INT8_SAT(col[1]), IM_F32_TO_INT8_SAT(col[2]), IM_F32_TO_INT8_SAT(col[3]));
 
     if (window->DC.ColorEditMode == ImGuiColorEditMode_UserSelectShowButton)
     {
