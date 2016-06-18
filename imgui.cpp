@@ -5493,7 +5493,7 @@ void ImGui::AlignFirstTextHeightToWidgets()
 }
 
 // Add a label+text combo aligned to other label+value widgets
-void ImGui::LabelTextV(ImStr label, const char* fmt, va_list args)
+void ImGui::LabelText(ImStr label, ImStr text)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -5511,11 +5511,17 @@ void ImGui::LabelTextV(ImStr label, const char* fmt, va_list args)
         return;
 
     // Render
-    const char* value_text_begin = &g.TempBuffer[0];
-    const char* value_text_end = value_text_begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    RenderTextClipped(value_bb.Min, value_bb.Max, ImStr(value_text_begin, value_text_end), NULL, ImGuiAlign_VCenter);
+    RenderTextClipped(value_bb.Min, value_bb.Max, text, NULL, ImGuiAlign_VCenter);
     if (label_size.x > 0.0f)
         RenderText(ImVec2(value_bb.Max.x + style.ItemInnerSpacing.x, value_bb.Min.y + style.FramePadding.y), label);
+}
+
+void ImGui::LabelTextV(ImStr label, const char* fmt, va_list args)
+{
+    // FIXME-IMSTR: Easier to merge but what's the overhead of this? It might not get used.
+    ImGuiContext& g = *GImGui;
+    const ImStr text(g.TempBuffer, ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args));
+    LabelText(label, text);
 }
 
 void ImGui::LabelText(ImStr label, const char* fmt, ...)
@@ -6160,6 +6166,14 @@ bool ImGui::TreeNode(ImStr label)
     return TreeNodeBehavior(window->GetID(label), 0, label);
 }
 
+bool ImGui::TreeNode(ImStr str_id, ImStr label)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+    return TreeNodeBehavior(window->GetID(str_id), 0, label);
+}
+
 void ImGui::TreeAdvanceToLabelPos()
 {
     ImGuiContext& g = *GImGui;
@@ -6243,7 +6257,7 @@ void ImGui::Bullet()
 }
 
 // Text with a little bullet aligned to the typical tree node.
-void ImGui::BulletTextV(const char* fmt, va_list args)
+void ImGui::BulletText(ImStr text)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -6252,9 +6266,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
 
-    const char* text_begin = g.TempBuffer;
-    const char* text_end = text_begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    const ImVec2 label_size = CalcTextSize(text_begin, text_end, true);
+    const ImVec2 label_size = CalcTextSize(text, true);
     const float text_base_offset_y = ImMax(0.0f, window->DC.CurrentLineTextBaseOffset); // Latch before ItemSize changes it
     const float line_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize + (label_size.x > 0.0f ? (label_size.x + style.FramePadding.x*2) : 0.0f), ImMax(line_height, label_size.y)));  // Empty text doesn't add padding
@@ -6264,7 +6276,15 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
 
     // Render
     RenderBullet(bb.Min + ImVec2(style.FramePadding.x + g.FontSize*0.5f, line_height*0.5f));
-    RenderText(bb.Min+ImVec2(g.FontSize + style.FramePadding.x*2, text_base_offset_y), text_begin, text_end);
+    RenderText(bb.Min+ImVec2(g.FontSize + style.FramePadding.x*2, text_base_offset_y), text);
+}
+
+void ImGui::BulletTextV(const char* fmt, va_list args)
+{
+    // FIXME-IMSTR: Easier to merge but what's the overhead of this? It might not get used.
+    ImGuiContext& g = *GImGui;
+    const ImStr text(g.TempBuffer, ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args));
+    BulletText(text);
 }
 
 void ImGui::BulletText(const char* fmt, ...)
