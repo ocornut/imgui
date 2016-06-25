@@ -895,6 +895,13 @@ int ImStrnicmp(const char* str1, const char* str2, int count)
     return d;
 }
 
+void ImStrncpy(char* dst, const char* src, int count)
+{
+    if (count < 1) return;
+    strncpy(dst, src, (size_t)count);
+    dst[count-1] = 0;
+}
+
 char* ImStrdup(const char *str)
 {
     size_t len = strlen(str) + 1;
@@ -1431,7 +1438,7 @@ ImGuiTextFilter::ImGuiTextFilter(const char* default_filter)
 {
     if (default_filter)
     {
-        ImFormatString(InputBuf, IM_ARRAYSIZE(InputBuf), "%s", default_filter);
+        ImStrncpy(InputBuf, default_filter, IM_ARRAYSIZE(InputBuf));
         Build();
     }
     else
@@ -7631,9 +7638,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
             // From the moment we focused we are ignoring the content of 'buf' (unless we are in read-only mode)
             const int prev_len_w = edit_state.CurLenW;
-            edit_state.Text.resize(buf_size+1);        // wchar count <= utf-8 count. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
-            edit_state.InitialText.resize(buf_size+1); // utf-8. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
-            ImFormatString(edit_state.InitialText.Data, edit_state.InitialText.Size, "%s", buf);
+            edit_state.Text.resize(buf_size+1);        // wchar count <= UTF-8 count. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
+            edit_state.InitialText.resize(buf_size+1); // UTF-8. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
+            ImStrncpy(edit_state.InitialText.Data, buf, edit_state.InitialText.Size);
             const char* buf_end = NULL;
             edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.Data, edit_state.Text.Size, buf, NULL, &buf_end);
             edit_state.CurLenA = (int)(buf_end - buf); // We can't get the result from ImFormatString() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
@@ -7839,7 +7846,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // Restore initial value
             if (is_editable)
             {
-                ImFormatString(buf, buf_size, "%s", edit_state.InitialText.Data);
+                ImStrncpy(buf, edit_state.InitialText.Data, buf_size);
                 value_changed = true;
             }
         }
@@ -7925,7 +7932,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // Copy back to user buffer
             if (is_editable && strcmp(edit_state.TempTextBuffer.Data, buf) != 0)
             {
-                ImFormatString(buf, buf_size, "%s", edit_state.TempTextBuffer.Data);
+                ImStrncpy(buf, edit_state.TempTextBuffer.Data, buf_size);
                 value_changed = true;
             }
         }
