@@ -4916,8 +4916,7 @@ void ImGui::SetWindowFocus(const char* name)
 {
     if (name)
     {
-        ImGuiWindow* window = FindWindowByName(name);
-        if (window)
+        if (ImGuiWindow* window = FindWindowByName(name))
             FocusWindow(window);
     }
     else
@@ -9470,7 +9469,7 @@ void ImGui::ValueColor(const char* prefix, const ImVec4& v)
     ColorButton(v, true);
 }
 
-void ImGui::ValueColor(const char* prefix, unsigned int v)
+void ImGui::ValueColor(const char* prefix, ImU32 v)
 {
     Text("%s: %08X", prefix, v);
     SameLine();

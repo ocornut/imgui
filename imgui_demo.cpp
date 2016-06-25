@@ -1020,24 +1020,24 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::Text("Hello\nWorld"); ImGui::SameLine();
             ImGui::Text("One\nTwo\nThree");
 
-            ImGui::Button("HOP"); ImGui::SameLine();
+            ImGui::Button("HOP##1"); ImGui::SameLine();
             ImGui::Text("Banana"); ImGui::SameLine();
             ImGui::Text("Hello\nWorld"); ImGui::SameLine();
             ImGui::Text("Banana");
 
-            ImGui::Button("HOP"); ImGui::SameLine();
+            ImGui::Button("HOP##2"); ImGui::SameLine();
             ImGui::Text("Hello\nWorld"); ImGui::SameLine();
             ImGui::Text("Banana");
 
-            ImGui::Button("TEST"); ImGui::SameLine();
+            ImGui::Button("TEST##1"); ImGui::SameLine();
             ImGui::Text("TEST"); ImGui::SameLine();
-            ImGui::SmallButton("TEST");
+            ImGui::SmallButton("TEST##2");
 
             ImGui::AlignFirstTextHeightToWidgets(); // If your line starts with text, call this to align it to upcoming widgets.
             ImGui::Text("Text aligned to Widget"); ImGui::SameLine();
-            ImGui::Button("Widget"); ImGui::SameLine();
+            ImGui::Button("Widget##1"); ImGui::SameLine();
             ImGui::Text("Widget"); ImGui::SameLine();
-            ImGui::SmallButton("Widget");
+            ImGui::SmallButton("Widget##2");
 
             // Tree
             const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
