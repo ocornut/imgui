@@ -9501,12 +9501,8 @@ void ImGui::ValueColor(const char* prefix, ImU32 v)
 
 static const char* GetClipboardTextFn_DefaultImpl()
 {
-    static char* buf_local = NULL;
-    if (buf_local)
-    {
-        ImGui::MemFree(buf_local);
-        buf_local = NULL;
-    }
+    static ImVector<char> buf_local;
+    buf_local.clear();
     if (!OpenClipboard(NULL))
         return NULL;
     HANDLE wbuf_handle = GetClipboardData(CF_UNICODETEXT);
@@ -9515,19 +9511,18 @@ static const char* GetClipboardTextFn_DefaultImpl()
     if (ImWchar* wbuf_global = (ImWchar*)GlobalLock(wbuf_handle))
     {
         int buf_len = ImTextCountUtf8BytesFromStr(wbuf_global, NULL) + 1;
-        buf_local = (char*)ImGui::MemAlloc(buf_len * sizeof(char));
-        ImTextStrToUtf8(buf_local, buf_len, wbuf_global, NULL);
+        buf_local.resize(buf_len);
+        ImTextStrToUtf8(buf_local.Data, buf_len, wbuf_global, NULL);
     }
     GlobalUnlock(wbuf_handle);
     CloseClipboard();
-    return buf_local;
+    return buf_local.Data;
 }
 
 static void SetClipboardTextFn_DefaultImpl(const char* text)
 {
     if (!OpenClipboard(NULL))
         return;
-
     const int wbuf_length = ImTextCountCharsFromUtf8(text, NULL) + 1;
     HGLOBAL wbuf_handle = GlobalAlloc(GMEM_MOVEABLE, (SIZE_T)wbuf_length * sizeof(ImWchar));
     if (wbuf_handle == NULL)
