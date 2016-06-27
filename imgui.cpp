@@ -7406,6 +7406,7 @@ static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)
 static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const ImWchar* new_text, int new_text_len)
 {
     const int text_len = obj->CurLenW;
+    IM_ASSERT(pos <= text_len);
     if (new_text_len + text_len + 1 > obj->Text.Size)
         return false;
 
