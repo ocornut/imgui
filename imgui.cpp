@@ -1680,8 +1680,9 @@ bool ImGuiListClipper::Step()
         if (ItemsCount == 1) { ItemsCount = -1; return false; }
         float items_height = ImGui::GetCursorPosY() - StartPosY;
         IM_ASSERT(items_height > 0.0f);   // If this triggers, it means Item 0 hasn't moved the cursor vertically
-        ImGui::SetCursorPosY(StartPosY);  // Rewind cursor so we can Begin() again, this time with a known height.
-        Begin(ItemsCount, items_height);
+        Begin(ItemsCount-1, items_height);
+        DisplayStart++;
+        DisplayEnd++;
         StepNo = 3;
         return true;
     }
