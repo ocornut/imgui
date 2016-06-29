@@ -9178,37 +9178,34 @@ void ImGui::NewLine()
 void ImGui::NextColumn()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
+    if (window->SkipItems || window->DC.ColumnsCount <= 1)
         return;
 
     ImGuiContext& g = *GImGui;
-    if (window->DC.ColumnsCount > 1)
+    PopItemWidth();
+    PopClipRect();
+
+    window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
+    if (++window->DC.ColumnsCurrent < window->DC.ColumnsCount)
     {
-        PopItemWidth();
-        PopClipRect();
-
-        window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
-        if (++window->DC.ColumnsCurrent < window->DC.ColumnsCount)
-        {
-            // Columns 1+ cancel out IndentX
-            window->DC.ColumnsOffsetX = GetColumnOffset(window->DC.ColumnsCurrent) - window->DC.IndentX + g.Style.ItemSpacing.x;
-            window->DrawList->ChannelsSetCurrent(window->DC.ColumnsCurrent);
-        }
-        else
-        {
-            window->DC.ColumnsCurrent = 0;
-            window->DC.ColumnsOffsetX = 0.0f;
-            window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY;
-            window->DrawList->ChannelsSetCurrent(0);
-        }
-        window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
-        window->DC.CursorPos.y = window->DC.ColumnsCellMinY;
-        window->DC.CurrentLineHeight = 0.0f;
-        window->DC.CurrentLineTextBaseOffset = 0.0f;
-
-        PushColumnClipRect();
-        PushItemWidth(GetColumnWidth() * 0.65f);  // FIXME: Move on columns setup
+        // Columns 1+ cancel out IndentX
+        window->DC.ColumnsOffsetX = GetColumnOffset(window->DC.ColumnsCurrent) - window->DC.IndentX + g.Style.ItemSpacing.x;
+        window->DrawList->ChannelsSetCurrent(window->DC.ColumnsCurrent);
     }
+    else
+    {
+        window->DC.ColumnsCurrent = 0;
+        window->DC.ColumnsOffsetX = 0.0f;
+        window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY;
+        window->DrawList->ChannelsSetCurrent(0);
+    }
+    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
+    window->DC.CursorPos.y = window->DC.ColumnsCellMinY;
+    window->DC.CurrentLineHeight = 0.0f;
+    window->DC.CurrentLineTextBaseOffset = 0.0f;
+
+    PushColumnClipRect();
+    PushItemWidth(GetColumnWidth() * 0.65f);  // FIXME: Move on columns setup
 }
 
 int ImGui::GetColumnIndex()
