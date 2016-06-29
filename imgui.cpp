@@ -5082,13 +5082,13 @@ ImVec2 ImGui::GetCursorPos()
 
 float ImGui::GetCursorPosX()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.CursorPos.x - window->Pos.x + window->Scroll.x;
 }
 
 float ImGui::GetCursorPosY()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.CursorPos.y - window->Pos.y + window->Scroll.y;
 }
 
