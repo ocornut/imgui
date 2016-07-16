@@ -3937,7 +3937,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             // Popup first latch mouse position, will position itself when it appears next frame
             window->AutoPosLastDirection = -1;
             if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api)
-                window->PosFloat = g.IO.MousePos;
+                window->PosFloat = g.CurrentPopupStack.back().MousePosOnOpen;
         }
 
         // Collapse window by double-clicking on title bar
