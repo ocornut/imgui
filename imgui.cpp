@@ -6360,13 +6360,18 @@ int ImGui::ParseFormatPrecision(const char* fmt, int default_precision)
     return precision;
 }
 
+static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
+{
+    static const float min_steps[10] = { 1.0f, 0.1f, 0.01f, 0.001f, 0.0001f, 0.00001f, 0.000001f, 0.0000001f, 0.00000001f, 0.000000001f };
+    return (decimal_precision >= 0 && decimal_precision < 10) ? min_steps[decimal_precision] : powf(10.0f, (float)-decimal_precision);
+}
+
 float ImGui::RoundScalar(float value, int decimal_precision)
 {
     // Round past decimal precision
     // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
     // FIXME: Investigate better rounding methods
-    static const float min_steps[10] = { 1.0f, 0.1f, 0.01f, 0.001f, 0.0001f, 0.00001f, 0.000001f, 0.0000001f, 0.00000001f, 0.000000001f };
-    float min_step = (decimal_precision >= 0 && decimal_precision < 10) ? min_steps[decimal_precision] : powf(10.0f, (float)-decimal_precision);
+    const float min_step = GetMinimumStepAtDecimalPrecision(decimal_precision);
     bool negative = value < 0.0f;
     value = fabsf(value);
     float remainder = fmodf(value, min_step);
@@ -6375,6 +6380,28 @@ float ImGui::RoundScalar(float value, int decimal_precision)
     else
         value += (min_step - remainder);
     return negative ? -value : value;
+}
+
+static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float v_max, float power, float linear_zero_pos)
+{
+    const bool is_non_linear = (power < 1.0f-0.00001f) && (power > 1.0f-0.00001f);
+    if (is_non_linear)
+    {
+        float v_clamped = ImClamp(v, v_min, v_max);
+        if (v_clamped < 0.0f)
+        {
+            const float f = 1.0f - (v_clamped - v_min) / (ImMin(0.0f,v_max) - v_min);
+            return (1.0f - powf(f, 1.0f/power)) * linear_zero_pos;
+        }
+        else
+        {
+            const float f = (v_clamped - ImMax(0.0f,v_min)) / (v_max - ImMax(0.0f,v_min));
+            return linear_zero_pos + powf(f, 1.0f/power) * (1.0f - linear_zero_pos);
+        }
+    }
+
+    // Linear slider
+    return (ImClamp(v, v_min, v_max) - v_min) / (v_max - v_min);
 }
 
 bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, ImGuiSliderFlags flags)
@@ -6386,7 +6413,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     // Draw frame
     RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
 
-    const bool is_non_linear = fabsf(power - 1.0f) > 0.0001f;
+    const bool is_non_linear = (power < 1.0f-0.00001f) && (power > 1.0f-0.00001f);
     const bool is_horizontal = (flags & ImGuiSliderFlags_Vertical) == 0;
 
     const float grab_padding = 2.0f;
@@ -6469,29 +6496,8 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
         }
     }
 
-    // Calculate slider grab positioning
-    float grab_t;
-    if (is_non_linear)
-    {
-        float v_clamped = ImClamp(*v, v_min, v_max);
-        if (v_clamped < 0.0f)
-        {
-            const float f = 1.0f - (v_clamped - v_min) / (ImMin(0.0f,v_max) - v_min);
-            grab_t = (1.0f - powf(f, 1.0f/power)) * linear_zero_pos;
-        }
-        else
-        {
-            const float f = (v_clamped - ImMax(0.0f,v_min)) / (v_max - ImMax(0.0f,v_min));
-            grab_t = linear_zero_pos + powf(f, 1.0f/power) * (1.0f - linear_zero_pos);
-        }
-    }
-    else
-    {
-        // Linear slider
-        grab_t = (ImClamp(*v, v_min, v_max) - v_min) / (v_max - v_min);
-    }
-
     // Draw
+    float grab_t = SliderBehaviorCalcRatioFromValue(*v, v_min, v_max, power, linear_zero_pos);
     if (!is_horizontal)
         grab_t = 1.0f - grab_t;
     const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
