@@ -652,6 +652,7 @@ static void             LogRenderedText(const ImVec2& ref_pos, const char* text,
 static void             PushMultiItemsWidths(int components, float w_full = 0.0f);
 static float            GetDraggedColumnOffset(int column_index);
 
+static bool             IsKeyDownMap(ImGuiKey key);
 static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
 static void             SetCurrentFont(ImFont* font);
@@ -3065,10 +3066,16 @@ bool ImGui::IsPosHoveringAnyWindow(const ImVec2& pos)
     return FindHoveredWindow(pos, false) != NULL;
 }
 
+static bool IsKeyDownMap(ImGuiKey key)
+{
+    const int key_index = GImGui->IO.KeyMap[key];
+    return (key_index >= 0) ? ImGui::IsKeyDown(key_index) : false;
+}
+
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
 {
     const int key_index = GImGui->IO.KeyMap[key];
-    return ImGui::IsKeyPressed(key_index, repeat);
+    return (key_index >= 0) ? ImGui::IsKeyPressed(key_index, repeat) : false;
 }
 
 int ImGui::GetKeyIndex(ImGuiKey key)
@@ -3084,7 +3091,7 @@ bool ImGui::IsKeyDown(int key_index)
     return GImGui->IO.KeysDown[key_index];
 }
 
-bool ImGui::IsKeyPressed(int key_index, bool repeat)
+bool ImGui::IsKeyPressed(int key_index, float repeat_delay, float repeat_rate)
 {
     ImGuiContext& g = *GImGui;
     if (key_index < 0) return false;
@@ -3092,14 +3099,21 @@ bool ImGui::IsKeyPressed(int key_index, bool repeat)
     const float t = g.IO.KeysDownDuration[key_index];
     if (t == 0.0f)
         return true;
-
-    if (repeat && t > g.IO.KeyRepeatDelay)
-    {
-        float delay = g.IO.KeyRepeatDelay, rate = g.IO.KeyRepeatRate;
-        if ((fmodf(t - delay, rate) > rate*0.5f) != (fmodf(t - delay - g.IO.DeltaTime, rate) > rate*0.5f))
+ 
+    if (t > repeat_delay && repeat_rate > 0.0f)
+        if ((fmodf(t - repeat_delay, repeat_rate) > repeat_rate*0.5f) != (fmodf(t - repeat_delay - g.IO.DeltaTime, repeat_rate) > repeat_rate*0.5f))
             return true;
-    }
+
     return false;
+}
+
+bool ImGui::IsKeyPressed(int key_index, bool repeat)
+{
+    ImGuiContext& g = *GImGui;
+    if (repeat)
+        return IsKeyPressed(key_index, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate);
+    else
+        return IsKeyPressed(key_index, 0.0f, 0.0f);
 }
 
 bool ImGui::IsKeyReleased(int key_index)
@@ -9725,8 +9739,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Text("FocusedWindow: '%s'", g.FocusedWindow ? g.FocusedWindow->Name : "NULL");
             ImGui::Text("HoveredWindow: '%s'", g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
             ImGui::Text("HoveredRootWindow: '%s'", g.HoveredRootWindow ? g.HoveredRootWindow->Name : "NULL");
-            ImGui::Text("HoveredID: 0x%08X/0x%08X", g.HoveredId, g.HoveredIdPreviousFrame); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
-            ImGui::Text("ActiveID: 0x%08X/0x%08X", g.ActiveId, g.ActiveIdPreviousFrame);
+            ImGui::Text("HoveredId: 0x%08X/0x%08X", g.HoveredId, g.HoveredIdPreviousFrame); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
+            ImGui::Text("ActiveId: 0x%08X/0x%08X", g.ActiveId, g.ActiveIdPreviousFrame);
             ImGui::TreePop();
         }
     }

@@ -430,6 +430,7 @@ namespace ImGui
     IMGUI_API int           GetKeyIndex(ImGuiKey key);                                          // map ImGuiKey_* values into user's key index. == io.KeyMap[key]
     IMGUI_API bool          IsKeyDown(int key_index);                                           // key_index into the keys_down[] array, imgui doesn't know the semantic of each entry, uses your own indices!
     IMGUI_API bool          IsKeyPressed(int key_index, bool repeat = true);                    // uses user's key indices as stored in the keys_down[] array. if repeat=true. uses io.KeyRepeatDelay / KeyRepeatRate
+    IMGUI_API bool          IsKeyPressed(int key_index, float repeat_delay, float repeat_rate); // uses user's key indices as stored in the keys_down[] array. uses provided repeat rate/delay
     IMGUI_API bool          IsKeyReleased(int key_index);                                       // "
     IMGUI_API bool          IsMouseDown(int button);                                            // is mouse button held
     IMGUI_API bool          IsMouseClicked(int button, bool repeat = false);                    // did mouse button clicked (went from !Down to Down)
