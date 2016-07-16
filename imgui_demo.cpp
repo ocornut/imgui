@@ -784,7 +784,7 @@ void ImGui::ShowTestWindow(bool* p_open)
         struct Funcs
         {
             static float Sin(void*, int i) { return sinf(i * 0.1f); }
-            static float Saw(void*, int i) { return (i & 1) ? 1.0f : 0.0f; }
+            static float Saw(void*, int i) { return (i & 1) ? 1.0f : -1.0f; }
         };
         static int func_type = 0, display_count = 70;
         ImGui::Separator();

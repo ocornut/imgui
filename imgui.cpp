@@ -4488,10 +4488,8 @@ void ImGui::FocusWindow(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
 
-    // Always mark the window we passed as focused. This is used for keyboard interactions such as tabbing.
-    g.FocusedWindow = window;
-
     // Passing NULL allow to disable keyboard focus
+    g.FocusedWindow = window;
     if (!window)
         return;
 

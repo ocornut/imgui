@@ -482,7 +482,7 @@ struct ImGuiContext
         DragCurrentValue = 0.0f;
         DragLastMouseDelta = ImVec2(0.0f, 0.0f);
         DragSpeedDefaultRatio = 1.0f / 100.0f;
-        DragSpeedScaleSlow = 0.01f;
+        DragSpeedScaleSlow = 1.0f / 100.0f;
         DragSpeedScaleFast = 10.0f;
         ScrollbarClickDeltaToGrabCenter = ImVec2(0.0f, 0.0f);
         memset(Tooltip, 0, sizeof(Tooltip));
