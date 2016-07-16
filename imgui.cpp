@@ -7663,6 +7663,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool user_clicked = hovered && io.MouseClicked[0];
     const bool user_scrolled = is_multiline && g.ActiveId == 0 && edit_state.Id == id && g.ActiveIdPreviousFrame == draw_window->GetIDNoKeepAlive("#SCROLLY");
 
+    bool clear_active_id = false;
     bool select_all = (g.ActiveId != id) && (flags & ImGuiInputTextFlags_AutoSelectAll) != 0;
     if (focus_requested || user_clicked || user_scrolled)
     {
@@ -7708,8 +7709,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     else if (io.MouseClicked[0])
     {
         // Release focus when we click outside
-        if (g.ActiveId == id)
-            SetActiveID(0);
+        clear_active_id = true;
     }
 
     bool value_changed = false;
@@ -7781,9 +7781,12 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // Consume characters
             memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
         }
+    }
 
-        // Handle various key-presses
-        bool cancel_edit = false;
+    bool cancel_edit = false;
+    if (g.ActiveId == id && !g.ActiveIdIsJustActivated)
+    {
+        // Handle key-presses
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
         const bool is_shortcutkey_only = (io.ShortcutsUseSuperKey ? (is_super_down && !is_alt_down && !is_shift_down && !is_ctrl_down) : (is_ctrl_down && !is_alt_down && !is_shift_down && !is_super_down));
         const bool is_wordmove_key_down = (io.WordMovementUsesAltKey ? io.KeyAlt : io.KeyCtrl);
@@ -7800,10 +7803,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         {
             bool ctrl_enter_for_new_line = (flags & ImGuiInputTextFlags_CtrlEnterForNewLine) != 0;
             if (!is_multiline || (ctrl_enter_for_new_line && !is_ctrl_down) || (!ctrl_enter_for_new_line && is_ctrl_down))
-            {
-                SetActiveID(0);
-                enter_pressed = true;
-            }
+                enter_pressed = clear_active_id = true;
             else if (is_editable)
             {
                 unsigned int c = '\n'; // Insert new line
@@ -7817,7 +7817,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             if (InputTextFilterCharacter(&c, flags, callback, user_data))
                 edit_state.OnKeyPressed((int)c);
         }
-        else if (IsKeyPressedMap(ImGuiKey_Escape))                                     { SetActiveID(0); cancel_edit = true; }
+        else if (IsKeyPressedMap(ImGuiKey_Escape))                                     { clear_active_id = cancel_edit = true; }
         else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
         else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
         else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_A))                   { edit_state.SelectAll(); edit_state.CursorFollow = true; }
@@ -7874,7 +7874,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 }
             }
         }
+    }
 
+    if (g.ActiveId == id)
+    {
         if (cancel_edit)
         {
             // Restore initial value
@@ -7971,6 +7974,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             }
         }
     }
+
+    // Release active ID at the end of the function (so e.g. pressing Return still does a final application of the value)
+    if (clear_active_id && g.ActiveId == id)
+        SetActiveID(0);
 
     // Render
     // Select which buffer we are going to display. When ImGuiInputTextFlags_NoLiveEdit is set 'buf' might still be the old value. We set buf to NULL to prevent accidental usage from now on.
