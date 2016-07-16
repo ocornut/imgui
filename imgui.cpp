@@ -9575,7 +9575,7 @@ static void SetClipboardTextFn_DefaultImpl(const char* text)
 #endif
 
 // Win32 API IME support (for Asian languages, etc.)
-#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS)
+#if defined(_WIN32) && !defined(__GNUC__) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS)
 
 #include <imm.h>
 #ifdef _MSC_VER
