@@ -1803,9 +1803,9 @@ ImGuiWindow* ImGui::GetParentWindow()
 void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window = NULL)
 {
     ImGuiContext& g = *GImGui;
+    g.ActiveIdIsJustActivated = (g.ActiveId != id);
     g.ActiveId = id;
     g.ActiveIdAllowOverlap = false;
-    g.ActiveIdIsJustActivated = true;
     g.ActiveIdWindow = window;
 }
 
