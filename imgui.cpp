@@ -1923,7 +1923,7 @@ bool ImGui::FocusableItemRegister(ImGuiWindow* window, bool is_active, bool tab_
 
     // Process keyboard input at this point: TAB, Shift-TAB switch focus
     // We can always TAB out of a widget that doesn't allow tabbing in.
-    if (tab_stop && window->FocusIdxAllRequestNext == INT_MAX && window->FocusIdxTabRequestNext == INT_MAX && is_active && IsKeyPressedMap(ImGuiKey_Tab))
+    if (tab_stop && window->FocusIdxAllRequestNext == INT_MAX && window->FocusIdxTabRequestNext == INT_MAX && is_active && !g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab))
     {
         // Modulo on index will be applied at the end of frame once we've got the total counter of items.
         window->FocusIdxTabRequestNext = window->FocusIdxTabCounter + (g.IO.KeyShift ? (allow_keyboard_focus ? -1 : 0) : +1);
@@ -2268,7 +2268,7 @@ void ImGui::NewFrame()
 
     // Pressing TAB activate widget focus
     // NB: Don't discard FocusedWindow if it isn't active, so that a window that go on/off programatically won't lose its keyboard focus.
-    if (g.ActiveId == 0 && g.FocusedWindow != NULL && g.FocusedWindow->Active && IsKeyPressedMap(ImGuiKey_Tab, false))
+    if (g.ActiveId == 0 && g.FocusedWindow != NULL && g.FocusedWindow->Active && !g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab, false))
         g.FocusedWindow->FocusIdxTabRequestNext = 0;
 
     // Mark all windows as not visible
