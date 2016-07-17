@@ -2095,7 +2095,22 @@ void ImGui::NewFrame()
     g.RenderDrawData.CmdLists = NULL;
     g.RenderDrawData.CmdListsCount = g.RenderDrawData.TotalVtxCount = g.RenderDrawData.TotalIdxCount = 0;
 
-    // Update inputs state
+    // Clear reference to active widget if the widget isn't alive anymore
+    g.HoveredIdPreviousFrame = g.HoveredId;
+    g.HoveredId = 0;
+    g.HoveredIdAllowOverlap = false;
+    if (!g.ActiveIdIsAlive && g.ActiveIdPreviousFrame == g.ActiveId && g.ActiveId != 0)
+        SetActiveID(0);
+    g.ActiveIdPreviousFrame = g.ActiveId;
+    g.ActiveIdIsAlive = false;
+    g.ActiveIdIsJustActivated = false;
+
+    // Update keyboard input state
+    memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
+    for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
+        g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
+
+    // Update mouse input state
     if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0)
         g.IO.MousePos = ImVec2(-9999.0f, -9999.0f);
     if ((g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0) || (g.IO.MousePosPrev.x < 0 && g.IO.MousePosPrev.y < 0))   // if mouse just appeared or disappeared (negative coordinate) we cancel out movement in MouseDelta
@@ -2130,25 +2145,12 @@ void ImGui::NewFrame()
             g.IO.MouseDragMaxDistanceSqr[i] = ImMax(g.IO.MouseDragMaxDistanceSqr[i], ImLengthSqr(g.IO.MousePos - g.IO.MouseClickedPos[i]));
         }
     }
-    memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
-    for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
-        g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
 
     // Calculate frame-rate for the user, as a purely luxurious feature
     g.FramerateSecPerFrameAccum += g.IO.DeltaTime - g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx];
     g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx] = g.IO.DeltaTime;
     g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_ARRAYSIZE(g.FramerateSecPerFrame);
     g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
-
-    // Clear reference to active widget if the widget isn't alive anymore
-    g.HoveredIdPreviousFrame = g.HoveredId;
-    g.HoveredId = 0;
-    g.HoveredIdAllowOverlap = false;
-    if (!g.ActiveIdIsAlive && g.ActiveIdPreviousFrame == g.ActiveId && g.ActiveId != 0)
-        SetActiveID(0);
-    g.ActiveIdPreviousFrame = g.ActiveId;
-    g.ActiveIdIsAlive = false;
-    g.ActiveIdIsJustActivated = false;
 
     // Handle user moving window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
     if (g.MovedWindowMoveId && g.MovedWindowMoveId == g.ActiveId)
@@ -3276,8 +3278,7 @@ bool ImGui::IsAnyItemActive()
 bool ImGui::IsItemVisible()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    ImRect r(window->ClipRect);
-    return r.Overlaps(window->DC.LastItemRect);
+    return window->ClipRect.Overlaps(window->DC.LastItemRect);
 }
 
 // Allow last item to be overlapped by a subsequent item. Both may be activated during the same frame before the later one takes priority.
