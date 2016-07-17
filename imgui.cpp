@@ -2250,14 +2250,11 @@ void ImGui::NewFrame()
                 window->SizeFull *= scale;
             }
         }
-        else
+        else if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
         {
             // Scroll
-            if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
-            {
-                const int scroll_lines = (window->Flags & ImGuiWindowFlags_ComboBox) ? 3 : 5;
-                SetWindowScrollY(window, window->Scroll.y - g.IO.MouseWheel * window->CalcFontSize() * scroll_lines);
-            }
+            const int scroll_lines = (window->Flags & ImGuiWindowFlags_ComboBox) ? 3 : 5;
+            SetWindowScrollY(window, window->Scroll.y - g.IO.MouseWheel * window->CalcFontSize() * scroll_lines);
         }
     }
 
@@ -2274,6 +2271,15 @@ void ImGui::NewFrame()
         window->Active = false;
         window->Accessed = false;
     }
+
+    // Closing the focused window restore focus to the first active root window in descending z-order
+    if (g.FocusedWindow && !g.FocusedWindow->WasActive)
+        for (int i = g.Windows.Size-1; i >= 0; i--)
+            if (g.Windows[i]->WasActive && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
+            {
+                FocusWindow(g.Windows[i]);
+                break;
+            }
 
     // No window should be open at the beginning of the frame.
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
