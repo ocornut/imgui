@@ -798,28 +798,31 @@ ImGuiIO::ImGuiIO()
     // Most fields are initialized with zero
     memset(this, 0, sizeof(*this));
 
+    // Settings
     DisplaySize = ImVec2(-1.0f, -1.0f);
     DeltaTime = 1.0f/60.0f;
     IniSavingRate = 5.0f;
     IniFilename = "imgui.ini";
     LogFilename = "imgui_log.txt";
-    Fonts = &GImDefaultFontAtlas;
-    FontGlobalScale = 1.0f;
-    DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-    MousePos = ImVec2(-1,-1);
-    MousePosPrev = ImVec2(-1,-1);
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
-    MouseDragThreshold = 6.0f;
-    for (int i = 0; i < IM_ARRAYSIZE(MouseDownDuration); i++)
-        MouseDownDuration[i] = MouseDownDurationPrev[i] = -1.0f;
-    for (int i = 0; i < IM_ARRAYSIZE(KeysDownDuration); i++)
-        KeysDownDuration[i] = KeysDownDurationPrev[i] = -1.0f;
     for (int i = 0; i < ImGuiKey_COUNT; i++)
         KeyMap[i] = -1;
     KeyRepeatDelay = 0.250f;
     KeyRepeatRate = 0.050f;
     UserData = NULL;
+
+    Fonts = &GImDefaultFontAtlas;
+    FontGlobalScale = 1.0f;
+    FontAllowUserScaling = false;
+    DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+    DisplayVisibleMin = DisplayVisibleMax = ImVec2(0.0f, 0.0f);
+#ifdef __APPLE__
+    WordMovementUsesAltKey = true;      // OS X style: Text editing cursor movement using Alt instead of Ctrl
+    ShortcutsUseSuperKey = true;        // OS X style: Shortcuts using Cmd/Super instead of Ctrl
+    DoubleClickSelectsWord = true;      // OS X style: Double click selects by word instead of selecting whole text
+    MultiSelectUsesSuperKey = true;     // OS X style: Multi-selection in lists uses Cmd/Super instead of Ctrl 
+#endif
 
     // User functions
     RenderDrawListsFn = NULL;
@@ -828,14 +831,16 @@ ImGuiIO::ImGuiIO()
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
     ImeSetInputScreenPosFn = ImeSetInputScreenPosFn_DefaultImpl;
+    ImeWindowHandle = NULL;
 
-    // Set OS X style defaults based on __APPLE__ compile time flag
-#ifdef __APPLE__
-    WordMovementUsesAltKey = true;      // OS X style: Text editing cursor movement using Alt instead of Ctrl
-    ShortcutsUseSuperKey = true;        // OS X style: Shortcuts using Cmd/Super instead of Ctrl
-    DoubleClickSelectsWord = true;      // OS X style: Double click selects by word instead of selecting whole text
-    MultiSelectUsesSuperKey = true;     // OS X style: Multi-selection in lists uses Cmd/Super instead of Ctrl 
-#endif
+    // Input (NB: we already have memset zero the entire structure)
+    MousePos = ImVec2(-1,-1);
+    MousePosPrev = ImVec2(-1,-1);
+    MouseDragThreshold = 6.0f;
+    for (int i = 0; i < IM_ARRAYSIZE(MouseDownDuration); i++)
+        MouseDownDuration[i] = MouseDownDurationPrev[i] = -1.0f;
+    for (int i = 0; i < IM_ARRAYSIZE(KeysDownDuration); i++)
+        KeysDownDuration[i] = KeysDownDurationPrev[i] = -1.0f;
 }
 
 // Pass in translated ASCII characters for text input.
