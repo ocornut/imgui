@@ -150,6 +150,9 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2016/07/18 (1.50) - renamed IsMouseHoveringAnyWindow() to IsAnyWindowHovered() for consistency. Kept inline redirection function (will obsolete).
+                     - renamed IsPosHoveringAnyWindow() to IsAnyWindowHoveredAtPos() for consistency. Kept inline redirection function (will obsolete).
+                     - renamed IsMouseHoveringWindow() to IsWindowHoveredRect() for consistency. Kept inline redirection function (will obsolete).
  - 2016/05/12 (1.49) - title bar (using ImGuiCol_TitleBg/ImGuiCol_TitleBgActive colors) isn't rendered over a window background (ImGuiCol_WindowBg color) anymore. 
                        If your TitleBg/TitleBgActive alpha was 1.0f or you are using the default theme it will not affect you. 
                        However if your TitleBg/TitleBgActive alpha was <1.0f you need to tweak your custom theme to readjust for the fact that we don't draw a WindowBg background behind the title bar.
@@ -391,7 +394,7 @@
  A: You can read the 'io.WantCaptureXXX' flags in the ImGuiIO structure. Preferably read them after calling ImGui::NewFrame() to avoid those flags lagging by one frame, but either should be fine.
     When 'io.WantCaptureMouse' or 'io.WantCaptureKeyboard' flags are set you may want to discard/hide the inputs from the rest of your application.
     When 'io.WantInputsCharacters' is set to may want to notify your OS to popup an on-screen keyboard, if available.
-    ImGui is tracking dragging and widget activity that may occur outside the boundary of a window, so 'io.WantCaptureMouse' is a more accurate and complete than testing for ImGui::IsMouseHoveringAnyWindow().
+    ImGui is tracking dragging and widget activity that may occur outside the boundary of a window, so 'io.WantCaptureMouse' is a more accurate and complete than testing for ImGui::IsAnyWindowHovered().
     (Advanced note: text input releases focus on Return 'KeyDown', so the following Return 'KeyUp' event that your application receive will typically have 'io.WantcaptureKeyboard=false'. 
      Depending on your application logic it may or not be inconvenient. You might want to track which key-downs were for ImGui (e.g. with an array of bool) and filter out the corresponding key-ups.)
 
@@ -1889,7 +1892,6 @@ bool ImGui::IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindowRead();
-
     if (!bb.Overlaps(window->ClipRect))
         if (!id || *id != GImGui->ActiveId)
             if (clip_even_when_logged || !g.LogEnabled)
@@ -3053,19 +3055,22 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     return rect_for_touch.Contains(g.IO.MousePos);
 }
 
-bool ImGui::IsMouseHoveringWindow()
+bool ImGui::IsWindowHoveredRect()
 {
-    ImGuiContext& g = *GImGui;
-    return g.HoveredWindow == g.CurrentWindow;
+    return GImGui->HoveredWindow == GImGui->CurrentWindow;
 }
 
-bool ImGui::IsMouseHoveringAnyWindow()
+bool ImGui::IsAnyWindowHovered()
 {
-    ImGuiContext& g = *GImGui;
-    return g.HoveredWindow != NULL;
+    return GImGui->HoveredWindow != NULL;
 }
 
-bool ImGui::IsPosHoveringAnyWindow(const ImVec2& pos)
+bool ImGui::IsAnyWindowFocused()
+{
+    return GImGui->FocusedWindow != NULL;
+}
+
+bool ImGui::IsAnyWindowHoveredAtPos(const ImVec2& pos)
 {
     return FindHoveredWindow(pos, false) != NULL;
 }
@@ -3550,7 +3555,7 @@ bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
 bool ImGui::BeginPopupContextWindow(bool also_over_items, const char* str_id, int mouse_button)
 {
     if (!str_id) str_id = "window_context_menu";
-    if (IsMouseHoveringWindow() && IsMouseClicked(mouse_button))
+    if (IsWindowHoveredRect() && IsMouseClicked(mouse_button))
         if (also_over_items || !IsAnyItemHovered())
             OpenPopupEx(str_id, true);
     return BeginPopup(str_id);
@@ -3559,7 +3564,7 @@ bool ImGui::BeginPopupContextWindow(bool also_over_items, const char* str_id, in
 bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
 {
     if (!str_id) str_id = "void_context_menu";
-    if (!IsMouseHoveringAnyWindow() && IsMouseClicked(mouse_button))
+    if (!IsAnyWindowHovered() && IsMouseClicked(mouse_button))
         OpenPopupEx(str_id, true);
     return BeginPopup(str_id);
 }
@@ -5476,6 +5481,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         return false;
     }
 
+    // Default behavior requires click+release on same spot
     if ((flags & (ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnRelease | ImGuiButtonFlags_PressedOnDoubleClick)) == 0)
         flags |= ImGuiButtonFlags_PressedOnClickRelease;
 
