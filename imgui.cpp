@@ -4113,7 +4113,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         // Apply scrolling
         if (window->ScrollTarget.x < FLT_MAX)
         {
-            window->Scroll.x = window->ScrollTarget.x;
+            float center_ratio = window->ScrollTargetCenterRatio.x;
+            window->Scroll.x = window->ScrollTarget.x - (center_ratio * window->SizeFull.x);
             window->ScrollTarget.x = FLT_MAX;
         }
         if (window->ScrollTarget.y < FLT_MAX)
