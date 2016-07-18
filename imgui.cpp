@@ -3569,7 +3569,7 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
 
 bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* parent_window = GetCurrentWindow();
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_ChildWindow;
 
     const ImVec2 content_avail = GetContentRegionAvail();
@@ -3591,12 +3591,13 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
     flags |= extra_flags;
 
     char title[256];
-    ImFormatString(title, IM_ARRAYSIZE(title), "%s.%s", window->Name, str_id);
+    ImFormatString(title, IM_ARRAYSIZE(title), "%s.%s", parent_window->Name, str_id);
 
     bool ret = ImGui::Begin(title, NULL, size, -1.0f, flags);
+    ImGuiWindow* child_window = GetCurrentWindow();
+    if (!(parent_window->Flags & ImGuiWindowFlags_ShowBorders))
+        child_window->Flags &= ~ImGuiWindowFlags_ShowBorders;
 
-    if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
-        GetCurrentWindow()->Flags &= ~ImGuiWindowFlags_ShowBorders;
 
     return ret;
 }
