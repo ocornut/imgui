@@ -67,11 +67,17 @@ static void ShowExampleAppCustomRendering(bool* p_open);
 static void ShowExampleAppMainMenuBar();
 static void ShowExampleMenuFile();
 
-static void ShowHelpMarker(const char* desc)
+static void ShowHelpMarker(const char* desc, float wrap_width = 450.0f)
 {
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip(desc);
+    {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(wrap_width);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
 }
 
 void ImGui::ShowUserGuide()
@@ -850,7 +856,8 @@ void ImGui::ShowTestWindow(bool* p_open)
                     ImGui::NextColumn();
                 char buf[32];
                 sprintf(buf, "%08x", i*5731);
-                ImGui::Button(buf, ImVec2(-1.0f, 0.0f));
+                if (ImGui::Button(buf, ImVec2(-1.0f, 0.0f)))
+                    printf("Pressed '%s'\n", buf);
             }
             ImGui::EndChild();
             ImGui::PopStyleVar();
@@ -1299,13 +1306,15 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::OpenPopup("Stacked 1");
             if (ImGui::BeginPopupModal("Stacked 1"))
             {
-                ImGui::Text("Hello from Stacked The First");
+                ImGui::Text("Hello from Stacked The First\nUsing style.Colors[ImGuiCol_ModalWindowDarkening] for darkening.");
+                static int item = 1;
+                ImGui::Combo("Combo", &item, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");
 
-                if (ImGui::Button("Another one.."))
+                if (ImGui::Button("Add another modal.."))
                     ImGui::OpenPopup("Stacked 2");
                 if (ImGui::BeginPopupModal("Stacked 2"))
                 {
-                    ImGui::Text("Hello from Stacked The Second");
+                    ImGui::Text("Hello from Stacked The Second!\nWe are piling a modal over another here,\nand also testing if the menu-bar works.");
                     if (ImGui::Button("Close"))
                         ImGui::CloseCurrentPopup();
                     ImGui::EndPopup();
@@ -1458,7 +1467,7 @@ void ImGui::ShowTestWindow(bool* p_open)
         }
 
         bool node_open = ImGui::TreeNode("Tree within single cell");
-        ImGui::SameLine(); ShowHelpMarker("NB: Tree node must be poped before ending the cell.\nThere's no storage of state per-cell.");
+        ImGui::SameLine(); ShowHelpMarker("NB: Tree node must be poped before ending the cell. There's no storage of state per-cell.");
         if (node_open)
         {
             ImGui::Columns(2, "tree items");
@@ -1488,6 +1497,10 @@ void ImGui::ShowTestWindow(bool* p_open)
 
     if (ImGui::CollapsingHeader("Keyboard, Mouse & Focus"))
     {
+        ImGuiIO& io = ImGui::GetIO();
+        ImGui::Checkbox("io.MouseDrawCursor", &io.MouseDrawCursor);
+        ImGui::SameLine(); ShowHelpMarker("Request ImGui to render a mouse cursor for you in software. Note that a mouse cursor rendered via regular GPU rendering will feel more laggy than hardware cursor, but will be more in sync with your other visuals.");
+
         if (ImGui::TreeNode("Tabbing"))
         {
             ImGui::Text("Use TAB/SHIFT+TAB to cycle through keyboard editable fields.");
@@ -1541,11 +1554,11 @@ void ImGui::ShowTestWindow(bool* p_open)
                 // Draw a line between the button and the mouse cursor
                 ImDrawList* draw_list = ImGui::GetWindowDrawList();
                 draw_list->PushClipRectFullScreen();
-                draw_list->AddLine(ImGui::CalcItemRectClosestPoint(ImGui::GetIO().MousePos, true, -2.0f), ImGui::GetIO().MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]), 4.0f);
+                draw_list->AddLine(ImGui::CalcItemRectClosestPoint(io.MousePos, true, -2.0f), io.MousePos, ImColor(ImGui::GetStyle().Colors[ImGuiCol_Button]), 4.0f);
                 draw_list->PopClipRect();
                 ImVec2 value_raw = ImGui::GetMouseDragDelta(0, 0.0f);
                 ImVec2 value_with_lock_threshold = ImGui::GetMouseDragDelta(0);
-                ImVec2 mouse_delta = ImGui::GetIO().MouseDelta;
+                ImVec2 mouse_delta = io.MouseDelta;
                 ImGui::SameLine(); ImGui::Text("Raw (%.1f, %.1f), WithLockThresold (%.1f, %.1f), MouseDelta (%.1f, %.1f)", value_raw.x, value_raw.y, value_with_lock_threshold.x, value_with_lock_threshold.y, mouse_delta.x, mouse_delta.y);
             }
             ImGui::TreePop();
@@ -1553,8 +1566,6 @@ void ImGui::ShowTestWindow(bool* p_open)
 
         if (ImGui::TreeNode("Keyboard & Mouse State"))
         {
-            ImGuiIO& io = ImGui::GetIO();
-
             ImGui::Text("MousePos: (%g, %g)", io.MousePos.x, io.MousePos.y);
             ImGui::Text("Mouse down:");     for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) if (io.MouseDownDuration[i] >= 0.0f)   { ImGui::SameLine(); ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]); }
             ImGui::Text("Mouse clicked:");  for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) if (ImGui::IsMouseClicked(i))          { ImGui::SameLine(); ImGui::Text("b%d", i); }
@@ -1567,9 +1578,9 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::Text("Keys release:");   for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) if (ImGui::IsKeyReleased(i))            { ImGui::SameLine(); ImGui::Text("%d", i); }
             ImGui::Text("KeyMods: %s%s%s%s", io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
 
-            ImGui::Text("WantCaptureMouse: %s", io.WantCaptureMouse ? "true" : "false");
-            ImGui::Text("WantCaptureKeyboard: %s", io.WantCaptureKeyboard ? "true" : "false");
-            ImGui::Text("WantTextInput: %s", io.WantTextInput ? "true" : "false");
+            ImGui::Text("WantCaptureMouse: %d", io.WantCaptureMouse);
+            ImGui::Text("WantCaptureKeyboard: %d", io.WantCaptureKeyboard);
+            ImGui::Text("WantTextInput: %d", io.WantTextInput);
 
             ImGui::Button("Hovering me sets the\nkeyboard capture flag");
             if (ImGui::IsItemHovered())
@@ -1584,9 +1595,8 @@ void ImGui::ShowTestWindow(bool* p_open)
 
         if (ImGui::TreeNode("Mouse cursors"))
         {
-            ImGui::TextWrapped("Your application can render a different mouse cursor based on what ImGui::GetMouseCursor() returns. You can also set io.MouseDrawCursor to ask ImGui to render the cursor for you in software.");
-            ImGui::Checkbox("io.MouseDrawCursor", &ImGui::GetIO().MouseDrawCursor);
             ImGui::Text("Hover to see mouse cursors:");
+            ImGui::SameLine(); ShowHelpMarker("Your application can render a different mouse cursor based on what ImGui::GetMouseCursor() returns. If software cursor rendering (io.MouseDrawCursor) is set ImGui will draw the right cursor for you, otherwise your backend needs to handle it.");
             for (int i = 0; i < ImGuiMouseCursor_Count_; i++)
             {
                 char label[32];
