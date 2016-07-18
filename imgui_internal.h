@@ -347,8 +347,8 @@ struct ImGuiContext
     ImGuiIO                 IO;
     ImGuiStyle              Style;
     ImFont*                 Font;                               // (Shortcut) == FontStack.empty() ? IO.Font : FontStack.back()
-    float                   FontSize;                           // (Shortcut) == FontBaseSize * g.CurrentWindow->FontWindowScale == window->FontSize()
-    float                   FontBaseSize;                       // (Shortcut) == IO.FontGlobalScale * Font->Scale * Font->FontSize. Size of characters.
+    float                   FontSize;                           // (Shortcut) == FontBaseSize * g.CurrentWindow->FontWindowScale == window->FontSize(). Text height for current window.
+    float                   FontBaseSize;                       // (Shortcut) == IO.FontGlobalScale * Font->Scale * Font->FontSize. Base text height.
     ImVec2                  FontTexUvWhitePixel;                // (Shortcut) == Font->TexUvWhitePixel
 
     float                   Time;
@@ -357,8 +357,8 @@ struct ImGuiContext
     int                     FrameCountRendered;
     ImVector<ImGuiWindow*>  Windows;
     ImVector<ImGuiWindow*>  WindowsSortBuffer;
-    ImGuiWindow*            CurrentWindow;                      // Being drawn into
     ImVector<ImGuiWindow*>  CurrentWindowStack;
+    ImGuiWindow*            CurrentWindow;                      // Being drawn into
     ImGuiWindow*            FocusedWindow;                      // Will catch keyboard inputs
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs
     ImGuiWindow*            HoveredRootWindow;                  // Will catch mouse inputs (for focus/move only)
@@ -369,7 +369,7 @@ struct ImGuiContext
     ImGuiID                 ActiveIdPreviousFrame;
     bool                    ActiveIdIsAlive;                    // Active widget has been seen this frame
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
-    bool                    ActiveIdAllowOverlap;               // Set only by active widget
+    bool                    ActiveIdAllowOverlap;               // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
     ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
     ImGuiWindow*            ActiveIdWindow;
     ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window.

@@ -393,11 +393,11 @@ namespace ImGui
     IMGUI_API void          PopClipRect();
 
     // Utilities
-    IMGUI_API bool          IsItemHovered();                                                    // was the last item hovered by mouse?
-    IMGUI_API bool          IsItemHoveredRect();                                                // was the last item hovered by mouse? even if another item is active or window is blocked by popup while we are hovering this
-    IMGUI_API bool          IsItemActive();                                                     // was the last item active? (e.g. button being held, text field being edited- items that don't interact will always return false)
-    IMGUI_API bool          IsItemClicked(int mouse_button = 0);                                // was the last item clicked? (e.g. button/node just clicked on)
-    IMGUI_API bool          IsItemVisible();                                                    // was the last item visible? (aka not out of sight due to clipping/scrolling.)
+    IMGUI_API bool          IsItemHovered();                                                    // is the last item hovered by mouse?
+    IMGUI_API bool          IsItemHoveredRect();                                                // is the last item hovered by mouse? even if another item is active or window is blocked by popup while we are hovering this
+    IMGUI_API bool          IsItemActive();                                                     // is the last item active? (e.g. button being held, text field being edited- items that don't interact will always return false)
+    IMGUI_API bool          IsItemClicked(int mouse_button = 0);                                // is the last item clicked? (e.g. button/node just clicked on)
+    IMGUI_API bool          IsItemVisible();                                                    // is the last item visible? (aka not out of sight due to clipping/scrolling.)
     IMGUI_API bool          IsAnyItemHovered();
     IMGUI_API bool          IsAnyItemActive();
     IMGUI_API ImVec2        GetItemRectMin();                                                   // get bounding rect of last item in screen space
@@ -812,7 +812,7 @@ struct ImGuiIO
 
     bool        WantCaptureMouse;           // Mouse is hovering a window or widget is active (= ImGui will use your mouse input)
     bool        WantCaptureKeyboard;        // Widget is active (= ImGui will use your keyboard input)
-    bool        WantTextInput;              // Some text input widget is active, which will read input characters from the InputCharacters array.
+    bool        WantTextInput;              // Text input widget is active, which will read input characters from the InputCharacters array.
     float       Framerate;                  // Framerate estimation, in frame per second. Rolling average estimation based on IO.DeltaTime over 120 frames
     int         MetricsAllocs;              // Number of active memory allocations
     int         MetricsRenderVertices;      // Vertices output during last call to Render()
