@@ -167,7 +167,7 @@ namespace ImGui
     IMGUI_API void          SetScrollY(float scroll_y);                                         // set scrolling amount [0..GetScrollMaxY()]
     IMGUI_API void          SetScrollHere(float center_y_ratio = 0.5f);                         // adjust scrolling amount to make current cursor position visible. center_y_ratio=0.0: top, 0.5: center, 1.0: bottom.
     IMGUI_API void          SetScrollFromPosY(float pos_y, float center_y_ratio = 0.5f);        // adjust scrolling amount to make given position valid. use GetCursorPos() or GetCursorStartPos()+offset to get valid positions.
-    IMGUI_API void          SetKeyboardFocusHere(int offset = 0);                               // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget. Use negative 'offset' to access previous widgets.
+    IMGUI_API void          SetKeyboardFocusHere(int offset = 0);  // FIXME-NAVIGATION          // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget. Use negative 'offset' to access previous widgets.
     IMGUI_API void          SetStateStorage(ImGuiStorage* tree);                                // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it)
     IMGUI_API ImGuiStorage* GetStateStorage();
 
@@ -396,14 +396,17 @@ namespace ImGui
     IMGUI_API bool          IsItemHovered();                                                    // is the last item hovered by mouse, and usable?
     IMGUI_API bool          IsItemHoveredRect();                                                // is the last item hovered by mouse? even if another item is active or window is blocked by popup while we are hovering this
     IMGUI_API bool          IsItemActive();                                                     // is the last item active? (e.g. button being held, text field being edited- items that don't interact will always return false)
+    IMGUI_API bool          IsItemFocused();                                                    // is the last item focused for keyboard/gamepad navigation?
     IMGUI_API bool          IsItemClicked(int mouse_button = 0);                                // is the last item clicked? (e.g. button/node just clicked on)
     IMGUI_API bool          IsItemVisible();                                                    // is the last item visible? (aka not out of sight due to clipping/scrolling.)
     IMGUI_API bool          IsAnyItemHovered();
     IMGUI_API bool          IsAnyItemActive();
+    IMGUI_API bool          IsAnyItemFocused();
     IMGUI_API ImVec2        GetItemRectMin();                                                   // get bounding rect of last item in screen space
     IMGUI_API ImVec2        GetItemRectMax();                                                   // "
     IMGUI_API ImVec2        GetItemRectSize();                                                  // "
     IMGUI_API void          SetItemAllowOverlap();                                              // allow last item to be overlapped by a subsequent item. sometimes useful with invisible buttons, selectables, etc. to catch unused area.
+    IMGUI_API void          SetItemDefaultFocus();                                              // make last item the default focused item of a window
     IMGUI_API bool          IsWindowFocused();                                                  // is current window focused
     IMGUI_API bool          IsWindowHovered();                                                  // is current window hovered and hoverable (not blocked by a popup) (differentiate child windows from each others)
     IMGUI_API bool          IsWindowHoveredRect();                                              // is current window hovered, disregarding of any consideration of being blocked by a popup. (unlike IsWindowHovered() this will return true even if the window is blocked because of a popup)
@@ -506,6 +509,7 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_AlwaysVerticalScrollbar= 1 << 14,  // Always show vertical scrollbar (even if ContentSize.y < Size.y)
     ImGuiWindowFlags_AlwaysHorizontalScrollbar=1<< 15,  // Always show horizontal scrollbar (even if ContentSize.x < Size.x)
     ImGuiWindowFlags_AlwaysUseWindowPadding = 1 << 16,  // Ensure child windows without border uses style.WindowPadding (ignored by default for non-bordered child windows, because more convenient)
+    ImGuiWindowFlags_NoNav                  = 1 << 17,  // No directional gamepad/keyboard navigation
     // [Internal]
     ImGuiWindowFlags_ChildWindow            = 1 << 20,  // Don't use! For internal use by BeginChild()
     ImGuiWindowFlags_ChildWindowAutoFitX    = 1 << 21,  // Don't use! For internal use by BeginChild()
@@ -590,6 +594,19 @@ enum ImGuiKey_
     ImGuiKey_X,         // for text edit CTRL+X: cut
     ImGuiKey_Y,         // for text edit CTRL+Y: redo
     ImGuiKey_Z,         // for text edit CTRL+Z: undo
+
+    // Inputs for Gamepad/Keyboard navigation. Feed those buttons with the input of either or both peripherals involved.
+    ImGuiKey_NavActivate,   // press button, tweak value        // e.g. Space key, Circle button
+    ImGuiKey_NavCancel,     // close menu/popup/child, unselect // e.g. Escape key, Cross button
+    ImGuiKey_NavInput,      // text input                       // e.g. Enter key, Triangle button
+    ImGuiKey_NavWindowing,  // change focus, move, resize       // e.g. Square button
+    ImGuiKey_NavLeft,       // e.g. Left arrow, D-Pad left
+    ImGuiKey_NavRight,      // e.g. Right arrow, D-Pad right
+    ImGuiKey_NavUp,         // e.g. Up arrow, D-Pad up
+    ImGuiKey_NavDown,       // e.g. Down arrow, D-Pad down
+    ImGuiKey_NavTweakFaster,// e.g. Shift key, R-trigger
+    ImGuiKey_NavTweakSlower,// e.g. Alt key, L-trigger
+
     ImGuiKey_COUNT
 };
 
@@ -751,6 +768,7 @@ struct ImGuiIO
     int           KeyMap[ImGuiKey_COUNT];   // <unset>              // Map of indices into the KeysDown[512] entries array
     float         KeyRepeatDelay;           // = 0.250f             // When holding a key/button, time before it starts repeating, in seconds (for buttons in Repeat mode, etc.).
     float         KeyRepeatRate;            // = 0.020f             // When holding a key/button, rate at which it repeats, in seconds.
+    bool          NavMovesMouse;            // = false              // Directional navigation move the mouse cursor (update MousePos and set 
     void*         UserData;                 // = NULL               // Store your own data for retrieval by callbacks.
 
     ImFontAtlas*  Fonts;                    // <auto>               // Load and assemble one or more fonts into a single tightly packed texture. Output to Fonts array.
@@ -817,6 +835,9 @@ struct ImGuiIO
     bool        WantCaptureMouse;           // Mouse is hovering a window or widget is active (= ImGui will use your mouse input)
     bool        WantCaptureKeyboard;        // Widget is active (= ImGui will use your keyboard input)
     bool        WantTextInput;              // Text input widget is active, which will read input characters from the InputCharacters array.
+    bool        WantMoveMouse;              // MousePos has been altered, used only if 'NavMovesMouse=true', back-end can reposition mouse on next frame.
+    bool        NavUsable;                  // Directional navigation is currently allowed (ImGuiKey_NavXXX events).
+    bool        NavActive;                  // Directional navigation is active/visible and currently allowed (ImGuiKey_NavXXX events).
     float       Framerate;                  // Framerate estimation, in frame per second. Rolling average estimation based on IO.DeltaTime over 120 frames
     int         MetricsAllocs;              // Number of active memory allocations
     int         MetricsRenderVertices;      // Vertices output during last call to Render()

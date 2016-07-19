@@ -153,6 +153,7 @@ void ImGui::ShowTestWindow(bool* p_open)
     static bool no_scrollbar = false;
     static bool no_collapse = false;
     static bool no_menu = false;
+    static bool no_nav = false;
 
     // Demonstrate the various window flags. Typically you would just use the default.
     ImGuiWindowFlags window_flags = 0;
@@ -163,6 +164,7 @@ void ImGui::ShowTestWindow(bool* p_open)
     if (no_scrollbar) window_flags |= ImGuiWindowFlags_NoScrollbar;
     if (no_collapse)  window_flags |= ImGuiWindowFlags_NoCollapse;
     if (!no_menu)     window_flags |= ImGuiWindowFlags_MenuBar;
+    if (no_nav)       window_flags |= ImGuiWindowFlags_NoNav;
     ImGui::SetNextWindowSize(ImVec2(550,680), ImGuiSetCond_FirstUseEver);
     if (!ImGui::Begin("ImGui Demo", p_open, window_flags))
     {
@@ -224,7 +226,8 @@ void ImGui::ShowTestWindow(bool* p_open)
         ImGui::Checkbox("No move", &no_move); ImGui::SameLine(150);
         ImGui::Checkbox("No scrollbar", &no_scrollbar); ImGui::SameLine(300);
         ImGui::Checkbox("No collapse", &no_collapse);
-        ImGui::Checkbox("No menu", &no_menu);
+        ImGui::Checkbox("No menu", &no_menu); ImGui::SameLine(150);
+        ImGui::Checkbox("No nav", &no_nav);
 
         if (ImGui::TreeNode("Style"))
         {
@@ -1297,6 +1300,7 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::PopStyleVar();
 
                 if (ImGui::Button("OK", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+                ImGui::SetItemDefaultFocus();
                 ImGui::SameLine();
                 if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
                 ImGui::EndPopup();
@@ -1498,6 +1502,9 @@ void ImGui::ShowTestWindow(bool* p_open)
     if (ImGui::CollapsingHeader("Keyboard, Mouse & Focus"))
     {
         ImGuiIO& io = ImGui::GetIO();
+        ImGui::Checkbox("io.NavMovesMouse", &io.NavMovesMouse);
+        ImGui::SameLine(); ShowHelpMarker("Request ImGui to move your move cursor when using gamepad/keyboard navigation. NewFrame() will change io.MousePos and set the io.WantMoveMouse flag, your backend will need to apply the new mouse position.");
+
         ImGui::Checkbox("io.MouseDrawCursor", &io.MouseDrawCursor);
         ImGui::SameLine(); ShowHelpMarker("Request ImGui to render a mouse cursor for you in software. Note that a mouse cursor rendered via regular GPU rendering will feel more laggy than hardware cursor, but will be more in sync with your other visuals.");
 
@@ -1581,6 +1588,8 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::Text("WantCaptureMouse: %d", io.WantCaptureMouse);
             ImGui::Text("WantCaptureKeyboard: %d", io.WantCaptureKeyboard);
             ImGui::Text("WantTextInput: %d", io.WantTextInput);
+            ImGui::Text("WantMoveMouse: %d", io.WantMoveMouse);
+            ImGui::Text("NavUsable: %d, NavActive: %d", io.NavUsable, io.NavActive);
 
             ImGui::Button("Hovering me sets the\nkeyboard capture flag");
             if (ImGui::IsItemHovered())
@@ -1602,7 +1611,7 @@ void ImGui::ShowTestWindow(bool* p_open)
                 char label[32];
                 sprintf(label, "Mouse cursor %d", i);
                 ImGui::Bullet(); ImGui::Selectable(label, false);
-                if (ImGui::IsItemHovered())
+                if (ImGui::IsItemHovered() || ImGui::IsItemFocused())
                     ImGui::SetMouseCursor(i);
             }
             ImGui::TreePop();
