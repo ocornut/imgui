@@ -1654,13 +1654,13 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesCyrillic()
 
 const ImWchar*  ImFontAtlas::GetGlyphRangesThai()
 {
-	static const ImWchar ranges[] =
-	{
-		0x0020, 0x00FF, //Basic Latin
-		0x0E00, 0x0E7F, //Thai Unicode
-		0,
-	};
-	return &ranges[0];
+    static const ImWchar ranges[] =
+    {
+        0x0020, 0x00FF, // Basic Latin
+        0x0E00, 0x0E7F, // Thai
+        0,
+    };
+    return &ranges[0];
 }
 
 //-----------------------------------------------------------------------------
