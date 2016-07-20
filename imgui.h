@@ -1322,6 +1322,7 @@ struct ImFontAtlas
     IMGUI_API const ImWchar*    GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
     IMGUI_API const ImWchar*    GetGlyphRangesChinese();    // Japanese + full set of about 21000 CJK Unified Ideographs
     IMGUI_API const ImWchar*    GetGlyphRangesCyrillic();   // Default + about 400 Cyrillic characters
+    IMGUI_API const ImWchar*    GetGlyphRangesThai();       // Default + Thai characters
 
     // Members
     // (Access texture data via GetTexData*() calls which will setup a default font for you.)
