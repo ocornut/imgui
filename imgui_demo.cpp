@@ -1160,6 +1160,104 @@ void ImGui::ShowTestWindow(bool* p_open)
         }
     }
 
+    if (ImGui::CollapsingHeader("Stack Layout"))
+    {
+        float indent = ImGui::GetStyle().IndentSpacing;
+        ImVec2 bounds = ImVec2(ImGui::GetWindowContentRegionWidth() - indent, 120);
+        ImGui::Indent(indent);
+
+        static bool spanToWindow = true;
+        static bool showBounds = true;
+        static bool showVertical = false;
+        static bool noPadding = false;
+
+        ImGui::BeginHorizontal("ctrl_group");
+            ImGui::BeginVertical("ctrl_1");
+                ImGui::Checkbox("Span to window", &spanToWindow);
+                ImGui::Checkbox("Show bounds", &showBounds);
+            ImGui::EndVertical();
+            ImGui::BeginVertical("ctrl_2");
+                ImGui::Checkbox("Show vertical", &showVertical);
+                ImGui::Checkbox("No padding", &noPadding);
+            ImGui::EndVertical();
+        ImGui::EndHorizontal();
+
+        static float middleWeight = 0.3f;
+        static float centerWeight = 0.3f;
+        ImGui::DragFloat("Middle position", &middleWeight, 0.002f, 0.0f, 1.0f);
+        if (showVertical)
+            ImGui::DragFloat("Center position", &centerWeight, 0.002f, 0.0f, 1.0f);
+
+        ImGui::Spacing();
+        ImGui::Unindent(indent / 2);
+
+        if (noPadding)
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+
+        if (!showVertical)
+        {
+            ImGui::BeginHorizontal("example_h1", spanToWindow ? bounds : ImVec2(0, 0));
+                ImGui::TextUnformatted("Left");
+                ImGui::Spring(middleWeight);
+                ImGui::TextUnformatted("Middle");
+                ImGui::Spring(1.0f - middleWeight);
+                ImGui::TextUnformatted("Right");
+            ImGui::EndHorizontal();
+
+            if (showBounds)
+            {
+                ImVec2 boundMin = ImGui::GetItemRectMin();
+                ImVec2 boundMax = ImGui::GetItemRectMax();
+                boundMin.x -= 2; boundMin.y -= 2;
+                boundMax.x += 2; boundMax.y += 2;
+                ImGui::GetWindowDrawList()->AddRect(boundMin, boundMax, 0xC0FF8060);
+            }
+        }
+        else
+        {
+            ImGui::BeginHorizontal("example_h2", spanToWindow ? bounds : ImVec2(0, 0));
+                ImGui::TextUnformatted("Left");
+                ImGui::Spring(middleWeight);
+                ImGui::BeginVertical("example_v1", spanToWindow ? bounds : ImVec2(0, 0));
+                ImGui::TextUnformatted("Middle");
+                ImGui::Spring(centerWeight);
+                ImGui::TextUnformatted("Center");
+                ImGui::Spring(1.0f - centerWeight);
+                ImGui::TextUnformatted("Bottom");
+            ImGui::EndVertical();
+
+            if (showBounds)
+            {
+                ImVec2 boundMin = ImGui::GetItemRectMin();
+                ImVec2 boundMax = ImGui::GetItemRectMax();
+                boundMin.x -= 2; boundMin.y -= 2;
+                boundMax.x += 2; boundMax.y += 2;
+                ImGui::GetWindowDrawList()->AddRect(boundMin, boundMax, 0xC0FF8060);
+            }
+
+            ImGui::Spring(1.0f - middleWeight);
+            ImGui::TextUnformatted("Right");
+            ImGui::EndHorizontal();
+
+            if (showBounds)
+            {
+                ImVec2 boundMin = ImGui::GetItemRectMin();
+                ImVec2 boundMax = ImGui::GetItemRectMax();
+                boundMin.x -= 2; boundMin.y -= 2;
+                boundMax.x += 2; boundMax.y += 2;
+                ImGui::GetWindowDrawList()->AddRect(boundMin, boundMax, 0xC0FF8060);
+            }
+        }
+
+        if (noPadding)
+            ImGui::PopStyleVar();
+
+        ImGui::Indent(indent / 2);
+        ImGui::Spacing();
+
+        ImGui::Unindent(indent);
+    }
+
     if (ImGui::CollapsingHeader("Popups & Modal windows"))
     {
         if (ImGui::TreeNode("Popups"))
