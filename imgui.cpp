@@ -1637,7 +1637,7 @@ static void SetCursorPosYAndSetupDummyPrevLine(float pos_y, float line_height)
     ImGui::SetCursorPosY(pos_y);
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     window->DC.CursorPosPrevLine.y = window->DC.CursorPos.y - line_height;      // Setting those fields so that SetScrollHere() can properly function after the end of our clipper usage.
-    window->DC.PrevLineHeight = (line_height - GImGui->Style.ItemSpacing.y);    // If we end up needing more accurate data (to e.g. use SameLine) we may as well make the clipper have a fourth step to let user process and display the last item in their list.
+    window->DC.PrevLineSize.y = (line_height - GImGui->Style.ItemSpacing.y);    // If we end up needing more accurate data (to e.g. use SameLine) we may as well make the clipper have a fourth step to let user process and display the last item in their list.
     if (window->DC.ColumnsCount > 1)
         window->DC.ColumnsCellMinY = window->DC.CursorPos.y;                    // Setting this so that cell Y position are set properly
 }
@@ -1843,18 +1843,19 @@ void ImGui::ItemSize(const ImVec2& size, float text_offset_y)
 
     // Always align ourselves on pixel boundaries
     ImGuiContext& g = *GImGui;
-    const float line_height = ImMax(window->DC.CurrentLineHeight, size.y);
+    const ImVec2 lineSize        = ImMax(window->DC.CurrentLineSize, size);
     const float text_base_offset = ImMax(window->DC.CurrentLineTextBaseOffset, text_offset_y);
     window->DC.CursorPosPrevLine = ImVec2(window->DC.CursorPos.x + size.x, window->DC.CursorPos.y);
-    window->DC.CursorPos = ImVec2((float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX), (float)(int)(window->DC.CursorPos.y + line_height + g.Style.ItemSpacing.y));
+    window->DC.CursorPos = ImVec2((float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x), (float)(int)(window->DC.CursorPos.y + lineSize.y + g.Style.ItemSpacing.y));
     window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, window->DC.CursorPosPrevLine.x);
     window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y);
 
     //window->DrawList->AddCircle(window->DC.CursorMaxPos, 3.0f, IM_COL32(255,0,0,255), 4); // Debug
 
-    window->DC.PrevLineHeight = line_height;
-    window->DC.PrevLineTextBaseOffset = text_base_offset;
-    window->DC.CurrentLineHeight = window->DC.CurrentLineTextBaseOffset = 0.0f;
+    window->DC.PrevLineSize              = ImVec2(window->DC.CurrentLineSize.x, lineSize.y);
+    window->DC.PrevLineTextBaseOffset    = text_base_offset;
+    window->DC.CurrentLineSize           = ImVec2(0.0f, 0.0f);
+    window->DC.CurrentLineTextBaseOffset = 0.0f;
 }
 
 void ImGui::ItemSize(const ImRect& bb, float text_offset_y)
@@ -4234,14 +4235,14 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         window->ContentsRegionRect.Max.y = -window->Scroll.y - window->WindowPadding.y + (window->SizeContentsExplicit.y != 0.0f ? window->SizeContentsExplicit.y : (window->Size.y - window->ScrollbarSizes.y)); 
 
         // Setup drawing context
-        window->DC.IndentX = 0.0f + window->WindowPadding.x - window->Scroll.x;
-        window->DC.GroupOffsetX = 0.0f;
-        window->DC.ColumnsOffsetX = 0.0f;
-        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.IndentX + window->DC.ColumnsOffsetX, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y - window->Scroll.y);
+        window->DC.Indent = window->WindowPadding - window->Scroll;
+        window->DC.GroupOffset = ImVec2(0.0f,0.0f);
+        window->DC.ColumnsOffset = ImVec2(0.0f,0.0f);
+        window->DC.CursorStartPos = window->Pos + window->DC.Indent + window->DC.ColumnsOffset + ImVec2(0.0f, window->TitleBarHeight() + window->MenuBarHeight());
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CursorMaxPos = window->DC.CursorStartPos;
-        window->DC.CurrentLineHeight = window->DC.PrevLineHeight = 0.0f;
+        window->DC.CurrentLineSize = window->DC.PrevLineSize = ImVec2(0.0f,0.0f);
         window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset = 0.0f;
         window->DC.MenuBarAppending = false;
         window->DC.MenuBarOffsetX = ImMax(window->WindowPadding.x, style.ItemSpacing.x);
@@ -5205,7 +5206,7 @@ void ImGui::SetScrollFromPosY(float pos_y, float center_y_ratio)
 void ImGui::SetScrollHere(float center_y_ratio)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    float target_y = window->DC.CursorPosPrevLine.y + (window->DC.PrevLineHeight * center_y_ratio) + (GImGui->Style.ItemSpacing.y * (center_y_ratio - 0.5f) * 2.0f); // Precisely aim above, in the middle or below the last line.
+    float target_y = window->DC.CursorPosPrevLine.y + (window->DC.PrevLineSize.y * center_y_ratio) + (GImGui->Style.ItemSpacing.y * (center_y_ratio - 0.5f) * 2.0f); // Precisely aim above, in the middle or below the last line.
     SetScrollFromPosY(target_y - window->Pos.y, center_y_ratio);
 }
 
@@ -5870,7 +5871,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
     // We vertically grow up to current line height up the typical widget height.
     const float text_base_offset_y = ImMax(0.0f, window->DC.CurrentLineTextBaseOffset - padding.y); // Latch before ItemSize changes it
-    const float frame_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + style.FramePadding.y*2), label_size.y + padding.y*2);
+    const float frame_height = ImMax(ImMin(window->DC.CurrentLineSize.y, g.FontSize + style.FramePadding.y*2), label_size.y + padding.y*2);
     ImRect bb = ImRect(window->DC.CursorPos, ImVec2(window->Pos.x + GetContentRegionMax().x, window->DC.CursorPos.y + frame_height));
     if (display_frame)
     {
@@ -6154,7 +6155,7 @@ void ImGui::Bullet()
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const float line_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
+    const float line_height = ImMax(ImMin(window->DC.CurrentLineSize.y, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize, line_height));
     ItemSize(bb);
     if (!ItemAdd(bb, NULL))
@@ -6182,7 +6183,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
     const char* text_end = text_begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
     const ImVec2 label_size = CalcTextSize(text_begin, text_end, false);
     const float text_base_offset_y = ImMax(0.0f, window->DC.CurrentLineTextBaseOffset); // Latch before ItemSize changes it
-    const float line_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
+    const float line_height = ImMax(ImMin(window->DC.CurrentLineSize.y, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize + (label_size.x > 0.0f ? (label_size.x + style.FramePadding.x*2) : 0.0f), ImMax(line_height, label_size.y)));  // Empty text doesn't add padding
     ItemSize(bb);
     if (!ItemAdd(bb, NULL))
@@ -9067,7 +9068,7 @@ void ImGui::Separator()
     float x1 = window->Pos.x;
     float x2 = window->Pos.x + window->Size.x;
     if (!window->DC.GroupStack.empty())
-        x1 += window->DC.IndentX;
+        x1 += window->DC.Indent.x;
 
     const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y));
     ItemSize(ImVec2(0.0f, 0.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit   // FIXME: Height should be 1.0f not 0.0f ?
@@ -9131,16 +9132,16 @@ void ImGui::BeginGroup()
     ImGuiGroupData& group_data = window->DC.GroupStack.back();
     group_data.BackupCursorPos = window->DC.CursorPos;
     group_data.BackupCursorMaxPos = window->DC.CursorMaxPos;
-    group_data.BackupIndentX = window->DC.IndentX;
-    group_data.BackupCurrentLineHeight = window->DC.CurrentLineHeight;
+    group_data.BackupIndent = window->DC.Indent;
+    group_data.BackupCurrentLineSize = window->DC.CurrentLineSize;
     group_data.BackupCurrentLineTextBaseOffset = window->DC.CurrentLineTextBaseOffset;
     group_data.BackupLogLinePosY = window->DC.LogLinePosY;
     group_data.AdvanceCursor = true;
 
-    window->DC.GroupOffsetX = window->DC.CursorPos.x - window->Pos.x - window->DC.ColumnsOffsetX;
-    window->DC.IndentX = window->DC.GroupOffsetX;
+    window->DC.GroupOffset = window->DC.CursorPos - window->Pos - window->DC.ColumnsOffset;
+    window->DC.Indent = window->DC.GroupOffset;
     window->DC.CursorMaxPos = window->DC.CursorPos;
-    window->DC.CurrentLineHeight = 0.0f;
+    window->DC.CurrentLineSize = ImVec2(0.0f,0.0f);
     window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
 }
 
@@ -9159,10 +9160,10 @@ void ImGui::EndGroup()
 
     window->DC.CursorPos = group_data.BackupCursorPos;
     window->DC.CursorMaxPos = ImMax(group_data.BackupCursorMaxPos, window->DC.CursorMaxPos);
-    window->DC.CurrentLineHeight = group_data.BackupCurrentLineHeight;
+    window->DC.CurrentLineSize = group_data.BackupCurrentLineSize;
     window->DC.CurrentLineTextBaseOffset = group_data.BackupCurrentLineTextBaseOffset;
-    window->DC.IndentX = group_data.BackupIndentX;
-    window->DC.GroupOffsetX = window->DC.IndentX;
+    window->DC.Indent = group_data.BackupIndent;
+    window->DC.GroupOffset = window->DC.Indent;
     window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
 
     if (group_data.AdvanceCursor)
@@ -9192,7 +9193,7 @@ void ImGui::SameLine(float pos_x, float spacing_w)
     if (pos_x != 0.0f)
     {
         if (spacing_w < 0.0f) spacing_w = 0.0f;
-        window->DC.CursorPos.x = window->Pos.x - window->Scroll.x + pos_x + spacing_w + window->DC.GroupOffsetX + window->DC.ColumnsOffsetX;
+        window->DC.CursorPos.x = window->Pos.x - window->Scroll.x + pos_x + spacing_w + window->DC.GroupOffset.x + window->DC.ColumnsOffset.x;
         window->DC.CursorPos.y = window->DC.CursorPosPrevLine.y;
     }
     else
@@ -9201,7 +9202,7 @@ void ImGui::SameLine(float pos_x, float spacing_w)
         window->DC.CursorPos.x = window->DC.CursorPosPrevLine.x + spacing_w;
         window->DC.CursorPos.y = window->DC.CursorPosPrevLine.y;
     }
-    window->DC.CurrentLineHeight = window->DC.PrevLineHeight;
+    window->DC.CurrentLineSize = window->DC.PrevLineSize;
     window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset;
 }
 
@@ -9210,7 +9211,7 @@ void ImGui::NewLine()
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
-    if (window->DC.CurrentLineHeight > 0.0f)     // In the event that we are on a line with items that is smaller that FontSize high, we will preserve its height.
+    if (window->DC.CurrentLineSize.y > 0.0f)     // In the event that we are on a line with items that is smaller that FontSize high, we will preserve its height.
         ItemSize(ImVec2(0,0));
     else
         ItemSize(ImVec2(0.0f, GImGui->FontSize));
@@ -9229,20 +9230,20 @@ void ImGui::NextColumn()
     window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
     if (++window->DC.ColumnsCurrent < window->DC.ColumnsCount)
     {
-        // Columns 1+ cancel out IndentX
-        window->DC.ColumnsOffsetX = GetColumnOffset(window->DC.ColumnsCurrent) - window->DC.IndentX + g.Style.ItemSpacing.x;
+        // Columns 1+ cancel out Indent
+        window->DC.ColumnsOffset = ImVec2(GetColumnOffset(window->DC.ColumnsCurrent), 0.0f) - window->DC.Indent + ImVec2(g.Style.ItemSpacing.x, 0.0f);
         window->DrawList->ChannelsSetCurrent(window->DC.ColumnsCurrent);
     }
     else
     {
         window->DC.ColumnsCurrent = 0;
-        window->DC.ColumnsOffsetX = 0.0f;
+        window->DC.ColumnsOffset = ImVec2(0.0f,0.0f);
         window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY;
         window->DrawList->ChannelsSetCurrent(0);
     }
-    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
+    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
     window->DC.CursorPos.y = window->DC.ColumnsCellMinY;
-    window->DC.CurrentLineHeight = 0.0f;
+    window->DC.CurrentLineSize = ImVec2(0.0f,0.0f);
     window->DC.CurrentLineTextBaseOffset = 0.0f;
 
     PushColumnClipRect();
@@ -9394,12 +9395,12 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     window->DC.ColumnsShowBorders = border;
 
     const float content_region_width = (window->SizeContentsExplicit.x != 0.0f) ? window->SizeContentsExplicit.x : window->Size.x;
-    window->DC.ColumnsMinX = window->DC.IndentX; // Lock our horizontal range
+    window->DC.ColumnsMinX = window->DC.Indent.x; // Lock our horizontal range
     window->DC.ColumnsMaxX = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
     window->DC.ColumnsStartPosY = window->DC.CursorPos.y;
     window->DC.ColumnsCellMinY = window->DC.ColumnsCellMaxY = window->DC.CursorPos.y;
-    window->DC.ColumnsOffsetX = 0.0f;
-    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
+    window->DC.ColumnsOffset = ImVec2(0.0f,0.0f);
+    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
 
     if (window->DC.ColumnsCount != 1)
     {
@@ -9427,16 +9428,16 @@ void ImGui::Indent(float indent_w)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.IndentX += (indent_w > 0.0f) ? indent_w : g.Style.IndentSpacing;
-    window->DC.CursorPos.x = window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX;
+    window->DC.Indent.x += (indent_w > 0.0f) ? indent_w : g.Style.IndentSpacing;
+    window->DC.CursorPos.x = window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x;
 }
 
 void ImGui::Unindent(float indent_w)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.IndentX -= (indent_w > 0.0f) ? indent_w : g.Style.IndentSpacing;
-    window->DC.CursorPos.x = window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX;
+    window->DC.Indent.x -= (indent_w > 0.0f) ? indent_w : g.Style.IndentSpacing;
+    window->DC.CursorPos.x = window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x;
 }
 
 void ImGui::TreePush(const char* str_id)

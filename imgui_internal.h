@@ -256,8 +256,8 @@ struct ImGuiGroupData
 {
     ImVec2      BackupCursorPos;
     ImVec2      BackupCursorMaxPos;
-    float       BackupIndentX;
-    float       BackupCurrentLineHeight;
+    ImVec2      BackupIndent;
+    ImVec2      BackupCurrentLineSize;
     float       BackupCurrentLineTextBaseOffset;
     float       BackupLogLinePosY;
     bool        AdvanceCursor;
@@ -514,11 +514,11 @@ struct IMGUI_API ImGuiDrawContext
 {
     ImVec2                  CursorPos;
     ImVec2                  CursorPosPrevLine;
-    ImVec2                  CursorStartPos;
+    ImVec2                  CursorStartPos;         // Initial position in client area with padding
     ImVec2                  CursorMaxPos;           // Implicitly calculate the size of our contents, always extending. Saved into window->SizeContents at the end of the frame
-    float                   CurrentLineHeight;
+    ImVec2                  CurrentLineSize;
     float                   CurrentLineTextBaseOffset;
-    float                   PrevLineHeight;
+    ImVec2                  PrevLineSize;
     float                   PrevLineTextBaseOffset;
     float                   LogLinePosY;
     int                     TreeDepth;
@@ -545,9 +545,9 @@ struct IMGUI_API ImGuiDrawContext
     ImGuiColorEditMode      ColorEditMode;
     int                     StackSizesBackup[6];    // Store size of various stacks for asserting
 
-    float                   IndentX;                // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
-    float                   GroupOffsetX;
-    float                   ColumnsOffsetX;         // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
+    ImVec2                  Indent;                 // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
+    ImVec2                  GroupOffset;
+    ImVec2                  ColumnsOffset;          // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
     int                     ColumnsCurrent;
     int                     ColumnsCount;
     float                   ColumnsMinX;
@@ -562,7 +562,7 @@ struct IMGUI_API ImGuiDrawContext
     ImGuiDrawContext()
     {
         CursorPos = CursorPosPrevLine = CursorStartPos = CursorMaxPos = ImVec2(0.0f, 0.0f);
-        CurrentLineHeight = PrevLineHeight = 0.0f;
+        CurrentLineSize = PrevLineSize = ImVec2(0.0f,0.0f);
         CurrentLineTextBaseOffset = PrevLineTextBaseOffset = 0.0f;
         LogLinePosY = -1.0f;
         TreeDepth = 0;
@@ -580,8 +580,8 @@ struct IMGUI_API ImGuiDrawContext
         ColorEditMode = ImGuiColorEditMode_RGB;
         memset(StackSizesBackup, 0, sizeof(StackSizesBackup));
 
-        IndentX = 0.0f;
-        ColumnsOffsetX = 0.0f;
+        Indent = ImVec2(0.0f,0.0f);
+        ColumnsOffset = ImVec2(0.0f, 0.0f);
         ColumnsCurrent = 0;
         ColumnsCount = 1;
         ColumnsMinX = ColumnsMaxX = 0.0f;
