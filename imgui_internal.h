@@ -42,10 +42,12 @@ struct ImGuiMouseCursorData;
 struct ImGuiPopupRef;
 struct ImGuiWindow;
 
-typedef int ImGuiLayoutType;      // enum ImGuiLayoutType_
-typedef int ImGuiButtonFlags;     // enum ImGuiButtonFlags_
-typedef int ImGuiTreeNodeFlags;   // enum ImGuiTreeNodeFlags_
-typedef int ImGuiSliderFlags;     // enum ImGuiSliderFlags_
+typedef int ImGuiLayoutType;        // enum ImGuiLayoutType_
+typedef int ImGuiLayoutItemType;    // enum ImGuiLayoutItemType_
+typedef int ImGuiLayoutDirtyFlags;  // enum ImGuiLayoutDirtyFlags_
+typedef int ImGuiButtonFlags;       // enum ImGuiButtonFlags_
+typedef int ImGuiTreeNodeFlags;     // enum ImGuiTreeNodeFlags_
+typedef int ImGuiSliderFlags;       // enum ImGuiSliderFlags_
 
 //-------------------------------------------------------------------------
 // STB libraries
@@ -167,6 +169,20 @@ enum ImGuiSliderFlags_
     ImGuiSliderFlags_Vertical               = 1 << 0
 };
 
+enum ImGuiLayoutDirtyFlags_
+{
+    ImGuiLayoutDirtyFlags_None              = 0,
+    ImGuiLayoutDirtyFlags_Uninitialized     = 1 << 0,
+    ImGuiLayoutDirtyFlags_LayoutSize        = 1 << 1,
+    ImGuiLayoutDirtyFlags_ItemAdded         = 1 << 2,
+    ImGuiLayoutDirtyFlags_ItemRemoved       = 1 << 3,
+    ImGuiLayoutDirtyFlags_ItemReplaced      = 1 << 4,
+    ImGuiLayoutDirtyFlags_ItemSize          = 1 << 5,
+    ImGuiLayoutDirtyFlags_SpringWeight      = 1 << 6,
+    ImGuiLayoutDirtyFlags_SpringSpacing     = 1 << 7,
+    ImGuiLayoutDirtyFlags_Bounds            = 1 << 8
+};
+
 enum ImGuiSelectableFlagsPrivate_
 {
     // NB: need to be in sync with last value of ImGuiSelectableFlags_
@@ -181,6 +197,12 @@ enum ImGuiLayoutType_
 {
     ImGuiLayoutType_Vertical,
     ImGuiLayoutType_Horizontal
+};
+
+enum ImGuiLayoutItemType_
+{
+    ImGuiLayoutItemType_Item,
+    ImGuiLayoutItemType_Spring
 };
 
 enum ImGuiPlotType
@@ -340,6 +362,35 @@ struct ImGuiPopupRef
     ImGuiPopupRef(ImGuiID id, ImGuiWindow* parent_window, ImGuiID parent_menu_set, const ImVec2& mouse_pos) { PopupId = id; Window = NULL; ParentWindow = parent_window; ParentMenuSet = parent_menu_set; MousePosOnOpen = mouse_pos; }
 };
 
+struct ImGuiLayoutItem
+{
+    ImGuiLayoutItemType         Type;           // Type of an item
+    ImVec2                      Size;           // Last size of an item
+    float                       SpringWeight;   // Weight of a spring
+    float                       SpringSpacing;  // Spring spacing
+    float                       SpringSize;     // Calculated spring size
+
+    ImGuiLayoutItem(ImGuiLayoutItemType type): Type(type), Size(0, 0), SpringWeight(1.0f), SpringSpacing(-1.0f), SpringSize(0.0f) {}
+};
+
+struct ImGuiLayout
+{
+    ImGuiID                     Id;
+    ImGuiLayoutType             Type;
+    ImVec2                      Size;           // Size from user
+    ImVec2                      Bounds;         // Actual bounds determined by BeginGroup/EndGroup
+    ImVec2                      AvailableSize;  // Bounds when taking into account parent layout
+    ImVector<ImGuiLayoutItem>   Items;
+    int                         NextItemIndex;
+    ImGuiLayoutDirtyFlags       Dirty;
+    ImGuiLayout*                Parent;
+
+    ImVec2                      StartPos;
+    float                       MaxExtent;
+
+    ImGuiLayout(ImGuiID id, ImGuiLayoutType type): Id(id), Type(type), Size(0, 0), Items(), NextItemIndex(0), Dirty(0), Parent(NULL) {}
+};
+
 // Main state for ImGui
 struct ImGuiContext
 {
@@ -381,6 +432,10 @@ struct ImGuiContext
     ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont()
     ImVector<ImGuiPopupRef> OpenPopupStack;                     // Which popups are open (persistent)
     ImVector<ImGuiPopupRef> CurrentPopupStack;                  // Which level of BeginPopup() we are in (reset every frame)
+    ImGuiLayout*            CurrentLayout;
+    ImVector<ImGuiLayout*>  LayoutStack;
+    ImVector<ImGuiLayout*>  Layouts;
+    ImVector<ImGuiLayout*>  ReflowQueue;
 
     // Storage for SetNexWindow** and SetNextTreeNode*** functions
     ImVec2                  SetNextWindowPosVal;
@@ -464,6 +519,7 @@ struct ImGuiContext
         MovedWindow = NULL;
         MovedWindowMoveId = 0;
         SettingsDirtyTimer = 0.0f;
+        CurrentLayout = NULL;
 
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
         SetNextWindowSizeVal = ImVec2(0.0f, 0.0f);
@@ -543,7 +599,7 @@ struct IMGUI_API ImGuiDrawContext
     ImVector<bool>          ButtonRepeatStack;
     ImVector<ImGuiGroupData>GroupStack;
     ImGuiColorEditMode      ColorEditMode;
-    int                     StackSizesBackup[6];    // Store size of various stacks for asserting
+    int                     StackSizesBackup[7];    // Store size of various stacks for asserting
 
     ImVec2                  Indent;                 // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
     ImVec2                  GroupOffset;
