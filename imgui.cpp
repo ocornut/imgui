@@ -2270,9 +2270,11 @@ int ImGui::GetFrameCount()
 static ImVec2 NavCalcPreferredMousePos()
 {
     ImGuiContext& g = *GImGui;
-    if (g.NavWindow)
-        return g.NavWindow->Pos + ImVec2(g.NavRefRectRel.Min.x + ImMin(g.Style.FramePadding.x*4, g.NavRefRectRel.GetWidth()), g.NavRefRectRel.Max.y - ImMin(g.Style.FramePadding.y, g.NavRefRectRel.GetHeight()));
-    return g.IO.MousePos;
+    if (!g.NavWindow)
+        return g.IO.MousePos;
+    ImVec2 p = g.NavWindow->Pos + ImVec2(g.NavRefRectRel.Min.x + ImMin(g.Style.FramePadding.x*4, g.NavRefRectRel.GetWidth()), g.NavRefRectRel.Max.y - ImMin(g.Style.FramePadding.y, g.NavRefRectRel.GetHeight()));
+    ImRect r = GetVisibleRect();
+    return ImClamp(p, r.Min, r.Max);
 }
 
 static void NavUpdate()
