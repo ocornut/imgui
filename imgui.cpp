@@ -2337,6 +2337,7 @@ static void NavUpdate()
     {
         // Apply result from previous navigation directional move request
         IM_ASSERT(g.NavWindow);
+        ImGui::SetActiveID(0);
         g.NavId = g.NavWindow->NavLastId = g.NavMoveResultBestId;
         g.NavRefRectRel = g.NavMoveResultBestRefRectRel;
         g.NavMousePosDirty = true;
@@ -2387,11 +2388,15 @@ static void NavUpdate()
     g.IO.NavActive = g.IO.NavUsable && g.NavId != 0 && !g.NavDisableHighlight;
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
-    if (g.ActiveId == 0 && IsKeyPressedMap(ImGuiKey_NavCancel))
+    if (IsKeyPressedMap(ImGuiKey_NavCancel))
     {
-        // Close open popup or move back to parent window
-        if (g.OpenPopupStack.Size > 0)
+        if (g.ActiveId != 0)
         {
+            ImGui::SetActiveID(0);
+        }
+        else if (g.OpenPopupStack.Size > 0)
+        {
+            // Close open popup or move back to parent window
             ClosePopupToLevel(g.OpenPopupStack.Size - 1);
         }
         else
@@ -6911,6 +6916,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label
 
     // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
     SetActiveIDNoNav(g.ScalarAsInputTextId, window);
+    g.ActiveIdAllowNavMove = true;
     SetHoveredID(0);
     FocusableItemUnregister(window);
 
@@ -8363,6 +8369,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 select_all = true;
         }
         SetActiveID(id, window);
+        g.ActiveIdAllowNavMove = true;
         FocusWindow(window);
     }
     else if (io.MouseClicked[0])
