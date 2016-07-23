@@ -2343,7 +2343,7 @@ static void NavUpdate()
 
     // Navigation windowing mode (change focus, move/resize window)
     if (!g.NavWindowingTarget && g.NavWindow && IsKeyPressedMap(ImGuiKey_NavWindowing, false))
-        g.NavWindowingTarget = g.NavWindow->RootWindow;
+        g.NavWindowingTarget = g.NavWindow->RootNonPopupWindow;
     if (g.NavWindowingTarget)
     {
         // FIXME-NAVIGATION: Need to clarify input semantic, naming is misleading/incorrect here.
@@ -2357,10 +2357,10 @@ static void NavUpdate()
                     i_current = i;
             int i_target = -1;
             for (int i = i_current+focus_change_dir; i >= 0 && i < g.Windows.Size && i_target == -1; i += focus_change_dir)
-                if (g.Windows[i]->Active && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
+                if (g.Windows[i]->Active && g.Windows[i] == g.Windows[i]->RootNonPopupWindow)
                     i_target = i;
             for (int i = (focus_change_dir < 0) ? (g.Windows.Size-1) : 0; i >= 0 && i < g.Windows.Size && i_target == -1 && i_target != i_current; i += focus_change_dir)
-                if (g.Windows[i]->Active && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
+                if (g.Windows[i]->Active && g.Windows[i] == g.Windows[i]->RootNonPopupWindow)
                     i_target = i;
             if (i_target != -1)
             {
@@ -2369,12 +2369,12 @@ static void NavUpdate()
             }
         }
 
-        // End window select/focus mode and apply final focus
+        // Apply actual focus only when leaving NavWindowing mode (until then the window was merely rendered front-most)
         if (!IsKeyDownMap(ImGuiKey_NavWindowing))
         {
             if (g.NavWindowingTarget)
-                if (!g.FocusedWindow || (g.NavWindowingTarget && g.NavWindowingTarget->RootWindow != g.FocusedWindow->RootWindow))
-                    ImGui::FocusWindow(g.NavWindowingTarget->RootWindow);
+                if (!g.FocusedWindow || (g.NavWindowingTarget->RootNonPopupWindow != g.FocusedWindow->RootNonPopupWindow))
+                    ImGui::FocusWindow(g.NavWindowingTarget->RootNonPopupWindow);
             g.NavWindowingTarget = NULL;
         }
     }
@@ -4387,7 +4387,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             break;
     window->ParentWindow = parent_window;
     window->RootWindow = g.CurrentWindowStack[root_idx];
-    window->RootNonPopupWindow = g.CurrentWindowStack[root_non_popup_idx];      // This is merely for displaying the TitleBgActive color.
+    window->RootNonPopupWindow = g.CurrentWindowStack[root_non_popup_idx];      // Used e.g. to keep displaying TitleBgActive color when menu is active, and for NavWindowing
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
