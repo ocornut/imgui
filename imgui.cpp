@@ -1921,9 +1921,8 @@ static bool NavScoreItem(ImRect cand)
     // FIXME-NAVIGATION: Introducing various biases toward typical imgui uses cases, but we don't have any rigorous proof of their effect now.
     float dbx = NavScoreItemDistInterval(cand.Min.x, cand.Max.x, curr.Min.x, curr.Max.x);
     float dby = NavScoreItemDistInterval(ImLerp(cand.Min.y, cand.Max.y, 0.2f), ImLerp(cand.Min.y, cand.Max.y, 0.8f), ImLerp(curr.Min.y, curr.Max.y, 0.2f), ImLerp(curr.Min.y, curr.Max.y, 0.8f)); // Clamp down on Y to keep using box-distance for vertically touching items
-    //dbx /= 2; dby *= 4 // Bias for dy
-    if (dby)
-        dbx = (dbx > 0.0f) ? +0.0f : -0.0f;
+    if (dby && dbx)
+       dbx = (dbx/1000.0f) + ((dbx > 0.0f) ? +1.0f : -1.0f);
     float dist_box = fabsf(dbx) + fabsf(dby);
 
     // Compute distance between centers (this is off by a factor of 2, but we only compare center distances with each other so it doesn't matter)
@@ -1957,7 +1956,6 @@ static bool NavScoreItem(ImRect cand)
     }
 
 #if 0 // [DEBUG]
-    //draw_list->AddRect(bb.Min, bb.Max, IM_COL32(255,0,255,200));
     if (ImGui::IsMouseHoveringRect(cand.Min, cand.Max))
     {
         char buf[128];
@@ -2042,7 +2040,6 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     //      We could early out with `if (is_clipped && !g.NavInitDefaultRequest) return false;` but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
     //      A more pragmatic solution for handling last lists is relying on the fact that they are likely evenly spread items (so that clipper can work) and we could nav at higher-level (apply index, etc.)
     //      So eventually we would like to provide the user will the primitives to be able to implement that sort of customized/efficient navigation handling whenever necessary.
-    // FIXME-NAVIGATION
     if (id != NULL && g.NavWindow == window && g.IO.NavUsable)
     {
         if (g.NavInitDefaultRequest && window->DC.AllowNavDefaultFocus)
@@ -2051,11 +2048,12 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
             g.NavInitDefaultResultId = *id;
         }
 
-        if (g.NavMoveRequest && g.NavId != *id)
+        const bool DEBUG_NAV = false; // [DEBUG] Enable to test scoring on all items.
+        if ((g.NavMoveRequest || DEBUG_NAV) && g.NavId != *id)
         {
-            //if (!g.NavMoveRequest) g.NavMoveDir = ImGuiNavDir_E; // [DEBUG] Removing if (g.NavMoveRequest) above allows debug scoring of all visible items.
+            //if (DEBUG_NAV && !g.NavMoveRequest) g.NavMoveDir = ImGuiNavDir_N;
             const ImRect& nav_bb = nav_bb_arg ? *nav_bb_arg : bb;
-            if (NavScoreItem(nav_bb)) //if (g.NavMoveRequest) // [DEBUG]
+            if (NavScoreItem(nav_bb)) //if (!DEBUG || g.NavMoveRequest)
             {
                 g.NavMoveResultBestId = *id;
                 g.NavMoveResultBestRefRectRel = ImRect(nav_bb.Min - window->Pos, nav_bb.Max - window->Pos);
@@ -2457,9 +2455,12 @@ static void NavUpdate()
     // Reset search 
     g.NavMoveResultBestId = 0;
     g.NavMoveResultBestDistAxial = g.NavMoveResultBestDistBox = g.NavMoveResultBestDistCenter = FLT_MAX;
+
+    // For scoring we use a single segment on the left side our current item bounding box (not touching the edge to avoid box overlap with zero-spaced items)
     g.NavScoringRectScreen = g.NavWindow ? ImRect(g.NavWindow->Pos + g.NavRefRectRel.Min, g.NavWindow->Pos + g.NavRefRectRel.Max) : ImRect();
-    //g.OverlayDrawList.AddRect(g.NavRefRectScreen.Min, g.NavRefRectScreen.Max, IM_COL32(255,200,0,255)); // [DEBUG]
+    g.NavScoringRectScreen.Min.x = ImMin(g.NavScoringRectScreen.Min.x + 1.0f, g.NavScoringRectScreen.Max.x);
     g.NavScoringRectScreen.Max.x = g.NavScoringRectScreen.Min.x;
+    //g.OverlayDrawList.AddRect(g.NavScoringRectScreen.Min, g.NavScoringRectScreen.Max, IM_COL32(255,200,0,255)); // [DEBUG]
 }
 
 void ImGui::NewFrame()
