@@ -2264,6 +2264,14 @@ int ImGui::GetFrameCount()
     return GImGui->FrameCount;
 }
 
+static ImVec2 NavCalcPreferredMousePos()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.NavWindow)
+        return g.NavWindow->Pos + ImVec2(g.NavRefRectRel.Min.x + ImMin(g.Style.FramePadding.x*4, g.NavRefRectRel.GetWidth()), g.NavRefRectRel.Max.y - ImMin(g.Style.FramePadding.y, g.NavRefRectRel.GetHeight()));
+    return g.IO.MousePos;
+}
+
 static void NavUpdate()
 {
     ImGuiContext& g = *GImGui;
@@ -2274,7 +2282,7 @@ static void NavUpdate()
         // Set mouse position given our knowledge of the nav widget position from last frame
         if (g.IO.NavMovesMouse)
         {
-            g.IO.MousePos = g.IO.MousePosPrev = g.NavWindow->Pos + ImVec2(g.NavRefRectRel.Min.x + ImMin(g.Style.FramePadding.x*4, g.NavRefRectRel.GetWidth()), g.NavRefRectRel.Max.y - ImMin(g.Style.FramePadding.y, g.NavRefRectRel.GetHeight()));
+            g.IO.MousePos = g.IO.MousePosPrev = NavCalcPreferredMousePos();
             g.IO.WantMoveMouse = true;
         }
         g.NavMousePosDirty = false;
@@ -3810,7 +3818,7 @@ void ImGui::OpenPopupEx(const char* str_id, bool reopen_existing)
     ImGuiID id = window->GetID(str_id);
     int current_stack_size = g.CurrentPopupStack.Size;
     ImVec2 mouse_pos = g.IO.MousePos;
-    ImVec2 popup_pos = (g.ActiveIdSource == ImGuiInputSource_Mouse || g.ActiveId == 0) ? mouse_pos : window->DC.LastItemRect.GetCenter();
+    ImVec2 popup_pos = (g.ActiveIdSource == ImGuiInputSource_Nav) ? NavCalcPreferredMousePos() : mouse_pos;
     ImGuiPopupRef popup_ref = ImGuiPopupRef(id, window, window->GetID("##menus"), popup_pos, mouse_pos); // Tagged as new ref because constructor sets Window to NULL (we are passing the ParentWindow info here)
     if (g.OpenPopupStack.Size < current_stack_size + 1)
         g.OpenPopupStack.push_back(popup_ref);
@@ -4541,7 +4549,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         // Position tooltip (always follows mouse)
         if ((flags & ImGuiWindowFlags_Tooltip) != 0 && !window_pos_set_by_api)
         {
-            ImVec2 ref_pos = (g.ActiveId == 0 || g.ActiveIdSource ==  ImGuiInputSource_Mouse) ? g.IO.MousePos : window->DC.LastItemRect.GetCenter();
+            ImVec2 ref_pos = (g.ActiveIdSource == ImGuiInputSource_Nav) ? NavCalcPreferredMousePos() : g.IO.MousePos;
             ImRect rect_to_avoid(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24, ref_pos.y + 24); // FIXME: Completely hard-coded. Perhaps center on cursor hit-point instead?
             window->PosFloat = FindBestPopupWindowPos(ref_pos, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
             if (window->AutoPosLastDirection == -1)
