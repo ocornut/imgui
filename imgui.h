@@ -199,6 +199,7 @@ namespace ImGui
     // Cursor / Layout
     IMGUI_API void          Separator();                                                        // horizontal line
     IMGUI_API void          SameLine(float pos_x = 0.0f, float spacing_w = -1.0f);              // call between widgets or groups to layout them horizontally
+    IMGUI_API void          SameColumn(float pos_y = 0.0f, float spacing_h = -1.0f);            // call between widgets or groups to layout them vertically
     IMGUI_API void          NewLine();                                                          // undo a SameLine()
     IMGUI_API void          Spacing();                                                          // add vertical spacing
     IMGUI_API void          Dummy(const ImVec2& size);                                          // add a dummy item of given size

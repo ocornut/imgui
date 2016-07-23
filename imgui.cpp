@@ -9182,6 +9182,32 @@ void ImGui::SameLine(float pos_x, float spacing_w)
     window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset;
 }
 
+// Gets back to previous widget and continue with vertical layout
+//      pos_y == 0      : follow right after previous item
+//      pos_y != 0      : align to specified y position
+//      spacing_h < 0   : use default spacing if pos_y == 0, no spacing if pos_y != 0
+//      spacing_h >= 0  : enforce spacing amount
+void ImGui::SameColumn(float pos_y, float spacing_h)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    ImGuiContext& g = *GImGui;
+    if (pos_y != 0.0f)
+    {
+        if (spacing_h < 0.0f) spacing_h = 0.0f;
+        window->DC.CursorPos.x = window->DC.CursorPos.x;
+        window->DC.CursorPos.y = window->Pos.y - window->Scroll.y + pos_y + spacing_h;
+    }
+    else
+    {
+        if (spacing_h < 0.0f) spacing_h = g.Style.ItemSpacing.y;
+        window->DC.CursorPos.x = window->DC.CursorPos.x;
+        window->DC.CursorPos.y = window->DC.CursorPosPrevLine.y + window->DC.PrevLineHeight + spacing_h;
+    }
+}
+
 void ImGui::NewLine()
 {
     ImGuiWindow* window = GetCurrentWindow();
