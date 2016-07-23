@@ -1911,10 +1911,11 @@ static float NavScoreItemDistInterval(float a0, float a1, float b0, float b1)
 // Scoring function for directional navigation. Based on https://gist.github.com/rygorous/6981057
 // FIXME-NAVIGATION: Pretty rough.
 // FIXME-NAVIGATION: May want to handle the degenerate case that we have commented out.
-static bool NavScoreItem(const ImRect& cand)
+static bool NavScoreItem(ImRect cand)
 {
     ImGuiContext& g = *GImGui;
     const ImRect& curr = g.NavScoringRectScreen; // Current modified source rect (NB: we've applied Max.x = Min.x in NavUpdate() to inhibit the effect of having lots of items with varied width)
+    cand.Clip(g.CurrentWindow->ClipRect);
 
     // Compute distance between boxes
     // FIXME-NAVIGATION: Introducing various biases toward typical imgui uses cases, but we don't have any rigorous proof of their effect now.
@@ -1960,7 +1961,9 @@ static bool NavScoreItem(const ImRect& cand)
     if (ImGui::IsMouseHoveringRect(cand.Min, cand.Max))
     {
         char buf[128];
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "db (%.0f,%.0f->%.1f) dc (%.0f,%.0f->%.1f) da (%.0f,%.0f->%.1f) quad %c", dbx, dby, dist_box, dcx, dcy, dist_center, dax, day, dist_axial, "WENS"[quadrant]);
+        ImFormatString(buf, IM_ARRAYSIZE(buf), "db (%.0f,%.0f->%.5f) dc (%.0f,%.0f->%.5f) da (%.0f,%.0f->%.5f) quad %c", dbx, dby, dist_box, dcx, dcy, dist_center, dax, day, dist_axial, "WENS"[quadrant]);
+        g.OverlayDrawList.AddRect(cand.Min, cand.Max, IM_COL32(255,255,0,200));
+        g.OverlayDrawList.AddRectFilled(cand.Max-ImVec2(4,4), cand.Max+ImGui::CalcTextSize(buf)+ImVec2(4,4), IM_COL32(40,0,0,150));
         g.OverlayDrawList.AddText(cand.Max, ~0U, buf);
     }
  #endif
@@ -2052,7 +2055,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
         {
             //if (!g.NavMoveRequest) g.NavMoveDir = ImGuiNavDir_E; // [DEBUG] Removing if (g.NavMoveRequest) above allows debug scoring of all visible items.
             const ImRect& nav_bb = nav_bb_arg ? *nav_bb_arg : bb;
-            if (NavScoreItem(nav_bb))
+            if (NavScoreItem(nav_bb)) //if (g.NavMoveRequest) // [DEBUG]
             {
                 g.NavMoveResultBestId = *id;
                 g.NavMoveResultBestRefRectRel = ImRect(nav_bb.Min - window->Pos, nav_bb.Max - window->Pos);
