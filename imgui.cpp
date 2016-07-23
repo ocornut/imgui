@@ -2446,7 +2446,7 @@ static void NavUpdate()
     if (g.FocusedWindow && !g.FocusedWindow->DC.NavHasItems && g.FocusedWindow->DC.NavHasScroll && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav) && g.NavMoveRequest && (g.NavMoveDir == ImGuiNavDir_N || g.NavMoveDir == ImGuiNavDir_S))
     {
         float scroll_speed = ImFloor(g.FocusedWindow->CalcFontSize() * 100 * g.IO.DeltaTime + 0.5f); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
-        g.FocusedWindow->Scroll.y = ImFloor(g.FocusedWindow->Scroll.y + ((g.NavMoveDir == ImGuiNavDir_N) ? -1.0f : +1.0f) * scroll_speed);
+        SetWindowScrollY(g.FocusedWindow, ImFloor(g.FocusedWindow->Scroll.y + ((g.NavMoveDir == ImGuiNavDir_N) ? -1.0f : +1.0f) * scroll_speed));
     }
 
     // Reset search 
@@ -5372,7 +5372,7 @@ ImVec2 ImGui::GetWindowPos()
 
 static void SetWindowScrollY(ImGuiWindow* window, float new_scroll_y)
 {
-    window->DC.CursorMaxPos.y += window->Scroll.y;
+    window->DC.CursorMaxPos.y += window->Scroll.y; // SizeContents is generally computed based on CursorMaxPos which is affected by scroll position, so we need to apply our change to it.
     window->Scroll.y = new_scroll_y;
     window->DC.CursorMaxPos.y -= window->Scroll.y;
 }
