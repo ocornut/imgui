@@ -2368,6 +2368,7 @@ static void NavUpdate()
         g.NavWindowingTarget = g.NavWindow->RootNonPopupWindow;
     if (g.NavWindowingTarget)
     {
+        // Select window to focus
         // FIXME-NAVIGATION: Need to clarify input semantic, naming is misleading/incorrect here.
         int focus_change_dir = IsKeyPressedMap(ImGuiKey_NavTweakFaster, true) ? -1 : IsKeyPressedMap(ImGuiKey_NavTweakSlower, true) ? +1 : 0;
         if (focus_change_dir != 0 && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_Modal))
@@ -2379,16 +2380,13 @@ static void NavUpdate()
                     i_current = i;
             int i_target = -1;
             for (int i = i_current+focus_change_dir; i >= 0 && i < g.Windows.Size && i_target == -1; i += focus_change_dir)
-                if (g.Windows[i]->Active && g.Windows[i] == g.Windows[i]->RootNonPopupWindow)
+                if (g.Windows[i]->IsNavigableTo())
                     i_target = i;
             for (int i = (focus_change_dir < 0) ? (g.Windows.Size-1) : 0; i >= 0 && i < g.Windows.Size && i_target == -1 && i_target != i_current; i += focus_change_dir)
-                if (g.Windows[i]->Active && g.Windows[i] == g.Windows[i]->RootNonPopupWindow)
+                if (g.Windows[i]->IsNavigableTo())
                     i_target = i;
-            if (i_target != -1)
-            {
-                IM_ASSERT(i_target != i_current);
+            if (i_target != -1 && i_target != i_current)        // i_target might be == i_current in rare situation where we only have 1 navigable window
                 g.NavWindowingTarget = g.Windows[i_target];
-            }
         }
 
         // Apply actual focus only when leaving NavWindowing mode (until then the window was merely rendered front-most)
