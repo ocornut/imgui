@@ -420,11 +420,11 @@ struct ImGuiContext
     bool                    NavInitDefaultResultExplicit;       // Whether the result was explicitly requested with SetItemDefaultFocus()
     bool                    NavMoveRequest;                     // Move request for this frame
     ImGuiNavDir             NavMoveDir;                         // West/East/North/South
-    ImGuiID                 NavMoveResultBestId;                // Best move request candidate
-    float                   NavMoveResultBestDistBox;           // Best move request candidate box distance to current NavId
-    float                   NavMoveResultBestDistCenter;        // Best move request candidate center distance to current NavId
-    float                   NavMoveResultBestDistAxial;
-    ImRect                  NavMoveResultBestRefRectRel;        // Best move request candidate bounding box in window space
+    ImGuiID                 NavMoveResultId;                    // Best move request candidate
+    float                   NavMoveResultDistBox;               // Best move request candidate box distance to current NavId
+    float                   NavMoveResultDistCenter;            // Best move request candidate center distance to current NavId
+    float                   NavMoveResultDistAxial;
+    ImRect                  NavMoveResultRectRel;               // Best move request candidate bounding box in window relative space
 
     // Storage for SetNexWindow** and SetNextTreeNode*** functions
     ImVec2                  SetNextWindowPosVal;
@@ -524,8 +524,8 @@ struct ImGuiContext
         NavInitDefaultResultExplicit = false;
         NavMoveRequest = false;
         NavMoveDir = ImGuiNavDir_None;
-        NavMoveResultBestId = 0;
-        NavMoveResultBestDistBox = NavMoveResultBestDistCenter = NavMoveResultBestDistAxial = 0.0f;
+        NavMoveResultId = 0;
+        NavMoveResultDistBox = NavMoveResultDistCenter = NavMoveResultDistAxial = 0.0f;
 
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
         SetNextWindowSizeVal = ImVec2(0.0f, 0.0f);

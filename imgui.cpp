@@ -1971,21 +1971,21 @@ static bool NavScoreItem(ImRect cand)
     if (quadrant == g.NavMoveDir) 
     {
         // Does it beat the current best candidate?
-        if (dist_box < g.NavMoveResultBestDistBox) 
+        if (dist_box < g.NavMoveResultDistBox) 
         {
-            g.NavMoveResultBestDistBox = dist_box;
-            g.NavMoveResultBestDistCenter = dist_center;
+            g.NavMoveResultDistBox = dist_box;
+            g.NavMoveResultDistCenter = dist_center;
             return true;
         } 
-        if (dist_box == g.NavMoveResultBestDistBox) 
+        if (dist_box == g.NavMoveResultDistBox) 
         {
             // Try using distance between center points to break ties
-            if (dist_center < g.NavMoveResultBestDistCenter) 
+            if (dist_center < g.NavMoveResultDistCenter) 
             {
-                g.NavMoveResultBestDistCenter = dist_center;
+                g.NavMoveResultDistCenter = dist_center;
                 new_best = true;
             } 
-            else if (dist_center == g.NavMoveResultBestDistCenter) 
+            else if (dist_center == g.NavMoveResultDistCenter) 
             {
                 // Still tied! we need to be extra-careful to make sure everything gets linked properly. We consistently break ties by symbolically moving "later" buttons 
                 // (with higher index) to the right/downwards by an infinitesimal amount since we the current "best" button already (so it must have a lower index), 
@@ -1999,10 +1999,10 @@ static bool NavScoreItem(ImRect cand)
     // Axial check: if 'curr' has no link at all in some direction and 'cand' lies roughly in that direction, add a tentative link. This will only be kept if no "real" matches
     // are found, so it only augments the graph produced by the above method using extra links. (important, since it doesn't guarantee strong connectedness)
     // This is just to avoid buttons having no links in a particular direction when there's a suitable neighbor. you get good graphs without this too.
-    if (g.NavMoveResultBestDistBox == FLT_MAX) 
-        if (dist_axial < g.NavMoveResultBestDistAxial) // Check axial match
+    if (g.NavMoveResultDistBox == FLT_MAX) 
+        if (dist_axial < g.NavMoveResultDistAxial) // Check axial match
             if ((g.NavMoveDir == ImGuiNavDir_W && dax < 0.0f) || (g.NavMoveDir == ImGuiNavDir_E && dax > 0.0f) || (g.NavMoveDir == ImGuiNavDir_N && day < 0.0f) || (g.NavMoveDir == ImGuiNavDir_S && day > 0.0f))
-                g.NavMoveResultBestDistAxial = dist_axial, new_best = true;
+                g.NavMoveResultDistAxial = dist_axial, new_best = true;
 
     return new_best;
 }
@@ -2055,9 +2055,9 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
             const ImRect& nav_bb = nav_bb_arg ? *nav_bb_arg : bb;
             if (NavScoreItem(nav_bb)) //if (!DEBUG || g.NavMoveRequest)
             {
-                g.NavMoveResultBestId = *id;
-                g.NavMoveResultBestRefRectRel = ImRect(nav_bb.Min - window->Pos, nav_bb.Max - window->Pos);
-                //g.OverlayDrawList.AddRectFilled(g.NavRefRectScreen.Min, g.NavRefRectScreen.Max+ImVec2(2,2), IM_COL32(255,255,0,255)); // [DEBUG]
+                g.NavMoveResultId = *id;
+                g.NavMoveResultRectRel = ImRect(nav_bb.Min - window->Pos, nav_bb.Max - window->Pos);
+                //g.OverlayDrawList.AddRectFilled(g.NavScoringRectScreen.Min, g.NavScoringRectScreen.Max+ImVec2(2,2), IM_COL32(255,255,0,255)); // [DEBUG]
                 //g.OverlayDrawList.AddRectFilled(nav_bb.Min, nav_bb.Max, IM_COL32(255,0,255,100)); // [DEBUG]
                 //g.OverlayDrawList.AddText(nav_bb.Min, ~0U, "new_best"); // [DEBUG]
             }
@@ -2326,38 +2326,38 @@ static void NavUpdate()
         ImRect window_rect_rel(g.NavWindow->InnerRect.Min - g.NavWindow->Pos, g.NavWindow->InnerRect.Max - g.NavWindow->Pos);
         window_rect_rel.Expand(1.0f);
         //g.OverlayDrawList.AddRect(g.NavWindow->Pos + window_rect_rel.Min, g.NavWindow->Pos + window_rect_rel.Max, IM_COL32_WHITE); // [DEBUG]
-        if (g.NavWindow && g.NavMoveResultBestId != 0 && !window_rect_rel.Contains(g.NavMoveResultBestRefRectRel))
+        if (g.NavWindow && g.NavMoveResultId != 0 && !window_rect_rel.Contains(g.NavMoveResultRectRel))
         {
-            if (g.NavWindow->ScrollbarX && g.NavMoveResultBestRefRectRel.Min.x < window_rect_rel.Min.x)
+            if (g.NavWindow->ScrollbarX && g.NavMoveResultRectRel.Min.x < window_rect_rel.Min.x)
             {
-                g.NavWindow->ScrollTarget.x = g.NavMoveResultBestRefRectRel.Min.x + g.NavWindow->Scroll.x - g.Style.ItemSpacing.x;
+                g.NavWindow->ScrollTarget.x = g.NavMoveResultRectRel.Min.x + g.NavWindow->Scroll.x - g.Style.ItemSpacing.x;
                 g.NavWindow->ScrollTargetCenterRatio.x = 0.0f;
             }
-            else if (g.NavWindow->ScrollbarX && g.NavMoveResultBestRefRectRel.Max.x >= window_rect_rel.Max.x)
+            else if (g.NavWindow->ScrollbarX && g.NavMoveResultRectRel.Max.x >= window_rect_rel.Max.x)
             {
-                g.NavWindow->ScrollTarget.x = g.NavMoveResultBestRefRectRel.Max.x + g.NavWindow->Scroll.x + g.Style.ItemSpacing.x;
+                g.NavWindow->ScrollTarget.x = g.NavMoveResultRectRel.Max.x + g.NavWindow->Scroll.x + g.Style.ItemSpacing.x;
                 g.NavWindow->ScrollTargetCenterRatio.x = 1.0f;
             }
-            if (g.NavMoveResultBestRefRectRel.Min.y < window_rect_rel.Min.y)
+            if (g.NavMoveResultRectRel.Min.y < window_rect_rel.Min.y)
             {
-                g.NavWindow->ScrollTarget.y = g.NavMoveResultBestRefRectRel.Min.y + g.NavWindow->Scroll.y - g.Style.ItemSpacing.y;
+                g.NavWindow->ScrollTarget.y = g.NavMoveResultRectRel.Min.y + g.NavWindow->Scroll.y - g.Style.ItemSpacing.y;
                 g.NavWindow->ScrollTargetCenterRatio.y = 0.0f;
             }
-            else if (g.NavMoveResultBestRefRectRel.Max.y >= window_rect_rel.Max.y)
+            else if (g.NavMoveResultRectRel.Max.y >= window_rect_rel.Max.y)
             {
-                g.NavWindow->ScrollTarget.y = g.NavMoveResultBestRefRectRel.Max.y + g.NavWindow->Scroll.y + g.Style.ItemSpacing.y;
+                g.NavWindow->ScrollTarget.y = g.NavMoveResultRectRel.Max.y + g.NavWindow->Scroll.y + g.Style.ItemSpacing.y;
                 g.NavWindow->ScrollTargetCenterRatio.y = 1.0f;
             }
         }
     }
 
-    if (g.NavMoveRequest && g.NavMoveResultBestId != 0)
+    if (g.NavMoveRequest && g.NavMoveResultId != 0)
     {
         // Apply result from previous navigation directional move request
         IM_ASSERT(g.NavWindow);
         ImGui::SetActiveID(0);
-        g.NavId = g.NavWindow->NavLastId = g.NavMoveResultBestId;
-        g.NavRefRectRel = g.NavMoveResultBestRefRectRel;
+        g.NavId = g.NavWindow->NavLastId = g.NavMoveResultId;
+        g.NavRefRectRel = g.NavMoveResultRectRel;
         g.NavMousePosDirty = true;
         g.NavDisableHighlight = false;
         g.NavDisableMouseHover = true;
@@ -2476,8 +2476,8 @@ static void NavUpdate()
     }
 
     // Reset search 
-    g.NavMoveResultBestId = 0;
-    g.NavMoveResultBestDistAxial = g.NavMoveResultBestDistBox = g.NavMoveResultBestDistCenter = FLT_MAX;
+    g.NavMoveResultId = 0;
+    g.NavMoveResultDistAxial = g.NavMoveResultDistBox = g.NavMoveResultDistCenter = FLT_MAX;
 
     // For scoring we use a single segment on the left side our current item bounding box (not touching the edge to avoid box overlap with zero-spaced items)
     g.NavScoringRectScreen = g.NavWindow ? ImRect(g.NavWindow->Pos + g.NavRefRectRel.Min, g.NavWindow->Pos + g.NavRefRectRel.Max) : ImRect();
