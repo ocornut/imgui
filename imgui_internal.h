@@ -773,7 +773,6 @@ namespace ImGui
 
     IMGUI_API void          OpenPopupEx(const char* str_id, bool reopen_existing);
 
-    IMGUI_API void          NavInitWindow(ImGuiWindow* window);
     IMGUI_API ImVec2        NavGetTweakDelta();
 
     inline IMGUI_API ImU32  GetColorU32(ImGuiCol idx, float alpha_mul)  { ImVec4 c = GImGui->Style.Colors[idx]; c.w *= GImGui->Style.Alpha * alpha_mul; return ImGui::ColorConvertFloat4ToU32(c); }

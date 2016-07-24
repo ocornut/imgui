@@ -2265,6 +2265,24 @@ int ImGui::GetFrameCount()
     return GImGui->FrameCount;
 }
 
+// This needs to be called before we submit any widget (aka in or before Begin)
+static void NavInitWindow(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    if (!(window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_Popup) || (window->NavLastId == 0))
+    {
+        g.NavId = window->NavLastId = 0;
+        g.NavInitDefaultRequest = true;
+        g.NavInitDefaultResultExplicit = false;
+        g.NavInitDefaultResultId = 0;
+    }
+    else
+    {
+        g.NavId = window->NavLastId;
+    }
+    g.NavWindow = window;
+}
+
 static ImVec2 NavCalcPreferredMousePos()
 {
     ImGuiContext& g = *GImGui;
@@ -5057,24 +5075,6 @@ void ImGui::FocusWindow(ImGuiWindow* window)
             break;
         }
     g.Windows.push_back(window);
-}
-
-// This needs to be called before we submit any widget (aka in or before Begin)
-void ImGui::NavInitWindow(ImGuiWindow* window)
-{
-    ImGuiContext& g = *GImGui;
-    if (!(window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_Popup) || (window->NavLastId == 0))
-    {
-        g.NavId = window->NavLastId = 0;
-        g.NavInitDefaultRequest = true;
-        g.NavInitDefaultResultExplicit = false;
-        g.NavInitDefaultResultId = 0;
-    }
-    else
-    {
-        g.NavId = window->NavLastId;
-    }
-    g.NavWindow = window;
 }
 
 void ImGui::PushItemWidth(float item_width)
