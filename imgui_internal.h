@@ -640,7 +640,7 @@ struct IMGUI_API ImGuiDrawContext
         LayoutType = ImGuiLayoutType_Vertical;
         ItemWidth = 0.0f;
         ButtonRepeat = false;
-        AllowKeyboardFocus = true;
+        AllowKeyboardFocus = AllowNavDefaultFocus = true;
         TextWrapPos = -1.0f;
         ColorEditMode = ImGuiColorEditMode_RGB;
         memset(StackSizesBackup, 0, sizeof(StackSizesBackup));
