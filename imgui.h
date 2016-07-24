@@ -599,7 +599,7 @@ enum ImGuiKey_
     ImGuiKey_NavActivate,   // press button, tweak value        // e.g. Space key, Circle button
     ImGuiKey_NavCancel,     // close menu/popup/child, unselect // e.g. Escape key, Cross button
     ImGuiKey_NavInput,      // text input                       // e.g. Enter key, Triangle button
-    ImGuiKey_NavWindowing,  // change focus, move, resize       // e.g. Square button
+    ImGuiKey_NavMenu,       // access menu, focus, move, resize // e.g. Square button
     ImGuiKey_NavLeft,       // e.g. Left arrow, D-Pad left
     ImGuiKey_NavRight,      // e.g. Right arrow, D-Pad right
     ImGuiKey_NavUp,         // e.g. Up arrow, D-Pad up

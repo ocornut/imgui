@@ -2364,7 +2364,7 @@ static void NavUpdate()
     }
 
     // Navigation windowing mode (change focus, move/resize window)
-    if (!g.NavWindowingTarget && g.NavWindow && IsKeyPressedMap(ImGuiKey_NavWindowing, false))
+    if (!g.NavWindowingTarget && g.NavWindow && IsKeyPressedMap(ImGuiKey_NavMenu, false))
         g.NavWindowingTarget = g.NavWindow->RootNonPopupWindow;
     if (g.NavWindowingTarget)
     {
@@ -2390,7 +2390,7 @@ static void NavUpdate()
         }
 
         // Apply actual focus only when leaving NavWindowing mode (until then the window was merely rendered front-most)
-        if (!IsKeyDownMap(ImGuiKey_NavWindowing))
+        if (!IsKeyDownMap(ImGuiKey_NavMenu))
         {
             if (g.NavWindowingTarget)
                 if (!g.FocusedWindow || (g.NavWindowingTarget->RootNonPopupWindow != g.FocusedWindow->RootNonPopupWindow))
