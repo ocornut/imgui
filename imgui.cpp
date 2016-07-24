@@ -2370,9 +2370,9 @@ static void NavUpdate()
     {
         // FIXME-NAVIGATION: Need to clarify input semantic, naming is misleading/incorrect here.
         int focus_change_dir = IsKeyPressedMap(ImGuiKey_NavTweakFaster, true) ? -1 : IsKeyPressedMap(ImGuiKey_NavTweakSlower, true) ? +1 : 0;
-        if (focus_change_dir != 0)
+        if (focus_change_dir != 0 && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_Modal))
         {
-            // FIXME-NAVIGATION FIXME-OPT: This is absolutely hideous and shouldn't stay. Pressed we should maintain a intrusive linked-list of visible windows.
+            // FIXME-NAVIGATION FIXME-OPT: Code is absolutely hideous. Perhaps we should maintain a intrusive linked-list of visible windows.
             int i_current = -1;
             for (int i = g.Windows.Size-1; i >= 0 && i_current == -1; i--)
                 if (g.Windows[i] == g.NavWindowingTarget)
