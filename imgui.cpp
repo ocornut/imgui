@@ -9261,38 +9261,7 @@ void ImGui::SameLine(float pos_x, float spacing_w)
         window->DC.CursorPos.x = window->DC.CursorPosPrevLine.x + spacing_w;
         window->DC.CursorPos.y = window->DC.CursorPosPrevLine.y;
     }
-    /*
-    if (!g.CurrentLayout || g.CurrentLayout->Type == ImGuiLayoutType_Vertical)
-    {
-        if (pos_x != 0.0f)
-        {
-            if (spacing_w < 0.0f) spacing_w = 0.0f;
-            window->DC.CursorPos.x = window->Pos.x - window->Scroll.x + pos_x + spacing_w;
-            window->DC.CursorPos.y = window->DC.CursorPosPrevLine.y;
-        }
-        else
-        {
-            if (spacing_w < 0.0f) spacing_w = g.Style.ItemSpacing.x;
-            window->DC.CursorPos.x = window->DC.CursorPosPrevLine.x + spacing_w;
-            window->DC.CursorPos.y = window->DC.CursorPosPrevLine.y;
-        }
-    }
-    else
-    {
-        if (pos_x != 0.0f)
-        {
-            if (spacing_w < 0.0f) spacing_w = 0.0f;
-            window->DC.CursorPos.x = window->DC.CursorPosPrevLine.x - window->DC.PrevLineSize.x;
-            window->DC.CursorPos.y = window->DC.CursorPos.y + pos_x + spacing_w;
-        }
-        else
-        {
-            if (spacing_w < 0.0f) spacing_w = g.Style.ItemSpacing.y;
-            window->DC.CursorPos.x = window->DC.CursorPosPrevLine.x - window->DC.PrevLineSize.x;
-            window->DC.CursorPos.y = window->DC.CursorPosPrevLine.y + ImGui::GetItemRectSize().y + spacing_w;
-        }
-    }
-    */
+
     window->DC.CurrentLineSize = window->DC.PrevLineSize;
     window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset;
 }
@@ -9516,51 +9485,50 @@ static void PopLayout(ImGuiLayout* layout)
 static void ReflowLayout(ImGuiLayout* layout)
 {
     // Accumulate amount of occupied space and springs weights
-    ImVec2 occupiedSize      = ImVec2(0.0f,0.0f);
-    float  totalSpringWeight = 0.0f;
+    ImVec2 occupied_size       = ImVec2(0.0f,0.0f);
+    float  total_spring_weight = 0.0f;
 
     for (int i = 0; i < layout->Items.size(); ++i)
     {
         ImGuiLayoutItem& item = layout->Items[i];
         if (item.Type == ImGuiLayoutItemType_Spring)
         {
-            totalSpringWeight += item.SpringWeight;
-            occupiedSize      += ImVec2(item.SpringSpacing, item.SpringSpacing);
+            total_spring_weight += item.SpringWeight;
+            occupied_size      += ImVec2(item.SpringSpacing, item.SpringSpacing);
         }
         else
-            occupiedSize += item.Size;
+            occupied_size += item.Size;
     }
 
     // Determine how much space is available
-    ImVec2 availableSize = layout->Size;
+    ImVec2 available_size = layout->Size;
     if (layout->Parent)
-        availableSize = ImMax(availableSize, layout->Parent->Bounds);
+        available_size = ImMax(available_size, layout->Parent->Bounds);
 
-    layout->AvailableSize = availableSize;
-    //layout->Bounds        = availableSize;
+    layout->AvailableSize = available_size;
 
     // Determine occupied space and available space depending on layout type
-    const bool  isHorizontal   = (layout->Type == ImGuiLayoutType_Horizontal);
-    const float occupiedSpace  = isHorizontal ? occupiedSize.x : occupiedSize.y;
-    const float availableSpace = isHorizontal ? availableSize.x : availableSize.y;
-    const float freeSpace      = ImMax(availableSpace - occupiedSpace, 0.0f);
+    const bool  is_horizontal   = (layout->Type == ImGuiLayoutType_Horizontal);
+    const float occupied_space  = is_horizontal ? occupied_size.x : occupied_size.y;
+    const float available_space = is_horizontal ? available_size.x : available_size.y;
+    const float free_space      = ImMax(available_space - occupied_space, 0.0f);
 
-    float spanStart     = 0.0f;
-    float currentWeight = 0.0f;
-    float error         = 0.0f;
-    ImGuiLayoutItem* lastSpan = NULL;
+    float span_start     = 0.0f;
+    float current_weight = 0.0f;
+    float error          = 0.0f;
+    ImGuiLayoutItem* last_span = NULL;
     for (int i = 0; i < layout->Items.size(); ++i)
     {
         ImGuiLayoutItem& item = layout->Items[i];
         if (item.Type != ImGuiLayoutItemType_Spring)
             continue;
 
-        if (freeSpace > 0.0f && totalSpringWeight > 0.0f)
+        if (free_space > 0.0f && total_spring_weight > 0.0f)
         {
-            float nextWeight = currentWeight + item.SpringWeight;
-            float spanEnd    = freeSpace * nextWeight / totalSpringWeight;
+            float next_weight = current_weight + item.SpringWeight;
+            float span_end    = free_space * next_weight / total_spring_weight;
 
-            item.SpringSize = (spanEnd - spanStart) + item.SpringSpacing;
+            item.SpringSize = (span_end - span_start) + item.SpringSpacing;
             error          += fmodf(item.SpringSize, 1.0f);
             item.SpringSize = floorf(item.SpringSize);
             if (error >= 1.0f)
@@ -9569,16 +9537,16 @@ static void ReflowLayout(ImGuiLayout* layout)
                 error           -= 1.0f;
             }
 
-            spanStart     = spanEnd;
-            currentWeight = nextWeight;
-            lastSpan      = &item;
+            span_start     = span_end;
+            current_weight = next_weight;
+            last_span      = &item;
         }
         else
             item.SpringSize = item.SpringSpacing;
     }
 
-    if (lastSpan && error + 0.5f > 1.0f)
-        lastSpan->SpringSize += 1.0f;
+    if (last_span && error + 0.5f > 1.0f)
+        last_span->SpringSize += 1.0f;
 }
 
 static ImGuiLayoutItem* PushNextLayoutItem(ImGuiLayout* layout, ImGuiLayoutItemType type)
@@ -9641,14 +9609,14 @@ static void BeginLayoutItem(ImGuiLayout* layout)
     ImGui::BeginGroup();
 }
 
-static void EndLayoutItem(ImGuiLayout* layout, bool isClosing)
+static void EndLayoutItem(ImGuiLayout* layout, bool is_closing)
 {
     IM_ASSERT(layout->NextItemIndex < layout->Items.size());
 
     // End content group
     ImGui::EndGroup();
 
-    ImVec2 newItemSize = ImGui::GetItemRectSize();
+    ImVec2 new_item_size = ImGui::GetItemRectSize();
 
     // End align group
     ImGui::EndGroup();
@@ -9658,26 +9626,26 @@ static void EndLayoutItem(ImGuiLayout* layout, bool isClosing)
     if (layout->Type == ImGuiLayoutType_Horizontal)
     {
         window->DC.CursorPos.x = window->DC.CursorMaxPos.x;
-        if (!isClosing)
+        if (!is_closing)
             window->DC.CursorMaxPos.y = window->DC.CursorPos.y;
     }
     else
     {
-        float padding = window->DC.CursorPos.y - (window->DC.CursorPosPrevLine.y + newItemSize.y);
+        float padding = window->DC.CursorPos.y - (window->DC.CursorPosPrevLine.y + new_item_size.y);
         window->DC.CursorPos.y -= padding;
-        if (!isClosing)
+        if (!is_closing)
             window->DC.CursorMaxPos.y -= padding;
     }
 
     if (layout->Type == ImGuiLayoutType_Vertical)
-        layout->MaxExtent = ImMax(layout->MaxExtent, newItemSize.x);
+        layout->MaxExtent = ImMax(layout->MaxExtent, new_item_size.x);
     else
-        layout->MaxExtent = ImMax(layout->MaxExtent, newItemSize.y);
+        layout->MaxExtent = ImMax(layout->MaxExtent, new_item_size.y);
 
     ImGuiLayoutItem& item = layout->Items[layout->NextItemIndex];
-    if (item.Size.x != newItemSize.x || item.Size.y != newItemSize.y)
+    if (item.Size.x != new_item_size.x || item.Size.y != new_item_size.y)
     {
-        item.Size = newItemSize;
+        item.Size = new_item_size;
 
         layout->Dirty |= ImGuiLayoutDirtyFlags_ItemSize;
     }
@@ -9689,46 +9657,46 @@ static void AddLayoutSpring(ImGuiLayout* layout, float weight, float spacing)
 {
     EndLayoutItem(layout, false);
 
-    ImGuiLayoutItem* springItem = PushNextLayoutItem(layout, ImGuiLayoutItemType_Spring);
+    ImGuiLayoutItem* spring_item = PushNextLayoutItem(layout, ImGuiLayoutItemType_Spring);
 
     if (weight < 0.0f)
         weight = 0.0f;
 
-    if (springItem->SpringWeight != weight)
+    if (spring_item->SpringWeight != weight)
     {
-        springItem->SpringWeight  = weight;
+        spring_item->SpringWeight  = weight;
         layout->Dirty |= ImGuiLayoutDirtyFlags_SpringWeight;
     }
 
     if (spacing < 0)
     {
-        ImVec2 styleSpacing = ImGui::GetStyle().ItemSpacing;
+        ImVec2 style_spacing = ImGui::GetStyle().ItemSpacing;
         if (layout->Type == ImGuiLayoutType_Horizontal)
-            spacing = styleSpacing.x;
+            spacing = style_spacing.x;
         else
-            spacing = styleSpacing.y;
+            spacing = style_spacing.y;
     }
 
-    if (springItem->SpringSpacing != spacing)
+    if (spring_item->SpringSpacing != spacing)
     {
-        springItem->SpringSpacing = spacing;
+        spring_item->SpringSpacing = spacing;
         layout->Dirty |= ImGuiLayoutDirtyFlags_SpringSpacing;
     }
 
-    if (springItem->SpringSize > 0.0f || layout->MaxExtent > 0.0f)
+    if (spring_item->SpringSize > 0.0f || layout->MaxExtent > 0.0f)
     {
         ImGuiStyle& style = ImGui::GetStyle();
 
-        ImVec2 springSize, springSpacing;
+        ImVec2 spring_size, spring_spacing;
         if (layout->Type == ImGuiLayoutType_Horizontal)
         {
-            springSpacing = ImVec2(0.0f, style.ItemSpacing.y);
-            springSize    = ImVec2(springItem->SpringSize, layout->MaxExtent);
+            spring_spacing = ImVec2(0.0f, style.ItemSpacing.y);
+            spring_size    = ImVec2(spring_item->SpringSize, layout->MaxExtent);
         }
         else
         {
-            springSpacing = ImVec2(style.ItemSpacing.x, 0.0f);
-            springSize    = ImVec2(layout->MaxExtent, springItem->SpringSize);
+            spring_spacing = ImVec2(style.ItemSpacing.x, 0.0f);
+            spring_size    = ImVec2(layout->MaxExtent, spring_item->SpringSize);
         }
 
         //if (layout->Type == ImGuiLayoutType_Horizontal)
@@ -9740,8 +9708,8 @@ static void AddLayoutSpring(ImGuiLayout* layout, float weight, float spacing)
         //        ImGui::GetCursorScreenPos(),
         //        ImGui::GetCursorScreenPos() + ImVec2(layout->Bounds.x, springItem->SpringSize), ImColor(0, 1, 1));
 
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, springSpacing);
-        ImGui::Dummy(springSize);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, spring_spacing);
+        ImGui::Dummy(spring_size);
         if (layout->Type == ImGuiLayoutType_Horizontal)
             ImGui::SameLine(0,0);
         ImGui::PopStyleVar();
