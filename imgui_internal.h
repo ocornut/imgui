@@ -708,7 +708,7 @@ struct IMGUI_API ImGuiWindow
     float                   FontWindowScale;                    // Scale multiplier per-window
     ImDrawList*             DrawList;
     ImGuiWindow*            RootWindow;                         // If we are a child window, this is pointing to the first non-child parent window. Else point to ourself.
-    ImGuiWindow*            RootNonPopupWindow;                 // If we are a child window, this is pointing to the first non-child non-popup parent window. Else point to ourself.
+    ImGuiWindow*            RootNonPopupWindow;                 // Used to display TitleBgActive color and for selecting which window to use for NavWindowing
     ImGuiWindow*            ParentWindow;                       // Immediate parent in the window stack *regardless* of whether this window is a child window or not)
 
     // Navigation / Focus
