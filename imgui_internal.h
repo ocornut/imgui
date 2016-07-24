@@ -410,6 +410,9 @@ struct ImGuiContext
     ImRect                  NavRefRectRel, NavScoringRectScreen;// Reference rectangle, in window space. Modified rectangle for directional navigation scoring, in screen space.
     ImGuiWindow*            NavWindow;                          // 
     ImGuiWindow*            NavWindowingTarget;
+    float                   NavWindowingDisplayAlpha;
+    bool                    NavWindowingToggleLayer;
+    int                     NavLayer;                           // Layer we are navigating on. For now the system is hard-coded for 0=main contents and 1=menu/title bar, may expose layers later.
     int                     NavIdTabCounter;                    // == NavWindow->DC.FocusIdxTabCounter at time of NavId processing
     bool                    NavIdIsAlive;                       // Nav widget has been seen this frame ~~ NavRefRectRel is valid
     bool                    NavMousePosDirty;
@@ -417,6 +420,7 @@ struct ImGuiContext
     bool                    NavDisableMouseHover;               // When user starts using gamepad/keyboard, we disable mouse hovering until mouse is touched again
     bool                    NavInitDefaultRequest;              // Init request for appearing window to select first item
     ImGuiID                 NavInitDefaultResultId;
+    ImRect                  NavInitDefaultResultRectRel;
     bool                    NavInitDefaultResultExplicit;       // Whether the result was explicitly requested with SetItemDefaultFocus()
     bool                    NavMoveRequest;                     // Move request for this frame
     ImGuiNavDir             NavMoveDir;                         // West/East/North/South
@@ -514,6 +518,8 @@ struct ImGuiContext
         NavRefRectRel = NavScoringRectScreen = ImRect();
         NavWindow = NULL;
         NavWindowingTarget = NULL;
+        NavWindowingDisplayAlpha = 0.0f;
+        NavWindowingToggleLayer = false;
         NavIdTabCounter = INT_MAX;
         NavIdIsAlive = false;
         NavMousePosDirty = false;
@@ -586,10 +592,11 @@ struct IMGUI_API ImGuiDrawContext
     int                     TreeDepth;
     ImGuiID                 LastItemId;
     ImRect                  LastItemRect;
-    bool                    LastItemHoveredAndUsable;  // Item rectangle is hovered, and its window is currently interactable with (not blocked by a popup preventing access to the window)
-    bool                    LastItemHoveredRect;       // Item rectangle is hovered, but its window may or not be currently interactable with (might be blocked by a popup preventing access to the window)
-    bool                    NavHasItems, NavHasItemsNext; // Set when has any navigatable item
-    bool                    NavHasScroll;                 // Set when scrolling can be used (ScrollMax > 0.0f)
+    bool                    LastItemHoveredAndUsable;       // Item rectangle is hovered, and its window is currently interactable with (not blocked by a popup preventing access to the window)
+    bool                    LastItemHoveredRect;            // Item rectangle is hovered, but its window may or not be currently interactable with (might be blocked by a popup preventing access to the window)
+    bool                    NavHasScroll;                   // Set when scrolling can be used (ScrollMax > 0.0f)
+    int                     NavLayerCurrent;                // Current layer, 0..31 (we currently only use 0..1)
+    int                     NavLayerActiveFlags, NavLayerActiveFlagsNext;   // Which layer have been written to.
     bool                    MenuBarAppending;
     float                   MenuBarOffsetX;
     ImVector<ImGuiWindow*>  ChildWindows;
@@ -633,7 +640,9 @@ struct IMGUI_API ImGuiDrawContext
         LastItemId = 0;
         LastItemRect = ImRect(0.0f,0.0f,0.0f,0.0f);
         LastItemHoveredAndUsable = LastItemHoveredRect = false;
-        NavHasItems = NavHasItemsNext = NavHasScroll = false;
+        NavHasScroll = false;
+        NavLayerActiveFlags = NavLayerActiveFlagsNext = 0x00;
+        NavLayerCurrent = 0;
         MenuBarAppending = false;
         MenuBarOffsetX = 0.0f;
         StateStorage = NULL;
@@ -686,7 +695,7 @@ struct IMGUI_API ImGuiWindow
     bool                    SkipItems;                          // == Visible && !Collapsed
     int                     BeginCount;                         // Number of Begin() during the current frame (generally 0 or 1, 1+ if appending via multiple Begin/End pairs)
     ImGuiID                 PopupId;                            // ID in the popup stack when this window is used as a popup/menu (because we use generic Name/ID for recycling)
-    ImGuiID                 NavLastId;                          // Last known NavId for this window
+    ImGuiID                 NavLastId;                          // Last known NavId for this window, for nav layer 0 only.
     int                     AutoFitFramesX, AutoFitFramesY;
     bool                    AutoFitOnlyGrows;
     int                     AutoPosLastDirection;
