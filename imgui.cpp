@@ -2298,6 +2298,15 @@ static void NavUpdate()
     ImGuiContext& g = *GImGui;
     g.IO.WantMoveMouse = false;
 
+    // Process navigation init request (select first/default focus)
+    if (g.NavInitDefaultResultId != 0 && (!g.NavDisableHighlight || g.NavInitDefaultResultExplicit))
+    {
+        // Apply result from previous navigation init request (typically select the first item, unless SetItemDefaultFocus() has been called)
+        IM_ASSERT(g.NavWindow);
+        g.NavId = g.NavWindow->NavLastId = g.NavInitDefaultResultId;
+    }
+
+    // Apply application mouse position movement
     if (g.NavMousePosDirty && g.NavIdIsAlive)
     {
         // Set mouse position given our knowledge of the nav widget position from last frame
@@ -2310,23 +2319,17 @@ static void NavUpdate()
     }
     g.NavIdIsAlive = false;
     g.NavTabbedId = 0;
-
-    if (g.NavInitDefaultResultId != 0 && (!g.NavDisableHighlight || g.NavInitDefaultResultExplicit))
+    
+    // Process navigation move request
+    if (g.NavMoveRequest && g.NavMoveResultId != 0)
     {
-        // Apply result from previous navigation init request (typically select the first item, unless SetItemDefaultFocus() has been called)
         IM_ASSERT(g.NavWindow);
-        g.NavId = g.NavWindow->NavLastId = g.NavInitDefaultResultId;
-        //if (g.NavInitDefaultResultExplicit)
-        //    g.NavDisableHighlight = false;
-    }
 
-    if (g.NavMoveRequest)
-    {
         // Scroll to keep newly navigated item fully into view
         ImRect window_rect_rel(g.NavWindow->InnerRect.Min - g.NavWindow->Pos, g.NavWindow->InnerRect.Max - g.NavWindow->Pos);
         window_rect_rel.Expand(1.0f);
         //g.OverlayDrawList.AddRect(g.NavWindow->Pos + window_rect_rel.Min, g.NavWindow->Pos + window_rect_rel.Max, IM_COL32_WHITE); // [DEBUG]
-        if (g.NavWindow && g.NavMoveResultId != 0 && !window_rect_rel.Contains(g.NavMoveResultRectRel))
+        if (!window_rect_rel.Contains(g.NavMoveResultRectRel))
         {
             if (g.NavWindow->ScrollbarX && g.NavMoveResultRectRel.Min.x < window_rect_rel.Min.x)
             {
@@ -2349,10 +2352,7 @@ static void NavUpdate()
                 g.NavWindow->ScrollTargetCenterRatio.y = 1.0f;
             }
         }
-    }
 
-    if (g.NavMoveRequest && g.NavMoveResultId != 0)
-    {
         // Apply result from previous navigation directional move request
         IM_ASSERT(g.NavWindow);
         ImGui::SetActiveID(0);
