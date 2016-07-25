@@ -180,7 +180,8 @@ enum ImGuiLayoutDirtyFlags_
     ImGuiLayoutDirtyFlags_ItemSize          = 1 << 5,
     ImGuiLayoutDirtyFlags_SpringWeight      = 1 << 6,
     ImGuiLayoutDirtyFlags_SpringSpacing     = 1 << 7,
-    ImGuiLayoutDirtyFlags_Bounds            = 1 << 8
+    ImGuiLayoutDirtyFlags_Bounds            = 1 << 8,
+    ImGuiLayoutDirtyFlags_ChildDirty        = 1 << 9
 };
 
 enum ImGuiSelectableFlagsPrivate_
@@ -384,11 +385,13 @@ struct ImGuiLayout
     int                         NextItemIndex;
     ImGuiLayoutDirtyFlags       Dirty;
     ImGuiLayout*                Parent;
+    ImGuiLayout*                FirstChild;
+    ImGuiLayout*                NextSibling;
 
     ImVec2                      StartPos;
     float                       MaxExtent;
 
-    ImGuiLayout(ImGuiID id, ImGuiLayoutType type): Id(id), Type(type), Size(0, 0), Items(), NextItemIndex(0), Dirty(0), Parent(NULL) {}
+    ImGuiLayout(ImGuiID id, ImGuiLayoutType type): Id(id), Type(type), Size(0, 0), Items(), NextItemIndex(0), Dirty(0), Parent(NULL), FirstChild(NULL), NextSibling(NULL) {}
 };
 
 // Main state for ImGui
@@ -435,7 +438,6 @@ struct ImGuiContext
     ImGuiLayout*            CurrentLayout;
     ImVector<ImGuiLayout*>  LayoutStack;
     ImVector<ImGuiLayout*>  Layouts;
-    ImVector<ImGuiLayout*>  ReflowQueue;
 
     // Storage for SetNexWindow** and SetNextTreeNode*** functions
     ImVec2                  SetNextWindowPosVal;

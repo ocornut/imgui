@@ -684,7 +684,12 @@ static void             BeginLayout(ImGuiID id, ImGuiLayoutType type, ImVec2 siz
 static void             EndLayout(ImGuiLayoutType type);
 static void             PushLayout(ImGuiLayout* layout);
 static void             PopLayout(ImGuiLayout* layout);
-static void             ReflowLayout(ImGuiLayout* layout);
+static void             ReflowLayouts();
+static void             CalculateLayoutAvailableSpace(ImGuiLayout* layout);
+static void             PropagateLayoutSpace(ImGuiLayout* layout, const ImVec2& extents);
+static void             DistributeAvailableLayoutSpace(ImGuiLayout* layout);
+static ImVec2           CalculateLayoutSize(ImGuiLayout* layout);
+static ImVec2           CalculateMinimumLayoutSize(ImGuiLayout* layout);
 static ImGuiLayoutItem* PushNextLayoutItem(ImGuiLayout* layout, ImGuiLayoutItemType type);
 static void             BeginLayoutItem(ImGuiLayout* layout);
 static void             EndLayoutItem(ImGuiLayout* layout, bool isClosing);
@@ -2620,10 +2625,7 @@ void ImGui::EndFrame()
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // ImGui::EndFrame() called multiple times, or forgot to call ImGui::NewFrame() again
 
-    // Reflow layouts
-    for (int i = 0; i < g.ReflowQueue.size(); ++i)
-        ReflowLayout(g.ReflowQueue[i]);
-    g.ReflowQueue.clear();
+    ReflowLayouts();
 
     // Render tooltip
     if (g.Tooltip[0])
@@ -9367,8 +9369,26 @@ static void EndLayout(ImGuiLayoutType type)
 
     ImGui::EndGroup();
 
-    // if dirty before bounds (something may shrink) reset bounds
-    ImVec2 new_bounds = ImVec2(0.0f, 0.0f);
+    ImVec2 new_bounds = CalculateMinimumLayoutSize(layout);
+
+    if (new_bounds.x != layout->Bounds.x || new_bounds.y != layout->Bounds.y)
+    {
+        layout->Dirty |= ImGuiLayoutDirtyFlags_Bounds;
+        layout->Bounds = new_bounds;
+    }
+
+    ImGui::PopID();
+
+    if (layout->Dirty && layout->Parent)
+        layout->Parent->Dirty |= ImGuiLayoutDirtyFlags_ChildDirty;
+
+    // ImGui::GetCurrentWindow()->DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMin() + layout->Size, 0xFF00FF00);   // Debug
+    // ImGui::GetCurrentWindow()->DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF00FFFF);   // Debug
+}
+
+static ImVec2 CalculateLayoutSize(ImGuiLayout* layout)
+{
+    ImVec2 bounds = ImVec2(0.0f, 0.0f);
     if (layout->Type == ImGuiLayoutType_Vertical)
     {
         for (int i = 0; i < layout->Items.size(); ++i)
@@ -9377,11 +9397,11 @@ static void EndLayout(ImGuiLayoutType type)
 
             if (item.Type == ImGuiLayoutItemType_Item)
             {
-                new_bounds.x  = ImMax(new_bounds.x, item.Size.x);
-                new_bounds.y += item.Size.y;
+                bounds.x = ImMax(bounds.x, item.Size.x);
+                bounds.y += item.Size.y;
             }
             else
-                new_bounds.y += item.SpringSize;
+                bounds.y += ImMax(item.SpringSize, item.SpringSpacing);
         }
     }
     else
@@ -9392,67 +9412,52 @@ static void EndLayout(ImGuiLayoutType type)
 
             if (item.Type == ImGuiLayoutItemType_Item)
             {
-                new_bounds.x += item.Size.x;
-                new_bounds.y = ImMax(new_bounds.y, item.Size.y);
+                bounds.x += item.Size.x;
+                bounds.y = ImMax(bounds.y, item.Size.y);
             }
             else
-                new_bounds.x += item.SpringSize;
+                bounds.x += ImMax(item.SpringSize, item.SpringSpacing);
         }
     }
 
-    bool has_new_bounds = false;
-    if (new_bounds.x != layout->Bounds.x || new_bounds.y != layout->Bounds.y)
-    {
-        layout->Dirty |= ImGuiLayoutDirtyFlags_Bounds;
-        layout->Bounds = new_bounds;
-        has_new_bounds = true;
-    }
+    return bounds;
+}
 
-    // If any item size changed, calculate minimum bounds so they can grow in next frame
-    if (layout->Dirty & ImGuiLayoutDirtyFlags_ItemSize)
+static ImVec2 CalculateMinimumLayoutSize(ImGuiLayout* layout)
+{
+    ImVec2 bounds = ImVec2(0.0f, 0.0f);
+    if (layout->Type == ImGuiLayoutType_Vertical)
     {
-        // TODO-OPT: Consider using individual item size to adjust spring size
-        //           to get rid of one frame lag when overall bounds of layout
-        //           rect does not change.
-
-        new_bounds = ImVec2(0.0f, 0.0f);
         for (int i = 0; i < layout->Items.size(); ++i)
-            if (layout->Items[i].Type == ImGuiLayoutItemType_Item)
-                new_bounds = ImMax(new_bounds, layout->Items[i].Size);
+        {
+            ImGuiLayoutItem& item = layout->Items[i];
 
-        if (layout->Type == ImGuiLayoutType_Vertical)
-        {
-            if (new_bounds.x < layout->Bounds.x)
+            if (item.Type == ImGuiLayoutItemType_Item)
             {
-                layout->Bounds = ImVec2(new_bounds.x, 0.0f);
-                layout->Dirty |= ImGuiLayoutDirtyFlags_Bounds;
-                has_new_bounds = true;
+                bounds.x = ImMax(bounds.x, item.Size.x);
+                bounds.y += item.Size.y;
             }
-        }
-        else
-        {
-            if (new_bounds.y < layout->Bounds.y)
-            {
-                layout->Bounds = ImVec2(0.0f, new_bounds.y);
-                layout->Dirty |= ImGuiLayoutDirtyFlags_Bounds;
-                has_new_bounds = true;
-            }
+            else
+                bounds.y += item.SpringSpacing;
         }
     }
-
-    if (layout->Dirty)
+    else
     {
-        g.ReflowQueue.push_back(layout);
-        layout->Dirty = ImGuiLayoutDirtyFlags_None;
+        for (int i = 0; i < layout->Items.size(); ++i)
+        {
+            ImGuiLayoutItem& item = layout->Items[i];
+
+            if (item.Type == ImGuiLayoutItemType_Item)
+            {
+                bounds.x += item.Size.x;
+                bounds.y = ImMax(bounds.y, item.Size.y);
+            }
+            else
+                bounds.x += item.SpringSpacing;
+        }
     }
 
-    if (has_new_bounds)
-        layout->Dirty |= ImGuiLayoutDirtyFlags_Bounds;
-
-    ImGui::PopID();
-
-    // ImGui::GetCurrentWindow()->DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMin() + layout->Size, 0xFF00FF00);   // Debug
-    // ImGui::GetCurrentWindow()->DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF00FFFF);   // Debug
+    return bounds;
 }
 
 static void PushLayout(ImGuiLayout* layout)
@@ -9461,7 +9466,18 @@ static void PushLayout(ImGuiLayout* layout)
 
     ImGuiContext& g = *GImGui;
 
-    layout->Parent = g.CurrentLayout;
+    layout->Parent              = g.CurrentLayout;
+    if (g.CurrentLayout)
+    {
+        layout->NextSibling         = g.CurrentLayout->FirstChild;
+        layout->FirstChild          = NULL;
+        g.CurrentLayout->FirstChild = layout;
+    }
+    else
+    {
+        layout->NextSibling = NULL;
+        layout->FirstChild  = NULL;
+    }
 
     g.LayoutStack.push_back(layout);
     g.CurrentLayout = layout;
@@ -9482,35 +9498,78 @@ static void PopLayout(ImGuiLayout* layout)
         g.CurrentLayout = NULL;
 }
 
-static void ReflowLayout(ImGuiLayout* layout)
+static void PropagateLayoutSpace(ImGuiLayout* layout, const ImVec2& extents)
 {
+    layout->AvailableSize = extents;
+
+    ImVec2 maximum_extent = ImVec2(0.0f, 0.0f);
+    for (ImGuiLayout* child = layout->FirstChild; child; child = child->NextSibling)
+    {
+        ImVec2 new_available_size;
+        if (layout->Type == ImGuiLayoutType_Vertical)
+            new_available_size = ImVec2(child->AvailableSize.x, extents.y);
+        else
+            new_available_size = ImVec2(extents.x, child->AvailableSize.y);
+
+        PropagateLayoutSpace(child, new_available_size);
+    }
+}
+
+static void CalculateLayoutAvailableSpace(ImGuiLayout* layout)
+{
+    layout->AvailableSize = ImMax(layout->Bounds, layout->Size);
+
+    float new_extent = 0.0f;
+    for (ImGuiLayout* child = layout->FirstChild; child; child = child->NextSibling)
+    {
+        CalculateLayoutAvailableSpace(child);
+
+        if (layout->Type == ImGuiLayoutType_Vertical)
+            new_extent = ImMax(new_extent, child->AvailableSize.x);
+        else
+            new_extent = ImMax(new_extent, child->AvailableSize.y);
+    }
+
+    for (ImGuiLayout* child = layout->FirstChild; child; child = child->NextSibling)
+    {
+        if (layout->Type == ImGuiLayoutType_Vertical)
+        {
+            if (child->AvailableSize.x < new_extent)
+            {
+                child->AvailableSize.x = new_extent;
+                PropagateLayoutSpace(child, child->AvailableSize);
+            }
+        }
+        else
+        {
+            if (child->AvailableSize.y < new_extent)
+            {
+                child->AvailableSize.y = new_extent;
+                PropagateLayoutSpace(child, child->AvailableSize);
+            }
+        }
+    }
+}
+
+static void DistributeAvailableLayoutSpace(ImGuiLayout* layout)
+{
+    for (ImGuiLayout* child = layout->FirstChild; child; child = child->NextSibling)
+        DistributeAvailableLayoutSpace(child);
+
     // Accumulate amount of occupied space and springs weights
-    ImVec2 occupied_size       = ImVec2(0.0f,0.0f);
-    float  total_spring_weight = 0.0f;
+    float total_spring_weight = 0.0f;
 
     for (int i = 0; i < layout->Items.size(); ++i)
     {
         ImGuiLayoutItem& item = layout->Items[i];
         if (item.Type == ImGuiLayoutItemType_Spring)
-        {
             total_spring_weight += item.SpringWeight;
-            occupied_size      += ImVec2(item.SpringSpacing, item.SpringSpacing);
-        }
-        else
-            occupied_size += item.Size;
     }
-
-    // Determine how much space is available
-    ImVec2 available_size = layout->Size;
-    if (layout->Parent)
-        available_size = ImMax(available_size, layout->Parent->Bounds);
-
-    layout->AvailableSize = available_size;
 
     // Determine occupied space and available space depending on layout type
     const bool  is_horizontal   = (layout->Type == ImGuiLayoutType_Horizontal);
-    const float occupied_space  = is_horizontal ? occupied_size.x : occupied_size.y;
-    const float available_space = is_horizontal ? available_size.x : available_size.y;
+    const float occupied_space  = is_horizontal ? layout->Bounds.x : layout->Bounds.y;
+    const float available_space = is_horizontal ? layout->AvailableSize.x : layout->AvailableSize.y;
     const float free_space      = ImMax(available_space - occupied_space, 0.0f);
 
     float span_start     = 0.0f;
@@ -9547,6 +9606,23 @@ static void ReflowLayout(ImGuiLayout* layout)
 
     if (last_span && error + 0.5f > 1.0f)
         last_span->SpringSize += 1.0f;
+
+    layout->Dirty = ImGuiLayoutDirtyFlags_None;
+}
+
+static void ReflowLayouts()
+{
+    ImGuiContext& g = *GImGui;
+
+    for (int i = 0; i < g.Layouts.size(); ++i)
+    {
+        ImGuiLayout* layout = g.Layouts[i];
+        if (!layout->Parent && layout->Dirty)
+        {
+            CalculateLayoutAvailableSpace(layout);
+            DistributeAvailableLayoutSpace(layout);
+        }
+    }
 }
 
 static ImGuiLayoutItem* PushNextLayoutItem(ImGuiLayout* layout, ImGuiLayoutItemType type)
@@ -9734,6 +9810,13 @@ void ImGui::BeginHorizontal(const void* ptr_id, const ImVec2& size/* = ImVec2(0,
     BeginLayout(window->GetID(ptr_id), ImGuiLayoutType_Horizontal, size);
 }
 
+void ImGui::BeginHorizontal(int id, const ImVec2& size/* = ImVec2(0, 0)*/)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+
+    BeginLayout(window->GetID(reinterpret_cast<void*>(id)), ImGuiLayoutType_Horizontal, size);
+}
+
 void ImGui::EndHorizontal()
 {
     EndLayout(ImGuiLayoutType_Horizontal);
@@ -9751,6 +9834,13 @@ void ImGui::BeginVertical(const void* ptr_id, const ImVec2& size/* = ImVec2(0, 0
     ImGuiWindow* window = GetCurrentWindow();
 
     BeginLayout(window->GetID(ptr_id), ImGuiLayoutType_Vertical, size);
+}
+
+void ImGui::BeginVertical(int id, const ImVec2& size/* = ImVec2(0, 0)*/)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+
+    BeginLayout(window->GetID(reinterpret_cast<void*>(id)), ImGuiLayoutType_Vertical, size);
 }
 
 void ImGui::EndVertical()
