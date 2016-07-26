@@ -9508,7 +9508,6 @@ static void PropagateLayoutSpace(ImGuiLayout* layout, const ImVec2& extents)
 {
     layout->AvailableSize = extents;
 
-    ImVec2 maximum_extent = ImVec2(0.0f, 0.0f);
     for (ImGuiLayout* child = layout->FirstChild; child; child = child->NextSibling)
     {
         ImVec2 new_available_size;
@@ -9616,13 +9615,10 @@ static void DistributeAvailableLayoutSpace(ImGuiLayout* layout)
     layout->Dirty = ImGuiLayoutDirtyFlags_None;
 }
 
-extern "C" __declspec(dllimport) void __stdcall OutputDebugStringA(const char*);
-
 static void ReflowLayouts()
 {
     ImGuiContext& g = *GImGui;
 
-//    int count = 0;
     for (int i = 0; i < g.Layouts.size(); ++i)
     {
         ImGuiLayout* layout = g.Layouts[i];
@@ -9630,19 +9626,8 @@ static void ReflowLayouts()
         {
             CalculateLayoutAvailableSpace(layout);
             DistributeAvailableLayoutSpace(layout);
-  //          ++count;
         }
     }
-
-    //if (count)
-//     {
-//         char buffer[64];
-//         if (count)
-//             snprintf(buffer, 63, "HIT! %d\n", count);
-//         else
-//             snprintf(buffer, 63, "MISS!\n");
-//         OutputDebugStringA(buffer);
-//     }
 }
 
 static ImGuiLayoutItem* PushNextLayoutItem(ImGuiLayout* layout, ImGuiLayoutItemType type)
