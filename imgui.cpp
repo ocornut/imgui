@@ -680,7 +680,7 @@ static void             MarkSettingsDirty();
 
 static ImGuiLayout*     FindLayout(ImGuiID id, ImGuiLayoutType type);
 static ImGuiLayout*     CreateNewLayout(ImGuiID id, ImGuiLayoutType type, ImVec2 size);
-static void             BeginLayout(ImGuiID id, ImGuiLayoutType type, ImVec2 size);
+static void             BeginLayout(ImGuiID id, ImGuiLayoutType type, ImVec2 size, float align);
 static void             EndLayout(ImGuiLayoutType type);
 static void             PushLayout(ImGuiLayout* layout);
 static void             PopLayout(ImGuiLayout* layout);
@@ -3709,7 +3709,7 @@ static void CheckStacksSize(ImGuiWindow* window, bool write)
         {
             *p_backup = current;
         }
-        else
+        else if (!g.LayoutStack.empty() && g.LayoutStack.back())
         {
             if (current == 0 || g.LayoutStack.back()->Type == ImGuiLayoutType_Horizontal)
                 IM_ASSERT(*p_backup == current && "BeginHorizontal/EndHorizontal Mismatch!");
@@ -9320,7 +9320,7 @@ static ImGuiLayout* CreateNewLayout(ImGuiID id, ImGuiLayoutType type, ImVec2 siz
     return layout;
 }
 
-static void BeginLayout(ImGuiID id, ImGuiLayoutType type, ImVec2 size)
+static void BeginLayout(ImGuiID id, ImGuiLayoutType type, ImVec2 size, float align)
 {
     ImGui::PushID(id);
     ImGui::BeginGroup();
@@ -9338,6 +9338,11 @@ static void BeginLayout(ImGuiID id, ImGuiLayoutType type, ImVec2 size)
         layout->Size   = size;
         layout->Dirty |= ImGuiLayoutDirtyFlags_LayoutSize;
     }
+
+    if (align < 0.0f)
+        layout->Align = -1.0f;
+    else
+        layout->Align = ImClamp(align, 0.0f, 1.0f);
 
     PushLayout(layout);
 
@@ -9462,21 +9467,22 @@ static ImVec2 CalculateMinimumLayoutSize(ImGuiLayout* layout)
 
 static void PushLayout(ImGuiLayout* layout)
 {
-    IM_ASSERT(layout);
-
     ImGuiContext& g = *GImGui;
 
-    layout->Parent              = g.CurrentLayout;
-    if (g.CurrentLayout)
+    if (layout)
     {
-        layout->NextSibling         = g.CurrentLayout->FirstChild;
-        layout->FirstChild          = NULL;
-        g.CurrentLayout->FirstChild = layout;
-    }
-    else
-    {
-        layout->NextSibling = NULL;
-        layout->FirstChild  = NULL;
+        layout->Parent = g.CurrentLayout;
+        if (g.CurrentLayout)
+        {
+            layout->NextSibling         = g.CurrentLayout->FirstChild;
+            layout->FirstChild          = NULL;
+            g.CurrentLayout->FirstChild = layout;
+        }
+        else
+        {
+            layout->NextSibling = NULL;
+            layout->FirstChild  = NULL;
+        }
     }
 
     g.LayoutStack.push_back(layout);
@@ -9610,10 +9616,13 @@ static void DistributeAvailableLayoutSpace(ImGuiLayout* layout)
     layout->Dirty = ImGuiLayoutDirtyFlags_None;
 }
 
+extern "C" __declspec(dllimport) void __stdcall OutputDebugStringA(const char*);
+
 static void ReflowLayouts()
 {
     ImGuiContext& g = *GImGui;
 
+//    int count = 0;
     for (int i = 0; i < g.Layouts.size(); ++i)
     {
         ImGuiLayout* layout = g.Layouts[i];
@@ -9621,8 +9630,19 @@ static void ReflowLayouts()
         {
             CalculateLayoutAvailableSpace(layout);
             DistributeAvailableLayoutSpace(layout);
+  //          ++count;
         }
     }
+
+    //if (count)
+//     {
+//         char buffer[64];
+//         if (count)
+//             snprintf(buffer, 63, "HIT! %d\n", count);
+//         else
+//             snprintf(buffer, 63, "MISS!\n");
+//         OutputDebugStringA(buffer);
+//     }
 }
 
 static ImGuiLayoutItem* PushNextLayoutItem(ImGuiLayout* layout, ImGuiLayoutItemType type)
@@ -9660,7 +9680,9 @@ static void BeginLayoutItem(ImGuiLayout* layout)
         ImGui::BeginGroup();
         if (layout->Bounds.y > item.Size.y)
         {
-            float align = ImMax(0.0f, ImMin(1.0f, ImGui::GetStyle().LayoutAlign));
+            float align = layout->Align;
+            if (align < 0.0f)
+                align = ImClamp(ImGui::GetStyle().LayoutAlign, 0.0f, 1.0f);
 
             float align_offset = floorf(align * (layout->Bounds.y - item.Size.y));
             float new_position = ImGui::GetCursorPosY() + align_offset;
@@ -9673,7 +9695,9 @@ static void BeginLayoutItem(ImGuiLayout* layout)
         ImGui::BeginGroup();
         if (layout->Bounds.x > item.Size.x)
         {
-            float align = ImMax(0.0f, ImMin(1.0f, ImGui::GetStyle().LayoutAlign));
+            float align = layout->Align;
+            if (align < 0.0f)
+                align = ImClamp(ImGui::GetStyle().LayoutAlign, 0.0f, 1.0f);
 
             float align_offset = floorf(align * (layout->Bounds.x - item.Size.x));
             float new_position = ImGui::GetCursorPosX() + align_offset;
@@ -9796,25 +9820,25 @@ static void AddLayoutSpring(ImGuiLayout* layout, float weight, float spacing)
     BeginLayoutItem(layout);
 }
 
-void ImGui::BeginHorizontal(const char* str_id, const ImVec2& size/* = ImVec2(0, 0)*/)
+void ImGui::BeginHorizontal(const char* str_id, const ImVec2& size/* = ImVec2(0, 0)*/, float align/* = -1*/)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
-    BeginLayout(window->GetID(str_id), ImGuiLayoutType_Horizontal, size);
+    BeginLayout(window->GetID(str_id), ImGuiLayoutType_Horizontal, size, align);
 }
 
-void ImGui::BeginHorizontal(const void* ptr_id, const ImVec2& size/* = ImVec2(0, 0)*/)
+void ImGui::BeginHorizontal(const void* ptr_id, const ImVec2& size/* = ImVec2(0, 0)*/, float align/* = -1*/)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
-    BeginLayout(window->GetID(ptr_id), ImGuiLayoutType_Horizontal, size);
+    BeginLayout(window->GetID(ptr_id), ImGuiLayoutType_Horizontal, size, align);
 }
 
-void ImGui::BeginHorizontal(int id, const ImVec2& size/* = ImVec2(0, 0)*/)
+void ImGui::BeginHorizontal(int id, const ImVec2& size/* = ImVec2(0, 0)*/, float align/* = -1*/)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
-    BeginLayout(window->GetID(reinterpret_cast<void*>(id)), ImGuiLayoutType_Horizontal, size);
+    BeginLayout(window->GetID(reinterpret_cast<void*>(id)), ImGuiLayoutType_Horizontal, size, align);
 }
 
 void ImGui::EndHorizontal()
@@ -9822,25 +9846,25 @@ void ImGui::EndHorizontal()
     EndLayout(ImGuiLayoutType_Horizontal);
 }
 
-void ImGui::BeginVertical(const char* str_id, const ImVec2& size/* = ImVec2(0, 0)*/)
+void ImGui::BeginVertical(const char* str_id, const ImVec2& size/* = ImVec2(0, 0)*/, float align/* = -1*/)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
-    BeginLayout(window->GetID(str_id), ImGuiLayoutType_Vertical, size);
+    BeginLayout(window->GetID(str_id), ImGuiLayoutType_Vertical, size, align);
 }
 
-void ImGui::BeginVertical(const void* ptr_id, const ImVec2& size/* = ImVec2(0, 0)*/)
+void ImGui::BeginVertical(const void* ptr_id, const ImVec2& size/* = ImVec2(0, 0)*/, float align/* = -1*/)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
-    BeginLayout(window->GetID(ptr_id), ImGuiLayoutType_Vertical, size);
+    BeginLayout(window->GetID(ptr_id), ImGuiLayoutType_Vertical, size, align);
 }
 
-void ImGui::BeginVertical(int id, const ImVec2& size/* = ImVec2(0, 0)*/)
+void ImGui::BeginVertical(int id, const ImVec2& size/* = ImVec2(0, 0)*/, float align/* = -1*/)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
-    BeginLayout(window->GetID(reinterpret_cast<void*>(id)), ImGuiLayoutType_Vertical, size);
+    BeginLayout(window->GetID(reinterpret_cast<void*>(id)), ImGuiLayoutType_Vertical, size, align);
 }
 
 void ImGui::EndVertical()
@@ -9859,6 +9883,20 @@ void ImGui::Spring(float weight/* = 1.0f*/, float spacing/* = -1.0f*/)
     IM_ASSERT(g.CurrentLayout);
 
     AddLayoutSpring(g.CurrentLayout, weight, spacing);
+}
+
+void ImGui::SuspendLayout()
+{
+    ImGuiContext& g = *GImGui;
+    PushLayout(NULL);
+}
+
+void ImGui::ResumeLayout()
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(!g.CurrentLayout);
+    IM_ASSERT(!g.LayoutStack.empty());
+    PopLayout(NULL);
 }
 
 void ImGui::NextColumn()

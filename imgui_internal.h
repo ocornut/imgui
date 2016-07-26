@@ -387,11 +387,12 @@ struct ImGuiLayout
     ImGuiLayout*                Parent;
     ImGuiLayout*                FirstChild;
     ImGuiLayout*                NextSibling;
+    float                       Align;
 
     ImVec2                      StartPos;
     float                       MaxExtent;
 
-    ImGuiLayout(ImGuiID id, ImGuiLayoutType type): Id(id), Type(type), Size(0, 0), Items(), NextItemIndex(0), Dirty(0), Parent(NULL), FirstChild(NULL), NextSibling(NULL) {}
+    ImGuiLayout(ImGuiID id, ImGuiLayoutType type): Id(id), Type(type), Size(0, 0), Items(), NextItemIndex(0), Dirty(0), Parent(NULL), FirstChild(NULL), NextSibling(NULL), Align(-1.0f) {}
 };
 
 // Main state for ImGui
