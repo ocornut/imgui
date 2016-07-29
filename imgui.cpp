@@ -830,10 +830,7 @@ ImGuiIO::ImGuiIO()
 
     // Set OS X style defaults based on __APPLE__ compile time flag
 #ifdef __APPLE__
-    WordMovementUsesAltKey = true;      // OS X style: Text editing cursor movement using Alt instead of Ctrl
-    ShortcutsUseSuperKey = true;        // OS X style: Shortcuts using Cmd/Super instead of Ctrl
-    DoubleClickSelectsWord = true;      // OS X style: Double click selects by word instead of selecting whole text
-    MultiSelectUsesSuperKey = true;     // OS X style: Multi-selection in lists uses Cmd/Super instead of Ctrl 
+    OSXBehaviors = true;
 #endif
 }
 
@@ -7628,10 +7625,6 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     // NB: we are only allowed to access 'edit_state' if we are the active widget.
     ImGuiTextEditState& edit_state = g.InputTextState;
 
-    const bool is_ctrl_down = io.KeyCtrl;
-    const bool is_shift_down = io.KeyShift;
-    const bool is_alt_down = io.KeyAlt;
-    const bool is_super_down = io.KeySuper;
     const bool focus_requested = FocusableItemRegister(window, g.ActiveId == id, (flags & (ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_AllowTabInput)) == 0);    // Using completion callback disable keyboard tabbing
     const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
     const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
@@ -7681,7 +7674,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             }
             if (flags & ImGuiInputTextFlags_AlwaysInsertMode)
                 edit_state.StbState.insert_mode = true;
-            if (!is_multiline && (focus_requested_by_tab || (user_clicked && is_ctrl_down)))
+            if (!is_multiline && (focus_requested_by_tab || (user_clicked && io.KeyCtrl)))
                 select_all = true;
         }
         SetActiveID(id, window);
@@ -7716,15 +7709,16 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         g.ActiveIdAllowOverlap = !io.MouseDown[0];
 
         // Edit in progress
-        const float mouse_x = (g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + edit_state.ScrollX;
-        const float mouse_y = (is_multiline ? (g.IO.MousePos.y - draw_window->DC.CursorPos.y - style.FramePadding.y) : (g.FontSize*0.5f));
+        const float mouse_x = (io.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + edit_state.ScrollX;
+        const float mouse_y = (is_multiline ? (io.MousePos.y - draw_window->DC.CursorPos.y - style.FramePadding.y) : (g.FontSize*0.5f));
 
-        if (select_all || (hovered && !io.DoubleClickSelectsWord && io.MouseDoubleClicked[0]))
+        const bool osx_double_click_selects_words = io.OSXBehaviors;      // OS X style: Double click selects by word instead of selecting whole text
+        if (select_all || (hovered && !osx_double_click_selects_words && io.MouseDoubleClicked[0]))
         {
             edit_state.SelectAll();
             edit_state.SelectedAllMouseLock = true;
         }
-        else if (hovered && io.DoubleClickSelectsWord && io.MouseDoubleClicked[0])
+        else if (hovered && osx_double_click_selects_words && io.MouseDoubleClicked[0])
         {
             // Select a word only, OS X style (by simulating keystrokes)
             edit_state.OnKeyPressed(STB_TEXTEDIT_K_WORDLEFT);
@@ -7744,14 +7738,14 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (edit_state.SelectedAllMouseLock && !io.MouseDown[0])
             edit_state.SelectedAllMouseLock = false;
 
-        if (g.IO.InputCharacters[0])
+        if (io.InputCharacters[0])
         {
             // Process text input (before we check for Return because using some IME will effectively send a Return?)
             // We ignore CTRL inputs, but need to allow CTRL+ALT as some keyboards (e.g. German) use AltGR - which is Alt+Ctrl - to input certain characters.
-            if (!(is_ctrl_down && !is_alt_down) && is_editable)
+            if (!(io.KeyCtrl && !io.KeyAlt) && is_editable)
             {
-                for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
-                    if (unsigned int c = (unsigned int)g.IO.InputCharacters[n])
+                for (int n = 0; n < IM_ARRAYSIZE(io.InputCharacters) && io.InputCharacters[n]; n++)
+                    if (unsigned int c = (unsigned int)io.InputCharacters[n])
                     {
                         // Insert character if they pass filtering
                         if (!InputTextFilterCharacter(&c, flags, callback, user_data))
@@ -7766,22 +7760,31 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
         // Handle various key-presses
         bool cancel_edit = false;
-        const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
-        const bool is_shortcutkey_only = (io.ShortcutsUseSuperKey ? (is_super_down && !is_alt_down && !is_shift_down && !is_ctrl_down) : (is_ctrl_down && !is_alt_down && !is_shift_down && !is_super_down));
-        const bool is_wordmove_key_down = (io.WordMovementUsesAltKey ? io.KeyAlt : io.KeyCtrl);
+        const int k_mask = (io.KeyShift ? STB_TEXTEDIT_K_SHIFT : 0);
+        const bool is_shortcut_key_only = (io.OSXBehaviors ? (io.KeySuper && !io.KeyCtrl) : (io.KeyCtrl && !io.KeySuper)) && !io.KeyAlt && !io.KeyShift; // OS X style: Shortcuts using Cmd/Super instead of Ctrl
+        const bool is_wordmove_key_down = io.OSXBehaviors ? io.KeyAlt : io.KeyCtrl;                     // OS X style: Text editing cursor movement using Alt instead of Ctrl
+        const bool is_startend_key_down = io.OSXBehaviors && io.KeySuper && !io.KeyCtrl && !io.KeyAlt;  // OS X style: Line/Text Start and End using Cmd+Arrows instead of Home/End
 
-        if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed(is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed(is_wordmove_key_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
-        else if (is_multiline && IsKeyPressedMap(ImGuiKey_UpArrow))     { if (is_ctrl_down) SetWindowScrollY(draw_window, ImMax(draw_window->Scroll.y - g.FontSize, 0.0f)); else edit_state.OnKeyPressed(STB_TEXTEDIT_K_UP | k_mask); }
-        else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { if (is_ctrl_down) SetWindowScrollY(draw_window, ImMin(draw_window->Scroll.y + g.FontSize, GetScrollMaxY())); else edit_state.OnKeyPressed(STB_TEXTEDIT_K_DOWN| k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Home))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_End))                         { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
+        if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINESTART : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT : STB_TEXTEDIT_K_LEFT) | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINEEND : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDRIGHT : STB_TEXTEDIT_K_RIGHT) | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_UpArrow) && is_multiline)     { if (io.KeyCtrl) SetWindowScrollY(draw_window, ImMax(draw_window->Scroll.y - g.FontSize, 0.0f)); else edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTSTART : STB_TEXTEDIT_K_UP) | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_DownArrow) && is_multiline)   { if (io.KeyCtrl) SetWindowScrollY(draw_window, ImMin(draw_window->Scroll.y + g.FontSize, GetScrollMaxY())); else edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTEND : STB_TEXTEDIT_K_DOWN) | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_Home))                        { edit_state.OnKeyPressed(io.KeyCtrl ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_End))                         { edit_state.OnKeyPressed(io.KeyCtrl ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Delete) && is_editable)       { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Backspace) && is_editable)    { if (is_ctrl_down && !edit_state.HasSelection()) edit_state.OnKeyPressed(STB_TEXTEDIT_K_WORDLEFT|STB_TEXTEDIT_K_SHIFT); edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_Backspace) && is_editable)
+        {
+            if (!edit_state.HasSelection())
+            {
+                if (is_wordmove_key_down) edit_state.OnKeyPressed(STB_TEXTEDIT_K_WORDLEFT|STB_TEXTEDIT_K_SHIFT);
+                else if (io.OSXBehaviors && io.KeySuper && !io.KeyAlt && !io.KeyCtrl) edit_state.OnKeyPressed(STB_TEXTEDIT_K_LINESTART|STB_TEXTEDIT_K_SHIFT);
+            }
+            edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask);
+        }
         else if (IsKeyPressedMap(ImGuiKey_Enter))
         {
             bool ctrl_enter_for_new_line = (flags & ImGuiInputTextFlags_CtrlEnterForNewLine) != 0;
-            if (!is_multiline || (ctrl_enter_for_new_line && !is_ctrl_down) || (!ctrl_enter_for_new_line && is_ctrl_down))
+            if (!is_multiline || (ctrl_enter_for_new_line && !io.KeyCtrl) || (!ctrl_enter_for_new_line && io.KeyCtrl))
             {
                 SetActiveID(0);
                 enter_pressed = true;
@@ -7793,30 +7796,30 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     edit_state.OnKeyPressed((int)c);
             }
         }
-        else if ((flags & ImGuiInputTextFlags_AllowTabInput) && IsKeyPressedMap(ImGuiKey_Tab) && !is_ctrl_down && !is_shift_down && !is_alt_down && is_editable)
+        else if ((flags & ImGuiInputTextFlags_AllowTabInput) && IsKeyPressedMap(ImGuiKey_Tab) && !io.KeyCtrl && !io.KeyShift && !io.KeyAlt && is_editable)
         {
             unsigned int c = '\t'; // Insert TAB
             if (InputTextFilterCharacter(&c, flags, callback, user_data))
                 edit_state.OnKeyPressed((int)c);
         }
         else if (IsKeyPressedMap(ImGuiKey_Escape))                                     { SetActiveID(0); cancel_edit = true; }
-        else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
-        else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)    { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
-        else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_A))                   { edit_state.SelectAll(); edit_state.CursorFollow = true; }
-        else if (is_shortcutkey_only && !is_password && ((IsKeyPressedMap(ImGuiKey_X) && is_editable) || IsKeyPressedMap(ImGuiKey_C)) && (!is_multiline || edit_state.HasSelection()))
+        else if (is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_Z) && is_editable)   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_UNDO); edit_state.ClearSelection(); }
+        else if (is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_Y) && is_editable)   { edit_state.OnKeyPressed(STB_TEXTEDIT_K_REDO); edit_state.ClearSelection(); }
+        else if (is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_A))                  { edit_state.SelectAll(); edit_state.CursorFollow = true; }
+        else if (is_shortcut_key_only && !is_password && ((IsKeyPressedMap(ImGuiKey_X) && is_editable) || IsKeyPressedMap(ImGuiKey_C)) && (!is_multiline || edit_state.HasSelection()))
         {
             // Cut, Copy
             const bool cut = IsKeyPressedMap(ImGuiKey_X);
             if (cut && !edit_state.HasSelection())
                 edit_state.SelectAll();
 
-            if (g.IO.SetClipboardTextFn)
+            if (io.SetClipboardTextFn)
             {
                 const int ib = edit_state.HasSelection() ? ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end) : 0;
                 const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : edit_state.CurLenW;
                 edit_state.TempTextBuffer.resize((ie-ib) * 4 + 1);
                 ImTextStrToUtf8(edit_state.TempTextBuffer.Data, edit_state.TempTextBuffer.Size, edit_state.Text.Data+ib, edit_state.Text.Data+ie);
-                g.IO.SetClipboardTextFn(edit_state.TempTextBuffer.Data);
+                io.SetClipboardTextFn(edit_state.TempTextBuffer.Data);
             }
 
             if (cut)
@@ -7825,35 +7828,32 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 stb_textedit_cut(&edit_state, &edit_state.StbState);
             }
         }
-        else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_V) && is_editable)
+        else if (is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_V) && is_editable)
         {
             // Paste
-            if (g.IO.GetClipboardTextFn)
+            if (const char* clipboard = io.GetClipboardTextFn ? io.GetClipboardTextFn() : NULL)
             {
-                if (const char* clipboard = g.IO.GetClipboardTextFn())
+                // Filter pasted buffer
+                const int clipboard_len = (int)strlen(clipboard);
+                ImWchar* clipboard_filtered = (ImWchar*)ImGui::MemAlloc((clipboard_len+1) * sizeof(ImWchar));
+                int clipboard_filtered_len = 0;
+                for (const char* s = clipboard; *s; )
                 {
-                    // Remove new-line from pasted buffer
-                    const int clipboard_len = (int)strlen(clipboard);
-                    ImWchar* clipboard_filtered = (ImWchar*)ImGui::MemAlloc((clipboard_len+1) * sizeof(ImWchar));
-                    int clipboard_filtered_len = 0;
-                    for (const char* s = clipboard; *s; )
-                    {
-                        unsigned int c;
-                        s += ImTextCharFromUtf8(&c, s, NULL);
-                        if (c == 0)
-                            break;
-                        if (c >= 0x10000 || !InputTextFilterCharacter(&c, flags, callback, user_data))
-                            continue;
-                        clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
-                    }
-                    clipboard_filtered[clipboard_filtered_len] = 0;
-                    if (clipboard_filtered_len > 0) // If everything was filtered, ignore the pasting operation
-                    {
-                        stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
-                        edit_state.CursorFollow = true;
-                    }
-                    ImGui::MemFree(clipboard_filtered);
+                    unsigned int c;
+                    s += ImTextCharFromUtf8(&c, s, NULL);
+                    if (c == 0)
+                        break;
+                    if (c >= 0x10000 || !InputTextFilterCharacter(&c, flags, callback, user_data))
+                        continue;
+                    clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
                 }
+                clipboard_filtered[clipboard_filtered_len] = 0;
+                if (clipboard_filtered_len > 0) // If everything was filtered, ignore the pasting operation
+                {
+                    stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
+                    edit_state.CursorFollow = true;
+                }
+                ImGui::MemFree(clipboard_filtered);
             }
         }
 
@@ -7967,7 +7967,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool is_currently_scrolling = (edit_state.Id == id && is_multiline && g.ActiveId == draw_window->GetIDNoKeepAlive("#SCROLLY"));
     if (g.ActiveId == id || is_currently_scrolling)
     {
-        edit_state.CursorAnim += g.IO.DeltaTime;
+        edit_state.CursorAnim += io.DeltaTime;
 
         // This is going to be messy. We need to:
         // - Display the text (this alone can be more easily clipped)
