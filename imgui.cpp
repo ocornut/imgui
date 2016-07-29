@@ -7768,16 +7768,14 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         // Handle various key-presses
         bool cancel_edit = false;
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
-        const bool is_shortcutkey_only = (io.ShortcutsUseSuperKey ? (is_super_down && !is_alt_down && !is_shift_down && !is_ctrl_down) : (is_ctrl_down && !is_alt_down && !is_shift_down && !is_super_down));
-        const bool is_shortcutkey_and_maybe_shift_only = (io.ShortcutsUseSuperKey ? (is_super_down && !is_alt_down && !is_ctrl_down) : (is_ctrl_down && !is_alt_down && !is_super_down));
-        const bool is_wordmove_key_down = (io.WordMovementUsesAltKey ? io.KeyAlt : io.KeyCtrl);
-        const bool is_line_startend_key_down = io.HomeEndUsesArrowSuperKey && is_super_down && !is_ctrl_down && !is_alt_down;
-        const bool is_text_startend_key_down = is_line_startend_key_down;
+        const bool is_shortcutkey_only = io.ShortcutsUseSuperKey ? (is_super_down && !is_alt_down && !is_shift_down && !is_ctrl_down) : (is_ctrl_down && !is_alt_down && !is_shift_down && !is_super_down);
+        const bool is_wordmove_key_down = io.WordMovementUsesAltKey ? io.KeyAlt : io.KeyCtrl;
+        const bool is_startend_key_down = io.HomeEndUsesArrowSuperKey && is_super_down && !is_ctrl_down && !is_alt_down;
 
-        if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed(is_line_startend_key_down ? STB_TEXTEDIT_K_LINESTART | k_mask : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT | k_mask : STB_TEXTEDIT_K_LEFT | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed(is_line_startend_key_down ? STB_TEXTEDIT_K_LINEEND | k_mask : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDRIGHT | k_mask  : STB_TEXTEDIT_K_RIGHT | k_mask); }
-        else if (is_multiline && IsKeyPressedMap(ImGuiKey_UpArrow))     { if (is_ctrl_down) SetWindowScrollY(draw_window, ImMax(draw_window->Scroll.y - g.FontSize, 0.0f)); else edit_state.OnKeyPressed((is_text_startend_key_down ? STB_TEXTEDIT_K_TEXTSTART : STB_TEXTEDIT_K_UP) | k_mask); }
-        else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { if (is_ctrl_down) SetWindowScrollY(draw_window, ImMin(draw_window->Scroll.y + g.FontSize, GetScrollMaxY())); else edit_state.OnKeyPressed((is_line_startend_key_down ? STB_TEXTEDIT_K_TEXTEND : STB_TEXTEDIT_K_DOWN) | k_mask); }
+        if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINESTART : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT : STB_TEXTEDIT_K_LEFT) | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINEEND : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDRIGHT : STB_TEXTEDIT_K_RIGHT) | k_mask); }
+        else if (is_multiline && IsKeyPressedMap(ImGuiKey_UpArrow))     { if (is_ctrl_down) SetWindowScrollY(draw_window, ImMax(draw_window->Scroll.y - g.FontSize, 0.0f)); else edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTSTART : STB_TEXTEDIT_K_UP) | k_mask); }
+        else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { if (is_ctrl_down) SetWindowScrollY(draw_window, ImMin(draw_window->Scroll.y + g.FontSize, GetScrollMaxY())); else edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTEND : STB_TEXTEDIT_K_DOWN) | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Home))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_End))                         { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Delete) && is_editable)       { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
@@ -7786,7 +7784,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             if (!edit_state.HasSelection())
             {
                 if (is_wordmove_key_down) edit_state.OnKeyPressed(STB_TEXTEDIT_K_WORDLEFT|STB_TEXTEDIT_K_SHIFT);
-                else if (io.ShortcutsUseSuperKey && is_shortcutkey_and_maybe_shift_only) edit_state.OnKeyPressed(STB_TEXTEDIT_K_LINESTART|STB_TEXTEDIT_K_SHIFT);
+                else if (io.ShortcutsUseSuperKey && is_super_down && !is_alt_down && !is_ctrl_down) edit_state.OnKeyPressed(STB_TEXTEDIT_K_LINESTART|STB_TEXTEDIT_K_SHIFT);
             }
             edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask);
         }
