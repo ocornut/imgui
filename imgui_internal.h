@@ -436,9 +436,6 @@ struct ImGuiContext
     ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont()
     ImVector<ImGuiPopupRef> OpenPopupStack;                     // Which popups are open (persistent)
     ImVector<ImGuiPopupRef> CurrentPopupStack;                  // Which level of BeginPopup() we are in (reset every frame)
-    ImGuiLayout*            CurrentLayout;
-    ImVector<ImGuiLayout*>  LayoutStack;
-    ImVector<ImGuiLayout*>  Layouts;
 
     // Storage for SetNexWindow** and SetNextTreeNode*** functions
     ImVec2                  SetNextWindowPosVal;
@@ -522,7 +519,6 @@ struct ImGuiContext
         MovedWindow = NULL;
         MovedWindowMoveId = 0;
         SettingsDirtyTimer = 0.0f;
-        CurrentLayout = NULL;
 
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
         SetNextWindowSizeVal = ImVec2(0.0f, 0.0f);
@@ -590,6 +586,9 @@ struct IMGUI_API ImGuiDrawContext
     ImVector<ImGuiWindow*>  ChildWindows;
     ImGuiStorage*           StateStorage;
     ImGuiLayoutType         LayoutType;
+    ImGuiLayout*            CurrentLayout;
+    ImVector<ImGuiLayout*>  LayoutStack;
+    ImGuiStorage            Layouts;
 
     // We store the current settings outside of the vectors to increase memory locality (reduce cache misses). The vectors are rarely modified. Also it allows us to not heap allocate for short-lived windows which are not using those settings.
     float                   ItemWidth;              // == ItemWidthStack.back(). 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
@@ -632,6 +631,7 @@ struct IMGUI_API ImGuiDrawContext
         MenuBarOffsetX = 0.0f;
         StateStorage = NULL;
         LayoutType = ImGuiLayoutType_Vertical;
+        CurrentLayout = NULL;
         ItemWidth = 0.0f;
         ButtonRepeat = false;
         AllowKeyboardFocus = true;

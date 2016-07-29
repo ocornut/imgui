@@ -684,7 +684,7 @@ static void             BeginLayout(ImGuiID id, ImGuiLayoutType type, ImVec2 siz
 static void             EndLayout(ImGuiLayoutType type);
 static void             PushLayout(ImGuiLayout* layout);
 static void             PopLayout(ImGuiLayout* layout);
-static void             ReflowLayouts();
+static void             ProcessLayouts(ImGuiWindow* window);
 static void             CalculateLayoutAvailableSpace(ImGuiLayout* layout);
 static void             PropagateLayoutSpace(ImGuiLayout* layout, const ImVec2& extents);
 static void             DistributeAvailableLayoutSpace(ImGuiLayout* layout);
@@ -1781,6 +1781,13 @@ ImGuiWindow::ImGuiWindow(const char* name)
 
 ImGuiWindow::~ImGuiWindow()
 {
+    for (int i = 0; i < DC.Layouts.Data.Size; ++i)
+    {
+        ImGuiLayout* layout = (ImGuiLayout*)DC.Layouts.Data[i].val_p;
+        layout->~ImGuiLayout();
+        ImGui::MemFree(layout);
+    }
+
     DrawList->~ImDrawList();
     ImGui::MemFree(DrawList);
     DrawList = NULL;
@@ -1865,7 +1872,7 @@ void ImGui::ItemSize(const ImVec2& size, float text_offset_y)
     const float text_base_offset = ImMax(window->DC.CurrentLineTextBaseOffset, text_offset_y);
     window->DC.CursorPosPrevLine = ImVec2(window->DC.CursorPos.x + size.x, window->DC.CursorPos.y);
 
-    if (!g.CurrentLayout || g.CurrentLayout->Type == ImGuiLayoutType_Vertical)
+    if (!window->DC.CurrentLayout || window->DC.CurrentLayout->Type == ImGuiLayoutType_Vertical)
     {
         // Move cursor to next line, x to left, y down.
         window->DC.CursorPos = ImVec2(
@@ -2356,12 +2363,6 @@ void ImGui::Shutdown()
 
     SaveSettings();
 
-    for (int i = 0; i < g.Layouts.Size; ++i)
-    {
-        g.Layouts[i]->~ImGuiLayout();
-        ImGui::MemFree(g.Layouts[i]);
-    }
-
     for (int i = 0; i < g.Windows.Size; i++)
     {
         g.Windows[i]->~ImGuiWindow();
@@ -2624,8 +2625,6 @@ void ImGui::EndFrame()
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // ImGui::EndFrame() called multiple times, or forgot to call ImGui::NewFrame() again
-
-    ReflowLayouts();
 
     // Render tooltip
     if (g.Tooltip[0])
@@ -3704,14 +3703,14 @@ static void CheckStacksSize(ImGuiWindow* window, bool write)
     { int current = g.StyleModifiers.Size;      if (write) *p_backup = current; else IM_ASSERT(*p_backup == current && "PushStyleVar/PopStyleVar Mismatch!");       p_backup++; }    // User forgot PopStyleVar()
     { int current = g.FontStack.Size;           if (write) *p_backup = current; else IM_ASSERT(*p_backup == current && "PushFont/PopFont Mismatch!");               p_backup++; }    // User forgot PopFont()
     { // User forgot EndVertical() or EndHorizontal()
-        int current = g.LayoutStack.Size;
+        int current = window->DC.LayoutStack.Size;
         if (write)
         {
             *p_backup = current;
         }
-        else if (!g.LayoutStack.empty() && g.LayoutStack.back())
+        else if (!window->DC.LayoutStack.empty() && window->DC.LayoutStack.back())
         {
-            if (current == 0 || g.LayoutStack.back()->Type == ImGuiLayoutType_Horizontal)
+            if (current == 0 || window->DC.LayoutStack.back()->Type == ImGuiLayoutType_Horizontal)
                 IM_ASSERT(*p_backup == current && "BeginHorizontal/EndHorizontal Mismatch!");
             else
                 IM_ASSERT(*p_backup == current && "BeginVertical/EndVertical Mismatch!");
@@ -4426,6 +4425,8 @@ void ImGui::End()
 
     Columns(1, "#CloseColumns");
     PopClipRect();   // inner window clip rectangle
+
+    ProcessLayouts(window);
 
     // Stop logging
     if (!(window->Flags & ImGuiWindowFlags_ChildWindow))    // FIXME: add more options for scope of logging
@@ -9283,39 +9284,33 @@ static ImGuiLayout* FindLayout(ImGuiID id, ImGuiLayoutType type)
 {
     IM_ASSERT(type == ImGuiLayoutType_Horizontal || type == ImGuiLayoutType_Vertical);
 
-    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImGuiLayout* layout = (ImGuiLayout*)window->DC.Layouts.GetVoidPtr(id);
+    if (!layout)
+        return NULL;
 
-    for (int i = 0; i != g.Layouts.Size; i++)
+    if (layout->Type != type)
     {
-        ImGuiLayout* layout = g.Layouts[i];
-        if (layout->Id == id)
-        {
-            if (layout->Type != type)
-            {
-                layout->Type   = type;
-                layout->Dirty  = ImGuiLayoutDirtyFlags_Uninitialized;
-                layout->Bounds = ImVec2(0.0f, 0.0f);
-                layout->Items.clear();
-            }
-
-            return layout;
-        }
+        layout->Type   = type;
+        layout->Dirty  = ImGuiLayoutDirtyFlags_Uninitialized;
+        layout->Bounds = ImVec2(0.0f, 0.0f);
+        layout->Items.clear();
     }
 
-    return NULL;
+    return layout;
 }
 
 static ImGuiLayout* CreateNewLayout(ImGuiID id, ImGuiLayoutType type, ImVec2 size)
 {
     IM_ASSERT(type == ImGuiLayoutType_Horizontal || type == ImGuiLayoutType_Vertical);
 
-    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
 
     ImGuiLayout* layout = (ImGuiLayout*)ImGui::MemAlloc(sizeof(ImGuiLayout));
     IM_PLACEMENT_NEW(layout) ImGuiLayout(id, type);
     layout->Size = size;
 
-    g.Layouts.push_back(layout);
+    window->DC.Layouts.SetVoidPtr(id, layout);
 
     return layout;
 }
@@ -9356,11 +9351,11 @@ static void BeginLayout(ImGuiID id, ImGuiLayoutType type, ImVec2 size, float ali
 
 static void EndLayout(ImGuiLayoutType type)
 {
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.CurrentLayout);
-    IM_ASSERT(g.CurrentLayout->Type == type);
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    IM_ASSERT(window->DC.CurrentLayout);
+    IM_ASSERT(window->DC.CurrentLayout->Type == type);
 
-    ImGuiLayout* layout = g.CurrentLayout;
+    ImGuiLayout* layout = window->DC.CurrentLayout;
 
     EndLayoutItem(layout, true);
 
@@ -9467,16 +9462,16 @@ static ImVec2 CalculateMinimumLayoutSize(ImGuiLayout* layout)
 
 static void PushLayout(ImGuiLayout* layout)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
 
     if (layout)
     {
-        layout->Parent = g.CurrentLayout;
-        if (g.CurrentLayout)
+        layout->Parent = window->DC.CurrentLayout;
+        if (window->DC.CurrentLayout)
         {
-            layout->NextSibling         = g.CurrentLayout->FirstChild;
+            layout->NextSibling         = window->DC.CurrentLayout->FirstChild;
             layout->FirstChild          = NULL;
-            g.CurrentLayout->FirstChild = layout;
+            window->DC.CurrentLayout->FirstChild = layout;
         }
         else
         {
@@ -9485,23 +9480,23 @@ static void PushLayout(ImGuiLayout* layout)
         }
     }
 
-    g.LayoutStack.push_back(layout);
-    g.CurrentLayout = layout;
+    window->DC.LayoutStack.push_back(layout);
+    window->DC.CurrentLayout = layout;
 }
 
 static void PopLayout(ImGuiLayout* layout)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
 
-    IM_ASSERT(!g.LayoutStack.empty());
-    IM_ASSERT(g.LayoutStack.back() == layout);
+    IM_ASSERT(!window->DC.LayoutStack.empty());
+    IM_ASSERT(window->DC.LayoutStack.back() == layout);
 
-    g.LayoutStack.pop_back();
+    window->DC.LayoutStack.pop_back();
 
-    if (!g.LayoutStack.empty())
-        g.CurrentLayout = g.LayoutStack.back();
+    if (!window->DC.LayoutStack.empty())
+        window->DC.CurrentLayout = window->DC.LayoutStack.back();
     else
-        g.CurrentLayout = NULL;
+        window->DC.CurrentLayout = NULL;
 }
 
 static void PropagateLayoutSpace(ImGuiLayout* layout, const ImVec2& extents)
@@ -9615,13 +9610,11 @@ static void DistributeAvailableLayoutSpace(ImGuiLayout* layout)
     layout->Dirty = ImGuiLayoutDirtyFlags_None;
 }
 
-static void ReflowLayouts()
+static void ProcessLayouts(ImGuiWindow* window)
 {
-    ImGuiContext& g = *GImGui;
-
-    for (int i = 0; i < g.Layouts.size(); ++i)
+    for (int i = 0; i < window->DC.Layouts.Data.size(); ++i)
     {
-        ImGuiLayout* layout = g.Layouts[i];
+        ImGuiLayout* layout = (ImGuiLayout*)window->DC.Layouts.Data[i].val_p;
         if (!layout->Parent && layout->Dirty)
         {
             CalculateLayoutAvailableSpace(layout);
@@ -9864,23 +9857,22 @@ void ImGui::EndVertical()
 //      spacing >= 0    : enforce spacing amount
 void ImGui::Spring(float weight/* = 1.0f*/, float spacing/* = -1.0f*/)
 {
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.CurrentLayout);
+    ImGuiWindow* window = GetCurrentWindow();
+    IM_ASSERT(window->DC.CurrentLayout);
 
-    AddLayoutSpring(g.CurrentLayout, weight, spacing);
+    AddLayoutSpring(window->DC.CurrentLayout, weight, spacing);
 }
 
 void ImGui::SuspendLayout()
 {
-    ImGuiContext& g = *GImGui;
     PushLayout(NULL);
 }
 
 void ImGui::ResumeLayout()
 {
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(!g.CurrentLayout);
-    IM_ASSERT(!g.LayoutStack.empty());
+    ImGuiWindow* window = GetCurrentWindow();
+    IM_ASSERT(!window->DC.CurrentLayout);
+    IM_ASSERT(!window->DC.LayoutStack.empty());
     PopLayout(NULL);
 }
 
