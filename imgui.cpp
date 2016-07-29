@@ -7771,8 +7771,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINESTART : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT : STB_TEXTEDIT_K_LEFT) | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINEEND : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDRIGHT : STB_TEXTEDIT_K_RIGHT) | k_mask); }
-        else if (is_multiline && IsKeyPressedMap(ImGuiKey_UpArrow))     { if (is_ctrl_down) SetWindowScrollY(draw_window, ImMax(draw_window->Scroll.y - g.FontSize, 0.0f)); else edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTSTART : STB_TEXTEDIT_K_UP) | k_mask); }
-        else if (is_multiline && IsKeyPressedMap(ImGuiKey_DownArrow))   { if (is_ctrl_down) SetWindowScrollY(draw_window, ImMin(draw_window->Scroll.y + g.FontSize, GetScrollMaxY())); else edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTEND : STB_TEXTEDIT_K_DOWN) | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_UpArrow) && is_multiline)     { if (is_ctrl_down) SetWindowScrollY(draw_window, ImMax(draw_window->Scroll.y - g.FontSize, 0.0f)); else edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTSTART : STB_TEXTEDIT_K_UP) | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_DownArrow) && is_multiline)   { if (is_ctrl_down) SetWindowScrollY(draw_window, ImMin(draw_window->Scroll.y + g.FontSize, GetScrollMaxY())); else edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTEND : STB_TEXTEDIT_K_DOWN) | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Home))                        { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_End))                         { edit_state.OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Delete) && is_editable)       { edit_state.OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
@@ -7835,32 +7835,29 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_V) && is_editable)
         {
             // Paste
-            if (io.GetClipboardTextFn)
+            if (const char* clipboard = io.GetClipboardTextFn ? io.GetClipboardTextFn() : NULL)
             {
-                if (const char* clipboard = io.GetClipboardTextFn())
+                // Remove new-line from pasted buffer
+                const int clipboard_len = (int)strlen(clipboard);
+                ImWchar* clipboard_filtered = (ImWchar*)ImGui::MemAlloc((clipboard_len+1) * sizeof(ImWchar));
+                int clipboard_filtered_len = 0;
+                for (const char* s = clipboard; *s; )
                 {
-                    // Remove new-line from pasted buffer
-                    const int clipboard_len = (int)strlen(clipboard);
-                    ImWchar* clipboard_filtered = (ImWchar*)ImGui::MemAlloc((clipboard_len+1) * sizeof(ImWchar));
-                    int clipboard_filtered_len = 0;
-                    for (const char* s = clipboard; *s; )
-                    {
-                        unsigned int c;
-                        s += ImTextCharFromUtf8(&c, s, NULL);
-                        if (c == 0)
-                            break;
-                        if (c >= 0x10000 || !InputTextFilterCharacter(&c, flags, callback, user_data))
-                            continue;
-                        clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
-                    }
-                    clipboard_filtered[clipboard_filtered_len] = 0;
-                    if (clipboard_filtered_len > 0) // If everything was filtered, ignore the pasting operation
-                    {
-                        stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
-                        edit_state.CursorFollow = true;
-                    }
-                    ImGui::MemFree(clipboard_filtered);
+                    unsigned int c;
+                    s += ImTextCharFromUtf8(&c, s, NULL);
+                    if (c == 0)
+                        break;
+                    if (c >= 0x10000 || !InputTextFilterCharacter(&c, flags, callback, user_data))
+                        continue;
+                    clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
                 }
+                clipboard_filtered[clipboard_filtered_len] = 0;
+                if (clipboard_filtered_len > 0) // If everything was filtered, ignore the pasting operation
+                {
+                    stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
+                    edit_state.CursorFollow = true;
+                }
+                ImGui::MemFree(clipboard_filtered);
             }
         }
 
