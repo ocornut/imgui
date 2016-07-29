@@ -7717,8 +7717,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         g.ActiveIdAllowOverlap = !io.MouseDown[0];
 
         // Edit in progress
-        const float mouse_x = (g.IO.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + edit_state.ScrollX;
-        const float mouse_y = (is_multiline ? (g.IO.MousePos.y - draw_window->DC.CursorPos.y - style.FramePadding.y) : (g.FontSize*0.5f));
+        const float mouse_x = (io.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + edit_state.ScrollX;
+        const float mouse_y = (is_multiline ? (io.MousePos.y - draw_window->DC.CursorPos.y - style.FramePadding.y) : (g.FontSize*0.5f));
 
         if (select_all || (hovered && !io.DoubleClickSelectsWord && io.MouseDoubleClicked[0]))
         {
@@ -7745,14 +7745,14 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (edit_state.SelectedAllMouseLock && !io.MouseDown[0])
             edit_state.SelectedAllMouseLock = false;
 
-        if (g.IO.InputCharacters[0])
+        if (io.InputCharacters[0])
         {
             // Process text input (before we check for Return because using some IME will effectively send a Return?)
             // We ignore CTRL inputs, but need to allow CTRL+ALT as some keyboards (e.g. German) use AltGR - which is Alt+Ctrl - to input certain characters.
             if (!(is_ctrl_down && !is_alt_down) && is_editable)
             {
-                for (int n = 0; n < IM_ARRAYSIZE(g.IO.InputCharacters) && g.IO.InputCharacters[n]; n++)
-                    if (unsigned int c = (unsigned int)g.IO.InputCharacters[n])
+                for (int n = 0; n < IM_ARRAYSIZE(io.InputCharacters) && io.InputCharacters[n]; n++)
+                    if (unsigned int c = (unsigned int)io.InputCharacters[n])
                     {
                         // Insert character if they pass filtering
                         if (!InputTextFilterCharacter(&c, flags, callback, user_data))
@@ -7820,13 +7820,13 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             if (cut && !edit_state.HasSelection())
                 edit_state.SelectAll();
 
-            if (g.IO.SetClipboardTextFn)
+            if (io.SetClipboardTextFn)
             {
                 const int ib = edit_state.HasSelection() ? ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end) : 0;
                 const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : edit_state.CurLenW;
                 edit_state.TempTextBuffer.resize((ie-ib) * 4 + 1);
                 ImTextStrToUtf8(edit_state.TempTextBuffer.Data, edit_state.TempTextBuffer.Size, edit_state.Text.Data+ib, edit_state.Text.Data+ie);
-                g.IO.SetClipboardTextFn(edit_state.TempTextBuffer.Data);
+                io.SetClipboardTextFn(edit_state.TempTextBuffer.Data);
             }
 
             if (cut)
@@ -7838,9 +7838,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         else if (is_shortcutkey_only && IsKeyPressedMap(ImGuiKey_V) && is_editable)
         {
             // Paste
-            if (g.IO.GetClipboardTextFn)
+            if (io.GetClipboardTextFn)
             {
-                if (const char* clipboard = g.IO.GetClipboardTextFn())
+                if (const char* clipboard = io.GetClipboardTextFn())
                 {
                     // Remove new-line from pasted buffer
                     const int clipboard_len = (int)strlen(clipboard);
@@ -7977,7 +7977,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool is_currently_scrolling = (edit_state.Id == id && is_multiline && g.ActiveId == draw_window->GetIDNoKeepAlive("#SCROLLY"));
     if (g.ActiveId == id || is_currently_scrolling)
     {
-        edit_state.CursorAnim += g.IO.DeltaTime;
+        edit_state.CursorAnim += io.DeltaTime;
 
         // This is going to be messy. We need to:
         // - Display the text (this alone can be more easily clipped)
