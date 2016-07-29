@@ -830,11 +830,7 @@ ImGuiIO::ImGuiIO()
 
     // Set OS X style defaults based on __APPLE__ compile time flag
 #ifdef __APPLE__
-    WordMovementUsesAltKey = true;      // OS X style: Text editing cursor movement using Alt instead of Ctrl
-    ShortcutsUseSuperKey = true;        // OS X style: Shortcuts using Cmd/Super instead of Ctrl
-    HomeEndUsesArrowSuperKey = true;    // OS X style: Line/Text Start and End using Cmd+Arrows instead of Home/End
-    DoubleClickSelectsWord = true;      // OS X style: Double click selects by word instead of selecting whole text
-    MultiSelectUsesSuperKey = true;     // OS X style: Multi-selection in lists uses Cmd/Super instead of Ctrl 
+    OSXBehaviors = true;
 #endif
 }
 
@@ -7720,12 +7716,13 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         const float mouse_x = (io.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + edit_state.ScrollX;
         const float mouse_y = (is_multiline ? (io.MousePos.y - draw_window->DC.CursorPos.y - style.FramePadding.y) : (g.FontSize*0.5f));
 
-        if (select_all || (hovered && !io.DoubleClickSelectsWord && io.MouseDoubleClicked[0]))
+        const bool osx_double_click_selects_words = io.OSXBehaviors;      // OS X style: Double click selects by word instead of selecting whole text
+        if (select_all || (hovered && !osx_double_click_selects_words && io.MouseDoubleClicked[0]))
         {
             edit_state.SelectAll();
             edit_state.SelectedAllMouseLock = true;
         }
-        else if (hovered && io.DoubleClickSelectsWord && io.MouseDoubleClicked[0])
+        else if (hovered && osx_double_click_selects_words && io.MouseDoubleClicked[0])
         {
             // Select a word only, OS X style (by simulating keystrokes)
             edit_state.OnKeyPressed(STB_TEXTEDIT_K_WORDLEFT);
@@ -7768,9 +7765,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         // Handle various key-presses
         bool cancel_edit = false;
         const int k_mask = (is_shift_down ? STB_TEXTEDIT_K_SHIFT : 0);
-        const bool is_shortcutkey_only = io.ShortcutsUseSuperKey ? (is_super_down && !is_alt_down && !is_shift_down && !is_ctrl_down) : (is_ctrl_down && !is_alt_down && !is_shift_down && !is_super_down);
-        const bool is_wordmove_key_down = io.WordMovementUsesAltKey ? io.KeyAlt : io.KeyCtrl;
-        const bool is_startend_key_down = io.HomeEndUsesArrowSuperKey && is_super_down && !is_ctrl_down && !is_alt_down;
+        const bool is_shortcutkey_only = (io.OSXBehaviors ? (is_super_down && !is_ctrl_down) : (is_ctrl_down && !is_super_down)) && !is_alt_down && !is_shift_down; // OS X style: Shortcuts using Cmd/Super instead of Ctrl
+        const bool is_wordmove_key_down = io.OSXBehaviors ? is_alt_down : is_ctrl_down;                         // OS X style: Text editing cursor movement using Alt instead of Ctrl
+        const bool is_startend_key_down = io.OSXBehaviors && is_super_down && !is_ctrl_down && !is_alt_down;    // OS X style: Line/Text Start and End using Cmd+Arrows instead of Home/End
 
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINESTART : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT : STB_TEXTEDIT_K_LEFT) | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { edit_state.OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINEEND : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDRIGHT : STB_TEXTEDIT_K_RIGHT) | k_mask); }
@@ -7784,7 +7781,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             if (!edit_state.HasSelection())
             {
                 if (is_wordmove_key_down) edit_state.OnKeyPressed(STB_TEXTEDIT_K_WORDLEFT|STB_TEXTEDIT_K_SHIFT);
-                else if (io.ShortcutsUseSuperKey && is_super_down && !is_alt_down && !is_ctrl_down) edit_state.OnKeyPressed(STB_TEXTEDIT_K_LINESTART|STB_TEXTEDIT_K_SHIFT);
+                else if (io.OSXBehaviors && is_super_down && !is_alt_down && !is_ctrl_down) edit_state.OnKeyPressed(STB_TEXTEDIT_K_LINESTART|STB_TEXTEDIT_K_SHIFT);
             }
             edit_state.OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask);
         }
