@@ -2159,6 +2159,7 @@ struct ExampleAppConsole
         ImGui::Separator();
 
         // Command-line
+        bool reclaim_focus = false;
         if (ImGui::InputText("Input", InputBuf, IM_ARRAYSIZE(InputBuf), ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_CallbackHistory, &TextEditCallbackStub, (void*)this))
         {
             char* input_end = InputBuf+strlen(InputBuf);
@@ -2166,10 +2167,12 @@ struct ExampleAppConsole
             if (InputBuf[0])
                 ExecCommand(InputBuf);
             strcpy(InputBuf, "");
+            reclaim_focus = true;
         }
 
-        // Demonstrate keeping auto focus on the input box
-        if (ImGui::IsItemHovered() || (ImGui::IsRootWindowOrAnyChildFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0)))
+        // Demonstrate keeping focus on the input box
+        ImGui::SetItemDefaultFocus();
+        if (ImGui::IsItemHovered() || reclaim_focus)
             ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
 
         ImGui::End();
