@@ -682,7 +682,7 @@ static ImGuiIniData*    FindWindowSettings(const char* name);
 static ImGuiIniData*    AddWindowSettings(const char* name);
 static void             LoadSettings();
 static void             SaveSettings();
-static void             MarkSettingsDirty();
+static void             MarkSettingsDirty(ImGuiWindow* window);
 
 static void             PushColumnClipRect(int column_index = -1);
 static ImRect           GetVisibleRect();
@@ -2442,8 +2442,7 @@ static void NavUpdate()
             {
                 const float move_speed = ImFloor(600 * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
                 g.NavWindowingTarget->PosFloat += move_delta * move_speed;
-                if (!(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoSavedSettings))
-                    MarkSettingsDirty();
+                MarkSettingsDirty(g.NavWindowingTarget);
             }
         }
 
@@ -2708,8 +2707,7 @@ void ImGui::NewFrame()
             if (!(g.MovedWindow->Flags & ImGuiWindowFlags_NoMove))
             {
                 g.MovedWindow->PosFloat += g.IO.MouseDelta;
-                if (!(g.MovedWindow->Flags & ImGuiWindowFlags_NoSavedSettings))
-                    MarkSettingsDirty();
+                MarkSettingsDirty(g.MovedWindow);
             }
             FocusWindow(g.MovedWindow);
         }
@@ -3018,11 +3016,12 @@ static void SaveSettings()
     fclose(f);
 }
 
-static void MarkSettingsDirty()
+static void MarkSettingsDirty(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
-    if (g.SettingsDirtyTimer <= 0.0f)
-        g.SettingsDirtyTimer = g.IO.IniSavingRate;
+    if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))
+        if (g.SettingsDirtyTimer <= 0.0f)
+            g.SettingsDirtyTimer = g.IO.IniSavingRate;
 }
 
 // FIXME: Add a more explicit sort order in the window structure.
@@ -4563,8 +4562,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             if (window->CollapseToggleWanted || (g.HoveredWindow == window && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max) && g.IO.MouseDoubleClicked[0]))
             {
                 window->Collapsed = !window->Collapsed;
-                if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                    MarkSettingsDirty();
+                MarkSettingsDirty(window);
                 FocusWindow(window);
             }
         }
@@ -4639,8 +4637,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                     window->SizeFull.x = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.x, size_auto_fit.x) : size_auto_fit.x;
                 if (window->AutoFitFramesY > 0)
                     window->SizeFull.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
-                if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                    MarkSettingsDirty();
+                MarkSettingsDirty(window);
             }
         }
 
@@ -4805,8 +4802,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 if (size_target.x != FLT_MAX && size_target.y != FLT_MAX)
                 {
                     ApplySizeFullWithConstraint(window, size_target);
-                    if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                        MarkSettingsDirty();
+                    MarkSettingsDirty(window);
                 }
 
                 resize_col = GetColorU32(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
