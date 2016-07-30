@@ -206,11 +206,11 @@ enum ImGuiInputSource
 
 enum ImGuiNavDir
 {
-    ImGuiNavDir_None = -1,
-    ImGuiNavDir_W,      // Needs to be 0..3 (using arithmetic op in NavScoreItem())
-    ImGuiNavDir_E,
-    ImGuiNavDir_N,
-    ImGuiNavDir_S
+    ImGuiNavDir_None    = -1,
+    ImGuiNavDir_Left    = 0,
+    ImGuiNavDir_Right   = 1,
+    ImGuiNavDir_Up      = 2,
+    ImGuiNavDir_Down    = 3,
 };
 
 // 2D axis aligned bounding-box

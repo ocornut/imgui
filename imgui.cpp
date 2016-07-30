@@ -1898,8 +1898,8 @@ void ImGui::ItemSize(const ImRect& bb, float text_offset_y)
 static ImGuiNavDir NavScoreItemGetQuadrant(float dx, float dy)
 {
     if (fabsf(dx) > fabsf(dy))
-        return (dx > 0.0f) ? ImGuiNavDir_E : ImGuiNavDir_W;
-    return (dy > 0.0f) ? ImGuiNavDir_S : ImGuiNavDir_N;
+        return (dx > 0.0f) ? ImGuiNavDir_Right : ImGuiNavDir_Left;
+    return (dy > 0.0f) ? ImGuiNavDir_Down : ImGuiNavDir_Up;
 }
 
 static float NavScoreItemDistInterval(float a0, float a1, float b0, float b1)
@@ -1957,7 +1957,7 @@ static bool NavScoreItem(ImRect cand)
     else
     {
         // Degenerate case: two overlapping buttons with same center, break ties using order
-        quadrant = (window->DC.LastItemId < g.NavId) ? ImGuiNavDir_W : ImGuiNavDir_E;
+        quadrant = (window->DC.LastItemId < g.NavId) ? ImGuiNavDir_Left : ImGuiNavDir_Right;
     }
 
 #if 0 // [DEBUG]
@@ -1995,7 +1995,7 @@ static bool NavScoreItem(ImRect cand)
                 // Still tied! we need to be extra-careful to make sure everything gets linked properly. We consistently break ties by symbolically moving "later" buttons 
                 // (with higher index) to the right/downwards by an infinitesimal amount since we the current "best" button already (so it must have a lower index), 
                 // this is fairly easy. This rule ensures that all buttons with dx==dy==0 will end up being linked in order of appearance along the x axis.
-                if ((g.NavMoveDir >= ImGuiNavDir_N ? dby : dbx) < 0.0f) // moving bj to the right/down decreases distance
+                if (((g.NavMoveDir == ImGuiNavDir_Up || g.NavMoveDir == ImGuiNavDir_Down) ? dby : dbx) < 0.0f) // moving bj to the right/down decreases distance
                     new_best = true;
             }
         }
@@ -2006,7 +2006,7 @@ static bool NavScoreItem(ImRect cand)
     // This is just to avoid buttons having no links in a particular direction when there's a suitable neighbor. you get good graphs without this too.
     if (g.NavMoveResultDistBox == FLT_MAX) 
         if (dist_axial < g.NavMoveResultDistAxial) // Check axial match
-            if ((g.NavMoveDir == ImGuiNavDir_W && dax < 0.0f) || (g.NavMoveDir == ImGuiNavDir_E && dax > 0.0f) || (g.NavMoveDir == ImGuiNavDir_N && day < 0.0f) || (g.NavMoveDir == ImGuiNavDir_S && day > 0.0f))
+            if ((g.NavMoveDir == ImGuiNavDir_Left && dax < 0.0f) || (g.NavMoveDir == ImGuiNavDir_Right && dax > 0.0f) || (g.NavMoveDir == ImGuiNavDir_Up && day < 0.0f) || (g.NavMoveDir == ImGuiNavDir_Down && day > 0.0f))
                 g.NavMoveResultDistAxial = dist_axial, new_best = true;
 
     return new_best;
@@ -2514,10 +2514,10 @@ static void NavUpdate()
     g.NavMoveDir = ImGuiNavDir_None;
     if (g.FocusedWindow && !g.NavWindowingTarget && (g.ActiveId == 0 || g.ActiveIdAllowNavMove) && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav))
     {
-        if (IsKeyPressedMap(ImGuiKey_NavLeft,  true))  g.NavMoveDir = ImGuiNavDir_W;
-        if (IsKeyPressedMap(ImGuiKey_NavRight,  true)) g.NavMoveDir = ImGuiNavDir_E;
-        if (IsKeyPressedMap(ImGuiKey_NavUp, true))     g.NavMoveDir = ImGuiNavDir_N;
-        if (IsKeyPressedMap(ImGuiKey_NavDown, true))   g.NavMoveDir = ImGuiNavDir_S;
+        if (IsKeyPressedMap(ImGuiKey_NavLeft,  true))  g.NavMoveDir = ImGuiNavDir_Left;
+        if (IsKeyPressedMap(ImGuiKey_NavRight,  true)) g.NavMoveDir = ImGuiNavDir_Right;
+        if (IsKeyPressedMap(ImGuiKey_NavUp, true))     g.NavMoveDir = ImGuiNavDir_Up;
+        if (IsKeyPressedMap(ImGuiKey_NavDown, true))   g.NavMoveDir = ImGuiNavDir_Down;
     }
     if (g.NavMoveDir != ImGuiNavDir_None)
     {
@@ -2526,10 +2526,10 @@ static void NavUpdate()
     }
 
     // Fallback manual-scroll with NavUp/NavDown when window has no navigable item
-    if (g.FocusedWindow && !g.FocusedWindow->DC.NavLayerActiveFlags && g.FocusedWindow->DC.NavHasScroll && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav) && g.NavMoveRequest && (g.NavMoveDir == ImGuiNavDir_N || g.NavMoveDir == ImGuiNavDir_S))
+    if (g.FocusedWindow && !g.FocusedWindow->DC.NavLayerActiveFlags && g.FocusedWindow->DC.NavHasScroll && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav) && g.NavMoveRequest && (g.NavMoveDir == ImGuiNavDir_Up || g.NavMoveDir == ImGuiNavDir_Down))
     {
         float scroll_speed = ImFloor(g.FocusedWindow->CalcFontSize() * 100 * g.IO.DeltaTime + 0.5f); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
-        SetWindowScrollY(g.FocusedWindow, ImFloor(g.FocusedWindow->Scroll.y + ((g.NavMoveDir == ImGuiNavDir_N) ? -1.0f : +1.0f) * scroll_speed));
+        SetWindowScrollY(g.FocusedWindow, ImFloor(g.FocusedWindow->Scroll.y + ((g.NavMoveDir == ImGuiNavDir_Up) ? -1.0f : +1.0f) * scroll_speed));
     }
 
     // Reset search 
@@ -3509,9 +3509,9 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
     const ImVec2 pos = window->DC.CursorPos;
     int start = (int)((window->ClipRect.Min.y - pos.y) / items_height);
     int end = (int)((window->ClipRect.Max.y - pos.y) / items_height);
-    if (g.NavMoveRequest && g.NavMoveDir == ImGuiNavDir_N) // When performing a navigation request, ensure we have one item extra in the direction we are moving to
+    if (g.NavMoveRequest && g.NavMoveDir == ImGuiNavDir_Up) // When performing a navigation request, ensure we have one item extra in the direction we are moving to
         start--;
-    if (g.NavMoveRequest && g.NavMoveDir == ImGuiNavDir_S)
+    if (g.NavMoveRequest && g.NavMoveDir == ImGuiNavDir_Down)
         end++;
 
     start = ImClamp(start, 0, items_count);
