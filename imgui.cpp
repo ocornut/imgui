@@ -2733,23 +2733,20 @@ void ImGui::NewFrame()
     if (g.HoveredWindow && g.IO.MouseWheel != 0.0f && !g.HoveredWindow->Collapsed)
     {
         ImGuiWindow* window = g.HoveredWindow;
-        if (g.IO.KeyCtrl)
+        if (g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
         {
-            if (g.IO.FontAllowUserScaling)
-            {
-                // Zoom / Scale window
-                float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
-                float scale = new_font_scale / window->FontWindowScale;
-                window->FontWindowScale = new_font_scale;
+            // Zoom / Scale window
+            const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
+            const float scale = new_font_scale / window->FontWindowScale;
+            window->FontWindowScale = new_font_scale;
 
-                const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
-                window->Pos += offset;
-                window->PosFloat += offset;
-                window->Size *= scale;
-                window->SizeFull *= scale;
-            }
+            const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
+            window->Pos += offset;
+            window->PosFloat += offset;
+            window->Size *= scale;
+            window->SizeFull *= scale;
         }
-        else if (!(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
+        else if (!g.IO.KeyCtrl && !(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
         {
             // Scroll
             const int scroll_lines = (window->Flags & ImGuiWindowFlags_ComboBox) ? 3 : 5;
