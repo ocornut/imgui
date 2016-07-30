@@ -2501,8 +2501,8 @@ static void NavUpdate()
         }
     }
 
-    g.NavActivateId = (g.NavId && !g.NavDisableHighlight && g.ActiveId == 0 && IsKeyPressedMap(ImGuiKey_NavActivate)) ? g.NavId : 0;
-    g.NavInputId = (g.NavId && !g.NavDisableHighlight && g.ActiveId == 0 && IsKeyPressedMap(ImGuiKey_NavInput)) ? g.NavId : 0;
+    g.NavActivateId = (g.NavId && !g.NavDisableHighlight && !g.NavWindowingTarget && g.ActiveId == 0 && IsKeyPressedMap(ImGuiKey_NavActivate)) ? g.NavId : 0;
+    g.NavInputId = (g.NavId && !g.NavDisableHighlight && !g.NavWindowingTarget && g.ActiveId == 0 && IsKeyPressedMap(ImGuiKey_NavInput)) ? g.NavId : 0;
     if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNav))
     {
         g.NavActivateId = g.NavInputId = 0;
@@ -6157,15 +6157,15 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     {
         // We report navigated item as hovered but we don't set g.HoveredId to not interfere with mouse
         hovered = true;
-        if (IsKeyDownMap(ImGuiKey_NavActivate))
+        if (!g.NavWindowingTarget && IsKeyDownMap(ImGuiKey_NavActivate))
         {
             // Set active id so it can be queried by user via IsItemActive(), etc. but don't react to it ourselves
             g.NavActivateId = g.NavId;
             SetActiveID(g.NavId, window);
             g.ActiveIdAllowNavMove = true;
+            if (IsKeyPressedMap(ImGuiKey_NavActivate, (flags & ImGuiButtonFlags_Repeat) != 0))
+                pressed = true;
         }
-        if (IsKeyPressedMap(ImGuiKey_NavActivate, (flags & ImGuiButtonFlags_Repeat) != 0))
-            pressed = true;
     }
 
     bool held = false;
