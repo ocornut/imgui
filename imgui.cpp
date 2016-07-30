@@ -1920,7 +1920,18 @@ static bool NavScoreItem(ImRect cand)
         return false;
 
     const ImRect& curr = g.NavScoringRectScreen; // Current modified source rect (NB: we've applied Max.x = Min.x in NavUpdate() to inhibit the effect of having lots of items with varied width)
-    window->ClipRect.Clip(cand);
+
+    // We perform scoring on items bounding box clipped by their parent window on the other axis (clipping on our movement axis would give us equal scores for all clipped items)
+    if (g.NavMoveDir == ImGuiNavDir_Left || g.NavMoveDir == ImGuiNavDir_Right)
+    {
+        cand.Min.y = ImClamp(cand.Min.y, window->ClipRect.Min.y, window->ClipRect.Max.y);
+        cand.Max.y = ImClamp(cand.Max.y, window->ClipRect.Min.y, window->ClipRect.Max.y);
+    }
+    else
+    {
+        cand.Min.x = ImClamp(cand.Min.x, window->ClipRect.Min.x, window->ClipRect.Max.x);
+        cand.Max.x = ImClamp(cand.Max.x, window->ClipRect.Min.x, window->ClipRect.Max.x);
+    }
 
     // Compute distance between boxes
     // FIXME-NAVIGATION: Introducing various biases toward typical imgui uses cases, but we don't have any rigorous proof of their effect now.
@@ -6168,7 +6179,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             // Set active id so it can be queried by user via IsItemActive(), etc. but don't react to it ourselves
             g.NavActivateId = g.NavId;
             SetActiveID(g.NavId, window);
-            g.ActiveIdAllowNavDirFlags = (1<<ImGuiNavDir_Left) | (1<<ImGuiNavDir_Right) | (1<<ImGuiNavDir_Up) | (1<<ImGuiNavDir_Down);
+            g.ActiveIdAllowNavDirFlags = (1 << ImGuiNavDir_Left) | (1 << ImGuiNavDir_Right) | (1 << ImGuiNavDir_Up) | (1 << ImGuiNavDir_Down);
             if (IsKeyPressedMap(ImGuiKey_NavActivate, (flags & ImGuiButtonFlags_Repeat) != 0))
                 pressed = true;
         }
