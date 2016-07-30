@@ -1824,7 +1824,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window = NULL)
     ImGuiContext& g = *GImGui;
     g.ActiveIdIsJustActivated = (g.ActiveId != id);
     g.ActiveId = id;
-    g.ActiveIdAllowNavMove = false;
+    g.ActiveIdAllowNavDirFlags = 0;
     g.ActiveIdAllowOverlap = false;
     g.ActiveIdWindow = window;
     if (id)
@@ -1847,7 +1847,7 @@ void ImGui::SetActiveIDNoNav(ImGuiID id, ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     g.ActiveIdIsJustActivated = (g.ActiveId != id);
     g.ActiveId = id;
-    g.ActiveIdAllowNavMove = false;
+    g.ActiveIdAllowNavDirFlags = 0;
     g.ActiveIdAllowOverlap = false;
     g.ActiveIdWindow = window;
     g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
@@ -2511,13 +2511,14 @@ static void NavUpdate()
     g.NavMoveRequest = false;
 
     // Initiate directional inputs request
+    const int allowed_dir_flags = (g.ActiveId == 0) ? ~0 : g.ActiveIdAllowNavDirFlags;
     g.NavMoveDir = ImGuiNavDir_None;
-    if (g.FocusedWindow && !g.NavWindowingTarget && (g.ActiveId == 0 || g.ActiveIdAllowNavMove) && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav))
+    if (g.FocusedWindow && !g.NavWindowingTarget && allowed_dir_flags && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav))
     {
-        if (IsKeyPressedMap(ImGuiKey_NavLeft,  true))  g.NavMoveDir = ImGuiNavDir_Left;
-        if (IsKeyPressedMap(ImGuiKey_NavRight,  true)) g.NavMoveDir = ImGuiNavDir_Right;
-        if (IsKeyPressedMap(ImGuiKey_NavUp, true))     g.NavMoveDir = ImGuiNavDir_Up;
-        if (IsKeyPressedMap(ImGuiKey_NavDown, true))   g.NavMoveDir = ImGuiNavDir_Down;
+        if ((allowed_dir_flags & (1<<ImGuiNavDir_Left))  && IsKeyPressedMap(ImGuiKey_NavLeft,  true)) g.NavMoveDir = ImGuiNavDir_Left;
+        if ((allowed_dir_flags & (1<<ImGuiNavDir_Right)) && IsKeyPressedMap(ImGuiKey_NavRight, true)) g.NavMoveDir = ImGuiNavDir_Right;
+        if ((allowed_dir_flags & (1<<ImGuiNavDir_Up))    && IsKeyPressedMap(ImGuiKey_NavUp,    true)) g.NavMoveDir = ImGuiNavDir_Up;
+        if ((allowed_dir_flags & (1<<ImGuiNavDir_Down))  && IsKeyPressedMap(ImGuiKey_NavDown,  true)) g.NavMoveDir = ImGuiNavDir_Down;
     }
     if (g.NavMoveDir != ImGuiNavDir_None)
     {
@@ -6167,7 +6168,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             // Set active id so it can be queried by user via IsItemActive(), etc. but don't react to it ourselves
             g.NavActivateId = g.NavId;
             SetActiveID(g.NavId, window);
-            g.ActiveIdAllowNavMove = true;
+            g.ActiveIdAllowNavDirFlags = (1<<ImGuiNavDir_Left) | (1<<ImGuiNavDir_Right) | (1<<ImGuiNavDir_Up) | (1<<ImGuiNavDir_Down);
             if (IsKeyPressedMap(ImGuiKey_NavActivate, (flags & ImGuiButtonFlags_Repeat) != 0))
                 pressed = true;
         }
@@ -6986,7 +6987,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label
 
     // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
     SetActiveIDNoNav(g.ScalarAsInputTextId, window);
-    g.ActiveIdAllowNavMove = true;
+    g.ActiveIdAllowNavDirFlags = (1 << ImGuiNavDir_Up) | (1 << ImGuiNavDir_Down);
     SetHoveredID(0);
     FocusableItemUnregister(window);
 
@@ -8445,7 +8446,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 select_all = true;
         }
         SetActiveID(id, window);
-        g.ActiveIdAllowNavMove = true;
+        if (!is_multiline)
+            g.ActiveIdAllowNavDirFlags = ((1 << ImGuiNavDir_Up) | (1 << ImGuiNavDir_Down));
         FocusWindow(window);
     }
     else if (io.MouseClicked[0])
