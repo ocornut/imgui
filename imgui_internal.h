@@ -745,7 +745,7 @@ public:
     ImRect      TitleBarRect() const                    { return ImRect(Pos, ImVec2(Pos.x + SizeFull.x, Pos.y + TitleBarHeight())); }
     float       MenuBarHeight() const                   { return (Flags & ImGuiWindowFlags_MenuBar) ? CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f : 0.0f; }
     ImRect      MenuBarRect() const                     { float y1 = Pos.y + TitleBarHeight(); return ImRect(Pos.x, y1, Pos.x + SizeFull.x, y1 + MenuBarHeight()); }
-    bool        IsNavigableTo() const                   { return Active && this == this->RootNonPopupWindow && (!(Flags & ImGuiWindowFlags_NoNav) || this == GImGui->FocusedWindow); }
+    bool        IsNavigableTo() const                   { return Active && this == this->RootNonPopupWindow && (!(Flags & ImGuiWindowFlags_NoNavFocus) || this == GImGui->FocusedWindow); }
 };
 
 //-----------------------------------------------------------------------------

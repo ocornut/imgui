@@ -2476,7 +2476,7 @@ static void NavUpdate()
     }
 
     // Set output flags for user application
-    g.IO.NavUsable = g.FocusedWindow && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav);
+    g.IO.NavUsable = g.FocusedWindow && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNavInputs);
     g.IO.NavActive = g.IO.NavUsable && g.NavId != 0 && !g.NavDisableHighlight;
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
@@ -2527,7 +2527,7 @@ static void NavUpdate()
 
     g.NavActivateId = (g.NavId && !g.NavDisableHighlight && !g.NavWindowingTarget && g.ActiveId == 0 && IsKeyPressedMap(ImGuiKey_NavActivate)) ? g.NavId : 0;
     g.NavInputId = (g.NavId && !g.NavDisableHighlight && !g.NavWindowingTarget && g.ActiveId == 0 && IsKeyPressedMap(ImGuiKey_NavInput)) ? g.NavId : 0;
-    if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNav))
+    if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
     {
         g.NavActivateId = g.NavInputId = 0;
         g.NavDisableHighlight = true;
@@ -2537,7 +2537,7 @@ static void NavUpdate()
     // Initiate directional inputs request
     const int allowed_dir_flags = (g.ActiveId == 0) ? ~0 : g.ActiveIdAllowNavDirFlags;
     g.NavMoveDir = ImGuiNavDir_None;
-    if (g.FocusedWindow && !g.NavWindowingTarget && allowed_dir_flags && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav))
+    if (g.FocusedWindow && !g.NavWindowingTarget && allowed_dir_flags && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNavInputs))
     {
         if ((allowed_dir_flags & (1<<ImGuiNavDir_Left))  && IsKeyPressedMap(ImGuiKey_NavLeft,  true)) g.NavMoveDir = ImGuiNavDir_Left;
         if ((allowed_dir_flags & (1<<ImGuiNavDir_Right)) && IsKeyPressedMap(ImGuiKey_NavRight, true)) g.NavMoveDir = ImGuiNavDir_Right;
@@ -2551,7 +2551,7 @@ static void NavUpdate()
     }
 
     // Scrolling
-    if (g.FocusedWindow && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav))
+    if (g.FocusedWindow && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNavInputs))
     {
         // Fallback manual-scroll with NavUp/NavDown when window has no navigable item
         const float scroll_speed = ImFloor(g.FocusedWindow->CalcFontSize() * 100 * g.IO.DeltaTime + 0.5f); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
@@ -2808,7 +2808,7 @@ void ImGui::NewFrame()
 
     // Pressing TAB activate widget focus
     //// NB: Don't discard FocusedWindow if it isn't active, so that a window that go on/off programatically won't lose its keyboard focus. // [2016/07/17] That comment was made invalid by 19d02becef94e8e0f1d432a8bd55cd783876583c
-    if (g.ActiveId == 0 && g.FocusedWindow != NULL && g.FocusedWindow->Active && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav) && !g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab, false))
+    if (g.ActiveId == 0 && g.FocusedWindow != NULL && g.FocusedWindow->Active && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab, false))
         if (g.NavId != 0 && g.NavIdTabCounter != INT_MAX)
             g.FocusedWindow->FocusIdxTabRequestNext = g.NavIdTabCounter + 1 + (g.IO.KeyShift ? -1 : 1);
         else
