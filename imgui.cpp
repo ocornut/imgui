@@ -1920,7 +1920,7 @@ static bool NavScoreItem(ImRect cand)
         return false;
 
     const ImRect& curr = g.NavScoringRectScreen; // Current modified source rect (NB: we've applied Max.x = Min.x in NavUpdate() to inhibit the effect of having lots of items with varied width)
-    cand.Clip(window->ClipRect);
+    window->ClipRect.Clip(cand);
 
     // Compute distance between boxes
     // FIXME-NAVIGATION: Introducing various biases toward typical imgui uses cases, but we don't have any rigorous proof of their effect now.
@@ -3555,7 +3555,7 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     // Clip
     ImRect rect_clipped(r_min, r_max);
     if (clip)
-        rect_clipped.Clip(window->ClipRect);
+        window->ClipRect.Clip(rect_clipped);
 
     // Expand for touch input
     const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
@@ -4927,7 +4927,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
         window->WindowRectClipped = window->Rect();
-        window->WindowRectClipped.Clip(window->ClipRect);
+        window->ClipRect.Clip(window->WindowRectClipped);
 
         // Pressing CTRL+C while holding on a window copy its content to the clipboard
         // This works but 1. doesn't handle multiple Begin/End pairs, 2. recursing into another Begin/End pair - so we need to work that out and add better logging scope.
@@ -8857,10 +8857,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 {
                     ImVec2 rect_size = InputTextCalcTextSizeW(p, text_selected_end, &p, NULL, true);
                     if (rect_size.x <= 0.0f) rect_size.x = (float)(int)(g.Font->GetCharAdvance((unsigned short)' ') * 0.50f); // So we can see selected empty lines
-                    ImRect rect(rect_pos + ImVec2(0.0f, bg_offy_up - g.FontSize), rect_pos +ImVec2(rect_size.x, bg_offy_dn));
-                    rect.Clip(clip_rect);
-                    if (rect.Overlaps(clip_rect))
-                        draw_window->DrawList->AddRectFilled(rect.Min, rect.Max, bg_color);
+                    ImRect cursor_rect(rect_pos + ImVec2(0.0f, bg_offy_up - g.FontSize), rect_pos +ImVec2(rect_size.x, bg_offy_dn));
+                    ImRect clip_rect_r(clip_rect);
+                    clip_rect_r.Clip(cursor_rect);
+                    if (cursor_rect.Overlaps(clip_rect_r))
+                        draw_window->DrawList->AddRectFilled(cursor_rect.Min, cursor_rect.Max, bg_color);
                 }
                 rect_pos.x = render_pos.x - render_scroll.x;
                 rect_pos.y += g.FontSize;
