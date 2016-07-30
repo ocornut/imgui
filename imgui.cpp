@@ -662,6 +662,7 @@ static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
 static void             SetCurrentFont(ImFont* font);
 static void             SetCurrentWindow(ImGuiWindow* window);
+static void             SetWindowScrollX(ImGuiWindow* window, float new_scroll_x);
 static void             SetWindowScrollY(ImGuiWindow* window, float new_scroll_y);
 static void             SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiSetCond cond);
 static void             SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiSetCond cond);
@@ -2364,8 +2365,7 @@ static void NavUpdate()
         IM_ASSERT(g.NavWindow);
 
         // Scroll to keep newly navigated item fully into view
-        ImRect window_rect_rel(g.NavWindow->InnerRect.Min - g.NavWindow->Pos, g.NavWindow->InnerRect.Max - g.NavWindow->Pos);
-        window_rect_rel.Expand(1.0f);
+        ImRect window_rect_rel(g.NavWindow->InnerRect.Min - g.NavWindow->Pos - ImVec2(1,1), g.NavWindow->InnerRect.Max - g.NavWindow->Pos + ImVec2(1,1));
         //g.OverlayDrawList.AddRect(g.NavWindow->Pos + window_rect_rel.Min, g.NavWindow->Pos + window_rect_rel.Max, IM_COL32_WHITE); // [DEBUG]
         if (g.NavLayer == 0 && !window_rect_rel.Contains(g.NavMoveResultRectRel))
         {
@@ -2394,6 +2394,7 @@ static void NavUpdate()
         // Apply result from previous navigation directional move request
         ImGui::SetActiveID(0);
         SetNavIdMoveMouse(g.NavMoveResultId, g.NavMoveResultRectRel);
+        g.NavMoveFromClampedRefRect = false;
     }
 
     // Navigation windowing mode (change focus, move/resize window)
@@ -2431,6 +2432,19 @@ static void NavUpdate()
                 g.NavWindowingTarget = g.Windows[i_target];
             g.NavWindowingToggleLayer = false;
             g.NavWindowingDisplayAlpha = 1.0f;
+        }
+
+        // Move window
+        if (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoMove))
+        {
+            const ImVec2 move_delta = ImGui::NavGetMovingDir(1);
+            if (move_delta.x != 0.0f || move_delta.y != 0.0f)
+            {
+                const float move_speed = ImFloor(600 * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
+                g.NavWindowingTarget->PosFloat += move_delta * move_speed;
+                if (!(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoSavedSettings))
+                    MarkSettingsDirty();
+            }
         }
 
         if (!IsKeyDownMap(ImGuiKey_NavMenu))
@@ -2537,16 +2551,44 @@ static void NavUpdate()
         g.NavWindow = g.FocusedWindow;
     }
 
-    // Fallback manual-scroll with NavUp/NavDown when window has no navigable item
-    if (g.FocusedWindow && !g.FocusedWindow->DC.NavLayerActiveFlags && g.FocusedWindow->DC.NavHasScroll && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav) && g.NavMoveRequest && (g.NavMoveDir == ImGuiNavDir_Up || g.NavMoveDir == ImGuiNavDir_Down))
+    // Scrolling
+    if (g.FocusedWindow && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav))
     {
-        float scroll_speed = ImFloor(g.FocusedWindow->CalcFontSize() * 100 * g.IO.DeltaTime + 0.5f); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
-        SetWindowScrollY(g.FocusedWindow, ImFloor(g.FocusedWindow->Scroll.y + ((g.NavMoveDir == ImGuiNavDir_Up) ? -1.0f : +1.0f) * scroll_speed));
+        // Fallback manual-scroll with NavUp/NavDown when window has no navigable item
+        const float scroll_speed = ImFloor(g.FocusedWindow->CalcFontSize() * 100 * g.IO.DeltaTime + 0.5f); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
+        if (!g.FocusedWindow->DC.NavLayerActiveFlags && g.FocusedWindow->DC.NavHasScroll && g.NavMoveRequest && (g.NavMoveDir == ImGuiNavDir_Up || g.NavMoveDir == ImGuiNavDir_Down))
+            SetWindowScrollY(g.FocusedWindow, ImFloor(g.FocusedWindow->Scroll.y + ((g.NavMoveDir == ImGuiNavDir_Up) ? -1.0f : +1.0f) * scroll_speed));
+
+        // Manual scroll with NavScrollXXX keys
+        ImVec2 scroll_dir = ImGui::NavGetMovingDir(1, 1.0f/10.0f, 10.0f);
+        if (scroll_dir.x != 0.0f && g.NavWindow->ScrollbarX)
+        {
+            SetWindowScrollX(g.FocusedWindow, ImFloor(g.FocusedWindow->Scroll.x + scroll_dir.x * scroll_speed));
+            g.NavMoveFromClampedRefRect = true;
+        }
+        if (scroll_dir.y != 0.0f)
+        {
+            SetWindowScrollY(g.FocusedWindow, ImFloor(g.FocusedWindow->Scroll.y + scroll_dir.y * scroll_speed));
+            g.NavMoveFromClampedRefRect = true;
+        }
     }
 
     // Reset search 
     g.NavMoveResultId = 0;
     g.NavMoveResultDistAxial = g.NavMoveResultDistBox = g.NavMoveResultDistCenter = FLT_MAX;
+    if (g.NavMoveRequest && g.NavMoveFromClampedRefRect && g.NavLayer == 0)
+    {
+        // When we have manually scrolled and NavId is out of bounds, we clamp its bounding box (used for search) to the visible area to restart navigation within visible items
+        ImRect window_rect_rel(g.NavWindow->InnerRect.Min - g.NavWindow->Pos - ImVec2(1,1), g.NavWindow->InnerRect.Max - g.NavWindow->Pos + ImVec2(1,1));
+        if (!window_rect_rel.Contains(g.NavRefRectRel))
+        {
+            float pad = g.NavWindow->CalcFontSize() * 0.5f;
+            window_rect_rel.Expand(ImVec2(-ImMin(window_rect_rel.GetWidth(), pad), -ImMin(window_rect_rel.GetHeight(), pad))); // Terrible approximation for the intend of starting navigation from first fully visible item
+            window_rect_rel.Clip(g.NavRefRectRel);
+            g.NavId = 0;
+        }
+        g.NavMoveFromClampedRefRect = false;
+    }
 
     // For scoring we use a single segment on the left side our current item bounding box (not touching the edge to avoid box overlap with zero-spaced items)
     g.NavScoringRectScreen = g.NavWindow ? ImRect(g.NavWindow->Pos + g.NavRefRectRel.Min, g.NavWindow->Pos + g.NavRefRectRel.Max) : ImRect();
@@ -4737,7 +4779,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 if (g.NavWindowingTarget == window)
                 {
                     const float resize_speed = ImFloor(600 * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
-                    nav_resize_delta = NavGetMovingDir() * resize_speed;
+                    nav_resize_delta = NavGetMovingDir(0) * resize_speed;
                     held |= (nav_resize_delta.x != 0.0f || nav_resize_delta.y != 0.0f); // For coloring
                 }
 
@@ -5467,6 +5509,13 @@ ImVec2 ImGui::GetWindowPos()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     return window->Pos;
+}
+
+static void SetWindowScrollX(ImGuiWindow* window, float new_scroll_x)
+{
+    window->DC.CursorMaxPos.x += window->Scroll.x; // SizeContents is generally computed based on CursorMaxPos which is affected by scroll position, so we need to apply our change to it.
+    window->Scroll.x = new_scroll_x;
+    window->DC.CursorMaxPos.x -= window->Scroll.x;
 }
 
 static void SetWindowScrollY(ImGuiWindow* window, float new_scroll_y)
@@ -7043,13 +7092,28 @@ int ImGui::ParseFormatPrecision(const char* fmt, int default_precision)
     return precision;
 }
 
-ImVec2 ImGui::NavGetMovingDir()
+ImVec2 ImGui::NavGetMovingDir(int stick_no, float slow_factor, float fast_factor)
 {
+    IM_ASSERT(stick_no >= 0 && stick_no < 2);
     ImVec2 dir(0.0f, 0.0f);
-    if (IsKeyDownMap(ImGuiKey_NavLeft))  dir.x -= 1.0f;
-    if (IsKeyDownMap(ImGuiKey_NavRight)) dir.x += 1.0f;
-    if (IsKeyDownMap(ImGuiKey_NavUp))    dir.y -= 1.0f;
-    if (IsKeyDownMap(ImGuiKey_NavDown))  dir.y += 1.0f;
+    if (stick_no == 0)
+    {
+        if (IsKeyDownMap(ImGuiKey_NavLeft))  dir.x -= 1.0f;
+        if (IsKeyDownMap(ImGuiKey_NavRight)) dir.x += 1.0f;
+        if (IsKeyDownMap(ImGuiKey_NavUp))    dir.y -= 1.0f;
+        if (IsKeyDownMap(ImGuiKey_NavDown))  dir.y += 1.0f;
+    }
+    if (stick_no == 1)
+    {
+        if (IsKeyDownMap(ImGuiKey_NavScrollLeft))  dir.x -= 1.0f;
+        if (IsKeyDownMap(ImGuiKey_NavScrollRight)) dir.x += 1.0f;
+        if (IsKeyDownMap(ImGuiKey_NavScrollUp))    dir.y -= 1.0f;
+        if (IsKeyDownMap(ImGuiKey_NavScrollDown))  dir.y += 1.0f;
+    }
+    if (slow_factor != 0.0f && IsKeyDownMap(ImGuiKey_NavTweakSlower))
+        dir *= slow_factor;
+    if (fast_factor != 0.0f && IsKeyDownMap(ImGuiKey_NavTweakFaster))
+        dir *= fast_factor;
     return dir;
 }
 
@@ -10458,7 +10522,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     }
                     ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
                     bool pcmd_node_open = ImGui::TreeNode((void*)(pcmd - draw_list->CmdBuffer.begin()), "Draw %-4d %s vtx, tex = %p, clip_rect = (%.0f,%.0f)..(%.0f,%.0f)", pcmd->ElemCount, draw_list->IdxBuffer.Size > 0 ? "indexed" : "non-indexed", pcmd->TextureId, pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
-                    if (show_clip_rects && ImGui::IsItemHovered())
+                    if (show_clip_rects && (ImGui::IsItemHovered() || ImGui::IsItemFocused()))
                     {
                         ImRect clip_rect = pcmd->ClipRect;
                         ImRect vtxs_rect;
@@ -10482,7 +10546,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                                 buf_p += sprintf(buf_p, "%s %04d { pos = (%8.2f,%8.2f), uv = (%.6f,%.6f), col = %08X }\n", (n == 0) ? "vtx" : "   ", vtx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
                             }
                             ImGui::Selectable(buf, false);
-                            if (ImGui::IsItemHovered())
+                            if (ImGui::IsItemHovered() || ImGui::IsItemFocused())
                                 overlay_draw_list->AddPolyline(triangles_pos, 3, IM_COL32(255,255,0,255), true, 1.0f, false);  // Add triangle without AA, more readable for large-thin triangle
                         }
                     ImGui::TreePop();

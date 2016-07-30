@@ -604,8 +604,13 @@ enum ImGuiKey_
     ImGuiKey_NavRight,      // e.g. Right arrow, D-Pad right
     ImGuiKey_NavUp,         // e.g. Up arrow, D-Pad up
     ImGuiKey_NavDown,       // e.g. Down arrow, D-Pad down
+    ImGuiKey_NavScrollLeft, // e.g. Analog left
+    ImGuiKey_NavScrollRight,// e.g. Analog right
+    ImGuiKey_NavScrollUp,   // e.g. Analog up
+    ImGuiKey_NavScrollDown, // e.g. Analog down
     ImGuiKey_NavTweakFaster,// e.g. Shift key, R-trigger
     ImGuiKey_NavTweakSlower,// e.g. Alt key, L-trigger
+    ImGuiKey_NavLast_,
 
     ImGuiKey_COUNT
 };

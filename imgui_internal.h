@@ -423,6 +423,7 @@ struct ImGuiContext
     ImRect                  NavInitDefaultResultRectRel;
     bool                    NavInitDefaultResultExplicit;       // Whether the result was explicitly requested with SetItemDefaultFocus()
     bool                    NavMoveRequest;                     // Move request for this frame
+    bool                    NavMoveFromClampedRefRect;          // Set by manual scrolling, if we scroll to a point where NavId isn't visible we reset navigation from visible items
     ImGuiNavDir             NavMoveDir;                         // West/East/North/South
     ImGuiID                 NavMoveResultId;                    // Best move request candidate
     float                   NavMoveResultDistBox;               // Best move request candidate box distance to current NavId
@@ -784,7 +785,7 @@ namespace ImGui
     IMGUI_API void          OpenPopupEx(const char* str_id, bool reopen_existing);
 
     IMGUI_API ImVec2        NavGetTweakDelta();
-    IMGUI_API ImVec2        NavGetMovingDir();
+    IMGUI_API ImVec2        NavGetMovingDir(int stick_no, float slow_factor = 0.0f, float fast_factor = 0.0f);
 
     inline IMGUI_API ImU32  GetColorU32(ImGuiCol idx, float alpha_mul)  { ImVec4 c = GImGui->Style.Colors[idx]; c.w *= GImGui->Style.Alpha * alpha_mul; return ImGui::ColorConvertFloat4ToU32(c); }
     inline IMGUI_API ImU32  GetColorU32(const ImVec4& col)              { ImVec4 c = col; c.w *= GImGui->Style.Alpha; return ImGui::ColorConvertFloat4ToU32(c); }
