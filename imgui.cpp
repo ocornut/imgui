@@ -2655,8 +2655,8 @@ void ImGui::NewFrame()
     g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_ARRAYSIZE(g.FramerateSecPerFrame);
     g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
 
-    // Handle user moving window (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
-    if (g.MovedWindowMoveId && g.MovedWindowMoveId == g.ActiveId)
+    // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
+    if (g.MovedWindowMoveId && g.MovedWindowMoveId == g.ActiveId && g.ActiveIdSource == ImGuiInputSource_Mouse)
     {
         KeepAliveID(g.MovedWindowMoveId);
         IM_ASSERT(g.MovedWindow && g.MovedWindow->RootWindow);

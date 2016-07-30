@@ -393,7 +393,7 @@ struct ImGuiContext
     ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
     ImGuiWindow*            ActiveIdWindow;
     ImGuiInputSource        ActiveIdSource;                     // Activating with mouse or nav (gamepad/keyboard)
-    ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window.
+    ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window (only apply to moving with mouse)
     ImGuiID                 MovedWindowMoveId;                  // == MovedWindow->RootWindow->MoveId
     ImVector<ImGuiIniData>  Settings;                           // .ini Settings
     float                   SettingsDirtyTimer;                 // Save .ini Settings on disk when time reaches zero
