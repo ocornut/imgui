@@ -2475,7 +2475,7 @@ static void NavUpdate()
 
     // Set output flags for user application
     g.IO.NavUsable = g.FocusedWindow && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNavInputs);
-    g.IO.NavActive = (g.IO.NavUsable && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL) || g.NavMoveRequest || g.NavInitDefaultRequest;
+    g.IO.NavActive = (g.IO.NavUsable && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL) || g.NavInitDefaultRequest;
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
     if (IsKeyPressedMap(ImGuiKey_NavCancel))
