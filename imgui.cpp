@@ -2474,7 +2474,7 @@ static void NavUpdate()
 
     // Set output flags for user application
     g.IO.NavUsable = g.FocusedWindow && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNavInputs);
-    g.IO.NavActive = g.IO.NavUsable && g.NavId != 0 && !g.NavDisableHighlight;
+    g.IO.NavActive = (g.IO.NavUsable && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL) || g.NavMoveRequest || g.NavInitDefaultRequest;
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
     if (IsKeyPressedMap(ImGuiKey_NavCancel))
@@ -10598,6 +10598,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Text("ActiveId: 0x%08X/0x%08X, ActiveIdWindow: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
             ImGui::Text("NavId: 0x%08X, NavWindow: '%s'", g.NavId, g.NavWindow ? g.NavWindow->Name : "NULL");
             ImGui::Text("NavRefRectRel: (%.1f,%.1f)(%.1f,%.1f)", g.NavRefRectRel.Min.x, g.NavRefRectRel.Min.y, g.NavRefRectRel.Max.x, g.NavRefRectRel.Max.y);
+            ImGui::Text("NavUsable: %d, NavActive: %d", g.IO.NavUsable, g.IO.NavActive);
             ImGui::Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
             ImGui::TreePop();
         }
