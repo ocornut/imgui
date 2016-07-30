@@ -4947,7 +4947,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
 
             // Collapse button
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
-            if (!(flags & ImGuiWindowFlags_NoCollapse) && g.IO.NavUsable)
+            if (!(flags & ImGuiWindowFlags_NoCollapse))
             {
                 ImGuiID id = window->GetID("#COLLAPSE");
                 ImRect bb(window->Pos + style.FramePadding + ImVec2(1,1), window->Pos + style.FramePadding + ImVec2(g.FontSize,g.FontSize) - ImVec2(1,1));
