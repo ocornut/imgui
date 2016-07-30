@@ -3509,6 +3509,11 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
     const ImVec2 pos = window->DC.CursorPos;
     int start = (int)((window->ClipRect.Min.y - pos.y) / items_height);
     int end = (int)((window->ClipRect.Max.y - pos.y) / items_height);
+    if (g.NavMoveRequest && g.NavMoveDir == ImGuiNavDir_N) // When performing a navigation request, ensure we have one item extra in the direction we are moving to
+        start--;
+    if (g.NavMoveRequest && g.NavMoveDir == ImGuiNavDir_S)
+        end++;
+
     start = ImClamp(start, 0, items_count);
     end = ImClamp(end + 1, start, items_count);
     *out_items_display_start = start;
