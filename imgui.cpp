@@ -2391,11 +2391,7 @@ void ImGui::Shutdown()
     for (int i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
         g.RenderDrawLists[i].clear();
     g.OverlayDrawList.ClearFreeMemory();
-    if (g.PrivateClipboard)
-    {
-        ImGui::MemFree(g.PrivateClipboard);
-        g.PrivateClipboard = NULL;
-    }
+    g.PrivateClipboard.clear();
     g.InputTextState.Text.clear();
     g.InputTextState.InitialText.clear();
     g.InputTextState.TempTextBuffer.clear();
@@ -10297,21 +10293,18 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
 // Local ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers
 static const char* GetClipboardTextFn_DefaultImpl(void*)
 {
-    return GImGui->PrivateClipboard;
+    ImGuiContext& g = *GImGui;
+    return g.PrivateClipboard.empty() ? NULL : g.PrivateClipboard.begin();
 }
 
 // Local ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers
 static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
 {
     ImGuiContext& g = *GImGui;
-    if (g.PrivateClipboard)
-    {
-        ImGui::MemFree(g.PrivateClipboard);
-        g.PrivateClipboard = NULL;
-    }
+    g.PrivateClipboard.clear();
     const char* text_end = text + strlen(text);
-    g.PrivateClipboard = (char*)ImGui::MemAlloc((size_t)(text_end - text) + 1);
-    memcpy(g.PrivateClipboard, text, (size_t)(text_end - text));
+    g.PrivateClipboard.resize((size_t)(text_end - text) + 1);
+    memcpy(&g.PrivateClipboard[0], text, (size_t)(text_end - text));
     g.PrivateClipboard[(int)(text_end - text)] = 0;
 }
 
