@@ -2062,7 +2062,6 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     {
         const ImRect& nav_bb = nav_bb_arg ? *nav_bb_arg : bb;
         const ImRect nav_bb_rel(nav_bb.Min - window->Pos, nav_bb.Max - window->Pos);
-
         if (g.NavInitDefaultRequest && g.NavLayer == window->DC.NavLayerCurrent && window->DC.AllowNavDefaultFocus)
         {
             g.NavInitDefaultRequest = g.NavInitDefaultResultExplicit = false; // Clear flag immediately, first item gets default, also simplify the if() in ItemAdd()
@@ -2334,7 +2333,8 @@ static void NavUpdate()
         IM_ASSERT(g.NavWindow);
         g.NavId = g.NavInitDefaultResultId;
         g.NavRefRectRel = g.NavInitDefaultResultRectRel;
-        g.NavMousePosDirty = true;
+        if (!g.NavDisableHighlight)
+            g.NavMousePosDirty = true;
         if (g.NavLayer == 0)
             g.NavWindow->NavLastId = g.NavId;
     }
