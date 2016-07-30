@@ -691,6 +691,7 @@ struct IMGUI_API ImGuiWindow
     bool                    WasActive;
     bool                    Accessed;                           // Set to true when any widget access the current window
     bool                    Collapsed;                          // Set when collapsing window to become only title-bar
+    bool                    CollapseToggleWanted;
     bool                    SkipItems;                          // == Visible && !Collapsed
     int                     BeginCount;                         // Number of Begin() during the current frame (generally 0 or 1, 1+ if appending via multiple Begin/End pairs)
     ImGuiID                 PopupId;                            // ID in the popup stack when this window is used as a popup/menu (because we use generic Name/ID for recycling)
@@ -783,6 +784,7 @@ namespace ImGui
     IMGUI_API void          OpenPopupEx(const char* str_id, bool reopen_existing);
 
     IMGUI_API ImVec2        NavGetTweakDelta();
+    IMGUI_API ImVec2        NavGetMovingDir();
 
     inline IMGUI_API ImU32  GetColorU32(ImGuiCol idx, float alpha_mul)  { ImVec4 c = GImGui->Style.Colors[idx]; c.w *= GImGui->Style.Alpha * alpha_mul; return ImGui::ColorConvertFloat4ToU32(c); }
     inline IMGUI_API ImU32  GetColorU32(const ImVec4& col)              { ImVec4 c = col; c.w *= GImGui->Style.Alpha; return ImGui::ColorConvertFloat4ToU32(c); }

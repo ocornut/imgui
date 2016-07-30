@@ -1718,14 +1718,13 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Name = ImStrdup(name);
     ID = ImHash(name, 0);
     IDStack.push_back(ID);
-    MoveId = GetID("#MOVE");
-
     Flags = 0;
     IndexWithinParent = 0;
     PosFloat = Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContents = SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     WindowPadding = ImVec2(0.0f, 0.0f);
+    MoveId = GetID("#MOVE");
     Scroll = ImVec2(0.0f, 0.0f);
     ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
     ScrollTargetCenterRatio = ImVec2(0.5f, 0.5f);
@@ -1735,6 +1734,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Active = WasActive = false;
     Accessed = false;
     Collapsed = false;
+    CollapseToggleWanted = false;
     SkipItems = false;
     BeginCount = 0;
     PopupId = 0;
@@ -2514,10 +2514,10 @@ static void NavUpdate()
     g.NavMoveDir = ImGuiNavDir_None;
     if (g.FocusedWindow && !g.NavWindowingTarget && (g.ActiveId == 0 || g.ActiveIdAllowNavMove) && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNav))
     {
-        if (IsKeyPressedMap(ImGuiKey_NavLeft,  true)) g.NavMoveDir = ImGuiNavDir_W;
+        if (IsKeyPressedMap(ImGuiKey_NavLeft,  true))  g.NavMoveDir = ImGuiNavDir_W;
         if (IsKeyPressedMap(ImGuiKey_NavRight,  true)) g.NavMoveDir = ImGuiNavDir_E;
-        if (IsKeyPressedMap(ImGuiKey_NavUp, true)) g.NavMoveDir = ImGuiNavDir_N;
-        if (IsKeyPressedMap(ImGuiKey_NavDown, true)) g.NavMoveDir = ImGuiNavDir_S;
+        if (IsKeyPressedMap(ImGuiKey_NavUp, true))     g.NavMoveDir = ImGuiNavDir_N;
+        if (IsKeyPressedMap(ImGuiKey_NavDown, true))   g.NavMoveDir = ImGuiNavDir_S;
     }
     if (g.NavMoveDir != ImGuiNavDir_None)
     {
@@ -4501,7 +4501,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         if (!(flags & ImGuiWindowFlags_NoTitleBar) && !(flags & ImGuiWindowFlags_NoCollapse))
         {
             ImRect title_bar_rect = window->TitleBarRect();
-            if (g.HoveredWindow == window && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max) && g.IO.MouseDoubleClicked[0])
+            if (window->CollapseToggleWanted || (g.HoveredWindow == window && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max) && g.IO.MouseDoubleClicked[0]))
             {
                 window->Collapsed = !window->Collapsed;
                 if (!(flags & ImGuiWindowFlags_NoSavedSettings))
@@ -4513,6 +4513,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         {
             window->Collapsed = false;
         }
+        window->CollapseToggleWanted = false;
 
         // SIZE
 
@@ -4718,11 +4719,9 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 ImVec2 nav_resize_delta(0.0f, 0.0f);
                 if (g.NavWindowingTarget == window)
                 {
-                    const float resize_speed = ImFloor(40 * g.FontSize * g.IO.DeltaTime);
-                    if (IsKeyDownMap(ImGuiKey_NavLeft))  nav_resize_delta.x -= resize_speed;
-                    if (IsKeyDownMap(ImGuiKey_NavRight)) nav_resize_delta.x += resize_speed;
-                    if (IsKeyDownMap(ImGuiKey_NavUp))    nav_resize_delta.y -= resize_speed;
-                    if (IsKeyDownMap(ImGuiKey_NavDown))  nav_resize_delta.y += resize_speed;
+                    const float resize_speed = ImFloor(600 * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
+                    nav_resize_delta = NavGetMovingDir() * resize_speed;
+                    held |= (nav_resize_delta.x != 0.0f || nav_resize_delta.y != 0.0f); // For coloring
                 }
 
                 ImVec2 size_target(FLT_MAX,FLT_MAX);
@@ -4737,7 +4736,6 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                     // FIXME-NAVIGATION: Should store and accumulate into a separate size buffer to handle sizing constraints properly
                     g.NavWindowingToggleLayer = false;
                     size_target = window->SizeFull + nav_resize_delta;
-                    held = true; // For coloring
                 }
                 else if (held)
                 {
@@ -4877,20 +4875,38 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         // Title bar
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
+            // Close & collapse button are on layer 1 (same as menus) and don't default focus
+            const bool backup_allow_nav_default_focus = window->DC.AllowNavDefaultFocus;
+            if (window->Flags & ImGuiWindowFlags_MenuBar)
+                window->DC.AllowNavDefaultFocus = false;
+            window->DC.NavLayerCurrent++;
+
+            // Close button
             if (p_open != NULL)
             {
-                const float pad = 2.0f;
-                const float rad = (window->TitleBarHeight() - pad*2.0f) * 0.5f;
-                window->DC.NavLayerCurrent++;
-                if (CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-pad - rad, pad + rad), rad))
+                const float PAD = 2.0f;
+                const float rad = (window->TitleBarHeight() - PAD*2.0f) * 0.5f;
+                if (CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-PAD - rad, PAD + rad), rad))
                     *p_open = false;
-                window->DC.NavLayerCurrent--;
             }
 
+            // Collapse button
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
-            if (!(flags & ImGuiWindowFlags_NoCollapse))
+            if (!(flags & ImGuiWindowFlags_NoCollapse) && g.IO.NavUsable)
+            {
+                ImGuiID id = window->GetID("#COLLAPSE");
+                ImRect bb(window->Pos + style.FramePadding + ImVec2(1,1), window->Pos + style.FramePadding + ImVec2(g.FontSize,g.FontSize) - ImVec2(1,1));
+                ItemAdd(bb, &id); // To allow navigation
+                if (ButtonBehavior(bb, id, NULL, NULL))
+                    window->CollapseToggleWanted = true; // Defer collapsing to next frame as we are too far in the Begin() function
+                RenderNavHighlight(id, bb);
                 RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
+            }
 
+            window->DC.NavLayerCurrent--;
+            window->DC.AllowNavDefaultFocus = backup_allow_nav_default_focus;
+
+            // Title text (FIXME: refactor text alignment facilities along with RenderText helpers)
             ImVec2 text_min = window->Pos + style.FramePadding;
             ImVec2 text_max = window->Pos + ImVec2(window->Size.x - style.FramePadding.x, style.FramePadding.y*2 + text_size.y);
             ImVec2 clip_max = ImVec2(window->Pos.x + window->Size.x - (p_open ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x), text_max.y); // Match the size of CloseWindowButton()
@@ -6264,12 +6280,7 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
     ImGuiWindow* window = GetCurrentWindow();
 
     const ImRect bb(pos - ImVec2(radius,radius), pos + ImVec2(radius,radius));
-    const bool backup_allow_nav_default_focus = window->DC.AllowNavDefaultFocus;  // We could exposethis as a flag to ItemAdd() but it is such a unique case for now
-    if (window->Flags & ImGuiWindowFlags_MenuBar)
-        window->DC.AllowNavDefaultFocus = false;
-    const bool added = ItemAdd(bb, &id); // To allow navigation
-    window->DC.AllowNavDefaultFocus = backup_allow_nav_default_focus;
-    if (!added)
+    if (!ItemAdd(bb, &id)) // To allow navigation
         return false;
 
     bool hovered, held;
@@ -7013,6 +7024,16 @@ int ImGui::ParseFormatPrecision(const char* fmt, int default_precision)
         break;
     }
     return precision;
+}
+
+ImVec2 ImGui::NavGetMovingDir()
+{
+    ImVec2 dir(0.0f, 0.0f);
+    if (IsKeyDownMap(ImGuiKey_NavLeft))  dir.x -= 1.0f;
+    if (IsKeyDownMap(ImGuiKey_NavRight)) dir.x += 1.0f;
+    if (IsKeyDownMap(ImGuiKey_NavUp))    dir.y -= 1.0f;
+    if (IsKeyDownMap(ImGuiKey_NavDown))  dir.y += 1.0f;
+    return dir;
 }
 
 // Adjustment delta for slider/drag/etc. 
