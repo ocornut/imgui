@@ -575,6 +575,14 @@ void ImGui_ImplDX11_NewFrame()
     // io.MouseDown : filled by WM_*BUTTON* events
     // io.MouseWheel : filled by WM_MOUSEWHEEL events
 
+    // Set OS mouse position if requested last frame by io.WantMoveMouse flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
+    if (io.WantMoveMouse)
+    {
+        POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
+        ClientToScreen(g_hWnd, &pos);
+        SetCursorPos(pos.x, pos.y);
+    }
+
     // Hide OS mouse cursor if ImGui is drawing it
     if (io.MouseDrawCursor)
         SetCursor(NULL);

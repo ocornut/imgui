@@ -89,3 +89,4 @@ vulkan_example/
 	Vulkan example.
 	This is quite long and tedious, because: Vulkan.
 
+TODO: Apple, SDL GL/GL3, Allegro, Marmalade, Vulkan examples do not honor the io.WantMoveMouse flag.
