@@ -2358,6 +2358,27 @@ static void SetNavIdMoveMouse(ImGuiID id, const ImRect& rect_rel)
     g.NavDisableMouseHover = true;
 }
 
+static int FindWindowIndex(ImGuiWindow* window) // FIXME-OPT O(N)
+{
+    ImGuiContext& g = *GImGui;
+    for (int i = g.Windows.Size-1; i >= 0; i--)
+        if (g.Windows[i] == window)
+            return i;
+    return -1;
+}
+
+static ImGuiWindow* FindWindowNavigable(int i_start, int i_stop, int dir) // FIXME-OPT O(N)
+{
+    ImGuiContext& g = *GImGui;
+    for (int i = i_start; i >= 0 && i < g.Windows.Size && i != i_stop; i += dir)
+    {
+        ImGuiWindow* window = g.Windows[i];
+        if (window->Active && window == window->RootNonPopupWindow && (!(window->Flags & ImGuiWindowFlags_NoNavFocus) || window == g.NavWindow))
+            return window;
+    }
+    return NULL;
+}
+
 static void NavUpdate()
 {
     ImGuiContext& g = *GImGui;
@@ -2432,11 +2453,17 @@ static void NavUpdate()
     }
 
     // Navigation windowing mode (change focus, move/resize window)
-    if (!g.NavWindowingTarget && g.NavWindow && IsKeyPressedMap(ImGuiKey_NavMenu, false))
+    if (!g.NavWindowingTarget && IsKeyPressedMap(ImGuiKey_NavMenu, false))
     {
-        g.NavWindowingTarget = g.NavWindow->RootNonPopupWindow;
-        g.NavWindowingDisplayAlpha = 0.0f;
-        g.NavWindowingToggleLayer = true;
+        ImGuiWindow* window = g.NavWindow;
+        if (!window)
+            window = FindWindowNavigable(g.Windows.Size-1, -1, -1);
+        if (window)
+        {
+            g.NavWindowingTarget = window->RootNonPopupWindow;
+            g.NavWindowingDisplayAlpha = 0.0f;
+            g.NavWindowingToggleLayer = true;
+        }
     }
     if (g.NavWindowingTarget)
     {
@@ -2450,20 +2477,11 @@ static void NavUpdate()
         int focus_change_dir = IsKeyPressedMap(ImGuiKey_NavTweakFaster, true) ? -1 : IsKeyPressedMap(ImGuiKey_NavTweakSlower, true) ? +1 : 0;
         if (focus_change_dir != 0 && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_Modal))
         {
-            // FIXME-NAVIGATION FIXME-OPT: Code is absolutely hideous. Perhaps we should maintain a intrusive linked-list of visible windows.
-            int i_current = -1;
-            for (int i = g.Windows.Size-1; i >= 0 && i_current == -1; i--)
-                if (g.Windows[i] == g.NavWindowingTarget)
-                    i_current = i;
-            int i_target = -1;
-            for (int i = i_current+focus_change_dir; i >= 0 && i < g.Windows.Size && i_target == -1; i += focus_change_dir)
-                if (g.Windows[i]->IsNavigableTo())
-                    i_target = i;
-            for (int i = (focus_change_dir < 0) ? (g.Windows.Size-1) : 0; i >= 0 && i < g.Windows.Size && i_target == -1 && i_target != i_current; i += focus_change_dir)
-                if (g.Windows[i]->IsNavigableTo())
-                    i_target = i;
-            if (i_target != -1 && i_target != i_current)        // i_target might be == i_current in rare situation where we only have 1 navigable window
-                g.NavWindowingTarget = g.Windows[i_target];
+            const int i_current = FindWindowIndex(g.NavWindowingTarget);
+            ImGuiWindow* window_target = FindWindowNavigable(i_current + focus_change_dir, -1, focus_change_dir);
+            if (!window_target)
+                window_target = FindWindowNavigable((focus_change_dir < 0) ? (g.Windows.Size-1) : 0, i_current, focus_change_dir);
+            g.NavWindowingTarget = window_target;
             g.NavWindowingToggleLayer = false;
             g.NavWindowingDisplayAlpha = 1.0f;
         }
