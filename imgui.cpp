@@ -51,22 +51,21 @@
  Designed for developers and content-creators, not the typical end-user! Some of the weaknesses includes:
  - doesn't look fancy, doesn't animate
  - limited layout features, intricate layouts are typically crafted in code
- - occasionally uses statically sized buffers for string manipulations - won't crash, but some very long pieces of text may be clipped. functions like ImGui::TextUnformatted() don't have such restriction.
 
 
  END-USER GUIDE
  ==============
 
- - double-click title bar to collapse window
- - click upper right corner to close a window, available when 'bool* p_open' is passed to ImGui::Begin()
- - click and drag on lower right corner to resize window
- - click and drag on any empty space to move window
- - double-click/double-tap on lower right corner grip to auto-fit to content
+ - Double-click title bar to collapse window
+ - Click upper right corner to close a window, available when 'bool* p_open' is passed to ImGui::Begin()
+ - Click and drag on lower right corner to resize window
+ - Click and drag on any empty space to move window
+ - Double-click/double-tap on lower right corner grip to auto-fit to content
  - TAB/SHIFT+TAB to cycle through keyboard editable fields
- - use mouse wheel to scroll
- - use CTRL+mouse wheel to zoom window contents (if IO.FontAllowScaling is true)
+ - Use mouse wheel to scroll
+ - Use CTRL+mouse wheel to zoom window contents (if io.FontAllowScaling is true)
  - CTRL+Click on a slider or drag box to input value as text
- - text editor:
+ - Text editor:
    - Hold SHIFT or use mouse to select text.
    - CTRL+Left/Right to word jump
    - CTRL+Shift+Left/Right to select words
@@ -75,75 +74,109 @@
    - CTRL+Z,CTRL+Y to undo/redo
    - ESCAPE to revert text to its original value
    - You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract (because - would set a negative value!)
+   - Controls are automatically adjusted for OSX to match standard OSX text editing operations.
+ - Gamepad/keyboard navigation are in beta-phase, see Programmer Guide below.
 
 
  PROGRAMMER GUIDE
  ================
 
- - read the FAQ below this section!
- - your code creates the UI, if your code doesn't run the UI is gone! == very dynamic UI, no construction/destructions steps, less data retention on your side, no state duplication, less sync, less bugs.
- - call and read ImGui::ShowTestWindow() for demo code demonstrating most features.
- - see examples/ folder for standalone sample applications. Prefer reading examples/opengl_example/ first as it is the simplest.
-   you may be able to grab and copy a ready made imgui_impl_*** file from the examples/.
- - customization: PushStyleColor()/PushStyleVar() or the style editor to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme).
+ READ FIRST
 
- - getting started:
-   - init: call ImGui::GetIO() to retrieve the ImGuiIO structure and fill the fields marked 'Settings'.
-   - init: call io.Fonts->GetTexDataAsRGBA32(...) and load the font texture pixels into graphics memory.
-   - every frame:
-      1/ in your mainloop or right after you got your keyboard/mouse info, call ImGui::GetIO() and fill the fields marked 'Input'
-      2/ call ImGui::NewFrame() as early as you can!
-      3/ use any ImGui function you want between NewFrame() and Render()
-      4/ call ImGui::Render() as late as you can to end the frame and finalize render data. it will call your RenderDrawListFn handler that you set in the IO structure.
-         (if you don't need to render, you still need to call Render() and ignore the callback, or call EndFrame() instead. if you call neither some aspects of windows focusing/moving will appear broken.)
-   - all rendering information are stored into command-lists until ImGui::Render() is called.
-   - ImGui never touches or know about your GPU state. the only function that knows about GPU is the RenderDrawListFn handler that you provide.
-   - effectively it means you can create widgets at any time in your code, regardless of considerations of being in "update" vs "render" phases of your own application.
-   - refer to the examples applications in the examples/ folder for instruction on how to setup your code.
-   - a typical application skeleton may be:
+ - Read the FAQ below this section!
+ - Your code creates the UI, if your code doesn't run the UI is gone! == very dynamic UI, no construction/destructions steps, less data retention on your side, no state duplication, less sync, less bugs.
+ - Call and read ImGui::ShowTestWindow() for demo code demonstrating most features.
+ - Customization: PushStyleColor()/PushStyleVar() or the style editor to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme).
 
-        // Application init
-        ImGuiIO& io = ImGui::GetIO();
-        io.DisplaySize.x = 1920.0f;
-        io.DisplaySize.y = 1280.0f;
-        io.IniFilename = "imgui.ini";
-        io.RenderDrawListsFn = my_render_function;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
-        // TODO: Fill others settings of the io structure
+ GETTING STARTED WITH INTEGRATING IN YOUR ENGINE
 
-        // Load texture atlas
-        // There is a default font so you don't need to care about choosing a font yet
-        unsigned char* pixels;
-        int width, height;
-        io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height);
-        // TODO: At this points you've got a texture pointed to by 'pixels' and you need to upload that your your graphic system
-        // TODO: Store your texture pointer/identifier (whatever your engine uses) in 'io.Fonts->TexID'
+ - See examples/ folder for standalone sample applications. Prefer reading examples/opengl_example/ first as it is the simplest.
+   You may be able to grab and copy a ready made imgui_impl_*** file from the examples/.
+ - Init: call ImGui::GetIO() to retrieve the ImGuiIO structure and fill the fields marked 'Settings'.
+ - Init: call io.Fonts->GetTexDataAsRGBA32(...) and load the font texture pixels into graphics memory.
+ - Every frame:
+    1/ in your mainloop or right after you got your keyboard/mouse info, call ImGui::GetIO() and fill the fields marked 'Input'
+    2/ call ImGui::NewFrame() as early as you can!
+    3/ use any ImGui function you want between NewFrame() and Render()
+    4/ call ImGui::Render() as late as you can to end the frame and finalize render data. it will call your RenderDrawListFn handler that you set in the IO structure.
+       (if you don't need to render, you still need to call Render() and ignore the callback, or call EndFrame() instead. if you call neither some aspects of windows focusing/moving will appear broken.)
+ - All rendering information are stored into command-lists until ImGui::Render() is called.
+ - ImGui never touches or know about your GPU state. the only function that knows about GPU is the RenderDrawListFn handler that you provide.
+ - Effectively it means you can create widgets at any time in your code, regardless of considerations of being in "update" vs "render" phases of your own application.
+ - Refer to the examples applications in the examples/ folder for instruction on how to setup your code.
+ - A typical application skeleton may be:
 
-        // Application main loop
-        while (true)
-        {
-            // 1) get low-level inputs (e.g. on Win32, GetKeyboardState(), or poll your events, etc.)
-            // TODO: fill all fields of IO structure and call NewFrame
-            ImGuiIO& io = ImGui::GetIO();
-            io.DeltaTime = 1.0f/60.0f;
-            io.MousePos = mouse_pos;
-            io.MouseDown[0] = mouse_button_0;
-            io.MouseDown[1] = mouse_button_1;
-            io.KeysDown[i] = ...
+     // Application init
+     ImGuiIO& io = ImGui::GetIO();
+     io.DisplaySize.x = 1920.0f;
+     io.DisplaySize.y = 1280.0f;
+     io.IniFilename = "imgui.ini";
+     io.RenderDrawListsFn = my_render_function;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
+     // TODO: Fill others settings of the io structure
 
-            // 2) call NewFrame(), after this point you can use ImGui::* functions anytime
-            ImGui::NewFrame();
+     // Load texture atlas (there is a default font so you don't need to care about choosing a font yet)
+     unsigned char* pixels;
+     int width, height;
+     io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height);
+     // TODO: At this points you've got a texture pointed to by 'pixels' and you need to upload that your your graphic system
+     // TODO: Store your texture pointer/identifier (whatever your engine uses) in 'io.Fonts->TexID'
 
-            // 3) most of your application code here
-            MyGameUpdate(); // may use any ImGui functions, e.g. ImGui::Begin("My window"); ImGui::Text("Hello, world!"); ImGui::End();
-            MyGameRender(); // may use any ImGui functions
+     // Application main loop
+     while (true)
+     {
+       // 1) get low-level inputs (e.g. on Win32, GetKeyboardState(), or poll your events, etc.)
+       // TODO: fill all fields of IO structure and call NewFrame
+       ImGuiIO& io = ImGui::GetIO();
+       io.DeltaTime = 1.0f/60.0f;
+       io.MousePos = mouse_pos;
+       io.MouseDown[0] = mouse_button_0;
+       io.MouseDown[1] = mouse_button_1;
+       io.KeysDown[i] = ...
 
-            // 4) render & swap video buffers
-            ImGui::Render();
-            SwapBuffers();
-        }
+       // 2) call NewFrame(), after this point you can use ImGui::* functions anytime
+       ImGui::NewFrame();
 
-   - You can read back 'io.WantCaptureMouse', 'io.WantCaptureKeybord' etc. flags from the IO structure to tell how ImGui intends to use your
-     inputs and to know if you should share them or hide them from the rest of your application. Read the FAQ below for more information.
+       // 3) most of your application code here
+       MyGameUpdate(); // may use any ImGui functions, e.g. ImGui::Begin("My window"); ImGui::Text("Hello, world!"); ImGui::End();
+       MyGameRender(); // may use any ImGui functions
+     
+       // 4) render & swap video buffers
+       ImGui::Render();
+       SwapBuffers();
+     }
+
+ - You can read back 'io.WantCaptureMouse', 'io.WantCaptureKeybord' etc. flags from the IO structure to tell how ImGui intends to use your
+   inputs and to know if you should share them or hide them from the rest of your application. Read the FAQ below for more information.
+
+ USING GAMEPAD/KEYBOARD NAVIGATION [BETA]
+
+ - Gamepad/keyboard navigation support is available, it is currently in Beta and has issues. Your feedback and bug reports are welcome.
+ - See https://github.com/ocornut/imgui/issues/323 for discussion thread and ask questions.
+ - The current primary focus is to support game controllers.
+ - Consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
+ - Consider using Synergy host (on your computer) + uSynergy.c (in your console/tablet/phone app) to use PC mouse/keyboard.
+ - Being able to share and transition inputs between imgui navigation and your own game/application is tricky, and may requires further work on imgui.
+   For gamepad use, the easiest approach is to go all-or-nothing, with a buttons combo that toggle your inputs between imgui and your game/application.
+   For more advanced uses, you may want to use:
+     - io.NavUsable: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
+     - io.NavActive: true when the navigation cursor is visible (and usually goes false when mouse is used).
+     - query focus information with IsWindowFocused(), IsAnyWindowFocused(), IsAnyItemFocused() functions.
+   The reality is more complex than what those flags can express. Please discuss your issues and usage scenario in the thread above. 
+   As we head toward more keyboard-oriented development this aspect will need to be improved.
+ - It is recommended that you enable the 'io.NavMovesMouse' option. Enabling it instructs ImGui that it can request moving your move cursor to track navigated items and ease readability.
+   When enabled and using directional navigation (with d-pad or arrow keys), the NewFrame() functions may alter 'io.MousePos' and set 'io.WantMoveMouse' to notify you that it did so.
+   When that happens your back-end will need to move the OS mouse cursor on the _next_ frame. The examples binding in examples/ do that.
+     
+     // Application init
+     io.NavMovesMouse = true;
+
+     // Application main loop
+     if (io.WantMoveMouse)
+        MyFuncToSetMousePosition(io.MousePos.x, io.MousePos.y);
+     ImGui::NewFrame();
+
+   In a setup when you may not have easy control over the mouse cursor (e.g. uSynergy doesn't expose changing remote mouse cursor),
+   you might want to set a boolean to request ignoring your other external mouse positions until they move again.
 
 
  API BREAKING CHANGES
@@ -266,7 +299,7 @@
 
  Q: How can I help?
  A: - If you are experienced enough with ImGui and with C/C++, look at the todo list and see how you want/can help!
-    - Become a Patron/donate. Convince your company to become a Patron or provide serious funding for development time.
+    - Become a Patron/donate! Convince your company to become a Patron or provide serious funding for development time! See http://www.patreon.com/imgui
 
  Q: How do I update to a newer version of ImGui?
  A: Overwrite the following files:
@@ -480,9 +513,9 @@
  - window/tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
  - window: increase minimum size of a window with menus or fix the menu rendering so that it doesn't look odd.
  - draw-list: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
-!- scrolling: allow immediately effective change of scroll if we haven't appended items yet
+!- scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet
  - splitter/separator: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
- - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc.
+ - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc. (#395)
  - widgets: clean up widgets internal toward exposing everything.
  - widgets: add disabled and read-only modes (#211)
  - main: considering adding an Init() function? some constructs are awkward in the implementation because of the lack of them.
@@ -532,7 +565,6 @@
  - popups: border options. richer api like BeginChild() perhaps? (#197)
  - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last prefered button" and may teleport when moving mouse
  - menus: local shortcuts, global shortcuts (#456, #126)
- - menus: icons
  - menus: menubars: some sort of priority / effect of main menu-bar on desktop size?
  - menus: calling BeginMenu() twice with a same name doesn't seem to append nicely
  - statusbar: add a per-window status bar helper similar to what menubar does.
@@ -563,6 +595,7 @@
  - textwrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
  - settings: write more decent code to allow saving/loading new fields
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file
+ - stb: add defines to disable stb implementations
  - style: add window shadows.
  - style/optimization: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding.
  - style: color-box not always square?
@@ -570,7 +603,7 @@
  - style: try to make PushStyleVar() more robust to incorrect parameters (to be more friendly to edit & continues situation).
  - style/opt: PopStyleVar could be optimized by having GetStyleVar returns the type, using a table mapping stylevar enum to data type.
  - style: global scale setting.
- - style: WindowPadding needs to be EVEN needs the 0.5 multiplier probably have a subtle effect on clip rectangle
+ - style: WindowPadding needs to be EVEN as the 0.5 multiplier used on this value probably have a subtle effect on clip rectangle
  - text: simple markup language for color change?
  - font: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
  - font: small opt: for monospace font (like the defalt one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance
@@ -583,6 +616,7 @@
  - log: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?). code is commented because it fails with multiple Begin/End pairs.
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wildcards (with implicit leading/trailing *), regexps
+ - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
 !- keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing
  - keyboard: full keyboard navigation and focus. (#323)
