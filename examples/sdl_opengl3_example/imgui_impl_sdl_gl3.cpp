@@ -152,7 +152,6 @@ bool ImGui_ImplSdlGL3_ProcessEvent(SDL_Event* event)
         }
     case SDL_TEXTINPUT:
         {
-            ImGuiIO& io = ImGui::GetIO();
             io.AddInputCharactersUTF8(event->text.text);
             return true;
         }
