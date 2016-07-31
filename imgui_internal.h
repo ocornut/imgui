@@ -700,6 +700,7 @@ struct IMGUI_API ImGuiWindow
     ImGuiID                 NavLastId;                          // Last known NavId for this window, for nav layer 0 only.
     int                     AutoFitFramesX, AutoFitFramesY;
     bool                    AutoFitOnlyGrows;
+    int                     AutoFitChildAxises;
     int                     AutoPosLastDirection;
     int                     HiddenFrames;
     int                     SetWindowPosAllowFlags;             // bit ImGuiSetCond_*** specify if SetWindowPos() call will succeed with this particular flag.

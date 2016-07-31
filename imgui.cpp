@@ -1743,6 +1743,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     NavLastId = 0;
     AutoFitFramesX = AutoFitFramesY = -1;
     AutoFitOnlyGrows = false;
+    AutoFitChildAxises = 0x00;
     AutoPosLastDirection = -1;
     HiddenFrames = 0;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiSetCond_Always | ImGuiSetCond_Once | ImGuiSetCond_FirstUseEver | ImGuiSetCond_Appearing;
@@ -4161,18 +4162,11 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
 
     const ImVec2 content_avail = GetContentRegionAvail();
     ImVec2 size = ImFloor(size_arg);
+    const int auto_fit_axises = ((size.x == 0.0f) ? 0x01 : 0x00) | ((size.y == 0.0f) ? 0x02 : 0x00);
     if (size.x <= 0.0f)
-    {
-        if (size.x == 0.0f)
-            flags |= ImGuiWindowFlags_ChildWindowAutoFitX;
         size.x = ImMax(content_avail.x, 4.0f) - fabsf(size.x); // Arbitrary minimum zero-ish child size of 4.0f (0.0f causing too much issues)
-    }
     if (size.y <= 0.0f)
-    {
-        if (size.y == 0.0f)
-            flags |= ImGuiWindowFlags_ChildWindowAutoFitY;
         size.y = ImMax(content_avail.y, 4.0f) - fabsf(size.y);
-    }
     if (border)
         flags |= ImGuiWindowFlags_ShowBorders;
     flags |= extra_flags;
@@ -4182,6 +4176,7 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
 
     bool ret = ImGui::Begin(title, NULL, size, -1.0f, flags);
     ImGuiWindow* child_window = GetCurrentWindow();
+    child_window->AutoFitChildAxises = auto_fit_axises;
     if (!(parent_window->Flags & ImGuiWindowFlags_ShowBorders))
         child_window->Flags &= ~ImGuiWindowFlags_ShowBorders;
 
@@ -4218,9 +4213,9 @@ void ImGui::EndChild()
     {
         // When using auto-filling child window, we don't provide full width/height to ItemSize so that it doesn't feed back into automatic size-fitting.
         ImVec2 sz = GetWindowSize();
-        if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitX) // Arbitrary minimum zero-ish child size of 4.0f causes less trouble than a 0.0f
+        if (window->AutoFitChildAxises & 0x01) // Arbitrary minimum zero-ish child size of 4.0f causes less trouble than a 0.0f
             sz.x = ImMax(4.0f, sz.x);
-        if (window->Flags & ImGuiWindowFlags_ChildWindowAutoFitY)
+        if (window->AutoFitChildAxises & 0x02)
             sz.y = ImMax(4.0f, sz.y);
         ImGui::End();
 
