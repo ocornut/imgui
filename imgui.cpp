@@ -2501,7 +2501,7 @@ static void NavUpdate()
         if (!IsKeyDownMap(ImGuiKey_NavMenu))
         {
             // Apply actual focus only when releasing the NavMenu button (until then the window was merely rendered front-most)
-            if (g.NavWindowingTarget && (!g.NavWindow || g.NavWindowingTarget != g.NavWindow->RootNonPopupWindow))
+            if (g.NavWindowingTarget && !g.NavWindowingToggleLayer && (!g.NavWindow || g.NavWindowingTarget != g.NavWindow->RootNonPopupWindow))
             {
                 ImGui::FocusWindow(g.NavWindowingTarget);
                 g.NavDisableHighlight = false;
@@ -2511,7 +2511,7 @@ static void NavUpdate()
             }
 
             // Single press toggles NavLayer
-            if (g.NavWindowingToggleLayer)
+            if (g.NavWindowingToggleLayer && g.NavWindow)
             {
                 if ((g.NavWindow->DC.NavLayerActiveFlags & (1<<1)) == 0 && (g.NavWindow->RootWindow->DC.NavLayerActiveFlags & (1<<1)) != 0)
                     ImGui::FocusWindow(g.NavWindow->RootWindow);
