@@ -718,9 +718,10 @@ struct IMGUI_API ImGuiWindow
     ImGuiStorage            StateStorage;
     float                   FontWindowScale;                    // Scale multiplier per-window
     ImDrawList*             DrawList;
-    ImGuiWindow*            RootWindow;                         // If we are a child window, this is pointing to the first non-child parent window. Else point to ourself.
-    ImGuiWindow*            RootNonPopupWindow;                 // Used to display TitleBgActive color and for selecting which window to use for NavWindowing
     ImGuiWindow*            ParentWindow;                       // Immediate parent in the window stack *regardless* of whether this window is a child window or not)
+    ImGuiWindow*            RootWindow;                         // Generally point to ourself. If we are a child window, this is pointing to the first non-child parent window.
+    ImGuiWindow*            RootNonPopupWindow;                 // Generally point to ourself. Used to display TitleBgActive color and for selecting which window to use for NavWindowing
+    ImGuiWindow*            RootNavWindow;                      // Generally point to ourself. If we are a child window with the ImGuiWindowFlags_NavFlattenedChild flag, point to parent. Used to display TitleBgActive color and for selecting which window to use for NavWindowing.
 
     // Navigation / Focus
     // FIXME-NAVIGATION: Merge all this with the new Nav system, at least the request variables should be moved to ImGuiContext
@@ -746,7 +747,7 @@ public:
     ImRect      TitleBarRect() const                    { return ImRect(Pos, ImVec2(Pos.x + SizeFull.x, Pos.y + TitleBarHeight())); }
     float       MenuBarHeight() const                   { return (Flags & ImGuiWindowFlags_MenuBar) ? CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f : 0.0f; }
     ImRect      MenuBarRect() const                     { float y1 = Pos.y + TitleBarHeight(); return ImRect(Pos.x, y1, Pos.x + SizeFull.x, y1 + MenuBarHeight()); }
-    bool        IsNavigableTo() const                   { return Active && this == this->RootNonPopupWindow && (!(Flags & ImGuiWindowFlags_NoNavFocus) || this == GImGui->FocusedWindow); }
+    bool        IsNavigableTo() const                   { return Active && this == RootNonPopupWindow && (!(Flags & ImGuiWindowFlags_NoNavFocus) || this == GImGui->FocusedWindow); }
 };
 
 //-----------------------------------------------------------------------------

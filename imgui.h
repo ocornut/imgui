@@ -511,6 +511,7 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_AlwaysUseWindowPadding = 1 << 16,  // Ensure child windows without border uses style.WindowPadding (ignored by default for non-bordered child windows, because more convenient)
     ImGuiWindowFlags_NoNavFocus             = 1 << 17,  // No focusing of this window with gamepad/keyboard navigation
     ImGuiWindowFlags_NoNavInputs            = 1 << 18,  // No gamepad/keyboard navigation within the window
+    ImGuiWindowFlags_NavFlattened           = 1 << 19,  // Allow gamepad/keyboard navigation to cross over parent border to this child (only use on child that have no scrolling!)
     // [Internal]
     ImGuiWindowFlags_ChildWindow            = 1 << 20,  // Don't use! For internal use by BeginChild()
     ImGuiWindowFlags_ChildWindowAutoFitX    = 1 << 21,  // Don't use! For internal use by BeginChild()

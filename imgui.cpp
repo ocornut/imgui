@@ -1755,9 +1755,10 @@ ImGuiWindow::ImGuiWindow(const char* name)
     DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
     IM_PLACEMENT_NEW(DrawList) ImDrawList();
     DrawList->_OwnerName = Name;
+    ParentWindow = NULL;
     RootWindow = NULL;
     RootNonPopupWindow = NULL;
-    ParentWindow = NULL;
+    RootNavWindow = NULL;
 
     FocusIdxAllCounter = FocusIdxTabCounter = -1;
     FocusIdxAllRequestCurrent = FocusIdxTabRequestCurrent = INT_MAX;
@@ -1917,7 +1918,7 @@ static float NavScoreItemDistInterval(float a0, float a1, float b0, float b1)
 static bool NavScoreItem(ImRect cand)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiWindow* window = g.NavWindow;
     if (g.NavLayer != window->DC.NavLayerCurrent)
         return false;
 
@@ -2059,10 +2060,10 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     //      We could early out with `if (is_clipped && !g.NavInitDefaultRequest) return false;` but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
     //      A more pragmatic solution for handling last lists is relying on the fact that they are likely evenly spread items (so that clipper can work) and we could nav at higher-level (apply index, etc.)
     //      So eventually we would like to provide the user will the primitives to be able to implement that sort of customized/efficient navigation handling whenever necessary.
-    if (id != NULL && g.NavWindow == window && g.IO.NavUsable)
+    if (id != NULL && g.NavWindow == window->RootNavWindow && g.IO.NavUsable)
     {
         const ImRect& nav_bb = nav_bb_arg ? *nav_bb_arg : bb;
-        const ImRect nav_bb_rel(nav_bb.Min - window->Pos, nav_bb.Max - window->Pos);
+        const ImRect nav_bb_rel(nav_bb.Min - g.NavWindow->Pos, nav_bb.Max - g.NavWindow->Pos);
         if (g.NavInitDefaultRequest && g.NavLayer == window->DC.NavLayerCurrent && window->DC.AllowNavDefaultFocus)
         {
             g.NavInitDefaultRequest = g.NavInitDefaultResultExplicit = false; // Clear flag immediately, first item gets default, also simplify the if() in ItemAdd()
@@ -2070,8 +2071,8 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
             g.NavInitDefaultResultRectRel = nav_bb_rel;
         }
 
-        const bool DEBUG_NAV = false; // [DEBUG] Enable to test scoring on all items.
-        if ((g.NavMoveRequest || DEBUG_NAV) && g.NavId != *id)
+        //const bool DEBUG_NAV = false; // [DEBUG] Enable to test scoring on all items.
+        if ((g.NavMoveRequest /*|| DEBUG_NAV*/) && g.NavId != *id)
         {
             //if (DEBUG_NAV && !g.NavMoveRequest) g.NavMoveDir = ImGuiNavDir_N;
             if (NavScoreItem(nav_bb)) //if (!DEBUG || g.NavMoveRequest)
@@ -2389,7 +2390,7 @@ static void NavUpdate()
             }
         }
 
-        // Apply result from previous navigation directional move request
+        // Apply result from previous frame navigation directional move request
         ImGui::SetActiveID(0);
         SetNavIdMoveMouse(g.NavMoveResultId, g.NavMoveResultRectRel);
         g.NavMoveFromClampedRefRect = false;
@@ -3864,7 +3865,7 @@ void ImGui::SetItemAllowOverlap()
 void ImGui::SetItemDefaultFocus()
 {
     ImGuiContext& g = *GImGui;
-    if (g.NavWindow == g.CurrentWindow && (g.NavInitDefaultRequest || g.NavInitDefaultResultId != 0))
+    if (g.NavWindow == g.CurrentWindow->RootNavWindow && (g.NavInitDefaultRequest || g.NavInitDefaultResultId != 0))
     {
         g.NavInitDefaultRequest = false;
         g.NavInitDefaultResultExplicit = true;
@@ -4186,7 +4187,7 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
 
     // Process navigation-in immediately so NavInit can run on first frame
     const ImGuiID id = parent_window->GetChildID(child_window);
-    if ((child_window->DC.NavLayerActiveFlags != 0 || child_window->DC.NavHasScroll) && GImGui->NavActivateId == id)
+    if (!(flags & ImGuiWindowFlags_NavFlattened) && (child_window->DC.NavLayerActiveFlags != 0 || child_window->DC.NavHasScroll) && GImGui->NavActivateId == id)
     {
         FocusWindow(child_window);
         NavInitWindow(child_window, false);
@@ -4227,15 +4228,14 @@ void ImGui::EndChild()
         ImGuiID id = parent_window->GetChildID(window);
         ImRect bb(parent_window->DC.CursorPos, parent_window->DC.CursorPos + sz);
         ItemSize(sz);
-        ItemAdd(bb, (window->DC.NavLayerActiveFlags != 0 || window->DC.NavHasScroll) ? &id : NULL);
-        if (window->DC.NavLayerActiveFlags != 0 || window->DC.NavHasScroll)
+        if (!(window->Flags & ImGuiWindowFlags_NavFlattened) && (window->DC.NavLayerActiveFlags != 0 || window->DC.NavHasScroll))
         {
-            //if (!window->DC.NavHasItems && window->DC.NavHasScroll && g.NavWindow == window) // As a special case, we render nav highlight of child when inside when only scrolling is possible
-            //{
-            //    bb.Expand(-1.0f);
-            //    id = g.NavId;
-            //}
+            ItemAdd(bb, &id);
             RenderNavHighlight(id, bb);
+        }
+        else
+        {
+            ItemAdd(bb, NULL);
         }
     }
 }
@@ -4428,6 +4428,9 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
     if (flags & ImGuiWindowFlags_NoInputs)
         flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
 
+    if (flags & ImGuiWindowFlags_NavFlattened)
+        IM_ASSERT(flags & ImGuiWindowFlags_ChildWindow);
+
     // Find or create
     bool window_is_new = false;
     ImGuiWindow* window = FindWindowByName(name);
@@ -4524,6 +4527,9 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
     window->ParentWindow = parent_window;
     window->RootWindow = g.CurrentWindowStack[root_idx];
     window->RootNonPopupWindow = g.CurrentWindowStack[root_non_popup_idx];      // Used to display TitleBgActive color and for selecting which window to use for NavWindowing
+    window->RootNavWindow = window;
+    while (window->RootNavWindow->Flags & ImGuiWindowFlags_NavFlattened)
+        window->RootNavWindow = window->RootNavWindow->ParentWindow;
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
