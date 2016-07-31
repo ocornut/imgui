@@ -4179,7 +4179,7 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
 
     // Process navigation-in immediately so NavInit can run on first frame
     const ImGuiID id = parent_window->GetChildID(child_window);
-    if (!(flags & ImGuiWindowFlags_NavFlattened) && (child_window->DC.NavLayerActiveFlags != 0 || child_window->DC.NavHasScroll) && GImGui->NavActivateId == id)
+    if (/*!(flags & ImGuiWindowFlags_NavFlattened) &&*/ (child_window->DC.NavLayerActiveFlags != 0 || child_window->DC.NavHasScroll) && GImGui->NavActivateId == id)
     {
         FocusWindow(child_window);
         NavInitWindow(child_window, false);
@@ -4220,7 +4220,7 @@ void ImGui::EndChild()
         ImGuiID id = parent_window->GetChildID(window);
         ImRect bb(parent_window->DC.CursorPos, parent_window->DC.CursorPos + sz);
         ItemSize(sz);
-        if (!(window->Flags & ImGuiWindowFlags_NavFlattened) && (window->DC.NavLayerActiveFlags != 0 || window->DC.NavHasScroll))
+        if (/*!(window->Flags & ImGuiWindowFlags_NavFlattened) &&*/ (window->DC.NavLayerActiveFlags != 0 || window->DC.NavHasScroll))
         {
             ItemAdd(bb, &id);
             RenderNavHighlight(id, bb);
@@ -4420,8 +4420,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
     if (flags & ImGuiWindowFlags_NoInputs)
         flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
 
-    if (flags & ImGuiWindowFlags_NavFlattened)
-        IM_ASSERT(flags & ImGuiWindowFlags_ChildWindow);
+    //if (flags & ImGuiWindowFlags_NavFlattened)
+    //    IM_ASSERT(flags & ImGuiWindowFlags_ChildWindow);
 
     // Find or create
     bool window_is_new = false;
@@ -4520,8 +4520,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
     window->RootWindow = g.CurrentWindowStack[root_idx];
     window->RootNonPopupWindow = g.CurrentWindowStack[root_non_popup_idx];      // Used to display TitleBgActive color and for selecting which window to use for NavWindowing
     window->RootNavWindow = window;
-    while (window->RootNavWindow->Flags & ImGuiWindowFlags_NavFlattened)
-        window->RootNavWindow = window->RootNavWindow->ParentWindow;
+    //while (window->RootNavWindow->Flags & ImGuiWindowFlags_NavFlattened)
+    //    window->RootNavWindow = window->RootNavWindow->ParentWindow;
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
