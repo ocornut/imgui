@@ -2449,7 +2449,7 @@ static void NavUpdate()
         if (!IsKeyDownMap(ImGuiKey_NavMenu))
         {
             // Apply actual focus only when releasing the NavMenu button (until then the window was merely rendered front-most)
-            if (g.NavWindowingTarget && (!g.FocusedWindow || g.NavWindowingTarget != g.FocusedWindow->RootNonPopupWindow))
+            if (g.NavWindowingTarget && (!g.NavWindow || g.NavWindowingTarget != g.NavWindow->RootNonPopupWindow))
             {
                 ImGui::FocusWindow(g.NavWindowingTarget);
                 g.NavDisableHighlight = false;
@@ -2476,7 +2476,7 @@ static void NavUpdate()
     }
 
     // Set output flags for user application
-    g.IO.NavUsable = g.FocusedWindow && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNavInputs);
+    g.IO.NavUsable = g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
     g.IO.NavActive = (g.IO.NavUsable && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL) || g.NavInitDefaultRequest;
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
@@ -2502,14 +2502,14 @@ static void NavUpdate()
         else
         {
             // Clear NavId for popups but keep it for regular child window so we can leave one and come back where we were
-            if (g.FocusedWindow && ((g.FocusedWindow->Flags & ImGuiWindowFlags_Popup) || !(g.FocusedWindow->Flags & ImGuiWindowFlags_ChildWindow)))
-                g.FocusedWindow->NavLastId = 0;
+            if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup) || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
+                g.NavWindow->NavLastId = 0;
 
-            if (g.FocusedWindow && (g.FocusedWindow->Flags & ImGuiWindowFlags_ChildWindow) && g.FocusedWindow->ParentWindow)
+            if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow) && g.NavWindow->ParentWindow)
             {
                 // Exit child window
-                ImGuiWindow* child_window = g.FocusedWindow;
-                ImGuiWindow* parent_window = g.FocusedWindow->ParentWindow;
+                ImGuiWindow* child_window = g.NavWindow;
+                ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
                 ImGui::FocusWindow(parent_window);
                 g.NavId = parent_window->GetChildID(child_window);
                 if (g.NavLayer == 0)
@@ -2537,7 +2537,7 @@ static void NavUpdate()
     // Initiate directional inputs request
     const int allowed_dir_flags = (g.ActiveId == 0) ? ~0 : g.ActiveIdAllowNavDirFlags;
     g.NavMoveDir = ImGuiNavDir_None;
-    if (g.FocusedWindow && !g.NavWindowingTarget && allowed_dir_flags && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNavInputs))
+    if (g.NavWindow && !g.NavWindowingTarget && allowed_dir_flags && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
     {
         if ((allowed_dir_flags & (1<<ImGuiNavDir_Left))  && IsKeyPressedMap(ImGuiKey_NavLeft,  true)) g.NavMoveDir = ImGuiNavDir_Left;
         if ((allowed_dir_flags & (1<<ImGuiNavDir_Right)) && IsKeyPressedMap(ImGuiKey_NavRight, true)) g.NavMoveDir = ImGuiNavDir_Right;
@@ -2545,10 +2545,7 @@ static void NavUpdate()
         if ((allowed_dir_flags & (1<<ImGuiNavDir_Down))  && IsKeyPressedMap(ImGuiKey_NavDown,  true)) g.NavMoveDir = ImGuiNavDir_Down;
     }
     if (g.NavMoveDir != ImGuiNavDir_None)
-    {
         g.NavMoveRequest = true;
-        g.NavWindow = g.FocusedWindow;
-    }
 
     // Scrolling
     if (g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.NavWindowingTarget)
@@ -2808,11 +2805,11 @@ void ImGui::NewFrame()
 
     // Pressing TAB activate widget focus
     //// NB: Don't discard FocusedWindow if it isn't active, so that a window that go on/off programatically won't lose its keyboard focus. // [2016/07/17] That comment was made invalid by 19d02becef94e8e0f1d432a8bd55cd783876583c
-    if (g.ActiveId == 0 && g.FocusedWindow != NULL && g.FocusedWindow->Active && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab, false))
+    if (g.ActiveId == 0 && g.NavWindow != NULL && g.NavWindow->Active && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab, false))
         if (g.NavId != 0 && g.NavIdTabCounter != INT_MAX)
-            g.FocusedWindow->FocusIdxTabRequestNext = g.NavIdTabCounter + 1 + (g.IO.KeyShift ? -1 : 1);
+            g.NavWindow->FocusIdxTabRequestNext = g.NavIdTabCounter + 1 + (g.IO.KeyShift ? -1 : 1);
         else
-            g.FocusedWindow->FocusIdxTabRequestNext = g.IO.KeyShift ? -1 : 0;
+            g.NavWindow->FocusIdxTabRequestNext = g.IO.KeyShift ? -1 : 0;
     g.NavIdTabCounter = INT_MAX;
 
     // Mark all windows as not visible
@@ -2825,7 +2822,7 @@ void ImGui::NewFrame()
     }
 
     // Closing the focused window restore focus to the first active root window in descending z-order
-    if (g.FocusedWindow && !g.FocusedWindow->WasActive)
+    if (g.NavWindow && !g.NavWindow->WasActive)
         for (int i = g.Windows.Size-1; i >= 0; i--)
             if (g.Windows[i]->WasActive && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
             {
@@ -2867,7 +2864,7 @@ void ImGui::Shutdown()
     g.Windows.clear();
     g.WindowsSortBuffer.clear();
     g.CurrentWindowStack.clear();
-    g.FocusedWindow = NULL;
+    g.NavWindow = NULL;
     g.HoveredWindow = NULL;
     g.HoveredRootWindow = NULL;
     for (int i = 0; i < g.Settings.Size; i++)
@@ -3156,7 +3153,7 @@ void ImGui::EndFrame()
     // Click to focus window and start moving (after we're done with all our widgets)
     if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
     {
-        if (!(g.FocusedWindow && !g.FocusedWindow->WasActive && g.FocusedWindow->Active)) // Unless we just made a popup appear
+        if (!(g.NavWindow && !g.NavWindow->WasActive && g.NavWindow->Active)) // Unless we just made a popup appear
         {
             if (g.HoveredRootWindow != NULL)
             {
@@ -3173,7 +3170,7 @@ void ImGui::EndFrame()
                     SetActiveIDNoNav(g.MovedWindowMoveId, g.HoveredRootWindow);
                 }
             }
-            else if (g.FocusedWindow != NULL && GetFrontMostModalRootWindow() == NULL)
+            else if (g.NavWindow != NULL && GetFrontMostModalRootWindow() == NULL)
             {
                 // Clicking on void disable focus
                 FocusWindow(NULL);
@@ -3626,7 +3623,7 @@ bool ImGui::IsAnyWindowHovered()
 
 bool ImGui::IsAnyWindowFocused()
 {
-    return GImGui->FocusedWindow != NULL;
+    return GImGui->NavWindow != NULL;
 }
 
 bool ImGui::IsAnyWindowHoveredAtPos(const ImVec2& pos)
@@ -3981,7 +3978,7 @@ static void CloseInactivePopups()
     // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it.
     // Don't close our own child popup windows
     int n = 0;
-    if (g.FocusedWindow)
+    if (g.NavWindow)
     {
         for (n = 0; n < g.OpenPopupStack.Size; n++)
         {
@@ -3994,7 +3991,7 @@ static void CloseInactivePopups()
 
             bool has_focus = false;
             for (int m = n; m < g.OpenPopupStack.Size && !has_focus; m++)
-                has_focus = (g.OpenPopupStack[m].Window && g.OpenPopupStack[m].Window->RootWindow == g.FocusedWindow->RootWindow);
+                has_focus = (g.OpenPopupStack[m].Window && g.OpenPopupStack[m].Window->RootWindow == g.NavWindow->RootWindow);
             if (!has_focus)
                 break;
         }
@@ -4753,7 +4750,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         if (window->Collapsed)
         {
             // Title bar only
-            const bool is_focused = g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow && !g.NavDisableHighlight;
+            const bool is_focused = g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow && !g.NavDisableHighlight;
             RenderFrame(title_bar_rect.GetTL(), title_bar_rect.GetBR(),  GetColorU32(is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBgCollapsed), true, window_rounding);
         }
         else
@@ -4832,7 +4829,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 window->DrawList->AddRectFilled(window->Pos+ImVec2(0,window->TitleBarHeight()), window->Pos+window->Size, ColorConvertFloat4ToU32(bg_color), window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? 15 : 4|8);
 
             // Title bar
-            const bool is_focused = g.FocusedWindow && window->RootNonPopupWindow == g.FocusedWindow->RootNonPopupWindow;
+            const bool is_focused = g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow;
             if (!(flags & ImGuiWindowFlags_NoTitleBar))
                 window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32(is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, 1|2);
 
@@ -5164,7 +5161,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
 
-    if (g.FocusedWindow != window)
+    if (g.NavWindow != window)
     {
         g.NavId = window ? window->NavLastId : 0; // Restore NavId
         g.NavIdIsAlive = false;
@@ -5176,7 +5173,6 @@ void ImGui::FocusWindow(ImGuiWindow* window)
     }
 
     // Passing NULL allow to disable keyboard focus
-    g.FocusedWindow = window;
     if (!window)
         return;
 
@@ -5467,19 +5463,19 @@ bool ImGui::IsWindowHovered()
 bool ImGui::IsWindowFocused()
 {
     ImGuiContext& g = *GImGui;
-    return g.FocusedWindow == g.CurrentWindow;
+    return g.NavWindow == g.CurrentWindow;
 }
 
 bool ImGui::IsRootWindowFocused()
 {
     ImGuiContext& g = *GImGui;
-    return g.FocusedWindow == g.CurrentWindow->RootWindow;
+    return g.NavWindow == g.CurrentWindow->RootWindow;
 }
 
 bool ImGui::IsRootWindowOrAnyChildFocused()
 {
     ImGuiContext& g = *GImGui;
-    return g.FocusedWindow && g.FocusedWindow->RootWindow == g.CurrentWindow->RootWindow;
+    return g.NavWindow && g.NavWindow->RootWindow == g.CurrentWindow->RootWindow;
 }
 
 bool ImGui::IsRootWindowOrAnyChildHovered()
@@ -6144,8 +6140,8 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window)
 {
     // An active popup disable hovering on other windows (apart from its own children)
     ImGuiContext& g = *GImGui;
-    if (ImGuiWindow* focused_window = g.FocusedWindow)
-        if (ImGuiWindow* focused_root_window = focused_window->RootWindow)
+    if (g.NavWindow)
+        if (ImGuiWindow* focused_root_window = g.NavWindow->RootWindow)
             if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasActive && focused_root_window != window->RootWindow)
                 return false;
 
@@ -9623,13 +9619,13 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     const ImGuiID id = window->GetID(label);
 
     ImVec2 label_size = CalcTextSize(label, NULL, true);
-    ImGuiWindow* backed_focused_window = g.FocusedWindow;
 
     bool pressed;
     bool menu_is_open = IsPopupOpen(id);
     bool menuset_is_open = !(window->Flags & ImGuiWindowFlags_Popup) && (g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].ParentMenuSet == window->GetID("##menus"));
+    ImGuiWindow* backed_nav_window = g.NavWindow;
     if (menuset_is_open)
-        g.FocusedWindow = window;
+        g.NavWindow = window;
 
     ImVec2 popup_pos, pos = window->DC.CursorPos;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
@@ -9656,7 +9652,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
 
     bool hovered = enabled && IsHovered(window->DC.LastItemRect, id);
     if (menuset_is_open)
-        g.FocusedWindow = backed_focused_window;
+        g.NavWindow = backed_nav_window;
 
     bool want_open = false, want_close = false;
     if (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
@@ -10596,12 +10592,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         }
         if (ImGui::TreeNode("Basic state"))
         {
-            ImGui::Text("FocusedWindow: '%s'", g.FocusedWindow ? g.FocusedWindow->Name : "NULL");
             ImGui::Text("HoveredWindow: '%s'", g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
             ImGui::Text("HoveredRootWindow: '%s'", g.HoveredRootWindow ? g.HoveredRootWindow->Name : "NULL");
             ImGui::Text("HoveredId: 0x%08X/0x%08X", g.HoveredId, g.HoveredIdPreviousFrame); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
             ImGui::Text("ActiveId: 0x%08X/0x%08X, ActiveIdWindow: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
-            ImGui::Text("NavId: 0x%08X, NavWindow: '%s'", g.NavId, g.NavWindow ? g.NavWindow->Name : "NULL");
+            ImGui::Text("NavWindow: '%s', NavId: 0x%08X", g.NavWindow ? g.NavWindow->Name : "NULL", g.NavId);
             ImGui::Text("NavRefRectRel: (%.1f,%.1f)(%.1f,%.1f)", g.NavRefRectRel.Min.x, g.NavRefRectRel.Min.y, g.NavRefRectRel.Max.x, g.NavRefRectRel.Max.y);
             ImGui::Text("NavUsable: %d, NavActive: %d", g.IO.NavUsable, g.IO.NavActive);
             ImGui::Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);

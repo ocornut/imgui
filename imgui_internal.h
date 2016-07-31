@@ -378,7 +378,6 @@ struct ImGuiContext
     ImVector<ImGuiWindow*>  WindowsSortBuffer;
     ImVector<ImGuiWindow*>  CurrentWindowStack;
     ImGuiWindow*            CurrentWindow;                      // Being drawn into
-    ImGuiWindow*            FocusedWindow;                      // Will catch keyboard inputs
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs
     ImGuiWindow*            HoveredRootWindow;                  // Will catch mouse inputs (for focus/move only)
     ImGuiID                 HoveredId;                          // Hovered widget
@@ -404,11 +403,11 @@ struct ImGuiContext
     ImVector<ImGuiPopupRef> CurrentPopupStack;                  // Which level of BeginPopup() we are in (reset every frame)
 
     // Navigation data (for gamepad/keyboard)
-    ImGuiID                 NavId;                              // Nav/focused widget for navigation
+    ImGuiWindow*            NavWindow;                          // Nav/focused window for navigation
+    ImGuiID                 NavId;                              // Nav/focused item for navigation
     ImGuiID                 NavActivateId, NavInputId;          // ~~ IsKeyPressedMap(ImGuiKey_NavActive) ? NavId : 0, etc. (to make widget code terser)
     ImGuiID                 NavTabbedId;                        // 
     ImRect                  NavRefRectRel, NavScoringRectScreen;// Reference rectangle, in window space. Modified rectangle for directional navigation scoring, in screen space.
-    ImGuiWindow*            NavWindow;                          // 
     ImGuiWindow*            NavWindowingTarget;
     float                   NavWindowingDisplayAlpha;
     bool                    NavWindowingToggleLayer;
@@ -497,7 +496,6 @@ struct ImGuiContext
         FrameCount = 0;
         FrameCountEnded = FrameCountRendered = -1;
         CurrentWindow = NULL;
-        FocusedWindow = NULL;
         HoveredWindow = NULL;
         HoveredRootWindow = NULL;
         HoveredId = 0;
@@ -515,9 +513,9 @@ struct ImGuiContext
         MovedWindowMoveId = 0;
         SettingsDirtyTimer = 0.0f;
 
+        NavWindow = NULL;
         NavId = NavActivateId = NavInputId = NavTabbedId = 0;
         NavRefRectRel = NavScoringRectScreen = ImRect();
-        NavWindow = NULL;
         NavWindowingTarget = NULL;
         NavWindowingDisplayAlpha = 0.0f;
         NavWindowingToggleLayer = false;
@@ -748,7 +746,7 @@ public:
     ImRect      TitleBarRect() const                    { return ImRect(Pos, ImVec2(Pos.x + SizeFull.x, Pos.y + TitleBarHeight())); }
     float       MenuBarHeight() const                   { return (Flags & ImGuiWindowFlags_MenuBar) ? CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f : 0.0f; }
     ImRect      MenuBarRect() const                     { float y1 = Pos.y + TitleBarHeight(); return ImRect(Pos.x, y1, Pos.x + SizeFull.x, y1 + MenuBarHeight()); }
-    bool        IsNavigableTo() const                   { return Active && this == RootNonPopupWindow && (!(Flags & ImGuiWindowFlags_NoNavFocus) || this == GImGui->FocusedWindow); }
+    bool        IsNavigableTo() const                   { return Active && this == RootNonPopupWindow && (!(Flags & ImGuiWindowFlags_NoNavFocus) || this == GImGui->NavWindow); }
 };
 
 //-----------------------------------------------------------------------------
