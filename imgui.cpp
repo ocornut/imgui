@@ -2549,23 +2549,23 @@ static void NavUpdate()
     }
 
     // Scrolling
-    if (g.FocusedWindow && !(g.FocusedWindow->Flags & ImGuiWindowFlags_NoNavInputs))
+    if (g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.NavWindowingTarget)
     {
         // Fallback manual-scroll with NavUp/NavDown when window has no navigable item
-        const float scroll_speed = ImFloor(g.FocusedWindow->CalcFontSize() * 100 * g.IO.DeltaTime + 0.5f); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
-        if (!g.FocusedWindow->DC.NavLayerActiveFlags && g.FocusedWindow->DC.NavHasScroll && g.NavMoveRequest && (g.NavMoveDir == ImGuiNavDir_Up || g.NavMoveDir == ImGuiNavDir_Down))
-            SetWindowScrollY(g.FocusedWindow, ImFloor(g.FocusedWindow->Scroll.y + ((g.NavMoveDir == ImGuiNavDir_Up) ? -1.0f : +1.0f) * scroll_speed));
+        const float scroll_speed = ImFloor(g.NavWindow->CalcFontSize() * 100 * g.IO.DeltaTime + 0.5f); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
+        if (!g.NavWindow->DC.NavLayerActiveFlags && g.NavWindow->DC.NavHasScroll && g.NavMoveRequest && (g.NavMoveDir == ImGuiNavDir_Up || g.NavMoveDir == ImGuiNavDir_Down))
+            SetWindowScrollY(g.NavWindow, ImFloor(g.NavWindow->Scroll.y + ((g.NavMoveDir == ImGuiNavDir_Up) ? -1.0f : +1.0f) * scroll_speed));
 
         // Manual scroll with NavScrollXXX keys
         ImVec2 scroll_dir = ImGui::NavGetMovingDir(1, 1.0f/10.0f, 10.0f);
         if (scroll_dir.x != 0.0f && g.NavWindow->ScrollbarX)
         {
-            SetWindowScrollX(g.FocusedWindow, ImFloor(g.FocusedWindow->Scroll.x + scroll_dir.x * scroll_speed));
+            SetWindowScrollX(g.NavWindow, ImFloor(g.NavWindow->Scroll.x + scroll_dir.x * scroll_speed));
             g.NavMoveFromClampedRefRect = true;
         }
         if (scroll_dir.y != 0.0f)
         {
-            SetWindowScrollY(g.FocusedWindow, ImFloor(g.FocusedWindow->Scroll.y + scroll_dir.y * scroll_speed));
+            SetWindowScrollY(g.NavWindow, ImFloor(g.NavWindow->Scroll.y + scroll_dir.y * scroll_speed));
             g.NavMoveFromClampedRefRect = true;
         }
     }
