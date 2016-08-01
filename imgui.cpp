@@ -7627,9 +7627,9 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
             if (g.ActiveIdSource == ImGuiInputSource_Nav)
             {
                 adjust_delta = NavGetTweakDelta().x;
-                if (IsKeyDownMap(ImGuiKey_NavTweakFaster) && g.DragSpeedScaleFast >= 0.0f)
+                if (IsKeyDownMap(ImGuiKey_NavTweakFaster))
                     adjust_delta *= 10.0f;
-                if (IsKeyDownMap(ImGuiKey_NavTweakSlower) && g.DragSpeedScaleSlow >= 0.0f)
+                if (IsKeyDownMap(ImGuiKey_NavTweakSlower))
                     adjust_delta /= 10.0f;
             }
             adjust_delta *= v_speed;
