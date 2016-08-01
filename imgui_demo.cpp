@@ -774,16 +774,16 @@ void ImGui::ShowTestWindow(bool* p_open)
         // Tip: If your float aren't contiguous but part of a structure, you can pass a pointer to your first float and the sizeof() of your structure in the Stride parameter.
         static float values[90] = { 0 };
         static int values_offset = 0;
-        if (animate)
+        static float refresh_time = 0.0f;
+        if (!animate || refresh_time == 0.0f)
+            refresh_time = ImGui::GetTime();
+        while (refresh_time < ImGui::GetTime()) // Create dummy data at fixed 60 hz rate for the demo
         {
-            static float refresh_time = ImGui::GetTime(); // Create dummy data at fixed 60 hz rate for the demo
-            for (; ImGui::GetTime() > refresh_time + 1.0f/60.0f; refresh_time += 1.0f/60.0f)
-            {
-                static float phase = 0.0f;
-                values[values_offset] = cosf(phase);
-                values_offset = (values_offset+1) % IM_ARRAYSIZE(values);
-                phase += 0.10f*values_offset;
-            }
+            static float phase = 0.0f;
+            values[values_offset] = cosf(phase);
+            values_offset = (values_offset+1) % IM_ARRAYSIZE(values);
+            phase += 0.10f*values_offset;
+            refresh_time += 1.0f/60.0f;
         }
         ImGui::PlotLines("Lines", values, IM_ARRAYSIZE(values), values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
         ImGui::PlotHistogram("Histogram", arr, IM_ARRAYSIZE(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0,80));
