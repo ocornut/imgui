@@ -772,7 +772,7 @@ struct ImGuiIO
     float         MouseDragThreshold;       // = 6.0f               // Distance threshold before considering we are dragging
     int           KeyMap[ImGuiKey_COUNT];   // <unset>              // Map of indices into the KeysDown[512] entries array
     float         KeyRepeatDelay;           // = 0.250f             // When holding a key/button, time before it starts repeating, in seconds (for buttons in Repeat mode, etc.).
-    float         KeyRepeatRate;            // = 0.020f             // When holding a key/button, rate at which it repeats, in seconds.
+    float         KeyRepeatRate;            // = 0.050f             // When holding a key/button, rate at which it repeats, in seconds.
     bool          NavMovesMouse;            // = false              // Directional navigation can move the mouse cursor. Updates MousePos and set WantMoveMouse=true. If enabled you MUST honor those requests in your binding, otherwise ImGui will react as if mouse is jumping around.
     void*         UserData;                 // = NULL               // Store your own data for retrieval by callbacks.
 
