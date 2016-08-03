@@ -2493,6 +2493,7 @@ static void NavUpdate()
             {
                 const float move_speed = ImFloor(600 * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
                 g.NavWindowingTarget->PosFloat += move_delta * move_speed;
+                g.NavDisableMouseHover = true;
                 MarkSettingsDirty(g.NavWindowingTarget);
             }
         }
