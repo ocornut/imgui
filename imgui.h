@@ -70,6 +70,7 @@ typedef void* ImTextureID;          // user data to identify a texture (this is 
 typedef int ImGuiCol;               // a color identifier for styling       // enum ImGuiCol_
 typedef int ImGuiStyleVar;          // a variable identifier for styling    // enum ImGuiStyleVar_
 typedef int ImGuiKey;               // a key identifier (ImGui-side enum)   // enum ImGuiKey_
+typedef int ImGuiNavInput;          // an input identifier for gamepad nav  // enum ImGuiNavInput_
 typedef int ImGuiAlign;             // alignment                            // enum ImGuiAlign_
 typedef int ImGuiColorEditMode;     // color edit mode for ColorEdit*()     // enum ImGuiColorEditMode_
 typedef int ImGuiMouseCursor;       // a mouse cursor identifier            // enum ImGuiMouseCursor_
@@ -437,7 +438,7 @@ namespace ImGui
     IMGUI_API bool          IsKeyDown(int key_index);                                           // key_index into the keys_down[] array, imgui doesn't know the semantic of each entry, uses your own indices!
     IMGUI_API bool          IsKeyPressed(int key_index, bool repeat = true);                    // uses user's key indices as stored in the keys_down[] array. if repeat=true. uses io.KeyRepeatDelay / KeyRepeatRate
     IMGUI_API bool          IsKeyReleased(int key_index);                                       // "
-    IMGUI_API int           GetKeyPressedAmount(int key_index, float repeat_delay, float rate); // uses provided repeat rate/delay. return a count, typically 0 or 1 but may be >1 if RepeatRate is small enough that DeltaTime > RepeatRate
+    IMGUI_API int           GetKeyPressedAmount(int key_index, float repeat_delay, float rate); // uses provided repeat rate/delay. return a count, most often 0 or 1 but might be >1 if RepeatRate is small enough that DeltaTime > RepeatRate
     IMGUI_API bool          IsMouseDown(int button);                                            // is mouse button held
     IMGUI_API bool          IsMouseClicked(int button, bool repeat = false);                    // did mouse button clicked (went from !Down to Down)
     IMGUI_API bool          IsMouseDoubleClicked(int button);                                   // did mouse button double-clicked. a double-click returns false in IsMouseClicked(). uses io.MouseDoubleClickTime.
@@ -576,10 +577,10 @@ enum ImGuiSelectableFlags_
 enum ImGuiKey_
 {
     ImGuiKey_Tab,       // for tabbing through fields
-    ImGuiKey_LeftArrow, // for text edit
-    ImGuiKey_RightArrow,// for text edit
     ImGuiKey_UpArrow,   // for text edit
     ImGuiKey_DownArrow, // for text edit
+    ImGuiKey_LeftArrow, // for text edit
+    ImGuiKey_RightArrow,// for text edit
     ImGuiKey_PageUp,
     ImGuiKey_PageDown,
     ImGuiKey_Home,      // for text edit
@@ -594,25 +595,29 @@ enum ImGuiKey_
     ImGuiKey_X,         // for text edit CTRL+X: cut
     ImGuiKey_Y,         // for text edit CTRL+Y: redo
     ImGuiKey_Z,         // for text edit CTRL+Z: undo
-
-    // Inputs for Gamepad/Keyboard navigation. Feed those buttons with the input of either or both peripherals involved.
-    ImGuiKey_NavActivate,   // press button, tweak value        // e.g. Space key, Circle button
-    ImGuiKey_NavCancel,     // close menu/popup/child, unselect // e.g. Escape key, Cross button
-    ImGuiKey_NavInput,      // text input                       // e.g. Enter key, Triangle button
-    ImGuiKey_NavMenu,       // access menu, focus, move, resize // e.g. Square button
-    ImGuiKey_NavLeft,       // e.g. Left arrow, D-Pad left
-    ImGuiKey_NavRight,      // e.g. Right arrow, D-Pad right
-    ImGuiKey_NavUp,         // e.g. Up arrow, D-Pad up
-    ImGuiKey_NavDown,       // e.g. Down arrow, D-Pad down
-    ImGuiKey_NavScrollLeft, // e.g. Analog left
-    ImGuiKey_NavScrollRight,// e.g. Analog right
-    ImGuiKey_NavScrollUp,   // e.g. Analog up
-    ImGuiKey_NavScrollDown, // e.g. Analog down
-    ImGuiKey_NavTweakFaster,// e.g. Shift key, R-trigger
-    ImGuiKey_NavTweakSlower,// e.g. Alt key, L-trigger
-    ImGuiKey_NavLast_,
-
     ImGuiKey_COUNT
+};
+
+enum ImGuiNavInput_
+{
+    ImGuiNavInput_PadActivate,      // press button, tweak value                    // e.g. Circle button
+    ImGuiNavInput_PadCancel,        // close menu/popup/child, lose selection       // e.g. Cross button
+    ImGuiNavInput_PadInput,         // text input                                   // e.g. Triangle button
+    ImGuiNavInput_PadMenu,          // access menu, focus, move, resize             // e.g. Square button
+    ImGuiNavInput_PadUp,            // move up, resize window (with PadMenu held)   // e.g. D-pad up/down/left/right
+    ImGuiNavInput_PadDown,          // move down
+    ImGuiNavInput_PadLeft,          // move left
+    ImGuiNavInput_PadRight,         // move right
+    ImGuiNavInput_PadScrollUp,      // scroll up, move window (with PadMenu held)   // e.g. right stick up/down/left/right
+    ImGuiNavInput_PadScrollDown,    // "
+    ImGuiNavInput_PadScrollLeft,    //
+    ImGuiNavInput_PadScrollRight,   //
+    ImGuiNavInput_PadFocusPrev,     // next window (with PadMenu held)              // e.g. L-trigger
+    ImGuiNavInput_PadFocusNext,     // prev window (with PadMenu held)              // e.g. R-trigger
+    ImGuiNavInput_PadTweakSlow,     // slower tweaks                                // e.g. L-trigger
+    ImGuiNavInput_PadTweakFast,     // faster tweaks                                // e.g. R-trigger
+
+    ImGuiNavInput_COUNT,
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -824,6 +829,7 @@ struct ImGuiIO
     bool        KeySuper;                   // Keyboard modifier pressed: Cmd/Super/Windows
     bool        KeysDown[512];              // Keyboard keys that are pressed (in whatever storage order you naturally have access to keyboard data)
     ImWchar     InputCharacters[16+1];      // List of characters input (translated by user from keypress+keyboard state). Fill using AddInputCharacter() helper.
+    float       NavInputs[ImGuiNavInput_COUNT];
 
     // Functions
     IMGUI_API void AddInputCharacter(ImWchar c);                        // Helper to add a new character into InputCharacters[]
@@ -863,6 +869,8 @@ struct ImGuiIO
     float       MouseDragMaxDistanceSqr[5]; // Squared maximum distance of how much mouse has traveled from the click point
     float       KeysDownDuration[512];      // Duration the keyboard key has been down (0.0f == just pressed)
     float       KeysDownDurationPrev[512];  // Previous duration the key has been down
+    float       NavInputsDownDuration[ImGuiNavInput_COUNT];
+    float       NavInputsPrev[ImGuiNavInput_COUNT];
 
     IMGUI_API   ImGuiIO();
 };
