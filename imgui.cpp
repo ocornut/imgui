@@ -2591,13 +2591,27 @@ static void NavUpdate()
         {
             ImGui::SetActiveID(0);
         }
+        else if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow) && !(g.NavWindow->Flags & ImGuiWindowFlags_Popup) && g.NavWindow->ParentWindow)
+        {
+            // Exit child window
+            ImGuiWindow* child_window = g.NavWindow;
+            ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
+            ImGui::FocusWindow(parent_window);
+            g.NavId = parent_window->GetChildID(child_window);
+            if (g.NavLayer == 0)
+                parent_window->NavLastId = g.NavId;
+            g.NavIdIsAlive = false;
+            if (g.NavDisableMouseHover)
+                g.NavMousePosDirty = true;
+        }
         else if (g.OpenPopupStack.Size > 0)
         {
-            // Close open popup or move back to parent window
+            // Close open popup/menu
             ClosePopupToLevel(g.OpenPopupStack.Size - 1);
         }
         else if (g.NavLayer != 0)
         {
+            // Leave the "menu" layer
             g.NavLayer = 0;
             if (g.NavWindow->NavLastId)
                 SetNavIdMoveMouse(g.NavWindow->NavLastId, ImRect());
@@ -2606,27 +2620,10 @@ static void NavUpdate()
         }
         else
         {
-            // Clear NavId for popups but keep it for regular child window so we can leave one and come back where we were
+            // Clear NavLastId for popups but keep it for regular child window so we can leave one and come back where we were
             if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup) || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
                 g.NavWindow->NavLastId = 0;
-
-            if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow) && g.NavWindow->ParentWindow)
-            {
-                // Exit child window
-                ImGuiWindow* child_window = g.NavWindow;
-                ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
-                ImGui::FocusWindow(parent_window);
-                g.NavId = parent_window->GetChildID(child_window);
-                if (g.NavLayer == 0)
-                    parent_window->NavLastId = g.NavId;
-                g.NavIdIsAlive = false;
-                if (g.NavDisableMouseHover)
-                    g.NavMousePosDirty = true;
-            }
-            else
-            {
-                g.NavId = 0;
-            }
+            g.NavId = 0;
         }
     }
 
