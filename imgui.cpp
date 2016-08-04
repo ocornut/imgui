@@ -9754,14 +9754,25 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
             want_close = menu_is_open;
             want_open = !menu_is_open;
         }
+        if (g.NavId == id && g.NavMoveRequest && g.NavMoveDir == ImGuiNavDir_Right) // Nav-Right to open
+        {
+            want_open = true;
+            g.NavMoveRequest = false;
+        }
     }
-    else if (menu_is_open && pressed && menuset_is_open) // menu-bar: click open menu to close
+    else if (menu_is_open && pressed && menuset_is_open) // Menu bar: click an open menu again to close it
     {
         want_close = true;
         want_open = menu_is_open = false;
     }
-    else if (pressed || (hovered && menuset_is_open && !menu_is_open)) // menu-bar: first click to open, then hover to open others
+    else if (pressed || (hovered && menuset_is_open && !menu_is_open)) // Menu bar: click to open a first menu, then hover to open others
         want_open = true;
+    else if (g.NavId == id && g.NavMoveRequest && g.NavMoveDir == ImGuiNavDir_Down) // Menu bar: Nav-Down to open
+    {
+        g.NavMoveRequest = false;
+        want_open = true;
+    }
+
     if (!enabled) // explicitly close if an open menu becomes disabled, facilitate users code a lot in pattern such as 'if (BeginMenu("options", has_object)) { ..use object.. }'
         want_close = true;
     if (want_close && IsPopupOpen(id))
