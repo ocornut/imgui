@@ -1195,16 +1195,20 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
 ImVec4 ImGui::ColorConvertU32ToFloat4(ImU32 in)
 {
     float s = 1.0f/255.0f;
-    return ImVec4((in & 0xFF) * s, ((in >> 8) & 0xFF) * s, ((in >> 16) & 0xFF) * s, (in >> 24) * s);
+    return ImVec4(
+        ((in >> IM_COL32_R_SHIFT) & 0xFF) * s,
+        ((in >> IM_COL32_G_SHIFT) & 0xFF) * s,
+        ((in >> IM_COL32_B_SHIFT) & 0xFF) * s,
+        ((in >> IM_COL32_A_SHIFT) & 0xFF) * s);
 }
 
 ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in)
 {
     ImU32 out;
-    out  = ((ImU32)IM_F32_TO_INT8_SAT(in.x));
-    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.y)) << 8;
-    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.z)) << 16;
-    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.w)) << 24;
+    out  = ((ImU32)IM_F32_TO_INT8_SAT(in.x)) << IM_COL32_R_SHIFT;
+    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.y)) << IM_COL32_G_SHIFT;
+    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.z)) << IM_COL32_B_SHIFT;
+    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.w)) << IM_COL32_A_SHIFT;
     return out;
 }
 
