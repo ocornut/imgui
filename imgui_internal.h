@@ -703,9 +703,6 @@ namespace ImGui
 
     IMGUI_API void          OpenPopupEx(const char* str_id, bool reopen_existing);
 
-    inline IMGUI_API ImU32  GetColorU32(ImGuiCol idx, float alpha_mul)  { ImVec4 c = GImGui->Style.Colors[idx]; c.w *= GImGui->Style.Alpha * alpha_mul; return ImGui::ColorConvertFloat4ToU32(c); }
-    inline IMGUI_API ImU32  GetColorU32(const ImVec4& col)              { ImVec4 c = col; c.w *= GImGui->Style.Alpha; return ImGui::ColorConvertFloat4ToU32(c); }
-
     // NB: All position are in absolute pixels coordinates (not window coordinates)
     // FIXME: All those functions are a mess and needs to be refactored into something decent. Avoid use outside of imgui.cpp!
     // We need: a sort of symbol library, preferably baked into font atlas when possible + decent text rendering helpers.
