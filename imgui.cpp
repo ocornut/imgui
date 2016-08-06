@@ -9116,10 +9116,10 @@ bool ImGui::IsRectVisible(const ImVec2& size)
     return window->ClipRect.Overlaps(ImRect(window->DC.CursorPos, window->DC.CursorPos + size));
 }
 
-bool ImGui::IsRectVisible(const ImVec2& a, const ImVec2& b)
+bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return window->ClipRect.Overlaps(ImRect(a, b));
+    return window->ClipRect.Overlaps(ImRect(rect_min, rect_max));
 }
 
 // Lock horizontal starting position + capture group bounding box into one "item" (so you can use IsItemHovered() or layout primitives such as SameLine() on whole group, etc.)
