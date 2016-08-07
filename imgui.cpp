@@ -2111,7 +2111,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     {
         const ImRect& nav_bb = nav_bb_arg ? *nav_bb_arg : bb;
         const ImRect nav_bb_rel(nav_bb.Min - g.NavWindow->Pos, nav_bb.Max - g.NavWindow->Pos);
-        if (g.NavInitDefaultRequest && g.NavLayer == window->DC.NavLayerCurrent && window->DC.AllowNavDefaultFocus)
+        if (g.NavInitDefaultRequest && g.NavLayer == window->DC.NavLayerCurrent && (window->DC.ItemFlags & ImGuiItemFlags_AllowNavDefaultFocus))
         {
             g.NavInitDefaultRequest = g.NavInitDefaultResultExplicit = false; // Clear flag immediately, first item gets default, also simplify the if() in ItemAdd()
             g.NavInitDefaultResultId = *id;
@@ -2186,7 +2186,7 @@ bool ImGui::FocusableItemRegister(ImGuiWindow* window, ImGuiID id, bool tab_stop
 {
     ImGuiContext& g = *GImGui;
 
-    const bool allow_keyboard_focus = window->DC.AllowKeyboardFocus;
+    const bool allow_keyboard_focus = (window->DC.ItemFlags & ImGuiItemFlags_AllowKeyboardFocus) != 0;
     window->FocusIdxAllCounter++;
     if (allow_keyboard_focus)
         window->FocusIdxTabCounter++;
@@ -5027,14 +5027,12 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
         window->DC.ChildWindows.resize(0);
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
+        window->DC.ItemFlags = ImGuiItemFlags_Default_;
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
-        window->DC.AllowKeyboardFocus = window->DC.AllowNavDefaultFocus = true;
-        window->DC.ButtonRepeat = false;
+        window->DC.ItemFlagsStack.resize(0);
         window->DC.ItemWidthStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
-        window->DC.AllowKeyboardFocusStack.resize(0);
-        window->DC.ButtonRepeatStack.resize(0);
         window->DC.ColorEditMode = ImGuiColorEditMode_UserSelect;
         window->DC.ColumnsCurrent = 0;
         window->DC.ColumnsCount = 1;
@@ -5044,6 +5042,12 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         window->DC.StateStorage = &window->StateStorage;
         window->DC.GroupStack.resize(0);
         window->MenuColumns.Update(3, style.ItemSpacing.x, !window_was_active);
+
+        if ((flags & ImGuiWindowFlags_ChildWindow) && (window->DC.ItemFlags != parent_window->DC.ItemFlags))
+        {
+            window->DC.ItemFlags = parent_window->DC.ItemFlags;
+            window->DC.ItemFlagsStack.push_back(window->DC.ItemFlags);
+        }
 
         if (window->AutoFitFramesX > 0)
             window->AutoFitFramesX--;
@@ -5062,9 +5066,9 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
             // Close & collapse button are on layer 1 (same as menus) and don't default focus
-            const bool backup_allow_nav_default_focus = window->DC.AllowNavDefaultFocus;
+            const ImGuiItemFlags backup_item_options = window->DC.ItemFlags;
             if (window->Flags & ImGuiWindowFlags_MenuBar)
-                window->DC.AllowNavDefaultFocus = false;
+                window->DC.ItemFlags &= ~ImGuiItemFlags_AllowNavDefaultFocus;
             window->DC.NavLayerCurrent++;
 
             // Close button
@@ -5090,7 +5094,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             }
 
             window->DC.NavLayerCurrent--;
-            window->DC.AllowNavDefaultFocus = backup_allow_nav_default_focus;
+            window->DC.ItemFlags = backup_item_options;
 
             // Title text (FIXME: refactor text alignment facilities along with RenderText helpers)
             ImVec2 text_min = window->Pos + style.FramePadding;
@@ -5402,32 +5406,41 @@ void  ImGui::PopFont()
     SetCurrentFont(g.FontStack.empty() ? g.IO.Fonts->Fonts[0] : g.FontStack.back());
 }
 
-void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus)
+void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.AllowKeyboardFocus = allow_keyboard_focus;
-    window->DC.AllowKeyboardFocusStack.push_back(allow_keyboard_focus);
+    if (enabled)
+        window->DC.ItemFlags |= option;
+    else
+        window->DC.ItemFlags &= ~option;
+    window->DC.ItemFlagsStack.push_back(window->DC.ItemFlags);
+}
+
+void ImGui::PopItemFlag()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.ItemFlagsStack.pop_back();
+    window->DC.ItemFlags = window->DC.ItemFlagsStack.empty() ? ImGuiItemFlags_Default_ : window->DC.ItemFlagsStack.back();
+}
+
+void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus)
+{
+    PushItemFlag(ImGuiItemFlags_AllowKeyboardFocus, allow_keyboard_focus);
 }
 
 void ImGui::PopAllowKeyboardFocus()
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    window->DC.AllowKeyboardFocusStack.pop_back();
-    window->DC.AllowKeyboardFocus = window->DC.AllowKeyboardFocusStack.empty() ? true : window->DC.AllowKeyboardFocusStack.back();
+    PopItemFlag();
 }
 
 void ImGui::PushButtonRepeat(bool repeat)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ButtonRepeat = repeat;
-    window->DC.ButtonRepeatStack.push_back(repeat);
+    PushItemFlag(ImGuiItemFlags_ButtonRepeat, repeat);
 }
 
 void ImGui::PopButtonRepeat()
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ButtonRepeatStack.pop_back();
-    window->DC.ButtonRepeat = window->DC.ButtonRepeatStack.empty() ? false : window->DC.ButtonRepeatStack.back();
+    PopItemFlag();
 }
 
 void ImGui::PushTextWrapPos(float wrap_pos_x)
@@ -5506,7 +5519,6 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
     g.StyleModifiers.push_back(backup);
     *pvar = val;
 }
-
 
 void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
 {
@@ -6413,7 +6425,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     if (!ItemAdd(bb, &id))
         return false;
 
-    if (window->DC.ButtonRepeat) flags |= ImGuiButtonFlags_Repeat;
+    if (window->DC.ItemFlags & ImGuiItemFlags_ButtonRepeat) flags |= ImGuiButtonFlags_Repeat;
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
 
@@ -9481,7 +9493,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_Disabled) PopStyleColor();
 
     // Automatically close popups
-    if (pressed && !(flags & ImGuiSelectableFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
+    if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_DontClosePopups) && !((window->DC.ItemFlags & ImGuiItemFlags_SelectableDontClosePopup)))
         CloseCurrentPopup();
     return pressed;
 }
