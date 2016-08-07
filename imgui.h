@@ -665,6 +665,7 @@ enum ImGuiCol_
     ImGuiCol_PlotHistogramHovered,
     ImGuiCol_TextSelectedBg,
     ImGuiCol_ModalWindowDarkening,  // darken entire screen when a modal window is active
+    ImGuiCol_NavWindowingHighlight, // when holding NavMenu to focus/move/resize windows
     ImGuiCol_COUNT
 };
 

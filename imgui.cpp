@@ -833,6 +833,7 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
     Colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.00f, 0.00f, 1.00f, 0.35f);
     Colors[ImGuiCol_ModalWindowDarkening]   = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+    Colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.12f);
 }
 
 ImGuiIO::ImGuiIO()
@@ -1961,8 +1962,7 @@ static float NavScoreItemDistInterval(float a0, float a1, float b0, float b1)
 }
 
 // Scoring function for directional navigation. Based on https://gist.github.com/rygorous/6981057
-// FIXME-NAVIGATION: Pretty rough.
-// FIXME-NAVIGATION: May want to handle the degenerate case that we have commented out.
+// FIXME-NAVIGATION: Pretty rough. Also may want to handle the degenerate case that we have commented out.
 static bool NavScoreItem(ImRect cand)
 {
     ImGuiContext& g = *GImGui;
@@ -2540,7 +2540,6 @@ static void NavUpdate()
         g.NavWindowingToggleLayer &= (g.NavWindowingDisplayAlpha < 1.0f); // Once button is held long enough we don't consider it a tag-to-toggle-layer press anymore.
 
         // Select window to focus
-        // FIXME-NAVIGATION: Need to clarify input semantic, naming is misleading/incorrect here.
         const int focus_change_dir = (int)IsNavInputPressed(ImGuiNavInput_PadFocusPrev, ImGuiNavReadMode_RepeatSlow) - (int)IsNavInputPressed(ImGuiNavInput_PadFocusNext, ImGuiNavReadMode_RepeatSlow);
         if (focus_change_dir != 0 && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_Modal))
         {
@@ -4868,13 +4867,12 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             window->DrawList->AddRectFilled(fullscreen_rect.Min, fullscreen_rect.Max, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
 
         // Navigation windowing (via ImGuiKey_NavWindowing key) shows whole window selected
-        // FIXME-NAVIGATION: Styling
         if (g.NavWindowingTarget == window)
         {
             ImRect bb = window->Rect();
             bb.Expand(g.FontSize);
-            window->DrawList->AddRectFilled(bb.Min, bb.Max, IM_COL32(255,255,255,(int)(30 * g.NavWindowingDisplayAlpha))/*ImGui::GetColorU32(ImGuiCol_HeaderHovered, 0.15f)*/, g.Style.WindowRounding);
-            window->DrawList->AddRect(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_HeaderHovered, g.NavWindowingDisplayAlpha), g.Style.WindowRounding);
+            window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingDisplayAlpha), g.Style.WindowRounding);
+            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_HeaderHovered, g.NavWindowingDisplayAlpha), g.Style.WindowRounding);
         }
 
         // Draw window + handle manual resize
@@ -5586,6 +5584,7 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     case ImGuiCol_PlotHistogramHovered: return "PlotHistogramHovered";
     case ImGuiCol_TextSelectedBg: return "TextSelectedBg";
     case ImGuiCol_ModalWindowDarkening: return "ModalWindowDarkening";
+    case ImGuiCol_NavWindowingHighlight: return "NavWindowingHighlight"; 
     }
     IM_ASSERT(0);
     return "Unknown";
