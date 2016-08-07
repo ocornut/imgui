@@ -593,25 +593,29 @@ enum ImGuiKey_
     ImGuiKey_COUNT
 };
 
+// [BETA] Gamepad/Keyboard directional navigation
+// Fill ImGuiIO.NavInputs[] float array every frame to feed gamepad/keyboard navigation inputs.
+// 0.0f= not held. 1.0f= fully held. Pass intermediate 0.0f..1.0f values for analog triggers/sticks.
+// ImGui uses a simple >0.0f for activation testing, and won't attempt to test for a dead-zone.
+// Your code passing analog gamepad values is likely to want to transform your raw inputs, using a dead-zone and maybe a power curve.
 enum ImGuiNavInput_
 {
     ImGuiNavInput_PadActivate,      // press button, tweak value                    // e.g. Circle button
     ImGuiNavInput_PadCancel,        // close menu/popup/child, lose selection       // e.g. Cross button
     ImGuiNavInput_PadInput,         // text input                                   // e.g. Triangle button
     ImGuiNavInput_PadMenu,          // access menu, focus, move, resize             // e.g. Square button
-    ImGuiNavInput_PadUp,            // move up, resize window (with PadMenu held)   // e.g. D-pad up/down/left/right
+    ImGuiNavInput_PadUp,            // move up, resize window (with PadMenu held)   // e.g. D-pad up/down/left/right, analog
     ImGuiNavInput_PadDown,          // move down
     ImGuiNavInput_PadLeft,          // move left
     ImGuiNavInput_PadRight,         // move right
-    ImGuiNavInput_PadScrollUp,      // scroll up, move window (with PadMenu held)   // e.g. right stick up/down/left/right
+    ImGuiNavInput_PadScrollUp,      // scroll up, move window (with PadMenu held)   // e.g. right stick up/down/left/right, analog
     ImGuiNavInput_PadScrollDown,    // "
     ImGuiNavInput_PadScrollLeft,    //
     ImGuiNavInput_PadScrollRight,   //
     ImGuiNavInput_PadFocusPrev,     // next window (with PadMenu held)              // e.g. L-trigger
     ImGuiNavInput_PadFocusNext,     // prev window (with PadMenu held)              // e.g. R-trigger
-    ImGuiNavInput_PadTweakSlow,     // slower tweaks                                // e.g. L-trigger
-    ImGuiNavInput_PadTweakFast,     // faster tweaks                                // e.g. R-trigger
-
+    ImGuiNavInput_PadTweakSlow,     // slower tweaks                                // e.g. L-trigger, analog
+    ImGuiNavInput_PadTweakFast,     // faster tweaks                                // e.g. R-trigger, analog
     ImGuiNavInput_COUNT,
 };
 

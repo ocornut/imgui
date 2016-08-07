@@ -150,13 +150,14 @@
 
  USING GAMEPAD/KEYBOARD NAVIGATION [BETA]
 
- - Gamepad/keyboard navigation support is available, it is currently in Beta and has issues. Your feedback and bug reports are welcome.
+ - Gamepad/keyboard navigation support is available, currently in Beta with some issues. Your feedback and bug reports are welcome.
  - See https://github.com/ocornut/imgui/issues/323 for discussion thread and ask questions.
  - The current primary focus is to support game controllers.
  - Consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
  - Consider using Synergy host (on your computer) + uSynergy.c (in your console/tablet/phone app) to use PC mouse/keyboard.
- - Being able to share and transition inputs between imgui navigation and your own game/application is tricky, and may requires further work on imgui.
-   For gamepad use, the easiest approach is to go all-or-nothing, with a buttons combo that toggle your inputs between imgui and your game/application.
+ - Your inputs are passed to imgui by filling the io.NavInputs[] array. See 'enum ImGuiNavInput_' in imgui.h for a description of available inputs.
+ - For gamepad use, the easiest approach is to go all-or-nothing, with a buttons combo that toggle your inputs between imgui and your game/application.
+   Sharing inputs in a more advanced or granular way between imgui and your game/application may be tricky and requires further work on imgui.
    For more advanced uses, you may want to use:
      - io.NavUsable: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
      - io.NavActive: true when the navigation cursor is visible (and usually goes false when mouse is used).
@@ -165,7 +166,7 @@
    As we head toward more keyboard-oriented development this aspect will need to be improved.
  - It is recommended that you enable the 'io.NavMovesMouse' option. Enabling it instructs ImGui that it can request moving your move cursor to track navigated items and ease readability.
    When enabled and using directional navigation (with d-pad or arrow keys), the NewFrame() functions may alter 'io.MousePos' and set 'io.WantMoveMouse' to notify you that it did so.
-   When that happens your back-end will need to move the OS mouse cursor on the _next_ frame. The examples binding in examples/ do that.
+   When that happens your back-end will need to move the OS mouse cursor on the next frame. The examples binding in examples/ do that.
      
      // Application init
      io.NavMovesMouse = true;
@@ -175,8 +176,8 @@
         MyFuncToSetMousePosition(io.MousePos.x, io.MousePos.y);
      ImGui::NewFrame();
 
-   In a setup when you may not have easy control over the mouse cursor (e.g. uSynergy doesn't expose changing remote mouse cursor),
-   you might want to set a boolean to request ignoring your other external mouse positions until they move again.
+   In a setup when you may not have easy control over the mouse cursor (e.g. uSynergy.c doesn't expose moving remote mouse cursor),
+   you might want to set a boolean to ignore your other external mouse positions until they move again.
 
 
  API BREAKING CHANGES
