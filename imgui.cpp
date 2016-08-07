@@ -2763,6 +2763,8 @@ void ImGui::NewFrame()
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = false;
     g.ActiveIdIsJustActivated = false;
+    if (g.ScalarAsInputTextId && g.ActiveId != g.ScalarAsInputTextId)
+        g.ScalarAsInputTextId = 0;
 
     // Update keyboard input state
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
@@ -7167,6 +7169,7 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
 }
 
 // Create text input in place of a slider (when CTRL+Clicking on slider)
+// FIXME: Logic is messy and confusing.
 bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label, ImGuiDataType data_type, void* data_ptr, ImGuiID id, int decimal_precision)
 {
     ImGuiContext& g = *GImGui;
@@ -7181,17 +7184,11 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label
     char buf[32];
     DataTypeFormatString(data_type, data_ptr, decimal_precision, buf, IM_ARRAYSIZE(buf));
     bool text_value_changed = InputTextEx(label, buf, IM_ARRAYSIZE(buf), aabb.GetSize(), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
-    if (g.ScalarAsInputTextId == 0)
+    if (g.ScalarAsInputTextId == 0)     // First frame we started displaying the InputText widget
     {
-        // First frame
         IM_ASSERT(g.ActiveId == id);    // InputText ID expected to match the Slider ID (else we'd need to store them both, which is also possible)
         g.ScalarAsInputTextId = g.ActiveId;
         SetHoveredID(id);
-    }
-    else if (g.ActiveId != g.ScalarAsInputTextId)
-    {
-        // Release
-        g.ScalarAsInputTextId = 0;
     }
     if (text_value_changed)
         return DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr, NULL);
