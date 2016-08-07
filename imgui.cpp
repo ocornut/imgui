@@ -9779,6 +9779,11 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
             want_open = true;
             g.NavMoveRequest = false;
         }
+        if (g.NavWindow && g.NavWindow->ParentWindow == window && g.NavMoveRequest && g.NavMoveDir == ImGuiNavDir_Left) // Nav-Left to close
+        {
+            want_close = true;
+            g.NavMoveRequest = false;
+        }
     }
     else if (menu_is_open && pressed && menuset_is_open) // Menu bar: click an open menu again to close it
     {
