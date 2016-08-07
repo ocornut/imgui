@@ -2664,6 +2664,14 @@ static void NavUpdate()
     if (g.NavMoveDir != ImGuiNavDir_None)
         g.NavMoveRequest = true;
 
+    // If we initiate a movement request and have no current NavId, we initiate a InitDefautRequest that will be used as a fallback if the direction fails to find a match
+    if (g.NavMoveRequest && g.NavId == 0)
+    {
+        g.NavInitDefaultRequest = g.NavInitDefaultResultExplicit = true;
+        g.NavInitDefaultResultId = 0;
+        g.NavDisableHighlight = false;
+    }
+
     // Scrolling
     if (g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.NavWindowingTarget)
     {
