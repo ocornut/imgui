@@ -7662,6 +7662,8 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
 
             if (v_speed == 0.0f && (v_max - v_min) != 0.0f && (v_max - v_min) < FLT_MAX)
                 v_speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
+            if (g.ActiveIdSource == ImGuiInputSource_Nav)
+                v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
 
             float v_cur = g.DragCurrentValue;
             const ImVec2 mouse_drag_delta = GetMouseDragDelta(0, 1.0f);
