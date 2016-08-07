@@ -4256,7 +4256,6 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         window->DC.AllowKeyboardFocusStack.resize(0);
         window->DC.ButtonRepeatStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
-        window->DC.ColorEditMode = ImGuiColorEditMode_UserSelect;
         window->DC.ColumnsCurrent = 0;
         window->DC.ColumnsCount = 1;
         window->DC.ColumnsStartPosY = window->DC.CursorPos.y;
@@ -4264,6 +4263,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         window->DC.TreeDepth = 0;
         window->DC.StateStorage = &window->StateStorage;
         window->DC.GroupStack.resize(0);
+        window->DC.ColorEditMode = ImGuiColorEditMode_UserSelect;
         window->MenuColumns.Update(3, style.ItemSpacing.x, !window_was_active);
 
         if (window->AutoFitFramesX > 0)
