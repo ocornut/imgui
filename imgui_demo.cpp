@@ -527,9 +527,10 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        static bool a=false;
-        if (ImGui::Button("Button")) { printf("Clicked\n"); a ^= 1; }
-        if (a)
+        static int clicked = 0;
+        if (ImGui::Button("Button")) 
+            clicked++;
+        if (clicked & 1)
         {
             ImGui::SameLine();
             ImGui::Text("Thanks for clicking me!");
@@ -1833,9 +1834,11 @@ static void ShowExampleMenuFile()
         ImGui::EndChild();
         static float f = 0.5f;
         static int n = 0;
+        static bool b = true;
         ImGui::SliderFloat("Value", &f, 0.0f, 1.0f);
         ImGui::InputFloat("Input", &f, 0.1f);
         ImGui::Combo("Combo", &n, "Yes\0No\0Maybe\0\0");
+        ImGui::Checkbox("Check", &b);
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Colors"))
