@@ -2080,8 +2080,7 @@ static void RenderNavHighlight(ImU32 id, const ImRect& bb)
     if (id != g.NavId || g.NavDisableHighlight)
         return;
     ImGuiWindow* window = ImGui::GetCurrentWindow();
-    window->DrawList->PushClipRect(window->WindowRectClipped.Min - ImVec2(2,2), window->WindowRectClipped.Max + ImVec2(2,2));
-    window->DrawList->AddRectFilled(bb.Min - ImVec2(2,2), bb.Max + ImVec2(2,2), ImGui::GetColorU32(ImGuiCol_HeaderHovered, 0.15f), g.Style.FrameRounding);
+    window->DrawList->PushClipRect(window->InnerRect.Min - ImVec2(2,2), window->InnerRect.Max + ImVec2(2,2));
     window->DrawList->AddRect(bb.Min - ImVec2(2,2), bb.Max + ImVec2(2,2), ImGui::GetColorU32(ImGuiCol_HeaderHovered), g.Style.FrameRounding);
     //window->DrawList->AddRect(g.NavRefRectScreen.Min, g.NavRefRectScreen.Max, IM_COL32(255,0,0,255));
     window->DrawList->PopClipRect();
