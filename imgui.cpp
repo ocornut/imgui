@@ -7676,7 +7676,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
             }
             if (g.ActiveIdSource == ImGuiInputSource_Nav)
             {
-                adjust_delta = GetNavInputAmount2d(0, ImGuiNavReadMode_RepeatFast, 1.0f/10.0f, 1.0f).x;
+                adjust_delta = GetNavInputAmount2d(0, ImGuiNavReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
             }
             adjust_delta *= v_speed;
             g.DragLastMouseDelta.x = mouse_drag_delta.x;
