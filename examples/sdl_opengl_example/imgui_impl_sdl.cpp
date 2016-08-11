@@ -131,7 +131,6 @@ bool ImGui_ImplSdl_ProcessEvent(SDL_Event* event)
         }
     case SDL_TEXTINPUT:
         {
-            ImGuiIO& io = ImGui::GetIO();
             io.AddInputCharactersUTF8(event->text.text);
             return true;
         }
@@ -165,6 +164,7 @@ bool ImGui_ImplSdl_CreateDeviceObjects()
     glBindTexture(GL_TEXTURE_2D, g_FontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier

@@ -18,9 +18,11 @@
 #include "imgui_internal.h"
 
 #include <stdio.h>      // vsnprintf, sscanf, printf
-#if !defined(alloca) && !defined(__FreeBSD__) && !defined(__DragonFly__)
+#if !defined(alloca)
 #ifdef _WIN32
 #include <malloc.h>     // alloca
+#elif (defined(__FreeBSD__) || defined(FreeBSD_kernel) || defined(__DragonFly__)) && !defined(__GLIBC__)
+#include <stdlib.h>     // alloca. FreeBSD uses stdlib.h unless GLIBC
 #else
 #include <alloca.h>     // alloca
 #endif
@@ -1645,6 +1647,17 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesCyrillic()
         0x0400, 0x052F, // Cyrillic + Cyrillic Supplement
         0x2DE0, 0x2DFF, // Cyrillic Extended-A
         0xA640, 0xA69F, // Cyrillic Extended-B
+        0,
+    };
+    return &ranges[0];
+}
+
+const ImWchar*  ImFontAtlas::GetGlyphRangesThai()
+{
+    static const ImWchar ranges[] =
+    {
+        0x0020, 0x00FF, // Basic Latin
+        0x0E00, 0x0E7F, // Thai
         0,
     };
     return &ranges[0];

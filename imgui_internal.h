@@ -482,7 +482,7 @@ struct ImGuiContext
         ScalarAsInputTextId = 0;
         DragCurrentValue = 0.0f;
         DragLastMouseDelta = ImVec2(0.0f, 0.0f);
-        DragSpeedDefaultRatio = 0.01f;
+        DragSpeedDefaultRatio = 1.0f / 100.0f;
         DragSpeedScaleSlow = 0.01f;
         DragSpeedScaleFast = 10.0f;
         ScrollbarClickDeltaToGrabCenter = ImVec2(0.0f, 0.0f);
@@ -546,6 +546,7 @@ struct IMGUI_API ImGuiDrawContext
     int                     StackSizesBackup[6];    // Store size of various stacks for asserting
 
     float                   IndentX;                // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
+    float                   GroupOffsetX;
     float                   ColumnsOffsetX;         // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
     int                     ColumnsCurrent;
     int                     ColumnsCount;
@@ -642,7 +643,7 @@ struct IMGUI_API ImGuiWindow
     ImGuiWindow*            RootNonPopupWindow;                 // If we are a child window, this is pointing to the first non-child non-popup parent window. Else point to ourself.
     ImGuiWindow*            ParentWindow;                       // If we are a child window, this is pointing to our parent window. Else point to NULL.
 
-    // Focus
+    // Navigation / Focus
     int                     FocusIdxAllCounter;                 // Start at -1 and increase as assigned via FocusItemRegister()
     int                     FocusIdxTabCounter;                 // (same, but only count widgets which you can Tab through)
     int                     FocusIdxAllRequestCurrent;          // Item being requested for focus
@@ -656,6 +657,7 @@ public:
 
     ImGuiID     GetID(const char* str, const char* str_end = NULL);
     ImGuiID     GetID(const void* ptr);
+    ImGuiID     GetIDNoKeepAlive(const char* str, const char* str_end = NULL);
 
     ImRect      Rect() const                            { return ImRect(Pos.x, Pos.y, Pos.x+Size.x, Pos.y+Size.y); }
     float       CalcFontSize() const                    { return GImGui->FontBaseSize * FontWindowScale; }
@@ -699,9 +701,6 @@ namespace ImGui
     IMGUI_API float         CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x);
 
     IMGUI_API void          OpenPopupEx(const char* str_id, bool reopen_existing);
-
-    inline IMGUI_API ImU32  GetColorU32(ImGuiCol idx, float alpha_mul)  { ImVec4 c = GImGui->Style.Colors[idx]; c.w *= GImGui->Style.Alpha * alpha_mul; return ImGui::ColorConvertFloat4ToU32(c); }
-    inline IMGUI_API ImU32  GetColorU32(const ImVec4& col)              { ImVec4 c = col; c.w *= GImGui->Style.Alpha; return ImGui::ColorConvertFloat4ToU32(c); }
 
     // NB: All position are in absolute pixels coordinates (not window coordinates)
     // FIXME: All those functions are a mess and needs to be refactored into something decent. Avoid use outside of imgui.cpp!

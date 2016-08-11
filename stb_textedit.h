@@ -1,4 +1,5 @@
 // [ImGui] this is a slightly modified version of stb_truetype.h 1.8
+// [ImGui] - fixed a state corruption/crash bug in stb_text_redo and stb_textedit_discard_redo (#715)
 // [ImGui] - fixed a crash bug in stb_textedit_discard_redo (#681)
 // [ImGui] - fixed some minor warnings
 // [ImGui] - added STB_TEXTEDIT_MOVEWORDLEFT/STB_TEXTEDIT_MOVEWORDRIGHT custom handler (#473)
@@ -1101,8 +1102,8 @@ static void stb_textedit_discard_redo(StbUndoState *state)
             if (state->undo_rec[i].char_storage >= 0)
                state->undo_rec[i].char_storage = state->undo_rec[i].char_storage + (short) n; // vsnet05
       }
+      STB_TEXTEDIT_memmove(state->undo_rec + state->redo_point, state->undo_rec + state->redo_point-1, (size_t) ((size_t)(STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_point)*sizeof(state->undo_rec[0])));
       ++state->redo_point;
-      STB_TEXTEDIT_memmove(state->undo_rec + state->redo_point-1, state->undo_rec + state->redo_point, (size_t) ((size_t)(STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_point)*sizeof(state->undo_rec[0])));
    }
 }
 
@@ -1260,6 +1261,7 @@ static void stb_text_redo(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
    if (r.insert_length) {
       // easy case: need to insert n characters
       STB_TEXTEDIT_INSERTCHARS(str, r.where, &s->undo_char[r.char_storage], r.insert_length);
+      s->redo_char_point += r.insert_length;
    }
 
    state->cursor = r.where + r.insert_length;
