@@ -8695,7 +8695,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     }
 
     bool cancel_edit = false;
-    if (g.ActiveId == id && !g.ActiveIdIsJustActivated)
+    if (g.ActiveId == id && !g.ActiveIdIsJustActivated && !clear_active_id)
     {
         // Handle key-presses
         const int k_mask = (io.KeyShift ? STB_TEXTEDIT_K_SHIFT : 0);
@@ -8806,7 +8806,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 value_changed = true;
             }
         }
-        else
+        if (!cancel_edit && !clear_active_id)
         {
             // Apply new value immediately - copy modified buffer back
             // Note that as soon as the input box is active, the in-widget value gets priority over any underlying modification of the input buffer
