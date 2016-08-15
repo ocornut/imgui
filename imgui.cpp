@@ -2080,10 +2080,14 @@ static void RenderNavHighlight(ImU32 id, const ImRect& bb)
     if (id != g.NavId || g.NavDisableHighlight)
         return;
     ImGuiWindow* window = ImGui::GetCurrentWindow();
-    window->DrawList->PushClipRect(window->InnerRect.Min - ImVec2(2,2), window->InnerRect.Max + ImVec2(2,2));
+
+    ImRect clip_rect(window->InnerRect.Min - ImVec2(2,2), window->InnerRect.Max + ImVec2(2,2));
+    if (!window->ClipRect.Contains(clip_rect))
+        window->DrawList->PushClipRect(clip_rect.Min, clip_rect.Max);
     window->DrawList->AddRect(bb.Min - ImVec2(2,2), bb.Max + ImVec2(2,2), ImGui::GetColorU32(ImGuiCol_HeaderHovered), g.Style.FrameRounding);
     //window->DrawList->AddRect(g.NavRefRectScreen.Min, g.NavRefRectScreen.Max, IM_COL32(255,0,0,255));
-    window->DrawList->PopClipRect();
+    if (!window->ClipRect.Contains(clip_rect))
+        window->DrawList->PopClipRect();
 }
 
 // Declare item bounding box for clipping and interaction.
