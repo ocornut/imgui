@@ -833,6 +833,7 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
     Colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.00f, 0.00f, 1.00f, 0.35f);
     Colors[ImGuiCol_ModalWindowDarkening]   = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+    Colors[ImGuiCol_NavHighlight]           = Colors[ImGuiCol_HeaderHovered];
     Colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.12f);
 }
 
@@ -2081,10 +2082,10 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id)
         return;
     ImGuiWindow* window = ImGui::GetCurrentWindow();
 
-    ImRect clip_rect(window->InnerRect.Min - ImVec2(2,2), window->InnerRect.Max + ImVec2(2,2));
+    ImRect clip_rect(window->InnerRect.Min - ImVec2(4,4), window->InnerRect.Max + ImVec2(4,4));
     if (!window->ClipRect.Contains(clip_rect))
         window->DrawList->PushClipRect(clip_rect.Min, clip_rect.Max);
-    window->DrawList->AddRect(bb.Min - ImVec2(2,2), bb.Max + ImVec2(2,2), ImGui::GetColorU32(ImGuiCol_HeaderHovered), g.Style.FrameRounding);
+    window->DrawList->AddRect(bb.Min - ImVec2(3,3), bb.Max + ImVec2(3,3), GetColorU32(ImGuiCol_NavHighlight), g.Style.FrameRounding, 0x0F, 2.0f);
     //window->DrawList->AddRect(g.NavRefRectScreen.Min, g.NavRefRectScreen.Max, IM_COL32(255,0,0,255));
     if (!window->ClipRect.Contains(clip_rect))
         window->DrawList->PopClipRect();
@@ -5599,6 +5600,7 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     case ImGuiCol_PlotHistogramHovered: return "PlotHistogramHovered";
     case ImGuiCol_TextSelectedBg: return "TextSelectedBg";
     case ImGuiCol_ModalWindowDarkening: return "ModalWindowDarkening";
+    case ImGuiCol_NavHighlight: return "NavHighlight";
     case ImGuiCol_NavWindowingHighlight: return "NavWindowingHighlight"; 
     }
     IM_ASSERT(0);
