@@ -9610,16 +9610,32 @@ static void DistributeAvailableLayoutSpace(ImGuiLayout* layout)
     layout->Dirty = ImGuiLayoutDirtyFlags_None;
 }
 
+static bool PropagateStableLayoutState(ImGuiLayout* layout)
+{
+    bool allStable = true;
+    for (ImGuiLayout* child = layout->FirstChild; child; child = child->NextSibling)
+        allStable &= PropagateStableLayoutState(child);
+
+    layout->IsStable = allStable && layout->Dirty == ImGuiLayoutDirtyFlags_None;
+
+    return layout->IsStable;
+}
+
 static void ProcessLayouts(ImGuiWindow* window)
 {
     for (int i = 0; i < window->DC.Layouts.Data.size(); ++i)
     {
         ImGuiLayout* layout = (ImGuiLayout*)window->DC.Layouts.Data[i].val_p;
-        if (!layout->Parent && layout->Dirty)
+        if (layout->Parent)
+            continue;
+
+        if (layout->Dirty)
         {
             CalculateLayoutAvailableSpace(layout);
             DistributeAvailableLayoutSpace(layout);
         }
+        else if (!layout->IsStable)
+            PropagateStableLayoutState(layout);
     }
 }
 
@@ -9656,7 +9672,7 @@ static void BeginLayoutItem(ImGuiLayout* layout)
     if (layout->Type == ImGuiLayoutType_Horizontal)
     {
         ImGui::BeginGroup();
-        if (layout->Bounds.y > item.Size.y)
+        if (layout->IsStable && layout->Bounds.y > item.Size.y)
         {
             float align = layout->Align;
             if (align < 0.0f)
@@ -9671,7 +9687,7 @@ static void BeginLayoutItem(ImGuiLayout* layout)
     {
         // Horizontal navigation is awkward in ImGui
         ImGui::BeginGroup();
-        if (layout->Bounds.x > item.Size.x)
+        if (layout->IsStable && layout->Bounds.x > item.Size.x)
         {
             float align = layout->Align;
             if (align < 0.0f)
