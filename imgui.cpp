@@ -164,9 +164,10 @@
      - query focus information with IsWindowFocused(), IsAnyWindowFocused(), IsAnyItemFocused() functions.
    The reality is more complex than what those flags can express. Please discuss your issues and usage scenario in the thread above. 
    As we head toward more keyboard-oriented development this aspect will need to be improved.
- - It is recommended that you enable the 'io.NavMovesMouse' option. Enabling it instructs ImGui that it can request moving your move cursor to track navigated items and ease readability.
+ - It is recommended that you enable the 'io.NavMovesMouse' option. Enabling it instructs ImGui that it can move your move cursor to track navigated items and ease readability.
    When enabled and using directional navigation (with d-pad or arrow keys), the NewFrame() functions may alter 'io.MousePos' and set 'io.WantMoveMouse' to notify you that it did so.
-   When that happens your back-end will need to move the OS mouse cursor on the next frame. The examples binding in examples/ do that.
+   When that happens your back-end NEEDS to move the OS or underlying mouse cursor on the next frame. The examples binding in examples/ do that.
+   (Important: It you set 'io.NavMovesMouse' to true but don't honor 'io.WantMoveMouse' properly, imgui will misbehave as it will think your mouse is moving back and forth.)
      
      // Application init
      io.NavMovesMouse = true;
@@ -9794,7 +9795,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
             want_open = true;
             g.NavMoveRequest = false;
         }
-        if (g.NavWindow && g.NavWindow->ParentWindow == window && g.NavMoveRequest && g.NavMoveDir == ImGuiNavDir_Left) // Nav-Left to close
+        if (g.NavWindow && g.NavWindow->ParentWindow == window && g.NavMoveRequest && g.NavMoveDir == ImGuiNavDir_Left && IsPopupOpen(id)) // Nav-Left to close
         {
             want_close = true;
             g.NavMoveRequest = false;
