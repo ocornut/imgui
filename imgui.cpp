@@ -2463,7 +2463,7 @@ static void NavUpdate()
         IM_ASSERT(g.NavWindow);
         g.NavId = g.NavInitDefaultResultId;
         g.NavRefRectRel = g.NavInitDefaultResultRectRel;
-        if (!g.NavDisableHighlight)
+        if (g.NavDisableMouseHover)
             g.NavMousePosDirty = true;
         if (g.NavLayer == 0)
             g.NavWindow->NavLastId = g.NavId;
