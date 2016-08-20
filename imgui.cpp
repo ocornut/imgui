@@ -2377,7 +2377,7 @@ static ImVec2 NavCalcPreferredMousePos()
         return g.IO.MousePos;
     ImVec2 p = g.NavWindow->Pos + ImVec2(g.NavRefRectRel.Min.x + ImMin(g.Style.FramePadding.x*4, g.NavRefRectRel.GetWidth()), g.NavRefRectRel.Max.y - ImMin(g.Style.FramePadding.y, g.NavRefRectRel.GetHeight()));
     ImRect r = GetVisibleRect();
-    return ImClamp(p, r.Min, r.Max);
+    return ImFloor(ImClamp(p, r.Min, r.Max));   // ImFloor() is important because non-integer mouse position application in backend might be lossy and result in undesirable non-zero delta.
 }
 
 static int FindWindowIndex(ImGuiWindow* window) // FIXME-OPT O(N)
