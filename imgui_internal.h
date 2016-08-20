@@ -416,8 +416,8 @@ struct ImGuiContext
     int                     NavIdTabCounter;                    // == NavWindow->DC.FocusIdxTabCounter at time of NavId processing
     bool                    NavIdIsAlive;                       // Nav widget has been seen this frame ~~ NavRefRectRel is valid
     bool                    NavMousePosDirty;
-    bool                    NavDisableHighlight;                // When user starts using mouse, we hide gamepad/keyboard functionalities
-    bool                    NavDisableMouseHover;               // When user starts using gamepad/keyboard, we disable mouse hovering until mouse is touched again
+    bool                    NavDisableHighlight;                // When user starts using mouse, we hide gamepad/keyboard highlight (nb: but they are still available, which is why NavDisableHighlight isn't always != NavDisableMouseHover)
+    bool                    NavDisableMouseHover;               // When user starts using gamepad/keyboard, we hide mouse hovering highlight until mouse is touched again.
     bool                    NavInitDefaultRequest;              // Init request for appearing window to select first item
     ImGuiID                 NavInitDefaultResultId;
     ImRect                  NavInitDefaultResultRectRel;

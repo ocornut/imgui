@@ -2333,6 +2333,24 @@ int ImGui::GetFrameCount()
     return GImGui->FrameCount;
 }
 
+static void SetNavId(ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    g.NavId = id;
+    if (g.NavLayer == 0)
+        g.NavWindow->NavLastId = g.NavId;
+}
+
+static void SetNavIdAndMoveMouse(ImGuiID id, const ImRect& rect_rel)
+{
+    ImGuiContext& g = *GImGui;
+    SetNavId(id);
+    g.NavRefRectRel = rect_rel;
+    g.NavMousePosDirty = true;
+    g.NavDisableHighlight = false;
+    g.NavDisableMouseHover = true;
+}
+
 // This needs to be called before we submit any widget (aka in or before Begin)
 static void NavInitWindow(ImGuiWindow* window, bool force_reinit)
 {
@@ -2340,9 +2358,7 @@ static void NavInitWindow(ImGuiWindow* window, bool force_reinit)
     IM_ASSERT(window == g.NavWindow);
     if (!(window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_Popup) || (window->NavLastId == 0) || force_reinit)
     {
-        g.NavId = 0;
-        if (g.NavLayer == 0)
-            window->NavLastId = 0;
+        SetNavId(0);
         g.NavInitDefaultRequest = true;
         g.NavInitDefaultResultId = 0;
         g.NavInitDefaultResultExplicit = false;
@@ -2362,18 +2378,6 @@ static ImVec2 NavCalcPreferredMousePos()
     ImVec2 p = g.NavWindow->Pos + ImVec2(g.NavRefRectRel.Min.x + ImMin(g.Style.FramePadding.x*4, g.NavRefRectRel.GetWidth()), g.NavRefRectRel.Max.y - ImMin(g.Style.FramePadding.y, g.NavRefRectRel.GetHeight()));
     ImRect r = GetVisibleRect();
     return ImClamp(p, r.Min, r.Max);
-}
-
-static void SetNavIdAndMoveMouse(ImGuiID id, const ImRect& rect_rel)
-{
-    ImGuiContext& g = *GImGui;
-    g.NavId = id;
-    if (g.NavLayer == 0)
-        g.NavWindow->NavLastId = g.NavId;
-    g.NavRefRectRel = rect_rel;
-    g.NavMousePosDirty = true;
-    g.NavDisableHighlight = false;
-    g.NavDisableMouseHover = true;
 }
 
 static int FindWindowIndex(ImGuiWindow* window) // FIXME-OPT O(N)
@@ -2461,12 +2465,10 @@ static void NavUpdate()
     {
         // Apply result from previous navigation init request (typically select the first item, unless SetItemDefaultFocus() has been called)
         IM_ASSERT(g.NavWindow);
-        g.NavId = g.NavInitDefaultResultId;
+        SetNavId(g.NavInitDefaultResultId);
         g.NavRefRectRel = g.NavInitDefaultResultRectRel;
         if (g.NavDisableMouseHover)
             g.NavMousePosDirty = true;
-        if (g.NavLayer == 0)
-            g.NavWindow->NavLastId = g.NavId;
     }
     g.NavInitDefaultRequest = false;
     g.NavInitDefaultResultExplicit = false;
@@ -2616,9 +2618,7 @@ static void NavUpdate()
             ImGuiWindow* child_window = g.NavWindow;
             ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
             ImGui::FocusWindow(parent_window);
-            g.NavId = parent_window->GetChildID(child_window);
-            if (g.NavLayer == 0)
-                parent_window->NavLastId = g.NavId;
+            SetNavId(parent_window->GetChildID(child_window));
             g.NavIdIsAlive = false;
             if (g.NavDisableMouseHover)
                 g.NavMousePosDirty = true;
@@ -9756,7 +9756,8 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         if (!enabled) PopStyleColor();
     }
 
-    bool hovered = enabled && IsHovered(window->DC.LastItemRect, id);
+    bool hovered = enabled && IsHovered(window->DC.LastItemRect, id); // FIXME: Why not using window->DC.LastItemHoveredAndUsable / IsItemHovered() ?
+
     if (menuset_is_open)
         g.NavWindow = backed_nav_window;
 
@@ -10724,7 +10725,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Text("HoveredRootWindow: '%s'", g.HoveredRootWindow ? g.HoveredRootWindow->Name : "NULL");
             ImGui::Text("HoveredId: 0x%08X/0x%08X", g.HoveredId, g.HoveredIdPreviousFrame); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
             ImGui::Text("ActiveId: 0x%08X/0x%08X, ActiveIdWindow: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
-            ImGui::Text("NavWindow: '%s', NavId: 0x%08X", g.NavWindow ? g.NavWindow->Name : "NULL", g.NavId);
+            ImGui::Text("NavWindow: '%s', NavId: 0x%08X, NavLayer: %d", g.NavWindow ? g.NavWindow->Name : "NULL", g.NavId, g.NavLayer);
             ImGui::Text("NavRefRectRel: (%.1f,%.1f)(%.1f,%.1f)", g.NavRefRectRel.Min.x, g.NavRefRectRel.Min.y, g.NavRefRectRel.Max.x, g.NavRefRectRel.Max.y);
             ImGui::Text("NavUsable: %d, NavActive: %d", g.IO.NavUsable, g.IO.NavActive);
             ImGui::Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
