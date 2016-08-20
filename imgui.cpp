@@ -2363,7 +2363,7 @@ static ImVec2 NavCalcPreferredMousePos()
     return ImClamp(p, r.Min, r.Max);
 }
 
-static void SetNavIdMoveMouse(ImGuiID id, const ImRect& rect_rel)
+static void SetNavIdAndMoveMouse(ImGuiID id, const ImRect& rect_rel)
 {
     ImGuiContext& g = *GImGui;
     g.NavId = id;
@@ -2519,7 +2519,7 @@ static void NavUpdate()
 
         // Apply result from previous frame navigation directional move request
         ImGui::SetActiveID(0);
-        SetNavIdMoveMouse(g.NavMoveResultId, g.NavMoveResultRectRel);
+        SetNavIdAndMoveMouse(g.NavMoveResultId, g.NavMoveResultRectRel);
         g.NavMoveFromClampedRefRect = false;
     }
 
@@ -2590,7 +2590,7 @@ static void NavUpdate()
                 g.NavDisableHighlight = false;
                 g.NavDisableMouseHover = true;
                 if (g.NavLayer == 0 && g.NavWindow->NavLastId)
-                    SetNavIdMoveMouse(g.NavWindow->NavLastId, ImRect());
+                    SetNavIdAndMoveMouse(g.NavWindow->NavLastId, ImRect());
                 else
                     NavInitWindow(g.NavWindow, true);
             }
@@ -2632,7 +2632,7 @@ static void NavUpdate()
             // Leave the "menu" layer
             g.NavLayer = 0;
             if (g.NavWindow->NavLastId)
-                SetNavIdMoveMouse(g.NavWindow->NavLastId, ImRect());
+                SetNavIdAndMoveMouse(g.NavWindow->NavLastId, ImRect());
             else
                 NavInitWindow(g.NavWindow, true);
         }
