@@ -2817,7 +2817,7 @@ void ImGui::NewFrame()
         {
             g.IO.MouseDragMaxDistanceSqr[i] = ImMax(g.IO.MouseDragMaxDistanceSqr[i], ImLengthSqr(g.IO.MousePos - g.IO.MouseClickedPos[i]));
         }
-        if (g.IO.MouseDown[i]) // Pressing any mouse button reactivate mouse hovering which may have been deactivated by gamepad/keyboard navigation
+        if (g.IO.MouseClicked[i]) // Clicking any mouse button reactivate mouse hovering which may have been deactivated by gamepad/keyboard navigation
             g.NavDisableMouseHover = false;
     }
 
