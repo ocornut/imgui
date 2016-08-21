@@ -9484,6 +9484,13 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_Disabled)
         selected = false;
 
+    // Hovering selectable with mouse updates NavId accordingly so navigation can be resumed with gamepad/keyboard (this doesn't happen on most widgets)
+    if (hovered && !g.NavDisableMouseHover && (g.IO.MouseDelta.x != 0.0f || g.IO.MouseDelta.y != 0.0f))
+    {
+        g.NavDisableHighlight = true;
+        SetNavId(id);
+    }
+
     // Render
     if (hovered || selected)
     {
