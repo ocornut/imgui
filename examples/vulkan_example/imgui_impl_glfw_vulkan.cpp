@@ -661,19 +661,16 @@ bool ImGui_ImplGlfwVulkan_CreateDeviceObjects()
 
     if (!g_PipelineLayout)
     {
-        VkPushConstantRange push_constants[2] = {};
+        VkPushConstantRange push_constants[1] = {};
         push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         push_constants[0].offset = sizeof(float) * 0;
-        push_constants[0].size = sizeof(float) * 2;
-        push_constants[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        push_constants[1].offset = sizeof(float) * 2;
-        push_constants[1].size = sizeof(float) * 2;
+        push_constants[0].size = sizeof(float) * 4;
         VkDescriptorSetLayout set_layout[1] = {g_DescriptorSetLayout};
         VkPipelineLayoutCreateInfo layout_info = {};
         layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         layout_info.setLayoutCount = 1;
         layout_info.pSetLayouts = set_layout;
-        layout_info.pushConstantRangeCount = 2;
+        layout_info.pushConstantRangeCount = 1;
         layout_info.pPushConstantRanges = push_constants;
         err = vkCreatePipelineLayout(g_Device, &layout_info, g_Allocator, &g_PipelineLayout);
         ImGui_ImplGlfwVulkan_VkResult(err);
@@ -750,6 +747,7 @@ bool ImGui_ImplGlfwVulkan_CreateDeviceObjects()
 
     VkDynamicState dynamic_states[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamic_state = {};
+    dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamic_state.dynamicStateCount = 2;
     dynamic_state.pDynamicStates = dynamic_states;
 

@@ -88,7 +88,10 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         VkSurfaceCapabilitiesKHR cap;
         err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_Gpu, g_Surface, &cap);
         check_vk_result(err);
-        info.minImageCount = (cap.minImageCount + 2 < cap.maxImageCount) ? (cap.minImageCount + 2) : cap.maxImageCount;
+        if (cap.maxImageCount > 0)
+            info.minImageCount = (cap.minImageCount + 2 < cap.maxImageCount) ? (cap.minImageCount + 2) : cap.maxImageCount;
+        else
+            info.minImageCount = cap.minImageCount + 2;
         if (cap.currentExtent.width == 0xffffffff)
         {
             fb_width = w;
