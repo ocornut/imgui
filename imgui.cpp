@@ -5089,8 +5089,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         {
             // Close & collapse button are on layer 1 (same as menus) and don't default focus
             const ImGuiItemFlags backup_item_options = window->DC.ItemFlags;
-            if (window->Flags & ImGuiWindowFlags_MenuBar)
-                window->DC.ItemFlags &= ~ImGuiItemFlags_AllowNavDefaultFocus;
+            window->DC.ItemFlags &= ~ImGuiItemFlags_AllowNavDefaultFocus;
             window->DC.NavLayerCurrent++;
 
             // Collapse button
