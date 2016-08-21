@@ -3942,6 +3942,9 @@ void ImGui::CaptureMouseFromApp(bool capture)
 bool ImGui::IsItemHovered()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiContext& g = *GImGui;
+    if (g.NavDisableMouseHover)
+        return IsItemFocused();
     return window->DC.LastItemHoveredAndUsable;
 }
 
@@ -3966,12 +3969,6 @@ bool ImGui::IsItemFocused()
 {
     ImGuiContext& g = *GImGui;
     return g.NavId && !g.NavDisableHighlight && g.NavId == g.CurrentWindow->DC.LastItemId;
-}
-
-bool ImGui::IsItemHoveredOrFocused()
-{
-    ImGuiContext& g = *GImGui;
-    return g.NavDisableMouseHover ? IsItemFocused() : IsItemHovered();
 }
 
 bool ImGui::IsItemClicked(int mouse_button)
@@ -9889,7 +9886,7 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
     RenderNavHighlight(bb, id);
     RenderFrame(bb.Min, bb.Max, GetColorU32(col), outline_border, style.FrameRounding);
 
-    if (IsItemHoveredOrFocused())
+    if (IsItemHovered())
         SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col.x, col.y, col.z, col.w, IM_F32_TO_INT8_SAT(col.x), IM_F32_TO_INT8_SAT(col.y), IM_F32_TO_INT8_SAT(col.z), IM_F32_TO_INT8_SAT(col.z));
 
     return pressed;
@@ -10007,7 +10004,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], bool alpha)
         g.ColorEditModeStorage.SetInt(id, (edit_mode + 1) % 3); // Don't set local copy of 'edit_mode' right away!
 
     // Recreate our own tooltip over's ColorButton() one because we want to display correct alpha here
-    if (IsItemHoveredOrFocused())
+    if (IsItemHovered())
         SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col[0], col[1], col[2], col[3], IM_F32_TO_INT8_SAT(col[0]), IM_F32_TO_INT8_SAT(col[1]), IM_F32_TO_INT8_SAT(col[2]), IM_F32_TO_INT8_SAT(col[3]));
 
     if (window->DC.ColorEditMode == ImGuiColorEditMode_UserSelectShowButton)
@@ -10666,7 +10663,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     }
                     ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
                     bool pcmd_node_open = ImGui::TreeNode((void*)(pcmd - draw_list->CmdBuffer.begin()), "Draw %-4d %s vtx, tex = %p, clip_rect = (%.0f,%.0f)..(%.0f,%.0f)", pcmd->ElemCount, draw_list->IdxBuffer.Size > 0 ? "indexed" : "non-indexed", pcmd->TextureId, pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
-                    if (show_clip_rects && ImGui::IsItemHoveredOrFocused())
+                    if (show_clip_rects && ImGui::IsItemHovered())
                     {
                         ImRect clip_rect = pcmd->ClipRect;
                         ImRect vtxs_rect;
@@ -10690,7 +10687,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                                 buf_p += sprintf(buf_p, "%s %04d { pos = (%8.2f,%8.2f), uv = (%.6f,%.6f), col = %08X }\n", (n == 0) ? "vtx" : "   ", vtx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
                             }
                             ImGui::Selectable(buf, false);
-                            if (ImGui::IsItemHoveredOrFocused())
+                            if (ImGui::IsItemHovered())
                                 overlay_draw_list->AddPolyline(triangles_pos, 3, IM_COL32(255,255,0,255), true, 1.0f, false);  // Add triangle without AA, more readable for large-thin triangle
                         }
                     ImGui::TreePop();

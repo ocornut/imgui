@@ -763,7 +763,7 @@ void ImGui::ShowTestWindow(bool* p_open)
         }
     }
 
-    if (ImGui::CollapsingHeader("Graphs widgets"))
+    if (ImGui::CollapsingHeader("Plots widgets"))
     {
         static bool animate = true;
         ImGui::Checkbox("Animate", &animate);
