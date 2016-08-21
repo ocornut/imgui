@@ -2475,20 +2475,6 @@ static void NavUpdate()
     g.NavInitDefaultResultExplicit = false;
     g.NavInitDefaultResultId = 0;
 
-    // Apply application mouse position movement
-    if (g.NavMousePosDirty && g.NavIdIsAlive)
-    {
-        // Set mouse position given our knowledge of the nav widget position from last frame
-        if (g.IO.NavMovesMouse)
-        {
-            g.IO.MousePos = g.IO.MousePosPrev = NavCalcPreferredMousePos();
-            g.IO.WantMoveMouse = true;
-        }
-        g.NavMousePosDirty = false;
-    }
-    g.NavIdIsAlive = false;
-    g.NavTabbedId = 0;
-    
     // Process navigation move request
     if (g.NavMoveRequest && g.NavMoveResultId != 0)
     {
@@ -2519,6 +2505,10 @@ static void NavUpdate()
                 g.NavWindow->ScrollTarget.y = g.NavMoveResultRectRel.Max.y + g.NavWindow->Scroll.y + g.Style.ItemSpacing.y;
                 g.NavWindow->ScrollTargetCenterRatio.y = 1.0f;
             }
+
+            // Estimate upcoming scroll so we can offset our relative mouse position so mouse position can be applied immediately (under this block)
+            ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(g.NavWindow);
+            g.NavMoveResultRectRel.Translate(g.NavWindow->Scroll - next_scroll);
         }
 
         // Apply result from previous frame navigation directional move request
@@ -2526,6 +2516,20 @@ static void NavUpdate()
         SetNavIdAndMoveMouse(g.NavMoveResultId, g.NavMoveResultRectRel);
         g.NavMoveFromClampedRefRect = false;
     }
+
+    // Apply application mouse position movement, after we had a chance to process move request result.
+    if (g.NavMousePosDirty && g.NavIdIsAlive)
+    {
+        // Set mouse position given our knowledge of the nav widget position from last frame
+        if (g.IO.NavMovesMouse)
+        {
+            g.IO.MousePos = g.IO.MousePosPrev = NavCalcPreferredMousePos();
+            g.IO.WantMoveMouse = true;
+        }
+        g.NavMousePosDirty = false;
+    }
+    g.NavIdIsAlive = false;
+    g.NavTabbedId = 0;
 
     // Navigation windowing mode (change focus, move/resize window)
     if (!g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiNavReadMode_Pressed))
