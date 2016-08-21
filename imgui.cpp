@@ -2347,6 +2347,7 @@ int ImGui::GetFrameCount()
 static void SetNavId(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.NavWindow);
     g.NavId = id;
     if (g.NavLayer == 0)
         g.NavWindow->NavLastId = g.NavId;
@@ -9503,7 +9504,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         selected = false;
 
     // Hovering selectable with mouse updates NavId accordingly so navigation can be resumed with gamepad/keyboard (this doesn't happen on most widgets)
-    if (hovered && !g.NavDisableMouseHover && (g.IO.MouseDelta.x != 0.0f || g.IO.MouseDelta.y != 0.0f))
+    if (hovered && !g.NavDisableMouseHover && g.NavWindow == window && (g.IO.MouseDelta.x != 0.0f || g.IO.MouseDelta.y != 0.0f))
     {
         g.NavDisableHighlight = true;
         SetNavId(id);
@@ -9756,7 +9757,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     bool menuset_is_open = !(window->Flags & ImGuiWindowFlags_Popup) && (g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].ParentMenuSet == window->GetID("##menus"));
     ImGuiWindow* backed_nav_window = g.NavWindow;
     if (menuset_is_open)
-        g.NavWindow = window;
+        g.NavWindow = window;  // Odd hack to allow hovering across menus of a same menu-set (otherwise we wouldn't be able to hover parent)
 
     ImVec2 popup_pos, pos = window->DC.CursorPos;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
