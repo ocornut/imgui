@@ -242,7 +242,7 @@ struct IMGUI_API ImRect
     void        Add(const ImRect& rhs)          { if (Min.x > rhs.Min.x) Min.x = rhs.Min.x; if (Min.y > rhs.Min.y) Min.y = rhs.Min.y; if (Max.x < rhs.Max.x) Max.x = rhs.Max.x; if (Max.y < rhs.Max.y) Max.y = rhs.Max.y; }
     void        Expand(const float amount)      { Min.x -= amount;   Min.y -= amount;   Max.x += amount;   Max.y += amount; }
     void        Expand(const ImVec2& amount)    { Min.x -= amount.x; Min.y -= amount.y; Max.x += amount.x; Max.y += amount.y; }
-    void        Reduce(const ImVec2& amount)    { Min.x += amount.x; Min.y += amount.y; Max.x -= amount.x; Max.y -= amount.y; }
+    void        Translate(const ImVec2& v)      { Min.x += v.x; Min.y += v.y; Max.x += v.x; Max.y += v.y; }
     void        Clip(ImRect& r) const           { r.Min.x = ImClamp(r.Min.x, Min.x, Max.x); r.Min.y = ImClamp(r.Min.y, Min.y, Max.y); r.Max.x = ImClamp(r.Max.x, Min.x, Max.x); r.Max.y = ImClamp(r.Max.y, Min.y, Max.y); }
     void        Floor()                         { Min.x = (float)(int)Min.x; Min.y = (float)(int)Min.y; Max.x = (float)(int)Max.x; Max.y = (float)(int)Max.y; }
     ImVec2      GetClosestPoint(ImVec2 p, bool on_edge) const
