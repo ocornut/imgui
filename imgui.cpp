@@ -2116,15 +2116,20 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     //      We could early out with `if (is_clipped && !g.NavInitDefaultRequest) return false;` but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
     //      A more pragmatic solution for handling last lists is relying on the fact that they are likely evenly spread items (so that clipper can work) and we could nav at higher-level (apply index, etc.)
     //      So eventually we would like to provide the user will the primitives to be able to implement that sort of customized/efficient navigation handling whenever necessary.
-    if (id != NULL && g.NavWindow == window->RootNavWindow && g.IO.NavUsable)
+    if (id != NULL && g.IO.NavUsable && g.NavWindow == window->RootNavWindow)
     {
         const ImRect& nav_bb = nav_bb_arg ? *nav_bb_arg : bb;
         const ImRect nav_bb_rel(nav_bb.Min - g.NavWindow->Pos, nav_bb.Max - g.NavWindow->Pos);
-        if (g.NavInitDefaultRequest && g.NavLayer == window->DC.NavLayerCurrent && (window->DC.ItemFlags & ImGuiItemFlags_AllowNavDefaultFocus))
+        if (g.NavInitDefaultRequest && g.NavLayer == window->DC.NavLayerCurrent)
         {
-            g.NavInitDefaultRequest = g.NavInitDefaultResultExplicit = false; // Clear flag immediately, first item gets default, also simplify the if() in ItemAdd()
-            g.NavInitDefaultResultId = *id;
-            g.NavInitDefaultResultRectRel = nav_bb_rel;
+            // Even if 'ImGuiItemFlags_AllowNavDefaultFocus' is off (typically collapse/close button) we record the first ResultId so they can be used as fallback
+            if (window->DC.ItemFlags & ImGuiItemFlags_AllowNavDefaultFocus)
+                g.NavInitDefaultRequest = g.NavInitDefaultResultExplicit = false; // Found a match, clear request
+            if (g.NavInitDefaultResultId == 0 || (window->DC.ItemFlags & ImGuiItemFlags_AllowNavDefaultFocus))
+            {
+                g.NavInitDefaultResultId = *id;
+                g.NavInitDefaultResultRectRel = nav_bb_rel;
+            }
         }
 
         //const bool DEBUG_NAV = false; // [DEBUG] Enable to test scoring on all items.
