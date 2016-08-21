@@ -18,6 +18,9 @@
  - MISSION STATEMENT
  - END-USER GUIDE
  - PROGRAMMER GUIDE (read me!)
+   - Read first
+   - Getting started with integrating imgui in your code/engine
+   - Using gamepad/keyboard navigation [beta]
  - API BREAKING CHANGES (read me when you update!)
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - How can I help?
@@ -88,7 +91,7 @@
  - Call and read ImGui::ShowTestWindow() for demo code demonstrating most features.
  - Customization: PushStyleColor()/PushStyleVar() or the style editor to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme).
 
- GETTING STARTED WITH INTEGRATING IN YOUR ENGINE
+ GETTING STARTED WITH INTEGRATING IMGUI IN YOUR CODE/ENGINE
 
  - See examples/ folder for standalone sample applications. Prefer reading examples/opengl_example/ first as it is the simplest.
    You may be able to grab and copy a ready made imgui_impl_*** file from the examples/.
@@ -2658,8 +2661,8 @@ static void NavUpdate()
         }
     }
 
-    g.NavActivateId = (g.NavId && !g.NavDisableHighlight && !g.NavWindowingTarget && g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadActivate, ImGuiNavReadMode_Repeat)) ? g.NavId : 0;
-    g.NavInputId = (g.NavId && !g.NavDisableHighlight && !g.NavWindowingTarget && g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadInput, ImGuiNavReadMode_Repeat)) ? g.NavId : 0;
+    g.NavActivateId = (g.NavId && !g.NavDisableHighlight && !g.NavWindowingTarget && g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadActivate, ImGuiNavReadMode_Pressed)) ? g.NavId : 0;
+    g.NavInputId = (g.NavId && !g.NavDisableHighlight && !g.NavWindowingTarget && g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadInput, ImGuiNavReadMode_Pressed)) ? g.NavId : 0;
     if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
     {
         g.NavActivateId = g.NavInputId = 0;
