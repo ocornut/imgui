@@ -203,6 +203,7 @@ enum ImGuiInputSource
     ImGuiInputSource_None = 0,
     ImGuiInputSource_Mouse,
     ImGuiInputSource_Nav,
+    ImGuiInputSource_Count_,
 };
 
 enum ImGuiNavDir

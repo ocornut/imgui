@@ -4321,6 +4321,7 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
         FocusWindow(child_window);
         NavInitWindow(child_window, false);
         SetActiveIDNoNav(id+1, child_window); // Steal ActiveId with a dummy id so that key-press won't activate child item
+        GImGui->ActiveIdSource = ImGuiInputSource_Nav;
     }
 
     return ret;
@@ -10728,10 +10729,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         }
         if (ImGui::TreeNode("Basic state"))
         {
+            const char* input_source_names[] = { "None", "Mouse", "Nav" }; IM_ASSERT(IM_ARRAYSIZE(input_source_names) == ImGuiInputSource_Count_);
             ImGui::Text("HoveredWindow: '%s'", g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
             ImGui::Text("HoveredRootWindow: '%s'", g.HoveredRootWindow ? g.HoveredRootWindow->Name : "NULL");
             ImGui::Text("HoveredId: 0x%08X/0x%08X", g.HoveredId, g.HoveredIdPreviousFrame); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
-            ImGui::Text("ActiveId: 0x%08X/0x%08X, ActiveIdWindow: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
+            ImGui::Text("ActiveId: 0x%08X/0x%08X, ActiveIdSource: %s", g.ActiveId, g.ActiveIdPreviousFrame, input_source_names[g.ActiveIdSource]);
+            ImGui::Text("ActiveIdWindow: '%s", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
             ImGui::Text("NavWindow: '%s', NavId: 0x%08X, NavLayer: %d", g.NavWindow ? g.NavWindow->Name : "NULL", g.NavId, g.NavLayer);
             ImGui::Text("NavRefRectRel: (%.1f,%.1f)(%.1f,%.1f)", g.NavRefRectRel.Min.x, g.NavRefRectRel.Min.y, g.NavRefRectRel.Max.x, g.NavRefRectRel.Max.y);
             ImGui::Text("NavUsable: %d, NavActive: %d", g.IO.NavUsable, g.IO.NavActive);
