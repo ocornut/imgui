@@ -154,7 +154,7 @@
  USING GAMEPAD/KEYBOARD NAVIGATION [BETA]
 
  - Gamepad/keyboard navigation support is available, currently in Beta with some issues. Your feedback and bug reports are welcome.
- - See https://github.com/ocornut/imgui/issues/323 for discussion thread and ask questions.
+ - See https://github.com/ocornut/imgui/issues/787 discussion thread and ask questions there.
  - The current primary focus is to support game controllers.
  - Consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
  - Consider using Synergy host (on your computer) + uSynergy.c (in your console/tablet/phone app) to use PC mouse/keyboard.
@@ -624,7 +624,6 @@
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
  - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
 !- keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing
- - keyboard: full keyboard navigation and focus. (#323)
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
  - input: rework IO system to be able to pass actual ordered/timestamped events. (~#335, #71)
@@ -697,7 +696,6 @@ static void             LogRenderedText(const ImVec2& ref_pos, const char* text,
 static void             PushMultiItemsWidths(int components, float w_full = 0.0f);
 static float            GetDraggedColumnOffset(int column_index);
 
-static bool             IsKeyDownMap(ImGuiKey key);
 static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
 static void             SetCurrentFont(ImFont* font);
@@ -2956,10 +2954,12 @@ void ImGui::NewFrame()
     // Pressing TAB activate widget focus
     //// NB: Don't discard FocusedWindow if it isn't active, so that a window that go on/off programatically won't lose its keyboard focus. // [2016/07/17] That comment was made invalid by 19d02becef94e8e0f1d432a8bd55cd783876583c
     if (g.ActiveId == 0 && g.NavWindow != NULL && g.NavWindow->Active && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab, false))
+    {
         if (g.NavId != 0 && g.NavIdTabCounter != INT_MAX)
             g.NavWindow->FocusIdxTabRequestNext = g.NavIdTabCounter + 1 + (g.IO.KeyShift ? -1 : 1);
         else
             g.NavWindow->FocusIdxTabRequestNext = g.IO.KeyShift ? -1 : 0;
+    }
     g.NavIdTabCounter = INT_MAX;
 
     // Mark all windows as not visible
@@ -3779,12 +3779,6 @@ bool ImGui::IsAnyWindowFocused()
 bool ImGui::IsAnyWindowHoveredAtPos(const ImVec2& pos)
 {
     return FindHoveredWindow(pos, false) != NULL;
-}
-
-static bool IsKeyDownMap(ImGuiKey key)
-{
-    const int key_index = GImGui->IO.KeyMap[key];
-    return (key_index >= 0) ? ImGui::IsKeyDown(key_index) : false;
 }
 
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
