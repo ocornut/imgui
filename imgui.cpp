@@ -944,21 +944,30 @@ const char* ImStristr(const char* haystack, const char* haystack_end, const char
     return NULL;
 }
 
+
+// MSVC version appears to return -1 on overflow, whereas glibc appears to return total count (which may be >= buf_size). 
+// Ideally we would test for only one of those limits at runtime depending on the behavior the vsnprintf(), but trying to deduct it at compile time sounds like a pandora can of worm.
 int ImFormatString(char* buf, int buf_size, const char* fmt, ...)
 {
+    IM_ASSERT(buf_size > 0);
     va_list args;
     va_start(args, fmt);
     int w = vsnprintf(buf, buf_size, fmt, args);
     va_end(args);
-    buf[buf_size-1] = 0;
-    return (w == -1) ? buf_size : w;
+    if (w == -1 || w >= buf_size)
+        w = buf_size - 1;
+    buf[w] = 0;
+    return w;
 }
 
 int ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args)
 {
+    IM_ASSERT(buf_size > 0);
     int w = vsnprintf(buf, buf_size, fmt, args);
-    buf[buf_size-1] = 0;
-    return (w == -1) ? buf_size : w;
+    if (w == -1 || w >= buf_size)
+        w = buf_size - 1;
+    buf[w] = 0;
+    return w;
 }
 
 // Pass data_size==0 for zero-terminated strings
