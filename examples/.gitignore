@@ -33,6 +33,7 @@ opengl3_example/opengl3_example
 *.obj
 *.exe
 *.pdb
+*.ilk
 
 ## Ini files
 imgui.ini
