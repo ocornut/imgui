@@ -8,7 +8,6 @@
 #include "imgui.h"
 #include "imgui_impl_glut.h"
 
-#include "glew.h"
 #include "freeglut.h"
 
 #include <iostream>

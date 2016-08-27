@@ -1,7 +1,6 @@
 // ImGui - standalone example application for Glut + OpenGL, using programmable pipeline
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 
-#include "glew.h"
 #include "freeglut.h"
 
 #include "imgui.h"
@@ -183,7 +182,6 @@ void mouseMoveCallback(int x, int y)
 // initialize ogl and imgui
 void init()
 {
-    glEnable(GL_MULTISAMPLE);
     glClearColor(0.447f, 0.565f, 0.604f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
