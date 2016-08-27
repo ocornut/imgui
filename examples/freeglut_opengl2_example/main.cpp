@@ -75,6 +75,9 @@ bool keyboardEvent(unsigned char nChar, int nX, int nY)
     ImGuiIO& io = ImGui::GetIO();
     io.AddInputCharacter(nChar);
 
+    if (nChar == 27) //Esc-key
+        glutLeaveMainLoop();
+
     return true;
 }
 
@@ -210,6 +213,8 @@ int main(int argc, char **argv)
 
     init();
     glutMainLoop();
+
+    ImGui_ImplGLUT_Shutdown();
 
     return 0;
 }
