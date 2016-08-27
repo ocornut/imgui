@@ -53,11 +53,22 @@ void drawScene()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     // add code here to draw scene objects
+    glColor3f(1.0, 0.0, 0.0);
+    glBegin(GL_TRIANGLES);
+    glVertex3f(-1.0, -1.0, 0.0);
+    glVertex3f(1.0, -1.0, 0.0);
+    glVertex3f(0.0, 1.0, 0.0);
+    glEnd();
 
-    // draw gui
+    // draw gui, seems unnecessary to push/pop matrix and attributes
+    //glPushMatrix();
+    //glPushAttrib(GL_ALL_ATTRIB_BITS);
     drawGUI();
+    //glPopAttrib();
+    //glPopMatrix();
 
     glutSwapBuffers();
+    glutPostRedisplay();
 }
 
 bool keyboardEvent(unsigned char nChar, int nX, int nY)
@@ -86,7 +97,7 @@ bool mouseEvent(int button, int state, int x, int y)
 
     // Wheel reports as button 3(scroll up) and button 4(scroll down)
     if (state == GLUT_DOWN && button == 3) // It's a wheel event
-        io.MouseWheel = 1.0; 
+        io.MouseWheel = 1.0;
     else
         io.MouseWheel = 0.0;
 
@@ -95,31 +106,36 @@ bool mouseEvent(int button, int state, int x, int y)
     else
         io.MouseWheel = 0.0;
 
-
     return true;
 }
 
 void reshape(int w, int h)
 {
+    // update screen width and height for imgui new frames
     screenWidth = w;
     screenHeight = h;
 
-    glViewport(0, 0, screenWidth, screenHeight);
+    // Prevent a divide by zero, when window is too short
+    // (you cant make a window of zero width).
+    if (h == 0)
+        h = 1;
+    float ratio = 1.0* w / h;
+
+    // Use the Projection Matrix
     glMatrixMode(GL_PROJECTION);
+
+    // Reset Matrix
     glLoadIdentity();
-    if (screenWidth > screenHeight)
-    {
-        float fWidth(screenWidth / screenHeight);
-        float fOffset((fWidth - 1.0f)*0.5f);
-        gluOrtho2D(0 - fOffset, fWidth - fOffset, 1.0f, 0.0f);
-    }
-    else
-    {
-        float fHeight(screenWidth / screenHeight);
-        float fOffset((fHeight - 1.0f)*0.5f);
-        gluOrtho2D(0, 1.0f, fHeight - fOffset, 0 - fOffset);
-    }
+
+    // Set the viewport to be the entire window
+    glViewport(0, 0, w, h);
+
+    // Set the correct perspective.
+    gluPerspective(45, ratio, 1, 1000);
+
+    // Get Back to the Modelview
     glMatrixMode(GL_MODELVIEW);
+    glTranslatef(0.0, 0.0, -2.0);
 }
 
 void keyboardCallback(unsigned char nChar, int x, int y)
@@ -170,7 +186,7 @@ int main(int argc, char **argv)
     glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE | GLUT_MULTISAMPLE);
 
-    glutInitWindowSize(1280, 720);
+    glutInitWindowSize(screenWidth, screenHeight);
     glutInitWindowPosition(200, 200);
     glutCreateWindow("imgui FreeGlut Example");
 
@@ -187,7 +203,3 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-
-
-
-
