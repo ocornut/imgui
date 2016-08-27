@@ -102,8 +102,8 @@ void ImGui_ImplGLUT_RenderDrawLists(ImDrawData* draw_data)
 
 static const char* ImGui_ImplGLUT_GetClipboardText()
 {
-	std::cerr << "ImGui_ImplGLUT_GetClipboardText not implemented\n";
-	return "";
+    std::cerr << "ImGui_ImplGLUT_GetClipboardText not implemented\n";
+    return "";
 }
 
 static void ImGui_ImplGLUT_SetClipboardText(const char* text)
@@ -112,94 +112,94 @@ static void ImGui_ImplGLUT_SetClipboardText(const char* text)
 
 bool ImGui_ImplGLUT_CreateDeviceObjects()
 {
-	// Build texture atlas
-	ImGuiIO& io = ImGui::GetIO();
-	unsigned char* pixels;
-	int width, height;
-	io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
+    // Build texture atlas
+    ImGuiIO& io = ImGui::GetIO();
+    unsigned char* pixels;
+    int width, height;
+    io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
 
-	// Upload texture to graphics system
-	GLint last_texture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-	glGenTextures(1, &g_FontTexture);
-	glBindTexture(GL_TEXTURE_2D, g_FontTexture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, pixels);
+    // Upload texture to graphics system
+    GLint last_texture;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+    glGenTextures(1, &g_FontTexture);
+    glBindTexture(GL_TEXTURE_2D, g_FontTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, pixels);
 
-	// Store our identifier
-	io.Fonts->TexID = (void *)(intptr_t)g_FontTexture;
+    // Store our identifier
+    io.Fonts->TexID = (void *)(intptr_t)g_FontTexture;
 
-	// Restore state
-	glBindTexture(GL_TEXTURE_2D, last_texture);
+    // Restore state
+    glBindTexture(GL_TEXTURE_2D, last_texture);
 
-	return true;
+    return true;
 }
 
 void ImGui_ImplGLUT_InvalidateDeviceObjects()
 {
-	if (g_FontTexture)
-	{
-		glDeleteTextures(1, &g_FontTexture);
-		ImGui::GetIO().Fonts->TexID = 0;
-		g_FontTexture = 0;
-	}
+    if (g_FontTexture)
+    {
+        glDeleteTextures(1, &g_FontTexture);
+        ImGui::GetIO().Fonts->TexID = 0;
+        g_FontTexture = 0;
+    }
 }
 
 bool ImGui_ImplGLUT_Init()
 {
-	ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO();
 
-	io.RenderDrawListsFn = ImGui_ImplGLUT_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
-	io.SetClipboardTextFn = ImGui_ImplGLUT_SetClipboardText;
-	io.GetClipboardTextFn = ImGui_ImplGLUT_GetClipboardText;
+    io.RenderDrawListsFn = ImGui_ImplGLUT_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
+    io.SetClipboardTextFn = ImGui_ImplGLUT_SetClipboardText;
+    io.GetClipboardTextFn = ImGui_ImplGLUT_GetClipboardText;
 
-	io.KeyMap[ImGuiKey_Tab]        = 9;    // tab
-	io.KeyMap[ImGuiKey_LeftArrow]  = GLUT_KEY_LEFT;    // Left
-	io.KeyMap[ImGuiKey_RightArrow] = GLUT_KEY_RIGHT;   // Right
-	io.KeyMap[ImGuiKey_UpArrow]    = GLUT_KEY_UP;      // Up
-	io.KeyMap[ImGuiKey_DownArrow]  = GLUT_KEY_DOWN;    // Down
-    io.KeyMap[ImGuiKey_PageUp]     = GLUT_KEY_PAGE_UP;    // PageUp
+    io.KeyMap[ImGuiKey_Tab]        = 9;                     // tab
+    io.KeyMap[ImGuiKey_LeftArrow]  = GLUT_KEY_LEFT;         // Left
+    io.KeyMap[ImGuiKey_RightArrow] = GLUT_KEY_RIGHT;        // Right
+    io.KeyMap[ImGuiKey_UpArrow]    = GLUT_KEY_UP;           // Up
+    io.KeyMap[ImGuiKey_DownArrow]  = GLUT_KEY_DOWN;         // Down
+    io.KeyMap[ImGuiKey_PageUp]     = GLUT_KEY_PAGE_UP;      // PageUp
     io.KeyMap[ImGuiKey_PageDown]   = GLUT_KEY_PAGE_DOWN;    // PageDown
-	io.KeyMap[ImGuiKey_Home]       = GLUT_KEY_HOME;    // Home
-	io.KeyMap[ImGuiKey_End]        = GLUT_KEY_END;     // End
-	io.KeyMap[ImGuiKey_Delete]     = 127;  // Delete
-	io.KeyMap[ImGuiKey_Backspace]  = 8;    // Backspace
-	io.KeyMap[ImGuiKey_Enter]      = 13;   // Enter
-	io.KeyMap[ImGuiKey_Escape]     = 27;  // Escape
-	io.KeyMap[11]                  = 1;   // ctrl-A
-	io.KeyMap[12]                  = 3;   // ctrl-C
-	io.KeyMap[13]                  = 22;  // ctrl-V
-	io.KeyMap[14]                  = 24;  // ctrl-X
-	io.KeyMap[15]                  = 25;  // ctrl-Y
-	io.KeyMap[16]                  = 26;  // ctrl-Z
+    io.KeyMap[ImGuiKey_Home]       = GLUT_KEY_HOME;         // Home
+    io.KeyMap[ImGuiKey_End]        = GLUT_KEY_END;          // End
+    io.KeyMap[ImGuiKey_Delete]     = 127;                   // Delete
+    io.KeyMap[ImGuiKey_Backspace]  = 8;                     // Backspace
+    io.KeyMap[ImGuiKey_Enter]      = 13;                    // Enter
+    io.KeyMap[ImGuiKey_Escape]     = 27;                    // Escape
+    io.KeyMap[11]                  = 1;                     // ctrl-A
+    io.KeyMap[12]                  = 3;                     // ctrl-C
+    io.KeyMap[13]                  = 22;                    // ctrl-V
+    io.KeyMap[14]                  = 24;                    // ctrl-X
+    io.KeyMap[15]                  = 25;                    // ctrl-Y
+    io.KeyMap[16]                  = 26;                    // ctrl-Z
 
-	return true;
+    return true;
 }
 
 void ImGui_ImplGLUT_Shutdown()
 {
-	ImGui_ImplGLUT_InvalidateDeviceObjects();
-	ImGui::Shutdown();
+    ImGui_ImplGLUT_InvalidateDeviceObjects();
+    ImGui::Shutdown();
 }
 
 void ImGui_ImplGLUT_NewFrame(int w, int h)
 {
-	if (!g_FontTexture)
-		ImGui_ImplGLUT_CreateDeviceObjects();
+    if (!g_FontTexture)
+        ImGui_ImplGLUT_CreateDeviceObjects();
 
-	ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO();
 
-	// Setup display size (every frame to accommodate for window resizing)
-	io.DisplaySize = ImVec2((float)w, (float)h);
+    // Setup display size (every frame to accommodate for window resizing)
+    io.DisplaySize = ImVec2((float)w, (float)h);
 
-	// Setup time step
+    // Setup time step
     int timeSinceStart = glutGet(GLUT_ELAPSED_TIME);
     float deltaTime = (timeSinceStart - oldTimeSinceStart)/1000.0f;
-    
-	io.DeltaTime = deltaTime > 0.0 ? deltaTime : (float)(1.0f / 60.0f);
+
+    io.DeltaTime = deltaTime > 0.0 ? deltaTime : (float)(1.0f / 60.0f);
     oldTimeSinceStart = timeSinceStart;
 
-	// Start the frame
-	ImGui::NewFrame();
+    // Start the frame
+    ImGui::NewFrame();
 }
