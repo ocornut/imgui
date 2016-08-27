@@ -74,10 +74,15 @@ void drawScene()
 bool keyboardEvent(unsigned char nChar, int nX, int nY)
 {
     ImGuiIO& io = ImGui::GetIO();
-
     io.AddInputCharacter(nChar);
 
     return true;
+}
+
+void KeyboardSpecial(int key, int x, int y)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddInputCharacter(key);
 }
 
 bool mouseEvent(int button, int state, int x, int y)
@@ -95,18 +100,23 @@ bool mouseEvent(int button, int state, int x, int y)
     else
         io.MouseDown[1] = false;
 
-    // Wheel reports as button 3(scroll up) and button 4(scroll down)
-    if (state == GLUT_DOWN && button == 3) // It's a wheel event
-        io.MouseWheel = 1.0;
-    else
-        io.MouseWheel = 0.0;
-
-    if (state == GLUT_DOWN && button == 4) // It's a wheel event
-        io.MouseWheel = -1.0;
-    else
-        io.MouseWheel = 0.0;
-
     return true;
+}
+
+void mouseWheel(int button, int dir, int x, int y)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    io.MousePos = ImVec2((float)x, (float)y);
+    if (dir > 0)
+    {
+        // Zoom in
+        io.MouseWheel = 1.0;
+    }
+    else if (dir < 0)
+    {
+        // Zoom out
+        io.MouseWheel = -1.0;
+    }
 }
 
 void reshape(int w, int h)
@@ -194,12 +204,14 @@ int main(int argc, char **argv)
     glutDisplayFunc(drawScene);
     glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboardCallback);
+    glutSpecialFunc(KeyboardSpecial);
     glutMouseFunc(mouseCallback);
+    glutMouseWheelFunc(mouseWheel);
     glutMotionFunc(mouseDragCallback);
     glutPassiveMotionFunc(mouseMoveCallback);
 
     init();
     glutMainLoop();
 
-	return 0;
+    return 0;
 }

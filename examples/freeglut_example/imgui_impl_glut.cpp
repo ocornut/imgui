@@ -159,6 +159,8 @@ bool ImGui_ImplGLUT_Init()
 	io.KeyMap[ImGuiKey_RightArrow] = GLUT_KEY_RIGHT;   // Right
 	io.KeyMap[ImGuiKey_UpArrow]    = GLUT_KEY_UP;      // Up
 	io.KeyMap[ImGuiKey_DownArrow]  = GLUT_KEY_DOWN;    // Down
+    io.KeyMap[ImGuiKey_PageUp]     = GLUT_KEY_PAGE_UP;    // PageUp
+    io.KeyMap[ImGuiKey_PageDown]   = GLUT_KEY_PAGE_DOWN;    // PageDown
 	io.KeyMap[ImGuiKey_Home]       = GLUT_KEY_HOME;    // Home
 	io.KeyMap[ImGuiKey_End]        = GLUT_KEY_END;     // End
 	io.KeyMap[ImGuiKey_Delete]     = 127;  // Delete
