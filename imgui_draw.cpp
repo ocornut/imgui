@@ -410,6 +410,28 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
     _IdxWritePtr += 6;
 }
 
+// Distribute UV over rectangle
+void ImDrawList::PrimDistributeUV(ImDrawVert* start, ImDrawVert* end, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, bool clamp)
+{
+    const ImVec2 size    = b - a;
+    const ImVec2 uv_size = uv_b - uv_a;
+    const ImVec2 scale   = ImSafeQuotient(uv_size, size, ImVec2(0.0f, 0.0f));
+
+    if (clamp)
+    {
+        const ImVec2 min = ImMin(uv_a, uv_b);
+        const ImVec2 max = ImMax(uv_a, uv_b);
+
+        for (ImDrawVert* vertex = start; vertex < end; ++vertex)
+            vertex->uv = ImClamp(uv_a + ImProduct(vertex->pos - a, scale), min, max);
+    }
+    else
+    {
+        for (ImDrawVert* vertex = start; vertex < end; ++vertex)
+            vertex->uv = uv_a + ImProduct(vertex->pos - a, scale);
+    }
+}
+
 // TODO: Thickness anti-aliased lines cap are missing their AA fringe.
 void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness, bool anti_aliased)
 {
@@ -955,7 +977,7 @@ void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, c
     AddText(GImGui->Font, GImGui->FontSize, pos, col, text_begin, text_end);
 }
 
-void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
+void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col, float rounding, int rounding_corners)
 {
     if ((col >> 24) == 0)
         return;
@@ -965,8 +987,20 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
     if (push_texture_id)
         PushTextureID(user_texture_id);
 
-    PrimReserve(6, 4);
-    PrimRectUV(a, b, uv0, uv1, col);
+    if (rounding > 0.0f && rounding_corners != 0)
+    {
+        size_t startIndex = VtxBuffer.size();
+        PathRect(a, b, rounding, rounding_corners);
+        PathFill(col);
+        size_t endIndex = VtxBuffer.size();
+
+        PrimDistributeUV(VtxBuffer.Data + startIndex, VtxBuffer.Data + endIndex, a, b, uv0, uv1, true);
+    }
+    else
+    {
+        PrimReserve(6, 4);
+        PrimRectUV(a, b, uv0, uv1, col);
+    }
 
     if (push_texture_id)
         PopTextureID();
