@@ -423,12 +423,12 @@ void ImDrawList::PrimDistributeUV(ImDrawVert* start, ImDrawVert* end, const ImVe
         const ImVec2 max = ImMax(uv_a, uv_b);
 
         for (ImDrawVert* vertex = start; vertex < end; ++vertex)
-            vertex->uv = ImClamp(uv_a + ImProduct(vertex->pos - a, scale), min, max);
+            vertex->uv = ImClamp(uv_a + ImProduct(ImVec2(vertex->pos.x, vertex->pos.y) - a, scale), min, max);
     }
     else
     {
         for (ImDrawVert* vertex = start; vertex < end; ++vertex)
-            vertex->uv = uv_a + ImProduct(vertex->pos - a, scale);
+            vertex->uv = uv_a + ImProduct(ImVec2(vertex->pos.x, vertex->pos.y) - a, scale);
     }
 }
 
