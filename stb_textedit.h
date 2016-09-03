@@ -512,13 +512,24 @@ static void stb_textedit_find_charpos(StbFindState *find, STB_TEXTEDIT_STRING *s
          find->height = 1;
          find->first_char = 0;
          find->length = 0;
+         r.baseline_y_delta = 0.0f;
          while (i < z) {
+            find->y += r.baseline_y_delta;
             STB_TEXTEDIT_LAYOUTROW(&r, str, i);
             find->prev_first = find->first_char;
             find->first_char = i;
             find->length = r.num_chars;
             find->x = r.x1;
             i += r.num_chars;
+         }
+         // workaround as STB_TEXTEDIT_LAYOUTROW "quietly" consumes newlines, and so
+         // we otherwise can't recognise the trailing-newline case
+         if(z && STB_TEXTEDIT_GETCHAR(str, z-1) == STB_TEXTEDIT_NEWLINE) {
+            find->prev_first = find->first_char;
+            find->first_char = i;
+            find->length = 0;
+            find->x = 0;
+            find->y += r.baseline_y_delta;
          }
       }
       return;
