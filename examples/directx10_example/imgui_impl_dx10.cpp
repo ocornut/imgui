@@ -87,10 +87,10 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        memcpy(vtx_dst, &cmd_list->VtxBuffer[0], cmd_list->VtxBuffer.size() * sizeof(ImDrawVert));
-        memcpy(idx_dst, &cmd_list->IdxBuffer[0], cmd_list->IdxBuffer.size() * sizeof(ImDrawIdx));
-        vtx_dst += cmd_list->VtxBuffer.size();
-        idx_dst += cmd_list->IdxBuffer.size();
+        memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+        memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+        vtx_dst += cmd_list->VtxBuffer.Size;
+        idx_dst += cmd_list->IdxBuffer.Size;
     }
     g_pVB->Unmap();
     g_pIB->Unmap();
@@ -189,7 +189,7 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++)
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
@@ -205,7 +205,7 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
             }
             idx_offset += pcmd->ElemCount;
         }
-        vtx_offset += cmd_list->VtxBuffer.size();
+        vtx_offset += cmd_list->VtxBuffer.Size;
     }
 
     // Restore modified DX state

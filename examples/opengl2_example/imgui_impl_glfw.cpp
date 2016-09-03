@@ -73,13 +73,13 @@ void ImGui_ImplGlfw_RenderDrawLists(ImDrawData* draw_data)
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        const unsigned char* vtx_buffer = (const unsigned char*)&cmd_list->VtxBuffer.front();
-        const ImDrawIdx* idx_buffer = &cmd_list->IdxBuffer.front();
-        glVertexPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, pos)));
-        glTexCoordPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, uv)));
-        glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, col)));
+        const ImDrawVert* vtx_buffer = cmd_list->VtxBuffer.Data;
+        const ImDrawIdx* idx_buffer = cmd_list->IdxBuffer.Data;
+        glVertexPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)((char*)vtx_buffer + OFFSETOF(ImDrawVert, pos)));
+        glTexCoordPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)((char*)vtx_buffer + OFFSETOF(ImDrawVert, uv)));
+        glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (void*)((char*)vtx_buffer + OFFSETOF(ImDrawVert, col)));
 
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++)
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)

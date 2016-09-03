@@ -46,8 +46,8 @@ void ImGui_ImplA5_RenderDrawLists(ImDrawData* draw_data)
 
         // FIXME-OPT: Unfortunately Allegro doesn't support 32-bits packed colors so we have to convert them to 4 floats
         static ImVector<ImDrawVertAllegro> vertices;
-        vertices.resize(cmd_list->VtxBuffer.size());
-        for (int i = 0; i < cmd_list->VtxBuffer.size(); ++i)
+        vertices.resize(cmd_list->VtxBuffer.Size);
+        for (int i = 0; i < cmd_list->VtxBuffer.Size; ++i)
         {
             const ImDrawVert &dv = cmd_list->VtxBuffer[i];
             ImDrawVertAllegro v;
@@ -61,12 +61,12 @@ void ImGui_ImplA5_RenderDrawLists(ImDrawData* draw_data)
         // FIXME-OPT: Unfortunately Allegro doesn't support 16-bit indices
         // You can also use '#define ImDrawIdx unsigned int' in imconfig.h and request ImGui to output 32-bit indices
         static ImVector<int> indices;
-        indices.resize(cmd_list->IdxBuffer.size());
-        for (int i = 0; i < cmd_list->IdxBuffer.size(); ++i)
+        indices.resize(cmd_list->IdxBuffer.Size);
+        for (int i = 0; i < cmd_list->IdxBuffer.Size; ++i)
             indices[i] = (int)cmd_list->IdxBuffer.Data[i];
 
         int idx_offset = 0;
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++)
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
