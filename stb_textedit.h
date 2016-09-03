@@ -3,6 +3,7 @@
 // [ImGui] - fixed a crash bug in stb_textedit_discard_redo (#681)
 // [ImGui] - fixed some minor warnings
 // [ImGui] - added STB_TEXTEDIT_MOVEWORDLEFT/STB_TEXTEDIT_MOVEWORDRIGHT custom handler (#473)
+// [ImGui] - fixed home and up key when cursor is at the end of the buffer (#588)
 
 // stb_textedit.h - v1.8  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
@@ -60,6 +61,7 @@
 //      Scott Graham
 //      Daniel Keller
 //      Omar Cornut
+//      Matvey Soloviev
 //
 // USAGE
 //
@@ -508,14 +510,16 @@ static void stb_textedit_find_charpos(StbFindState *find, STB_TEXTEDIT_STRING *s
          find->y = 0;
          find->x = 0;
          find->height = 1;
+         find->first_char = 0;
+         find->length = 0;
          while (i < z) {
             STB_TEXTEDIT_LAYOUTROW(&r, str, i);
-            prev_start = i;
+            find->prev_first = find->first_char;
+            find->first_char = i;
+            find->length = r.num_chars;
+            find->x = r.x1;
             i += r.num_chars;
          }
-         find->first_char = i;
-         find->length = 0;
-         find->prev_first = prev_start;
       }
       return;
    }
