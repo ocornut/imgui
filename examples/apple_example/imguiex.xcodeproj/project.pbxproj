@@ -97,7 +97,7 @@
 			isa = PBXGroup;
 			children = (
 				1A1A0F4D1CB3C54D0090F036 /* libglfw3.dylib */,
-				1A1A0F351CB3A1B20090F036 /* opengl_example */,
+				1A1A0F351CB3A1B20090F036 /* opengl2_example */,
 				1A1A0F211CB39FB50090F036 /* AppDelegate.h */,
 				1A1A0F221CB39FB50090F036 /* AppDelegate.m */,
 				1A1A0F271CB39FB50090F036 /* Assets.xcassets */,
@@ -114,15 +114,15 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		1A1A0F351CB3A1B20090F036 /* opengl_example */ = {
+		1A1A0F351CB3A1B20090F036 /* opengl2_example */ = {
 			isa = PBXGroup;
 			children = (
 				1A1A0F371CB3A1B20090F036 /* imgui_impl_glfw.cpp */,
 				1A1A0F381CB3A1B20090F036 /* imgui_impl_glfw.h */,
 				1A1A0F391CB3A1B20090F036 /* main.cpp */,
 			);
-			name = opengl_example;
-			path = ../../opengl_example;
+			name = opengl2_example;
+			path = ../../opengl2_example;
 			sourceTree = "<group>";
 		};
 		6D1E39141B35EEF10017B40F /* usynergy */ = {
