@@ -1979,6 +1979,15 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
     return text_size;
 }
 
+void ImFont::RenderGlyph(ImDrawList* draw_list, ImVec2 pos, ImU32 col, const ImFont::Glyph* glyph) const {
+    pos.x = (float)(int)pos.x + DisplayOffset.x;
+    pos.y = (float)(int)pos.y + DisplayOffset.y;
+    ImVec2 pos_tl(pos.x + glyph->X0, pos.y + glyph->Y0);
+    ImVec2 pos_br(pos.x + glyph->X1, pos.y + glyph->Y1);
+    draw_list->PrimReserve(6, 4);
+    draw_list->PrimRectUV(pos_tl, pos_br, ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
+}
+
 void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, unsigned short c) const
 {
     if (c == ' ' || c == '\t' || c == '\n' || c == '\r') // Match behavior of RenderText(), those 4 codepoints are hard-coded.
