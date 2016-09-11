@@ -191,7 +191,7 @@ uSynergyBool ImGui_ConnectFunc(uSynergyCookie cookie)
     // connect it to the address and port we passed in to getaddrinfo():
     int ret = connect(usynergy_sockfd, res->ai_addr, res->ai_addrlen);
     if (!ret) {
-        NSLog( @"Connect suceeded...");
+        NSLog( @"Connect succeeded...");
     } else {
         NSLog( @"Connect failed, %d", ret );
     }
