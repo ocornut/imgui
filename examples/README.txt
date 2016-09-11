@@ -38,7 +38,7 @@ ImGui has zero frame of lag for most behaviors and one frame of lag for some beh
 At 60 FPS your experience should be pleasant. Consider that OS mouse cursors are typically drawn through 
 a specific hardware accelerated route and may feel smoother than other GPU rendered contents. You may 
 experiment with the io.MouseDrawCursor flag to request ImGui to draw a mouse cursor itself, to visualize 
-the lag between an hardware cursor and a software cursor. It might be beneficial to the user experience
+the lag between a hardware cursor and a software cursor. It might be beneficial to the user experience
 to switch to a software rendered cursor when an interactive drag is in progress. 
 Also note that some setup or GPU drivers may be causing extra lag (possibly by enforcing triple buffering), 
 leaving you with no option but sadness/anger (Intel GPU drivers were reported as such).
