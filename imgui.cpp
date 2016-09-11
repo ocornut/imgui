@@ -301,7 +301,7 @@
    - Elements that are not clickable, such as Text() items don't need an ID.
 
    - Interactive widgets require state to be carried over multiple frames (most typically ImGui often needs to remember what is the "active" widget).
-     to do so they need an unique ID. unique ID are typically derived from a string label, an integer index or a pointer.
+     to do so they need a unique ID. unique ID are typically derived from a string label, an integer index or a pointer.
 
        Button("OK");        // Label = "OK",     ID = hash of "OK"
        Button("Cancel");    // Label = "Cancel", ID = hash of "Cancel"
@@ -9420,7 +9420,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(column_index);
             KeepAliveID(column_id);
             const float default_t = column_index / (float)window->DC.ColumnsCount;
-            const float t = window->DC.StateStorage->GetFloat(column_id, default_t);      // Cheaply store our floating point value inside the integer (could store an union into the map?)
+            const float t = window->DC.StateStorage->GetFloat(column_id, default_t);      // Cheaply store our floating point value inside the integer (could store a union into the map?)
             window->DC.ColumnsData[column_index].OffsetNorm = t;
         }
         window->DrawList->ChannelsSplit(window->DC.ColumnsCount);
