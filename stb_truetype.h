@@ -2186,7 +2186,7 @@ static void stbtt__sort_edges_ins_sort(stbtt__edge *p, int n)
 
 static void stbtt__sort_edges_quicksort(stbtt__edge *p, int n)
 {
-   /* threshhold for transitioning to insertion sort */
+   /* threshold for transitioning to insertion sort */
    while (n > 12) {
       stbtt__edge t;
       int c01,c12,c,m,i,j;
@@ -2321,7 +2321,7 @@ static void stbtt__add_point(stbtt__point *points, int n, float x, float y)
    points[n].y = y;
 }
 
-// tesselate until threshhold p is happy... @TODO warped to compensate for non-linear stretching
+// tesselate until threshold p is happy... @TODO warped to compensate for non-linear stretching
 static int stbtt__tesselate_curve(stbtt__point *points, int *num_points, float x0, float y0, float x1, float y1, float x2, float y2, float objspace_flatness_squared, int n)
 {
    // midpoint
