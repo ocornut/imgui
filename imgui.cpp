@@ -525,7 +525,7 @@
 !- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
  - popups: add variant using global identifier similar to Begin/End (#402)
  - popups: border options. richer api like BeginChild() perhaps? (#197)
- - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last prefered button" and may teleport when moving mouse
+ - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last preferred button" and may teleport when moving mouse
  - menus: local shortcuts, global shortcuts (#456, #126)
  - menus: icons
  - menus: menubars: some sort of priority / effect of main menu-bar on desktop size?
