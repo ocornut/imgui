@@ -634,7 +634,7 @@ STBTT_DEF int stbtt_GetFontOffsetForIndex(const unsigned char *data, int index);
 // this step if you know it's that kind of font.
 
 
-// The following structure is defined publically so you can declare one on
+// The following structure is defined publicly so you can declare one on
 // the stack or as a global or etc, but you should treat it as opaque.
 struct stbtt_fontinfo
 {
