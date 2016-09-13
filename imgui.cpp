@@ -9142,6 +9142,7 @@ void ImGui::BeginGroup()
     group_data.BackupCursorPos = window->DC.CursorPos;
     group_data.BackupCursorMaxPos = window->DC.CursorMaxPos;
     group_data.BackupIndentX = window->DC.IndentX;
+    group_data.BackupGroupOffsetX = window->DC.GroupOffsetX;
     group_data.BackupCurrentLineHeight = window->DC.CurrentLineHeight;
     group_data.BackupCurrentLineTextBaseOffset = window->DC.CurrentLineTextBaseOffset;
     group_data.BackupLogLinePosY = window->DC.LogLinePosY;
@@ -9172,7 +9173,7 @@ void ImGui::EndGroup()
     window->DC.CurrentLineHeight = group_data.BackupCurrentLineHeight;
     window->DC.CurrentLineTextBaseOffset = group_data.BackupCurrentLineTextBaseOffset;
     window->DC.IndentX = group_data.BackupIndentX;
-    window->DC.GroupOffsetX = window->DC.IndentX;
+    window->DC.GroupOffsetX = group_data.BackupGroupOffsetX;
     window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
 
     if (group_data.AdvanceCursor)

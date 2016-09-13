@@ -257,6 +257,7 @@ struct ImGuiGroupData
     ImVec2      BackupCursorPos;
     ImVec2      BackupCursorMaxPos;
     float       BackupIndentX;
+    float       BackupGroupOffsetX;
     float       BackupCurrentLineHeight;
     float       BackupCurrentLineTextBaseOffset;
     float       BackupLogLinePosY;
