@@ -1828,6 +1828,8 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window = NULL)
     g.ActiveId = id;
     g.ActiveIdAllowOverlap = false;
     g.ActiveIdIsJustActivated = true;
+    if (id)
+        g.ActiveIdIsAlive = true;
     g.ActiveIdWindow = window;
 }
 
