@@ -266,6 +266,7 @@ struct ImGuiGroupData
     float       BackupCurrentLineHeight;
     float       BackupCurrentLineTextBaseOffset;
     float       BackupLogLinePosY;
+    bool        BackupActiveIdIsAlive;
     bool        AdvanceCursor;
 };
 
