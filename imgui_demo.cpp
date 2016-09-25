@@ -71,7 +71,13 @@ static void ShowHelpMarker(const char* desc)
 {
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip(desc);
+    {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(450.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
 }
 
 void ImGui::ShowUserGuide()
@@ -1731,13 +1737,47 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::PopFont();
             if (ImGui::TreeNode("Details"))
             {
-                ImGui::DragFloat("font scale", &font->Scale, 0.005f, 0.3f, 2.0f, "%.1f");             // scale only this font
+                ImGui::DragFloat("Font scale", &font->Scale, 0.005f, 0.3f, 2.0f, "%.1f");   // Scale only this font
+                ImGui::SameLine(); ShowHelpMarker("Note than the default embedded font is NOT meant to be scaled.\n\nFont are currently rendered into bitmaps at a given size at the time of building the atlas. You may oversample them to get some flexibility with scaling. You can also render at multiple sizes and select which one to use at runtime.\n\n(Glimmer of hope: the atlas system should hopefully be rewritten in the future to make scaling more natural and automatic.)");
                 ImGui::Text("Ascent: %f, Descent: %f, Height: %f", font->Ascent, font->Descent, font->Ascent - font->Descent);
                 ImGui::Text("Fallback character: '%c' (%d)", font->FallbackChar, font->FallbackChar);
                 for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
                 {
                     ImFontConfig* cfg = &font->ConfigData[config_i];
                     ImGui::BulletText("Input %d: \'%s\'\nOversample: (%d,%d), PixelSnapH: %d", config_i, cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH);
+                }
+                if (ImGui::TreeNode("Glyphs", "Glyphs (%d)", font->Glyphs.Size))
+                {
+                    // Display all glyphs of the fonts in separate pages of 256 characters
+                    const ImFont::Glyph* glyph_fallback = font->FallbackGlyph; // Forcefully/dodgily make FindGlyph() return NULL on fallback, which isn't the default behavior.
+                    font->FallbackGlyph = NULL;
+                    for (int base = 0; base < 0x10000; base += 256)
+                    {
+                        int count = 0;
+                        for (int n = 0; n < 256; n++)
+                            count += font->FindGlyph((ImWchar)(base + n)) ? 1 : 0;
+                        if (count > 0 && ImGui::TreeNode((void*)(intptr_t)base, "U+%04X..U+%04X (%d %s)", base, base+255, count, count > 1 ? "glyphs" : "glyph"))
+                        {
+                            float cell_spacing = style.ItemSpacing.y;
+                            ImVec2 cell_size(font->FontSize * 1, font->FontSize * 1);
+                            ImVec2 base_pos = ImGui::GetCursorScreenPos();
+                            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+                            for (int n = 0; n < 256; n++)
+                            {
+                                ImVec2 cell_p1(base_pos.x + (n % 16) * (cell_size.x + cell_spacing), base_pos.y + (n / 16) * (cell_size.y + cell_spacing));
+                                ImVec2 cell_p2(cell_p1.x + cell_size.x, cell_p1.y + cell_size.y);
+                                const ImFont::Glyph* glyph = font->FindGlyph((ImWchar)(base+n));;
+                                draw_list->AddRect(cell_p1, cell_p2, glyph ? IM_COL32(255,255,255,100) : IM_COL32(255,255,255,50));
+                                font->RenderChar(draw_list, cell_size.x, cell_p1, ImGui::GetColorU32(ImGuiCol_Text), (ImWchar)(base+n)); // We use ImFont::RenderChar as a shortcut because we don't have UTF-8 conversion functions available to generate a string.
+                                if (ImGui::IsMouseHoveringRect(cell_p1, cell_p2))
+                                    ImGui::SetTooltip("U+%04X: %s", base+n, glyph ? "Present" : "Missing");
+                            }
+                            ImGui::Dummy(ImVec2((cell_size.x + cell_spacing) * 16, (cell_size.y + cell_spacing) * 16));
+                            ImGui::TreePop();
+                        }
+                    }
+                    font->FallbackGlyph = glyph_fallback;
+                    ImGui::TreePop();
                 }
                 ImGui::TreePop();
             }
