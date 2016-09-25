@@ -70,7 +70,6 @@ typedef void* ImTextureID;          // user data to identify a texture (this is 
 typedef int ImGuiCol;               // a color identifier for styling       // enum ImGuiCol_
 typedef int ImGuiStyleVar;          // a variable identifier for styling    // enum ImGuiStyleVar_
 typedef int ImGuiKey;               // a key identifier (ImGui-side enum)   // enum ImGuiKey_
-typedef int ImGuiAlign;             // alignment                            // enum ImGuiAlign_
 typedef int ImGuiColorEditMode;     // color edit mode for ColorEdit*()     // enum ImGuiColorEditMode_
 typedef int ImGuiMouseCursor;       // a mouse cursor identifier            // enum ImGuiMouseCursor_
 typedef int ImGuiWindowFlags;       // window flags for Begin*()            // enum ImGuiWindowFlags_
@@ -176,7 +175,6 @@ namespace ImGui
     IMGUI_API void          PopFont();
     IMGUI_API void          PushStyleColor(ImGuiCol idx, const ImVec4& col);
     IMGUI_API void          PopStyleColor(int count = 1);
-    IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, int val);
     IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, float val);
     IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, const ImVec2& val);
     IMGUI_API void          PopStyleVar(int count = 1);
@@ -651,16 +649,6 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_Count_
 };
 
-enum ImGuiAlign_
-{
-    ImGuiAlign_Left     = 1 << 0,
-    ImGuiAlign_Center   = 1 << 1,
-    ImGuiAlign_Right    = 1 << 2,
-    ImGuiAlign_Top      = 1 << 3,
-    ImGuiAlign_VCenter  = 1 << 4,
-    ImGuiAlign_Default  = ImGuiAlign_Left | ImGuiAlign_Top
-};
-
 // Enumeration for ColorEditMode()
 // FIXME-OBSOLETE: Will be replaced by future color/picker api
 enum ImGuiColorEditMode_
@@ -701,7 +689,7 @@ struct ImGuiStyle
     ImVec2      WindowPadding;              // Padding within a window
     ImVec2      WindowMinSize;              // Minimum window size
     float       WindowRounding;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
-    ImGuiAlign  WindowTitleAlign;           // Alignment for title bar text
+    ImVec2      WindowTitleAlign;           // Alignment for title bar text. Defaults to (0.0f,0.5f) for left-aligned,vertically centered.
     float       ChildWindowRounding;        // Radius of child window corners rounding. Set to 0.0f to have rectangular windows
     ImVec2      FramePadding;               // Padding within a framed rectangle (used by most widgets)
     float       FrameRounding;              // Radius of frame corners rounding. Set to 0.0f to have rectangular frame (used by most widgets).
@@ -712,7 +700,7 @@ struct ImGuiStyle
     float       ColumnsMinSpacing;          // Minimum horizontal spacing between two columns
     float       ScrollbarSize;              // Width of the vertical scrollbar, Height of the horizontal scrollbar
     float       ScrollbarRounding;          // Radius of grab corners for scrollbar
-    float       GrabMinSize;                // Minimum width/height of a grab box for slider/scrollbar
+    float       GrabMinSize;                // Minimum width/height of a grab box for slider/scrollbar.
     float       GrabRounding;               // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
     ImVec2      DisplayWindowPadding;       // Window positions are clamped to be visible within the display area by at least this amount. Only covers regular windows.
     ImVec2      DisplaySafeAreaPadding;     // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.

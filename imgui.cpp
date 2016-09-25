@@ -150,6 +150,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2016/09/25 (1.50) - style.WindowTitleAlign is now a ImVec2 (ImGuiAlign enum was removed). set to (0.5f,0.5f) for horizontal+vertical centering, (0.0f,0.0f) for upper-left, etc.
  - 2016/07/30 (1.50) - SameLine(x) with x>0.0f is now relative to left of column/group if any, and not always to left of window. This was sort of always the intent and hopefully breakage should be minimal.
  - 2016/05/12 (1.49) - title bar (using ImGuiCol_TitleBg/ImGuiCol_TitleBgActive colors) isn't rendered over a window background (ImGuiCol_WindowBg color) anymore. 
                        If your TitleBg/TitleBgActive alpha was 1.0f or you are using the default theme it will not affect you. 
@@ -729,7 +730,7 @@ ImGuiStyle::ImGuiStyle()
     WindowPadding           = ImVec2(8,8);      // Padding within a window
     WindowMinSize           = ImVec2(32,32);    // Minimum window size
     WindowRounding          = 9.0f;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
-    WindowTitleAlign        = ImGuiAlign_Left;  // Alignment for title bar text
+    WindowTitleAlign        = ImVec2(0.0f,0.5f);// Alignment for title bar text
     ChildWindowRounding     = 0.0f;             // Radius of child window corners rounding. Set to 0.0f to have rectangular child windows
     FramePadding            = ImVec2(4,3);      // Padding within a framed rectangle (used by most widgets)
     FrameRounding           = 0.0f;             // Radius of frame corners rounding. Set to 0.0f to have rectangular frames (used by most widgets).
@@ -2868,7 +2869,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
 
 // Default clip_rect uses (pos_min,pos_max)
 // Handle clipping on CPU immediately (vs typically let the GPU clip the triangles that are overlapping the clipping rectangle edges)
-void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, ImGuiAlign align, const ImRect* clip_rect)
+void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align, const ImRect* clip_rect)
 {
     // Hide anything after a '##' string
     const char* text_display_end = FindRenderedTextEnd(text, text_end);
@@ -2889,10 +2890,9 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, cons
     if (clip_rect) // If we had no explicit clipping rectangle then pos==clip_min
         need_clipping |= (pos.x < clip_min->x) || (pos.y < clip_min->y);
 
-    // Align whole block (we should defer that to the better rendering function)
-    if (align & ImGuiAlign_Center) pos.x = ImMax(pos.x, (pos.x + pos_max.x - text_size.x) * 0.5f);
-    else if (align & ImGuiAlign_Right) pos.x = ImMax(pos.x, pos_max.x - text_size.x);
-    if (align & ImGuiAlign_VCenter) pos.y = ImMax(pos.y, (pos.y + pos_max.y - text_size.y) * 0.5f);
+    // Align whole block (we should defer that to the better rendering function
+    if (align.x > 0.0f) pos.x = ImMax(pos.x, pos.x + (pos_max.x - pos.x - text_size.x) * align.x);
+    if (align.y > 0.0f) pos.y = ImMax(pos.y, pos.y + (pos_max.y - pos.y - text_size.y) * align.y);
 
     // Render
     if (need_clipping)
@@ -4307,15 +4307,15 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             if (!(flags & ImGuiWindowFlags_NoCollapse))
                 RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f, true);
 
-            ImVec2 text_min = window->Pos + style.FramePadding;
-            ImVec2 text_max = window->Pos + ImVec2(window->Size.x - style.FramePadding.x, style.FramePadding.y*2 + text_size.y);
+            ImVec2 text_min = window->Pos;
+            ImVec2 text_max = window->Pos + ImVec2(window->Size.x, style.FramePadding.y*2 + text_size.y);
             ImRect clip_rect;
             clip_rect.Max = ImVec2(window->Pos.x + window->Size.x - (p_open ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x), text_max.y); // Match the size of CloseWindowButton()
-            bool pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0;
-            bool pad_right = (p_open != NULL);
-            if (style.WindowTitleAlign & ImGuiAlign_Center) pad_right = pad_left;
-            if (pad_left) text_min.x += g.FontSize + style.ItemInnerSpacing.x;
-            if (pad_right) text_max.x -= g.FontSize + style.ItemInnerSpacing.x;
+            float pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0 ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : 0.0f;
+            float pad_right = (p_open != NULL) ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : 0.0f;
+            if (style.WindowTitleAlign.x > 0.0f) pad_right = ImLerp(pad_right, pad_left, style.WindowTitleAlign.x);
+            text_min.x += pad_left;
+            text_max.x -= pad_right;
             clip_rect.Min = ImVec2(text_min.x, window->Pos.y);
             RenderTextClipped(text_min, text_max, name, NULL, &text_size, style.WindowTitleAlign, &clip_rect);
         }
@@ -4692,26 +4692,6 @@ static const ImGuiStyleVarInfo* GetStyleVarInfo(ImGuiStyleVar idx)
 {
     IM_ASSERT(idx >= 0 && idx < ImGuiStyleVar_Count_);
     return &GStyleVarInfo[idx];
-}
-
-void ImGui::PushStyleVar(ImGuiStyleVar idx, int val)
-{
-    const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
-    if (var_info->Type == ImGuiDataType_Int)
-    {
-        int* pvar = (int*)var_info->GetVarPtr();
-        GImGui->StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
-        *pvar = val;
-        return;
-    }
-    if (var_info->Type == ImGuiDataType_Float)
-    {
-        float* pvar = (float*)var_info->GetVarPtr();
-        GImGui->StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
-        *pvar = (float)val;
-        return;
-    }
-    IM_ASSERT(0); // Called function with wrong-type? Variable is not a int.
 }
 
 void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
@@ -5470,7 +5450,7 @@ void ImGui::LabelTextV(const char* label, const char* fmt, va_list args)
     // Render
     const char* value_text_begin = &g.TempBuffer[0];
     const char* value_text_end = value_text_begin + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    RenderTextClipped(value_bb.Min, value_bb.Max, value_text_begin, value_text_end, NULL, ImGuiAlign_VCenter);
+    RenderTextClipped(value_bb.Min, value_bb.Max, value_text_begin, value_text_end, NULL, ImVec2(0.0f,0.5f));
     if (label_size.x > 0.0f)
         RenderText(ImVec2(value_bb.Max.x + style.ItemInnerSpacing.x, value_bb.Min.y + style.FramePadding.y), label);
 }
@@ -5603,7 +5583,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     // Render
     const ImU32 col = GetColorU32((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
-    RenderTextClipped(bb.Min, bb.Max, label, NULL, &label_size, ImGuiAlign_Center | ImGuiAlign_VCenter);
+    RenderTextClipped(bb.Min, bb.Max, label, NULL, &label_size, style.ButtonTextAlign);
 
     // Automatically close popups
     //if (pressed && !(flags & ImGuiButtonFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
@@ -5970,12 +5950,12 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             const char log_prefix[] = "\n##";
             const char log_suffix[] = "##";
             LogRenderedText(text_pos, log_prefix, log_prefix+3);
-            RenderTextClipped(text_pos, bb.Max, label, label_end, &label_size);
+            RenderTextClipped(text_pos, bb.Max, label, label_end, &label_size, ImVec2(0.0f,0.0f));
             LogRenderedText(text_pos, log_suffix+1, log_suffix+3);
         }
         else
         {
-            RenderTextClipped(text_pos, bb.Max, label, label_end, &label_size);
+            RenderTextClipped(text_pos, bb.Max, label, label_end, &label_size, ImVec2(0.0f,0.0f));
         }
     }
     else
@@ -6602,7 +6582,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
     const char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), display_format, *v);
-    RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImGuiAlign_Center|ImGuiAlign_VCenter);
+    RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f,0.5f));
 
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
@@ -6649,7 +6629,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     // For the vertical slider we allow centered text to overlap the frame padding
     char value_buf[64];
     char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), display_format, *v);
-    RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, value_buf, value_buf_end, NULL, ImGuiAlign_Center);
+    RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f,0.0f));
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
@@ -6899,7 +6879,7 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
     const char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), display_format, *v);
-    RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImGuiAlign_Center|ImGuiAlign_VCenter);
+    RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f,0.5f));
 
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
@@ -7150,7 +7130,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
 
     // Text overlay
     if (overlay_text)
-        RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, overlay_text, NULL, NULL, ImGuiAlign_Center);
+        RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, overlay_text, NULL, NULL, ImVec2(0.5f,0.0f));
 
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
@@ -7226,7 +7206,7 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
 
     ImVec2 overlay_size = CalcTextSize(overlay, NULL);
     if (overlay_size.x > 0.0f)
-        RenderTextClipped(ImVec2(ImClamp(fill_br.x + style.ItemSpacing.x, bb.Min.x, bb.Max.x - overlay_size.x - style.ItemInnerSpacing.x), bb.Min.y), bb.Max, overlay, NULL, &overlay_size, ImGuiAlign_Left|ImGuiAlign_VCenter, &bb);
+        RenderTextClipped(ImVec2(ImClamp(fill_br.x + style.ItemSpacing.x, bb.Min.x, bb.Max.x - overlay_size.x - style.ItemInnerSpacing.x), bb.Min.y), bb.Max, overlay, NULL, &overlay_size, ImVec2(0.0f,0.5f), &bb);
 }
 
 bool ImGui::Checkbox(const char* label, bool* v)
@@ -8440,7 +8420,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     {
         const char* item_text;
         if (items_getter(data, *current_item, &item_text))
-            RenderTextClipped(frame_bb.Min + style.FramePadding, value_bb.Max, item_text, NULL, NULL);
+            RenderTextClipped(frame_bb.Min + style.FramePadding, value_bb.Max, item_text, NULL, NULL, ImVec2(0.0f,0.0f));
     }
 
     if (label_size.x > 0)
@@ -8586,7 +8566,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     }
 
     if (flags & ImGuiSelectableFlags_Disabled) PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
-    RenderTextClipped(bb.Min, bb_with_spacing.Max, label, NULL, &label_size);
+    RenderTextClipped(bb.Min, bb_with_spacing.Max, label, NULL, &label_size, ImVec2(0.0f,0.0f));
     if (flags & ImGuiSelectableFlags_Disabled) PopStyleColor();
 
     // Automatically close popups
