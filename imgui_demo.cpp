@@ -1769,8 +1769,16 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                                 const ImFont::Glyph* glyph = font->FindGlyph((ImWchar)(base+n));;
                                 draw_list->AddRect(cell_p1, cell_p2, glyph ? IM_COL32(255,255,255,100) : IM_COL32(255,255,255,50));
                                 font->RenderChar(draw_list, cell_size.x, cell_p1, ImGui::GetColorU32(ImGuiCol_Text), (ImWchar)(base+n)); // We use ImFont::RenderChar as a shortcut because we don't have UTF-8 conversion functions available to generate a string.
-                                if (ImGui::IsMouseHoveringRect(cell_p1, cell_p2))
-                                    ImGui::SetTooltip("U+%04X: %s", base+n, glyph ? "Present" : "Missing");
+                                if (glyph && ImGui::IsMouseHoveringRect(cell_p1, cell_p2))
+                                {
+                                    ImGui::BeginTooltip();
+                                    ImGui::Text("Codepoint: U+%04X", base+n);
+                                    ImGui::Separator();
+                                    ImGui::Text("XAdvance+1: %.1f", glyph->XAdvance);
+                                    ImGui::Text("Pos: (%.2f,%.2f)->(%.2f,%.2f)", glyph->X0, glyph->Y0, glyph->X1, glyph->Y1);
+                                    ImGui::Text("UV: (%.3f,%.3f)->(%.3f,%.3f)", glyph->U0, glyph->V0, glyph->U1, glyph->V1);
+                                    ImGui::EndTooltip();
+                                }
                             }
                             ImGui::Dummy(ImVec2((cell_size.x + cell_spacing) * 16, (cell_size.y + cell_spacing) * 16));
                             ImGui::TreePop();
