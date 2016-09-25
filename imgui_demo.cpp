@@ -800,7 +800,7 @@ void ImGui::ShowTestWindow(bool* p_open)
         ImGui::Separator();
         ImGui::PushItemWidth(100); ImGui::Combo("func", &func_type, "Sin\0Saw\0"); ImGui::PopItemWidth();
         ImGui::SameLine();
-        ImGui::SliderInt("Sample count", &display_count, 1, 500);
+        ImGui::SliderInt("Sample count", &display_count, 1, 400);
         float (*func)(void*, int) = (func_type == 0) ? Funcs::Sin : Funcs::Saw;
         ImGui::PlotLines("Lines", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0,80));
         ImGui::PlotHistogram("Histogram", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0,80));
@@ -1656,7 +1656,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::TreePop();
     }
 
-    if (ImGui::TreeNode("Sizes"))
+    if (ImGui::TreeNode("Settings"))
     {
         ImGui::SliderFloat2("WindowPadding", (float*)&style.WindowPadding, 0.0f, 20.0f, "%.0f");
         ImGui::SliderFloat("WindowRounding", &style.WindowRounding, 0.0f, 16.0f, "%.0f");
@@ -1671,6 +1671,9 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::SliderFloat("ScrollbarRounding", &style.ScrollbarRounding, 0.0f, 16.0f, "%.0f");
         ImGui::SliderFloat("GrabMinSize", &style.GrabMinSize, 1.0f, 20.0f, "%.0f");
         ImGui::SliderFloat("GrabRounding", &style.GrabRounding, 0.0f, 16.0f, "%.0f");
+        ImGui::Text("Alignment");
+        ImGui::SliderFloat2("WindowTitleAlign", (float*)&style.WindowTitleAlign, 0.0f, 1.0f, "%.2f");
+        ImGui::SliderFloat2("ButtonTextAlign", (float*)&style.ButtonTextAlign, 0.0f, 1.0f, "%.2f"); ImGui::SameLine(); ShowHelpMarker("Alignment applies when a button is larger than its text content.");
         ImGui::TreePop();
     }
 

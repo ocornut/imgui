@@ -71,7 +71,6 @@ typedef int ImGuiCol;               // a color identifier for styling       // e
 typedef int ImGuiStyleVar;          // a variable identifier for styling    // enum ImGuiStyleVar_
 typedef int ImGuiKey;               // a key identifier (ImGui-side enum)   // enum ImGuiKey_
 typedef int ImGuiNavInput;          // an input identifier for gamepad nav  // enum ImGuiNavInput_
-typedef int ImGuiAlign;             // alignment                            // enum ImGuiAlign_
 typedef int ImGuiColorEditMode;     // color edit mode for ColorEdit*()     // enum ImGuiColorEditMode_
 typedef int ImGuiMouseCursor;       // a mouse cursor identifier            // enum ImGuiMouseCursor_
 typedef int ImGuiWindowFlags;       // window flags for Begin*()            // enum ImGuiWindowFlags_
@@ -685,17 +684,9 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_ItemSpacing,         // ImVec2
     ImGuiStyleVar_ItemInnerSpacing,    // ImVec2
     ImGuiStyleVar_IndentSpacing,       // float
-    ImGuiStyleVar_GrabMinSize          // float
-};
-
-enum ImGuiAlign_
-{
-    ImGuiAlign_Left     = 1 << 0,
-    ImGuiAlign_Center   = 1 << 1,
-    ImGuiAlign_Right    = 1 << 2,
-    ImGuiAlign_Top      = 1 << 3,
-    ImGuiAlign_VCenter  = 1 << 4,
-    ImGuiAlign_Default  = ImGuiAlign_Left | ImGuiAlign_Top
+    ImGuiStyleVar_GrabMinSize,         // float
+    ImGuiStyleVar_ButtonTextAlign,     // flags ImGuiAlign_*
+    ImGuiStyleVar_Count_
 };
 
 // Enumeration for ColorEditMode()
@@ -738,7 +729,7 @@ struct ImGuiStyle
     ImVec2      WindowPadding;              // Padding within a window
     ImVec2      WindowMinSize;              // Minimum window size
     float       WindowRounding;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
-    ImGuiAlign  WindowTitleAlign;           // Alignment for title bar text
+    ImVec2      WindowTitleAlign;           // Alignment for title bar text. Defaults to (0.0f,0.5f) for left-aligned,vertically centered.
     float       ChildWindowRounding;        // Radius of child window corners rounding. Set to 0.0f to have rectangular windows
     ImVec2      FramePadding;               // Padding within a framed rectangle (used by most widgets)
     float       FrameRounding;              // Radius of frame corners rounding. Set to 0.0f to have rectangular frame (used by most widgets).
@@ -749,8 +740,9 @@ struct ImGuiStyle
     float       ColumnsMinSpacing;          // Minimum horizontal spacing between two columns
     float       ScrollbarSize;              // Width of the vertical scrollbar, Height of the horizontal scrollbar
     float       ScrollbarRounding;          // Radius of grab corners for scrollbar
-    float       GrabMinSize;                // Minimum width/height of a grab box for slider/scrollbar
+    float       GrabMinSize;                // Minimum width/height of a grab box for slider/scrollbar.
     float       GrabRounding;               // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
+    ImVec2      ButtonTextAlign;            // Alignment of button text when button is larger than text. Defaults to (0.5f,0.5f) for horizontally+vertically centered.
     ImVec2      DisplayWindowPadding;       // Window positions are clamped to be visible within the display area by at least this amount. Only covers regular windows.
     ImVec2      DisplaySafeAreaPadding;     // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
     bool        AntiAliasedLines;           // Enable anti-aliasing on lines/borders. Disable if you are really tight on CPU/GPU.
