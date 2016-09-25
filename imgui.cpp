@@ -4684,25 +4684,27 @@ static const ImGuiStyleVarInfo GStyleVarInfo[ImGuiStyleVar_Count_] =
     { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, GrabMinSize) },
 };
 
-static const void* GetStyleVarPtr(ImGuiStyleVar idx, ImGuiDataType type)
+static const ImGuiStyleVarInfo* GetStyleVarInfo(ImGuiStyleVar idx)
 {
     IM_ASSERT(idx >= 0 && idx < ImGuiStyleVar_Count_);
-    const ImGuiStyleVarInfo* info = &GStyleVarInfo[idx];
-    return (info->Type == type) ? info->GetVarPtr() : NULL; 
+    return &GStyleVarInfo[idx];
 }
 
 void ImGui::PushStyleVar(ImGuiStyleVar idx, int val)
 {
-    if (int* pvar = (int*)GetStyleVarPtr(idx, ImGuiDataType_Int))
+    const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
+    if (var_info->Type == ImGuiDataType_Int)
     {
+        int* pvar = (int*)var_info->GetVarPtr();
         GImGui->StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
         *pvar = val;
         return;
     }
-    if (float* pvarf = (float*)GetStyleVarPtr(idx, ImGuiDataType_Float))
+    if (var_info->Type == ImGuiDataType_Float)
     {
-        GImGui->StyleModifiers.push_back(ImGuiStyleMod(idx, *pvarf));
-        *pvarf = (float)val;
+        float* pvar = (float*)var_info->GetVarPtr();
+        GImGui->StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
+        *pvar = (float)val;
         return;
     }
     IM_ASSERT(0); // Called function with wrong-type? Variable is not a int.
@@ -4710,8 +4712,10 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, int val)
 
 void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
 {
-    if (float* pvar = (float*)GetStyleVarPtr(idx, ImGuiDataType_Float))
+    const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
+    if (var_info->Type == ImGuiDataType_Float)
     {
+        float* pvar = (float*)var_info->GetVarPtr();
         GImGui->StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
         *pvar = val;
         return;
@@ -4721,8 +4725,10 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
 
 void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
 {
-    if (ImVec2* pvar = (ImVec2*)GetStyleVarPtr(idx, ImGuiDataType_Float2))
+    const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
+    if (var_info->Type == ImGuiDataType_Float2)
     {
+        ImVec2* pvar = (ImVec2*)var_info->GetVarPtr();
         GImGui->StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
         *pvar = val;
         return;
@@ -4736,12 +4742,10 @@ void ImGui::PopStyleVar(int count)
     while (count > 0)
     {
         ImGuiStyleMod& backup = g.StyleModifiers.back();
-        IM_ASSERT(backup.VarIdx >= 0 && backup.VarIdx < ImGuiStyleVar_Count_);
-        const ImGuiStyleVarInfo* info = &GStyleVarInfo[backup.VarIdx];
-        void* pvar = info->GetVarPtr();
-        if (info->Type == ImGuiDataType_Float)          (*(float*)pvar) = backup.BackupFloat[0];
-        else if (info->Type == ImGuiDataType_Float2)    (*(ImVec2*)pvar) = ImVec2(backup.BackupFloat[0], backup.BackupFloat[1]);
-        else if (info->Type == ImGuiDataType_Int)       (*(int*)pvar) = backup.BackupInt[0];
+        const ImGuiStyleVarInfo* info = GetStyleVarInfo(backup.VarIdx);
+        if (info->Type == ImGuiDataType_Float)          (*(float*)info->GetVarPtr()) = backup.BackupFloat[0];
+        else if (info->Type == ImGuiDataType_Float2)    (*(ImVec2*)info->GetVarPtr()) = ImVec2(backup.BackupFloat[0], backup.BackupFloat[1]);
+        else if (info->Type == ImGuiDataType_Int)       (*(int*)info->GetVarPtr()) = backup.BackupInt[0];
         g.StyleModifiers.pop_back();
         count--;
     }
