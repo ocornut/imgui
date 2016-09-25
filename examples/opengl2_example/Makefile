@@ -10,7 +10,7 @@
 
 #CXX = g++
 
-EXE = opengl_example
+EXE = opengl2_example
 OBJS = main.o imgui_impl_glfw.o
 OBJS += ../../imgui.o ../../imgui_demo.o ../../imgui_draw.o
 

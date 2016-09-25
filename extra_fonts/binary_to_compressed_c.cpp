@@ -79,11 +79,18 @@ bool binary_to_compressed_c(const char* filename, const char* symbol, bool use_b
     if (use_base85_encoding)
     {
         fprintf(out, "static const char %s_%sdata_base85[%d+1] =\n    \"", symbol, compressed_str, (int)((compressed_sz+3)/4)*5);
-        for (int i = 0; i < compressed_sz; i += 4)
+        char prev_c = 0;
+        for (int src_i = 0; src_i < compressed_sz; src_i += 4)
         {
-            unsigned int d = *(unsigned int*)(compressed + i);
-            fprintf(out, "%c%c%c%c%c", Encode85Byte(d), Encode85Byte(d/85), Encode85Byte(d/7225), Encode85Byte(d/614125), Encode85Byte(d/52200625));
-            if ((i % 112) == 112-4)
+            // This is made a little more complicated by the fact that ??X sequences are interpreted as trigraphs by old C/C++ compilers. So we need to escape pairs of ??.
+            unsigned int d = *(unsigned int*)(compressed + src_i);
+            for (unsigned int n5 = 0; n5 < 5; n5++, d /= 85)
+            {
+                char c = Encode85Byte(d);
+                fprintf(out, (c == '?' && prev_c == '?') ? "\\%c" : "%c", c);
+                prev_c = c;
+            }
+            if ((src_i % 112) == 112-4)
                 fprintf(out, "\"\n    \"");
         }
         fprintf(out, "\";\n\n");
