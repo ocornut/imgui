@@ -75,6 +75,7 @@ extern IMGUI_API ImGuiContext*  GImGui;     // current implicit ImGui context po
 
 #define IM_ARRAYSIZE(_ARR)      ((int)(sizeof(_ARR)/sizeof(*_ARR)))
 #define IM_PI                   3.14159265358979323846f
+#define IM_OFFSETOF(_TYPE,_ELM) ((size_t)&(((_TYPE*)0)->_ELM))
 
 // Helpers: UTF-8 <> wchar
 IMGUI_API int           ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
@@ -192,7 +193,8 @@ enum ImGuiPlotType
 enum ImGuiDataType
 {
     ImGuiDataType_Int,
-    ImGuiDataType_Float
+    ImGuiDataType_Float,
+    ImGuiDataType_Float2,
 };
 
 // 2D axis aligned bounding-box
@@ -241,14 +243,17 @@ struct IMGUI_API ImRect
 struct ImGuiColMod
 {
     ImGuiCol    Col;
-    ImVec4      PreviousValue;
+    ImVec4      BackupValue;
 };
 
-// Stacked style modifier, backup of modified data so we can restore it
+// Stacked style modifier, backup of modified data so we can restore it. Data type inferred from the variable.
 struct ImGuiStyleMod
 {
-    ImGuiStyleVar   Var;
-    ImVec2          PreviousValue;
+    ImGuiStyleVar   VarIdx;
+    union           { int BackupInt[2]; float BackupFloat[2]; };
+    ImGuiStyleMod(ImGuiStyleVar idx, int v)     { VarIdx = idx; BackupInt[0] = v; }
+    ImGuiStyleMod(ImGuiStyleVar idx, float v)   { VarIdx = idx; BackupFloat[0] = v; }
+    ImGuiStyleMod(ImGuiStyleVar idx, ImVec2 v)  { VarIdx = idx; BackupFloat[0] = v.x; BackupFloat[1] = v.y; }
 };
 
 // Stacked data for BeginGroup()/EndGroup()
@@ -705,7 +710,7 @@ namespace ImGui
     IMGUI_API void          OpenPopupEx(const char* str_id, bool reopen_existing);
 
     // NB: All position are in absolute pixels coordinates (not window coordinates)
-    // FIXME: All those functions are a mess and needs to be refactored into something decent. Avoid use outside of imgui.cpp!
+    // FIXME: All those functions are a mess and needs to be refactored into something decent. AVOID USING OUTSIDE OF IMGUI.CPP! NOT FOR PUBLIC CONSUMPTION.
     // We need: a sort of symbol library, preferably baked into font atlas when possible + decent text rendering helpers.
     IMGUI_API void          RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
     IMGUI_API void          RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width);

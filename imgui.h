@@ -176,6 +176,7 @@ namespace ImGui
     IMGUI_API void          PopFont();
     IMGUI_API void          PushStyleColor(ImGuiCol idx, const ImVec4& col);
     IMGUI_API void          PopStyleColor(int count = 1);
+    IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, int val);
     IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, float val);
     IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, const ImVec2& val);
     IMGUI_API void          PopStyleVar(int count = 1);
@@ -646,7 +647,8 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_ItemSpacing,         // ImVec2
     ImGuiStyleVar_ItemInnerSpacing,    // ImVec2
     ImGuiStyleVar_IndentSpacing,       // float
-    ImGuiStyleVar_GrabMinSize          // float
+    ImGuiStyleVar_GrabMinSize,         // float
+    ImGuiStyleVar_Count_
 };
 
 enum ImGuiAlign_

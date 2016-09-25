@@ -563,7 +563,6 @@
  - style: color-box not always square?
  - style: a concept of "compact style" that the end-user can easily rely on (e.g. PushStyleCompact()?) that maps to other settings? avoid implementing duplicate helpers such as SmallCheckbox(), etc.
  - style: try to make PushStyleVar() more robust to incorrect parameters (to be more friendly to edit & continues situation).
- - style/opt: PopStyleVar could be optimized by having GetStyleVar returns the type, using a table mapping stylevar enum to data type.
  - style: global scale setting.
  - style: WindowPadding needs to be EVEN needs the 0.5 multiplier probably have a subtle effect on clip rectangle
  - text: simple markup language for color change?
@@ -4646,7 +4645,7 @@ void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
     ImGuiContext& g = *GImGui;
     ImGuiColMod backup;
     backup.Col = idx;
-    backup.PreviousValue = g.Style.Colors[idx];
+    backup.BackupValue = g.Style.Colors[idx];
     g.ColorModifiers.push_back(backup);
     g.Style.Colors[idx] = col;
 }
@@ -4657,64 +4656,78 @@ void ImGui::PopStyleColor(int count)
     while (count > 0)
     {
         ImGuiColMod& backup = g.ColorModifiers.back();
-        g.Style.Colors[backup.Col] = backup.PreviousValue;
+        g.Style.Colors[backup.Col] = backup.BackupValue;
         g.ColorModifiers.pop_back();
         count--;
     }
 }
 
-static float* GetStyleVarFloatAddr(ImGuiStyleVar idx)
+struct ImGuiStyleVarInfo
 {
-    ImGuiContext& g = *GImGui;
-    switch (idx)
-    {
-    case ImGuiStyleVar_Alpha: return &g.Style.Alpha;
-    case ImGuiStyleVar_WindowRounding: return &g.Style.WindowRounding;
-    case ImGuiStyleVar_ChildWindowRounding: return &g.Style.ChildWindowRounding;
-    case ImGuiStyleVar_FrameRounding: return &g.Style.FrameRounding;
-    case ImGuiStyleVar_IndentSpacing: return &g.Style.IndentSpacing;
-    case ImGuiStyleVar_GrabMinSize: return &g.Style.GrabMinSize;
-    }
-    return NULL;
+    ImGuiDataType   Type;
+    ImU32           Offset;
+    void*           GetVarPtr() const { return (void*)((unsigned char*)&GImGui->Style + Offset); }
+};
+
+static const ImGuiStyleVarInfo GStyleVarInfo[ImGuiStyleVar_Count_] =
+{
+    { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, Alpha) },
+    { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowPadding) },
+    { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, WindowRounding) },
+    { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowMinSize) },
+    { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, ChildWindowRounding) },
+    { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, FramePadding) },
+    { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, FrameRounding) },
+    { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, ItemSpacing) },
+    { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, ItemInnerSpacing) },
+    { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, IndentSpacing) },
+    { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, GrabMinSize) },
+};
+
+static const void* GetStyleVarPtr(ImGuiStyleVar idx, ImGuiDataType type)
+{
+    IM_ASSERT(idx >= 0 && idx < ImGuiStyleVar_Count_);
+    const ImGuiStyleVarInfo* info = &GStyleVarInfo[idx];
+    return (info->Type == type) ? info->GetVarPtr() : NULL; 
 }
 
-static ImVec2* GetStyleVarVec2Addr(ImGuiStyleVar idx)
+void ImGui::PushStyleVar(ImGuiStyleVar idx, int val)
 {
-    ImGuiContext& g = *GImGui;
-    switch (idx)
+    if (int* pvar = (int*)GetStyleVarPtr(idx, ImGuiDataType_Int))
     {
-    case ImGuiStyleVar_WindowPadding: return &g.Style.WindowPadding;
-    case ImGuiStyleVar_WindowMinSize: return &g.Style.WindowMinSize;
-    case ImGuiStyleVar_FramePadding: return &g.Style.FramePadding;
-    case ImGuiStyleVar_ItemSpacing: return &g.Style.ItemSpacing;
-    case ImGuiStyleVar_ItemInnerSpacing: return &g.Style.ItemInnerSpacing;
+        GImGui->StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
+        *pvar = val;
+        return;
     }
-    return NULL;
+    if (float* pvarf = (float*)GetStyleVarPtr(idx, ImGuiDataType_Float))
+    {
+        GImGui->StyleModifiers.push_back(ImGuiStyleMod(idx, *pvarf));
+        *pvarf = (float)val;
+        return;
+    }
+    IM_ASSERT(0); // Called function with wrong-type? Variable is not a int.
 }
 
 void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
 {
-    ImGuiContext& g = *GImGui;
-    float* pvar = GetStyleVarFloatAddr(idx);
-    IM_ASSERT(pvar != NULL); // Called function with wrong-type? Variable is not a float.
-    ImGuiStyleMod backup;
-    backup.Var = idx;
-    backup.PreviousValue = ImVec2(*pvar, 0.0f);
-    g.StyleModifiers.push_back(backup);
-    *pvar = val;
+    if (float* pvar = (float*)GetStyleVarPtr(idx, ImGuiDataType_Float))
+    {
+        GImGui->StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
+        *pvar = val;
+        return;
+    }
+    IM_ASSERT(0); // Called function with wrong-type? Variable is not a float.
 }
-
 
 void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
 {
-    ImGuiContext& g = *GImGui;
-    ImVec2* pvar = GetStyleVarVec2Addr(idx);
-    IM_ASSERT(pvar != NULL); // Called function with wrong-type? Variable is not a ImVec2.
-    ImGuiStyleMod backup;
-    backup.Var = idx;
-    backup.PreviousValue = *pvar;
-    g.StyleModifiers.push_back(backup);
-    *pvar = val;
+    if (ImVec2* pvar = (ImVec2*)GetStyleVarPtr(idx, ImGuiDataType_Float2))
+    {
+        GImGui->StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
+        *pvar = val;
+        return;
+    }
+    IM_ASSERT(0); // Called function with wrong-type? Variable is not a ImVec2.
 }
 
 void ImGui::PopStyleVar(int count)
@@ -4723,10 +4736,12 @@ void ImGui::PopStyleVar(int count)
     while (count > 0)
     {
         ImGuiStyleMod& backup = g.StyleModifiers.back();
-        if (float* pvar_f = GetStyleVarFloatAddr(backup.Var))
-            *pvar_f = backup.PreviousValue.x;
-        else if (ImVec2* pvar_v = GetStyleVarVec2Addr(backup.Var))
-            *pvar_v = backup.PreviousValue;
+        IM_ASSERT(backup.VarIdx >= 0 && backup.VarIdx < ImGuiStyleVar_Count_);
+        const ImGuiStyleVarInfo* info = &GStyleVarInfo[backup.VarIdx];
+        void* pvar = info->GetVarPtr();
+        if (info->Type == ImGuiDataType_Float)          (*(float*)pvar) = backup.BackupFloat[0];
+        else if (info->Type == ImGuiDataType_Float2)    (*(ImVec2*)pvar) = ImVec2(backup.BackupFloat[0], backup.BackupFloat[1]);
+        else if (info->Type == ImGuiDataType_Int)       (*(int*)pvar) = backup.BackupInt[0];
         g.StyleModifiers.pop_back();
         count--;
     }
