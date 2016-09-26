@@ -556,7 +556,7 @@ void ImGui_ImplDX11_NewFrame()
 
     // Setup display size (every frame to accommodate for window resizing)
     RECT rect;
-    GetClientRect(g_hWnd, &rect);
+    GetWindowRect (g_hWnd, &rect);
     io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
 
     // Setup time step
