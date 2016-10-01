@@ -282,15 +282,15 @@ void    ImGui_ImplSdlGL3_InvalidateDeviceObjects()
     if (g_ElementsHandle) glDeleteBuffers(1, &g_ElementsHandle);
     g_VaoHandle = g_VboHandle = g_ElementsHandle = 0;
 
-    glDetachShader(g_ShaderHandle, g_VertHandle);
-    glDeleteShader(g_VertHandle);
+    if (g_ShaderHandle && g_VertHandle) glDetachShader(g_ShaderHandle, g_VertHandle);
+    if (g_VertHandle) glDeleteShader(g_VertHandle);
     g_VertHandle = 0;
 
-    glDetachShader(g_ShaderHandle, g_FragHandle);
-    glDeleteShader(g_FragHandle);
+    if (g_ShaderHandle && g_FragHandle) glDetachShader(g_ShaderHandle, g_FragHandle);
+    if (g_FragHandle) glDeleteShader(g_FragHandle);
     g_FragHandle = 0;
 
-    glDeleteProgram(g_ShaderHandle);
+    if (g_ShaderHandle) glDeleteProgram(g_ShaderHandle);
     g_ShaderHandle = 0;
 
     if (g_FontTexture)
