@@ -26,6 +26,9 @@
 //---- Don't define obsolete functions names
 //#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
+//---- Pack colors to BGRA instead of RGBA (remove need to post process vertex buffer in back ends)
+//#define IMGUI_USE_BGRA_PACKED_COLOR
+
 //---- Implement STB libraries in a namespace to avoid conflicts
 //#define IMGUI_STB_NAMESPACE     ImGuiStb
 
