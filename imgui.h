@@ -827,23 +827,6 @@ struct ImGuiIO
 // Helpers
 //-----------------------------------------------------------------------------
 
-// Helpers macros to generate 32-bits encoded colors
-#ifdef IMGUI_USE_BGRA_PACKED_COLOR
-#define IM_COL32_R_SHIFT    16
-#define IM_COL32_G_SHIFT    8
-#define IM_COL32_B_SHIFT    0
-#define IM_COL32_A_SHIFT    24
-#else
-#define IM_COL32_R_SHIFT    0
-#define IM_COL32_G_SHIFT    8
-#define IM_COL32_B_SHIFT    16
-#define IM_COL32_A_SHIFT    24
-#endif
-#define IM_COL32(R,G,B,A)    (((ImU32)(A)<<IM_COL32_A_SHIFT) | ((ImU32)(B)<<IM_COL32_B_SHIFT) | ((ImU32)(G)<<IM_COL32_G_SHIFT) | ((ImU32)(R)<<IM_COL32_R_SHIFT))
-#define IM_COL32_WHITE       (IM_COL32(255,255,255,255))
-#define IM_COL32_BLACK       (IM_COL32(0,0,0,255))
-#define IM_COL32_BLACK_TRANS (IM_COL32(0,0,0,0))    // Transparent black
-
 // Lightweight std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug).
 // Our implementation does NOT call c++ constructors because we don't use them in ImGui. Don't use this class as a straight std::vector replacement in your code!
 template<typename T>
@@ -1050,6 +1033,23 @@ struct ImGuiSizeConstraintCallbackData
     ImVec2  CurrentSize;    // Read-only.	Current window size.
     ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
 };
+
+// Helpers macros to generate 32-bits encoded colors
+#ifdef IMGUI_USE_BGRA_PACKED_COLOR
+#define IM_COL32_R_SHIFT    16
+#define IM_COL32_G_SHIFT    8
+#define IM_COL32_B_SHIFT    0
+#define IM_COL32_A_SHIFT    24
+#else
+#define IM_COL32_R_SHIFT    0
+#define IM_COL32_G_SHIFT    8
+#define IM_COL32_B_SHIFT    16
+#define IM_COL32_A_SHIFT    24
+#endif
+#define IM_COL32(R,G,B,A)    (((ImU32)(A)<<IM_COL32_A_SHIFT) | ((ImU32)(B)<<IM_COL32_B_SHIFT) | ((ImU32)(G)<<IM_COL32_G_SHIFT) | ((ImU32)(R)<<IM_COL32_R_SHIFT))
+#define IM_COL32_WHITE       IM_COL32(255,255,255,255)  // Opaque white
+#define IM_COL32_BLACK       IM_COL32(0,0,0,255)        // Opaque black
+#define IM_COL32_BLACK_TRANS IM_COL32(0,0,0,0)          // Transparent black
 
 // ImColor() helper to implicity converts colors to either ImU32 (packed 4x1 byte) or ImVec4 (4x1 float)
 // Prefer using IM_COL32() macros if you want a guaranteed compile-time ImU32 for usage with ImDrawList API.

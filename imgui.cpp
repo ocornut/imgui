@@ -1216,14 +1216,14 @@ ImU32 ImGui::GetColorU32(ImGuiCol idx, float alpha_mul)
 { 
     ImVec4 c = GImGui->Style.Colors[idx]; 
     c.w *= GImGui->Style.Alpha * alpha_mul; 
-    return ImGui::ColorConvertFloat4ToU32(c); 
+    return ColorConvertFloat4ToU32(c); 
 }
 
 ImU32 ImGui::GetColorU32(const ImVec4& col)
 { 
     ImVec4 c = col; 
     c.w *= GImGui->Style.Alpha; 
-    return ImGui::ColorConvertFloat4ToU32(c); 
+    return ColorConvertFloat4ToU32(c); 
 }
 
 // Convert rgb floats ([0-1],[0-1],[0-1]) to hsv floats ([0-1],[0-1],[0-1]), from Foley & van Dam p592
@@ -9546,13 +9546,7 @@ void ImGui::ValueColor(const char* prefix, ImU32 v)
 {
     Text("%s: %08X", prefix, v);
     SameLine();
-
-    ImVec4 col;
-    col.x = (float)((v >> IM_COL32_R_SHIFT) & 0xFF) / 255.0f;
-    col.y = (float)((v >> IM_COL32_G_SHIFT) & 0xFF) / 255.0f;
-    col.z = (float)((v >> IM_COL32_B_SHIFT) & 0xFF) / 255.0f;
-    col.w = (float)((v >> IM_COL32_A_SHIFT) & 0xFF) / 255.0f;
-    ColorButton(col, true);
+    ColorButton(ColorConvertU32ToFloat4(v), true);
 }
 
 //-----------------------------------------------------------------------------
