@@ -9196,8 +9196,11 @@ void ImGui::EndGroup()
 
     // If the current ActiveId was declared within the boundary of our group, we copy it to LastItemId so IsItemActive() will function on the entire group.
     // It would be be neater if we replaced window.DC.LastItemId by e.g. 'bool LastItemIsActive', but if you search for LastItemId you'll notice it is only used in that context.
-    if (!group_data.BackupActiveIdIsAlive && g.ActiveIdIsAlive && g.ActiveId && g.ActiveIdWindow->RootWindow == window->RootWindow)
+    const bool active_id_within_group = (!group_data.BackupActiveIdIsAlive && g.ActiveIdIsAlive && g.ActiveId && g.ActiveIdWindow->RootWindow == window->RootWindow);
+    if (active_id_within_group)
         window->DC.LastItemId = g.ActiveId;
+    if (active_id_within_group && g.HoveredId == g.ActiveId)
+        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = true;
 
     window->DC.GroupStack.pop_back();
 
