@@ -173,17 +173,12 @@ static void stb__write(unsigned char v)
     ++stb__outbytes;
 }
 
-#define stb_out(v)    (stb__out ? *stb__out++ = (stb_uchar) (v) : stb__write((stb_uchar) (v)))
+//#define stb_out(v)    (stb__out ? *stb__out++ = (stb_uchar) (v) : stb__write((stb_uchar) (v)))
+#define stb_out(v)    do { if (stb__out) *stb__out++ = (stb_uchar) (v); else stb__write((stb_uchar) (v)); } while (0)
 
-static void stb_out2(stb_uint v)
-{
-    stb_out(v >> 8);
-    stb_out(v);
-}
-
+static void stb_out2(stb_uint v) { stb_out(v >> 8); stb_out(v); }
 static void stb_out3(stb_uint v) { stb_out(v >> 16); stb_out(v >> 8); stb_out(v); }
-static void stb_out4(stb_uint v) { stb_out(v >> 24); stb_out(v >> 16);
-stb_out(v >> 8 ); stb_out(v);                  }
+static void stb_out4(stb_uint v) { stb_out(v >> 24); stb_out(v >> 16); stb_out(v >> 8 ); stb_out(v); }
 
 static void outliterals(stb_uchar *in, int numlit)
 {
