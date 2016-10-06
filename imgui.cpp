@@ -2607,10 +2607,10 @@ void ImGui::EndFrame()
     if (g.Tooltip[0])
     {
         ImGui::BeginTooltip();
-		ImGui::PushFont(g.TooltipFont);
-		ImGui::TextUnformatted(g.Tooltip);
-		ImGui::PopFont();
-		ImGui::EndTooltip();
+        ImGui::PushFont(g.TooltipFont);
+        ImGui::TextUnformatted(g.Tooltip);
+        ImGui::PopFont();
+        ImGui::EndTooltip();
     }
 
     // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
@@ -3339,7 +3339,7 @@ void ImGui::SetTooltipV(const char* fmt, va_list args)
 {
     ImGuiContext& g = *GImGui;
     ImFormatStringV(g.Tooltip, IM_ARRAYSIZE(g.Tooltip), fmt, args);
-	g.TooltipFont = g.Font;
+    g.TooltipFont = g.Font;
 }
 
 void ImGui::SetTooltip(const char* fmt, ...)
