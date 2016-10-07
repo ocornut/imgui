@@ -294,7 +294,7 @@
     Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
 
  Q: I integrated ImGui in my engine and some elements are clipping or disappearing when I move windows around..
- A: Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1,y1,x2,y2) and NOT as (x1,y1,width,height).
+ A: Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1=left,y1=top,x2=right,y2=bottom) and NOT as (x1,y1,width,height).
 
  Q: Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
  A: Yes. A primer on the use of labels/IDs in ImGui..
