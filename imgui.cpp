@@ -1249,16 +1249,20 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
 ImVec4 ImGui::ColorConvertU32ToFloat4(ImU32 in)
 {
     float s = 1.0f/255.0f;
-    return ImVec4((in & 0xFF) * s, ((in >> 8) & 0xFF) * s, ((in >> 16) & 0xFF) * s, (in >> 24) * s);
+    return ImVec4(
+        ((in >> IM_COL32_R_SHIFT) & 0xFF) * s,
+        ((in >> IM_COL32_G_SHIFT) & 0xFF) * s,
+        ((in >> IM_COL32_B_SHIFT) & 0xFF) * s,
+        ((in >> IM_COL32_A_SHIFT) & 0xFF) * s);
 }
 
 ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in)
 {
     ImU32 out;
-    out  = ((ImU32)IM_F32_TO_INT8_SAT(in.x));
-    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.y)) << 8;
-    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.z)) << 16;
-    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.w)) << 24;
+    out  = ((ImU32)IM_F32_TO_INT8_SAT(in.x)) << IM_COL32_R_SHIFT;
+    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.y)) << IM_COL32_G_SHIFT;
+    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.z)) << IM_COL32_B_SHIFT;
+    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.w)) << IM_COL32_A_SHIFT;
     return out;
 }
 
@@ -1266,14 +1270,14 @@ ImU32 ImGui::GetColorU32(ImGuiCol idx, float alpha_mul)
 { 
     ImVec4 c = GImGui->Style.Colors[idx]; 
     c.w *= GImGui->Style.Alpha * alpha_mul; 
-    return ImGui::ColorConvertFloat4ToU32(c); 
+    return ColorConvertFloat4ToU32(c); 
 }
 
 ImU32 ImGui::GetColorU32(const ImVec4& col)
 { 
     ImVec4 c = col; 
     c.w *= GImGui->Style.Alpha; 
-    return ImGui::ColorConvertFloat4ToU32(c); 
+    return ColorConvertFloat4ToU32(c); 
 }
 
 // Convert rgb floats ([0-1],[0-1],[0-1]) to hsv floats ([0-1],[0-1],[0-1]), from Foley & van Dam p592
@@ -4843,7 +4847,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         if (window_pos_center)
         {
             // Center (any sort of window)
-            SetWindowPos(ImMax(style.DisplaySafeAreaPadding, fullscreen_rect.GetCenter() - window->SizeFull * 0.5f));
+            SetWindowPos(window, ImMax(style.DisplaySafeAreaPadding, fullscreen_rect.GetCenter() - window->SizeFull * 0.5f), 0);
         }
         else if (flags & ImGuiWindowFlags_ChildMenu)
         {
@@ -5723,14 +5727,13 @@ static void SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiSetCond co
 
 void ImGui::SetWindowPos(const ImVec2& pos, ImGuiSetCond cond)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     SetWindowPos(window, pos, cond);
 }
 
 void ImGui::SetWindowPos(const char* name, const ImVec2& pos, ImGuiSetCond cond)
 {
-    ImGuiWindow* window = FindWindowByName(name);
-    if (window)
+    if (ImGuiWindow* window = FindWindowByName(name))
         SetWindowPos(window, pos, cond);
 }
 
@@ -9819,7 +9822,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
                 tb.y = ta.y + ImMax((tb.y - extra) - ta.y, -100.0f);            // triangle is maximum 200 high to limit the slope and the bias toward large sub-menus // FIXME: Multiply by fb_scale?
                 tc.y = ta.y + ImMin((tc.y + extra) - ta.y, +100.0f);
                 moving_within_opened_triangle = ImIsPointInTriangle(g.IO.MousePos, ta, tb, tc);
-                //window->DrawList->PushClipRectFullScreen(); window->DrawList->AddTriangleFilled(ta, tb, tc, moving_within_opened_triangle ? 0x80008000 : 0x80000080); window->DrawList->PopClipRect(); // Debug
+                //window->DrawList->PushClipRectFullScreen(); window->DrawList->AddTriangleFilled(ta, tb, tc, moving_within_opened_triangle ? IM_COL32(0,128,0,128) : IM_COL32(128,0,0,128)); window->DrawList->PopClipRect(); // Debug
             }
         }
 
@@ -10193,12 +10196,15 @@ void ImGui::EndGroup()
 
     // If the current ActiveId was declared within the boundary of our group, we copy it to LastItemId so IsItemActive() will function on the entire group.
     // It would be be neater if we replaced window.DC.LastItemId by e.g. 'bool LastItemIsActive', but if you search for LastItemId you'll notice it is only used in that context.
-    if (!group_data.BackupActiveIdIsAlive && g.ActiveIdIsAlive && g.ActiveId && g.ActiveIdWindow->RootWindow == window->RootWindow)
+    const bool active_id_within_group = (!group_data.BackupActiveIdIsAlive && g.ActiveIdIsAlive && g.ActiveId && g.ActiveIdWindow->RootWindow == window->RootWindow);
+    if (active_id_within_group)
         window->DC.LastItemId = g.ActiveId;
+    if (active_id_within_group && g.HoveredId == g.ActiveId)
+        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = true;
 
     window->DC.GroupStack.pop_back();
 
-    //window->DrawList->AddRect(group_bb.Min, group_bb.Max, 0xFFFF00FF);   // Debug
+    //window->DrawList->AddRect(group_bb.Min, group_bb.Max, IM_COL32(255,0,255,255));   // Debug
 }
 
 // Gets back to previous line and continue with horizontal layout
@@ -10536,13 +10542,7 @@ void ImGui::ValueColor(const char* prefix, ImU32 v)
 {
     Text("%s: %08X", prefix, v);
     SameLine();
-
-    ImVec4 col;
-    col.x = (float)((v >> 0) & 0xFF) / 255.0f;
-    col.y = (float)((v >> 8) & 0xFF) / 255.0f;
-    col.z = (float)((v >> 16) & 0xFF) / 255.0f;
-    col.w = (float)((v >> 24) & 0xFF) / 255.0f;
-    ColorButton(col, true);
+    ColorButton(ColorConvertU32ToFloat4(v), true);
 }
 
 //-----------------------------------------------------------------------------
