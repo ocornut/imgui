@@ -7080,59 +7080,62 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
 
     RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
 
-    int res_w = ImMin((int)graph_size.x, values_count) + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0);
-    int item_count = values_count + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0);
-
-    // Tooltip on hover
-    int v_hovered = -1;
-    if (IsHovered(inner_bb, 0))
+    if (values_count > 0)
     {
-        const float t = ImClamp((g.IO.MousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x), 0.0f, 0.9999f);
-        const int v_idx = (int)(t * item_count);
-        IM_ASSERT(v_idx >= 0 && v_idx < values_count);
+        int res_w = ImMin((int)graph_size.x, values_count) + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0);
+        int item_count = values_count + ((plot_type == ImGuiPlotType_Lines) ? -1 : 0);
 
-        const float v0 = values_getter(data, (v_idx + values_offset) % values_count);
-        const float v1 = values_getter(data, (v_idx + 1 + values_offset) % values_count);
-        if (plot_type == ImGuiPlotType_Lines)
-            SetTooltip("%d: %8.4g\n%d: %8.4g", v_idx, v0, v_idx+1, v1);
-        else if (plot_type == ImGuiPlotType_Histogram)
-            SetTooltip("%d: %8.4g", v_idx, v0);
-        v_hovered = v_idx;
-    }
-
-    const float t_step = 1.0f / (float)res_w;
-
-    float v0 = values_getter(data, (0 + values_offset) % values_count);
-    float t0 = 0.0f;
-    ImVec2 tp0 = ImVec2( t0, 1.0f - ImSaturate((v0 - scale_min) / (scale_max - scale_min)) );    // Point in the normalized space of our target rectangle
-
-    const ImU32 col_base = GetColorU32((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLines : ImGuiCol_PlotHistogram);
-    const ImU32 col_hovered = GetColorU32((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLinesHovered : ImGuiCol_PlotHistogramHovered);
-
-    for (int n = 0; n < res_w; n++)
-    {
-        const float t1 = t0 + t_step;
-        const int v1_idx = (int)(t0 * item_count + 0.5f);
-        IM_ASSERT(v1_idx >= 0 && v1_idx < values_count);
-        const float v1 = values_getter(data, (v1_idx + values_offset + 1) % values_count);
-        const ImVec2 tp1 = ImVec2( t1, 1.0f - ImSaturate((v1 - scale_min) / (scale_max - scale_min)) );
-
-        // NB: Draw calls are merged together by the DrawList system. Still, we should render our batch are lower level to save a bit of CPU.
-        ImVec2 pos0 = ImLerp(inner_bb.Min, inner_bb.Max, tp0);
-        ImVec2 pos1 = ImLerp(inner_bb.Min, inner_bb.Max, (plot_type == ImGuiPlotType_Lines) ? tp1 : ImVec2(tp1.x, 1.0f));
-        if (plot_type == ImGuiPlotType_Lines)
+        // Tooltip on hover
+        int v_hovered = -1;
+        if (IsHovered(inner_bb, 0))
         {
-            window->DrawList->AddLine(pos0, pos1, v_hovered == v1_idx ? col_hovered : col_base);
-        }
-        else if (plot_type == ImGuiPlotType_Histogram)
-        {
-            if (pos1.x >= pos0.x + 2.0f)
-                pos1.x -= 1.0f;
-            window->DrawList->AddRectFilled(pos0, pos1, v_hovered == v1_idx ? col_hovered : col_base);
+            const float t = ImClamp((g.IO.MousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x), 0.0f, 0.9999f);
+            const int v_idx = (int)(t * item_count);
+            IM_ASSERT(v_idx >= 0 && v_idx < values_count);
+
+            const float v0 = values_getter(data, (v_idx + values_offset) % values_count);
+            const float v1 = values_getter(data, (v_idx + 1 + values_offset) % values_count);
+            if (plot_type == ImGuiPlotType_Lines)
+                SetTooltip("%d: %8.4g\n%d: %8.4g", v_idx, v0, v_idx+1, v1);
+            else if (plot_type == ImGuiPlotType_Histogram)
+                SetTooltip("%d: %8.4g", v_idx, v0);
+            v_hovered = v_idx;
         }
 
-        t0 = t1;
-        tp0 = tp1;
+        const float t_step = 1.0f / (float)res_w;
+
+        float v0 = values_getter(data, (0 + values_offset) % values_count);
+        float t0 = 0.0f;
+        ImVec2 tp0 = ImVec2( t0, 1.0f - ImSaturate((v0 - scale_min) / (scale_max - scale_min)) );    // Point in the normalized space of our target rectangle
+
+        const ImU32 col_base = GetColorU32((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLines : ImGuiCol_PlotHistogram);
+        const ImU32 col_hovered = GetColorU32((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLinesHovered : ImGuiCol_PlotHistogramHovered);
+
+        for (int n = 0; n < res_w; n++)
+        {
+            const float t1 = t0 + t_step;
+            const int v1_idx = (int)(t0 * item_count + 0.5f);
+            IM_ASSERT(v1_idx >= 0 && v1_idx < values_count);
+            const float v1 = values_getter(data, (v1_idx + values_offset + 1) % values_count);
+            const ImVec2 tp1 = ImVec2( t1, 1.0f - ImSaturate((v1 - scale_min) / (scale_max - scale_min)) );
+
+            // NB: Draw calls are merged together by the DrawList system. Still, we should render our batch are lower level to save a bit of CPU.
+            ImVec2 pos0 = ImLerp(inner_bb.Min, inner_bb.Max, tp0);
+            ImVec2 pos1 = ImLerp(inner_bb.Min, inner_bb.Max, (plot_type == ImGuiPlotType_Lines) ? tp1 : ImVec2(tp1.x, 1.0f));
+            if (plot_type == ImGuiPlotType_Lines)
+            {
+                window->DrawList->AddLine(pos0, pos1, v_hovered == v1_idx ? col_hovered : col_base);
+            }
+            else if (plot_type == ImGuiPlotType_Histogram)
+            {
+                if (pos1.x >= pos0.x + 2.0f)
+                    pos1.x -= 1.0f;
+                window->DrawList->AddRectFilled(pos0, pos1, v_hovered == v1_idx ? col_hovered : col_base);
+            }
+
+            t0 = t1;
+            tp0 = tp1;
+        }
     }
 
     // Text overlay
