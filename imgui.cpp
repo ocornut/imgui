@@ -4216,7 +4216,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             {
                 ImRect menu_bar_rect = window->MenuBarRect();
                 if (flags & ImGuiWindowFlags_ShowBorders)
-                    window->DrawList->AddLine(menu_bar_rect.GetBL()-ImVec2(0,0), menu_bar_rect.GetBR()-ImVec2(0,0), GetColorU32(ImGuiCol_Border));
+                    window->DrawList->AddLine(menu_bar_rect.GetBL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border));
                 window->DrawList->AddRectFilled(menu_bar_rect.GetTL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImGuiCorner_TopLeft|ImGuiCorner_TopRight);
             }
 
