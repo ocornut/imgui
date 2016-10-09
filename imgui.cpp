@@ -3490,11 +3490,11 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
 
-    char name[32];
+    char name[20];
     if (flags & ImGuiWindowFlags_ChildMenu)
-        ImFormatString(name, 20, "##menu_%d", g.CurrentPopupStack.Size);    // Recycle windows based on depth
+        ImFormatString(name, IM_ARRAYSIZE(name), "##menu_%d", g.CurrentPopupStack.Size);    // Recycle windows based on depth
     else
-        ImFormatString(name, 20, "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
+        ImFormatString(name, IM_ARRAYSIZE(name), "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
 
     bool is_open = ImGui::Begin(name, NULL, flags);
     if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
@@ -8250,7 +8250,7 @@ bool ImGui::InputFloat(const char* label, float* v, float step, float step_fast,
     if (decimal_precision < 0)
         strcpy(display_format, "%f");      // Ideally we'd have a minimum decimal precision of 1 to visually denote that this is a float, while hiding non-significant digits? %f doesn't have a minimum of 1
     else
-        ImFormatString(display_format, 16, "%%.%df", decimal_precision);
+        ImFormatString(display_format, IM_ARRAYSIZE(display_format), "%%.%df", decimal_precision);
     return InputScalarEx(label, ImGuiDataType_Float, (void*)v, (void*)(step>0.0f ? &step : NULL), (void*)(step_fast>0.0f ? &step_fast : NULL), display_format, extra_flags);
 }
 
