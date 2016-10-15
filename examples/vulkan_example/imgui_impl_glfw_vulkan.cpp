@@ -401,14 +401,14 @@ void ImGui_ImplGlfwVulkan_RenderDrawLists(ImDrawData* draw_data)
     }
 }
 
-static const char* ImGui_ImplGlfwVulkan_GetClipboardText()
+static const char* ImGui_ImplGlfwVulkan_GetClipboardText(void* user_data)
 {
-    return glfwGetClipboardString(g_Window);
+    return glfwGetClipboardString((GLFWwindow*)user_data);
 }
 
-static void ImGui_ImplGlfwVulkan_SetClipboardText(const char* text)
+static void ImGui_ImplGlfwVulkan_SetClipboardText(void* user_data, const char* text)
 {
-    glfwSetClipboardString(g_Window, text);
+    glfwSetClipboardString((GLFWwindow*)user_data, text);
 }
 
 void ImGui_ImplGlfwVulkan_MouseButtonCallback(GLFWwindow*, int button, int action, int /*mods*/)
@@ -861,6 +861,7 @@ bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, Im
     io.RenderDrawListsFn = ImGui_ImplGlfwVulkan_RenderDrawLists;       // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
     io.SetClipboardTextFn = ImGui_ImplGlfwVulkan_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplGlfwVulkan_GetClipboardText;
+    io.ClipboardUserData = g_Window;
 #ifdef _WIN32
     io.ImeWindowHandle = glfwGetWin32Window(g_Window);
 #endif
