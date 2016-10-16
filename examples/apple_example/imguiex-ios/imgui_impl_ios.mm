@@ -3,6 +3,9 @@
 // Providing a standalone iOS application with Synergy integration makes this sample more verbose than others. It also hasn't been tested as much.
 // Refer to other examples to get an easier understanding of how to integrate ImGui into your existing application.
 
+// TODO:
+// - Clipboard is not supported.
+
 #import <OpenGLES/ES3/gl.h>
 #import <OpenGLES/ES3/glext.h>
 
@@ -287,7 +290,6 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
 {
     printf("Synergy: clipboard callback TODO\n" );
 }
-
 
 @interface ImGuiHelper ()
 {

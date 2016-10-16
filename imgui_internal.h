@@ -198,6 +198,15 @@ enum ImGuiDataType
     ImGuiDataType_Float2,
 };
 
+enum ImGuiCorner
+{
+    ImGuiCorner_TopLeft     = 1 << 0, // 1
+    ImGuiCorner_TopRight    = 1 << 1, // 2
+    ImGuiCorner_BottomRight = 1 << 2, // 4
+    ImGuiCorner_BottomLeft  = 1 << 3, // 8
+    ImGuiCorner_All         = 0x0F
+};
+
 // 2D axis aligned bounding-box
 // NB: we can't rely on ImVec2 math operators being available here
 struct IMGUI_API ImRect
@@ -716,7 +725,7 @@ namespace ImGui
     IMGUI_API void          RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width);
     IMGUI_API void          RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0,0), const ImRect* clip_rect = NULL);
     IMGUI_API void          RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
-    IMGUI_API void          RenderCollapseTriangle(ImVec2 pos, bool is_open, float scale = 1.0f, bool shadow = false);
+    IMGUI_API void          RenderCollapseTriangle(ImVec2 pos, bool is_open, float scale = 1.0f);
     IMGUI_API void          RenderBullet(ImVec2 pos);
     IMGUI_API void          RenderCheckMark(ImVec2 pos, ImU32 col);
     IMGUI_API const char*   FindRenderedTextEnd(const char* text, const char* text_end = NULL); // Find the optional ## from which we stop displaying text.
