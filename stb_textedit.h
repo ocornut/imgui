@@ -1,4 +1,5 @@
 // [ImGui] this is a slightly modified version of stb_truetype.h 1.9. Those changes would need to be pushed into nothings/sb
+// [ImGui] - fixed linestart handler when over last character of multi-line buffer + simplified existing code (#588, #815)
 // [ImGui] - fixed a state corruption/crash bug in stb_text_redo and stb_textedit_discard_redo (#715)
 // [ImGui] - fixed a crash bug in stb_textedit_discard_redo (#681)
 // [ImGui] - fixed some minor warnings
@@ -992,58 +993,58 @@ retry:
 #ifdef STB_TEXTEDIT_K_LINESTART2
       case STB_TEXTEDIT_K_LINESTART2:
 #endif
-      case STB_TEXTEDIT_K_LINESTART: {
-         StbFindState find;
+      case STB_TEXTEDIT_K_LINESTART:
          stb_textedit_clamp(str, state);
          stb_textedit_move_to_first(state);
-         stb_textedit_find_charpos(&find, str, state->cursor, state->single_line);
-         state->cursor = find.first_char;
+         if (state->single_line)
+            state->cursor = 0;
+         else while (state->cursor > 0 && STB_TEXTEDIT_GETCHAR(str, state->cursor-1) != STB_TEXTEDIT_NEWLINE)
+            --state->cursor;
          state->has_preferred_x = 0;
          break;
-      }
 
 #ifdef STB_TEXTEDIT_K_LINEEND2
       case STB_TEXTEDIT_K_LINEEND2:
 #endif
       case STB_TEXTEDIT_K_LINEEND: {
-         StbFindState find;
+         int n = STB_TEXTEDIT_STRINGLEN(str);
          stb_textedit_clamp(str, state);
          stb_textedit_move_to_first(state);
-         stb_textedit_find_charpos(&find, str, state->cursor, state->single_line);
-
+         if (state->single_line)
+             state->cursor = n;
+         else while (state->cursor < n && STB_TEXTEDIT_GETCHAR(str, state->cursor) != STB_TEXTEDIT_NEWLINE)
+             ++state->cursor;
          state->has_preferred_x = 0;
-         state->cursor = find.first_char + find.length;
-         if (find.length > 0 && STB_TEXTEDIT_GETCHAR(str, state->cursor-1) == STB_TEXTEDIT_NEWLINE)
-            --state->cursor;
          break;
       }
 
 #ifdef STB_TEXTEDIT_K_LINESTART2
       case STB_TEXTEDIT_K_LINESTART2 | STB_TEXTEDIT_K_SHIFT:
 #endif
-      case STB_TEXTEDIT_K_LINESTART | STB_TEXTEDIT_K_SHIFT: {
-         StbFindState find;
+      case STB_TEXTEDIT_K_LINESTART | STB_TEXTEDIT_K_SHIFT:
          stb_textedit_clamp(str, state);
          stb_textedit_prep_selection_at_cursor(state);
-         stb_textedit_find_charpos(&find, str, state->cursor, state->single_line);
-         state->cursor = state->select_end = find.first_char;
+         if (state->single_line)
+            state->cursor = 0;
+         else while (state->cursor > 0 && STB_TEXTEDIT_GETCHAR(str, state->cursor-1) != STB_TEXTEDIT_NEWLINE)
+            --state->cursor;
+         state->select_end = state->cursor;
          state->has_preferred_x = 0;
          break;
-      }
 
 #ifdef STB_TEXTEDIT_K_LINEEND2
       case STB_TEXTEDIT_K_LINEEND2 | STB_TEXTEDIT_K_SHIFT:
 #endif
       case STB_TEXTEDIT_K_LINEEND | STB_TEXTEDIT_K_SHIFT: {
-         StbFindState find;
+         int n = STB_TEXTEDIT_STRINGLEN(str);
          stb_textedit_clamp(str, state);
          stb_textedit_prep_selection_at_cursor(state);
-         stb_textedit_find_charpos(&find, str, state->cursor, state->single_line);
-         state->has_preferred_x = 0;
-         state->cursor = find.first_char + find.length;
-         if (find.length > 0 && STB_TEXTEDIT_GETCHAR(str, state->cursor-1) == STB_TEXTEDIT_NEWLINE)
-            --state->cursor;
+         if (state->single_line)
+             state->cursor = n;
+         else while (state->cursor < n && STB_TEXTEDIT_GETCHAR(str, state->cursor) != STB_TEXTEDIT_NEWLINE)
+            ++state->cursor;
          state->select_end = state->cursor;
+         state->has_preferred_x = 0;
          break;
       }
 
