@@ -89,28 +89,24 @@ void ImGui_Marmalade_RenderDrawLists(ImDrawData* draw_data)
     // TODO: restore modified state (i.e. mvp matrix)
 }
 
-static const char* ImGui_Marmalade_GetClipboardText()
+static const char* ImGui_Marmalade_GetClipboardText(void* /*user_data*/)
 {
-    if (s3eClipboardAvailable())
+    if (!s3eClipboardAvailable())
+        return NULL;
+
+    if (int size = s3eClipboardGetText(NULL, 0))
     {
-        int size = s3eClipboardGetText(NULL, 0);
-        if (size > 0)
-        {
-            if (g_ClipboardText)
-            {
-                delete[] g_ClipboardText;
-                g_ClipboardText = NULL;
-            }
-            g_ClipboardText = new char[size];
-            g_ClipboardText[0] = '\0';
-            s3eClipboardGetText(g_ClipboardText, size);
-        }
+        if (g_ClipboardText)
+            delete[] g_ClipboardText;
+        g_ClipboardText = new char[size];
+        g_ClipboardText[0] = '\0';
+        s3eClipboardGetText(g_ClipboardText, size);
     }
 
     return g_ClipboardText;
 }
 
-static void ImGui_Marmalade_SetClipboardText(const char* text)
+static void ImGui_Marmalade_SetClipboardText(void* /*user_data*/, const char* text)
 {
     if (s3eClipboardAvailable())
         s3eClipboardSetText(text);

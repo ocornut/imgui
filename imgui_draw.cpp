@@ -807,21 +807,21 @@ void ImDrawList::AddLine(const ImVec2& a, const ImVec2& b, ImU32 col, float thic
 }
 
 // a: upper-left, b: lower-right. we don't render 1 px sized rectangles properly.
-void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners, float thickness)
+void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners_flags, float thickness)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    PathRect(a + ImVec2(0.5f,0.5f), b - ImVec2(0.5f,0.5f), rounding, rounding_corners);
+    PathRect(a + ImVec2(0.5f,0.5f), b - ImVec2(0.5f,0.5f), rounding, rounding_corners_flags);
     PathStroke(col, true, thickness);
 }
 
-void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners)
+void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, float rounding, int rounding_corners_flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
     if (rounding > 0.0f)
     {
-        PathRect(a, b, rounding, rounding_corners);
+        PathRect(a, b, rounding, rounding_corners_flags);
         PathFill(col);
     }
     else
