@@ -798,31 +798,45 @@ void    ImGui_ImplGlfwVulkan_InvalidateDeviceObjects()
     ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects();
     for (int i=0; i<IMGUI_VK_QUEUED_FRAMES; i++)
     {
-        if (g_VertexBuffer[i])
+        if (g_VertexBuffer[i]) {
             vkDestroyBuffer(g_Device, g_VertexBuffer[i], g_Allocator);
-        if (g_VertexBufferMemory[i])
+            g_VertexBuffer[i] = VK_NULL_HANDLE;
+        }
+        if (g_VertexBufferMemory[i]) {
             vkFreeMemory(g_Device, g_VertexBufferMemory[i], g_Allocator);
-        if (g_IndexBuffer[i])
+            g_VertexBufferMemory[i] = VK_NULL_HANDLE;
+        }
+        if (g_IndexBuffer[i]) {
             vkDestroyBuffer(g_Device, g_IndexBuffer[i], g_Allocator);
-        if (g_IndexBufferMemory[i])
+            g_IndexBuffer[i] = VK_NULL_HANDLE;
+        }
+        if (g_IndexBufferMemory[i]) {
             vkFreeMemory(g_Device, g_IndexBufferMemory[i], g_Allocator);
+            g_IndexBufferMemory[i] = VK_NULL_HANDLE;
+        }
     }
 
     if (g_FontView)
         vkDestroyImageView(g_Device, g_FontView, g_Allocator);
+    g_FontView = VK_NULL_HANDLE;
     if (g_FontImage)
         vkDestroyImage(g_Device, g_FontImage, g_Allocator);
+    g_FontImage = VK_NULL_HANDLE;
     if (g_FontMemory)
         vkFreeMemory(g_Device, g_FontMemory, g_Allocator);
+    g_FontMemory = VK_NULL_HANDLE;
     if (g_FontSampler)
         vkDestroySampler(g_Device, g_FontSampler, g_Allocator);
-
+    g_FontSampler = VK_NULL_HANDLE;
     if (g_DescriptorSetLayout)
         vkDestroyDescriptorSetLayout(g_Device, g_DescriptorSetLayout, g_Allocator);
+    g_DescriptorSetLayout = VK_NULL_HANDLE;
     if (g_PipelineLayout)
         vkDestroyPipelineLayout(g_Device, g_PipelineLayout, g_Allocator);
+    g_PipelineLayout = VK_NULL_HANDLE;
     if (g_Pipeline)
         vkDestroyPipeline(g_Device, g_Pipeline, g_Allocator);
+    g_Pipeline = VK_NULL_HANDLE;
 }
 
 bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, ImGui_ImplGlfwVulkan_Init_Data *init_data)
