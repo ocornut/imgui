@@ -15,9 +15,10 @@
 #CXX = clang++
 
 EXE = opengl3_example
-OBJS = main.o imgui_impl_glfw_gl3.o
-OBJS += ../../imgui.o ../../imgui_demo.o ../../imgui_draw.o
-OBJS += ../libs/gl3w/GL/gl3w.o
+SOURCES = main.cpp imgui_impl_glfw_gl3.cpp
+SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp
+SOURCES += ../libs/gl3w/GL/gl3w.c
+OBJS = $(addsuffix .o, $(basename $(SOURCES)))
 
 UNAME_S := $(shell uname -s)
 

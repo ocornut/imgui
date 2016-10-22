@@ -15,8 +15,9 @@
 #CXX = clang++
 
 EXE = opengl2_example
-OBJS = main.o imgui_impl_glfw_gl2.o
-OBJS += ../../imgui.o ../../imgui_demo.o ../../imgui_draw.o
+SOURCES = main.cpp imgui_impl_glfw_gl2.cpp
+SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp
+OBJS = $(addsuffix .o, $(basename $(SOURCES)))
 
 UNAME_S := $(shell uname -s)
 
