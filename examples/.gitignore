@@ -19,7 +19,7 @@ opengl2_example/Debug/*
 opengl2_example/Release/*
 opengl2_example/ipch/*
 opengl2_example/x64/*
-opengl2_example/opengl_example
+opengl2_example/opengl2_example
 opengl3_example/Debug/*
 opengl3_example/Release/*
 opengl3_example/ipch/*
