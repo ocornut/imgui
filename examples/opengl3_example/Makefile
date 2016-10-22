@@ -60,4 +60,4 @@ $(EXE): $(OBJS)
 	$(CXX) -o $(EXE) $(OBJS) $(CXXFLAGS) $(LIBS)
 
 clean:
-	rm $(EXE) $(OBJS)
+	rm -f $(EXE) $(OBJS)
