@@ -1400,6 +1400,49 @@ void ImGui::ShowTestWindow(bool* p_open)
         }
         */
 
+        if (ImGui::TreeNode("Advanced settings"))
+        {
+            static bool border = true;
+            static bool preserveWidths = true;
+            static bool forceWithinWindow = true;
+
+            ImGui::Checkbox("Border", &border);
+            ImGui::SameLine();
+            ImGui::Checkbox("Preserve widths", &preserveWidths);
+            ImGui::SameLine();
+            ImGui::Checkbox("Force within window", &forceWithinWindow);
+
+            ImGuiColumnsFlags flags = 0;
+            flags |= (border ? 0 : ImGuiColumnsFlags_NoBorder);
+            flags |= (preserveWidths ? 0 : ImGuiColumnsFlags_NoPreserveWidths);
+            flags |= (forceWithinWindow ? 0 : ImGuiColumnsFlags_NoForceWithinWindow);
+
+            ImGui::BeginColumns("AdvancedColumns", 4, flags);
+            ImGui::Separator();
+            ImGui::Text("ID"); ImGui::NextColumn();
+            ImGui::Text("Name"); ImGui::NextColumn();
+            ImGui::Text("Path"); ImGui::NextColumn();
+            ImGui::Text("Flags"); ImGui::NextColumn();
+            ImGui::Separator();
+            const char* names[3] = { "One", "Two", "Three" };
+            const char* paths[3] = { "/path/one", "/path/two", "/path/three" };
+            static int selected = -1;
+            for (int i = 0; i < 3; i++)
+            {
+                char label[32];
+                sprintf(label, "%04d", i);
+                if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns))
+                    selected = i;
+                ImGui::NextColumn();
+                ImGui::Text(names[i]); ImGui::NextColumn();
+                ImGui::Text(paths[i]); ImGui::NextColumn();
+                ImGui::Text("...."); ImGui::NextColumn();
+            }
+            ImGui::EndColumns();
+            ImGui::Separator();
+            ImGui::TreePop();
+        }
+
         // Create multiple items in a same cell before switching to next column
         if (ImGui::TreeNode("Mixed items"))
         {
