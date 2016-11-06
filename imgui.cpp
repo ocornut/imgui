@@ -25,6 +25,7 @@
    - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on the purpose of labels/IDs.
    - How can I tell when ImGui wants my mouse/keyboard inputs and when I can pass them to my application?
    - How can I load a different font than the default?
+   - How can I easily use icons in my application?
    - How can I load multiple fonts?
    - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
    - How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
@@ -406,6 +407,10 @@
       io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
       io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
 
+ Q: How can I easily use icons in my application?
+ A: The most convenient and practical way is to merge an icon font such as FontAwesome inside you main font. Then you can refer to icons within your strings.
+    Read 'How can I load multiple fonts?' and the file 'extra_fonts/README.txt' for instructions.
+
  Q: How can I load multiple fonts?
  A: Use the font atlas to pack them into a single texture:
     (Read extra_fonts/README.txt and the code in ImFontAtlas for more details.)
@@ -425,13 +430,13 @@
       config.GlyphExtraSpacing.x = 1.0f;
       io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, &config);
 
-      // Combine multiple fonts into one
+      // Combine multiple fonts into one (e.g. for icon fonts)
       ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
       ImFontConfig config;
       config.MergeMode = true;
       io.Fonts->AddFontDefault();
-      io.Fonts->LoadFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges);
-      io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese());
+      io.Fonts->LoadFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges); // Merge icon font
+      io.Fonts->LoadFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge japanese glyphs
 
  Q: How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?
  A: When loading a font, pass custom Unicode ranges to specify the glyphs to load. 
