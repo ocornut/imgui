@@ -1721,8 +1721,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     if (ImGui::TreeNode("Fonts", "Fonts (%d)", ImGui::GetIO().Fonts->Fonts.Size))
     {
         ImGui::SameLine(); ShowHelpMarker("Tip: Load fonts with io.Fonts->AddFontFromFileTTF()\nbefore calling io.Fonts->GetTex* functions.");
-        ImGuiIO& io = ImGui::GetIO();
-        ImFontAtlas* atlas = io.Fonts;
+        ImFontAtlas* atlas = ImGui::GetIO().Fonts;
         if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
         {
             ImGui::Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0,0), ImVec2(1,1), ImColor(255,255,255,255), ImColor(255,255,255,128));
@@ -1734,7 +1733,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImFont* font = atlas->Fonts[i];
             ImGui::BulletText("Font %d: \'%s\', %.2f px, %d glyphs", i, font->ConfigData ? font->ConfigData[0].Name : "", font->FontSize, font->Glyphs.Size);
             ImGui::TreePush((void*)(intptr_t)i);
-            ImGui::SameLine(); if (ImGui::SmallButton("Set as default")) io.FontDefault = font;
+            ImGui::SameLine(); if (ImGui::SmallButton("Set as default")) ImGui::GetIO().FontDefault = font;
             ImGui::PushFont(font);
             ImGui::Text("The quick brown fox jumps over the lazy dog");
             ImGui::PopFont();

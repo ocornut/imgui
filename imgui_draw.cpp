@@ -1184,7 +1184,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
         font_cfg.OversampleH = font_cfg.OversampleV = 1;
         font_cfg.PixelSnapH = true;
     }
-    if (font_cfg.Name[0] == '\0') strcpy(font_cfg.Name, "<default>");
+    if (font_cfg.Name[0] == '\0') strcpy(font_cfg.Name, "ProggyClean.ttf");
 
     const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
     ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, 13.0f, &font_cfg, GetGlyphRangesDefault());
