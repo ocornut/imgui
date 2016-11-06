@@ -94,9 +94,16 @@
  FONT FILES INCLUDED IN THIS FOLDER
 ---------------------------------
 
+ Roboto-Medium.ttf
+   Apache License 2.0
+   by Christian Robertson
+   https://fonts.google.com/specimen/Roboto
+
  Cousine-Regular.ttf
+   by Steve Matteson
    Digitized data copyright (c) 2010 Google Corporation.
-   Licensed under the SIL Open Font License, Version 1.1   
+   Licensed under the SIL Open Font License, Version 1.1
+   https://fonts.google.com/specimen/Cousine 
 
  DroidSans.ttf
    Copyright (c) Steve Matteson
@@ -107,13 +114,15 @@
    Copyright (c) 2004, 2005 Tristan Grimmer
    MIT License
    recommended loading setting in ImGui: Size = 13.0, DisplayOffset.Y = +1
+   http://www.proggyfonts.net/
 
  ProggyTiny.ttf
    Copyright (c) 2004, 2005 Tristan Grimmer
    MIT License
    recommended loading setting in ImGui: Size = 10.0, DisplayOffset.Y = +1
+   http://www.proggyfonts.net/
 
- Karla-Regular
+ Karla-Regular.ttf
    Copyright (c) 2012, Jonathan Pinhorn
    SIL OPEN FONT LICENSE Version 1.1
 
