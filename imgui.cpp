@@ -658,6 +658,7 @@ static float            GetDraggedColumnOffset(int column_index);
 
 static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
+static ImFont*          GetDefaultFont();
 static void             SetCurrentFont(ImFont* font);
 static void             SetCurrentWindow(ImGuiWindow* window);
 static void             SetWindowScrollY(ImGuiWindow* window, float new_scroll_y);
@@ -809,6 +810,7 @@ ImGuiIO::ImGuiIO()
     LogFilename = "imgui_log.txt";
     Fonts = &GImDefaultFontAtlas;
     FontGlobalScale = 1.0f;
+    FontDefault = NULL;
     DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
     MousePos = ImVec2(-1,-1);
     MousePosPrev = ImVec2(-1,-1);
@@ -2106,7 +2108,8 @@ void ImGui::NewFrame()
         g.Initialized = true;
     }
 
-    SetCurrentFont(g.IO.Fonts->Fonts[0]);
+    SetCurrentFont(GetDefaultFont());
+    IM_ASSERT(g.Font->IsLoaded());
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
@@ -4586,6 +4589,12 @@ float ImGui::CalcItemWidth()
     return w;
 }
 
+static ImFont* GetDefaultFont()
+{
+    ImGuiContext& g = *GImGui;
+    return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0];
+}
+
 static void SetCurrentFont(ImFont* font)
 {
     ImGuiContext& g = *GImGui;
@@ -4601,7 +4610,7 @@ void ImGui::PushFont(ImFont* font)
 {
     ImGuiContext& g = *GImGui;
     if (!font)
-        font = g.IO.Fonts->Fonts[0];
+        font = GetDefaultFont();
     SetCurrentFont(font);
     g.FontStack.push_back(font);
     g.CurrentWindow->DrawList->PushTextureID(font->ContainerAtlas->TexID);
@@ -4612,7 +4621,7 @@ void  ImGui::PopFont()
     ImGuiContext& g = *GImGui;
     g.CurrentWindow->DrawList->PopTextureID();
     g.FontStack.pop_back();
-    SetCurrentFont(g.FontStack.empty() ? g.IO.Fonts->Fonts[0] : g.FontStack.back());
+    SetCurrentFont(g.FontStack.empty() ? GetDefaultFont() : g.FontStack.back());
 }
 
 void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus)
