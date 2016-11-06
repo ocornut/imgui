@@ -2041,20 +2041,20 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 
         bool adding_preview = false;
         ImGui::InvisibleButton("canvas", canvas_size);
+        ImVec2 mouse_pos_in_canvas = ImVec2(ImGui::GetIO().MousePos.x - canvas_pos.x, ImGui::GetIO().MousePos.y - canvas_pos.y);
+        if (adding_line)
+        {
+            adding_preview = true;
+            points.push_back(mouse_pos_in_canvas);
+            if (!ImGui::GetIO().MouseDown[0])
+                adding_line = adding_preview = false;
+        }
         if (ImGui::IsItemHovered())
         {
-            ImVec2 mouse_pos_in_canvas = ImVec2(ImGui::GetIO().MousePos.x - canvas_pos.x, ImGui::GetIO().MousePos.y - canvas_pos.y);
             if (!adding_line && ImGui::IsMouseClicked(0))
             {
                 points.push_back(mouse_pos_in_canvas);
                 adding_line = true;
-            }
-            if (adding_line)
-            {
-                adding_preview = true;
-                points.push_back(mouse_pos_in_canvas);
-                if (!ImGui::GetIO().MouseDown[0])
-                    adding_line = adding_preview = false;
             }
             if (ImGui::IsMouseClicked(1) && !points.empty())
             {
