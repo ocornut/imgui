@@ -1942,7 +1942,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         else
         {
             s += ImTextCharFromUtf8(&c, s, text_end);
-            if (c == 0)
+            if (c == 0) // Malformed UTF-8?
                 break;
         }
 
@@ -2000,7 +2000,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip) const
 {
     if (!text_end)
-        text_end = text_begin + strlen(text_begin);
+        text_end = text_begin + strlen(text_begin); // ImGui functions generally already provides a valid text_end, so this is merely to handle direct calls.
 
     // Align to be pixel perfect
     pos.x = (float)(int)pos.x + DisplayOffset.x;
@@ -2068,7 +2068,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         else
         {
             s += ImTextCharFromUtf8(&c, s, text_end);
-            if (c == 0)
+            if (c == 0) // Malformed UTF-8?
                 break;
         }
 
