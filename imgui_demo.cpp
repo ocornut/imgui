@@ -1804,6 +1804,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     ImGui::PopItemWidth();
 }
 
+// Demonstrate creating a fullscreen menu bar and populating it.
 static void ShowExampleAppMainMenuBar()
 {
     if (ImGui::BeginMainMenuBar())
@@ -1882,6 +1883,7 @@ static void ShowExampleMenuFile()
     if (ImGui::MenuItem("Quit", "Alt+F4")) {}
 }
 
+// Demonstrate creating a window which gets auto-resized according to its content.
 static void ShowExampleAppAutoResize(bool* p_open)
 {
     if (!ImGui::Begin("Example: Auto-resizing window", p_open, ImGuiWindowFlags_AlwaysAutoResize))
@@ -1898,6 +1900,7 @@ static void ShowExampleAppAutoResize(bool* p_open)
     ImGui::End();
 }
 
+// Demonstrate creating a window with custom resize constraints.
 static void ShowExampleAppConstrainedResize(bool* p_open)
 {
     struct CustomConstraints // Helper functions to demonstrate programmatic constraints
@@ -1935,6 +1938,7 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
     ImGui::End();
 }
 
+// Demonstrate creating a simple static window with no decoration.
 static void ShowExampleAppFixedOverlay(bool* p_open)
 {
     ImGui::SetNextWindowPos(ImVec2(10,10));
@@ -1949,10 +1953,12 @@ static void ShowExampleAppFixedOverlay(bool* p_open)
     ImGui::End();
 }
 
+// Demonstrate using "##" and "###" in identifiers to manipulate ID generation.
+// Read section "How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on the purpose of labels/IDs." about ID.
 static void ShowExampleAppManipulatingWindowTitle(bool*)
 {
     // By default, Windows are uniquely identified by their title.
-    // You can use the "##" and "###" markers to manipulate the display/ID. Read FAQ at the top of this file!
+    // You can use the "##" and "###" markers to manipulate the display/ID.
 
     // Using "##" to display same title but have unique identifier.
     ImGui::SetNextWindowPos(ImVec2(100,100), ImGuiSetCond_FirstUseEver);
@@ -1974,6 +1980,7 @@ static void ShowExampleAppManipulatingWindowTitle(bool*)
     ImGui::End();
 }
 
+// Demonstrate using the low-level ImDrawList to draw custom shapes. 
 static void ShowExampleAppCustomRendering(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(350,560), ImGuiSetCond_FirstUseEver);
@@ -2073,6 +2080,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
     ImGui::End();
 }
 
+// Demonstrating creating a simple console window, with scrolling, filtering, completion and history.
 // For the console example, here we are using a more C++ like approach of declaring a class to hold the data and the functions.
 struct ExampleAppConsole
 {
@@ -2422,6 +2430,7 @@ struct ExampleAppLog
     }
 };
 
+// Demonstrate creating a simple log window with basic filtering.
 static void ShowExampleAppLog(bool* p_open)
 {
     static ExampleAppLog log;
@@ -2439,6 +2448,7 @@ static void ShowExampleAppLog(bool* p_open)
     log.Draw("Example: Log", p_open);
 }
 
+// Demonstrate create a window with multiple child windows.
 static void ShowExampleAppLayout(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(500, 440), ImGuiSetCond_FirstUseEver);
@@ -2484,6 +2494,7 @@ static void ShowExampleAppLayout(bool* p_open)
     ImGui::End();
 }
 
+// Demonstrate create a simple property editor.
 static void ShowExampleAppPropertyEditor(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(430,450), ImGuiSetCond_FirstUseEver);
@@ -2556,6 +2567,7 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
     ImGui::End();
 }
 
+// Demonstrate/test rendering huge amount of text, and the incidence of clipping.
 static void ShowExampleAppLongText(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(520,600), ImGuiSetCond_FirstUseEver);
