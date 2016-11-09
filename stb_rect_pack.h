@@ -501,8 +501,8 @@ static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, i
 
 static int rect_height_compare(const void *a, const void *b)
 {
-   stbrp_rect *p = (stbrp_rect *) a;
-   stbrp_rect *q = (stbrp_rect *) b;
+   stbrp_rect const *p = (stbrp_rect const *) a;
+   stbrp_rect const *q = (stbrp_rect const *) b;
    if (p->h > q->h)
       return -1;
    if (p->h < q->h)
@@ -512,8 +512,8 @@ static int rect_height_compare(const void *a, const void *b)
 
 static int rect_width_compare(const void *a, const void *b)
 {
-   stbrp_rect *p = (stbrp_rect *) a;
-   stbrp_rect *q = (stbrp_rect *) b;
+   stbrp_rect const *p = (stbrp_rect const *) a;
+   stbrp_rect const *q = (stbrp_rect const *) b;
    if (p->w > q->w)
       return -1;
    if (p->w < q->w)
@@ -523,8 +523,8 @@ static int rect_width_compare(const void *a, const void *b)
 
 static int rect_original_order(const void *a, const void *b)
 {
-   stbrp_rect *p = (stbrp_rect *) a;
-   stbrp_rect *q = (stbrp_rect *) b;
+   stbrp_rect const *p = (stbrp_rect const *) a;
+   stbrp_rect const *q = (stbrp_rect const *) b;
    return (p->was_packed < q->was_packed) ? -1 : (p->was_packed > q->was_packed);
 }
 
