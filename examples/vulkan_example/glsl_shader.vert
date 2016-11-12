@@ -8,7 +8,7 @@ layout(push_constant) uniform uPushConstant{
     vec2 uTranslate;
 } pc;
 
-out block{
+layout(location = 0) out struct{
     vec4 Color;
     vec2 UV;
 } Out;
