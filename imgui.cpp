@@ -712,9 +712,9 @@ static bool             DataTypeApplyOpFromText(const char* buf, const char* ini
 // Platform dependent default implementations
 //-----------------------------------------------------------------------------
 
-static const char*      GetClipboardTextFn_DefaultImpl(void* user_data);
-static void             SetClipboardTextFn_DefaultImpl(void* user_data, const char* text);
-static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
+static const char*      IMGUI_CALLBACK GetClipboardTextFn_DefaultImpl(void* user_data);
+static void             IMGUI_CALLBACK SetClipboardTextFn_DefaultImpl(void* user_data, const char* text);
+static void             IMGUI_CALLBACK ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 
 //-----------------------------------------------------------------------------
 // Context
@@ -835,6 +835,7 @@ ImGuiIO::ImGuiIO()
 
     // User functions
     RenderDrawListsFn = NULL;
+    UserData = NULL;
     MemAllocFn = malloc;
     MemFreeFn = free;
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
@@ -2047,7 +2048,7 @@ void ImGui::SetCurrentContext(ImGuiContext* ctx)
     GImGui = ctx;
 }
 
-ImGuiContext* ImGui::CreateContext(void* (*malloc_fn)(size_t), void (*free_fn)(void*))
+ImGuiContext* ImGui::CreateContext(void* (IMGUI_CALLBACK *malloc_fn)(size_t), void (IMGUI_CALLBACK *free_fn)(void*))
 {
     if (!malloc_fn) malloc_fn = malloc;
     ImGuiContext* ctx = (ImGuiContext*)malloc_fn(sizeof(ImGuiContext));
@@ -2059,7 +2060,7 @@ ImGuiContext* ImGui::CreateContext(void* (*malloc_fn)(size_t), void (*free_fn)(v
 
 void ImGui::DestroyContext(ImGuiContext* ctx)
 {
-    void (*free_fn)(void*) = ctx->IO.MemFreeFn;
+    void (IMGUI_CALLBACK *free_fn)(void*) = ctx->IO.MemFreeFn;
     ctx->~ImGuiContext();
     free_fn(ctx);
     if (GImGui == ctx)
@@ -2521,7 +2522,7 @@ static void MarkSettingsDirty()
 }
 
 // FIXME: Add a more explicit sort order in the window structure.
-static int ChildWindowComparer(const void* lhs, const void* rhs)
+static int IMGUI_CALLBACK ChildWindowComparer(const void* lhs, const void* rhs)
 {
     const ImGuiWindow* a = *(const ImGuiWindow**)lhs;
     const ImGuiWindow* b = *(const ImGuiWindow**)rhs;
@@ -9588,7 +9589,7 @@ void ImGui::ValueColor(const char* prefix, ImU32 v)
 #pragma comment(lib, "user32")
 #endif
 
-static const char* GetClipboardTextFn_DefaultImpl(void*)
+static const char* IMGUI_CALLBACK GetClipboardTextFn_DefaultImpl(void*)
 {
     static ImVector<char> buf_local;
     buf_local.clear();
@@ -9608,7 +9609,7 @@ static const char* GetClipboardTextFn_DefaultImpl(void*)
     return buf_local.Data;
 }
 
-static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
+static void IMGUI_CALLBACK SetClipboardTextFn_DefaultImpl(void*, const char* text)
 {
     if (!OpenClipboard(NULL))
         return;
@@ -9657,7 +9658,7 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
 #pragma comment(lib, "imm32")
 #endif
 
-static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
+static void IMGUI_CALLBACK ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
 {
     // Notify OS Input Method Editor of text input position
     if (HWND hwnd = (HWND)GImGui->IO.ImeWindowHandle)
@@ -9673,7 +9674,7 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
 
 #else
 
-static void ImeSetInputScreenPosFn_DefaultImpl(int, int) {}
+static void IMGUI_CALLBACK ImeSetInputScreenPosFn_DefaultImpl(int, int) {}
 
 #endif
 

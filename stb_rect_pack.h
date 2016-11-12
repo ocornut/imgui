@@ -63,6 +63,12 @@
 #define STBRP_DEF extern
 #endif
 
+#if !defined(STBRP_QSORT_CALLBACK) && defined(_WIN32)
+#define STBRP_QSORT_CALLBACK __cdecl
+#else
+#define STBRP_QSORT_CALLBACK
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -509,7 +515,7 @@ static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, i
    return res;
 }
 
-static int rect_height_compare(const void *a, const void *b)
+static int STBRP_QSORT_CALLBACK rect_height_compare(const void *a, const void *b)
 {
    const stbrp_rect *p = (const stbrp_rect *) a;
    const stbrp_rect *q = (const stbrp_rect *) b;
@@ -520,7 +526,7 @@ static int rect_height_compare(const void *a, const void *b)
    return (p->w > q->w) ? -1 : (p->w < q->w);
 }
 
-static int rect_width_compare(const void *a, const void *b)
+static int STBRP_QSORT_CALLBACK rect_width_compare(const void *a, const void *b)
 {
    const stbrp_rect *p = (const stbrp_rect *) a;
    const stbrp_rect *q = (const stbrp_rect *) b;
@@ -531,7 +537,7 @@ static int rect_width_compare(const void *a, const void *b)
    return (p->h > q->h) ? -1 : (p->h < q->h);
 }
 
-static int rect_original_order(const void *a, const void *b)
+static int STBRP_QSORT_CALLBACK rect_original_order(const void *a, const void *b)
 {
    const stbrp_rect *p = (const stbrp_rect *) a;
    const stbrp_rect *q = (const stbrp_rect *) b;

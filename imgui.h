@@ -23,6 +23,13 @@
 #define IMGUI_API
 #endif
 
+// Calling conventions
+#if !defined(IMGUI_CALLBACK) && defined(_WIN32)
+#define IMGUI_CALLBACK __cdecl
+#else
+#define IMGUI_CALLBACK
+#endif
+
 // Define assertion handler.
 #ifndef IM_ASSERT
 #include <assert.h>
@@ -457,7 +464,7 @@ namespace ImGui
     // Internal context access - if you want to use multiple context, share context between modules (e.g. DLL). There is a default context created and active by default.
     // All contexts share a same ImFontAtlas by default. If you want different font atlas, you can new() them and overwrite the GetIO().Fonts variable of an ImGui context.
     IMGUI_API const char*   GetVersion();
-    IMGUI_API ImGuiContext* CreateContext(void* (*malloc_fn)(size_t) = NULL, void (*free_fn)(void*) = NULL);
+    IMGUI_API ImGuiContext* CreateContext(void* (IMGUI_CALLBACK *malloc_fn)(size_t) = NULL, void (IMGUI_CALLBACK *free_fn)(void*) = NULL);
     IMGUI_API void          DestroyContext(ImGuiContext* ctx);
     IMGUI_API ImGuiContext* GetCurrentContext();
     IMGUI_API void          SetCurrentContext(ImGuiContext* ctx);
@@ -754,22 +761,22 @@ struct ImGuiIO
     // Rendering function, will be called in Render().
     // Alternatively you can keep this to NULL and call GetDrawData() after Render() to get the same pointer.
     // See example applications if you are unsure of how to implement this.
-    void        (*RenderDrawListsFn)(ImDrawData* data);
+    void        (IMGUI_CALLBACK *RenderDrawListsFn)(ImDrawData* data);
 
     // Optional: access OS clipboard
     // (default to use native Win32 clipboard on Windows, otherwise uses a private clipboard. Override to access OS clipboard on other architectures)
-    const char* (*GetClipboardTextFn)(void* user_data);
-    void        (*SetClipboardTextFn)(void* user_data, const char* text);
+    const char* (IMGUI_CALLBACK *GetClipboardTextFn)(void* user_data);
+    void        (IMGUI_CALLBACK *SetClipboardTextFn)(void* user_data, const char* text);
     void*       ClipboardUserData;
 
     // Optional: override memory allocations. MemFreeFn() may be called with a NULL pointer.
     // (default to posix malloc/free)
-    void*       (*MemAllocFn)(size_t sz);
-    void        (*MemFreeFn)(void* ptr);
+    void*       (IMGUI_CALLBACK *MemAllocFn)(size_t sz);
+    void        (IMGUI_CALLBACK *MemFreeFn)(void* ptr);
 
     // Optional: notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME in Windows)
     // (default to use native imm32 api on Windows)
-    void        (*ImeSetInputScreenPosFn)(int x, int y);
+    void        (IMGUI_CALLBACK *ImeSetInputScreenPosFn)(int x, int y);
     void*       ImeWindowHandle;            // (Windows) Set this to your HWND to get automatic IME cursor positioning.
 
     //------------------------------------------------------------------
