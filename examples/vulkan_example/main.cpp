@@ -61,10 +61,10 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
     check_vk_result(err);
 
     // Destroy old Framebuffer:
-    for (uint32_t i=0; i<g_BackBufferCount; i++)
+    for (uint32_t i = 0; i < g_BackBufferCount; i++)
         if (g_BackBufferView[i])
             vkDestroyImageView(g_Device, g_BackBufferView[i], g_Allocator);
-     for(uint32_t i=0; i<g_BackBufferCount; i++)
+    for (uint32_t i = 0; i < g_BackBufferCount; i++)
         if (g_Framebuffer[i])
             vkDestroyFramebuffer(g_Device, g_Framebuffer[i], g_Allocator);
     if (g_RenderPass)
@@ -155,7 +155,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         info.components.b = VK_COMPONENT_SWIZZLE_B;
         info.components.a = VK_COMPONENT_SWIZZLE_A;
         info.subresourceRange = g_ImageRange;
-        for (uint32_t i = 0; i<g_BackBufferCount; i++)
+        for (uint32_t i = 0; i < g_BackBufferCount; i++)
         {
             info.image = g_BackBuffer[i];
             err = vkCreateImageView(g_Device, &info, g_Allocator, &g_BackBufferView[i]);
@@ -174,7 +174,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         info.width = fb_width;
         info.height = fb_height;
         info.layers = 1;
-        for (uint32_t i = 0; i<g_BackBufferCount; i++)
+        for (uint32_t i = 0; i < g_BackBufferCount; i++)
         {
             attachment[0] = g_BackBufferView[i];
             err = vkCreateFramebuffer(g_Device, &info, g_Allocator, &g_Framebuffer[i]);
@@ -244,7 +244,7 @@ static void setup_vulkan(GLFWwindow* window)
     }
 
     // Create Command Buffers
-    for (int i=0; i<IMGUI_VK_QUEUED_FRAMES; i++)
+    for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
     {
         {
             VkCommandPoolCreateInfo info = {};
