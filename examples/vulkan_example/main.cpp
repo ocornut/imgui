@@ -24,6 +24,7 @@ static uint32_t                 g_QueueFamily = 0;
 static VkQueue                  g_Queue = VK_NULL_HANDLE;
 
 static VkFormat                 g_Format = VK_FORMAT_B8G8R8A8_UNORM;
+static VkFormat                 g_ViewFormat = VK_FORMAT_B8G8R8A8_UNORM;
 static VkColorSpaceKHR          g_ColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 static VkImageSubresourceRange  g_ImageRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
@@ -119,7 +120,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
     // Create the Render Pass:
     {
         VkAttachmentDescription attachment = {};
-        attachment.format = g_Format;
+        attachment.format = g_ViewFormat;
         attachment.samples = VK_SAMPLE_COUNT_1_BIT;
         attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -149,7 +150,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         VkImageViewCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        info.format = g_Format;
+        info.format = g_ViewFormat;
         info.components.r = VK_COMPONENT_SWIZZLE_R;
         info.components.g = VK_COMPONENT_SWIZZLE_G;
         info.components.b = VK_COMPONENT_SWIZZLE_B;
