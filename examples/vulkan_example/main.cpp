@@ -49,7 +49,7 @@ static void check_vk_result(VkResult err)
 {
     if (err == 0) return;
     printf("VkResult %d\n", err);
-    if (err < 0) 
+    if (err < 0)
         abort();
 }
 
@@ -204,12 +204,46 @@ static void setup_vulkan(GLFWwindow* window)
         err = glfwCreateWindowSurface(g_Instance, window, g_Allocator, &g_Surface);
         check_vk_result(err);
     }
-    
-    // Get GPU
+
+    // Get GPU (WARNING here we assume the first gpu is one we can use)
     {
         uint32_t count = 1;
         err = vkEnumeratePhysicalDevices(g_Instance, &count, &g_Gpu);
         check_vk_result(err);
+    }
+
+    // Get queue
+    {
+        uint32_t count;
+        vkGetPhysicalDeviceQueueFamilyProperties(g_Gpu, &count, nullptr);
+        VkQueueFamilyProperties *queues = (VkQueueFamilyProperties*)malloc(sizeof(VkQueueFamilyProperties)*count);
+        vkGetPhysicalDeviceQueueFamilyProperties(g_Gpu, &count, queues);
+        for(uint32_t i=0; i<count; i++){
+            if(queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT){
+                g_QueueFamily = i;
+                break;
+            }
+        }
+        free(queues);
+    }
+
+    // Check for WSI support
+    {
+        VkBool32 res;
+        vkGetPhysicalDeviceSurfaceSupportKHR(g_Gpu, g_QueueFamily, g_Surface, &res);
+        if(res != VK_TRUE){
+            fprintf(stderr, "Error no WSI support on physical device 0\n");
+            exit(-1);
+        }
+    }
+
+    // Get Surface Format (WARNING here we assume the first format is the one we want)
+    {
+        uint32_t count = 1;
+        VkSurfaceFormatKHR format;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, &format);
+        g_Format = format.format;
+        g_ColorSpace = format.colorSpace;
     }
 
     // Create Logical Device
@@ -280,7 +314,7 @@ static void setup_vulkan(GLFWwindow* window)
 
     // Create Descriptor Pool
     {
-        VkDescriptorPoolSize pool_size[11] = 
+        VkDescriptorPoolSize pool_size[11] =
         {
             { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
@@ -381,10 +415,12 @@ static void frame_end()
         vkCmdPipelineBarrier(g_CommandBuffer[g_FrameIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
     }
     {
+        VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         VkSubmitInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         info.waitSemaphoreCount = 1;
         info.pWaitSemaphores = &g_Semaphore[g_FrameIndex];
+        info.pWaitDstStageMask = &wait_stage;
         info.commandBufferCount = 1;
         info.pCommandBuffers = &g_CommandBuffer[g_FrameIndex];
 
