@@ -23,7 +23,7 @@ static VkRenderPass             g_RenderPass = VK_NULL_HANDLE;
 static uint32_t                 g_QueueFamily = 0;
 static VkQueue                  g_Queue = VK_NULL_HANDLE;
 
-static VkFormat                 g_Format = VK_FORMAT_B8G8R8A8_UNORM;
+static VkFormat                 g_ImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
 static VkFormat                 g_ViewFormat = VK_FORMAT_B8G8R8A8_UNORM;
 static VkColorSpaceKHR          g_ColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 static VkImageSubresourceRange  g_ImageRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
@@ -76,7 +76,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         VkSwapchainCreateInfoKHR info = {};
         info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         info.surface = g_Surface;
-        info.imageFormat = g_Format;
+        info.imageFormat = g_ImageFormat;
         info.imageColorSpace = g_ColorSpace;
         info.imageArrayLayers = 1;
         info.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -216,7 +216,7 @@ static void setup_vulkan(GLFWwindow* window)
     // Get queue
     {
         uint32_t count;
-        vkGetPhysicalDeviceQueueFamilyProperties(g_Gpu, &count, nullptr);
+        vkGetPhysicalDeviceQueueFamilyProperties(g_Gpu, &count, NULL);
         VkQueueFamilyProperties *queues = (VkQueueFamilyProperties*)malloc(sizeof(VkQueueFamilyProperties)*count);
         vkGetPhysicalDeviceQueueFamilyProperties(g_Gpu, &count, queues);
         for(uint32_t i=0; i<count; i++){
@@ -238,13 +238,24 @@ static void setup_vulkan(GLFWwindow* window)
         }
     }
 
-    // Get Surface Format (WARNING here we assume the first format is the one we want)
+    // Get Surface Format
     {
-        uint32_t count = 1;
-        VkSurfaceFormatKHR format;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, &format);
-        g_Format = format.format;
-        g_ColorSpace = format.colorSpace;
+        VkFormat image_view_format[][2] = {{VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM},
+                                           {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM}};
+        uint32_t count;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, NULL);
+        VkSurfaceFormatKHR *formats = (VkSurfaceFormatKHR*)malloc(sizeof(VkSurfaceFormatKHR)*count);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, formats);
+        for(size_t i=0; i<sizeof(image_view_format)/sizeof(image_view_format[0]); i++){
+            for(uint32_t j=0; j<count; j++){
+                if(formats[j].format == image_view_format[i][0]){
+                    g_ImageFormat = image_view_format[i][0];
+                    g_ViewFormat = image_view_format[i][1];
+                    g_ColorSpace = formats[j].colorSpace;
+                }
+            }
+        }
+        free(formats);
     }
 
     // Create Logical Device
