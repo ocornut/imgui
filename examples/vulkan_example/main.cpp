@@ -217,10 +217,12 @@ static void setup_vulkan(GLFWwindow* window)
     {
         uint32_t count;
         vkGetPhysicalDeviceQueueFamilyProperties(g_Gpu, &count, NULL);
-        VkQueueFamilyProperties *queues = (VkQueueFamilyProperties*)malloc(sizeof(VkQueueFamilyProperties)*count);
+        VkQueueFamilyProperties* queues = (VkQueueFamilyProperties*)malloc(sizeof(VkQueueFamilyProperties) * count);
         vkGetPhysicalDeviceQueueFamilyProperties(g_Gpu, &count, queues);
-        for(uint32_t i=0; i<count; i++){
-            if(queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT){
+        for (uint32_t i = 0; i < count; i++)
+        {
+            if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            {
                 g_QueueFamily = i;
                 break;
             }
@@ -232,7 +234,8 @@ static void setup_vulkan(GLFWwindow* window)
     {
         VkBool32 res;
         vkGetPhysicalDeviceSurfaceSupportKHR(g_Gpu, g_QueueFamily, g_Surface, &res);
-        if(res != VK_TRUE){
+        if (res != VK_TRUE)
+        {
             fprintf(stderr, "Error no WSI support on physical device 0\n");
             exit(-1);
         }
@@ -240,15 +243,17 @@ static void setup_vulkan(GLFWwindow* window)
 
     // Get Surface Format
     {
-        VkFormat image_view_format[][2] = {{VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM},
-                                           {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM}};
+        VkFormat image_view_format[][2] = {{VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM}, {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM}};
         uint32_t count;
         vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, NULL);
-        VkSurfaceFormatKHR *formats = (VkSurfaceFormatKHR*)malloc(sizeof(VkSurfaceFormatKHR)*count);
+        VkSurfaceFormatKHR *formats = (VkSurfaceFormatKHR*)malloc(sizeof(VkSurfaceFormatKHR) * count);
         vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, formats);
-        for(size_t i=0; i<sizeof(image_view_format)/sizeof(image_view_format[0]); i++){
-            for(uint32_t j=0; j<count; j++){
-                if(formats[j].format == image_view_format[i][0]){
+        for (size_t i = 0; i < sizeof(image_view_format) / sizeof(image_view_format[0]); i++)
+        {
+            for (uint32_t j = 0; j < count; j++)
+            {
+                if (formats[j].format == image_view_format[i][0])
+                {
                     g_ImageFormat = image_view_format[i][0];
                     g_ViewFormat = image_view_format[i][1];
                     g_ColorSpace = formats[j].colorSpace;
