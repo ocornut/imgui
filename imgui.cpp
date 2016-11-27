@@ -6446,6 +6446,28 @@ float ImGui::RoundScalar(float value, int decimal_precision)
     return negative ? -value : value;
 }
 
+static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float v_max, float power, float linear_zero_pos)
+{
+    const bool is_non_linear = (power < 1.0f-0.00001f) && (power > 1.0f-0.00001f);
+    const float v_clamped = (v_min < v_max) ? ImClamp(v, v_min, v_max) : ImClamp(v, v_max, v_min);
+    if (is_non_linear)
+    {
+        if (v_clamped < 0.0f)
+        {
+            const float f = 1.0f - (v_clamped - v_min) / (ImMin(0.0f,v_max) - v_min);
+            return (1.0f - powf(f, 1.0f/power)) * linear_zero_pos;
+        }
+        else
+        {
+            const float f = (v_clamped - ImMax(0.0f,v_min)) / (v_max - ImMax(0.0f,v_min));
+            return linear_zero_pos + powf(f, 1.0f/power) * (1.0f - linear_zero_pos);
+        }
+    }
+
+    // Linear slider
+    return (v_clamped - v_min) / (v_max - v_min);
+}
+
 bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, ImGuiSliderFlags flags)
 {
     ImGuiContext& g = *GImGui;
@@ -6539,26 +6561,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     }
 
     // Calculate slider grab positioning
-    float v_clamped = (v_min < v_max) ? ImClamp(*v, v_min, v_max) : ImClamp(*v, v_max, v_min);
-    float grab_t;
-    if (is_non_linear)
-    {
-        if (v_clamped < 0.0f)
-        {
-            const float f = 1.0f - (v_clamped - v_min) / (ImMin(0.0f,v_max) - v_min);
-            grab_t = (1.0f - powf(f, 1.0f/power)) * linear_zero_pos;
-        }
-        else
-        {
-            const float f = (v_clamped - ImMax(0.0f,v_min)) / (v_max - ImMax(0.0f,v_min));
-            grab_t = linear_zero_pos + powf(f, 1.0f/power) * (1.0f - linear_zero_pos);
-        }
-    }
-    else
-    {
-        // Linear slider
-        grab_t = (v_clamped - v_min) / (v_max - v_min);
-    }
+    float grab_t = SliderBehaviorCalcRatioFromValue(*v, v_min, v_max, power, linear_zero_pos);
 
     // Draw
     if (!is_horizontal)
