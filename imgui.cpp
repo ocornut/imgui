@@ -6539,10 +6539,10 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     }
 
     // Calculate slider grab positioning
+    float v_clamped = (v_min < v_max) ? ImClamp(*v, v_min, v_max) : ImClamp(*v, v_max, v_min);
     float grab_t;
     if (is_non_linear)
     {
-        float v_clamped = ImClamp(*v, v_min, v_max);
         if (v_clamped < 0.0f)
         {
             const float f = 1.0f - (v_clamped - v_min) / (ImMin(0.0f,v_max) - v_min);
@@ -6557,7 +6557,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     else
     {
         // Linear slider
-        grab_t = (ImClamp(*v, v_min, v_max) - v_min) / (v_max - v_min);
+        grab_t = (v_clamped - v_min) / (v_max - v_min);
     }
 
     // Draw
