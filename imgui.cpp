@@ -6491,18 +6491,18 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
         if (g.IO.MouseDown[0])
         {
             const float mouse_abs_pos = is_horizontal ? g.IO.MousePos.x : g.IO.MousePos.y;
-            float normalized_pos = ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f);
+            float clicked_t = ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f);
             if (!is_horizontal)
-                normalized_pos = 1.0f - normalized_pos;
+                clicked_t = 1.0f - clicked_t;
 
             float new_value;
             if (is_non_linear)
             {
                 // Account for logarithmic scale on both sides of the zero
-                if (normalized_pos < linear_zero_pos)
+                if (clicked_t < linear_zero_pos)
                 {
                     // Negative: rescale to the negative range before powering
-                    float a = 1.0f - (normalized_pos / linear_zero_pos);
+                    float a = 1.0f - (clicked_t / linear_zero_pos);
                     a = powf(a, power);
                     new_value = ImLerp(ImMin(v_max,0.0f), v_min, a);
                 }
@@ -6511,9 +6511,9 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
                     // Positive: rescale to the positive range before powering
                     float a;
                     if (fabsf(linear_zero_pos - 1.0f) > 1.e-6f)
-                        a = (normalized_pos - linear_zero_pos) / (1.0f - linear_zero_pos);
+                        a = (clicked_t - linear_zero_pos) / (1.0f - linear_zero_pos);
                     else
-                        a = normalized_pos;
+                        a = clicked_t;
                     a = powf(a, power);
                     new_value = ImLerp(ImMax(v_min,0.0f), v_max, a);
                 }
@@ -6521,7 +6521,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
             else
             {
                 // Linear slider
-                new_value = ImLerp(v_min, v_max, normalized_pos);
+                new_value = ImLerp(v_min, v_max, clicked_t);
             }
 
             // Round past decimal precision
