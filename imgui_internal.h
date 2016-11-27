@@ -69,7 +69,9 @@ namespace ImGuiStb
 // Context
 //-----------------------------------------------------------------------------
 
-extern IMGUI_API ImGuiContext*  GImGui;     // current implicit ImGui context pointer
+#ifndef GImGui
+extern IMGUI_API ImGuiContext* GImGui;  // Current implicit ImGui context pointer
+#endif
 
 //-----------------------------------------------------------------------------
 // Helpers
@@ -89,6 +91,7 @@ IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, cons
 // Helpers: Misc
 IMGUI_API ImU32         ImHash(const void* data, int data_size, ImU32 seed = 0);    // Pass data_size==0 for zero-terminated strings
 IMGUI_API void*         ImLoadFileToMemory(const char* filename, const char* file_open_mode, int* out_file_size = NULL, int padding_bytes = 0);
+IMGUI_API FILE*         ImOpenFile(const char* filename, const char* file_open_mode);         
 IMGUI_API bool          ImIsPointInTriangle(const ImVec2& p, const ImVec2& a, const ImVec2& b, const ImVec2& c);
 static inline bool      ImCharIsSpace(int c)            { return c == ' ' || c == '\t' || c == 0x3000; }
 static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
@@ -557,9 +560,11 @@ struct ImGuiContext
         SetNextWindowSizeCond = 0;
         SetNextWindowContentSizeCond = 0;
         SetNextWindowCollapsedCond = 0;
-        SetNextWindowFocus = false;
+        SetNextWindowSizeConstraintRect = ImRect();
         SetNextWindowSizeConstraintCallback = NULL;
         SetNextWindowSizeConstraintCallbackUserData = NULL;
+        SetNextWindowSizeConstraint = false;
+        SetNextWindowFocus = false;
         SetNextTreeNodeOpenVal = false;
         SetNextTreeNodeOpenCond = 0;
 
@@ -678,6 +683,7 @@ struct IMGUI_API ImGuiDrawContext
         memset(StackSizesBackup, 0, sizeof(StackSizesBackup));
 
         IndentX = 0.0f;
+        GroupOffsetX = 0.0f;
         ColumnsOffsetX = 0.0f;
         ColumnsCurrent = 0;
         ColumnsCount = 1;

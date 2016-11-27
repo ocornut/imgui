@@ -693,6 +693,7 @@
 #pragma GCC diagnostic ignored "-Wformat"                   // warning: format '%p' expects argument of type 'void*', but argument 6 has type 'ImGuiWindow*'
 #pragma GCC diagnostic ignored "-Wdouble-promotion"         // warning: implicit conversion from 'float' to 'double' when passing argument to function
 #pragma GCC diagnostic ignored "-Wconversion"               // warning: conversion to 'xxxx' from 'xxxx' may alter its value
+#pragma GCC diagnostic ignored "-Wcast-qual"                // warning: cast from type 'xxxx' to type 'xxxx' casts away qualifiers
 #endif
 
 //-------------------------------------------------------------------------
@@ -764,14 +765,19 @@ static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 // Context
 //-----------------------------------------------------------------------------
 
-// Default context, default font atlas.
+// Default font atlas storage .
 // New contexts always point by default to this font atlas. It can be changed by reassigning the GetIO().Fonts variable.
-static ImGuiContext     GImDefaultContext;
 static ImFontAtlas      GImDefaultFontAtlas;
 
-// Current context pointer. Implicitely used by all ImGui functions. Always assumed to be != NULL. Change to a different context by calling ImGui::SetCurrentContext()
-// ImGui is currently not thread-safe because of this variable. If you want thread-safety to allow N threads to access N different contexts, you might work around it by (A) having two instances of the ImGui code under different namespaces or (B) change this variable to be TLS. Further development aim to make this context pointer explicit to all calls. Also read https://github.com/ocornut/imgui/issues/586
+// Default context storage + current context pointer.
+// Implicitely used by all ImGui functions. Always assumed to be != NULL. Change to a different context by calling ImGui::SetCurrentContext()
+// ImGui is currently not thread-safe because of this variable. If you want thread-safety to allow N threads to access N different contexts, you might work around it by:
+// - Having multiple instances of the ImGui code compiled inside different namespace (easiest/safest, if you have a finite number of contexts)
+// - or: Changing this variable to be TLS. You may #define GImGui in imconfig.h for further custom hackery. Future development aim to make this context pointer explicit to all calls. Also read https://github.com/ocornut/imgui/issues/586
+#ifndef GImGui
+static ImGuiContext     GImDefaultContext;
 ImGuiContext*           GImGui = &GImDefaultContext;
+#endif
 
 //-----------------------------------------------------------------------------
 // User facing structures
@@ -1341,6 +1347,22 @@ void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float&
     }
 }
 
+FILE* ImFileOpen(const char* filename, const char* mode)
+{
+#ifdef _MSC_VER
+    // We need a fopen() wrapper because MSVC/Windows fopen doesn't handle UTF-8 filenames. Converting both strings from UTF-8 to wchar format (using a single allocation, because we can)
+    const int filename_wsize = ImTextCountCharsFromUtf8(filename, NULL) + 1;
+    const int mode_wsize = ImTextCountCharsFromUtf8(mode, NULL) + 1;
+    ImVector<ImWchar> buf;
+    buf.resize(filename_wsize + mode_wsize);
+    ImTextStrFromUtf8(&buf[0], filename_wsize, filename, NULL);
+    ImTextStrFromUtf8(&buf[filename_wsize], mode_wsize, mode, NULL);
+    return _wfopen((wchar_t*)&buf[0], (wchar_t*)&buf[filename_wsize]);
+#else
+    return fopen(filename, mode);
+#endif
+}
+
 // Load file content into memory
 // Memory allocated with ImGui::MemAlloc(), must be freed by user using ImGui::MemFree()
 void* ImLoadFileToMemory(const char* filename, const char* file_open_mode, int* out_file_size, int padding_bytes)
@@ -1350,7 +1372,7 @@ void* ImLoadFileToMemory(const char* filename, const char* file_open_mode, int* 
         *out_file_size = 0;
 
     FILE* f;
-    if ((f = fopen(filename, file_open_mode)) == NULL)
+    if ((f = ImFileOpen(filename, file_open_mode)) == NULL)
         return NULL;
 
     long file_size_signed;
@@ -2320,7 +2342,11 @@ ImGuiContext* ImGui::GetCurrentContext()
 
 void ImGui::SetCurrentContext(ImGuiContext* ctx)
 {
+#ifdef IMGUI_SET_CURRENT_CONTEXT_FUNC
+    IMGUI_SET_CURRENT_CONTEXT_FUNC(ctx); // For custom thread-based hackery you may want to have control over this.
+#else
     GImGui = ctx;
+#endif
 }
 
 ImGuiContext* ImGui::CreateContext(void* (*malloc_fn)(size_t), void (*free_fn)(void*))
@@ -2339,7 +2365,7 @@ void ImGui::DestroyContext(ImGuiContext* ctx)
     ctx->~ImGuiContext();
     free_fn(ctx);
     if (GImGui == ctx)
-        GImGui = NULL;
+        SetCurrentContext(NULL);
 }
 
 ImGuiIO& ImGui::GetIO()
@@ -3174,7 +3200,7 @@ static void SaveSettings()
 
     // Write .ini file
     // If a window wasn't opened in this session we preserve its settings
-    FILE* f = fopen(filename, "wt");
+    FILE* f = ImFileOpen(filename, "wt");
     if (!f)
         return;
     for (int i = 0; i != g.Settings.Size; i++)
@@ -6664,7 +6690,7 @@ void ImGui::LogToFile(int max_depth, const char* filename)
             return;
     }
 
-    g.LogFile = fopen(filename, "ab");
+    g.LogFile = ImFileOpen(filename, "ab");
     if (!g.LogFile)
     {
         IM_ASSERT(g.LogFile != NULL); // Consider this an error
@@ -7314,9 +7340,9 @@ float ImGui::RoundScalar(float value, int decimal_precision)
 static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float v_max, float power, float linear_zero_pos)
 {
     const bool is_non_linear = (power < 1.0f-0.00001f) && (power > 1.0f-0.00001f);
+    const float v_clamped = (v_min < v_max) ? ImClamp(v, v_min, v_max) : ImClamp(v, v_max, v_min);
     if (is_non_linear)
     {
-        float v_clamped = ImClamp(v, v_min, v_max);
         if (v_clamped < 0.0f)
         {
             const float f = 1.0f - (v_clamped - v_min) / (ImMin(0.0f,v_max) - v_min);
@@ -7330,7 +7356,7 @@ static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float
     }
 
     // Linear slider
-    return (ImClamp(v, v_min, v_max) - v_min) / (v_max - v_min);
+    return (v_clamped - v_min) / (v_max - v_min);
 }
 
 bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, ImGuiSliderFlags flags)
@@ -7378,13 +7404,13 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     if (g.ActiveId == id)
     {
         bool set_new_value = false;
-        float normalized_pos = 0.0f;
+        float clicked_t = 0.0f;
         if (g.ActiveIdSource == ImGuiInputSource_Mouse && g.IO.MouseDown[0])
         {
             const float mouse_abs_pos = is_horizontal ? g.IO.MousePos.x : g.IO.MousePos.y;
-            normalized_pos = ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f);
+            clicked_t = ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f);
             if (!is_horizontal)
-                normalized_pos = 1.0f - normalized_pos;
+                clicked_t = 1.0f - clicked_t;
             set_new_value = true;
         }
         else if (g.ActiveIdSource == ImGuiInputSource_Nav && IsNavInputDown(ImGuiNavInput_PadActivate))
@@ -7392,7 +7418,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
             const ImVec2 delta2 = GetNavInputAmount2d(0, ImGuiNavReadMode_RepeatFast, 0.0f, 0.0f);
             if (float delta = is_horizontal ? delta2.x : -delta2.y)
             {
-                normalized_pos = SliderBehaviorCalcRatioFromValue(*v, v_min, v_max, power, linear_zero_pos);
+                clicked_t = SliderBehaviorCalcRatioFromValue(*v, v_min, v_max, power, linear_zero_pos);
                 if (decimal_precision == 0 && !is_non_linear)
                 {
                     if (fabsf(v_max - v_min) <= 100.0f || IsNavInputDown(ImGuiNavInput_PadTweakSlow))
@@ -7408,7 +7434,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
                 }
                 if (IsNavInputDown(ImGuiNavInput_PadTweakFast))
                     delta *= 10.0f;
-                normalized_pos = ImSaturate(normalized_pos + delta); // FIXME-NAVIGATION: todo: cancel adjustment if current value already past edge and we are moving in edge direction, to avoid clamping value to edge.
+                clicked_t = ImSaturate(clicked_t + delta); // FIXME-NAVIGATION: todo: cancel adjustment if current value already past edge and we are moving in edge direction, to avoid clamping value to edge.
                 set_new_value = true;
             }
         }
@@ -7423,10 +7449,10 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
             if (is_non_linear)
             {
                 // Account for logarithmic scale on both sides of the zero
-                if (normalized_pos < linear_zero_pos)
+                if (clicked_t < linear_zero_pos)
                 {
                     // Negative: rescale to the negative range before powering
-                    float a = 1.0f - (normalized_pos / linear_zero_pos);
+                    float a = 1.0f - (clicked_t / linear_zero_pos);
                     a = powf(a, power);
                     new_value = ImLerp(ImMin(v_max,0.0f), v_min, a);
                 }
@@ -7435,9 +7461,9 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
                     // Positive: rescale to the positive range before powering
                     float a;
                     if (fabsf(linear_zero_pos - 1.0f) > 1.e-6f)
-                        a = (normalized_pos - linear_zero_pos) / (1.0f - linear_zero_pos);
+                        a = (clicked_t - linear_zero_pos) / (1.0f - linear_zero_pos);
                     else
-                        a = normalized_pos;
+                        a = clicked_t;
                     a = powf(a, power);
                     new_value = ImLerp(ImMax(v_min,0.0f), v_max, a);
                 }
@@ -7445,12 +7471,12 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
             else
             {
                 // Linear slider
-                new_value = ImLerp(v_min, v_max, normalized_pos);
+                new_value = ImLerp(v_min, v_max, clicked_t);
             }
 
             // Round past decimal precision
             new_value = RoundScalar(new_value, decimal_precision);
-            if (*v != new_value)
+            if (*v != new_value && (v_min != v_max))
             {
                 *v = new_value;
                 value_changed = true;

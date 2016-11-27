@@ -1,11 +1,17 @@
 // ImGui - binary_to_compressed_c.cpp
-// Helper tool to turn a file into a C array.
-// The data is first compressed with stb_compress() to reduce source code size.
-// Then encoded in Base85 to fit in a string so we can fit roughly 4 bytes of compressed data into 5 bytes of source code (suggested by @mmalex)
-// (If we used 32-bits constants it would require take 11 bytes of source code to encode 4 bytes.)
-// Useful if you want to embed fonts into your code.
+// Helper tool to turn a file into a C array, if you want to embed font data in your source code.
+
+// The data is first compressed with stb_compress() to reduce source code size,
+// then encoded in Base85 to fit in a string so we can fit roughly 4 bytes of compressed data into 5 bytes of source code (suggested by @mmalex)
+// (If we used 32-bits constants it would require take 11 bytes of source code to encode 4 bytes, and be endianness dependent)
 // Note that even with compression, the output array is likely to be bigger than the binary file..
 // Load compressed TTF fonts with ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF()
+
+// Single file application, build with:
+//  # cl.exe binary_to_compressed_c.cpp
+//  # gcc binary_to_compressed_c.cpp
+// etc.
+// You can also find a precompiled Windows binary in the binary/demo package available from https://github.com/ocornut/imgui
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
