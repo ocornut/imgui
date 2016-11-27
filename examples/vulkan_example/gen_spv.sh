@@ -1,4 +1,3 @@
 #!/bin/bash
-glslangValidator -V -o glsl_shader.frag.spv glsl_shader.frag
-glslangValidator -V -o glsl_shader.vert.spv glsl_shader.vert
-spirv-remap --map all --dce all --strip-all --input glsl_shader.frag.spv glsl_shader.vert.spv --output ./
+glslangValidator -V -x -o glsl_shader.frag.u32 glsl_shader.frag
+glslangValidator -V -x -o glsl_shader.vert.u32 glsl_shader.vert

@@ -1,4 +1,4 @@
-// stb_rect_pack.h - v0.08 - public domain - rectangle packing
+// stb_rect_pack.h - v0.10 - public domain - rectangle packing
 // Sean Barrett 2014
 //
 // Useful for e.g. packing rectangular textures into an atlas.
@@ -32,6 +32,8 @@
 //
 // Version history:
 //
+//     0.10  (2016-10-25)  remove cast-away-const to avoid warnings
+//     0.09  (2016-08-27)  fix compiler warnings
 //     0.08  (2015-09-13)  really fix bug with empty rects (w=0 or h=0)
 //     0.07  (2015-09-13)  fix bug with empty rects (w=0 or h=0)
 //     0.06  (2015-04-15)  added STBRP_SORT to allow replacing qsort
@@ -41,9 +43,9 @@
 //
 // LICENSE
 //
-//   This software is in the public domain. Where that dedication is not
-//   recognized, you are granted a perpetual, irrevocable license to copy,
-//   distribute, and modify this file as you see fit.
+//   This software is dual-licensed to the public domain and under the following
+//   license: you are granted a perpetual, irrevocable license to copy, modify,
+//   publish, and distribute this file as you see fit.
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -198,6 +200,12 @@ struct stbrp_context
 #define STBRP_ASSERT assert
 #endif
 
+#ifdef _MSC_VER
+#define STBRP__NOTUSED(v)  (void)(v)
+#else
+#define STBRP__NOTUSED(v)  (void)sizeof(v)
+#endif
+
 enum
 {
    STBRP__INIT_skyline = 1
@@ -268,12 +276,14 @@ STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, 
 }
 
 // find minimum y position if it starts at x1
-static int stbrp__skyline_find_min_y(stbrp_context *, stbrp_node *first, int x0, int width, int *pwaste)
+static int stbrp__skyline_find_min_y(stbrp_context *c, stbrp_node *first, int x0, int width, int *pwaste)
 {
-   //(void)c;
    stbrp_node *node = first;
    int x1 = x0 + width;
    int min_y, visited_width, waste_area;
+
+   STBRP__NOTUSED(c);
+
    STBRP_ASSERT(first->x <= x0);
 
    #if 0
@@ -501,8 +511,8 @@ static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, i
 
 static int rect_height_compare(const void *a, const void *b)
 {
-   stbrp_rect *p = (stbrp_rect *) a;
-   stbrp_rect *q = (stbrp_rect *) b;
+   const stbrp_rect *p = (const stbrp_rect *) a;
+   const stbrp_rect *q = (const stbrp_rect *) b;
    if (p->h > q->h)
       return -1;
    if (p->h < q->h)
@@ -512,8 +522,8 @@ static int rect_height_compare(const void *a, const void *b)
 
 static int rect_width_compare(const void *a, const void *b)
 {
-   stbrp_rect *p = (stbrp_rect *) a;
-   stbrp_rect *q = (stbrp_rect *) b;
+   const stbrp_rect *p = (const stbrp_rect *) a;
+   const stbrp_rect *q = (const stbrp_rect *) b;
    if (p->w > q->w)
       return -1;
    if (p->w < q->w)
@@ -523,8 +533,8 @@ static int rect_width_compare(const void *a, const void *b)
 
 static int rect_original_order(const void *a, const void *b)
 {
-   stbrp_rect *p = (stbrp_rect *) a;
-   stbrp_rect *q = (stbrp_rect *) b;
+   const stbrp_rect *p = (const stbrp_rect *) a;
+   const stbrp_rect *q = (const stbrp_rect *) b;
    return (p->was_packed < q->was_packed) ? -1 : (p->was_packed > q->was_packed);
 }
 
