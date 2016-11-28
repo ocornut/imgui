@@ -6551,7 +6551,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
 
             // Round past decimal precision
             new_value = RoundScalar(new_value, decimal_precision);
-            if (*v != new_value && (v_min != v_max))
+            if (*v != new_value)
             {
                 *v = new_value;
                 value_changed = true;
