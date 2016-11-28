@@ -6448,6 +6448,9 @@ float ImGui::RoundScalar(float value, int decimal_precision)
 
 static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float v_max, float power, float linear_zero_pos)
 {
+    if (v_min == v_max)
+        return 0.0f;
+
     const bool is_non_linear = (power < 1.0f-0.00001f) || (power > 1.0f+0.00001f);
     const float v_clamped = (v_min < v_max) ? ImClamp(v, v_min, v_max) : ImClamp(v, v_max, v_min);
     if (is_non_linear)
