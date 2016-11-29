@@ -684,9 +684,9 @@ static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sort
 
 static ImGuiIniData*    FindWindowSettings(const char* name);
 static ImGuiIniData*    AddWindowSettings(const char* name);
-static void             LoadSettings();
-static void             SaveSettings();
-static void             MarkSettingsDirty();
+static void             LoadIniSettingsFromDisk(const char* ini_filename);
+static void             SaveIniSettingsToDisk(const char* ini_filename);
+static void             MarkIniSettingsDirty();
 
 static void             PushColumnClipRect(int column_index = -1);
 static ImRect           GetVisibleRect();
@@ -2135,7 +2135,7 @@ void ImGui::NewFrame()
         IM_PLACEMENT_NEW(g.LogClipboard) ImGuiTextBuffer();
 
         IM_ASSERT(g.Settings.empty());
-        LoadSettings();
+        LoadIniSettingsFromDisk(g.IO.IniFilename);
         g.Initialized = true;
     }
 
@@ -2221,7 +2221,7 @@ void ImGui::NewFrame()
             {
                 g.MovedWindow->PosFloat += g.IO.MouseDelta;
                 if (!(g.MovedWindow->Flags & ImGuiWindowFlags_NoSavedSettings) && (g.IO.MouseDelta.x != 0.0f || g.IO.MouseDelta.y != 0.0f))
-                    MarkSettingsDirty();
+                    MarkIniSettingsDirty();
             }
             FocusWindow(g.MovedWindow);
         }
@@ -2243,7 +2243,7 @@ void ImGui::NewFrame()
     {
         g.SettingsDirtyTimer -= g.IO.DeltaTime;
         if (g.SettingsDirtyTimer <= 0.0f)
-            SaveSettings();
+            SaveIniSettingsToDisk(g.IO.IniFilename);
     }
 
     // Find the window we are hovering. Child windows can extend beyond the limit of their parent so we need to derive HoveredRootWindow from HoveredWindow
@@ -2370,7 +2370,7 @@ void ImGui::Shutdown()
     if (!g.Initialized)
         return;
 
-    SaveSettings();
+    SaveIniSettingsToDisk(g.IO.IniFilename);
 
     for (int i = 0; i < g.Windows.Size; i++)
     {
@@ -2450,15 +2450,14 @@ static ImGuiIniData* AddWindowSettings(const char* name)
 
 // Zero-tolerance, poor-man .ini parsing
 // FIXME: Write something less rubbish
-static void LoadSettings()
+static void LoadIniSettingsFromDisk(const char* ini_filename)
 {
     ImGuiContext& g = *GImGui;
-    const char* filename = g.IO.IniFilename;
-    if (!filename)
+    if (!ini_filename)
         return;
 
     int file_size;
-    char* file_data = (char*)ImLoadFileToMemory(filename, "rb", &file_size, 1);
+    char* file_data = (char*)ImLoadFileToMemory(ini_filename, "rb", &file_size, 1);
     if (!file_data)
         return;
 
@@ -2496,11 +2495,11 @@ static void LoadSettings()
     ImGui::MemFree(file_data);
 }
 
-static void SaveSettings()
+static void SaveIniSettingsToDisk(const char* ini_filename)
 {
     ImGuiContext& g = *GImGui;
-    const char* filename = g.IO.IniFilename;
-    if (!filename)
+    g.SettingsDirtyTimer = 0.0f;
+    if (!ini_filename)
         return;
 
     // Gather data from windows that were active during this session
@@ -2517,7 +2516,7 @@ static void SaveSettings()
 
     // Write .ini file
     // If a window wasn't opened in this session we preserve its settings
-    FILE* f = ImFileOpen(filename, "wt");
+    FILE* f = ImFileOpen(ini_filename, "wt");
     if (!f)
         return;
     for (int i = 0; i != g.Settings.Size; i++)
@@ -2538,7 +2537,7 @@ static void SaveSettings()
     fclose(f);
 }
 
-static void MarkSettingsDirty()
+static void MarkIniSettingsDirty()
 {
     ImGuiContext& g = *GImGui;
     if (g.SettingsDirtyTimer <= 0.0f)
@@ -4010,7 +4009,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             {
                 window->Collapsed = !window->Collapsed;
                 if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                    MarkSettingsDirty();
+                    MarkIniSettingsDirty();
                 FocusWindow(window);
             }
         }
@@ -4085,7 +4084,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 if (window->AutoFitFramesY > 0)
                     window->SizeFull.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
                 if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                    MarkSettingsDirty();
+                    MarkIniSettingsDirty();
             }
         }
 
@@ -4214,7 +4213,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                     // Manual auto-fit when double-clicking
                     ApplySizeFullWithConstraint(window, size_auto_fit);
                     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                        MarkSettingsDirty();
+                        MarkIniSettingsDirty();
                     SetActiveID(0);
                 }
                 else if (held)
@@ -4222,7 +4221,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                     // We don't use an incremental MouseDelta but rather compute an absolute target size based on mouse position
                     ApplySizeFullWithConstraint(window, (g.IO.MousePos - g.ActiveIdClickOffset + resize_rect.GetSize()) - window->Pos);
                     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
-                        MarkSettingsDirty();
+                        MarkIniSettingsDirty();
                 }
 
                 window->Size = window->SizeFull;
