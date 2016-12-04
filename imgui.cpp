@@ -8399,7 +8399,7 @@ bool ImGui::InputInt4(const char* label, int v[4], ImGuiInputTextFlags extra_fla
 
 static bool Items_ArrayGetter(void* data, int idx, const char** out_text)
 {
-    const char** items = (const char**)data;
+    const char* const* items = (const char* const*)data;
     if (out_text)
         *out_text = items[idx];
     return true;
@@ -8426,7 +8426,7 @@ static bool Items_SingleStringGetter(void* data, int idx, const char** out_text)
 }
 
 // Combo box helper allowing to pass an array of strings.
-bool ImGui::Combo(const char* label, int* current_item, const char** items, int items_count, int height_in_items)
+bool ImGui::Combo(const char* label, int* current_item, const char* const* items, int items_count, int height_in_items)
 {
     const bool value_changed = Combo(label, current_item, Items_ArrayGetter, (void*)items, items_count, height_in_items);
     return value_changed;
@@ -8703,7 +8703,7 @@ void ImGui::ListBoxFooter()
     EndGroup();
 }
 
-bool ImGui::ListBox(const char* label, int* current_item, const char** items, int items_count, int height_items)
+bool ImGui::ListBox(const char* label, int* current_item, const char* const* items, int items_count, int height_items)
 {
     const bool value_changed = ListBox(label, current_item, Items_ArrayGetter, (void*)items, items_count, height_items);
     return value_changed;
