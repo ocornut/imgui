@@ -1123,7 +1123,8 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::BeginChild("scrolling", ImVec2(0, ImGui::GetItemsLineHeightWithSpacing()*7 + 30), true, ImGuiWindowFlags_HorizontalScrollbar);
             for (int line = 0; line < lines; line++)
             {
-                // Display random stuff
+                // Display random stuff (for the sake of this trivial demo we are using basic Button+SameLine. If you want to create your own time line for a real application you may be better off 
+                // manipulating the cursor position yourself, aka using SetCursorPos/SetCursorScreenPos to position the widgets yourself. You may also want to use the lower-level ImDrawList API)
                 int num_buttons = 10 + ((line & 1) ? line * 9 : line * 3);
                 for (int n = 0; n < num_buttons; n++)
                 {
@@ -1181,6 +1182,8 @@ void ImGui::ShowTestWindow(bool* p_open)
             const char* names[] = { "Bream", "Haddock", "Mackerel", "Pollock", "Tilefish" };
             static bool toggles[] = { true, false, false, false, false };
 
+            // Simple selection popup
+            // (If you want to show the current selection inside the Button itself, you may want to build a string using the "###" operator to preserve a constant ID with a variable label)
             if (ImGui::Button("Select.."))
                 ImGui::OpenPopup("select");
             ImGui::SameLine();
@@ -1195,6 +1198,7 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::EndPopup();
             }
 
+            // Showing a menu with toggles
             if (ImGui::Button("Toggle.."))
                 ImGui::OpenPopup("toggle");
             if (ImGui::BeginPopup("toggle"))
@@ -1229,8 +1233,8 @@ void ImGui::ShowTestWindow(bool* p_open)
             }
 
             if (ImGui::Button("Popup Menu.."))
-                ImGui::OpenPopup("popup from button");
-            if (ImGui::BeginPopup("popup from button"))
+                ImGui::OpenPopup("FilePopup");
+            if (ImGui::BeginPopup("FilePopup"))
             {
                 ShowExampleMenuFile();
                 ImGui::EndPopup();
