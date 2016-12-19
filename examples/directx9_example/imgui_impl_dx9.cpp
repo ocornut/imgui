@@ -94,6 +94,15 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     g_pd3dDevice->SetIndices(g_pIB);
     g_pd3dDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
 
+    // Setup viewport
+    D3DVIEWPORT9 vp;
+    vp.X = vp.Y = 0;
+    vp.Width = (DWORD)io.DisplaySize.x;
+    vp.Height = (DWORD)io.DisplaySize.y;
+    vp.MinZ = 0.0f;
+    vp.MaxZ = 1.0f;
+    g_pd3dDevice->SetViewport(&vp);
+
     // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
     g_pd3dDevice->SetPixelShader(NULL);
     g_pd3dDevice->SetVertexShader(NULL);
