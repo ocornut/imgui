@@ -43,6 +43,40 @@ Binaries/Demo
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at the features of ImGui, you can download Windows binaries of the demo app here.
 - [imgui-demo-binaries-20161113.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20161113.zip) (Windows binaries, ImGui 1.49+ 2016/11/13, 5 executables, 588 KB)
 
+Bindings
+--------
+
+_NB: those third-party bindings may be more or less maintained, more or less close to the spirit of original API. People who create language bindings sometimes haven't used the C++ API themselves. ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, always check the original C++ version first!_
+
+Languages:
+- cimgui: thin c-api wrapper for ImGui https://github.com/Extrawurst/cimgui
+- ImGui.NET: An ImGui wrapper for .NET Core https://github.com/mellinoe/ImGui.NET
+- imgui-rs: Rust bindings for dear imgui https://github.com/Gekkio/imgui-rs
+- DerelictImgui: Dynamic bindings for the D programming language: https://github.com/Extrawurst/DerelictImgui
+- CyImGui: Python bindings for dear imgui using Cython: https://github.com/chromy/cyimgui
+- pyimgui: Another Python bindings for dear imgui: https://github.com/swistakm/pyimgui
+- LUA: https://github.com/patrickriordan/imgui_lua_bindings
+
+Frameworks:
+- Main ImGui repository include examples for DirectX9, DirectX10, DirectX11, OpenGL2/3, Vulkan, Allegro 5, SDL+GL2/3, iOS and Marmalade: https://github.com/ocornut/imgui/tree/master/examples
+- Unmerged PR: DirectX12 example (with issues) https://github.com/ocornut/imgui/pull/301
+- Unmerged PR: SDL2 + OpenGLES + Emscripten example https://github.com/ocornut/imgui/pull/336
+- Unmerged PR: FreeGlut + OpenGL2 example https://github.com/ocornut/imgui/pull/801
+- Unmerged PR: Native Win32 and OSX example https://github.com/ocornut/imgui/pull/281
+- Unmerged PR: Android Example https://github.com/ocornut/imgui/pull/421
+- Cinder backend for dear imgui https://github.com/simongeilfus/Cinder-ImGui
+- FlexGUI: Flexium/SFML backend for dear imgui https://github.com/DXsmiley/FlexGUI
+- IrrIMGUI: Irrlicht backend for dear imgui https://github.com/ZahlGraf/IrrIMGUI
+- LÖVE backend for dear imgui https://github.com/slages/love-imgui
+- Ogre backend for dear imgui https://bitbucket.org/LMCrashy/ogreimgui/src
+- ofxImGui: openFrameworks backend for dear imgui https://github.com/jvcleave/ofxImGui
+- SFML backend for dear imgui https://github.com/EliasD/imgui-sfml
+- SFML backend for dear imgui https://github.com/Mischa-Alff/imgui-backends
+- cocos2d-x with imgui https://github.com/c0i/imguix https://github.com/ocornut/imgui/issues/551
+- NanoRT: software raytraced version https://github.com/syoyo/imgui/tree/nanort/examples/raytrace_example
+
+For other bindings: see [this page](https://github.com/ocornut/imgui/wiki/Links/).
+Please contact me with the Issues tracker or Twitter to fix/update this list.
 
 Gallery
 -------
