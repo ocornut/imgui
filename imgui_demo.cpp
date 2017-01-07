@@ -2316,7 +2316,7 @@ struct ExampleAppConsole
                         for (int i = 0; i < candidates.Size && all_candidates_matches; i++)
                             if (i == 0)
                                 c = toupper(candidates[i][match_len]);
-                            else if (c != toupper(candidates[i][match_len]))
+                            else if (c == 0 || c != toupper(candidates[i][match_len]))
                                 all_candidates_matches = false;
                         if (!all_candidates_matches)
                             break;
