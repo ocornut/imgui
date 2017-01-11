@@ -1851,6 +1851,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             {
                 line_width += blank_width;
                 blank_width = 0.0f;
+                word_end = s;
             }
             blank_width += char_width;
             inside_word = false;
