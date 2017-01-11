@@ -1922,7 +1922,7 @@ ImGuiWindow* ImGui::GetParentWindow()
     return g.CurrentWindowStack[(unsigned int)g.CurrentWindowStack.Size - 2];
 }
 
-void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window = NULL)
+void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     g.ActiveIdIsJustActivated = (g.ActiveId != id);
@@ -1955,6 +1955,11 @@ void ImGui::SetActiveIDNoNav(ImGuiID id, ImGuiWindow* window)
     g.ActiveIdIsAlive |= (id != 0);
     g.ActiveIdWindow = window;
     g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
+}
+
+void ImGui::ClearActiveID()
+{
+    SetActiveID(0, NULL);
 }
 
 void ImGui::SetHoveredID(ImGuiID id)
@@ -2573,7 +2578,7 @@ static void NavUpdate()
         }
 
         // Apply result from previous frame navigation directional move request
-        ImGui::SetActiveID(0);
+        ImGui::ClearActiveID();
         SetNavIdAndMoveMouse(g.NavMoveResultId, g.NavMoveResultRectRel);
         g.NavMoveFromClampedRefRect = false;
     }
@@ -2676,7 +2681,7 @@ static void NavUpdate()
     {
         if (g.ActiveId != 0)
         {
-            ImGui::SetActiveID(0);
+            ImGui::ClearActiveID();
         }
         else if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow) && !(g.NavWindow->Flags & ImGuiWindowFlags_Popup) && g.NavWindow->ParentWindow)
         {
@@ -2830,7 +2835,7 @@ void ImGui::NewFrame()
     g.HoveredId = 0;
     g.HoveredIdAllowOverlap = false;
     if (!g.ActiveIdIsAlive && g.ActiveIdPreviousFrame == g.ActiveId && g.ActiveId != 0)
-        SetActiveID(0);
+        ClearActiveID();
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = false;
     g.ActiveIdIsJustActivated = false;
@@ -2912,7 +2917,7 @@ void ImGui::NewFrame()
         }
         else
         {
-            SetActiveID(0);
+            ClearActiveID();
             g.MovedWindow = NULL;
             g.MovedWindowMoveId = 0;
         }
@@ -4998,7 +5003,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 {
                     // Manual auto-fit when double-clicking
                     size_target = size_auto_fit;
-                    SetActiveID(0);
+                    ClearActiveID();
                 }
                 else if (nav_resize_delta.x != 0.0f || nav_resize_delta.y != 0.0f)
                 {
@@ -5403,7 +5408,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
     // Steal focus on active widgets
     if (window->Flags & ImGuiWindowFlags_Popup) // FIXME: This statement should be unnecessary. Need further testing before removing it..
         if (g.ActiveId != 0 && g.ActiveIdWindow && g.ActiveIdWindow->RootWindow != window)
-            SetActiveID(0);
+            ClearActiveID();
 
     // Bring to front
     if ((window->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus) || g.Windows.back() == window)
@@ -6394,7 +6399,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     {
         if (out_hovered) *out_hovered = false;
         if (out_held) *out_held = false;
-        if (g.ActiveId == id) SetActiveID(0);
+        if (g.ActiveId == id) ClearActiveID();
         return false;
     }
 
@@ -6427,14 +6432,14 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             if (((flags & ImGuiButtonFlags_PressedOnClick) && g.IO.MouseClicked[0]) || ((flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseDoubleClicked[0]))
             {
                 pressed = true;
-                SetActiveID(0);
+                ClearActiveID();
                 FocusWindow(window);
             }
             if ((flags & ImGuiButtonFlags_PressedOnRelease) && g.IO.MouseReleased[0])
             {
                 if (!((flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[0] >= g.IO.KeyRepeatDelay))  // Repeat mode trumps <on release>
                     pressed = true;
-                SetActiveID(0);
+                ClearActiveID();
             }
 
             // 'Repeat' mode acts when held regardless of _PressedOn flags (see table above). 
@@ -6475,14 +6480,14 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             if (hovered && (flags & ImGuiButtonFlags_PressedOnClickRelease))
                 if (!((flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[0] >= g.IO.KeyRepeatDelay))  // Repeat mode trumps <on release>
                     pressed = true;
-            SetActiveID(0);
+            ClearActiveID();
         }
         if (!(flags & ImGuiButtonFlags_NoNavOverride))
             g.NavDisableHighlight = true;
     }
     if (g.ActiveId == id && g.ActiveIdSource == ImGuiInputSource_Nav)
         if (!IsNavInputDown(ImGuiNavInput_PadActivate))
-            SetActiveID(0);
+            ClearActiveID();
 
     // AllowOverlap mode (rarely used) requires previous frame HoveredId to be null or to match. This allows using patterns where a later submitted widget overlaps a previous one.
     if (hovered && (flags & ImGuiButtonFlags_AllowOverlapMode) && (g.HoveredIdPreviousFrame != id && g.HoveredIdPreviousFrame != 0))
@@ -7443,7 +7448,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
         }
         else
         {
-            SetActiveID(0);
+            ClearActiveID();
         }
 
         if (set_new_value)
@@ -7808,7 +7813,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
         }
         else
         {
-            SetActiveID(0);
+            ClearActiveID();
         }
     }
 
@@ -8992,7 +8997,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
     // Release active ID at the end of the function (so e.g. pressing Return still does a final application of the value)
     if (clear_active_id && g.ActiveId == id)
-        SetActiveID(0);
+        ClearActiveID();
 
     // Render
     // Select which buffer we are going to display. When ImGuiInputTextFlags_NoLiveEdit is set 'buf' might still be the old value. We set buf to NULL to prevent accidental usage from now on.
@@ -9441,7 +9446,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         SetHoveredID(id);
         if (g.IO.MouseClicked[0])
         {
-            SetActiveID(0);
+            ClearActiveID();
             popup_toggled = true;
         }
     }
@@ -9499,7 +9504,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
                     item_text = "*Unknown item*";
                 if (Selectable(item_text, item_selected))
                 {
-                    SetActiveID(0);
+                    ClearActiveID();
                     value_changed = true;
                     *current_item = i;
                 }

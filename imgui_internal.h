@@ -799,6 +799,7 @@ namespace ImGui
 
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          SetActiveIDNoNav(ImGuiID id, ImGuiWindow* window);
+	IMGUI_API void          ClearActiveID();
     IMGUI_API void          SetHoveredID(ImGuiID id);
     IMGUI_API void          KeepAliveID(ImGuiID id);
 
