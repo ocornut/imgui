@@ -1311,7 +1311,7 @@ FILE* ImFileOpen(const char* filename, const char* mode)
 
 // Load file content into memory
 // Memory allocated with ImGui::MemAlloc(), must be freed by user using ImGui::MemFree()
-void* ImLoadFileToMemory(const char* filename, const char* file_open_mode, int* out_file_size, int padding_bytes)
+void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, int* out_file_size, int padding_bytes)
 {
     IM_ASSERT(filename && file_open_mode);
     if (out_file_size)
@@ -2462,7 +2462,7 @@ static void LoadIniSettingsFromDisk(const char* ini_filename)
         return;
 
     int file_size;
-    char* file_data = (char*)ImLoadFileToMemory(ini_filename, "rb", &file_size, 1);
+    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_size, 1);
     if (!file_data)
         return;
 
