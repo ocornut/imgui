@@ -772,6 +772,10 @@ struct ImGuiIO
     void        (*ImeSetInputScreenPosFn)(int x, int y);
     void*       ImeWindowHandle;            // (Windows) Set this to your HWND to get automatic IME cursor positioning.
 
+    // Optional: save or load configuration.
+    void        (*SaveIniCb)(const char* buffer, size_t size);
+    size_t      (*LoadIniCb)(char* buffer, size_t size);
+
     //------------------------------------------------------------------
     // Input - Fill before calling NewFrame()
     //------------------------------------------------------------------
