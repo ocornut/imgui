@@ -4321,9 +4321,12 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
 
     // Expand for touch input
     const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
-    if (!rect_for_touch.Contains(g.IO.MousePos))
-        return false;
-    return true;
+    bool result = rect_for_touch.Contains(g.IO.MousePos);
+
+    if (result && window->DC.HitTest.Callback)
+        return window->DC.HitTest.Callback(g.IO.MousePos, r_min, r_max, window->DC.HitTest.UserData);
+    else
+        return result;
 }
 
 int ImGui::GetKeyIndex(ImGuiKey imgui_key)
@@ -6220,6 +6223,22 @@ void ImGui::PushButtonRepeat(bool repeat)
 void ImGui::PopButtonRepeat()
 {
     PopItemFlag();
+}
+
+void ImGui::PushHitTest(ImGuiHitTestCallback callback, void* user_data)
+{
+    ImGuiHitTestData hitTest = ImGuiHitTestData(callback, user_data);
+
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.HitTest = hitTest;
+    window->DC.HitTestStack.push_back(hitTest);
+}
+
+void ImGui::PopHitTest()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.HitTestStack.pop_back();
+    window->DC.HitTest = window->DC.HitTestStack.empty() ? ImGuiHitTestData() : window->DC.HitTestStack.back();
 }
 
 void ImGui::PushTextWrapPos(float wrap_pos_x)

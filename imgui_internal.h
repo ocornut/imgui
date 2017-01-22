@@ -832,6 +832,16 @@ struct ImGuiGroupData
     bool        EmitItem;
 };
 
+// Stacked data for PushHitTest()/PopHitTest()
+struct ImGuiHitTestData
+{
+    ImGuiHitTestCallback Callback;
+    void*                UserData;
+
+    ImGuiHitTestData()                                                      { Callback = NULL; UserData = NULL; }
+    ImGuiHitTestData(ImGuiHitTestCallback callback, void* user_data = NULL) { Callback = callback; UserData = user_data; }
+};
+
 // Simple column measurement, currently used for MenuItem() only.. This is very short-sighted/throw-away code and NOT a generic helper.
 struct IMGUI_API ImGuiMenuColumns
 {
@@ -1511,9 +1521,11 @@ struct IMGUI_API ImGuiWindowTempData
     ImGuiItemFlags          ItemFlags;              // == ItemFlagsStack.back() [empty == ImGuiItemFlags_Default]
     float                   ItemWidth;              // == ItemWidthStack.back(). 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
     float                   TextWrapPos;            // == TextWrapPosStack.back() [empty == -1.0f]
+    ImGuiHitTestData        HitTest;
     ImVector<ImGuiItemFlags>ItemFlagsStack;
     ImVector<float>         ItemWidthStack;
     ImVector<float>         TextWrapPosStack;
+    ImVector<ImGuiHitTestData> HitTestStack;
     ImVector<ImGuiGroupData>GroupStack;
     short                   StackSizesBackup[6];    // Store size of various stacks for asserting
 
@@ -1545,6 +1557,9 @@ struct IMGUI_API ImGuiWindowTempData
         CurrentColumns = NULL;
         LayoutType = ParentLayoutType = ImGuiLayoutType_Vertical;
         FocusCounterRegular = FocusCounterTabStop = -1;
+
+        HitTest.Callback = NULL;
+        HitTest.UserData = NULL;
 
         ItemFlags = ImGuiItemFlags_Default_;
         ItemWidth = 0.0f;
