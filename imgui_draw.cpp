@@ -975,6 +975,23 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
         PopTextureID();
 }
 
+void ImDrawList::AddImageQuad(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, const ImVec2& uva, const ImVec2& uvb, const ImVec2& uvc, const ImVec2& uvd, ImU32 col)
+{
+    if ((col >> 24) == 0)
+        return;
+
+    // FIXME-OPT: This is wasting draw calls.
+    const bool push_texture_id = _TextureIdStack.empty() || user_texture_id != _TextureIdStack.back();
+    if (push_texture_id)
+        PushTextureID(user_texture_id);
+
+    PrimReserve(6, 4);
+    PrimQuadUV(a, b, c, d, uva, uvb, uvc, uvd, col);
+
+    if (push_texture_id)
+        PopTextureID();
+}
+
 //-----------------------------------------------------------------------------
 // ImDrawData
 //-----------------------------------------------------------------------------
