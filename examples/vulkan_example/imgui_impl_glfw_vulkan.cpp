@@ -301,8 +301,8 @@ void ImGui_ImplGlfwVulkan_RenderDrawLists(ImDrawData* draw_data)
             else
             {
                 VkRect2D scissor;
-                scissor.offset.x = (int32_t)(pcmd->ClipRect.x);
-                scissor.offset.y = (int32_t)(pcmd->ClipRect.y);
+                scissor.offset.x = (int32_t)(pcmd->ClipRect.x) > 0 ? (int32_t)(pcmd->ClipRect.x) : 0; // clamp these to 0, scissor offset.xy must be > 0
+                scissor.offset.y = (int32_t)(pcmd->ClipRect.y) > 0 ? (int32_t)(pcmd->ClipRect.y) : 0;
                 scissor.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
                 scissor.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y + 1); // TODO: + 1??????
                 vkCmdSetScissor(g_CommandBuffer, 0, 1, &scissor);
