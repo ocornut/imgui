@@ -89,7 +89,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
 
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
         info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-#elif
+#else
         info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
 #endif // IMGUI_UNLIMITED_FRAME_RATE
         info.clipped = VK_TRUE;
@@ -233,7 +233,7 @@ static void setup_vulkan(GLFWwindow* window)
         extensions[ extensions_count ] = "VK_EXT_debug_report";
         create_info.enabledExtensionCount = extensions_count+1;
         create_info.ppEnabledExtensionNames = extensions;
-#elif
+#else
         create_info.enabledExtensionCount = extensions_count;
         create_info.ppEnabledExtensionNames = glfw_extensions;
 #endif // IMGUI_VULKAN_DEBUG_REPORT
