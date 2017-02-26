@@ -12,7 +12,8 @@
 #include "imgui_impl_glfw_vulkan.h"
 
 #define IMGUI_MAX_POSSIBLE_BACK_BUFFERS 16
-#define IMGUI_UNLIMITED_FRAME_RATE 
+#define IMGUI_UNLIMITED_FRAME_RATE
+#define IMGUI_VULKAN_DEBUG_REPORT
 
 static VkAllocationCallbacks*   g_Allocator = NULL;
 static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -23,6 +24,7 @@ static VkSwapchainKHR           g_Swapchain = VK_NULL_HANDLE;
 static VkRenderPass             g_RenderPass = VK_NULL_HANDLE;
 static uint32_t                 g_QueueFamily = 0;
 static VkQueue                  g_Queue = VK_NULL_HANDLE;
+static VkDebugReportCallbackEXT g_Debug_Report = VK_NULL_HANDLE;
 
 static VkFormat                 g_ImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
 static VkFormat                 g_ViewFormat = VK_FORMAT_B8G8R8A8_UNORM;
@@ -89,7 +91,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 #elif
         info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-#endif
+#endif // IMGUI_UNLIMITED_FRAME_RATE
         info.clipped = VK_TRUE;
         info.oldSwapchain = old_swapchain;
         VkSurfaceCapabilitiesKHR cap;
@@ -191,20 +193,71 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
     }
 }
 
+#ifdef IMGUI_VULKAN_DEBUG_REPORT
+static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(
+    VkDebugReportFlagsEXT,      //flags,
+    VkDebugReportObjectTypeEXT  objectType,
+    uint64_t,                   //object,
+    size_t,                     //location,
+    int32_t,                    //messageCode,
+    const char*,                //pLayerPrefix,
+    const char*                 pMessage,
+    void*)                      //pUserData)
+{
+    printf( "ObjectType  : %i\nMessage     : %s\n\n", objectType, pMessage );
+    return VK_FALSE;
+}
+#endif // IMGUI_VULKAN_DEBUG_REPORT
+
 static void setup_vulkan(GLFWwindow* window)
 {
     VkResult err;
 
     // Create Vulkan Instance
     {
-        uint32_t glfw_extensions_count;
-        const char** glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extensions_count);
+        uint32_t extensions_count;
+        const char** glfw_extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
+
         VkInstanceCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        create_info.enabledExtensionCount = glfw_extensions_count;
+#ifdef IMGUI_VULKAN_DEBUG_REPORT
+        // enabling multiple validation layers grouped as lunarg standard validation
+        const char* layers[] = {"VK_LAYER_LUNARG_standard_validation"};
+        create_info.enabledLayerCount = 1;
+        create_info.ppEnabledLayerNames = layers;
+
+        // need additional storage for char pointer to debug report extension
+        const char** extensions = (const char**)malloc(sizeof(const char*) * (extensions_count + 1));
+        for( size_t i = 0; i < extensions_count; i++ )
+            extensions[ i ] = glfw_extensions[ i ];
+        extensions[ extensions_count ] = "VK_EXT_debug_report";
+        create_info.enabledExtensionCount = extensions_count+1;
+        create_info.ppEnabledExtensionNames = extensions;
+#elif
+        create_info.enabledExtensionCount = extensions_count;
         create_info.ppEnabledExtensionNames = glfw_extensions;
+#endif // IMGUI_VULKAN_DEBUG_REPORT
+
         err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
         check_vk_result(err);
+
+#ifdef IMGUI_VULKAN_DEBUG_REPORT
+        free(extensions);
+
+        // create the debug report callback
+        VkDebugReportCallbackCreateInfoEXT debug_report_ci ={};
+        debug_report_ci.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+        debug_report_ci.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+        debug_report_ci.pfnCallback = debug_report;
+        debug_report_ci.pUserData = NULL;
+        
+        // get the proc address of the function pointer, required for used extensions
+        PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT = 
+            (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkCreateDebugReportCallbackEXT");
+
+        err = vkCreateDebugReportCallbackEXT( g_Instance, &debug_report_ci, g_Allocator, &g_Debug_Report );
+        check_vk_result( err );
+#endif // IMGUI_VULKAN_DEBUG_REPORT
     }
 
     // Create Window Surface
@@ -381,6 +434,14 @@ static void cleanup_vulkan()
     vkDestroyRenderPass(g_Device, g_RenderPass, g_Allocator);
     vkDestroySwapchainKHR(g_Device, g_Swapchain, g_Allocator);
     vkDestroySurfaceKHR(g_Instance, g_Surface, g_Allocator);
+
+#ifdef IMGUI_VULKAN_DEBUG_REPORT
+    // get the proc address of the function pointer, required for used extensions
+    auto vkDestroyDebugReportCallbackEXT =
+        (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkDestroyDebugReportCallbackEXT");
+    vkDestroyDebugReportCallbackEXT(g_Instance, g_Debug_Report, g_Allocator);
+#endif // IMGUI_VULKAN_DEBUG_REPORT
+
     vkDestroyDevice(g_Device, g_Allocator);
     vkDestroyInstance(g_Instance, g_Allocator);
 }
