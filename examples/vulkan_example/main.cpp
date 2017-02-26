@@ -87,7 +87,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
 
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
         info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-#elif
+#else
         info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
 #endif
         info.clipped = VK_TRUE;
