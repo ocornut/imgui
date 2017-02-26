@@ -12,6 +12,7 @@
 #include "imgui_impl_glfw_vulkan.h"
 
 #define IMGUI_MAX_POSSIBLE_BACK_BUFFERS 16
+#define IMGUI_UNLIMITED_FRAME_RATE 
 
 static VkAllocationCallbacks*   g_Allocator = NULL;
 static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -83,7 +84,12 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
         info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+
+#ifdef IMGUI_UNLIMITED_FRAME_RATE
+        info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+#elif
         info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+#endif
         info.clipped = VK_TRUE;
         info.oldSwapchain = old_swapchain;
         VkSurfaceCapabilitiesKHR cap;
@@ -93,6 +99,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
             info.minImageCount = (cap.minImageCount + 2 < cap.maxImageCount) ? (cap.minImageCount + 2) : cap.maxImageCount;
         else
             info.minImageCount = cap.minImageCount + 2;
+
         if (cap.currentExtent.width == 0xffffffff)
         {
             fb_width = w;
@@ -462,7 +469,7 @@ static void frame_end()
         check_vk_result(err);
         check_vk_result(res);
     }
-    g_FrameIndex = (g_FrameIndex) % IMGUI_VK_QUEUED_FRAMES;
+    g_FrameIndex = (g_FrameIndex+1) % IMGUI_VK_QUEUED_FRAMES;
 }
 
 static void error_callback(int error, const char* description)
