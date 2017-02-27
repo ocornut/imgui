@@ -13,7 +13,9 @@
 
 #define IMGUI_MAX_POSSIBLE_BACK_BUFFERS 16
 #define IMGUI_UNLIMITED_FRAME_RATE
+//#ifdef _DEBUG
 //#define IMGUI_VULKAN_DEBUG_REPORT
+//#endif
 
 static VkAllocationCallbacks*   g_Allocator = NULL;
 static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -34,7 +36,7 @@ static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
 static int                      fb_width, fb_height;
-static uint32_t                 g_BackBufferIndex = 0;
+static uint32_t                 g_BackbufferIndices[IMGUI_VK_QUEUED_FRAMES];    // keep track of recently rendered swapchain frame indices
 static uint32_t                 g_BackBufferCount = 0;
 static VkImage                  g_BackBuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
 static VkImageView              g_BackBufferView[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
@@ -44,7 +46,8 @@ static uint32_t                 g_FrameIndex = 0;
 static VkCommandPool            g_CommandPool[IMGUI_VK_QUEUED_FRAMES];
 static VkCommandBuffer          g_CommandBuffer[IMGUI_VK_QUEUED_FRAMES];
 static VkFence                  g_Fence[IMGUI_VK_QUEUED_FRAMES];
-static VkSemaphore              g_Semaphore[IMGUI_VK_QUEUED_FRAMES];
+static VkSemaphore              g_PresentCompleteSemaphore[IMGUI_VK_QUEUED_FRAMES];
+static VkSemaphore              g_RenderCompleteSemaphore[IMGUI_VK_QUEUED_FRAMES];
 
 static VkClearValue             g_ClearValue = {};
 
@@ -452,7 +455,9 @@ static void setup_vulkan(GLFWwindow* window)
         {
             VkSemaphoreCreateInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-            err = vkCreateSemaphore(g_Device, &info, g_Allocator, &g_Semaphore[i]);
+            err = vkCreateSemaphore(g_Device, &info, g_Allocator, &g_PresentCompleteSemaphore[i]);
+            check_vk_result(err);
+            err = vkCreateSemaphore(g_Device, &info, g_Allocator, &g_RenderCompleteSemaphore[i]);
             check_vk_result(err);
         }
     }
@@ -492,7 +497,8 @@ static void cleanup_vulkan()
         vkDestroyFence(g_Device, g_Fence[i], g_Allocator);
         vkFreeCommandBuffers(g_Device, g_CommandPool[i], 1, &g_CommandBuffer[i]);
         vkDestroyCommandPool(g_Device, g_CommandPool[i], g_Allocator);
-        vkDestroySemaphore(g_Device, g_Semaphore[i], g_Allocator);
+        vkDestroySemaphore(g_Device, g_PresentCompleteSemaphore[i], g_Allocator);
+        vkDestroySemaphore(g_Device, g_RenderCompleteSemaphore[i], g_Allocator);
     }
     for (uint32_t i = 0; i < g_BackBufferCount; i++)
     {
@@ -525,7 +531,7 @@ static void frame_begin()
         check_vk_result(err);
     }
     {
-        err = vkAcquireNextImageKHR(g_Device, g_Swapchain, UINT64_MAX, g_Semaphore[g_FrameIndex], VK_NULL_HANDLE, &g_BackBufferIndex);
+        err = vkAcquireNextImageKHR(g_Device, g_Swapchain, UINT64_MAX, g_PresentCompleteSemaphore[g_FrameIndex], VK_NULL_HANDLE, &g_BackbufferIndices[g_FrameIndex]);
         check_vk_result(err);
     }
     {
@@ -541,7 +547,7 @@ static void frame_begin()
         VkRenderPassBeginInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         info.renderPass = g_RenderPass;
-        info.framebuffer = g_Framebuffer[g_BackBufferIndex];
+        info.framebuffer = g_Framebuffer[g_BackbufferIndices[g_FrameIndex]];
         info.renderArea.extent.width = fb_width;
         info.renderArea.extent.height = fb_height;
         info.clearValueCount = 1;
@@ -559,10 +565,12 @@ static void frame_end()
         VkSubmitInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         info.waitSemaphoreCount = 1;
-        info.pWaitSemaphores = &g_Semaphore[g_FrameIndex];
+        info.pWaitSemaphores = &g_PresentCompleteSemaphore[g_FrameIndex];
         info.pWaitDstStageMask = &wait_stage;
         info.commandBufferCount = 1;
         info.pCommandBuffers = &g_CommandBuffer[g_FrameIndex];
+        info.signalSemaphoreCount = 1;
+        info.pSignalSemaphores = &g_RenderCompleteSemaphore[g_FrameIndex];
 
         err = vkEndCommandBuffer(g_CommandBuffer[g_FrameIndex]);
         check_vk_result(err);
@@ -571,18 +579,32 @@ static void frame_end()
         err = vkQueueSubmit(g_Queue, 1, &info, g_Fence[g_FrameIndex]);
         check_vk_result(err);
     }
-    {
-        VkSwapchainKHR swapchains[1] = {g_Swapchain};
-        uint32_t indices[1] = {g_BackBufferIndex};
-        VkPresentInfoKHR info = {};
-        info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        info.swapchainCount = 1;
-        info.pSwapchains = swapchains;
-        info.pImageIndices = indices;
-        err = vkQueuePresentKHR(g_Queue, &info);
-        check_vk_result(err);
-    }
-    g_FrameIndex = (g_FrameIndex+1) % IMGUI_VK_QUEUED_FRAMES;
+}
+
+static void frame_present()
+{
+    VkResult err;
+// If IMGUI_UNLIMITED_FRAME_RATE is defined we present the latest but one frame
+// Othrewise we present the latest rendered frame
+#ifdef IMGUI_UNLIMITED_FRAME_RATE
+    uint32_t PresentIndex = (g_FrameIndex + IMGUI_VK_QUEUED_FRAMES - 1) % IMGUI_VK_QUEUED_FRAMES;
+#else
+    uint32_t PresentIndex = g_FrameIndex;
+#endif // IMGUI_UNLIMITED_FRAME_RATE
+
+    VkSwapchainKHR swapchains[1] = {g_Swapchain};
+    uint32_t indices[1] = {g_BackbufferIndices[PresentIndex]};
+    VkPresentInfoKHR info = {};
+    info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    info.waitSemaphoreCount = 1;
+    info.pWaitSemaphores = &g_RenderCompleteSemaphore[PresentIndex];
+    info.swapchainCount = 1;
+    info.pSwapchains = swapchains;
+    info.pImageIndices = indices;
+    err = vkQueuePresentKHR(g_Queue, &info);
+    check_vk_result(err);
+
+    g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 }
 
 static void error_callback(int error, const char* description)
@@ -660,6 +682,18 @@ int main(int, char**)
     bool show_another_window = false;
     ImVec4 clear_color = ImColor(114, 144, 154);
 
+    // When IMGUI_UNLIMITED_FRAME_RATE is defined we render into latest image acquired from the swapchain
+    // but we display the image which was rendered before
+    // hence we must render once and increase the g_FrameIndex without presenting, which we do befor entering the render loop 
+    // this is also the reason why frame_end() is split into frame_end() and frame_present(), the latter one not being called here
+#ifdef IMGUI_UNLIMITED_FRAME_RATE
+    ImGui_ImplGlfwVulkan_NewFrame();
+    frame_begin();
+    ImGui_ImplGlfwVulkan_Render(g_CommandBuffer[g_FrameIndex]);
+    frame_end();
+    g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
+#endif // IMGUI_UNLIMITED_FRAME_RATE
+
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -702,6 +736,7 @@ int main(int, char**)
         frame_begin();
         ImGui_ImplGlfwVulkan_Render(g_CommandBuffer[g_FrameIndex]);
         frame_end();
+        frame_present();
     }
 
     // Cleanup
