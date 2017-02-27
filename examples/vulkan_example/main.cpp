@@ -572,7 +572,6 @@ static void frame_end()
         check_vk_result(err);
     }
     {
-        VkResult res;
         VkSwapchainKHR swapchains[1] = {g_Swapchain};
         uint32_t indices[1] = {g_BackBufferIndex};
         VkPresentInfoKHR info = {};
@@ -580,10 +579,8 @@ static void frame_end()
         info.swapchainCount = 1;
         info.pSwapchains = swapchains;
         info.pImageIndices = indices;
-        info.pResults = &res;
         err = vkQueuePresentKHR(g_Queue, &info);
         check_vk_result(err);
-        check_vk_result(res);
     }
     g_FrameIndex = (g_FrameIndex+1) % IMGUI_VK_QUEUED_FRAMES;
 }
