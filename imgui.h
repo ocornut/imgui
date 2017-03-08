@@ -937,11 +937,11 @@ struct ImGuiTextFilter
     ImVector<TextRange> Filters;
     int                 CountGrep;
 
-    ImGuiTextFilter(const char* default_filter = "");
+    IMGUI_API ImGuiTextFilter(const char* default_filter = "");
     ~ImGuiTextFilter() {}
     void                Clear() { InputBuf[0] = 0; Build(); }
-    bool                Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
-    bool                PassFilter(const char* text, const char* text_end = NULL) const;
+    IMGUI_API bool      Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
+    IMGUI_API bool      PassFilter(const char* text, const char* text_end = NULL) const;
     bool                IsActive() const { return !Filters.empty(); }
     IMGUI_API void      Build();
 };
