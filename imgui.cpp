@@ -1317,7 +1317,7 @@ static ImVector<ImGuiStorage::Pair>::iterator LowerBound(ImVector<ImGuiStorage::
     return first;
 }
 
-int ImGuiStorage::GetInt(ImU32 key, int default_val) const
+int ImGuiStorage::GetInt(ImGuiID key, int default_val) const
 {
     ImVector<Pair>::iterator it = LowerBound(const_cast<ImVector<ImGuiStorage::Pair>&>(Data), key);
     if (it == Data.end() || it->key != key)
@@ -1325,12 +1325,12 @@ int ImGuiStorage::GetInt(ImU32 key, int default_val) const
     return it->val_i;
 }
 
-bool ImGuiStorage::GetBool(ImU32 key, bool default_val) const
+bool ImGuiStorage::GetBool(ImGuiID key, bool default_val) const
 {
     return GetInt(key, default_val ? 1 : 0) != 0;
 }
 
-float ImGuiStorage::GetFloat(ImU32 key, float default_val) const
+float ImGuiStorage::GetFloat(ImGuiID key, float default_val) const
 {
     ImVector<Pair>::iterator it = LowerBound(const_cast<ImVector<ImGuiStorage::Pair>&>(Data), key);
     if (it == Data.end() || it->key != key)
@@ -1377,7 +1377,7 @@ void** ImGuiStorage::GetVoidPtrRef(ImGuiID key, void* default_val)
 }
 
 // FIXME-OPT: Need a way to reuse the result of lower_bound when doing GetInt()/SetInt() - not too bad because it only happens on explicit interaction (maximum one a frame)
-void ImGuiStorage::SetInt(ImU32 key, int val)
+void ImGuiStorage::SetInt(ImGuiID key, int val)
 {
     ImVector<Pair>::iterator it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
@@ -1388,12 +1388,12 @@ void ImGuiStorage::SetInt(ImU32 key, int val)
     it->val_i = val;
 }
 
-void ImGuiStorage::SetBool(ImU32 key, bool val)
+void ImGuiStorage::SetBool(ImGuiID key, bool val)
 {
     SetInt(key, val ? 1 : 0);
 }
 
-void ImGuiStorage::SetFloat(ImU32 key, float val)
+void ImGuiStorage::SetFloat(ImGuiID key, float val)
 {
     ImVector<Pair>::iterator it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
@@ -1404,7 +1404,7 @@ void ImGuiStorage::SetFloat(ImU32 key, float val)
     it->val_f = val;
 }
 
-void ImGuiStorage::SetVoidPtr(ImU32 key, void* val)
+void ImGuiStorage::SetVoidPtr(ImGuiID key, void* val)
 {
     ImVector<Pair>::iterator it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
@@ -8329,7 +8329,7 @@ bool ImGui::Combo(const char* label, int* current_item, const char* items_separa
 }
 
 // Combo box function.
-bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+bool ImGui::Combo(const char* label, int* current_item, bool(*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -8591,7 +8591,7 @@ bool ImGui::ListBox(const char* label, int* current_item, const char** items, in
     return value_changed;
 }
 
-bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items)
 {
     if (!ListBoxHeader(label, items_count, height_in_items))
         return false;
