@@ -1,11 +1,17 @@
 // ImGui - binary_to_compressed_c.cpp
-// Helper tool to turn a file into a C array.
-// The data is first compressed with stb_compress() to reduce source code size.
-// Then encoded in Base85 to fit in a string so we can fit roughly 4 bytes of compressed data into 5 bytes of source code (suggested by @mmalex)
-// (If we used 32-bits constants it would require take 11 bytes of source code to encode 4 bytes.)
-// Useful if you want to embed fonts into your code.
+// Helper tool to turn a file into a C array, if you want to embed font data in your source code.
+
+// The data is first compressed with stb_compress() to reduce source code size,
+// then encoded in Base85 to fit in a string so we can fit roughly 4 bytes of compressed data into 5 bytes of source code (suggested by @mmalex)
+// (If we used 32-bits constants it would require take 11 bytes of source code to encode 4 bytes, and be endianness dependent)
 // Note that even with compression, the output array is likely to be bigger than the binary file..
 // Load compressed TTF fonts with ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF()
+
+// Single file application, build with:
+//  # cl.exe binary_to_compressed_c.cpp
+//  # gcc binary_to_compressed_c.cpp
+// etc.
+// You can also find a precompiled Windows binary in the binary/demo package available from https://github.com/ocornut/imgui
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
@@ -79,11 +85,18 @@ bool binary_to_compressed_c(const char* filename, const char* symbol, bool use_b
     if (use_base85_encoding)
     {
         fprintf(out, "static const char %s_%sdata_base85[%d+1] =\n    \"", symbol, compressed_str, (int)((compressed_sz+3)/4)*5);
-        for (int i = 0; i < compressed_sz; i += 4)
+        char prev_c = 0;
+        for (int src_i = 0; src_i < compressed_sz; src_i += 4)
         {
-            unsigned int d = *(unsigned int*)(compressed + i);
-            fprintf(out, "%c%c%c%c%c", Encode85Byte(d), Encode85Byte(d/85), Encode85Byte(d/7225), Encode85Byte(d/614125), Encode85Byte(d/52200625));
-            if ((i % 112) == 112-4)
+            // This is made a little more complicated by the fact that ??X sequences are interpreted as trigraphs by old C/C++ compilers. So we need to escape pairs of ??.
+            unsigned int d = *(unsigned int*)(compressed + src_i);
+            for (unsigned int n5 = 0; n5 < 5; n5++, d /= 85)
+            {
+                char c = Encode85Byte(d);
+                fprintf(out, (c == '?' && prev_c == '?') ? "\\%c" : "%c", c);
+                prev_c = c;
+            }
+            if ((src_i % 112) == 112-4)
                 fprintf(out, "\"\n    \"");
         }
         fprintf(out, "\";\n\n");
@@ -166,17 +179,12 @@ static void stb__write(unsigned char v)
     ++stb__outbytes;
 }
 
-#define stb_out(v)    (stb__out ? *stb__out++ = (stb_uchar) (v) : stb__write((stb_uchar) (v)))
+//#define stb_out(v)    (stb__out ? *stb__out++ = (stb_uchar) (v) : stb__write((stb_uchar) (v)))
+#define stb_out(v)    do { if (stb__out) *stb__out++ = (stb_uchar) (v); else stb__write((stb_uchar) (v)); } while (0)
 
-static void stb_out2(stb_uint v)
-{
-    stb_out(v >> 8);
-    stb_out(v);
-}
-
+static void stb_out2(stb_uint v) { stb_out(v >> 8); stb_out(v); }
 static void stb_out3(stb_uint v) { stb_out(v >> 16); stb_out(v >> 8); stb_out(v); }
-static void stb_out4(stb_uint v) { stb_out(v >> 24); stb_out(v >> 16);
-stb_out(v >> 8 ); stb_out(v);                  }
+static void stb_out4(stb_uint v) { stb_out(v >> 24); stb_out(v >> 16); stb_out(v >> 8 ); stb_out(v); }
 
 static void outliterals(stb_uchar *in, int numlit)
 {

@@ -1,11 +1,30 @@
 
  The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' that you can use without any external files.
- Those are only provided as a convenience, you can load your own .TTF files.
+ The files in this folder are only provided as a convenience, you can use any of your own .TTF files.
 
  Fonts are rasterized in a single texture at the time of calling either of io.Fonts.GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 
 ---------------------------------
- LOADING INSTRUCTIONS
+ USING ICONS
+---------------------------------
+
+ Using an icon font (such as FontAwesome: http://fontawesome.io) is an easy and practical way to use icons in your ImGui application.
+ A common pattern is to merge the icon font within your main font, so you can refer to the icons directly from your strings without having to change fonts back and forth.
+ To refer to the icon from your C++ code, you can use headers files created by Juliette Foucaut, at https://github.com/juliettef/IconFontCppHeaders
+
+    // Merge icons into default tool font
+   #include "IconsFontAwesome.h"
+   ImGuiIO& io = ImGui::GetIO();
+   io.Fonts->AddFontDefault();
+   ImFontConfig config;
+   config.MergeMode = true;
+   const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+   io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config, icon_ranges);
+   // Usage, e.g.
+   ImGui::Text("%s Search", ICON_FA_SEARCH);
+
+---------------------------------
+ FONTS LOADING INSTRUCTIONS
 ---------------------------------
 
  Load default font with:
@@ -35,10 +54,10 @@
 
  Combine two fonts into one:
 
-   // Load main font
+   // Load a first font
    io.Fonts->AddFontDefault();
 
-   // Add character ranges and merge into main font
+   // Add character ranges and merge into the previous font
    // The ranges array is not copied by the AddFont* functions and is used lazily
    // so ensure it is available for duration of font usage
    static const ImWchar icons_ranges[] = { 0xf000, 0xf3ff, 0 }; // will not be copied by AddFont* so keep in scope.
@@ -63,8 +82,18 @@
    ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
    font->DisplayOffset.y += 1;   // Render 1 pixel down
 
+
 ---------------------------------
- EMBED A FONT IN SOURCE CODE
+ REMAPPING CODEPOINTS
+---------------------------------
+
+ All your strings needs to use UTF-8 encoding. Specifying literal in your source code using a local code page (such as CP-923 for Japanese CP-1251 for Cyrillic) will not work.
+ In C++11 you can encode a string literal in UTF-8 by using the u8"hello" syntax. Otherwise you can convert yourself to UTF-8 or load text data from file already saved as UTF-8.
+ You can also try to remap your local codepage characters to their Unicode codepoint using font->AddRemapChar(), but international users may have problems reading/editing your source code.
+
+
+---------------------------------
+ EMBEDDING FONT IN SOURCE CODE
 ---------------------------------
 
  Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array. Then load the font with:
@@ -75,13 +104,21 @@
  
    ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_base85, size_pixels, ...);
 
+
 ---------------------------------
- INCLUDED FONT FILES
+ FONT FILES INCLUDED IN THIS FOLDER
 ---------------------------------
 
+ Roboto-Medium.ttf
+   Apache License 2.0
+   by Christian Robertson
+   https://fonts.google.com/specimen/Roboto
+
  Cousine-Regular.ttf
+   by Steve Matteson
    Digitized data copyright (c) 2010 Google Corporation.
-   Licensed under the SIL Open Font License, Version 1.1   
+   Licensed under the SIL Open Font License, Version 1.1
+   https://fonts.google.com/specimen/Cousine 
 
  DroidSans.ttf
    Copyright (c) Steve Matteson
@@ -92,15 +129,18 @@
    Copyright (c) 2004, 2005 Tristan Grimmer
    MIT License
    recommended loading setting in ImGui: Size = 13.0, DisplayOffset.Y = +1
+   http://www.proggyfonts.net/
 
  ProggyTiny.ttf
    Copyright (c) 2004, 2005 Tristan Grimmer
    MIT License
    recommended loading setting in ImGui: Size = 10.0, DisplayOffset.Y = +1
+   http://www.proggyfonts.net/
 
- Karla-Regular
+ Karla-Regular.ttf
    Copyright (c) 2012, Jonathan Pinhorn
    SIL OPEN FONT LICENSE Version 1.1
+
 
 ---------------------------------
  LINKS
@@ -109,6 +149,7 @@
  Icon fonts
    https://fortawesome.github.io/Font-Awesome/
    https://github.com/SamBrishes/kenney-icon-font
+   https://design.google.com/icons/
 
  Typefaces for source code beautification
    https://github.com/chrissimpkins/codeface

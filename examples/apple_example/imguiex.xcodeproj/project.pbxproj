@@ -9,6 +9,16 @@
 /* Begin PBXBuildFile section */
 		197E1E871B8943FE00E3FE6A /* imgui_draw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 197E1E861B8943FE00E3FE6A /* imgui_draw.cpp */; };
 		197E1E891B89443600E3FE6A /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 197E1E881B89443600E3FE6A /* imgui_demo.cpp */; };
+		1A1A0F231CB39FB50090F036 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A0F221CB39FB50090F036 /* AppDelegate.m */; };
+		1A1A0F281CB39FB50090F036 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A1A0F271CB39FB50090F036 /* Assets.xcassets */; };
+		1A1A0F301CB3A0DA0090F036 /* imgui_draw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 197E1E861B8943FE00E3FE6A /* imgui_draw.cpp */; };
+		1A1A0F311CB3A0DA0090F036 /* imgui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FC5861B2E64AB00C130BA /* imgui.cpp */; };
+		1A1A0F321CB3A0DE0090F036 /* uSynergy.c in Sources */ = {isa = PBXBuildFile; fileRef = 6D1E39151B35EEF10017B40F /* uSynergy.c */; };
+		1A1A0F331CB3A0E10090F036 /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 197E1E881B89443600E3FE6A /* imgui_demo.cpp */; };
+		1A1A0F341CB3A0EC0090F036 /* debug_hud.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FC5891B2E6A5500C130BA /* debug_hud.cpp */; };
+		1A1A0F481CB3A2E50090F036 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A0F391CB3A1B20090F036 /* main.cpp */; };
+		1A1A0F4A1CB3A5070090F036 /* imgui_impl_glfw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A0F371CB3A1B20090F036 /* imgui_impl_glfw.cpp */; };
+		1A1A0F4E1CB3C54D0090F036 /* libglfw3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A1A0F4D1CB3C54D0090F036 /* libglfw3.dylib */; };
 		6D1E39171B35EEF10017B40F /* uSynergy.c in Sources */ = {isa = PBXBuildFile; fileRef = 6D1E39151B35EEF10017B40F /* uSynergy.c */; };
 		6D2FC55A1B2E632000C130BA /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FC5591B2E632000C130BA /* main.m */; };
 		6D2FC55D1B2E632000C130BA /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FC55C1B2E632000C130BA /* AppDelegate.m */; };
@@ -28,9 +38,18 @@
 /* Begin PBXFileReference section */
 		197E1E861B8943FE00E3FE6A /* imgui_draw.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_draw.cpp; path = ../../imgui_draw.cpp; sourceTree = "<group>"; };
 		197E1E881B89443600E3FE6A /* imgui_demo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_demo.cpp; path = ../../../imgui_demo.cpp; sourceTree = "<group>"; };
+		1A1A0F1F1CB39FB50090F036 /* imguiex-osx.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "imguiex-osx.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A1A0F211CB39FB50090F036 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		1A1A0F221CB39FB50090F036 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		1A1A0F271CB39FB50090F036 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1A1A0F2C1CB39FB50090F036 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1A1A0F371CB3A1B20090F036 /* imgui_impl_glfw.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = imgui_impl_glfw.cpp; sourceTree = "<group>"; };
+		1A1A0F381CB3A1B20090F036 /* imgui_impl_glfw.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = imgui_impl_glfw.h; sourceTree = "<group>"; };
+		1A1A0F391CB3A1B20090F036 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		1A1A0F4D1CB3C54D0090F036 /* libglfw3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libglfw3.dylib; path = /usr/local/lib/libglfw3.dylib; sourceTree = "<absolute>"; };
 		6D1E39151B35EEF10017B40F /* uSynergy.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = uSynergy.c; sourceTree = "<group>"; };
 		6D1E39161B35EEF10017B40F /* uSynergy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = uSynergy.h; sourceTree = "<group>"; };
-		6D2FC5541B2E632000C130BA /* imguiex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = imguiex.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6D2FC5541B2E632000C130BA /* imguiex-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "imguiex-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6D2FC5581B2E632000C130BA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		6D2FC5591B2E632000C130BA /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		6D2FC55B1B2E632000C130BA /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -54,6 +73,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		1A1A0F1C1CB39FB50090F036 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A1A0F4E1CB3C54D0090F036 /* libglfw3.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6D2FC5511B2E632000C130BA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -66,6 +93,38 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1A1A0F201CB39FB50090F036 /* imguiex-osx */ = {
+			isa = PBXGroup;
+			children = (
+				1A1A0F4D1CB3C54D0090F036 /* libglfw3.dylib */,
+				1A1A0F351CB3A1B20090F036 /* opengl2_example */,
+				1A1A0F211CB39FB50090F036 /* AppDelegate.h */,
+				1A1A0F221CB39FB50090F036 /* AppDelegate.m */,
+				1A1A0F271CB39FB50090F036 /* Assets.xcassets */,
+				1A1A0F2C1CB39FB50090F036 /* Info.plist */,
+				1A1A0F241CB39FB50090F036 /* Supporting Files */,
+			);
+			path = "imguiex-osx";
+			sourceTree = "<group>";
+		};
+		1A1A0F241CB39FB50090F036 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		1A1A0F351CB3A1B20090F036 /* opengl2_example */ = {
+			isa = PBXGroup;
+			children = (
+				1A1A0F371CB3A1B20090F036 /* imgui_impl_glfw.cpp */,
+				1A1A0F381CB3A1B20090F036 /* imgui_impl_glfw.h */,
+				1A1A0F391CB3A1B20090F036 /* main.cpp */,
+			);
+			name = opengl2_example;
+			path = ../../opengl2_example;
+			sourceTree = "<group>";
+		};
 		6D1E39141B35EEF10017B40F /* usynergy */ = {
 			isa = PBXGroup;
 			children = (
@@ -81,7 +140,8 @@
 			children = (
 				6D1E39141B35EEF10017B40F /* usynergy */,
 				6D2FC5841B2E648D00C130BA /* imgui */,
-				6D2FC5561B2E632000C130BA /* imguiex */,
+				6D2FC5561B2E632000C130BA /* imguiex-ios */,
+				1A1A0F201CB39FB50090F036 /* imguiex-osx */,
 				6D2FC5551B2E632000C130BA /* Products */,
 			);
 			sourceTree = "<group>";
@@ -89,12 +149,13 @@
 		6D2FC5551B2E632000C130BA /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				6D2FC5541B2E632000C130BA /* imguiex.app */,
+				6D2FC5541B2E632000C130BA /* imguiex-ios.app */,
+				1A1A0F1F1CB39FB50090F036 /* imguiex-osx.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		6D2FC5561B2E632000C130BA /* imguiex */ = {
+		6D2FC5561B2E632000C130BA /* imguiex-ios */ = {
 			isa = PBXGroup;
 			children = (
 				6D2FC5811B2E63A100C130BA /* imgui_impl_ios.mm */,
@@ -113,7 +174,7 @@
 				6D2FC56A1B2E632000C130BA /* LaunchScreen.xib */,
 				6D2FC5571B2E632000C130BA /* Supporting Files */,
 			);
-			path = imguiex;
+			path = "imguiex-ios";
 			sourceTree = "<group>";
 		};
 		6D2FC5571B2E632000C130BA /* Supporting Files */ = {
@@ -141,9 +202,26 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		6D2FC5531B2E632000C130BA /* imguiex */ = {
+		1A1A0F1E1CB39FB50090F036 /* imguiex-osx */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 6D2FC57B1B2E632000C130BA /* Build configuration list for PBXNativeTarget "imguiex" */;
+			buildConfigurationList = 1A1A0F2F1CB39FB50090F036 /* Build configuration list for PBXNativeTarget "imguiex-osx" */;
+			buildPhases = (
+				1A1A0F1B1CB39FB50090F036 /* Sources */,
+				1A1A0F1C1CB39FB50090F036 /* Frameworks */,
+				1A1A0F1D1CB39FB50090F036 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "imguiex-osx";
+			productName = "imguiex-osx";
+			productReference = 1A1A0F1F1CB39FB50090F036 /* imguiex-osx.app */;
+			productType = "com.apple.product-type.application";
+		};
+		6D2FC5531B2E632000C130BA /* imguiex-ios */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6D2FC57B1B2E632000C130BA /* Build configuration list for PBXNativeTarget "imguiex-ios" */;
 			buildPhases = (
 				6D2FC5501B2E632000C130BA /* Sources */,
 				6D2FC5511B2E632000C130BA /* Frameworks */,
@@ -153,9 +231,9 @@
 			);
 			dependencies = (
 			);
-			name = imguiex;
+			name = "imguiex-ios";
 			productName = imguiex;
-			productReference = 6D2FC5541B2E632000C130BA /* imguiex.app */;
+			productReference = 6D2FC5541B2E632000C130BA /* imguiex-ios.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -167,6 +245,9 @@
 				LastUpgradeCheck = 0630;
 				ORGANIZATIONNAME = "Joel Davis";
 				TargetAttributes = {
+					1A1A0F1E1CB39FB50090F036 = {
+						CreatedOnToolsVersion = 7.3;
+					};
 					6D2FC5531B2E632000C130BA = {
 						CreatedOnToolsVersion = 6.3.2;
 					};
@@ -185,12 +266,21 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				6D2FC5531B2E632000C130BA /* imguiex */,
+				6D2FC5531B2E632000C130BA /* imguiex-ios */,
+				1A1A0F1E1CB39FB50090F036 /* imguiex-osx */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		1A1A0F1D1CB39FB50090F036 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A1A0F281CB39FB50090F036 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6D2FC5521B2E632000C130BA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -206,6 +296,21 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1A1A0F1B1CB39FB50090F036 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A1A0F301CB3A0DA0090F036 /* imgui_draw.cpp in Sources */,
+				1A1A0F311CB3A0DA0090F036 /* imgui.cpp in Sources */,
+				1A1A0F331CB3A0E10090F036 /* imgui_demo.cpp in Sources */,
+				1A1A0F341CB3A0EC0090F036 /* debug_hud.cpp in Sources */,
+				1A1A0F481CB3A2E50090F036 /* main.cpp in Sources */,
+				1A1A0F321CB3A0DE0090F036 /* uSynergy.c in Sources */,
+				1A1A0F231CB39FB50090F036 /* AppDelegate.m in Sources */,
+				1A1A0F4A1CB3A5070090F036 /* imgui_impl_glfw.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6D2FC5501B2E632000C130BA /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -244,6 +349,54 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		1A1A0F2D1CB39FB50090F036 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ANALYZER_NONNULL = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../../",
+					/usr/local/include,
+				);
+				INFOPLIST_FILE = "imguiex-osx/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LIBRARY_SEARCH_PATHS = /usr/local/lib;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.imgui.example.imguiex.imguiex-osx";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = "";
+			};
+			name = Debug;
+		};
+		1A1A0F2E1CB39FB50090F036 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ANALYZER_NONNULL = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../../",
+					/usr/local/include,
+				);
+				INFOPLIST_FILE = "imguiex-osx/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LIBRARY_SEARCH_PATHS = /usr/local/lib;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.imgui.example.imguiex.imguiex-osx";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = "";
+			};
+			name = Release;
+		};
 		6D2FC5791B2E632000C130BA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -280,11 +433,13 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
 		};
@@ -318,10 +473,12 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				USER_HEADER_SEARCH_PATHS = "";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -330,7 +487,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				INFOPLIST_FILE = imguiex/Info.plist;
+				INFOPLIST_FILE = "imguiex-ios/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -340,7 +497,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				INFOPLIST_FILE = imguiex/Info.plist;
+				INFOPLIST_FILE = "imguiex-ios/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -349,6 +506,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1A1A0F2F1CB39FB50090F036 /* Build configuration list for PBXNativeTarget "imguiex-osx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A1A0F2D1CB39FB50090F036 /* Debug */,
+				1A1A0F2E1CB39FB50090F036 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		6D2FC54F1B2E632000C130BA /* Build configuration list for PBXProject "imguiex" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -358,7 +524,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		6D2FC57B1B2E632000C130BA /* Build configuration list for PBXNativeTarget "imguiex" */ = {
+		6D2FC57B1B2E632000C130BA /* Build configuration list for PBXNativeTarget "imguiex-ios" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				6D2FC57C1B2E632000C130BA /* Debug */,

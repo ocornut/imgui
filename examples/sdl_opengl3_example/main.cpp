@@ -4,13 +4,13 @@
 #include <imgui.h>
 #include "imgui_impl_sdl_gl3.h"
 #include <stdio.h>
-#include <GL/gl3w.h>
+#include <GL/gl3w.h>    // This example is using gl3w to access OpenGL functions (because it is small). You may use glew/glad/glLoadGen/etc. whatever already works for you.
 #include <SDL.h>
 
 int main(int, char**)
 {
     // Setup SDL
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER) != 0)
     {
         printf("Error: %s\n", SDL_GetError());
         return -1;
@@ -58,7 +58,7 @@ int main(int, char**)
             if (event.type == SDL_QUIT)
                 done = true;
         }
-        ImGui_ImplSdlGL3_NewFrame();
+        ImGui_ImplSdlGL3_NewFrame(window);
 
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
@@ -98,7 +98,7 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplSdlGL3_Shutdown();
-    SDL_GL_DeleteContext(glcontext);  
+    SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(window);
     SDL_Quit();
 

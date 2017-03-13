@@ -13,6 +13,6 @@ before_install:
   - if [ $TRAVIS_OS_NAME == osx ]; then brew update && brew install glfw3; fi
 
 script: 
-  - make -C examples/opengl_example
+  - make -C examples/opengl2_example
   - make -C examples/opengl3_example
 

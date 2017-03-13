@@ -1,4 +1,6 @@
 // ImGui Win32 + DirectX12 binding
+// In this binding, ImTextureID is used to store a 'D3D12_GPU_DESCRIPTOR_HANDLE' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
+
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
@@ -48,116 +50,143 @@ struct VERTEX_CONSTANT_BUFFER
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 void ImGui_ImplDX12_RenderDrawLists(ImDrawData* draw_data)
 {
-    // Create and grow vertex/index buffers if needed
-    //
     // NOTE: I'm assuming that this only get's called once per frame!  If not,
     // we can't just re-allocate the IB or VB, we'll have to do a proper
     // allocator.
     g_frameIndex = g_frameIndex + 1;
     FrameResources* frameResources = &g_pFrameResources[g_frameIndex % g_numFramesInFlight];
+    ID3D12Resource* g_pVB = frameResources->VB;
+    ID3D12Resource* g_pIB = frameResources->IB;
+    int g_VertexBufferSize = frameResources->VertexBufferSize;
+    int g_IndexBufferSize = frameResources->IndexBufferSize;
+    ID3D12GraphicsCommandList* ctx = g_pd3dCommandList;
 
-    D3D12_HEAP_PROPERTIES props = {};
-    props.Type = D3D12_HEAP_TYPE_UPLOAD;
-    props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-    props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-    D3D12_RESOURCE_DESC desc = {};
-    desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    desc.Height = 1;
-    desc.DepthOrArraySize = 1;
-    desc.MipLevels = 1;
-    desc.Format = DXGI_FORMAT_UNKNOWN;
-    desc.SampleDesc.Count = 1;
-    desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-    desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-    if (!frameResources->VB || frameResources->VertexBufferSize < draw_data->TotalVtxCount)
+    // Create and grow vertex/index buffers if needed
+    if (!g_pVB || g_VertexBufferSize < draw_data->TotalVtxCount)
     {
-        if (frameResources->VB) { frameResources->VB->Release(); frameResources->VB = NULL; }
-        frameResources->VertexBufferSize = draw_data->TotalVtxCount + 5000;
-        desc.Width = frameResources->VertexBufferSize * sizeof(ImDrawVert);
-        HRESULT hr = g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&frameResources->VB));
-        assert(SUCCEEDED(hr));
+        if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
+        g_VertexBufferSize = draw_data->TotalVtxCount + 5000;
+        D3D12_HEAP_PROPERTIES props;
+        memset(&props, 0, sizeof(D3D12_HEAP_PROPERTIES));
+        props.Type = D3D12_HEAP_TYPE_UPLOAD;
+        props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        D3D12_RESOURCE_DESC desc;
+        memset(&desc, 0, sizeof(D3D12_RESOURCE_DESC));
+        desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        desc.Width = g_VertexBufferSize * sizeof(ImDrawVert);
+        desc.Height = 1;
+        desc.DepthOrArraySize = 1;
+        desc.MipLevels = 1;
+        desc.Format = DXGI_FORMAT_UNKNOWN;
+        desc.SampleDesc.Count = 1;
+        desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        if (g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE,
+            &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&g_pVB)) < 0)
+            return;
+        frameResources->VB = g_pVB;
+        frameResources->VertexBufferSize = g_VertexBufferSize;
     }
-    if (!frameResources->IB || frameResources->IndexBufferSize < draw_data->TotalIdxCount)
+    if (!g_pIB || g_IndexBufferSize < draw_data->TotalIdxCount)
     {
-        if (frameResources->IB) { frameResources->IB->Release(); frameResources->IB = NULL; }
-        frameResources->IndexBufferSize = draw_data->TotalIdxCount + 10000;
-        desc.Width = frameResources->IndexBufferSize * sizeof(ImDrawIdx);
-        HRESULT hr = g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&frameResources->IB));
-        assert(SUCCEEDED(hr));
+        if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
+        g_IndexBufferSize = draw_data->TotalIdxCount + 10000;
+        D3D12_HEAP_PROPERTIES props;
+        memset(&props, 0, sizeof(D3D12_HEAP_PROPERTIES));
+        props.Type = D3D12_HEAP_TYPE_UPLOAD;
+        props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        D3D12_RESOURCE_DESC desc;
+        memset(&desc, 0, sizeof(D3D12_RESOURCE_DESC));
+        desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        desc.Width = g_IndexBufferSize * sizeof(ImDrawIdx);
+        desc.Height = 1;
+        desc.DepthOrArraySize = 1;
+        desc.MipLevels = 1;
+        desc.Format = DXGI_FORMAT_UNKNOWN;
+        desc.SampleDesc.Count = 1;
+        desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        if (g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE,
+            &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&g_pIB)) < 0)
+            return;
+        frameResources->IB = g_pIB;
+        frameResources->IndexBufferSize = g_IndexBufferSize;
     }
 
     // Copy and convert all vertices into a single contiguous buffer
-    D3D12_RANGE range = {};
-    void* vtx_resource = NULL;
-    HRESULT hr = frameResources->VB->Map(0, &range, &vtx_resource);
-    assert(SUCCEEDED(hr));
-
-    void* idx_resource = NULL;
-    hr = frameResources->IB->Map(0, &range, &idx_resource);
-    assert(SUCCEEDED(hr));
-
+    void* vtx_resource, *idx_resource;
+    D3D12_RANGE range;
+    memset(&range, 0, sizeof(D3D12_RANGE));
+    if (g_pVB->Map(0, &range, &vtx_resource) != S_OK)
+        return;
+    if (g_pIB->Map(0, &range, &idx_resource) != S_OK)
+        return;
     ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource;
     ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        memcpy(vtx_dst, &cmd_list->VtxBuffer[0], cmd_list->VtxBuffer.size() * sizeof(ImDrawVert));
-        memcpy(idx_dst, &cmd_list->IdxBuffer[0], cmd_list->IdxBuffer.size() * sizeof(ImDrawIdx));
-        vtx_dst += cmd_list->VtxBuffer.size();
-        idx_dst += cmd_list->IdxBuffer.size();
+        memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+        memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+        vtx_dst += cmd_list->VtxBuffer.Size;
+        idx_dst += cmd_list->IdxBuffer.Size;
     }
-    frameResources->VB->Unmap(0, &range);
-    frameResources->IB->Unmap(0, &range);
+    g_pVB->Unmap(0, &range);
+    g_pIB->Unmap(0, &range);
 
     // Setup orthographic projection matrix into our constant buffer
-    VERTEX_CONSTANT_BUFFER vertexConstantBuffer = {};
+    VERTEX_CONSTANT_BUFFER vertex_constant_buffer;
     {
-        const float L = 0.0f;
-        const float R = ImGui::GetIO().DisplaySize.x;
-        const float B = ImGui::GetIO().DisplaySize.y;
-        const float T = 0.0f;
-        const float mvp[4][4] =
+        VERTEX_CONSTANT_BUFFER* constant_buffer = &vertex_constant_buffer;
+        float L = 0.0f;
+        float R = ImGui::GetIO().DisplaySize.x;
+        float B = ImGui::GetIO().DisplaySize.y;
+        float T = 0.0f;
+        float mvp[4][4] =
         {
             { 2.0f/(R-L),   0.0f,           0.0f,       0.0f },
             { 0.0f,         2.0f/(T-B),     0.0f,       0.0f },
             { 0.0f,         0.0f,           0.5f,       0.0f },
             { (R+L)/(L-R),  (T+B)/(B-T),    0.5f,       1.0f },
         };
-        memcpy(&vertexConstantBuffer.mvp, mvp, sizeof(mvp));
+        memcpy(&constant_buffer->mvp, mvp, sizeof(mvp));
     }
 
     // Setup viewport
-    D3D12_VIEWPORT viewport = {};
-    viewport.Width = ImGui::GetIO().DisplaySize.x;
-    viewport.Height = ImGui::GetIO().DisplaySize.y;
-    viewport.MinDepth = 0.0f;
-    viewport.MaxDepth = 1.0f;
-    viewport.TopLeftX = 0;
-    viewport.TopLeftY = 0;
+    D3D12_VIEWPORT vp;
+    memset(&vp, 0, sizeof(D3D12_VIEWPORT));
+    vp.Width = ImGui::GetIO().DisplaySize.x;
+    vp.Height = ImGui::GetIO().DisplaySize.y;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    vp.TopLeftX = vp.TopLeftY = 0.0f;
+    ctx->RSSetViewports(1, &vp);
 
     // Bind shader and vertex buffers
-    D3D12_VERTEX_BUFFER_VIEW vbv = {};
-    vbv.BufferLocation = frameResources->VB->GetGPUVirtualAddress();
-    vbv.SizeInBytes = frameResources->VertexBufferSize * sizeof(ImDrawVert);
-    vbv.StrideInBytes = sizeof(ImDrawVert);
-
-    D3D12_INDEX_BUFFER_VIEW ibv = {};
-    ibv.BufferLocation = frameResources->IB->GetGPUVirtualAddress();
-    ibv.SizeInBytes = frameResources->IndexBufferSize * sizeof(ImDrawIdx);
+    unsigned int stride = sizeof(ImDrawVert);
+    unsigned int offset = 0;
+    D3D12_VERTEX_BUFFER_VIEW vbv;
+    memset(&vbv, 0, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+    vbv.BufferLocation = g_pVB->GetGPUVirtualAddress() + offset;
+    vbv.SizeInBytes = g_VertexBufferSize * stride;
+    vbv.StrideInBytes = stride;
+    ctx->IASetVertexBuffers(0, 1, &vbv);
+    D3D12_INDEX_BUFFER_VIEW ibv;
+    memset(&ibv, 0, sizeof(D3D12_INDEX_BUFFER_VIEW));
+    ibv.BufferLocation = g_pIB->GetGPUVirtualAddress();
+    ibv.SizeInBytes = g_IndexBufferSize * sizeof(ImDrawIdx);
     ibv.Format = sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
+    ctx->IASetIndexBuffer(&ibv);
+    ctx->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ctx->SetPipelineState(g_pPipelineState);
+    ctx->SetGraphicsRootSignature(g_pRootSignature);
+    ctx->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
 
-    FLOAT blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
-
-    g_pd3dCommandList->SetPipelineState(g_pPipelineState);
-    g_pd3dCommandList->SetGraphicsRootSignature(g_pRootSignature);
-    g_pd3dCommandList->SetGraphicsRoot32BitConstants(0, 16, &vertexConstantBuffer, 0);
-    g_pd3dCommandList->IASetIndexBuffer(&ibv);
-    g_pd3dCommandList->IASetVertexBuffers(0, 1, &vbv);
-    g_pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    g_pd3dCommandList->RSSetViewports(1, &viewport);
-    g_pd3dCommandList->OMSetBlendFactor(blendFactor);
+    // Setup render state
+    const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
+    ctx->OMSetBlendFactor(blend_factor);
 
     // Render command lists
     int vtx_offset = 0;
@@ -165,7 +194,7 @@ void ImGui_ImplDX12_RenderDrawLists(ImDrawData* draw_data)
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++)
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
@@ -174,18 +203,14 @@ void ImGui_ImplDX12_RenderDrawLists(ImDrawData* draw_data)
             }
             else
             {
-                D3D12_RECT scissorRect = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
-
-                D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = {};
-                srvHandle.ptr = (UINT64) pcmd->TextureId;
-
-                g_pd3dCommandList->SetGraphicsRootDescriptorTable(1, srvHandle);
-                g_pd3dCommandList->RSSetScissorRects(1, &scissorRect);
-                g_pd3dCommandList->DrawIndexedInstanced(pcmd->ElemCount, 1, idx_offset, vtx_offset, 0);
+                const D3D12_RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
+                ctx->SetGraphicsRootDescriptorTable(1, *(D3D12_GPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
+                ctx->RSSetScissorRects(1, &r);
+                ctx->DrawIndexedInstanced(pcmd->ElemCount, 1, idx_offset, vtx_offset, 0);
             }
             idx_offset += pcmd->ElemCount;
         }
-        vtx_offset += cmd_list->VtxBuffer.size();
+        vtx_offset += cmd_list->VtxBuffer.Size;
     }
 }
 
@@ -246,48 +271,50 @@ static void ImGui_ImplDX12_CreateFontsTexture()
 
     // Upload texture to graphics system
     {
-        D3D12_RESOURCE_DESC resourceDesc = {};
-        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-        resourceDesc.Alignment = 0;
-        resourceDesc.Width = width;
-        resourceDesc.Height = height;
-        resourceDesc.DepthOrArraySize = 1;
-        resourceDesc.MipLevels = 1;
-        resourceDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        resourceDesc.SampleDesc.Count = 1;
-        resourceDesc.SampleDesc.Quality = 0;
-        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-        D3D12_HEAP_PROPERTIES props = {};
+        D3D12_HEAP_PROPERTIES props;
+        memset(&props, 0, sizeof(D3D12_HEAP_PROPERTIES));
         props.Type = D3D12_HEAP_TYPE_DEFAULT;
         props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
-        HRESULT hr = g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST, NULL, IID_PPV_ARGS(&g_pFontTextureResource));
-        assert(SUCCEEDED(hr));
+        D3D12_RESOURCE_DESC desc;
+        ZeroMemory(&desc, sizeof(desc));
+        desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        desc.Alignment = 0;
+        desc.Width = width;
+        desc.Height = height;
+        desc.DepthOrArraySize = 1;
+        desc.MipLevels = 1;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
+        desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+        desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+        ID3D12Resource* pTexture = NULL;
+        g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
+            D3D12_RESOURCE_STATE_COPY_DEST, NULL, IID_PPV_ARGS(&pTexture));
 
         UINT uploadPitch = (width * 4 + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u);
         UINT uploadSize = height * uploadPitch;
-        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        resourceDesc.Alignment = 0;
-        resourceDesc.Width = uploadSize;
-        resourceDesc.Height = 1;
-        resourceDesc.DepthOrArraySize = 1;
-        resourceDesc.MipLevels = 1;
-        resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-        resourceDesc.SampleDesc.Count = 1;
-        resourceDesc.SampleDesc.Quality = 0;
-        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        desc.Alignment = 0;
+        desc.Width = uploadSize;
+        desc.Height = 1;
+        desc.DepthOrArraySize = 1;
+        desc.MipLevels = 1;
+        desc.Format = DXGI_FORMAT_UNKNOWN;
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
+        desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
         props.Type = D3D12_HEAP_TYPE_UPLOAD;
         props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
         ID3D12Resource* uploadBuffer = NULL;
-        hr = g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+        HRESULT hr = g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
             D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&uploadBuffer));
         assert(SUCCEEDED(hr));
 
@@ -311,14 +338,14 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         srcLocation.PlacedFootprint.Footprint.RowPitch = uploadPitch;
 
         D3D12_TEXTURE_COPY_LOCATION dstLocation = {};
-        dstLocation.pResource = g_pFontTextureResource;
+        dstLocation.pResource = pTexture;
         dstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
         dstLocation.SubresourceIndex = 0;
 
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrier.Transition.pResource   = g_pFontTextureResource;
+        barrier.Transition.pResource   = pTexture;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
         barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -366,14 +393,24 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         CloseHandle(event);
         fence->Release();
         uploadBuffer->Release();
-    }
 
-    // Create texture view
-    g_pd3dDevice->CreateShaderResourceView(g_pFontTextureResource, NULL, g_hFontSrvCpuDescHandle);
+        // Create texture view
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+        ZeroMemory(&srvDesc, sizeof(srvDesc));
+        srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MipLevels = desc.MipLevels;
+        srvDesc.Texture2D.MostDetailedMip = 0;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        g_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, g_hFontSrvCpuDescHandle);
+        if (g_pFontTextureResource != NULL)
+            g_pFontTextureResource->Release();
+        g_pFontTextureResource = pTexture;
+    }
 
     // Store our identifier
     static_assert(sizeof(void*) >= sizeof(g_hFontSrvGpuDescHandle.ptr), "Can't pack descriptor handle into TexID");
-    ImGui::GetIO().Fonts->TexID = (void*) g_hFontSrvGpuDescHandle.ptr;
+    io.Fonts->TexID = (void *)g_hFontSrvGpuDescHandle.ptr;
 }
 
 bool    ImGui_ImplDX12_CreateDeviceObjects()
@@ -438,9 +475,27 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         g_pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&g_pRootSignature));
         blob->Release();
     }
-    // Create the pipeline state object
+
+    // By using D3DCompile() from <d3dcompiler.h> / d3dcompiler.lib, we introduce a dependency to a given version of d3dcompiler_XX.dll (see D3DCOMPILER_DLL_A)
+    // If you would like to use this DX12 sample code but remove this dependency you can: 
+    //  1) compile once, save the compiled shader blobs into a file or source code and pass them to CreateVertexShader()/CreatePixelShader() [preferred solution]
+    //  2) use code to detect any version of the DLL and grab a pointer to D3DCompile from the DLL. 
+    // See https://github.com/ocornut/imgui/pull/638 for sources and details.
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
+    memset(&psoDesc, 0, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+    psoDesc.NodeMask = 1;
+    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    psoDesc.pRootSignature = g_pRootSignature;
+    psoDesc.SampleMask = UINT_MAX;
+    psoDesc.NumRenderTargets = 1;
+    psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    psoDesc.SampleDesc.Count = 1;
+    psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+
+    // Create the vertex shader
     {
-        static const char* vertexShader = 
+        static const char* vertexShader =
             "cbuffer vertexBuffer : register(b0) \
             {\
             float4x4 ProjectionMatrix; \
@@ -468,6 +523,22 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
             return output;\
             }";
 
+        D3DCompile(vertexShader, strlen(vertexShader), NULL, NULL, NULL, "main", "vs_5_0", 0, 0, &g_pVertexShaderBlob, NULL);
+        if (g_pVertexShaderBlob == NULL) // NB: Pass ID3D10Blob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
+            return false;
+        psoDesc.VS = { g_pVertexShaderBlob->GetBufferPointer(), g_pVertexShaderBlob->GetBufferSize() };
+
+        // Create the input layout
+        static D3D12_INPUT_ELEMENT_DESC local_layout[] = {
+            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->uv),  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (size_t)(&((ImDrawVert*)0)->col), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        };
+        psoDesc.InputLayout = { local_layout, 3 };
+    }
+
+    // Create the pixel shader
+    {
         static const char* pixelShader =
             "struct PS_INPUT\
             {\
@@ -484,61 +555,56 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
             return out_col; \
             }";
 
-        D3DCompile(vertexShader, strlen(vertexShader), NULL, NULL, NULL, "main", "vs_5_0", 0, 0, &g_pVertexShaderBlob, NULL);
-        if (g_pVertexShaderBlob == NULL) // NB: Pass ID3D10Blob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
-            return false;
-
         D3DCompile(pixelShader, strlen(pixelShader), NULL, NULL, NULL, "main", "ps_5_0", 0, 0, &g_pPixelShaderBlob, NULL);
         if (g_pPixelShaderBlob == NULL)  // NB: Pass ID3D10Blob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
             return false;
-
-        D3D12_INPUT_ELEMENT_DESC localLayout[] = {
-            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->uv),  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (size_t)(&((ImDrawVert*)0)->col), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        };
-
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = {};
-        desc.NodeMask              = 1;
-        desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        desc.InputLayout           = { localLayout, _countof(localLayout) };
-        desc.pRootSignature        = g_pRootSignature;
-        desc.VS                    = { g_pVertexShaderBlob->GetBufferPointer(), g_pVertexShaderBlob->GetBufferSize() };
-        desc.PS                    = { g_pPixelShaderBlob->GetBufferPointer(), g_pPixelShaderBlob->GetBufferSize() };
-        desc.SampleMask            = UINT_MAX;
-        desc.NumRenderTargets      = 1;
-        desc.RTVFormats[0]         = DXGI_FORMAT_B8G8R8A8_UNORM;
-        desc.SampleDesc.Count      = 1;
-        desc.Flags                 = D3D12_PIPELINE_STATE_FLAG_NONE;
-
-        desc.RasterizerState.FillMode              = D3D12_FILL_MODE_SOLID;
-        desc.RasterizerState.CullMode              = D3D12_CULL_MODE_NONE;
-        desc.RasterizerState.FrontCounterClockwise = FALSE;
-        desc.RasterizerState.DepthBias             = D3D12_DEFAULT_DEPTH_BIAS;
-        desc.RasterizerState.DepthBiasClamp        = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
-        desc.RasterizerState.SlopeScaledDepthBias  = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
-        desc.RasterizerState.DepthClipEnable       = TRUE;
-        desc.RasterizerState.MultisampleEnable     = FALSE;
-        desc.RasterizerState.AntialiasedLineEnable = FALSE;
-        desc.RasterizerState.ForcedSampleCount     = 0;
-        desc.RasterizerState.ConservativeRaster    = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
-
-        desc.BlendState.AlphaToCoverageEnable = FALSE;
-        desc.BlendState.RenderTarget[0].BlendEnable = TRUE;
-        desc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-        desc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-        desc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-        desc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
-        desc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-        desc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-        desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
-        desc.DepthStencilState.DepthEnable   = FALSE;
-        desc.DepthStencilState.StencilEnable = FALSE;
-
-        HRESULT hr = g_pd3dDevice->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&g_pPipelineState));
-        assert(SUCCEEDED(hr));
+        psoDesc.PS = { g_pPixelShaderBlob->GetBufferPointer(), g_pPixelShaderBlob->GetBufferSize() };
     }
+
+    // Create the blending setup
+    {
+        D3D12_BLEND_DESC& desc = psoDesc.BlendState;
+        desc.AlphaToCoverageEnable = false;
+        desc.RenderTarget[0].BlendEnable = true;
+        desc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+        desc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+        desc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+        desc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
+        desc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+        desc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+        desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    }
+
+    // Create the rasterizer state
+    {
+        D3D12_RASTERIZER_DESC& desc = psoDesc.RasterizerState;
+        desc.FillMode = D3D12_FILL_MODE_SOLID;
+        desc.CullMode = D3D12_CULL_MODE_NONE;
+        desc.FrontCounterClockwise = FALSE;
+        desc.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+        desc.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+        desc.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+        desc.DepthClipEnable = true;
+        desc.MultisampleEnable = FALSE;
+        desc.AntialiasedLineEnable = FALSE;
+        desc.ForcedSampleCount = 0;
+        desc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+    }
+
+    // Create depth-stencil State
+    {
+        D3D12_DEPTH_STENCIL_DESC& desc = psoDesc.DepthStencilState;
+        desc.DepthEnable = false;
+        desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+        desc.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+        desc.StencilEnable = false;
+        desc.FrontFace.StencilFailOp = desc.FrontFace.StencilDepthFailOp = desc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+        desc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+        desc.BackFace = desc.FrontFace;
+    }
+
+    if (g_pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&g_pPipelineState)) != S_OK)
+        return false;
 
     ImGui_ImplDX12_CreateFontsTexture();
 
@@ -563,21 +629,21 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     ImGui::GetIO().Fonts->TexID = 0;
 }
 
-bool    ImGui_ImplDX12_Init(void* hwnd, int numFramesInFlight,
-                            ID3D12Device* device, ID3D12GraphicsCommandList* cmdList,
-                            D3D12_CPU_DESCRIPTOR_HANDLE fontSrvCpuDescHandle,
-                            D3D12_GPU_DESCRIPTOR_HANDLE fontSrvGpuDescHandle)
+bool    ImGui_ImplDX12_Init(void* hwnd, int num_frames_in_flight,
+                            ID3D12Device* device, ID3D12GraphicsCommandList* command_list,
+                            D3D12_CPU_DESCRIPTOR_HANDLE font_srv_cpu_desc_handle,
+                            D3D12_GPU_DESCRIPTOR_HANDLE font_srv_gpu_desc_handle)
 {
     g_hWnd = (HWND)hwnd;
     g_pd3dDevice = device;
-    g_pd3dCommandList = cmdList;
-    g_hFontSrvCpuDescHandle = fontSrvCpuDescHandle;
-    g_hFontSrvGpuDescHandle = fontSrvGpuDescHandle;
-    g_pFrameResources = new FrameResources [numFramesInFlight];
-    g_numFramesInFlight = numFramesInFlight;
+    g_pd3dCommandList = command_list;
+    g_hFontSrvCpuDescHandle = font_srv_cpu_desc_handle;
+    g_hFontSrvGpuDescHandle = font_srv_gpu_desc_handle;
+    g_pFrameResources = new FrameResources [num_frames_in_flight];
+    g_numFramesInFlight = num_frames_in_flight;
     g_frameIndex = UINT_MAX;
 
-    for (int i = 0; i < numFramesInFlight; ++i)
+    for (int i = 0; i < num_frames_in_flight; ++i)
     {
         g_pFrameResources[i].IB = NULL;
         g_pFrameResources[i].VB = NULL;
@@ -654,13 +720,15 @@ void ImGui_ImplDX12_NewFrame()
     io.KeyCtrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     io.KeyShift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
     io.KeyAlt = (GetKeyState(VK_MENU) & 0x8000) != 0;
+    io.KeySuper = false;
     // io.KeysDown : filled by WM_KEYDOWN/WM_KEYUP events
     // io.MousePos : filled by WM_MOUSEMOVE events
     // io.MouseDown : filled by WM_*BUTTON* events
     // io.MouseWheel : filled by WM_MOUSEWHEEL events
 
     // Hide OS mouse cursor if ImGui is drawing it
-    SetCursor(io.MouseDrawCursor ? NULL : LoadCursor(NULL, IDC_ARROW));
+    if (io.MouseDrawCursor)
+        SetCursor(NULL);
 
     // Start the frame
     ImGui::NewFrame();
