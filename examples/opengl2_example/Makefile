@@ -10,7 +10,7 @@
 
 #CXX = g++
 
-EXE = opengl_example
+EXE = opengl2_example
 OBJS = main.o imgui_impl_glfw.o
 OBJS += ../../imgui.o ../../imgui_demo.o ../../imgui_draw.o
 
@@ -29,11 +29,11 @@ endif
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
 	LIBS = -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
-	LIBS += -L/usr/local/lib -lglfw3
+	#LIBS += -L/usr/local/lib -lglfw3
+	LIBS += -L/usr/local/lib -lglfw
 
 	CXXFLAGS = -I../../ -I/usr/local/include
 	CXXFLAGS += -Wall -Wformat
-#	CXXFLAGS += -D__APPLE__
 	CFLAGS = $(CXXFLAGS)
 endif
 

@@ -23,7 +23,8 @@ static VkRenderPass             g_RenderPass = VK_NULL_HANDLE;
 static uint32_t                 g_QueueFamily = 0;
 static VkQueue                  g_Queue = VK_NULL_HANDLE;
 
-static VkFormat                 g_Format = VK_FORMAT_B8G8R8A8_UNORM;
+static VkFormat                 g_ImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+static VkFormat                 g_ViewFormat = VK_FORMAT_B8G8R8A8_UNORM;
 static VkColorSpaceKHR          g_ColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 static VkImageSubresourceRange  g_ImageRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
@@ -49,7 +50,7 @@ static void check_vk_result(VkResult err)
 {
     if (err == 0) return;
     printf("VkResult %d\n", err);
-    if (err < 0) 
+    if (err < 0)
         abort();
 }
 
@@ -61,10 +62,10 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
     check_vk_result(err);
 
     // Destroy old Framebuffer:
-    for (uint32_t i=0; i<g_BackBufferCount; i++)
+    for (uint32_t i = 0; i < g_BackBufferCount; i++)
         if (g_BackBufferView[i])
             vkDestroyImageView(g_Device, g_BackBufferView[i], g_Allocator);
-     for(uint32_t i=0; i<g_BackBufferCount; i++)
+    for (uint32_t i = 0; i < g_BackBufferCount; i++)
         if (g_Framebuffer[i])
             vkDestroyFramebuffer(g_Device, g_Framebuffer[i], g_Allocator);
     if (g_RenderPass)
@@ -75,7 +76,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         VkSwapchainCreateInfoKHR info = {};
         info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         info.surface = g_Surface;
-        info.imageFormat = g_Format;
+        info.imageFormat = g_ImageFormat;
         info.imageColorSpace = g_ColorSpace;
         info.imageArrayLayers = 1;
         info.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -88,7 +89,10 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         VkSurfaceCapabilitiesKHR cap;
         err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_Gpu, g_Surface, &cap);
         check_vk_result(err);
-        info.minImageCount = (cap.minImageCount + 2 < cap.maxImageCount) ? (cap.minImageCount + 2) : cap.maxImageCount;
+        if (cap.maxImageCount > 0)
+            info.minImageCount = (cap.minImageCount + 2 < cap.maxImageCount) ? (cap.minImageCount + 2) : cap.maxImageCount;
+        else
+            info.minImageCount = cap.minImageCount + 2;
         if (cap.currentExtent.width == 0xffffffff)
         {
             fb_width = w;
@@ -116,7 +120,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
     // Create the Render Pass:
     {
         VkAttachmentDescription attachment = {};
-        attachment.format = g_Format;
+        attachment.format = g_ViewFormat;
         attachment.samples = VK_SAMPLE_COUNT_1_BIT;
         attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -146,13 +150,13 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         VkImageViewCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        info.format = g_Format;
+        info.format = g_ViewFormat;
         info.components.r = VK_COMPONENT_SWIZZLE_R;
         info.components.g = VK_COMPONENT_SWIZZLE_G;
         info.components.b = VK_COMPONENT_SWIZZLE_B;
         info.components.a = VK_COMPONENT_SWIZZLE_A;
         info.subresourceRange = g_ImageRange;
-        for (uint32_t i = 0; i<g_BackBufferCount; i++)
+        for (uint32_t i = 0; i < g_BackBufferCount; i++)
         {
             info.image = g_BackBuffer[i];
             err = vkCreateImageView(g_Device, &info, g_Allocator, &g_BackBufferView[i]);
@@ -171,7 +175,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         info.width = fb_width;
         info.height = fb_height;
         info.layers = 1;
-        for (uint32_t i = 0; i<g_BackBufferCount; i++)
+        for (uint32_t i = 0; i < g_BackBufferCount; i++)
         {
             attachment[0] = g_BackBufferView[i];
             err = vkCreateFramebuffer(g_Device, &info, g_Allocator, &g_Framebuffer[i]);
@@ -201,12 +205,62 @@ static void setup_vulkan(GLFWwindow* window)
         err = glfwCreateWindowSurface(g_Instance, window, g_Allocator, &g_Surface);
         check_vk_result(err);
     }
-    
-    // Get GPU
+
+    // Get GPU (WARNING here we assume the first gpu is one we can use)
     {
         uint32_t count = 1;
         err = vkEnumeratePhysicalDevices(g_Instance, &count, &g_Gpu);
         check_vk_result(err);
+    }
+
+    // Get queue
+    {
+        uint32_t count;
+        vkGetPhysicalDeviceQueueFamilyProperties(g_Gpu, &count, NULL);
+        VkQueueFamilyProperties* queues = (VkQueueFamilyProperties*)malloc(sizeof(VkQueueFamilyProperties) * count);
+        vkGetPhysicalDeviceQueueFamilyProperties(g_Gpu, &count, queues);
+        for (uint32_t i = 0; i < count; i++)
+        {
+            if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            {
+                g_QueueFamily = i;
+                break;
+            }
+        }
+        free(queues);
+    }
+
+    // Check for WSI support
+    {
+        VkBool32 res;
+        vkGetPhysicalDeviceSurfaceSupportKHR(g_Gpu, g_QueueFamily, g_Surface, &res);
+        if (res != VK_TRUE)
+        {
+            fprintf(stderr, "Error no WSI support on physical device 0\n");
+            exit(-1);
+        }
+    }
+
+    // Get Surface Format
+    {
+        VkFormat image_view_format[][2] = {{VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM}, {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM}};
+        uint32_t count;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, NULL);
+        VkSurfaceFormatKHR *formats = (VkSurfaceFormatKHR*)malloc(sizeof(VkSurfaceFormatKHR) * count);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, formats);
+        for (size_t i = 0; i < sizeof(image_view_format) / sizeof(image_view_format[0]); i++)
+        {
+            for (uint32_t j = 0; j < count; j++)
+            {
+                if (formats[j].format == image_view_format[i][0])
+                {
+                    g_ImageFormat = image_view_format[i][0];
+                    g_ViewFormat = image_view_format[i][1];
+                    g_ColorSpace = formats[j].colorSpace;
+                }
+            }
+        }
+        free(formats);
     }
 
     // Create Logical Device
@@ -241,7 +295,7 @@ static void setup_vulkan(GLFWwindow* window)
     }
 
     // Create Command Buffers
-    for (int i=0; i<IMGUI_VK_QUEUED_FRAMES; i++)
+    for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
     {
         {
             VkCommandPoolCreateInfo info = {};
@@ -277,7 +331,7 @@ static void setup_vulkan(GLFWwindow* window)
 
     // Create Descriptor Pool
     {
-        VkDescriptorPoolSize pool_size[11] = 
+        VkDescriptorPoolSize pool_size[11] =
         {
             { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
@@ -378,10 +432,12 @@ static void frame_end()
         vkCmdPipelineBarrier(g_CommandBuffer[g_FrameIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
     }
     {
+        VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         VkSubmitInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         info.waitSemaphoreCount = 1;
         info.pWaitSemaphores = &g_Semaphore[g_FrameIndex];
+        info.pWaitDstStageMask = &wait_stage;
         info.commandBufferCount = 1;
         info.pCommandBuffers = &g_CommandBuffer[g_FrameIndex];
 

@@ -4,12 +4,27 @@
 
  Fonts are rasterized in a single texture at the time of calling either of io.Fonts.GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 
- If you want to use icons in ImGui, a good idea is to merge an icon font within your main font, and refer to icons directly in your strings.
- You can use headers files with definitions for popular icon fonts codepoints, by Juliette Foucaut, at https://github.com/juliettef/IconFontCppHeaders
+---------------------------------
+ USING ICONS
+---------------------------------
 
+ Using an icon font (such as FontAwesome: http://fontawesome.io) is an easy and practical way to use icons in your ImGui application.
+ A common pattern is to merge the icon font within your main font, so you can refer to the icons directly from your strings without having to change fonts back and forth.
+ To refer to the icon from your C++ code, you can use headers files created by Juliette Foucaut, at https://github.com/juliettef/IconFontCppHeaders
+
+    // Merge icons into default tool font
+   #include "IconsFontAwesome.h"
+   ImGuiIO& io = ImGui::GetIO();
+   io.Fonts->AddFontDefault();
+   ImFontConfig config;
+   config.MergeMode = true;
+   const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+   io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config, icon_ranges);
+   // Usage, e.g.
+   ImGui::Text("%s Search", ICON_FA_SEARCH);
 
 ---------------------------------
- LOADING INSTRUCTIONS
+ FONTS LOADING INSTRUCTIONS
 ---------------------------------
 
  Load default font with:
@@ -69,7 +84,7 @@
 
 
 ---------------------------------
- REMAP CODEPOINTS
+ REMAPPING CODEPOINTS
 ---------------------------------
 
  All your strings needs to use UTF-8 encoding. Specifying literal in your source code using a local code page (such as CP-923 for Japanese CP-1251 for Cyrillic) will not work.
@@ -78,7 +93,7 @@
 
 
 ---------------------------------
- EMBED A FONT IN SOURCE CODE
+ EMBEDDING FONT IN SOURCE CODE
 ---------------------------------
 
  Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array. Then load the font with:
@@ -94,9 +109,16 @@
  FONT FILES INCLUDED IN THIS FOLDER
 ---------------------------------
 
+ Roboto-Medium.ttf
+   Apache License 2.0
+   by Christian Robertson
+   https://fonts.google.com/specimen/Roboto
+
  Cousine-Regular.ttf
+   by Steve Matteson
    Digitized data copyright (c) 2010 Google Corporation.
-   Licensed under the SIL Open Font License, Version 1.1   
+   Licensed under the SIL Open Font License, Version 1.1
+   https://fonts.google.com/specimen/Cousine 
 
  DroidSans.ttf
    Copyright (c) Steve Matteson
@@ -107,13 +129,15 @@
    Copyright (c) 2004, 2005 Tristan Grimmer
    MIT License
    recommended loading setting in ImGui: Size = 13.0, DisplayOffset.Y = +1
+   http://www.proggyfonts.net/
 
  ProggyTiny.ttf
    Copyright (c) 2004, 2005 Tristan Grimmer
    MIT License
    recommended loading setting in ImGui: Size = 10.0, DisplayOffset.Y = +1
+   http://www.proggyfonts.net/
 
- Karla-Regular
+ Karla-Regular.ttf
    Copyright (c) 2012, Jonathan Pinhorn
    SIL OPEN FONT LICENSE Version 1.1
 

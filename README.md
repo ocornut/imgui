@@ -7,9 +7,9 @@ dear imgui,
 
 [![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui) [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
-dear imgui (AKA ImGui), is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is fast, portable, renderer agnostic and self-contained (no external dependencies).
+dear imgui (AKA ImGui), is a bloat-free graphical user interface library for C++. It outputs optimized vertex buffers that you can render anytime in your 3D-pipeline enabled application. It is fast, portable, renderer agnostic and self-contained (no external dependencies).
 
-ImGui is designed to enable fast iteration and empower programmers to create content creation tools and visualization/debug tools (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal, and thus lacks certain features normally found in more high-level libraries.
+ImGui is designed to enable fast iteration and empower programmers to create content creation tools and visualization/ debug tools (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal, and thus lacks certain features normally found in more high-level libraries.
 
 ImGui is particularly suited to integration in realtime 3D applications, fullscreen applications, embedded applications, games, or any applications on consoles platforms where operating system features are non-standard. 
 
@@ -33,14 +33,52 @@ Your code passes mouse/keyboard inputs and settings to ImGui (see example applic
 
 ImGui outputs vertex buffers and simple command-lists that you can render in your application. The number of draw calls and state changes is typically very small. Because it doesn't know or touch graphics state directly, you can call ImGui commands anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate ImGui with your existing codebase. 
 
+_A common misunderstanding is to think that immediate mode gui == immediate mode rendering, which usually implies hammering your driver/GPU with a bunch of inefficient draw calls and state changes, as the gui functions as called by the user. This is NOT what Dear ImGui does. Dear ImGui outputs vertex buffers and a small list of draw calls batches. It never touches your GPU directly. The draw call batches are decently optimal and you can render them later, in your app or even remotely._
+
 ImGui allows you create elaborate tools as well as very short-lived ones. On the extreme side of short-liveness: using the Edit&Continue feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, etc.  
 
-Demo
-----
+Binaries/Demo
+-------------
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at the features of ImGui, you can download Windows binaries of the demo app here.
-- [imgui-demo-binaries-20160410.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20160410.zip) (Windows binaries, ImGui 1.48+ 2016/04/10, 4 executables, 534 KB)
+- [imgui-demo-binaries-20161113.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20161113.zip) (Windows binaries, ImGui 1.49+ 2016/11/13, 5 executables, 588 KB)
 
+Bindings
+--------
+
+_NB: those third-party bindings may be more or less maintained, more or less close to the spirit of original API and therefore I cannot give much guarantee about them. People who create language bindings sometimes haven't used the C++ API themselves (for the good reason that they aren't C++ users). ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
+
+_Integrating Dear ImGui within your custom engine is a matter of wiring mouse/keyboard inputs and providing a render function that can bind a texture and render simple textured triangles. The examples/ folder is populated with applications doing just that. If you are an experienced programmer it should take you less than an hour to integrate Dear ImGui in your custom engine, but make sure to spend time reading the FAQ, the comments and other documentation!_
+
+Languages:
+- cimgui: thin c-api wrapper for ImGui https://github.com/Extrawurst/cimgui
+- ImGui.NET: An ImGui wrapper for .NET Core https://github.com/mellinoe/ImGui.NET
+- imgui-rs: Rust bindings for dear imgui https://github.com/Gekkio/imgui-rs
+- DerelictImgui: Dynamic bindings for the D programming language: https://github.com/Extrawurst/DerelictImgui
+- CyImGui: Python bindings for dear imgui using Cython: https://github.com/chromy/cyimgui
+- pyimgui: Another Python bindings for dear imgui: https://github.com/swistakm/pyimgui
+- LUA: https://github.com/patrickriordan/imgui_lua_bindings
+
+Frameworks:
+- Main ImGui repository include examples for DirectX9, DirectX10, DirectX11, OpenGL2/3, Vulkan, Allegro 5, SDL+GL2/3, iOS and Marmalade: https://github.com/ocornut/imgui/tree/master/examples
+- Unmerged PR: DirectX12 example (with issues) https://github.com/ocornut/imgui/pull/301
+- Unmerged PR: SDL2 + OpenGLES + Emscripten example https://github.com/ocornut/imgui/pull/336
+- Unmerged PR: FreeGlut + OpenGL2 example https://github.com/ocornut/imgui/pull/801
+- Unmerged PR: Native Win32 and OSX example https://github.com/ocornut/imgui/pull/281
+- Unmerged PR: Android Example https://github.com/ocornut/imgui/pull/421
+- Cinder backend for dear imgui https://github.com/simongeilfus/Cinder-ImGui
+- FlexGUI: Flexium/SFML backend for dear imgui https://github.com/DXsmiley/FlexGUI
+- IrrIMGUI: Irrlicht backend for dear imgui https://github.com/ZahlGraf/IrrIMGUI
+- LÖVE backend for dear imgui https://github.com/slages/love-imgui
+- Ogre backend for dear imgui https://bitbucket.org/LMCrashy/ogreimgui/src
+- ofxImGui: openFrameworks backend for dear imgui https://github.com/jvcleave/ofxImGui
+- SFML backend for dear imgui https://github.com/EliasD/imgui-sfml
+- SFML backend for dear imgui https://github.com/Mischa-Alff/imgui-backends
+- cocos2d-x with imgui https://github.com/c0i/imguix https://github.com/ocornut/imgui/issues/551
+- NanoRT: software raytraced version https://github.com/syoyo/imgui/tree/nanort/examples/raytrace_example
+
+For other bindings: see [this page](https://github.com/ocornut/imgui/wiki/Links/).
+Please contact me with the Issues tracker or Twitter to fix/update this list.
 
 Gallery
 -------
@@ -48,12 +86,12 @@ Gallery
 See the [Screenshots Thread](https://github.com/ocornut/imgui/issues/123) for some user creations.
 
 ![screenshot 1](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_01.png)
+[![screenshot game](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v149/gallery_TheDragonsTrap-01-thumb.jpg)](https://cloud.githubusercontent.com/assets/8225057/20628927/33e14cac-b329-11e6-80f6-9524e93b048a.png)
 ![screenshot 2](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_02.png)
 
-[![profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler-880.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler.png)
+[![screenshot profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler-880.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler.png)
 
-![screenshot 2](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_01.png)
-![screenshot 3](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_02.png)
+![screenshot 3](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_01.png)
 ![screenshot 4](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/test_window_03.png)
 ![screenshot 5](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v140/test_window_05_menus.png)
 ![screenshot 6](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/skinning_sample_02.png)
@@ -101,6 +139,7 @@ The library started its life and is best known as "ImGui" only due to the fact t
 <br><b>How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on the purpose of labels/IDs.</b>
 <br><b>How can I tell when ImGui wants my mouse/keyboard inputs and when I can pass them to my application?</b>
 <br><b>How can I load a different font than the default?</b>
+<br><b>How can I easily use icons in my application?</b>
 <br><b>How can I load multiple fonts?</b>
 <br><b>How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?</b>
 <br><b>How can I use the drawing facilities without an ImGui window? (using ImDrawList API)</b>
@@ -109,7 +148,7 @@ See the FAQ in imgui.cpp for answers.
 
 <b>How do you use ImGui on a platform that may not have a mouse or keyboard?</b>
 
-I recommend using [Synergy](http://synergy-project.org) ([sources](https://github.com/synergy/synergy)). In particular, the _src/micro/uSynergy.c_ file contains a small client that you can use on any platform to connect to your host PC. You can seamlessly use your PC input devices from a video game console or a tablet. ImGui allows to increase the hit box of widgets (via the _TouchPadding_ setting) to accommodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.
+I recommend using [Synergy](http://synergy-project.org) ([sources](https://github.com/symless/synergy)). In particular, the _src/micro/uSynergy.c_ file contains a small client that you can use on any platform to connect to your host PC. You can seamlessly use your PC input devices from a video game console or a tablet. ImGui allows to increase the hit box of widgets (via the _TouchPadding_ setting) to accommodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.
 
 <b>Can you create elaborate/serious tools with ImGui?</b>
 
@@ -168,13 +207,16 @@ Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Bin
 Ongoing ImGui development is financially supported on [**Patreon**](http://www.patreon.com/imgui).
 
 Double-chocolate sponsors:
-- Media Molecule, Mobigame
+- Media Molecule
+- Mobigame
+- Insomniac Games (sponsored the gamepad/keyboard navigation branch)
+- Aras Pranckevičius
 
 Salty caramel supporters:
-- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Stefano Cristiano, Chris Genova, ikrima
+- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Recognition Robotics, Chris Genova, ikrima, Glenn Fiedler, Geoffrey Evans, Dakko Dakko.
 
 Caramel supporters:
-- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm, Farhan Wali, Jeff Roberts, Matt Reyer, Colin Riley.
+- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm, Farhan Wali, Jeff Roberts, Matt Reyer, Colin Riley, Victor Martins, Josh Simmons, Garrett Hoofman, Sergio Gonzales, Andrew Berridge, Roy Eltham, Game Preservation Society, [Kit framework](http://svkonsult.se/kit), Josh Faust, Martin Donlon, Quinton, Felix.
 
 And other supporters; thanks!
 

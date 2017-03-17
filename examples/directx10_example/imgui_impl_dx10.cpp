@@ -87,10 +87,10 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        memcpy(vtx_dst, &cmd_list->VtxBuffer[0], cmd_list->VtxBuffer.size() * sizeof(ImDrawVert));
-        memcpy(idx_dst, &cmd_list->IdxBuffer[0], cmd_list->IdxBuffer.size() * sizeof(ImDrawIdx));
-        vtx_dst += cmd_list->VtxBuffer.size();
-        idx_dst += cmd_list->IdxBuffer.size();
+        memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+        memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+        vtx_dst += cmd_list->VtxBuffer.Size;
+        idx_dst += cmd_list->IdxBuffer.Size;
     }
     g_pVB->Unmap();
     g_pIB->Unmap();
@@ -189,7 +189,7 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++)
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
@@ -205,7 +205,7 @@ void ImGui_ImplDX10_RenderDrawLists(ImDrawData* draw_data)
             }
             idx_offset += pcmd->ElemCount;
         }
-        vtx_offset += cmd_list->VtxBuffer.size();
+        vtx_offset += cmd_list->VtxBuffer.Size;
     }
 
     // Restore modified DX state
@@ -345,7 +345,7 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
 
     // By using D3DCompile() from <d3dcompiler.h> / d3dcompiler.lib, we introduce a dependency to a given version of d3dcompiler_XX.dll (see D3DCOMPILER_DLL_A)
     // If you would like to use this DX11 sample code but remove this dependency you can: 
-    //  1) compile once, save the compiled shader blobs into a file or source code and pass them to CreateVertexShader()/CreatePixelShader() [prefered solution]
+    //  1) compile once, save the compiled shader blobs into a file or source code and pass them to CreateVertexShader()/CreatePixelShader() [preferred solution]
     //  2) use code to detect any version of the DLL and grab a pointer to D3DCompile from the DLL. 
     // See https://github.com/ocornut/imgui/pull/638 for sources and details.
 
@@ -573,7 +573,8 @@ void ImGui_ImplDX10_NewFrame()
     // io.MouseWheel : filled by WM_MOUSEWHEEL events
 
     // Hide OS mouse cursor if ImGui is drawing it
-    SetCursor(io.MouseDrawCursor ? NULL : LoadCursor(NULL, IDC_ARROW));
+    if (io.MouseDrawCursor)
+        SetCursor(NULL);
 
     // Start the frame
     ImGui::NewFrame();
