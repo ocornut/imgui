@@ -989,47 +989,39 @@ int ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args)
 }
 
 // Pass data_size==0 for zero-terminated strings
-// FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
 ImU32 ImHash(const void* data, int data_size, ImU32 seed)
 {
-    static ImU32 crc32_lut[256] = { 0 };
-    if (!crc32_lut[1])
-    {
-        const ImU32 polynomial = 0xEDB88320;
-        for (ImU32 i = 0; i < 256; i++)
+    const ImU32 FNV1aPrime = 0x01000193;
+
+    ImU32 ret = seed;
+    const unsigned char* beg = (const unsigned char*)data;
+    if (data_size > 0)
+    { // Known size
+        const unsigned char* end = beg + data_size;
+        while (beg != end)
         {
-            ImU32 crc = i;
-            for (ImU32 j = 0; j < 8; j++)
-                crc = (crc >> 1) ^ (ImU32(-int(crc & 1)) & polynomial);
-            crc32_lut[i] = crc;
+		    ret ^= (ImU32)*beg++;
+            ret *= FNV1aPrime;
         }
     }
-
-    seed = ~seed;
-    ImU32 crc = seed;
-    const unsigned char* current = (const unsigned char*)data;
-
-    if (data_size > 0)
-    {
-        // Known size
-        while (data_size--)
-            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *current++];
-    }
     else
-    {
-        // Zero-terminated string
-        while (unsigned char c = *current++)
+    { // Null-terminated string
+        while (unsigned char c = *beg++)
         {
             // We support a syntax of "label###id" where only "###id" is included in the hash, and only "label" gets displayed.
             // Because this syntax is rarely used we are optimizing for the common case.
             // - If we reach ### in the string we discard the hash so far and reset to the seed.
             // - We don't do 'current += 2; continue;' after handling ### to keep the code smaller.
-            if (c == '#' && current[0] == '#' && current[1] == '#')
-                crc = seed;
-            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
+            if (c == '#' && beg[0] == '#' && beg[1] == '#')
+            {
+                ret = seed;
+            }
+			ret ^= (ImU32)c;
+            ret *= FNV1aPrime;
         }
-    }
-    return ~crc;
+	}
+
+	return ret;
 }
 
 //-----------------------------------------------------------------------------
