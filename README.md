@@ -3,9 +3,7 @@ dear imgui,
 [![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 [![Coverity Status](https://scan.coverity.com/projects/4720/badge.svg)](https://scan.coverity.com/projects/4720)
 
-(This library is free and will stay free, but needs your support to sustain its development. There are lots of desirable new features and maintenance to do. If you work for a company using ImGui or have the means to do so, please consider buying ~~financial~~ commercial support. 
-
-For more information, please see section [Commercial Support](#commercial-support).)
+(This library is free and will stay free, but needs your support to sustain its development. There are lots of desirable new features and maintenance to do. If you work for a company using ImGui or have the means to do so, please consider financial support. I can invoice for private support, custom development etc.)
 
 [![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui) [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
@@ -191,14 +189,7 @@ Donate
 
 [![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui) [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
-Your contributions are keeping the library alive. For end-users, I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgui) if you want to donate and enable me to spend more time improving the library. ~~If your company uses ImGui please consider making a contribution.~~ One-off donations are also greatly appreciated. ~~I can invoice for private support, custom development or whatever makes more sense in a given context. I am available for hire to work on or with ImGui. Please e-mail for details. Thanks~~ Thank you.
-
-Commercial Support
-------------------
-
-If your company uses ImGui, please consider buying a commercial support. I can invoice for private support, custom development or whatever makes more sense in a given context. I am available for hire to work on or with ImGui.
-
-For more information, please contact me via e-email for further details.
+Your contributions are keeping the library alive. For end-users, I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgui) if you want to donate and enable me to spend more time improving the library. If your company uses ImGui please consider making a contribution. One-off donations are also greatly appreciated. I can invoice for private support, custom development or whatever makes more sense in a given context. I am available for hire to work on or with ImGui. Please e-mail for details. Thanks!
 
 Credits
 -------
