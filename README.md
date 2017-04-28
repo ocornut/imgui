@@ -179,7 +179,7 @@ This is [LumixEngine](https://github.com/nem0/LumixEngine) with a minor skinning
 
 <b>Why using C++ (as opposed to C)?</b>
 
-ImGui takes advantage of a few C++ features for convenience but nothing anywhere Boost-insanity/quagmire. In particular, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience but could be removed.
+ImGui takes advantage of a few C++ languages features for convenience but nothing anywhere Boost-insanity/quagmire. ImGui doesn't use any C++ header file. Language-wise, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience.
 
 There is an unofficial but reasonably maintained [c-api for ImGui](https://github.com/Extrawurst/cimgui) by Stephan Dilly. I would suggest using your target language functionality to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. It was really designed with C++ in mind and may not make the same amount of sense with another language. Also see [Links](https://github.com/ocornut/imgui/wiki/Links) for third-party bindings to other languages.
 
