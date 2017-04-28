@@ -192,9 +192,13 @@ Donate
 
 <b>How can I help financing further development of Dear ImGui?</b>
 
-[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui) [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
+Monthly donations via Patreon:
+<br>[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui)
 
-Your contributions are keeping the library alive. For end-users, I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgui) if you want to donate and enable me to spend more time improving the library. If your company uses ImGui please consider making a contribution. One-off donations are also greatly appreciated. I can invoice for private support, custom development or whatever makes more sense in a given context. I am available for hire to work on or with ImGui. Please e-mail for details. Thanks!
+One-off donations via PayPal:
+<br>[![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
+
+Your contributions are keeping the library alive. For end-users, I have setup an [**ImGui Patreon page**](http://www.patreon.com/imgui) if you want to donate and enable me to spend more time improving the library. If your company uses ImGui please consider making a contribution. One-off donations are also greatly appreciated. I can invoice for private support, custom development or whatever makes more sense in a given context. I am available for hire to work on or with ImGui. Please e-mail omarcornut at gmail for details. Thanks!
 
 Credits
 -------
