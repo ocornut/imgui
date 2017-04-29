@@ -137,6 +137,9 @@ static inline float  ImLengthSqr(const ImVec4& lhs)                             
 static inline float  ImInvLength(const ImVec2& lhs, float fail_value)           { float d = lhs.x*lhs.x + lhs.y*lhs.y; if (d > 0.0f) return 1.0f / sqrtf(d); return fail_value; }
 static inline float  ImFloor(float f)                                           { return (float)(int)f; }
 static inline ImVec2 ImFloor(ImVec2 v)                                          { return ImVec2((float)(int)v.x, (float)(int)v.y); }
+static inline ImVec2 ImProduct(const ImVec2& lhs, const ImVec2& rhs)            { return ImVec2(lhs.x * rhs.x, lhs.y * rhs.y); }
+static inline ImVec2 ImQuotient(const ImVec2& lhs, const ImVec2& rhs)           { return ImVec2(lhs.x / rhs.x, lhs.y / rhs.y); }
+static inline ImVec2 ImSafeQuotient(const ImVec2& lhs, const ImVec2& rhs, const ImVec2& alt) { return ImVec2(rhs.x ? (lhs.x / rhs.x) : alt.x, rhs.y ? (lhs.y / rhs.y) : alt.y); }
 
 // We call C++ constructor on own allocated memory via the placement "new(ptr) Type()" syntax.
 // Defining a custom placement new() with a dummy parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
