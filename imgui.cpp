@@ -4201,17 +4201,41 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         }
         else
         {
-            ImU32 resize_col = 0;
+            ImU32 resize_col_br = 0;
+            ImU32 resize_col_bl = 0;
             const float resize_corner_size = ImMax(g.FontSize * 1.35f, window_rounding + 1.0f + g.FontSize * 0.2f);
             if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && !(flags & ImGuiWindowFlags_NoResize))
             {
                 // Manual resize
                 const ImVec2 br = window->Rect().GetBR();
-                const ImRect resize_rect(br - ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f), br);
-                const ImGuiID resize_id = window->GetID("#RESIZE");
-                bool hovered, held;
-                ButtonBehavior(resize_rect, resize_id, &hovered, &held, ImGuiButtonFlags_FlattenChilds);
-                resize_col = GetColorU32(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
+                const ImVec2 bl = window->Rect().GetBL();
+                const ImRect resize_rect_br(br - ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f), br);
+                const ImRect resize_rect_bl(bl + ImVec2(0.0f, -resize_corner_size * 0.75f), bl + ImVec2(resize_corner_size * 0.75f, 0.0f));
+                
+                bool hovered = false;
+                bool held = false;
+                bool held_bl = false;
+                bool held_br = false;
+                bool hovered_bl = false;
+                bool hovered_br = false;
+
+                if(!(flags & ImGuiWindowFlags_ResizeLowerLeft))
+                {
+                    const ImGuiID resize_id_br = window->GetID("#RESIZE_BR");
+                    ButtonBehavior(resize_rect_br, resize_id_br, &hovered, &held, ImGuiButtonFlags_FlattenChilds);
+                    held_br = held;
+                    hovered_br = hovered;
+                }
+                if(((flags & ImGuiWindowFlags_ResizeLowerLeft) || (flags & ImGuiWindowFlags_ResizeLowerLeftAndRight)) && !held_br && !hovered_br)
+                {
+                    const ImGuiID resize_id_bl = window->GetID("#RESIZE_BL");
+                    ButtonBehavior(resize_rect_bl, resize_id_bl, &hovered, &held, ImGuiButtonFlags_FlattenChilds);
+                    held_bl = held;
+                    hovered_bl = hovered;
+                }
+
+                resize_col_br = GetColorU32(held_br ? ImGuiCol_ResizeGripActive : hovered_br ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
+                resize_col_bl = GetColorU32(held_bl ? ImGuiCol_ResizeGripActive : hovered_bl ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
                 if (hovered || held)
                     g.MouseCursor = ImGuiMouseCursor_ResizeNWSE;
@@ -4227,7 +4251,21 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 else if (held)
                 {
                     // We don't use an incremental MouseDelta but rather compute an absolute target size based on mouse position
-                    ApplySizeFullWithConstraint(window, (g.IO.MousePos - g.ActiveIdClickOffset + resize_rect.GetSize()) - window->Pos);
+                    if(held_br)
+                    {
+                        ApplySizeFullWithConstraint(window, (g.IO.MousePos - g.ActiveIdClickOffset + resize_rect_br.GetSize()) - window->Pos);
+                    }
+                    else
+                    {
+                        ImVec2 size;
+                        size.x = window->SizeFull.x + ((window->Pos.x + g.ActiveIdClickOffset.x) - g.IO.MousePos.x);
+                        size.y = ((g.IO.MousePos.y - g.ActiveIdClickOffset.y) + resize_rect_bl.GetSize().y) - window->Pos.y;
+                        
+                        window->PosFloat.x += (g.IO.MousePos.x - g.ActiveIdClickOffset.x) - resize_rect_bl.Min.x;
+                        window->Pos.x = (float)int(window->PosFloat.x);
+                        SetWindowPos(window->Pos);
+                        ApplySizeFullWithConstraint(window, size);
+                    }
                     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
                         MarkIniSettingsDirty();
                 }
@@ -4280,11 +4318,23 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             // (after the input handling so we don't have a frame of latency)
             if (!(flags & ImGuiWindowFlags_NoResize))
             {
-                const ImVec2 br = window->Rect().GetBR();
-                window->DrawList->PathLineTo(br + ImVec2(-resize_corner_size, -window->BorderSize));
-                window->DrawList->PathLineTo(br + ImVec2(-window->BorderSize, -resize_corner_size));
-                window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding - window->BorderSize, br.y - window_rounding - window->BorderSize), window_rounding, 0, 3);
-                window->DrawList->PathFill(resize_col);
+                if(!(flags & ImGuiWindowFlags_ResizeLowerLeft))
+                {
+                    const ImVec2 br = window->Rect().GetBR();
+                    window->DrawList->PathLineTo(br + ImVec2(-resize_corner_size, -window->BorderSize));
+                    window->DrawList->PathLineTo(br + ImVec2(-window->BorderSize, -resize_corner_size));
+                    window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding - window->BorderSize, br.y - window_rounding - window->BorderSize), window_rounding, 0, 3);
+                    window->DrawList->PathFill(resize_col_br);
+                }
+
+                if((flags & ImGuiWindowFlags_ResizeLowerLeft) || (flags & ImGuiWindowFlags_ResizeLowerLeftAndRight))
+                {
+                    const ImVec2 bl = window->Rect().GetBL();
+                    window->DrawList->PathLineTo(bl + ImVec2(window->BorderSize, -resize_corner_size));
+                    window->DrawList->PathLineTo(bl + ImVec2(resize_corner_size, -window->BorderSize));
+                    window->DrawList->PathArcToFast(ImVec2(bl.x + window_rounding + window->BorderSize, bl.y - window_rounding - window->BorderSize), window_rounding, 0, 3);
+                    window->DrawList->PathFill(resize_col_bl);
+                }
             }
 
             // Borders
