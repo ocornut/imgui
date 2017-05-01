@@ -1,9 +1,10 @@
 // ImGui GLFW binding with OpenGL
 // In this binding, ImTextureID is used to store an OpenGL 'GLuint' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
 
-// If your context is GL3/GL3 then prefer using the code in opengl3_example.
+// If your context or own usage of OpenGL involve anything GL3/GL4, prefer using the code in opengl3_example.
+// If you are not sure what that means, prefer using the code in opengl3_example.
 // You *might* use this code with a GL3/GL4 context but make sure you disable the programmable pipeline by calling "glUseProgram(0)" before ImGui::Render().
-// We cannot do that from GL2 code because the function doesn't exist. 
+// We cannot do that from GL2 code because the function doesn't exist. Mixing GL2 calls and GL3/GL4 calls is giving trouble to many librairies/drivers.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
