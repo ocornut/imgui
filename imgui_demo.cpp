@@ -1,9 +1,11 @@
 // dear imgui, v1.50 WIP
 // (demo code)
 
-// Don't remove this file from your project! It is useful reference code that you can execute.
-// You can call ImGui::ShowTestWindow() in your code to learn about various features of ImGui.
+// Message to the person tempted to delete this file when integrating ImGui into their code base:
+// Do NOT remove this file from your project! It is useful reference code that you and other users will want to refer to.
 // Everything in this file will be stripped out by the linker if you don't call ImGui::ShowTestWindow().
+// During development, you can call ImGui::ShowTestWindow() in your code to learn about various features of ImGui.
+// Removing this file from your project is hindering your access to documentation, likely leading you to poorer usage of the library.
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
