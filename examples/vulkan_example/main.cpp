@@ -13,7 +13,7 @@
 
 #define IMGUI_MAX_POSSIBLE_BACK_BUFFERS 16
 #define IMGUI_UNLIMITED_FRAME_RATE
-#define IMGUI_VULKAN_DEBUG_REPORT
+//#define IMGUI_VULKAN_DEBUG_REPORT
 
 static VkAllocationCallbacks*   g_Allocator = NULL;
 static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -233,7 +233,7 @@ static void setup_vulkan(GLFWwindow* window)
         extensions[ extensions_count ] = "VK_EXT_debug_report";
         create_info.enabledExtensionCount = extensions_count+1;
         create_info.ppEnabledExtensionNames = extensions;
-#elif
+#else
         create_info.enabledExtensionCount = extensions_count;
         create_info.ppEnabledExtensionNames = glfw_extensions;
 #endif // IMGUI_VULKAN_DEBUG_REPORT
