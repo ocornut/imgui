@@ -301,8 +301,8 @@ void ImGui_ImplGlfwVulkan_RenderDrawLists(ImDrawData* draw_data)
             else
             {
                 VkRect2D scissor;
-                scissor.offset.x = (int32_t)(pcmd->ClipRect.x);
-                scissor.offset.y = (int32_t)(pcmd->ClipRect.y);
+                scissor.offset.x = (int32_t)(pcmd->ClipRect.x) > 0 ? (int32_t)(pcmd->ClipRect.x) : 0;
+                scissor.offset.y = (int32_t)(pcmd->ClipRect.y) > 0 ? (int32_t)(pcmd->ClipRect.y) : 0;
                 scissor.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
                 scissor.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y + 1); // TODO: + 1??????
                 vkCmdSetScissor(g_CommandBuffer, 0, 1, &scissor);
@@ -483,6 +483,7 @@ bool ImGui_ImplGlfwVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
         region.imageSubresource.layerCount = 1;
         region.imageExtent.width = width;
         region.imageExtent.height = height;
+        region.imageExtent.depth = 1;
         vkCmdCopyBufferToImage(command_buffer, g_UploadBuffer, g_FontImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
         VkImageMemoryBarrier use_barrier[1] = {};
