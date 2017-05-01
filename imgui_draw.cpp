@@ -958,7 +958,7 @@ void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, c
     AddText(GImGui->Font, GImGui->FontSize, pos, col, text_begin, text_end);
 }
 
-void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv0, const ImVec2& uv1, ImU32 col)
+void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -969,24 +969,23 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
         PushTextureID(user_texture_id);
 
     PrimReserve(6, 4);
-    PrimRectUV(a, b, uv0, uv1, col);
+    PrimRectUV(a, b, uv_a, uv_b, col);
 
     if (push_texture_id)
         PopTextureID();
 }
 
-void ImDrawList::AddImageQuad(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, const ImVec2& uva, const ImVec2& uvb, const ImVec2& uvc, const ImVec2& uvd, ImU32 col)
+void ImDrawList::AddImageQuad(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, const ImVec2& uv_a, const ImVec2& uv_b, const ImVec2& uv_c, const ImVec2& uv_d, ImU32 col)
 {
-    if ((col >> 24) == 0)
+    if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    // FIXME-OPT: This is wasting draw calls.
     const bool push_texture_id = _TextureIdStack.empty() || user_texture_id != _TextureIdStack.back();
     if (push_texture_id)
         PushTextureID(user_texture_id);
 
     PrimReserve(6, 4);
-    PrimQuadUV(a, b, c, d, uva, uvb, uvc, uvd, col);
+    PrimQuadUV(a, b, c, d, uv_a, uv_b, uv_c, uv_d, col);
 
     if (push_texture_id)
         PopTextureID();
