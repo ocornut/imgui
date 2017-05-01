@@ -12,6 +12,8 @@
 #include "imgui_impl_glfw_vulkan.h"
 
 #define IMGUI_MAX_POSSIBLE_BACK_BUFFERS 16
+#define IMGUI_UNLIMITED_FRAME_RATE
+#define IMGUI_VULKAN_DEBUG_REPORT
 
 static VkAllocationCallbacks*   g_Allocator = NULL;
 static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -22,11 +24,11 @@ static VkSwapchainKHR           g_Swapchain = VK_NULL_HANDLE;
 static VkRenderPass             g_RenderPass = VK_NULL_HANDLE;
 static uint32_t                 g_QueueFamily = 0;
 static VkQueue                  g_Queue = VK_NULL_HANDLE;
+static VkDebugReportCallbackEXT g_Debug_Report = VK_NULL_HANDLE;
 
-static VkFormat                 g_ImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
-static VkFormat                 g_ViewFormat = VK_FORMAT_B8G8R8A8_UNORM;
-static VkColorSpaceKHR          g_ColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+static VkSurfaceFormatKHR       g_SurfaceFormat;
 static VkImageSubresourceRange  g_ImageRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+static VkPresentModeKHR         g_PresentMode;
 
 static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
@@ -76,14 +78,14 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         VkSwapchainCreateInfoKHR info = {};
         info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         info.surface = g_Surface;
-        info.imageFormat = g_ImageFormat;
-        info.imageColorSpace = g_ColorSpace;
+        info.imageFormat = g_SurfaceFormat.format;
+        info.imageColorSpace = g_SurfaceFormat.colorSpace;
         info.imageArrayLayers = 1;
         info.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
         info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+        info.presentMode = g_PresentMode;
         info.clipped = VK_TRUE;
         info.oldSwapchain = old_swapchain;
         VkSurfaceCapabilitiesKHR cap;
@@ -93,6 +95,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
             info.minImageCount = (cap.minImageCount + 2 < cap.maxImageCount) ? (cap.minImageCount + 2) : cap.maxImageCount;
         else
             info.minImageCount = cap.minImageCount + 2;
+
         if (cap.currentExtent.width == 0xffffffff)
         {
             fb_width = w;
@@ -120,7 +123,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
     // Create the Render Pass:
     {
         VkAttachmentDescription attachment = {};
-        attachment.format = g_ViewFormat;
+        attachment.format = g_SurfaceFormat.format;
         attachment.samples = VK_SAMPLE_COUNT_1_BIT;
         attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -150,7 +153,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         VkImageViewCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        info.format = g_ViewFormat;
+        info.format = g_SurfaceFormat.format;
         info.components.r = VK_COMPONENT_SWIZZLE_R;
         info.components.g = VK_COMPONENT_SWIZZLE_G;
         info.components.b = VK_COMPONENT_SWIZZLE_B;
@@ -184,20 +187,71 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
     }
 }
 
+#ifdef IMGUI_VULKAN_DEBUG_REPORT
+static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(
+    VkDebugReportFlagsEXT,      //flags,
+    VkDebugReportObjectTypeEXT  objectType,
+    uint64_t,                   //object,
+    size_t,                     //location,
+    int32_t,                    //messageCode,
+    const char*,                //pLayerPrefix,
+    const char*                 pMessage,
+    void*)                      //pUserData)
+{
+    printf( "ObjectType  : %i\nMessage     : %s\n\n", objectType, pMessage );
+    return VK_FALSE;
+}
+#endif // IMGUI_VULKAN_DEBUG_REPORT
+
 static void setup_vulkan(GLFWwindow* window)
 {
     VkResult err;
 
     // Create Vulkan Instance
     {
-        uint32_t glfw_extensions_count;
-        const char** glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extensions_count);
+        uint32_t extensions_count;
+        const char** glfw_extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
+
         VkInstanceCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        create_info.enabledExtensionCount = glfw_extensions_count;
+#ifdef IMGUI_VULKAN_DEBUG_REPORT
+        // enabling multiple validation layers grouped as lunarg standard validation
+        const char* layers[] = {"VK_LAYER_LUNARG_standard_validation"};
+        create_info.enabledLayerCount = 1;
+        create_info.ppEnabledLayerNames = layers;
+
+        // need additional storage for char pointer to debug report extension
+        const char** extensions = (const char**)malloc(sizeof(const char*) * (extensions_count + 1));
+        for (size_t i = 0; i < extensions_count; i++)
+            extensions[i] = glfw_extensions[i];
+        extensions[ extensions_count ] = "VK_EXT_debug_report";
+        create_info.enabledExtensionCount = extensions_count+1;
+        create_info.ppEnabledExtensionNames = extensions;
+#else
+        create_info.enabledExtensionCount = extensions_count;
         create_info.ppEnabledExtensionNames = glfw_extensions;
+#endif // IMGUI_VULKAN_DEBUG_REPORT
+
         err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
         check_vk_result(err);
+
+#ifdef IMGUI_VULKAN_DEBUG_REPORT
+        free(extensions);
+
+        // create the debug report callback
+        VkDebugReportCallbackCreateInfoEXT debug_report_ci ={};
+        debug_report_ci.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+        debug_report_ci.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+        debug_report_ci.pfnCallback = debug_report;
+        debug_report_ci.pUserData = NULL;
+        
+        // get the proc address of the function pointer, required for used extensions
+        PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT = 
+            (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkCreateDebugReportCallbackEXT");
+
+        err = vkCreateDebugReportCallbackEXT( g_Instance, &debug_report_ci, g_Allocator, &g_Debug_Report );
+        check_vk_result( err );
+#endif // IMGUI_VULKAN_DEBUG_REPORT
     }
 
     // Create Window Surface
@@ -206,11 +260,26 @@ static void setup_vulkan(GLFWwindow* window)
         check_vk_result(err);
     }
 
-    // Get GPU (WARNING here we assume the first gpu is one we can use)
+    // Get GPU
     {
-        uint32_t count = 1;
-        err = vkEnumeratePhysicalDevices(g_Instance, &count, &g_Gpu);
+        uint32_t gpu_count;
+        err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, NULL);
         check_vk_result(err);
+
+        if( gpu_count == 1 ) {  // only one gpu, assume it has a graphics queue family and use it
+            err = vkEnumeratePhysicalDevices( g_Instance, &gpu_count, &g_Gpu );
+            check_vk_result( err );
+        } else {
+            VkPhysicalDevice* gpus = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * gpu_count);
+            err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, gpus);
+            check_vk_result(err);
+
+            // here a number > 1 of GPUs got reported, you should find the best fit GPU for your purpose
+            // e.g. VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU if available, or with the greatest memory available, etc.
+            // for sake of simplicity we'll just take the first one, assuming it has a graphics queue family
+            g_Gpu = gpus[0];
+            free(gpus);
+        }
     }
 
     // Get queue
@@ -243,25 +312,84 @@ static void setup_vulkan(GLFWwindow* window)
 
     // Get Surface Format
     {
-        VkFormat image_view_format[][2] = {{VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM}, {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM}};
+        // Per Spec Format and View Format are expected to be the same unless VK_IMAGE_CREATE_MUTABLE_BIT was set at image creation
+        // Assuming that the default behaviour is without setting this bit, there is no need for seperate Spapchain image and image view format
+        // additionally severeal new color spaces were introduced with Vulkan Spec v1.0.40
+        // hence we must make sure that a format with the mostly available color space, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR, is found and used
         uint32_t count;
         vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, NULL);
         VkSurfaceFormatKHR *formats = (VkSurfaceFormatKHR*)malloc(sizeof(VkSurfaceFormatKHR) * count);
         vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, formats);
-        for (size_t i = 0; i < sizeof(image_view_format) / sizeof(image_view_format[0]); i++)
+
+        // first check if only one format, VK_FORMAT_UNDEFINED, is available, which would imply that any format is available
+        if (count == 1)
         {
-            for (uint32_t j = 0; j < count; j++)
+            if( formats[0].format == VK_FORMAT_UNDEFINED )
             {
-                if (formats[j].format == image_view_format[i][0])
-                {
-                    g_ImageFormat = image_view_format[i][0];
-                    g_ViewFormat = image_view_format[i][1];
-                    g_ColorSpace = formats[j].colorSpace;
+                g_SurfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
+                g_SurfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+            }
+            else
+            {   // no point in searching another format
+                g_SurfaceFormat = formats[0];
+            }
+        }
+        else
+        {
+            // request several formats, the first found will be used 
+            VkFormat requestSurfaceImageFormat[] = {VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM};
+            VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+            bool requestedFound = false;
+            for (size_t i = 0; i < sizeof(requestSurfaceImageFormat) / sizeof(requestSurfaceImageFormat[0]); i++)
+            {
+                if( requestedFound ) {
+                    break;
                 }
+                for (uint32_t j = 0; j < count; j++)
+                {
+                    if (formats[j].format == requestSurfaceImageFormat[i] && formats[j].colorSpace == requestSurfaceColorSpace)
+                    {
+                        g_SurfaceFormat = formats[j];
+                        requestedFound = true;
+                    }
+                }
+            }
+
+            // if none of the requested image formats could be found, use the first available
+            if (!requestedFound)
+            {
+                g_SurfaceFormat = formats[0];
             }
         }
         free(formats);
     }
+
+
+    // Get Present Mode
+    {
+        // Requst a certain mode and confirm that it is available. If not use VK_PRESENT_MODE_FIFO_KHR which is mandatory
+#ifdef IMGUI_UNLIMITED_FRAME_RATE
+        g_PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+#else
+        g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
+#endif
+        uint32_t count = 0;
+        vkGetPhysicalDeviceSurfacePresentModesKHR( g_Gpu, g_Surface, &count, nullptr );
+        VkPresentModeKHR* presentModes = ( VkPresentModeKHR* )malloc( sizeof( VkQueueFamilyProperties ) * count );
+        vkGetPhysicalDeviceSurfacePresentModesKHR( g_Gpu, g_Surface, &count, presentModes );
+        bool presentModeAvailable = false;
+        for (size_t i = 0; i < count; i++) 
+        {
+            if (presentModes[i] == g_PresentMode)
+            {
+                presentModeAvailable = true;
+                break;
+            }
+        }
+        if( !presentModeAvailable )
+            g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;   // allways available
+    }
+
 
     // Create Logical Device
     {
@@ -374,6 +502,14 @@ static void cleanup_vulkan()
     vkDestroyRenderPass(g_Device, g_RenderPass, g_Allocator);
     vkDestroySwapchainKHR(g_Device, g_Swapchain, g_Allocator);
     vkDestroySurfaceKHR(g_Instance, g_Surface, g_Allocator);
+
+#ifdef IMGUI_VULKAN_DEBUG_REPORT
+    // get the proc address of the function pointer, required for used extensions
+    auto vkDestroyDebugReportCallbackEXT =
+        (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkDestroyDebugReportCallbackEXT");
+    vkDestroyDebugReportCallbackEXT(g_Instance, g_Debug_Report, g_Allocator);
+#endif // IMGUI_VULKAN_DEBUG_REPORT
+
     vkDestroyDevice(g_Device, g_Allocator);
     vkDestroyInstance(g_Instance, g_Allocator);
 }
@@ -462,7 +598,7 @@ static void frame_end()
         check_vk_result(err);
         check_vk_result(res);
     }
-    g_FrameIndex = (g_FrameIndex) % IMGUI_VK_QUEUED_FRAMES;
+    g_FrameIndex = (g_FrameIndex+1) % IMGUI_VK_QUEUED_FRAMES;
 }
 
 static void error_callback(int error, const char* description)
