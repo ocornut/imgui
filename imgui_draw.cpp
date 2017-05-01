@@ -823,7 +823,7 @@ void ImDrawList::AddRectFilled(const ImVec2& a, const ImVec2& b, ImU32 col, floa
     if (rounding > 0.0f)
     {
         PathRect(a, b, rounding, rounding_corners_flags);
-        PathFill(col);
+        PathFillConvex(col);
     }
     else
     {
@@ -868,7 +868,7 @@ void ImDrawList::AddQuadFilled(const ImVec2& a, const ImVec2& b, const ImVec2& c
     PathLineTo(b);
     PathLineTo(c);
     PathLineTo(d);
-    PathFill(col);
+    PathFillConvex(col);
 }
 
 void ImDrawList::AddTriangle(const ImVec2& a, const ImVec2& b, const ImVec2& c, ImU32 col, float thickness)
@@ -890,7 +890,7 @@ void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec
     PathLineTo(a);
     PathLineTo(b);
     PathLineTo(c);
-    PathFill(col);
+    PathFillConvex(col);
 }
 
 void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments, float thickness)
@@ -910,7 +910,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, 
 
     const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(centre, radius, 0.0f, a_max, num_segments);
-    PathFill(col);
+    PathFillConvex(col);
 }
 
 void ImDrawList::AddBezierCurve(const ImVec2& pos0, const ImVec2& cp0, const ImVec2& cp1, const ImVec2& pos1, ImU32 col, float thickness, int num_segments)
