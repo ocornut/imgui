@@ -120,6 +120,7 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 - [A presentation by Rickard Gustafsson and Johannes Algelind](http://www.cse.chalmers.se/edu/year/2011/course/TDA361/Advanced%20Computer%20Graphics/IMGUI.pdf).
 - [Jari Komppa's tutorial on building an ImGui library](http://iki.fi/sol/imgui/).
 - [Casey Muratori's original video that popularized the concept](https://mollyrocket.com/861).
+- [Nicolas Guillemot's CppCon'16 flashtalk about Dear ImGui](https://www.youtube.com/watch?v=LSRJ1jZq90k).
 
 See the [Links page](https://github.com/ocornut/imgui/wiki/Links) for third-party bindings to different languages and frameworks.
 
