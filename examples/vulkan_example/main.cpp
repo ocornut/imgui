@@ -192,16 +192,9 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(
-    VkDebugReportFlagsEXT,      //flags,
-    VkDebugReportObjectTypeEXT  objectType,
-    uint64_t,                   //object,
-    size_t,                     //location,
-    int32_t,                    //messageCode,
-    const char*,                //pLayerPrefix,
-    const char*                 pMessage,
-    void*)                      //pUserData)
+    VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
-    printf( "ObjectType  : %i\nMessage     : %s\n\n", objectType, pMessage );
+    printf("[vulkan] ObjectType: %i\nMessage: %s\n\n", objectType, pMessage );
     return VK_FALSE;
 }
 #endif // IMGUI_VULKAN_DEBUG_REPORT
@@ -217,6 +210,9 @@ static void setup_vulkan(GLFWwindow* window)
 
         VkInstanceCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        create_info.enabledExtensionCount = extensions_count;
+        create_info.ppEnabledExtensionNames = glfw_extensions;
+
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
         // enabling multiple validation layers grouped as lunarg standard validation
         const char* layers[] = {"VK_LAYER_LUNARG_standard_validation"};
@@ -230,9 +226,6 @@ static void setup_vulkan(GLFWwindow* window)
         extensions[ extensions_count ] = "VK_EXT_debug_report";
         create_info.enabledExtensionCount = extensions_count+1;
         create_info.ppEnabledExtensionNames = extensions;
-#else
-        create_info.enabledExtensionCount = extensions_count;
-        create_info.ppEnabledExtensionNames = glfw_extensions;
 #endif // IMGUI_VULKAN_DEBUG_REPORT
 
         err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
@@ -253,7 +246,7 @@ static void setup_vulkan(GLFWwindow* window)
             (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkCreateDebugReportCallbackEXT");
 
         err = vkCreateDebugReportCallbackEXT( g_Instance, &debug_report_ci, g_Allocator, &g_Debug_Report );
-        check_vk_result( err );
+        check_vk_result(err);
 #endif // IMGUI_VULKAN_DEBUG_REPORT
     }
 
@@ -269,20 +262,15 @@ static void setup_vulkan(GLFWwindow* window)
         err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, NULL);
         check_vk_result(err);
 
-        if( gpu_count == 1 ) {  // only one gpu, assume it has a graphics queue family and use it
-            err = vkEnumeratePhysicalDevices( g_Instance, &gpu_count, &g_Gpu );
-            check_vk_result( err );
-        } else {
-            VkPhysicalDevice* gpus = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * gpu_count);
-            err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, gpus);
-            check_vk_result(err);
+        VkPhysicalDevice* gpus = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * gpu_count);
+        err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, gpus);
+        check_vk_result(err);
 
-            // here a number > 1 of GPUs got reported, you should find the best fit GPU for your purpose
-            // e.g. VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU if available, or with the greatest memory available, etc.
-            // for sake of simplicity we'll just take the first one, assuming it has a graphics queue family
-            g_Gpu = gpus[0];
-            free(gpus);
-        }
+        // If a number >1 of GPUs got reported, you should find the best fit GPU for your purpose
+        // e.g. VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU if available, or with the greatest memory available, etc.
+        // for sake of simplicity we'll just take the first one, assuming it has a graphics queue family.
+        g_Gpu = gpus[0];
+        free(gpus);
     }
 
     // Get queue
@@ -316,8 +304,8 @@ static void setup_vulkan(GLFWwindow* window)
     // Get Surface Format
     {
         // Per Spec Format and View Format are expected to be the same unless VK_IMAGE_CREATE_MUTABLE_BIT was set at image creation
-        // Assuming that the default behaviour is without setting this bit, there is no need for seperate Spapchain image and image view format
-        // additionally severeal new color spaces were introduced with Vulkan Spec v1.0.40
+        // Assuming that the default behavior is without setting this bit, there is no need for separate Spawchain image and image view format
+        // additionally several new color spaces were introduced with Vulkan Spec v1.0.40
         // hence we must make sure that a format with the mostly available color space, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR, is found and used
         uint32_t count;
         vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, NULL);
@@ -360,9 +348,7 @@ static void setup_vulkan(GLFWwindow* window)
 
             // if none of the requested image formats could be found, use the first available
             if (!requestedFound)
-            {
                 g_SurfaceFormat = formats[0];
-            }
         }
         free(formats);
     }
@@ -377,9 +363,9 @@ static void setup_vulkan(GLFWwindow* window)
         g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 #endif
         uint32_t count = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR( g_Gpu, g_Surface, &count, nullptr );
-        VkPresentModeKHR* presentModes = ( VkPresentModeKHR* )malloc( sizeof( VkQueueFamilyProperties ) * count );
-        vkGetPhysicalDeviceSurfacePresentModesKHR( g_Gpu, g_Surface, &count, presentModes );
+        vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, nullptr);
+        VkPresentModeKHR* presentModes = (VkPresentModeKHR*)malloc(sizeof(VkQueueFamilyProperties) * count);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, presentModes);
         bool presentModeAvailable = false;
         for (size_t i = 0; i < count; i++) 
         {
@@ -390,7 +376,7 @@ static void setup_vulkan(GLFWwindow* window)
             }
         }
         if( !presentModeAvailable )
-            g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;   // allways available
+            g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;   // always available
     }
 
 
@@ -511,8 +497,7 @@ static void cleanup_vulkan()
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
     // get the proc address of the function pointer, required for used extensions
-    auto vkDestroyDebugReportCallbackEXT =
-        (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkDestroyDebugReportCallbackEXT");
+    auto vkDestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkDestroyDebugReportCallbackEXT");
     vkDestroyDebugReportCallbackEXT(g_Instance, g_Debug_Report, g_Allocator);
 #endif // IMGUI_VULKAN_DEBUG_REPORT
 
@@ -584,8 +569,7 @@ static void frame_end()
 static void frame_present()
 {
     VkResult err;
-// If IMGUI_UNLIMITED_FRAME_RATE is defined we present the latest but one frame
-// Othrewise we present the latest rendered frame
+    // If IMGUI_UNLIMITED_FRAME_RATE is defined we present the latest but one frame. Otherwise we present the latest rendered frame
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
     uint32_t PresentIndex = (g_FrameIndex + IMGUI_VK_QUEUED_FRAMES - 1) % IMGUI_VK_QUEUED_FRAMES;
 #else
@@ -682,10 +666,9 @@ int main(int, char**)
     bool show_another_window = false;
     ImVec4 clear_color = ImColor(114, 144, 154);
 
-    // When IMGUI_UNLIMITED_FRAME_RATE is defined we render into latest image acquired from the swapchain
-    // but we display the image which was rendered before
-    // hence we must render once and increase the g_FrameIndex without presenting, which we do befor entering the render loop 
-    // this is also the reason why frame_end() is split into frame_end() and frame_present(), the latter one not being called here
+    // When IMGUI_UNLIMITED_FRAME_RATE is defined we render into latest image acquired from the swapchain but we display the image which was rendered before.
+    // Hence we must render once and increase the g_FrameIndex without presenting, which we do before entering the render loop.
+    // This is also the reason why frame_end() is split into frame_end() and frame_present(), the later one not being called here.
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
     ImGui_ImplGlfwVulkan_NewFrame();
     frame_begin();
