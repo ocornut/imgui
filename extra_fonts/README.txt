@@ -96,7 +96,9 @@
  EMBEDDING FONT IN SOURCE CODE
 ---------------------------------
 
- Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array. Then load the font with:
+ Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array. 
+ See the documentation in binary_to_compressed_c.cpp for instruction on how to use the tool.
+ Then load the font with:
  
    ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
    
