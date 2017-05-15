@@ -4544,7 +4544,7 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
         scroll_ratio = ImSaturate(scroll_v / scroll_max);
         grab_v_norm = scroll_ratio * (scrollbar_size_v - grab_h_pixels) / scrollbar_size_v;
 
-        // Update distance to grab now that we have seeked and saturated
+        // Update distance to grab now that we have sought and saturated
         if (seek_absolute)
             *click_delta_to_grab_center_v = clicked_v_norm - grab_v_norm - grab_h_norm*0.5f;
     }
