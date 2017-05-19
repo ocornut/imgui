@@ -9625,6 +9625,11 @@ void ImGui::ValueColor(const char* prefix, ImU32 v)
 #include <windows.h>
 #endif
 
+#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS
+#define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS
+#endif
+
 // Win32 API clipboard implementation
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS)
 
