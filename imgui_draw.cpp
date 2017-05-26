@@ -1046,7 +1046,6 @@ ImFontConfig::ImFontConfig()
     GlyphOffset = ImVec2(0.0f, 0.0f);
     GlyphRanges = NULL;
     MergeMode = false;
-    MergeGlyphCenterV = false;
     DstFont = NULL;
     memset(Name, 0, sizeof(Name));
 }
@@ -1427,8 +1426,8 @@ bool    ImFontAtlas::Build()
             dst_font->MetricsTotalSurface = 0;
         }
         dst_font->ConfigDataCount++;
-        float off_x = cfg.GlyphOffset.x, off_y = cfg.GlyphOffset.y;
-        float merge_off_y = (cfg.MergeMode && cfg.MergeGlyphCenterV) ? (ascent - dst_font->Ascent) * 0.5f : 0.0f;
+        float off_x = cfg.GlyphOffset.x;
+        float off_y = cfg.GlyphOffset.y;
 
         dst_font->FallbackGlyph = NULL; // Always clear fallback so FindGlyph can return NULL. It will be set again in BuildLookupTable()
         for (int i = 0; i < tmp.RangesCount; i++)
@@ -1453,8 +1452,8 @@ bool    ImFontAtlas::Build()
                 glyph.Codepoint = (ImWchar)codepoint;
                 glyph.X0 = q.x0 + off_x; glyph.Y0 = q.y0 + off_y; glyph.X1 = q.x1 + off_x; glyph.Y1 = q.y1 + off_y;
                 glyph.U0 = q.s0; glyph.V0 = q.t0; glyph.U1 = q.s1; glyph.V1 = q.t1;
-                glyph.Y0 += (float)(int)(dst_font->Ascent + merge_off_y + 0.5f);
-                glyph.Y1 += (float)(int)(dst_font->Ascent + merge_off_y + 0.5f);
+                glyph.Y0 += (float)(int)(dst_font->Ascent + 0.5f);
+                glyph.Y1 += (float)(int)(dst_font->Ascent + 0.5f);
                 glyph.XAdvance = (pc.xadvance + cfg.GlyphExtraSpacing.x);  // Bake spacing into XAdvance
                 if (cfg.PixelSnapH)
                     glyph.XAdvance = (float)(int)(glyph.XAdvance + 0.5f);
