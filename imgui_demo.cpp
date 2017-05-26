@@ -1,9 +1,11 @@
 // dear imgui, v1.50 WIP
 // (demo code)
 
-// Don't remove this file from your project! It is useful reference code that you can execute.
-// You can call ImGui::ShowTestWindow() in your code to learn about various features of ImGui.
+// Message to the person tempted to delete this file when integrating ImGui into their code base:
+// Do NOT remove this file from your project! It is useful reference code that you and other users will want to refer to.
 // Everything in this file will be stripped out by the linker if you don't call ImGui::ShowTestWindow().
+// During development, you can call ImGui::ShowTestWindow() in your code to learn about various features of ImGui.
+// Removing this file from your project is hindering your access to documentation, likely leading you to poorer usage of the library.
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
@@ -1768,7 +1770,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 ImGui::SameLine(); ShowHelpMarker("Note than the default embedded font is NOT meant to be scaled.\n\nFont are currently rendered into bitmaps at a given size at the time of building the atlas. You may oversample them to get some flexibility with scaling. You can also render at multiple sizes and select which one to use at runtime.\n\n(Glimmer of hope: the atlas system should hopefully be rewritten in the future to make scaling more natural and automatic.)");
                 ImGui::Text("Ascent: %f, Descent: %f, Height: %f", font->Ascent, font->Descent, font->Ascent - font->Descent);
                 ImGui::Text("Fallback character: '%c' (%d)", font->FallbackChar, font->FallbackChar);
-                ImGui::Text("Texture surface: %d pixels (approx)", font->MetricsTotalSurface);
+                ImGui::Text("Texture surface: %d pixels (approx) ~ %dx%d", font->MetricsTotalSurface, (int)sqrtf((float)font->MetricsTotalSurface), (int)sqrtf((float)font->MetricsTotalSurface));
                 for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
                 {
                     ImFontConfig* cfg = &font->ConfigData[config_i];

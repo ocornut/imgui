@@ -7,11 +7,16 @@
 // Note that even with compression, the output array is likely to be bigger than the binary file..
 // Load compressed TTF fonts with ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF()
 
-// Single file application, build with:
-//  # cl.exe binary_to_compressed_c.cpp
-//  # gcc binary_to_compressed_c.cpp
-// etc.
+// Build with, e.g:
+//   # cl.exe binary_to_compressed_c.cpp
+//   # gcc binary_to_compressed_c.cpp
 // You can also find a precompiled Windows binary in the binary/demo package available from https://github.com/ocornut/imgui
+
+// Usage:
+//   binary_to_compressed_c.exe [-base85] [-nocompress] <inputfile> <symbolname>
+// Usage example:
+//   # binary_to_compressed_c.exe myfont.ttf MyFont > myfont.cpp
+//   # binary_to_compressed_c.exe -base85 myfont.ttf MyFont > myfont.cpp
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
