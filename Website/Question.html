@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Question</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="css/agency.css" rel="stylesheet">
+
+    <!-- Custom Fonts -->
+    <link href="font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css">
+    <link href='https://fonts.googleapis.com/css?family=Kaushan+Script' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Roboto+Slab:400,100,300,700' rel='stylesheet' type='text/css'>
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+<body id="page-top" class="index">
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header page-scroll">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand page-scroll" href="index.html">dear imgui</a>
+            </div>
+
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="hidden">
+                        <a href="#page-top"></a>
+                    </li>
+                    <li>
+                        <a class="page-scroll" href="Demo.html">Demo</a>
+                    </li>
+                    <li>
+                        <a class="page-scroll" href="Gallery.html">Gallery</a>
+                    </li>
+                    <li>
+                        <a class="page-scroll" href="References.html">References</a>
+                    </li>
+                    <li>
+                        <a class="page-scroll" href="Question.html">Question</a>
+                    </li>
+                    <li>
+                        <a class="page-scroll" href="Credits.html">Credits</a>
+                    </li>
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container-fluid -->
+    </nav>
+
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="intro-text">
+                <div class="intro-lead-in">Welcome To Dear Imgui Library!</div>
+                <div style="font-size:large; ">It is a bloat-free graphical user interface library for C++</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Services Section -->
+    <section id="services">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12 text-center">
+                    <h2 class="section-heading">Frequently Asked Question (FAQ)</h2>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12"><br><br>
+                    <p style="font-size: medium;"> <strong> Where is the documentation? </strong><br><br>
+
+The documentation is at the top of imgui.cpp + effectively imgui.h.<br>
+Example code is in imgui_demo.cpp and particularly the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output.<br>
+Standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder.<br>
+We obviously needs better documentation! Consider contributing or becoming a Patron to promote this effort.<br><br>
+<strong> Why the odd dual naming, "dear imgui" vs "ImGui"? </strong><br><br>
+
+The library started its life and is best known as "ImGui" only due to the fact that I didn't give it a proper name when I released it. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations. It seemed confusing and unfair to hog the name. To reduce the ambiguity without affecting existing codebases, I have decided on an alternate, longer name "dear imgui" that people can use to refer to this specific library in ambiguous situations.<br><br>
+
+<strong>How do I update to a newer version of ImGui? <br>
+Can I have multiple widgets with the same label? Can I have widget without a label? (Yes) <br>
+I integrated ImGui in my engine and the text or lines are blurry.. <br>
+I integrated ImGui in my engine and some elements are disappearing when I move windows around.. <br>
+How can I load a different font than the default? <br>
+How can I load multiple fonts? <br>
+How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic? </strong><br><br>
+
+See the FAQ in imgui.cpp for answers.<br><br>
+
+<strong>How do you use ImGui on a platform that may not have a mouse or keyboard?</strong><br><br>
+
+I recommend using Synergy (sources). In particular, the src/micro/uSynergy.c file contains a small client that you can use on any platform to connect to your host PC. You can seamlessly use your PC input devices from a video game console or a tablet. ImGui allows to increase the hit box of widgets (via the TouchPadding setting) to accommodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.<br><br>
+
+<strong>Can you create elaborate/serious tools with ImGui? </strong><br><br>
+
+Yes. I have written data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools).<br><br>
+
+ImGui is very programmer centric and the immediate-mode GUI paradigm might requires you to readjust some habits before you can realize its full potential. Many programmers have unfortunately been taught by their environment to make unnecessarily complicated things. ImGui is about making things that are simple, efficient and powerful.<br><br>
+
+<strong> Is ImGui fast? </strong><br><br>
+
+Probably fast enough for most uses. Down to the fundation of its visual design, ImGui is engineered to be fairly performant both in term of CPU and GPU usage. Running elaborate code and creating elaborate UI will of course have a cost but ImGui aims to minimize it.<br><br>
+
+Mileage may vary but the following screenshot can give you a rough idea of the cost of running and rendering UI code (In the case of a trivial demo application like this one, your driver/os setup are likely to be the bottleneck. Testing performance as part of a real application is recommended).<br><br> </p>
+
+<center><img src="img/performance_01.png" class="img-thumbnail" height="600" width="600" ></center><br><br>
+
+<p style="font-size: medium;"> 
+
+This is showing framerate for the full application loop on my 2011 iMac running Windows 7, OpenGL, AMD Radeon HD 6700M with an optimized executable. In contrast, librairies featuring higher-quality rendering and layouting techniques may have a higher resources footprint.<br><br>
+
+If you intend to display large lists of items (say, 1000+) it can be beneficial for your code to perform clipping manually - one way is using helpers such as ImGuiListClipper - in order to avoid submitting them to ImGui in the first place. Even though ImGui will discard your clipped items it still needs to calculate their size and that overhead will add up if you have thousands of items. If you can handle clipping and height positionning yourself then browsing a list with millions of items isn't a problem.<br><br>
+
+<strong>Can you reskin the look of ImGui?</strong><br><br>
+
+You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface.<br><br>
+
+This is LumixEngine with a minor skinning hack + a docking/tabs extension (both of which you can find in the Issues section and will eventually be merged).<br><br>
+
+</p>
+
+<center><img src="img/92808c5c-d812-11e5-9507-16b63918b05b.jpg" class="img-thumbnail" height="600" width="600" ></center><br><br>
+
+<p style="font-size: medium;"> 
+
+<strong>Why using C++ (as opposed to C)?</strong><br><br>
+
+
+ImGui takes advantage of a few C++ features for convenience but nothing anywhere Boost-insanity/quagmire. In particular, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector&lt;&gt; class) are also relied on as a convenience but could be removed.<br><br>
+
+There is an unofficial but reasonably maintained c-api for ImGui by Stephan Dilly. I would suggest using your target language functionality to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. It was really designed with C++ in mind and may not make the same amount of sense with another language. Also see Links for third-party bindings to other languages.<br><br>
+
+
+</p>
+
+<h2> Donate </h2>
+
+<p style="font-size: medium;"> 
+
+<strong>Can I donate to support the development of ImGui?</strong><br><br>
+
+
+I'm currently an independent developer and your contributions are useful. I have setup an <a href="http://www.patreon.com/imgui" target="_blank">ImGui Patreon page</a>  if you want to donate and enable me to spend more time improving the library. If your company uses ImGui please consider making a contribution. One-off donations are also greatly appreciated. I am available for hire to work on or with ImGui. Thanks!<br><br>
+
+</p>
+
+
+                </div>
+
+                
+            </div>
+        </div>
+    </section>
+
+    <footer style="background-color: black; color: white;">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <span class="copyright">Dear ImGui is licensed under the MIT License</span>
+                </div>
+                
+            </div>
+        </div>
+    </footer>
+
+    
+
+    <!-- jQuery -->
+    <script src="js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="js/bootstrap.min.js"></script>
+
+    <!-- Plugin JavaScript -->
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.3/jquery.easing.min.js"></script>
+    <script src="js/classie.js"></script>
+    <script src="js/cbpAnimatedHeader.js"></script>
+
+    <!-- Contact Form JavaScript -->
+    <script src="js/jqBootstrapValidation.js"></script>
+    <script src="js/contact_me.js"></script>
+
+    <!-- Custom Theme JavaScript -->
+    <script src="js/agency.js"></script>
+
+</body>
+
+</html>
