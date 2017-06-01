@@ -62,6 +62,7 @@ Languages:
 - CyImGui: Python bindings for dear imgui using Cython: https://github.com/chromy/cyimgui
 - pyimgui: Another Python bindings for dear imgui: https://github.com/swistakm/pyimgui
 - LUA: https://github.com/patrickriordan/imgui_lua_bindings
+- imgui-pas: P  ascal bindings for imgui https://github.com/dpethes/imgui-pas
 
 Frameworks:
 - Main ImGui repository include examples for DirectX9, DirectX10, DirectX11, OpenGL2/3, Vulkan, Allegro 5, SDL+GL2/3, iOS and Marmalade: https://github.com/ocornut/imgui/tree/master/examples
