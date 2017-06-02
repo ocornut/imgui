@@ -311,12 +311,13 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
         g_pIB->Release();
         g_pIB = NULL;
     }
-    if (LPDIRECT3DTEXTURE9 tex = (LPDIRECT3DTEXTURE9)ImGui::GetIO().Fonts->TexID)
-    {
-        tex->Release();
-        ImGui::GetIO().Fonts->TexID = 0;
-    }
+
+    // At this point note that we set ImGui::GetIO().Fonts->TexID to be == g_FontTexture, so clear both.
+    if (g_FontTexture)
+        g_FontTexture->Release();
     g_FontTexture = NULL;
+    ImGuiIO& io = ImGui::GetIO();
+    io.Fonts->TexID = NULL;
 }
 
 void ImGui_ImplDX9_NewFrame()
