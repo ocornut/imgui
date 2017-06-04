@@ -43,6 +43,9 @@ void ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data)
         return;
     draw_data->ScaleClipRects(io.DisplayFramebufferScale);
 
+    //Activate Texture Unit 0
+    glActiveTexture(GL_TEXTURE0);
+    
     // Backup GL state
     GLint last_active_texture; glGetIntegerv(GL_ACTIVE_TEXTURE, &last_active_texture);
     glActiveTexture(GL_TEXTURE0);
