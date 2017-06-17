@@ -2603,10 +2603,12 @@ static void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDr
     IM_ASSERT(draw_list->IdxBuffer.Size == 0 || draw_list->_IdxWritePtr == draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size);
     IM_ASSERT((int)draw_list->_VtxCurrentIdx == draw_list->VtxBuffer.Size);
 
-    // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = 2 bytes = 64K vertices)
+    // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = 2 bytes = 64K vertices per window)
     // If this assert triggers because you are drawing lots of stuff manually, you can:
-    //  A) workaround by calling BeginChild()/EndChild() to put your draw commands in multiple draw lists, 
-    //  B) #define ImDrawIdx to a 'unsigned int' in imconfig.h and render accordingly.
+    // A) Add '#define ImDrawIdx unsigned int' in imconfig.h to raise the index size of 4 bytes. You'll need to handle the 4-bytes indices to your renderer.
+    //    For example, the OpenGL example code detect index size at compile-time and does 
+    //    'glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer_offset);
+    // B) If for some reason you cannot use 32-bit indices or don't want to, a workaround is to call BeginChild()/EndChild() because reaching the 64K limit to split your draw commands in multiple draw lists.
     IM_ASSERT((draw_list->_VtxCurrentIdx >> (sizeof(ImDrawIdx)*8)) == 0);  // Too many vertices in same ImDrawList. See comment above.
     
     out_render_list.push_back(draw_list);
