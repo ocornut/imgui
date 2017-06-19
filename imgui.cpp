@@ -2610,7 +2610,7 @@ static void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDr
     //    'glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer_offset);'
     //    Your own engine or render API may use different parameters or function calls to specify index sizes. 2 and 4 bytes indices are generally supported by most API.
     // B) If for some reason you cannot use 4 bytes indices or don't want to, a workaround is to call BeginChild()/EndChild() before reaching the 64K limit to split your draw commands in multiple draw lists.
-    IM_ASSERT((draw_list->_VtxCurrentIdx >> (sizeof(ImDrawIdx)*8)) == 0);  // Too many vertices in same ImDrawList. See comment above.
+    IM_ASSERT(((ImU64)draw_list->_VtxCurrentIdx >> (sizeof(ImDrawIdx)*8)) == 0);  // Too many vertices in same ImDrawList. See comment above.
     
     out_render_list.push_back(draw_list);
     GImGui->IO.MetricsRenderVertices += draw_list->VtxBuffer.Size;

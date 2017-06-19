@@ -79,6 +79,11 @@ typedef int ImGuiSelectableFlags;   // flags for Selectable()               // e
 typedef int ImGuiTreeNodeFlags;     // flags for TreeNode*(), Collapsing*() // enum ImGuiTreeNodeFlags_
 typedef int (*ImGuiTextEditCallback)(ImGuiTextEditCallbackData *data);
 typedef void (*ImGuiSizeConstraintCallback)(ImGuiSizeConstraintCallbackData* data);
+#ifdef _MSC_VER
+typedef unsigned __int64 ImU64;     // 64-bit unsigned integer
+#else
+typedef unsigned long long ImU64;   // 64-bit unsigned integer
+#endif 
 
 // Others helpers at bottom of the file:
 // class ImVector<>                 // Lightweight std::vector like class.
