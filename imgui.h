@@ -636,22 +636,24 @@ enum ImGuiCol_
     ImGuiCol_COUNT
 };
 
-// Enumeration for PushStyleVar() / PopStyleVar()
-// NB: the enum only refers to fields of ImGuiStyle() which makes sense to be pushed/poped in UI code. Feel free to add others.
+// Enumeration for PushStyleVar() / PopStyleVar() to temporarily modify the ImGuiStyle structure.
+// NB: the enum only refers to fields of ImGuiStyle which makes sense to be pushed/poped inside UI code. During initialization, feel free to just poke into ImGuiStyle directly.
+// NB: if changing this enum, you need to update the associated internal table GStyleVarInfo[] accordingly. This is where we link enum values to members offset/type.
 enum ImGuiStyleVar_
 {
-    ImGuiStyleVar_Alpha,               // float
-    ImGuiStyleVar_WindowPadding,       // ImVec2
-    ImGuiStyleVar_WindowRounding,      // float
-    ImGuiStyleVar_WindowMinSize,       // ImVec2
-    ImGuiStyleVar_ChildWindowRounding, // float
-    ImGuiStyleVar_FramePadding,        // ImVec2
-    ImGuiStyleVar_FrameRounding,       // float
-    ImGuiStyleVar_ItemSpacing,         // ImVec2
-    ImGuiStyleVar_ItemInnerSpacing,    // ImVec2
-    ImGuiStyleVar_IndentSpacing,       // float
-    ImGuiStyleVar_GrabMinSize,         // float
-    ImGuiStyleVar_ButtonTextAlign,     // flags ImGuiAlign_*
+    // Enum name ......................// Member in ImGuiStyle structure (see ImGuiStyle for descriptions)
+    ImGuiStyleVar_Alpha,               // float     Alpha
+    ImGuiStyleVar_WindowPadding,       // ImVec2    WindowPadding
+    ImGuiStyleVar_WindowRounding,      // float     WindowRounding
+    ImGuiStyleVar_WindowMinSize,       // ImVec2    WindowMinSize
+    ImGuiStyleVar_ChildWindowRounding, // float     ChildWindowRounding
+    ImGuiStyleVar_FramePadding,        // ImVec2    FramePadding
+    ImGuiStyleVar_FrameRounding,       // float     FrameRounding
+    ImGuiStyleVar_ItemSpacing,         // ImVec2    ItemSpacing
+    ImGuiStyleVar_ItemInnerSpacing,    // ImVec2    ItemInnerSpacing
+    ImGuiStyleVar_IndentSpacing,       // float     IndentSpacing
+    ImGuiStyleVar_GrabMinSize,         // float     GrabMinSize
+    ImGuiStyleVar_ButtonTextAlign,     // ImVec2    ButtonTextAlign
     ImGuiStyleVar_Count_
 };
 
