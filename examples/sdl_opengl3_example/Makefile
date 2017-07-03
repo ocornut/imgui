@@ -12,8 +12,8 @@
 
 #CXX = g++
 
-EXE = opengl3_example
-OBJS = main.o imgui_impl_glfw_gl3.o
+EXE = sdl_opengl3_example
+OBJS = main.o imgui_impl_sdl_gl3.o
 OBJS += ../../imgui.o ../../imgui_demo.o ../../imgui_draw.o
 OBJS += ../libs/gl3w/GL/gl3w.o
 
@@ -42,9 +42,9 @@ endif
 
 ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
    ECHO_MESSAGE = "Windows"
-   LIBS = -lglfw3 -lgdi32 -lopengl32 -limm32
+   LIBS = -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
 
-   CXXFLAGS = -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
+   CXXFLAGS = -I../../ -I../libs/gl3w `pkg-config --cflags sdl2`
    CXXFLAGS += -Wall -Wformat
    CFLAGS = $(CXXFLAGS)
 endif
