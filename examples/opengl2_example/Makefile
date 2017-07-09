@@ -1,6 +1,6 @@
 #
 # Cross Platform Makefile
-# Compatible with Ubuntu 14.04.1 and Mac OS X
+# Compatible with MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X
 #
 #
 # if you using Mac OS X:
@@ -37,7 +37,7 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	CFLAGS = $(CXXFLAGS)
 endif
 
-ifeq ($(UNAME_S), MINGW64_NT-6.3)
+ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
    ECHO_MESSAGE = "Windows"
    LIBS = -lglfw3 -lgdi32 -lopengl32 -limm32
 
