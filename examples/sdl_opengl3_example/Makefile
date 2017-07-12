@@ -6,6 +6,8 @@
 # You will need GLFW (http://www.glfw.org)
 #
 #   apt-get install libglfw-dev  # Linux
+#   or
+#   apt-get install libglfw3-dev  # Linux
 #   brew install glfw            # Mac OS X
 #   pacman -S --noconfirm --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-glfw # MSYS2
 #
@@ -22,9 +24,9 @@ UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	LIBS = -lGL `pkg-config --static --libs glfw3`
+	LIBS = -lGL `pkg-config --static --libs glfw3` `pkg-config --static --libs sdl2`
 
-	CXXFLAGS = -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
+	CXXFLAGS = -I../../ -I../libs/gl3w `pkg-config --cflags glfw3` `pkg-config --cflags sdl2`
 	CXXFLAGS += -Wall -Wformat
 	CFLAGS = $(CXXFLAGS)
 endif
