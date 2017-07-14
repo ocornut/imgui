@@ -933,7 +933,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     if (text_begin == text_end)
         return;
 
-    // Note: This is one of the few instance of breaking the encapsulation of ImDrawList, as we pull this from ImGui state, but it is just SO useful.
+    // IMPORTANT: This is one of the few instance of breaking the encapsulation of ImDrawList, as we pull this from ImGui state, but it is just SO useful.
     // Might just move Font/FontSize to ImDrawList?
     if (font == NULL)
         font = GImGui->Font;
@@ -955,7 +955,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
 {
-    AddText(GImGui->Font, GImGui->FontSize, pos, col, text_begin, text_end);
+    AddText(NULL, 0.0f, pos, col, text_begin, text_end);
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col)
@@ -2167,8 +2167,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                         }
                     }
 
-                    // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
-                    // Inlined here:
+                    // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug builds. Inlined here:
                     {
                         idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2);
                         idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3);
