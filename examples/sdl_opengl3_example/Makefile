@@ -31,12 +31,9 @@ endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
-	LIBS = -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
-	# FIXME: Missing SDL2 libs/includes
-	#LIBS += -L/usr/local/lib -lglfw3
-	#LIBS += -L/usr/local/lib -lglfw
+	LIBS = -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -framework SDL2
 
-	CXXFLAGS = -I../../ -I../libs/gl3w -I/usr/local/include
+	CXXFLAGS = -I../../ -I../libs/gl3w -I/usr/local/include -I /Library/Frameworks/SDL2.framework/Headers
 	CXXFLAGS += -Wall -Wformat
 	CFLAGS = $(CXXFLAGS)
 endif
