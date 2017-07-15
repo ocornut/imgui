@@ -15,4 +15,5 @@ before_install:
 script: 
   - make -C examples/opengl2_example
   - make -C examples/opengl3_example
+  - if [ $TRAVIS_OS_NAME == osx ]; then xcodebuild -project examples/apple_example/imguiex.xcodeproj -target imguiex-osx; fi
 
