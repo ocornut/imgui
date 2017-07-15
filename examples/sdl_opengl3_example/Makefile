@@ -22,9 +22,9 @@ UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	LIBS = -lGL `pkg-config --static --libs glfw3`
+	LIBS = -lGL -ldl `sdl2-config --libs`
 
-	CXXFLAGS = -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
+	CXXFLAGS = -I../../ -I../libs/gl3w `sdl2-config --cflags`
 	CXXFLAGS += -Wall -Wformat
 	CFLAGS = $(CXXFLAGS)
 endif
@@ -32,8 +32,9 @@ endif
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
 	LIBS = -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
+	# FIXME: Missing SDL2 libs/includes
 	#LIBS += -L/usr/local/lib -lglfw3
-	LIBS += -L/usr/local/lib -lglfw
+	#LIBS += -L/usr/local/lib -lglfw
 
 	CXXFLAGS = -I../../ -I../libs/gl3w -I/usr/local/include
 	CXXFLAGS += -Wall -Wformat
