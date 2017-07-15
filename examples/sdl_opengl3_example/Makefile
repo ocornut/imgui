@@ -3,11 +3,11 @@
 # Compatible with MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X
 #
 #
-# You will need GLFW (http://www.glfw.org)
+# You will need SDL2 (http://www.libsdl.org)
 #
-#   apt-get install libglfw-dev  # Linux
-#   brew install glfw            # Mac OS X
-#   pacman -S --noconfirm --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-glfw # MSYS2
+#   apt-get install libsdl2-dev  # Linux
+#   brew install sdl2            # Mac OS X
+#   pacman -S mingw-w64-i686-SDL # MSYS2
 #
 
 #CXX = g++
