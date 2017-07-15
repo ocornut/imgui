@@ -31,9 +31,9 @@ endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
-	LIBS = -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -framework SDL2
+	LIBS = -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs`
 
-	CXXFLAGS = -I../../ -I../libs/gl3w -I/usr/local/include -I /Library/Frameworks/SDL2.framework/Headers
+	CXXFLAGS = -I../../ -I../libs/gl3w -I/usr/local/include `sdl2-config --cflags`
 	CXXFLAGS += -Wall -Wformat
 	CFLAGS = $(CXXFLAGS)
 endif
