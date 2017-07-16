@@ -1412,7 +1412,7 @@ bool    ImFontAtlas::Build()
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
         stbtt_GetFontVMetrics(&tmp.FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
 
-        float ascent = unscaled_ascent * font_scale;
+        float ascent = unscaled_ascent * font_scale + cfg.GlyphExtraSpacing.y;
         float descent = unscaled_descent * font_scale;
         if (!cfg.MergeMode)
         {
