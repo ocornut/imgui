@@ -3,7 +3,7 @@ dear imgui,
 [![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 [![Coverity Status](https://scan.coverity.com/projects/4720/badge.svg)](https://scan.coverity.com/projects/4720)
 
-(This library is free and will stay free, but needs your support to sustain its development. There are lots of desirable new features and maintenance to do. If you work for a company using ImGui or have the means to do so, please consider financial support. I can invoice for private support, custom development etc. E-mail: omarcornut at gmail)
+(This library is free but needs your support to sustain its development. There are lots of desirable new features and maintenance to do. If you are an individual using dear imgui, please consider financial support via Patreon/PayPal. If your company is using dear imgui, please consider sponsorship (e.g. sponsoring a few weeks of development). I can invoice for private support, custom development etc. E-mail: omarcornut at gmail.)
 
 Monthly donations via Patreon:
 <br>[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui)
@@ -62,6 +62,7 @@ Languages:
 - CyImGui: Python bindings for dear imgui using Cython: https://github.com/chromy/cyimgui
 - pyimgui: Another Python bindings for dear imgui: https://github.com/swistakm/pyimgui
 - LUA: https://github.com/patrickriordan/imgui_lua_bindings
+- imgui-pas: P  ascal bindings for imgui https://github.com/dpethes/imgui-pas
 
 Frameworks:
 - Main ImGui repository include examples for DirectX9, DirectX10, DirectX11, OpenGL2/3, Vulkan, Allegro 5, SDL+GL2/3, iOS and Marmalade: https://github.com/ocornut/imgui/tree/master/examples
