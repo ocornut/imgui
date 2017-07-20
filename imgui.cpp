@@ -8976,6 +8976,23 @@ void ImGui::EndMenu()
     EndPopup();
 }
 
+static void ColorTooltip(const float* col, ImGuiColorEditFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    int cr = IM_F32_TO_INT8_SAT(col[0]), cg = IM_F32_TO_INT8_SAT(col[1]), cb = IM_F32_TO_INT8_SAT(col[2]), ca = (flags & ImGuiColorEditFlags_Alpha) ? IM_F32_TO_INT8_SAT(col[3]) : 255;
+    BeginTooltipEx(true);
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImVec2 sz(g.FontSize * 3, g.FontSize * 3);
+    window->DrawList->AddRectFilled(window->DC.CursorPos, window->DC.CursorPos + sz, IM_COL32(cr,cg,cb,255));
+    ImGui::Dummy(sz);
+    ImGui::SameLine();
+    if (flags & ImGuiColorEditFlags_Alpha)
+        ImGui::Text("#%02X%02X%02X%02X\nR:%d, G:%d, B:%d, A:%d\n(%.3f, %.3f, %.3f, %.3f)", cr, cg, cb, ca, cr, cg, cb, ca, col[0], col[1], col[2], col[3]);
+    else
+        ImGui::Text("#%02X%02X%02X\nR: %d, G: %d, B: %d\n(%.3f, %.3f, %.3f)", cr, cg, cb, cr, cg, cb, col[0], col[1], col[2]);
+    ImGui::EndTooltip();
+}
+
 // A little colored square. Return true when clicked.
 // FIXME: May want to display/ignore the alpha component in the color display? Yet show it in the tooltip.
 bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_border)
@@ -8998,7 +9015,7 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
     RenderFrame(bb.Min, bb.Max, GetColorU32(col), outline_border, style.FrameRounding);
 
     if (hovered)
-        SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col.x, col.y, col.z, col.w, IM_F32_TO_INT8_SAT(col.x), IM_F32_TO_INT8_SAT(col.y), IM_F32_TO_INT8_SAT(col.z), IM_F32_TO_INT8_SAT(col.w));
+        ColorTooltip(&col.x, ImGuiColorEditFlags_Alpha);
 
     return pressed;
 }
@@ -9151,7 +9168,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
         // Recreate our own tooltip over's ColorButton() one because we want to display correct alpha here
         if (IsItemHovered())
-            SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col[0], col[1], col[2], col[3], IM_F32_TO_INT8_SAT(col[0]), IM_F32_TO_INT8_SAT(col[1]), IM_F32_TO_INT8_SAT(col[2]), IM_F32_TO_INT8_SAT(col[3]));
+            ColorTooltip(col, flags);
     }
 
     if (label != label_display_end)
@@ -9214,8 +9231,8 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     float bar1_pos_x = bar0_pos_x + bars_width + style.ItemInnerSpacing.x;
 
     // Recreate our own tooltip over's ColorButton() one because we want to display correct alpha here
-    if (IsItemHovered())
-        SetTooltip("Color:\n(%.2f,%.2f,%.2f,%.2f)\n#%02X%02X%02X%02X", col[0], col[1], col[2], col[3], IM_F32_TO_INT8_SAT(col[0]), IM_F32_TO_INT8_SAT(col[1]), IM_F32_TO_INT8_SAT(col[2]), IM_F32_TO_INT8_SAT(col[3]));
+    //if (IsItemHovered())
+    //    ColorTooltip(col, flags);
 
     float H,S,V;
     ImGui::ColorConvertRGBtoHSV(col[0], col[1], col[2], H, S, V);
