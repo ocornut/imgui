@@ -154,6 +154,7 @@
 
  - 2016/08/xx (1.XX) - removed ColorEditMode() and ImGuiColorEditMode in favor of ImGuiColorEditFlags and parameters to ColorEdit*() functions
                        replaced ColorEdit4() third parameter 'bool show_alpha=true' to 'ImGuiColorEditFlags flags=0x01' where ImGuiColorEditFlags_Alpha=0x01 for dodgy compatibility
+ - 2017/07/20 (1.51) - Removed IsPosHoveringAnyWindow(ImVec2), which was partly broken and misleading. ASSERT + redirect user to io.WantCaptureMouse
  - 2017/05/26 (1.50) - Removed ImFontConfig::MergeGlyphCenterV in favor of a more multipurpose ImFontConfig::GlyphOffset.
  - 2017/05/01 (1.50) - Renamed ImDrawList::PathFill() (rarely used directly) to ImDrawList::PathFillConvex() for clarity.
  - 2016/11/06 (1.50) - BeginChild(const char*) now applies the stack id to the provided label, consistently with other functions as it should always have been. It shouldn't affect you unless (extremely unlikely) you were appending multiple times to a same child from different locations of the stack id. If that's the case, generate an id with GetId() and use it instead of passing string to BeginChild().
@@ -1777,7 +1778,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     MoveId = GetID("#MOVE");
 
     Flags = 0;
-    IndexWithinParent = 0;
+    OrderWithinParent = 0;
     PosFloat = Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContents = SizeContentsExplicit = ImVec2(0.0f, 0.0f);
@@ -2158,7 +2159,7 @@ void ImGui::NewFrame()
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
-    g.Tooltip[0] = '\0';
+    g.TooltipOverrideCount = 0;
     g.OverlayDrawList.Clear();
     g.OverlayDrawList.PushTextureID(g.IO.Fonts->TexID);
     g.OverlayDrawList.PushClipRectFullScreen();
@@ -2569,7 +2570,7 @@ static int ChildWindowComparer(const void* lhs, const void* rhs)
         return d;
     if (int d = (a->Flags & ImGuiWindowFlags_ComboBox) - (b->Flags & ImGuiWindowFlags_ComboBox))
         return d;
-    return (a->IndexWithinParent - b->IndexWithinParent);
+    return (a->OrderWithinParent - b->OrderWithinParent);
 }
 
 static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, ImGuiWindow* window)
@@ -2657,14 +2658,6 @@ void ImGui::EndFrame()
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // ImGui::EndFrame() called multiple times, or forgot to call ImGui::NewFrame() again
-
-    // Render tooltip
-    if (g.Tooltip[0])
-    {
-        ImGui::BeginTooltip();
-        ImGui::TextUnformatted(g.Tooltip);
-        ImGui::EndTooltip();
-    }
 
     // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
     if (g.IO.ImeSetInputScreenPosFn && ImLengthSqr(g.OsImePosRequest - g.OsImePosSet) > 0.0001f)
@@ -3148,11 +3141,6 @@ bool ImGui::IsMouseHoveringAnyWindow()
     return g.HoveredWindow != NULL;
 }
 
-bool ImGui::IsPosHoveringAnyWindow(const ImVec2& pos)
-{
-    return FindHoveredWindow(pos, false) != NULL;
-}
-
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
 {
     const int key_index = GImGui->IO.KeyMap[key];
@@ -3386,11 +3374,36 @@ ImVec2 ImGui::CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge, float ou
     return rect.GetClosestPoint(pos, on_edge);
 }
 
-// Tooltip is stored and turned into a BeginTooltip()/EndTooltip() sequence at the end of the frame. Each call override previous value.
-void ImGui::SetTooltipV(const char* fmt, va_list args)
+static ImRect GetVisibleRect()
 {
     ImGuiContext& g = *GImGui;
-    ImFormatStringV(g.Tooltip, IM_ARRAYSIZE(g.Tooltip), fmt, args);
+    if (g.IO.DisplayVisibleMin.x != g.IO.DisplayVisibleMax.x && g.IO.DisplayVisibleMin.y != g.IO.DisplayVisibleMax.y)
+        return ImRect(g.IO.DisplayVisibleMin, g.IO.DisplayVisibleMax);
+    return ImRect(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y);
+}
+
+// Not exposed publicly as BeginTooltip() because bool parameters are evil. Let's see if other needs arise first.
+static void BeginTooltipEx(bool override_previous_tooltip)
+{
+    ImGuiContext& g = *GImGui;
+    char window_name[16];
+    ImFormatString(window_name, IM_ARRAYSIZE(window_name), "##Tooltip%02d", g.TooltipOverrideCount);
+    if (override_previous_tooltip)
+        if (ImGuiWindow* window = ImGui::FindWindowByName(window_name))
+            if (window->Active)
+            {
+                // Hide previous tooltips. We can't easily "reset" the content of a window so we create a new one.
+                window->HiddenFrames = 1;
+                ImFormatString(window_name, IM_ARRAYSIZE(window_name), "##Tooltip%02d", ++g.TooltipOverrideCount);
+            }
+    ImGui::Begin(window_name, NULL, ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize);
+}
+
+void ImGui::SetTooltipV(const char* fmt, va_list args)
+{
+    BeginTooltipEx(true);
+    TextV(fmt, args);
+    EndTooltip();
 }
 
 void ImGui::SetTooltip(const char* fmt, ...)
@@ -3401,18 +3414,9 @@ void ImGui::SetTooltip(const char* fmt, ...)
     va_end(args);
 }
 
-static ImRect GetVisibleRect()
-{
-    ImGuiContext& g = *GImGui;
-    if (g.IO.DisplayVisibleMin.x != g.IO.DisplayVisibleMax.x && g.IO.DisplayVisibleMin.y != g.IO.DisplayVisibleMax.y)
-        return ImRect(g.IO.DisplayVisibleMin, g.IO.DisplayVisibleMax);
-    return ImRect(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y);
-}
-
 void ImGui::BeginTooltip()
 {
-    ImGuiWindowFlags flags = ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
-    ImGui::Begin("##Tooltip", NULL, flags);
+    BeginTooltipEx(false);
 }
 
 void ImGui::EndTooltip()
@@ -3997,7 +4001,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
     if (first_begin_of_the_frame)
     {
         window->Active = true;
-        window->IndexWithinParent = 0;
+        window->OrderWithinParent = 0;
         window->BeginCount = 0;
         window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
         window->LastFrameActive = current_frame;
@@ -4117,7 +4121,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         // Position child window
         if (flags & ImGuiWindowFlags_ChildWindow)
         {
-            window->IndexWithinParent = parent_window->DC.ChildWindows.Size;
+            window->OrderWithinParent = parent_window->DC.ChildWindows.Size;
             parent_window->DC.ChildWindows.push_back(window);
         }
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))

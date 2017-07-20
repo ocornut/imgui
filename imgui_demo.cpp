@@ -2,10 +2,17 @@
 // (demo code)
 
 // Message to the person tempted to delete this file when integrating ImGui into their code base:
-// Do NOT remove this file from your project! It is useful reference code that you and other users will want to refer to.
+// Don't do it! Do NOT remove this file from your project! It is useful reference code that you and other users will want to refer to.
 // Everything in this file will be stripped out by the linker if you don't call ImGui::ShowTestWindow().
-// During development, you can call ImGui::ShowTestWindow() in your code to learn about various features of ImGui.
-// Removing this file from your project is hindering your access to documentation, likely leading you to poorer usage of the library.
+// During development, you can call ImGui::ShowTestWindow() in your code to learn about various features of ImGui. Have it wired in a debug menu!
+// Removing this file from your project is hindering access to documentation for everyone in your team, likely leading you to poorer usage of the library.
+
+// Note that you can #define IMGUI_DISABLE_TEST_WINDOWS in imconfig.h for the same effect.
+// If you want to link core ImGui in your public builds but not those test windows, #define IMGUI_DISABLE_TEST_WINDOWS in imconfig.h and those functions will be empty.
+// For any other case, if you have ImGui available you probably want this to be available for reference and execution.
+
+// Thank you,
+// -Your beloved friend, imgui_demo.cpp (that you won't delete)
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
