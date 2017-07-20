@@ -2661,7 +2661,9 @@ void ImGui::EndFrame()
     if (g.Tooltip[0])
     {
         ImGui::BeginTooltip();
+        ImGui::PushFont(g.TooltipFont);
         ImGui::TextUnformatted(g.Tooltip);
+        ImGui::PopFont();
         ImGui::EndTooltip();
     }
 
@@ -3393,6 +3395,7 @@ void ImGui::SetTooltipV(const char* fmt, va_list args)
 {
     ImGuiContext& g = *GImGui;
     ImFormatStringV(g.Tooltip, IM_ARRAYSIZE(g.Tooltip), fmt, args);
+    g.TooltipFont = g.Font;
 }
 
 void ImGui::SetTooltip(const char* fmt, ...)

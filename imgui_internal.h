@@ -437,6 +437,7 @@ struct ImGuiContext
     float                   DragSpeedScaleSlow;
     float                   DragSpeedScaleFast;
     ImVec2                  ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
+    ImFont*                 TooltipFont;
     char                    Tooltip[1024];
     char*                   PrivateClipboard;                   // If no custom clipboard handler is defined
     ImVec2                  OsImePosRequest, OsImePosSet;       // Cursor position request & last passed to the OS Input Method Editor
