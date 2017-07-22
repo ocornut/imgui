@@ -2977,6 +2977,16 @@ void ImGui::RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
     }
 }
 
+void ImGui::RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->Flags & ImGuiWindowFlags_ShowBorders)
+    {
+        window->DrawList->AddRect(p_min+ImVec2(1,1), p_max+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), rounding);
+        window->DrawList->AddRect(p_min, p_max, GetColorU32(ImGuiCol_Border), rounding);
+    }
+}
+
 // Render a triangle to denote expanded/collapsed state
 void ImGui::RenderCollapseTriangle(ImVec2 p_min, bool is_open, float scale)
 {
@@ -9033,8 +9043,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
 
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);
-    window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(*(ImVec4*)&col), style.FrameRounding);
-    //window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(border_col), style.FrameRounding);
+    RenderFrame(bb.Min, bb.Max, GetColorU32(*(ImVec4*)&col), true, style.FrameRounding);
 
     if (hovered && !(flags & ImGuiColorEditFlags_NoTooltip))
         ColorTooltip(desc_id, &col.x, flags & ImGuiColorEditFlags_NoAlpha);
@@ -9347,14 +9356,17 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             hue_colors[i], hue_colors[i], hue_colors[i + 1], hue_colors[i + 1]);
     }
     float bar0_line_y = (float)(int)(picker_pos.y + H * sv_picker_size + 0.5f);
+    RenderFrameBorder(ImVec2(bar0_pos_x, picker_pos.y), ImVec2(bar0_pos_x + bars_width, picker_pos.y + sv_picker_size), 0.0f);
     draw_list->AddLine(ImVec2(bar0_pos_x - bars_line_extrude, bar0_line_y), ImVec2(bar0_pos_x + bars_width + bars_line_extrude, bar0_line_y), IM_COL32_WHITE);
 
     // Render alpha bar
     if (alpha_bar)
     {
         float alpha = ImSaturate(col[3]);
-        float bar1_line_y = (float)(int)(picker_pos.y + (1.0f-alpha) * sv_picker_size + 0.5f);
-        draw_list->AddRectFilledMultiColor(ImVec2(bar1_pos_x, picker_pos.y), ImVec2(bar1_pos_x + bars_width, picker_pos.y + sv_picker_size), IM_COL32_WHITE, IM_COL32_WHITE, IM_COL32_BLACK, IM_COL32_BLACK);
+        float bar1_line_y = (float)(int)(picker_pos.y + (1.0f - alpha) * sv_picker_size + 0.5f);
+        ImRect bar1_bb(bar1_pos_x, picker_pos.y, bar1_pos_x + bars_width, picker_pos.y + sv_picker_size);
+        draw_list->AddRectFilledMultiColor(bar1_bb.Min, bar1_bb.Max, IM_COL32_WHITE, IM_COL32_WHITE, IM_COL32_BLACK, IM_COL32_BLACK);
+        RenderFrameBorder(bar1_bb.Min, bar1_bb.Max, 0.0f);
         draw_list->AddLine(ImVec2(bar1_pos_x - bars_line_extrude, bar1_line_y), ImVec2(bar1_pos_x + bars_width + bars_line_extrude, bar1_line_y), IM_COL32_WHITE);
     }
 
@@ -9362,6 +9374,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     ImU32 hue_color32 = ColorConvertFloat4ToU32(hue_color_f);
     draw_list->AddRectFilledMultiColor(picker_pos, picker_pos + ImVec2(sv_picker_size,sv_picker_size), IM_COL32_WHITE, hue_color32, hue_color32, IM_COL32_WHITE);
     draw_list->AddRectFilledMultiColor(picker_pos, picker_pos + ImVec2(sv_picker_size,sv_picker_size), IM_COL32_BLACK_TRANS, IM_COL32_BLACK_TRANS, IM_COL32_BLACK, IM_COL32_BLACK);
+    RenderFrameBorder(picker_pos, picker_pos + ImVec2(sv_picker_size,sv_picker_size), 0.0f);
 
     // Render cross-hair
     const float CROSSHAIR_SIZE = 7.0f;
