@@ -9109,8 +9109,8 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X%02X", i[0], i[1], i[2], i[3]);
         else
             ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X", i[0], i[1], i[2]);
-        ImGui::PushItemWidth(w_slider_all);
-        if (ImGui::InputText("##Text", buf, IM_ARRAYSIZE(buf), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase))
+        PushItemWidth(w_slider_all);
+        if (InputText("##Text", buf, IM_ARRAYSIZE(buf), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase))
         {
             value_changed |= true;
             char* p = buf;
@@ -9213,20 +9213,21 @@ bool ImGui::ColorPicker3(const char* label, float col[3], ImGuiColorEditFlags fl
 // see https://github.com/ocornut/imgui/issues/346
 // TODO: Missing color square
 // TODO: English strings in context menu (see FIXME-LOCALIZATION)
+// Note: we adjust item height based on item widget, which may cause a flickering feedback loop (if automatic height makes a vertical scrollbar appears, affecting automatic width..) 
 bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags flags)
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGuiStyle& style = ImGui::GetStyle();
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
-    ImGui::PushID(label);
-    ImGui::BeginGroup();
+    PushID(label);
+    BeginGroup();
 
     // Setup
     bool alpha = (flags & ImGuiColorEditFlags_Alpha) != 0;
     ImVec2 picker_pos = ImGui::GetCursorScreenPos();
     float bars_width = ImGui::GetWindowFontSize() * 1.0f;                                                           // Arbitrary smallish width of Hue/Alpha picking bars
-    float sv_picker_size = ImMax(bars_width * 2, ImGui::CalcItemWidth() - (alpha ? 2 : 1) * (bars_width + style.ItemInnerSpacing.x)); // Saturation/Value picking box
+    float sv_picker_size = ImMax(bars_width * 2, CalcItemWidth() - (alpha ? 2 : 1) * (bars_width + style.ItemInnerSpacing.x)); // Saturation/Value picking box
     float bar0_pos_x = picker_pos.x + sv_picker_size + style.ItemInnerSpacing.x;
     float bar1_pos_x = bar0_pos_x + bars_width + style.ItemInnerSpacing.x;
 
@@ -9235,12 +9236,12 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     //    ColorTooltip(col, flags);
 
     float H,S,V;
-    ImGui::ColorConvertRGBtoHSV(col[0], col[1], col[2], H, S, V);
+    ColorConvertRGBtoHSV(col[0], col[1], col[2], H, S, V);
 
     // Color matrix logic
     bool value_changed = false, hsv_changed = false;
-    ImGui::InvisibleButton("sv", ImVec2(sv_picker_size, sv_picker_size));
-    if (ImGui::IsItemActive())
+    InvisibleButton("sv", ImVec2(sv_picker_size, sv_picker_size));
+    if (IsItemActive())
     {
         S = ImSaturate((io.MousePos.x - picker_pos.x) / (sv_picker_size-1));
         V = 1.0f - ImSaturate((io.MousePos.y - picker_pos.y) / (sv_picker_size-1));
@@ -9283,29 +9284,29 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     if (!(flags & ImGuiColorEditFlags_NoSliders))
     {
         if ((flags & ImGuiColorEditFlags_ModeMask_) == 0)
-        ImGui::PushItemWidth((alpha ? bar1_pos_x : bar0_pos_x) + bars_width - picker_pos.x);
         ImGuiColorEditFlags sub_flags = (alpha ? ImGuiColorEditFlags_Alpha : 0) | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoColorSquare;
             flags |= ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX;
+        PushItemWidth((alpha ? bar1_pos_x : bar0_pos_x) + bars_width - picker_pos.x);
         if (flags & ImGuiColorEditFlags_RGB)
-            value_changed |= ImGui::ColorEdit4("##rgb", col, sub_flags | ImGuiColorEditFlags_RGB);
+            value_changed |= ColorEdit4("##rgb", col, sub_flags | ImGuiColorEditFlags_RGB);
         if (flags & ImGuiColorEditFlags_HSV)
-            value_changed |= ImGui::ColorEdit4("##hsv", col, sub_flags | ImGuiColorEditFlags_HSV);
+            value_changed |= ColorEdit4("##hsv", col, sub_flags | ImGuiColorEditFlags_HSV);
         if (flags & ImGuiColorEditFlags_HEX)
-            value_changed |= ImGui::ColorEdit4("##hex", col, sub_flags | ImGuiColorEditFlags_HEX);
-        ImGui::PopItemWidth();
+            value_changed |= ColorEdit4("##hex", col, sub_flags | ImGuiColorEditFlags_HEX);
+        PopItemWidth();
     }
 
     // Try to cancel hue wrap (after ColorEdit), if any
     if (value_changed)
     {
         float new_H, new_S, new_V;
-        ImGui::ColorConvertRGBtoHSV(col[0], col[1], col[2], new_H, new_S, new_V);
+        ColorConvertRGBtoHSV(col[0], col[1], col[2], new_H, new_S, new_V);
         if (new_H <= 0 && H > 0) 
         {
             if (new_V <= 0 && V != new_V)
-                ImGui::ColorConvertHSVtoRGB(H, S, new_V <= 0 ? V * 0.5f : new_V, col[0], col[1], col[2]);
+                ColorConvertHSVtoRGB(H, S, new_V <= 0 ? V * 0.5f : new_V, col[0], col[1], col[2]);
             else if (new_S <= 0)
-                ImGui::ColorConvertHSVtoRGB(H, new_S <= 0 ? S * 0.5f : new_S, new_V, col[0], col[1], col[2]);
+                ColorConvertHSVtoRGB(H, new_S <= 0 ? S * 0.5f : new_S, new_V, col[0], col[1], col[2]);
         }
     }
 
@@ -9481,7 +9482,7 @@ void ImGui::EndGroup()
 
     window->DC.GroupStack.pop_back();
 
-    //window->DrawList->AddRect(group_bb.Min, group_bb.Max, IM_COL32(255,0,255,255));   // Debug
+    //window->DrawList->AddRect(group_bb.Min, group_bb.Max, IM_COL32(255,0,255,255));   // [Debug]
 }
 
 // Gets back to previous line and continue with horizontal layout
@@ -9941,7 +9942,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::Text("%d vertices, %d indices (%d triangles)", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices, ImGui::GetIO().MetricsRenderIndices / 3);
         ImGui::Text("%d allocations", ImGui::GetIO().MetricsAllocs);
         static bool show_clip_rects = true;
-        ImGui::Checkbox("Show clipping rectangles when hovering a ImDrawCmd", &show_clip_rects);
+        ImGui::Checkbox("Show clipping rectangles when hovering an ImDrawCmd", &show_clip_rects);
         ImGui::Separator();
 
         struct Funcs
