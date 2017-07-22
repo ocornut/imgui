@@ -9228,6 +9228,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     ImVec2 picker_pos = ImGui::GetCursorScreenPos();
     float bars_width = ImGui::GetWindowFontSize() * 1.0f;                                                           // Arbitrary smallish width of Hue/Alpha picking bars
     float sv_picker_size = ImMax(bars_width * 2, CalcItemWidth() - (alpha ? 2 : 1) * (bars_width + style.ItemInnerSpacing.x)); // Saturation/Value picking box
+    float bars_line_extrude = ImMin(2.0f, style.ItemInnerSpacing.x * 0.5f);
     float bar0_pos_x = picker_pos.x + sv_picker_size + style.ItemInnerSpacing.x;
     float bar1_pos_x = bar0_pos_x + bars_width + style.ItemInnerSpacing.x;
 
@@ -9322,7 +9323,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             hue_colors[i], hue_colors[i], hue_colors[i + 1], hue_colors[i + 1]);
     }
     float bar0_line_y = (float)(int)(picker_pos.y + H * sv_picker_size + 0.5f);
-    draw_list->AddLine(ImVec2(bar0_pos_x - 1, bar0_line_y), ImVec2(bar0_pos_x + bars_width + 1, bar0_line_y), IM_COL32_WHITE);
+    draw_list->AddLine(ImVec2(bar0_pos_x - bars_line_extrude, bar0_line_y), ImVec2(bar0_pos_x + bars_width + bars_line_extrude, bar0_line_y), IM_COL32_WHITE);
 
     // Render alpha bar
     if (alpha)
@@ -9330,7 +9331,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         float alpha = ImSaturate(col[3]);
         float bar1_line_y = (float)(int)(picker_pos.y + (1.0f-alpha) * sv_picker_size + 0.5f);
         draw_list->AddRectFilledMultiColor(ImVec2(bar1_pos_x, picker_pos.y), ImVec2(bar1_pos_x + bars_width, picker_pos.y + sv_picker_size), IM_COL32_WHITE, IM_COL32_WHITE, IM_COL32_BLACK, IM_COL32_BLACK);
-        draw_list->AddLine(ImVec2(bar1_pos_x - 1, bar1_line_y), ImVec2(bar1_pos_x + bars_width + 1, bar1_line_y), IM_COL32_WHITE);
+        draw_list->AddLine(ImVec2(bar1_pos_x - bars_line_extrude, bar1_line_y), ImVec2(bar1_pos_x + bars_width + bars_line_extrude, bar1_line_y), IM_COL32_WHITE);
     }
 
     // Render color matrix
