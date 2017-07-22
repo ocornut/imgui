@@ -9315,7 +9315,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         if ((flags & ImGuiColorEditFlags_ModeMask_) == 0)
             flags |= ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX;
         PushItemWidth((alpha ? bar1_pos_x : bar0_pos_x) + bars_width - picker_pos.x);
-        ImGuiColorEditFlags sub_flags = (flags & ImGuiColorEditFlags_NoAlpha) | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip;
+        ImGuiColorEditFlags sub_flags = (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoColorSquare)) | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip;
         if (flags & ImGuiColorEditFlags_RGB)
             value_changed |= ColorEdit4("##rgb", col, sub_flags | ImGuiColorEditFlags_RGB);
         if (flags & ImGuiColorEditFlags_HSV)
