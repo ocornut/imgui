@@ -9048,7 +9048,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         flags |= ImGuiColorEditFlags_RGB;
 
     // If we're not showing any slider there's no point in querying color mode, nor showing the options menu, nor doing any HSV conversions
-    if (flags & ImGuiColorEditFlags_NoSliders)
+    if (flags & ImGuiColorEditFlags_NoInputs)
         flags = (flags & (~ImGuiColorEditFlags_ModeMask_)) | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_NoOptions;
 
     // Read back edit mode from persistent storage
@@ -9071,7 +9071,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     BeginGroup();
     PushID(label);
 
-    if ((flags & (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV)) != 0 && (flags & ImGuiColorEditFlags_NoSliders) == 0)
+    if ((flags & (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV)) != 0 && (flags & ImGuiColorEditFlags_NoInputs) == 0)
     {
         // RGB/HSV 0..255 Sliders
         const float w_items_all = w_full - square_sz_with_spacing;
@@ -9100,7 +9100,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         PopItemWidth();
         PopItemWidth();
     }
-    else if ((flags & ImGuiColorEditFlags_HEX) != 0 && (flags & ImGuiColorEditFlags_NoSliders) == 0)
+    else if ((flags & ImGuiColorEditFlags_HEX) != 0 && (flags & ImGuiColorEditFlags_NoInputs) == 0)
     {
         // RGB Hexadecimal Input
         const float w_slider_all = w_full - square_sz_with_spacing;
@@ -9130,7 +9130,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     bool picker_active = false;
     if (!(flags & ImGuiColorEditFlags_NoColorSquare))
     {
-        if (!(flags & ImGuiColorEditFlags_NoSliders))
+        if (!(flags & ImGuiColorEditFlags_NoInputs))
             SameLine(0, style.ItemInnerSpacing.x);
 
         const ImVec4 col_display(col[0], col[1], col[2], 1.0f);
@@ -9282,7 +9282,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         ColorConvertHSVtoRGB(H >= 1.0f ? H - 10 * 1e-6f : H, S > 0.0f ? S : 10*1e-6f, V > 0.0f ? V : 1e-6f, col[0], col[1], col[2]);
 
     // R,G,B and H,S,V slider color editor
-    if (!(flags & ImGuiColorEditFlags_NoSliders))
+    if (!(flags & ImGuiColorEditFlags_NoInputs))
     {
         if ((flags & ImGuiColorEditFlags_ModeMask_) == 0)
         ImGuiColorEditFlags sub_flags = (alpha ? ImGuiColorEditFlags_Alpha : 0) | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoColorSquare;
