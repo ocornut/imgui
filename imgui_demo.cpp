@@ -674,15 +674,17 @@ void ImGui::ShowTestWindow(bool* p_open)
 
             ImGui::Text("Color picker:");
             static bool alpha = false;
+            static bool alpha_bar = false;
             static bool label = true;
             static int inputs_mode = 0;
             static float width = 200.0f;
             ImGui::Checkbox("With Alpha", &alpha);
+            ImGui::Checkbox("With Alpha Bar", &alpha_bar);
             ImGui::Checkbox("With Label", &label);
             ImGui::Combo("Mode", &inputs_mode, "All Inputs\0No Inputs\0RGB Input\0HSV Input\0HEX Input\0");
             ImGui::DragFloat("Width", &width, 1.0f, 1.0f, 999.0f);
             ImGui::PushItemWidth(width);
-            ImGuiColorEditFlags flags = (label ? 0 : ImGuiColorEditFlags_NoLabel);
+            ImGuiColorEditFlags flags = (label ? 0 : ImGuiColorEditFlags_NoLabel) | (alpha_bar ? ImGuiColorEditFlags_AlphaBar : 0);
             if (inputs_mode == 1) flags |= ImGuiColorEditFlags_NoInputs;
             if (inputs_mode == 2) flags |= ImGuiColorEditFlags_RGB;
             if (inputs_mode == 3) flags |= ImGuiColorEditFlags_HSV;

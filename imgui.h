@@ -673,6 +673,7 @@ enum ImGuiColorEditFlags_
     ImGuiColorEditFlags_NoInputs        = 1 << 7,   // ColorEdit, ColorPicker: Disable inputs sliders/text widgets, show only the colored square.
     ImGuiColorEditFlags_NoTooltip       = 1 << 8,   // ColorEdit, ColorButton: Disable tooltip when hovering the colored square.
     ImGuiColorEditFlags_NoLabel         = 1 << 9,   // ColorEdit: Disable display of inline text label (however the label is still used in tooltip and picker)
+    ImGuiColorEditFlags_AlphaBar        = 1 << 10,  // ColorPicker: Show vertical alpha bar/gradient
     ImGuiColorEditFlags_ModeMask_       = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX
 };
 

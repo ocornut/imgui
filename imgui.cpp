@@ -9249,17 +9249,13 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     BeginGroup();
 
     // Setup
-    bool alpha = (flags & ImGuiColorEditFlags_NoAlpha) == 0;
+    bool alpha_bar = (flags & ImGuiColorEditFlags_AlphaBar) && !(flags & ImGuiColorEditFlags_NoAlpha);
     ImVec2 picker_pos = window->DC.CursorPos;
     float bars_width = ColorSquareSize(); // Arbitrary smallish width of Hue/Alpha picking bars
     float bars_line_extrude = ImMin(2.0f, style.ItemInnerSpacing.x * 0.5f);
-    float sv_picker_size = ImMax(bars_width * 1, CalcItemWidth() - (alpha ? 2 : 1) * (bars_width + style.ItemInnerSpacing.x)); // Saturation/Value picking box
+    float sv_picker_size = ImMax(bars_width * 1, CalcItemWidth() - (alpha_bar ? 2 : 1) * (bars_width + style.ItemInnerSpacing.x)); // Saturation/Value picking box
     float bar0_pos_x = picker_pos.x + sv_picker_size + style.ItemInnerSpacing.x;
     float bar1_pos_x = bar0_pos_x + bars_width + style.ItemInnerSpacing.x;
-
-    // Recreate our own tooltip over's ColorButton() one because we want to display correct alpha here
-    //if (IsItemHovered())
-    //    ColorTooltip(col, flags);
 
     float H,S,V;
     ColorConvertRGBtoHSV(col[0], col[1], col[2], H, S, V);
@@ -9284,7 +9280,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     }
 
     // Alpha bar logic
-    if (alpha)
+    if (alpha_bar)
     {
         SetCursorScreenPos(ImVec2(bar1_pos_x, picker_pos.y));
         InvisibleButton("alpha", ImVec2(bars_width, sv_picker_size));
@@ -9314,7 +9310,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     {
         if ((flags & ImGuiColorEditFlags_ModeMask_) == 0)
             flags |= ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX;
-        PushItemWidth((alpha ? bar1_pos_x : bar0_pos_x) + bars_width - picker_pos.x);
+        PushItemWidth((alpha_bar ? bar1_pos_x : bar0_pos_x) + bars_width - picker_pos.x);
         ImGuiColorEditFlags sub_flags = (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoColorSquare)) | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip;
         if (flags & ImGuiColorEditFlags_RGB)
             value_changed |= ColorEdit4("##rgb", col, sub_flags | ImGuiColorEditFlags_RGB);
@@ -9354,7 +9350,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     draw_list->AddLine(ImVec2(bar0_pos_x - bars_line_extrude, bar0_line_y), ImVec2(bar0_pos_x + bars_width + bars_line_extrude, bar0_line_y), IM_COL32_WHITE);
 
     // Render alpha bar
-    if (alpha)
+    if (alpha_bar)
     {
         float alpha = ImSaturate(col[3]);
         float bar1_line_y = (float)(int)(picker_pos.y + (1.0f-alpha) * sv_picker_size + 0.5f);
