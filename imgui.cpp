@@ -152,11 +152,12 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2016/08/xx (1.XX) - removed ColorEditMode() and ImGuiColorEditMode in favor of ImGuiColorEditFlags and parameters to ColorEdit*() functions
-                       replaced ColorEdit4() third parameter 'bool show_alpha=true' to 'ImGuiColorEditFlags flags=0x01' where ImGuiColorEditFlags_Alpha=0x01 for dodgy compatibility
- - 2017/07/20 (1.51) - Removed IsPosHoveringAnyWindow(ImVec2), which was partly broken and misleading. ASSERT + redirect user to io.WantCaptureMouse
- - 2017/05/26 (1.50) - Removed ImFontConfig::MergeGlyphCenterV in favor of a more multipurpose ImFontConfig::GlyphOffset.
- - 2017/05/01 (1.50) - Renamed ImDrawList::PathFill() (rarely used directly) to ImDrawList::PathFillConvex() for clarity.
+ - 2016/08/xx (1.XX) - removed ColorEditMode() and ImGuiColorEditMode in favor of ImGuiColorEditFlags and parameters to the various Color*() functions
+                     - changed prototype of 'ColorEdit4(const char* label, float col[4], bool show_alpha = true)' to 'ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags = 0)', where passing flags = 0x01 is a safe no-op (hello dodgy backward compatibility!)
+                     - changed prototype of rarely used 'ColorButton(ImVec4 col, bool small_height = false, bool outline_border = true)' to 'ColorButton(const char* desc_id, ImVec4 col, ImGuiColorEditFlags flags = 0, ImVec2 size = ImVec2(0,0))'
+ - 2017/07/20 (1.51) - removed IsPosHoveringAnyWindow(ImVec2), which was partly broken and misleading. ASSERT + redirect user to io.WantCaptureMouse
+ - 2017/05/26 (1.50) - removed ImFontConfig::MergeGlyphCenterV in favor of a more multipurpose ImFontConfig::GlyphOffset.
+ - 2017/05/01 (1.50) - renamed ImDrawList::PathFill() (rarely used directly) to ImDrawList::PathFillConvex() for clarity.
  - 2016/11/06 (1.50) - BeginChild(const char*) now applies the stack id to the provided label, consistently with other functions as it should always have been. It shouldn't affect you unless (extremely unlikely) you were appending multiple times to a same child from different locations of the stack id. If that's the case, generate an id with GetId() and use it instead of passing string to BeginChild().
  - 2016/10/15 (1.50) - avoid 'void* user_data' parameter to io.SetClipboardTextFn/io.GetClipboardTextFn pointers. We pass io.ClipboardUserData to it.
  - 2016/09/25 (1.50) - style.WindowTitleAlign is now a ImVec2 (ImGuiAlign enum was removed). set to (0.5f,0.5f) for horizontal+vertical centering, (0.0f,0.0f) for upper-left, etc.
@@ -8976,26 +8977,43 @@ void ImGui::EndMenu()
     EndPopup();
 }
 
-static void ColorTooltip(const float* col, ImGuiColorEditFlags flags)
+// Note: only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
+void ImGui::ColorTooltip(const char* text, const float col[4], ImGuiColorEditFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    int cr = IM_F32_TO_INT8_SAT(col[0]), cg = IM_F32_TO_INT8_SAT(col[1]), cb = IM_F32_TO_INT8_SAT(col[2]), ca = (flags & ImGuiColorEditFlags_Alpha) ? IM_F32_TO_INT8_SAT(col[3]) : 255;
+
+    int cr = IM_F32_TO_INT8_SAT(col[0]), cg = IM_F32_TO_INT8_SAT(col[1]), cb = IM_F32_TO_INT8_SAT(col[2]), ca = (flags & ImGuiColorEditFlags_NoAlpha) ? 255 : IM_F32_TO_INT8_SAT(col[3]);
     BeginTooltipEx(true);
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindow();
+    
+    const char* text_end = text ? FindRenderedTextEnd(text, NULL) : text;
+    if (text_end > text)
+    {
+        TextUnformatted(text, text_end);
+        Separator();
+    }
+
     ImVec2 sz(g.FontSize * 3, g.FontSize * 3);
     window->DrawList->AddRectFilled(window->DC.CursorPos, window->DC.CursorPos + sz, IM_COL32(cr,cg,cb,255));
-    ImGui::Dummy(sz);
-    ImGui::SameLine();
-    if (flags & ImGuiColorEditFlags_Alpha)
-        ImGui::Text("#%02X%02X%02X%02X\nR:%d, G:%d, B:%d, A:%d\n(%.3f, %.3f, %.3f, %.3f)", cr, cg, cb, ca, cr, cg, cb, ca, col[0], col[1], col[2], col[3]);
+    Dummy(sz);
+    SameLine();
+    if (flags & ImGuiColorEditFlags_NoAlpha)
+        Text("#%02X%02X%02X\nR: %d, G: %d, B: %d\n(%.3f, %.3f, %.3f)", cr, cg, cb, cr, cg, cb, col[0], col[1], col[2]);
     else
-        ImGui::Text("#%02X%02X%02X\nR: %d, G: %d, B: %d\n(%.3f, %.3f, %.3f)", cr, cg, cb, cr, cg, cb, col[0], col[1], col[2]);
-    ImGui::EndTooltip();
+        Text("#%02X%02X%02X%02X\nR:%d, G:%d, B:%d, A:%d\n(%.3f, %.3f, %.3f, %.3f)", cr, cg, cb, ca, cr, cg, cb, ca, col[0], col[1], col[2], col[3]);
+    EndTooltip();
+}
+
+static inline float ColorSquareSize()
+{
+    ImGuiContext& g = *GImGui;
+    return g.FontSize + g.Style.FramePadding.y * 2.0f;
 }
 
 // A little colored square. Return true when clicked.
 // FIXME: May want to display/ignore the alpha component in the color display? Yet show it in the tooltip.
-bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_border)
+// 'desc_id' is not called 'label' because we don't display it next to the button, but only in the tooltip.
+bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFlags flags, ImVec2 size)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -9003,34 +9021,35 @@ bool ImGui::ColorButton(const ImVec4& col, bool small_height, bool outline_borde
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID("#colorbutton");
-    const float square_size = g.FontSize;
-    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(square_size + style.FramePadding.y*2, square_size + (small_height ? 0 : style.FramePadding.y*2)));
-    ItemSize(bb, small_height ? 0.0f : style.FramePadding.y);
+    const ImGuiID id = window->GetID(desc_id);
+    if (size.x == 0.0f)
+        size.x = ColorSquareSize();
+    if (size.y == 0.0f)
+        size.y = ColorSquareSize();
+    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
+    ItemSize(bb);
     if (!ItemAdd(bb, &id))
         return false;
 
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);
-    RenderFrame(bb.Min, bb.Max, GetColorU32(col), outline_border, style.FrameRounding);
+    window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(*(ImVec4*)&col), style.FrameRounding);
+    //window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(border_col), style.FrameRounding);
 
-    if (hovered)
-        ColorTooltip(&col.x, ImGuiColorEditFlags_Alpha);
+    if (hovered && !(flags & ImGuiColorEditFlags_NoTooltip))
+        ColorTooltip(desc_id, &col.x, flags & ImGuiColorEditFlags_NoAlpha);
 
     return pressed;
 }
 
 bool ImGui::ColorEdit3(const char* label, float col[3], ImGuiColorEditFlags flags)
 {
-    float col4[4] = { col[0], col[1], col[2], 1.0f };
-    if (!ColorEdit4(label, col4, flags & ~ImGuiColorEditFlags_Alpha))
-        return false;
-    col[0] = col4[0]; col[1] = col4[1]; col[2] = col4[2];
-    return true;
+    return ColorEdit4(label, col, flags | ImGuiColorEditFlags_NoAlpha);
 }
 
 // Edit colors components (each component in 0.0f..1.0f range)
 // Click on colored square to open a color picker (unless ImGuiColorEditFlags_NoPicker is set). Use CTRL-Click to input value and TAB to go to next item.
+// Note: only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
 bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -9041,7 +9060,11 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
     const float w_full = CalcItemWidth();
-    const float square_sz_with_spacing = (flags & ImGuiColorEditFlags_NoColorSquare) ? 0.0f : (g.FontSize + style.FramePadding.y * 2.0f + style.ItemInnerSpacing.x);
+    const float w_extra = (flags & ImGuiColorEditFlags_NoColorSquare) ? 0.0f : (ColorSquareSize() + style.ItemInnerSpacing.x);
+    const float w_items_all = w_full - w_extra;
+
+    const bool alpha = (flags & ImGuiColorEditFlags_NoAlpha) == 0;
+    const int components = alpha ? 4 : 3;
 
     // If no mode is specified, defaults to RGB
     if (!(flags & ImGuiColorEditFlags_ModeMask_))
@@ -9058,15 +9081,13 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     // Check that exactly one of RGB/HSV/HEX is set
     IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags_ModeMask_))); // 
 
-    float f[4] = { col[0], col[1], col[2], col[3] };
+    float f[4] = { col[0], col[1], col[2], alpha ? col[3] : 1.0f };
     if (flags & ImGuiColorEditFlags_HSV)
         ColorConvertRGBtoHSV(f[0], f[1], f[2], f[0], f[1], f[2]);
 
     int i[4] = { IM_F32_TO_INT8_UNBOUND(f[0]), IM_F32_TO_INT8_UNBOUND(f[1]), IM_F32_TO_INT8_UNBOUND(f[2]), IM_F32_TO_INT8_UNBOUND(f[3]) };
 
-    bool alpha = (flags & ImGuiColorEditFlags_Alpha) != 0;
     bool value_changed = false;
-    int components = alpha ? 4 : 3;
 
     BeginGroup();
     PushID(label);
@@ -9074,7 +9095,6 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     if ((flags & (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV)) != 0 && (flags & ImGuiColorEditFlags_NoInputs) == 0)
     {
         // RGB/HSV 0..255 Sliders
-        const float w_items_all = w_full - square_sz_with_spacing;
         const float w_item_one  = ImMax(1.0f, (float)(int)((w_items_all - (style.ItemInnerSpacing.x) * (components-1)) / (float)components));
         const float w_item_last = ImMax(1.0f, (float)(int)(w_items_all - (w_item_one + style.ItemInnerSpacing.x) * (components-1)));
 
@@ -9103,13 +9123,12 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     else if ((flags & ImGuiColorEditFlags_HEX) != 0 && (flags & ImGuiColorEditFlags_NoInputs) == 0)
     {
         // RGB Hexadecimal Input
-        const float w_slider_all = w_full - square_sz_with_spacing;
         char buf[64];
         if (alpha)
             ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X%02X", i[0], i[1], i[2], i[3]);
         else
             ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X", i[0], i[1], i[2]);
-        PushItemWidth(w_slider_all);
+        PushItemWidth(w_items_all);
         if (InputText("##Text", buf, IM_ARRAYSIZE(buf), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase))
         {
             value_changed |= true;
@@ -9134,7 +9153,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             SameLine(0, style.ItemInnerSpacing.x);
 
         const ImVec4 col_display(col[0], col[1], col[2], 1.0f);
-        if (ColorButton(col_display))
+        if (ColorButton("##ColorButton", col_display, flags))
         {
             if (!(flags & ImGuiColorEditFlags_NoPicker))
             {
@@ -9151,9 +9170,12 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         {
             picker_active = true;
             if (label != label_display_end)
+            {
                 TextUnformatted(label, label_display_end);
-            PushItemWidth(256.0f + (alpha ? 2 : 1) * (style.ItemInnerSpacing.x));
-            value_changed |= ColorPicker4("##picker", col, (flags & ImGuiColorEditFlags_Alpha) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX));
+                Separator();
+            }
+            PushItemWidth(ColorSquareSize() * 12.0f);
+            value_changed |= ColorPicker4("##picker", col, (flags & ImGuiColorEditFlags_NoAlpha) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX));
             PopItemWidth();
             EndPopup();
         }
@@ -9167,11 +9189,11 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         }
 
         // Recreate our own tooltip over's ColorButton() one because we want to display correct alpha here
-        if (IsItemHovered())
-            ColorTooltip(col, flags);
+        if (!(flags & ImGuiColorEditFlags_NoTooltip) && IsItemHovered())
+            ColorTooltip(label, col, flags);
     }
 
-    if (label != label_display_end)
+    if (label != label_display_end && !(flags & ImGuiColorEditFlags_NoLabel))
     {
         SameLine(0, style.ItemInnerSpacing.x);
         TextUnformatted(label, label_display_end);
@@ -9203,32 +9225,35 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 bool ImGui::ColorPicker3(const char* label, float col[3], ImGuiColorEditFlags flags)
 {
     float col4[4] = { col[0], col[1], col[2], 1.0f };
-    if (!ColorPicker4(label, col4, flags & ~ImGuiColorEditFlags_Alpha))
+    if (!ColorPicker4(label, col4, flags | ImGuiColorEditFlags_NoAlpha))
         return false;
     col[0] = col4[0]; col[1] = col4[1]; col[2] = col4[2];
     return true;
 }
 
-// ColorPicker v2.50 WIP 
+// ColorPicker v2.60 WIP 
 // see https://github.com/ocornut/imgui/issues/346
-// TODO: Missing color square
 // TODO: English strings in context menu (see FIXME-LOCALIZATION)
 // Note: we adjust item height based on item widget, which may cause a flickering feedback loop (if automatic height makes a vertical scrollbar appears, affecting automatic width..) 
+// Note: only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
 bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags flags)
 {
-    ImGuiIO& io = ImGui::GetIO();
-    ImGuiStyle& style = ImGui::GetStyle();
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    ImDrawList* draw_list = window->DrawList;
+
+    ImGuiStyle& style = g.Style;
+    ImGuiIO& io = g.IO;
 
     PushID(label);
     BeginGroup();
 
     // Setup
-    bool alpha = (flags & ImGuiColorEditFlags_Alpha) != 0;
-    ImVec2 picker_pos = ImGui::GetCursorScreenPos();
-    float bars_width = ImGui::GetWindowFontSize() * 1.0f;                                                           // Arbitrary smallish width of Hue/Alpha picking bars
-    float sv_picker_size = ImMax(bars_width * 2, CalcItemWidth() - (alpha ? 2 : 1) * (bars_width + style.ItemInnerSpacing.x)); // Saturation/Value picking box
+    bool alpha = (flags & ImGuiColorEditFlags_NoAlpha) == 0;
+    ImVec2 picker_pos = window->DC.CursorPos;
+    float bars_width = ColorSquareSize(); // Arbitrary smallish width of Hue/Alpha picking bars
     float bars_line_extrude = ImMin(2.0f, style.ItemInnerSpacing.x * 0.5f);
+    float sv_picker_size = ImMax(bars_width * 1, CalcItemWidth() - (alpha ? 2 : 1) * (bars_width + style.ItemInnerSpacing.x)); // Saturation/Value picking box
     float bar0_pos_x = picker_pos.x + sv_picker_size + style.ItemInnerSpacing.x;
     float bar1_pos_x = bar0_pos_x + bars_width + style.ItemInnerSpacing.x;
 
@@ -9270,11 +9295,14 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         }
     }
 
-    const char* label_display_end = FindRenderedTextEnd(label);
-    if (label != label_display_end)
+    if ((flags & ImGuiColorEditFlags_NoLabel) == 0)
     {
-        SameLine(0, style.ItemInnerSpacing.x);
-        TextUnformatted(label, label_display_end);
+        const char* label_display_end = FindRenderedTextEnd(label);
+        if (label != label_display_end)
+        {
+            SameLine(0, style.ItemInnerSpacing.x);
+            TextUnformatted(label, label_display_end);
+        }
     }
 
     // Convert back color to RGB
@@ -9285,9 +9313,9 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     if (!(flags & ImGuiColorEditFlags_NoInputs))
     {
         if ((flags & ImGuiColorEditFlags_ModeMask_) == 0)
-        ImGuiColorEditFlags sub_flags = (alpha ? ImGuiColorEditFlags_Alpha : 0) | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoColorSquare;
             flags |= ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX;
         PushItemWidth((alpha ? bar1_pos_x : bar0_pos_x) + bars_width - picker_pos.x);
+        ImGuiColorEditFlags sub_flags = (flags & ImGuiColorEditFlags_NoAlpha) | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip;
         if (flags & ImGuiColorEditFlags_RGB)
             value_changed |= ColorEdit4("##rgb", col, sub_flags | ImGuiColorEditFlags_RGB);
         if (flags & ImGuiColorEditFlags_HSV)
@@ -9814,14 +9842,14 @@ void ImGui::ValueColor(const char* prefix, const ImVec4& v)
 {
     Text("%s: (%.2f,%.2f,%.2f,%.2f)", prefix, v.x, v.y, v.z, v.w);
     SameLine();
-    ColorButton(v, true);
+    ColorButton(prefix, v);
 }
 
 void ImGui::ValueColor(const char* prefix, ImU32 v)
 {
     Text("%s: %08X", prefix, v);
     SameLine();
-    ColorButton(ColorConvertU32ToFloat4(v), true);
+    ColorButton(prefix, ColorConvertU32ToFloat4(v));
 }
 
 //-----------------------------------------------------------------------------
@@ -10023,6 +10051,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::BulletText("Pos: (%.1f,%.1f)", window->Pos.x, window->Pos.y);
                 ImGui::BulletText("Size: (%.1f,%.1f), SizeContents (%.1f,%.1f)", window->Size.x, window->Size.y, window->SizeContents.x, window->SizeContents.y);
                 ImGui::BulletText("Scroll: (%.2f,%.2f)", window->Scroll.x, window->Scroll.y);
+                ImGui::BulletText("Active: %d, Accessed: %d", window->Active, window->Accessed);
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
                 ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.Size * (int)sizeof(ImGuiStorage::Pair));
