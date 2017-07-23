@@ -19,6 +19,7 @@ int main(int, char**)
         return 1;
     GLFWwindow* window = glfwCreateWindow(1280, 720, "ImGui OpenGL2 example", NULL, NULL);
     glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // Enable vsync
 
     // Setup ImGui binding
     ImGui_ImplGlfw_Init(window, true);

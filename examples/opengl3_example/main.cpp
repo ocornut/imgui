@@ -26,6 +26,7 @@ int main(int, char**)
 #endif
     GLFWwindow* window = glfwCreateWindow(1280, 720, "ImGui OpenGL3 example", NULL, NULL);
     glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // Enable vsync
     gl3wInit();
 
     // Setup ImGui binding
