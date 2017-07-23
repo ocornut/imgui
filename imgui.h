@@ -675,7 +675,8 @@ enum ImGuiColorEditFlags_
     ImGuiColorEditFlags_NoLabel         = 1 << 9,   // ColorEdit: Disable display of inline text label (however the label is still used in tooltip and picker)
     ImGuiColorEditFlags_AlphaBar        = 1 << 10,  // ColorPicker: Show vertical alpha bar/gradient
     ImGuiColorEditFlags_Float           = 1 << 11,  // ColorEdit, ColorPicker: display values formatted as 0.0f..1.0f floats instead of 0..255 integers
-    ImGuiColorEditFlags_ModeMask_       = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX
+    ImGuiColorEditFlags_ModeMask_       = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX,
+    ImGuiColorEditFlags_StoredMask_     = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX|ImGuiColorEditFlags_Float
 };
 
 // Enumeration for GetMouseCursor()

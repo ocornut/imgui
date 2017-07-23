@@ -9085,7 +9085,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
     // Read back edit mode from persistent storage
     if (!(flags & ImGuiColorEditFlags_NoOptions))
-        flags = (flags & (~ImGuiColorEditFlags_ModeMask_)) | (g.ColorEditModeStorage.GetInt(id, (flags & ImGuiColorEditFlags_ModeMask_)) & ImGuiColorEditFlags_ModeMask_);
+        flags = (flags & (~ImGuiColorEditFlags_StoredMask_)) | (g.ColorEditModeStorage.GetInt(id, (flags & ImGuiColorEditFlags_StoredMask_)) & ImGuiColorEditFlags_StoredMask_);
 
     // Check that exactly one of RGB/HSV/HEX is set
     IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags_ModeMask_))); // 
@@ -9202,10 +9202,16 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         }
         if (!(flags & ImGuiColorEditFlags_NoOptions) && BeginPopup("context"))
         {
-            // FIXME-LOCALIZATION
-            if (MenuItem("Edit as RGB", NULL, (flags & ImGuiColorEditFlags_RGB)?1:0)) g.ColorEditModeStorage.SetInt(id, (int)(ImGuiColorEditFlags_RGB));
-            if (MenuItem("Edit as HSV", NULL, (flags & ImGuiColorEditFlags_HSV)?1:0)) g.ColorEditModeStorage.SetInt(id, (int)(ImGuiColorEditFlags_HSV));
-            if (MenuItem("Edit as Hexadecimal", NULL, (flags & ImGuiColorEditFlags_HEX)?1:0)) g.ColorEditModeStorage.SetInt(id, (int)(ImGuiColorEditFlags_HEX));
+            // Display and store options. Don't apply to 'flags' this frame.
+            ImGuiColorEditFlags new_flags = -1;
+            if (RadioButton("RGB", (flags & ImGuiColorEditFlags_RGB)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_RGB;
+            if (RadioButton("HSV", (flags & ImGuiColorEditFlags_HSV)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_HSV;
+            if (RadioButton("HEX", (flags & ImGuiColorEditFlags_HEX)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_HEX;
+            Separator();
+            if (RadioButton("0..255", (flags & ImGuiColorEditFlags_Float)?0:1)) new_flags = (flags & ~ImGuiColorEditFlags_Float);
+            if (RadioButton("0.00..1.00", (flags & ImGuiColorEditFlags_Float)?1:0)) new_flags = (flags | ImGuiColorEditFlags_Float);
+            if (new_flags != -1)
+                g.ColorEditModeStorage.SetInt(id, (int)(new_flags & ImGuiColorEditFlags_StoredMask_));
             EndPopup();
         }
 
