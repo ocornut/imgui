@@ -663,18 +663,18 @@ enum ImGuiStyleVar_
 // Enumeration for ColorEdit3() / ColorEdit4() / ColorPicker3() / ColorPicker4()
 enum ImGuiColorEditFlags_
 {
-    ImGuiColorEditFlags_RGB             = 1 << 0,   // ColorEdit: Default to one among RGB/HSV/HEX. User can still use the options menu to change. ColorPicker: Choose any combination or RGB/HSX/HEX..
+    ImGuiColorEditFlags_RGB             = 1 << 0,   // ColorEdit: Default to one among RGB/HSV/HEX. User can still use the options menu to change. ColorPicker: Choose any combination or RGB/HSV/HEX.
     ImGuiColorEditFlags_HSV             = 1 << 1,   // "
     ImGuiColorEditFlags_HEX             = 1 << 2,   // "
-    ImGuiColorEditFlags_NoAlpha         = 1 << 3,   // ColorEdit, ColorPicker: show/edit Alpha component.
-    ImGuiColorEditFlags_NoPicker        = 1 << 4,   // ColorEdit: Disable picker when clicking on colored square
-    ImGuiColorEditFlags_NoOptions       = 1 << 5,   // ColorEdit: Disable toggling options menu when right-clicking colored square
-    ImGuiColorEditFlags_NoColorSquare   = 1 << 6,   // ColorEdit, ColorPicker: Disable colored square.
-    ImGuiColorEditFlags_NoInputs        = 1 << 7,   // ColorEdit, ColorPicker: Disable inputs sliders/text widgets, show only the colored square.
-    ImGuiColorEditFlags_NoTooltip       = 1 << 8,   // ColorEdit, ColorButton: Disable tooltip when hovering the colored square.
-    ImGuiColorEditFlags_NoLabel         = 1 << 9,   // ColorEdit: Disable display of inline text label (however the label is still used in tooltip and picker)
-    ImGuiColorEditFlags_AlphaBar        = 1 << 10,  // ColorPicker: Show vertical alpha bar/gradient
-    ImGuiColorEditFlags_Float           = 1 << 11,  // ColorEdit, ColorPicker: display values formatted as 0.0f..1.0f floats instead of 0..255 integers
+    ImGuiColorEditFlags_Float           = 1 << 3,   // ColorEdit, ColorPicker: display values formatted as 0.0f..1.0f floats instead of 0..255 integers. No round-trip of value via integers.
+    ImGuiColorEditFlags_AlphaBar        = 1 << 4,   // ColorPicker: Show vertical alpha bar/gradient.
+    ImGuiColorEditFlags_NoAlpha         = 1 << 5,   // ColorEdit, ColorPicker: show/edit Alpha component.
+    ImGuiColorEditFlags_NoPicker        = 1 << 6,   // ColorEdit: Disable picker when clicking on colored square
+    ImGuiColorEditFlags_NoOptions       = 1 << 7,   // ColorEdit: Disable toggling options menu when right-clicking colored square
+    ImGuiColorEditFlags_NoColorSquare   = 1 << 8,   // ColorEdit, ColorPicker: Disable colored square.
+    ImGuiColorEditFlags_NoInputs        = 1 << 9,   // ColorEdit, ColorPicker: Disable inputs sliders/text widgets, show only the colored square.
+    ImGuiColorEditFlags_NoTooltip       = 1 << 10,  // ColorEdit, ColorButton: Disable tooltip when hovering the colored square.
+    ImGuiColorEditFlags_NoLabel         = 1 << 11,  // ColorEdit: Disable display of inline text label (the label is still used in tooltip and picker)
     ImGuiColorEditFlags_ModeMask_       = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX,
     ImGuiColorEditFlags_StoredMask_     = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX|ImGuiColorEditFlags_Float
 };
