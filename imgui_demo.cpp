@@ -666,33 +666,31 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::SameLine(); ShowHelpMarker("Click on the colored square to open a color picker.\nRight-click on the colored square to show options.\nCTRL+click on individual component to input value.\n");
             ImGui::ColorEdit3("MyColor##1", (float*)&color, ImGuiColorEditFlags_HSV);
 
-            ImGui::Text("Color widget w/ Alpha:");
+            ImGui::Text("Color widget with Alpha:");
             ImGui::ColorEdit4("MyColor##2", (float*)&color);
 
             ImGui::Text("Color button only:");
+            ImGui::SameLine(); ShowHelpMarker("With the ImGuiColorEditFlags_NoInputs flag you can hide all the slider/text inputs.\nWith the ImGuiColorEditFlags_NoLabel flag you can pass a non-empty label which will only be used for the tooltip and picker popup.");
             ImGui::ColorEdit4("MyColor##3", (float*)&color, ImGuiColorEditFlags_NoInputs|ImGuiColorEditFlags_NoLabel);
 
             ImGui::Text("Color picker:");
             static bool alpha = false;
             static bool alpha_bar = false;
-            static bool label = true;
             static int inputs_mode = 0;
             static float width = 200.0f;
             ImGui::Checkbox("With Alpha", &alpha);
             ImGui::Checkbox("With Alpha Bar", &alpha_bar);
-            ImGui::Checkbox("With Label", &label);
             ImGui::Combo("Mode", &inputs_mode, "All Inputs\0No Inputs\0RGB Input\0HSV Input\0HEX Input\0");
             ImGui::DragFloat("Width", &width, 1.0f, 1.0f, 999.0f);
             ImGui::PushItemWidth(width);
-            ImGuiColorEditFlags flags = (label ? 0 : ImGuiColorEditFlags_NoLabel) | (alpha_bar ? ImGuiColorEditFlags_AlphaBar : 0);
+            ImGuiColorEditFlags flags = 0;
+            if (!alpha) flags |= ImGuiColorEditFlags_NoAlpha; // This is by default if you call ColorPicker3() instead of ColorPicker4()
+            if (alpha_bar) flags |= ImGuiColorEditFlags_AlphaBar;
             if (inputs_mode == 1) flags |= ImGuiColorEditFlags_NoInputs;
             if (inputs_mode == 2) flags |= ImGuiColorEditFlags_RGB;
             if (inputs_mode == 3) flags |= ImGuiColorEditFlags_HSV;
             if (inputs_mode == 4) flags |= ImGuiColorEditFlags_HEX;
-            if (alpha)
-                ImGui::ColorPicker4("MyColor##4", (float*)&color, flags);
-            else
-                ImGui::ColorPicker3("MyColor##4", (float*)&color, flags);
+            ImGui::ColorPicker4("MyColor##4", (float*)&color, flags);
             ImGui::PopItemWidth();
 
             ImGui::TreePop();
