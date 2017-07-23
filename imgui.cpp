@@ -9097,6 +9097,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     int i[4] = { IM_F32_TO_INT8_UNBOUND(f[0]), IM_F32_TO_INT8_UNBOUND(f[1]), IM_F32_TO_INT8_UNBOUND(f[2]), IM_F32_TO_INT8_UNBOUND(f[3]) };
 
     bool value_changed = false;
+    bool value_changed_as_float = false;
 
     BeginGroup();
     PushID(label);
@@ -9107,15 +9108,21 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         const float w_item_one  = ImMax(1.0f, (float)(int)((w_items_all - (style.ItemInnerSpacing.x) * (components-1)) / (float)components));
         const float w_item_last = ImMax(1.0f, (float)(int)(w_items_all - (w_item_one + style.ItemInnerSpacing.x) * (components-1)));
 
-        const bool hide_prefix = (w_item_one <= CalcTextSize("M:999").x);
+        const bool hide_prefix = (w_item_one <= CalcTextSize((flags & ImGuiColorEditFlags_Float) ? "M:1.000" : "M:999").x);
         const char* ids[4] = { "##X", "##Y", "##Z", "##W" };
-        const char* fmt_table[3][4] =
+        const char* fmt_table_int[3][4] =
         {
             {   "%3.0f",   "%3.0f",   "%3.0f",   "%3.0f" }, // Short display
             { "R:%3.0f", "G:%3.0f", "B:%3.0f", "A:%3.0f" }, // Long display for RGBA
-            { "H:%3.0f", "S:%3.0f", "V:%3.0f", "A:%3.0f" }  // Long display for HSVV
+            { "H:%3.0f", "S:%3.0f", "V:%3.0f", "A:%3.0f" }  // Long display for HSVA
         };
-        const char** fmt = hide_prefix ? fmt_table[0] : (flags & ImGuiColorEditFlags_HSV) ? fmt_table[2] : fmt_table[1];
+        const char* fmt_table_float[3][4] =
+        {
+            {   "%0.3f",   "%0.3f",   "%0.3f",   "%0.3f" }, // Short display
+            { "R:%0.3f", "G:%0.3f", "B:%0.3f", "A:%0.3f" }, // Long display for RGBA
+            { "H:%0.3f", "S:%0.3f", "V:%0.3f", "A:%0.3f" }  // Long display for HSVA
+        };
+        const int fmt_idx = hide_prefix ? 0 : (flags & ImGuiColorEditFlags_HSV) ? 2 : 1;
 
         PushItemWidth(w_item_one);
         for (int n = 0; n < components; n++)
@@ -9124,7 +9131,10 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
                 SameLine(0, style.ItemInnerSpacing.x);
             if (n + 1 == components)
                 PushItemWidth(w_item_last);
-            value_changed |= DragInt(ids[n], &i[n], 1.0f, 0, 255, fmt[n]);
+            if (flags & ImGuiColorEditFlags_Float)
+                value_changed |= value_changed_as_float |= DragFloat(ids[n], &f[n], 1.0f/255.0f, 0.0f, 1.0f, fmt_table_float[fmt_idx][n]);
+            else
+                value_changed |= DragInt(ids[n], &i[n], 1.0f, 0, 255, fmt_table_int[fmt_idx][n]);
         }
         PopItemWidth();
         PopItemWidth();
@@ -9183,8 +9193,10 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
                 TextUnformatted(label, label_display_end);
                 Separator();
             }
-            PushItemWidth(ColorSquareSize() * 12.0f);
-            value_changed |= ColorPicker4("##picker", col, (flags & ImGuiColorEditFlags_NoAlpha) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX));
+            float square_sz = ColorSquareSize();
+            ImGuiColorEditFlags picker_flags = (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_Float)) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX) | ImGuiColorEditFlags_NoLabel;
+            PushItemWidth(square_sz * 12.0f);
+            value_changed |= ColorPicker4("##picker", col, picker_flags);
             PopItemWidth();
             EndPopup();
         }
@@ -9211,6 +9223,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     // Convert back
     if (!picker_active)
     {
+        if (!value_changed_as_float) 
         for (int n = 0; n < 4; n++)
             f[n] = i[n] / 255.0f;
         if (flags & ImGuiColorEditFlags_HSV)
@@ -9320,7 +9333,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         if ((flags & ImGuiColorEditFlags_ModeMask_) == 0)
             flags |= ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX;
         PushItemWidth((alpha_bar ? bar1_pos_x : bar0_pos_x) + bars_width - picker_pos.x);
-        ImGuiColorEditFlags sub_flags = (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoColorSquare)) | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip;
+        ImGuiColorEditFlags sub_flags = (flags & (ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoColorSquare)) | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip;
         if (flags & ImGuiColorEditFlags_RGB)
             value_changed |= ColorEdit4("##rgb", col, sub_flags | ImGuiColorEditFlags_RGB);
         if (flags & ImGuiColorEditFlags_HSV)

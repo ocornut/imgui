@@ -669,6 +669,9 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::Text("Color widget with Alpha:");
             ImGui::ColorEdit4("MyColor##2", (float*)&color);
 
+            ImGui::Text("Color widget with Float Display:");
+            ImGui::ColorEdit4("MyColor##2f", (float*)&color, ImGuiColorEditFlags_Float);
+
             ImGui::Text("Color button only:");
             ImGui::SameLine(); ShowHelpMarker("With the ImGuiColorEditFlags_NoInputs flag you can hide all the slider/text inputs.\nWith the ImGuiColorEditFlags_NoLabel flag you can pass a non-empty label which will only be used for the tooltip and picker popup.");
             ImGui::ColorEdit4("MyColor##3", (float*)&color, ImGuiColorEditFlags_NoInputs|ImGuiColorEditFlags_NoLabel);
