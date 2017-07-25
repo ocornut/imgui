@@ -44,8 +44,8 @@ ImGui allows you create elaborate tools as well as very short-lived ones. On the
 Binaries/Demo
 -------------
 
-You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at the features of ImGui, you can download Windows binaries of the demo app here.
-- [imgui-demo-binaries-20161113.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20161113.zip) (Windows binaries, ImGui 1.49+ 2016/11/13, 5 executables, 588 KB)
+You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some ImGui features, you can download Windows binaries of the demo app here:
+- [imgui-demo-binaries-20170723.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20170723.zip) (Windows binaries, ImGui 1.51+ 2017/07/23, 5 executables, 808 KB)
 
 Bindings
 --------
