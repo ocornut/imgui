@@ -9033,19 +9033,26 @@ static inline float ColorSquareSize()
     return g.FontSize + g.Style.FramePadding.y * 2.0f;
 }
 
+static inline ImU32 ImAlphaBlendColor(ImU32 col_a, ImU32 col_b)
+{
+    float t = ((col_b >> IM_COL32_A_SHIFT) & 0xFF) / 255.f;
+    int r = ImLerp((int)(col_a >> IM_COL32_R_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_R_SHIFT) & 0xFF, t);
+    int g = ImLerp((int)(col_a >> IM_COL32_G_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_G_SHIFT) & 0xFF, t);
+    int b = ImLerp((int)(col_a >> IM_COL32_B_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_B_SHIFT) & 0xFF, t);
+    return IM_COL32(r, g, b, 0xFF);
+}
+
 void ImGui::RenderColorRectWithAlphaCheckerboard(ImVec2 p_min, ImVec2 p_max, ImU32 col, float grid_step, float rounding, int rounding_corners_flags_parent)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (((col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT) < 0xFF)
     {
-        // We use rounding+1 here which is counterintuitive but it inhibit mosts of the edge artifacts with overlayed rounded shapes
-        ImU32 col_bg1 = GetColorU32(IM_COL32(204,204,204,255));
-        ImU32 col_bg2 = GetColorU32(IM_COL32(128,128,128,255));
-        window->DrawList->AddRectFilled(p_min, p_max, col_bg1, rounding+1, rounding_corners_flags_parent);
+        ImU32 col_bg1 = GetColorU32(ImAlphaBlendColor(IM_COL32(204,204,204,255), col));
+        ImU32 col_bg2 = GetColorU32(ImAlphaBlendColor(IM_COL32(128,128,128,255), col));
+        window->DrawList->AddRectFilled(p_min, p_max, col_bg1, rounding, rounding_corners_flags_parent);
         int x_count = (int)((p_max.x - p_min.x) / grid_step + 0.99f);
         int y_count = (int)((p_max.y - p_min.y) / grid_step + 0.99f);
         for (int y_i = 0; y_i < y_count; y_i++)
-            {
             for (int x_i = (y_i & 1) ^ 1; x_i < x_count; x_i += 2)
             {
                 int rounding_corners_flags = 0;
@@ -9054,11 +9061,13 @@ void ImGui::RenderColorRectWithAlphaCheckerboard(ImVec2 p_min, ImVec2 p_max, ImU
                 rounding_corners_flags &= rounding_corners_flags_parent;
                 ImVec2 p1(p_min.x + x_i * grid_step, p_min.y + y_i * grid_step);
                 ImVec2 p2(ImMin(p1.x + grid_step, p_max.x), ImMin(p1.y + grid_step, p_max.y));
-                window->DrawList->AddRectFilled(p1, p2, col_bg2, rounding_corners_flags ? rounding+1 : 0.0f, rounding_corners_flags);
-            }
+                window->DrawList->AddRectFilled(p1, p2, col_bg2, rounding_corners_flags ? rounding : 0.0f, rounding_corners_flags);
             }
     }
-    window->DrawList->AddRectFilled(p_min, p_max, col, rounding, rounding_corners_flags_parent);
+    else
+    {
+        window->DrawList->AddRectFilled(p_min, p_max, col, rounding, rounding_corners_flags_parent);
+    }
 }
 
 // A little colored square. Return true when clicked.
@@ -9238,7 +9247,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
                 Separator();
             }
             float square_sz = ColorSquareSize();
-            ImGuiColorEditFlags picker_flags = (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_Float)) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX) | ImGuiColorEditFlags_NoLabel;
+            ImGuiColorEditFlags picker_flags = (flags & (ImGuiColorEditFlags_NoAlpha|ImGuiColorEditFlags_Float)) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX) | ImGuiColorEditFlags_NoLabel;
             PushItemWidth(square_sz * 12.0f);
             value_changed |= ColorPicker4("##picker", col, picker_flags);
             PopItemWidth();
@@ -9274,8 +9283,8 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     if (!picker_active)
     {
         if (!value_changed_as_float) 
-        for (int n = 0; n < 4; n++)
-            f[n] = i[n] / 255.0f;
+            for (int n = 0; n < 4; n++)
+                f[n] = i[n] / 255.0f;
         if (flags & ImGuiColorEditFlags_HSV)
             ColorConvertHSVtoRGB(f[0], f[1], f[2], f[0], f[1], f[2]);
         if (value_changed)
