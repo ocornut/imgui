@@ -9220,7 +9220,6 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         {
             if (!(flags & ImGuiColorEditFlags_NoPicker))
             {
-                g.ColorPickerRef = ImVec4(col[0], col[1], col[2], alpha ? col[3] : 1.0f);
                 OpenPopup("picker");
                 SetNextWindowPos(window->DC.LastItemRect.GetBL() + ImVec2(-1,style.ItemSpacing.y));
             }
