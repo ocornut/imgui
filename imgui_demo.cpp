@@ -1317,15 +1317,17 @@ void ImGui::ShowTestWindow(bool* p_open)
             {
                 if (ImGui::Selectable("Set to zero")) value = 0.0f;
                 if (ImGui::Selectable("Set to PI")) value = 3.1415f;
+                ImGui::DragFloat("Value", &value, 0.1f, 0.0f, 0.0f);
                 ImGui::EndPopup();
             }
 
-            static ImVec4 color = ImColor(0.8f, 0.5f, 1.0f, 1.0f);
-            ImGui::ColorButton("##color", color);
-            if (ImGui::BeginPopupContextItem("color context menu"))
+            static char name[32] = "Label1";
+            char buf[64]; sprintf(buf, "Button: %s###Button", name); // ### operator override ID ignoring the preceeding label
+            ImGui::Button(buf);
+            if (ImGui::BeginPopupContextItem("rename context menu"))
             {
-                ImGui::Text("Edit color");
-                ImGui::ColorEdit3("##edit", (float*)&color);
+                ImGui::Text("Edit name:");
+                ImGui::InputText("##edit", name, IM_ARRAYSIZE(name));
                 if (ImGui::Button("Close"))
                     ImGui::CloseCurrentPopup();
                 ImGui::EndPopup();
