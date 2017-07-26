@@ -274,7 +274,7 @@ namespace ImGui
     IMGUI_API bool          RadioButton(const char* label, bool active);
     IMGUI_API bool          RadioButton(const char* label, int* v, int v_button);
     IMGUI_API bool          Combo(const char* label, int* current_item, const char* const* items, int items_count, int height_in_items = -1);
-    IMGUI_API bool          Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int height_in_items = -1);      // separate items with \0, end item-list with \0\0
+    IMGUI_API bool          Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int height_in_items = -1);    // separate items with \0, end item-list with \0\0
     IMGUI_API bool          Combo(const char* label, int* current_item, bool (*items_getter)(void* data, int idx, const char** out_text), void* data, int items_count, int height_in_items = -1);
     IMGUI_API bool          ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFlags flags = 0, ImVec2 size = ImVec2(0,0));  // display a colored square/button, hover for details, return true when pressed.
     IMGUI_API bool          ColorEdit3(const char* label, float col[3], ImGuiColorEditFlags flags = 0);     // 3-4 components color edition. click on colored squared to open a color picker, right-click for options. Hint: 'float col[3]' function argument is same as 'float* col'. You can pass address of first element out of a contiguous structure, e.g. &myvector.x
@@ -661,21 +661,22 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_Count_
 };
 
-// Enumeration for ColorEdit3() / ColorEdit4() / ColorPicker3() / ColorPicker4()
+// Enumeration for ColorEdit3() / ColorEdit4() / ColorPicker3() / ColorPicker4() / ColorButton()
 enum ImGuiColorEditFlags_
 {
     ImGuiColorEditFlags_RGB             = 1 << 0,   // ColorEdit: Default to one among RGB/HSV/HEX. User can still use the options menu to change. ColorPicker: Choose any combination or RGB/HSV/HEX.
     ImGuiColorEditFlags_HSV             = 1 << 1,   // "
     ImGuiColorEditFlags_HEX             = 1 << 2,   // "
-    ImGuiColorEditFlags_Float           = 1 << 3,   // ColorEdit, ColorPicker: display values formatted as 0.0f..1.0f floats instead of 0..255 integers. No round-trip of value via integers.
+    ImGuiColorEditFlags_Float           = 1 << 3,   // ColorEdit, ColorPicker, ColorButton: display values formatted as 0.0f..1.0f floats instead of 0..255 integers. No round-trip of value via integers.
     ImGuiColorEditFlags_AlphaBar        = 1 << 4,   // ColorPicker: Show vertical alpha bar/gradient.
-    ImGuiColorEditFlags_NoAlpha         = 1 << 5,   // ColorEdit, ColorPicker: show/edit Alpha component.
-    ImGuiColorEditFlags_NoPicker        = 1 << 6,   // ColorEdit: Disable picker when clicking on colored square
-    ImGuiColorEditFlags_NoOptions       = 1 << 7,   // ColorEdit: Disable toggling options menu when right-clicking colored square
-    ImGuiColorEditFlags_NoColorSquare   = 1 << 8,   // ColorEdit, ColorPicker: Disable colored square.
-    ImGuiColorEditFlags_NoInputs        = 1 << 9,   // ColorEdit, ColorPicker: Disable inputs sliders/text widgets, show only the colored square.
-    ImGuiColorEditFlags_NoTooltip       = 1 << 10,  // ColorEdit, ColorButton: Disable tooltip when hovering the colored square.
-    ImGuiColorEditFlags_NoLabel         = 1 << 11,  // ColorEdit: Disable display of inline text label (the label is still used in tooltip and picker)
+    ImGuiColorEditFlags_NoAlpha         = 1 << 5,   // ColorEdit, ColorPicker, ColorButton: completely ignore Alpha component (read 3 components).
+    ImGuiColorEditFlags_NoAlphaPreview  = 1 << 6,   // ColorEdit, ColorPicker, ColorButton: do not display transparent colors over a checkerboard, always display the preview as opaque.
+    ImGuiColorEditFlags_NoPicker        = 1 << 7,   // ColorEdit: disable picker when clicking on colored square.
+    ImGuiColorEditFlags_NoOptions       = 1 << 8,   // ColorEdit: disable toggling options menu when right-clicking on colored square.
+    ImGuiColorEditFlags_NoColorSquare   = 1 << 9,   // ColorEdit, ColorPicker: disable colored square.
+    ImGuiColorEditFlags_NoInputs        = 1 << 10,  // ColorEdit, ColorPicker: disable inputs sliders/text widgets, show only the colored square.
+    ImGuiColorEditFlags_NoTooltip       = 1 << 11,  // ColorEdit, ColorButton: disable tooltip when hovering the colored square.
+    ImGuiColorEditFlags_NoLabel         = 1 << 12,  // ColorEdit, ColorPicker: disable display of inline text label (the label is still used in tooltip and picker).
     ImGuiColorEditFlags_ModeMask_       = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX,
     ImGuiColorEditFlags_StoredMask_     = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX|ImGuiColorEditFlags_Float
 };

@@ -660,21 +660,27 @@ void ImGui::ShowTestWindow(bool* p_open)
 
         if (ImGui::TreeNode("Color/Picker Widgets"))
         {
-            static ImVec4 color = ImColor(114, 144, 154);
+            static ImVec4 color = ImColor(114, 144, 154, 200);
+
+            static bool alpha_preview = true;
+            ImGui::Checkbox("With Alpha Preview", &alpha_preview);
 
             ImGui::Text("Color widget:");
             ImGui::SameLine(); ShowHelpMarker("Click on the colored square to open a color picker.\nRight-click on the colored square to show options.\nCTRL+click on individual component to input value.\n");
             ImGui::ColorEdit3("MyColor##1", (float*)&color, ImGuiColorEditFlags_HSV);
 
             ImGui::Text("Color widget with Alpha:");
-            ImGui::ColorEdit4("MyColor##2", (float*)&color);
+            ImGui::ColorEdit4("MyColor##2", (float*)&color, (alpha_preview ? 0 : ImGuiColorEditFlags_NoAlphaPreview));
 
             ImGui::Text("Color widget with Float Display:");
-            ImGui::ColorEdit4("MyColor##2f", (float*)&color, ImGuiColorEditFlags_Float);
+            ImGui::ColorEdit4("MyColor##2f", (float*)&color, ImGuiColorEditFlags_Float | (alpha_preview ? 0 : ImGuiColorEditFlags_NoAlphaPreview));
+
+            ImGui::Text("Color button with Picker:");
+            ImGui::SameLine(); ShowHelpMarker("With the ImGuiColorEditFlags_NoInputs flag you can hide all the slider/text inputs.\nWith the ImGuiColorEditFlags_NoLabel flag you can pass a non-empty label which will only be used for the tooltip and picker popup.");
+            ImGui::ColorEdit4("MyColor##3", (float*)&color, ImGuiColorEditFlags_NoInputs|ImGuiColorEditFlags_NoLabel|(alpha_preview ? 0 : ImGuiColorEditFlags_NoAlphaPreview));
 
             ImGui::Text("Color button only:");
-            ImGui::SameLine(); ShowHelpMarker("With the ImGuiColorEditFlags_NoInputs flag you can hide all the slider/text inputs.\nWith the ImGuiColorEditFlags_NoLabel flag you can pass a non-empty label which will only be used for the tooltip and picker popup.");
-            ImGui::ColorEdit4("MyColor##3", (float*)&color, ImGuiColorEditFlags_NoInputs|ImGuiColorEditFlags_NoLabel);
+            ImGui::ColorButton("MyColor##3b", *(ImVec4*)&color, (alpha_preview ? 0 : ImGuiColorEditFlags_NoAlphaPreview), ImVec2(80,80));
 
             ImGui::Text("Color picker:");
             static bool alpha = false;

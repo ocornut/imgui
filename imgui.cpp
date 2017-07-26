@@ -9005,7 +9005,7 @@ void ImGui::ColorTooltip(const char* text, const float col[4], ImGuiColorEditFla
 {
     ImGuiContext& g = *GImGui;
 
-    int cr = IM_F32_TO_INT8_SAT(col[0]), cg = IM_F32_TO_INT8_SAT(col[1]), cb = IM_F32_TO_INT8_SAT(col[2]), ca = (flags & ImGuiColorEditFlags_NoAlpha) ? 255 : IM_F32_TO_INT8_SAT(col[3]);
+    int cr = IM_F32_TO_INT8_SAT(col[0]), cg = IM_F32_TO_INT8_SAT(col[1]), cb = IM_F32_TO_INT8_SAT(col[2]), ca = (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) ? 255 : IM_F32_TO_INT8_SAT(col[3]);
     BeginTooltipEx(true);
     ImGuiWindow* window = GetCurrentWindow();
     
@@ -9076,11 +9076,11 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);
     float grid_step = ImMin(g.FontSize, ImMin(size.x, size.y) * 0.5f);
-    RenderColorRectWithAlphaGrid(bb.Min, bb.Max, GetColorU32(col), grid_step, style.FrameRounding);
+    RenderColorRectWithAlphaGrid(bb.Min, bb.Max, GetColorU32((flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) ? ImVec4(col.x, col.y, col.z, 1.0f) : col), grid_step, style.FrameRounding);
     RenderFrameBorder(bb.Min, bb.Max, style.FrameRounding);
 
     if (hovered && !(flags & ImGuiColorEditFlags_NoTooltip))
-        ColorTooltip(desc_id, &col.x, flags & ImGuiColorEditFlags_NoAlpha);
+        ColorTooltip(desc_id, &col.x, flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview));
 
     return pressed;
 }
