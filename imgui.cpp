@@ -9094,8 +9094,19 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
 
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);
-    float grid_step = ImMin(g.FontSize, ImMin(size.x, size.y) * 0.5f);
-    RenderColorRectWithAlphaCheckerboard(bb.Min, bb.Max, GetColorU32((flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) ? ImVec4(col.x, col.y, col.z, 1.0f) : col), grid_step, style.FrameRounding);
+    
+    float mid_x = (float)(int)((bb.Min.x + bb.Max.x) * 0.5f);
+    float grid_step = ImMax((bb.Max.x - mid_x) * 0.50f, ImMin(size.x, size.y) * 0.50f);
+    ImVec4 col_without_alpha(col.x, col.y, col.z, 1.0f);
+    if ((flags & ImGuiColorEditFlags_HalfAlphaPreview) && (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) == 0 && col.w < 1.0f)
+    {
+        window->DrawList->AddRectFilled(bb.Min, ImVec2(mid_x, bb.Max.y), GetColorU32(col_without_alpha), style.FrameRounding, ImGuiCorner_TopLeft|ImGuiCorner_BottomLeft);
+        RenderColorRectWithAlphaCheckerboard(ImVec2(mid_x, bb.Min.y), bb.Max, GetColorU32(col), grid_step, style.FrameRounding, ImGuiCorner_TopRight|ImGuiCorner_BottomRight);
+    }
+    else
+    {
+        RenderColorRectWithAlphaCheckerboard(bb.Min, bb.Max, GetColorU32((flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) ? col_without_alpha : col), grid_step, style.FrameRounding);
+    }
     RenderFrameBorder(bb.Min, bb.Max, style.FrameRounding);
 
     if (hovered && !(flags & ImGuiColorEditFlags_NoTooltip))
