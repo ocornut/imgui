@@ -9017,7 +9017,7 @@ void ImGui::ColorTooltip(const char* text, const float col[4], ImGuiColorEditFla
     }
 
     ImVec2 sz(g.FontSize * 3, g.FontSize * 3);
-    window->DrawList->AddRectFilled(window->DC.CursorPos, window->DC.CursorPos + sz, IM_COL32(cr,cg,cb,255));
+    RenderColorRectWithAlphaGrid(window->DC.CursorPos, window->DC.CursorPos + sz, IM_COL32(cr,cg,cb,ca), g.FontSize, g.Style.FrameRounding);
     Dummy(sz);
     SameLine();
     if (flags & ImGuiColorEditFlags_NoAlpha)
@@ -9033,6 +9033,24 @@ static inline float ColorSquareSize()
     return g.FontSize + g.Style.FramePadding.y * 2.0f;
 }
 
+void ImGui::RenderColorRectWithAlphaGrid(ImVec2 p_min, ImVec2 p_max, ImU32 col, float grid_step, float rounding)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (((col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT) < 0xFF)
+    {
+        ImU32 col_bg1 = GetColorU32(IM_COL32(204,204,204,255));
+        ImU32 col_bg2 = GetColorU32(IM_COL32(128,128,128,255));
+        window->DrawList->AddRectFilled(p_min, p_max, col_bg1, rounding);
+        int yi = 0;
+        for (float y = p_min.y; y < p_max.y; y += grid_step, yi++)
+            for (float x = p_min.x + ((yi & 1) ? grid_step : 0.0f); x < p_max.x; x += grid_step * 2)
+            {
+                window->DrawList->AddRectFilled(ImVec2(x,y), ImMin(ImVec2(x + grid_step, y + grid_step), p_max), col_bg2, 0.0f);
+            }
+    }
+    window->DrawList->AddRectFilled(p_min, p_max, col, rounding);
+}
+
 // A little colored square. Return true when clicked.
 // FIXME: May want to display/ignore the alpha component in the color display? Yet show it in the tooltip.
 // 'desc_id' is not called 'label' because we don't display it next to the button, but only in the tooltip.
@@ -9045,10 +9063,11 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(desc_id);
+    float default_size = ColorSquareSize();
     if (size.x == 0.0f)
-        size.x = ColorSquareSize();
+        size.x = default_size;
     if (size.y == 0.0f)
-        size.y = ColorSquareSize();
+        size.y = default_size;
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
     ItemSize(bb);
     if (!ItemAdd(bb, &id))
@@ -9056,7 +9075,9 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
 
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);
-    RenderFrame(bb.Min, bb.Max, GetColorU32(*(ImVec4*)&col), true, style.FrameRounding);
+    float grid_step = ImMin(g.FontSize, ImMin(size.x, size.y) * 0.5f);
+    RenderColorRectWithAlphaGrid(bb.Min, bb.Max, GetColorU32(col), grid_step, style.FrameRounding);
+    RenderFrameBorder(bb.Min, bb.Max, style.FrameRounding);
 
     if (hovered && !(flags & ImGuiColorEditFlags_NoTooltip))
         ColorTooltip(desc_id, &col.x, flags & ImGuiColorEditFlags_NoAlpha);
@@ -9184,11 +9205,12 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         if (!(flags & ImGuiColorEditFlags_NoInputs))
             SameLine(0, style.ItemInnerSpacing.x);
 
-        const ImVec4 col_display(col[0], col[1], col[2], 1.0f);
+        const ImVec4 col_display(col[0], col[1], col[2], alpha ? col[3] : 1.0f); // 1.0f
         if (ColorButton("##ColorButton", col_display, flags))
         {
             if (!(flags & ImGuiColorEditFlags_NoPicker))
             {
+                g.ColorPickerRef = ImVec4(col[0], col[1], col[2], alpha ? col[3] : 1.0f);
                 OpenPopup("picker");
                 SetNextWindowPos(window->DC.LastItemRect.GetBL() + ImVec2(-1,style.ItemSpacing.y));
             }
