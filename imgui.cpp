@@ -9017,7 +9017,7 @@ void ImGui::ColorTooltip(const char* text, const float col[4], ImGuiColorEditFla
     }
 
     ImVec2 sz(g.FontSize * 3, g.FontSize * 3);
-    RenderColorRectWithAlphaGrid(window->DC.CursorPos, window->DC.CursorPos + sz, IM_COL32(cr,cg,cb,ca), g.FontSize, g.Style.FrameRounding);
+    RenderColorRectWithAlphaCheckerboard(window->DC.CursorPos, window->DC.CursorPos + sz, IM_COL32(cr,cg,cb,ca), g.FontSize, g.Style.FrameRounding);
     Dummy(sz);
     SameLine();
     if (flags & ImGuiColorEditFlags_NoAlpha)
@@ -9033,22 +9033,32 @@ static inline float ColorSquareSize()
     return g.FontSize + g.Style.FramePadding.y * 2.0f;
 }
 
-void ImGui::RenderColorRectWithAlphaGrid(ImVec2 p_min, ImVec2 p_max, ImU32 col, float grid_step, float rounding)
+void ImGui::RenderColorRectWithAlphaCheckerboard(ImVec2 p_min, ImVec2 p_max, ImU32 col, float grid_step, float rounding, int rounding_corners_flags_parent)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (((col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT) < 0xFF)
     {
+        // We use rounding+1 here which is counterintuitive but it inhibit mosts of the edge artifacts with overlayed rounded shapes
         ImU32 col_bg1 = GetColorU32(IM_COL32(204,204,204,255));
         ImU32 col_bg2 = GetColorU32(IM_COL32(128,128,128,255));
-        window->DrawList->AddRectFilled(p_min, p_max, col_bg1, rounding);
-        int yi = 0;
-        for (float y = p_min.y; y < p_max.y; y += grid_step, yi++)
-            for (float x = p_min.x + ((yi & 1) ? grid_step : 0.0f); x < p_max.x; x += grid_step * 2)
+        window->DrawList->AddRectFilled(p_min, p_max, col_bg1, rounding+1, rounding_corners_flags_parent);
+        int x_count = (int)((p_max.x - p_min.x) / grid_step + 0.99f);
+        int y_count = (int)((p_max.y - p_min.y) / grid_step + 0.99f);
+        for (int y_i = 0; y_i < y_count; y_i++)
             {
-                window->DrawList->AddRectFilled(ImVec2(x,y), ImMin(ImVec2(x + grid_step, y + grid_step), p_max), col_bg2, 0.0f);
+            for (int x_i = (y_i & 1) ^ 1; x_i < x_count; x_i += 2)
+            {
+                int rounding_corners_flags = 0;
+                if (y_i == 0) rounding_corners_flags |= (x_i == 0) ? ImGuiCorner_TopLeft : (x_i == x_count-1) ? ImGuiCorner_TopRight : 0;
+                if (y_i == y_count-1) rounding_corners_flags |= (x_i == 0) ? ImGuiCorner_BottomLeft : (x_i == x_count-1) ? ImGuiCorner_BottomRight : 0;
+                rounding_corners_flags &= rounding_corners_flags_parent;
+                ImVec2 p1(p_min.x + x_i * grid_step, p_min.y + y_i * grid_step);
+                ImVec2 p2(ImMin(p1.x + grid_step, p_max.x), ImMin(p1.y + grid_step, p_max.y));
+                window->DrawList->AddRectFilled(p1, p2, col_bg2, rounding_corners_flags ? rounding+1 : 0.0f, rounding_corners_flags);
+            }
             }
     }
-    window->DrawList->AddRectFilled(p_min, p_max, col, rounding);
+    window->DrawList->AddRectFilled(p_min, p_max, col, rounding, rounding_corners_flags_parent);
 }
 
 // A little colored square. Return true when clicked.
@@ -9076,7 +9086,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);
     float grid_step = ImMin(g.FontSize, ImMin(size.x, size.y) * 0.5f);
-    RenderColorRectWithAlphaGrid(bb.Min, bb.Max, GetColorU32((flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) ? ImVec4(col.x, col.y, col.z, 1.0f) : col), grid_step, style.FrameRounding);
+    RenderColorRectWithAlphaCheckerboard(bb.Min, bb.Max, GetColorU32((flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) ? ImVec4(col.x, col.y, col.z, 1.0f) : col), grid_step, style.FrameRounding);
     RenderFrameBorder(bb.Min, bb.Max, style.FrameRounding);
 
     if (hovered && !(flags & ImGuiColorEditFlags_NoTooltip))
@@ -9294,11 +9304,9 @@ bool ImGui::ColorPicker3(const char* label, float col[3], ImGuiColorEditFlags fl
     return true;
 }
 
-// ColorPicker v2.60 WIP 
-// see https://github.com/ocornut/imgui/issues/346
-// TODO: English strings in context menu (see FIXME-LOCALIZATION)
-// Note: we adjust item height based on item widget, which may cause a flickering feedback loop (if automatic height makes a vertical scrollbar appears, affecting automatic width..) 
+// ColorPicker
 // Note: only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
+// FIXME: we adjust the big color square height based on item width, which may cause a flickering feedback loop (if automatic height makes a vertical scrollbar appears, affecting automatic width..) 
 bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags flags)
 {
     ImGuiContext& g = *GImGui;
