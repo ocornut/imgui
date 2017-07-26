@@ -774,9 +774,14 @@ void ImDrawList::PathBezierCurveTo(const ImVec2& p2, const ImVec2& p3, const ImV
 
 void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int rounding_corners)
 {
+    const int corners_top = ImGuiCorner_TopLeft | ImGuiCorner_TopRight;
+    const int corners_bottom = ImGuiCorner_BottomLeft | ImGuiCorner_BottomRight;
+    const int corners_left = ImGuiCorner_TopLeft | ImGuiCorner_BottomLeft;
+    const int corners_right = ImGuiCorner_TopRight | ImGuiCorner_BottomRight;
+
     float r = rounding;
-    r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners&(1|2))==(1|2)) || ((rounding_corners&(4|8))==(4|8)) ? 0.5f : 1.0f ) - 1.0f);
-    r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners&(1|8))==(1|8)) || ((rounding_corners&(2|4))==(2|4)) ? 0.5f : 1.0f ) - 1.0f);
+    r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners & corners_top)  == corners_top)  || ((rounding_corners & corners_bottom) == corners_bottom) ? 0.5f : 1.0f ) - 1.0f);
+    r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners & corners_left) == corners_left) || ((rounding_corners & corners_right)  == corners_right)  ? 0.5f : 1.0f ) - 1.0f);
 
     if (r <= 0.0f || rounding_corners == 0)
     {
@@ -787,10 +792,10 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int 
     }
     else
     {
-        const float r0 = (rounding_corners & 1) ? r : 0.0f;
-        const float r1 = (rounding_corners & 2) ? r : 0.0f;
-        const float r2 = (rounding_corners & 4) ? r : 0.0f;
-        const float r3 = (rounding_corners & 8) ? r : 0.0f;
+        const float r0 = (rounding_corners & ImGuiCorner_TopLeft) ? r : 0.0f;
+        const float r1 = (rounding_corners & ImGuiCorner_TopRight) ? r : 0.0f;
+        const float r2 = (rounding_corners & ImGuiCorner_BottomRight) ? r : 0.0f;
+        const float r3 = (rounding_corners & ImGuiCorner_BottomLeft) ? r : 0.0f;
         PathArcToFast(ImVec2(a.x+r0,a.y+r0), r0, 6, 9);
         PathArcToFast(ImVec2(b.x-r1,a.y+r1), r1, 9, 12);
         PathArcToFast(ImVec2(b.x-r2,b.y-r2), r2, 0, 3);
