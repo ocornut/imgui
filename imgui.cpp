@@ -9258,7 +9258,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
                 Separator();
             }
             float square_sz = ColorSquareSize();
-            ImGuiColorEditFlags picker_flags = (flags & (ImGuiColorEditFlags_NoAlpha|ImGuiColorEditFlags_Float)) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX) | ImGuiColorEditFlags_NoLabel;
+            ImGuiColorEditFlags picker_flags = (flags & (ImGuiColorEditFlags_NoAlpha|ImGuiColorEditFlags_AlphaBar|ImGuiColorEditFlags_Float)) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX) | ImGuiColorEditFlags_NoLabel;
             PushItemWidth(square_sz * 12.0f);
             value_changed |= ColorPicker4("##picker", col, picker_flags);
             PopItemWidth();

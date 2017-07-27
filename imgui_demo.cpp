@@ -1768,7 +1768,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             if (!filter.PassFilter(name))
                 continue;
             ImGui::PushID(i);
-            ImGui::ColorEdit4(name, (float*)&style.Colors[i], color_edit_flags | ImGuiColorEditFlags_NoOptions);
+            ImGui::ColorEdit4(name, (float*)&style.Colors[i], color_edit_flags | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_AlphaBar);
             if (memcmp(&style.Colors[i], (ref ? &ref->Colors[i] : &default_style.Colors[i]), sizeof(ImVec4)) != 0)
             {
                 ImGui::SameLine(); if (ImGui::Button("Revert")) style.Colors[i] = ref ? ref->Colors[i] : default_style.Colors[i];
