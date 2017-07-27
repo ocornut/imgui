@@ -9129,6 +9129,7 @@ bool ImGui::ColorEdit3(const char* label, float col[3], ImGuiColorEditFlags flag
 // Edit colors components (each component in 0.0f..1.0f range)
 // Click on colored square to open a color picker (unless ImGuiColorEditFlags_NoPicker is set). Use CTRL-Click to input value and TAB to go to next item.
 // Note: only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
+// FIXME-OPT: Need to add coarse clipping for the entire widget.
 bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -9138,9 +9139,9 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-    const float w_full = CalcItemWidth();
     const float w_extra = (flags & ImGuiColorEditFlags_NoColorSquare) ? 0.0f : (ColorSquareSize() + style.ItemInnerSpacing.x);
-    const float w_items_all = w_full - w_extra;
+    const float w_items_all = CalcItemWidth() - w_extra;
+    const char* label_display_end = FindRenderedTextEnd(label);
 
     const bool alpha = (flags & ImGuiColorEditFlags_NoAlpha) == 0;
     const int components = alpha ? 4 : 3;
@@ -9153,12 +9154,10 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     if (flags & ImGuiColorEditFlags_NoInputs)
         flags = (flags & (~ImGuiColorEditFlags_ModeMask_)) | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_NoOptions;
 
-    // Read back edit mode from persistent storage
+    // Read back edit mode from persistent storage, check that exactly one of RGB/HSV/HEX is set
     if (!(flags & ImGuiColorEditFlags_NoOptions))
         flags = (flags & (~ImGuiColorEditFlags_StoredMask_)) | (g.ColorEditModeStorage.GetInt(id, (flags & ImGuiColorEditFlags_StoredMask_)) & ImGuiColorEditFlags_StoredMask_);
-
-    // Check that exactly one of RGB/HSV/HEX is set
-    IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags_ModeMask_))); // 
+    IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags_ModeMask_)));
 
     float f[4] = { col[0], col[1], col[2], alpha ? col[3] : 1.0f };
     if (flags & ImGuiColorEditFlags_HSV)
@@ -9232,8 +9231,6 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         }
         PopItemWidth();
     }
-
-    const char* label_display_end = FindRenderedTextEnd(label);
 
     bool picker_active = false;
     if (!(flags & ImGuiColorEditFlags_NoColorSquare))
