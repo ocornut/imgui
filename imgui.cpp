@@ -9054,8 +9054,8 @@ void ImGui::RenderColorRectWithAlphaCheckerboard(ImVec2 p_min, ImVec2 p_max, ImU
             for (int x_i = (y_i & 1) ^ 1; x_i < x_count; x_i += 2)
             {
                 int rounding_corners_flags = 0;
-                if (y_i == 0) rounding_corners_flags |= (x_i == 0) ? ImGuiCorner_TopLeft : (x_i == x_count-1) ? ImGuiCorner_TopRight : 0;
-                if (y_i == y_count-1) rounding_corners_flags |= (x_i == 0) ? ImGuiCorner_BottomLeft : (x_i == x_count-1) ? ImGuiCorner_BottomRight : 0;
+                if (y_i == 0) { if (x_i == 0) rounding_corners_flags |= ImGuiCorner_TopLeft; if (x_i == x_count-1) rounding_corners_flags |= ImGuiCorner_TopRight; }
+                if (y_i == y_count-1) { if (x_i == 0) rounding_corners_flags |= ImGuiCorner_BottomLeft; if (x_i == x_count-1) rounding_corners_flags |= ImGuiCorner_BottomRight; }
                 rounding_corners_flags &= rounding_corners_flags_parent;
                 ImVec2 p1(p_min.x + x_i * grid_step, p_min.y + y_i * grid_step);
                 ImVec2 p2(ImMin(p1.x + grid_step, p_max.x), ImMin(p1.y + grid_step, p_max.y));
