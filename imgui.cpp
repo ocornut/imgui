@@ -9040,31 +9040,39 @@ static inline ImU32 ImAlphaBlendColor(ImU32 col_a, ImU32 col_b)
     return IM_COL32(r, g, b, 0xFF);
 }
 
-void ImGui::RenderColorRectWithAlphaCheckerboard(ImVec2 p_min, ImVec2 p_max, ImU32 col, float grid_step, float rounding, int rounding_corners_flags_parent)
+// NB: This is rather brittle and will show artifact when rounding this enabled if rounded corners overlap multiple cells. Caller currently responsible for avoiding that.
+// I spent a non reasonable amount of time trying to getting this right for ColorButton with rounding+anti-aliasing+ImGuiColorEditFlags_HalfAlphaPreview flag + various grid sizes and offsets, and eventually gave up... probably more reasonable to disable rounding alltogether.
+void ImGui::RenderColorRectWithAlphaCheckerboard(ImVec2 p_min, ImVec2 p_max, ImU32 col, float grid_step, ImVec2 grid_off, float rounding, int rounding_corners_flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (((col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT) < 0xFF)
     {
         ImU32 col_bg1 = GetColorU32(ImAlphaBlendColor(IM_COL32(204,204,204,255), col));
         ImU32 col_bg2 = GetColorU32(ImAlphaBlendColor(IM_COL32(128,128,128,255), col));
-        window->DrawList->AddRectFilled(p_min, p_max, col_bg1, rounding, rounding_corners_flags_parent);
-        int x_count = (int)((p_max.x - p_min.x) / grid_step + 0.99f);
-        int y_count = (int)((p_max.y - p_min.y) / grid_step + 0.99f);
-        for (int y_i = 0; y_i < y_count; y_i++)
-            for (int x_i = (y_i & 1) ^ 1; x_i < x_count; x_i += 2)
+        window->DrawList->AddRectFilled(p_min, p_max, col_bg1, rounding, rounding_corners_flags);
+
+        int yi = 0;
+        for (float y = p_min.y + grid_off.y; y < p_max.y; y += grid_step, yi++)
+        {
+            float y1 = ImClamp(y, p_min.y, p_max.y), y2 = ImMin(y + grid_step, p_max.y);
+            if (y2 <= y1)
+                continue;
+            for (float x = p_min.x + grid_off.x + (yi & 1) * grid_step; x < p_max.x; x += grid_step * 2.0f)
             {
-                int rounding_corners_flags = 0;
-                if (y_i == 0) { if (x_i == 0) rounding_corners_flags |= ImGuiCorner_TopLeft; if (x_i == x_count-1) rounding_corners_flags |= ImGuiCorner_TopRight; }
-                if (y_i == y_count-1) { if (x_i == 0) rounding_corners_flags |= ImGuiCorner_BottomLeft; if (x_i == x_count-1) rounding_corners_flags |= ImGuiCorner_BottomRight; }
-                rounding_corners_flags &= rounding_corners_flags_parent;
-                ImVec2 p1(p_min.x + x_i * grid_step, p_min.y + y_i * grid_step);
-                ImVec2 p2(ImMin(p1.x + grid_step, p_max.x), ImMin(p1.y + grid_step, p_max.y));
-                window->DrawList->AddRectFilled(p1, p2, col_bg2, rounding_corners_flags ? rounding : 0.0f, rounding_corners_flags);
+                float x1 = ImClamp(x, p_min.x, p_max.x), x2 = ImMin(x + grid_step, p_max.x);
+                if (x2 <= x1)
+                    continue;
+                int rounding_corners_flags_cell = 0;
+                if (y1 <= p_min.y) { if (x1 <= p_min.x) rounding_corners_flags_cell |= ImGuiCorner_TopLeft;    if (x2 >= p_max.x) rounding_corners_flags_cell |= ImGuiCorner_TopRight; }
+                if (y2 >= p_max.y) { if (x1 <= p_min.x) rounding_corners_flags_cell |= ImGuiCorner_BottomLeft; if (x2 >= p_max.x) rounding_corners_flags_cell |= ImGuiCorner_BottomRight; }
+                rounding_corners_flags_cell &= rounding_corners_flags;
+                window->DrawList->AddRectFilled(ImVec2(x1,y1), ImVec2(x2,y2), col_bg2, rounding_corners_flags_cell ? rounding : 0.0f, rounding_corners_flags_cell);
+            }
             }
     }
     else
     {
-        window->DrawList->AddRectFilled(p_min, p_max, col, rounding, rounding_corners_flags_parent);
+        window->DrawList->AddRectFilled(p_min, p_max, col, rounding, rounding_corners_flags);
     }
 }
 
@@ -9078,7 +9086,6 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
         return false;
 
     ImGuiContext& g = *GImGui;
-    const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(desc_id);
     float default_size = ColorSquareSize();
     if (size.x == 0.0f)
@@ -9086,26 +9093,27 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     if (size.y == 0.0f)
         size.y = default_size;
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
-    ItemSize(bb);//, ImMin((size.y - g.FontSize) * 0.5f, style.FramePadding.y));
+    ItemSize(bb);
     if (!ItemAdd(bb, &id))
         return false;
 
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);
     
-    float mid_x = (float)(int)((bb.Min.x + bb.Max.x) * 0.5f);
-    float grid_step = ImMax((bb.Max.x - mid_x) * 0.50f, ImMin(size.x, size.y) * 0.50f);
     ImVec4 col_without_alpha(col.x, col.y, col.z, 1.0f);
+    float grid_step = ImMin(size.x, size.y) / 2.0f;
+    float rounding = ImMin(g.Style.FrameRounding, grid_step * 0.5f);
     if ((flags & ImGuiColorEditFlags_HalfAlphaPreview) && (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) == 0 && col.w < 1.0f)
     {
-        window->DrawList->AddRectFilled(bb.Min, ImVec2(mid_x, bb.Max.y), GetColorU32(col_without_alpha), style.FrameRounding, ImGuiCorner_TopLeft|ImGuiCorner_BottomLeft);
-        RenderColorRectWithAlphaCheckerboard(ImVec2(mid_x, bb.Min.y), bb.Max, GetColorU32(col), grid_step, style.FrameRounding, ImGuiCorner_TopRight|ImGuiCorner_BottomRight);
+        float mid_x = (float)(int)((bb.Min.x + bb.Max.x) * 0.5f + 0.5f);
+        RenderColorRectWithAlphaCheckerboard(ImVec2(bb.Min.x + grid_step, bb.Min.y), bb.Max, GetColorU32(col), grid_step, ImVec2(-grid_step, 0.0f), rounding, ImGuiCorner_TopRight|ImGuiCorner_BottomRight);
+        window->DrawList->AddRectFilled(bb.Min, ImVec2(mid_x, bb.Max.y), GetColorU32(col_without_alpha), rounding, ImGuiCorner_TopLeft|ImGuiCorner_BottomLeft);
     }
     else
     {
-        RenderColorRectWithAlphaCheckerboard(bb.Min, bb.Max, GetColorU32((flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) ? col_without_alpha : col), grid_step, style.FrameRounding);
+        RenderColorRectWithAlphaCheckerboard(bb.Min, bb.Max, GetColorU32((flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) ? col_without_alpha : col), grid_step, ImVec2(0,0), rounding);
     }
-    RenderFrameBorder(bb.Min, bb.Max, style.FrameRounding);
+    RenderFrameBorder(bb.Min, bb.Max, rounding);
 
     if (hovered && !(flags & ImGuiColorEditFlags_NoTooltip))
         ColorTooltip(desc_id, &col.x, flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview | ImGuiColorEditFlags_HalfAlphaPreview));
