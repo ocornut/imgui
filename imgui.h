@@ -668,16 +668,17 @@ enum ImGuiColorEditFlags_
     ImGuiColorEditFlags_HSV             = 1 << 1,   // "
     ImGuiColorEditFlags_HEX             = 1 << 2,   // "
     ImGuiColorEditFlags_Float           = 1 << 3,   // ColorEdit, ColorPicker, ColorButton: display values formatted as 0.0f..1.0f floats instead of 0..255 integers. No round-trip of value via integers.
-    ImGuiColorEditFlags_AlphaBar        = 1 << 4,   // ColorPicker: Show vertical alpha bar/gradient.
-    ImGuiColorEditFlags_NoAlpha         = 1 << 5,   // ColorEdit, ColorPicker, ColorButton: completely ignore Alpha component (read 3 components).
-    ImGuiColorEditFlags_NoAlphaPreview  = 1 << 6,   // ColorEdit, ColorPicker, ColorButton: do not display transparent colors over a checkerboard, always display the preview as opaque.
-    ImGuiColorEditFlags_NoPicker        = 1 << 7,   // ColorEdit: disable picker when clicking on colored square.
-    ImGuiColorEditFlags_NoOptions       = 1 << 8,   // ColorEdit: disable toggling options menu when right-clicking on colored square.
-    ImGuiColorEditFlags_NoColorSquare   = 1 << 9,   // ColorEdit, ColorPicker: disable colored square.
-    ImGuiColorEditFlags_NoInputs        = 1 << 10,  // ColorEdit, ColorPicker: disable inputs sliders/text widgets, show only the colored square.
-    ImGuiColorEditFlags_NoTooltip       = 1 << 11,  // ColorEdit, ColorButton: disable tooltip when hovering the colored square.
-    ImGuiColorEditFlags_NoLabel         = 1 << 12,  // ColorEdit, ColorPicker: disable display of inline text label (the label is still used in tooltip and picker).
-    ImGuiColorEditFlags_HalfAlphaPreview= 1 << 13,
+    ImGuiColorEditFlags_AlphaBar        = 1 << 4,   // ColorEdit, ColorPicker: show vertical alpha bar/gradient in picker.
+    ImGuiColorEditFlags_AlphaPreview    = 1 << 5,   // ColorEdit, ColorPicker, ColorButton: display preview as a transparent color over a checkerboard, instead of opaque.
+    ImGuiColorEditFlags_AlphaPreviewHalf= 1 << 6,   // ColorEdit, ColorPicker, ColorButton: display half opaque / half checkerboard
+    ImGuiColorEditFlags_NoAlpha         = 1 << 7,   // ColorEdit, ColorPicker, ColorButton: completely ignore Alpha component (read 3 components).
+    ImGuiColorEditFlags_NoPicker        = 1 << 8,   // ColorEdit: disable picker when clicking on colored square.
+    ImGuiColorEditFlags_NoOptions       = 1 << 9,   // ColorEdit: disable toggling options menu when right-clicking on colored square.
+    ImGuiColorEditFlags_NoColorSquare   = 1 << 10,  // ColorEdit, ColorPicker: disable colored square.
+    ImGuiColorEditFlags_NoInputs        = 1 << 12,  // ColorEdit, ColorPicker: disable inputs sliders/text widgets, show only the colored square.
+    ImGuiColorEditFlags_NoTooltip       = 1 << 13,  // ColorEdit, ColorButton: disable tooltip when hovering the colored square.
+    ImGuiColorEditFlags_NoLabel         = 1 << 14,  // ColorEdit, ColorPicker: disable display of inline text label (the label is still used in tooltip and picker).
+    ImGuiColorEditFlags_NoRefColor      = 1 << 15,
     ImGuiColorEditFlags_ModeMask_       = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX,
     ImGuiColorEditFlags_StoredMask_     = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX|ImGuiColorEditFlags_Float
 };

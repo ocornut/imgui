@@ -666,7 +666,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             static bool alpha_half_preview = false;
             ImGui::Checkbox("With Alpha Preview", &alpha_preview);
             ImGui::Checkbox("With Half Alpha Preview", &alpha_half_preview);
-            int alpha_flags = alpha_half_preview ? ImGuiColorEditFlags_HalfAlphaPreview : (alpha_preview ? 0 : ImGuiColorEditFlags_NoAlphaPreview);
+            int alpha_flags = alpha_half_preview ? ImGuiColorEditFlags_AlphaPreviewHalf : (alpha_preview ? ImGuiColorEditFlags_AlphaPreview : 0);
 
             ImGui::Text("Color widget:");
             ImGui::SameLine(); ShowHelpMarker("Click on the colored square to open a color picker.\nRight-click on the colored square to show options.\nCTRL+click on individual component to input value.\n");
@@ -1752,13 +1752,16 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::SameLine(); ImGui::PushItemWidth(120); ImGui::Combo("##output_type", &output_dest, "To Clipboard\0To TTY\0"); ImGui::PopItemWidth();
         ImGui::SameLine(); ImGui::Checkbox("Only Modified Fields", &output_only_modified);
 
-        static ImGuiColorEditFlags color_edit_flags = ImGuiColorEditFlags_RGB;
-        ImGui::RadioButton("RGB", &color_edit_flags, ImGuiColorEditFlags_RGB);
-        ImGui::SameLine();
-        ImGui::RadioButton("HSV", &color_edit_flags, ImGuiColorEditFlags_HSV);
-        ImGui::SameLine();
-        ImGui::RadioButton("HEX", &color_edit_flags, ImGuiColorEditFlags_HEX);
+        static ImGuiColorEditFlags color_flags = ImGuiColorEditFlags_RGB;
+        ImGui::RadioButton("RGB", &color_flags, ImGuiColorEditFlags_RGB); ImGui::SameLine(); 
+        ImGui::RadioButton("HSV", &color_flags, ImGuiColorEditFlags_HSV); ImGui::SameLine(); 
+        ImGui::RadioButton("HEX", &color_flags, ImGuiColorEditFlags_HEX);
         //ImGui::Text("Tip: Click on colored square to change edit mode.");
+
+        static ImGuiColorEditFlags alpha_flags = 0;
+        ImGui::RadioButton("Opaque", &alpha_flags, 0); ImGui::SameLine(); 
+        ImGui::RadioButton("Alpha", &alpha_flags, ImGuiColorEditFlags_AlphaPreview); ImGui::SameLine(); 
+        ImGui::RadioButton("Half", &alpha_flags, ImGuiColorEditFlags_AlphaPreviewHalf);
 
         static ImGuiTextFilter filter;
         filter.Draw("Filter colors", 200);
@@ -1771,7 +1774,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             if (!filter.PassFilter(name))
                 continue;
             ImGui::PushID(i);
-            ImGui::ColorEdit4(name, (float*)&style.Colors[i], color_edit_flags | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_AlphaBar);
+            ImGui::ColorEdit4(name, (float*)&style.Colors[i], color_flags | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_AlphaBar | alpha_flags);
             if (memcmp(&style.Colors[i], (ref ? &ref->Colors[i] : &default_style.Colors[i]), sizeof(ImVec4)) != 0)
             {
                 ImGui::SameLine(); if (ImGui::Button("Revert")) style.Colors[i] = ref ? ref->Colors[i] : default_style.Colors[i];

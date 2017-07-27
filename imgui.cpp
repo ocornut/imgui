@@ -9005,7 +9005,7 @@ void ImGui::ColorTooltip(const char* text, const float col[4], ImGuiColorEditFla
 {
     ImGuiContext& g = *GImGui;
 
-    int cr = IM_F32_TO_INT8_SAT(col[0]), cg = IM_F32_TO_INT8_SAT(col[1]), cb = IM_F32_TO_INT8_SAT(col[2]), ca = (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) ? 255 : IM_F32_TO_INT8_SAT(col[3]);
+    int cr = IM_F32_TO_INT8_SAT(col[0]), cg = IM_F32_TO_INT8_SAT(col[1]), cb = IM_F32_TO_INT8_SAT(col[2]), ca = (flags & ImGuiColorEditFlags_NoAlpha) ? 255 : IM_F32_TO_INT8_SAT(col[3]);
     BeginTooltipEx(true);
     
     const char* text_end = text ? FindRenderedTextEnd(text, NULL) : text;
@@ -9016,7 +9016,7 @@ void ImGui::ColorTooltip(const char* text, const float col[4], ImGuiColorEditFla
     }
 
     ImVec2 sz(g.FontSize * 3, g.FontSize * 3);
-    ColorButton("##preview", ImVec4(col[0], col[1], col[2], col[3]), (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_HalfAlphaPreview)) | ImGuiColorEditFlags_NoTooltip, sz);
+    ColorButton("##preview", ImVec4(col[0], col[1], col[2], col[3]), (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf)) | ImGuiColorEditFlags_NoTooltip, sz);
     SameLine();
     if (flags & ImGuiColorEditFlags_NoAlpha)
         Text("#%02X%02X%02X\nR: %d, G: %d, B: %d\n(%.3f, %.3f, %.3f)", cr, cg, cb, cr, cg, cb, col[0], col[1], col[2]);
@@ -9068,7 +9068,7 @@ void ImGui::RenderColorRectWithAlphaCheckerboard(ImVec2 p_min, ImVec2 p_max, ImU
                 rounding_corners_flags_cell &= rounding_corners_flags;
                 window->DrawList->AddRectFilled(ImVec2(x1,y1), ImVec2(x2,y2), col_bg2, rounding_corners_flags_cell ? rounding : 0.0f, rounding_corners_flags_cell);
             }
-            }
+        }
     }
     else
     {
@@ -9099,11 +9099,14 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
 
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+
+    if (flags & ImGuiColorEditFlags_NoAlpha)
+        flags &= ~(ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf);
     
     ImVec4 col_without_alpha(col.x, col.y, col.z, 1.0f);
-    float grid_step = ImMin(size.x, size.y) / 2.0f;
+    float grid_step = ImMin(size.x, size.y) / 2.99f;
     float rounding = ImMin(g.Style.FrameRounding, grid_step * 0.5f);
-    if ((flags & ImGuiColorEditFlags_HalfAlphaPreview) && (flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) == 0 && col.w < 1.0f)
+    if ((flags & ImGuiColorEditFlags_AlphaPreviewHalf) && col.w < 1.0f)
     {
         float mid_x = (float)(int)((bb.Min.x + bb.Max.x) * 0.5f + 0.5f);
         RenderColorRectWithAlphaCheckerboard(ImVec2(bb.Min.x + grid_step, bb.Min.y), bb.Max, GetColorU32(col), grid_step, ImVec2(-grid_step, 0.0f), rounding, ImGuiCorner_TopRight|ImGuiCorner_BottomRight);
@@ -9111,12 +9114,12 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     }
     else
     {
-        RenderColorRectWithAlphaCheckerboard(bb.Min, bb.Max, GetColorU32((flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview)) ? col_without_alpha : col), grid_step, ImVec2(0,0), rounding);
+        RenderColorRectWithAlphaCheckerboard(bb.Min, bb.Max, GetColorU32((flags & ImGuiColorEditFlags_AlphaPreview) ? col : col_without_alpha), grid_step, ImVec2(0,0), rounding);
     }
     RenderFrameBorder(bb.Min, bb.Max, rounding);
 
     if (hovered && !(flags & ImGuiColorEditFlags_NoTooltip))
-        ColorTooltip(desc_id, &col.x, flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoAlphaPreview | ImGuiColorEditFlags_HalfAlphaPreview));
+        ColorTooltip(desc_id, &col.x, flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf));
 
     return pressed;
 }
