@@ -19,6 +19,7 @@ int main(int, char**)
         return 1;
     GLFWwindow* window = glfwCreateWindow(1280, 720, "ImGui OpenGL2 example", NULL, NULL);
     glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // Enable vsync
 
     // Setup ImGui binding
     ImGui_ImplGlfw_Init(window, true);
@@ -77,6 +78,7 @@ int main(int, char**)
         glViewport(0, 0, display_w, display_h);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
+        //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
         ImGui::Render();
         glfwSwapBuffers(window);
     }

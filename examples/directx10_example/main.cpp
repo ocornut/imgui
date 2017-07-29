@@ -183,7 +183,9 @@ int main(int, char**)
         // Rendering
         g_pd3dDevice->ClearRenderTargetView(g_mainRenderTargetView, (float*)&clear_col);
         ImGui::Render();
-        g_pSwapChain->Present(0, 0);
+
+        g_pSwapChain->Present(1, 0); // Present with vsync
+        //g_pSwapChain->Present(0, 0); // Present without vsync
     }
 
     ImGui_ImplDX10_Shutdown();
