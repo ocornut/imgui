@@ -706,6 +706,7 @@ void ImGui::ShowTestWindow(bool* p_open)
                 }
             }
             ImGui::Combo("Mode", &inputs_mode, "All Inputs\0No Inputs\0RGB Input\0HSV Input\0HEX Input\0");
+            ImGui::SameLine(); ShowHelpMarker("User can right-click the inputs and override edit mode.");
             //ImGui::DragFloat("Width", &width, 1.0f, 1.0f, 999.0f);
             //ImGui::PushItemWidth(width);
             ImGuiColorEditFlags flags = alpha_preview_flags;
