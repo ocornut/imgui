@@ -9266,48 +9266,28 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
                 Separator();
             }
             float square_sz = ColorSquareSize();
-            ImGuiColorEditFlags picker_flags_to_forward = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf;
-            ImGuiColorEditFlags picker_flags = (flags & picker_flags_to_forward) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX) | ImGuiColorEditFlags_NoLabel;
-            if ((flags & ImGuiColorEditFlags_NoRefColor) == 0)
-                picker_flags |= ImGuiColorEditFlags_NoColorSquare;
+            ImGuiColorEditFlags picker_flags_to_forward = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaBar;// | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf;
+            ImGuiColorEditFlags picker_flags = (flags & picker_flags_to_forward) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX) | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaPreviewHalf;
             PushItemWidth(square_sz * 12.0f); // Use 256 + bar sizes?
-            value_changed |= ColorPicker4("##picker", col, picker_flags);
+            value_changed |= ColorPicker4("##picker", col, picker_flags, &g.ColorPickerRef.x);
             PopItemWidth();
-            if ((flags & ImGuiColorEditFlags_NoRefColor) == 0)
-            {
-                SameLine();
-                BeginGroup();
-                Text("Current");
-                ColorButton("##current", col_v4, ImGuiColorEditFlags_NoTooltip|ImGuiColorEditFlags_AlphaPreviewHalf, ImVec2(square_sz * 3, square_sz * 2));
-                Text("Original");
-                if (ColorButton("##original", g.ColorPickerRef, ImGuiColorEditFlags_NoTooltip|ImGuiColorEditFlags_AlphaPreviewHalf, ImVec2(square_sz * 3, square_sz * 2)))
-                {
-                    memcpy(col, &g.ColorPickerRef, components * sizeof(float));
-                    value_changed = true;
-                }
-                EndGroup();
-            }
             EndPopup();
         }
+    }
 
-        // Context menu: display and store options. Don't apply to 'flags' this frame.
-        if (!(flags & ImGuiColorEditFlags_NoOptions) && BeginPopup("context"))
-        {
-            ImGuiColorEditFlags new_flags = -1;
-            if (RadioButton("RGB", (flags & ImGuiColorEditFlags_RGB)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_RGB;
-            if (RadioButton("HSV", (flags & ImGuiColorEditFlags_HSV)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_HSV;
-            if (RadioButton("HEX", (flags & ImGuiColorEditFlags_HEX)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_HEX;
-            Separator();
-            if (RadioButton("0..255", (flags & ImGuiColorEditFlags_Float)?0:1)) new_flags = (flags & ~ImGuiColorEditFlags_Float);
-            if (RadioButton("0.00..1.00", (flags & ImGuiColorEditFlags_Float)?1:0)) new_flags = (flags | ImGuiColorEditFlags_Float);
-            if (new_flags != -1)
-                g.ColorEditModeStorage.SetInt(storage_id, (int)(new_flags & ImGuiColorEditFlags_StoredMask_));
-            EndPopup();
-        }
-
-        // Recreate our own tooltip over's ColorButton() one because we want to display correct alpha here
-        if (!(flags & ImGuiColorEditFlags_NoTooltip) && IsItemHovered())
-            ColorTooltip(label, col, flags);
+    // Context menu: display and store options. Don't apply to 'flags' this frame.
+    if (!(flags & ImGuiColorEditFlags_NoOptions) && BeginPopup("context"))
+    {
+        ImGuiColorEditFlags new_flags = -1;
+        if (RadioButton("RGB", (flags & ImGuiColorEditFlags_RGB)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_RGB;
+        if (RadioButton("HSV", (flags & ImGuiColorEditFlags_HSV)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_HSV;
+        if (RadioButton("HEX", (flags & ImGuiColorEditFlags_HEX)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_HEX;
+        Separator();
+        if (RadioButton("0..255", (flags & ImGuiColorEditFlags_Float)?0:1)) new_flags = (flags & ~ImGuiColorEditFlags_Float);
+        if (RadioButton("0.00..1.00", (flags & ImGuiColorEditFlags_Float)?1:0)) new_flags = (flags | ImGuiColorEditFlags_Float);
+        if (new_flags != -1)
+            g.ColorEditModeStorage.SetInt(storage_id, (int)(new_flags & ImGuiColorEditFlags_StoredMask_));
+        EndPopup();
     }
 
     if (label != label_display_end && !(flags & ImGuiColorEditFlags_NoLabel))
@@ -9352,7 +9332,7 @@ bool ImGui::ColorPicker3(const char* label, float col[3], ImGuiColorEditFlags fl
 // ColorPicker
 // Note: only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
 // FIXME: we adjust the big color square height based on item width, which may cause a flickering feedback loop (if automatic height makes a vertical scrollbar appears, affecting automatic width..) 
-bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags flags)
+bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags flags, const float* ref_col)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -9363,6 +9343,9 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
 
     PushID(label);
     BeginGroup();
+
+    if ((flags & ImGuiColorEditFlags_NoSidePreview) == 0)
+        flags |= ImGuiColorEditFlags_NoColorSquare;
 
     // Setup
     bool alpha_bar = (flags & ImGuiColorEditFlags_AlphaBar) && !(flags & ImGuiColorEditFlags_NoAlpha);
@@ -9407,14 +9390,40 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         }
     }
 
-    if ((flags & ImGuiColorEditFlags_NoLabel) == 0)
+    if (!(flags & ImGuiColorEditFlags_NoSidePreview))
+    {
+        SameLine(0, style.ItemInnerSpacing.x);
+        BeginGroup();
+    }
+
+    if (!(flags & ImGuiColorEditFlags_NoLabel))
     {
         const char* label_display_end = FindRenderedTextEnd(label);
         if (label != label_display_end)
         {
-            SameLine(0, style.ItemInnerSpacing.x);
+            if ((flags & ImGuiColorEditFlags_NoSidePreview))
+                SameLine(0, style.ItemInnerSpacing.x);
             TextUnformatted(label, label_display_end);
         }
+    }
+    if (!(flags & ImGuiColorEditFlags_NoSidePreview))
+    {
+        ImVec4 col_v4(col[0], col[1], col[2], (flags & ImGuiColorEditFlags_NoAlpha) ? 1.0f : col[3]);
+        float square_sz = ColorSquareSize();
+        if ((flags & ImGuiColorEditFlags_NoLabel))
+            Text("Current");
+        ColorButton("##current", col_v4, (flags & (ImGuiColorEditFlags_AlphaPreview|ImGuiColorEditFlags_AlphaPreviewHalf)), ImVec2(square_sz * 3, square_sz * 2));
+        if (ref_col != NULL)
+        {
+            Text("Original");
+            ImVec4 ref_col_v4(ref_col[0], ref_col[1], ref_col[2], (flags & ImGuiColorEditFlags_NoAlpha) ? 1.0f : ref_col[3]);
+            if (ColorButton("##original", ref_col_v4, (flags & (ImGuiColorEditFlags_AlphaPreview|ImGuiColorEditFlags_AlphaPreviewHalf)), ImVec2(square_sz * 3, square_sz * 2)))
+            {
+                memcpy(col, ref_col, ((flags & ImGuiColorEditFlags_NoAlpha) ? 3 : 4) * sizeof(float));
+                value_changed = true;
+            }
+        }
+        EndGroup();
     }
 
     // Convert back color to RGB
