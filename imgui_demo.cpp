@@ -686,7 +686,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::ColorButton("MyColor##3b", *(ImVec4*)&color, alpha_previw_flags, ImVec2(80,80));
 
             ImGui::Text("Color picker:");
-            static bool alpha = false;
+            static bool alpha = true;
             static bool alpha_bar = false;
             static int inputs_mode = 2;
             static float width = 200.0f;
