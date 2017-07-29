@@ -9244,6 +9244,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         {
             if (!(flags & ImGuiColorEditFlags_NoPicker))
             {
+                g.ColorPickerRef = ImVec4(col[0], col[1], col[2], alpha ? col[3] : 1.0f);
                 OpenPopup("picker");
                 SetNextWindowPos(window->DC.LastItemRect.GetBL() + ImVec2(-1,style.ItemSpacing.y));
             }
@@ -9264,9 +9265,25 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             float square_sz = ColorSquareSize();
             ImGuiColorEditFlags picker_flags_to_forward = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf;
             ImGuiColorEditFlags picker_flags = (flags & picker_flags_to_forward) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX) | ImGuiColorEditFlags_NoLabel;
+            if ((flags & ImGuiColorEditFlags_NoRefColor) == 0)
+                picker_flags |= ImGuiColorEditFlags_NoColorSquare;
             PushItemWidth(square_sz * 12.0f);
             value_changed |= ColorPicker4("##picker", col, picker_flags);
             PopItemWidth();
+            if ((flags & ImGuiColorEditFlags_NoRefColor) == 0)
+            {
+                SameLine();
+                BeginGroup();
+                Text("Current");
+                ColorButton("##current", col_display, ImGuiColorEditFlags_NoTooltip|ImGuiColorEditFlags_AlphaPreviewHalf, ImVec2(square_sz * 3, square_sz * 2));
+                Text("Original");
+                if (ColorButton("##original", g.ColorPickerRef, ImGuiColorEditFlags_NoTooltip|ImGuiColorEditFlags_AlphaPreviewHalf, ImVec2(square_sz * 3, square_sz * 2)))
+                {
+                    memcpy(col, &g.ColorPickerRef, (alpha ? 4 : 3) * sizeof(float));
+                    value_changed = 0;
+                }
+                EndGroup();
+            }
             EndPopup();
         }
 
