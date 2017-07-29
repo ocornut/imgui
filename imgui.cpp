@@ -9264,15 +9264,17 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
                 Separator();
             }
             float square_sz = ColorSquareSize();
-            ImGuiColorEditFlags picker_flags = (flags & (ImGuiColorEditFlags_NoAlpha|ImGuiColorEditFlags_AlphaBar|ImGuiColorEditFlags_Float)) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX) | ImGuiColorEditFlags_NoLabel;
+            ImGuiColorEditFlags picker_flags_to_forward = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf;
+            ImGuiColorEditFlags picker_flags = (flags & picker_flags_to_forward) | (ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX) | ImGuiColorEditFlags_NoLabel;
             PushItemWidth(square_sz * 12.0f);
             value_changed |= ColorPicker4("##picker", col, picker_flags);
             PopItemWidth();
             EndPopup();
         }
+
+        // Context menu: display and store options. Don't apply to 'flags' this frame.
         if (!(flags & ImGuiColorEditFlags_NoOptions) && BeginPopup("context"))
         {
-            // Display and store options. Don't apply to 'flags' this frame.
             ImGuiColorEditFlags new_flags = -1;
             if (RadioButton("RGB", (flags & ImGuiColorEditFlags_RGB)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_RGB;
             if (RadioButton("HSV", (flags & ImGuiColorEditFlags_HSV)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_HSV;
@@ -9407,7 +9409,8 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         if ((flags & ImGuiColorEditFlags_ModeMask_) == 0)
             flags |= ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX;
         PushItemWidth((alpha_bar ? bar1_pos_x : bar0_pos_x) + bars_width - picker_pos.x);
-        ImGuiColorEditFlags sub_flags = (flags & (ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoColorSquare)) | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip;
+        ImGuiColorEditFlags sub_flags_to_forward = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoColorSquare | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf;
+        ImGuiColorEditFlags sub_flags = (flags & sub_flags_to_forward) | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions;
         if (flags & ImGuiColorEditFlags_RGB)
             value_changed |= ColorEdit4("##rgb", col, sub_flags | ImGuiColorEditFlags_RGB);
         if (flags & ImGuiColorEditFlags_HSV)
