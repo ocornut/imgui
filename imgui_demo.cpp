@@ -1752,19 +1752,15 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::SameLine(); ImGui::PushItemWidth(120); ImGui::Combo("##output_type", &output_dest, "To Clipboard\0To TTY\0"); ImGui::PopItemWidth();
         ImGui::SameLine(); ImGui::Checkbox("Only Modified Fields", &output_only_modified);
 
-        static ImGuiColorEditFlags color_flags = ImGuiColorEditFlags_RGB;
-        ImGui::RadioButton("RGB", &color_flags, ImGuiColorEditFlags_RGB); ImGui::SameLine(); 
-        ImGui::RadioButton("HSV", &color_flags, ImGuiColorEditFlags_HSV); ImGui::SameLine(); 
-        ImGui::RadioButton("HEX", &color_flags, ImGuiColorEditFlags_HEX);
-        //ImGui::Text("Tip: Click on colored square to change edit mode.");
+        ImGui::Text("Tip: Left-click on colored square to open color picker,\nRight-click to open edit options menu.");
+
+        static ImGuiTextFilter filter;
+        filter.Draw("Filter colors", 200);
 
         static ImGuiColorEditFlags alpha_flags = 0;
         ImGui::RadioButton("Opaque", &alpha_flags, 0); ImGui::SameLine(); 
         ImGui::RadioButton("Alpha", &alpha_flags, ImGuiColorEditFlags_AlphaPreview); ImGui::SameLine(); 
-        ImGui::RadioButton("Half", &alpha_flags, ImGuiColorEditFlags_AlphaPreviewHalf);
-
-        static ImGuiTextFilter filter;
-        filter.Draw("Filter colors", 200);
+        ImGui::RadioButton("Both", &alpha_flags, ImGuiColorEditFlags_AlphaPreviewHalf);
 
         ImGui::BeginChild("#colors", ImVec2(0, 300), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
         ImGui::PushItemWidth(-160);
@@ -1774,7 +1770,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             if (!filter.PassFilter(name))
                 continue;
             ImGui::PushID(i);
-            ImGui::ColorEdit4(name, (float*)&style.Colors[i], color_flags | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_AlphaBar | alpha_flags);
+            ImGui::ColorEdit4(name, (float*)&style.Colors[i], ImGuiColorEditFlags_AlphaBar | alpha_flags);
             if (memcmp(&style.Colors[i], (ref ? &ref->Colors[i] : &default_style.Colors[i]), sizeof(ImVec4)) != 0)
             {
                 ImGui::SameLine(); if (ImGui::Button("Revert")) style.Colors[i] = ref ? ref->Colors[i] : default_style.Colors[i];

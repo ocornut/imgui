@@ -9141,7 +9141,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = window->GetID(label);
+    const ImGuiID storage_id = window->ID;      // Store options on a per window basis
     const float w_extra = (flags & ImGuiColorEditFlags_NoColorSquare) ? 0.0f : (ColorSquareSize() + style.ItemInnerSpacing.x);
     const float w_items_all = CalcItemWidth() - w_extra;
     const char* label_display_end = FindRenderedTextEnd(label);
@@ -9149,17 +9149,17 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     const bool alpha = (flags & ImGuiColorEditFlags_NoAlpha) == 0;
     const int components = alpha ? 4 : 3;
 
-    // If no mode is specified, defaults to RGB
-    if (!(flags & ImGuiColorEditFlags_ModeMask_))
-        flags |= ImGuiColorEditFlags_RGB;
-
     // If we're not showing any slider there's no point in querying color mode, nor showing the options menu, nor doing any HSV conversions
     if (flags & ImGuiColorEditFlags_NoInputs)
         flags = (flags & (~ImGuiColorEditFlags_ModeMask_)) | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_NoOptions;
 
+    // If no mode is specified, defaults to RGB
+    if (!(flags & ImGuiColorEditFlags_ModeMask_))
+        flags |= ImGuiColorEditFlags_RGB;
+
     // Read back edit mode from persistent storage, check that exactly one of RGB/HSV/HEX is set
     if (!(flags & ImGuiColorEditFlags_NoOptions))
-        flags = (flags & (~ImGuiColorEditFlags_StoredMask_)) | (g.ColorEditModeStorage.GetInt(id, (flags & ImGuiColorEditFlags_StoredMask_)) & ImGuiColorEditFlags_StoredMask_);
+        flags = (flags & (~ImGuiColorEditFlags_StoredMask_)) | (g.ColorEditModeStorage.GetInt(storage_id, (flags & ImGuiColorEditFlags_StoredMask_)) & ImGuiColorEditFlags_StoredMask_);
     IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags_ModeMask_)));
 
     float f[4] = { col[0], col[1], col[2], alpha ? col[3] : 1.0f };
@@ -9281,7 +9281,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             if (RadioButton("0..255", (flags & ImGuiColorEditFlags_Float)?0:1)) new_flags = (flags & ~ImGuiColorEditFlags_Float);
             if (RadioButton("0.00..1.00", (flags & ImGuiColorEditFlags_Float)?1:0)) new_flags = (flags | ImGuiColorEditFlags_Float);
             if (new_flags != -1)
-                g.ColorEditModeStorage.SetInt(id, (int)(new_flags & ImGuiColorEditFlags_StoredMask_));
+                g.ColorEditModeStorage.SetInt(storage_id, (int)(new_flags & ImGuiColorEditFlags_StoredMask_));
             EndPopup();
         }
 
