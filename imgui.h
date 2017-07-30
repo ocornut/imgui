@@ -664,21 +664,21 @@ enum ImGuiStyleVar_
 // Enumeration for ColorEdit3() / ColorEdit4() / ColorPicker3() / ColorPicker4() / ColorButton()
 enum ImGuiColorEditFlags_
 {
-    ImGuiColorEditFlags_RGB             = 1 << 0,   // ColorEdit: Default to one among RGB/HSV/HEX. User can still use the options menu to change. ColorPicker: Choose any combination or RGB/HSV/HEX.
-    ImGuiColorEditFlags_HSV             = 1 << 1,   // "
-    ImGuiColorEditFlags_HEX             = 1 << 2,   // "
-    ImGuiColorEditFlags_Float           = 1 << 3,   // ColorEdit, ColorPicker, ColorButton: display values formatted as 0.0f..1.0f floats instead of 0..255 integers. No round-trip of value via integers.
-    ImGuiColorEditFlags_AlphaBar        = 1 << 4,   // ColorEdit, ColorPicker: show vertical alpha bar/gradient in picker.
-    ImGuiColorEditFlags_AlphaPreview    = 1 << 5,   // ColorEdit, ColorPicker, ColorButton: display preview as a transparent color over a checkerboard, instead of opaque.
-    ImGuiColorEditFlags_AlphaPreviewHalf= 1 << 6,   // ColorEdit, ColorPicker, ColorButton: display half opaque / half checkerboard
-    ImGuiColorEditFlags_NoAlpha         = 1 << 7,   // ColorEdit, ColorPicker, ColorButton: completely ignore Alpha component (read 3 components).
-    ImGuiColorEditFlags_NoPicker        = 1 << 8,   // ColorEdit: disable picker when clicking on colored square.
-    ImGuiColorEditFlags_NoOptions       = 1 << 9,   // ColorEdit: disable toggling options menu when right-clicking on colored square.
-    ImGuiColorEditFlags_NoSmallPreview  = 1 << 10,  // ColorEdit, ColorPicker: disable colored square.
-    ImGuiColorEditFlags_NoInputs        = 1 << 12,  // ColorEdit, ColorPicker: disable inputs sliders/text widgets, show only the colored square.
-    ImGuiColorEditFlags_NoTooltip       = 1 << 13,  // ColorEdit, ColorButton: disable tooltip when hovering the colored square.
-    ImGuiColorEditFlags_NoLabel         = 1 << 14,  // ColorEdit, ColorPicker: disable display of inline text label (the label is still used in tooltip and picker).
-    ImGuiColorEditFlags_NoSidePreview   = 1 << 15,  // ColorPicker: disable bigger color preview on right side of the picker, use small colored square instead
+    ImGuiColorEditFlags_RGB             = 1 << 1,   // ColorEdit: default to one among RGB/HSV/HEX. User can still use the options menu to change. ColorPicker: Choose any combination or RGB/HSV/HEX.
+    ImGuiColorEditFlags_HSV             = 1 << 2,   // "
+    ImGuiColorEditFlags_HEX             = 1 << 3,   // "
+    ImGuiColorEditFlags_Float           = 1 << 4,   // ColorEdit, ColorPicker, ColorButton: display values formatted as 0.0f..1.0f floats instead of 0..255 integers. No round-trip of value via integers.
+    ImGuiColorEditFlags_AlphaBar        = 1 << 5,   // ColorEdit, ColorPicker: show vertical alpha bar/gradient in picker.
+    ImGuiColorEditFlags_AlphaPreview    = 1 << 6,   // ColorEdit, ColorPicker, ColorButton: display preview as a transparent color over a checkerboard, instead of opaque.
+    ImGuiColorEditFlags_AlphaPreviewHalf= 1 << 7,   // ColorEdit, ColorPicker, ColorButton: display half opaque / half checkerboard, instead of opaque.
+    ImGuiColorEditFlags_NoAlpha         = 1 << 8,   // ColorEdit, ColorPicker, ColorButton: completely ignore Alpha component (read 3 components from the input pointer).
+    ImGuiColorEditFlags_NoPicker        = 1 << 9,   // ColorEdit: disable picker when clicking on colored square.
+    ImGuiColorEditFlags_NoOptions       = 1 << 10,  // ColorEdit: disable toggling options menu when right-clicking on inputs/small preview.
+    ImGuiColorEditFlags_NoSmallPreview  = 1 << 11,  // ColorEdit, ColorPicker: disable colored square preview next to the inputs. (e.g. to show only the inputs)
+    ImGuiColorEditFlags_NoInputs        = 1 << 12,  // ColorEdit, ColorPicker: disable inputs sliders/text widgets (e.g. to show only the small preview colored square).
+    ImGuiColorEditFlags_NoTooltip       = 1 << 13,  // ColorEdit, ColorPicker, ColorButton: disable tooltip when hovering the preview.
+    ImGuiColorEditFlags_NoLabel         = 1 << 14,  // ColorEdit, ColorPicker: disable display of inline text label (the label is still forwarded to the tooltip and picker).
+    ImGuiColorEditFlags_NoSidePreview   = 1 << 15,  // ColorPicker: disable bigger color preview on right side of the picker, use small colored square preview instead.
     ImGuiColorEditFlags_ModeMask_       = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX,
     ImGuiColorEditFlags_StoredMask_     = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX|ImGuiColorEditFlags_Float
 };
