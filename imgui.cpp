@@ -9380,13 +9380,13 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     ColorConvertRGBtoHSV(col[0], col[1], col[2], H, S, V);
 
     // Color matrix logic
-    bool value_changed = false, hsv_changed = false;
+    bool value_changed = false, hsv_changed = false, value_changed_from_matrix = false;
     InvisibleButton("sv", ImVec2(sv_picker_size, sv_picker_size));
     if (IsItemActive())
     {
         S = ImSaturate((io.MousePos.x - picker_pos.x) / (sv_picker_size-1));
         V = 1.0f - ImSaturate((io.MousePos.y - picker_pos.y) / (sv_picker_size-1));
-        value_changed = hsv_changed = true;
+        value_changed = hsv_changed = value_changed_from_matrix = true;
     }
 
     // Hue bar logic
@@ -9426,6 +9426,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             TextUnformatted(label, label_display_end);
         }
     }
+
     if (!(flags & ImGuiColorEditFlags_NoSidePreview))
     {
         ImVec4 col_v4(col[0], col[1], col[2], (flags & ImGuiColorEditFlags_NoAlpha) ? 1.0f : col[3]);
@@ -9515,13 +9516,14 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     draw_list->AddRectFilledMultiColor(picker_pos, picker_pos + ImVec2(sv_picker_size,sv_picker_size), IM_COL32_BLACK_TRANS, IM_COL32_BLACK_TRANS, IM_COL32_BLACK, IM_COL32_BLACK);
     RenderFrameBorder(picker_pos, picker_pos + ImVec2(sv_picker_size,sv_picker_size), 0.0f);
 
-    // Render cross-hair (clamp S/V within 0..1 range because floating points colors may lead HSV values to be out of range)
-    const float CROSSHAIR_SIZE = 7.0f;
+    // Render cursor/preview circle  (clamp S/V within 0..1 range because floating points colors may lead HSV values to be out of range)
     ImVec2 p((float)(int)(picker_pos.x + ImSaturate(S) * sv_picker_size + 0.5f), (float)(int)(picker_pos.y + ImSaturate(1 - V) * sv_picker_size + 0.5f));
-    draw_list->AddLine(ImVec2(p.x - CROSSHAIR_SIZE, p.y), ImVec2(p.x - 2, p.y), IM_COL32_WHITE);
-    draw_list->AddLine(ImVec2(p.x + CROSSHAIR_SIZE, p.y), ImVec2(p.x + 2, p.y), IM_COL32_WHITE);
-    draw_list->AddLine(ImVec2(p.x, p.y + CROSSHAIR_SIZE), ImVec2(p.x, p.y + 2), IM_COL32_WHITE);
-    draw_list->AddLine(ImVec2(p.x, p.y - CROSSHAIR_SIZE), ImVec2(p.x, p.y - 2), IM_COL32_WHITE);
+    p.x = ImClamp(p.x, picker_pos.x + 2, picker_pos.x + sv_picker_size - 2);
+    p.y = ImClamp(p.y, picker_pos.y + 2, picker_pos.y + sv_picker_size - 2);
+    float r = value_changed_from_matrix ? 10.0f : 6.0f;
+    draw_list->AddCircleFilled(p, r, ColorConvertFloat4ToU32(ImVec4(col[0], col[1], col[2], 1.0f)), 12);
+    draw_list->AddCircle(p, r+1, IM_COL32(128,128,128,255), 12);
+    draw_list->AddCircle(p, r, IM_COL32_WHITE, 12);
 
     EndGroup();
     PopID();
