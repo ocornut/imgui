@@ -700,15 +700,15 @@ void ImGui::ShowTestWindow(bool* p_open)
             if (ImGui::BeginPopup("mypicker"))
             {
                 // FIXME: Adding a drag and drop example here would be perfect!
-                ImGui::Text("MY FANCY COLOR PICKER!");
+                ImGui::Text("MY CUSTOM COLOR PICKER WITH AN AMAZING PALETTE!");
                 ImGui::Separator();
                 ImGui::ColorPicker4("##picker", (float*)&color, alpha_preview_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
                 ImGui::SameLine();
                 ImGui::BeginGroup();
                 ImGui::Text("Current");
-                ImGui::ColorButton("##current", color, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_AlphaPreview, ImVec2(60,40));
+                ImGui::ColorButton("##current", color, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_AlphaPreviewHalf, ImVec2(60,40));
                 ImGui::Text("Previous");
-                if (ImGui::ColorButton("##previous", backup_color, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_AlphaPreview, ImVec2(60,40)))
+                if (ImGui::ColorButton("##previous", backup_color, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_AlphaPreviewHalf, ImVec2(60,40)))
                     color = backup_color;
                 ImGui::Separator();
                 ImGui::Text("Palette");
