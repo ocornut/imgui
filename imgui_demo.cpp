@@ -683,8 +683,13 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::ColorEdit4("MyColor##3", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | alpha_preview_flags);
 
             ImGui::Text("Color button with Custom Picker Popup:");
-            bool open_popup = ImGui::ColorButton("MyColor##3b", color, alpha_preview_flags);
+            static bool saved_palette_inited = false;
+            static ImVec4 saved_palette[32];
             static ImVec4 backup_color;
+            if (!saved_palette_inited)
+                for (int n = 0; n < IM_ARRAYSIZE(saved_palette); n++)
+                    ImGui::ColorConvertHSVtoRGB(n / 31.0f, 0.8f, 0.8f, saved_palette[n].x, saved_palette[n].y, saved_palette[n].z);
+            bool open_popup = ImGui::ColorButton("MyColor##3b", color, alpha_preview_flags);
             ImGui::SameLine();
             open_popup |= ImGui::Button("Palette");
             if (open_popup)
@@ -694,6 +699,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             }
             if (ImGui::BeginPopup("mypicker"))
             {
+                // FIXME: Adding a drag and drop example here would be perfect!
                 ImGui::Text("MY FANCY COLOR PICKER!");
                 ImGui::Separator();
                 ImGui::ColorPicker4("##picker", (float*)&color, alpha_preview_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoColorSquare);
@@ -706,15 +712,13 @@ void ImGui::ShowTestWindow(bool* p_open)
                     color = backup_color;
                 ImGui::Separator();
                 ImGui::Text("Palette");
-                for (int n = 0; n < 32; n++)
+                for (int n = 0; n < IM_ARRAYSIZE(saved_palette); n++)
                 {
                     ImGui::PushID(n);
                     if ((n % 8) != 0)
                         ImGui::SameLine(0.0f, ImGui::GetStyle().ItemSpacing.y);
-                    ImVec4 dummy_palette_col;
-                    ImGui::ColorConvertHSVtoRGB(n / 31.0f, 0.8f, 0.8f, dummy_palette_col.x, dummy_palette_col.y, dummy_palette_col.z);
-                    if (ImGui::ColorButton("##palette", dummy_palette_col, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoTooltip, ImVec2(20,20)))
-                        color = ImVec4(dummy_palette_col.x, dummy_palette_col.y, dummy_palette_col.z, color.w); // Preserve alpha!
+                    if (ImGui::ColorButton("##palette", saved_palette[n], ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoTooltip, ImVec2(20,20)))
+                        color = ImVec4(saved_palette[n].x, saved_palette[n].y, saved_palette[n].z, color.w); // Preserve alpha!
                     ImGui::PopID();
                 }
                 ImGui::EndGroup();
