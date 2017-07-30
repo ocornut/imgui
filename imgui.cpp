@@ -9140,7 +9140,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID storage_id = window->ID;      // Store options on a per window basis
-    const float w_extra = (flags & ImGuiColorEditFlags_NoColorSquare) ? 0.0f : (ColorSquareSize() + style.ItemInnerSpacing.x);
+    const float w_extra = (flags & ImGuiColorEditFlags_NoSmallPreview) ? 0.0f : (ColorSquareSize() + style.ItemInnerSpacing.x);
     const float w_items_all = CalcItemWidth() - w_extra;
     const char* label_display_end = FindRenderedTextEnd(label);
 
@@ -9238,7 +9238,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     }
 
     bool picker_active = false;
-    if (!(flags & ImGuiColorEditFlags_NoColorSquare))
+    if (!(flags & ImGuiColorEditFlags_NoSmallPreview))
     {
         if (!(flags & ImGuiColorEditFlags_NoInputs))
             SameLine(0, style.ItemInnerSpacing.x);
@@ -9365,7 +9365,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     BeginGroup();
 
     if ((flags & ImGuiColorEditFlags_NoSidePreview) == 0)
-        flags |= ImGuiColorEditFlags_NoColorSquare;
+        flags |= ImGuiColorEditFlags_NoSmallPreview;
 
     // Setup
     bool alpha_bar = (flags & ImGuiColorEditFlags_AlphaBar) && !(flags & ImGuiColorEditFlags_NoAlpha);
@@ -9455,7 +9455,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     if (!(flags & ImGuiColorEditFlags_NoInputs))
     {
         PushItemWidth((alpha_bar ? bar1_pos_x : bar0_pos_x) + bars_width - picker_pos.x);
-        ImGuiColorEditFlags sub_flags_to_forward = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoColorSquare | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf;
+        ImGuiColorEditFlags sub_flags_to_forward = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoSmallPreview | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf;
         ImGuiColorEditFlags sub_flags = (flags & sub_flags_to_forward) | ImGuiColorEditFlags_NoPicker;
         if ((flags & ImGuiColorEditFlags_ModeMask_) == 0)
             flags |= ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX;

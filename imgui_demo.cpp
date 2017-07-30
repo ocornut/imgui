@@ -702,7 +702,7 @@ void ImGui::ShowTestWindow(bool* p_open)
                 // FIXME: Adding a drag and drop example here would be perfect!
                 ImGui::Text("MY FANCY COLOR PICKER!");
                 ImGui::Separator();
-                ImGui::ColorPicker4("##picker", (float*)&color, alpha_preview_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoColorSquare);
+                ImGui::ColorPicker4("##picker", (float*)&color, alpha_preview_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
                 ImGui::SameLine();
                 ImGui::BeginGroup();
                 ImGui::Text("Current");

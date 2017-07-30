@@ -674,7 +674,7 @@ enum ImGuiColorEditFlags_
     ImGuiColorEditFlags_NoAlpha         = 1 << 7,   // ColorEdit, ColorPicker, ColorButton: completely ignore Alpha component (read 3 components).
     ImGuiColorEditFlags_NoPicker        = 1 << 8,   // ColorEdit: disable picker when clicking on colored square.
     ImGuiColorEditFlags_NoOptions       = 1 << 9,   // ColorEdit: disable toggling options menu when right-clicking on colored square.
-    ImGuiColorEditFlags_NoColorSquare   = 1 << 10,  // ColorEdit, ColorPicker: disable colored square.
+    ImGuiColorEditFlags_NoSmallPreview  = 1 << 10,  // ColorEdit, ColorPicker: disable colored square.
     ImGuiColorEditFlags_NoInputs        = 1 << 12,  // ColorEdit, ColorPicker: disable inputs sliders/text widgets, show only the colored square.
     ImGuiColorEditFlags_NoTooltip       = 1 << 13,  // ColorEdit, ColorButton: disable tooltip when hovering the colored square.
     ImGuiColorEditFlags_NoLabel         = 1 << 14,  // ColorEdit, ColorPicker: disable display of inline text label (the label is still used in tooltip and picker).
