@@ -682,6 +682,45 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::SameLine(); ShowHelpMarker("With the ImGuiColorEditFlags_NoInputs flag you can hide all the slider/text inputs.\nWith the ImGuiColorEditFlags_NoLabel flag you can pass a non-empty label which will only be used for the tooltip and picker popup.");
             ImGui::ColorEdit4("MyColor##3", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | alpha_preview_flags);
 
+            ImGui::Text("Color button with Custom Picker Popup:");
+            bool open_popup = ImGui::ColorButton("MyColor##3b", color, alpha_preview_flags);
+            static ImVec4 backup_color;
+            ImGui::SameLine();
+            open_popup |= ImGui::Button("Palette");
+            if (open_popup)
+            {
+                ImGui::OpenPopup("mypicker");
+                backup_color = color;
+            }
+            if (ImGui::BeginPopup("mypicker"))
+            {
+                ImGui::Text("MY FANCY COLOR PICKER!");
+                ImGui::Separator();
+                ImGui::ColorPicker4("##picker", (float*)&color, alpha_preview_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoColorSquare);
+                ImGui::SameLine();
+                ImGui::BeginGroup();
+                ImGui::Text("Current");
+                ImGui::ColorButton("##current", color, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_AlphaPreview, ImVec2(60,40));
+                ImGui::Text("Previous");
+                if (ImGui::ColorButton("##previous", backup_color, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_AlphaPreview, ImVec2(60,40)))
+                    color = backup_color;
+                ImGui::Separator();
+                ImGui::Text("Palette");
+                for (int n = 0; n < 32; n++)
+                {
+                    ImGui::PushID(n);
+                    if ((n % 8) != 0)
+                        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemSpacing.y);
+                    ImVec4 dummy_palette_col;
+                    ImGui::ColorConvertHSVtoRGB(n / 31.0f, 0.8f, 0.8f, dummy_palette_col.x, dummy_palette_col.y, dummy_palette_col.z);
+                    if (ImGui::ColorButton("##palette", dummy_palette_col, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoTooltip, ImVec2(20,20)))
+                        color = ImVec4(dummy_palette_col.x, dummy_palette_col.y, dummy_palette_col.z, color.w); // Preserve alpha!
+                    ImGui::PopID();
+                }
+                ImGui::EndGroup();
+                ImGui::EndPopup();
+            }
+
             ImGui::Text("Color button only:");
             ImGui::ColorButton("MyColor##3b", *(ImVec4*)&color, alpha_preview_flags, ImVec2(80,80));
 
