@@ -9504,11 +9504,13 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     RenderArrowsForVerticalBar(draw_list, ImVec2(bar0_pos_x - 1, bar0_line_y), ImVec2(bars_triangles_half_sz + 1, bars_triangles_half_sz), bars_width + 2.0f);
 
     // Render alpha bar
+    ImU32 col32_no_alpha = ColorConvertFloat4ToU32(ImVec4(col[0], col[1], col[2], 1.0f));
     if (alpha_bar)
     {
         float alpha = ImSaturate(col[3]);
         ImRect bar1_bb(bar1_pos_x, picker_pos.y, bar1_pos_x + bars_width, picker_pos.y + sv_picker_size);
-        draw_list->AddRectFilledMultiColor(bar1_bb.Min, bar1_bb.Max, IM_COL32_WHITE, IM_COL32_WHITE, IM_COL32_BLACK, IM_COL32_BLACK);
+        RenderColorRectWithAlphaCheckerboard(bar1_bb.Min, bar1_bb.Max, IM_COL32(0,0,0,0), bar1_bb.GetWidth() / 2.0f, ImVec2(0,0));
+        draw_list->AddRectFilledMultiColor(bar1_bb.Min, bar1_bb.Max, col32_no_alpha, col32_no_alpha, col32_no_alpha & ~IM_COL32_A_MASK, col32_no_alpha & ~IM_COL32_A_MASK);
         float bar1_line_y = (float)(int)(picker_pos.y + (1.0f - alpha) * sv_picker_size + 0.5f);
         RenderFrameBorder(bar1_bb.Min, bar1_bb.Max, 0.0f);
         RenderArrowsForVerticalBar(draw_list, ImVec2(bar1_pos_x - 1, bar1_line_y), ImVec2(bars_triangles_half_sz + 1, bars_triangles_half_sz), bars_width + 2.0f);
@@ -9525,7 +9527,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     p.x = ImClamp(p.x, picker_pos.x + 2, picker_pos.x + sv_picker_size - 2);
     p.y = ImClamp(p.y, picker_pos.y + 2, picker_pos.y + sv_picker_size - 2);
     float r = value_changed_from_matrix ? 10.0f : 6.0f;
-    draw_list->AddCircleFilled(p, r, ColorConvertFloat4ToU32(ImVec4(col[0], col[1], col[2], 1.0f)), 12);
+    draw_list->AddCircleFilled(p, r, col32_no_alpha, 12);
     draw_list->AddCircle(p, r+1, IM_COL32(128,128,128,255), 12);
     draw_list->AddCircle(p, r, IM_COL32_WHITE, 12);
 
