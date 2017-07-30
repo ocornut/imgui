@@ -202,6 +202,15 @@ enum ImGuiDataType
     ImGuiDataType_Float2,
 };
 
+enum ImGuiDir
+{
+    ImGuiDir_None    = -1,
+    ImGuiDir_Left    = 0,
+    ImGuiDir_Right   = 1,
+    ImGuiDir_Up      = 2,
+    ImGuiDir_Down    = 3,
+};
+
 enum ImGuiCorner
 {
     ImGuiCorner_TopLeft     = 1 << 0, // 1

@@ -687,7 +687,7 @@ void ImGui::ShowTestWindow(bool* p_open)
 
             ImGui::Text("Color picker:");
             static bool alpha = true;
-            static bool alpha_bar = false;
+            static bool alpha_bar = true;
             static bool side_preview = true;
             static bool ref_color = false;
             static ImVec4 ref_color_v(1.0f,0.0f,1.0f,0.5f);
