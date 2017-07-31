@@ -9153,16 +9153,16 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
     // If we're not showing any slider there's no point in querying color mode, nor showing the options menu, nor doing any HSV conversions
     if (flags & ImGuiColorEditFlags_NoInputs)
-        flags = (flags & (~ImGuiColorEditFlags_ModeMask_)) | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_NoOptions;
+        flags = (flags & (~ImGuiColorEditFlags_InputsModeMask_)) | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_NoOptions;
 
     // If no mode is specified, defaults to RGB
-    if (!(flags & ImGuiColorEditFlags_ModeMask_))
+    if (!(flags & ImGuiColorEditFlags_InputsModeMask_))
         flags |= ImGuiColorEditFlags_RGB;
 
     // Read back edit mode from persistent storage, check that exactly one of RGB/HSV/HEX is set
     if (!(flags & ImGuiColorEditFlags_NoOptions))
         flags = (flags & (~ImGuiColorEditFlags_StoredMask_)) | (g.ColorEditModeStorage.GetInt(storage_id, (flags & ImGuiColorEditFlags_StoredMask_)) & ImGuiColorEditFlags_StoredMask_);
-    IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags_ModeMask_)));
+    IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags_InputsModeMask_)));
 
     float f[4] = { col[0], col[1], col[2], alpha ? col[3] : 1.0f };
     if (flags & ImGuiColorEditFlags_HSV)
@@ -9283,9 +9283,9 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     if (!(flags & ImGuiColorEditFlags_NoOptions) && BeginPopup("context"))
     {
         ImGuiColorEditFlags new_flags = -1;
-        if (RadioButton("RGB", (flags & ImGuiColorEditFlags_RGB)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_RGB;
-        if (RadioButton("HSV", (flags & ImGuiColorEditFlags_HSV)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_HSV;
-        if (RadioButton("HEX", (flags & ImGuiColorEditFlags_HEX)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_ModeMask_) | ImGuiColorEditFlags_HEX;
+        if (RadioButton("RGB", (flags & ImGuiColorEditFlags_RGB)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_InputsModeMask_) | ImGuiColorEditFlags_RGB;
+        if (RadioButton("HSV", (flags & ImGuiColorEditFlags_HSV)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_InputsModeMask_) | ImGuiColorEditFlags_HSV;
+        if (RadioButton("HEX", (flags & ImGuiColorEditFlags_HEX)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_InputsModeMask_) | ImGuiColorEditFlags_HEX;
         Separator();
         if (RadioButton("0..255", (flags & ImGuiColorEditFlags_Float)?0:1)) new_flags = (flags & ~ImGuiColorEditFlags_Float);
         if (RadioButton("0.00..1.00", (flags & ImGuiColorEditFlags_Float)?1:0)) new_flags = (flags | ImGuiColorEditFlags_Float);
@@ -9461,9 +9461,9 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         PushItemWidth((alpha_bar ? bar1_pos_x : bar0_pos_x) + bars_width - picker_pos.x);
         ImGuiColorEditFlags sub_flags_to_forward = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoSmallPreview | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf;
         ImGuiColorEditFlags sub_flags = (flags & sub_flags_to_forward) | ImGuiColorEditFlags_NoPicker;
-        if ((flags & ImGuiColorEditFlags_ModeMask_) == 0)
+        if ((flags & ImGuiColorEditFlags_InputsModeMask_) == 0)
             flags |= ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_HSV | ImGuiColorEditFlags_HEX;
-        if ((flags & ImGuiColorEditFlags_ModeMask_) == ImGuiColorEditFlags_ModeMask_)
+        if ((flags & ImGuiColorEditFlags_InputsModeMask_) == ImGuiColorEditFlags_InputsModeMask_)
             sub_flags |= ImGuiColorEditFlags_NoOptions;
         if (flags & ImGuiColorEditFlags_RGB)
             value_changed |= ColorEdit4("##rgb", col, sub_flags | ImGuiColorEditFlags_RGB);
