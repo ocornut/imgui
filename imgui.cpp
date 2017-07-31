@@ -900,12 +900,23 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
 #define IM_NEWLINE "\n"
 #endif
 
-bool ImIsPointInTriangle(const ImVec2& p, const ImVec2& a, const ImVec2& b, const ImVec2& c)
+bool ImTriangleContainsPoint(ImVec2 a, ImVec2 b, ImVec2 c, ImVec2 p)
 {
     bool b1 = ((p.x - b.x) * (a.y - b.y) - (p.y - b.y) * (a.x - b.x)) < 0.0f;
     bool b2 = ((p.x - c.x) * (b.y - c.y) - (p.y - c.y) * (b.x - c.x)) < 0.0f;
     bool b3 = ((p.x - a.x) * (c.y - a.y) - (p.y - a.y) * (c.x - a.x)) < 0.0f;
     return ((b1 == b2) && (b2 == b3));
+}
+
+void ImTriangleBarycentricCoords(ImVec2 a, ImVec2 b, ImVec2 c, ImVec2 p, float& out_u, float& out_v, float& out_w)
+{
+    ImVec2 v0 = b - a;
+    ImVec2 v1 = c - a;
+    ImVec2 v2 = p - a;
+    const float denom = v0.x * v1.y - v1.x * v0.y;
+    out_v = (v2.x * v1.y - v1.x * v2.y) / denom;
+    out_w = (v0.x * v2.y - v2.x * v0.y) / denom;
+    out_u = 1.0f - out_v - out_w;
 }
 
 int ImStricmp(const char* str1, const char* str2)
@@ -8954,7 +8965,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
                 ta.x += (window->Pos.x < next_window->Pos.x) ? -0.5f : +0.5f;   // to avoid numerical issues
                 tb.y = ta.y + ImMax((tb.y - extra) - ta.y, -100.0f);            // triangle is maximum 200 high to limit the slope and the bias toward large sub-menus // FIXME: Multiply by fb_scale?
                 tc.y = ta.y + ImMin((tc.y + extra) - ta.y, +100.0f);
-                moving_within_opened_triangle = ImIsPointInTriangle(g.IO.MousePos, ta, tb, tc);
+                moving_within_opened_triangle = ImTriangleContainsPoint(ta, tb, tc, g.IO.MousePos);
                 //window->DrawList->PushClipRectFullScreen(); window->DrawList->AddTriangleFilled(ta, tb, tc, moving_within_opened_triangle ? IM_COL32(0,128,0,128) : IM_COL32(128,0,0,128)); window->DrawList->PopClipRect(); // Debug
             }
         }
