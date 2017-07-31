@@ -900,7 +900,21 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
 #define IM_NEWLINE "\n"
 #endif
 
-bool ImTriangleContainsPoint(ImVec2 a, ImVec2 b, ImVec2 c, ImVec2 p)
+ImVec2 ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p)
+{
+    ImVec2 ap = p - a;
+    ImVec2 ab_dir = b - a;
+    float ab_len = sqrtf(ab_dir.x * ab_dir.x + ab_dir.y * ab_dir.y);
+    ab_dir *= 1.0f / ab_len;
+    float dot = ap.x * ab_dir.x + ap.y * ab_dir.y;
+    if (dot < 0.0f)
+        return a;
+    if (dot > ab_len)
+        return b;
+    return a + ab_dir * dot;
+}
+
+bool ImTriangleContainsPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p)
 {
     bool b1 = ((p.x - b.x) * (a.y - b.y) - (p.y - b.y) * (a.x - b.x)) < 0.0f;
     bool b2 = ((p.x - c.x) * (b.y - c.y) - (p.y - c.y) * (b.x - c.x)) < 0.0f;
@@ -908,7 +922,7 @@ bool ImTriangleContainsPoint(ImVec2 a, ImVec2 b, ImVec2 c, ImVec2 p)
     return ((b1 == b2) && (b2 == b3));
 }
 
-void ImTriangleBarycentricCoords(ImVec2 a, ImVec2 b, ImVec2 c, ImVec2 p, float& out_u, float& out_v, float& out_w)
+void ImTriangleBarycentricCoords(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p, float& out_u, float& out_v, float& out_w)
 {
     ImVec2 v0 = b - a;
     ImVec2 v1 = c - a;
@@ -917,6 +931,22 @@ void ImTriangleBarycentricCoords(ImVec2 a, ImVec2 b, ImVec2 c, ImVec2 p, float& 
     out_v = (v2.x * v1.y - v1.x * v2.y) / denom;
     out_w = (v0.x * v2.y - v2.x * v0.y) / denom;
     out_u = 1.0f - out_v - out_w;
+}
+
+ImVec2 ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p)
+{
+    ImVec2 proj_ab = ImLineClosestPoint(a, b, p);
+    ImVec2 proj_bc = ImLineClosestPoint(b, c, p);
+    ImVec2 proj_ca = ImLineClosestPoint(c, a, p);
+    float dist2_ab = ImLengthSqr(p - proj_ab);
+    float dist2_bc = ImLengthSqr(p - proj_bc);
+    float dist2_ca = ImLengthSqr(p - proj_ca);
+    float m = ImMin(dist2_ab, ImMin(dist2_bc, dist2_ca));
+    if (m == dist2_ab)
+        return proj_ab;
+    if (m == dist2_bc)
+        return proj_bc;
+    return proj_ca;
 }
 
 int ImStricmp(const char* str1, const char* str2)
