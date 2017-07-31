@@ -9132,6 +9132,20 @@ bool ImGui::ColorEdit3(const char* label, float col[3], ImGuiColorEditFlags flag
     return ColorEdit4(label, col, flags | ImGuiColorEditFlags_NoAlpha);
 }
 
+static void ColorOptionsPopup(ImGuiID storage_id, ImGuiColorEditFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiColorEditFlags new_flags = -1;
+    if (ImGui::RadioButton("RGB", (flags & ImGuiColorEditFlags_RGB)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_InputsModeMask_) | ImGuiColorEditFlags_RGB;
+    if (ImGui::RadioButton("HSV", (flags & ImGuiColorEditFlags_HSV)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_InputsModeMask_) | ImGuiColorEditFlags_HSV;
+    if (ImGui::RadioButton("HEX", (flags & ImGuiColorEditFlags_HEX)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_InputsModeMask_) | ImGuiColorEditFlags_HEX;
+    ImGui::Separator();
+    if (ImGui::RadioButton("0..255", (flags & ImGuiColorEditFlags_Float)?0:1)) new_flags = (flags & ~ImGuiColorEditFlags_Float);
+    if (ImGui::RadioButton("0.00..1.00", (flags & ImGuiColorEditFlags_Float)?1:0)) new_flags = (flags | ImGuiColorEditFlags_Float);
+    if (new_flags != -1)
+        g.ColorEditModeStorage.SetInt(storage_id, (int)(new_flags & ImGuiColorEditFlags_StoredMask_));
+}
+
 // Edit colors components (each component in 0.0f..1.0f range). 
 // See enum ImGuiColorEditFlags_ for available options. e.g. Only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
 // With typical options: Left-click on colored square to open color picker. Right-click to open option menu. CTRL-Click over input fields to edit them and TAB to go to next item.
@@ -9283,15 +9297,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     // Context menu: display and store options. Don't apply to 'flags' this frame.
     if (!(flags & ImGuiColorEditFlags_NoOptions) && BeginPopup("context"))
     {
-        ImGuiColorEditFlags new_flags = -1;
-        if (RadioButton("RGB", (flags & ImGuiColorEditFlags_RGB)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_InputsModeMask_) | ImGuiColorEditFlags_RGB;
-        if (RadioButton("HSV", (flags & ImGuiColorEditFlags_HSV)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_InputsModeMask_) | ImGuiColorEditFlags_HSV;
-        if (RadioButton("HEX", (flags & ImGuiColorEditFlags_HEX)?1:0)) new_flags = (flags & ~ImGuiColorEditFlags_InputsModeMask_) | ImGuiColorEditFlags_HEX;
-        Separator();
-        if (RadioButton("0..255", (flags & ImGuiColorEditFlags_Float)?0:1)) new_flags = (flags & ~ImGuiColorEditFlags_Float);
-        if (RadioButton("0.00..1.00", (flags & ImGuiColorEditFlags_Float)?1:0)) new_flags = (flags | ImGuiColorEditFlags_Float);
-        if (new_flags != -1)
-            g.ColorEditModeStorage.SetInt(storage_id, (int)(new_flags & ImGuiColorEditFlags_StoredMask_));
+        ColorOptionsPopup(storage_id, flags);
         EndPopup();
     }
 
