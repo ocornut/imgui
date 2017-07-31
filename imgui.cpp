@@ -5570,6 +5570,7 @@ void ImGui::LabelText(const char* label, const char* fmt, ...)
 static inline bool IsWindowContentHoverable(ImGuiWindow* window)
 {
     // An active popup disable hovering on other windows (apart from its own children)
+    // FIXME-OPT: This could be cached/stored within the window.
     ImGuiContext& g = *GImGui;
     if (ImGuiWindow* focused_window = g.FocusedWindow)
         if (ImGuiWindow* focused_root_window = focused_window->RootWindow)
@@ -9846,7 +9847,8 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
         {
             float x = window->Pos.x + GetColumnOffset(i);
             const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(i);
-            const ImRect column_rect(ImVec2(x-4,y1),ImVec2(x+4,y2));
+            const float column_w = 4.0f;
+            const ImRect column_rect(ImVec2(x - column_w, y1), ImVec2(x + column_w, y2));
             if (IsClippedEx(column_rect, &column_id, false))
                 continue;
 
@@ -9863,7 +9865,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
             if (held)
             {
                 if (g.ActiveIdIsJustActivated)
-                    g.ActiveIdClickOffset.x -= 4;   // Store from center of column line (we used a 8 wide rect for columns clicking)
+                    g.ActiveIdClickOffset.x -= column_w;   // Store from center of column line (we used a 8 wide rect for columns clicking)
                 x = GetDraggedColumnOffset(i);
                 SetColumnOffset(i, x);
             }
