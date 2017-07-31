@@ -673,14 +673,17 @@ enum ImGuiColorEditFlags_
     ImGuiColorEditFlags_AlphaPreview    = 1 << 7,   // ColorEdit, ColorPicker, ColorButton: display preview as a transparent color over a checkerboard, instead of opaque.
     ImGuiColorEditFlags_AlphaPreviewHalf= 1 << 8,   // ColorEdit, ColorPicker, ColorButton: display half opaque / half checkerboard, instead of opaque.
     ImGuiColorEditFlags_NoAlpha         = 1 << 9,   // ColorEdit, ColorPicker, ColorButton: completely ignore Alpha component (read 3 components from the input pointer).
-    ImGuiColorEditFlags_NoPicker        = 1 << 10,   // ColorEdit: disable picker when clicking on colored square.
+    ImGuiColorEditFlags_NoPicker        = 1 << 10,  // ColorEdit: disable picker when clicking on colored square.
     ImGuiColorEditFlags_NoOptions       = 1 << 11,  // ColorEdit: disable toggling options menu when right-clicking on inputs/small preview.
     ImGuiColorEditFlags_NoSmallPreview  = 1 << 12,  // ColorEdit, ColorPicker: disable colored square preview next to the inputs. (e.g. to show only the inputs)
     ImGuiColorEditFlags_NoInputs        = 1 << 13,  // ColorEdit, ColorPicker: disable inputs sliders/text widgets (e.g. to show only the small preview colored square).
     ImGuiColorEditFlags_NoTooltip       = 1 << 14,  // ColorEdit, ColorPicker, ColorButton: disable tooltip when hovering the preview.
     ImGuiColorEditFlags_NoLabel         = 1 << 15,  // ColorEdit, ColorPicker: disable display of inline text label (the label is still forwarded to the tooltip and picker).
     ImGuiColorEditFlags_NoSidePreview   = 1 << 16,  // ColorPicker: disable bigger color preview on right side of the picker, use small colored square preview instead.
+    ImGuiColorEditFlags_PickerHueWheel  = 1 << 17,  // [WIP] ColorPicker: wheel for Hue, triangle for SV
+    ImGuiColorEditFlags_PickerHueBar    = 1 << 18,  // [WIP] ColorPicker: bar for Hue, rectangle for SV
     ImGuiColorEditFlags_InputsModeMask_ = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX,
+    ImGuiColorEditFlags_PickerModeMask_ = ImGuiColorEditFlags_PickerHueWheel|ImGuiColorEditFlags_PickerHueBar,
     ImGuiColorEditFlags_StoredMask_     = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX|ImGuiColorEditFlags_Float
 };
 

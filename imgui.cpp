@@ -1013,7 +1013,6 @@ const char* ImStristr(const char* haystack, const char* haystack_end, const char
     return NULL;
 }
 
-
 // MSVC version appears to return -1 on overflow, whereas glibc appears to return total count (which may be >= buf_size). 
 // Ideally we would test for only one of those limits at runtime depending on the behavior the vsnprintf(), but trying to deduct it at compile time sounds like a pandora can of worm.
 int ImFormatString(char* buf, int buf_size, const char* fmt, ...)
@@ -9401,6 +9400,21 @@ static void RenderArrowsForVerticalBar(ImDrawList* draw_list, ImVec2 pos, ImVec2
     RenderArrow(draw_list, ImVec2(pos.x + bar_w - half_sz.x,     pos.y), half_sz,                              ImGuiDir_Left,  IM_COL32_WHITE);
 }
 
+static void PaintVertsLinearGradientKeepAlpha(ImDrawVert* vert_start, ImDrawVert* vert_end, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1)
+{
+    ImVec2 gradient_extent = gradient_p1 - gradient_p0;
+    float gradient_inv_length = ImInvLength(gradient_extent, 0.0f);
+    for (ImDrawVert* vert = vert_start; vert < vert_end; vert++)
+    {
+        float d = ImDot(vert->pos - gradient_p0, gradient_extent);
+        float t = ImMin(sqrtf(ImMax(d, 0.0f)) * gradient_inv_length, 1.0f);
+        int r = ImLerp((int)(col0 >> IM_COL32_R_SHIFT) & 0xFF, (int)(col1 >> IM_COL32_R_SHIFT) & 0xFF, t);
+        int g = ImLerp((int)(col0 >> IM_COL32_G_SHIFT) & 0xFF, (int)(col1 >> IM_COL32_G_SHIFT) & 0xFF, t);
+        int b = ImLerp((int)(col0 >> IM_COL32_B_SHIFT) & 0xFF, (int)(col1 >> IM_COL32_B_SHIFT) & 0xFF, t);
+        vert->col = (r << IM_COL32_R_SHIFT) | (g << IM_COL32_G_SHIFT) | (b << IM_COL32_B_SHIFT) | (vert->col & IM_COL32_A_MASK);
+    }
+}
+
 // ColorPicker
 // Note: only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
 // FIXME: we adjust the big color square height based on item width, which may cause a flickering feedback loop (if automatic height makes a vertical scrollbar appears, affecting automatic width..) 
@@ -9428,13 +9442,63 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     float bar1_pos_x = bar0_pos_x + bars_width + style.ItemInnerSpacing.x;
     float bars_triangles_half_sz = (float)(int)(bars_width * 0.20f);
 
+    float wheel_thickness = sv_picker_size * 0.08f;
+    float wheel_r_outer = sv_picker_size * 0.50f;
+    float wheel_r_inner = wheel_r_outer - wheel_thickness;
+    ImVec2 wheel_center(picker_pos.x + (sv_picker_size + bars_width)*0.5f, picker_pos.y + sv_picker_size*0.5f);
+    
+    // Note: the triangle is displayed rotated with triangle_pa pointing to Hue, but most coordinates stays unrotated for logic.
+    float triangle_r = wheel_r_inner - (int)(sv_picker_size * 0.027f);
+    ImVec2 triangle_pa = ImVec2(triangle_r, 0.0f); // Hue point.
+    ImVec2 triangle_pb = ImVec2(triangle_r * -0.5f, triangle_r * -0.866025f); // Black point.
+    ImVec2 triangle_pc = ImVec2(triangle_r * -0.5f, triangle_r * +0.866025f); // White point.
+
     float H,S,V;
     ColorConvertRGBtoHSV(col[0], col[1], col[2], H, S, V);
 
-    // Color matrix logic
+    // Defaults to Hue bar + SV rectangle // FIXME-WIP
+    if ((flags & ImGuiColorEditFlags_PickerModeMask_) == 0)
+        flags |= ImGuiColorEditFlags_PickerHueBar;
+    IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags_PickerModeMask_))); // Check that only 1 is selected
+
     bool value_changed = false, value_changed_h = false, value_changed_sv = false;
 
+    if (flags & ImGuiColorEditFlags_PickerHueWheel)
     {
+        // Hue wheel + SV triangle logic
+        InvisibleButton("hsv", ImVec2(sv_picker_size + style.ItemInnerSpacing.x + bars_width, sv_picker_size));
+        if (IsItemActive())
+        {
+            ImVec2 initial_off = g.IO.MouseClickedPos[0] - wheel_center;
+            ImVec2 current_off = g.IO.MousePos - wheel_center;
+            float initial_dist2 = ImLengthSqr(initial_off);
+            if (initial_dist2 >= (wheel_r_inner-1)*(wheel_r_inner-1) && initial_dist2 <= (wheel_r_outer+1)*(wheel_r_outer+1))
+            {
+                // Interactive with Hue wheel
+                H = atan2f(current_off.y, current_off.x) / IM_PI*0.5f;
+                if (H < 0.0f)
+                    H += 1.0f;
+                value_changed = value_changed_h = true;
+            }
+            float cos_hue_angle = cosf(-H * 2.0f * IM_PI);
+            float sin_hue_angle = sinf(-H * 2.0f * IM_PI);
+            if (ImTriangleContainsPoint(triangle_pa, triangle_pb, triangle_pc, ImRotate(initial_off, cos_hue_angle, sin_hue_angle)))
+            {
+                // Interacting with SV triangle
+                ImVec2 current_off_unrotated = ImRotate(current_off, cos_hue_angle, sin_hue_angle);
+                if (!ImTriangleContainsPoint(triangle_pa, triangle_pb, triangle_pc, current_off_unrotated))
+                    current_off_unrotated = ImTriangleClosestPoint(triangle_pa, triangle_pb, triangle_pc, current_off_unrotated);
+                float uu, vv, ww;
+                ImTriangleBarycentricCoords(triangle_pa, triangle_pb, triangle_pc, current_off_unrotated, uu, vv, ww);
+                V = ImClamp(1.0f - vv, 0.0001f, 1.0f);
+                S = ImClamp(uu / V, 0.0001f, 1.0f);
+                value_changed = value_changed_sv = true;
+            }
+        }
+    }
+    else if (flags & ImGuiColorEditFlags_PickerHueBar)
+    {
+        // SV rectangle logic
         InvisibleButton("sv", ImVec2(sv_picker_size, sv_picker_size));
         if (IsItemActive())
         {
@@ -9546,6 +9610,51 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     const ImU32 hue_colors[6+1] = { IM_COL32(255,0,0,255), IM_COL32(255,255,0,255), IM_COL32(0,255,0,255), IM_COL32(0,255,255,255), IM_COL32(0,0,255,255), IM_COL32(255,0,255,255), IM_COL32(255,0,0,255) };
     ImVec2 sv_cursor_pos;
     
+    if (flags & ImGuiColorEditFlags_PickerHueWheel)
+    {
+        // Render Hue Wheel
+        const float aeps = 1.5f / wheel_r_outer; // Half a pixel arc length in radians (2pi cancels out).
+        const int segment_per_arc = ImMax(4, (int)wheel_r_outer / 12);
+        for (int n = 0; n < 6; n++)
+        {
+            const float a0 = (n)     /6.0f * 2.0f * IM_PI - aeps;
+            const float a1 = (n+1.0f)/6.0f * 2.0f * IM_PI + aeps;
+            int vert_start_idx = draw_list->_VtxCurrentIdx;
+            draw_list->PathArcTo(wheel_center, (wheel_r_inner + wheel_r_outer)*0.5f, a0, a1, segment_per_arc);
+            draw_list->PathStroke(IM_COL32_WHITE, false, wheel_thickness);
+
+            // Paint colors over existing vertices
+            ImVec2 gradient_p0(wheel_center.x + cosf(a0) * wheel_r_inner, wheel_center.y + sinf(a0) * wheel_r_inner);
+            ImVec2 gradient_p1(wheel_center.x + cosf(a1) * wheel_r_inner, wheel_center.y + sinf(a1) * wheel_r_inner);
+            PaintVertsLinearGradientKeepAlpha(draw_list->_VtxWritePtr - (draw_list->_VtxCurrentIdx - vert_start_idx), draw_list->_VtxWritePtr, gradient_p0, gradient_p1, hue_colors[n], hue_colors[n+1]);
+        }
+
+        // Render Cursor + preview on Hue Wheel
+        float cos_hue_angle = cosf(H * 2.0f * IM_PI);
+        float sin_hue_angle = sinf(H * 2.0f * IM_PI);
+        ImVec2 hue_cursor_pos(wheel_center.x + cos_hue_angle * (wheel_r_inner+wheel_r_outer)*0.5f, wheel_center.y + sin_hue_angle * (wheel_r_inner+wheel_r_outer)*0.5f);
+        float hue_cursor_rad = value_changed_h ? wheel_thickness * 0.65f : wheel_thickness * 0.55f;
+        int hue_cursor_segments = ImClamp((int)(hue_cursor_rad / 1.4f), 9, 32);
+        draw_list->AddCircleFilled(hue_cursor_pos, hue_cursor_rad, hue_color32, hue_cursor_segments);
+        draw_list->AddCircle(hue_cursor_pos, hue_cursor_rad+1, IM_COL32(128,128,128,255), hue_cursor_segments);
+        draw_list->AddCircle(hue_cursor_pos, hue_cursor_rad, IM_COL32_WHITE, hue_cursor_segments);
+
+        // Render SV triangle (rotated according to hue)
+        ImVec2 tra = wheel_center + ImRotate(triangle_pa, cos_hue_angle, sin_hue_angle);
+        ImVec2 trb = wheel_center + ImRotate(triangle_pb, cos_hue_angle, sin_hue_angle);
+        ImVec2 trc = wheel_center + ImRotate(triangle_pc, cos_hue_angle, sin_hue_angle);
+        ImVec2 uv_white = g.FontTexUvWhitePixel;
+        draw_list->PrimReserve(6, 6);
+        draw_list->PrimVtx(tra, uv_white, hue_color32);
+        draw_list->PrimVtx(trb, uv_white, hue_color32);
+        draw_list->PrimVtx(trc, uv_white, IM_COL32_WHITE);
+        draw_list->PrimVtx(tra, uv_white, IM_COL32_BLACK_TRANS);
+        draw_list->PrimVtx(trb, uv_white, IM_COL32_BLACK);
+        draw_list->PrimVtx(trc, uv_white, IM_COL32_BLACK_TRANS);
+        draw_list->AddTriangle(tra, trb, trc, IM_COL32(128,128,128,255), 1.5f);
+        sv_cursor_pos = ImLerp(ImLerp(trc, tra, ImSaturate(S)), trb, ImSaturate(1 - V));
+    }
+    else if (flags & ImGuiColorEditFlags_PickerHueBar)
     {
         // Render SV Square
         draw_list->AddRectFilledMultiColor(picker_pos, picker_pos + ImVec2(sv_picker_size,sv_picker_size), IM_COL32_WHITE, hue_color32, hue_color32, IM_COL32_WHITE);

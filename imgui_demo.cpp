@@ -737,7 +737,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             static bool ref_color = false;
             static ImVec4 ref_color_v(1.0f,0.0f,1.0f,0.5f);
             static int inputs_mode = 2;
-            static float width = 200.0f;
+            static int picker_mode = 0;
             ImGui::Checkbox("With Alpha", &alpha);
             ImGui::Checkbox("With Alpha Bar", &alpha_bar);
             ImGui::Checkbox("With Side Preview", &side_preview);
@@ -750,20 +750,20 @@ void ImGui::ShowTestWindow(bool* p_open)
                     ImGui::ColorEdit4("##RefColor", &ref_color_v.x, ImGuiColorEditFlags_NoInputs | misc_flags);
                 }
             }
-            ImGui::Combo("Mode", &inputs_mode, "All Inputs\0No Inputs\0RGB Input\0HSV Input\0HEX Input\0");
+            ImGui::Combo("Inputs Mode", &inputs_mode, "All Inputs\0No Inputs\0RGB Input\0HSV Input\0HEX Input\0");
+            ImGui::Combo("Picker Mode", &picker_mode, "Hue bar + SV rect\0Hue wheel + SV triangle\0");
             ImGui::SameLine(); ShowHelpMarker("User can right-click the inputs and override edit mode.");
-            //ImGui::DragFloat("Width", &width, 1.0f, 1.0f, 999.0f);
-            //ImGui::PushItemWidth(width);
             ImGuiColorEditFlags flags = misc_flags;
             if (!alpha) flags |= ImGuiColorEditFlags_NoAlpha; // This is by default if you call ColorPicker3() instead of ColorPicker4()
             if (alpha_bar) flags |= ImGuiColorEditFlags_AlphaBar;
             if (!side_preview) flags |= ImGuiColorEditFlags_NoSidePreview;
+            if (picker_mode == 0) flags |= ImGuiColorEditFlags_PickerHueBar;
+            if (picker_mode == 1) flags |= ImGuiColorEditFlags_PickerHueWheel;
             if (inputs_mode == 1) flags |= ImGuiColorEditFlags_NoInputs;
             if (inputs_mode == 2) flags |= ImGuiColorEditFlags_RGB;
             if (inputs_mode == 3) flags |= ImGuiColorEditFlags_HSV;
             if (inputs_mode == 4) flags |= ImGuiColorEditFlags_HEX;
             ImGui::ColorPicker4("MyColor##4", (float*)&color, flags, ref_color ? &ref_color_v.x : NULL);
-            //ImGui::PopItemWidth();
 
             ImGui::TreePop();
         }
