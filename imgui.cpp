@@ -6369,16 +6369,16 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
             scalar_format = "%d";
         int* v = (int*)data_ptr;
         const int old_v = *v;
-        int arg0 = *v;
-        if (op && sscanf(initial_value_buf, scalar_format, &arg0) < 1)
+        int arg0i = *v;
+        if (op && sscanf(initial_value_buf, scalar_format, &arg0i) < 1)
             return false;
 
         // Store operand in a float so we can use fractional value for multipliers (*1.1), but constant always parsed as integer so we can fit big integers (e.g. 2000000003) past float precision
-        float arg1 = 0.0f;
-        if (op == '+')      { if (sscanf(buf, "%f", &arg1) == 1) *v = (int)(arg0 + arg1); }                // Add (use "+-" to subtract)
-        else if (op == '*') { if (sscanf(buf, "%f", &arg1) == 1) *v = (int)(arg0 * arg1); }                // Multiply
-        else if (op == '/') { if (sscanf(buf, "%f", &arg1) == 1 && arg1 != 0.0f) *v = (int)(arg0 / arg1); }// Divide
-        else                { if (sscanf(buf, scalar_format, &arg0) == 1) *v = arg0; }                     // Assign constant
+        float arg1f = 0.0f;
+        if (op == '+')      { if (sscanf(buf, "%f", &arg1f) == 1) *v = (int)(arg0i + arg1f); }                 // Add (use "+-" to subtract)
+        else if (op == '*') { if (sscanf(buf, "%f", &arg1f) == 1) *v = (int)(arg0i * arg1f); }                 // Multiply
+        else if (op == '/') { if (sscanf(buf, "%f", &arg1f) == 1 && arg1f != 0.0f) *v = (int)(arg0i / arg1f); }// Divide
+        else                { if (sscanf(buf, scalar_format, &arg0i) == 1) *v = arg0i; }                       // Assign constant (read as integer so big values are not lossy)
         return (old_v != *v);
     }
     else if (data_type == ImGuiDataType_Float)
@@ -6387,17 +6387,17 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
         scalar_format = "%f";
         float* v = (float*)data_ptr;
         const float old_v = *v;
-        float arg0 = *v;
-        if (op && sscanf(initial_value_buf, scalar_format, &arg0) < 1)
+        float arg0f = *v;
+        if (op && sscanf(initial_value_buf, scalar_format, &arg0f) < 1)
             return false;
 
-        float arg1 = 0.0f;
-        if (sscanf(buf, scalar_format, &arg1) < 1)
+        float arg1f = 0.0f;
+        if (sscanf(buf, scalar_format, &arg1f) < 1)
             return false;
-        if (op == '+')      { *v = arg0 + arg1; }                    // Add (use "+-" to subtract)
-        else if (op == '*') { *v = arg0 * arg1; }                    // Multiply
-        else if (op == '/') { if (arg1 != 0.0f) *v = arg0 / arg1; }  // Divide
-        else                { *v = arg1; }                           // Assign constant
+        if (op == '+')      { *v = arg0f + arg1f; }                    // Add (use "+-" to subtract)
+        else if (op == '*') { *v = arg0f * arg1f; }                    // Multiply
+        else if (op == '/') { if (arg1f != 0.0f) *v = arg0f / arg1f; } // Divide
+        else                { *v = arg1f; }                            // Assign constant
         return (old_v != *v);
     }
 
