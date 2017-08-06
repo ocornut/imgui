@@ -6,13 +6,17 @@
 // Everything in this file will be stripped out by the linker if you don't call ImGui::ShowTestWindow().
 // During development, you can call ImGui::ShowTestWindow() in your code to learn about various features of ImGui. Have it wired in a debug menu!
 // Removing this file from your project is hindering access to documentation for everyone in your team, likely leading you to poorer usage of the library.
-
 // Note that you can #define IMGUI_DISABLE_TEST_WINDOWS in imconfig.h for the same effect.
 // If you want to link core ImGui in your public builds but not those test windows, #define IMGUI_DISABLE_TEST_WINDOWS in imconfig.h and those functions will be empty.
 // For any other case, if you have ImGui available you probably want this to be available for reference and execution.
-
 // Thank you,
 // -Your beloved friend, imgui_demo.cpp (that you won't delete)
+
+// Message to beginner C/C++ programmer about the meaning of 'static': in this demo code, we frequently we use 'static' variables inside functions. 
+// We do this as a way to gather code and data in the same place, make the demo code faster to read, faster to write, and smaller. A static variable persist across calls, 
+// so it is essentially like a global variable but declared inside the scope of the function.
+// It also happens to be a convenient way of storing simple UI related information as long as your function doesn't need to be reentrant or used in threads.
+// This may be a pattern you want to use in your code (simple is beautiful!), but most of the real data you would be editing is likely to be stored outside your function.
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
@@ -538,9 +542,13 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        static bool a=false;
-        if (ImGui::Button("Button")) { printf("Clicked\n"); a ^= 1; }
-        if (a)
+        static bool my_toggle = false;
+        if (ImGui::Button("Button")) 
+        { 
+            printf("Clicked\n"); 
+            my_toggle = !my_toggle; 
+        }
+        if (my_toggle)
         {
             ImGui::SameLine();
             ImGui::Text("Thanks for clicking me!");
