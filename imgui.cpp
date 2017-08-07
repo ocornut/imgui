@@ -4205,7 +4205,10 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         }
         window->Scroll = ImMax(window->Scroll, ImVec2(0.0f, 0.0f));
         if (!window->Collapsed && !window->SkipItems)
-            window->Scroll = ImMin(window->Scroll, ImMax(ImVec2(0.0f, 0.0f), window->SizeContents - window->SizeFull + window->ScrollbarSizes));
+        {
+            window->Scroll.x = ImMin(window->Scroll.x, GetScrollMaxX());
+            window->Scroll.y = ImMin(window->Scroll.y, GetScrollMaxY());
+        }
 
         // Modal window darkens what is behind them
         if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
@@ -5267,13 +5270,13 @@ float ImGui::GetScrollY()
 float ImGui::GetScrollMaxX()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return window->SizeContents.x - window->SizeFull.x - window->ScrollbarSizes.x;
+    return ImMax(0.0f, window->SizeContents.x - (window->SizeFull.x - window->ScrollbarSizes.x));
 }
 
 float ImGui::GetScrollMaxY()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return window->SizeContents.y - window->SizeFull.y - window->ScrollbarSizes.y;
+    return ImMax(0.0f, window->SizeContents.y - (window->SizeFull.y - window->ScrollbarSizes.y));
 }
 
 void ImGui::SetScrollX(float scroll_x)
