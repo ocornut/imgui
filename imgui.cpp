@@ -4262,6 +4262,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             // Scrollbars
             window->ScrollbarY = (flags & ImGuiWindowFlags_AlwaysVerticalScrollbar) || ((window->SizeContents.y > window->Size.y + style.ItemSpacing.y) && !(flags & ImGuiWindowFlags_NoScrollbar));
             window->ScrollbarX = (flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar) || ((window->SizeContents.x > window->Size.x - (window->ScrollbarY ? style.ScrollbarSize : 0.0f) - window->WindowPadding.x) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar));
+            if (window->ScrollbarX && !window->ScrollbarY)
+                window->ScrollbarY = (window->SizeContents.y > window->Size.y + style.ItemSpacing.y - style.ScrollbarSize) && !(flags & ImGuiWindowFlags_NoScrollbar);
             window->ScrollbarSizes = ImVec2(window->ScrollbarY ? style.ScrollbarSize : 0.0f, window->ScrollbarX ? style.ScrollbarSize : 0.0f);
             window->BorderSize = (flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
 
@@ -4510,10 +4512,10 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
     // V denote the main axis of the scrollbar
     float scrollbar_size_v = horizontal ? bb.GetWidth() : bb.GetHeight();
     float scroll_v = horizontal ? window->Scroll.x : window->Scroll.y;
-    float win_size_avail_v = (horizontal ? window->Size.x : window->Size.y) - other_scrollbar_size_w;
+    float win_size_avail_v = (horizontal ? window->SizeFull.x : window->SizeFull.y) - other_scrollbar_size_w;
     float win_size_contents_v = horizontal ? window->SizeContents.x : window->SizeContents.y;
 
-    // The grabable box size generally represent the amount visible (vs the total scrollable amount)
+    // The grabbable box size generally represent the amount visible (vs the total scrollable amount)
     // But we maintain a minimum size in pixel to allow for the user to still aim inside.
     const float grab_h_pixels = ImMin(ImMax(scrollbar_size_v * ImSaturate(win_size_avail_v / ImMax(win_size_contents_v, win_size_avail_v)), style.GrabMinSize), scrollbar_size_v);
     const float grab_h_norm = grab_h_pixels / scrollbar_size_v;
@@ -5270,7 +5272,7 @@ float ImGui::GetScrollY()
 float ImGui::GetScrollMaxX()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return ImMax(0.0f, window->SizeContents.x - (window->SizeFull.x - window->ScrollbarSizes.x));
+    return ImMax(0.0f, window->SizeContents.x - (window->SizeFull.x - window->ScrollbarSizes.x) + 50);
 }
 
 float ImGui::GetScrollMaxY()
