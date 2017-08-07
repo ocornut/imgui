@@ -18,8 +18,9 @@
    io.Fonts->AddFontDefault();
    ImFontConfig config;
    config.MergeMode = true;
-   const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+   static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
    io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config, icon_ranges);
+
    // Usage, e.g.
    ImGui::Text("%s Search", ICON_FA_SEARCH);
 
@@ -152,6 +153,9 @@
    https://fortawesome.github.io/Font-Awesome/
    https://github.com/SamBrishes/kenney-icon-font
    https://design.google.com/icons/
+
+ IcoMoon - Custom Icon font builder
+   https://icomoon.io/app
 
  Typefaces for source code beautification
    https://github.com/chrissimpkins/codeface
