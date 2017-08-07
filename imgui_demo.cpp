@@ -2464,10 +2464,10 @@ static void ShowExampleAppLog(bool* p_open)
 {
     static ExampleAppLog log;
 
-    // Demo fill
+    // Demo: add random items (unless Ctrl is held)
     static float last_time = -1.0f;
     float time = ImGui::GetTime();
-    if (time - last_time >= 0.3f)
+    if (time - last_time >= 0.20f && !ImGui::GetIO().KeyCtrl)
     {
         const char* random_words[] = { "system", "info", "warning", "error", "fatal", "notice", "log" };
         log.AddLog("[%s] Hello, time is %.1f, rand() %d\n", random_words[rand() % IM_ARRAYSIZE(random_words)], time, (int)rand());
