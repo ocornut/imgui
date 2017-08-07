@@ -1,4 +1,4 @@
-// dear imgui, v1.50 WIP
+// dear imgui, v1.51 WIP
 // (headers)
 
 // See imgui.cpp file for documentation.
@@ -16,7 +16,7 @@
 #include <stddef.h>         // ptrdiff_t, NULL
 #include <string.h>         // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
-#define IMGUI_VERSION       "1.50 WIP"
+#define IMGUI_VERSION       "1.51 WIP"
 
 // Define attributes of all API symbols declarations, e.g. for DLL under Windows.
 #ifndef IMGUI_API
@@ -80,6 +80,11 @@ typedef int ImGuiSelectableFlags;   // flags for Selectable()               // e
 typedef int ImGuiTreeNodeFlags;     // flags for TreeNode*(), Collapsing*() // enum ImGuiTreeNodeFlags_
 typedef int (*ImGuiTextEditCallback)(ImGuiTextEditCallbackData *data);
 typedef void (*ImGuiSizeConstraintCallback)(ImGuiSizeConstraintCallbackData* data);
+#ifdef _MSC_VER
+typedef unsigned __int64 ImU64;     // 64-bit unsigned integer
+#else
+typedef unsigned long long ImU64;   // 64-bit unsigned integer
+#endif 
 
 // Others helpers at bottom of the file:
 // class ImVector<>                 // Lightweight std::vector like class.
@@ -116,10 +121,12 @@ namespace ImGui
     IMGUI_API void          NewFrame();                                 // start a new ImGui frame, you can submit any command from this point until NewFrame()/Render().
     IMGUI_API void          Render();                                   // ends the ImGui frame, finalize rendering data, then call your io.RenderDrawListsFn() function if set.
     IMGUI_API void          Shutdown();
-    IMGUI_API void          ShowUserGuide();                            // help block
-    IMGUI_API void          ShowStyleEditor(ImGuiStyle* ref = NULL);    // style editor block. you can pass in a reference ImGuiStyle structure to compare to, revert to and save to (else it uses the default style)
-    IMGUI_API void          ShowTestWindow(bool* p_open = NULL);        // test window demonstrating ImGui features
-    IMGUI_API void          ShowMetricsWindow(bool* p_open = NULL);     // metrics window for debugging ImGui (browse draw commands, individual vertices, window list, etc.)
+
+    // Demo/Debug/Info
+    IMGUI_API void          ShowTestWindow(bool* p_open = NULL);        // create demo/test window. demonstrate most ImGui features. call this to learn about the library! try to make it always available in your application!
+    IMGUI_API void          ShowMetricsWindow(bool* p_open = NULL);     // create metrics window. display ImGui internals: browse window list, draw commands, individual vertices, basic internal state, etc.
+    IMGUI_API void          ShowStyleEditor(ImGuiStyle* ref = NULL);    // add style editor block (not a window). you can pass in a reference ImGuiStyle structure to compare to, revert to and save to (else it uses the default style)
+    IMGUI_API void          ShowUserGuide();                            // add basic help/info block (not a window): how to manipulate ImGui as a end-user (mouse/keyboard controls).
 
     // Window
     IMGUI_API bool          Begin(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0);                                                   // push window to the stack and start appending to it. see .cpp for details. return false when window is collapsed, so you can early out in your code. 'bool* p_open' creates a widget on the upper-right to close the window (which sets your bool to false).
@@ -356,9 +363,9 @@ namespace ImGui
     IMGUI_API void          ValueColor(const char* prefix, ImU32 v);
 
     // Tooltips
-    IMGUI_API void          SetTooltip(const char* fmt, ...) IM_PRINTFARGS(1);                  // set tooltip under mouse-cursor, typically use with ImGui::IsHovered(). last call wins
+    IMGUI_API void          SetTooltip(const char* fmt, ...) IM_PRINTFARGS(1);                  // set text tooltip under mouse-cursor, typically use with ImGui::IsItemHovered(). overidde any previous call to SetTooltip().
     IMGUI_API void          SetTooltipV(const char* fmt, va_list args);
-    IMGUI_API void          BeginTooltip();                                                     // use to create full-featured tooltip windows that aren't just text
+    IMGUI_API void          BeginTooltip();                                                     // begin/append a tooltip window. to create full-featured tooltip (with any kind of contents).
     IMGUI_API void          EndTooltip();
 
     // Menus
@@ -416,7 +423,6 @@ namespace ImGui
     IMGUI_API bool          IsRootWindowOrAnyChildHovered();                                    // is current root window or any of its child (including current window) hovered and hoverable (not blocked by a popup)
     IMGUI_API bool          IsAnyWindowFocused();
     IMGUI_API bool          IsAnyWindowHovered();                                               // is mouse hovering any visible window
-    IMGUI_API bool          IsAnyWindowHoveredAtPos(const ImVec2& pos);                         // is given position hovering any active imgui window
     IMGUI_API bool          IsRectVisible(const ImVec2& size);                                  // test if rectangle (of given size, starting from cursor position) is visible / not clipped.
     IMGUI_API bool          IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max);      // test if rectangle (in screen space) is visible / not clipped. to perform coarse clipping on user's side.
     IMGUI_API float         GetTime();
@@ -435,10 +441,10 @@ namespace ImGui
     IMGUI_API void          ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
 
     // Inputs
-    IMGUI_API int           GetKeyIndex(ImGuiKey key);                                          // map ImGuiKey_* values into user's key index. == io.KeyMap[key]
-    IMGUI_API bool          IsKeyDown(int key_index);                                           // key_index into the keys_down[] array, imgui doesn't know the semantic of each entry, uses your own indices!
-    IMGUI_API bool          IsKeyPressed(int key_index, bool repeat = true);                    // uses user's key indices as stored in the keys_down[] array. if repeat=true. uses io.KeyRepeatDelay / KeyRepeatRate
-    IMGUI_API bool          IsKeyReleased(int key_index);                                       // "
+    IMGUI_API int           GetKeyIndex(ImGuiKey imgui_key);                                    // map ImGuiKey_* values into user's key index. == io.KeyMap[key]
+    IMGUI_API bool          IsKeyDown(int user_key_index);                                      // is key being held. == io.KeysDown[user_key_index]. note that imgui doesn't know the semantic of each entry of io.KeyDown[]. Use your own indices/enums according to how your backend/engine stored them into KeyDown[]!
+    IMGUI_API bool          IsKeyPressed(int user_key_index, bool repeat = true);               // was key pressed (went from !Down to Down). if repeat=true, uses io.KeyRepeatDelay / KeyRepeatRate
+    IMGUI_API bool          IsKeyReleased(int user_key_index);                                  // was key released (went from Down to !Down)..
     IMGUI_API int           GetKeyPressedAmount(int key_index, float repeat_delay, float rate); // uses provided repeat rate/delay. return a count, most often 0 or 1 but might be >1 if RepeatRate is small enough that DeltaTime > RepeatRate
     IMGUI_API bool          IsMouseDown(int button);                                            // is mouse button held
     IMGUI_API bool          IsMouseClicked(int button, bool repeat = false);                    // did mouse button clicked (went from !Down to Down)
@@ -469,9 +475,9 @@ namespace ImGui
     IMGUI_API ImGuiContext* GetCurrentContext();
     IMGUI_API void          SetCurrentContext(ImGuiContext* ctx);
 
-    // Obsolete (will be removed)
+    // Obsolete functions (Will be removed! Also see 'API BREAKING CHANGES' section in imgui.cpp)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    static inline bool      IsPosHoveringAnyWindow(const ImVec2& pos) { return IsAnyWindowHoveredAtPos(pos); } // OBSOLETE 1.50+
+    static inline bool      IsPosHoveringAnyWindow(const ImVec2&) { IM_ASSERT(0); return false; } // OBSOLETE 1.51+. This was partly broken. You probably wanted to use ImGui::GetIO().WantCaptureMouse instead.
     static inline bool      IsMouseHoveringAnyWindow() { return IsAnyWindowHovered(); }        // OBSOLETE 1.50+
     static inline bool      IsMouseHoveringWindow() { return IsWindowHoveredRect(); }          // OBSOLETE 1.50+
     static inline bool      CollapsingHeader(const char* label, const char* str_id, bool framed = true, bool default_open = false) { (void)str_id; (void)framed; ImGuiTreeNodeFlags default_open_flags = 1<<5; return CollapsingHeader(label, (default_open ? default_open_flags : 0)); } // OBSOLETE 1.49+
@@ -670,22 +676,24 @@ enum ImGuiCol_
     ImGuiCol_COUNT
 };
 
-// Enumeration for PushStyleVar() / PopStyleVar()
-// NB: the enum only refers to fields of ImGuiStyle() which makes sense to be pushed/poped in UI code. Feel free to add others.
+// Enumeration for PushStyleVar() / PopStyleVar() to temporarily modify the ImGuiStyle structure.
+// NB: the enum only refers to fields of ImGuiStyle which makes sense to be pushed/poped inside UI code. During initialization, feel free to just poke into ImGuiStyle directly.
+// NB: if changing this enum, you need to update the associated internal table GStyleVarInfo[] accordingly. This is where we link enum values to members offset/type.
 enum ImGuiStyleVar_
 {
-    ImGuiStyleVar_Alpha,               // float
-    ImGuiStyleVar_WindowPadding,       // ImVec2
-    ImGuiStyleVar_WindowRounding,      // float
-    ImGuiStyleVar_WindowMinSize,       // ImVec2
-    ImGuiStyleVar_ChildWindowRounding, // float
-    ImGuiStyleVar_FramePadding,        // ImVec2
-    ImGuiStyleVar_FrameRounding,       // float
-    ImGuiStyleVar_ItemSpacing,         // ImVec2
-    ImGuiStyleVar_ItemInnerSpacing,    // ImVec2
-    ImGuiStyleVar_IndentSpacing,       // float
-    ImGuiStyleVar_GrabMinSize,         // float
-    ImGuiStyleVar_ButtonTextAlign,     // flags ImGuiAlign_*
+    // Enum name ......................// Member in ImGuiStyle structure (see ImGuiStyle for descriptions)
+    ImGuiStyleVar_Alpha,               // float     Alpha
+    ImGuiStyleVar_WindowPadding,       // ImVec2    WindowPadding
+    ImGuiStyleVar_WindowRounding,      // float     WindowRounding
+    ImGuiStyleVar_WindowMinSize,       // ImVec2    WindowMinSize
+    ImGuiStyleVar_ChildWindowRounding, // float     ChildWindowRounding
+    ImGuiStyleVar_FramePadding,        // ImVec2    FramePadding
+    ImGuiStyleVar_FrameRounding,       // float     FrameRounding
+    ImGuiStyleVar_ItemSpacing,         // ImVec2    ItemSpacing
+    ImGuiStyleVar_ItemInnerSpacing,    // ImVec2    ItemInnerSpacing
+    ImGuiStyleVar_IndentSpacing,       // float     IndentSpacing
+    ImGuiStyleVar_GrabMinSize,         // float     GrabMinSize
+    ImGuiStyleVar_ButtonTextAlign,     // ImVec2    ButtonTextAlign
     ImGuiStyleVar_Count_
 };
 
@@ -999,11 +1007,11 @@ struct ImGuiTextBuffer
 
 // Helper: Simple Key->value storage
 // Typically you don't have to worry about this since a storage is held within each Window.
-// We use it to e.g. store collapse state for a tree (Int 0/1), store color edit options.
-// You can use it as custom user storage for temporary values.
-// Declare your own storage if:
+// We use it to e.g. store collapse state for a tree (Int 0/1), store color edit options. 
+// This is optimized for efficient reading (dichotomy into a contiguous buffer), rare writing (typically tied to user interactions)
+// You can use it as custom user storage for temporary values. Declare your own storage if, for example:
 // - You want to manipulate the open/close state of a particular sub-tree in your interface (tree node uses Int 0/1 to store their state).
-// - You want to store custom debug data easily without adding or editing structures in your code.
+// - You want to store custom debug data easily without adding or editing structures in your code (probably not efficient, but convenient)
 // Types are NOT stored, so it is up to you to make sure your Key don't collide with different types.
 struct ImGuiStorage
 {
@@ -1191,6 +1199,7 @@ struct ImDrawVert
 // You can override the vertex format layout by defining IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT in imconfig.h
 // The code expect ImVec2 pos (8 bytes), ImVec2 uv (8 bytes), ImU32 col (4 bytes), but you can re-order them or add other fields as needed to simplify integration in your engine.
 // The type has to be described within the macro (you can either declare the struct or use a typedef)
+// NOTE: IMGUI DOESN'T CLEAR THE STRUCTURE AND DOESN'T CALL A CONSTRUCTOR SO ANY CUSTOM FIELD WILL BE UNINITIALIZED. IF YOU ADD EXTRA FIELDS (SUCH AS A 'Z' COORDINATES) YOU WILL NEED TO CLEAR THEM DURING RENDER OR TO IGNORE THEM. 
 IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
 #endif
 
@@ -1207,11 +1216,12 @@ struct ImDrawChannel
 // At the moment, each ImGui window contains its own ImDrawList but they could potentially be merged in the future.
 // If you want to add custom rendering within a window, you can use ImGui::GetWindowDrawList() to access the current draw list and add your own primitives.
 // You can interleave normal ImGui:: calls and adding primitives to the current draw list.
-// All positions are in screen coordinates (0,0=top-left, 1 pixel per unit). Primitives are always added to the list and not culled (culling is done at render time and at a higher-level by ImGui:: functions).
+// All positions are generally in pixel coordinates (top-left at (0,0), bottom-right at io.DisplaySize), however you are totally free to apply whatever transformation matrix to want to the data (if you apply such transformation you'll want to apply it to ClipRect as well)
+// Primitives are always added to the list and not culled (culling is done at higher-level by ImGui:: functions).
 struct ImDrawList
 {
     // This is what you have to render
-    ImVector<ImDrawCmd>     CmdBuffer;          // Commands. Typically 1 command = 1 gpu draw call.
+    ImVector<ImDrawCmd>     CmdBuffer;          // Commands. Typically 1 command = 1 GPU draw call.
     ImVector<ImDrawIdx>     IdxBuffer;          // Index buffer. Each command consume ImDrawCmd::ElemCount of those
     ImVector<ImDrawVert>    VtxBuffer;          // Vertex buffer.
 
@@ -1302,7 +1312,7 @@ struct ImDrawData
 
     // Functions
     ImDrawData() { Valid = false; CmdLists = NULL; CmdListsCount = TotalVtxCount = TotalIdxCount = 0; }
-    IMGUI_API void DeIndexAllBuffers();               // For backward compatibility: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
+    IMGUI_API void DeIndexAllBuffers();               // For backward compatibility or convenience: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
     IMGUI_API void ScaleClipRects(const ImVec2& sc);  // Helper to scale the ClipRect field of each ImDrawCmd. Use if your final output buffer is at a different scale than ImGui expects, or if there is a difference between your window resolution and framebuffer resolution.
 };
 
@@ -1315,13 +1325,13 @@ struct ImFontConfig
     float           SizePixels;                 //          // Size in pixels for rasterizer
     int             OversampleH, OversampleV;   // 3, 1     // Rasterize at higher quality for sub-pixel positioning. We don't use sub-pixel positions on the Y axis.
     bool            PixelSnapH;                 // false    // Align every glyph to pixel boundary. Useful e.g. if you are merging a non-pixel aligned font with the default font. If enabled, you can set OversampleH/V to 1.
-    ImVec2          GlyphExtraSpacing;          // 0, 0     // Extra spacing (in pixels) between glyphs
+    ImVec2          GlyphExtraSpacing;          // 0, 0     // Extra spacing (in pixels) between glyphs. Only X axis is supported for now.
     ImVec2          GlyphOffset;                // 0, 0     // Offset all glyphs from this font input
     const ImWchar*  GlyphRanges;                //          // Pointer to a user-provided list of Unicode range (2 value per range, values are inclusive, zero-terminated list). THE ARRAY DATA NEEDS TO PERSIST AS LONG AS THE FONT IS ALIVE.
     bool            MergeMode;                  // false    // Merge into previous ImFont, so you can combine multiple inputs font into one ImFont (e.g. ASCII font + icons + Japanese glyphs). You may want to use GlyphOffset.y when merge font of different heights.
 
     // [Internal]
-    char            Name[32];                               // Name (strictly for debugging)
+    char            Name[32];                               // Name (strictly to ease debugging)
     ImFont*         DstFont;
 
     IMGUI_API ImFontConfig();
@@ -1334,8 +1344,7 @@ struct ImFontConfig
 //  2. Call GetTexDataAsAlpha8() or GetTexDataAsRGBA32() to build and retrieve pixels data.
 //  3. Upload the pixels data into a texture within your graphics system.
 //  4. Call SetTexID(my_tex_id); and pass the pointer/identifier to your texture. This value will be passed back to you during rendering to identify the texture.
-//  5. Call ClearTexData() to free textures memory on the heap.
-// NB: If you use a 'glyph_ranges' array you need to make sure that your array persist up until the ImFont is cleared. We only copy the pointer, not the data.
+// IMPORTANT: If you pass a 'glyph_ranges' array to AddFont*** functions, you need to make sure that your array persist up until the ImFont is build (when calling GetTextData*** or Build()). We only copy the pointer, not the data.
 struct ImFontAtlas
 {
     IMGUI_API ImFontAtlas();
@@ -1358,10 +1367,10 @@ struct ImFontAtlas
     // Pitch = Width * BytesPerPixels
     IMGUI_API void              GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 1 byte per-pixel
     IMGUI_API void              GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 4 bytes-per-pixel
-    void                        SetTexID(void* id)  { TexID = id; }
+    void                        SetTexID(ImTextureID id)  { TexID = id; }
 
     // Helpers to retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
-    // NB: Make sure that your string are UTF-8 and NOT in your local code page. See FAQ for details.
+    // NB: Make sure that your string are UTF-8 and NOT in your local code page. In C++11, you can create a UTF-8 string literally using the u8"Hello world" syntax. See FAQ for details.
     IMGUI_API const ImWchar*    GetGlyphRangesDefault();    // Basic Latin, Extended Latin
     IMGUI_API const ImWchar*    GetGlyphRangesKorean();     // Default + Korean characters
     IMGUI_API const ImWchar*    GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
@@ -1371,7 +1380,7 @@ struct ImFontAtlas
 
     // Members
     // (Access texture data via GetTexData*() calls which will setup a default font for you.)
-    void*                       TexID;              // User data to refer to the texture once it has been uploaded to user's graphic systems. It ia passed back to you during rendering.
+    ImTextureID                 TexID;              // User data to refer to the texture once it has been uploaded to user's graphic systems. It is passed back to you during rendering via the ImDrawCmd structure.
     unsigned char*              TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
     unsigned int*               TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
     int                         TexWidth;           // Texture width calculated during Build().

@@ -1,4 +1,4 @@
-// dear imgui, v1.50 WIP
+// dear imgui, v1.51 WIP
 // (internals)
 
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
@@ -487,7 +487,7 @@ struct ImGuiContext
     float                   DragSpeedScaleSlow;
     float                   DragSpeedScaleFast;
     ImVec2                  ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
-    char                    Tooltip[1024];
+    int                     TooltipOverrideCount;
     ImVector<char>          PrivateClipboard;                   // If no custom clipboard handler is defined
     ImVec2                  OsImePosRequest, OsImePosSet;       // Cursor position request & last passed to the OS Input Method Editor
 
@@ -575,7 +575,7 @@ struct ImGuiContext
         DragSpeedScaleSlow = 1.0f / 100.0f;
         DragSpeedScaleFast = 10.0f;
         ScrollbarClickDeltaToGrabCenter = ImVec2(0.0f, 0.0f);
-        memset(Tooltip, 0, sizeof(Tooltip));
+        TooltipOverrideCount = 0;
         OsImePosRequest = OsImePosSet = ImVec2(-1.0f, -1.0f);
 
         ModalWindowDarkeningRatio = 0.0f;
@@ -701,7 +701,7 @@ struct IMGUI_API ImGuiWindow
     char*                   Name;
     ImGuiID                 ID;                                 // == ImHash(Name)
     ImGuiWindowFlags        Flags;                              // See enum ImGuiWindowFlags_
-    int                     IndexWithinParent;                  // Order within immediate parent window, if we are a child window. Otherwise 0.
+    int                     OrderWithinParent;                  // Order within immediate parent window, if we are a child window. Otherwise 0.
     ImVec2                  PosFloat;
     ImVec2                  Pos;                                // Position rounded-up to nearest pixel
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)

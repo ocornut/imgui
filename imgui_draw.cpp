@@ -1,4 +1,4 @@
-// dear imgui, v1.50 WIP
+// dear imgui, v1.51 WIP
 // (drawing and font code)
 
 // Contains implementation for
@@ -359,13 +359,13 @@ void ImDrawList::PrimReserve(int idx_count, int vtx_count)
     ImDrawCmd& draw_cmd = CmdBuffer.Data[CmdBuffer.Size-1];
     draw_cmd.ElemCount += idx_count;
 
-    int vtx_buffer_size = VtxBuffer.Size;
-    VtxBuffer.resize(vtx_buffer_size + vtx_count);
-    _VtxWritePtr = VtxBuffer.Data + vtx_buffer_size;
+    int vtx_buffer_old_size = VtxBuffer.Size;
+    VtxBuffer.resize(vtx_buffer_old_size + vtx_count);
+    _VtxWritePtr = VtxBuffer.Data + vtx_buffer_old_size;
 
-    int idx_buffer_size = IdxBuffer.Size;
-    IdxBuffer.resize(idx_buffer_size + idx_count);
-    _IdxWritePtr = IdxBuffer.Data + idx_buffer_size;
+    int idx_buffer_old_size = IdxBuffer.Size;
+    IdxBuffer.resize(idx_buffer_old_size + idx_count);
+    _IdxWritePtr = IdxBuffer.Data + idx_buffer_old_size;
 }
 
 // Fully unrolled with inline call to keep our debug builds decently fast.
@@ -933,7 +933,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     if (text_begin == text_end)
         return;
 
-    // Note: This is one of the few instance of breaking the encapsulation of ImDrawList, as we pull this from ImGui state, but it is just SO useful.
+    // IMPORTANT: This is one of the few instance of breaking the encapsulation of ImDrawList, as we pull this from ImGui state, but it is just SO useful.
     // Might just move Font/FontSize to ImDrawList?
     if (font == NULL)
         font = GImGui->Font;
@@ -955,7 +955,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
 {
-    AddText(GImGui->Font, GImGui->FontSize, pos, col, text_begin, text_end);
+    AddText(NULL, 0.0f, pos, col, text_begin, text_end);
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col)
@@ -1161,7 +1161,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     }
     else
     {
-        IM_ASSERT(!Fonts.empty()); // When using MergeMode make sure that a font has already been added before. You can use ImGui::AddFontDefault() to add the default imgui font.
+        IM_ASSERT(!Fonts.empty()); // When using MergeMode make sure that a font has already been added before. You can use ImGui::GetIO().Fonts->AddFontDefault() to add the default imgui font.
     }
 
     ConfigData.push_back(*font_cfg);
@@ -2167,8 +2167,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                         }
                     }
 
-                    // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug build.
-                    // Inlined here:
+                    // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug builds. Inlined here:
                     {
                         idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2);
                         idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3);
