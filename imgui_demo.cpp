@@ -263,6 +263,133 @@ void ImGui::ShowTestWindow(bool* p_open)
 
     if (ImGui::CollapsingHeader("Widgets"))
     {
+
+        if (ImGui::TreeNode("Basic"))
+        {
+            static int clicked = 0;
+            if (ImGui::Button("Button")) 
+                clicked++;
+            if (clicked & 1)
+            {
+                ImGui::SameLine();
+                ImGui::Text("Thanks for clicking me!");
+            }
+
+            static bool check = true;
+            ImGui::Checkbox("checkbox", &check);
+
+            static int e = 0;
+            ImGui::RadioButton("radio a", &e, 0); ImGui::SameLine();
+            ImGui::RadioButton("radio b", &e, 1); ImGui::SameLine();
+            ImGui::RadioButton("radio c", &e, 2);
+
+            // Color buttons, demonstrate using PushID() to add unique identifier in the ID stack, and changing style.
+            for (int i = 0; i < 7; i++)
+            {
+                if (i > 0) ImGui::SameLine();
+                ImGui::PushID(i);
+                ImGui::PushStyleColor(ImGuiCol_Button, ImColor::HSV(i/7.0f, 0.6f, 0.6f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImColor::HSV(i/7.0f, 0.7f, 0.7f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImColor::HSV(i/7.0f, 0.8f, 0.8f));
+                ImGui::Button("Click");
+                ImGui::PopStyleColor(3);
+                ImGui::PopID();
+            }
+
+            ImGui::Text("Hover over me");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("I am a tooltip");
+
+            ImGui::SameLine();
+            ImGui::Text("- or me");
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                ImGui::Text("I am a fancy tooltip");
+                static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
+                ImGui::PlotLines("Curve", arr, IM_ARRAYSIZE(arr));
+                ImGui::EndTooltip();
+            }
+
+            // Testing IMGUI_ONCE_UPON_A_FRAME macro
+            //for (int i = 0; i < 5; i++)
+            //{
+            //  IMGUI_ONCE_UPON_A_FRAME
+            //  {
+            //      ImGui::Text("This will be displayed only once.");
+            //  }
+            //}
+
+            ImGui::Separator();
+
+            ImGui::LabelText("label", "Value");
+
+            static int item = 1;
+            ImGui::Combo("combo", &item, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");   // Combo using values packed in a single constant string (for really quick combo)
+
+            const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ", "KKKK" };
+            static int item2 = -1;
+            ImGui::Combo("combo scroll", &item2, items, IM_ARRAYSIZE(items));   // Combo using proper array. You can also pass a callback to retrieve array value, no need to create/copy an array just for that.
+
+            {
+                static char str0[128] = "Hello, world!";
+                static int i0=123;
+                static float f0=0.001f;
+                ImGui::InputText("input text", str0, IM_ARRAYSIZE(str0));
+                ImGui::SameLine(); ShowHelpMarker("Hold SHIFT or use mouse to select text.\n" "CTRL+Left/Right to word jump.\n" "CTRL+A or double-click to select all.\n" "CTRL+X,CTRL+C,CTRL+V clipboard.\n" "CTRL+Z,CTRL+Y undo/redo.\n" "ESCAPE to revert.\n");
+
+                ImGui::InputInt("input int", &i0);
+                ImGui::SameLine(); ShowHelpMarker("You can apply arithmetic operators +,*,/ on numerical values.\n  e.g. [ 100 ], input \'*2\', result becomes [ 200 ]\nUse +- to subtract.\n");
+
+                ImGui::InputFloat("input float", &f0, 0.01f, 1.0f);
+
+                static float vec4a[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+                ImGui::InputFloat3("input float3", vec4a);
+            }
+
+            {
+                static int i1=50, i2=42;
+                ImGui::DragInt("drag int", &i1, 1);
+                ImGui::SameLine(); ShowHelpMarker("Click and drag to edit value.\nHold SHIFT/ALT for faster/slower edit.\nDouble-click or CTRL+click to input value.");
+
+                ImGui::DragInt("drag int 0..100", &i2, 1, 0, 100, "%.0f%%");
+
+                static float f1=1.00f, f2=0.0067f;
+                ImGui::DragFloat("drag float", &f1, 0.005f);
+                ImGui::DragFloat("drag small float", &f2, 0.0001f, 0.0f, 0.0f, "%.06f ns");
+            }
+
+            {
+                static int i1=0;
+                ImGui::SliderInt("slider int", &i1, -1, 3);
+                ImGui::SameLine(); ShowHelpMarker("CTRL+click to input value.");
+
+                static float f1=0.123f, f2=0.0f;
+                ImGui::SliderFloat("slider float", &f1, 0.0f, 1.0f, "ratio = %.3f");
+                ImGui::SliderFloat("slider log float", &f2, -10.0f, 10.0f, "%.4f", 3.0f);
+                static float angle = 0.0f;
+                ImGui::SliderAngle("slider angle", &angle);
+            }
+
+            static float col1[3] = { 1.0f,0.0f,0.2f };
+            static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
+            ImGui::ColorEdit3("color 1", col1);
+            ImGui::SameLine(); ShowHelpMarker("Click on the colored square to open a color picker.\nRight-click on the colored square to show options.\nCTRL+click on individual component to input value.\n");
+
+            ImGui::ColorEdit4("color 2", col2);
+
+            const char* listbox_items[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
+            static int listbox_item_current = 1;
+            ImGui::ListBox("listbox\n(single select)", &listbox_item_current, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
+
+            //static int listbox_item_current2 = 2;
+            //ImGui::PushItemWidth(-1);
+            //ImGui::ListBox("##listbox2", &listbox_item_current2, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
+            //ImGui::PopItemWidth();
+
+            ImGui::TreePop();
+        }
+
         if (ImGui::TreeNode("Trees"))
         {
             if (ImGui::TreeNode("Basic trees"))
@@ -356,56 +483,62 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Colored Text"))
+        if (ImGui::TreeNode("Text"))
         {
-            // Using shortcut. You can use PushStyleColor()/PopStyleColor() for more flexibility.
-            ImGui::TextColored(ImVec4(1.0f,0.0f,1.0f,1.0f), "Pink");
-            ImGui::TextColored(ImVec4(1.0f,1.0f,0.0f,1.0f), "Yellow");
-            ImGui::TextDisabled("Disabled");
-            ImGui::TreePop();
-        }
+            if (ImGui::TreeNode("Colored Text"))
+            {
+                // Using shortcut. You can use PushStyleColor()/PopStyleColor() for more flexibility.
+                ImGui::TextColored(ImVec4(1.0f,0.0f,1.0f,1.0f), "Pink");
+                ImGui::TextColored(ImVec4(1.0f,1.0f,0.0f,1.0f), "Yellow");
+                ImGui::TextDisabled("Disabled");
+                ImGui::SameLine(); ShowHelpMarker("The TextDisabled color is stored in ImGuiStyle.");
+                ImGui::TreePop();
+            }
 
-        if (ImGui::TreeNode("Word Wrapping"))
-        {
-            // Using shortcut. You can use PushTextWrapPos()/PopTextWrapPos() for more flexibility.
-            ImGui::TextWrapped("This text should automatically wrap on the edge of the window. The current implementation for text wrapping follows simple rules suitable for English and possibly other languages.");
-            ImGui::Spacing();
+            if (ImGui::TreeNode("Word Wrapping"))
+            {
+                // Using shortcut. You can use PushTextWrapPos()/PopTextWrapPos() for more flexibility.
+                ImGui::TextWrapped("This text should automatically wrap on the edge of the window. The current implementation for text wrapping follows simple rules suitable for English and possibly other languages.");
+                ImGui::Spacing();
 
-            static float wrap_width = 200.0f;
-            ImGui::SliderFloat("Wrap width", &wrap_width, -20, 600, "%.0f");
+                static float wrap_width = 200.0f;
+                ImGui::SliderFloat("Wrap width", &wrap_width, -20, 600, "%.0f");
 
-            ImGui::Text("Test paragraph 1:");
-            ImVec2 pos = ImGui::GetCursorScreenPos();
-            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x + wrap_width, pos.y), ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight()), IM_COL32(255,0,255,255));
-            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
-            ImGui::Text("The lazy dog is a good dog. This paragraph is made to fit within %.0f pixels. Testing a 1 character word. The quick brown fox jumps over the lazy dog.", wrap_width);
-            ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255,255,0,255));
-            ImGui::PopTextWrapPos();
+                ImGui::Text("Test paragraph 1:");
+                ImVec2 pos = ImGui::GetCursorScreenPos();
+                ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x + wrap_width, pos.y), ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight()), IM_COL32(255,0,255,255));
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
+                ImGui::Text("The lazy dog is a good dog. This paragraph is made to fit within %.0f pixels. Testing a 1 character word. The quick brown fox jumps over the lazy dog.", wrap_width);
+                ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255,255,0,255));
+                ImGui::PopTextWrapPos();
 
-            ImGui::Text("Test paragraph 2:");
-            pos = ImGui::GetCursorScreenPos();
-            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x + wrap_width, pos.y), ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight()), IM_COL32(255,0,255,255));
-            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
-            ImGui::Text("aaaaaaaa bbbbbbbb, c cccccccc,dddddddd. d eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
-            ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255,255,0,255));
-            ImGui::PopTextWrapPos();
+                ImGui::Text("Test paragraph 2:");
+                pos = ImGui::GetCursorScreenPos();
+                ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x + wrap_width, pos.y), ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight()), IM_COL32(255,0,255,255));
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
+                ImGui::Text("aaaaaaaa bbbbbbbb, c cccccccc,dddddddd. d eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
+                ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255,255,0,255));
+                ImGui::PopTextWrapPos();
 
-            ImGui::TreePop();
-        }
+                ImGui::TreePop();
+            }
 
-        if (ImGui::TreeNode("UTF-8 Text"))
-        {
-            // UTF-8 test with Japanese characters
-            // (needs a suitable font, try Arial Unicode or M+ fonts http://mplus-fonts.sourceforge.jp/mplus-outline-fonts/index-en.html)
-            // Most compiler appears to support UTF-8 in source code (with Visual Studio you need to save your file as 'UTF-8 without signature')
-            // However for the sake for maximum portability here we are *not* including raw UTF-8 character in this source file, instead we encode the string with hexadecimal constants.
-            // In your own application be reasonable and use UTF-8 in source or retrieve the data from file system!
-            // Note that characters values are preserved even if the font cannot be displayed, so you can safely copy & paste garbled characters into another application.
-            ImGui::TextWrapped("CJK text will only appears if the font was loaded with the appropriate CJK character ranges. Call io.Font->LoadFromFileTTF() manually to load extra character ranges.");
-            ImGui::Text("Hiragana: \xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93 (kakikukeko)");
-            ImGui::Text("Kanjis: \xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e (nihongo)");
-            static char buf[32] = "\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e";
-            ImGui::InputText("UTF-8 input", buf, IM_ARRAYSIZE(buf));
+            if (ImGui::TreeNode("UTF-8 Text"))
+            {
+                // UTF-8 test with Japanese characters
+                // (needs a suitable font, try Arial Unicode or M+ fonts http://mplus-fonts.sourceforge.jp/mplus-outline-fonts/index-en.html)
+                // - From C++11 you can use the u8"my text" syntax to encode literal strings as UTF-8
+                // - For earlier compiler, you may be able to encode your sources as UTF-8 (e.g. Visual Studio save your file as 'UTF-8 without signature')
+                // - HOWEVER, FOR THIS DEMO FILE, BECAUSE WE WANT TO SUPPORT COMPILER, WE ARE *NOT* INCLUDING RAW UTF-8 CHARACTERS IN THIS SOURCE FILE.
+                //   Instead we are encoding a few string with hexadecimal constants. Don't do this in your application!
+                // Note that characters values are preserved even by InputText() if the font cannot be displayed, so you can safely copy & paste garbled characters into another application.
+                ImGui::TextWrapped("CJK text will only appears if the font was loaded with the appropriate CJK character ranges. Call io.Font->LoadFromFileTTF() manually to load extra character ranges.");
+                ImGui::Text("Hiragana: \xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93 (kakikukeko)");
+                ImGui::Text("Kanjis: \xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e (nihongo)");
+                static char buf[32] = "\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e"; // "nihongo"
+                ImGui::InputText("UTF-8 input", buf, IM_ARRAYSIZE(buf));
+                ImGui::TreePop();
+            }
             ImGui::TreePop();
         }
 
@@ -545,126 +678,70 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        static int clicked = 0;
-        if (ImGui::Button("Button")) 
-            clicked++;
-        if (clicked & 1)
+
+        if (ImGui::TreeNode("Plots widgets"))
         {
-            ImGui::SameLine();
-            ImGui::Text("Thanks for clicking me!");
-        }
+            static bool animate = true;
+            ImGui::Checkbox("Animate", &animate);
 
-        static bool check = true;
-        ImGui::Checkbox("checkbox", &check);
-
-        static int e = 0;
-        ImGui::RadioButton("radio a", &e, 0); ImGui::SameLine();
-        ImGui::RadioButton("radio b", &e, 1); ImGui::SameLine();
-        ImGui::RadioButton("radio c", &e, 2);
-
-        // Color buttons, demonstrate using PushID() to add unique identifier in the ID stack, and changing style.
-        for (int i = 0; i < 7; i++)
-        {
-            if (i > 0) ImGui::SameLine();
-            ImGui::PushID(i);
-            ImGui::PushStyleColor(ImGuiCol_Button, ImColor::HSV(i/7.0f, 0.6f, 0.6f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImColor::HSV(i/7.0f, 0.7f, 0.7f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImColor::HSV(i/7.0f, 0.8f, 0.8f));
-            ImGui::Button("Click");
-            ImGui::PopStyleColor(3);
-            ImGui::PopID();
-        }
-
-        ImGui::Text("Hover over me");
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("I am a tooltip");
-
-        ImGui::SameLine();
-        ImGui::Text("- or me");
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text("I am a fancy tooltip");
             static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
-            ImGui::PlotLines("Curve", arr, IM_ARRAYSIZE(arr));
-            ImGui::EndTooltip();
+            ImGui::PlotLines("Frame Times", arr, IM_ARRAYSIZE(arr));
+
+            // Create a dummy array of contiguous float values to plot
+            // Tip: If your float aren't contiguous but part of a structure, you can pass a pointer to your first float and the sizeof() of your structure in the Stride parameter.
+            static float values[90] = { 0 };
+            static int values_offset = 0;
+            static float refresh_time = 0.0f;
+            if (!animate || refresh_time == 0.0f)
+                refresh_time = ImGui::GetTime();
+            while (refresh_time < ImGui::GetTime()) // Create dummy data at fixed 60 hz rate for the demo
+            {
+                static float phase = 0.0f;
+                values[values_offset] = cosf(phase);
+                values_offset = (values_offset+1) % IM_ARRAYSIZE(values);
+                phase += 0.10f*values_offset;
+                refresh_time += 1.0f/60.0f;
+            }
+            ImGui::PlotLines("Lines", values, IM_ARRAYSIZE(values), values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
+            ImGui::PlotHistogram("Histogram", arr, IM_ARRAYSIZE(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0,80));
+
+            // Use functions to generate output
+            // FIXME: This is rather awkward because current plot API only pass in indices. We probably want an API passing floats and user provide sample rate/count.
+            struct Funcs
+            {
+                static float Sin(void*, int i) { return sinf(i * 0.1f); }
+                static float Saw(void*, int i) { return (i & 1) ? 1.0f : -1.0f; }
+            };
+            static int func_type = 0, display_count = 70;
+            ImGui::Separator();
+            ImGui::PushItemWidth(100); ImGui::Combo("func", &func_type, "Sin\0Saw\0"); ImGui::PopItemWidth();
+            ImGui::SameLine();
+            ImGui::SliderInt("Sample count", &display_count, 1, 400);
+            float (*func)(void*, int) = (func_type == 0) ? Funcs::Sin : Funcs::Saw;
+            ImGui::PlotLines("Lines", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0,80));
+            ImGui::PlotHistogram("Histogram", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0,80));
+            ImGui::Separator();
+
+            // Animate a simple progress bar
+            static float progress = 0.0f, progress_dir = 1.0f;
+            if (animate)
+            {
+                progress += progress_dir * 0.4f * ImGui::GetIO().DeltaTime;
+                if (progress >= +1.1f) { progress = +1.1f; progress_dir *= -1.0f; }
+                if (progress <= -0.1f) { progress = -0.1f; progress_dir *= -1.0f; }
+            }
+
+            // Typically we would use ImVec2(-1.0f,0.0f) to use all available width, or ImVec2(width,0.0f) for a specified width. ImVec2(0.0f,0.0f) uses ItemWidth.
+            ImGui::ProgressBar(progress, ImVec2(0.0f,0.0f));
+            ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+            ImGui::Text("Progress Bar");
+
+            float progress_saturated = (progress < 0.0f) ? 0.0f : (progress > 1.0f) ? 1.0f : progress;
+            char buf[32];
+            sprintf(buf, "%d/%d", (int)(progress_saturated*1753), 1753);
+            ImGui::ProgressBar(progress, ImVec2(0.f,0.f), buf);
+            ImGui::TreePop();
         }
-
-        // Testing IMGUI_ONCE_UPON_A_FRAME macro
-        //for (int i = 0; i < 5; i++)
-        //{
-        //  IMGUI_ONCE_UPON_A_FRAME
-        //  {
-        //      ImGui::Text("This will be displayed only once.");
-        //  }
-        //}
-
-        ImGui::Separator();
-
-        ImGui::LabelText("label", "Value");
-
-        static int item = 1;
-        ImGui::Combo("combo", &item, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");   // Combo using values packed in a single constant string (for really quick combo)
-
-        const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ", "KKKK" };
-        static int item2 = -1;
-        ImGui::Combo("combo scroll", &item2, items, IM_ARRAYSIZE(items));   // Combo using proper array. You can also pass a callback to retrieve array value, no need to create/copy an array just for that.
-
-        {
-            static char str0[128] = "Hello, world!";
-            static int i0=123;
-            static float f0=0.001f;
-            ImGui::InputText("input text", str0, IM_ARRAYSIZE(str0));
-            ImGui::SameLine(); ShowHelpMarker("Hold SHIFT or use mouse to select text.\n" "CTRL+Left/Right to word jump.\n" "CTRL+A or double-click to select all.\n" "CTRL+X,CTRL+C,CTRL+V clipboard.\n" "CTRL+Z,CTRL+Y undo/redo.\n" "ESCAPE to revert.\n");
-
-            ImGui::InputInt("input int", &i0);
-            ImGui::SameLine(); ShowHelpMarker("You can apply arithmetic operators +,*,/ on numerical values.\n  e.g. [ 100 ], input \'*2\', result becomes [ 200 ]\nUse +- to subtract.\n");
-
-            ImGui::InputFloat("input float", &f0, 0.01f, 1.0f);
-
-            static float vec4a[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
-            ImGui::InputFloat3("input float3", vec4a);
-        }
-
-        {
-            static int i1=50, i2=42;
-            ImGui::DragInt("drag int", &i1, 1);
-            ImGui::SameLine(); ShowHelpMarker("Click and drag to edit value.\nHold SHIFT/ALT for faster/slower edit.\nDouble-click or CTRL+click to input value.");
-
-            ImGui::DragInt("drag int 0..100", &i2, 1, 0, 100, "%.0f%%");
-
-            static float f1=1.00f, f2=0.0067f;
-            ImGui::DragFloat("drag float", &f1, 0.005f);
-            ImGui::DragFloat("drag small float", &f2, 0.0001f, 0.0f, 0.0f, "%.06f ns");
-        }
-
-        {
-            static int i1=0;
-            ImGui::SliderInt("slider int", &i1, -1, 3);
-            ImGui::SameLine(); ShowHelpMarker("CTRL+click to input value.");
-
-            static float f1=0.123f, f2=0.0f;
-            ImGui::SliderFloat("slider float", &f1, 0.0f, 1.0f, "ratio = %.3f");
-            ImGui::SliderFloat("slider log float", &f2, -10.0f, 10.0f, "%.4f", 3.0f);
-            static float angle = 0.0f;
-            ImGui::SliderAngle("slider angle", &angle);
-        }
-
-        static float col1[3] = { 1.0f,0.0f,0.2f };
-        static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
-        ImGui::ColorEdit3("color 1", col1);
-        ImGui::SameLine(); ShowHelpMarker("Click on the colored square to open a color picker.\nRight-click on the colored square to show options.\nCTRL+click on individual component to input value.\n");
-
-        ImGui::ColorEdit4("color 2", col2);
-
-        const char* listbox_items[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
-        static int listbox_item_current = 1;
-        ImGui::ListBox("listbox\n(single select)", &listbox_item_current, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
-
-        //static int listbox_item_current2 = 2;
-        //ImGui::PushItemWidth(-1);
-        //ImGui::ListBox("##listbox2", &listbox_item_current2, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
-        //ImGui::PopItemWidth();
 
         if (ImGui::TreeNode("Color/Picker Widgets"))
         {
@@ -789,21 +866,15 @@ void ImGui::ShowTestWindow(bool* p_open)
 
         if (ImGui::TreeNode("Range Widgets"))
         {
-            ImGui::Unindent();
-
             static float begin = 10, end = 90;
             static int begin_i = 100, end_i = 1000;
             ImGui::DragFloatRange2("range", &begin, &end, 0.25f, 0.0f, 100.0f, "Min: %.1f %%", "Max: %.1f %%");
             ImGui::DragIntRange2("range int (no bounds)", &begin_i, &end_i, 5, 0, 0, "Min: %.0f units", "Max: %.0f units");
-
-            ImGui::Indent();
             ImGui::TreePop();
         }
 
         if (ImGui::TreeNode("Multi-component Widgets"))
         {
-            ImGui::Unindent();
-
             static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
             static int vec4i[4] = { 1, 5, 100, 255 };
 
@@ -830,13 +901,11 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::DragInt4("drag int4", vec4i, 1, 0, 255);
             ImGui::SliderInt4("slider int4", vec4i, 0, 255);
 
-            ImGui::Indent();
             ImGui::TreePop();
         }
 
         if (ImGui::TreeNode("Vertical Sliders"))
         {
-            ImGui::Unindent();
             const float spacing = 4;
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, spacing));
 
@@ -896,73 +965,8 @@ void ImGui::ShowTestWindow(bool* p_open)
             }
             ImGui::PopID();
             ImGui::PopStyleVar();
-
-            ImGui::Indent();
             ImGui::TreePop();
         }
-    }
-
-    if (ImGui::CollapsingHeader("Plots widgets"))
-    {
-        static bool animate = true;
-        ImGui::Checkbox("Animate", &animate);
-
-        static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
-        ImGui::PlotLines("Frame Times", arr, IM_ARRAYSIZE(arr));
-
-        // Create a dummy array of contiguous float values to plot
-        // Tip: If your float aren't contiguous but part of a structure, you can pass a pointer to your first float and the sizeof() of your structure in the Stride parameter.
-        static float values[90] = { 0 };
-        static int values_offset = 0;
-        static float refresh_time = 0.0f;
-        if (!animate || refresh_time == 0.0f)
-            refresh_time = ImGui::GetTime();
-        while (refresh_time < ImGui::GetTime()) // Create dummy data at fixed 60 hz rate for the demo
-        {
-            static float phase = 0.0f;
-            values[values_offset] = cosf(phase);
-            values_offset = (values_offset+1) % IM_ARRAYSIZE(values);
-            phase += 0.10f*values_offset;
-            refresh_time += 1.0f/60.0f;
-        }
-        ImGui::PlotLines("Lines", values, IM_ARRAYSIZE(values), values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
-        ImGui::PlotHistogram("Histogram", arr, IM_ARRAYSIZE(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0,80));
-
-        // Use functions to generate output
-        // FIXME: This is rather awkward because current plot API only pass in indices. We probably want an API passing floats and user provide sample rate/count.
-        struct Funcs
-        {
-            static float Sin(void*, int i) { return sinf(i * 0.1f); }
-            static float Saw(void*, int i) { return (i & 1) ? 1.0f : -1.0f; }
-        };
-        static int func_type = 0, display_count = 70;
-        ImGui::Separator();
-        ImGui::PushItemWidth(100); ImGui::Combo("func", &func_type, "Sin\0Saw\0"); ImGui::PopItemWidth();
-        ImGui::SameLine();
-        ImGui::SliderInt("Sample count", &display_count, 1, 400);
-        float (*func)(void*, int) = (func_type == 0) ? Funcs::Sin : Funcs::Saw;
-        ImGui::PlotLines("Lines", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0,80));
-        ImGui::PlotHistogram("Histogram", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0,80));
-        ImGui::Separator();
-
-        // Animate a simple progress bar
-        static float progress = 0.0f, progress_dir = 1.0f;
-        if (animate)
-        {
-            progress += progress_dir * 0.4f * ImGui::GetIO().DeltaTime;
-            if (progress >= +1.1f) { progress = +1.1f; progress_dir *= -1.0f; }
-            if (progress <= -0.1f) { progress = -0.1f; progress_dir *= -1.0f; }
-        }
-
-        // Typically we would use ImVec2(-1.0f,0.0f) to use all available width, or ImVec2(width,0.0f) for a specified width. ImVec2(0.0f,0.0f) uses ItemWidth.
-        ImGui::ProgressBar(progress, ImVec2(0.0f,0.0f));
-        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-        ImGui::Text("Progress Bar");
-
-        float progress_saturated = (progress < 0.0f) ? 0.0f : (progress > 1.0f) ? 1.0f : progress;
-        char buf[32];
-        sprintf(buf, "%d/%d", (int)(progress_saturated*1753), 1753);
-        ImGui::ProgressBar(progress, ImVec2(0.f,0.f), buf);
     }
 
     if (ImGui::CollapsingHeader("Layout"))
