@@ -673,17 +673,19 @@ void ImGui::ShowTestWindow(bool* p_open)
             static bool hdr = false;
             static bool alpha_preview = true;
             static bool alpha_half_preview = false;
+            static bool options_menu = true;
             ImGui::Checkbox("With HDR", &hdr); ImGui::SameLine(); ShowHelpMarker("Currently all this does is to lift the 0..1 limits on dragging widgets.");
             ImGui::Checkbox("With Alpha Preview", &alpha_preview);
             ImGui::Checkbox("With Half Alpha Preview", &alpha_half_preview);
-            int misc_flags = (hdr ? ImGuiColorEditFlags_HDR : 0) | (alpha_half_preview ? ImGuiColorEditFlags_AlphaPreviewHalf : (alpha_preview ? ImGuiColorEditFlags_AlphaPreview : 0));
+            ImGui::Checkbox("With Options Menu", &options_menu); ImGui::SameLine(); ShowHelpMarker("Right-click on the individual color widget to show options.");
+            int misc_flags = (hdr ? ImGuiColorEditFlags_HDR : 0) | (alpha_half_preview ? ImGuiColorEditFlags_AlphaPreviewHalf : (alpha_preview ? ImGuiColorEditFlags_AlphaPreview : 0)) | (options_menu ? 0 : ImGuiColorEditFlags_NoOptions);
 
             ImGui::Text("Color widget:");
-            ImGui::SameLine(); ShowHelpMarker("Click on the colored square to open a color picker.\nRight-click on the colored square to show options.\nCTRL+click on individual component to input value.\n");
-            ImGui::ColorEdit3("MyColor##1", (float*)&color, ImGuiColorEditFlags_HSV);
+            ImGui::SameLine(); ShowHelpMarker("Click on the colored square to open a color picker.\nCTRL+click on individual component to input value.\n");
+            ImGui::ColorEdit3("MyColor##1", (float*)&color, misc_flags);
 
-            ImGui::Text("Color widget with Alpha:");
-            ImGui::ColorEdit4("MyColor##2", (float*)&color, misc_flags);
+            ImGui::Text("Color widget HSV with Alpha:");
+            ImGui::ColorEdit4("MyColor##2", (float*)&color, ImGuiColorEditFlags_HSV | misc_flags);
 
             ImGui::Text("Color widget with Float Display:");
             ImGui::ColorEdit4("MyColor##2f", (float*)&color, ImGuiColorEditFlags_Float | misc_flags);
@@ -751,6 +753,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::Checkbox("With Side Preview", &side_preview);
             if (side_preview)
             {
+                ImGui::SameLine();
                 ImGui::Checkbox("With Ref Color", &ref_color);
                 if (ref_color)
                 {
@@ -759,14 +762,14 @@ void ImGui::ShowTestWindow(bool* p_open)
                 }
             }
             ImGui::Combo("Inputs Mode", &inputs_mode, "All Inputs\0No Inputs\0RGB Input\0HSV Input\0HEX Input\0");
-            ImGui::Combo("Picker Mode", &picker_mode, "Hue bar + SV rect\0Hue wheel + SV triangle\0");
-            ImGui::SameLine(); ShowHelpMarker("User can right-click the inputs and override edit mode.");
+            ImGui::Combo("Picker Mode", &picker_mode, "Auto/Current\0Hue bar + SV rect\0Hue wheel + SV triangle\0");
+            ImGui::SameLine(); ShowHelpMarker("User can right-click the picker to change mode.");
             ImGuiColorEditFlags flags = misc_flags;
             if (!alpha) flags |= ImGuiColorEditFlags_NoAlpha; // This is by default if you call ColorPicker3() instead of ColorPicker4()
             if (alpha_bar) flags |= ImGuiColorEditFlags_AlphaBar;
             if (!side_preview) flags |= ImGuiColorEditFlags_NoSidePreview;
-            if (picker_mode == 0) flags |= ImGuiColorEditFlags_PickerHueBar;
-            if (picker_mode == 1) flags |= ImGuiColorEditFlags_PickerHueWheel;
+            if (picker_mode == 1) flags |= ImGuiColorEditFlags_PickerHueBar;
+            if (picker_mode == 2) flags |= ImGuiColorEditFlags_PickerHueWheel;
             if (inputs_mode == 1) flags |= ImGuiColorEditFlags_NoInputs;
             if (inputs_mode == 2) flags |= ImGuiColorEditFlags_RGB;
             if (inputs_mode == 3) flags |= ImGuiColorEditFlags_HSV;
