@@ -10483,7 +10483,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Text("HoveredRootWindow: '%s'", g.HoveredRootWindow ? g.HoveredRootWindow->Name : "NULL");
             ImGui::Text("HoveredID: 0x%08X/0x%08X", g.HoveredId, g.HoveredIdPreviousFrame); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
             ImGui::Text("ActiveID: 0x%08X/0x%08X", g.ActiveId, g.ActiveIdPreviousFrame);
-            ImGui::Text("ActiveIdWindow: '%s", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
+            ImGui::Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
             ImGui::TreePop();
         }
     }
