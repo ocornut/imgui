@@ -449,7 +449,7 @@ struct ImGuiContext
     ImGuiTextEditState      InputTextState;
     ImFont                  InputTextPasswordFont;
     ImGuiID                 ScalarAsInputTextId;                // Temporary text input when CTRL+clicking on a slider, etc.
-    ImGuiStorage            ColorEditModeStorage;               // Store user selection of color edit mode
+    ImGuiColorEditFlags     ColorEditOptions;                   // Store user options for color edit widgets
     ImVec4                  ColorPickerRef;
     float                   DragCurrentValue;                   // Currently dragged value, always float, not rounded by end-user precision settings
     ImVec2                  DragLastMouseDelta;
@@ -520,6 +520,7 @@ struct ImGuiContext
         SetNextTreeNodeOpenCond = 0;
 
         ScalarAsInputTextId = 0;
+        ColorEditOptions = ImGuiColorEditFlags__OptionsDefault;
         DragCurrentValue = 0.0f;
         DragLastMouseDelta = ImVec2(0.0f, 0.0f);
         DragSpeedDefaultRatio = 1.0f / 100.0f;
