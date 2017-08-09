@@ -363,8 +363,6 @@ namespace ImGui
     IMGUI_API void          Value(const char* prefix, int v);
     IMGUI_API void          Value(const char* prefix, unsigned int v);
     IMGUI_API void          Value(const char* prefix, float v, const char* float_format = NULL);
-    IMGUI_API void          ValueColor(const char* prefix, const ImVec4& v);
-    IMGUI_API void          ValueColor(const char* prefix, ImU32 v);
 
     // Tooltips
     IMGUI_API void          SetTooltip(const char* fmt, ...) IM_PRINTFARGS(1);                  // set text tooltip under mouse-cursor, typically use with ImGui::IsItemHovered(). overidde any previous call to SetTooltip().
