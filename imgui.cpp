@@ -26,11 +26,12 @@
    - I integrated ImGui in my engine and the text or lines are blurry..
    - I integrated ImGui in my engine and some elements are clipping or disappearing when I move windows around..
    - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on the purpose of labels/IDs.
-   - How can I tell when ImGui wants my mouse/keyboard inputs and when I can pass them to my application?
+   - How can I tell when ImGui wants my mouse/keyboard inputs VS when I can pass them to my application?
    - How can I load a different font than the default?
    - How can I easily use icons in my application?
    - How can I load multiple fonts?
    - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
+   - How can I preserve my ImGui context across reloading a DLL? (loss of the global/static variables)
    - How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
  - ISSUES & TODO-LIST
  - CODE
@@ -405,7 +406,7 @@
       e.g. when displaying a single object that may change over time (1-1 relationship), using a static string as ID will preserve your node open/closed state when the targeted object change.
       e.g. when displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state differently. experiment and see what makes more sense!
 
- Q: How can I tell when ImGui wants my mouse/keyboard inputs and when I can pass them to my application?
+ Q: How can I tell when ImGui wants my mouse/keyboard inputs VS when I can pass them to my application?
  A: You can read the 'io.WantCaptureMouse'/'io.WantCaptureKeyboard'/'ioWantTextInput' flags from the ImGuiIO structure. 
     - When 'io.WantCaptureMouse' or 'io.WantCaptureKeyboard' flags are set you may want to discard/hide the inputs from the rest of your application.
     - When 'io.WantTextInput' is set to may want to notify your OS to popup an on-screen keyboard, if available (e.g. on a mobile phone, or console without a keyboard).
@@ -466,9 +467,13 @@
 
     As for text input, depends on you passing the right character code to io.AddInputCharacter(). The example applications do that.
 
+ Q: How can I preserve my ImGui context across reloading a DLL? (loss of the global/static variables)
+ A: Create your own context 'ctx = CreateContext()' + 'SetCurrentContext(ctx)' and your own font atlas 'ctx->GetIO().Fonts = new ImFontAtlas()' so you don't rely on the default globals.
+
  Q: How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
  A: The easiest way is to create a dummy window. Call Begin() with NoTitleBar|NoResize|NoMove|NoScrollbar|NoSavedSettings|NoInputs flag, zero background alpha, 
     then retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
+    You can also perfectly create a standalone ImDrawList instance _but_ you need ImGui to be initialized because ImDrawList pulls from ImGui data to retrieve the coordinates of the white pixel.
 
  - tip: the construct 'IMGUI_ONCE_UPON_A_FRAME { ... }' will run the block of code only once a frame. You can use it to quickly add custom UI in the middle of a deep nested inner loop in your code.
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug"
@@ -740,12 +745,13 @@ static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 // Context
 //-----------------------------------------------------------------------------
 
-// Default font atlas storage .
+// Default font atlas storage.
 // New contexts always point by default to this font atlas. It can be changed by reassigning the GetIO().Fonts variable.
 static ImFontAtlas      GImDefaultFontAtlas;
 
 // Default context storage + current context pointer.
 // Implicitely used by all ImGui functions. Always assumed to be != NULL. Change to a different context by calling ImGui::SetCurrentContext()
+// If you are hot-reloading this code in a DLL you will lose the static/global variables. Create your own context+font atlas instead of relying on those default (see FAQ entry "How can I preserve my ImGui context across reloading a DLL?").
 // ImGui is currently not thread-safe because of this variable. If you want thread-safety to allow N threads to access N different contexts, you might work around it by:
 // - Having multiple instances of the ImGui code compiled inside different namespace (easiest/safest, if you have a finite number of contexts)
 // - or: Changing this variable to be TLS. You may #define GImGui in imconfig.h for further custom hackery. Future development aim to make this context pointer explicit to all calls. Also read https://github.com/ocornut/imgui/issues/586
