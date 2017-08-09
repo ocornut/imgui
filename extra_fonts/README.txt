@@ -24,6 +24,7 @@
    // Usage, e.g.
    ImGui::Text("%s Search", ICON_FA_SEARCH);
 
+
 ---------------------------------
  FONTS LOADING INSTRUCTIONS
 ---------------------------------
@@ -85,10 +86,26 @@
 
 
 ---------------------------------
+ BUILDING CUSTOM GLYPH RANGES
+---------------------------------
+
+ You can use the ImFontAtlas::GlyphRangesBuilder helper to create glyph ranges based on text input.
+ For exemple: for a game where your script is known, if you can feed your entire script to it and only build the characters the game needs. 
+
+   ImVector<ImWchar> ranges;
+   ImFontAtlas::GlyphRangesBuilder builder;
+   builder.AddText("Hello world");                        // Add a string (here "Hello world" contains 7 unique characters)
+   builder.AddChar(0x7262);                               // Add a specific character
+   builder.AddRanges(io.Fonts->GetGlyphRangesJapanese()); // Add one of the default ranges
+   builder.BuildRanges(&ranges);                          // Build the final result (ordered ranges with all the unique characters submitted)
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, ranges.Data);
+
+
+---------------------------------
  REMAPPING CODEPOINTS
 ---------------------------------
 
- All your strings needs to use UTF-8 encoding. Specifying literal in your source code using a local code page (such as CP-923 for Japanese CP-1251 for Cyrillic) will not work.
+ All your strings needs to use UTF-8 encoding. Specifying literal in your source code using a local code page (such as CP-923 for Japanese CP-1251 for Cyrillic) will NOT work!
  In C++11 you can encode a string literal in UTF-8 by using the u8"hello" syntax. Otherwise you can convert yourself to UTF-8 or load text data from file already saved as UTF-8.
  You can also try to remap your local codepage characters to their Unicode codepoint using font->AddRemapChar(), but international users may have problems reading/editing your source code.
 
@@ -168,6 +185,9 @@
    
  Inconsolata
    http://www.levien.com/type/myfonts/inconsolata.html
+
+ Google Noto Fonts (worldwide languages)
+   https://www.google.com/get/noto/
 
  Adobe Source Code Pro: Monospaced font family for user interface and coding environments
    https://github.com/adobe-fonts/source-code-pro
