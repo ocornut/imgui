@@ -17,11 +17,11 @@
  - END-USER GUIDE
  - PROGRAMMER GUIDE (read me!)
    - Read first
-   - Getting started with integrating imgui in your code/engine
+   - How to update to a newer version of ImGui
+   - Getting started with integrating ImGui in your code/engine
  - API BREAKING CHANGES (read me when you update!)
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - How can I help?
-   - How do I update to a newer version of ImGui?
    - What is ImTextureID and how do I display an image?
    - I integrated ImGui in my engine and the text or lines are blurry..
    - I integrated ImGui in my engine and some elements are clipping or disappearing when I move windows around..
@@ -40,19 +40,18 @@
  MISSION STATEMENT
  =================
 
- - easy to use to create code-driven and data-driven tools
- - easy to use to create ad hoc short-lived tools and long-lived, more elaborate tools
- - easy to hack and improve
- - minimize screen real-estate usage
- - minimize setup and maintenance
- - minimize state storage on user side
- - portable, minimize dependencies, run on target (consoles, phones, etc.)
- - efficient runtime (NB- we do allocate when "growing" content - creating a window / opening a tree node for the first time, etc. - but a typical frame won't allocate anything)
- - read about immediate-mode gui principles @ http://mollyrocket.com/861, http://mollyrocket.com/forums/index.html
+ - Easy to use to create code-driven and data-driven tools
+ - Easy to use to create ad hoc short-lived tools and long-lived, more elaborate tools
+ - Easy to hack and improve
+ - Minimize screen real-estate usage
+ - Minimize setup and maintenance
+ - Minimize state storage on user side
+ - Portable, minimize dependencies, run on target (consoles, phones, etc.)
+ - Efficient runtime and memory consumption (NB- we do allocate when "growing" content - creating a window / opening a tree node for the first time, etc. - but a typical frame won't allocate anything)
 
  Designed for developers and content-creators, not the typical end-user! Some of the weaknesses includes:
- - doesn't look fancy, doesn't animate
- - limited layout features, intricate layouts are typically crafted in code
+ - Doesn't look fancy, doesn't animate
+ - Limited layout features, intricate layouts are typically crafted in code
 
 
  END-USER GUIDE
@@ -87,65 +86,110 @@
  - Read the FAQ below this section!
  - Your code creates the UI, if your code doesn't run the UI is gone! == very dynamic UI, no construction/destructions steps, less data retention on your side, no state duplication, less sync, less bugs.
  - Call and read ImGui::ShowTestWindow() for demo code demonstrating most features.
- - Customization: PushStyleColor()/PushStyleVar() or the style editor to tweak the look of the interface (e.g. if you want a more compact UI or a different color scheme).
+ - You can learn about immediate-mode gui principles at http://www.johno.se/book/imgui.html or watch http://mollyrocket.com/861
+
+ HOW TO UPDATE TO A NEWER VERSION OF IMGUI
+
+ - Overwrite all the sources files except for imconfig.h (if you have made modification to your copy of imconfig.h)
+ - Read the "API BREAKING CHANGES" section (below). This is where we list occasional API breaking changes. 
+   If a function/type has been renamed / or marked obsolete, try to fix the name in your code before it is permanently removed from the public API.
+   If you have a problem with a missing function/symbols, search for its name in the code, there will likely be a comment about it. 
+   Please report any issue to the GitHub page!
+ - Try to keep your copy of dear imgui reasonably up to date.
 
  GETTING STARTED WITH INTEGRATING IMGUI IN YOUR CODE/ENGINE
 
- - See examples/ folder for standalone sample applications. Prefer reading examples/opengl_example/ first as it is the simplest.
-   You may be able to grab and copy a ready made imgui_impl_*** file from the examples/.
- - Init: call ImGui::GetIO() to retrieve the ImGuiIO structure and fill the fields marked 'Settings'.
- - Init: call io.Fonts->GetTexDataAsRGBA32(...) and load the font texture pixels into graphics memory.
+ - Add the ImGui source files to your projects, using your preferred build system. It is recommended you build the .cpp files as part of your project and not as a library.
+ - You can later customize the imconfig.h file to tweak some compilation time behavior, such as integrating imgui types with your own maths types.
+ - See examples/ folder for standalone sample applications. To understand the integration process, you can read examples/opengl2_example/ because it is short, 
+   then switch to the one more appropriate to your use case.
+ - You may be able to grab and copy a ready made imgui_impl_*** file from the examples/.
+ - When using ImGui, your programming IDE if your friend: follow the declaration of variables, functions and types to find comments about them.
+
+ - Init: retrieve the ImGuiIO structure with ImGui::GetIO() and fill the fields marked 'Settings': at minimum you need to set io.DisplaySize (application resolution).
+   Later on you will fill your keyboard mapping, clipboard handlers, and other advanced features but for a basic integration you don't need to worry about it all.
+ - Init: call io.Fonts->GetTexDataAsRGBA32(...), it will build the font atlas texture, then load the texture pixels into graphics memory.
  - Every frame:
-    1/ in your mainloop or right after you got your keyboard/mouse info, call ImGui::GetIO() and fill the fields marked 'Input'
-    2/ call ImGui::NewFrame() as early as you can!
-    3/ use any ImGui function you want between NewFrame() and Render()
-    4/ call ImGui::Render() as late as you can to end the frame and finalize render data. it will call your RenderDrawListFn handler that you set in the IO structure.
+    - In your main loop as early a possible, fill the IO fields marked 'Input' (e.g. mouse position, buttons, keyboard info, etc.)
+    - Call ImGui::NewFrame() to begin the imgui frame
+    - You can use any ImGui function you want between NewFrame() and Render()
+    - Call ImGui::Render() as late as you can to end the frame and finalize render data. it will call your io.RenderDrawListFn handler.
        (if you don't need to render, you still need to call Render() and ignore the callback, or call EndFrame() instead. if you call neither some aspects of windows focusing/moving will appear broken.)
  - All rendering information are stored into command-lists until ImGui::Render() is called.
  - ImGui never touches or knows about your GPU state. the only function that knows about GPU is the RenderDrawListFn handler that you provide.
  - Effectively it means you can create widgets at any time in your code, regardless of considerations of being in "update" vs "render" phases of your own application.
  - Refer to the examples applications in the examples/ folder for instruction on how to setup your code.
- - A typical application skeleton may be:
+ - A minimal application skeleton may be:
 
      // Application init
      ImGuiIO& io = ImGui::GetIO();
      io.DisplaySize.x = 1920.0f;
      io.DisplaySize.y = 1280.0f;
-     io.IniFilename = "imgui.ini";
-     io.RenderDrawListsFn = my_render_function;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
-     // TODO: Fill others settings of the io structure
+     io.RenderDrawListsFn = MyRenderFunction;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
+     // TODO: Fill others settings of the io structure later.
 
      // Load texture atlas (there is a default font so you don't need to care about choosing a font yet)
      unsigned char* pixels;
      int width, height;
      io.Fonts->GetTexDataAsRGBA32(pixels, &width, &height);
-     // TODO: At this points you've got a texture pointed to by 'pixels' and you need to upload that your your graphic system
-     // TODO: Store your texture pointer/identifier (whatever your engine uses) in 'io.Fonts->TexID'
+     // TODO: At this points you've got the texture data and you need to upload that your your graphic system:
+     MyTexture* texture = MyEngine::CreateTextureFromMemoryPixels(pixels, width, height, TEXTURE_TYPE_RGBA)
+     // TODO: Store your texture pointer/identifier (whatever your engine uses) in 'io.Fonts->TexID'. This will be passed back to your via the renderer.
+     io.Fonts->TexID = (void*)texture;
 
      // Application main loop
      while (true)
      {
-       // 1) get low-level inputs (e.g. on Win32, GetKeyboardState(), or poll your events, etc.)
-       // TODO: fill all fields of IO structure and call NewFrame
-       ImGuiIO& io = ImGui::GetIO();
-       io.DeltaTime = 1.0f/60.0f;
-       io.MousePos = mouse_pos;
-       io.MouseDown[0] = mouse_button_0;
-       io.MouseDown[1] = mouse_button_1;
-       io.KeysDown[i] = ...
+        // Setup low-level inputs (e.g. on Win32, GetKeyboardState(), or write to those fields from your Windows message loop handlers, etc.)
+        ImGuiIO& io = ImGui::GetIO();
+        io.DeltaTime = 1.0f/60.0f;
+        io.MousePos = mouse_pos;
+        io.MouseDown[0] = mouse_button_0;
+        io.MouseDown[1] = mouse_button_1;
 
-       // 2) call NewFrame(), after this point you can use ImGui::* functions anytime
-       ImGui::NewFrame();
+        // Call NewFrame(), after this point you can use ImGui::* functions anytime
+        ImGui::NewFrame();
 
-       // 3) most of your application code here
-       MyGameUpdate(); // may use any ImGui functions, e.g. ImGui::Begin("My window"); ImGui::Text("Hello, world!"); ImGui::End();
-       MyGameRender(); // may use any ImGui functions
+        // Most of your application code here
+        MyGameUpdate(); // may use any ImGui functions, e.g. ImGui::Begin("My window"); ImGui::Text("Hello, world!"); ImGui::End();
+        MyGameRender(); // may use any ImGui functions as well!
      
-       // 4) render & swap video buffers
-       ImGui::Render();
-       SwapBuffers();
+        // Render & swap video buffers
+        ImGui::Render();
+        SwapBuffers();
      }
 
+ - A minimal render function skeleton may be:
+
+    void void MyRenderFunction(ImDrawData* draw_data)(ImDrawData* draw_data)
+    {
+       // TODO: Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
+       // TODO: Setup viewport, orthographic projection matrix
+       // TODO: Setup shader: vertex { float2 pos, float2 uv, u32 color }, fragment shader sample color from 1 texture, multiply by vertex color.
+       for (int n = 0; n < draw_data->CmdListsCount; n++)
+       {
+          const ImDrawVert* vtx_buffer = cmd_list->VtxBuffer.Data;  // vertex buffer generated by ImGui
+          const ImDrawIdx* idx_buffer = cmd_list->IdxBuffer.Data;   // index buffer generated by ImGui
+          for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+          {
+             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+             if (pcmd->UserCallback)
+             {
+                 pcmd->UserCallback(cmd_list, pcmd);
+             }
+             else
+             {
+                 // Render 'pcmd->ElemCount/3' texture triangles
+                 MyEngineBindTexture(pcmd->TextureId);
+                 MyEngineScissor((int)pcmd->ClipRect.x, (int)pcmd->ClipRect.y, (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
+                 MyEngineDrawIndexedTriangles(pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer, vtx_buffer);
+             }
+             idx_buffer += pcmd->ElemCount;
+          }
+       }
+    }
+
+ - The examples/ folders contains many functional implementation of the pseudo-code above.
  - When calling NewFrame(), the 'io.WantCaptureMouse'/'io.WantCaptureKeyboard'/'io.WantTextInput' flags are updated. 
    They tell you if ImGui intends to use your inputs. So for example, if 'io.WantCaptureMouse' is set you would typically want to hide 
    mouse inputs from the rest of your application. Read the FAQ below for more information about those flags.
@@ -281,21 +325,6 @@
  Q: How can I help?
  A: - If you are experienced enough with ImGui and with C/C++, look at the todo list and see how you want/can help!
     - Become a Patron/donate! Convince your company to become a Patron or provide serious funding for development time! See http://www.patreon.com/imgui
-
- Q: How do I update to a newer version of ImGui?
- A: Overwrite the following files:
-      imgui.cpp
-      imgui.h
-      imgui_demo.cpp
-      imgui_draw.cpp
-      imgui_internal.h
-      stb_rect_pack.h
-      stb_textedit.h
-      stb_truetype.h
-    Don't overwrite imconfig.h if you have made modification to your copy.
-    If you have a problem with a missing function/symbols, search for its name in the code, there will likely be a comment about it. 
-    Check the "API BREAKING CHANGES" sections for a list of occasional API breaking changes. 
-    Please report any issue to the GitHub page!
 
  Q: What is ImTextureID and how do I display an image?
  A: ImTextureID is a void* used to pass renderer-agnostic texture references around until it hits your render function.
