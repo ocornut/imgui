@@ -2633,9 +2633,12 @@ static void SaveIniSettingsToDisk(const char* ini_filename)
         if (window->Flags & ImGuiWindowFlags_NoSavedSettings)
             continue;
         ImGuiIniData* settings = FindWindowSettings(window->Name);
+     // Test that the pointer is not null
+     if (settings) {
         settings->Pos = window->Pos;
         settings->Size = window->SizeFull;
         settings->Collapsed = window->Collapsed;
+     }
     }
 
     // Write .ini file
