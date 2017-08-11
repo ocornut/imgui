@@ -425,17 +425,17 @@ struct ImGuiContext
     ImVec2                  SetNextWindowSizeVal;
     ImVec2                  SetNextWindowContentSizeVal;
     bool                    SetNextWindowCollapsedVal;
-    ImGuiSetCond            SetNextWindowPosCond;
-    ImGuiSetCond            SetNextWindowSizeCond;
-    ImGuiSetCond            SetNextWindowContentSizeCond;
-    ImGuiSetCond            SetNextWindowCollapsedCond;
+    ImGuiCond               SetNextWindowPosCond;
+    ImGuiCond               SetNextWindowSizeCond;
+    ImGuiCond               SetNextWindowContentSizeCond;
+    ImGuiCond               SetNextWindowCollapsedCond;
     ImRect                  SetNextWindowSizeConstraintRect;           // Valid if 'SetNextWindowSizeConstraint' is true
     ImGuiSizeConstraintCallback SetNextWindowSizeConstraintCallback;
-    void*                       SetNextWindowSizeConstraintCallbackUserData;
+    void*                   SetNextWindowSizeConstraintCallbackUserData;
     bool                    SetNextWindowSizeConstraint;
     bool                    SetNextWindowFocus;
     bool                    SetNextTreeNodeOpenVal;
-    ImGuiSetCond            SetNextTreeNodeOpenCond;
+    ImGuiCond               SetNextTreeNodeOpenCond;
 
     // Render
     ImDrawData              RenderDrawData;                     // Main ImDrawData instance to pass render information to the user
@@ -666,9 +666,9 @@ struct IMGUI_API ImGuiWindow
     bool                    AutoFitOnlyGrows;
     int                     AutoPosLastDirection;
     int                     HiddenFrames;
-    int                     SetWindowPosAllowFlags;             // bit ImGuiSetCond_*** specify if SetWindowPos() call will succeed with this particular flag.
-    int                     SetWindowSizeAllowFlags;            // bit ImGuiSetCond_*** specify if SetWindowSize() call will succeed with this particular flag.
-    int                     SetWindowCollapsedAllowFlags;       // bit ImGuiSetCond_*** specify if SetWindowCollapsed() call will succeed with this particular flag.
+    ImGuiCond               SetWindowPosAllowFlags;             // store condition flags for next SetWindowPos() call.
+    ImGuiCond               SetWindowSizeAllowFlags;            // store condition flags for next SetWindowSize() call.
+    ImGuiCond               SetWindowCollapsedAllowFlags;       // store condition flags for next SetWindowCollapsed() call.
     bool                    SetWindowPosCenterWanted;
 
     ImGuiDrawContext        DC;                                 // Temporary per-window data, reset at the beginning of the frame
