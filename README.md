@@ -122,6 +122,7 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 - [Jari Komppa's tutorial on building an ImGui library](http://iki.fi/sol/imgui/).
 - [Casey Muratori's original video that popularized the concept](https://mollyrocket.com/861).
 - [Nicolas Guillemot's CppCon'16 flashtalk about Dear ImGui](https://www.youtube.com/watch?v=LSRJ1jZq90k).
+- [Thierry Excoffier's Zero Memory Widget](http://perso.univ-lyon1.fr/thierry.excoffier/ZMW/).
 
 See the [Links page](https://github.com/ocornut/imgui/wiki/Links) for third-party bindings to different languages and frameworks.
 
@@ -139,7 +140,6 @@ Frequently Asked Question (FAQ)
 
 The library started its life and is best known as "ImGui" only due to the fact that I didn't give it a proper name when I released it. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations. It seemed confusing and unfair to hog the name. To reduce the ambiguity without affecting existing codebases, I have decided on an alternate, longer name "dear imgui" that people can use to refer to this specific library in ambiguous situations.
 
-<b>How do I update to a newer version of ImGui?</b>
 <br><b>What is ImTextureID and how do I display an image?</b>
 <br><b>I integrated ImGui in my engine and the text or lines are blurry..</b>
 <br><b>I integrated ImGui in my engine and some elements are disappearing when I move windows around..</b>
