@@ -1695,6 +1695,44 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesThai()
 }
 
 //-----------------------------------------------------------------------------
+// ImFontAtlas::GlyphRangesBuilder
+//-----------------------------------------------------------------------------
+
+void ImFontAtlas::GlyphRangesBuilder::AddText(const char* text, const char* text_end)
+{
+    while (text_end ? (text < text_end) : *text)
+    {
+        unsigned int c = 0;
+        int c_len = ImTextCharFromUtf8(&c, text, text_end);
+        text += c_len;
+        if (c_len == 0)
+            break;
+        if (c < 0x10000)
+            AddChar((ImWchar)c);
+    }
+}
+
+void ImFontAtlas::GlyphRangesBuilder::AddRanges(const ImWchar* ranges)
+{
+    for (; ranges[0]; ranges += 2)
+        for (ImWchar c = ranges[0]; c <= ranges[1]; c++)
+            AddChar(c);
+}
+
+void ImFontAtlas::GlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
+{
+    for (int n = 0; n < 0x10000; n++)
+        if (GetBit(n))
+        {
+            out_ranges->push_back((ImWchar)n);
+            while (n < 0x10000 && GetBit(n + 1))
+                n++;
+            out_ranges->push_back((ImWchar)n);
+        }
+    out_ranges->push_back(0);
+}
+
+//-----------------------------------------------------------------------------
 // ImFont
 //-----------------------------------------------------------------------------
 

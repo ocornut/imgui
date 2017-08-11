@@ -144,11 +144,12 @@ The library started its life and is best known as "ImGui" only due to the fact t
 <br><b>I integrated ImGui in my engine and the text or lines are blurry..</b>
 <br><b>I integrated ImGui in my engine and some elements are disappearing when I move windows around..</b>
 <br><b>How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on the purpose of labels/IDs.</b>
-<br><b>How can I tell when ImGui wants my mouse/keyboard inputs and when I can pass them to my application?</b>
+<br><b>How can I tell when ImGui wants my mouse/keyboard inputs VS when I can pass them to my application?</b>
 <br><b>How can I load a different font than the default?</b>
 <br><b>How can I easily use icons in my application?</b>
 <br><b>How can I load multiple fonts?</b>
 <br><b>How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?</b>
+<br><b>How can I preserve my ImGui context across reloading a DLL? (loss of the global/static variables)</b>
 <br><b>How can I use the drawing facilities without an ImGui window? (using ImDrawList API)</b>
 
 See the FAQ in imgui.cpp for answers.
