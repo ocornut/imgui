@@ -25,7 +25,7 @@
    - What is ImTextureID and how do I display an image?
    - I integrated ImGui in my engine and the text or lines are blurry..
    - I integrated ImGui in my engine and some elements are clipping or disappearing when I move windows around..
-   - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on the purpose of labels/IDs.
+   - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on labels/IDs.
    - How can I tell when ImGui wants my mouse/keyboard inputs VS when I can pass them to my application?
    - How can I load a different font than the default?
    - How can I easily use icons in my application?
@@ -344,7 +344,7 @@
  Q: I integrated ImGui in my engine and some elements are clipping or disappearing when I move windows around..
  A: Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1=left,y1=top,x2=right,y2=bottom) and NOT as (x1,y1,width,height).
 
- Q: Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
+ Q: Can I have multiple widgets with the same label? Can I have widget without a label?
  A: Yes. A primer on the use of labels/IDs in ImGui..
 
    - Elements that are not clickable, such as Text() items don't need an ID.
@@ -2633,6 +2633,8 @@ static void SaveIniSettingsToDisk(const char* ini_filename)
         if (window->Flags & ImGuiWindowFlags_NoSavedSettings)
             continue;
         ImGuiIniData* settings = FindWindowSettings(window->Name);
+        if (!settings)  // This will only return NULL in the rare instance where the window was first created with ImGuiWindowFlags_NoSavedSettings then had the flag disabled later on. We don't bind settings in this case (bug #1000).
+            continue;
         settings->Pos = window->Pos;
         settings->Size = window->SizeFull;
         settings->Collapsed = window->Collapsed;
