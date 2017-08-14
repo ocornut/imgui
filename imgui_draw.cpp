@@ -678,7 +678,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     }
 }
 
-void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int amin, int amax)
+void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int a_min_of_12, int a_max_of_12)
 {
     static ImVec2 circle_vtx[12];
     static bool circle_vtx_builds = false;
@@ -694,15 +694,15 @@ void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int amin, int
         circle_vtx_builds = true;
     }
 
-    if (amin > amax) return;
+    if (a_min_of_12 > a_max_of_12) return;
     if (radius == 0.0f)
     {
         _Path.push_back(centre);
     }
     else
     {
-        _Path.reserve(_Path.Size + (amax - amin + 1));
-        for (int a = amin; a <= amax; a++)
+        _Path.reserve(_Path.Size + (a_max_of_12 - a_min_of_12 + 1));
+        for (int a = a_min_of_12; a <= a_max_of_12; a++)
         {
             const ImVec2& c = circle_vtx[a % circle_vtx_count];
             _Path.push_back(ImVec2(centre.x + c.x * radius, centre.y + c.y * radius));
@@ -1878,6 +1878,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
     float line_width = 0.0f;
     float word_width = 0.0f;
     float blank_width = 0.0f;
+    wrap_width /= scale; // We work with unscaled widths to avoid scaling every characters
 
     const char* word_end = text;
     const char* prev_word_end = NULL;
@@ -1911,7 +1912,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             }
         }
 
-        const float char_width = ((int)c < IndexXAdvance.Size ? IndexXAdvance[(int)c] : FallbackXAdvance) * scale;
+        const float char_width = ((int)c < IndexXAdvance.Size ? IndexXAdvance[(int)c] : FallbackXAdvance);
         if (ImCharIsSpace(c))
         {
             if (inside_word)
@@ -2059,10 +2060,8 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         float scale = (size >= 0.0f) ? (size / FontSize) : 1.0f;
         pos.x = (float)(int)pos.x + DisplayOffset.x;
         pos.y = (float)(int)pos.y + DisplayOffset.y;
-        ImVec2 pos_tl(pos.x + glyph->X0 * scale, pos.y + glyph->Y0 * scale);
-        ImVec2 pos_br(pos.x + glyph->X1 * scale, pos.y + glyph->Y1 * scale);
         draw_list->PrimReserve(6, 4);
-        draw_list->PrimRectUV(pos_tl, pos_br, ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
+        draw_list->PrimRectUV(ImVec2(pos.x + glyph->X0 * scale, pos.y + glyph->Y0 * scale), ImVec2(pos.x + glyph->X1 * scale, pos.y + glyph->Y1 * scale), ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
     }
 }
 

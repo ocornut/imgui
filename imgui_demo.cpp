@@ -1489,6 +1489,8 @@ void ImGui::ShowTestWindow(bool* p_open)
 
     if (ImGui::CollapsingHeader("Columns"))
     {
+        ImGui::PushID("Columns");
+
         // Basic columns
         if (ImGui::TreeNode("Basic"))
         {
@@ -1636,6 +1638,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::Separator();
             ImGui::TreePop();
         }
+        ImGui::PopID();
     }
 
     if (ImGui::CollapsingHeader("Filtering"))
@@ -1799,7 +1802,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
     if (ImGui::TreeNode("Rendering"))
     {
-        ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines);
+        ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines); ImGui::SameLine(); ShowHelpMarker("When disabling anti-aliasing lines, you'll probably want to disable borders in your style as well.");
         ImGui::Checkbox("Anti-aliased shapes", &style.AntiAliasedShapes);
         ImGui::PushItemWidth(100);
         ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, FLT_MAX, NULL, 2.0f);
@@ -2321,6 +2324,7 @@ struct ExampleAppConsole
         if (ImGui::SmallButton("Add Dummy Text")) { AddLog("%d some text", Items.Size); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine();
         if (ImGui::SmallButton("Add Dummy Error")) AddLog("[error] something went wrong"); ImGui::SameLine();
         if (ImGui::SmallButton("Clear")) ClearLog(); ImGui::SameLine();
+        bool copy_to_clipboard = ImGui::SmallButton("Copy"); ImGui::SameLine();
         if (ImGui::SmallButton("Scroll to bottom")) ScrollToBottom = true;
         //static float t = 0.0f; if (ImGui::GetTime() - t > 0.02f) { t = ImGui::GetTime(); AddLog("Spam %f", t); }
 
@@ -2351,6 +2355,8 @@ struct ExampleAppConsole
         // and appending newly elements as they are inserted. This is left as a task to the user until we can manage to improve this example code!
         // If your items are of variable size you may want to implement code similar to what ImGuiListClipper does. Or split your data into fixed height items to allow random-seeking into your list.
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,1)); // Tighten spacing
+        if (copy_to_clipboard)
+            ImGui::LogToClipboard();
         for (int i = 0; i < Items.Size; i++)
         {
             const char* item = Items[i];
@@ -2363,6 +2369,8 @@ struct ExampleAppConsole
             ImGui::TextUnformatted(item);
             ImGui::PopStyleColor();
         }
+        if (copy_to_clipboard)
+            ImGui::LogFinish();
         if (ScrollToBottom)
             ImGui::SetScrollHere();
         ScrollToBottom = false;

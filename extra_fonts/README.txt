@@ -1,6 +1,7 @@
 
  The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' that you can use without any external files.
- The files in this folder are only provided as a convenience, you can use any of your own .TTF files.
+ The files in this folder are only provided as a convenience, you can use any .TTF/.OTF.
+ (Note: .OTF support in stb_truetype.h currently doesn't appear to load every font)
 
  Fonts are rasterized in a single texture at the time of calling either of io.Fonts.GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 
@@ -34,7 +35,7 @@
    ImGuiIO& io = ImGui::GetIO();
    io.Fonts->AddFontDefault();
 
- Load .TTF file with:
+ Load .TTF/.OTF file with:
 
    ImGuiIO& io = ImGui::GetIO();
    io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);

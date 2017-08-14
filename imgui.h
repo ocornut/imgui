@@ -48,7 +48,7 @@ struct ImDrawData;                  // All draw command lists required to render
 struct ImDrawList;                  // A single draw command list (generally one per window)
 struct ImDrawVert;                  // A single vertex (20 bytes by default, override layout with IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT)
 struct ImFont;                      // Runtime data for a single font within a parent ImFontAtlas
-struct ImFontAtlas;                 // Runtime data for multiple fonts, bake multiple fonts into a single texture, TTF font loader
+struct ImFontAtlas;                 // Runtime data for multiple fonts, bake multiple fonts into a single texture, TTF/OTF font loader
 struct ImFontConfig;                // Configuration data when adding a font or merging fonts
 struct ImColor;                     // Helper functions to create a color that can be converted to either u32 or float4
 struct ImGuiIO;                     // Main configuration and I/O between your application and ImGui
@@ -660,9 +660,9 @@ enum ImGuiCol_
     ImGuiCol_Header,
     ImGuiCol_HeaderHovered,
     ImGuiCol_HeaderActive,
-    ImGuiCol_Column,
-    ImGuiCol_ColumnHovered,
-    ImGuiCol_ColumnActive,
+    ImGuiCol_Separator,
+    ImGuiCol_SeparatorHovered,
+    ImGuiCol_SeparatorActive,
     ImGuiCol_ResizeGrip,
     ImGuiCol_ResizeGripHovered,
     ImGuiCol_ResizeGripActive,
@@ -1346,10 +1346,10 @@ struct ImDrawData
 
 struct ImFontConfig
 {
-    void*           FontData;                   //          // TTF data
-    int             FontDataSize;               //          // TTF data size
-    bool            FontDataOwnedByAtlas;       // true     // TTF data ownership taken by the container ImFontAtlas (will delete memory itself). Set to true
-    int             FontNo;                     // 0        // Index of font within TTF file
+    void*           FontData;                   //          // TTF/OTF data
+    int             FontDataSize;               //          // TTF/OTF data size
+    bool            FontDataOwnedByAtlas;       // true     // TTF/OTF data ownership taken by the container ImFontAtlas (will delete memory itself). Set to true
+    int             FontNo;                     // 0        // Index of font within TTF/OTF file
     float           SizePixels;                 //          // Size in pixels for rasterizer
     int             OversampleH, OversampleV;   // 3, 1     // Rasterize at higher quality for sub-pixel positioning. We don't use sub-pixel positions on the Y axis.
     bool            PixelSnapH;                 // false    // Align every glyph to pixel boundary. Useful e.g. if you are merging a non-pixel aligned font with the default font. If enabled, you can set OversampleH/V to 1.
@@ -1365,7 +1365,7 @@ struct ImFontConfig
     IMGUI_API ImFontConfig();
 };
 
-// Load and rasterize multiple TTF fonts into a same texture.
+// Load and rasterize multiple TTF/OTF fonts into a same texture.
 // Sharing a texture for multiple fonts allows us to reduce the number of draw calls during rendering.
 // We also add custom graphic data into the texture that serves for ImGui.
 //  1. (Optional) Call AddFont*** functions. If you don't call any, the default font will be loaded for you.
@@ -1380,9 +1380,9 @@ struct ImFontAtlas
     IMGUI_API ImFont*           AddFont(const ImFontConfig* font_cfg);
     IMGUI_API ImFont*           AddFontDefault(const ImFontConfig* font_cfg = NULL);
     IMGUI_API ImFont*           AddFontFromFileTTF(const char* filename, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL);
-    IMGUI_API ImFont*           AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL);                                        // Transfer ownership of 'ttf_data' to ImFontAtlas, will be deleted after Build()
-    IMGUI_API ImFont*           AddFontFromMemoryCompressedTTF(const void* compressed_ttf_data, int compressed_ttf_size, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL);  // 'compressed_ttf_data' still owned by caller. Compress with binary_to_compressed_c.cpp
-    IMGUI_API ImFont*           AddFontFromMemoryCompressedBase85TTF(const char* compressed_ttf_data_base85, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL);              // 'compressed_ttf_data_base85' still owned by caller. Compress with binary_to_compressed_c.cpp with -base85 paramaeter
+    IMGUI_API ImFont*           AddFontFromMemoryTTF(void* font_data, int font_size, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL);                                       // Transfer ownership of 'ttf_data' to ImFontAtlas, will be deleted after Build()
+    IMGUI_API ImFont*           AddFontFromMemoryCompressedTTF(const void* compressed_font_data, int compressed_font_size, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL); // 'compressed_font_data' still owned by caller. Compress with binary_to_compressed_c.cpp
+    IMGUI_API ImFont*           AddFontFromMemoryCompressedBase85TTF(const char* compressed_font_data_base85, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL);              // 'compressed_font_data_base85' still owned by caller. Compress with binary_to_compressed_c.cpp with -base85 paramaeter
     IMGUI_API void              ClearTexData();             // Clear the CPU-side texture data. Saves RAM once the texture has been copied to graphics memory.
     IMGUI_API void              ClearInputData();           // Clear the input TTF data (inc sizes, glyph ranges)
     IMGUI_API void              ClearFonts();               // Clear the ImGui-side font data (glyphs storage, UV coordinates)

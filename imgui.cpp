@@ -24,12 +24,13 @@
    - Getting started with integrating ImGui in your code/engine
    - Using gamepad/keyboard navigation [BETA]
  - API BREAKING CHANGES (read me when you update!)
+ - ISSUES & TODO LIST
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - How can I help?
    - What is ImTextureID and how do I display an image?
    - I integrated ImGui in my engine and the text or lines are blurry..
    - I integrated ImGui in my engine and some elements are clipping or disappearing when I move windows around..
-   - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on the purpose of labels/IDs.
+   - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on labels/IDs.
    - How can I tell when ImGui wants my mouse/keyboard inputs VS when I can pass them to my application?
    - How can I load a different font than the default?
    - How can I easily use icons in my application?
@@ -239,6 +240,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/08/13 (1.51) - renamed ImGuiCol_Columns_*** to ImGuiCol_Separator_***
  - 2017/08/11 (1.51) - renamed ImGuiSetCond_*** types and flags to ImGuiCond_***. Kept redirection enums (will obsolete).
  - 2017/08/09 (1.51) - removed ValueColor() helpers, they are equivalent to calling Text(label) + SameLine() + ColorButton().
  - 2017/08/08 (1.51) - removed ColorEditMode() and ImGuiColorEditMode in favor of ImGuiColorEditFlags and parameters to the various Color*() functions. The SetColorEditOptions() allows to initialize default but the user can still change them with right-click context menu.
@@ -358,6 +360,11 @@
  - 2014/08/28 (1.09) - changed the behavior of IO.PixelCenterOffset following various rendering fixes
 
 
+ ISSUES & TODO-LIST
+ ==================
+ See TODO.txt
+
+
  FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
  ======================================
 
@@ -383,7 +390,7 @@
  Q: I integrated ImGui in my engine and some elements are clipping or disappearing when I move windows around..
  A: Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1=left,y1=top,x2=right,y2=bottom) and NOT as (x1,y1,width,height).
 
- Q: Can I have multiple widgets with the same label? Can I have widget without a label? (Yes)
+ Q: Can I have multiple widgets with the same label? Can I have widget without a label?
  A: Yes. A primer on the use of labels/IDs in ImGui..
 
    - Elements that are not clickable, such as Text() items don't need an ID.
@@ -487,7 +494,7 @@
      Depending on your application logic it may or not be inconvenient. You might want to track which key-downs were for ImGui (e.g. with an array of bool) and filter out the corresponding key-ups.)
 
  Q: How can I load a different font than the default? (default is an embedded version of ProggyClean.ttf, rendered at size 13)
- A: Use the font atlas to load the TTF file you want:
+ A: Use the font atlas to load the TTF/OTF file you want:
 
       ImGuiIO& io = ImGui::GetIO();
       io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
@@ -561,154 +568,6 @@
  - tip: you can call Render() multiple times (e.g for VR renders).
  - tip: call and read the ShowTestWindow() code in imgui_demo.cpp for more example of how to use ImGui!
 
-
- ISSUES & TODO-LIST
- ==================
- Issue numbers (#) refer to github issues listed at https://github.com/ocornut/imgui/issues
- The list below consist mostly of ideas noted down before they are requested/discussed by users (at which point it usually moves to the github)
-
- - doc: add a proper documentation+regression testing system (#435)
- - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. perhaps a lightweight explicit cleanup pass.
- - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis) (#690)
- - window: auto-fit feedback loop when user relies on any dynamic layout (window width multiplier, column) appears weird to end-user. clarify.
- - window: allow resizing of child windows (possibly given min/max for each axis?)
- - window: background options for child windows, border option (disable rounding)
- - window: add a way to clear an existing window instead of appending (e.g. for tooltip override using a consistent api rather than the deferred tooltip)
- - window: resizing from any sides? + mouse cursor directives for app.
-!- window: begin with *p_open == false should return false.
- - window: get size/pos helpers given names (see discussion in #249)
- - window: a collapsed window can be stuck behind the main menu bar?
- - window: when window is small, prioritize resize button over close button.
- - window: detect extra End() call that pop the "Debug" window out and assert at call site instead of later.
- - window/tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
- - window: increase minimum size of a window with menus or fix the menu rendering so that it doesn't look odd.
- - draw-list: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
-!- scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet
- - splitter/separator: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
- - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc. (#395)
- - widgets: clean up widgets internal toward exposing everything.
- - widgets: add disabled and read-only modes (#211)
- - main: considering adding an Init() function? some constructs are awkward in the implementation because of the lack of them.
-!- main: make it so that a frame with no window registered won't refocus every window on subsequent frames (~bump LastFrameActive of all windows).
- - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
- - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
- - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile.
- - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
- - input text: expose CursorPos in char filter event (#816)
- - input text: flag to disable live update of the user buffer (also applies to float/int text input) 
- - input text: resize behavior - field could stretch when being edited? hover tooltip shows more text?
- - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
- - input text: add discard flag (e.g. ImGuiInputTextFlags_DiscardActiveBuffer) or make it easier to clear active focus for text replacement during edition (#725)
- - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
- - input text multi-line: way to dynamically grow the buffer without forcing the user to initially allocate for worse case (follow up on #200)
- - input text multi-line: line numbers? status bar? (follow up on #200)
- - input text multi-line: behave better when user changes input buffer while editing is active (even though it is illegal behavior). namely, the change of buffer can create a scrollbar glitch (#725)
- - input text multi-line: better horizontal scrolling support (#383, #1224)
- - input text: allow centering/positioning text so that ctrl+clicking Drag or Slider keeps the textual value at the same pixel position.
- - input number: optional range min/max for Input*() functions
- - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
- - input number: use mouse wheel to step up/down
- - input number: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
- - button: provide a button that looks framed.
- - text: proper alignment options
- - image/image button: misalignment on padded/bordered button?
- - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
- - layout: horizontal layout helper (#97)
- - layout: horizontal flow until no space left (#404)
- - layout: more generic alignment state (left/right/centered) for single items?
- - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
- - layout: BeginGroup() needs a border option.
- - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
- - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
- - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
- - columns: columns header to act as button (~sort op) and allow resize/reorder (#513, #125)
- - columns: user specify columns size (#513, #125)
- - columns: flag to add horizontal separator above/below?
- - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
- - combo: sparse combo boxes (via function call?) / iterators
- - combo: contents should extends to fit label if combo widget is small
- - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
- - listbox: multiple selection
- - listbox: user may want to initial scroll to focus on the one selected value?
- - listbox: keyboard navigation.
- - listbox: scrolling should track modified selection.
-!- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
- - popups: add variant using global identifier similar to Begin/End (#402)
- - popups: border options. richer api like BeginChild() perhaps? (#197)
- - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last preferred button" and may teleport when moving mouse
- - menus: local shortcuts, global shortcuts (#456, #126)
- - menus: menubars: some sort of priority / effect of main menu-bar on desktop size?
- - menus: calling BeginMenu() twice with a same name doesn't seem to append nicely
- - statusbar: add a per-window status bar helper similar to what menubar does.
- - tabs (#261, #351)
- - separator: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
-!- color: the color helpers/typing is a mess and needs sorting out.
- - node/graph editor (#306)
- - pie menus patterns (#434)
- - drag'n drop, dragging helpers (carry dragging info, visualize drag source before clicking, drop target, etc.) (#143, #479)
- - plot: PlotLines() should use the polygon-stroke facilities (currently issues with averaging normals)
- - plot: make it easier for user to draw extra stuff into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
- - plot: "smooth" automatic scale over time, user give an input 0.0(full user scale) 1.0(full derived from value)
- - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
- - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
- - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar).
- - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
- - slider: tint background based on value (e.g. v_min -> v_max, or use 0.0f either side of the sign)
- - slider & drag: int data passing through a float
- - drag float: up/down axis
- - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
- - tree node / optimization: avoid formatting when clipped.
- - tree node: tree-node/header right-most side doesn't take account of horizontal scrolling.
- - tree node: add treenode/treepush int variants? not there because (void*) cast from int warns on some platforms/settings?
- - tree node: try to apply scrolling at time of TreePop() if node was just opened and end of node is past scrolling limits?
- - tree node / selectable render mismatch which is visible if you use them both next to each other (e.g. cf. property viewer)
- - tree node: tweak color scheme to distinguish headers from selected tree node (#581)
- - textwrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
- - settings: write more decent code to allow saving/loading new fields
- - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file
- - stb: add defines to disable stb implementations
- - style: add window shadows.
- - style/optimization: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding.
- - style: color-box not always square?
- - style: a concept of "compact style" that the end-user can easily rely on (e.g. PushStyleCompact()?) that maps to other settings? avoid implementing duplicate helpers such as SmallCheckbox(), etc.
- - style: try to make PushStyleVar() more robust to incorrect parameters (to be more friendly to edit & continues situation).
- - style: global scale setting.
- - style: WindowPadding needs to be EVEN as the 0.5 multiplier used on this value probably have a subtle effect on clip rectangle
- - text: simple markup language for color change?
- - font: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
- - font: small opt: for monospace font (like the defalt one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance
- - font: add support for kerning, probably optional. perhaps default to (32..128)^2 matrix ~ 36KB then hash fallback.
- - font: add a simpler CalcTextSizeA() api? current one ok but not welcome if user needs to call it directly (without going through ImGui::CalcTextSize)
- - font: fix AddRemapChar() to work before font has been built.
- - log: LogButtons() options for specifying depth and/or hiding depth slider
- - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
- - log: be able to log anything (e.g. right-click on a window/tree-node, shows context menu? log into tty/file/clipboard)
- - log: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?). code is commented because it fails with multiple Begin/End pairs.
- - filters: set a current filter that tree node can automatically query to hide themselves
- - filters: handle wildcards (with implicit leading/trailing *), regexps
- - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
- - shortcuts: add a shortcut api, e.g. parse "&Save" and/or "Save (CTRL+S)", pass in to widgets or provide simple ways to use (button=activate, input=focus)
-!- keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing
- - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
- - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
- - input: rework IO system to be able to pass actual ordered/timestamped events. (~#335, #71)
- - input: allow to decide and pass explicit double-clicks (e.g. for windows by the CS_DBLCLKS style).
- - input: support track pad style scrolling & slider edit.
- - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
- - misc: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
- - misc: provide HoveredTime and ActivatedTime to ease the creation of animations.
- - style editor: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space? (#438)
- - style editor: color child window height expressed in multiple of line height.
- - remote: make a system like RemoteImGui first-class citizen/project (#75)
- - drawlist: move Font, FontSize, FontTexUvWhitePixel inside ImDrawList and make it self-contained (apart from drawing settings?)
- - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
- - examples: directx9: save/restore device state more thoroughly.
- - examples: window minimize, maximize (#583)
- - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
- - optimization: add a flag to disable most of rendering, for the case where the user expect to skip it (#335)
- - optimization: use another hash function than crc32, e.g. FNV1a
- - optimization/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
- - optimization: turn some the various stack vectors into statically-sized arrays
 */
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
@@ -874,7 +733,7 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 0.70f);
     Colors[ImGuiCol_ChildWindowBg]          = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     Colors[ImGuiCol_PopupBg]                = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
-    Colors[ImGuiCol_Border]                 = ImVec4(0.70f, 0.70f, 0.70f, 0.65f);
+    Colors[ImGuiCol_Border]                 = ImVec4(0.70f, 0.70f, 0.70f, 0.22f);
     Colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     Colors[ImGuiCol_FrameBg]                = ImVec4(0.80f, 0.80f, 0.80f, 0.30f);   // Background of checkbox, radio button, plot, slider, text input
     Colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.90f, 0.80f, 0.80f, 0.40f);
@@ -897,9 +756,9 @@ ImGuiStyle::ImGuiStyle()
     Colors[ImGuiCol_Header]                 = ImVec4(0.40f, 0.40f, 0.90f, 0.45f);
     Colors[ImGuiCol_HeaderHovered]          = ImVec4(0.45f, 0.45f, 0.90f, 0.80f);
     Colors[ImGuiCol_HeaderActive]           = ImVec4(0.53f, 0.53f, 0.87f, 0.80f);
-    Colors[ImGuiCol_Column]                 = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-    Colors[ImGuiCol_ColumnHovered]          = ImVec4(0.70f, 0.60f, 0.60f, 1.00f);
-    Colors[ImGuiCol_ColumnActive]           = ImVec4(0.90f, 0.70f, 0.70f, 1.00f);
+    Colors[ImGuiCol_Separator]              = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    Colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.60f, 0.60f, 0.70f, 1.00f);
+    Colors[ImGuiCol_SeparatorActive]        = ImVec4(0.70f, 0.70f, 0.90f, 1.00f);
     Colors[ImGuiCol_ResizeGrip]             = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
     Colors[ImGuiCol_ResizeGripHovered]      = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
     Colors[ImGuiCol_ResizeGripActive]       = ImVec4(1.00f, 1.00f, 1.00f, 0.90f);
@@ -3310,6 +3169,8 @@ static void SaveIniSettingsToDisk(const char* ini_filename)
         if (window->Flags & ImGuiWindowFlags_NoSavedSettings)
             continue;
         ImGuiIniData* settings = FindWindowSettings(window->Name);
+        if (!settings)  // This will only return NULL in the rare instance where the window was first created with ImGuiWindowFlags_NoSavedSettings then had the flag disabled later on. We don't bind settings in this case (bug #1000).
+            continue;
         settings->Pos = window->Pos;
         settings->Size = window->SizeFull;
         settings->Collapsed = window->Collapsed;
@@ -4687,7 +4548,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
             window->Collapsed = settings->Collapsed;
         }
 
-        if (ImLengthSqr(settings->Size) > 0.00001f && !(flags & ImGuiWindowFlags_NoResize))
+        if (ImLengthSqr(settings->Size) > 0.00001f)
             size = settings->Size;
         window->Size = window->SizeFull = size;
     }
@@ -5174,7 +5035,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 bg_color_idx = ImGuiCol_PopupBg;
             else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
                 bg_color_idx = ImGuiCol_ChildWindowBg;
-            ImVec4 bg_color = style.Colors[bg_color_idx];
+            ImVec4 bg_color = style.Colors[bg_color_idx]; // We don't use GetColorU32() because bg_alpha is assigned (not multiplied) below
             if (bg_alpha >= 0.0f)
                 bg_color.w = bg_alpha;
             bg_color.w *= style.Alpha;
@@ -5809,9 +5670,9 @@ const char* ImGui::GetStyleColName(ImGuiCol idx)
     case ImGuiCol_Header: return "Header";
     case ImGuiCol_HeaderHovered: return "HeaderHovered";
     case ImGuiCol_HeaderActive: return "HeaderActive";
-    case ImGuiCol_Column: return "Column";
-    case ImGuiCol_ColumnHovered: return "ColumnHovered";
-    case ImGuiCol_ColumnActive: return "ColumnActive";
+    case ImGuiCol_Separator: return "Separator";
+    case ImGuiCol_SeparatorHovered: return "SeparatorHovered";
+    case ImGuiCol_SeparatorActive: return "SeparatorActive";
     case ImGuiCol_ResizeGrip: return "ResizeGrip";
     case ImGuiCol_ResizeGripHovered: return "ResizeGripHovered";
     case ImGuiCol_ResizeGripActive: return "ResizeGripActive";
@@ -8230,7 +8091,8 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
 
         float v0 = values_getter(data, (0 + values_offset) % values_count);
         float t0 = 0.0f;
-        ImVec2 tp0 = ImVec2( t0, 1.0f - ImSaturate((v0 - scale_min) / (scale_max - scale_min)) );    // Point in the normalized space of our target rectangle
+        ImVec2 tp0 = ImVec2( t0, 1.0f - ImSaturate((v0 - scale_min) / (scale_max - scale_min)) );                       // Point in the normalized space of our target rectangle
+        float histogram_zero_line_t = (scale_min * scale_max < 0.0f) ? (-scale_min / (scale_max - scale_min)) : (scale_min < 0.0f ? 0.0f : 1.0f);   // Where does the zero line stands
 
         const ImU32 col_base = GetColorU32((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLines : ImGuiCol_PlotHistogram);
         const ImU32 col_hovered = GetColorU32((plot_type == ImGuiPlotType_Lines) ? ImGuiCol_PlotLinesHovered : ImGuiCol_PlotHistogramHovered);
@@ -8245,7 +8107,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
 
             // NB: Draw calls are merged together by the DrawList system. Still, we should render our batch are lower level to save a bit of CPU.
             ImVec2 pos0 = ImLerp(inner_bb.Min, inner_bb.Max, tp0);
-            ImVec2 pos1 = ImLerp(inner_bb.Min, inner_bb.Max, (plot_type == ImGuiPlotType_Lines) ? tp1 : ImVec2(tp1.x, 1.0f));
+            ImVec2 pos1 = ImLerp(inner_bb.Min, inner_bb.Max, (plot_type == ImGuiPlotType_Lines) ? tp1 : ImVec2(tp1.x, histogram_zero_line_t));
             if (plot_type == ImGuiPlotType_Lines)
             {
                 window->DrawList->AddLine(pos0, pos1, v_hovered == v1_idx ? col_hovered : col_base);
@@ -8354,7 +8216,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
 
-    const ImRect check_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(label_size.y + style.FramePadding.y*2, label_size.y + style.FramePadding.y*2));
+    const ImRect check_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(label_size.y + style.FramePadding.y*2, label_size.y + style.FramePadding.y*2)); // We want a square shape to we use Y twice
     ItemSize(check_bb, style.FramePadding.y);
 
     ImRect total_bb = check_bb;
@@ -10278,7 +10140,7 @@ static void ColorPickerOptionsPopup(ImGuiColorEditFlags flags, float* ref_col)
                 g.ColorEditOptions = (g.ColorEditOptions & ~ImGuiColorEditFlags__PickerMask) | (picker_flags & ImGuiColorEditFlags__PickerMask);
             ImGui::SetCursorScreenPos(backup_pos);
             ImVec4 dummy_ref_col;
-            memcpy(&dummy_ref_col.x, ref_col, sizeof(float) * (ImGuiColorEditFlags_NoAlpha ? 3 : 4));
+            memcpy(&dummy_ref_col.x, ref_col, sizeof(float) * (picker_flags & ImGuiColorEditFlags_NoAlpha ? 3 : 4));
             ImGui::ColorPicker4("##dummypicker", &dummy_ref_col.x, picker_flags);
             ImGui::PopID();
         }
@@ -10488,10 +10350,11 @@ static void RenderArrow(ImDrawList* draw_list, ImVec2 pos, ImVec2 half_sz, ImGui
 {
     switch (direction)
     {
-    case ImGuiDir_Right: draw_list->AddTriangleFilled(ImVec2(pos.x - half_sz.x, pos.y + half_sz.y), ImVec2(pos.x - half_sz.x, pos.y - half_sz.y), pos, col); return;
     case ImGuiDir_Left:  draw_list->AddTriangleFilled(ImVec2(pos.x + half_sz.x, pos.y - half_sz.y), ImVec2(pos.x + half_sz.x, pos.y + half_sz.y), pos, col); return;
-    case ImGuiDir_Down:  draw_list->AddTriangleFilled(ImVec2(pos.x - half_sz.x, pos.y - half_sz.y), ImVec2(pos.x + half_sz.x, pos.y - half_sz.y), pos, col); return;
+    case ImGuiDir_Right: draw_list->AddTriangleFilled(ImVec2(pos.x - half_sz.x, pos.y + half_sz.y), ImVec2(pos.x - half_sz.x, pos.y - half_sz.y), pos, col); return;
     case ImGuiDir_Up:    draw_list->AddTriangleFilled(ImVec2(pos.x + half_sz.x, pos.y + half_sz.y), ImVec2(pos.x - half_sz.x, pos.y + half_sz.y), pos, col); return;
+    case ImGuiDir_Down:  draw_list->AddTriangleFilled(ImVec2(pos.x - half_sz.x, pos.y - half_sz.y), ImVec2(pos.x + half_sz.x, pos.y - half_sz.y), pos, col); return;
+    default: return; // Fix warning for ImGuiDir_None
     }
 }
 
@@ -10828,7 +10691,7 @@ void ImGui::Separator()
         return;
     }
 
-    window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x,bb.Min.y), GetColorU32(ImGuiCol_Border));
+    window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x,bb.Min.y), GetColorU32(ImGuiCol_Separator));
 
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
@@ -11129,7 +10992,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
                 g.MouseCursor = ImGuiMouseCursor_ResizeEW;
 
             // Draw before resize so our items positioning are in sync with the line being drawn
-            const ImU32 col = GetColorU32(held ? ImGuiCol_ColumnActive : hovered ? ImGuiCol_ColumnHovered : ImGuiCol_Column);
+            const ImU32 col = GetColorU32(held ? ImGuiCol_SeparatorActive : hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
             const float xi = (float)(int)x;
             window->DrawList->AddLine(ImVec2(xi, y1+1.0f), ImVec2(xi, y2), col);
 
