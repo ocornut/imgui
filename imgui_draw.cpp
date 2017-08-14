@@ -678,7 +678,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     }
 }
 
-void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int amin, int amax)
+void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int a_min_of_12, int a_max_of_12)
 {
     static ImVec2 circle_vtx[12];
     static bool circle_vtx_builds = false;
@@ -694,15 +694,15 @@ void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int amin, int
         circle_vtx_builds = true;
     }
 
-    if (amin > amax) return;
+    if (a_min_of_12 > a_max_of_12) return;
     if (radius == 0.0f)
     {
         _Path.push_back(centre);
     }
     else
     {
-        _Path.reserve(_Path.Size + (amax - amin + 1));
-        for (int a = amin; a <= amax; a++)
+        _Path.reserve(_Path.Size + (a_max_of_12 - a_min_of_12 + 1));
+        for (int a = a_min_of_12; a <= a_max_of_12; a++)
         {
             const ImVec2& c = circle_vtx[a % circle_vtx_count];
             _Path.push_back(ImVec2(centre.x + c.x * radius, centre.y + c.y * radius));
