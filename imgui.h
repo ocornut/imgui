@@ -412,6 +412,9 @@ namespace ImGui
     IMGUI_API void          PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect);
     IMGUI_API void          PopClipRect();
 
+    // Styles
+    IMGUI_API void          StyleColorsClassic(ImGuiStyle* dst = NULL);
+
     // Utilities
     IMGUI_API bool          IsItemHovered();                                                    // is the last item hovered by mouse (and usable)?
     IMGUI_API bool          IsItemRectHovered();                                                // is the last item hovered by mouse? even if another item is active or window is blocked by popup while we are hovering this
