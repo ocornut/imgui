@@ -3941,7 +3941,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
             window->Collapsed = settings->Collapsed;
         }
 
-        if (ImLengthSqr(settings->Size) > 0.00001f && !(flags & ImGuiWindowFlags_NoResize))
+        if (ImLengthSqr(settings->Size) > 0.00001f)
             size = settings->Size;
         window->Size = window->SizeFull = size;
     }
