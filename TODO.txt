@@ -1,8 +1,9 @@
 dear imgui
 ISSUES & TODO LIST
 
-Issue numbers (#) refer to github issues listed at https://github.com/ocornut/imgui/issues
-The list below consist mostly of ideas noted down before they are requested/discussed by users (at which point it usually moves to the github)
+Issue numbers (#) refer to github issues listed at https://github.com/ocornut/imgui/issues/XXXX
+The list below consist mostly of ideas noted down before they are requested/discussed by users (at which point they usually exist on the github issue tracker).
+It's mostly a bunch of personal notes, probably incomplete. Feel free to query if you have any questions.
 
  - doc/test: add a proper documentation+regression testing system (#435)
  - doc/test: checklist app to verify binding/integration of imgui (test inputs, rendering, callback, etc.).
@@ -28,6 +29,7 @@ The list below consist mostly of ideas noted down before they are requested/disc
  - drawlist: move Font, FontSize, FontTexUvWhitePixel inside ImDrawList and make it self-contained (apart from drawing settings?)
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
+ - drawlist: avoid passing null (-9999,+9999) rectangle to end-user, instead perhaps pass rectangle based on io.DisplaySize?
 
  - main: considering adding an Init() function? some constructs are awkward in the implementation because of the lack of them.
  - main: find a way to preserve relative orders of multiple reappearing windows (so an app toggling between "modes" e.g. fullscreen vs all tools) won't lose relative ordering.
@@ -67,16 +69,17 @@ The list below consist mostly of ideas noted down before they are requested/disc
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
  - layout: BeginGroup() needs a border option.
- - columns: declare column set (each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
+ 
+ - columns: sizing policy (e.g. for each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
  - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
+ - columns: headers. with sort op/button. reorderable. (#513, #125)
+ - columns: allow columns to recurse. 
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
- - columns: columns header to act as button (~sort op) and allow resize/reorder (#513, #125)
- - columns: user specify columns size (#513, #125)
  - columns: flag to add horizontal separator above/below?
  - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
 
 !- color: the color helpers/types are a mess and needs sorting out. 
- - color: (api break) ImGui::ColorConvertXXX functions should be loose ImColorConvertXX to match imgui_internals.h
+ - color: (api breaking) ImGui::ColorConvertXXX functions should be loose ImColorConvertXX to match imgui_internals.h
 
  - plot: full featured plot/graph api w/ scrolling, zooming etc. all bell & whistle. why not!
  - plot: PlotLines() should use the polygon-stroke facilities, less verticles (currently issues with averaging normals)
@@ -90,10 +93,11 @@ The list below consist mostly of ideas noted down before they are requested/disc
  - clipper: ability to force display 1 item in the list would be convenient. 
 
  - splitter/separator: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
- - tabs (#261, #351)
  
  - dock: docking extension
  - dock: dock out from a collapsing header? would work nicely but need emitting window to keep submitting the code.
+
+ - tabs: re-ordering, close buttons, context menu, persistent order (#261, #351)
 
  - ext: stl-ish friendly extension (imgui_stl.h) that has wrapped for std::string, std::vector etc.
 
@@ -127,19 +131,20 @@ The list below consist mostly of ideas noted down before they are requested/disc
  - listbox: scrolling should track modified selection.
 
 !- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
+ - popups/nav: esc/enter default behavior for popups.
+ - popups: reopening context menu at new position should be the behavior by default? (equivalent to internal OpenPopupEx() with reopen_existing=true)
  - popups: if the popup functions took explicit ImGuiID it would allow the user to manage the scope of those ID. (#331)
  - popups: clicking outside (to close popup) and holding shouldn't drag window below.
  - popups: add variant using global identifier similar to Begin/End (#402)
  - popups: border options. richer api like BeginChild() perhaps? (#197)
  - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last preferred direction" and may teleport when moving mouse.
 
- - menus: local shortcuts, global shortcuts (#456, #126)
- - menus: menubars: some sort of priority / effect of main menu-bar on desktop size?
  - menus: calling BeginMenu() twice with a same name doesn't append as Begin() does for regular windows (#1207)
  - statusbar: add a per-window status bar helper similar to what menubar does.
  - shortcuts: local-style shortcut api, e.g. parse "&Save"
- - shortcuts: global-style shortcut api e.g. "Save (CTRL+S)" -> explicit flag for recursing into closed menu
+ - shortcuts,menus: global-style shortcut api e.g. "Save (CTRL+S)" -> explicit flag for recursing into closed menu
  - shortcuts: programmatically access shortcuts "Focus("&Save"))
+ - menus: menubars: main menu-bar could affect clamping of windows position (~ akin to modifying DisplayMin)
 
  - text: proper alignment options in imgui_internal.h
  - text wrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
@@ -194,6 +199,7 @@ The list below consist mostly of ideas noted down before they are requested/disc
  - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
  - font: add a simpler CalcTextSizeA() api? current one ok but not welcome if user needs to call it directly (without going through ImGui::CalcTextSize)
  - font: fix AddRemapChar() to work before font has been built.
+ - font: (api breaking) removed "TTF" from symbol names. also because it now supports OTF.
 
 !- keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing.
  - keyboard: full keyboard navigation and focus. (#323)
@@ -206,9 +212,12 @@ The list below consist mostly of ideas noted down before they are requested/disc
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: provide HoveredTime and ActivatedTime to ease the creation of animations.
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
+
+ - demo: demo: add a virtual scrolling example?
  - examples: directx9: save/restore device state more thoroughly.
  - examples: window minimize, maximize (#583)
  - examples: provide a zero-framerate/idle example.
+ - examples: document WantCaptureKeyboard, WantCaptureMouse in example apps. (#446)
  - optimization: replace vsnprintf with stb_printf? or enable the defines/infrastructure to allow it (#1038)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
  - optimization: add a flag to disable most of rendering, for the case where the user expect to skip it (#335)
