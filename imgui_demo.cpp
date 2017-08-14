@@ -1484,6 +1484,8 @@ void ImGui::ShowTestWindow(bool* p_open)
 
     if (ImGui::CollapsingHeader("Columns"))
     {
+        ImGui::PushID("Columns");
+
         // Basic columns
         if (ImGui::TreeNode("Basic"))
         {
@@ -1631,6 +1633,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::Separator();
             ImGui::TreePop();
         }
+        ImGui::PopID();
     }
 
     if (ImGui::CollapsingHeader("Filtering"))
@@ -1786,7 +1789,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
     if (ImGui::TreeNode("Rendering"))
     {
-        ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines);
+        ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines); ImGui::SameLine(); ShowHelpMarker("When disabling anti-aliasing lines, you'll probably want to disable borders in your style as well.");
         ImGui::Checkbox("Anti-aliased shapes", &style.AntiAliasedShapes);
         ImGui::PushItemWidth(100);
         ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, FLT_MAX, NULL, 2.0f);
