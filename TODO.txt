@@ -30,6 +30,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
  - drawlist: avoid passing null (-9999,+9999) rectangle to end-user, instead perhaps pass rectangle based on io.DisplaySize?
+ - drawlist: primtiives/helpers to manipulate vertices post submission, so e.g. a quad/rect can be resized to fit later submitted content, _without_ using the ChannelSplit api
 
  - main: considering adding an Init() function? some constructs are awkward in the implementation because of the lack of them.
  - main: find a way to preserve relative orders of multiple reappearing windows (so an app toggling between "modes" e.g. fullscreen vs all tools) won't lose relative ordering.
@@ -64,6 +65,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input number: use mouse wheel to step up/down
  - input number: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
 
+ - layout: helper or a way to express ImGui::SameLine(ImGui::GetCursorStartPos().x + ImGui::CalcItemWidth() + ImGui::GetStyle().ItemInnerSpacing.x); in a simpler manner.
  - layout: horizontal layout helper (#97)
  - layout: horizontal flow until no space left (#404)
  - layout: more generic alignment state (left/right/centered) for single items?
@@ -78,8 +80,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - columns: flag to add horizontal separator above/below?
  - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
 
-!- color: the color helpers/types are a mess and needs sorting out. 
+!- color: the color conversion helpers/types are a mess and needs sorting out. 
  - color: (api breaking) ImGui::ColorConvertXXX functions should be loose ImColorConvertXX to match imgui_internals.h
+ - coloredit: it is still somehow awkward to copy colors around (unless going through Hex mode).
 
  - plot: full featured plot/graph api w/ scrolling, zooming etc. all bell & whistle. why not!
  - plot: PlotLines() should use the polygon-stroke facilities, less verticles (currently issues with averaging normals)
