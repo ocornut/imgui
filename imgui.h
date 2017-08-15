@@ -908,12 +908,13 @@ public:
     inline int                  _grow_capacity(int new_size)    { int new_capacity = Capacity ? (Capacity + Capacity/2) : 8; return new_capacity > new_size ? new_capacity : new_size; }
 
     inline void                 resize(int new_size)            { if (new_size > Capacity) reserve(_grow_capacity(new_size)); Size = new_size; }
+    inline void                 resize(int new_size, const T& v){ if (new_size > Capacity) reserve(_grow_capacity(new_size)); if (new_size > Size) for (int n = Size; n < new_size; n++) Data[n] = v; Size = new_size; }
     inline void                 reserve(int new_capacity)
     {
         if (new_capacity <= Capacity) return;
-        T* new_data = (value_type*)ImGui::MemAlloc((size_t)new_capacity * sizeof(value_type));
+        T* new_data = (value_type*)ImGui::MemAlloc((size_t)new_capacity * sizeof(T));
         if (Data)
-            memcpy(new_data, Data, (size_t)Size * sizeof(value_type));
+            memcpy(new_data, Data, (size_t)Size * sizeof(T));
         ImGui::MemFree(Data);
         Data = new_data;
         Capacity = new_capacity;

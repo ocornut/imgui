@@ -1820,16 +1820,10 @@ void ImFont::SetFallbackChar(ImWchar c)
 void ImFont::GrowIndex(int new_size)
 {
     IM_ASSERT(IndexXAdvance.Size == IndexLookup.Size);
-    int old_size = IndexLookup.Size;
-    if (new_size <= old_size)
+    if (new_size <= IndexLookup.Size)
         return;
-    IndexXAdvance.resize(new_size);
-    IndexLookup.resize(new_size);
-    for (int i = old_size; i < new_size; i++)
-    {
-        IndexXAdvance[i] = -1.0f;
-        IndexLookup[i] = (unsigned short)-1;
-    }
+    IndexXAdvance.resize(new_size, -1.0f);
+    IndexLookup.resize(new_size, (unsigned short)-1);
 }
 
 void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
