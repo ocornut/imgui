@@ -9110,7 +9110,7 @@ bool ImGui::ColorEdit3(const char* label, float col[3], ImGuiColorEditFlags flag
     return ColorEdit4(label, col, flags | ImGuiColorEditFlags_NoAlpha);
 }
 
-static void ColorEditOptionsPopup(ImGuiColorEditFlags flags)
+static void ColorEditOptionsPopup(ImGuiColorEditFlags flags, float* col)
 {
     bool allow_opt_inputs = !(flags & ImGuiColorEditFlags__InputsMask);
     bool allow_opt_datatype = !(flags & ImGuiColorEditFlags__DataTypeMask);
@@ -9130,6 +9130,26 @@ static void ColorEditOptionsPopup(ImGuiColorEditFlags flags)
         if (ImGui::RadioButton("0..255",     (opts & ImGuiColorEditFlags_Uint8) ? 1 : 0)) opts = (opts & ~ImGuiColorEditFlags__DataTypeMask) | ImGuiColorEditFlags_Uint8;
         if (ImGui::RadioButton("0.00..1.00", (opts & ImGuiColorEditFlags_Float) ? 1 : 0)) opts = (opts & ~ImGuiColorEditFlags__DataTypeMask) | ImGuiColorEditFlags_Float;
     }
+
+    if (allow_opt_inputs || allow_opt_datatype) ImGui::Separator();
+    if (ImGui::Button("Copy as..", ImVec2(-1,0)))
+        ImGui::OpenPopup("Copy");
+    if (ImGui::BeginPopup("Copy"))
+    {
+        int cr = IM_F32_TO_INT8_SAT(col[0]), cg = IM_F32_TO_INT8_SAT(col[1]), cb = IM_F32_TO_INT8_SAT(col[2]), ca = (flags & ImGuiColorEditFlags_NoAlpha) ? 255 : IM_F32_TO_INT8_SAT(col[3]);
+        char buf[64];
+        sprintf(buf, "(%.3ff, %.3ff, %.3ff, %.3ff)", col[0], col[1], col[2], (flags & ImGuiColorEditFlags_NoAlpha) ? 1.0f : col[3]);
+        if (ImGui::Selectable(buf))
+            ImGui::SetClipboardText(buf);
+        sprintf(buf, "(%d,%d,%d,%d)", cr, cg, cb, ca);
+        if (ImGui::Selectable(buf))
+            ImGui::SetClipboardText(buf);
+        sprintf(buf, (flags & ImGuiColorEditFlags_NoAlpha) ? "0x%02X%02X%02X" : "0x%02X%02X%02X%02X", cr, cg, cb, ca);
+        if (ImGui::Selectable(buf))
+            ImGui::SetClipboardText(buf);
+        ImGui::EndPopup();
+    }
+
     g.ColorEditOptions = opts;
     ImGui::EndPopup();
 }
@@ -9202,7 +9222,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
     // Context menu: display and modify options (before defaults are applied)
     if (!(flags & ImGuiColorEditFlags_NoOptions))
-        ColorEditOptionsPopup(flags);
+        ColorEditOptionsPopup(flags, col);
  
     // Read stored options
     if (!(flags & ImGuiColorEditFlags__InputsMask))
