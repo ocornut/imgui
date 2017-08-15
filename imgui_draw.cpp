@@ -1061,7 +1061,7 @@ ImFontAtlas::ImFontAtlas()
     TexPixelsAlpha8 = NULL;
     TexPixelsRGBA32 = NULL;
     TexWidth = TexHeight = TexDesiredWidth = 0;
-	TexGlyphPadding = 1;
+    TexGlyphPadding = 1;
     TexUvWhitePixel = ImVec2(0, 0);
 }
 
