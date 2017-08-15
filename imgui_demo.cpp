@@ -260,7 +260,6 @@ void ImGui::ShowTestWindow(bool* p_open)
 
     if (ImGui::CollapsingHeader("Widgets"))
     {
-
         if (ImGui::TreeNode("Basic"))
         {
             static int clicked = 0;
