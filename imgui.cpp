@@ -3400,11 +3400,10 @@ void ImGui::EndTooltip()
 // Popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
 // Popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
 // One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
-void ImGui::OpenPopupEx(const char* str_id, bool reopen_existing)
+void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiID id = window->GetID(str_id);
     int current_stack_size = g.CurrentPopupStack.Size;
     ImGuiPopupRef popup_ref = ImGuiPopupRef(id, window, window->GetID("##menus"), g.IO.MousePos); // Tagged as new ref because constructor sets Window to NULL (we are passing the ParentWindow info here)
     if (g.OpenPopupStack.Size < current_stack_size + 1)
@@ -3418,7 +3417,8 @@ void ImGui::OpenPopupEx(const char* str_id, bool reopen_existing)
 
 void ImGui::OpenPopup(const char* str_id)
 {
-    ImGui::OpenPopupEx(str_id, false);
+    ImGuiContext& g = *GImGui;
+    OpenPopupEx(g.CurrentWindow->GetID(str_id), false);
 }
 
 static void CloseInactivePopups()
@@ -3494,6 +3494,7 @@ void ImGui::CloseCurrentPopup()
 
 static inline void ClearSetNextWindowData()
 {
+    // FIXME-OPT
     ImGuiContext& g = *GImGui;
     g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowContentSizeCond = g.SetNextWindowCollapsedCond = 0;
     g.SetNextWindowSizeConstraint = g.SetNextWindowFocus = false;
@@ -3538,6 +3539,7 @@ bool ImGui::BeginPopup(const char* str_id)
     return BeginPopupEx(g.CurrentWindow->GetID(str_id), ImGuiWindowFlags_ShowBorders);
 }
 
+// FIXME
 bool ImGui::IsPopupOpen(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
@@ -3590,31 +3592,31 @@ void ImGui::EndPopup()
 // 2. If you want right-clicking on the same item to reopen the popup at new location, use the same code replacing IsItemHovered() with IsItemHoveredRect()
 //    and passing true to the OpenPopupEx().
 //    Because: hovering an item in a window below the popup won't normally trigger is hovering behavior/coloring. The pattern of ignoring the fact that
-//    the item isn't interactable (because it is blocked by the active popup) may useful in some situation when e.g. large canvas as one item, content of menu
+//    the item can be interacted with (because it is blocked by the active popup) may useful in some situation when e.g. large canvas as one item, content of menu
 //    driven by click position.
 bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
 {
     if (IsItemHovered() && IsMouseClicked(mouse_button))
-        OpenPopupEx(str_id, false);
+        OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), false);
     return BeginPopup(str_id);
 }
 
 bool ImGui::BeginPopupContextWindow(const char* str_id, int mouse_button, bool also_over_items)
 {
     if (!str_id)
-        str_id = "window_context_menu";
+        str_id = "window_context";
     if (IsMouseHoveringWindow() && IsMouseClicked(mouse_button))
         if (also_over_items || !IsAnyItemHovered())
-            OpenPopupEx(str_id, true);
+            OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), true);
     return BeginPopup(str_id);
 }
 
 bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
 {
     if (!str_id) 
-        str_id = "void_context_menu";
+        str_id = "void_context";
     if (!IsMouseHoveringAnyWindow() && IsMouseClicked(mouse_button))
-        OpenPopupEx(str_id, true);
+        OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), true);
     return BeginPopup(str_id);
 }
 

@@ -745,7 +745,7 @@ namespace ImGui
     IMGUI_API ImVec2        CalcItemSize(ImVec2 size, float default_x, float default_y);
     IMGUI_API float         CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x);
 
-    IMGUI_API void          OpenPopupEx(const char* str_id, bool reopen_existing);
+    IMGUI_API void          OpenPopupEx(ImGuiID id, bool reopen_existing);
     IMGUI_API bool          IsPopupOpen(ImGuiID id);
 
     // NB: All position are in absolute pixels coordinates (never using window coordinates internally)
