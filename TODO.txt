@@ -23,19 +23,22 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
  - window: increase minimum size of a window with menus or fix the menu rendering so that it doesn't look odd.
  - window: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
+ - window: expose contents size. (#1045)
 !- scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
 
  - drawlist: move Font, FontSize, FontTexUvWhitePixel inside ImDrawList and make it self-contained (apart from drawing settings?)
+ - drawlist: make it easier to toggle AA per primitive, so we can use e.g. non-AA fill + AA borders more naturally
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
  - drawlist: avoid passing null (-9999,+9999) rectangle to end-user, instead perhaps pass rectangle based on io.DisplaySize?
+ - drawlist: primtiives/helpers to manipulate vertices post submission, so e.g. a quad/rect can be resized to fit later submitted content, _without_ using the ChannelSplit api
 
  - main: considering adding an Init() function? some constructs are awkward in the implementation because of the lack of them.
  - main: find a way to preserve relative orders of multiple reappearing windows (so an app toggling between "modes" e.g. fullscreen vs all tools) won't lose relative ordering.
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
- - main: rename the main "Debug" window to avoid ID collision with user who may want to use "Debug" with specific flags
+ - main: rename the main "Debug" window to avoid ID collision with user who may want to use "Debug" with specific flags.
 
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc. (#395)
  - widgets: clean up widgets internal toward exposing everything and stabilizing imgui_internals.h.
@@ -64,6 +67,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input number: use mouse wheel to step up/down
  - input number: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
 
+ - layout: helper or a way to express ImGui::SameLine(ImGui::GetCursorStartPos().x + ImGui::CalcItemWidth() + ImGui::GetStyle().ItemInnerSpacing.x); in a simpler manner.
+ - layout: generalization of the above: a concept equivalent to word processor ruler tab stop ~ mini columns (position in X, no clipping implied) (vaguely relate to #267, #395, also what is used internally for menu items)
  - layout: horizontal layout helper (#97)
  - layout: horizontal flow until no space left (#404)
  - layout: more generic alignment state (left/right/centered) for single items?
@@ -78,8 +83,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - columns: flag to add horizontal separator above/below?
  - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
 
-!- color: the color helpers/types are a mess and needs sorting out. 
+!- color: the color conversion helpers/types are a mess and needs sorting out. 
  - color: (api breaking) ImGui::ColorConvertXXX functions should be loose ImColorConvertXX to match imgui_internals.h
+ - coloredit: it is still somehow awkward to copy colors around (unless going through Hex mode).
 
  - plot: full featured plot/graph api w/ scrolling, zooming etc. all bell & whistle. why not!
  - plot: PlotLines() should use the polygon-stroke facilities, less verticles (currently issues with averaging normals)
@@ -158,11 +164,12 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
 !- settings: expose enough to save/load .ini from RAM instead of fopen
  - settings: write more decent code to allow saving/loading new fields
- - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file
+ - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)
  - stb: add defines to disable stb implementations
 
 !- style: better default styles.
 !- style: move border to style structure, remove _ShowBorder flag.
+ - style: border types: out-screen, in-screen, etc. 
  - style/optimization: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding.
  - style: add window shadow (fading away from the window. Paint-style calculation of vertices alpha after drawlist would be easier)
  - style: color-box not always square?
@@ -171,6 +178,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - style: global scale setting.
  - style: WindowPadding needs to be EVEN as the 0.5 multiplier used on this value probably have a subtle effect on clip rectangle
  - style: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space? (#438, #707, #1223)
+ - style: gradients fill (#1223) ~ 2 bg colors for each fill? tricky with rounded shapes and using textures for corners.
  - style editor: color child window height expressed in multiple of line height.
 
  - log: LogButtons() options for specifying depth and/or hiding depth slider
@@ -205,12 +213,13 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - keyboard: full keyboard navigation and focus. (#323)
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
- - input: rework IO system to be able to pass actual ordered/timestamped events. (~#335, #71)
- - input: allow to decide and pass explicit double-clicks (e.g. for windows by the CS_DBLCLKS style).
- - input: support track pad style scrolling & slider edit.
+ - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)
+ - inputs: allow to decide and pass explicit double-clicks (e.g. for windows by the CS_DBLCLKS style).
+ - inputs: support track pad style scrolling & slider edit.
 
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: provide HoveredTime and ActivatedTime to ease the creation of animations.
+ - misc: fix for compilation settings where stdcall isn't the default (e.g. vectorcall) (#1230)
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
 
  - demo: demo: add a virtual scrolling example?
