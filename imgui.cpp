@@ -614,7 +614,7 @@ static void             MarkIniSettingsDirty();
 static void             PushColumnClipRect(int column_index = -1);
 static ImRect           GetVisibleRect();
 
-static bool             BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags);
+static bool             BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags);
 static void             CloseInactivePopups();
 static void             ClosePopupToLevel(int remaining);
 static void             ClosePopup(ImGuiID id);
@@ -3505,11 +3505,10 @@ static inline void ClearSetNextWindowData()
     g.SetNextWindowSizeConstraint = g.SetNextWindowFocus = false;
 }
 
-static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
+static bool BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    const ImGuiID id = window->GetID(str_id);
     if (!IsPopupOpen(id))
     {
         ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
@@ -3536,12 +3535,13 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
 
 bool ImGui::BeginPopup(const char* str_id)
 {
-    if (GImGui->OpenPopupStack.Size <= GImGui->CurrentPopupStack.Size)	// Early out for performance
+    ImGuiContext& g = *GImGui;
+    if (g.OpenPopupStack.Size <= g.CurrentPopupStack.Size)	// Early out for performance
     {
         ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
         return false;
     }
-    return BeginPopupEx(str_id, ImGuiWindowFlags_ShowBorders);
+    return BeginPopupEx(g.CurrentWindow->GetID(str_id), ImGuiWindowFlags_ShowBorders);
 }
 
 bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags extra_flags)
@@ -8534,7 +8534,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
 
         const ImGuiWindowFlags flags = ImGuiWindowFlags_ComboBox | ((window->Flags & ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
-        if (BeginPopupEx(label, flags))
+        if (BeginPopupEx(id, flags))
         {
             // Display items
             Spacing();
@@ -8944,7 +8944,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     {
         SetNextWindowPos(popup_pos, ImGuiCond_Always);
         ImGuiWindowFlags flags = ImGuiWindowFlags_ShowBorders | ((window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu)) ? ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_ChildWindow : ImGuiWindowFlags_ChildMenu);
-        menu_is_open = BeginPopupEx(label, flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
+        menu_is_open = BeginPopupEx(id, flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
     }
 
     return menu_is_open;
