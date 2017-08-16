@@ -24,6 +24,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: increase minimum size of a window with menus or fix the menu rendering so that it doesn't look odd.
  - window: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - window: expose contents size. (#1045)
+ - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
 !- scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
 
