@@ -204,6 +204,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/08/15 (1.51) - changed parameter order for BeginPopupContextWindow(), note that most uses relied on default parameters completely.
  - 2017/08/13 (1.51) - renamed ImGuiCol_Columns_*** to ImGuiCol_Separator_***
  - 2017/08/11 (1.51) - renamed ImGuiSetCond_*** types and flags to ImGuiCond_***. Kept redirection enums (will obsolete).
  - 2017/08/09 (1.51) - removed ValueColor() helpers, they are equivalent to calling Text(label) + SameLine() + ColorButton().
@@ -3598,9 +3599,10 @@ bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
     return BeginPopup(str_id);
 }
 
-bool ImGui::BeginPopupContextWindow(bool also_over_items, const char* str_id, int mouse_button)
+bool ImGui::BeginPopupContextWindow(const char* str_id, int mouse_button, bool also_over_items)
 {
-    if (!str_id) str_id = "window_context_menu";
+    if (!str_id)
+        str_id = "window_context_menu";
     if (IsMouseHoveringWindow() && IsMouseClicked(mouse_button))
         if (also_over_items || !IsAnyItemHovered())
             OpenPopupEx(str_id, true);
@@ -3609,7 +3611,8 @@ bool ImGui::BeginPopupContextWindow(bool also_over_items, const char* str_id, in
 
 bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
 {
-    if (!str_id) str_id = "void_context_menu";
+    if (!str_id) 
+        str_id = "void_context_menu";
     if (!IsMouseHoveringAnyWindow() && IsMouseClicked(mouse_button))
         OpenPopupEx(str_id, true);
     return BeginPopup(str_id);
