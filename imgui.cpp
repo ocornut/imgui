@@ -618,7 +618,7 @@ static bool             BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags);
 static void             CloseInactivePopups();
 static void             ClosePopupToLevel(int remaining);
 static void             ClosePopup(ImGuiID id);
-static bool             IsPopupOpen(ImGuiID id);
+static bool             IsPopupIdOpen(ImGuiID id);
 static ImGuiWindow*     GetFrontMostModalRootWindow();
 static ImVec2           FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size, int* last_dir, const ImRect& rect_to_avoid);
 
@@ -3396,7 +3396,7 @@ void ImGui::EndTooltip()
     ImGui::End();
 }
 
-static bool IsPopupOpen(ImGuiID id)
+static bool IsPopupIdOpen(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     return g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].PopupId == id;
@@ -3480,7 +3480,7 @@ static void ClosePopupToLevel(int remaining)
 
 static void ClosePopup(ImGuiID id)
 {
-    if (!IsPopupOpen(id))
+    if (!IsPopupIdOpen(id))
         return;
     ImGuiContext& g = *GImGui;
     ClosePopupToLevel(g.OpenPopupStack.Size - 1);
@@ -3509,7 +3509,7 @@ static bool BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (!IsPopupOpen(id))
+    if (!IsPopupIdOpen(id))
     {
         ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
         return false;
@@ -3544,12 +3544,20 @@ bool ImGui::BeginPopup(const char* str_id)
     return BeginPopupEx(g.CurrentWindow->GetID(str_id), ImGuiWindowFlags_ShowBorders);
 }
 
+bool ImGui::IsPopupOpen(const char* str_id)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    const ImGuiID id = window->GetID(str_id);
+    return IsPopupIdOpen(id);
+}
+
 bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags extra_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     const ImGuiID id = window->GetID(name);
-    if (!IsPopupOpen(id))
+    if (!IsPopupIdOpen(id))
     {
         ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
         return false;
@@ -8475,7 +8483,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
 
     const float arrow_size = (g.FontSize + style.FramePadding.x * 2.0f);
     const bool hovered = IsHovered(frame_bb, id);
-    bool popup_open = IsPopupOpen(id);
+    bool popup_open = IsPopupIdOpen(id);
     bool popup_opened_now = false;
 
     const ImRect value_bb(frame_bb.Min, frame_bb.Max - ImVec2(arrow_size, 0.0f));
@@ -8499,7 +8507,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         if (g.IO.MouseClicked[0])
         {
             ClearActiveID();
-            if (IsPopupOpen(id))
+            if (IsPopupIdOpen(id))
             {
                 ClosePopup(id);
             }
@@ -8513,7 +8521,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     }
 
     bool value_changed = false;
-    if (IsPopupOpen(id))
+    if (IsPopupIdOpen(id))
     {
         // Size default to hold ~7 items
         if (height_in_items < 0)
@@ -8859,7 +8867,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     ImGuiWindow* backed_focused_window = g.FocusedWindow;
 
     bool pressed;
-    bool menu_is_open = IsPopupOpen(id);
+    bool menu_is_open = IsPopupIdOpen(id);
     bool menuset_is_open = !(window->Flags & ImGuiWindowFlags_Popup) && (g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].ParentMenuSet == window->GetID("##menus"));
     if (menuset_is_open)
         g.FocusedWindow = window;
@@ -8926,7 +8934,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         want_open = true;
     if (!enabled) // explicitly close if an open menu becomes disabled, facilitate users code a lot in pattern such as 'if (BeginMenu("options", has_object)) { ..use object.. }'
         want_close = true;
-    if (want_close && IsPopupOpen(id))
+    if (want_close && IsPopupIdOpen(id))
         ClosePopupToLevel(GImGui->CurrentPopupStack.Size);
 
     if (!menu_is_open && want_open && g.OpenPopupStack.Size > g.CurrentPopupStack.Size)
