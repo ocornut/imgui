@@ -308,14 +308,11 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::EndTooltip();
             }
 
-            // Testing IMGUI_ONCE_UPON_A_FRAME macro
+            // Testing ImGuiOnceUponAFrame helper.
+            //static ImGuiOnceUponAFrame once;
             //for (int i = 0; i < 5; i++)
-            //{
-            //  IMGUI_ONCE_UPON_A_FRAME
-            //  {
-            //      ImGui::Text("This will be displayed only once.");
-            //  }
-            //}
+            //    if (once)
+            //        ImGui::Text("This will be displayed only once.");
 
             ImGui::Separator();
 
