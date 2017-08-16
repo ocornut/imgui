@@ -618,7 +618,6 @@ static bool             BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags);
 static void             CloseInactivePopups();
 static void             ClosePopupToLevel(int remaining);
 static void             ClosePopup(ImGuiID id);
-static bool             IsPopupOpen(ImGuiID id);
 static ImGuiWindow*     GetFrontMostModalRootWindow();
 static ImVec2           FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size, int* last_dir, const ImRect& rect_to_avoid);
 
@@ -3396,12 +3395,6 @@ void ImGui::EndTooltip()
     ImGui::End();
 }
 
-static bool IsPopupOpen(ImGuiID id)
-{
-    ImGuiContext& g = *GImGui;
-    return g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].PopupId == id;
-}
-
 // Mark popup as open (toggle toward open state).
 // Popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
 // Popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
@@ -3480,7 +3473,7 @@ static void ClosePopupToLevel(int remaining)
 
 static void ClosePopup(ImGuiID id)
 {
-    if (!IsPopupOpen(id))
+    if (!ImGui::IsPopupOpen(id))
         return;
     ImGuiContext& g = *GImGui;
     ClosePopupToLevel(g.OpenPopupStack.Size - 1);
@@ -3509,7 +3502,7 @@ static bool BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (!IsPopupOpen(id))
+    if (!ImGui::IsPopupOpen(id))
     {
         ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
         return false;
@@ -3542,6 +3535,18 @@ bool ImGui::BeginPopup(const char* str_id)
         return false;
     }
     return BeginPopupEx(g.CurrentWindow->GetID(str_id), ImGuiWindowFlags_ShowBorders);
+}
+
+bool ImGui::IsPopupOpen(ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    return g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].PopupId == id;
+}
+
+bool ImGui::IsPopupOpen(const char* str_id)
+{
+    ImGuiContext& g = *GImGui;
+    return g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].PopupId == g.CurrentWindow->GetID(str_id);
 }
 
 bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags extra_flags)
