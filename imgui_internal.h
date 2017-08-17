@@ -792,6 +792,11 @@ namespace ImGui
 
 } // namespace ImGui
 
+// ImFontAtlas
+IMGUI_API void              ImFontAtlasBuildRegisterDefaultCustomRects(ImFontAtlas* atlas);
+IMGUI_API void              ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* spc);
+IMGUI_API void              ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas);
+
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif

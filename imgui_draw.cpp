@@ -1334,12 +1334,11 @@ void ImFontAtlas::CustomRectCalcUV(const CustomRect* rect, ImVec2* out_uv_min, I
     *out_uv_max = ImVec2((float)(rect->X + rect->Width) / TexWidth, (float)(rect->Y + rect->Height) / TexHeight);
 }
 
-static void BuildPackCustomRects(ImFontAtlas* atlas, stbtt_pack_context* spc);
-static void BuildRenderDefaultTexData(ImFontAtlas* atlas);
-
 bool    ImFontAtlas::Build()
 {
     IM_ASSERT(ConfigData.Size > 0);
+
+    ImFontAtlasBuildRegisterDefaultCustomRects(this);
 
     TexID = NULL;
     TexWidth = TexHeight = 0;
@@ -1358,19 +1357,19 @@ bool    ImFontAtlas::Build()
             total_glyphs_count += (in_range[1] - in_range[0]) + 1;
     }
 
-    // Start packing. We need a known width for the skyline algorithm. Using a dumb heuristic here to decide of width. User can override TexDesiredWidth and TexGlyphPadding if they wish.
+    // We need a width for the skyline algorithm. Using a dumb heuristic here to decide of width. User can override TexDesiredWidth and TexGlyphPadding if they wish.
     // Width doesn't really matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
     TexWidth = (TexDesiredWidth > 0) ? TexDesiredWidth : (total_glyphs_count > 4000) ? 4096 : (total_glyphs_count > 2000) ? 2048 : (total_glyphs_count > 1000) ? 1024 : 512;
     TexHeight = 0;
+
+    // Start packing
     const int max_tex_height = 1024*32;
     stbtt_pack_context spc;
     stbtt_PackBegin(&spc, NULL, TexWidth, max_tex_height, 0, TexGlyphPadding, NULL);
+    stbtt_PackSetOversampling(&spc, 1, 1);
 
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
-    // FIXME-WIP: We should register in the constructor (but cannot because our static instances may not have allocator ready by the time they initialize). This needs to be fixed because we can expose CustomRects.
-    if (CustomRects.empty())
-        CustomRectRegister(FONT_ATLAS_DEFAULT_TEX_DATA_ID, FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF*2+1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
-    BuildPackCustomRects(this, &spc);
+    ImFontAtlasBuildPackCustomRects(this, spc.pack_info);
 
     // Initialize font information (so we can error without any cleanup)
     struct ImFontTempBuildData
@@ -1533,13 +1532,22 @@ bool    ImFontAtlas::Build()
     ImGui::MemFree(tmp_array);
 
     // Render into our custom data block
-    BuildRenderDefaultTexData(this);
+    ImFontAtlasBuildRenderDefaultTexData(this);
 
     return true;
 }
 
-static void BuildPackCustomRects(ImFontAtlas* atlas, stbtt_pack_context* spc)
+void ImFontAtlasBuildRegisterDefaultCustomRects(ImFontAtlas* atlas)
 {
+    // FIXME-WIP: We should register in the constructor (but cannot because our static instances may not have allocator ready by the time they initialize). This needs to be fixed because we can expose CustomRects.
+    if (atlas->CustomRects.empty())
+        atlas->CustomRectRegister(FONT_ATLAS_DEFAULT_TEX_DATA_ID, FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF*2+1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
+}
+
+void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* pack_context_opaque)
+{
+    stbrp_context* pack_context = (stbrp_context*)pack_context_opaque;
+
     ImVector<ImFontAtlas::CustomRect>& user_rects = atlas->CustomRects;
     ImVector<stbrp_rect> pack_rects;
     pack_rects.resize(user_rects.Size);
@@ -1549,8 +1557,7 @@ static void BuildPackCustomRects(ImFontAtlas* atlas, stbtt_pack_context* spc)
         pack_rects[i].w = user_rects[i].Width;
         pack_rects[i].h = user_rects[i].Height;
     }
-    stbtt_PackSetOversampling(spc, 1, 1);
-    stbrp_pack_rects((stbrp_context*)spc->pack_info, &pack_rects[0], pack_rects.Size);
+    stbrp_pack_rects(pack_context, &pack_rects[0], pack_rects.Size);
     for (int i = 0; i < pack_rects.Size; i++)
         if (pack_rects[i].was_packed)
         {
@@ -1561,7 +1568,7 @@ static void BuildPackCustomRects(ImFontAtlas* atlas, stbtt_pack_context* spc)
         }
 }
 
-static void BuildRenderDefaultTexData(ImFontAtlas* atlas)
+void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
 {
     ImFontAtlas::CustomRect& r = atlas->CustomRects[0];
     IM_ASSERT(r.ID == FONT_ATLAS_DEFAULT_TEX_DATA_ID);
