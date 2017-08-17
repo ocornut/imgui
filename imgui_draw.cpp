@@ -1477,20 +1477,9 @@ bool    ImFontAtlas::Build()
 
         float ascent = unscaled_ascent * font_scale;
         float descent = unscaled_descent * font_scale;
-        if (!cfg.MergeMode)
-        {
-            dst_font->ContainerAtlas = this;
-            dst_font->ConfigData = &cfg;
-            dst_font->ConfigDataCount = 0;
-            dst_font->FontSize = cfg.SizePixels;
-            dst_font->Ascent = ascent;
-            dst_font->Descent = descent;
-            dst_font->Glyphs.resize(0);
-            dst_font->MetricsTotalSurface = 0;
-        }
-        dst_font->ConfigDataCount++;
+        ImFontAtlasBuildSetupFont(this, dst_font, &cfg, ascent, descent);
         float off_x = cfg.GlyphOffset.x;
-        float off_y = cfg.GlyphOffset.y;
+        float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
 
         dst_font->FallbackGlyph = NULL; // Always clear fallback so FindGlyph can return NULL. It will be set again in BuildLookupTable()
         for (int i = 0; i < tmp.RangesCount; i++)
@@ -1513,11 +1502,16 @@ bool    ImFontAtlas::Build()
                 dst_font->Glyphs.resize(dst_font->Glyphs.Size + 1);
                 ImFont::Glyph& glyph = dst_font->Glyphs.back();
                 glyph.Codepoint = (ImWchar)codepoint;
-                glyph.X0 = q.x0 + off_x; glyph.Y0 = q.y0 + off_y; glyph.X1 = q.x1 + off_x; glyph.Y1 = q.y1 + off_y;
-                glyph.U0 = q.s0; glyph.V0 = q.t0; glyph.U1 = q.s1; glyph.V1 = q.t1;
-                glyph.Y0 += (float)(int)(dst_font->Ascent + 0.5f);
-                glyph.Y1 += (float)(int)(dst_font->Ascent + 0.5f);
+                glyph.X0 = q.x0 + off_x; 
+                glyph.Y0 = q.y0 + off_y; 
+                glyph.X1 = q.x1 + off_x; 
+                glyph.Y1 = q.y1 + off_y;
+                glyph.U0 = q.s0; 
+                glyph.V0 = q.t0; 
+                glyph.U1 = q.s1; 
+                glyph.V1 = q.t1;
                 glyph.XAdvance = (pc.xadvance + cfg.GlyphExtraSpacing.x);  // Bake spacing into XAdvance
+
                 if (cfg.PixelSnapH)
                     glyph.XAdvance = (float)(int)(glyph.XAdvance + 0.5f);
                 dst_font->MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * TexWidth + 1.99f) * (int)((glyph.V1 - glyph.V0) * TexHeight + 1.99f); // +1 to account for average padding, +0.99 to round
@@ -1542,6 +1536,22 @@ void ImFontAtlasBuildRegisterDefaultCustomRects(ImFontAtlas* atlas)
     // FIXME-WIP: We should register in the constructor (but cannot because our static instances may not have allocator ready by the time they initialize). This needs to be fixed because we can expose CustomRects.
     if (atlas->CustomRects.empty())
         atlas->CustomRectRegister(FONT_ATLAS_DEFAULT_TEX_DATA_ID, FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF*2+1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
+}
+
+void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* font_config, float ascent, float descent)
+{
+    if (!font_config->MergeMode)
+    {
+        font->ContainerAtlas = atlas;
+        font->ConfigData = font_config;
+        font->ConfigDataCount = 0;
+        font->FontSize = font_config->SizePixels;
+        font->Ascent = ascent;
+        font->Descent = descent;
+        font->Glyphs.resize(0);
+        font->MetricsTotalSurface = 0;
+    }
+    font->ConfigDataCount++;
 }
 
 void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* pack_context_opaque)
