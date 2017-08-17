@@ -204,6 +204,8 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/08/15 (1.51) - marked the weird IMGUI_ONCE_UPON_A_FRAME helper macro as obsolete. prefer using the more explicit ImGuiOnceUponAFrame.
+ - 2017/08/15 (1.51) - changed parameter order for BeginPopupContextWindow(), note that most uses relied on default parameters completely.
  - 2017/08/13 (1.51) - renamed ImGuiCol_Columns_*** to ImGuiCol_Separator_***
  - 2017/08/11 (1.51) - renamed ImGuiSetCond_*** types and flags to ImGuiCond_***. Kept redirection enums (will obsolete).
  - 2017/08/09 (1.51) - removed ValueColor() helpers, they are equivalent to calling Text(label) + SameLine() + ColorButton().
@@ -614,11 +616,10 @@ static void             MarkIniSettingsDirty();
 static void             PushColumnClipRect(int column_index = -1);
 static ImRect           GetVisibleRect();
 
-static bool             BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags);
+static bool             BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags);
 static void             CloseInactivePopups();
 static void             ClosePopupToLevel(int remaining);
 static void             ClosePopup(ImGuiID id);
-static bool             IsPopupOpen(ImGuiID id);
 static ImGuiWindow*     GetFrontMostModalRootWindow();
 static ImVec2           FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size, int* last_dir, const ImRect& rect_to_avoid);
 
@@ -3404,21 +3405,14 @@ void ImGui::EndTooltip()
     ImGui::End();
 }
 
-static bool IsPopupOpen(ImGuiID id)
-{
-    ImGuiContext& g = *GImGui;
-    return g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].PopupId == id;
-}
-
 // Mark popup as open (toggle toward open state).
 // Popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
 // Popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
 // One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
-void ImGui::OpenPopupEx(const char* str_id, bool reopen_existing)
+void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiID id = window->GetID(str_id);
     int current_stack_size = g.CurrentPopupStack.Size;
     ImGuiPopupRef popup_ref = ImGuiPopupRef(id, window, window->GetID("##menus"), g.IO.MousePos); // Tagged as new ref because constructor sets Window to NULL (we are passing the ParentWindow info here)
     if (g.OpenPopupStack.Size < current_stack_size + 1)
@@ -3432,7 +3426,8 @@ void ImGui::OpenPopupEx(const char* str_id, bool reopen_existing)
 
 void ImGui::OpenPopup(const char* str_id)
 {
-    ImGui::OpenPopupEx(str_id, false);
+    ImGuiContext& g = *GImGui;
+    OpenPopupEx(g.CurrentWindow->GetID(str_id), false);
 }
 
 static void CloseInactivePopups()
@@ -3488,7 +3483,7 @@ static void ClosePopupToLevel(int remaining)
 
 static void ClosePopup(ImGuiID id)
 {
-    if (!IsPopupOpen(id))
+    if (!ImGui::IsPopupOpen(id))
         return;
     ImGuiContext& g = *GImGui;
     ClosePopupToLevel(g.OpenPopupStack.Size - 1);
@@ -3508,17 +3503,17 @@ void ImGui::CloseCurrentPopup()
 
 static inline void ClearSetNextWindowData()
 {
+    // FIXME-OPT
     ImGuiContext& g = *GImGui;
     g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowContentSizeCond = g.SetNextWindowCollapsedCond = 0;
     g.SetNextWindowSizeConstraint = g.SetNextWindowFocus = false;
 }
 
-static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
+static bool BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    const ImGuiID id = window->GetID(str_id);
-    if (!IsPopupOpen(id))
+    if (!ImGui::IsPopupOpen(id))
     {
         ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
         return false;
@@ -3544,12 +3539,26 @@ static bool BeginPopupEx(const char* str_id, ImGuiWindowFlags extra_flags)
 
 bool ImGui::BeginPopup(const char* str_id)
 {
-    if (GImGui->OpenPopupStack.Size <= GImGui->CurrentPopupStack.Size)	// Early out for performance
+    ImGuiContext& g = *GImGui;
+    if (g.OpenPopupStack.Size <= g.CurrentPopupStack.Size)	// Early out for performance
     {
         ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
         return false;
     }
-    return BeginPopupEx(str_id, ImGuiWindowFlags_ShowBorders);
+    return BeginPopupEx(g.CurrentWindow->GetID(str_id), ImGuiWindowFlags_ShowBorders);
+}
+
+// FIXME
+bool ImGui::IsPopupOpen(ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    return g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].PopupId == id;
+}
+
+bool ImGui::IsPopupOpen(const char* str_id)
+{
+    ImGuiContext& g = *GImGui;
+    return g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].PopupId == g.CurrentWindow->GetID(str_id);
 }
 
 bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags extra_flags)
@@ -3592,29 +3601,31 @@ void ImGui::EndPopup()
 // 2. If you want right-clicking on the same item to reopen the popup at new location, use the same code replacing IsItemHovered() with IsItemHoveredRect()
 //    and passing true to the OpenPopupEx().
 //    Because: hovering an item in a window below the popup won't normally trigger is hovering behavior/coloring. The pattern of ignoring the fact that
-//    the item isn't interactable (because it is blocked by the active popup) may useful in some situation when e.g. large canvas as one item, content of menu
+//    the item can be interacted with (because it is blocked by the active popup) may useful in some situation when e.g. large canvas as one item, content of menu
 //    driven by click position.
 bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
 {
     if (IsItemHovered() && IsMouseClicked(mouse_button))
-        OpenPopupEx(str_id, false);
+        OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), false);
     return BeginPopup(str_id);
 }
 
-bool ImGui::BeginPopupContextWindow(bool also_over_items, const char* str_id, int mouse_button)
+bool ImGui::BeginPopupContextWindow(const char* str_id, int mouse_button, bool also_over_items)
 {
-    if (!str_id) str_id = "window_context_menu";
+    if (!str_id)
+        str_id = "window_context";
     if (IsMouseHoveringWindow() && IsMouseClicked(mouse_button))
         if (also_over_items || !IsAnyItemHovered())
-            OpenPopupEx(str_id, true);
+            OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), true);
     return BeginPopup(str_id);
 }
 
 bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
 {
-    if (!str_id) str_id = "void_context_menu";
+    if (!str_id) 
+        str_id = "void_context";
     if (!IsMouseHoveringAnyWindow() && IsMouseClicked(mouse_button))
-        OpenPopupEx(str_id, true);
+        OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), true);
     return BeginPopup(str_id);
 }
 
@@ -6187,32 +6198,32 @@ void ImGui::SetNextTreeNodeOpen(bool is_open, ImGuiCond cond)
 
 void ImGui::PushID(const char* str_id)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     window->IDStack.push_back(window->GetID(str_id));
 }
 
 void ImGui::PushID(const char* str_id_begin, const char* str_id_end)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     window->IDStack.push_back(window->GetID(str_id_begin, str_id_end));
 }
 
 void ImGui::PushID(const void* ptr_id)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     window->IDStack.push_back(window->GetID(ptr_id));
 }
 
 void ImGui::PushID(int int_id)
 {
     const void* ptr_id = (void*)(intptr_t)int_id;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     window->IDStack.push_back(window->GetID(ptr_id));
 }
 
 void ImGui::PopID()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     window->IDStack.pop_back();
 }
 
@@ -8550,7 +8561,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
 
         const ImGuiWindowFlags flags = ImGuiWindowFlags_ComboBox | ((window->Flags & ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
-        if (BeginPopupEx(label, flags))
+        if (BeginPopupEx(id, flags))
         {
             // Display items
             Spacing();
@@ -8960,7 +8971,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     {
         SetNextWindowPos(popup_pos, ImGuiCond_Always);
         ImGuiWindowFlags flags = ImGuiWindowFlags_ShowBorders | ((window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu)) ? ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_ChildWindow : ImGuiWindowFlags_ChildMenu);
-        menu_is_open = BeginPopupEx(label, flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
+        menu_is_open = BeginPopupEx(id, flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
     }
 
     return menu_is_open;
