@@ -1336,40 +1336,45 @@ void ImFontAtlas::CustomRectCalcUV(const CustomRect* rect, ImVec2* out_uv_min, I
 
 bool    ImFontAtlas::Build()
 {
-    IM_ASSERT(ConfigData.Size > 0);
+    return ImFontAtlasBuildWithStbTruetype(this);
+}
 
-    ImFontAtlasBuildRegisterDefaultCustomRects(this);
+bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
+{
+    IM_ASSERT(atlas->ConfigData.Size > 0);
 
-    TexID = NULL;
-    TexWidth = TexHeight = 0;
-    TexUvWhitePixel = ImVec2(0, 0);
-    ClearTexData();
+    ImFontAtlasBuildRegisterDefaultCustomRects(atlas);
+
+    atlas->TexID = NULL;
+    atlas->TexWidth = atlas->TexHeight = 0;
+    atlas->TexUvWhitePixel = ImVec2(0, 0);
+    atlas->ClearTexData();
 
     // Count glyphs/ranges
     int total_glyphs_count = 0;
     int total_ranges_count = 0;
-    for (int input_i = 0; input_i < ConfigData.Size; input_i++)
+    for (int input_i = 0; input_i < atlas->ConfigData.Size; input_i++)
     {
-        ImFontConfig& cfg = ConfigData[input_i];
+        ImFontConfig& cfg = atlas->ConfigData[input_i];
         if (!cfg.GlyphRanges)
-            cfg.GlyphRanges = GetGlyphRangesDefault();
+            cfg.GlyphRanges = atlas->GetGlyphRangesDefault();
         for (const ImWchar* in_range = cfg.GlyphRanges; in_range[0] && in_range[1]; in_range += 2, total_ranges_count++)
             total_glyphs_count += (in_range[1] - in_range[0]) + 1;
     }
 
     // We need a width for the skyline algorithm. Using a dumb heuristic here to decide of width. User can override TexDesiredWidth and TexGlyphPadding if they wish.
     // Width doesn't really matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
-    TexWidth = (TexDesiredWidth > 0) ? TexDesiredWidth : (total_glyphs_count > 4000) ? 4096 : (total_glyphs_count > 2000) ? 2048 : (total_glyphs_count > 1000) ? 1024 : 512;
-    TexHeight = 0;
+    atlas->TexWidth = (atlas->TexDesiredWidth > 0) ? atlas->TexDesiredWidth : (total_glyphs_count > 4000) ? 4096 : (total_glyphs_count > 2000) ? 2048 : (total_glyphs_count > 1000) ? 1024 : 512;
+    atlas->TexHeight = 0;
 
     // Start packing
     const int max_tex_height = 1024*32;
     stbtt_pack_context spc;
-    stbtt_PackBegin(&spc, NULL, TexWidth, max_tex_height, 0, TexGlyphPadding, NULL);
+    stbtt_PackBegin(&spc, NULL, atlas->TexWidth, max_tex_height, 0, atlas->TexGlyphPadding, NULL);
     stbtt_PackSetOversampling(&spc, 1, 1);
 
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
-    ImFontAtlasBuildPackCustomRects(this, spc.pack_info);
+    ImFontAtlasBuildPackCustomRects(atlas, spc.pack_info);
 
     // Initialize font information (so we can error without any cleanup)
     struct ImFontTempBuildData
@@ -1379,12 +1384,13 @@ bool    ImFontAtlas::Build()
         stbtt_pack_range*   Ranges;
         int                 RangesCount;
     };
-    ImFontTempBuildData* tmp_array = (ImFontTempBuildData*)ImGui::MemAlloc((size_t)ConfigData.Size * sizeof(ImFontTempBuildData));
-    for (int input_i = 0; input_i < ConfigData.Size; input_i++)
+    ImFontTempBuildData* tmp_array = (ImFontTempBuildData*)ImGui::MemAlloc((size_t)atlas->ConfigData.Size * sizeof(ImFontTempBuildData));
+    for (int input_i = 0; input_i < atlas->ConfigData.Size; input_i++)
     {
-        ImFontConfig& cfg = ConfigData[input_i];
+        ImFontConfig& cfg = atlas->ConfigData[input_i];
         ImFontTempBuildData& tmp = tmp_array[input_i];
-        IM_ASSERT(cfg.DstFont && (!cfg.DstFont->IsLoaded() || cfg.DstFont->ContainerAtlas == this));
+        IM_ASSERT(cfg.DstFont && (!cfg.DstFont->IsLoaded() || cfg.DstFont->ContainerAtlas == atlas));
+
         const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)cfg.FontData, cfg.FontNo);
         IM_ASSERT(font_offset >= 0);
         if (!stbtt_InitFont(&tmp.FontInfo, (unsigned char*)cfg.FontData, font_offset))
@@ -1401,9 +1407,9 @@ bool    ImFontAtlas::Build()
     memset(buf_ranges, 0, total_ranges_count * sizeof(stbtt_pack_range));
 
     // First font pass: pack all glyphs (no rendering at this point, we are working with rectangles in an infinitely tall texture at this point)
-    for (int input_i = 0; input_i < ConfigData.Size; input_i++)
+    for (int input_i = 0; input_i < atlas->ConfigData.Size; input_i++)
     {
-        ImFontConfig& cfg = ConfigData[input_i];
+        ImFontConfig& cfg = atlas->ConfigData[input_i];
         ImFontTempBuildData& tmp = tmp_array[input_i];
 
         // Setup ranges
@@ -1436,23 +1442,23 @@ bool    ImFontAtlas::Build()
         // Extend texture height
         for (int i = 0; i < n; i++)
             if (tmp.Rects[i].was_packed)
-                TexHeight = ImMax(TexHeight, tmp.Rects[i].y + tmp.Rects[i].h);
+                atlas->TexHeight = ImMax(atlas->TexHeight, tmp.Rects[i].y + tmp.Rects[i].h);
     }
     IM_ASSERT(buf_rects_n == total_glyphs_count);
     IM_ASSERT(buf_packedchars_n == total_glyphs_count);
     IM_ASSERT(buf_ranges_n == total_ranges_count);
 
     // Create texture
-    TexHeight = ImUpperPowerOfTwo(TexHeight);
-    TexPixelsAlpha8 = (unsigned char*)ImGui::MemAlloc(TexWidth * TexHeight);
-    memset(TexPixelsAlpha8, 0, TexWidth * TexHeight);
-    spc.pixels = TexPixelsAlpha8;
-    spc.height = TexHeight;
+    atlas->TexHeight = ImUpperPowerOfTwo(atlas->TexHeight);
+    atlas->TexPixelsAlpha8 = (unsigned char*)ImGui::MemAlloc(atlas->TexWidth * atlas->TexHeight);
+    memset(atlas->TexPixelsAlpha8, 0, atlas->TexWidth * atlas->TexHeight);
+    spc.pixels = atlas->TexPixelsAlpha8;
+    spc.height = atlas->TexHeight;
 
     // Second pass: render font characters
-    for (int input_i = 0; input_i < ConfigData.Size; input_i++)
+    for (int input_i = 0; input_i < atlas->ConfigData.Size; input_i++)
     {
-        ImFontConfig& cfg = ConfigData[input_i];
+        ImFontConfig& cfg = atlas->ConfigData[input_i];
         ImFontTempBuildData& tmp = tmp_array[input_i];
         stbtt_PackSetOversampling(&spc, cfg.OversampleH, cfg.OversampleV);
         stbtt_PackFontRangesRenderIntoRects(&spc, &tmp.FontInfo, tmp.Ranges, tmp.RangesCount, tmp.Rects);
@@ -1465,9 +1471,9 @@ bool    ImFontAtlas::Build()
     buf_rects = NULL;
 
     // Third pass: setup ImFont and glyphs for runtime
-    for (int input_i = 0; input_i < ConfigData.Size; input_i++)
+    for (int input_i = 0; input_i < atlas->ConfigData.Size; input_i++)
     {
-        ImFontConfig& cfg = ConfigData[input_i];
+        ImFontConfig& cfg = atlas->ConfigData[input_i];
         ImFontTempBuildData& tmp = tmp_array[input_i];
         ImFont* dst_font = cfg.DstFont; // We can have multiple input fonts writing into a same destination font (when using MergeMode=true)
 
@@ -1477,7 +1483,7 @@ bool    ImFontAtlas::Build()
 
         float ascent = unscaled_ascent * font_scale;
         float descent = unscaled_descent * font_scale;
-        ImFontAtlasBuildSetupFont(this, dst_font, &cfg, ascent, descent);
+        ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
         float off_x = cfg.GlyphOffset.x;
         float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
 
@@ -1497,7 +1503,7 @@ bool    ImFontAtlas::Build()
 
                 stbtt_aligned_quad q;
                 float dummy_x = 0.0f, dummy_y = 0.0f;
-                stbtt_GetPackedQuad(range.chardata_for_range, TexWidth, TexHeight, char_idx, &dummy_x, &dummy_y, &q, 0);
+                stbtt_GetPackedQuad(range.chardata_for_range, atlas->TexWidth, atlas->TexHeight, char_idx, &dummy_x, &dummy_y, &q, 0);
 
                 dst_font->Glyphs.resize(dst_font->Glyphs.Size + 1);
                 ImFont::Glyph& glyph = dst_font->Glyphs.back();
@@ -1514,7 +1520,7 @@ bool    ImFontAtlas::Build()
 
                 if (cfg.PixelSnapH)
                     glyph.XAdvance = (float)(int)(glyph.XAdvance + 0.5f);
-                dst_font->MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * TexWidth + 1.99f) * (int)((glyph.V1 - glyph.V0) * TexHeight + 1.99f); // +1 to account for average padding, +0.99 to round
+                dst_font->MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * atlas->TexWidth + 1.99f) * (int)((glyph.V1 - glyph.V0) * atlas->TexHeight + 1.99f); // +1 to account for average padding, +0.99 to round
             }
         }
         cfg.DstFont->BuildLookupTable();
@@ -1526,7 +1532,7 @@ bool    ImFontAtlas::Build()
     ImGui::MemFree(tmp_array);
 
     // Render into our custom data block
-    ImFontAtlasBuildRenderDefaultTexData(this);
+    ImFontAtlasBuildRenderDefaultTexData(atlas);
 
     return true;
 }

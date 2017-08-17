@@ -793,6 +793,7 @@ namespace ImGui
 } // namespace ImGui
 
 // ImFontAtlas internals
+IMGUI_API bool              ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildRegisterDefaultCustomRects(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* font_config, float ascent, float descent); 
 IMGUI_API void              ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* spc);
