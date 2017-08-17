@@ -1059,6 +1059,42 @@ ImFontConfig::ImFontConfig()
 // ImFontAtlas
 //-----------------------------------------------------------------------------
 
+// A work of art lies ahead! (. = white layer, X = black layer, others are blank)
+// The white texels on the top left are the ones we'll use everywhere in ImGui to render filled shapes.
+const int FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF = 90;
+const int FONT_ATLAS_DEFAULT_TEX_DATA_H      = 27;
+const int FONT_ATLAS_DEFAULT_TEX_DATA_ID     = 0xF0000;
+const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF * FONT_ATLAS_DEFAULT_TEX_DATA_H + 1] =
+{
+    "..-         -XXXXXXX-    X    -           X           -XXXXXXX          -          XXXXXXX"
+    "..-         -X.....X-   X.X   -          X.X          -X.....X          -          X.....X"
+    "---         -XXX.XXX-  X...X  -         X...X         -X....X           -           X....X"
+    "X           -  X.X  - X.....X -        X.....X        -X...X            -            X...X"
+    "XX          -  X.X  -X.......X-       X.......X       -X..X.X           -           X.X..X"
+    "X.X         -  X.X  -XXXX.XXXX-       XXXX.XXXX       -X.X X.X          -          X.X X.X"
+    "X..X        -  X.X  -   X.X   -          X.X          -XX   X.X         -         X.X   XX"
+    "X...X       -  X.X  -   X.X   -    XX    X.X    XX    -      X.X        -        X.X      "
+    "X....X      -  X.X  -   X.X   -   X.X    X.X    X.X   -       X.X       -       X.X       "
+    "X.....X     -  X.X  -   X.X   -  X..X    X.X    X..X  -        X.X      -      X.X        "
+    "X......X    -  X.X  -   X.X   - X...XXXXXX.XXXXXX...X -         X.X   XX-XX   X.X         "
+    "X.......X   -  X.X  -   X.X   -X.....................X-          X.X X.X-X.X X.X          "
+    "X........X  -  X.X  -   X.X   - X...XXXXXX.XXXXXX...X -           X.X..X-X..X.X           "
+    "X.........X -XXX.XXX-   X.X   -  X..X    X.X    X..X  -            X...X-X...X            "
+    "X..........X-X.....X-   X.X   -   X.X    X.X    X.X   -           X....X-X....X           "
+    "X......XXXXX-XXXXXXX-   X.X   -    XX    X.X    XX    -          X.....X-X.....X          "
+    "X...X..X    ---------   X.X   -          X.X          -          XXXXXXX-XXXXXXX          "
+    "X..X X..X   -       -XXXX.XXXX-       XXXX.XXXX       ------------------------------------"
+    "X.X  X..X   -       -X.......X-       X.......X       -    XX           XX    -           "
+    "XX    X..X  -       - X.....X -        X.....X        -   X.X           X.X   -           "
+    "      X..X          -  X...X  -         X...X         -  X..X           X..X  -           "
+    "       XX           -   X.X   -          X.X          - X...XXXXXXXXXXXXX...X -           "
+    "------------        -    X    -           X           -X.....................X-           "
+    "                    ----------------------------------- X...XXXXXXXXXXXXX...X -           "
+    "                                                      -  X..X           X..X  -           "
+    "                                                      -   X.X           X.X   -           "
+    "                                                      -    XX           XX    -           "
+};
+
 ImFontAtlas::ImFontAtlas()
 {
     TexID = NULL;
@@ -1091,6 +1127,7 @@ void    ImFontAtlas::ClearInputData()
             Fonts[i]->ConfigDataCount = 0;
         }
     ConfigData.clear();
+    CustomRects.clear();
 }
 
 void    ImFontAtlas::ClearTexData()
@@ -1277,6 +1314,29 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(const char* compressed
     return font;
 }
 
+int ImFontAtlas::CustomRectRegister(unsigned int id, int width, int height)
+{
+    IM_ASSERT(width > 0 && width <= 0xFFFF);
+    IM_ASSERT(height > 0 && height <= 0xFFFF);
+    CustomRect r;
+    r.ID = id;
+    r.Width = (unsigned short)width;
+    r.Height = (unsigned short)height;
+    CustomRects.push_back(r);
+    return CustomRects.Size - 1; // Return index
+}
+
+void ImFontAtlas::CustomRectCalcUV(const CustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max)
+{
+    IM_ASSERT(TexWidth > 0 && TexHeight > 0);   // Font atlas needs to be built before we can calculate UV coordinates
+    IM_ASSERT(rect->IsPacked());                // Make sure the rectangle has been packed
+    *out_uv_min = ImVec2((float)rect->X / TexWidth, (float)rect->Y / TexHeight);
+    *out_uv_max = ImVec2((float)(rect->X + rect->Width) / TexWidth, (float)(rect->Y + rect->Height) / TexHeight);
+}
+
+static void BuildPackCustomRects(ImFontAtlas* atlas, stbtt_pack_context* spc);
+static void BuildRenderDefaultTexData(ImFontAtlas* atlas);
+
 bool    ImFontAtlas::Build()
 {
     IM_ASSERT(ConfigData.Size > 0);
@@ -1299,7 +1359,7 @@ bool    ImFontAtlas::Build()
     }
 
     // Start packing. We need a known width for the skyline algorithm. Using a dumb heuristic here to decide of width. User can override TexDesiredWidth and TexGlyphPadding if they wish.
-    // After packing is done, width shouldn't matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
+    // Width doesn't really matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
     TexWidth = (TexDesiredWidth > 0) ? TexDesiredWidth : (total_glyphs_count > 4000) ? 4096 : (total_glyphs_count > 2000) ? 2048 : (total_glyphs_count > 1000) ? 1024 : 512;
     TexHeight = 0;
     const int max_tex_height = 1024*32;
@@ -1307,13 +1367,10 @@ bool    ImFontAtlas::Build()
     stbtt_PackBegin(&spc, NULL, TexWidth, max_tex_height, 0, TexGlyphPadding, NULL);
 
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
-    ImVector<stbrp_rect> extra_rects;
-    RenderCustomTexData(0, &extra_rects);
-    stbtt_PackSetOversampling(&spc, 1, 1);
-    stbrp_pack_rects((stbrp_context*)spc.pack_info, &extra_rects[0], extra_rects.Size);
-    for (int i = 0; i < extra_rects.Size; i++)
-        if (extra_rects[i].was_packed)
-            TexHeight = ImMax(TexHeight, extra_rects[i].y + extra_rects[i].h);
+    // FIXME-WIP: We should register in the constructor (but cannot because our static instances may not have allocator ready by the time they initialize). This needs to be fixed because we can expose CustomRects.
+    if (CustomRects.empty())
+        CustomRectRegister(FONT_ATLAS_DEFAULT_TEX_DATA_ID, FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF*2+1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
+    BuildPackCustomRects(this, &spc);
 
     // Initialize font information (so we can error without any cleanup)
     struct ImFontTempBuildData
@@ -1476,100 +1533,81 @@ bool    ImFontAtlas::Build()
     ImGui::MemFree(tmp_array);
 
     // Render into our custom data block
-    RenderCustomTexData(1, &extra_rects);
+    BuildRenderDefaultTexData(this);
 
     return true;
 }
 
-void ImFontAtlas::RenderCustomTexData(int pass, void* p_rects)
+static void BuildPackCustomRects(ImFontAtlas* atlas, stbtt_pack_context* spc)
 {
-    // A work of art lies ahead! (. = white layer, X = black layer, others are blank)
-    // The white texels on the top left are the ones we'll use everywhere in ImGui to render filled shapes.
-    const int TEX_DATA_W = 90;
-    const int TEX_DATA_H = 27;
-    const char texture_data[TEX_DATA_W*TEX_DATA_H+1] =
+    ImVector<ImFontAtlas::CustomRect>& user_rects = atlas->CustomRects;
+    ImVector<stbrp_rect> pack_rects;
+    pack_rects.resize(user_rects.Size);
+    memset(pack_rects.Data, 0, sizeof(stbrp_rect) * user_rects.Size);
+    for (int i = 0; i < user_rects.Size; i++)
     {
-        "..-         -XXXXXXX-    X    -           X           -XXXXXXX          -          XXXXXXX"
-        "..-         -X.....X-   X.X   -          X.X          -X.....X          -          X.....X"
-        "---         -XXX.XXX-  X...X  -         X...X         -X....X           -           X....X"
-        "X           -  X.X  - X.....X -        X.....X        -X...X            -            X...X"
-        "XX          -  X.X  -X.......X-       X.......X       -X..X.X           -           X.X..X"
-        "X.X         -  X.X  -XXXX.XXXX-       XXXX.XXXX       -X.X X.X          -          X.X X.X"
-        "X..X        -  X.X  -   X.X   -          X.X          -XX   X.X         -         X.X   XX"
-        "X...X       -  X.X  -   X.X   -    XX    X.X    XX    -      X.X        -        X.X      "
-        "X....X      -  X.X  -   X.X   -   X.X    X.X    X.X   -       X.X       -       X.X       "
-        "X.....X     -  X.X  -   X.X   -  X..X    X.X    X..X  -        X.X      -      X.X        "
-        "X......X    -  X.X  -   X.X   - X...XXXXXX.XXXXXX...X -         X.X   XX-XX   X.X         "
-        "X.......X   -  X.X  -   X.X   -X.....................X-          X.X X.X-X.X X.X          "
-        "X........X  -  X.X  -   X.X   - X...XXXXXX.XXXXXX...X -           X.X..X-X..X.X           "
-        "X.........X -XXX.XXX-   X.X   -  X..X    X.X    X..X  -            X...X-X...X            "
-        "X..........X-X.....X-   X.X   -   X.X    X.X    X.X   -           X....X-X....X           "
-        "X......XXXXX-XXXXXXX-   X.X   -    XX    X.X    XX    -          X.....X-X.....X          "
-        "X...X..X    ---------   X.X   -          X.X          -          XXXXXXX-XXXXXXX          "
-        "X..X X..X   -       -XXXX.XXXX-       XXXX.XXXX       ------------------------------------"
-        "X.X  X..X   -       -X.......X-       X.......X       -    XX           XX    -           "
-        "XX    X..X  -       - X.....X -        X.....X        -   X.X           X.X   -           "
-        "      X..X          -  X...X  -         X...X         -  X..X           X..X  -           "
-        "       XX           -   X.X   -          X.X          - X...XXXXXXXXXXXXX...X -           "
-        "------------        -    X    -           X           -X.....................X-           "
-        "                    ----------------------------------- X...XXXXXXXXXXXXX...X -           "
-        "                                                      -  X..X           X..X  -           "
-        "                                                      -   X.X           X.X   -           "
-        "                                                      -    XX           XX    -           "
+        pack_rects[i].w = user_rects[i].Width;
+        pack_rects[i].h = user_rects[i].Height;
+    }
+    stbtt_PackSetOversampling(spc, 1, 1);
+    stbrp_pack_rects((stbrp_context*)spc->pack_info, &pack_rects[0], pack_rects.Size);
+    for (int i = 0; i < pack_rects.Size; i++)
+        if (pack_rects[i].was_packed)
+        {
+            user_rects[i].X = pack_rects[i].x;
+            user_rects[i].Y = pack_rects[i].y;
+            IM_ASSERT(pack_rects[i].w == user_rects[i].Width && pack_rects[i].h == user_rects[i].Height);
+            atlas->TexHeight = ImMax(atlas->TexHeight, pack_rects[i].y + pack_rects[i].h);
+        }
+}
+
+static void BuildRenderDefaultTexData(ImFontAtlas* atlas)
+{
+    ImFontAtlas::CustomRect& r = atlas->CustomRects[0];
+    IM_ASSERT(r.ID == FONT_ATLAS_DEFAULT_TEX_DATA_ID);
+    IM_ASSERT(r.Width == FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF*2+1);
+    IM_ASSERT(r.Height == FONT_ATLAS_DEFAULT_TEX_DATA_H);
+    IM_ASSERT(r.IsPacked());
+    IM_ASSERT(atlas->TexPixelsAlpha8 != NULL);
+
+    // Render/copy pixels
+    for (int y = 0, n = 0; y < FONT_ATLAS_DEFAULT_TEX_DATA_H; y++)
+        for (int x = 0; x < FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF; x++, n++)
+        {
+            const int offset0 = (int)(r.X + x) + (int)(r.Y + y) * atlas->TexWidth;
+            const int offset1 = offset0 + FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;
+            atlas->TexPixelsAlpha8[offset0] = FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[n] == '.' ? 0xFF : 0x00;
+            atlas->TexPixelsAlpha8[offset1] = FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[n] == 'X' ? 0xFF : 0x00;
+        }
+    const ImVec2 tex_uv_scale(1.0f / atlas->TexWidth, 1.0f / atlas->TexHeight);
+    atlas->TexUvWhitePixel = ImVec2((r.X + 0.5f) * tex_uv_scale.x, (r.Y + 0.5f) * tex_uv_scale.y);
+
+    // Setup mouse cursors
+    const ImVec2 cursor_datas[ImGuiMouseCursor_Count_][3] =
+    {
+        // Pos ........ Size ......... Offset ......
+        { ImVec2(0,3),  ImVec2(12,19), ImVec2( 0, 0) }, // ImGuiMouseCursor_Arrow
+        { ImVec2(13,0), ImVec2(7,16),  ImVec2( 4, 8) }, // ImGuiMouseCursor_TextInput
+        { ImVec2(31,0), ImVec2(23,23), ImVec2(11,11) }, // ImGuiMouseCursor_Move
+        { ImVec2(21,0), ImVec2( 9,23), ImVec2( 5,11) }, // ImGuiMouseCursor_ResizeNS
+        { ImVec2(55,18),ImVec2(23, 9), ImVec2(11, 5) }, // ImGuiMouseCursor_ResizeEW
+        { ImVec2(73,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNESW
+        { ImVec2(55,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNWSE
     };
 
-    ImVector<stbrp_rect>& rects = *(ImVector<stbrp_rect>*)p_rects;
-    if (pass == 0)
+    for (int type = 0; type < ImGuiMouseCursor_Count_; type++)
     {
-        // Request rectangles
-        stbrp_rect r;
-        memset(&r, 0, sizeof(r));
-        r.w = (TEX_DATA_W*2)+1;
-        r.h = TEX_DATA_H+1;
-        rects.push_back(r);
-    }
-    else if (pass == 1)
-    {
-        // Render/copy pixels
-        const stbrp_rect& r = rects[0];
-        for (int y = 0, n = 0; y < TEX_DATA_H; y++)
-            for (int x = 0; x < TEX_DATA_W; x++, n++)
-            {
-                const int offset0 = (int)(r.x + x) + (int)(r.y + y) * TexWidth;
-                const int offset1 = offset0 + 1 + TEX_DATA_W;
-                TexPixelsAlpha8[offset0] = texture_data[n] == '.' ? 0xFF : 0x00;
-                TexPixelsAlpha8[offset1] = texture_data[n] == 'X' ? 0xFF : 0x00;
-            }
-        const ImVec2 tex_uv_scale(1.0f / TexWidth, 1.0f / TexHeight);
-        TexUvWhitePixel = ImVec2((r.x + 0.5f) * tex_uv_scale.x, (r.y + 0.5f) * tex_uv_scale.y);
-
-        // Setup mouse cursors
-        const ImVec2 cursor_datas[ImGuiMouseCursor_Count_][3] =
-        {
-            // Pos ........ Size ......... Offset ......
-            { ImVec2(0,3),  ImVec2(12,19), ImVec2( 0, 0) }, // ImGuiMouseCursor_Arrow
-            { ImVec2(13,0), ImVec2(7,16),  ImVec2( 4, 8) }, // ImGuiMouseCursor_TextInput
-            { ImVec2(31,0), ImVec2(23,23), ImVec2(11,11) }, // ImGuiMouseCursor_Move
-            { ImVec2(21,0), ImVec2( 9,23), ImVec2( 5,11) }, // ImGuiMouseCursor_ResizeNS
-            { ImVec2(55,18),ImVec2(23, 9), ImVec2(11, 5) }, // ImGuiMouseCursor_ResizeEW
-            { ImVec2(73,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNESW
-            { ImVec2(55,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNWSE
-        };
-
-        for (int type = 0; type < ImGuiMouseCursor_Count_; type++)
-        {
-            ImGuiMouseCursorData& cursor_data = GImGui->MouseCursorData[type];
-            ImVec2 pos = cursor_datas[type][0] + ImVec2((float)r.x, (float)r.y);
-            const ImVec2 size = cursor_datas[type][1];
-            cursor_data.Type = type;
-            cursor_data.Size = size;
-            cursor_data.HotOffset = cursor_datas[type][2];
-            cursor_data.TexUvMin[0] = (pos) * tex_uv_scale;
-            cursor_data.TexUvMax[0] = (pos + size) * tex_uv_scale;
-            pos.x += TEX_DATA_W+1;
-            cursor_data.TexUvMin[1] = (pos) * tex_uv_scale;
-            cursor_data.TexUvMax[1] = (pos + size) * tex_uv_scale;
-        }
+        ImGuiMouseCursorData& cursor_data = GImGui->MouseCursorData[type];
+        ImVec2 pos = cursor_datas[type][0] + ImVec2((float)r.X, (float)r.Y);
+        const ImVec2 size = cursor_datas[type][1];
+        cursor_data.Type = type;
+        cursor_data.Size = size;
+        cursor_data.HotOffset = cursor_datas[type][2];
+        cursor_data.TexUvMin[0] = (pos) * tex_uv_scale;
+        cursor_data.TexUvMax[0] = (pos + size) * tex_uv_scale;
+        pos.x += FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;
+        cursor_data.TexUvMin[1] = (pos) * tex_uv_scale;
+        cursor_data.TexUvMax[1] = (pos + size) * tex_uv_scale;
     }
 }
 

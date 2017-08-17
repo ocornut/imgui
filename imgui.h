@@ -1388,10 +1388,22 @@ struct ImFontAtlas
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
 
-    // Private
+    // [Private] User rectangle for packing custom texture data into the atlas.
+    struct CustomRect
+    {
+        unsigned int    ID;             // Input    // User ID. <0x10000 for font mapped data (WIP/UNSUPPORTED), >=0x10000 for other texture data
+        unsigned short  Width, Height;  // Input    // Desired rectangle dimension
+        unsigned short  X, Y;           // Output   // Packed position in Atlas
+        CustomRect()            { ID = 0xFFFFFFFF; Width = Height = 0; X = Y = 0xFFFF; }
+        bool IsPacked() const   { return X != 0xFFFF; }
+    };
+
+    // [Private] Members
+    ImVector<CustomRect>        CustomRects;        // Rectangles for packing custom texture data into the atlas.
     ImVector<ImFontConfig>      ConfigData;         // Internal data
     IMGUI_API bool              Build();            // Build pixels data. This is automatically for you by the GetTexData*** functions.
-    IMGUI_API void              RenderCustomTexData(int pass, void* rects);
+    IMGUI_API int               CustomRectRegister(unsigned int id, int width, int height);
+    IMGUI_API void              CustomRectCalcUV(const CustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max);
 };
 
 // Font runtime data and rendering
