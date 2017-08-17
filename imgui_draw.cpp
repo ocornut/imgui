@@ -1287,20 +1287,20 @@ bool    ImFontAtlas::Build()
     ClearTexData();
 
     // Count glyphs/ranges
-    int total_glyph_count = 0;
-    int total_glyph_range_count = 0;
+    int total_glyphs_count = 0;
+    int total_ranges_count = 0;
     for (int input_i = 0; input_i < ConfigData.Size; input_i++)
     {
         ImFontConfig& cfg = ConfigData[input_i];
         if (!cfg.GlyphRanges)
             cfg.GlyphRanges = GetGlyphRangesDefault();
-        for (const ImWchar* in_range = cfg.GlyphRanges; in_range[0] && in_range[1]; in_range += 2, total_glyph_range_count++)
-            total_glyph_count += (in_range[1] - in_range[0]) + 1;
+        for (const ImWchar* in_range = cfg.GlyphRanges; in_range[0] && in_range[1]; in_range += 2, total_ranges_count++)
+            total_glyphs_count += (in_range[1] - in_range[0]) + 1;
     }
 
     // Start packing. We need a known width for the skyline algorithm. Using a dumb heuristic here to decide of width. User can override TexDesiredWidth and TexGlyphPadding if they wish.
     // After packing is done, width shouldn't matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
-    TexWidth = (TexDesiredWidth > 0) ? TexDesiredWidth : (total_glyph_count > 4000) ? 4096 : (total_glyph_count > 2000) ? 2048 : (total_glyph_count > 1000) ? 1024 : 512;
+    TexWidth = (TexDesiredWidth > 0) ? TexDesiredWidth : (total_glyphs_count > 4000) ? 4096 : (total_glyphs_count > 2000) ? 2048 : (total_glyphs_count > 1000) ? 1024 : 512;
     TexHeight = 0;
     const int max_tex_height = 1024*32;
     stbtt_pack_context spc;
@@ -1337,12 +1337,12 @@ bool    ImFontAtlas::Build()
 
     // Allocate packing character data and flag packed characters buffer as non-packed (x0=y0=x1=y1=0)
     int buf_packedchars_n = 0, buf_rects_n = 0, buf_ranges_n = 0;
-    stbtt_packedchar* buf_packedchars = (stbtt_packedchar*)ImGui::MemAlloc(total_glyph_count * sizeof(stbtt_packedchar));
-    stbrp_rect* buf_rects = (stbrp_rect*)ImGui::MemAlloc(total_glyph_count * sizeof(stbrp_rect));
-    stbtt_pack_range* buf_ranges = (stbtt_pack_range*)ImGui::MemAlloc(total_glyph_range_count * sizeof(stbtt_pack_range));
-    memset(buf_packedchars, 0, total_glyph_count * sizeof(stbtt_packedchar));
-    memset(buf_rects, 0, total_glyph_count * sizeof(stbrp_rect));              // Unnecessary but let's clear this for the sake of sanity.
-    memset(buf_ranges, 0, total_glyph_range_count * sizeof(stbtt_pack_range));
+    stbtt_packedchar* buf_packedchars = (stbtt_packedchar*)ImGui::MemAlloc(total_glyphs_count * sizeof(stbtt_packedchar));
+    stbrp_rect* buf_rects = (stbrp_rect*)ImGui::MemAlloc(total_glyphs_count * sizeof(stbrp_rect));
+    stbtt_pack_range* buf_ranges = (stbtt_pack_range*)ImGui::MemAlloc(total_ranges_count * sizeof(stbtt_pack_range));
+    memset(buf_packedchars, 0, total_glyphs_count * sizeof(stbtt_packedchar));
+    memset(buf_rects, 0, total_glyphs_count * sizeof(stbrp_rect));              // Unnecessary but let's clear this for the sake of sanity.
+    memset(buf_ranges, 0, total_ranges_count * sizeof(stbtt_pack_range));
 
     // First font pass: pack all glyphs (no rendering at this point, we are working with rectangles in an infinitely tall texture at this point)
     for (int input_i = 0; input_i < ConfigData.Size; input_i++)
@@ -1351,14 +1351,14 @@ bool    ImFontAtlas::Build()
         ImFontTempBuildData& tmp = tmp_array[input_i];
 
         // Setup ranges
-        int glyph_count = 0;
-        int glyph_ranges_count = 0;
-        for (const ImWchar* in_range = cfg.GlyphRanges; in_range[0] && in_range[1]; in_range += 2, glyph_ranges_count++)
-            glyph_count += (in_range[1] - in_range[0]) + 1;
+        int font_glyphs_count = 0;
+        int font_ranges_count = 0;
+        for (const ImWchar* in_range = cfg.GlyphRanges; in_range[0] && in_range[1]; in_range += 2, font_ranges_count++)
+            font_glyphs_count += (in_range[1] - in_range[0]) + 1;
         tmp.Ranges = buf_ranges + buf_ranges_n;
-        tmp.RangesCount = glyph_ranges_count;
-        buf_ranges_n += glyph_ranges_count;
-        for (int i = 0; i < glyph_ranges_count; i++)
+        tmp.RangesCount = font_ranges_count;
+        buf_ranges_n += font_ranges_count;
+        for (int i = 0; i < font_ranges_count; i++)
         {
             const ImWchar* in_range = &cfg.GlyphRanges[i * 2];
             stbtt_pack_range& range = tmp.Ranges[i];
@@ -1371,9 +1371,10 @@ bool    ImFontAtlas::Build()
 
         // Pack
         tmp.Rects = buf_rects + buf_rects_n;
-        buf_rects_n += glyph_count;
+        buf_rects_n += font_glyphs_count;
         stbtt_PackSetOversampling(&spc, cfg.OversampleH, cfg.OversampleV);
         int n = stbtt_PackFontRangesGatherRects(&spc, &tmp.FontInfo, tmp.Ranges, tmp.RangesCount, tmp.Rects);
+        IM_ASSERT(n == font_glyphs_count);
         stbrp_pack_rects((stbrp_context*)spc.pack_info, tmp.Rects, n);
 
         // Extend texture height
@@ -1381,9 +1382,9 @@ bool    ImFontAtlas::Build()
             if (tmp.Rects[i].was_packed)
                 TexHeight = ImMax(TexHeight, tmp.Rects[i].y + tmp.Rects[i].h);
     }
-    IM_ASSERT(buf_rects_n == total_glyph_count);
-    IM_ASSERT(buf_packedchars_n == total_glyph_count);
-    IM_ASSERT(buf_ranges_n == total_glyph_range_count);
+    IM_ASSERT(buf_rects_n == total_glyphs_count);
+    IM_ASSERT(buf_packedchars_n == total_glyphs_count);
+    IM_ASSERT(buf_ranges_n == total_ranges_count);
 
     // Create texture
     TexHeight = ImUpperPowerOfTwo(TexHeight);
