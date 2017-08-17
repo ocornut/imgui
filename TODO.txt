@@ -75,6 +75,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
  - layout: BeginGroup() needs a border option.
+ - layout: vertical alignement of mixed height items (e.g. buttons) within a same line (#1284)
  
  - columns: sizing policy (e.g. for each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
  - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
