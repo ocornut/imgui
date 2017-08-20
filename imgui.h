@@ -231,9 +231,8 @@ namespace ImGui
     IMGUI_API float         GetItemsLineHeightWithSpacing();                                    // distance (in pixels) between 2 consecutive lines of standard height widgets == GetWindowFontSize() + GetStyle().FramePadding.y*2 + GetStyle().ItemSpacing.y
 
     // Columns
-    // You can also use SameLine(pos_x) for simplified columning. The columns API is still work-in-progress and rather lacking.
-    IMGUI_API void          BeginColumns(const char* id, int count, ImGuiColumnsFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().
-    IMGUI_API void          EndColumns();                                                        // close columns
+    // You can also use SameLine(pos_x) for simplified columns. The columns API is still work-in-progress and rather lacking.
+    IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border = true);
     IMGUI_API void          NextColumn();                                                        // next column, defaults to current row or next row if the current row is finished
     IMGUI_API int           GetColumnIndex();                                                    // get current column index
     IMGUI_API float         GetColumnWidth(int column_index = -1);                               // get column width (in pixels). pass -1 to use current column
@@ -241,7 +240,6 @@ namespace ImGui
     IMGUI_API float         GetColumnOffset(int column_index = -1);                              // get position of column line (in pixels, from the left side of the contents region). pass -1 to use current column, otherwise 0..GetColumnsCount() inclusive. column 0 is usually 0.0f and not resizable unless you call this
     IMGUI_API void          SetColumnOffset(int column_index, float offset_x);                   // set position of column line (in pixels, from the left side of the contents region). pass -1 to use current column
     IMGUI_API int           GetColumnsCount();
-    IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border = true);
 
     // ID scopes
     // If you are creating widgets in a loop you most likely want to push a unique identifier so ImGui can differentiate them.
@@ -522,15 +520,6 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_Popup                  = 1 << 25,  // Don't use! For internal use by BeginPopup()
     ImGuiWindowFlags_Modal                  = 1 << 26,  // Don't use! For internal use by BeginPopupModal()
     ImGuiWindowFlags_ChildMenu              = 1 << 27   // Don't use! For internal use by BeginMenu()
-};
-
-// Flags for ImGui::Columns()
-enum ImGuiColumnsFlags_
-{
-    // Default: 0
-    ImGuiColumnsFlags_NoBorder               = 1 << 0,   // Disable column dividers
-    ImGuiColumnsFlags_NoPreserveWidths       = 1 << 1,   // Disable column width preservation when adjusting columns
-    ImGuiColumnsFlags_NoForceWithinWindow    = 1 << 2    // Disable forcing columns to fit within window
 };
 
 // Flags for ImGui::InputText()

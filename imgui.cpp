@@ -9928,15 +9928,13 @@ int ImGui::GetColumnsCount()
     return window->DC.ColumnsCount;
 }
 
-static float OffsetNormToPixels(float offsetNorm)
+static float OffsetNormToPixels(ImGuiWindow* window, float offset_norm)
 {
-    ImGuiWindow* window = ImGui::GetCurrentWindowRead();
-    return offsetNorm * (window->DC.ColumnsMaxX - window->DC.ColumnsMinX);
+    return offset_norm * (window->DC.ColumnsMaxX - window->DC.ColumnsMinX);
 }
 
-static float PixelsToOffsetNorm(float offset)
+static float PixelsToOffsetNorm(ImGuiWindow* window, float offset)
 {
-    ImGuiWindow* window = ImGui::GetCurrentWindowRead();
     return (offset - window->DC.ColumnsMinX) / (window->DC.ColumnsMaxX - window->DC.ColumnsMinX);
 }
 
@@ -9986,18 +9984,18 @@ void ImGui::SetColumnOffset(int column_index, float offset)
 
     IM_ASSERT(column_index < window->DC.ColumnsData.Size);
 
-    const bool preserveWidth = !(window->DC.ColumnsFlags & ImGuiColumnsFlags_NoPreserveWidths) && (column_index < window->DC.ColumnsCount-1);
-    const float width = preserveWidth ? GetColumnWidth(column_index) : 0.0f;
+    const bool preserve_width = !(window->DC.ColumnsFlags & ImGuiColumnsFlags_NoPreserveWidths) && (column_index < window->DC.ColumnsCount-1);
+    const float width = preserve_width ? GetColumnWidth(column_index) : 0.0f;
 
     if (!(window->DC.ColumnsFlags & ImGuiColumnsFlags_NoForceWithinWindow))
         offset = ImMin((float)(int)offset, window->DC.ColumnsMaxX - g.Style.ColumnsMinSpacing * (window->DC.ColumnsCount - column_index));
-    const float offsetNorm = PixelsToOffsetNorm(offset);
+    const float offset_norm = PixelsToOffsetNorm(window, offset);
 
     const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(column_index);
-    window->DC.StateStorage->SetFloat(column_id, offsetNorm);
-    window->DC.ColumnsData[column_index].OffsetNorm = offsetNorm;
+    window->DC.StateStorage->SetFloat(column_id, offset_norm);
+    window->DC.ColumnsData[column_index].OffsetNorm = offset_norm;
 
-    if (preserveWidth)
+    if (preserve_width)
         SetColumnOffset(column_index+1, offset + ImMax(g.Style.ColumnsMinSpacing, width));
 }
 
@@ -10007,7 +10005,7 @@ float ImGui::GetColumnWidth(int column_index)
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
 
-    return OffsetNormToPixels(window->DC.ColumnsData[column_index+1].OffsetNorm - window->DC.ColumnsData[column_index].OffsetNorm);
+    return OffsetNormToPixels(window, window->DC.ColumnsData[column_index+1].OffsetNorm - window->DC.ColumnsData[column_index].OffsetNorm);
 }
 
 void ImGui::SetColumnWidth(int column_index, float width)
@@ -10066,7 +10064,7 @@ void ImGui::BeginColumns(const char* id, int columns_count, ImGuiColumnsFlags fl
         const float default_t = column_index / (float)window->DC.ColumnsCount;
         float t = window->DC.StateStorage->GetFloat(column_id, default_t);      // Cheaply store our floating point value inside the integer (could store a union into the map?)
         if (!(window->DC.ColumnsFlags & ImGuiColumnsFlags_NoForceWithinWindow))
-            t = ImMin(t, PixelsToOffsetNorm(window->DC.ColumnsMaxX - g.Style.ColumnsMinSpacing * (window->DC.ColumnsCount - column_index)));
+            t = ImMin(t, PixelsToOffsetNorm(window, window->DC.ColumnsMaxX - g.Style.ColumnsMinSpacing * (window->DC.ColumnsCount - column_index)));
         window->DC.ColumnsData[column_index].OffsetNorm = t;
     }
     window->DrawList->ChannelsSplit(window->DC.ColumnsCount);
@@ -10098,7 +10096,7 @@ void ImGui::EndColumns()
 		{
 			float x = window->Pos.x + GetColumnOffset(i);
 			const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(i);
-            const float column_w = 4.0f;
+            const float column_w = 4.0f; // Width for interaction
             const ImRect column_rect(ImVec2(x - column_w, y1), ImVec2(x + column_w, y2));
 			if (IsClippedEx(column_rect, &column_id, false))
 				continue;

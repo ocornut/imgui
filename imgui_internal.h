@@ -183,6 +183,14 @@ enum ImGuiSliderFlags_
     ImGuiSliderFlags_Vertical               = 1 << 0
 };
 
+enum ImGuiColumnsFlags_
+{
+    // Default: 0
+    ImGuiColumnsFlags_NoBorder              = 1 << 0,   // Disable column dividers
+    ImGuiColumnsFlags_NoPreserveWidths      = 1 << 1,   // Disable column width preservation when adjusting columns
+    ImGuiColumnsFlags_NoForceWithinWindow   = 1 << 2    // Disable forcing columns to fit within window
+};
+
 enum ImGuiSelectableFlagsPrivate_
 {
     // NB: need to be in sync with last value of ImGuiSelectableFlags_
@@ -598,7 +606,7 @@ struct IMGUI_API ImGuiDrawContext
     float                   ColumnsStartPosY;
     float                   ColumnsCellMinY;
     float                   ColumnsCellMaxY;
-    ImGuiColumnsFlags        ColumnsFlags;
+    ImGuiColumnsFlags       ColumnsFlags;
     ImGuiID                 ColumnsSetId;
     ImVector<ImGuiColumnData> ColumnsData;
 
@@ -747,6 +755,10 @@ namespace ImGui
 
     IMGUI_API void          OpenPopupEx(ImGuiID id, bool reopen_existing);
     IMGUI_API bool          IsPopupOpen(ImGuiID id);
+
+    // New Columns API
+    IMGUI_API void          BeginColumns(const char* id, int count, ImGuiColumnsFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().
+    IMGUI_API void          EndColumns();                                                         // close columns
 
     // NB: All position are in absolute pixels coordinates (never using window coordinates internally)
     // AVOID USING OUTSIDE OF IMGUI.CPP! NOT FOR PUBLIC CONSUMPTION. THOSE FUNCTIONS ARE A MESS. THEIR SIGNATURE AND BEHAVIOR WILL CHANGE, THEY NEED TO BE REFACTORED INTO SOMETHING DECENT.
