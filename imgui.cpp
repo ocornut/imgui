@@ -10100,14 +10100,17 @@ void ImGui::EndColumns()
 			if (IsClippedEx(column_rect, &column_id, false))
 				continue;
             
-            bool hovered, held;
-			ButtonBehavior(column_rect, column_id, &hovered, &held);
-			if (hovered || held)
-				g.MouseCursor = ImGuiMouseCursor_ResizeEW;
-            if (held && g.ActiveIdIsJustActivated)
-                g.ActiveIdClickOffset.x -= column_w; // Store from center of column line (we used a 8 wide rect for columns clicking). This is used by GetDraggedColumnOffset().
-            if (held)
-                dragging_column = i;
+            bool hovered = false, held = false;
+            if (!(window->DC.ColumnsFlags & ImGuiColumnsFlags_NoResize))
+            {
+                ButtonBehavior(column_rect, column_id, &hovered, &held);
+                if (hovered || held)
+                    g.MouseCursor = ImGuiMouseCursor_ResizeEW;
+                if (held && g.ActiveIdIsJustActivated)
+                    g.ActiveIdClickOffset.x -= column_w; // Store from center of column line (we used a 8 wide rect for columns clicking). This is used by GetDraggedColumnOffset().
+                if (held)
+                    dragging_column = i;
+            }
 
             // Draw column
             const ImU32 col = GetColorU32(held ? ImGuiCol_SeparatorActive : hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);

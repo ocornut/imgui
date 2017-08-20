@@ -187,8 +187,9 @@ enum ImGuiColumnsFlags_
 {
     // Default: 0
     ImGuiColumnsFlags_NoBorder              = 1 << 0,   // Disable column dividers
-    ImGuiColumnsFlags_NoPreserveWidths      = 1 << 1,   // Disable column width preservation when adjusting columns
-    ImGuiColumnsFlags_NoForceWithinWindow   = 1 << 2    // Disable forcing columns to fit within window
+    ImGuiColumnsFlags_NoResize              = 1 << 1,   // Disable resizing columns when clicking on the dividers
+    ImGuiColumnsFlags_NoPreserveWidths      = 1 << 2,   // Disable column width preservation when adjusting columns
+    ImGuiColumnsFlags_NoForceWithinWindow   = 1 << 3    // Disable forcing columns to fit within window
 };
 
 enum ImGuiSelectableFlagsPrivate_
