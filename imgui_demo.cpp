@@ -1623,13 +1623,13 @@ void ImGui::ShowTestWindow(bool* p_open)
 
         if (ImGui::TreeNode("Horizontal Scrolling"))
         {
-            ImGui::SetNextWindowContentWidth(2000);
+            ImGui::SetNextWindowContentWidth(1500);
             ImGui::BeginChild("##scrollingregion", ImVec2(0, 120), false, ImGuiWindowFlags_HorizontalScrollbar);
             ImGui::Columns(10);
             for (int i = 0; i < 20; i++)
                 for (int j = 0; j < 10; j++)
                 {
-                    ImGui::Text("Line %d Column %d", i, j);
+                    ImGui::Text("Line %d Column %d...", i, j);
                     ImGui::NextColumn();
                 }
             ImGui::Columns(1);
