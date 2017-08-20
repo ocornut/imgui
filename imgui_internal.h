@@ -605,6 +605,7 @@ struct IMGUI_API ImGuiDrawContext
     float                   ColumnsMinX;
     float                   ColumnsMaxX;
     float                   ColumnsStartPosY;
+    float                   ColumnsStartMaxPosX;   // Backup of CursorMaxPos
     float                   ColumnsCellMinY;
     float                   ColumnsCellMaxY;
     ImGuiColumnsFlags       ColumnsFlags;
@@ -638,6 +639,7 @@ struct IMGUI_API ImGuiDrawContext
         ColumnsCount = 1;
         ColumnsMinX = ColumnsMaxX = 0.0f;
         ColumnsStartPosY = 0.0f;
+        ColumnsStartMaxPosX = 0.0f;
         ColumnsCellMinY = ColumnsCellMaxY = 0.0f;
         ColumnsFlags = 0;
         ColumnsSetId = 0;
