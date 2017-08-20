@@ -9958,17 +9958,19 @@ static float GetDraggedColumnOffset(int column_index)
 
 float ImGui::GetColumnOffset(int column_index)
 {
-    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindowRead();
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
 
+    /*
     if (g.ActiveId)
     {
+        ImGuiContext& g = *GImGui;
         const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(column_index);
         if (g.ActiveId == column_id)
             return GetDraggedColumnOffset(column_index);
     }
+    */
 
     IM_ASSERT(column_index < window->DC.ColumnsData.Size);
     const float t = window->DC.ColumnsData[column_index].OffsetNorm;
@@ -10148,6 +10150,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 		EndColumns();
     
     ImGuiColumnsFlags flags = (border ? 0 : ImGuiColumnsFlags_NoBorder);
+    //flags |= ImGuiColumnsFlags_NoPreserveWidths | ImGuiColumnsFlags_NoForceWithinWindow;    // NB: Legacy behavior
     if (columns_count != 1)
         BeginColumns(id, columns_count, flags);
 }
