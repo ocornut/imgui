@@ -9996,7 +9996,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     window->DC.ColumnsData[column_index].OffsetNorm = offset_norm;
 
     if (preserve_width)
-        SetColumnOffset(column_index+1, offset + ImMax(g.Style.ColumnsMinSpacing, width));
+        SetColumnOffset(column_index + 1, offset + ImMax(g.Style.ColumnsMinSpacing, width));
 }
 
 float ImGui::GetColumnWidth(int column_index)
@@ -10090,6 +10090,7 @@ void ImGui::EndColumns()
 	{
 		const float y1 = window->DC.ColumnsStartPosY;
 		const float y2 = window->DC.CursorPos.y;
+        int dragging_column = -1;
 		for (int i = 1; i < window->DC.ColumnsCount; i++)
 		{
 			float x = window->Pos.x + GetColumnOffset(i);
@@ -10098,25 +10099,28 @@ void ImGui::EndColumns()
             const ImRect column_rect(ImVec2(x - column_w, y1), ImVec2(x + column_w, y2));
 			if (IsClippedEx(column_rect, &column_id, false))
 				continue;
-
-			bool hovered, held;
+            
+            bool hovered, held;
 			ButtonBehavior(column_rect, column_id, &hovered, &held);
 			if (hovered || held)
 				g.MouseCursor = ImGuiMouseCursor_ResizeEW;
+            if (held && g.ActiveIdIsJustActivated)
+                g.ActiveIdClickOffset.x -= column_w; // Store from center of column line (we used a 8 wide rect for columns clicking). This is used by GetDraggedColumnOffset().
+            if (held)
+                dragging_column = i;
 
-			// Draw before resize so our items positioning are in sync with the line being drawn
-			const ImU32 col = GetColorU32(held ? ImGuiCol_SeparatorActive : hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
-			const float xi = (float)(int)x;
-			window->DrawList->AddLine(ImVec2(xi, y1 + 1.0f), ImVec2(xi, y2), col);
+            // Draw column
+            const ImU32 col = GetColorU32(held ? ImGuiCol_SeparatorActive : hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
+            const float xi = (float)(int)x;
+            window->DrawList->AddLine(ImVec2(xi, y1 + 1.0f), ImVec2(xi, y2), col);
+        }
 
-			if (held)
-			{
-				if (g.ActiveIdIsJustActivated)
-					g.ActiveIdClickOffset.x -= column_w; // Store from center of column line (we used a 8 wide rect for columns clicking)
-				x = GetDraggedColumnOffset(i);
-				SetColumnOffset(i, x);
-			}
-		}
+        // Apply dragging after drawing the column lines, so our rendered lines are in sync with how items were displayed during the frame.
+        if (dragging_column != -1)
+        {
+            float x = GetDraggedColumnOffset(dragging_column);
+            SetColumnOffset(dragging_column, x);
+        }
 	}
 
 	window->DC.ColumnsSetId = 0;
