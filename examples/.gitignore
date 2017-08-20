@@ -42,6 +42,8 @@ sdl_opengl3_example/x64/*
 *.exe
 *.pdb
 *.ilk
+*.VC.db
+*.VC.VC.opendb
 
 ## Ini files
 imgui.ini

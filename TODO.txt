@@ -26,7 +26,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: expose contents size. (#1045)
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
 !- scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
- - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y)
+ - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
 
  - drawlist: move Font, FontSize, FontTexUvWhitePixel inside ImDrawList and make it self-contained (apart from drawing settings?)
  - drawlist: make it easier to toggle AA per primitive, so we can use e.g. non-AA fill + AA borders more naturally

@@ -186,6 +186,15 @@ enum ImGuiSliderFlags_
     ImGuiSliderFlags_Vertical               = 1 << 0
 };
 
+enum ImGuiColumnsFlags_
+{
+    // Default: 0
+    ImGuiColumnsFlags_NoBorder              = 1 << 0,   // Disable column dividers
+    ImGuiColumnsFlags_NoResize              = 1 << 1,   // Disable resizing columns when clicking on the dividers
+    ImGuiColumnsFlags_NoPreserveWidths      = 1 << 2,   // Disable column width preservation when adjusting columns
+    ImGuiColumnsFlags_NoForceWithinWindow   = 1 << 3    // Disable forcing columns to fit within window
+};
+
 enum ImGuiSelectableFlagsPrivate_
 {
     // NB: need to be in sync with last value of ImGuiSelectableFlags_
@@ -317,7 +326,8 @@ struct ImGuiGroupData
 // Per column data for Columns()
 struct ImGuiColumnData
 {
-    float       OffsetNorm;     // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
+    float       OffsetNorm; // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
+    ImRect      ClipRect;
     //float     IndentX;
 };
 
@@ -666,9 +676,10 @@ struct IMGUI_API ImGuiDrawContext
     float                   ColumnsMinX;
     float                   ColumnsMaxX;
     float                   ColumnsStartPosY;
+    float                   ColumnsStartMaxPosX;   // Backup of CursorMaxPos
     float                   ColumnsCellMinY;
     float                   ColumnsCellMaxY;
-    bool                    ColumnsShowBorders;
+    ImGuiColumnsFlags       ColumnsFlags;
     ImGuiID                 ColumnsSetId;
     ImVector<ImGuiColumnData> ColumnsData;
 
@@ -701,8 +712,9 @@ struct IMGUI_API ImGuiDrawContext
         ColumnsCount = 1;
         ColumnsMinX = ColumnsMaxX = 0.0f;
         ColumnsStartPosY = 0.0f;
+        ColumnsStartMaxPosX = 0.0f;
         ColumnsCellMinY = ColumnsCellMaxY = 0.0f;
-        ColumnsShowBorders = true;
+        ColumnsFlags = 0;
         ColumnsSetId = 0;
     }
 };
@@ -811,7 +823,7 @@ namespace ImGui
 
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          SetActiveIDNoNav(ImGuiID id, ImGuiWindow* window);
-	IMGUI_API void          ClearActiveID();
+    IMGUI_API void          ClearActiveID();
     IMGUI_API void          SetHoveredID(ImGuiID id);
     IMGUI_API void          KeepAliveID(ImGuiID id);
 
@@ -831,6 +843,11 @@ namespace ImGui
     IMGUI_API bool          IsPopupOpen(ImGuiID id);
 
     IMGUI_API int           CalcTypematicPressedRepeatAmount(float t, float t_prev, float repeat_delay, float repeat_rate);
+
+    // New Columns API
+    IMGUI_API void          BeginColumns(const char* id, int count, ImGuiColumnsFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().
+    IMGUI_API void          EndColumns();                                                         // close columns
+    IMGUI_API void          PushColumnClipRect(int column_index = -1);
 
     // NB: All position are in absolute pixels coordinates (never using window coordinates internally)
     // AVOID USING OUTSIDE OF IMGUI.CPP! NOT FOR PUBLIC CONSUMPTION. THOSE FUNCTIONS ARE A MESS. THEIR SIGNATURE AND BEHAVIOR WILL CHANGE, THEY NEED TO BE REFACTORED INTO SOMETHING DECENT.
