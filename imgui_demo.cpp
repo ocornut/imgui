@@ -1527,32 +1527,6 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        // Scrolling columns
-        /*
-        if (ImGui::TreeNode("Scrolling"))
-        {
-            ImGui::BeginChild("##header", ImVec2(0, ImGui::GetTextLineHeightWithSpacing()+ImGui::GetStyle().ItemSpacing.y));
-            ImGui::Columns(3);
-            ImGui::Text("ID"); ImGui::NextColumn();
-            ImGui::Text("Name"); ImGui::NextColumn();
-            ImGui::Text("Path"); ImGui::NextColumn();
-            ImGui::Columns(1);
-            ImGui::Separator();
-            ImGui::EndChild();
-            ImGui::BeginChild("##scrollingregion", ImVec2(0, 60));
-            ImGui::Columns(3);
-            for (int i = 0; i < 10; i++)
-            {
-                ImGui::Text("%04d", i); ImGui::NextColumn();
-                ImGui::Text("Foobar"); ImGui::NextColumn();
-                ImGui::Text("/path/foobar/%04d/", i); ImGui::NextColumn();
-            }
-            ImGui::Columns(1);
-            ImGui::EndChild();
-            ImGui::TreePop();
-        }
-        */
-
         // Create multiple items in a same cell before switching to next column
         if (ImGui::TreeNode("Mixed items"))
         {
@@ -1570,7 +1544,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::Text("An extra line here.");
             ImGui::NextColumn();
 
-            ImGui::Text("Sailor");
+                ImGui::Text("Sailor");
             ImGui::Button("Corniflower");
             static float bar = 1.0f;
             ImGui::InputFloat("blue", &bar, 0.05f, 0, 3);
@@ -1607,14 +1581,59 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::SameLine();
             ImGui::Checkbox("vertical", &v_borders);
             ImGui::Columns(4, NULL, v_borders);
-            if (h_borders) ImGui::Separator();
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 4*3; i++)
             {
+                if (h_borders && ImGui::GetColumnIndex() == 0)
+                    ImGui::Separator();
                 ImGui::Text("%c%c%c", 'a'+i, 'a'+i, 'a'+i);
+                ImGui::Text("Width %.2f\nOffset %.2f", ImGui::GetColumnWidth(), ImGui::GetColumnOffset());
                 ImGui::NextColumn();
             }
             ImGui::Columns(1);
-            if (h_borders) ImGui::Separator();
+            if (h_borders)
+                ImGui::Separator();
+            ImGui::TreePop();
+        }
+
+        // Scrolling columns
+        /*
+        if (ImGui::TreeNode("Vertical Scrolling"))
+        {
+            ImGui::BeginChild("##header", ImVec2(0, ImGui::GetTextLineHeightWithSpacing()+ImGui::GetStyle().ItemSpacing.y));
+            ImGui::Columns(3);
+            ImGui::Text("ID"); ImGui::NextColumn();
+            ImGui::Text("Name"); ImGui::NextColumn();
+            ImGui::Text("Path"); ImGui::NextColumn();
+            ImGui::Columns(1);
+            ImGui::Separator();
+            ImGui::EndChild();
+            ImGui::BeginChild("##scrollingregion", ImVec2(0, 60));
+            ImGui::Columns(3);
+            for (int i = 0; i < 10; i++)
+            {
+                ImGui::Text("%04d", i); ImGui::NextColumn();
+                ImGui::Text("Foobar"); ImGui::NextColumn();
+                ImGui::Text("/path/foobar/%04d/", i); ImGui::NextColumn();
+            }
+            ImGui::Columns(1);
+            ImGui::EndChild();
+            ImGui::TreePop();
+        }
+        */
+
+        if (ImGui::TreeNode("Horizontal Scrolling"))
+        {
+            ImGui::SetNextWindowContentWidth(2000);
+            ImGui::BeginChild("##scrollingregion", ImVec2(0, 120), false, ImGuiWindowFlags_HorizontalScrollbar);
+            ImGui::Columns(10);
+            for (int i = 0; i < 20; i++)
+                for (int j = 0; j < 10; j++)
+                {
+                    ImGui::Text("Line %d Column %d", i, j);
+                    ImGui::NextColumn();
+                }
+            ImGui::Columns(1);
+            ImGui::EndChild();
             ImGui::TreePop();
         }
 
