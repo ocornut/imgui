@@ -10150,7 +10150,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 		EndColumns();
     
     ImGuiColumnsFlags flags = (border ? 0 : ImGuiColumnsFlags_NoBorder);
-    //flags |= ImGuiColumnsFlags_NoPreserveWidths | ImGuiColumnsFlags_NoForceWithinWindow;    // NB: Legacy behavior
+    //flags |= ImGuiColumnsFlags_NoPreserveWidths; // NB: Legacy behavior
     if (columns_count != 1)
         BeginColumns(id, columns_count, flags);
 }
