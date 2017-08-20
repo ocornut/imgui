@@ -4450,7 +4450,7 @@ void ImGui::End()
     ImGuiWindow* window = g.CurrentWindow;
 
     if (window->DC.ColumnsCount != 1) // close columns set if any is open
-        Columns(1, "#CLOSECOLUMNS");
+        EndColumns();
     PopClipRect();   // inner window clip rectangle
 
     // Stop logging
@@ -10078,8 +10078,6 @@ void ImGui::EndColumns()
 	ImGuiWindow* window = GetCurrentWindow();
 	IM_ASSERT(window->DC.ColumnsCount > 1);
 
-	if (window->DC.ColumnsCurrent != 0)
-		ItemSize(ImVec2(0, 0));   // Advance to column 0
 	PopItemWidth();
 	PopClipRect();
 	window->DrawList->ChannelsMerge();
