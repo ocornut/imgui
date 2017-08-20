@@ -10086,32 +10086,32 @@ void ImGui::BeginColumns(const char* id, int columns_count, ImGuiColumnsFlags fl
 
 void ImGui::EndColumns()
 {
-	ImGuiContext& g = *GImGui;
-	ImGuiWindow* window = GetCurrentWindow();
-	IM_ASSERT(window->DC.ColumnsCount > 1);
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindow();
+    IM_ASSERT(window->DC.ColumnsCount > 1);
 
-	PopItemWidth();
-	PopClipRect();
-	window->DrawList->ChannelsMerge();
+    PopItemWidth();
+    PopClipRect();
+    window->DrawList->ChannelsMerge();
 
-	window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
-	window->DC.CursorPos.y = window->DC.ColumnsCellMaxY;
+    window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
+    window->DC.CursorPos.y = window->DC.ColumnsCellMaxY;
     window->DC.CursorMaxPos.x = ImMax(window->DC.ColumnsStartMaxPosX, window->DC.ColumnsMaxX);  // Columns don't grow parent
 
-	// Draw columns borders and handle resize
-	if (!(window->DC.ColumnsFlags & ImGuiColumnsFlags_NoBorder) && !window->SkipItems)
-	{
-		const float y1 = window->DC.ColumnsStartPosY;
-		const float y2 = window->DC.CursorPos.y;
+    // Draw columns borders and handle resize
+    if (!(window->DC.ColumnsFlags & ImGuiColumnsFlags_NoBorder) && !window->SkipItems)
+    {
+        const float y1 = window->DC.ColumnsStartPosY;
+        const float y2 = window->DC.CursorPos.y;
         int dragging_column = -1;
-		for (int i = 1; i < window->DC.ColumnsCount; i++)
-		{
-			float x = window->Pos.x + GetColumnOffset(i);
-			const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(i);
+        for (int i = 1; i < window->DC.ColumnsCount; i++)
+        {
+            float x = window->Pos.x + GetColumnOffset(i);
+            const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(i);
             const float column_w = 4.0f; // Width for interaction
             const ImRect column_rect(ImVec2(x - column_w, y1), ImVec2(x + column_w, y2));
-			if (IsClippedEx(column_rect, &column_id, false))
-				continue;
+            if (IsClippedEx(column_rect, &column_id, false))
+                continue;
             
             bool hovered = false, held = false;
             if (!(window->DC.ColumnsFlags & ImGuiColumnsFlags_NoResize))
@@ -10137,13 +10137,13 @@ void ImGui::EndColumns()
             float x = GetDraggedColumnOffset(dragging_column);
             SetColumnOffset(dragging_column, x);
         }
-	}
+    }
 
-	window->DC.ColumnsSetId = 0;
-	window->DC.ColumnsCurrent = 0;
-	window->DC.ColumnsCount = 1;
-	window->DC.ColumnsFlags = 0;
-	window->DC.ColumnsData.resize(0);
+    window->DC.ColumnsSetId = 0;
+    window->DC.ColumnsCurrent = 0;
+    window->DC.ColumnsCount = 1;
+    window->DC.ColumnsFlags = 0;
+    window->DC.ColumnsData.resize(0);
     window->DC.ColumnsOffsetX = 0.0f;
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
 }
@@ -10155,7 +10155,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     IM_ASSERT(columns_count >= 1);
 
     if (window->DC.ColumnsCount != columns_count && window->DC.ColumnsCount != 1)
-		EndColumns();
+        EndColumns();
     
     ImGuiColumnsFlags flags = (border ? 0 : ImGuiColumnsFlags_NoBorder);
     //flags |= ImGuiColumnsFlags_NoPreserveWidths; // NB: Legacy behavior
