@@ -306,7 +306,7 @@ struct ImGuiGroupData
 // Per column data for Columns()
 struct ImGuiColumnData
 {
-    float       OffsetNorm;     // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
+    float       OffsetNorm; // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
     //float     IndentX;
 };
 
@@ -598,7 +598,7 @@ struct IMGUI_API ImGuiDrawContext
     float                   ColumnsStartPosY;
     float                   ColumnsCellMinY;
     float                   ColumnsCellMaxY;
-    bool                    ColumnsShowBorders;
+    ImGuiColumnsFlags        ColumnsFlags;
     ImGuiID                 ColumnsSetId;
     ImVector<ImGuiColumnData> ColumnsData;
 
@@ -630,7 +630,7 @@ struct IMGUI_API ImGuiDrawContext
         ColumnsMinX = ColumnsMaxX = 0.0f;
         ColumnsStartPosY = 0.0f;
         ColumnsCellMinY = ColumnsCellMaxY = 0.0f;
-        ColumnsShowBorders = true;
+        ColumnsFlags = 0;
         ColumnsSetId = 0;
     }
 };

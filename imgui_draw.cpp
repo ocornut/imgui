@@ -1213,8 +1213,8 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 
     ConfigData.push_back(*font_cfg);
     ImFontConfig& new_font_cfg = ConfigData.back();
-	if (!new_font_cfg.DstFont)
-	    new_font_cfg.DstFont = Fonts.back();
+    if (!new_font_cfg.DstFont)
+        new_font_cfg.DstFont = Fonts.back();
     if (!new_font_cfg.FontDataOwnedByAtlas)
     {
         new_font_cfg.FontData = ImGui::MemAlloc(new_font_cfg.FontDataSize);
