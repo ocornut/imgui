@@ -10126,6 +10126,8 @@ void ImGui::EndColumns()
 	window->DC.ColumnsCount = 1;
 	window->DC.ColumnsFlags = 0;
 	window->DC.ColumnsData.resize(0);
+    window->DC.ColumnsOffsetX = 0.0f;
+    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
 }
 
 // [2017/08: This is currently the only public API, while we are working on making BeginColumns/EndColumns user-facing]
