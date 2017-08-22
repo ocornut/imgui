@@ -1000,8 +1000,7 @@ void ImGui::ShowTestWindow(bool* p_open)
                     ImGui::NextColumn();
                 char buf[32];
                 sprintf(buf, "%08x", i*5731);
-                if (ImGui::Button(buf, ImVec2(-1.0f, 0.0f)))
-                    printf("Pressed '%s'\n", buf);
+                ImGui::Button(buf, ImVec2(-1.0f, 0.0f));
             }
             ImGui::EndChild();
             ImGui::PopStyleVar();
@@ -1469,7 +1468,7 @@ void ImGui::ShowTestWindow(bool* p_open)
                     ImGui::OpenPopup("Stacked 2");
                 if (ImGui::BeginPopupModal("Stacked 2"))
                 {
-                    ImGui::Text("Hello from Stacked The Second!\nWe are piling a modal over another here,\nand also testing if the menu-bar works.");
+                    ImGui::Text("Hello from Stacked The Second!");
                     if (ImGui::Button("Close"))
                         ImGui::CloseCurrentPopup();
                     ImGui::EndPopup();
