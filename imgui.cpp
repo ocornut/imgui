@@ -11066,7 +11066,7 @@ void ImGui::BeginColumns(const char* id, int columns_count, ImGuiColumnsFlags fl
         float clip_x1 = ImFloor(0.5f + window->Pos.x + GetColumnOffset(column_index) - 1.0f);
         float clip_x2 = ImFloor(0.5f + window->Pos.x + GetColumnOffset(column_index + 1) - 1.0f);
         window->DC.ColumnsData[column_index].ClipRect = ImRect(clip_x1, -FLT_MAX, clip_x2, +FLT_MAX);
-        window->DC.ColumnsData[column_index].ClipRect.Clip(window->ClipRect);
+        window->ClipRect.Clip(window->DC.ColumnsData[column_index].ClipRect);
     }
 
     window->DrawList->ChannelsSplit(window->DC.ColumnsCount);
