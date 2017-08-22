@@ -1807,6 +1807,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     SizeContents = SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     WindowPadding = ImVec2(0.0f, 0.0f);
     MoveId = GetID("#MOVE");
+    ChildId = 0;
     Scroll = ImVec2(0.0f, 0.0f);
     ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
     ScrollTargetCenterRatio = ImVec2(0.5f, 0.5f);
@@ -1875,13 +1876,6 @@ ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end)
 {
     ImGuiID seed = IDStack.back();
     return ImHash(str, str_end ? (int)(str_end - str) : 0, seed);
-}
-
-ImGuiID ImGuiWindow::GetChildID(ImGuiWindow* child_window)
-{
-    IM_ASSERT(child_window && child_window->ParentWindow == this);
-    ImGuiID seed = IDStack[0];
-    return ImHash(&child_window->ID, sizeof(child_window->ID), seed);
 }
 
 //-----------------------------------------------------------------------------
@@ -2670,7 +2664,8 @@ static void NavUpdate()
             ImGuiWindow* child_window = g.NavWindow;
             ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
             ImGui::FocusWindow(parent_window);
-            SetNavId(parent_window->GetChildID(child_window));
+            IM_ASSERT(child_window->ChildId != 0);
+            SetNavId(child_window->ChildId);
             g.NavIdIsAlive = false;
             if (g.NavDisableMouseHover)
                 g.NavMousePosDirty = true;
@@ -4392,12 +4387,12 @@ static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
 
     bool ret = ImGui::Begin(title, NULL, size, -1.0f, flags);
     ImGuiWindow* child_window = ImGui::GetCurrentWindow();
+    child_window->ChildId = id;
     child_window->AutoFitChildAxises = auto_fit_axises;
     if (!(parent_window->Flags & ImGuiWindowFlags_ShowBorders))
         child_window->Flags &= ~ImGuiWindowFlags_ShowBorders;
 
     // Process navigation-in immediately so NavInit can run on first frame
-    //const ImGuiID id = parent_window->GetChildID(child_window);
     if (/*!(flags & ImGuiWindowFlags_NavFlattened) &&*/ (child_window->DC.NavLayerActiveFlags != 0 || child_window->DC.NavHasScroll) && GImGui->NavActivateId == id)
     {
         ImGui::FocusWindow(child_window);
@@ -4440,13 +4435,12 @@ void ImGui::EndChild()
         ImGui::End();
 
         ImGuiWindow* parent_window = GetCurrentWindow();
-        ImGuiID id = parent_window->GetChildID(window);
         ImRect bb(parent_window->DC.CursorPos, parent_window->DC.CursorPos + sz);
         ItemSize(sz);
         if (/*!(window->Flags & ImGuiWindowFlags_NavFlattened) &&*/ (window->DC.NavLayerActiveFlags != 0 || window->DC.NavHasScroll))
         {
-            ItemAdd(bb, &id);
-            RenderNavHighlight(bb, id);
+            ItemAdd(bb, &window->ChildId);
+            RenderNavHighlight(bb, window->ChildId);
         }
         else
         {
@@ -11465,6 +11459,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Text("NavWindow: '%s', NavId: 0x%08X, NavLayer: %d", g.NavWindow ? g.NavWindow->Name : "NULL", g.NavId, g.NavLayer);
             ImGui::Text("NavRefRectRel: (%.1f,%.1f)(%.1f,%.1f)", g.NavRefRectRel.Min.x, g.NavRefRectRel.Min.y, g.NavRefRectRel.Max.x, g.NavRefRectRel.Max.y);
             ImGui::Text("NavUsable: %d, NavActive: %d", g.IO.NavUsable, g.IO.NavActive);
+            ImGui::Text("NavActivateId: 0x%08X, NavInputId: 0x%08X", g.NavActivateId, g.NavInputId);
             ImGui::Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
             ImGui::TreePop();
         }
