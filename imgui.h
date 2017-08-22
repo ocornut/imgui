@@ -587,10 +587,10 @@ enum ImGuiSelectableFlags_
 enum ImGuiKey_
 {
     ImGuiKey_Tab,       // for tabbing through fields
-    ImGuiKey_UpArrow,   // for text edit
-    ImGuiKey_DownArrow, // for text edit
     ImGuiKey_LeftArrow, // for text edit
     ImGuiKey_RightArrow,// for text edit
+    ImGuiKey_UpArrow,   // for text edit
+    ImGuiKey_DownArrow, // for text edit
     ImGuiKey_PageUp,
     ImGuiKey_PageDown,
     ImGuiKey_Home,      // for text edit
