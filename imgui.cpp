@@ -2761,7 +2761,7 @@ static void NavUpdate()
         {
             float pad = g.NavWindow->CalcFontSize() * 0.5f;
             window_rect_rel.Expand(ImVec2(-ImMin(window_rect_rel.GetWidth(), pad), -ImMin(window_rect_rel.GetHeight(), pad))); // Terrible approximation for the intend of starting navigation from first fully visible item
-            window_rect_rel.Clip(g.NavRefRectRel);
+            g.NavRefRectRel.ClipWith(window_rect_rel);
             g.NavId = 0;
         }
         g.NavMoveFromClampedRefRect = false;
@@ -3800,7 +3800,7 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     // Clip
     ImRect rect_clipped(r_min, r_max);
     if (clip)
-        window->ClipRect.Clip(rect_clipped);
+        rect_clipped.ClipWith(window->ClipRect);
 
     // Expand for touch input
     const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
@@ -4234,7 +4234,7 @@ void ImGui::CloseCurrentPopup()
 {
     ImGuiContext& g = *GImGui;
     int popup_idx = g.CurrentPopupStack.Size - 1;
-    if (popup_idx < 0 || popup_idx > g.OpenPopupStack.Size || g.CurrentPopupStack[popup_idx].PopupId != g.OpenPopupStack[popup_idx].PopupId)
+    if (popup_idx < 0 || popup_idx >= g.OpenPopupStack.Size || g.CurrentPopupStack[popup_idx].PopupId != g.OpenPopupStack[popup_idx].PopupId)
         return;
     while (popup_idx > 0 && g.OpenPopupStack[popup_idx].Window && (g.OpenPopupStack[popup_idx].Window->Flags & ImGuiWindowFlags_ChildMenu))
         popup_idx--;
@@ -4288,7 +4288,6 @@ bool ImGui::BeginPopup(const char* str_id)
     return BeginPopupEx(g.CurrentWindow->GetID(str_id), ImGuiWindowFlags_ShowBorders);
 }
 
-// FIXME
 bool ImGui::IsPopupOpen(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
@@ -5211,7 +5210,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
         window->WindowRectClipped = window->Rect();
-        window->ClipRect.Clip(window->WindowRectClipped);
+        window->WindowRectClipped.ClipWith(window->ClipRect);
 
         // Pressing CTRL+C while holding on a window copy its content to the clipboard
         // This works but 1. doesn't handle multiple Begin/End pairs, 2. recursing into another Begin/End pair - so we need to work that out and add better logging scope.
@@ -9156,11 +9155,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 {
                     ImVec2 rect_size = InputTextCalcTextSizeW(p, text_selected_end, &p, NULL, true);
                     if (rect_size.x <= 0.0f) rect_size.x = (float)(int)(g.Font->GetCharAdvance((unsigned short)' ') * 0.50f); // So we can see selected empty lines
-                    ImRect cursor_rect(rect_pos + ImVec2(0.0f, bg_offy_up - g.FontSize), rect_pos +ImVec2(rect_size.x, bg_offy_dn));
-                    ImRect clip_rect_r(clip_rect);
-                    clip_rect_r.Clip(cursor_rect);
-                    if (cursor_rect.Overlaps(clip_rect_r))
-                        draw_window->DrawList->AddRectFilled(cursor_rect.Min, cursor_rect.Max, bg_color);
+                    ImRect rect(rect_pos + ImVec2(0.0f, bg_offy_up - g.FontSize), rect_pos +ImVec2(rect_size.x, bg_offy_dn));
+                    rect.ClipWith(clip_rect);
+                    if (rect.Overlaps(clip_rect))
+                        draw_window->DrawList->AddRectFilled(rect.Min, rect.Max, bg_color);
                 }
                 rect_pos.x = render_pos.x - render_scroll.x;
                 rect_pos.y += g.FontSize;
@@ -11066,7 +11064,7 @@ void ImGui::BeginColumns(const char* id, int columns_count, ImGuiColumnsFlags fl
         float clip_x1 = ImFloor(0.5f + window->Pos.x + GetColumnOffset(column_index) - 1.0f);
         float clip_x2 = ImFloor(0.5f + window->Pos.x + GetColumnOffset(column_index + 1) - 1.0f);
         window->DC.ColumnsData[column_index].ClipRect = ImRect(clip_x1, -FLT_MAX, clip_x2, +FLT_MAX);
-        window->ClipRect.Clip(window->DC.ColumnsData[column_index].ClipRect);
+        window->DC.ColumnsData[column_index].ClipRect.ClipWith(window->ClipRect);
     }
 
     window->DrawList->ChannelsSplit(window->DC.ColumnsCount);
