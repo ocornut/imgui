@@ -204,8 +204,10 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2016/08/20 (1.51) - renamed GetStyleColName() to GetStyleColorName() for consistency.
- - 2016/08/20 (1.51) - added PushStyleColor(ImGuiCol idx, ImU32 col) overload, which _might_ cause an "ambiguous call" compilation error if you are using ImColor() with implicit cast. Cast to ImU32 or ImVec4 explicily to fix.
+ - 2017/08/22 (1.51) - renamed IsMouseHoveringAnyWindow() to IsAnyWindowHovered() for consistency. Kept inline redirection function (will obsolete).
+                     - renamed IsMouseHoveringWindow() to IsWindowHoveredRect() for consistency. Kept inline redirection function (will obsolete).
+ - 2017/08/20 (1.51) - renamed GetStyleColName() to GetStyleColorName() for consistency.
+ - 2017/08/20 (1.51) - added PushStyleColor(ImGuiCol idx, ImU32 col) overload, which _might_ cause an "ambiguous call" compilation error if you are using ImColor() with implicit cast. Cast to ImU32 or ImVec4 explicily to fix.
  - 2017/08/15 (1.51) - marked the weird IMGUI_ONCE_UPON_A_FRAME helper macro as obsolete. prefer using the more explicit ImGuiOnceUponAFrame.
  - 2017/08/15 (1.51) - changed parameter order for BeginPopupContextWindow() from (const char*,int buttons,bool also_over_items) to (const char*,int buttons,bool also_over_items). Note that most calls relied on default parameters completely.
  - 2017/08/13 (1.51) - renamed ImGuiCol_Columns_*** to ImGuiCol_Separator_***
@@ -3108,13 +3110,13 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     return rect_for_touch.Contains(g.IO.MousePos);
 }
 
-bool ImGui::IsMouseHoveringWindow()
+bool ImGui::IsWindowHoveredRect()
 {
     ImGuiContext& g = *GImGui;
     return g.HoveredWindow == g.CurrentWindow;
 }
 
-bool ImGui::IsMouseHoveringAnyWindow()
+bool ImGui::IsAnyWindowHovered()
 {
     ImGuiContext& g = *GImGui;
     return g.HoveredWindow != NULL;
