@@ -3111,12 +3111,6 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     return rect_for_touch.Contains(g.IO.MousePos);
 }
 
-bool ImGui::IsWindowRectHovered()
-{
-    ImGuiContext& g = *GImGui;
-    return g.HoveredWindow == g.CurrentWindow;
-}
-
 bool ImGui::IsAnyWindowHovered()
 {
     ImGuiContext& g = *GImGui;
@@ -4876,6 +4870,12 @@ bool ImGui::IsWindowHovered()
     return g.HoveredWindow == g.CurrentWindow && IsWindowContentHoverable(g.HoveredRootWindow);
 }
 
+bool ImGui::IsWindowRectHovered()
+{
+    ImGuiContext& g = *GImGui;
+    return g.HoveredWindow == g.CurrentWindow;
+}
+
 bool ImGui::IsWindowFocused()
 {
     ImGuiContext& g = *GImGui;
@@ -4921,7 +4921,7 @@ ImVec2 ImGui::GetWindowPos()
 
 static void SetWindowScrollY(ImGuiWindow* window, float new_scroll_y)
 {
-    window->DC.CursorMaxPos.y += window->Scroll.y;
+    window->DC.CursorMaxPos.y += window->Scroll.y; // SizeContents is generally computed based on CursorMaxPos which is affected by scroll position, so we need to apply our change to it.
     window->Scroll.y = new_scroll_y;
     window->DC.CursorMaxPos.y -= window->Scroll.y;
 }
@@ -5550,8 +5550,8 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window)
     // An active popup disable hovering on other windows (apart from its own children)
     // FIXME-OPT: This could be cached/stored within the window.
     ImGuiContext& g = *GImGui;
-    if (ImGuiWindow* focused_window = g.NavWindow)
-        if (ImGuiWindow* focused_root_window = focused_window->RootWindow)
+    if (g.NavWindow)
+        if (ImGuiWindow* focused_root_window = g.NavWindow->RootWindow)
             if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasActive && focused_root_window != window->RootWindow)
                 return false;
 
@@ -6549,13 +6549,23 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     bool value_changed = false;
     if (g.ActiveId == id)
     {
+        bool set_new_value = false;
+        float clicked_t = 0.0f;
         if (g.IO.MouseDown[0])
         {
             const float mouse_abs_pos = is_horizontal ? g.IO.MousePos.x : g.IO.MousePos.y;
-            float clicked_t = (slider_usable_sz > 0.0f) ? ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f) : 0.0f;
+            clicked_t = (slider_usable_sz > 0.0f) ? ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f) : 0.0f;
             if (!is_horizontal)
                 clicked_t = 1.0f - clicked_t;
+            set_new_value = true;
+        }
+        else
+        {
+            ClearActiveID();
+        }
 
+        if (set_new_value)
+        {
             float new_value;
             if (is_non_linear)
             {
@@ -6592,10 +6602,6 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
                 *v = new_value;
                 value_changed = true;
             }
-        }
-        else
-        {
-            ClearActiveID();
         }
     }
 
@@ -6864,32 +6870,32 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
                 g.DragLastMouseDelta = ImVec2(0.f, 0.f);
             }
 
+            if (v_speed == 0.0f && (v_max - v_min) != 0.0f && (v_max - v_min) < FLT_MAX)
+                v_speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
             float v_cur = g.DragCurrentValue;
             const ImVec2 mouse_drag_delta = GetMouseDragDelta(0, 1.0f);
             if (fabsf(mouse_drag_delta.x - g.DragLastMouseDelta.x) > 0.0f)
             {
                 float speed = v_speed;
-                if (speed == 0.0f && (v_max - v_min) != 0.0f && (v_max - v_min) < FLT_MAX)
-                    speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
                 if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
                     speed = speed * g.DragSpeedScaleFast;
                 if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
                     speed = speed * g.DragSpeedScaleSlow;
 
-                float delta = (mouse_drag_delta.x - g.DragLastMouseDelta.x) * speed;
+                float adjust_delta = (mouse_drag_delta.x - g.DragLastMouseDelta.x) * speed;
                 if (fabsf(power - 1.0f) > 0.001f)
                 {
                     // Logarithmic curve on both side of 0.0
                     float v0_abs = v_cur >= 0.0f ? v_cur : -v_cur;
                     float v0_sign = v_cur >= 0.0f ? 1.0f : -1.0f;
-                    float v1 = powf(v0_abs, 1.0f / power) + (delta * v0_sign);
+                    float v1 = powf(v0_abs, 1.0f / power) + (adjust_delta * v0_sign);
                     float v1_abs = v1 >= 0.0f ? v1 : -v1;
                     float v1_sign = v1 >= 0.0f ? 1.0f : -1.0f;          // Crossed sign line
                     v_cur = powf(v1_abs, power) * v0_sign * v1_sign;    // Reapply sign
                 }
                 else
                 {
-                    v_cur += delta;
+                    v_cur += adjust_delta;
                 }
                 g.DragLastMouseDelta.x = mouse_drag_delta.x;
 
@@ -8504,7 +8510,6 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     const float arrow_size = (g.FontSize + style.FramePadding.x * 2.0f);
     const bool hovered = IsHovered(frame_bb, id);
     bool popup_open = IsPopupOpen(id);
-    bool popup_opened_now = false;
 
     const ImRect value_bb(frame_bb.Min, frame_bb.Max - ImVec2(arrow_size, 0.0f));
     RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
@@ -8521,22 +8526,27 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
+    bool popup_toggled = false;
     if (hovered)
     {
         SetHoveredID(id);
         if (g.IO.MouseClicked[0])
         {
             ClearActiveID();
-            if (IsPopupOpen(id))
-            {
-                ClosePopup(id);
-            }
-            else
-            {
-                FocusWindow(window);
-                OpenPopup(label);
-                popup_open = popup_opened_now = true;
-            }
+            popup_toggled = true;
+        }
+    }
+    if (popup_toggled)
+    {
+        if (IsPopupOpen(id))
+        {
+            ClosePopup(id);
+        }
+        else
+        {
+            FocusWindow(window);
+            OpenPopup(label);
+            popup_open = true;
         }
     }
 
@@ -8580,7 +8590,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
                     value_changed = true;
                     *current_item = i;
                 }
-                if (item_selected && popup_opened_now)
+                if (item_selected && popup_toggled)
                     SetScrollHere();
                 PopID();
             }
@@ -8885,13 +8895,13 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     const ImGuiID id = window->GetID(label);
 
     ImVec2 label_size = CalcTextSize(label, NULL, true);
-    ImGuiWindow* backed_focused_window = g.NavWindow;
 
     bool pressed;
     bool menu_is_open = IsPopupOpen(id);
     bool menuset_is_open = !(window->Flags & ImGuiWindowFlags_Popup) && (g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].ParentMenuSet == window->GetID("##menus"));
+    ImGuiWindow* backed_nav_window = g.NavWindow;
     if (menuset_is_open)
-        g.NavWindow = window;
+        g.NavWindow = window;  // Odd hack to allow hovering across menus of a same menu-set (otherwise we wouldn't be able to hover parent)
 
     // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu (using FindBestPopupWindowPos).
     ImVec2 popup_pos, pos = window->DC.CursorPos;
@@ -8919,7 +8929,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
 
     bool hovered = enabled && IsHovered(window->DC.LastItemRect, id);
     if (menuset_is_open)
-        g.NavWindow = backed_focused_window;
+        g.NavWindow = backed_nav_window;
 
     bool want_open = false, want_close = false;
     if (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
@@ -8946,7 +8956,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         want_close = (menu_is_open && !hovered && g.HoveredWindow == window && g.HoveredIdPreviousFrame != 0 && g.HoveredIdPreviousFrame != id && !moving_within_opened_triangle);
         want_open = (!menu_is_open && hovered && !moving_within_opened_triangle) || (!menu_is_open && hovered && pressed);
     }
-    else if (menu_is_open && pressed && menuset_is_open) // menu-bar: click open menu to close
+    else if (menu_is_open && pressed && menuset_is_open) // Menu bar: click an open menu again to close it
     {
         want_close = true;
         want_open = menu_is_open = false;
@@ -10461,12 +10471,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         }
         if (ImGui::TreeNode("Basic state"))
         {
-            ImGui::Text("FocusedWindow: '%s'", g.NavWindow ? g.NavWindow->Name : "NULL");
             ImGui::Text("HoveredWindow: '%s'", g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
             ImGui::Text("HoveredRootWindow: '%s'", g.HoveredRootWindow ? g.HoveredRootWindow->Name : "NULL");
             ImGui::Text("HoveredId: 0x%08X/0x%08X", g.HoveredId, g.HoveredIdPreviousFrame); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
             ImGui::Text("ActiveId: 0x%08X/0x%08X", g.ActiveId, g.ActiveIdPreviousFrame);
             ImGui::Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
+            ImGui::Text("NavWindow: '%s'", g.NavWindow ? g.NavWindow->Name : "NULL");
             ImGui::TreePop();
         }
     }
