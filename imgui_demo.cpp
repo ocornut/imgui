@@ -1,4 +1,4 @@
-// dear imgui, v1.51
+// dear imgui, v1.52 WIP
 // (demo code)
 
 // Message to the person tempted to delete this file when integrating ImGui into their code base:

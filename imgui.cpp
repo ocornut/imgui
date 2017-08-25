@@ -1,4 +1,4 @@
-// dear imgui, v1.51
+// dear imgui, v1.52 WIP
 // (main code and documentation)
 
 // See ImGui::ShowTestWindow() in imgui_demo.cpp for demo code.
@@ -2150,7 +2150,6 @@ void ImGui::NewFrame()
     g.RenderDrawData.Valid = false;
     g.RenderDrawData.CmdLists = NULL;
     g.RenderDrawData.CmdListsCount = g.RenderDrawData.TotalVtxCount = g.RenderDrawData.TotalIdxCount = 0;
-
 
     // Update mouse input state
     if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0)
