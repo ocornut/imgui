@@ -3607,7 +3607,7 @@ bool ImGui::BeginPopupContextWindow(const char* str_id, int mouse_button, bool a
 {
     if (!str_id)
         str_id = "window_context";
-    if (IsMouseHoveringWindow() && IsMouseClicked(mouse_button))
+    if (IsWindowRectHovered() && IsMouseClicked(mouse_button))
         if (also_over_items || !IsAnyItemHovered())
             OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), true);
     return BeginPopup(str_id);
@@ -3617,7 +3617,7 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
 {
     if (!str_id) 
         str_id = "void_context";
-    if (!IsMouseHoveringAnyWindow() && IsMouseClicked(mouse_button))
+    if (!IsAnyWindowHovered() && IsMouseClicked(mouse_button))
         OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), true);
     return BeginPopup(str_id);
 }
