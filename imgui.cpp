@@ -204,6 +204,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/08/25 (1.52) - io.MousePos needs to be set to ImVec2(-FLT_MAX,-FLT_MAX) when mouse is unavailable/missing. Previously ImVec2(-1,-1) was enough but we now accept negative mouse coordinates. In your binding if you need to support unavailable mouse, make sure to replace "io.MousePos = ImVec2(-1,-1)" with "io.MousePos = ImVec2(-FLT_MAX,-FLT_MAX)".
  - 2017/08/22 (1.51) - renamed IsItemHoveredRect() to IsItemRectHovered(). Kept inline redirection function (will obsolete).
                      - renamed IsMouseHoveringAnyWindow() to IsAnyWindowHovered() for consistency. Kept inline redirection function (will obsolete).
                      - renamed IsMouseHoveringWindow() to IsWindowRectHovered() for consistency. Kept inline redirection function (will obsolete).
@@ -754,8 +755,8 @@ ImGuiIO::ImGuiIO()
     FontGlobalScale = 1.0f;
     FontDefault = NULL;
     DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-    MousePos = ImVec2(-1,-1);
-    MousePosPrev = ImVec2(-1,-1);
+    MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+    MousePosPrev = ImVec2(-FLT_MAX, -FLT_MAX);
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
     MouseDragThreshold = 6.0f;
@@ -2151,9 +2152,9 @@ void ImGui::NewFrame()
     g.RenderDrawData.CmdListsCount = g.RenderDrawData.TotalVtxCount = g.RenderDrawData.TotalIdxCount = 0;
 
     // Update mouse input state
-    if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0)
-        g.IO.MousePos = ImVec2(-9999.0f, -9999.0f);
-    if ((g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0) || (g.IO.MousePosPrev.x < 0 && g.IO.MousePosPrev.y < 0))   // if mouse just appeared or disappeared (negative coordinate) we cancel out movement in MouseDelta
+    // If mouse just appeared or disappeared (usually denoted by -FLT_MAX component, but in reality we test for -256000.0f) we cancel out movement in MouseDelta
+    const float MOUSE_INVALID = -256000.0f;
+    if ((g.IO.MousePos.x < MOUSE_INVALID && g.IO.MousePos.y < MOUSE_INVALID) || (g.IO.MousePosPrev.x < MOUSE_INVALID && g.IO.MousePosPrev.y < MOUSE_INVALID))
         g.IO.MouseDelta = ImVec2(0.0f, 0.0f);
     else
         g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;

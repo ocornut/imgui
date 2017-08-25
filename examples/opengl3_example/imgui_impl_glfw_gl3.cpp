@@ -383,7 +383,7 @@ void ImGui_ImplGlfwGL3_NewFrame()
     }
     else
     {
-        io.MousePos = ImVec2(-1,-1);
+        io.MousePos = ImVec2(-FLT_MAX,-FLT_MAX);
     }
 
     for (int i = 0; i < 3; i++)
