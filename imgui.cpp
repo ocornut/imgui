@@ -2125,16 +2125,9 @@ void ImGui::NewFrame()
     IM_ASSERT(g.Style.CurveTessellationTol > 0.0f);  // Invalid style setting
     IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f);  // Invalid style setting. Alpha cannot be negative (allows us to avoid a few clamps in color computations)
 
+    // Initialize on first frame
     if (!g.Initialized)
-    {
-        // Initialize on first frame
-        g.LogClipboard = (ImGuiTextBuffer*)ImGui::MemAlloc(sizeof(ImGuiTextBuffer));
-        IM_PLACEMENT_NEW(g.LogClipboard) ImGuiTextBuffer();
-
-        IM_ASSERT(g.Settings.empty());
-        LoadIniSettingsFromDisk(g.IO.IniFilename);
-        g.Initialized = true;
-    }
+        ImGui::Initialize();
 
     SetCurrentFont(GetDefaultFont());
     IM_ASSERT(g.Font->IsLoaded());
@@ -2350,7 +2343,18 @@ void ImGui::NewFrame()
     ImGui::Begin("Debug");
 }
 
-// NB: behavior of ImGui after Shutdown() is not tested/guaranteed at the moment. This function is merely here to free heap allocations.
+void ImGui::Initialize()
+{
+    ImGuiContext& g = *GImGui;
+    g.LogClipboard = (ImGuiTextBuffer*)ImGui::MemAlloc(sizeof(ImGuiTextBuffer));
+    IM_PLACEMENT_NEW(g.LogClipboard) ImGuiTextBuffer();
+
+    IM_ASSERT(g.Settings.empty());
+    LoadIniSettingsFromDisk(g.IO.IniFilename);
+    g.Initialized = true;
+}
+
+// This function is merely here to free heap allocations.
 void ImGui::Shutdown()
 {
     ImGuiContext& g = *GImGui;
@@ -2359,7 +2363,7 @@ void ImGui::Shutdown()
     if (g.IO.Fonts) // Testing for NULL to allow user to NULLify in case of running Shutdown() on multiple contexts. Bit hacky.
         g.IO.Fonts->Clear();
 
-    // Cleanup of other data are conditional on actually having used ImGui.
+    // Cleanup of other data are conditional on actually having initialize ImGui.
     if (!g.Initialized)
         return;
 
