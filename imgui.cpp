@@ -2153,11 +2153,10 @@ void ImGui::NewFrame()
 
     // Update mouse input state
     // If mouse just appeared or disappeared (usually denoted by -FLT_MAX component, but in reality we test for -256000.0f) we cancel out movement in MouseDelta
-    const float MOUSE_INVALID = -256000.0f;
-    if ((g.IO.MousePos.x < MOUSE_INVALID && g.IO.MousePos.y < MOUSE_INVALID) || (g.IO.MousePosPrev.x < MOUSE_INVALID && g.IO.MousePosPrev.y < MOUSE_INVALID))
-        g.IO.MouseDelta = ImVec2(0.0f, 0.0f);
-    else
+    if (IsMousePosValid(&g.IO.MousePos) && IsMousePosValid(&g.IO.MousePosPrev))
         g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;
+    else
+        g.IO.MouseDelta = ImVec2(0.0f, 0.0f);
     g.IO.MousePosPrev = g.IO.MousePos;
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
     {
@@ -3226,6 +3225,15 @@ ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup()
     if (g.CurrentPopupStack.Size > 0)
         return g.OpenPopupStack[g.CurrentPopupStack.Size-1].MousePosOnOpen;
     return g.IO.MousePos;
+}
+
+// We typically use ImVec2(-FLT_MAX,-FLT_MAX) to denote an invalid mouse position
+bool ImGui::IsMousePosValid(const ImVec2* mouse_pos)
+{
+    if (mouse_pos == NULL)
+        mouse_pos = &GImGui->IO.MousePos;
+    const float MOUSE_INVALID = -256000.0f;
+    return mouse_pos->x >= MOUSE_INVALID && mouse_pos->y >= MOUSE_INVALID;
 }
 
 ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
