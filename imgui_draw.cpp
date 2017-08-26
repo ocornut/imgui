@@ -1051,6 +1051,8 @@ ImFontConfig::ImFontConfig()
     GlyphOffset = ImVec2(0.0f, 0.0f);
     GlyphRanges = NULL;
     MergeMode = false;
+    RasterizerFlags = 0x00;
+    RasterizerMultiply = 1.0f;
     memset(Name, 0, sizeof(Name));
     DstFont = NULL;
 }
@@ -1340,6 +1342,23 @@ bool    ImFontAtlas::Build()
     return ImFontAtlasBuildWithStbTruetype(this);
 }
 
+void    ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], float in_brighten_factor)
+{
+    for (unsigned int i = 0; i < 256; i++)
+    {
+        unsigned int value = (unsigned int)(i * in_brighten_factor);
+        out_table[i] = value > 255 ? 255 : (value & 0xFF);
+    }
+}
+
+void    ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsigned char* pixels, int x, int y, int w, int h, int stride)
+{
+    unsigned char* data = pixels + x + y * stride;
+    for (int j = h; j > 0; j--, data += stride)
+        for (int i = 0; i < w; i++)
+            data[i] = table[data[i]];
+}
+
 bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 {
     IM_ASSERT(atlas->ConfigData.Size > 0);
@@ -1382,6 +1401,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     {
         stbtt_fontinfo      FontInfo;
         stbrp_rect*         Rects;
+        int                 RectsCount;
         stbtt_pack_range*   Ranges;
         int                 RangesCount;
     };
@@ -1434,6 +1454,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 
         // Pack
         tmp.Rects = buf_rects + buf_rects_n;
+        tmp.RectsCount = font_glyphs_count;
         buf_rects_n += font_glyphs_count;
         stbtt_PackSetOversampling(&spc, cfg.OversampleH, cfg.OversampleV);
         int n = stbtt_PackFontRangesGatherRects(&spc, &tmp.FontInfo, tmp.Ranges, tmp.RangesCount, tmp.Rects);
@@ -1463,6 +1484,14 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         ImFontTempBuildData& tmp = tmp_array[input_i];
         stbtt_PackSetOversampling(&spc, cfg.OversampleH, cfg.OversampleV);
         stbtt_PackFontRangesRenderIntoRects(&spc, &tmp.FontInfo, tmp.Ranges, tmp.RangesCount, tmp.Rects);
+        if (cfg.RasterizerMultiply != 1.0f)
+        {
+            unsigned char multiply_table[256];
+            ImFontAtlasBuildMultiplyCalcLookupTable(multiply_table, cfg.RasterizerMultiply);
+            for (const stbrp_rect* r = tmp.Rects; r != tmp.Rects + tmp.RectsCount; r++)
+                if (r->was_packed)
+                    ImFontAtlasBuildMultiplyRectAlpha8(multiply_table, spc.pixels, r->x, r->y, r->w, r->h, spc.stride_in_bytes);
+        }
         tmp.Rects = NULL;
     }
 
