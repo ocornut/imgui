@@ -1051,8 +1051,8 @@ ImFontConfig::ImFontConfig()
     GlyphOffset = ImVec2(0.0f, 0.0f);
     GlyphRanges = NULL;
     MergeMode = false;
-    DstFont = NULL;
     memset(Name, 0, sizeof(Name));
+    DstFont = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -1478,15 +1478,15 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         ImFontTempBuildData& tmp = tmp_array[input_i];
         ImFont* dst_font = cfg.DstFont; // We can have multiple input fonts writing into a same destination font (when using MergeMode=true)
 
-        float font_scale = stbtt_ScaleForPixelHeight(&tmp.FontInfo, cfg.SizePixels);
+        const float font_scale = stbtt_ScaleForPixelHeight(&tmp.FontInfo, cfg.SizePixels);
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
         stbtt_GetFontVMetrics(&tmp.FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
 
-        float ascent = unscaled_ascent * font_scale;
-        float descent = unscaled_descent * font_scale;
+        const float ascent = unscaled_ascent * font_scale;
+        const float descent = unscaled_descent * font_scale;
         ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
-        float off_x = cfg.GlyphOffset.x;
-        float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
+        const float off_x = cfg.GlyphOffset.x;
+        const float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
 
         dst_font->FallbackGlyph = NULL; // Always clear fallback so FindGlyph can return NULL. It will be set again in BuildLookupTable()
         for (int i = 0; i < tmp.RangesCount; i++)
