@@ -694,7 +694,8 @@ void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int a_min_of_
         circle_vtx_builds = true;
     }
 
-    if (a_min_of_12 > a_max_of_12) return;
+    if (a_min_of_12 > a_max_of_12) 
+        return;
     if (radius == 0.0f)
     {
         _Path.push_back(centre);
@@ -779,11 +780,10 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int 
     const int corners_left = ImGuiCorner_TopLeft | ImGuiCorner_BotLeft;
     const int corners_right = ImGuiCorner_TopRight | ImGuiCorner_BotRight;
 
-    float r = rounding;
-    r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners & corners_top)  == corners_top)  || ((rounding_corners & corners_bottom) == corners_bottom) ? 0.5f : 1.0f ) - 1.0f);
-    r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners & corners_left) == corners_left) || ((rounding_corners & corners_right)  == corners_right)  ? 0.5f : 1.0f ) - 1.0f);
+    rounding = ImMin(rounding, fabsf(b.x - a.x) * ( ((rounding_corners & corners_top)  == corners_top)  || ((rounding_corners & corners_bottom) == corners_bottom) ? 0.5f : 1.0f ) - 1.0f);
+    rounding = ImMin(rounding, fabsf(b.y - a.y) * ( ((rounding_corners & corners_left) == corners_left) || ((rounding_corners & corners_right)  == corners_right)  ? 0.5f : 1.0f ) - 1.0f);
 
-    if (r <= 0.0f || rounding_corners == 0)
+    if (rounding <= 0.0f || rounding_corners == 0)
     {
         PathLineTo(a);
         PathLineTo(ImVec2(b.x,a.y));
@@ -792,14 +792,14 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int 
     }
     else
     {
-        const float r0 = (rounding_corners & ImGuiCorner_TopLeft) ? r : 0.0f;
-        const float r1 = (rounding_corners & ImGuiCorner_TopRight) ? r : 0.0f;
-        const float r2 = (rounding_corners & ImGuiCorner_BotRight) ? r : 0.0f;
-        const float r3 = (rounding_corners & ImGuiCorner_BotLeft) ? r : 0.0f;
-        PathArcToFast(ImVec2(a.x+r0,a.y+r0), r0, 6, 9);
-        PathArcToFast(ImVec2(b.x-r1,a.y+r1), r1, 9, 12);
-        PathArcToFast(ImVec2(b.x-r2,b.y-r2), r2, 0, 3);
-        PathArcToFast(ImVec2(a.x+r3,b.y-r3), r3, 3, 6);
+        const float rounding_tl = (rounding_corners & ImGuiCorner_TopLeft) ? rounding : 0.0f;
+        const float rounding_tr = (rounding_corners & ImGuiCorner_TopRight) ? rounding : 0.0f;
+        const float rounding_br = (rounding_corners & ImGuiCorner_BotRight) ? rounding : 0.0f;
+        const float rounding_bl = (rounding_corners & ImGuiCorner_BotLeft) ? rounding : 0.0f;
+        PathArcToFast(ImVec2(a.x + rounding_tl, a.y + rounding_tl), rounding_tl, 6, 9);
+        PathArcToFast(ImVec2(b.x - rounding_tr, a.y + rounding_tr), rounding_tr, 9, 12);
+        PathArcToFast(ImVec2(b.x - rounding_br, b.y - rounding_br), rounding_br, 0, 3);
+        PathArcToFast(ImVec2(a.x + rounding_bl, b.y - rounding_bl), rounding_bl, 3, 6);
     }
 }
 
