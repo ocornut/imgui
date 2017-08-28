@@ -694,27 +694,26 @@ void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int a_min_of_
         circle_vtx_builds = true;
     }
 
-    if (a_min_of_12 > a_max_of_12) 
-        return;
-    if (radius == 0.0f)
+    if (radius == 0.0f || a_min_of_12 > a_max_of_12)
     {
         _Path.push_back(centre);
+        return;
     }
-    else
+    _Path.reserve(_Path.Size + (a_max_of_12 - a_min_of_12 + 1));
+    for (int a = a_min_of_12; a <= a_max_of_12; a++)
     {
-        _Path.reserve(_Path.Size + (a_max_of_12 - a_min_of_12 + 1));
-        for (int a = a_min_of_12; a <= a_max_of_12; a++)
-        {
-            const ImVec2& c = circle_vtx[a % circle_vtx_count];
-            _Path.push_back(ImVec2(centre.x + c.x * radius, centre.y + c.y * radius));
-        }
+        const ImVec2& c = circle_vtx[a % circle_vtx_count];
+        _Path.push_back(ImVec2(centre.x + c.x * radius, centre.y + c.y * radius));
     }
 }
 
 void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float amin, float amax, int num_segments)
 {
     if (radius == 0.0f)
+    {
         _Path.push_back(centre);
+        return;
+    }
     _Path.reserve(_Path.Size + (num_segments + 1));
     for (int i = 0; i <= num_segments; i++)
     {
@@ -786,9 +785,9 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int 
     if (rounding <= 0.0f || rounding_corners == 0)
     {
         PathLineTo(a);
-        PathLineTo(ImVec2(b.x,a.y));
+        PathLineTo(ImVec2(b.x, a.y));
         PathLineTo(b);
-        PathLineTo(ImVec2(a.x,b.y));
+        PathLineTo(ImVec2(a.x, b.y));
     }
     else
     {
