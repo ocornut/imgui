@@ -55,14 +55,15 @@ _NB: those third-party bindings may be more or less maintained, more or less clo
 _Integrating Dear ImGui within your custom engine is a matter of wiring mouse/keyboard inputs and providing a render function that can bind a texture and render simple textured triangles. The examples/ folder is populated with applications doing just that. If you are an experienced programmer it should take you less than an hour to integrate Dear ImGui in your custom engine, but make sure to spend time reading the FAQ, the comments and other documentation!_
 
 Languages:
-- cimgui: thin c-api wrapper for ImGui https://github.com/Extrawurst/cimgui
-- ImGui.NET: An ImGui wrapper for .NET Core https://github.com/mellinoe/ImGui.NET
-- imgui-rs: Rust bindings for dear imgui https://github.com/Gekkio/imgui-rs
-- DerelictImgui: Dynamic bindings for the D programming language: https://github.com/Extrawurst/DerelictImgui
-- CyImGui: Python bindings for dear imgui using Cython: https://github.com/chromy/cyimgui
-- pyimgui: Another Python bindings for dear imgui: https://github.com/swistakm/pyimgui
-- LUA: https://github.com/patrickriordan/imgui_lua_bindings
-- imgui-pas: P  ascal bindings for imgui https://github.com/dpethes/imgui-pas
+- C - cimgui: thin c-api wrapper for ImGui https://github.com/Extrawurst/cimgui
+- C#/.Net - ImGui.NET: An ImGui wrapper for .NET Core https://github.com/mellinoe/ImGui.NET
+- D - DerelictImgui: Dynamic bindings for the D programming language: https://github.com/Extrawurst/DerelictImgui
+- Go - go-imgui https://github.com/Armored-Dragon/go-imgui
+- Lua - https://github.com/patrickriordan/imgui_lua_bindings
+- Pascal - imgui-pas https://github.com/dpethes/imgui-pas
+- Python - CyImGui: Python bindings for dear imgui using Cython: https://github.com/chromy/cyimgui
+- Python - pyimgui: Another Python bindings for dear imgui: https://github.com/swistakm/pyimgui
+- Rust - imgui-rs: Rust bindings for dear imgui https://github.com/Gekkio/imgui-rs
 
 Frameworks:
 - Main ImGui repository include examples for DirectX9, DirectX10, DirectX11, OpenGL2/3, Vulkan, Allegro 5, SDL+GL2/3, iOS and Marmalade: https://github.com/ocornut/imgui/tree/master/examples
