@@ -1252,12 +1252,12 @@ void ImGui::ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float&
     float K = 0.f;
     if (g < b)
     {
-        const float tmp = g; g = b; b = tmp;
+        ImSwap(g, b);
         K = -1.f;
     }
     if (r < g)
     {
-        const float tmp = r; r = g; g = tmp;
+        ImSwap(r, g);
         K = -2.f / 6.f - K;
     }
 
