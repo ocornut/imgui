@@ -936,6 +936,18 @@ const char* ImStristr(const char* haystack, const char* haystack_end, const char
     return NULL;
 }
 
+static const char* ImAtoi(const char* src, int* output)
+{
+    int negative = 0;
+    if (*src == '-') { negative = 1; src++; }
+    if (*src == '+') { src++; }
+    int v = 0;
+    while (*src >= '0' && *src <= '9')
+        v = (v * 10) + (*src++ - '0');
+    *output = negative ? -v : v;
+    return src;
+}
+
 // MSVC version appears to return -1 on overflow, whereas glibc appears to return total count (which may be >= buf_size). 
 // Ideally we would test for only one of those limits at runtime depending on the behavior the vsnprintf(), but trying to deduct it at compile time sounds like a pandora can of worm.
 int ImFormatString(char* buf, int buf_size, const char* fmt, ...)
@@ -6462,10 +6474,12 @@ int ImGui::ParseFormatPrecision(const char* fmt, int default_precision)
             fmt++;
         if (*fmt == '.')
         {
-            precision = atoi(fmt + 1);
+            fmt = ImAtoi(fmt + 1, &precision);
             if (precision < 0 || precision > 10)
                 precision = default_precision;
         }
+        if (*fmt == 'e' || *fmt == 'E') // Maximum precision with scientific notation
+            precision = -1;
         break;
     }
     return precision;
@@ -6482,6 +6496,8 @@ float ImGui::RoundScalar(float value, int decimal_precision)
     // Round past decimal precision
     // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
     // FIXME: Investigate better rounding methods
+    if (decimal_precision < 0)
+        return value;
     const float min_step = GetMinimumStepAtDecimalPrecision(decimal_precision);
     bool negative = value < 0.0f;
     value = fabsf(value);
@@ -6533,7 +6549,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     const float grab_padding = 2.0f;
     const float slider_sz = is_horizontal ? (frame_bb.GetWidth() - grab_padding * 2.0f) : (frame_bb.GetHeight() - grab_padding * 2.0f);
     float grab_sz;
-    if (decimal_precision > 0)
+    if (decimal_precision != 0)
         grab_sz = ImMin(style.GrabMinSize, slider_sz);
     else
         grab_sz = ImMin(ImMax(1.0f * (slider_sz / ((v_min < v_max ? v_max - v_min : v_min - v_max) + 1.0f)), style.GrabMinSize), slider_sz);  // Integer sliders, if possible have the grab size represent 1 unit
