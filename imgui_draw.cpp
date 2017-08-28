@@ -775,9 +775,9 @@ void ImDrawList::PathBezierCurveTo(const ImVec2& p2, const ImVec2& p3, const ImV
 void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int rounding_corners)
 {
     const int corners_top = ImGuiCorner_TopLeft | ImGuiCorner_TopRight;
-    const int corners_bottom = ImGuiCorner_BottomLeft | ImGuiCorner_BottomRight;
-    const int corners_left = ImGuiCorner_TopLeft | ImGuiCorner_BottomLeft;
-    const int corners_right = ImGuiCorner_TopRight | ImGuiCorner_BottomRight;
+    const int corners_bottom = ImGuiCorner_BotLeft | ImGuiCorner_BotRight;
+    const int corners_left = ImGuiCorner_TopLeft | ImGuiCorner_BotLeft;
+    const int corners_right = ImGuiCorner_TopRight | ImGuiCorner_BotRight;
 
     float r = rounding;
     r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners & corners_top)  == corners_top)  || ((rounding_corners & corners_bottom) == corners_bottom) ? 0.5f : 1.0f ) - 1.0f);
@@ -794,8 +794,8 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int 
     {
         const float r0 = (rounding_corners & ImGuiCorner_TopLeft) ? r : 0.0f;
         const float r1 = (rounding_corners & ImGuiCorner_TopRight) ? r : 0.0f;
-        const float r2 = (rounding_corners & ImGuiCorner_BottomRight) ? r : 0.0f;
-        const float r3 = (rounding_corners & ImGuiCorner_BottomLeft) ? r : 0.0f;
+        const float r2 = (rounding_corners & ImGuiCorner_BotRight) ? r : 0.0f;
+        const float r3 = (rounding_corners & ImGuiCorner_BotLeft) ? r : 0.0f;
         PathArcToFast(ImVec2(a.x+r0,a.y+r0), r0, 6, 9);
         PathArcToFast(ImVec2(b.x-r1,a.y+r1), r1, 9, 12);
         PathArcToFast(ImVec2(b.x-r2,b.y-r2), r2, 0, 3);

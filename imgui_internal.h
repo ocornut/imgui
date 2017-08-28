@@ -234,8 +234,8 @@ enum ImGuiCorner
 {
     ImGuiCorner_TopLeft     = 1 << 0, // 1
     ImGuiCorner_TopRight    = 1 << 1, // 2
-    ImGuiCorner_BottomRight = 1 << 2, // 4
-    ImGuiCorner_BottomLeft  = 1 << 3, // 8
+    ImGuiCorner_BotRight    = 1 << 2, // 4
+    ImGuiCorner_BotLeft     = 1 << 3, // 8
     ImGuiCorner_All         = 0x0F
 };
 
