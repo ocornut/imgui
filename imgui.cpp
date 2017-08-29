@@ -3820,12 +3820,14 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
 
 bool ImGui::IsAnyWindowHovered()
 {
-    return GImGui->HoveredWindow != NULL;
+    ImGuiContext& g = *GImGui;
+    return g.HoveredWindow != NULL;
 }
 
 bool ImGui::IsAnyWindowFocused()
 {
-    return GImGui->NavWindow != NULL;
+    ImGuiContext& g = *GImGui;
+    return g.NavWindow != NULL;
 }
 
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
@@ -3870,10 +3872,14 @@ int ImGui::GetKeyPressedAmount(int key_index, float repeat_delay, float repeat_r
 bool ImGui::IsKeyPressed(int user_key_index, bool repeat)
 {
     ImGuiContext& g = *GImGui;
-    if (repeat)
+    if (user_key_index < 0) return false;
+    IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(g.IO.KeysDown));
+    const float t = g.IO.KeysDownDuration[user_key_index];
+    if (t == 0.0f)
+        return true;
+    if (repeat && t > g.IO.KeyRepeatDelay)
         return GetKeyPressedAmount(user_key_index, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate) > 0;
-    else
-        return GetKeyPressedAmount(user_key_index, 0.0f, 0.0f) > 0;
+    return false;
 }
 
 bool ImGui::IsKeyReleased(int user_key_index)
