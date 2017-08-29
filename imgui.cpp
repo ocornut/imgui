@@ -2196,7 +2196,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     if (is_clipped)
         return false;
 
-    // Setting LastItemHoveredAndUsable for IsItemHovered()
+    // Setting LastItemHoveredAndUsable for IsItemHovered(). This is a sensible default, but widgets are free to override it.
     if (IsMouseHoveringRect(bb.Min, bb.Max))
     {
         // Matching the behavior of IsHovered() but allow if ActiveId==window->MoveID (we clicked on the window background)
@@ -4641,15 +4641,17 @@ static void ApplySizeFullWithConstraint(ImGuiWindow* window, ImVec2 new_size)
 static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
 {
     ImVec2 scroll = window->Scroll;
+    float cr_x = window->ScrollTargetCenterRatio.x;
+    float cr_y = window->ScrollTargetCenterRatio.y;
     if (window->ScrollTarget.x < FLT_MAX)
-        scroll.x = window->ScrollTarget.x - (window->ScrollTargetCenterRatio.x * window->SizeFull.x);
+        scroll.x = window->ScrollTarget.x - cr_x * (window->SizeFull.x - window->ScrollbarSizes.x);
     if (window->ScrollTarget.y < FLT_MAX)
-        scroll.y = window->ScrollTarget.y - ((1.0f - window->ScrollTargetCenterRatio.y) * (window->TitleBarHeight() + window->MenuBarHeight())) - (window->ScrollTargetCenterRatio.y * (window->SizeFull.y - window->ScrollbarSizes.y));
+        scroll.y = window->ScrollTarget.y - (1.0f - cr_y) * (window->TitleBarHeight() + window->MenuBarHeight()) - cr_y * (window->SizeFull.y - window->ScrollbarSizes.y);
     scroll = ImMax(scroll, ImVec2(0.0f, 0.0f));
     if (!window->Collapsed && !window->SkipItems)
     {
-        scroll.x = ImMin(scroll.x, ImMax(0.0f, window->SizeContents.x - (window->SizeFull.x - window->ScrollbarSizes.x)));
-        scroll.y = ImMin(scroll.y, ImMax(0.0f, window->SizeContents.y - (window->SizeFull.y - window->ScrollbarSizes.y)));
+        scroll.x = ImMin(scroll.x, ImMax(0.0f, window->SizeContents.x - (window->SizeFull.x - window->ScrollbarSizes.x))); // == GetScrollMaxX for that window
+        scroll.y = ImMin(scroll.y, ImMax(0.0f, window->SizeContents.y - (window->SizeFull.y - window->ScrollbarSizes.y))); // == GetScrollMaxY for that window
     }
     return scroll;
 }
@@ -4999,7 +5001,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         {
             // Title bar only
             const bool is_focused = g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow && !g.NavDisableHighlight;
-            RenderFrame(title_bar_rect.GetTL(), title_bar_rect.GetBR(),  GetColorU32(is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBgCollapsed), true, window_rounding);
+            RenderFrame(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32(is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBgCollapsed), true, window_rounding);
         }
         else
         {
@@ -7618,9 +7620,8 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
         return InputScalarAsWidgetReplacement(frame_bb, label, ImGuiDataType_Float, v, id, decimal_precision);
 
-    ItemSize(total_bb, style.FramePadding.y);
-
     // Actual slider behavior + render grab
+    ItemSize(total_bb, style.FramePadding.y);
     const bool value_changed = SliderBehavior(frame_bb, id, v, v_min, v_max, power, decimal_precision);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
@@ -7820,9 +7821,6 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
             if (v_speed == 0.0f && (v_max - v_min) != 0.0f && (v_max - v_min) < FLT_MAX)
                 v_speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
 
-            if (g.ActiveIdSource == ImGuiInputSource_Nav)
-                v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
-
             float v_cur = g.DragCurrentValue;
             const ImVec2 mouse_drag_delta = GetMouseDragDelta(0, 1.0f);
             float adjust_delta = 0.0f;
@@ -7837,6 +7835,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
             if (g.ActiveIdSource == ImGuiInputSource_Nav)
             {
                 adjust_delta = GetNavInputAmount2d(0, ImGuiNavReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
+                v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
             }
             adjust_delta *= v_speed;
             g.DragLastMouseDelta.x = mouse_drag_delta.x;
