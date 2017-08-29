@@ -6926,15 +6926,20 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
                 v_speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
             float v_cur = g.DragCurrentValue;
             const ImVec2 mouse_drag_delta = GetMouseDragDelta(0, 1.0f);
-            if (fabsf(mouse_drag_delta.x - g.DragLastMouseDelta.x) > 0.0f)
+            float adjust_delta = 0.0f;
+            //if (g.ActiveIdSource == ImGuiInputSource_Mouse)
             {
-                float speed = v_speed;
+                adjust_delta = mouse_drag_delta.x - g.DragLastMouseDelta.x;
                 if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
-                    speed = speed * g.DragSpeedScaleFast;
+                    adjust_delta *= g.DragSpeedScaleFast;
                 if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
-                    speed = speed * g.DragSpeedScaleSlow;
+                    adjust_delta *= g.DragSpeedScaleSlow;
+            }
+            adjust_delta *= v_speed;
+            g.DragLastMouseDelta.x = mouse_drag_delta.x;
 
-                float adjust_delta = (mouse_drag_delta.x - g.DragLastMouseDelta.x) * speed;
+            if (fabsf(adjust_delta) > 0.0f)
+            {
                 if (fabsf(power - 1.0f) > 0.001f)
                 {
                     // Logarithmic curve on both side of 0.0
@@ -6949,7 +6954,6 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
                 {
                     v_cur += adjust_delta;
                 }
-                g.DragLastMouseDelta.x = mouse_drag_delta.x;
 
                 // Clamp
                 if (v_min < v_max)
