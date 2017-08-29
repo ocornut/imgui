@@ -1919,6 +1919,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     g.ActiveIdWindow = window;
     if (id)
     {
+        g.ActiveIdIsAlive = true;
         g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id || g.NavTabbedId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
         if (g.ActiveIdSource == ImGuiInputSource_Nav)
             g.NavDisableMouseHover = true;
@@ -1939,9 +1940,12 @@ void ImGui::SetActiveIDNoNav(ImGuiID id, ImGuiWindow* window)
     g.ActiveId = id;
     g.ActiveIdAllowNavDirFlags = 0;
     g.ActiveIdAllowOverlap = false;
-    g.ActiveIdIsAlive |= (id != 0);
     g.ActiveIdWindow = window;
-    g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
+    if (id)
+    {
+        g.ActiveIdIsAlive = true;
+        g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
+    }
 }
 
 void ImGui::ClearActiveID()
