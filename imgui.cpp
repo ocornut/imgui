@@ -4255,24 +4255,27 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 bool hovered, held;
                 ButtonBehavior(resize_rect, resize_id, &hovered, &held, ImGuiButtonFlags_FlattenChilds);
                 resize_col = GetColorU32(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
-
                 if (hovered || held)
                     g.MouseCursor = ImGuiMouseCursor_ResizeNWSE;
 
+                ImVec2 size_target(FLT_MAX,FLT_MAX);
                 if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0])
                 {
                     // Manual auto-fit when double-clicking
-                    ApplySizeFullWithConstraint(window, size_auto_fit);
-                    MarkIniSettingsDirty(window);
+                    size_target = size_auto_fit;
                     ClearActiveID();
                 }
                 else if (held)
                 {
                     // We don't use an incremental MouseDelta but rather compute an absolute target size based on mouse position
-                    ApplySizeFullWithConstraint(window, (g.IO.MousePos - g.ActiveIdClickOffset + resize_rect.GetSize()) - window->Pos);
-                    MarkIniSettingsDirty(window);
+                    size_target = (g.IO.MousePos - g.ActiveIdClickOffset + resize_rect.GetSize()) - window->Pos;
                 }
 
+                if (size_target.x != FLT_MAX && size_target.y != FLT_MAX)
+                {
+                    ApplySizeFullWithConstraint(window, size_target);
+                    MarkIniSettingsDirty(window);
+                }
                 window->Size = window->SizeFull;
                 title_bar_rect = window->TitleBarRect();
             }
