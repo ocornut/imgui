@@ -2165,6 +2165,9 @@ void ImGui::NewFrame()
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = false;
     g.ActiveIdIsJustActivated = false;
+    if (g.ScalarAsInputTextId && g.ActiveId != g.ScalarAsInputTextId)
+        g.ScalarAsInputTextId = 0;
+
     // Update keyboard input state
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
@@ -6480,11 +6483,6 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label
         g.ScalarAsInputTextId = g.ActiveId;
         SetHoveredID(id);
     }
-    else if (g.ActiveId != g.ScalarAsInputTextId)
-    {
-        // Release
-        g.ScalarAsInputTextId = 0;
-    }
     if (text_value_changed)
         return DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr, NULL);
     return false;
@@ -6727,9 +6725,8 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
         return InputScalarAsWidgetReplacement(frame_bb, label, ImGuiDataType_Float, v, id, decimal_precision);
 
-    ItemSize(total_bb, style.FramePadding.y);
-
     // Actual slider behavior + render grab
+    ItemSize(total_bb, style.FramePadding.y);
     const bool value_changed = SliderBehavior(frame_bb, id, v, v_min, v_max, power, decimal_precision);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
@@ -8983,6 +8980,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     }
 
     bool hovered = enabled && IsHovered(window->DC.LastItemRect, id);
+
     if (menuset_is_open)
         g.NavWindow = backed_nav_window;
 
