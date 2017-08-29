@@ -1935,7 +1935,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
     if (IsClippedEx(bb, id, false))
         return false;
 
-    // This is a sensible default, but widgets are free to override it after calling ItemAdd()
+    // Setting LastItemHoveredAndUsable for IsItemHovered(). This is a sensible default, but widgets are free to override it.
     if (IsMouseHoveringRect(bb.Min, bb.Max))
     {
         // Matching the behavior of IsHovered() but allow if ActiveId==window->MoveID (we clicked on the window background)
@@ -4008,11 +4008,12 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         if (!(g.CurrentWindowStack[root_idx]->Flags & ImGuiWindowFlags_ChildWindow))
             break;
     for (root_non_popup_idx = root_idx; root_non_popup_idx > 0; root_non_popup_idx--)
-        if (!(g.CurrentWindowStack[root_non_popup_idx]->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
+        if (!(g.CurrentWindowStack[root_non_popup_idx]->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)) || (g.CurrentWindowStack[root_non_popup_idx]->Flags & ImGuiWindowFlags_Modal))
             break;
     window->ParentWindow = parent_window;
     window->RootWindow = g.CurrentWindowStack[root_idx];
-    window->RootNonPopupWindow = g.CurrentWindowStack[root_non_popup_idx];      // This is merely for displaying the TitleBgActive color.
+    window->RootNonPopupWindow = g.CurrentWindowStack[root_non_popup_idx];      // Used to display TitleBgActive color and for selecting which window to use for NavWindowing
+
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
@@ -4235,7 +4236,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         if (window->Collapsed)
         {
             // Title bar only
-            RenderFrame(title_bar_rect.GetTL(), title_bar_rect.GetBR(),  GetColorU32(ImGuiCol_TitleBgCollapsed), true, window_rounding);
+            RenderFrame(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_TitleBgCollapsed), true, window_rounding);
         }
         else
         {
@@ -4296,8 +4297,9 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 window->DrawList->AddRectFilled(window->Pos+ImVec2(0,window->TitleBarHeight()), window->Pos+window->Size, ColorConvertFloat4ToU32(bg_color), window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImGuiCorner_All : ImGuiCorner_BotLeft|ImGuiCorner_BotRight);
 
             // Title bar
+            const bool is_focused = g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow;
             if (!(flags & ImGuiWindowFlags_NoTitleBar))
-                window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32((g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow) ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, ImGuiCorner_TopLeft|ImGuiCorner_TopRight);
+                window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32(is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, ImGuiCorner_TopLeft|ImGuiCorner_TopRight);
 
             // Menu bar
             if (flags & ImGuiWindowFlags_MenuBar)
@@ -4387,11 +4389,12 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         // Title bar
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
+            // Close button
             if (p_open != NULL)
             {
-                const float pad = 2.0f;
-                const float rad = (window->TitleBarHeight() - pad*2.0f) * 0.5f;
-                if (CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-pad - rad, pad + rad), rad))
+                const float PAD = 2.0f;
+                const float rad = (window->TitleBarHeight() - PAD*2.0f) * 0.5f;
+                if (CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-PAD - rad, PAD + rad), rad))
                     *p_open = false;
             }
 
