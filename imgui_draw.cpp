@@ -2330,6 +2330,77 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 }
 
 //-----------------------------------------------------------------------------
+// Internals Drawing Helpers
+//-----------------------------------------------------------------------------
+
+static inline float ImAcos01(float x)
+{
+    if (x <= 0.0f) return IM_PI * 0.5f;
+    if (x >= 1.0f) return 0.0f;
+    return (-0.69813170079773212f * x * x - 0.87266462599716477f) * x + 1.5707963267948966f; // Cheap approximation, enough for what we do.
+}
+
+// FIXME: Cleanup and move code to ImDrawList.
+void ImGui::RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, ImU32 col, float x_start_norm, float x_end_norm, float rounding)
+{
+    if (x_end_norm == x_start_norm)
+        return;
+    if (x_start_norm > x_end_norm)
+        ImSwap(x_start_norm, x_end_norm);
+
+    ImVec2 p0 = ImVec2(ImLerp(rect.Min.x, rect.Max.x, x_start_norm), rect.Min.y);
+    ImVec2 p1 = ImVec2(ImLerp(rect.Min.x, rect.Max.x, x_end_norm), rect.Max.y);
+    if (rounding == 0.0f)
+    {
+        draw_list->AddRectFilled(p0, p1, col, 0.0f);
+        return;
+    }
+
+    rounding = ImClamp(ImMin((rect.Max.x - rect.Min.x) * 0.5f, (rect.Max.y - rect.Min.y) * 0.5f) - 1.0f, 0.0f, rounding);
+    const float inv_rounding = 1.0f / rounding;
+    const float arc0_b = ImAcos01(1.0f - (p0.x - rect.Min.x) * inv_rounding);
+    const float arc0_e = ImAcos01(1.0f - (p1.x - rect.Min.x) * inv_rounding);
+    const float x0 = ImMax(p0.x, rect.Min.x + rounding);
+    if (arc0_b == arc0_e)
+    {
+        draw_list->PathLineTo(ImVec2(x0, p1.y));
+        draw_list->PathLineTo(ImVec2(x0, p0.y));
+    }
+    else if (arc0_b == 0.0f && arc0_e == IM_PI*0.5f)
+    {
+        draw_list->PathArcToFast(ImVec2(x0, p1.y - rounding), rounding, 3, 6); // BL
+        draw_list->PathArcToFast(ImVec2(x0, p0.y + rounding), rounding, 6, 9); // TR
+    }
+    else
+    {
+        draw_list->PathArcTo(ImVec2(x0, p1.y - rounding), rounding, IM_PI - arc0_e, IM_PI - arc0_b, 3); // BL
+        draw_list->PathArcTo(ImVec2(x0, p0.y + rounding), rounding, IM_PI + arc0_b, IM_PI + arc0_e, 3); // TR
+    }
+    if (p1.x > rect.Min.x + rounding)
+    {
+        const float arc1_b = ImAcos01(1.0f - (rect.Max.x - p1.x) * inv_rounding);
+        const float arc1_e = ImAcos01(1.0f - (rect.Max.x - p0.x) * inv_rounding);
+        const float x1 = ImMin(p1.x, rect.Max.x - rounding);
+        if (arc1_b == arc1_e)
+        {
+            draw_list->PathLineTo(ImVec2(x1, p0.y));
+            draw_list->PathLineTo(ImVec2(x1, p1.y));
+        }
+        else if (arc1_b == 0.0f && arc1_e == IM_PI*0.5f)
+        {
+            draw_list->PathArcToFast(ImVec2(x1, p0.y + rounding), rounding, 9, 12); // TR
+            draw_list->PathArcToFast(ImVec2(x1, p1.y - rounding), rounding, 0, 3);  // BR
+        }
+        else
+        {
+            draw_list->PathArcTo(ImVec2(x1, p0.y + rounding), rounding, -arc1_e, -arc1_b, 3); // TR
+            draw_list->PathArcTo(ImVec2(x1, p1.y - rounding), rounding, +arc1_b, +arc1_e, 3); // BR
+        }
+    }
+    draw_list->PathFillConvex(col);
+}
+
+//-----------------------------------------------------------------------------
 // DEFAULT FONT DATA
 //-----------------------------------------------------------------------------
 // Compressed with stb_compress() then converted to a C array.
