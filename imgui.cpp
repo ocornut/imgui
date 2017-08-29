@@ -1977,7 +1977,7 @@ bool ImGui::IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs)
     return false;
 }
 
-bool ImGui::FocusableItemRegister(ImGuiWindow* window, bool is_active, bool tab_stop)
+bool ImGui::FocusableItemRegister(ImGuiWindow* window, ImGuiID id, bool tab_stop)
 {
     ImGuiContext& g = *GImGui;
 
@@ -1986,13 +1986,10 @@ bool ImGui::FocusableItemRegister(ImGuiWindow* window, bool is_active, bool tab_
     if (allow_keyboard_focus)
         window->FocusIdxTabCounter++;
 
-    // Process keyboard input at this point: TAB, Shift-TAB switch focus
-    // We can always TAB out of a widget that doesn't allow tabbing in.
-    if (tab_stop && window->FocusIdxAllRequestNext == INT_MAX && window->FocusIdxTabRequestNext == INT_MAX && is_active && IsKeyPressedMap(ImGuiKey_Tab))
-    {
-        // Modulo on index will be applied at the end of frame once we've got the total counter of items.
-        window->FocusIdxTabRequestNext = window->FocusIdxTabCounter + (g.IO.KeyShift ? (allow_keyboard_focus ? -1 : 0) : +1);
-    }
+    // Process keyboard input at this point: TAB/Shift-TAB to tab out of the currently focused item.
+    // Note that we can always TAB out of a widget that doesn't allow tabbing in.
+    if (tab_stop && (g.ActiveId == id) && window->FocusIdxAllRequestNext == INT_MAX && window->FocusIdxTabRequestNext == INT_MAX && !g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab))
+        window->FocusIdxTabRequestNext = window->FocusIdxTabCounter + (g.IO.KeyShift ? (allow_keyboard_focus ? -1 : 0) : +1); // Modulo on index will be applied at the end of frame once we've got the total counter of items.
 
     if (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent)
         return true;
@@ -6715,7 +6712,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 
     // Tabbing or CTRL-clicking on Slider turns it into an input box
     bool start_text_input = false;
-    const bool tab_focus_requested = FocusableItemRegister(window, g.ActiveId == id);
+    const bool tab_focus_requested = FocusableItemRegister(window, id);
     if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]))
     {
         SetActiveID(id, window);
@@ -7013,7 +7010,7 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
 
     // Tabbing or CTRL-clicking on Drag turns it into an input box
     bool start_text_input = false;
-    const bool tab_focus_requested = FocusableItemRegister(window, g.ActiveId == id);
+    const bool tab_focus_requested = FocusableItemRegister(window, id);
     if (tab_focus_requested || (hovered && (g.IO.MouseClicked[0] | g.IO.MouseDoubleClicked[0])))
     {
         SetActiveID(id, window);
@@ -7818,7 +7815,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     // NB: we are only allowed to access 'edit_state' if we are the active widget.
     ImGuiTextEditState& edit_state = g.InputTextState;
 
-    const bool focus_requested = FocusableItemRegister(window, g.ActiveId == id, (flags & (ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_AllowTabInput)) == 0);    // Using completion callback disable keyboard tabbing
+    const bool focus_requested = FocusableItemRegister(window, id, (flags & (ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_AllowTabInput)) == 0);    // Using completion callback disable keyboard tabbing
     const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
     const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
 
