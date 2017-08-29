@@ -3154,6 +3154,25 @@ bool ImGui::IsKeyDown(int user_key_index)
     return GImGui->IO.KeysDown[user_key_index];
 }
 
+int ImGui::CalcTypematicPressedRepeatAmount(float t, float t_prev, float repeat_delay, float repeat_rate)
+{
+    if (t == 0.0f)
+        return 1;
+    if (t <= repeat_delay || repeat_rate <= 0.0f)
+        return 0;
+    const int count = (int)((t - repeat_delay) / repeat_rate) - (int)((t_prev - repeat_delay) / repeat_rate);
+    return (count > 0) ? count : 0;
+}
+
+int ImGui::GetKeyPressedAmount(int key_index, float repeat_delay, float repeat_rate)
+{
+    ImGuiContext& g = *GImGui;
+    if (key_index < 0) return false;
+    IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
+    const float t = g.IO.KeysDownDuration[key_index];
+    return CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, repeat_delay, repeat_rate);
+}
+
 bool ImGui::IsKeyPressed(int user_key_index, bool repeat)
 {
     ImGuiContext& g = *GImGui;
@@ -3162,13 +3181,8 @@ bool ImGui::IsKeyPressed(int user_key_index, bool repeat)
     const float t = g.IO.KeysDownDuration[user_key_index];
     if (t == 0.0f)
         return true;
-
     if (repeat && t > g.IO.KeyRepeatDelay)
-    {
-        float delay = g.IO.KeyRepeatDelay, rate = g.IO.KeyRepeatRate;
-        if ((fmodf(t - delay, rate) > rate*0.5f) != (fmodf(t - delay - g.IO.DeltaTime, rate) > rate*0.5f))
-            return true;
-    }
+        return GetKeyPressedAmount(user_key_index, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate) > 0;
     return false;
 }
 
