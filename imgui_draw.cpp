@@ -694,30 +694,30 @@ void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int a_min_of_
         circle_vtx_builds = true;
     }
 
-    if (a_min_of_12 > a_max_of_12) return;
-    if (radius == 0.0f)
+    if (radius == 0.0f || a_min_of_12 > a_max_of_12)
     {
         _Path.push_back(centre);
+        return;
     }
-    else
+    _Path.reserve(_Path.Size + (a_max_of_12 - a_min_of_12 + 1));
+    for (int a = a_min_of_12; a <= a_max_of_12; a++)
     {
-        _Path.reserve(_Path.Size + (a_max_of_12 - a_min_of_12 + 1));
-        for (int a = a_min_of_12; a <= a_max_of_12; a++)
-        {
-            const ImVec2& c = circle_vtx[a % circle_vtx_count];
-            _Path.push_back(ImVec2(centre.x + c.x * radius, centre.y + c.y * radius));
-        }
+        const ImVec2& c = circle_vtx[a % circle_vtx_count];
+        _Path.push_back(ImVec2(centre.x + c.x * radius, centre.y + c.y * radius));
     }
 }
 
-void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float amin, float amax, int num_segments)
+void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float a_min, float a_max, int num_segments)
 {
     if (radius == 0.0f)
+    {
         _Path.push_back(centre);
+        return;
+    }
     _Path.reserve(_Path.Size + (num_segments + 1));
     for (int i = 0; i <= num_segments; i++)
     {
-        const float a = amin + ((float)i / (float)num_segments) * (amax - amin);
+        const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
         _Path.push_back(ImVec2(centre.x + cosf(a) * radius, centre.y + sinf(a) * radius));
     }
 }
@@ -775,31 +775,30 @@ void ImDrawList::PathBezierCurveTo(const ImVec2& p2, const ImVec2& p3, const ImV
 void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int rounding_corners)
 {
     const int corners_top = ImGuiCorner_TopLeft | ImGuiCorner_TopRight;
-    const int corners_bottom = ImGuiCorner_BottomLeft | ImGuiCorner_BottomRight;
-    const int corners_left = ImGuiCorner_TopLeft | ImGuiCorner_BottomLeft;
-    const int corners_right = ImGuiCorner_TopRight | ImGuiCorner_BottomRight;
+    const int corners_bottom = ImGuiCorner_BotLeft | ImGuiCorner_BotRight;
+    const int corners_left = ImGuiCorner_TopLeft | ImGuiCorner_BotLeft;
+    const int corners_right = ImGuiCorner_TopRight | ImGuiCorner_BotRight;
 
-    float r = rounding;
-    r = ImMin(r, fabsf(b.x-a.x) * ( ((rounding_corners & corners_top)  == corners_top)  || ((rounding_corners & corners_bottom) == corners_bottom) ? 0.5f : 1.0f ) - 1.0f);
-    r = ImMin(r, fabsf(b.y-a.y) * ( ((rounding_corners & corners_left) == corners_left) || ((rounding_corners & corners_right)  == corners_right)  ? 0.5f : 1.0f ) - 1.0f);
+    rounding = ImMin(rounding, fabsf(b.x - a.x) * ( ((rounding_corners & corners_top)  == corners_top)  || ((rounding_corners & corners_bottom) == corners_bottom) ? 0.5f : 1.0f ) - 1.0f);
+    rounding = ImMin(rounding, fabsf(b.y - a.y) * ( ((rounding_corners & corners_left) == corners_left) || ((rounding_corners & corners_right)  == corners_right)  ? 0.5f : 1.0f ) - 1.0f);
 
-    if (r <= 0.0f || rounding_corners == 0)
+    if (rounding <= 0.0f || rounding_corners == 0)
     {
         PathLineTo(a);
-        PathLineTo(ImVec2(b.x,a.y));
+        PathLineTo(ImVec2(b.x, a.y));
         PathLineTo(b);
-        PathLineTo(ImVec2(a.x,b.y));
+        PathLineTo(ImVec2(a.x, b.y));
     }
     else
     {
-        const float r0 = (rounding_corners & ImGuiCorner_TopLeft) ? r : 0.0f;
-        const float r1 = (rounding_corners & ImGuiCorner_TopRight) ? r : 0.0f;
-        const float r2 = (rounding_corners & ImGuiCorner_BottomRight) ? r : 0.0f;
-        const float r3 = (rounding_corners & ImGuiCorner_BottomLeft) ? r : 0.0f;
-        PathArcToFast(ImVec2(a.x+r0,a.y+r0), r0, 6, 9);
-        PathArcToFast(ImVec2(b.x-r1,a.y+r1), r1, 9, 12);
-        PathArcToFast(ImVec2(b.x-r2,b.y-r2), r2, 0, 3);
-        PathArcToFast(ImVec2(a.x+r3,b.y-r3), r3, 3, 6);
+        const float rounding_tl = (rounding_corners & ImGuiCorner_TopLeft) ? rounding : 0.0f;
+        const float rounding_tr = (rounding_corners & ImGuiCorner_TopRight) ? rounding : 0.0f;
+        const float rounding_br = (rounding_corners & ImGuiCorner_BotRight) ? rounding : 0.0f;
+        const float rounding_bl = (rounding_corners & ImGuiCorner_BotLeft) ? rounding : 0.0f;
+        PathArcToFast(ImVec2(a.x + rounding_tl, a.y + rounding_tl), rounding_tl, 6, 9);
+        PathArcToFast(ImVec2(b.x - rounding_tr, a.y + rounding_tr), rounding_tr, 9, 12);
+        PathArcToFast(ImVec2(b.x - rounding_br, b.y - rounding_br), rounding_br, 0, 3);
+        PathArcToFast(ImVec2(a.x + rounding_bl, b.y - rounding_bl), rounding_bl, 3, 6);
     }
 }
 
@@ -2328,6 +2327,78 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     draw_list->_VtxWritePtr = vtx_write;
     draw_list->_IdxWritePtr = idx_write;
     draw_list->_VtxCurrentIdx = (unsigned int)draw_list->VtxBuffer.Size;
+}
+
+//-----------------------------------------------------------------------------
+// Internals Drawing Helpers
+//-----------------------------------------------------------------------------
+
+static inline float ImAcos01(float x)
+{
+    if (x <= 0.0f) return IM_PI * 0.5f;
+    if (x >= 1.0f) return 0.0f;
+    return acosf(x);
+    //return (-0.69813170079773212f * x * x - 0.87266462599716477f) * x + 1.5707963267948966f; // Cheap approximation, may be enough for what we do.
+}
+
+// FIXME: Cleanup and move code to ImDrawList.
+void ImGui::RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, ImU32 col, float x_start_norm, float x_end_norm, float rounding)
+{
+    if (x_end_norm == x_start_norm)
+        return;
+    if (x_start_norm > x_end_norm)
+        ImSwap(x_start_norm, x_end_norm);
+
+    ImVec2 p0 = ImVec2(ImLerp(rect.Min.x, rect.Max.x, x_start_norm), rect.Min.y);
+    ImVec2 p1 = ImVec2(ImLerp(rect.Min.x, rect.Max.x, x_end_norm), rect.Max.y);
+    if (rounding == 0.0f)
+    {
+        draw_list->AddRectFilled(p0, p1, col, 0.0f);
+        return;
+    }
+
+    rounding = ImClamp(ImMin((rect.Max.x - rect.Min.x) * 0.5f, (rect.Max.y - rect.Min.y) * 0.5f) - 1.0f, 0.0f, rounding);
+    const float inv_rounding = 1.0f / rounding;
+    const float arc0_b = ImAcos01(1.0f - (p0.x - rect.Min.x) * inv_rounding);
+    const float arc0_e = ImAcos01(1.0f - (p1.x - rect.Min.x) * inv_rounding);
+    const float x0 = ImMax(p0.x, rect.Min.x + rounding);
+    if (arc0_b == arc0_e)
+    {
+        draw_list->PathLineTo(ImVec2(x0, p1.y));
+        draw_list->PathLineTo(ImVec2(x0, p0.y));
+    }
+    else if (arc0_b == 0.0f && arc0_e == IM_PI*0.5f)
+    {
+        draw_list->PathArcToFast(ImVec2(x0, p1.y - rounding), rounding, 3, 6); // BL
+        draw_list->PathArcToFast(ImVec2(x0, p0.y + rounding), rounding, 6, 9); // TR
+    }
+    else
+    {
+        draw_list->PathArcTo(ImVec2(x0, p1.y - rounding), rounding, IM_PI - arc0_e, IM_PI - arc0_b, 3); // BL
+        draw_list->PathArcTo(ImVec2(x0, p0.y + rounding), rounding, IM_PI + arc0_b, IM_PI + arc0_e, 3); // TR
+    }
+    if (p1.x > rect.Min.x + rounding)
+    {
+        const float arc1_b = ImAcos01(1.0f - (rect.Max.x - p1.x) * inv_rounding);
+        const float arc1_e = ImAcos01(1.0f - (rect.Max.x - p0.x) * inv_rounding);
+        const float x1 = ImMin(p1.x, rect.Max.x - rounding);
+        if (arc1_b == arc1_e)
+        {
+            draw_list->PathLineTo(ImVec2(x1, p0.y));
+            draw_list->PathLineTo(ImVec2(x1, p1.y));
+        }
+        else if (arc1_b == 0.0f && arc1_e == IM_PI*0.5f)
+        {
+            draw_list->PathArcToFast(ImVec2(x1, p0.y + rounding), rounding, 9, 12); // TR
+            draw_list->PathArcToFast(ImVec2(x1, p1.y - rounding), rounding, 0, 3);  // BR
+        }
+        else
+        {
+            draw_list->PathArcTo(ImVec2(x1, p0.y + rounding), rounding, -arc1_e, -arc1_b, 3); // TR
+            draw_list->PathArcTo(ImVec2(x1, p1.y - rounding), rounding, +arc1_b, +arc1_e, 3); // BR
+        }
+    }
+    draw_list->PathFillConvex(col);
 }
 
 //-----------------------------------------------------------------------------
