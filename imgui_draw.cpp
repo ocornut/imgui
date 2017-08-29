@@ -707,7 +707,7 @@ void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int a_min_of_
     }
 }
 
-void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float amin, float amax, int num_segments)
+void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float a_min, float a_max, int num_segments)
 {
     if (radius == 0.0f)
     {
@@ -717,7 +717,7 @@ void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float amin, float
     _Path.reserve(_Path.Size + (num_segments + 1));
     for (int i = 0; i <= num_segments; i++)
     {
-        const float a = amin + ((float)i / (float)num_segments) * (amax - amin);
+        const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
         _Path.push_back(ImVec2(centre.x + cosf(a) * radius, centre.y + sinf(a) * radius));
     }
 }
