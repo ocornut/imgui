@@ -2633,6 +2633,19 @@ static void AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiW
     }
 }
 
+static void AddWindowToRenderListSelectLayer(ImGuiWindow* window)
+{
+    // FIXME: Generalize this with a proper layering system so e.g. user can draw in specific layers, below text, ..
+    ImGuiContext& g = *GImGui;
+    g.IO.MetricsActiveWindows++;
+    if (window->Flags & ImGuiWindowFlags_Popup)
+        AddWindowToRenderList(g.RenderDrawLists[1], window);
+    else if (window->Flags & ImGuiWindowFlags_Tooltip)
+        AddWindowToRenderList(g.RenderDrawLists[2], window);
+    else
+        AddWindowToRenderList(g.RenderDrawLists[0], window);
+}
+
 // When using this function it is sane to ensure that float are perfectly rounded to integer values, to that e.g. (int)(max.x-min.x) in user's render produce correct result.
 void ImGui::PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect)
 {
@@ -2734,16 +2747,7 @@ void ImGui::Render()
         {
             ImGuiWindow* window = g.Windows[i];
             if (window->Active && window->HiddenFrames <= 0 && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0)
-            {
-                // FIXME: Generalize this with a proper layering system so e.g. user can draw in specific layers, below text, ..
-                g.IO.MetricsActiveWindows++;
-                if (window->Flags & ImGuiWindowFlags_Popup)
-                    AddWindowToRenderList(g.RenderDrawLists[1], window);
-                else if (window->Flags & ImGuiWindowFlags_Tooltip)
-                    AddWindowToRenderList(g.RenderDrawLists[2], window);
-                else
-                    AddWindowToRenderList(g.RenderDrawLists[0], window);
-            }
+                AddWindowToRenderListSelectLayer(window);
         }
 
         // Flatten layers
@@ -3138,7 +3142,7 @@ bool ImGui::IsAnyWindowHovered()
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
 {
     const int key_index = GImGui->IO.KeyMap[key];
-    return ImGui::IsKeyPressed(key_index, repeat);
+    return (key_index >= 0) ? ImGui::IsKeyPressed(key_index, repeat) : false;
 }
 
 int ImGui::GetKeyIndex(ImGuiKey imgui_key)
