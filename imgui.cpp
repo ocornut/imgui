@@ -10386,7 +10386,7 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
     ImGuiContext& g = *GImGui;
     g.PrivateClipboard.clear();
     const char* text_end = text + strlen(text);
-    g.PrivateClipboard.resize((size_t)(text_end - text) + 1);
+    g.PrivateClipboard.resize((int)(text_end - text) + 1);
     memcpy(&g.PrivateClipboard[0], text, (size_t)(text_end - text));
     g.PrivateClipboard[(int)(text_end - text)] = 0;
 }
