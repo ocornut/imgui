@@ -31,9 +31,9 @@ static float        g_MouseWheel = 0.0f;
 static GLuint       g_FontTexture = 0;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
-// If text or lines are blurry when integrating ImGui in your engine:
-// - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 void ImGui_ImplGlfwGL2_RenderDrawLists(ImDrawData* draw_data)
+// Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so. 
+// If text or lines are blurry when integrating ImGui in your engine: in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     ImGuiIO& io = ImGui::GetIO();
@@ -116,12 +116,12 @@ void ImGui_ImplGlfwGL2_RenderDrawLists(ImDrawData* draw_data)
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 }
 
-static const char* ImGui_ImplGlfw_GetClipboardText(void* user_data)
+static const char* ImGui_ImplGlfwGL2_GetClipboardText(void* user_data)
 {
     return glfwGetClipboardString((GLFWwindow*)user_data);
 }
 
-static void ImGui_ImplGlfw_SetClipboardText(void* user_data, const char* text)
+static void ImGui_ImplGlfwGL2_SetClipboardText(void* user_data, const char* text)
 {
     glfwSetClipboardString((GLFWwindow*)user_data, text);
 }
@@ -221,8 +221,8 @@ bool    ImGui_ImplGlfwGL2_Init(GLFWwindow* window, bool install_callbacks)
     io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
 
     io.RenderDrawListsFn = ImGui_ImplGlfwGL2_RenderDrawLists;      // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
-    io.SetClipboardTextFn = ImGui_ImplGlfw_SetClipboardText;
-    io.GetClipboardTextFn = ImGui_ImplGlfw_GetClipboardText;
+    io.SetClipboardTextFn = ImGui_ImplGlfwGL2_SetClipboardText;
+    io.GetClipboardTextFn = ImGui_ImplGlfwGL2_GetClipboardText;
     io.ClipboardUserData = g_Window;
 #ifdef _WIN32
     io.ImeWindowHandle = glfwGetWin32Window(g_Window);
