@@ -8667,7 +8667,6 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
                     item_text = "*Unknown item*";
                 if (Selectable(item_text, item_selected))
                 {
-                    ClearActiveID();
                     value_changed = true;
                     *current_item = i;
                 }
