@@ -8569,8 +8569,7 @@ bool ImGui::Combo(const char* label, int* current_item, const char* items_separa
     return value_changed;
 }
 
-// Combo box function.
-bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+bool ImGui::BeginCombo(const char* label, const char* preview_value, float popup_opened_height)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -8597,87 +8596,102 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     RenderFrame(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y), frame_bb.Max, GetColorU32(popup_open || hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button), true, style.FrameRounding); // FIXME-ROUNDING
     RenderCollapseTriangle(ImVec2(frame_bb.Max.x-arrow_size, frame_bb.Min.y) + style.FramePadding, true);
 
-    if (*current_item >= 0 && *current_item < items_count)
-    {
-        const char* item_text;
-        if (items_getter(data, *current_item, &item_text))
-            RenderTextClipped(frame_bb.Min + style.FramePadding, value_bb.Max, item_text, NULL, NULL, ImVec2(0.0f,0.0f));
-    }
+    if (preview_value != NULL)
+        RenderTextClipped(frame_bb.Min + style.FramePadding, value_bb.Max, preview_value, NULL, NULL, ImVec2(0.0f,0.0f));
 
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
-    bool popup_toggled = false;
     if (hovered)
     {
         SetHoveredID(id);
         if (g.IO.MouseClicked[0])
         {
             ClearActiveID();
-            popup_toggled = true;
-        }
-    }
-    if (popup_toggled)
-    {
-        if (IsPopupOpen(id))
-        {
-            ClosePopup(id);
-        }
-        else
-        {
-            FocusWindow(window);
-            OpenPopup(label);
-            popup_open = true;
-        }
-    }
-
-    bool value_changed = false;
-    if (IsPopupOpen(id))
-    {
-        // Size default to hold ~7 items
-        if (height_in_items < 0)
-            height_in_items = 7;
-
-        float popup_height = (label_size.y + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
-        float popup_y1 = frame_bb.Max.y;
-        float popup_y2 = ImClamp(popup_y1 + popup_height, popup_y1, g.IO.DisplaySize.y - style.DisplaySafeAreaPadding.y);
-        if ((popup_y2 - popup_y1) < ImMin(popup_height, frame_bb.Min.y - style.DisplaySafeAreaPadding.y))
-        {
-            // Position our combo ABOVE because there's more space to fit! (FIXME: Handle in Begin() or use a shared helper. We have similar code in Begin() for popup placement)
-            popup_y1 = ImClamp(frame_bb.Min.y - popup_height, style.DisplaySafeAreaPadding.y, frame_bb.Min.y);
-            popup_y2 = frame_bb.Min.y;
-        }
-        ImRect popup_rect(ImVec2(frame_bb.Min.x, popup_y1), ImVec2(frame_bb.Max.x, popup_y2));
-        SetNextWindowPos(popup_rect.Min);
-        SetNextWindowSize(popup_rect.GetSize());
-        PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
-
-        const ImGuiWindowFlags flags = ImGuiWindowFlags_ComboBox | ((window->Flags & ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
-        if (BeginPopupEx(id, flags))
-        {
-            // Display items
-            // FIXME-OPT: Use clipper
-            Spacing();
-            for (int i = 0; i < items_count; i++)
+            if (IsPopupOpen(id))
             {
-                PushID((void*)(intptr_t)i);
-                const bool item_selected = (i == *current_item);
-                const char* item_text;
-                if (!items_getter(data, i, &item_text))
-                    item_text = "*Unknown item*";
-                if (Selectable(item_text, item_selected))
-                {
-                    value_changed = true;
-                    *current_item = i;
-                }
-                if (item_selected && popup_toggled)
-                    SetScrollHere();
-                PopID();
+                ClosePopup(id);
             }
-            EndPopup();
+            else
+            {
+                FocusWindow(window);
+                OpenPopup(label);
+            }
         }
-        PopStyleVar();
     }
+
+    if (!IsPopupOpen(id))
+        return false;
+
+    float popup_y1 = frame_bb.Max.y;
+    float popup_y2 = ImClamp(popup_y1 + popup_opened_height, popup_y1, g.IO.DisplaySize.y - style.DisplaySafeAreaPadding.y);
+    if ((popup_y2 - popup_y1) < ImMin(popup_opened_height, frame_bb.Min.y - style.DisplaySafeAreaPadding.y))
+    {
+        // Position our combo ABOVE because there's more space to fit! (FIXME: Handle in Begin() or use a shared helper. We have similar code in Begin() for popup placement)
+        popup_y1 = ImClamp(frame_bb.Min.y - popup_opened_height, style.DisplaySafeAreaPadding.y, frame_bb.Min.y);
+        popup_y2 = frame_bb.Min.y;
+    }
+    ImRect popup_rect(ImVec2(frame_bb.Min.x, popup_y1), ImVec2(frame_bb.Max.x, popup_y2));
+    SetNextWindowPos(popup_rect.Min);
+    SetNextWindowSize(popup_rect.GetSize());
+    PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
+
+    const ImGuiWindowFlags flags = ImGuiWindowFlags_ComboBox | ((window->Flags & ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
+    if (!BeginPopupEx(id, flags))
+    {
+        IM_ASSERT(0);   // This should never happen as we tested for IsPopupOpen() above
+        return false;
+    }
+    Spacing();
+
+    return true;
+}
+
+void ImGui::EndCombo()
+{
+    EndPopup();
+    PopStyleVar();
+}
+
+// Combo box function.
+bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+{
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    const char* preview_text = NULL;
+    if (*current_item >= 0 && *current_item < items_count)
+        items_getter(data, *current_item, &preview_text);
+
+    // Size default to hold ~7 items
+    if (height_in_items < 0)
+        height_in_items = 7;
+    float popup_opened_height = (g.FontSize + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
+
+    if (!BeginCombo(label, preview_text, popup_opened_height))
+        return false;
+
+    // Display items
+    // FIXME-OPT: Use clipper
+    bool value_changed = false;
+    for (int i = 0; i < items_count; i++)
+    {
+        PushID((void*)(intptr_t)i);
+        const bool item_selected = (i == *current_item);
+        const char* item_text;
+        if (!items_getter(data, i, &item_text))
+            item_text = "*Unknown item*";
+        if (Selectable(item_text, item_selected))
+        {
+            value_changed = true;
+            *current_item = i;
+        }
+        if (item_selected && IsWindowAppearing())
+            SetScrollHere();
+        PopID();
+    }
+
+    EndCombo();
     return value_changed;
 }
 
