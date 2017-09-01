@@ -28,7 +28,7 @@ int main(int, char**)
     SDL_GLContext glcontext = SDL_GL_CreateContext(window);
 
     // Setup ImGui binding
-    ImGui_ImplSdl_Init(window);
+    ImGui_ImplSdlGL2_Init(window);
 
     // Load Fonts
     // (there is a default font, this is only if you want to change it. see extra_fonts/README.txt for more details)
@@ -51,11 +51,11 @@ int main(int, char**)
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
-            ImGui_ImplSdl_ProcessEvent(&event);
+            ImGui_ImplSdlGL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
                 done = true;
         }
-        ImGui_ImplSdl_NewFrame(window);
+        ImGui_ImplSdlGL2_NewFrame(window);
 
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
@@ -95,7 +95,7 @@ int main(int, char**)
     }
 
     // Cleanup
-    ImGui_ImplSdl_Shutdown();
+    ImGui_ImplSdlGL2_Shutdown();
     SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(window);
     SDL_Quit();

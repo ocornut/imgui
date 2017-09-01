@@ -117,7 +117,7 @@ static void ImGui_ImplSdl_SetClipboardText(void*, const char* text)
     SDL_SetClipboardText(text);
 }
 
-bool ImGui_ImplSdl_ProcessEvent(SDL_Event* event)
+bool ImGui_ImplSdlGL2_ProcessEvent(SDL_Event* event)
 {
     ImGuiIO& io = ImGui::GetIO();
     switch (event->type)
@@ -157,7 +157,7 @@ bool ImGui_ImplSdl_ProcessEvent(SDL_Event* event)
     return false;
 }
 
-bool ImGui_ImplSdl_CreateDeviceObjects()
+bool ImGui_ImplSdlGL2_CreateDeviceObjects()
 {
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
@@ -184,7 +184,7 @@ bool ImGui_ImplSdl_CreateDeviceObjects()
     return true;
 }
 
-void    ImGui_ImplSdl_InvalidateDeviceObjects()
+void    ImGui_ImplSdlGL2_InvalidateDeviceObjects()
 {
     if (g_FontTexture)
     {
@@ -194,7 +194,7 @@ void    ImGui_ImplSdl_InvalidateDeviceObjects()
     }
 }
 
-bool    ImGui_ImplSdl_Init(SDL_Window* window)
+bool    ImGui_ImplSdlGL2_Init(SDL_Window* window)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = SDLK_TAB;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
@@ -234,16 +234,16 @@ bool    ImGui_ImplSdl_Init(SDL_Window* window)
     return true;
 }
 
-void ImGui_ImplSdl_Shutdown()
+void ImGui_ImplSdlGL2_Shutdown()
 {
-    ImGui_ImplSdl_InvalidateDeviceObjects();
+    ImGui_ImplSdlGL2_InvalidateDeviceObjects();
     ImGui::Shutdown();
 }
 
-void ImGui_ImplSdl_NewFrame(SDL_Window *window)
+void ImGui_ImplSdlGL2_NewFrame(SDL_Window *window)
 {
     if (!g_FontTexture)
-        ImGui_ImplSdl_CreateDeviceObjects();
+        ImGui_ImplSdlGL2_CreateDeviceObjects();
 
     ImGuiIO& io = ImGui::GetIO();
 
