@@ -493,8 +493,6 @@ namespace ImGui
     static inline ImFont*   GetWindowFont() { return GetFont(); }                              // OBSOLETE 1.48+
     static inline float     GetWindowFontSize() { return GetFontSize(); }                      // OBSOLETE 1.48+
     static inline void      SetScrollPosHere() { SetScrollHere(); }                            // OBSOLETE 1.42+
-    static inline bool      GetWindowCollapsed() { return ImGui::IsWindowCollapsed(); }        // OBSOLETE 1.39+
-    static inline bool      IsRectClipped(const ImVec2& size) { return !IsRectVisible(size); } // OBSOLETE 1.39+
 #endif
 
 } // namespace ImGui
