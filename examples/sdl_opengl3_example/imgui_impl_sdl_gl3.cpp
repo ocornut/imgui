@@ -25,8 +25,8 @@ static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_Attr
 static unsigned int g_VboHandle = 0, g_VaoHandle = 0, g_ElementsHandle = 0;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
-// If text or lines are blurry when integrating ImGui in your engine:
-// - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
+// Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so. 
+// If text or lines are blurry when integrating ImGui in your engine: in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
 void ImGui_ImplSdlGL3_RenderDrawLists(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
@@ -82,6 +82,7 @@ void ImGui_ImplSdlGL3_RenderDrawLists(ImDrawData* draw_data)
     glUniform1i(g_AttribLocationTex, 0);
     glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
     glBindVertexArray(g_VaoHandle);
+    glBindSampler(0, 0); // Rely on combined texture/sampler state.
 
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
@@ -104,7 +105,6 @@ void ImGui_ImplSdlGL3_RenderDrawLists(ImDrawData* draw_data)
             else
             {
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
-                glBindSampler(0, 0); // rely on combined texture/sampler state.
                 glScissor((int)pcmd->ClipRect.x, (int)(fb_height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
                 glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer_offset);
             }
