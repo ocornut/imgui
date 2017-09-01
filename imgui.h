@@ -149,6 +149,7 @@ namespace ImGui
     IMGUI_API float         GetWindowWidth();
     IMGUI_API float         GetWindowHeight();
     IMGUI_API bool          IsWindowCollapsed();
+    IMGUI_API bool          IsWindowAppearing();
     IMGUI_API void          SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontGlobalScale if you want to scale all windows
 
     IMGUI_API void          SetNextWindowPos(const ImVec2& pos, ImGuiCond cond = 0);            // set next window position. call before Begin()
