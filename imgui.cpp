@@ -9538,7 +9538,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, float popup
             if (window->DC.NavLayerCurrent == 0) 
                 window->NavLastId = id;
             FocusWindow(window);
-            OpenPopup(label);
+            OpenPopupEx(id, false);
         }
         popup_open = !popup_open;
     }
@@ -10006,12 +10006,13 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         want_close = true;
         want_open = menu_is_open = false;
     }
-    else if (pressed || (hovered && menuset_is_open && !menu_is_open)) // Menu bar: click to open a first menu, then hover to open others
+    else if (pressed || (hovered && menuset_is_open && !menu_is_open)) // Menu bar: first click to open, then hover to open others
+    {
         want_open = true;
+    }
     else if (g.NavId == id && g.NavMoveRequest && g.NavMoveDir == ImGuiDir_Down) // Menu bar: Nav-Down to open
     {
         g.NavMoveRequest = false;
-        want_open = true;
     }
 
     if (!enabled) // explicitly close if an open menu becomes disabled, facilitate users code a lot in pattern such as 'if (BeginMenu("options", has_object)) { ..use object.. }'
