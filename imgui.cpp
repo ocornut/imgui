@@ -6550,7 +6550,13 @@ static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float
 
     const bool is_non_linear = (power < 1.0f-0.00001f) || (power > 1.0f+0.00001f);
     const float v_clamped = (v_min < v_max) ? ImClamp(v, v_min, v_max) : ImClamp(v, v_max, v_min);
-    if (is_non_linear)
+
+    if (power == 0.0f)
+    {
+        // Logarithmic
+        return logf(v_clamped / v_min) / logf(v_max / v_min);
+    }
+    else if (is_non_linear)
     {
         if (v_clamped < 0.0f)
         {
@@ -6628,7 +6634,12 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
         if (set_new_value)
         {
             float new_value;
-            if (is_non_linear)
+            if (power == 0.0f)
+            {
+                // Logarithmic
+                new_value = v_min * powf(v_max / v_min, clicked_t);
+            }
+            else if (is_non_linear)
             {
                 // Account for logarithmic scale on both sides of the zero
                 if (clicked_t < linear_zero_pos)
