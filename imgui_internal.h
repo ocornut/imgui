@@ -626,11 +626,12 @@ struct ImGuiContext
 // Transient per-window flags, reset at the beginning of the frame. For child window, inherited from parent on first Begin().
 enum ImGuiItemFlags_
 {
-    ImGuiItemFlags_AllowKeyboardFocus       = 1 << 0,  // true
-    ImGuiItemFlags_ButtonRepeat             = 1 << 1,  // false    // Button() will return true multiple times based on io.KeyRepeatDelay and io.KeyRepeatRate settings.
-    ImGuiItemFlags_AllowNavDefaultFocus     = 1 << 1,  // true
-    ImGuiItemFlags_SelectableDontClosePopup = 1 << 3,  // false    // MenuItem/Selectable() automatically closes current Popup window
-    ImGuiItemFlags_Default_                 = ImGuiItemFlags_AllowKeyboardFocus|ImGuiItemFlags_AllowNavDefaultFocus
+    ImGuiItemFlags_AllowKeyboardFocus           = 1 << 0,  // true
+    ImGuiItemFlags_ButtonRepeat                 = 1 << 1,  // false    // Button() will return true multiple times based on io.KeyRepeatDelay and io.KeyRepeatRate settings.
+    //ImGuiItemFlags_Disabled                   = 1 << 2,  // false    // All widgets appears are disabled
+    ImGuiItemFlags_AllowNavDefaultFocus         = 1 << 3,  // true
+    ImGuiItemFlags_SelectableDontClosePopup     = 1 << 4,  // false    // MenuItem/Selectable() automatically closes current Popup window
+    ImGuiItemFlags_Default_                     = ImGuiItemFlags_AllowKeyboardFocus|ImGuiItemFlags_AllowNavDefaultFocus
 };
 
 // Transient per-window data, reset at the beginning of the frame
