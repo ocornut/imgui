@@ -2118,7 +2118,8 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
 static void ShowExampleAppFixedOverlay(bool* p_open)
 {
     ImGui::SetNextWindowPos(ImVec2(10,10));
-    if (!ImGui::Begin("Example: Fixed Overlay", p_open, ImVec2(0,0), 0.3f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings))
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.3f));
+    if (!ImGui::Begin("Example: Fixed Overlay", p_open, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings))
     {
         ImGui::End();
         return;
@@ -2127,6 +2128,7 @@ static void ShowExampleAppFixedOverlay(bool* p_open)
     ImGui::Separator();
     ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
     ImGui::End();
+    ImGui::PopStyleColor();
 }
 
 // Demonstrate using "##" and "###" in identifiers to manipulate ID generation.
