@@ -526,8 +526,9 @@ struct ImGuiContext
     float                   FramerateSecPerFrame[120];          // calculate estimate of framerate for user
     int                     FramerateSecPerFrameIdx;
     float                   FramerateSecPerFrameAccum;
-    int                     CaptureMouseNextFrame;              // explicit capture via CaptureInputs() sets those flags
-    int                     CaptureKeyboardNextFrame;
+    int                     WantCaptureMouseNextFrame;          // explicit capture via CaptureInputs() sets those flags
+    int                     WantCaptureKeyboardNextFrame;
+    int                     WantTextInputNextFrame;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
 
     ImGuiContext()
@@ -617,7 +618,7 @@ struct ImGuiContext
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
         FramerateSecPerFrameIdx = 0;
         FramerateSecPerFrameAccum = 0.0f;
-        CaptureMouseNextFrame = CaptureKeyboardNextFrame = -1;
+        WantCaptureMouseNextFrame = WantCaptureKeyboardNextFrame = WantTextInputNextFrame = -1;
         memset(TempBuffer, 0, sizeof(TempBuffer));
     }
 };
@@ -748,7 +749,8 @@ struct IMGUI_API ImGuiWindow
     bool                    Accessed;                           // Set to true when any widget access the current window
     bool                    Collapsed;                          // Set when collapsing window to become only title-bar
     bool                    CollapseToggleWanted;
-    bool                    SkipItems;                          // == Visible && !Collapsed
+    bool                    SkipItems;                          // Set when items can safely be all clipped (e.g. window not visible or collapsed)
+    bool                    Appearing;                          // Set during the frame where the window is appearing (or re-appearing)
     int                     BeginCount;                         // Number of Begin() during the current frame (generally 0 or 1, 1+ if appending via multiple Begin/End pairs)
     ImGuiID                 PopupId;                            // ID in the popup stack when this window is used as a popup/menu (because we use generic Name/ID for recycling)
     ImGuiID                 NavLastId;                          // Last known NavId for this window, for nav layer 0 only.
@@ -846,10 +848,14 @@ namespace ImGui
 
     IMGUI_API int           CalcTypematicPressedRepeatAmount(float t, float t_prev, float repeat_delay, float repeat_rate);
 
-    // New Columns API
+    // FIXME-WIP: New Columns API
     IMGUI_API void          BeginColumns(const char* id, int count, ImGuiColumnsFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().
     IMGUI_API void          EndColumns();                                                         // close columns
     IMGUI_API void          PushColumnClipRect(int column_index = -1);
+
+    // FIXME-WIP: New Combo API
+    IMGUI_API bool          BeginCombo(const char* label, const char* preview_value, float popup_opened_height);
+    IMGUI_API void          EndCombo();
 
     // NB: All position are in absolute pixels coordinates (never using window coordinates internally)
     // AVOID USING OUTSIDE OF IMGUI.CPP! NOT FOR PUBLIC CONSUMPTION. THOSE FUNCTIONS ARE A MESS. THEIR SIGNATURE AND BEHAVIOR WILL CHANGE, THEY NEED TO BE REFACTORED INTO SOMETHING DECENT.

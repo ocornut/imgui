@@ -72,9 +72,8 @@ int main(int, char**)
         // 2. Show another simple window, this time using an explicit Begin/End pair
         if (show_another_window)
         {
-            ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiCond_FirstUseEver);
             ImGui::Begin("Another Window", &show_another_window);
-            ImGui::Text("Hello");
+            ImGui::Text("Hello from another window!");
             ImGui::End();
         }
 

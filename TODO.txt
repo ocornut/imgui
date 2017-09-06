@@ -99,6 +99,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
 
  - clipper: ability to force display 1 item in the list would be convenient. 
+ - clipper: ability to run without knowing full count in advance.
 
  - splitter/separator: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
  
@@ -156,6 +157,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - text: proper alignment options in imgui_internal.h
  - text wrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
+ - text: it's currently impossible to have a window title with "##". perhaps an official workaround would be nice. \ style inhibitor? non-visible ascii code to insert between #?
 
  - tree node / optimization: avoid formatting when clipped.
  - tree node: tree-node/header right-most side doesn't take account of horizontal scrolling.
@@ -215,6 +217,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - keyboard: full keyboard navigation and focus. (#323)
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
+ - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#343)
  - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)
  - inputs: allow to decide and pass explicit double-clicks (e.g. for windows by the CS_DBLCLKS style).
  - inputs: support track pad style scrolling & slider edit.

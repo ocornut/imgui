@@ -34,8 +34,8 @@ void DebugHUD_DoInterface(DebugHUD *hud)
     
     if (hud->show_example_window)
     {
-        ImGui::SetNextWindowSize(ImVec2(350, 200), ImGuiCond_FirstUseEver);
         ImGui::Begin("Another Window", &hud->show_example_window);
+        ImGui::Text("Hello from another window!");
         ImGui::ColorEdit3("Cube 1 Color", hud->cubeColor1);
         ImGui::ColorEdit3("Cube 2 Color", hud->cubeColor2);
         ImGui::SliderFloat("Rotation Speed", &hud->rotation_speed, 0.0f, 200.0f);

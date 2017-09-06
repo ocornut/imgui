@@ -150,6 +150,7 @@ namespace ImGui
     IMGUI_API float         GetWindowWidth();
     IMGUI_API float         GetWindowHeight();
     IMGUI_API bool          IsWindowCollapsed();
+    IMGUI_API bool          IsWindowAppearing();
     IMGUI_API void          SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontGlobalScale if you want to scale all windows
 
     IMGUI_API void          SetNextWindowPos(const ImVec2& pos, ImGuiCond cond = 0);            // set next window position. call before Begin()
@@ -499,8 +500,6 @@ namespace ImGui
     static inline ImFont*   GetWindowFont() { return GetFont(); }                              // OBSOLETE 1.48+
     static inline float     GetWindowFontSize() { return GetFontSize(); }                      // OBSOLETE 1.48+
     static inline void      SetScrollPosHere() { SetScrollHere(); }                            // OBSOLETE 1.42+
-    static inline bool      GetWindowCollapsed() { return ImGui::IsWindowCollapsed(); }        // OBSOLETE 1.39+
-    static inline bool      IsRectClipped(const ImVec2& size) { return !IsRectVisible(size); } // OBSOLETE 1.39+
 #endif
 
 } // namespace ImGui
