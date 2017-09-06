@@ -1981,7 +1981,7 @@ bool ImGui::FocusableItemRegister(ImGuiWindow* window, ImGuiID id, bool tab_stop
 {
     ImGuiContext& g = *GImGui;
 
-    const bool allow_keyboard_focus = window->DC.AllowKeyboardFocus;
+    const bool allow_keyboard_focus = (window->DC.ItemFlags & ImGuiItemFlags_AllowKeyboardFocus) != 0;
     window->FocusIdxAllCounter++;
     if (allow_keyboard_focus)
         window->FocusIdxTabCounter++;
@@ -4370,13 +4370,11 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
         window->DC.ChildWindows.resize(0);
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
+        window->DC.ItemFlags = ImGuiItemFlags_Default_;
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
-        window->DC.AllowKeyboardFocus = true;
-        window->DC.ButtonRepeat = false;
+        window->DC.ItemFlagsStack.resize(0);
         window->DC.ItemWidthStack.resize(0);
-        window->DC.AllowKeyboardFocusStack.resize(0);
-        window->DC.ButtonRepeatStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
         window->DC.ColumnsCurrent = 0;
         window->DC.ColumnsCount = 1;
@@ -4387,6 +4385,12 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         window->DC.StateStorage = &window->StateStorage;
         window->DC.GroupStack.resize(0);
         window->MenuColumns.Update(3, style.ItemSpacing.x, window_just_activated_by_user);
+
+        if ((flags & ImGuiWindowFlags_ChildWindow) && (window->DC.ItemFlags != parent_window->DC.ItemFlags))
+        {
+            window->DC.ItemFlags = parent_window->DC.ItemFlags;
+            window->DC.ItemFlagsStack.push_back(window->DC.ItemFlags);
+        }
 
         if (window->AutoFitFramesX > 0)
             window->AutoFitFramesX--;
@@ -4721,32 +4725,41 @@ void  ImGui::PopFont()
     SetCurrentFont(g.FontStack.empty() ? GetDefaultFont() : g.FontStack.back());
 }
 
-void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus)
+void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.AllowKeyboardFocus = allow_keyboard_focus;
-    window->DC.AllowKeyboardFocusStack.push_back(allow_keyboard_focus);
+    if (enabled)
+        window->DC.ItemFlags |= option;
+    else
+        window->DC.ItemFlags &= ~option;
+    window->DC.ItemFlagsStack.push_back(window->DC.ItemFlags);
+}
+
+void ImGui::PopItemFlag()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.ItemFlagsStack.pop_back();
+    window->DC.ItemFlags = window->DC.ItemFlagsStack.empty() ? ImGuiItemFlags_Default_ : window->DC.ItemFlagsStack.back();
+}
+
+void ImGui::PushAllowKeyboardFocus(bool allow_keyboard_focus)
+{
+    PushItemFlag(ImGuiItemFlags_AllowKeyboardFocus, allow_keyboard_focus);
 }
 
 void ImGui::PopAllowKeyboardFocus()
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    window->DC.AllowKeyboardFocusStack.pop_back();
-    window->DC.AllowKeyboardFocus = window->DC.AllowKeyboardFocusStack.empty() ? true : window->DC.AllowKeyboardFocusStack.back();
+    PopItemFlag();
 }
 
 void ImGui::PushButtonRepeat(bool repeat)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ButtonRepeat = repeat;
-    window->DC.ButtonRepeatStack.push_back(repeat);
+    PushItemFlag(ImGuiItemFlags_ButtonRepeat, repeat);
 }
 
 void ImGui::PopButtonRepeat()
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ButtonRepeatStack.pop_back();
-    window->DC.ButtonRepeat = window->DC.ButtonRepeatStack.empty() ? false : window->DC.ButtonRepeatStack.back();
+    PopItemFlag();
 }
 
 void ImGui::PushTextWrapPos(float wrap_pos_x)
@@ -5722,7 +5735,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     if (!ItemAdd(bb, &id))
         return false;
 
-    if (window->DC.ButtonRepeat) flags |= ImGuiButtonFlags_Repeat;
+    if (window->DC.ItemFlags & ImGuiItemFlags_ButtonRepeat) flags |= ImGuiButtonFlags_Repeat;
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
 
