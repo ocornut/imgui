@@ -21,10 +21,10 @@
 #if !defined(alloca)
 #ifdef _WIN32
 #include <malloc.h>     // alloca
-#elif (defined(__FreeBSD__) || defined(FreeBSD_kernel) || defined(__DragonFly__)) && !defined(__GLIBC__)
-#include <stdlib.h>     // alloca. FreeBSD uses stdlib.h unless GLIBC
+#elif !defined(__GLIBC__)
+#include <stdlib.h>     // alloca
 #else
-#include <alloca.h>     // alloca
+#include <alloca.h>     // alloca. glibc has an alloca specific header
 #endif
 #endif
 
