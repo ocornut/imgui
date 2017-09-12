@@ -23,6 +23,8 @@ static LPDIRECT3DVERTEXBUFFER9  g_pVB = NULL;
 static LPDIRECT3DINDEXBUFFER9   g_pIB = NULL;
 static LPDIRECT3DTEXTURE9       g_FontTexture = NULL;
 static int                      g_VertexBufferSize = 5000, g_IndexBufferSize = 10000;
+static bool                     g_PrevMouseDown[3] = { 0, 0, 0 };
+static bool                     g_MouseNeedRelease[3] = { 0, 0, 0 };
 
 struct CUSTOMVERTEX
 {
@@ -180,19 +182,28 @@ IMGUI_API LRESULT ImGui_ImplDX9_WndProcHandler(HWND, UINT msg, WPARAM wParam, LP
         io.MouseDown[0] = true;
         return true;
     case WM_LBUTTONUP:
-        io.MouseDown[0] = false;
+        if(g_PrevMouseDown[0])
+            io.MouseDown[0] = false;
+        else
+            g_MouseNeedRelease[0] = true;
         return true;
     case WM_RBUTTONDOWN:
         io.MouseDown[1] = true;
         return true;
     case WM_RBUTTONUP:
-        io.MouseDown[1] = false;
+        if(g_PrevMouseDown[1])
+            io.MouseDown[1] = false;
+        else
+            g_MouseNeedRelease[1] = true;
         return true;
     case WM_MBUTTONDOWN:
         io.MouseDown[2] = true;
         return true;
     case WM_MBUTTONUP:
-        io.MouseDown[2] = false;
+        if(g_PrevMouseDown[2])
+            io.MouseDown[2] = false;
+        else
+            g_MouseNeedRelease[2] = true;
         return true;
     case WM_MOUSEWHEEL:
         io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
@@ -355,4 +366,9 @@ void ImGui_ImplDX9_NewFrame()
 
     // Start the frame
     ImGui::NewFrame();
+
+    g_PrevMouseDown[0] = io.MouseDown[0]; g_PrevMouseDown[1] = io.MouseDown[1]; g_PrevMouseDown[2] = io.MouseDown[2];
+    if(g_MouseNeedRelease[0]) { io.MouseDown[0] = g_MouseNeedRelease[0] = false; }
+    if(g_MouseNeedRelease[1]) { io.MouseDown[1] = g_MouseNeedRelease[1] = false; }
+    if(g_MouseNeedRelease[2]) { io.MouseDown[2] = g_MouseNeedRelease[2] = false; }
 }
