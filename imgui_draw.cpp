@@ -21,10 +21,10 @@
 #if !defined(alloca)
 #ifdef _WIN32
 #include <malloc.h>     // alloca
-#elif !defined(__GLIBC__)
-#include <stdlib.h>     // alloca
+#elif defined(__GLIBC__) || defined(__sun)
+#include <alloca.h>     // alloca
 #else
-#include <alloca.h>     // alloca. glibc has an alloca specific header
+#include <stdlib.h>     // alloca
 #endif
 #endif
 
