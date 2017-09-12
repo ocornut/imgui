@@ -2355,8 +2355,9 @@ void ImGui::NewFrame()
     CloseInactivePopups();
 
     // Create implicit window - we will only render it if the user has added something to it.
+    // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
     ImGui::SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Debug");
+    ImGui::Begin("Debug##Default");
 }
 
 void ImGui::Initialize()
