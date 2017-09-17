@@ -2034,9 +2034,9 @@ static bool NavScoreItem(ImRect cand)
     }
 
     // Compute distance between boxes
-    // FIXME-NAVIGATION: Introducing various biases toward typical imgui uses cases, but we don't have any rigorous proof of their effect now.
+    // FIXME-NAVIGATION: Introducing various biases toward typical imgui uses cases, but we don't have any rigorous proof of their side-effect..
     float dbx = NavScoreItemDistInterval(cand.Min.x, cand.Max.x, curr.Min.x, curr.Max.x);
-    float dby = NavScoreItemDistInterval(ImLerp(cand.Min.y, cand.Max.y, 0.2f), ImLerp(cand.Min.y, cand.Max.y, 0.8f), ImLerp(curr.Min.y, curr.Max.y, 0.2f), ImLerp(curr.Min.y, curr.Max.y, 0.8f)); // Clamp down on Y to keep using box-distance for vertically touching items
+    float dby = NavScoreItemDistInterval(ImLerp(cand.Min.y, cand.Max.y, 0.2f), ImLerp(cand.Min.y, cand.Max.y, 0.8f), ImLerp(curr.Min.y, curr.Max.y, 0.2f), ImLerp(curr.Min.y, curr.Max.y, 0.8f)); // Scale down on Y to keep using box-distance for vertically touching items
     if (dby && dbx)
        dbx = (dbx/1000.0f) + ((dbx > 0.0f) ? +1.0f : -1.0f);
     float dist_box = fabsf(dbx) + fabsf(dby);
@@ -2160,8 +2160,8 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     //  (b) So that we can scroll up/down past clipped items. This adds a small O(N) cost to regular navigation requests unfortunately, but it is still limited to one window. 
     //      it may not scale very well for windows with ten of thousands of item, but at least the NavRequest is only performed on user interaction, aka maximum once a frame.
     //      We could early out with `if (is_clipped && !g.NavInitDefaultRequest) return false;` but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
-    //      A more pragmatic solution for handling last lists is relying on the fact that they are likely evenly spread items (so that clipper can work) and we could nav at higher-level (apply index, etc.)
-    //      So eventually we would like to provide the user will the primitives to be able to implement that sort of customized/efficient navigation handling whenever necessary.
+    //      A more pragmatic solution for handling long lists is relying on the fact that they are likely evenly spread items (so that clipper can be used) and we could Nav at higher-level (apply index, etc.)
+    //      So eventually we would like to provide the user will the primitives to be able to implement that customized/efficient navigation handling whenever necessary.
     if (id != NULL && g.IO.NavUsable && g.NavWindow == window->RootNavWindow)
     {
         const ImRect& nav_bb = nav_bb_arg ? *nav_bb_arg : bb;
