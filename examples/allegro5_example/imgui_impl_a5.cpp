@@ -262,7 +262,7 @@ void ImGui_ImplA5_NewFrame()
     }
     else
     {
-        io.MousePos = ImVec2(-1, -1);
+        io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     }
 
     al_get_mouse_state(&mouse);

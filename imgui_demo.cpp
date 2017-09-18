@@ -1,4 +1,4 @@
-// dear imgui, v1.51 WIP
+// dear imgui, v1.52 WIP
 // (demo code)
 
 // Message to the person tempted to delete this file when integrating ImGui into their code base:
@@ -192,7 +192,7 @@ void ImGui::ShowTestWindow(bool* p_open)
     //ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);    // 2/3 of the space for widget and 1/3 for labels
     ImGui::PushItemWidth(-140);                                 // Right align, keep 140 pixels for labels
 
-    ImGui::Text("Dear ImGui says hello.");
+    ImGui::Text("dear imgui says hello. (%s)", IMGUI_VERSION);
 
     // Menu
     if (ImGui::BeginMenuBar())
@@ -284,9 +284,9 @@ void ImGui::ShowTestWindow(bool* p_open)
             {
                 if (i > 0) ImGui::SameLine();
                 ImGui::PushID(i);
-                ImGui::PushStyleColor(ImGuiCol_Button, ImColor::HSV(i/7.0f, 0.6f, 0.6f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImColor::HSV(i/7.0f, 0.7f, 0.7f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImColor::HSV(i/7.0f, 0.8f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(i/7.0f, 0.6f, 0.6f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(i/7.0f, 0.7f, 0.7f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(i/7.0f, 0.8f, 0.8f));
                 ImGui::Button("Click");
                 ImGui::PopStyleColor(3);
                 ImGui::PopID();
@@ -912,10 +912,10 @@ void ImGui::ShowTestWindow(bool* p_open)
             {
                 if (i > 0) ImGui::SameLine();
                 ImGui::PushID(i);
-                ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor::HSV(i/7.0f, 0.5f, 0.5f));
-                ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImColor::HSV(i/7.0f, 0.6f, 0.5f));
-                ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImColor::HSV(i/7.0f, 0.7f, 0.5f));
-                ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImColor::HSV(i/7.0f, 0.9f, 0.9f));
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, (ImVec4)ImColor::HSV(i/7.0f, 0.5f, 0.5f));
+                ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, (ImVec4)ImColor::HSV(i/7.0f, 0.6f, 0.5f));
+                ImGui::PushStyleColor(ImGuiCol_FrameBgActive, (ImVec4)ImColor::HSV(i/7.0f, 0.7f, 0.5f));
+                ImGui::PushStyleColor(ImGuiCol_SliderGrab, (ImVec4)ImColor::HSV(i/7.0f, 0.9f, 0.9f));
                 ImGui::VSliderFloat("##v", ImVec2(18,160), &values[i], 0.0f, 1.0f, "");
                 if (ImGui::IsItemActive() || ImGui::IsItemHovered())
                     ImGui::SetTooltip("%.3f", values[i]);
@@ -1270,9 +1270,9 @@ void ImGui::ShowTestWindow(bool* p_open)
                     char num_buf[16];
                     const char* label = (!(n%15)) ? "FizzBuzz" : (!(n%3)) ? "Fizz" : (!(n%5)) ? "Buzz" : (sprintf(num_buf, "%d", n), num_buf);
                     float hue = n*0.05f;
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImColor::HSV(hue, 0.6f, 0.6f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImColor::HSV(hue, 0.7f, 0.7f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImColor::HSV(hue, 0.8f, 0.8f));
+                    ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(hue, 0.6f, 0.6f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(hue, 0.7f, 0.7f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(hue, 0.8f, 0.8f));
                     ImGui::Button(label, ImVec2(40.0f + sinf((float)(line + n)) * 20.0f, 0.0f));
                     ImGui::PopStyleColor(3);
                     ImGui::PopID();
@@ -1526,9 +1526,78 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::TreePop();
         }
 
+        // Create multiple items in a same cell before switching to next column
+        if (ImGui::TreeNode("Mixed items"))
+        {
+            ImGui::Columns(3, "mixed");
+            ImGui::Separator();
+
+            ImGui::Text("Hello");
+            ImGui::Button("Banana");
+            ImGui::NextColumn();
+
+            ImGui::Text("ImGui");
+            ImGui::Button("Apple");
+            static float foo = 1.0f;
+            ImGui::InputFloat("red", &foo, 0.05f, 0, 3);
+            ImGui::Text("An extra line here.");
+            ImGui::NextColumn();
+
+                ImGui::Text("Sailor");
+            ImGui::Button("Corniflower");
+            static float bar = 1.0f;
+            ImGui::InputFloat("blue", &bar, 0.05f, 0, 3);
+            ImGui::NextColumn();
+
+            if (ImGui::CollapsingHeader("Category A")) { ImGui::Text("Blah blah blah"); } ImGui::NextColumn();
+            if (ImGui::CollapsingHeader("Category B")) { ImGui::Text("Blah blah blah"); } ImGui::NextColumn();
+            if (ImGui::CollapsingHeader("Category C")) { ImGui::Text("Blah blah blah"); } ImGui::NextColumn();
+            ImGui::Columns(1);
+            ImGui::Separator();
+            ImGui::TreePop();
+        }
+
+        // Word wrapping
+        if (ImGui::TreeNode("Word-wrapping"))
+        {
+            ImGui::Columns(2, "word-wrapping");
+            ImGui::Separator();
+            ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
+            ImGui::TextWrapped("Hello Left");
+            ImGui::NextColumn();
+            ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
+            ImGui::TextWrapped("Hello Right");
+            ImGui::Columns(1);
+            ImGui::Separator();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Borders"))
+        {
+            // NB: Future columns API should allow automatic horizontal borders.
+            static bool h_borders = true;
+            static bool v_borders = true;
+            ImGui::Checkbox("horizontal", &h_borders);
+            ImGui::SameLine();
+            ImGui::Checkbox("vertical", &v_borders);
+            ImGui::Columns(4, NULL, v_borders);
+            for (int i = 0; i < 4*3; i++)
+            {
+                if (h_borders && ImGui::GetColumnIndex() == 0)
+                    ImGui::Separator();
+                ImGui::Text("%c%c%c", 'a'+i, 'a'+i, 'a'+i);
+                ImGui::Text("Width %.2f\nOffset %.2f", ImGui::GetColumnWidth(), ImGui::GetColumnOffset());
+                ImGui::NextColumn();
+            }
+            ImGui::Columns(1);
+            if (h_borders)
+                ImGui::Separator();
+            ImGui::TreePop();
+        }
+
         // Scrolling columns
         /*
-        if (ImGui::TreeNode("Scrolling"))
+        if (ImGui::TreeNode("Vertical Scrolling"))
         {
             ImGui::BeginChild("##header", ImVec2(0, ImGui::GetTextLineHeightWithSpacing()+ImGui::GetStyle().ItemSpacing.y));
             ImGui::Columns(3);
@@ -1552,68 +1621,19 @@ void ImGui::ShowTestWindow(bool* p_open)
         }
         */
 
-        // Create multiple items in a same cell before switching to next column
-        if (ImGui::TreeNode("Mixed items"))
+        if (ImGui::TreeNode("Horizontal Scrolling"))
         {
-            ImGui::Columns(3, "mixed");
-            ImGui::Separator();
-
-            ImGui::Text("Hello");
-            ImGui::Button("Banana");
-            ImGui::NextColumn();
-
-            ImGui::Text("ImGui");
-            ImGui::Button("Apple");
-            static float foo = 1.0f;
-            ImGui::InputFloat("red", &foo, 0.05f, 0, 3);
-            ImGui::Text("An extra line here.");
-            ImGui::NextColumn();
-
-            ImGui::Text("Sailor");
-            ImGui::Button("Corniflower");
-            static float bar = 1.0f;
-            ImGui::InputFloat("blue", &bar, 0.05f, 0, 3);
-            ImGui::NextColumn();
-
-            if (ImGui::CollapsingHeader("Category A")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
-            if (ImGui::CollapsingHeader("Category B")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
-            if (ImGui::CollapsingHeader("Category C")) ImGui::Text("Blah blah blah"); ImGui::NextColumn();
+            ImGui::SetNextWindowContentWidth(1500);
+            ImGui::BeginChild("##scrollingregion", ImVec2(0, 120), false, ImGuiWindowFlags_HorizontalScrollbar);
+            ImGui::Columns(10);
+            for (int i = 0; i < 20; i++)
+                for (int j = 0; j < 10; j++)
+                {
+                    ImGui::Text("Line %d Column %d...", i, j);
+                    ImGui::NextColumn();
+                }
             ImGui::Columns(1);
-            ImGui::Separator();
-            ImGui::TreePop();
-        }
-
-        // Word wrapping
-        if (ImGui::TreeNode("Word-wrapping"))
-        {
-            ImGui::Columns(2, "word-wrapping");
-            ImGui::Separator();
-            ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
-            ImGui::TextWrapped("Hello Left");
-            ImGui::NextColumn();
-            ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
-            ImGui::TextWrapped("Hello Right");
-            ImGui::Columns(1);
-            ImGui::Separator();
-            ImGui::TreePop();
-        }
-
-        if (ImGui::TreeNode("Borders"))
-        {
-            static bool h_borders = true;
-            static bool v_borders = true;
-            ImGui::Checkbox("horizontal", &h_borders);
-            ImGui::SameLine();
-            ImGui::Checkbox("vertical", &v_borders);
-            ImGui::Columns(4, NULL, v_borders);
-            if (h_borders) ImGui::Separator();
-            for (int i = 0; i < 8; i++)
-            {
-                ImGui::Text("%c%c%c", 'a'+i, 'a'+i, 'a'+i);
-                ImGui::NextColumn();
-            }
-            ImGui::Columns(1);
-            if (h_borders) ImGui::Separator();
+            ImGui::EndChild();
             ImGui::TreePop();
         }
 
@@ -1830,7 +1850,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             for (int i = 0; i < ImGuiCol_COUNT; i++)
             {
                 const ImVec4& col = style.Colors[i];
-                const char* name = ImGui::GetStyleColName(i);
+                const char* name = ImGui::GetStyleColorName(i);
                 if (!output_only_modified || memcmp(&col, (ref ? &ref->Colors[i] : &default_style.Colors[i]), sizeof(ImVec4)) != 0)
                     ImGui::LogText("colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" IM_NEWLINE, name, 23-(int)strlen(name), "", col.x, col.y, col.z, col.w);
             }
@@ -1853,7 +1873,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::PushItemWidth(-160);
         for (int i = 0; i < ImGuiCol_COUNT; i++)
         {
-            const char* name = ImGui::GetStyleColName(i);
+            const char* name = ImGui::GetStyleColorName(i);
             if (!filter.PassFilter(name))
                 continue;
             ImGui::PushID(i);
@@ -2027,7 +2047,7 @@ static void ShowExampleMenuFile()
     if (ImGui::BeginMenu("Colors"))
     {
         for (int i = 0; i < ImGuiCol_COUNT; i++)
-            ImGui::MenuItem(ImGui::GetStyleColName((ImGuiCol)i));
+            ImGui::MenuItem(ImGui::GetStyleColorName((ImGuiCol)i));
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Disabled", false)) // Disabled
@@ -2084,9 +2104,9 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
             "Custom: Fixed Steps (100)",
         };
         ImGui::Combo("Constraint", &type, desc, IM_ARRAYSIZE(desc)); 
-        if (ImGui::Button("200x200")) ImGui::SetWindowSize(ImVec2(200,200)); ImGui::SameLine();
-        if (ImGui::Button("500x500")) ImGui::SetWindowSize(ImVec2(500,500)); ImGui::SameLine();
-        if (ImGui::Button("800x200")) ImGui::SetWindowSize(ImVec2(800,200));
+        if (ImGui::Button("200x200")) { ImGui::SetWindowSize(ImVec2(200,200)); } ImGui::SameLine();
+        if (ImGui::Button("500x500")) { ImGui::SetWindowSize(ImVec2(500,500)); } ImGui::SameLine();
+        if (ImGui::Button("800x200")) { ImGui::SetWindowSize(ImVec2(800,200)); }
         for (int i = 0; i < 10; i++) 
             ImGui::Text("Hello, sailor! Making this line long enough for the example.");
     }
@@ -2097,7 +2117,8 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
 static void ShowExampleAppFixedOverlay(bool* p_open)
 {
     ImGui::SetNextWindowPos(ImVec2(10,10));
-    if (!ImGui::Begin("Example: Fixed Overlay", p_open, ImVec2(0,0), 0.3f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings))
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.3f));
+    if (!ImGui::Begin("Example: Fixed Overlay", p_open, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings))
     {
         ImGui::End();
         return;
@@ -2106,6 +2127,7 @@ static void ShowExampleAppFixedOverlay(bool* p_open)
     ImGui::Separator();
     ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
     ImGui::End();
+    ImGui::PopStyleColor();
 }
 
 // Demonstrate using "##" and "###" in identifiers to manipulate ID generation.
@@ -2277,7 +2299,7 @@ struct ExampleAppConsole
         ScrollToBottom = true;
     }
 
-    void    AddLog(const char* fmt, ...) IM_PRINTFARGS(2)
+    void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
     {
         char buf[1024];
         va_list args;
@@ -2304,8 +2326,8 @@ struct ExampleAppConsole
         // TODO: display items starting from the bottom
 
         if (ImGui::SmallButton("Add Dummy Text")) { AddLog("%d some text", Items.Size); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine();
-        if (ImGui::SmallButton("Add Dummy Error")) AddLog("[error] something went wrong"); ImGui::SameLine();
-        if (ImGui::SmallButton("Clear")) ClearLog(); ImGui::SameLine();
+        if (ImGui::SmallButton("Add Dummy Error")) { AddLog("[error] something went wrong"); } ImGui::SameLine();
+        if (ImGui::SmallButton("Clear")) { ClearLog(); } ImGui::SameLine();
         bool copy_to_clipboard = ImGui::SmallButton("Copy"); ImGui::SameLine();
         if (ImGui::SmallButton("Scroll to bottom")) ScrollToBottom = true;
         //static float t = 0.0f; if (ImGui::GetTime() - t > 0.02f) { t = ImGui::GetTime(); AddLog("Spam %f", t); }
@@ -2364,7 +2386,7 @@ struct ExampleAppConsole
         if (ImGui::InputText("Input", InputBuf, IM_ARRAYSIZE(InputBuf), ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_CallbackHistory, &TextEditCallbackStub, (void*)this))
         {
             char* input_end = InputBuf+strlen(InputBuf);
-            while (input_end > InputBuf && input_end[-1] == ' ') input_end--; *input_end = 0;
+            while (input_end > InputBuf && input_end[-1] == ' ') { input_end--; } *input_end = 0;
             if (InputBuf[0])
                 ExecCommand(InputBuf);
             strcpy(InputBuf, "");
@@ -2405,7 +2427,8 @@ struct ExampleAppConsole
         }
         else if (Stricmp(command_line, "HISTORY") == 0)
         {
-            for (int i = History.Size >= 10 ? History.Size - 10 : 0; i < History.Size; i++)
+            int first = History.Size - 10;
+            for (int i = first > 0 ? first : 0; i < History.Size; i++)
                 AddLog("%3d: %s\n", i, History[i]);
         }
         else
@@ -2539,7 +2562,7 @@ struct ExampleAppLog
 
     void    Clear()     { Buf.clear(); LineOffsets.clear(); }
 
-    void    AddLog(const char* fmt, ...) IM_PRINTFARGS(2)
+    void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
     {
         int old_size = Buf.size();
         va_list args;
