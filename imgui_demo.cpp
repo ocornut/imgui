@@ -1676,6 +1676,7 @@ void ImGui::ShowTestWindow(bool* p_open)
         ImGui::Text("WantCaptureMouse: %d", io.WantCaptureMouse);
         ImGui::Text("WantCaptureKeyboard: %d", io.WantCaptureKeyboard);
         ImGui::Text("WantTextInput: %d", io.WantTextInput);
+        ImGui::Text("WantMoveMouse: %d", io.WantMoveMouse);
 
         if (ImGui::TreeNode("Keyboard & Mouse State"))
         {
