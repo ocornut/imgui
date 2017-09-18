@@ -222,7 +222,7 @@ enum ImGuiDataType
 {
     ImGuiDataType_Int,
     ImGuiDataType_Float,
-    ImGuiDataType_Float2,
+    ImGuiDataType_Float2
 };
 
 enum ImGuiInputSource
@@ -239,7 +239,7 @@ enum ImGuiDir
     ImGuiDir_Left    = 0,
     ImGuiDir_Right   = 1,
     ImGuiDir_Up      = 2,
-    ImGuiDir_Down    = 3,
+    ImGuiDir_Down    = 3
 };
 
 enum ImGuiCorner
