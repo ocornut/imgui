@@ -9301,7 +9301,10 @@ static void ColorEditOptionsPopup(ImGuiColorEditFlags flags, float* col)
         sprintf(buf, "(%d,%d,%d,%d)", cr, cg, cb, ca);
         if (ImGui::Selectable(buf))
             ImGui::SetClipboardText(buf);
-        sprintf(buf, (flags & ImGuiColorEditFlags_NoAlpha) ? "0x%02X%02X%02X" : "0x%02X%02X%02X%02X", cr, cg, cb, ca);
+        if (flags & ImGuiColorEditFlags_NoAlpha)
+            sprintf(buf, "0x%02X%02X%02X", cr, cg, cb);
+        else
+            sprintf(buf, "0x%02X%02X%02X%02X", cr, cg, cb, ca);
         if (ImGui::Selectable(buf))
             ImGui::SetClipboardText(buf);
         ImGui::EndPopup();
