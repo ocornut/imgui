@@ -825,8 +825,8 @@ ImGuiIO::ImGuiIO()
     ImeWindowHandle = NULL;
 
     // Input (NB: we already have memset zero the entire structure)
-    MousePos = ImVec2(-FLT_MAX,-FLT_MAX);
-    MousePosPrev = ImVec2(-FLT_MAX,-FLT_MAX);
+    MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+    MousePosPrev = ImVec2(-FLT_MAX, -FLT_MAX);
     MouseDragThreshold = 6.0f;
     for (int i = 0; i < IM_ARRAYSIZE(MouseDownDuration); i++) MouseDownDuration[i] = MouseDownDurationPrev[i] = -1.0f;
     for (int i = 0; i < IM_ARRAYSIZE(KeysDownDuration); i++) KeysDownDuration[i]  = KeysDownDurationPrev[i] = -1.0f;
@@ -4058,17 +4058,20 @@ bool ImGui::IsItemClicked(int mouse_button)
 
 bool ImGui::IsAnyItemHovered()
 {
-    return GImGui->HoveredId != 0 || GImGui->HoveredIdPreviousFrame != 0;
+    ImGuiContext& g = *GImGui;
+    return g.HoveredId != 0 || g.HoveredIdPreviousFrame != 0;
 }
 
 bool ImGui::IsAnyItemActive()
 {
-    return GImGui->ActiveId != 0;
+    ImGuiContext& g = *GImGui;
+    return g.ActiveId != 0;
 }
 
 bool ImGui::IsAnyItemFocused()
 {
-    return GImGui->NavId != 0 && !GImGui->NavDisableHighlight;
+    ImGuiContext& g = *GImGui;
+    return g.NavId != 0 && !g.NavDisableHighlight;
 }
 
 bool ImGui::IsItemVisible()
@@ -4406,6 +4409,7 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
 
 static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
 {
+    ImGuiContext& g = *GImGui;
     ImGuiWindow* parent_window = ImGui::GetCurrentWindow();
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_ChildWindow;
 
@@ -4434,12 +4438,12 @@ static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
         child_window->Flags &= ~ImGuiWindowFlags_ShowBorders;
 
     // Process navigation-in immediately so NavInit can run on first frame
-    if (/*!(flags & ImGuiWindowFlags_NavFlattened) &&*/ (child_window->DC.NavLayerActiveFlags != 0 || child_window->DC.NavHasScroll) && GImGui->NavActivateId == id)
+    if (/*!(flags & ImGuiWindowFlags_NavFlattened) &&*/ (child_window->DC.NavLayerActiveFlags != 0 || child_window->DC.NavHasScroll) && g.NavActivateId == id)
     {
         ImGui::FocusWindow(child_window);
         NavInitWindow(child_window, false);
         ImGui::SetActiveIDNoNav(id+1, child_window); // Steal ActiveId with a dummy id so that key-press won't activate child item
-        GImGui->ActiveIdSource = ImGuiInputSource_Nav;
+        g.ActiveIdSource = ImGuiInputSource_Nav;
     }
 
     return ret;
