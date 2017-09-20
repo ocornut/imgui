@@ -2545,36 +2545,37 @@ static void NavUpdate()
     if (g.NavMoveRequest && g.NavMoveResultId != 0)
     {
         IM_ASSERT(g.NavWindow);
+        ImGuiWindow* window = g.NavWindow;
 
         // Scroll to keep newly navigated item fully into view
-        ImRect window_rect_rel(g.NavWindow->InnerRect.Min - g.NavWindow->Pos - ImVec2(1,1), g.NavWindow->InnerRect.Max - g.NavWindow->Pos + ImVec2(1,1));
-        //g.OverlayDrawList.AddRect(g.NavWindow->Pos + window_rect_rel.Min, g.NavWindow->Pos + window_rect_rel.Max, IM_COL32_WHITE); // [DEBUG]
+        ImRect window_rect_rel(window->InnerRect.Min - window->Pos - ImVec2(1,1), window->InnerRect.Max - window->Pos + ImVec2(1,1));
+        //g.OverlayDrawList.AddRect(window->Pos + window_rect_rel.Min, window->Pos + window_rect_rel.Max, IM_COL32_WHITE); // [DEBUG]
         if (g.NavLayer == 0 && !window_rect_rel.Contains(g.NavMoveResultRectRel))
         {
-            if (g.NavWindow->ScrollbarX && g.NavMoveResultRectRel.Min.x < window_rect_rel.Min.x)
+            if (window->ScrollbarX && g.NavMoveResultRectRel.Min.x < window_rect_rel.Min.x)
             {
-                g.NavWindow->ScrollTarget.x = g.NavMoveResultRectRel.Min.x + g.NavWindow->Scroll.x - g.Style.ItemSpacing.x;
-                g.NavWindow->ScrollTargetCenterRatio.x = 0.0f;
+                window->ScrollTarget.x = g.NavMoveResultRectRel.Min.x + window->Scroll.x - g.Style.ItemSpacing.x;
+                window->ScrollTargetCenterRatio.x = 0.0f;
             }
-            else if (g.NavWindow->ScrollbarX && g.NavMoveResultRectRel.Max.x >= window_rect_rel.Max.x)
+            else if (window->ScrollbarX && g.NavMoveResultRectRel.Max.x >= window_rect_rel.Max.x)
             {
-                g.NavWindow->ScrollTarget.x = g.NavMoveResultRectRel.Max.x + g.NavWindow->Scroll.x + g.Style.ItemSpacing.x;
-                g.NavWindow->ScrollTargetCenterRatio.x = 1.0f;
+                window->ScrollTarget.x = g.NavMoveResultRectRel.Max.x + window->Scroll.x + g.Style.ItemSpacing.x;
+                window->ScrollTargetCenterRatio.x = 1.0f;
             }
             if (g.NavMoveResultRectRel.Min.y < window_rect_rel.Min.y)
             {
-                g.NavWindow->ScrollTarget.y = g.NavMoveResultRectRel.Min.y + g.NavWindow->Scroll.y - g.Style.ItemSpacing.y;
-                g.NavWindow->ScrollTargetCenterRatio.y = 0.0f;
+                window->ScrollTarget.y = g.NavMoveResultRectRel.Min.y + window->Scroll.y - g.Style.ItemSpacing.y;
+                window->ScrollTargetCenterRatio.y = 0.0f;
             }
             else if (g.NavMoveResultRectRel.Max.y >= window_rect_rel.Max.y)
             {
-                g.NavWindow->ScrollTarget.y = g.NavMoveResultRectRel.Max.y + g.NavWindow->Scroll.y + g.Style.ItemSpacing.y;
-                g.NavWindow->ScrollTargetCenterRatio.y = 1.0f;
+                window->ScrollTarget.y = g.NavMoveResultRectRel.Max.y + window->Scroll.y + g.Style.ItemSpacing.y;
+                window->ScrollTargetCenterRatio.y = 1.0f;
             }
 
             // Estimate upcoming scroll so we can offset our relative mouse position so mouse position can be applied immediately (under this block)
-            ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(g.NavWindow);
-            g.NavMoveResultRectRel.Translate(g.NavWindow->Scroll - next_scroll);
+            ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(window);
+            g.NavMoveResultRectRel.Translate(window->Scroll - next_scroll);
         }
 
         // Apply result from previous frame navigation directional move request
