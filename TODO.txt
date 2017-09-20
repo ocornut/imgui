@@ -44,6 +44,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc. (#395)
  - widgets: clean up widgets internal toward exposing everything and stabilizing imgui_internals.h.
  - widgets: add disabled and read-only modes (#211)
+ - widgets: add always-allow-overlap mode.
  - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
  - widgets: activate by identifier (trigger button, focus given id)
 
@@ -173,7 +174,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
 !- style: better default styles.
 !- style: move border to style structure, remove _ShowBorder flag.
- - style: border types: out-screen, in-screen, etc. 
+ - style: border types: out-screen, in-screen, etc. (#447)
  - style/optimization: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding.
  - style: add window shadow (fading away from the window. Paint-style calculation of vertices alpha after drawlist would be easier)
  - style: color-box not always square?
@@ -200,6 +201,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - markup: simple markup language for color change?
 
 !- font: better CalcTextSizeA() API, at least for simple use cases. current one is horrible (perhaps have simple vs extended versions).
+ - font: enforce monospace through ImFontConfig (for icons?)
+ - font: finish CustomRectRegister() to allow mapping unicode codepoint to custom texture data 
  - font: PushFontSize API (#1018)
  - font/atlas: incremental updates
  - font/atlas: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
@@ -232,6 +235,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - examples: window minimize, maximize (#583)
  - examples: provide a zero-framerate/idle example.
  - examples: document WantCaptureKeyboard, WantCaptureMouse in example apps. (#446)
+ - examples: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // the problem is that DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
  - optimization: replace vsnprintf with stb_printf? or enable the defines/infrastructure to allow it (#1038)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
  - optimization: add a flag to disable most of rendering, for the case where the user expect to skip it (#335)
