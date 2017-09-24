@@ -32,6 +32,7 @@ static ID3D10Blob*              g_pVertexShaderBlob = NULL;
 static ID3D10Blob*              g_pPixelShaderBlob = NULL;
 static ID3D12RootSignature*     g_pRootSignature = NULL;
 static ID3D12PipelineState*     g_pPipelineState = NULL;
+static DXGI_FORMAT              g_RTVFormat = DXGI_FORMAT_UNKNOWN;
 static ID3D12Resource*          g_pFontTextureResource = NULL;
 static D3D12_CPU_DESCRIPTOR_HANDLE g_hFontSrvCpuDescHandle = {};
 static D3D12_GPU_DESCRIPTOR_HANDLE g_hFontSrvGpuDescHandle = {};
@@ -489,7 +490,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     psoDesc.pRootSignature = g_pRootSignature;
     psoDesc.SampleMask = UINT_MAX;
     psoDesc.NumRenderTargets = 1;
-    psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    psoDesc.RTVFormats[0] = g_RTVFormat;
     psoDesc.SampleDesc.Count = 1;
     psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
@@ -630,11 +631,13 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
 
 bool    ImGui_ImplDX12_Init(void* hwnd, int num_frames_in_flight,
                             ID3D12Device* device,
+                            DXGI_FORMAT rtv_format,
                             D3D12_CPU_DESCRIPTOR_HANDLE font_srv_cpu_desc_handle,
                             D3D12_GPU_DESCRIPTOR_HANDLE font_srv_gpu_desc_handle)
 {
     g_hWnd = (HWND)hwnd;
     g_pd3dDevice = device;
+    g_RTVFormat = rtv_format;
     g_hFontSrvCpuDescHandle = font_srv_cpu_desc_handle;
     g_hFontSrvGpuDescHandle = font_srv_gpu_desc_handle;
     g_pFrameResources = new FrameResources [num_frames_in_flight];

@@ -6,6 +6,7 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+enum DXGI_FORMAT;
 struct ID3D12Device;
 struct ID3D12GraphicsCommandList;
 struct D3D12_CPU_DESCRIPTOR_HANDLE;
@@ -22,6 +23,7 @@ struct D3D12_GPU_DESCRIPTOR_HANDLE;
 // descriptor to use for the internal font texture.
 IMGUI_API bool        ImGui_ImplDX12_Init(void* hwnd, int numFramesInFlight,
                                           ID3D12Device* device,
+                                          DXGI_FORMAT rtv_format,
                                           D3D12_CPU_DESCRIPTOR_HANDLE fontSrvCpuDescHandle,
                                           D3D12_GPU_DESCRIPTOR_HANDLE fontSrvGpuDescHandle);
 IMGUI_API void        ImGui_ImplDX12_Shutdown();

@@ -301,6 +301,7 @@ int main(int, char**)
 
     // Setup ImGui binding
     ImGui_ImplDX12_Init(hwnd, NUM_FRAMES_IN_FLIGHT, g_pd3dDevice,
+        DXGI_FORMAT_R8G8B8A8_UNORM,
         g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
 
