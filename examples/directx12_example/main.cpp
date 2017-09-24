@@ -300,7 +300,7 @@ int main(int, char**)
     UpdateWindow(hwnd);
 
     // Setup ImGui binding
-    ImGui_ImplDX12_Init(hwnd, NUM_FRAMES_IN_FLIGHT, g_pd3dDevice, g_pd3dCommandList,
+    ImGui_ImplDX12_Init(hwnd, NUM_FRAMES_IN_FLIGHT, g_pd3dDevice,
         g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
 
@@ -329,7 +329,7 @@ int main(int, char**)
             DispatchMessage(&msg);
             continue;
         }
-        ImGui_ImplDX12_NewFrame();
+        ImGui_ImplDX12_NewFrame(g_pd3dCommandList);
 
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"

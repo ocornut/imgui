@@ -629,13 +629,12 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
 }
 
 bool    ImGui_ImplDX12_Init(void* hwnd, int num_frames_in_flight,
-                            ID3D12Device* device, ID3D12GraphicsCommandList* command_list,
+                            ID3D12Device* device,
                             D3D12_CPU_DESCRIPTOR_HANDLE font_srv_cpu_desc_handle,
                             D3D12_GPU_DESCRIPTOR_HANDLE font_srv_gpu_desc_handle)
 {
     g_hWnd = (HWND)hwnd;
     g_pd3dDevice = device;
-    g_pd3dCommandList = command_list;
     g_hFontSrvCpuDescHandle = font_srv_cpu_desc_handle;
     g_hFontSrvGpuDescHandle = font_srv_gpu_desc_handle;
     g_pFrameResources = new FrameResources [num_frames_in_flight];
@@ -697,10 +696,12 @@ void ImGui_ImplDX12_Shutdown()
     g_frameIndex = UINT_MAX;
 }
 
-void ImGui_ImplDX12_NewFrame()
+void ImGui_ImplDX12_NewFrame(ID3D12GraphicsCommandList* command_list)
 {
     if (!g_pPipelineState)
         ImGui_ImplDX12_CreateDeviceObjects();
+
+    g_pd3dCommandList = command_list;
 
     ImGuiIO& io = ImGui::GetIO();
 

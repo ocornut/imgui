@@ -21,11 +21,11 @@ struct D3D12_GPU_DESCRIPTOR_HANDLE;
 // fontSrvCpuDescHandle and fontSrvGpuDescHandle are handles to a single SRV
 // descriptor to use for the internal font texture.
 IMGUI_API bool        ImGui_ImplDX12_Init(void* hwnd, int numFramesInFlight,
-                                          ID3D12Device* device, ID3D12GraphicsCommandList* cmdList,
+                                          ID3D12Device* device,
                                           D3D12_CPU_DESCRIPTOR_HANDLE fontSrvCpuDescHandle,
                                           D3D12_GPU_DESCRIPTOR_HANDLE fontSrvGpuDescHandle);
 IMGUI_API void        ImGui_ImplDX12_Shutdown();
-IMGUI_API void        ImGui_ImplDX12_NewFrame();
+IMGUI_API void        ImGui_ImplDX12_NewFrame(ID3D12GraphicsCommandList* cmdList);
 
 // Use if you want to reset your rendering device without losing ImGui state.
 IMGUI_API void        ImGui_ImplDX12_InvalidateDeviceObjects();
