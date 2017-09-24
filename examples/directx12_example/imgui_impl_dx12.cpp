@@ -620,13 +620,12 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     if (g_pPixelShaderBlob) { g_pPixelShaderBlob->Release(); g_pPixelShaderBlob = NULL; }
     if (g_pRootSignature) { g_pRootSignature->Release(); g_pRootSignature = NULL; }
     if (g_pPipelineState) { g_pPipelineState->Release(); g_pPipelineState = NULL; }
-    if (g_pFontTextureResource) { g_pFontTextureResource->Release(); g_pFontTextureResource = NULL; }
+    if (g_pFontTextureResource) { g_pFontTextureResource->Release(); g_pFontTextureResource = NULL; ImGui::GetIO().Fonts->TexID = NULL; } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
     for (UINT i = 0; i < g_numFramesInFlight; ++i)
     {
         if (g_pFrameResources[i].IB) { g_pFrameResources[i].IB->Release(); g_pFrameResources[i].IB = NULL; }
         if (g_pFrameResources[i].VB) { g_pFrameResources[i].VB->Release(); g_pFrameResources[i].VB = NULL; }
     }
-    ImGui::GetIO().Fonts->TexID = 0;
 }
 
 bool    ImGui_ImplDX12_Init(void* hwnd, int num_frames_in_flight,
@@ -725,6 +724,14 @@ void ImGui_ImplDX12_NewFrame()
     // io.MousePos : filled by WM_MOUSEMOVE events
     // io.MouseDown : filled by WM_*BUTTON* events
     // io.MouseWheel : filled by WM_MOUSEWHEEL events
+
+    // Set OS mouse position if requested last frame by io.WantMoveMouse flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
+    if (io.WantMoveMouse)
+    {
+        POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
+        ClientToScreen(g_hWnd, &pos);
+        SetCursorPos(pos.x, pos.y);
+    }
 
     // Hide OS mouse cursor if ImGui is drawing it
     if (io.MouseDrawCursor)

@@ -311,12 +311,14 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
         g_pIB->Release();
         g_pIB = NULL;
     }
-    if (LPDIRECT3DTEXTURE9 tex = (LPDIRECT3DTEXTURE9)ImGui::GetIO().Fonts->TexID)
-    {
-        tex->Release();
-        ImGui::GetIO().Fonts->TexID = 0;
-    }
+
+    // At this point note that we set ImGui::GetIO().Fonts->TexID to be == g_FontTexture, so clear both.
+    ImGuiIO& io = ImGui::GetIO();
+    IM_ASSERT(g_FontTexture == io.Fonts->TexID);
+    if (g_FontTexture)
+        g_FontTexture->Release();
     g_FontTexture = NULL;
+    io.Fonts->TexID = NULL;
 }
 
 void ImGui_ImplDX9_NewFrame()
@@ -346,6 +348,14 @@ void ImGui_ImplDX9_NewFrame()
     // io.MousePos : filled by WM_MOUSEMOVE events
     // io.MouseDown : filled by WM_*BUTTON* events
     // io.MouseWheel : filled by WM_MOUSEWHEEL events
+
+    // Set OS mouse position if requested last frame by io.WantMoveMouse flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
+    if (io.WantMoveMouse)
+    {
+        POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
+        ClientToScreen(g_hWnd, &pos);
+        SetCursorPos(pos.x, pos.y);
+    }
 
     // Hide OS mouse cursor if ImGui is drawing it
     if (io.MouseDrawCursor)

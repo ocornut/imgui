@@ -24,19 +24,18 @@ void DebugHUD_InitDefaults( DebugHUD *hud )
     hud->cubeColor2[3] = 1.0f;
 }
 
-void DebugHUD_DoInterface( DebugHUD *hud )
+void DebugHUD_DoInterface(DebugHUD *hud)
 {
     if (hud->show_test_window)
     {
-        ImGui::SetNextWindowPos( ImVec2( 400, 20 ), ImGuiSetCond_FirstUseEver );
-        ImGui::ShowTestWindow( &hud->show_test_window );
+        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
+        ImGui::ShowTestWindow(&hud->show_test_window );
     }
     
     if (hud->show_example_window)
     {
-        ImGui::SetNextWindowPos( ImVec2( 20, 20 ), ImGuiSetCond_FirstUseEver );
-        ImGui::SetNextWindowSize( ImVec2( 350, 200 ), ImGuiSetCond_FirstUseEver );
         ImGui::Begin("Another Window", &hud->show_example_window);
+        ImGui::Text("Hello from another window!");
         ImGui::ColorEdit3("Cube 1 Color", hud->cubeColor1);
         ImGui::ColorEdit3("Cube 2 Color", hud->cubeColor2);
         ImGui::SliderFloat("Rotation Speed", &hud->rotation_speed, 0.0f, 200.0f);
