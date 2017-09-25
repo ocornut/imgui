@@ -3882,7 +3882,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
     return window;
 }
 
-static void ApplySizeFullWithConstraint(ImGuiWindow* window, ImVec2 new_size)
+static ImVec2 CalcSizeFullWithConstraint(ImGuiWindow* window, ImVec2 new_size)
 {
     ImGuiContext& g = *GImGui;
     if (g.SetNextWindowSizeConstraint)
@@ -3904,7 +3904,7 @@ static void ApplySizeFullWithConstraint(ImGuiWindow* window, ImVec2 new_size)
     }
     if (!(window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_AlwaysAutoResize)))
         new_size = ImMax(new_size, g.Style.WindowMinSize);
-    window->SizeFull = new_size;
+    return new_size;
 }
 
 static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
@@ -4161,7 +4161,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         }
 
         // Apply minimum/maximum window size constraints and final size
-        ApplySizeFullWithConstraint(window, window->SizeFull);
+        window->SizeFull = CalcSizeFullWithConstraint(window, window->SizeFull);
         window->Size = window->Collapsed ? window->TitleBarRect().GetSize() : window->SizeFull;
         
         // POSITION
@@ -4286,7 +4286,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
 
                 if (size_target.x != FLT_MAX && size_target.y != FLT_MAX)
                 {
-                    ApplySizeFullWithConstraint(window, size_target);
+                    window->SizeFull = CalcSizeFullWithConstraint(window, size_target);
                     MarkIniSettingsDirty(window);
                 }
                 window->Size = window->SizeFull;
