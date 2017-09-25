@@ -3912,6 +3912,30 @@ static ImVec2 CalcSizeFullWithConstraint(ImGuiWindow* window, ImVec2 new_size)
     return new_size;
 }
 
+static ImVec2 CalcSizeAutoFit(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiStyle& style = g.Style;
+    ImGuiWindowFlags flags = window->Flags;
+    ImVec2 size_auto_fit;
+    if ((flags & ImGuiWindowFlags_Tooltip) != 0)
+    {
+        // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
+        size_auto_fit = window->SizeContents + window->WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
+    }
+    else
+    {
+        // Handling case of auto fit window not fitting in screen on one axis, we are growing auto fit size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than DisplaySize-WindowPadding.
+        size_auto_fit = ImClamp(window->SizeContents + window->WindowPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - g.Style.DisplaySafeAreaPadding));
+        if (size_auto_fit.x < window->SizeContents.x && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar))
+            size_auto_fit.y += style.ScrollbarSize;
+        if (size_auto_fit.y < window->SizeContents.y && !(flags & ImGuiWindowFlags_NoScrollbar))
+            size_auto_fit.x += style.ScrollbarSize;
+        size_auto_fit.y = ImMax(size_auto_fit.y - style.ItemSpacing.y, 0.0f);
+    }
+    return size_auto_fit;
+}
+
 static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
 {
     ImVec2 scroll = window->Scroll;
@@ -4002,7 +4026,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         if (window_pos_set_by_api && ImLengthSqr(g.SetNextWindowPosPivot) > 0.00001f)
         {
             // May be processed on the next frame if this is our first frame and we are measuring size
-            // FIXME: Look into removing the branch so everything can go through this same codepath for consistency.
+            // FIXME: Look into removing the branch so everything can go through this same code path for consistency.
             window->SetWindowPosVal = g.SetNextWindowPosVal;
             window->SetWindowPosPivot = g.SetNextWindowPosPivot;
             window->SetWindowPosAllowFlags &= ~(ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing);
@@ -4122,26 +4146,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         // Lock window padding so that altering the ShowBorders flag for children doesn't have side-effects.
         window->WindowPadding = ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup))) ? ImVec2(0,0) : style.WindowPadding;
 
-        // Calculate auto-fit size
-        ImVec2 size_auto_fit;
-        if ((flags & ImGuiWindowFlags_Tooltip) != 0)
-        {
-            // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
-            size_auto_fit = window->SizeContents + window->WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
-        }
-        else
-        {
-            size_auto_fit = ImClamp(window->SizeContents + window->WindowPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - g.Style.DisplaySafeAreaPadding));
-
-            // Handling case of auto fit window not fitting in screen on one axis, we are growing auto fit size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than DisplaySize-WindowPadding.
-            if (size_auto_fit.x < window->SizeContents.x && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar))
-                size_auto_fit.y += style.ScrollbarSize;
-            if (size_auto_fit.y < window->SizeContents.y && !(flags & ImGuiWindowFlags_NoScrollbar))
-                size_auto_fit.x += style.ScrollbarSize;
-            size_auto_fit.y = ImMax(size_auto_fit.y - style.ItemSpacing.y, 0.0f);
-        }
-
-        // Handle automatic resize
+        // Calculate auto-fit size, handle automatic resize
+        const ImVec2 size_auto_fit = CalcSizeAutoFit(window);
         if (window->Collapsed)
         {
             // We still process initial auto-fit on collapsed windows to get a window width,
