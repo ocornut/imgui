@@ -437,6 +437,7 @@ struct ImGuiContext
 
     // Storage for SetNexWindow** and SetNextTreeNode*** functions
     ImVec2                  SetNextWindowPosVal;
+    ImVec2                  SetNextWindowPosPivot;
     ImVec2                  SetNextWindowSizeVal;
     ImVec2                  SetNextWindowContentSizeVal;
     bool                    SetNextWindowCollapsedVal;
@@ -696,7 +697,8 @@ struct IMGUI_API ImGuiWindow
     ImGuiCond               SetWindowPosAllowFlags;             // store condition flags for next SetWindowPos() call.
     ImGuiCond               SetWindowSizeAllowFlags;            // store condition flags for next SetWindowSize() call.
     ImGuiCond               SetWindowCollapsedAllowFlags;       // store condition flags for next SetWindowCollapsed() call.
-    bool                    SetWindowPosCenterWanted;
+    ImVec2                  SetWindowPosVal;                    // store window position when using a non-zero Pivot (position set needs to be processed when we know the window size)
+    ImVec2                  SetWindowPosPivot;                  // store window pivot for positioning. ImVec2(0,0) when positioning from top-left corner; ImVec2(0.5f,0.5f) for centering; ImVec2(1,1) for bottom right.
 
     ImGuiDrawContext        DC;                                 // Temporary per-window data, reset at the beginning of the frame
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack

@@ -1434,7 +1434,7 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::OpenPopup("Delete?");
             if (ImGui::BeginPopupModal("Delete?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
             {
-                ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
+                    ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
                 ImGui::Separator();
 
                 //static int dummy_i = 0;
@@ -2114,20 +2114,30 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
     ImGui::End();
 }
 
-// Demonstrate creating a simple static window with no decoration.
+// Demonstrate creating a simple static window with no decoration + a context-menu to choose which corner of the screen to use.
 static void ShowExampleAppFixedOverlay(bool* p_open)
 {
-    ImGui::SetNextWindowPos(ImVec2(10,10));
+    const float DISTANCE = 10.0f;
+    static int corner = 0;
+    ImVec2 window_pos = ImVec2((corner & 1) ? ImGui::GetIO().DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? ImGui::GetIO().DisplaySize.y - DISTANCE : DISTANCE);
+    ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+    ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.3f));
-    if (!ImGui::Begin("Example: Fixed Overlay", p_open, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings))
+    if (ImGui::Begin("Example: Fixed Overlay", p_open, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings))
     {
+        ImGui::Text("Simple overlay\nin the corner of the screen.\n(right-click to change position)");
+        ImGui::Separator();
+        ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
+        if (ImGui::BeginPopupContextWindow())
+        {
+            if (ImGui::MenuItem("Top-left", NULL, corner == 0)) corner = 0;
+            if (ImGui::MenuItem("Top-right", NULL, corner == 1)) corner = 1;
+            if (ImGui::MenuItem("Bottom-left", NULL, corner == 2)) corner = 2;
+            if (ImGui::MenuItem("Bottom-right", NULL, corner == 3)) corner = 3;
+            ImGui::EndPopup();
+        }
         ImGui::End();
-        return;
     }
-    ImGui::Text("Simple overlay\non the top-left side of the screen.");
-    ImGui::Separator();
-    ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
-    ImGui::End();
     ImGui::PopStyleColor();
 }
 

@@ -152,8 +152,7 @@ namespace ImGui
     IMGUI_API bool          IsWindowAppearing();
     IMGUI_API void          SetWindowFontScale(float scale);                                    // per-window font scale. Adjust IO.FontGlobalScale if you want to scale all windows
 
-    IMGUI_API void          SetNextWindowPos(const ImVec2& pos, ImGuiCond cond = 0);            // set next window position. call before Begin()
-    IMGUI_API void          SetNextWindowPosCenter(ImGuiCond cond = 0);                         // set next window position to be centered on screen. call before Begin()
+    IMGUI_API void          SetNextWindowPos(const ImVec2& pos, ImGuiCond cond = 0, const ImVec2& pivot = ImVec2(0,0)); // set next window position. call before Begin(). use pivot=(0.5f,0.5f) to center on given point, etc.
     IMGUI_API void          SetNextWindowSize(const ImVec2& size, ImGuiCond cond = 0);          // set next window size. set axis to 0.0f to force an auto-fit on this axis. call before Begin()
     IMGUI_API void          SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeConstraintCallback custom_callback = NULL, void* custom_callback_data = NULL); // set next window size limits. use -1,-1 on either X/Y axis to preserve the current size. Use callback to apply non-trivial programmatic constraints.
     IMGUI_API void          SetNextWindowContentSize(const ImVec2& size);                       // set next window content size (enforce the range of scrollbars). set axis to 0.0f to leave it automatic. call before Begin()
@@ -489,6 +488,7 @@ namespace ImGui
 
     // Obsolete functions (Will be removed! Also see 'API BREAKING CHANGES' section in imgui.cpp)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    static void             SetNextWindowPosCenter(ImGuiCond cond = 0);                        // OBSOLETE 1.52+
     static inline bool      IsItemHoveredRect() { return IsItemRectHovered(); }                // OBSOLETE 1.51+
     static inline bool      IsPosHoveringAnyWindow(const ImVec2&) { IM_ASSERT(0); return false; } // OBSOLETE 1.51+. This was partly broken. You probably wanted to use ImGui::GetIO().WantCaptureMouse instead.
     static inline bool      IsMouseHoveringAnyWindow() { return IsAnyWindowHovered(); }        // OBSOLETE 1.51+

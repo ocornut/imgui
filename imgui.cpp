@@ -204,6 +204,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/09/25 (1.52) - removed SetNextWindowPosCenter() because SetNextWindowPos() now has the optional pivot information to do the same and more. Kept redirection function (will obsolete). 
  - 2017/08/25 (1.52) - io.MousePos needs to be set to ImVec2(-FLT_MAX,-FLT_MAX) when mouse is unavailable/missing. Previously ImVec2(-1,-1) was enough but we now accept negative mouse coordinates. In your binding if you need to support unavailable mouse, make sure to replace "io.MousePos = ImVec2(-1,-1)" with "io.MousePos = ImVec2(-FLT_MAX,-FLT_MAX)".
  - 2017/08/22 (1.51) - renamed IsItemHoveredRect() to IsItemRectHovered(). Kept inline redirection function (will obsolete).
                      - renamed IsMouseHoveringAnyWindow() to IsAnyWindowHovered() for consistency. Kept inline redirection function (will obsolete).
@@ -1804,7 +1805,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     AutoPosLastDirection = -1;
     HiddenFrames = 0;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
-    SetWindowPosCenterWanted = false;
+    SetWindowPosVal = SetWindowPosPivot = ImVec2(FLT_MAX, FLT_MAX);
 
     LastFrameActive = -1;
     ItemWidthDefault = 0.0f;
@@ -3619,11 +3620,15 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags ext
         return false;
     }
 
+    // Center modal windows by default
+    if ((window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) == 0)
+        SetNextWindowPos(g.IO.DisplaySize * 0.5f, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
     ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_Modal|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings;
     bool is_open = ImGui::Begin(name, p_open, flags);
     if (!is_open || (p_open && !*p_open)) // NB: is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
     {
-        ImGui::EndPopup();
+        EndPopup();
         if (is_open)
             ClosePopup(id);
         return false;
@@ -3994,9 +3999,12 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         if (window->Appearing) 
             window->SetWindowPosAllowFlags |= ImGuiCond_Appearing;
         window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) != 0;
-        if (window_pos_set_by_api && ImLengthSqr(g.SetNextWindowPosVal - ImVec2(-FLT_MAX,-FLT_MAX)) < 0.001f)
+        if (window_pos_set_by_api && ImLengthSqr(g.SetNextWindowPosPivot) > 0.00001f)
         {
-            window->SetWindowPosCenterWanted = true;                            // May be processed on the next frame if this is our first frame and we are measuring size
+            // May be processed on the next frame if this is our first frame and we are measuring size
+            // FIXME: Look into removing the branch so everything can go through this same codepath for consistency.
+            window->SetWindowPosVal = g.SetNextWindowPosVal;
+            window->SetWindowPosPivot = g.SetNextWindowPosPivot;
             window->SetWindowPosAllowFlags &= ~(ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing);
         }
         else
@@ -4178,13 +4186,11 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             window->Size = window->SizeFull = size_on_first_use; // NB: argument name 'size_on_first_use' misleading here, it's really just 'size' as provided by user passed via BeginChild()->Begin().
         }
 
-        bool window_pos_center = false;
-        window_pos_center |= (window->SetWindowPosCenterWanted && window->HiddenFrames == 0);
-        window_pos_center |= ((flags & ImGuiWindowFlags_Modal) && !window_pos_set_by_api && window_just_appearing_after_hidden_for_resize);
-        if (window_pos_center)
+        const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFrames == 0);
+        if (window_pos_with_pivot)
         {
-            // Center (any sort of window)
-            SetWindowPos(window, ImMax(style.DisplaySafeAreaPadding, fullscreen_rect.GetCenter() - window->SizeFull * 0.5f), 0);
+            // Position given a pivot (e.g. for centering)
+            SetWindowPos(window, ImMax(style.DisplaySafeAreaPadding, window->SetWindowPosVal - window->SizeFull * window->SetWindowPosPivot), 0);
         }
         else if (flags & ImGuiWindowFlags_ChildMenu)
         {
@@ -5010,7 +5016,7 @@ static void SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond)
     if (cond && (window->SetWindowPosAllowFlags & cond) == 0)
         return;
     window->SetWindowPosAllowFlags &= ~(ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing);
-    window->SetWindowPosCenterWanted = false;
+    window->SetWindowPosVal = ImVec2(FLT_MAX, FLT_MAX);
 
     // Set
     const ImVec2 old_pos = window->Pos;
@@ -5133,19 +5139,20 @@ void ImGui::SetWindowFocus(const char* name)
     }
 }
 
-void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiCond cond)
+void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiCond cond, const ImVec2& pivot)
 {
     ImGuiContext& g = *GImGui;
     g.SetNextWindowPosVal = pos;
+    g.SetNextWindowPosPivot = pivot;
     g.SetNextWindowPosCond = cond ? cond : ImGuiCond_Always;
 }
 
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 void ImGui::SetNextWindowPosCenter(ImGuiCond cond)
 {
-    ImGuiContext& g = *GImGui;
-    g.SetNextWindowPosVal = ImVec2(-FLT_MAX, -FLT_MAX);
-    g.SetNextWindowPosCond = cond ? cond : ImGuiCond_Always;
+    SetNextWindowPos(ImGui::GetIO().DisplaySize * 0.5f, cond, ImVec2(0.5f, 0.5f));
 }
+#endif
 
 void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiCond cond)
 {
