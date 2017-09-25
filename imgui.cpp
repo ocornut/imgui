@@ -3569,7 +3569,7 @@ bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
     }
 
     PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
+    ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings;
 
     char name[20];
     if (flags & ImGuiWindowFlags_ChildMenu)
@@ -3594,7 +3594,7 @@ bool ImGui::BeginPopup(const char* str_id)
         ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
         return false;
     }
-    return BeginPopupEx(g.CurrentWindow->GetID(str_id), ImGuiWindowFlags_ShowBorders);
+    return BeginPopupEx(g.CurrentWindow->GetID(str_id), ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_AlwaysAutoResize);
 }
 
 bool ImGui::IsPopupOpen(ImGuiID id)
@@ -8602,7 +8602,7 @@ bool ImGui::Combo(const char* label, int* current_item, const char* items_separa
     return value_changed;
 }
 
-bool ImGui::BeginCombo(const char* label, const char* preview_value, float popup_opened_height)
+bool ImGui::BeginCombo(const char* label, const char* preview_value, ImVec2 popup_size)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -8662,17 +8662,24 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, float popup
     if (!popup_open)
         return false;
 
+    if (popup_size.x == 0.0f)
+        popup_size.x = w;
+
     float popup_y1 = frame_bb.Max.y;
-    float popup_y2 = ImClamp(popup_y1 + popup_opened_height, popup_y1, g.IO.DisplaySize.y - style.DisplaySafeAreaPadding.y);
-    if ((popup_y2 - popup_y1) < ImMin(popup_opened_height, frame_bb.Min.y - style.DisplaySafeAreaPadding.y))
+    float popup_y2 = ImClamp(popup_y1 + popup_size.y, popup_y1, g.IO.DisplaySize.y - style.DisplaySafeAreaPadding.y);
+    if ((popup_y2 - popup_y1) < ImMin(popup_size.y, frame_bb.Min.y - style.DisplaySafeAreaPadding.y))
     {
         // Position our combo ABOVE because there's more space to fit! (FIXME: Handle in Begin() or use a shared helper. We have similar code in Begin() for popup placement)
-        popup_y1 = ImClamp(frame_bb.Min.y - popup_opened_height, style.DisplaySafeAreaPadding.y, frame_bb.Min.y);
+        popup_y1 = ImClamp(frame_bb.Min.y - popup_size.y, style.DisplaySafeAreaPadding.y, frame_bb.Min.y);
         popup_y2 = frame_bb.Min.y;
+        SetNextWindowPos(ImVec2(frame_bb.Min.x, frame_bb.Min.y), ImGuiCond_Always, ImVec2(0.0f, 1.0f));
     }
-    ImRect popup_rect(ImVec2(frame_bb.Min.x, popup_y1), ImVec2(frame_bb.Max.x, popup_y2));
-    SetNextWindowPos(popup_rect.Min);
-    SetNextWindowSize(popup_rect.GetSize());
+    else
+    {
+        // Position our combo below
+        SetNextWindowPos(ImVec2(frame_bb.Min.x, frame_bb.Max.y), ImGuiCond_Always, ImVec2(0.0f, 0.0f));
+    }
+    SetNextWindowSize(ImVec2(popup_size.x, popup_y2 - popup_y1), ImGuiCond_Appearing);
     PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
 
     const ImGuiWindowFlags flags = ImGuiWindowFlags_ComboBox | ((window->Flags & ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
@@ -8705,9 +8712,9 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     // Size default to hold ~7 items
     if (height_in_items < 0)
         height_in_items = 7;
-    float popup_opened_height = (g.FontSize + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
+    float popup_height = (g.FontSize + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
 
-    if (!BeginCombo(label, preview_text, popup_opened_height))
+    if (!BeginCombo(label, preview_text, ImVec2(0.0f, popup_height)))
         return false;
 
     // Display items
@@ -9119,7 +9126,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     if (menu_is_open)
     {
         SetNextWindowPos(popup_pos, ImGuiCond_Always);
-        ImGuiWindowFlags flags = ImGuiWindowFlags_ShowBorders | ((window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu)) ? ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_ChildWindow : ImGuiWindowFlags_ChildMenu);
+        ImGuiWindowFlags flags = ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_AlwaysAutoResize | ((window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu)) ? ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_ChildWindow : ImGuiWindowFlags_ChildMenu);
         menu_is_open = BeginPopupEx(id, flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
     }
 

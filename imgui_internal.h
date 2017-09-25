@@ -788,7 +788,7 @@ namespace ImGui
     IMGUI_API void          PushColumnClipRect(int column_index = -1);
 
     // FIXME-WIP: New Combo API
-    IMGUI_API bool          BeginCombo(const char* label, const char* preview_value, float popup_opened_height);
+    IMGUI_API bool          BeginCombo(const char* label, const char* preview_value, ImVec2 popup_size = ImVec2(0.0f,0.0f));
     IMGUI_API void          EndCombo();
 
     // NB: All position are in absolute pixels coordinates (never using window coordinates internally)
