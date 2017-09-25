@@ -240,6 +240,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/09/25 (1.52) - removed SetNextWindowPosCenter() because SetNextWindowPos() now has the optional pivot information to do the same and more. Kept redirection function (will obsolete). 
  - 2017/08/25 (1.52) - io.MousePos needs to be set to ImVec2(-FLT_MAX,-FLT_MAX) when mouse is unavailable/missing. Previously ImVec2(-1,-1) was enough but we now accept negative mouse coordinates. In your binding if you need to support unavailable mouse, make sure to replace "io.MousePos = ImVec2(-1,-1)" with "io.MousePos = ImVec2(-FLT_MAX,-FLT_MAX)".
  - 2017/08/22 (1.51) - renamed IsItemHoveredRect() to IsItemRectHovered(). Kept inline redirection function (will obsolete).
                      - renamed IsMouseHoveringAnyWindow() to IsAnyWindowHovered() for consistency. Kept inline redirection function (will obsolete).
@@ -659,10 +660,8 @@ static void             MarkIniSettingsDirty(ImGuiWindow* window);
 
 static ImRect           GetVisibleRect();
 
-static bool             BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags);
 static void             CloseInactivePopups();
 static void             ClosePopupToLevel(int remaining);
-static void             ClosePopup(ImGuiID id);
 static ImGuiWindow*     GetFrontMostModalRootWindow();
 static ImVec2           FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size, int* last_dir, const ImRect& rect_to_avoid);
 
@@ -1849,7 +1848,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     AutoPosLastDirection = -1;
     HiddenFrames = 0;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
-    SetWindowPosCenterWanted = false;
+    SetWindowPosVal = SetWindowPosPivot = ImVec2(FLT_MAX, FLT_MAX);
 
     LastFrameActive = -1;
     ItemWidthDefault = 0.0f;
@@ -4261,9 +4260,9 @@ static void ClosePopupToLevel(int remaining)
     g.OpenPopupStack.resize(remaining);
 }
 
-static void ClosePopup(ImGuiID id)
+void ImGui::ClosePopup(ImGuiID id)
 {
-    if (!ImGui::IsPopupOpen(id))
+    if (!IsPopupOpen(id))
         return;
     ImGuiContext& g = *GImGui;
     ClosePopupToLevel(g.OpenPopupStack.Size - 1);
@@ -4289,18 +4288,18 @@ static inline void ClearSetNextWindowData()
     g.SetNextWindowSizeConstraint = g.SetNextWindowFocus = false;
 }
 
-static bool BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
+bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (!ImGui::IsPopupOpen(id))
+    if (!IsPopupOpen(id))
     {
         ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
         return false;
     }
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
+    PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings;
 
     char name[20];
     if (flags & ImGuiWindowFlags_ChildMenu)
@@ -4308,11 +4307,11 @@ static bool BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
     else
         ImFormatString(name, IM_ARRAYSIZE(name), "##popup_%08x", id); // Not recycling, so we can close/open during the same frame
 
-    bool is_open = ImGui::Begin(name, NULL, flags);
+    bool is_open = Begin(name, NULL, flags);
     if (!(window->Flags & ImGuiWindowFlags_ShowBorders))
         g.CurrentWindow->Flags &= ~ImGuiWindowFlags_ShowBorders;
     if (!is_open) // NB: is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
-        ImGui::EndPopup();
+        EndPopup();
 
     return is_open;
 }
@@ -4325,7 +4324,7 @@ bool ImGui::BeginPopup(const char* str_id)
         ClearSetNextWindowData(); // We behave like Begin() and need to consume those values
         return false;
     }
-    return BeginPopupEx(g.CurrentWindow->GetID(str_id), ImGuiWindowFlags_ShowBorders);
+    return BeginPopupEx(g.CurrentWindow->GetID(str_id), ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_AlwaysAutoResize);
 }
 
 bool ImGui::IsPopupOpen(ImGuiID id)
@@ -4351,11 +4350,15 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags ext
         return false;
     }
 
+    // Center modal windows by default
+    if ((window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) == 0)
+        SetNextWindowPos(g.IO.DisplaySize * 0.5f, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
     ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_Modal|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings;
     bool is_open = ImGui::Begin(name, p_open, flags);
     if (!is_open || (p_open && !*p_open)) // NB: is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
     {
-        ImGui::EndPopup();
+        EndPopup();
         if (is_open)
             ClosePopup(id);
         return false;
@@ -4633,7 +4636,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
     return window;
 }
 
-static void ApplySizeFullWithConstraint(ImGuiWindow* window, ImVec2 new_size)
+static ImVec2 CalcSizeFullWithConstraint(ImGuiWindow* window, ImVec2 new_size)
 {
     ImGuiContext& g = *GImGui;
     if (g.SetNextWindowSizeConstraint)
@@ -4655,7 +4658,32 @@ static void ApplySizeFullWithConstraint(ImGuiWindow* window, ImVec2 new_size)
     }
     if (!(window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_AlwaysAutoResize)))
         new_size = ImMax(new_size, g.Style.WindowMinSize);
-    window->SizeFull = new_size;
+    return new_size;
+}
+
+static ImVec2 CalcSizeAutoFit(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiStyle& style = g.Style;
+    ImGuiWindowFlags flags = window->Flags;
+    ImVec2 size_auto_fit;
+    if ((flags & ImGuiWindowFlags_Tooltip) != 0)
+    {
+        // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
+        size_auto_fit = window->SizeContents + window->WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
+    }
+    else
+    {
+        // Handling case of auto fit window not fitting on the screen (on either axis): we are growing the size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than DisplaySize-WindowPadding.
+        size_auto_fit = ImClamp(window->SizeContents + window->WindowPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - g.Style.DisplaySafeAreaPadding));
+        ImVec2 size_auto_fit_after_constraint = CalcSizeFullWithConstraint(window, size_auto_fit);
+        if (size_auto_fit_after_constraint.x < window->SizeContents.x && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar))
+            size_auto_fit.y += style.ScrollbarSize;
+        if (size_auto_fit_after_constraint.y < window->SizeContents.y && !(flags & ImGuiWindowFlags_NoScrollbar))
+            size_auto_fit.x += style.ScrollbarSize * 2.0f;
+        size_auto_fit.y = ImMax(size_auto_fit.y - style.ItemSpacing.y, 0.0f);
+    }
+    return size_auto_fit;
 }
 
 static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
@@ -4750,9 +4778,12 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         if (window->Appearing) 
             window->SetWindowPosAllowFlags |= ImGuiCond_Appearing;
         window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) != 0;
-        if (window_pos_set_by_api && ImLengthSqr(g.SetNextWindowPosVal - ImVec2(-FLT_MAX,-FLT_MAX)) < 0.001f)
+        if (window_pos_set_by_api && ImLengthSqr(g.SetNextWindowPosPivot) > 0.00001f)
         {
-            window->SetWindowPosCenterWanted = true;                            // May be processed on the next frame if this is our first frame and we are measuring size
+            // May be processed on the next frame if this is our first frame and we are measuring size
+            // FIXME: Look into removing the branch so everything can go through this same code path for consistency.
+            window->SetWindowPosVal = g.SetNextWindowPosVal;
+            window->SetWindowPosPivot = g.SetNextWindowPosPivot;
             window->SetWindowPosAllowFlags &= ~(ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing);
         }
         else
@@ -4874,26 +4905,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         // Lock window padding so that altering the ShowBorders flag for children doesn't have side-effects.
         window->WindowPadding = ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup))) ? ImVec2(0,0) : style.WindowPadding;
 
-        // Calculate auto-fit size
-        ImVec2 size_auto_fit;
-        if ((flags & ImGuiWindowFlags_Tooltip) != 0)
-        {
-            // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
-            size_auto_fit = window->SizeContents + window->WindowPadding - ImVec2(0.0f, style.ItemSpacing.y);
-        }
-        else
-        {
-            size_auto_fit = ImClamp(window->SizeContents + window->WindowPadding, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - g.Style.DisplaySafeAreaPadding));
-
-            // Handling case of auto fit window not fitting in screen on one axis, we are growing auto fit size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than DisplaySize-WindowPadding.
-            if (size_auto_fit.x < window->SizeContents.x && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar))
-                size_auto_fit.y += style.ScrollbarSize;
-            if (size_auto_fit.y < window->SizeContents.y && !(flags & ImGuiWindowFlags_NoScrollbar))
-                size_auto_fit.x += style.ScrollbarSize;
-            size_auto_fit.y = ImMax(size_auto_fit.y - style.ItemSpacing.y, 0.0f);
-        }
-
-        // Handle automatic resize
+        // Calculate auto-fit size, handle automatic resize
+        const ImVec2 size_auto_fit = CalcSizeAutoFit(window);
         if (window->Collapsed)
         {
             // We still process initial auto-fit on collapsed windows to get a window width,
@@ -4903,13 +4916,13 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             if (window->AutoFitFramesY > 0)
                 window->SizeFull.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
         }
-        else
+        else if (!window_size_set_by_api)
         {
-            if ((flags & ImGuiWindowFlags_AlwaysAutoResize) && !window_size_set_by_api)
+            if (flags & ImGuiWindowFlags_AlwaysAutoResize)
             {
                 window->SizeFull = size_auto_fit;
             }
-            else if ((window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0) && !window_size_set_by_api)
+            else if (window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0)
             {
                 // Auto-fit only grows during the first few frames
                 if (window->AutoFitFramesX > 0)
@@ -4921,7 +4934,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         }
 
         // Apply minimum/maximum window size constraints and final size
-        ApplySizeFullWithConstraint(window, window->SizeFull);
+        window->SizeFull = CalcSizeFullWithConstraint(window, window->SizeFull);
         window->Size = window->Collapsed ? window->TitleBarRect().GetSize() : window->SizeFull;
         
         // POSITION
@@ -4938,13 +4951,11 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             window->Size = window->SizeFull = size_on_first_use; // NB: argument name 'size_on_first_use' misleading here, it's really just 'size' as provided by user passed via BeginChild()->Begin().
         }
 
-        bool window_pos_center = false;
-        window_pos_center |= (window->SetWindowPosCenterWanted && window->HiddenFrames == 0);
-        window_pos_center |= ((flags & ImGuiWindowFlags_Modal) && !window_pos_set_by_api && window_just_appearing_after_hidden_for_resize);
-        if (window_pos_center)
+        const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFrames == 0);
+        if (window_pos_with_pivot)
         {
-            // Center (any sort of window)
-            SetWindowPos(window, ImMax(style.DisplaySafeAreaPadding, fullscreen_rect.GetCenter() - window->SizeFull * 0.5f), 0);
+            // Position given a pivot (e.g. for centering)
+            SetWindowPos(window, ImMax(style.DisplaySafeAreaPadding, window->SetWindowPosVal - window->SizeFull * window->SetWindowPosPivot), 0);
         }
         else if (flags & ImGuiWindowFlags_ChildMenu)
         {
@@ -5073,7 +5084,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
 
                 if (size_target.x != FLT_MAX && size_target.y != FLT_MAX)
                 {
-                    ApplySizeFullWithConstraint(window, size_target);
+                    window->SizeFull = CalcSizeFullWithConstraint(window, size_target);
                     MarkIniSettingsDirty(window);
                 }
 
@@ -5846,7 +5857,7 @@ static void SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond)
     if (cond && (window->SetWindowPosAllowFlags & cond) == 0)
         return;
     window->SetWindowPosAllowFlags &= ~(ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing);
-    window->SetWindowPosCenterWanted = false;
+    window->SetWindowPosVal = ImVec2(FLT_MAX, FLT_MAX);
 
     // Set
     const ImVec2 old_pos = window->Pos;
@@ -5969,19 +5980,20 @@ void ImGui::SetWindowFocus(const char* name)
     }
 }
 
-void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiCond cond)
+void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiCond cond, const ImVec2& pivot)
 {
     ImGuiContext& g = *GImGui;
     g.SetNextWindowPosVal = pos;
+    g.SetNextWindowPosPivot = pivot;
     g.SetNextWindowPosCond = cond ? cond : ImGuiCond_Always;
 }
 
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 void ImGui::SetNextWindowPosCenter(ImGuiCond cond)
 {
-    ImGuiContext& g = *GImGui;
-    g.SetNextWindowPosVal = ImVec2(-FLT_MAX, -FLT_MAX);
-    g.SetNextWindowPosCond = cond ? cond : ImGuiCond_Always;
+    SetNextWindowPos(ImGui::GetIO().DisplaySize * 0.5f, cond, ImVec2(0.5f, 0.5f));
 }
+#endif
 
 void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiCond cond)
 {
@@ -9503,7 +9515,7 @@ bool ImGui::Combo(const char* label, int* current_item, const char* items_separa
     return value_changed;
 }
 
-bool ImGui::BeginCombo(const char* label, const char* preview_value, float popup_opened_height)
+bool ImGui::BeginCombo(const char* label, const char* preview_value, ImVec2 popup_size)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -9569,17 +9581,24 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, float popup
     if (!popup_open)
         return false;
 
+    if (popup_size.x == 0.0f)
+        popup_size.x = w;
+
     float popup_y1 = frame_bb.Max.y;
-    float popup_y2 = ImClamp(popup_y1 + popup_opened_height, popup_y1, g.IO.DisplaySize.y - style.DisplaySafeAreaPadding.y);
-    if ((popup_y2 - popup_y1) < ImMin(popup_opened_height, frame_bb.Min.y - style.DisplaySafeAreaPadding.y))
+    float popup_y2 = ImClamp(popup_y1 + popup_size.y, popup_y1, g.IO.DisplaySize.y - style.DisplaySafeAreaPadding.y);
+    if ((popup_y2 - popup_y1) < ImMin(popup_size.y, frame_bb.Min.y - style.DisplaySafeAreaPadding.y))
     {
         // Position our combo ABOVE because there's more space to fit! (FIXME: Handle in Begin() or use a shared helper. We have similar code in Begin() for popup placement)
-        popup_y1 = ImClamp(frame_bb.Min.y - popup_opened_height, style.DisplaySafeAreaPadding.y, frame_bb.Min.y);
+        popup_y1 = ImClamp(frame_bb.Min.y - popup_size.y, style.DisplaySafeAreaPadding.y, frame_bb.Min.y);
         popup_y2 = frame_bb.Min.y;
+        SetNextWindowPos(ImVec2(frame_bb.Min.x, frame_bb.Min.y), ImGuiCond_Always, ImVec2(0.0f, 1.0f));
     }
-    ImRect popup_rect(ImVec2(frame_bb.Min.x, popup_y1), ImVec2(frame_bb.Max.x, popup_y2));
-    SetNextWindowPos(popup_rect.Min);
-    SetNextWindowSize(popup_rect.GetSize());
+    else
+    {
+        // Position our combo below
+        SetNextWindowPos(ImVec2(frame_bb.Min.x, frame_bb.Max.y), ImGuiCond_Always, ImVec2(0.0f, 0.0f));
+    }
+    SetNextWindowSize(ImVec2(popup_size.x, popup_y2 - popup_y1), ImGuiCond_Appearing);
     PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
 
     const ImGuiWindowFlags flags = ImGuiWindowFlags_ComboBox | ((window->Flags & ImGuiWindowFlags_ShowBorders) ? ImGuiWindowFlags_ShowBorders : 0);
@@ -9612,9 +9631,9 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     // Size default to hold ~7 items
     if (height_in_items < 0)
         height_in_items = 7;
-    float popup_opened_height = (g.FontSize + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
+    float popup_height = (g.FontSize + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
 
-    if (!BeginCombo(label, preview_text, popup_opened_height))
+    if (!BeginCombo(label, preview_text, ImVec2(0.0f, popup_height)))
         return false;
 
     // Display items
@@ -10057,7 +10076,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     if (menu_is_open)
     {
         SetNextWindowPos(popup_pos, ImGuiCond_Always);
-        ImGuiWindowFlags flags = ImGuiWindowFlags_ShowBorders | ((window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu)) ? ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_ChildWindow : ImGuiWindowFlags_ChildMenu);
+        ImGuiWindowFlags flags = ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_AlwaysAutoResize | ((window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu)) ? ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_ChildWindow : ImGuiWindowFlags_ChildMenu);
         menu_is_open = BeginPopupEx(id, flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
     }
 
@@ -10245,7 +10264,10 @@ static void ColorEditOptionsPopup(ImGuiColorEditFlags flags, float* col)
         sprintf(buf, "(%d,%d,%d,%d)", cr, cg, cb, ca);
         if (ImGui::Selectable(buf))
             ImGui::SetClipboardText(buf);
-        sprintf(buf, (flags & ImGuiColorEditFlags_NoAlpha) ? "0x%02X%02X%02X" : "0x%02X%02X%02X%02X", cr, cg, cb, ca);
+        if (flags & ImGuiColorEditFlags_NoAlpha)
+            sprintf(buf, "0x%02X%02X%02X", cr, cg, cb);
+        else
+            sprintf(buf, "0x%02X%02X%02X%02X", cr, cg, cb, ca);
         if (ImGui::Selectable(buf))
             ImGui::SetClipboardText(buf);
         ImGui::EndPopup();
