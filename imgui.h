@@ -905,7 +905,7 @@ struct ImGuiIO
     ImVec2      MouseDelta;                 // Mouse delta. Note that this is zero if either current or previous position are negative, so a disappearing/reappearing mouse won't have a huge delta for one frame.
 
     //------------------------------------------------------------------
-    // [Private] ImGui will maintain those fields. Forward compatibility not guaranteed!
+    // [Internal] ImGui will maintain those fields. Forward compatibility not guaranteed!
     //------------------------------------------------------------------
 
     ImVec2      MousePosPrev;               // Previous mouse position temporary storage (nb: not for public use, set to MousePos in NewFrame())
@@ -1375,7 +1375,7 @@ struct ImFontConfig
     float           SizePixels;                 //          // Size in pixels for rasterizer.
     int             OversampleH, OversampleV;   // 3, 1     // Rasterize at higher quality for sub-pixel positioning. We don't use sub-pixel positions on the Y axis.
     bool            PixelSnapH;                 // false    // Align every glyph to pixel boundary. Useful e.g. if you are merging a non-pixel aligned font with the default font. If enabled, you can set OversampleH/V to 1.
-    ImVec2          GlyphExtraSpacing;          // 0, 0     // Extra spacing (in pixels) between glyphs. Only X axis is supported for now.
+    ImVec2          GlyphExtraSpacing;          // 1, 0     // Extra spacing (in pixels) between glyphs. Only X axis is supported for now.
     ImVec2          GlyphOffset;                // 0, 0     // Offset all glyphs from this font input.
     const ImWchar*  GlyphRanges;                // NULL     // Pointer to a user-provided list of Unicode range (2 value per range, values are inclusive, zero-terminated list). THE ARRAY DATA NEEDS TO PERSIST AS LONG AS THE FONT IS ALIVE.
     bool            MergeMode;                  // false    // Merge into previous ImFont, so you can combine multiple inputs font into one ImFont (e.g. ASCII font + icons + Japanese glyphs). You may want to use GlyphOffset.y when merge font of different heights.
@@ -1387,6 +1387,14 @@ struct ImFontConfig
     ImFont*         DstFont;
 
     IMGUI_API ImFontConfig();
+};
+
+struct ImFontGlyph
+{
+    ImWchar         Codepoint;          // 0x0000..0xFFFF
+    float           AdvanceX;           // Distance to next character (= data from font + ImFontConfig::GlyphExtraSpacing.x baked in)
+    float           X0, Y0, X1, Y1;     // Glyph corners
+    float           U0, V0, U1, V1;     // Texture coordinates
 };
 
 // Load and rasterize multiple TTF/OTF fonts into a same texture.
@@ -1412,25 +1420,29 @@ struct ImFontAtlas
     IMGUI_API void              ClearFonts();               // Clear the ImGui-side font data (glyphs storage, UV coordinates)
     IMGUI_API void              Clear();                    // Clear all
 
-    // Retrieve texture data
-    // User is in charge of copying the pixels into graphics memory, then call SetTextureUserID()
-    // After loading the texture into your graphic system, store your texture handle in 'TexID' (ignore if you aren't using multiple fonts nor images)
-    // RGBA32 format is provided for convenience and high compatibility, but note that all RGB pixels are white, so 75% of the memory is wasted.
+    // Build atlas, retrieve pixel data.
+    // User is in charge of copying the pixels into graphics memory (e.g. create a texture with your engine). Then store your texture handle with SetTexID().
+    // RGBA32 format is provided for convenience and compatibility, but note that unless you use CustomRect to draw color data, the RGB pixels emitted from Fonts will all be white (~75% of waste). 
     // Pitch = Width * BytesPerPixels
+    IMGUI_API bool              Build();                    // Build pixels data. This is called automatically for you by the GetTexData*** functions.
     IMGUI_API void              GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 1 byte per-pixel
     IMGUI_API void              GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 4 bytes-per-pixel
-    void                        SetTexID(ImTextureID id)  { TexID = id; }
+    void                        SetTexID(ImTextureID id)    { TexID = id; }
+
+    //-------------------------------------------
+    // Glyph Ranges
+    //-------------------------------------------
 
     // Helpers to retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
     // NB: Make sure that your string are UTF-8 and NOT in your local code page. In C++11, you can create UTF-8 string literal using the u8"Hello world" syntax. See FAQ for details.
     IMGUI_API const ImWchar*    GetGlyphRangesDefault();    // Basic Latin, Extended Latin
     IMGUI_API const ImWchar*    GetGlyphRangesKorean();     // Default + Korean characters
     IMGUI_API const ImWchar*    GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
-    IMGUI_API const ImWchar*    GetGlyphRangesChinese();    // Japanese + full set of about 21000 CJK Unified Ideographs
+    IMGUI_API const ImWchar*    GetGlyphRangesChinese();    // Default + Japanese + full set of about 21000 CJK Unified Ideographs
     IMGUI_API const ImWchar*    GetGlyphRangesCyrillic();   // Default + about 400 Cyrillic characters
     IMGUI_API const ImWchar*    GetGlyphRangesThai();       // Default + Thai characters
 
-    // Helpers to build glyph ranges from text data. Feed all your application strings/characters to it then call BuildRanges().
+    // Helpers to build glyph ranges from text data. Feed your application strings/characters to it then call BuildRanges().
     struct GlyphRangesBuilder
     {
         ImVector<unsigned char> UsedChars;  // Store 1-bit per Unicode code point (0=unused, 1=used)
@@ -1443,57 +1455,64 @@ struct ImFontAtlas
         IMGUI_API void BuildRanges(ImVector<ImWchar>* out_ranges);                  // Output new ranges
     };
 
+    //-------------------------------------------
+    // Custom Rectangles/Glyphs API
+    //-------------------------------------------
+
+    // You can request arbitrary rectangles to be packed into the atlas, for your own purposes. After calling Build(), you can query the rectangle position and render your pixels.
+    // You can also request your rectangles to be mapped as font glyph (given a font + Unicode point), so you can render e.g. custom colorful icons and use them as regular glyphs.
+    struct CustomRect
+    {
+        unsigned int    ID;             // Input    // User ID. Use <0x10000 to map into a font glyph, >=0x10000 for other/internal/custom texture data.
+        unsigned short  Width, Height;  // Input    // Desired rectangle dimension
+        unsigned short  X, Y;           // Output   // Packed position in Atlas
+        float           GlyphAdvanceX;  // Input    // For custom font glyphs only (ID<0x10000): glyph xadvance
+        ImVec2          GlyphOffset;    // Input    // For custom font glyphs only (ID<0x10000): glyph display offset
+        ImFont*         Font;           // Input    // For custom font glyphs only (ID<0x10000): target font
+        CustomRect()            { ID = 0xFFFFFFFF; Width = Height = 0; X = Y = 0xFFFF; GlyphAdvanceX = 0.0f; GlyphOffset = ImVec2(0,0); Font = NULL; }
+        bool IsPacked() const   { return X != 0xFFFF; }
+    };
+
+    IMGUI_API int       AddCustomRectRegular(unsigned int id, int width, int height);                                                                   // Id needs to be >= 0x10000. Id >= 0x80000000 are reserved for ImGui and ImDrawList
+    IMGUI_API int       AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0,0));   // Id needs to be < 0x10000 to register a rectangle to map into a specific font.
+    IMGUI_API void      ClearCustomRects();
+    IMGUI_API void      CalcCustomRectUV(const CustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max);
+    const CustomRect*   GetCustomRectByIndex(int index) const { if (index < 0) return NULL; return &CustomRects[index]; }
+
+    //-------------------------------------------
     // Members
-    // (Access texture data via GetTexData*() calls which will setup a default font for you.)
+    //-------------------------------------------
+
     ImTextureID                 TexID;              // User data to refer to the texture once it has been uploaded to user's graphic systems. It is passed back to you during rendering via the ImDrawCmd structure.
+    int                         TexDesiredWidth;    // Texture width desired by user before Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height.
+    int                         TexGlyphPadding;    // Padding between glyphs within texture in pixels. Defaults to 1.
+
+    // [Internal]
+    // NB: Access texture data via GetTexData*() calls! Which will setup a default font for you.
     unsigned char*              TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
     unsigned int*               TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
     int                         TexWidth;           // Texture width calculated during Build().
     int                         TexHeight;          // Texture height calculated during Build().
-    int                         TexDesiredWidth;    // Texture width desired by user before Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height.
-    int                         TexGlyphPadding;    // Padding between glyphs within texture in pixels. Defaults to 1.
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
-
-    // [Private] User rectangle for packing custom texture data into the atlas.
-    struct CustomRect
-    {
-        unsigned int    ID;             // Input    // User ID. <0x10000 for font mapped data (WIP/UNSUPPORTED), >=0x10000 for other texture data
-        unsigned short  Width, Height;  // Input    // Desired rectangle dimension
-        unsigned short  X, Y;           // Output   // Packed position in Atlas
-        CustomRect()            { ID = 0xFFFFFFFF; Width = Height = 0; X = Y = 0xFFFF; }
-        bool IsPacked() const   { return X != 0xFFFF; }
-    };
-
-    // [Private] Members
     ImVector<CustomRect>        CustomRects;        // Rectangles for packing custom texture data into the atlas.
     ImVector<ImFontConfig>      ConfigData;         // Internal data
-    IMGUI_API bool              Build();            // Build pixels data. This is automatically for you by the GetTexData*** functions.
-    IMGUI_API int               CustomRectRegister(unsigned int id, int width, int height);
-    IMGUI_API void              CustomRectCalcUV(const CustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max);
+    int                         CustomRectIds[1];   // Identifiers of custom texture rectangle used by ImFontAtlas/ImDrawList
 };
 
 // Font runtime data and rendering
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
 struct ImFont
 {
-    struct Glyph
-    {
-        ImWchar                 Codepoint;
-        float                   XAdvance;
-        float                   X0, Y0, X1, Y1;
-        float                   U0, V0, U1, V1;     // Texture coordinates
-    };
-
     // Members: Hot ~62/78 bytes
     float                       FontSize;           // <user set>   // Height of characters, set during loading (don't change after loading)
     float                       Scale;              // = 1.f        // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
     ImVec2                      DisplayOffset;      // = (0.f,1.f)  // Offset font rendering by xx pixels
-    ImVector<Glyph>             Glyphs;             //              // All glyphs.
-    ImVector<float>             IndexXAdvance;      //              // Sparse. Glyphs->XAdvance in a directly indexable way (more cache-friendly, for CalcTextSize functions which are often bottleneck in large UI).
+    ImVector<ImFontGlyph>       Glyphs;             //              // All glyphs.
+    ImVector<float>             IndexAdvanceX;      //              // Sparse. Glyphs->AdvanceX in a directly indexable way (more cache-friendly, for CalcTextSize functions which are often bottleneck in large UI).
     ImVector<unsigned short>    IndexLookup;        //              // Sparse. Index glyphs by Unicode code-point.
-    const Glyph*                FallbackGlyph;      // == FindGlyph(FontFallbackChar)
-    float                       FallbackXAdvance;   // == FallbackGlyph->XAdvance
+    const ImFontGlyph*          FallbackGlyph;      // == FindGlyph(FontFallbackChar)
+    float                       FallbackAdvanceX;   // == FallbackGlyph->AdvanceX
     ImWchar                     FallbackChar;       // = '?'        // Replacement glyph if one isn't found. Only set via SetFallbackChar()
 
     // Members: Cold ~18/26 bytes
@@ -1508,9 +1527,9 @@ struct ImFont
     IMGUI_API ~ImFont();
     IMGUI_API void              Clear();
     IMGUI_API void              BuildLookupTable();
-    IMGUI_API const Glyph*      FindGlyph(ImWchar c) const;
+    IMGUI_API const ImFontGlyph*FindGlyph(ImWchar c) const;
     IMGUI_API void              SetFallbackChar(ImWchar c);
-    float                       GetCharAdvance(ImWchar c) const     { return ((int)c < IndexXAdvance.Size) ? IndexXAdvance[(int)c] : FallbackXAdvance; }
+    float                       GetCharAdvance(ImWchar c) const     { return ((int)c < IndexAdvanceX.Size) ? IndexAdvanceX[(int)c] : FallbackAdvanceX; }
     bool                        IsLoaded() const                    { return ContainerAtlas != NULL; }
 
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
@@ -1520,9 +1539,14 @@ struct ImFont
     IMGUI_API void              RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, unsigned short c) const;
     IMGUI_API void              RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false) const;
 
-    // Private
+    // [Internal]
     IMGUI_API void              GrowIndex(int new_size);
+    IMGUI_API void              AddGlyph(ImWchar c, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float advance_x);
     IMGUI_API void              AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst = true); // Makes 'dst' character/glyph points to 'src' character/glyph. Currently needs to be called AFTER fonts have been built.
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    typedef ImFontGlyph Glyph; // OBSOLETE 1.52+
+#endif
 };
 
 #if defined(__clang__)

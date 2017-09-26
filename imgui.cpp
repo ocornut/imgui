@@ -3751,7 +3751,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
         return ImVec2(0.0f, font_size);
     ImVec2 text_size = font->CalcTextSizeA(font_size, FLT_MAX, wrap_width, text, text_display_end, NULL);
 
-    // Cancel out character spacing for the last character of a line (it is baked into glyph->XAdvance field)
+    // Cancel out character spacing for the last character of a line (it is baked into glyph->AdvanceX field)
     const float font_scale = font_size / font->FontSize;
     const float character_spacing_x = 1.0f * font_scale;
     if (text_size.x > 0.0f)
@@ -8750,7 +8750,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     // Password pushes a temporary font with only a fallback glyph
     if (is_password)
     {
-        const ImFont::Glyph* glyph = g.Font->FindGlyph('*');
+        const ImFontGlyph* glyph = g.Font->FindGlyph('*');
         ImFont* password_font = &g.InputTextPasswordFont;
         password_font->FontSize = g.Font->FontSize;
         password_font->Scale = g.Font->Scale;
@@ -8759,8 +8759,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         password_font->Descent = g.Font->Descent;
         password_font->ContainerAtlas = g.Font->ContainerAtlas;
         password_font->FallbackGlyph = glyph;
-        password_font->FallbackXAdvance = glyph->XAdvance;
-        IM_ASSERT(password_font->Glyphs.empty() && password_font->IndexXAdvance.empty() && password_font->IndexLookup.empty());
+        password_font->FallbackAdvanceX = glyph->AdvanceX;
+        IM_ASSERT(password_font->Glyphs.empty() && password_font->IndexAdvanceX.empty() && password_font->IndexLookup.empty());
         PushFont(password_font);
     }
 

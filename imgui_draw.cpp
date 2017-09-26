@@ -1066,7 +1066,7 @@ ImFontConfig::ImFontConfig()
 // The white texels on the top left are the ones we'll use everywhere in ImGui to render filled shapes.
 const int FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF = 90;
 const int FONT_ATLAS_DEFAULT_TEX_DATA_H      = 27;
-const int FONT_ATLAS_DEFAULT_TEX_DATA_ID     = 0xF0000;
+const unsigned int FONT_ATLAS_DEFAULT_TEX_DATA_ID = 0x80000000;
 const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF * FONT_ATLAS_DEFAULT_TEX_DATA_H + 1] =
 {
     "..-         -XXXXXXX-    X    -           X           -XXXXXXX          -          XXXXXXX"
@@ -1101,11 +1101,14 @@ const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF
 ImFontAtlas::ImFontAtlas()
 {
     TexID = NULL;
+    TexDesiredWidth = 0;
+    TexGlyphPadding = 1;
     TexPixelsAlpha8 = NULL;
     TexPixelsRGBA32 = NULL;
-    TexWidth = TexHeight = TexDesiredWidth = 0;
-    TexGlyphPadding = 1;
+    TexWidth = TexHeight = 0;
     TexUvWhitePixel = ImVec2(0, 0);
+    for (int n = 0; n < IM_ARRAYSIZE(CustomRectIds); n++)
+        CustomRectIds[n] = -1;
 }
 
 ImFontAtlas::~ImFontAtlas()
@@ -1122,7 +1125,7 @@ void    ImFontAtlas::ClearInputData()
             ConfigData[i].FontData = NULL;
         }
 
-    // When clearing this we lose access to the font name and other information used to build the font.
+    // When clearing this we lose access to  the font name and other information used to build the font.
     for (int i = 0; i < Fonts.Size; i++)
         if (Fonts[i]->ConfigData >= ConfigData.Data && Fonts[i]->ConfigData < ConfigData.Data + ConfigData.Size)
         {
@@ -1318,8 +1321,9 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(const char* compressed
     return font;
 }
 
-int ImFontAtlas::CustomRectRegister(unsigned int id, int width, int height)
+int ImFontAtlas::AddCustomRectRegular(unsigned int id, int width, int height)
 {
+    IM_ASSERT(id >= 0x10000);
     IM_ASSERT(width > 0 && width <= 0xFFFF);
     IM_ASSERT(height > 0 && height <= 0xFFFF);
     CustomRect r;
@@ -1330,7 +1334,23 @@ int ImFontAtlas::CustomRectRegister(unsigned int id, int width, int height)
     return CustomRects.Size - 1; // Return index
 }
 
-void ImFontAtlas::CustomRectCalcUV(const CustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max)
+int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset)
+{
+    IM_ASSERT(font != NULL);
+    IM_ASSERT(width > 0 && width <= 0xFFFF);
+    IM_ASSERT(height > 0 && height <= 0xFFFF);
+    CustomRect r;
+    r.ID = id;
+    r.Width = (unsigned short)width;
+    r.Height = (unsigned short)height;
+    r.GlyphAdvanceX = advance_x;
+    r.GlyphOffset = offset;
+    r.Font = font;
+    CustomRects.push_back(r);
+    return CustomRects.Size - 1; // Return index
+}
+
+void ImFontAtlas::CalcCustomRectUV(const CustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max)
 {
     IM_ASSERT(TexWidth > 0 && TexHeight > 0);   // Font atlas needs to be built before we can calculate UV coordinates
     IM_ASSERT(rect->IsPacked());                // Make sure the rectangle has been packed
@@ -1535,26 +1555,9 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
                 stbtt_aligned_quad q;
                 float dummy_x = 0.0f, dummy_y = 0.0f;
                 stbtt_GetPackedQuad(range.chardata_for_range, atlas->TexWidth, atlas->TexHeight, char_idx, &dummy_x, &dummy_y, &q, 0);
-
-                dst_font->Glyphs.resize(dst_font->Glyphs.Size + 1);
-                ImFont::Glyph& glyph = dst_font->Glyphs.back();
-                glyph.Codepoint = (ImWchar)codepoint;
-                glyph.X0 = q.x0 + off_x; 
-                glyph.Y0 = q.y0 + off_y; 
-                glyph.X1 = q.x1 + off_x; 
-                glyph.Y1 = q.y1 + off_y;
-                glyph.U0 = q.s0; 
-                glyph.V0 = q.t0; 
-                glyph.U1 = q.s1; 
-                glyph.V1 = q.t1;
-                glyph.XAdvance = (pc.xadvance + cfg.GlyphExtraSpacing.x);  // Bake spacing into XAdvance
-
-                if (cfg.PixelSnapH)
-                    glyph.XAdvance = (float)(int)(glyph.XAdvance + 0.5f);
-                dst_font->MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * atlas->TexWidth + 1.99f) * (int)((glyph.V1 - glyph.V0) * atlas->TexHeight + 1.99f); // +1 to account for average padding, +0.99 to round
+                dst_font->AddGlyph((ImWchar)codepoint, q.x0 + off_x, q.y0 + off_y, q.x1 + off_x, q.y1 + off_y, q.s0, q.t0, q.s1, q.t1, pc.xadvance);
             }
         }
-        cfg.DstFont->BuildLookupTable();
     }
 
     // Cleanup temporaries
@@ -1562,17 +1565,15 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     ImGui::MemFree(buf_ranges);
     ImGui::MemFree(tmp_array);
 
-    // Render into our custom data block
-    ImFontAtlasBuildRenderDefaultTexData(atlas);
+    ImFontAtlasBuildFinish(atlas);
 
     return true;
 }
 
 void ImFontAtlasBuildRegisterDefaultCustomRects(ImFontAtlas* atlas)
 {
-    // FIXME-WIP: We should register in the constructor (but cannot because our static instances may not have allocator ready by the time they initialize). This needs to be fixed because we can expose CustomRects.
-    if (atlas->CustomRects.empty())
-        atlas->CustomRectRegister(FONT_ATLAS_DEFAULT_TEX_DATA_ID, FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF*2+1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
+    if (atlas->CustomRectIds[0] < 0)
+        atlas->CustomRectIds[0] = atlas->AddCustomRectRegular(FONT_ATLAS_DEFAULT_TEX_DATA_ID, FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF*2+1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
 }
 
 void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* font_config, float ascent, float descent)
@@ -1615,9 +1616,10 @@ void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* pack_context_opaq
         }
 }
 
-void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
+static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
 {
-    ImFontAtlas::CustomRect& r = atlas->CustomRects[0];
+    IM_ASSERT(atlas->CustomRectIds[0] >= 0);
+    ImFontAtlas::CustomRect& r = atlas->CustomRects[atlas->CustomRectIds[0]];
     IM_ASSERT(r.ID == FONT_ATLAS_DEFAULT_TEX_DATA_ID);
     IM_ASSERT(r.Width == FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF*2+1);
     IM_ASSERT(r.Height == FONT_ATLAS_DEFAULT_TEX_DATA_H);
@@ -1663,6 +1665,29 @@ void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
         cursor_data.TexUvMin[1] = (pos) * tex_uv_scale;
         cursor_data.TexUvMax[1] = (pos + size) * tex_uv_scale;
     }
+}
+
+void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
+{
+    // Render into our custom data block
+    ImFontAtlasBuildRenderDefaultTexData(atlas);
+
+    // Register custom rectangle glyphs
+    for (int i = 0; i < atlas->CustomRects.Size; i++)
+    {
+        const ImFontAtlas::CustomRect& r = atlas->CustomRects[i];
+        if (r.Font == NULL || r.ID > 0x10000)
+            continue;
+
+        IM_ASSERT(r.Font->ContainerAtlas == atlas);
+        ImVec2 uv0, uv1;
+        atlas->CalcCustomRectUV(&r, &uv0, &uv1);
+        r.Font->AddGlyph((ImWchar)r.ID, r.GlyphOffset.x, r.GlyphOffset.y, r.GlyphOffset.x + r.Width, r.GlyphOffset.y + r.Height, uv0.x, uv0.y, uv1.x, uv1.y, r.GlyphAdvanceX);
+    }
+
+    // Build all fonts lookup tables
+    for (int i = 0; i < atlas->Fonts.Size; i++)
+        atlas->Fonts[i]->BuildLookupTable();
 }
 
 // Retrieve list of range (2 int per range, values are inclusive)
@@ -1858,10 +1883,10 @@ void    ImFont::Clear()
     FontSize = 0.0f;
     DisplayOffset = ImVec2(0.0f, 1.0f);
     Glyphs.clear();
-    IndexXAdvance.clear();
+    IndexAdvanceX.clear();
     IndexLookup.clear();
     FallbackGlyph = NULL;
-    FallbackXAdvance = 0.0f;
+    FallbackAdvanceX = 0.0f;
     ConfigDataCount = 0;
     ConfigData = NULL;
     ContainerAtlas = NULL;
@@ -1876,13 +1901,13 @@ void ImFont::BuildLookupTable()
         max_codepoint = ImMax(max_codepoint, (int)Glyphs[i].Codepoint);
 
     IM_ASSERT(Glyphs.Size < 0xFFFF); // -1 is reserved
-    IndexXAdvance.clear();
+    IndexAdvanceX.clear();
     IndexLookup.clear();
     GrowIndex(max_codepoint + 1);
     for (int i = 0; i < Glyphs.Size; i++)
     {
         int codepoint = (int)Glyphs[i].Codepoint;
-        IndexXAdvance[codepoint] = Glyphs[i].XAdvance;
+        IndexAdvanceX[codepoint] = Glyphs[i].AdvanceX;
         IndexLookup[codepoint] = (unsigned short)i;
     }
 
@@ -1892,20 +1917,20 @@ void ImFont::BuildLookupTable()
     {
         if (Glyphs.back().Codepoint != '\t')   // So we can call this function multiple times
             Glyphs.resize(Glyphs.Size + 1);
-        ImFont::Glyph& tab_glyph = Glyphs.back();
+        ImFontGlyph& tab_glyph = Glyphs.back();
         tab_glyph = *FindGlyph((unsigned short)' ');
         tab_glyph.Codepoint = '\t';
-        tab_glyph.XAdvance *= 4;
-        IndexXAdvance[(int)tab_glyph.Codepoint] = (float)tab_glyph.XAdvance;
+        tab_glyph.AdvanceX *= 4;
+        IndexAdvanceX[(int)tab_glyph.Codepoint] = (float)tab_glyph.AdvanceX;
         IndexLookup[(int)tab_glyph.Codepoint] = (unsigned short)(Glyphs.Size-1);
     }
 
     FallbackGlyph = NULL;
     FallbackGlyph = FindGlyph(FallbackChar);
-    FallbackXAdvance = FallbackGlyph ? FallbackGlyph->XAdvance : 0.0f;
+    FallbackAdvanceX = FallbackGlyph ? FallbackGlyph->AdvanceX : 0.0f;
     for (int i = 0; i < max_codepoint + 1; i++)
-        if (IndexXAdvance[i] < 0.0f)
-            IndexXAdvance[i] = FallbackXAdvance;
+        if (IndexAdvanceX[i] < 0.0f)
+            IndexAdvanceX[i] = FallbackAdvanceX;
 }
 
 void ImFont::SetFallbackChar(ImWchar c)
@@ -1916,11 +1941,33 @@ void ImFont::SetFallbackChar(ImWchar c)
 
 void ImFont::GrowIndex(int new_size)
 {
-    IM_ASSERT(IndexXAdvance.Size == IndexLookup.Size);
+    IM_ASSERT(IndexAdvanceX.Size == IndexLookup.Size);
     if (new_size <= IndexLookup.Size)
         return;
-    IndexXAdvance.resize(new_size, -1.0f);
+    IndexAdvanceX.resize(new_size, -1.0f);
     IndexLookup.resize(new_size, (unsigned short)-1);
+}
+
+void ImFont::AddGlyph(ImWchar codepoint, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float advance_x)
+{
+    Glyphs.resize(Glyphs.Size + 1);
+    ImFontGlyph& glyph = Glyphs.back();
+    glyph.Codepoint = (ImWchar)codepoint;
+    glyph.X0 = x0; 
+    glyph.Y0 = y0; 
+    glyph.X1 = x1; 
+    glyph.Y1 = y1;
+    glyph.U0 = u0; 
+    glyph.V0 = v0; 
+    glyph.U1 = u1; 
+    glyph.V1 = v1;
+    glyph.AdvanceX = advance_x + ConfigData->GlyphExtraSpacing.x;  // Bake spacing into AdvanceX
+
+    if (ConfigData->PixelSnapH)
+        glyph.AdvanceX = (float)(int)(glyph.AdvanceX + 0.5f);
+    
+    // Compute rough surface usage metrics (+1 to account for average padding, +0.99 to round)
+    MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * ContainerAtlas->TexWidth + 1.99f) * (int)((glyph.V1 - glyph.V0) * ContainerAtlas->TexHeight + 1.99f);
 }
 
 void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
@@ -1935,10 +1982,10 @@ void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
 
     GrowIndex(dst + 1);
     IndexLookup[dst] = (src < index_size) ? IndexLookup.Data[src] : (unsigned short)-1;
-    IndexXAdvance[dst] = (src < index_size) ? IndexXAdvance.Data[src] : 1.0f;
+    IndexAdvanceX[dst] = (src < index_size) ? IndexAdvanceX.Data[src] : 1.0f;
 }
 
-const ImFont::Glyph* ImFont::FindGlyph(unsigned short c) const
+const ImFontGlyph* ImFont::FindGlyph(unsigned short c) const
 {
     if (c < IndexLookup.Size)
     {
@@ -2003,7 +2050,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             }
         }
 
-        const float char_width = ((int)c < IndexXAdvance.Size ? IndexXAdvance[(int)c] : FallbackXAdvance);
+        const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX[(int)c] : FallbackAdvanceX);
         if (ImCharIsSpace(c))
         {
             if (inside_word)
@@ -2120,7 +2167,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 continue;
         }
 
-        const float char_width = ((int)c < IndexXAdvance.Size ? IndexXAdvance[(int)c] : FallbackXAdvance) * scale;
+        const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX[(int)c] : FallbackAdvanceX) * scale;
         if (line_width + char_width >= max_width)
         {
             s = prev_s;
@@ -2146,7 +2193,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 {
     if (c == ' ' || c == '\t' || c == '\n' || c == '\r') // Match behavior of RenderText(), those 4 codepoints are hard-coded.
         return;
-    if (const Glyph* glyph = FindGlyph(c))
+    if (const ImFontGlyph* glyph = FindGlyph(c))
     {
         float scale = (size >= 0.0f) ? (size / FontSize) : 1.0f;
         pos.x = (float)(int)pos.x + DisplayOffset.x;
@@ -2250,9 +2297,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         }
 
         float char_width = 0.0f;
-        if (const Glyph* glyph = FindGlyph((unsigned short)c))
+        if (const ImFontGlyph* glyph = FindGlyph((unsigned short)c))
         {
-            char_width = glyph->XAdvance * scale;
+            char_width = glyph->AdvanceX * scale;
 
             // Arbitrarily assume that both space and tabs are empty glyphs as an optimization
             if (c != ' ' && c != '\t')
