@@ -1413,18 +1413,28 @@ struct ImFontAtlas
     };
 
     //-------------------------------------------
-    // Custom Rectangles
+    // Custom Rectangles/Glyphs API
     //-------------------------------------------
 
-    // [Private] User rectangle for packing custom texture data into the atlas.
+    // You can request arbitrary rectangles to be packed into the atlas, for your own purposes. After calling Build(), you can query the rectangle position and render your pixels.
+    // You can also request your rectangles to be mapped as font glyph (given a font + Unicode point), so you can render e.g. custom colorful icons and use them as regular glyphs.
     struct CustomRect
     {
-        unsigned int    ID;             // Input    // User ID. <0x10000 for font mapped data (WIP/UNSUPPORTED), >=0x10000 for other texture data
+        unsigned int    ID;             // Input    // User ID. Use <0x10000 to map into a font glyph, >=0x10000 for other/internal/custom texture data.
         unsigned short  Width, Height;  // Input    // Desired rectangle dimension
         unsigned short  X, Y;           // Output   // Packed position in Atlas
-        CustomRect()            { ID = 0xFFFFFFFF; Width = Height = 0; X = Y = 0xFFFF; }
+        float           GlyphAdvanceX;  // Input    // For custom font glyphs only (ID<0x10000): glyph xadvance
+        ImVec2          GlyphOffset;    // Input    // For custom font glyphs only (ID<0x10000): glyph display offset
+        ImFont*         Font;           // Input    // For custom font glyphs only (ID<0x10000): target font
+        CustomRect()            { ID = 0xFFFFFFFF; Width = Height = 0; X = Y = 0xFFFF; GlyphAdvanceX = 0.0f; GlyphOffset = ImVec2(0,0); Font = NULL; }
         bool IsPacked() const   { return X != 0xFFFF; }
     };
+
+    IMGUI_API int       AddCustomRectRegular(unsigned int id, int width, int height);                                                                   // Id needs to be >= 0x10000. Id >= 0x80000000 are reserved for ImGui and ImDrawList
+    IMGUI_API int       AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0,0));   // Id needs to be < 0x10000 to register a rectangle to map into a specific font.
+    IMGUI_API void      ClearCustomRects();
+    IMGUI_API void      CalcCustomRectUV(const CustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max);
+    const CustomRect*   GetCustomRectByIndex(int index) const { if (index < 0) return NULL; return &CustomRects[index]; }
 
     //-------------------------------------------
     // Members
@@ -1444,8 +1454,7 @@ struct ImFontAtlas
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<CustomRect>        CustomRects;        // Rectangles for packing custom texture data into the atlas.
     ImVector<ImFontConfig>      ConfigData;         // Internal data
-    IMGUI_API int               CustomRectRegister(unsigned int id, int width, int height);
-    IMGUI_API void              CustomRectCalcUV(const CustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max);
+    int                         CustomRectIds[1];   // Identifiers of custom texture rectangle used by ImFontAtlas/ImDrawList
 };
 
 // Font runtime data and rendering
