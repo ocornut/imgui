@@ -1387,7 +1387,7 @@ struct ImFontAtlas
     IMGUI_API const ImWchar*    GetGlyphRangesCyrillic();   // Default + about 400 Cyrillic characters
     IMGUI_API const ImWchar*    GetGlyphRangesThai();       // Default + Thai characters
 
-    // Helpers to build glyph ranges from text data. Feed all your application strings/characters to it then call BuildRanges().
+    // Helpers to build glyph ranges from text data. Feed your application strings/characters to it then call BuildRanges().
     struct GlyphRangesBuilder
     {
         ImVector<unsigned char> UsedChars;  // Store 1-bit per Unicode code point (0=unused, 1=used)
@@ -1477,8 +1477,9 @@ struct ImFont
     IMGUI_API void              RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, unsigned short c) const;
     IMGUI_API void              RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false) const;
 
-    // Private
+    // [Private]
     IMGUI_API void              GrowIndex(int new_size);
+    IMGUI_API void              AddGlyph(ImWchar c, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float x_advance);
     IMGUI_API void              AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst = true); // Makes 'dst' character/glyph points to 'src' character/glyph. Currently needs to be called AFTER fonts have been built.
 };
 

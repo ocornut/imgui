@@ -1535,23 +1535,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
                 stbtt_aligned_quad q;
                 float dummy_x = 0.0f, dummy_y = 0.0f;
                 stbtt_GetPackedQuad(range.chardata_for_range, atlas->TexWidth, atlas->TexHeight, char_idx, &dummy_x, &dummy_y, &q, 0);
-
-                dst_font->Glyphs.resize(dst_font->Glyphs.Size + 1);
-                ImFont::Glyph& glyph = dst_font->Glyphs.back();
-                glyph.Codepoint = (ImWchar)codepoint;
-                glyph.X0 = q.x0 + off_x; 
-                glyph.Y0 = q.y0 + off_y; 
-                glyph.X1 = q.x1 + off_x; 
-                glyph.Y1 = q.y1 + off_y;
-                glyph.U0 = q.s0; 
-                glyph.V0 = q.t0; 
-                glyph.U1 = q.s1; 
-                glyph.V1 = q.t1;
-                glyph.XAdvance = (pc.xadvance + cfg.GlyphExtraSpacing.x);  // Bake spacing into XAdvance
-
-                if (cfg.PixelSnapH)
-                    glyph.XAdvance = (float)(int)(glyph.XAdvance + 0.5f);
-                dst_font->MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * atlas->TexWidth + 1.99f) * (int)((glyph.V1 - glyph.V0) * atlas->TexHeight + 1.99f); // +1 to account for average padding, +0.99 to round
+                dst_font->AddGlyph((ImWchar)codepoint, q.x0 + off_x, q.y0 + off_y, q.x1 + off_x, q.y1 + off_y, q.s0, q.t0, q.s1, q.t1, pc.xadvance);
             }
         }
         cfg.DstFont->BuildLookupTable();
@@ -1921,6 +1905,28 @@ void ImFont::GrowIndex(int new_size)
         return;
     IndexXAdvance.resize(new_size, -1.0f);
     IndexLookup.resize(new_size, (unsigned short)-1);
+}
+
+void ImFont::AddGlyph(ImWchar codepoint, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float x_advance)
+{
+    Glyphs.resize(Glyphs.Size + 1);
+    ImFont::Glyph& glyph = Glyphs.back();
+    glyph.Codepoint = (ImWchar)codepoint;
+    glyph.X0 = x0; 
+    glyph.Y0 = y0; 
+    glyph.X1 = x1; 
+    glyph.Y1 = y1;
+    glyph.U0 = u0; 
+    glyph.V0 = v0; 
+    glyph.U1 = u1; 
+    glyph.V1 = v1;
+    glyph.XAdvance = (x_advance + ConfigData->GlyphExtraSpacing.x);  // Bake spacing into XAdvance
+
+    if (ConfigData->PixelSnapH)
+        glyph.XAdvance = (float)(int)(glyph.XAdvance + 0.5f);
+    
+    // Compute rough surface usage metrics (+1 to account for average padding, +0.99 to round)
+    MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * ContainerAtlas->TexWidth + 1.99f) * (int)((glyph.V1 - glyph.V0) * ContainerAtlas->TexHeight + 1.99f);
 }
 
 void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
