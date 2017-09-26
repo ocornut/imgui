@@ -48,6 +48,7 @@ typedef int ImGuiLayoutType;      // enum ImGuiLayoutType_
 typedef int ImGuiButtonFlags;     // enum ImGuiButtonFlags_
 typedef int ImGuiTreeNodeFlags;   // enum ImGuiTreeNodeFlags_
 typedef int ImGuiSliderFlags;     // enum ImGuiSliderFlags_
+typedef int ImGuiSeparatorFlags;  // enum ImGuiSeparatorFlags_
 typedef int ImGuiItemFlags;       // enum ImGuiItemFlags_
 
 //-------------------------------------------------------------------------
@@ -201,6 +202,12 @@ enum ImGuiSelectableFlagsPrivate_
     ImGuiSelectableFlags_MenuItem           = 1 << 4,
     ImGuiSelectableFlags_Disabled           = 1 << 5,
     ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 6
+};
+
+enum ImGuiSeparatorFlags_
+{
+    ImGuiSeparatorFlags_Horizontal          = 1 << 0,   // Axis default to current layout type, so generally Horizontal unless e.g. in a menu bar
+    ImGuiSeparatorFlags_Vertical            = 1 << 1
 };
 
 // FIXME: this is in development, not exposed/functional as a generic feature yet.
