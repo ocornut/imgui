@@ -1369,21 +1369,25 @@ struct ImFontAtlas
     IMGUI_API void              ClearFonts();               // Clear the ImGui-side font data (glyphs storage, UV coordinates)
     IMGUI_API void              Clear();                    // Clear all
 
-    // Retrieve texture data
-    // User is in charge of copying the pixels into graphics memory, then call SetTextureUserID()
-    // After loading the texture into your graphic system, store your texture handle in 'TexID' (ignore if you aren't using multiple fonts nor images)
+    // Build atlas, retrieve pixel data.
+    // User is in charge of copying the pixels into graphics memory (e.g. create a texture with your engine). Then store your texture handle with SetTexID().
     // RGBA32 format is provided for convenience and high compatibility, but note that all RGB pixels are white, so 75% of the memory is wasted.
     // Pitch = Width * BytesPerPixels
+    IMGUI_API bool              Build();                    // Build pixels data. This is called automatically for you by the GetTexData*** functions.
     IMGUI_API void              GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 1 byte per-pixel
     IMGUI_API void              GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 4 bytes-per-pixel
     void                        SetTexID(ImTextureID id)  { TexID = id; }
+
+    //-------------------------------------------
+    // Glyph Ranges
+    //-------------------------------------------
 
     // Helpers to retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
     // NB: Make sure that your string are UTF-8 and NOT in your local code page. In C++11, you can create UTF-8 string literal using the u8"Hello world" syntax. See FAQ for details.
     IMGUI_API const ImWchar*    GetGlyphRangesDefault();    // Basic Latin, Extended Latin
     IMGUI_API const ImWchar*    GetGlyphRangesKorean();     // Default + Korean characters
     IMGUI_API const ImWchar*    GetGlyphRangesJapanese();   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
-    IMGUI_API const ImWchar*    GetGlyphRangesChinese();    // Japanese + full set of about 21000 CJK Unified Ideographs
+    IMGUI_API const ImWchar*    GetGlyphRangesChinese();    // Default + Japanese + full set of about 21000 CJK Unified Ideographs
     IMGUI_API const ImWchar*    GetGlyphRangesCyrillic();   // Default + about 400 Cyrillic characters
     IMGUI_API const ImWchar*    GetGlyphRangesThai();       // Default + Thai characters
 
@@ -1400,17 +1404,9 @@ struct ImFontAtlas
         IMGUI_API void BuildRanges(ImVector<ImWchar>* out_ranges);                  // Output new ranges
     };
 
-    // Members
-    // (Access texture data via GetTexData*() calls which will setup a default font for you.)
-    ImTextureID                 TexID;              // User data to refer to the texture once it has been uploaded to user's graphic systems. It is passed back to you during rendering via the ImDrawCmd structure.
-    unsigned char*              TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
-    unsigned int*               TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
-    int                         TexWidth;           // Texture width calculated during Build().
-    int                         TexHeight;          // Texture height calculated during Build().
-    int                         TexDesiredWidth;    // Texture width desired by user before Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height.
-    int                         TexGlyphPadding;    // Padding between glyphs within texture in pixels. Defaults to 1.
-    ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel
-    ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
+    //-------------------------------------------
+    // Custom Rectangles
+    //-------------------------------------------
 
     // [Private] User rectangle for packing custom texture data into the atlas.
     struct CustomRect
@@ -1422,10 +1418,24 @@ struct ImFontAtlas
         bool IsPacked() const   { return X != 0xFFFF; }
     };
 
-    // [Private] Members
+    //-------------------------------------------
+    // Members
+    //-------------------------------------------
+
+    ImTextureID                 TexID;              // User data to refer to the texture once it has been uploaded to user's graphic systems. It is passed back to you during rendering via the ImDrawCmd structure.
+    int                         TexDesiredWidth;    // Texture width desired by user before Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height.
+    int                         TexGlyphPadding;    // Padding between glyphs within texture in pixels. Defaults to 1.
+
+    // [Private]
+    // NB: Access texture data via GetTexData*() calls! Which will setup a default font for you.
+    unsigned char*              TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
+    unsigned int*               TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
+    int                         TexWidth;           // Texture width calculated during Build().
+    int                         TexHeight;          // Texture height calculated during Build().
+    ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel
+    ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<CustomRect>        CustomRects;        // Rectangles for packing custom texture data into the atlas.
     ImVector<ImFontConfig>      ConfigData;         // Internal data
-    IMGUI_API bool              Build();            // Build pixels data. This is automatically for you by the GetTexData*** functions.
     IMGUI_API int               CustomRectRegister(unsigned int id, int width, int height);
     IMGUI_API void              CustomRectCalcUV(const CustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max);
 };
@@ -1438,7 +1448,7 @@ struct ImFont
     {
         ImWchar                 Codepoint;
         float                   XAdvance;
-        float                   X0, Y0, X1, Y1;
+        float                   X0, Y0, X1, Y1;     // Glyph corners
         float                   U0, V0, U1, V1;     // Texture coordinates
     };
 
