@@ -627,7 +627,6 @@
 
 static void             LogRenderedText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
 
-static void             PushMultiItemsWidths(int components, float w_full = 0.0f);
 static float            GetDraggedColumnOffset(int column_index);
 
 static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
@@ -1986,16 +1985,20 @@ void ImGui::ItemSize(const ImVec2& size, float text_offset_y)
     ImGuiContext& g = *GImGui;
     const float line_height = ImMax(window->DC.CurrentLineHeight, size.y);
     const float text_base_offset = ImMax(window->DC.CurrentLineTextBaseOffset, text_offset_y);
+    //if (g.IO.KeyAlt) window->DrawList->AddRect(window->DC.CursorPos, window->DC.CursorPos + ImVec2(size.x, line_height), IM_COL32(255,0,0,200)); // [DEBUG]
     window->DC.CursorPosPrevLine = ImVec2(window->DC.CursorPos.x + size.x, window->DC.CursorPos.y);
     window->DC.CursorPos = ImVec2((float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX), (float)(int)(window->DC.CursorPos.y + line_height + g.Style.ItemSpacing.y));
     window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, window->DC.CursorPosPrevLine.x);
     window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y);
-
-    //window->DrawList->AddCircle(window->DC.CursorMaxPos, 3.0f, IM_COL32(255,0,0,255), 4); // Debug
+    //if (g.IO.KeyAlt) window->DrawList->AddCircle(window->DC.CursorMaxPos, 3.0f, IM_COL32(255,0,0,255), 4); // [DEBUG]
 
     window->DC.PrevLineHeight = line_height;
     window->DC.PrevLineTextBaseOffset = text_base_offset;
     window->DC.CurrentLineHeight = window->DC.CurrentLineTextBaseOffset = 0.0f;
+
+    // Horizontal layout mode
+    if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
+        SameLine();
 }
 
 void ImGui::ItemSize(const ImRect& bb, float text_offset_y)
@@ -2207,6 +2210,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
 
     if (is_clipped)
         return false;
+    //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
 
     // Setting LastItemHoveredAndUsable for IsItemHovered(). This is a sensible default, but widgets are free to override it.
     if (IsMouseHoveringRect(bb.Min, bb.Max))
@@ -2969,7 +2973,7 @@ void ImGui::NewFrame()
     if (g.WantCaptureMouseNextFrame != -1)
         g.IO.WantCaptureMouse = (g.WantCaptureMouseNextFrame != 0);
     else
-        g.IO.WantCaptureMouse = (mouse_avail_to_imgui && (g.HoveredWindow != NULL || mouse_any_down)) || (g.ActiveId != 0) || (!g.OpenPopupStack.empty());
+        g.IO.WantCaptureMouse = (mouse_avail_to_imgui && (g.HoveredWindow != NULL || mouse_any_down)) || (!g.OpenPopupStack.empty());
     g.IO.WantCaptureKeyboard = (g.WantCaptureKeyboardNextFrame != -1) ? (g.WantCaptureKeyboardNextFrame != 0) : (g.ActiveId != 0);
     g.IO.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : 0;
     g.MouseCursor = ImGuiMouseCursor_Arrow;
@@ -5501,12 +5505,12 @@ void ImGui::PushItemWidth(float item_width)
     window->DC.ItemWidthStack.push_back(window->DC.ItemWidth);
 }
 
-static void PushMultiItemsWidths(int components, float w_full)
+void ImGui::PushMultiItemsWidths(int components, float w_full)
 {
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindow();
     const ImGuiStyle& style = GImGui->Style;
     if (w_full <= 0.0f)
-        w_full = ImGui::CalcItemWidth();
+        w_full = CalcItemWidth();
     const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.ItemInnerSpacing.x) * (components-1)) / (float)components));
     const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.ItemInnerSpacing.x) * (components-1)));
     window->DC.ItemWidthStack.push_back(w_item_last);
@@ -9977,17 +9981,19 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     ImVec2 popup_pos, pos = window->DC.CursorPos;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
+        // Menu inside an horizontal menu bar
+        // Selectable extend their highlight by half ItemSpacing in each direction.
         popup_pos = ImVec2(pos.x - window->WindowPadding.x, pos.y - style.FramePadding.y + window->MenuBarHeight());
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
         PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
         float w = label_size.x;
         pressed = Selectable(label, menu_is_open, ImGuiSelectableFlags_Menu | ImGuiSelectableFlags_DontClosePopups | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(w, 0.0f));
         PopStyleVar();
-        SameLine();
-        window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
+        window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * (-1.0f + 0.5f)); // -1 spacing to compensate the spacing added when Selectable() did a SameLine(). It would also work to call SameLine() ourselves after the PopStyleVar().
     }
     else
     {
+        // Menu inside a menu
         popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
         float w = window->MenuColumns.DeclColumns(label_size.x, 0.0f, (float)(int)(g.FontSize * 1.20f)); // Feedback to next frame
         float extra_w = ImMax(0.0f, GetContentRegionAvail().x - w);
@@ -10831,37 +10837,62 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
 // Horizontal separating line.
 void ImGui::Separator()
 {
+    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
 
-    if (window->DC.ColumnsCount > 1)
-        PopClipRect();
+    ImGuiWindowFlags flags = 0;
+    if ((flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical)) == 0)
+    {
+        if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
+            flags |= ImGuiSeparatorFlags_Vertical;
+        else
+            flags |= ImGuiSeparatorFlags_Horizontal;
+    }
+    IM_ASSERT(ImIsPowerOfTwo((int)(flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical))));   // Check that only 1 option is selected
 
-    float x1 = window->Pos.x;
-    float x2 = window->Pos.x + window->Size.x;
-    if (!window->DC.GroupStack.empty())
-        x1 += window->DC.IndentX;
-
-    const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y+1.0f));
-    ItemSize(ImVec2(0.0f, 0.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit, we don't provide height to not alter layout.
-    if (!ItemAdd(bb, NULL))
+    if (flags & ImGuiSeparatorFlags_Horizontal)
     {
         if (window->DC.ColumnsCount > 1)
+            PopClipRect();
+
+        float x1 = window->Pos.x;
+        float x2 = window->Pos.x + window->Size.x;
+        if (!window->DC.GroupStack.empty())
+            x1 += window->DC.IndentX;
+
+        const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y+1.0f));
+        ItemSize(ImVec2(0.0f, 0.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit, we don't provide height to not alter layout.
+        if (!ItemAdd(bb, NULL))
+        {
+            if (window->DC.ColumnsCount > 1)
+                PushColumnClipRect();
+            return;
+        }
+
+        window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x,bb.Min.y), GetColorU32(ImGuiCol_Separator));
+
+        if (g.LogEnabled)
+            LogText(IM_NEWLINE "--------------------------------");
+
+        if (window->DC.ColumnsCount > 1)
+        {
             PushColumnClipRect();
-        return;
+            window->DC.ColumnsCellMinY = window->DC.CursorPos.y;
+        }
     }
-
-    window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x,bb.Min.y), GetColorU32(ImGuiCol_Separator));
-
-    ImGuiContext& g = *GImGui;
-    if (g.LogEnabled)
-        LogText(IM_NEWLINE "--------------------------------");
-
-    if (window->DC.ColumnsCount > 1)
+    else if (flags & ImGuiSeparatorFlags_Vertical)
     {
-        PushColumnClipRect();
-        window->DC.ColumnsCellMinY = window->DC.CursorPos.y;
+        const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(1.0f, window->DC.CurrentLineHeight));
+        ItemSize(ImVec2(bb.GetWidth(), 0.0f));
+        if (!ItemAdd(bb, NULL))
+            return;
+
+        window->DrawList->AddLine(ImVec2(bb.Min.x, bb.Min.y), ImVec2(bb.Min.x, bb.Max.y), GetColorU32(ImGuiCol_Separator));
+
+        if (g.LogEnabled)
+            LogText("|");
     }
 }
 
@@ -10994,10 +11025,15 @@ void ImGui::NewLine()
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiLayoutType backup_layout_type = window->DC.LayoutType;
+    window->DC.LayoutType = ImGuiLayoutType_Vertical;
     if (window->DC.CurrentLineHeight > 0.0f)     // In the event that we are on a line with items that is smaller that FontSize high, we will preserve its height.
         ItemSize(ImVec2(0,0));
     else
-        ItemSize(ImVec2(0.0f, GImGui->FontSize));
+        ItemSize(ImVec2(0.0f, g.FontSize));
+    window->DC.LayoutType = backup_layout_type;
 }
 
 void ImGui::NextColumn()
