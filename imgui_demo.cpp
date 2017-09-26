@@ -1951,7 +1951,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                                     ImGui::BeginTooltip();
                                     ImGui::Text("Codepoint: U+%04X", base+n);
                                     ImGui::Separator();
-                                    ImGui::Text("XAdvance+1: %.1f", glyph->XAdvance);
+                                    ImGui::Text("AdvanceX: %.1f", glyph->AdvanceX);
                                     ImGui::Text("Pos: (%.2f,%.2f)->(%.2f,%.2f)", glyph->X0, glyph->Y0, glyph->X1, glyph->Y1);
                                     ImGui::Text("UV: (%.3f,%.3f)->(%.3f,%.3f)", glyph->U0, glyph->V0, glyph->U1, glyph->V1);
                                     ImGui::EndTooltip();

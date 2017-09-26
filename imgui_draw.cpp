@@ -1851,10 +1851,10 @@ void    ImFont::Clear()
     FontSize = 0.0f;
     DisplayOffset = ImVec2(0.0f, 1.0f);
     Glyphs.clear();
-    IndexXAdvance.clear();
+    IndexAdvanceX.clear();
     IndexLookup.clear();
     FallbackGlyph = NULL;
-    FallbackXAdvance = 0.0f;
+    FallbackAdvanceX = 0.0f;
     ConfigDataCount = 0;
     ConfigData = NULL;
     ContainerAtlas = NULL;
@@ -1869,13 +1869,13 @@ void ImFont::BuildLookupTable()
         max_codepoint = ImMax(max_codepoint, (int)Glyphs[i].Codepoint);
 
     IM_ASSERT(Glyphs.Size < 0xFFFF); // -1 is reserved
-    IndexXAdvance.clear();
+    IndexAdvanceX.clear();
     IndexLookup.clear();
     GrowIndex(max_codepoint + 1);
     for (int i = 0; i < Glyphs.Size; i++)
     {
         int codepoint = (int)Glyphs[i].Codepoint;
-        IndexXAdvance[codepoint] = Glyphs[i].XAdvance;
+        IndexAdvanceX[codepoint] = Glyphs[i].AdvanceX;
         IndexLookup[codepoint] = (unsigned short)i;
     }
 
@@ -1888,17 +1888,17 @@ void ImFont::BuildLookupTable()
         ImFontGlyph& tab_glyph = Glyphs.back();
         tab_glyph = *FindGlyph((unsigned short)' ');
         tab_glyph.Codepoint = '\t';
-        tab_glyph.XAdvance *= 4;
-        IndexXAdvance[(int)tab_glyph.Codepoint] = (float)tab_glyph.XAdvance;
+        tab_glyph.AdvanceX *= 4;
+        IndexAdvanceX[(int)tab_glyph.Codepoint] = (float)tab_glyph.AdvanceX;
         IndexLookup[(int)tab_glyph.Codepoint] = (unsigned short)(Glyphs.Size-1);
     }
 
     FallbackGlyph = NULL;
     FallbackGlyph = FindGlyph(FallbackChar);
-    FallbackXAdvance = FallbackGlyph ? FallbackGlyph->XAdvance : 0.0f;
+    FallbackAdvanceX = FallbackGlyph ? FallbackGlyph->AdvanceX : 0.0f;
     for (int i = 0; i < max_codepoint + 1; i++)
-        if (IndexXAdvance[i] < 0.0f)
-            IndexXAdvance[i] = FallbackXAdvance;
+        if (IndexAdvanceX[i] < 0.0f)
+            IndexAdvanceX[i] = FallbackAdvanceX;
 }
 
 void ImFont::SetFallbackChar(ImWchar c)
@@ -1909,14 +1909,14 @@ void ImFont::SetFallbackChar(ImWchar c)
 
 void ImFont::GrowIndex(int new_size)
 {
-    IM_ASSERT(IndexXAdvance.Size == IndexLookup.Size);
+    IM_ASSERT(IndexAdvanceX.Size == IndexLookup.Size);
     if (new_size <= IndexLookup.Size)
         return;
-    IndexXAdvance.resize(new_size, -1.0f);
+    IndexAdvanceX.resize(new_size, -1.0f);
     IndexLookup.resize(new_size, (unsigned short)-1);
 }
 
-void ImFont::AddGlyph(ImWchar codepoint, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float x_advance)
+void ImFont::AddGlyph(ImWchar codepoint, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float advance_x)
 {
     Glyphs.resize(Glyphs.Size + 1);
     ImFontGlyph& glyph = Glyphs.back();
@@ -1929,10 +1929,10 @@ void ImFont::AddGlyph(ImWchar codepoint, float x0, float y0, float x1, float y1,
     glyph.V0 = v0; 
     glyph.U1 = u1; 
     glyph.V1 = v1;
-    glyph.XAdvance = (x_advance + ConfigData->GlyphExtraSpacing.x);  // Bake spacing into XAdvance
+    glyph.AdvanceX = (advance_x + ConfigData->GlyphExtraSpacing.x);  // Bake spacing into AdvanceX
 
     if (ConfigData->PixelSnapH)
-        glyph.XAdvance = (float)(int)(glyph.XAdvance + 0.5f);
+        glyph.AdvanceX = (float)(int)(glyph.AdvanceX + 0.5f);
     
     // Compute rough surface usage metrics (+1 to account for average padding, +0.99 to round)
     MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * ContainerAtlas->TexWidth + 1.99f) * (int)((glyph.V1 - glyph.V0) * ContainerAtlas->TexHeight + 1.99f);
@@ -1950,7 +1950,7 @@ void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
 
     GrowIndex(dst + 1);
     IndexLookup[dst] = (src < index_size) ? IndexLookup.Data[src] : (unsigned short)-1;
-    IndexXAdvance[dst] = (src < index_size) ? IndexXAdvance.Data[src] : 1.0f;
+    IndexAdvanceX[dst] = (src < index_size) ? IndexAdvanceX.Data[src] : 1.0f;
 }
 
 const ImFontGlyph* ImFont::FindGlyph(unsigned short c) const
@@ -2018,7 +2018,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             }
         }
 
-        const float char_width = ((int)c < IndexXAdvance.Size ? IndexXAdvance[(int)c] : FallbackXAdvance);
+        const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX[(int)c] : FallbackAdvanceX);
         if (ImCharIsSpace(c))
         {
             if (inside_word)
@@ -2135,7 +2135,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 continue;
         }
 
-        const float char_width = ((int)c < IndexXAdvance.Size ? IndexXAdvance[(int)c] : FallbackXAdvance) * scale;
+        const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX[(int)c] : FallbackAdvanceX) * scale;
         if (line_width + char_width >= max_width)
         {
             s = prev_s;
@@ -2267,7 +2267,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         float char_width = 0.0f;
         if (const ImFontGlyph* glyph = FindGlyph((unsigned short)c))
         {
-            char_width = glyph->XAdvance * scale;
+            char_width = glyph->AdvanceX * scale;
 
             // Arbitrarily assume that both space and tabs are empty glyphs as an optimization
             if (c != ' ' && c != '\t')
