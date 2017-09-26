@@ -8632,7 +8632,10 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImVec2 popu
         return false;
 
     const float arrow_size = SmallSquareSize();
-    const bool hovered = IsHovered(frame_bb, id);
+
+    bool hovered, held;
+    bool pressed = ButtonBehavior(frame_bb, id, &hovered, &held);
+
     bool popup_open = IsPopupOpen(id);
 
     const ImRect value_bb(frame_bb.Min, frame_bb.Max - ImVec2(arrow_size, 0.0f));
@@ -8646,28 +8649,10 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImVec2 popu
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
 
-    bool popup_toggled = false;
-    if (hovered)
+    if (pressed && !popup_open)
     {
-        SetHoveredID(id);
-        if (g.IO.MouseClicked[0])
-        {
-            ClearActiveID();
-            popup_toggled = true;
-        }
-    }
-    if (popup_toggled)
-    {
-        if (popup_open)
-        {
-            ClosePopup(id);
-        }
-        else
-        {
-            FocusWindow(window);
-            OpenPopupEx(id, false);
-        }
-        popup_open = !popup_open;
+        OpenPopupEx(id, false);
+        popup_open = true;
     }
 
     if (!popup_open)
