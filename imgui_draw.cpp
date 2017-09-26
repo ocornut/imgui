@@ -1539,7 +1539,6 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
                 dst_font->AddGlyph((ImWchar)codepoint, q.x0 + off_x, q.y0 + off_y, q.x1 + off_x, q.y1 + off_y, q.s0, q.t0, q.s1, q.t1, pc.xadvance);
             }
         }
-        cfg.DstFont->BuildLookupTable();
     }
 
     // Cleanup temporaries
@@ -1547,8 +1546,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     ImGui::MemFree(buf_ranges);
     ImGui::MemFree(tmp_array);
 
-    // Render into our custom data block
-    ImFontAtlasBuildRenderDefaultTexData(atlas);
+    ImFontAtlasBuildFinish(atlas);
 
     return true;
 }
@@ -1600,7 +1598,7 @@ void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* pack_context_opaq
         }
 }
 
-void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
+static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
 {
     ImFontAtlas::CustomRect& r = atlas->CustomRects[0];
     IM_ASSERT(r.ID == FONT_ATLAS_DEFAULT_TEX_DATA_ID);
@@ -1648,6 +1646,16 @@ void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
         cursor_data.TexUvMin[1] = (pos) * tex_uv_scale;
         cursor_data.TexUvMax[1] = (pos + size) * tex_uv_scale;
     }
+}
+
+void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
+{
+    // Render into our custom data block
+    ImFontAtlasBuildRenderDefaultTexData(atlas);
+
+    // Build all fonts lookup tables
+    for (int i = 0; i < atlas->Fonts.Size; i++)
+        atlas->Fonts[i]->BuildLookupTable();
 }
 
 // Retrieve list of range (2 int per range, values are inclusive)
