@@ -1922,6 +1922,10 @@ void ImGui::ItemSize(const ImVec2& size, float text_offset_y)
     window->DC.PrevLineHeight = line_height;
     window->DC.PrevLineTextBaseOffset = text_base_offset;
     window->DC.CurrentLineHeight = window->DC.CurrentLineTextBaseOffset = 0.0f;
+
+    // Horizontal layout mode
+    if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
+        SameLine();
 }
 
 void ImGui::ItemSize(const ImRect& bb, float text_offset_y)
@@ -9062,8 +9066,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         float w = label_size.x;
         pressed = Selectable(label, menu_is_open, ImGuiSelectableFlags_Menu | ImGuiSelectableFlags_DontClosePopups | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(w, 0.0f));
         PopStyleVar();
-        SameLine();
-        window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
+        window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * (-1.0f + 0.5f)); // -1 spacing to compensate the spacing added when Selectable() did a SameLine(). It would also work to call SameLine() ourselves after the PopStyleVar().
     }
     else
     {
@@ -10053,10 +10056,15 @@ void ImGui::NewLine()
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiLayoutType backup_layout_type = window->DC.LayoutType;
+    window->DC.LayoutType = ImGuiLayoutType_Vertical;
     if (window->DC.CurrentLineHeight > 0.0f)     // In the event that we are on a line with items that is smaller that FontSize high, we will preserve its height.
         ItemSize(ImVec2(0,0));
     else
-        ItemSize(ImVec2(0.0f, GImGui->FontSize));
+        ItemSize(ImVec2(0.0f, g.FontSize));
+    window->DC.LayoutType = backup_layout_type;
 }
 
 void ImGui::NextColumn()
