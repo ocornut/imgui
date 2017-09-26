@@ -1885,7 +1885,7 @@ void ImFont::BuildLookupTable()
     {
         if (Glyphs.back().Codepoint != '\t')   // So we can call this function multiple times
             Glyphs.resize(Glyphs.Size + 1);
-        ImFont::Glyph& tab_glyph = Glyphs.back();
+        ImFontGlyph& tab_glyph = Glyphs.back();
         tab_glyph = *FindGlyph((unsigned short)' ');
         tab_glyph.Codepoint = '\t';
         tab_glyph.XAdvance *= 4;
@@ -1919,7 +1919,7 @@ void ImFont::GrowIndex(int new_size)
 void ImFont::AddGlyph(ImWchar codepoint, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float x_advance)
 {
     Glyphs.resize(Glyphs.Size + 1);
-    ImFont::Glyph& glyph = Glyphs.back();
+    ImFontGlyph& glyph = Glyphs.back();
     glyph.Codepoint = (ImWchar)codepoint;
     glyph.X0 = x0; 
     glyph.Y0 = y0; 
@@ -1953,7 +1953,7 @@ void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
     IndexXAdvance[dst] = (src < index_size) ? IndexXAdvance.Data[src] : 1.0f;
 }
 
-const ImFont::Glyph* ImFont::FindGlyph(unsigned short c) const
+const ImFontGlyph* ImFont::FindGlyph(unsigned short c) const
 {
     if (c < IndexLookup.Size)
     {
@@ -2161,7 +2161,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 {
     if (c == ' ' || c == '\t' || c == '\n' || c == '\r') // Match behavior of RenderText(), those 4 codepoints are hard-coded.
         return;
-    if (const Glyph* glyph = FindGlyph(c))
+    if (const ImFontGlyph* glyph = FindGlyph(c))
     {
         float scale = (size >= 0.0f) ? (size / FontSize) : 1.0f;
         pos.x = (float)(int)pos.x + DisplayOffset.x;
@@ -2265,7 +2265,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         }
 
         float char_width = 0.0f;
-        if (const Glyph* glyph = FindGlyph((unsigned short)c))
+        if (const ImFontGlyph* glyph = FindGlyph((unsigned short)c))
         {
             char_width = glyph->XAdvance * scale;
 

@@ -1332,7 +1332,7 @@ struct ImFontConfig
     float           SizePixels;                 //          // Size in pixels for rasterizer.
     int             OversampleH, OversampleV;   // 3, 1     // Rasterize at higher quality for sub-pixel positioning. We don't use sub-pixel positions on the Y axis.
     bool            PixelSnapH;                 // false    // Align every glyph to pixel boundary. Useful e.g. if you are merging a non-pixel aligned font with the default font. If enabled, you can set OversampleH/V to 1.
-    ImVec2          GlyphExtraSpacing;          // 0, 0     // Extra spacing (in pixels) between glyphs. Only X axis is supported for now.
+    ImVec2          GlyphExtraSpacing;          // 1, 0     // Extra spacing (in pixels) between glyphs. Only X axis is supported for now.
     ImVec2          GlyphOffset;                // 0, 0     // Offset all glyphs from this font input.
     const ImWchar*  GlyphRanges;                // NULL     // Pointer to a user-provided list of Unicode range (2 value per range, values are inclusive, zero-terminated list). THE ARRAY DATA NEEDS TO PERSIST AS LONG AS THE FONT IS ALIVE.
     bool            MergeMode;                  // false    // Merge into previous ImFont, so you can combine multiple inputs font into one ImFont (e.g. ASCII font + icons + Japanese glyphs). You may want to use GlyphOffset.y when merge font of different heights.
@@ -1344,6 +1344,14 @@ struct ImFontConfig
     ImFont*         DstFont;
 
     IMGUI_API ImFontConfig();
+};
+
+struct ImFontGlyph
+{
+    ImWchar         Codepoint;          // 0x0000..0xFFFF
+    float           XAdvance;           // Distance to next character (= data from font + ImFontConfig::GlyphExtraSpacing.x baked in)
+    float           X0, Y0, X1, Y1;     // Glyph corners
+    float           U0, V0, U1, V1;     // Texture coordinates
 };
 
 // Load and rasterize multiple TTF/OTF fonts into a same texture.
@@ -1444,22 +1452,14 @@ struct ImFontAtlas
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
 struct ImFont
 {
-    struct Glyph
-    {
-        ImWchar                 Codepoint;
-        float                   XAdvance;
-        float                   X0, Y0, X1, Y1;     // Glyph corners
-        float                   U0, V0, U1, V1;     // Texture coordinates
-    };
-
     // Members: Hot ~62/78 bytes
     float                       FontSize;           // <user set>   // Height of characters, set during loading (don't change after loading)
     float                       Scale;              // = 1.f        // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
     ImVec2                      DisplayOffset;      // = (0.f,1.f)  // Offset font rendering by xx pixels
-    ImVector<Glyph>             Glyphs;             //              // All glyphs.
+    ImVector<ImFontGlyph>       Glyphs;             //              // All glyphs.
     ImVector<float>             IndexXAdvance;      //              // Sparse. Glyphs->XAdvance in a directly indexable way (more cache-friendly, for CalcTextSize functions which are often bottleneck in large UI).
     ImVector<unsigned short>    IndexLookup;        //              // Sparse. Index glyphs by Unicode code-point.
-    const Glyph*                FallbackGlyph;      // == FindGlyph(FontFallbackChar)
+    const ImFontGlyph*          FallbackGlyph;      // == FindGlyph(FontFallbackChar)
     float                       FallbackXAdvance;   // == FallbackGlyph->XAdvance
     ImWchar                     FallbackChar;       // = '?'        // Replacement glyph if one isn't found. Only set via SetFallbackChar()
 
@@ -1475,7 +1475,7 @@ struct ImFont
     IMGUI_API ~ImFont();
     IMGUI_API void              Clear();
     IMGUI_API void              BuildLookupTable();
-    IMGUI_API const Glyph*      FindGlyph(ImWchar c) const;
+    IMGUI_API const ImFontGlyph*FindGlyph(ImWchar c) const;
     IMGUI_API void              SetFallbackChar(ImWchar c);
     float                       GetCharAdvance(ImWchar c) const     { return ((int)c < IndexXAdvance.Size) ? IndexXAdvance[(int)c] : FallbackXAdvance; }
     bool                        IsLoaded() const                    { return ContainerAtlas != NULL; }
@@ -1491,6 +1491,10 @@ struct ImFont
     IMGUI_API void              GrowIndex(int new_size);
     IMGUI_API void              AddGlyph(ImWchar c, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float x_advance);
     IMGUI_API void              AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst = true); // Makes 'dst' character/glyph points to 'src' character/glyph. Currently needs to be called AFTER fonts have been built.
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    typedef ImFontGlyph Glyph; // OBSOLETE 1.52+
+#endif
 };
 
 #if defined(__clang__)
