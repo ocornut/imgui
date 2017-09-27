@@ -2230,15 +2230,12 @@ void ImGui::NewFrame()
     {
         KeepAliveID(g.MovedWindowMoveId);
         IM_ASSERT(g.MovedWindow && g.MovedWindow->RootWindow);
-        IM_ASSERT(g.MovedWindow->RootWindow->MoveId == g.MovedWindowMoveId);
+        IM_ASSERT(g.MovedWindow->MoveId == g.MovedWindowMoveId);
         if (g.IO.MouseDown[0])
         {
-            if (!(g.MovedWindow->Flags & ImGuiWindowFlags_NoMove))
-            {
-                g.MovedWindow->PosFloat += g.IO.MouseDelta;
-                if (g.IO.MouseDelta.x != 0.0f || g.IO.MouseDelta.y != 0.0f)
-                    MarkIniSettingsDirty(g.MovedWindow);
-            }
+            g.MovedWindow->RootWindow->PosFloat += g.IO.MouseDelta;
+            if (g.IO.MouseDelta.x != 0.0f || g.IO.MouseDelta.y != 0.0f)
+                MarkIniSettingsDirty(g.MovedWindow->RootWindow);
             FocusWindow(g.MovedWindow);
         }
         else
@@ -2704,7 +2701,7 @@ void ImGui::EndFrame()
                 if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
                 {
                     g.MovedWindow = g.HoveredWindow;
-                    g.MovedWindowMoveId = g.HoveredRootWindow->MoveId;
+                    g.MovedWindowMoveId = g.HoveredWindow->MoveId;
                     SetActiveID(g.MovedWindowMoveId, g.HoveredRootWindow);
                 }
             }
