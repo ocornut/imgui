@@ -1961,7 +1961,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
     return true;
 }
 
-// This is roughly matching the behavior of internal-facing IsHovered()
+// This is roughly matching the behavior of internal-facing ItemHoverable() which is 
 // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
 bool ImGui::IsItemHovered()
 {
@@ -1985,8 +1985,8 @@ bool ImGui::IsItemRectHovered()
     return IsMouseHoveringRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max);
 }
 
-// Internal facing IsHovered() differs slightly from IsItemHovered().
-bool ImGui::IsHovered(const ImRect& bb, ImGuiID id)
+// Internal facing ItemHoverable() used when submitting widgets. Differs slightly from IsItemHovered().
+bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     if (g.HoveredId != 0 && g.HoveredId != id && !g.HoveredIdAllowOverlap)
@@ -2001,6 +2001,8 @@ bool ImGui::IsHovered(const ImRect& bb, ImGuiID id)
         return false;
     if (!IsWindowContentHoverable(window))
         return false;
+
+    SetHoveredID(id);
     return true;
 }
 
@@ -5683,14 +5685,13 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         g.HoveredWindow = window;
 
     bool pressed = false;
-    bool hovered = IsHovered(bb, id);
+    bool hovered = ItemHoverable(bb, id);
 
     if ((flags & ImGuiButtonFlags_FlattenChilds) && g.HoveredRootWindow == window)
         g.HoveredWindow = backup_hovered_window;
 
     if (hovered)
     {
-        SetHoveredID(id);
         if (!(flags & ImGuiButtonFlags_NoKeyModifiers) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
             //                        | CLICKING        | HOLDING with ImGuiButtonFlags_Repeat
@@ -6757,10 +6758,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         ItemSize(total_bb, style.FramePadding.y);
         return false;
     }
-
-    const bool hovered = IsHovered(frame_bb, id);
-    if (hovered)
-        SetHoveredID(id);
+    const bool hovered = ItemHoverable(frame_bb, id);
 
     if (!display_format)
         display_format = "%.3f";
@@ -6814,10 +6812,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     ItemSize(bb, style.FramePadding.y);
     if (!ItemAdd(frame_bb, &id))
         return false;
-
-    const bool hovered = IsHovered(frame_bb, id);
-    if (hovered)
-        SetHoveredID(id);
+    const bool hovered = ItemHoverable(frame_bb, id);
 
     if (!display_format)
         display_format = "%.3f";
@@ -7057,10 +7052,7 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
         ItemSize(total_bb, style.FramePadding.y);
         return false;
     }
-
-    const bool hovered = IsHovered(frame_bb, id);
-    if (hovered)
-        SetHoveredID(id);
+    const bool hovered = ItemHoverable(frame_bb, id);
 
     if (!display_format)
         display_format = "%.3f";
@@ -7263,6 +7255,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
     ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, NULL))
         return;
+    const bool hovered = ItemHoverable(inner_bb, 0);
 
     // Determine scale from values if not specified
     if (scale_min == FLT_MAX || scale_max == FLT_MAX)
@@ -7290,7 +7283,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
 
         // Tooltip on hover
         int v_hovered = -1;
-        if (IsHovered(inner_bb, 0))
+        if (hovered)
         {
             const float t = ImClamp((g.IO.MousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x), 0.0f, 0.9999f);
             const int v_idx = (int)(t * item_count);
@@ -7851,6 +7844,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (!ItemAdd(total_bb, &id))
             return false;
     }
+    const bool hovered = ItemHoverable(frame_bb, id);
+    if (hovered)
+        g.MouseCursor = ImGuiMouseCursor_TextInput;
 
     // Password pushes a temporary font with only a fallback glyph
     if (is_password)
@@ -7876,12 +7872,6 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
     const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
 
-    const bool hovered = IsHovered(frame_bb, id);
-    if (hovered)
-    {
-        SetHoveredID(id);
-        g.MouseCursor = ImGuiMouseCursor_TextInput;
-    }
     const bool user_clicked = hovered && io.MouseClicked[0];
     const bool user_scrolled = is_multiline && g.ActiveId == 0 && edit_state.Id == id && g.ActiveIdPreviousFrame == draw_window->GetIDNoKeepAlive("#SCROLLY");
 
@@ -9073,8 +9063,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         if (!enabled) PopStyleColor();
     }
 
-    bool hovered = enabled && IsHovered(window->DC.LastItemRect, id);
-
+    const bool hovered = enabled && ItemHoverable(window->DC.LastItemRect, id);
     if (menuset_is_open)
         g.NavWindow = backed_nav_window;
 
