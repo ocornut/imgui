@@ -605,7 +605,6 @@ static void             SetWindowSize(ImGuiWindow* window, const ImVec2& size, I
 static void             SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond);
 static ImGuiWindow*     FindHoveredWindow(ImVec2 pos, bool excluding_childs);
 static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags);
-static inline bool      IsWindowContentHoverable(ImGuiWindow* window);
 static void             ClearSetNextWindowData();
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
 static void             Scrollbar(ImGuiWindow* window, bool horizontal);
@@ -1899,6 +1898,19 @@ void ImGui::KeepAliveID(ImGuiID id)
     ImGuiContext& g = *GImGui;
     if (g.ActiveId == id)
         g.ActiveIdIsAlive = true;
+}
+
+static inline bool IsWindowContentHoverable(ImGuiWindow* window)
+{
+    // An active popup disable hovering on other windows (apart from its own children)
+    // FIXME-OPT: This could be cached/stored within the window.
+    ImGuiContext& g = *GImGui;
+    if (g.NavWindow)
+        if (ImGuiWindow* focused_root_window = g.NavWindow->RootWindow)
+            if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasActive && focused_root_window != window->RootWindow)
+                return false;
+
+    return true;
 }
 
 // Advance cursor given item size for layout.
@@ -5645,19 +5657,6 @@ void ImGui::LabelText(const char* label, const char* fmt, ...)
     va_start(args, fmt);
     LabelTextV(label, fmt, args);
     va_end(args);
-}
-
-static inline bool IsWindowContentHoverable(ImGuiWindow* window)
-{
-    // An active popup disable hovering on other windows (apart from its own children)
-    // FIXME-OPT: This could be cached/stored within the window.
-    ImGuiContext& g = *GImGui;
-    if (g.NavWindow)
-        if (ImGuiWindow* focused_root_window = g.NavWindow->RootWindow)
-            if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasActive && focused_root_window != window->RootWindow)
-                return false;
-
-    return true;
 }
 
 bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, ImGuiButtonFlags flags)
