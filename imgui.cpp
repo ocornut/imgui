@@ -10039,6 +10039,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     else if (g.NavId == id && g.NavMoveRequest && g.NavMoveDir == ImGuiDir_Down) // Menu bar: Nav-Down to open
     {
         g.NavMoveRequest = false;
+        want_open = true;
     }
 
     if (!enabled) // explicitly close if an open menu becomes disabled, facilitate users code a lot in pattern such as 'if (BeginMenu("options", has_object)) { ..use object.. }'
