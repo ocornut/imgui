@@ -641,7 +641,6 @@ static void             SetWindowSize(ImGuiWindow* window, const ImVec2& size, I
 static void             SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond);
 static ImGuiWindow*     FindHoveredWindow(ImVec2 pos, bool excluding_childs);
 static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags);
-static inline bool      IsWindowContentHoverable(ImGuiWindow* window);
 static void             ClearSetNextWindowData();
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
 static void             Scrollbar(ImGuiWindow* window, bool horizontal);
@@ -1974,6 +1973,19 @@ void ImGui::KeepAliveID(ImGuiID id)
         g.ActiveIdIsAlive = true;
 }
 
+static inline bool IsWindowContentHoverable(ImGuiWindow* window)
+{
+    // An active popup disable hovering on other windows (apart from its own children)
+    // FIXME-OPT: This could be cached/stored within the window.
+    ImGuiContext& g = *GImGui;
+    if (g.NavWindow)
+        if (ImGuiWindow* focused_root_window = g.NavWindow->RootWindow)
+            if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasActive && focused_root_window != window->RootWindow)
+                return false;
+
+    return true;
+}
+
 // Advance cursor given item size for layout.
 void ImGui::ItemSize(const ImVec2& size, float text_offset_y)
 {
@@ -2214,22 +2226,24 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     return true;
 }
 
-// This is roughly matching the behavior of internal-facing IsHovered()
+// This is roughly matching the behavior of internal-facing ItemHoverable() which is 
 // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
-// - we don't expose the flatten_child feature that IsHovered() has, which is only used by the window resizing widget (may rework this)
 bool ImGui::IsItemHovered()
 {
     ImGuiContext& g = *GImGui;
+
     ImGuiWindow* window = g.CurrentWindow;
     if (g.NavDisableMouseHover)
         return IsItemFocused();
-    if (g.HoveredWindow == window)
-        if (g.ActiveId == 0 || g.ActiveId == window->DC.LastItemId || g.ActiveIdAllowOverlap || g.ActiveId == window->MoveId)
-            if (IsMouseHoveringRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max))
-                if (!g.NavDisableMouseHover && IsWindowContentHoverable(window))
-                    return true;
-
-    return false;
+    if (g.HoveredWindow != window)
+        return false;
+    if (g.ActiveId != 0 && g.ActiveId != window->DC.LastItemId && !g.ActiveIdAllowOverlap && g.ActiveId != window->MoveId)
+        return false;
+    if (!IsMouseHoveringRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max))
+        return false;
+    if (g.NavDisableMouseHover || !IsWindowContentHoverable(window))
+        return false;
+    return true;
 }
 
 bool ImGui::IsItemRectHovered()
@@ -2238,20 +2252,25 @@ bool ImGui::IsItemRectHovered()
     return IsMouseHoveringRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max);
 }
 
-// Internal facing IsHovered() differs slightly from IsItemHovered().
-bool ImGui::IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs)
+// Internal facing ItemHoverable() used when submitting widgets. Differs slightly from IsItemHovered().
+bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
-    if (g.HoveredId == 0 || g.HoveredId == id || g.HoveredIdAllowOverlap)
-    {
-        ImGuiWindow* window = g.CurrentWindow;
-        if (g.HoveredWindow == window || (flatten_childs && g.HoveredRootWindow == window->RootWindow))
-            if (g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdAllowOverlap)
-                if (IsMouseHoveringRect(bb.Min, bb.Max))
-                    if (!g.NavDisableMouseHover && IsWindowContentHoverable(g.HoveredRootWindow))
-                        return true;
-    }
-    return false;
+    if (g.HoveredId != 0 && g.HoveredId != id && !g.HoveredIdAllowOverlap)
+        return false;
+
+    ImGuiWindow* window = g.CurrentWindow;
+    if (g.HoveredWindow != window)
+        return false;
+    if (g.ActiveId != 0 && g.ActiveId != id && !g.ActiveIdAllowOverlap)
+        return false;
+    if (!IsMouseHoveringRect(bb.Min, bb.Max))
+        return false;
+    if (g.NavDisableMouseHover || !IsWindowContentHoverable(window))
+        return false;
+
+    SetHoveredID(id);
+    return true;
 }
 
 bool ImGui::IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when_logged)
@@ -5041,6 +5060,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && !(flags & ImGuiWindowFlags_NoResize))
             {
                 // Manual resize
+                // Using the FlattenChilds button flag, we make the resize button accessible even if we are hovering over a child window
                 const ImVec2 br = window->Rect().GetBR();
                 const ImRect resize_rect(br - ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f), br);
                 const ImGuiID resize_id = window->GetID("#RESIZE");
@@ -6476,19 +6496,6 @@ void ImGui::LabelText(const char* label, const char* fmt, ...)
     va_end(args);
 }
 
-static inline bool IsWindowContentHoverable(ImGuiWindow* window)
-{
-    // An active popup disable hovering on other windows (apart from its own children)
-    // FIXME-OPT: This could be cached/stored within the window.
-    ImGuiContext& g = *GImGui;
-    if (g.NavWindow)
-        if (ImGuiWindow* focused_root_window = g.NavWindow->RootWindow)
-            if ((focused_root_window->Flags & ImGuiWindowFlags_Popup) != 0 && focused_root_window->WasActive && focused_root_window != window->RootWindow)
-                return false;
-
-    return true;
-}
-
 bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, ImGuiButtonFlags flags)
 {
     ImGuiContext& g = *GImGui;
@@ -6506,11 +6513,18 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if ((flags & (ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnRelease | ImGuiButtonFlags_PressedOnDoubleClick)) == 0)
         flags |= ImGuiButtonFlags_PressedOnClickRelease;
 
+    ImGuiWindow* backup_hovered_window = g.HoveredWindow;
+    if ((flags & ImGuiButtonFlags_FlattenChilds) && g.HoveredRootWindow == window)
+        g.HoveredWindow = window;
+
     bool pressed = false;
-    bool hovered = IsHovered(bb, id, (flags & ImGuiButtonFlags_FlattenChilds) != 0);
+    bool hovered = ItemHoverable(bb, id);
+
+    if ((flags & ImGuiButtonFlags_FlattenChilds) && g.HoveredRootWindow == window)
+        g.HoveredWindow = backup_hovered_window;
+
     if (hovered)
     {
-        SetHoveredID(id);
         if (!(flags & ImGuiButtonFlags_NoKeyModifiers) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
             //                        | CLICKING        | HOLDING with ImGuiButtonFlags_Repeat
@@ -7637,10 +7651,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         ItemSize(total_bb, style.FramePadding.y);
         return false;
     }
-
-    const bool hovered = IsHovered(frame_bb, id);
-    if (hovered)
-        SetHoveredID(id);
+    const bool hovered = ItemHoverable(frame_bb, id);
 
     if (!display_format)
         display_format = "%.3f";
@@ -7694,10 +7705,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     ItemSize(bb, style.FramePadding.y);
     if (!ItemAdd(frame_bb, &id, &frame_bb))
         return false;
-
-    const bool hovered = IsHovered(frame_bb, id);
-    if (hovered)
-        SetHoveredID(id);
+    const bool hovered = ItemHoverable(frame_bb, id);
 
     if (!display_format)
         display_format = "%.3f";
@@ -7944,10 +7952,7 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
         ItemSize(total_bb, style.FramePadding.y);
         return false;
     }
-
-    const bool hovered = IsHovered(frame_bb, id);
-    if (hovered)
-        SetHoveredID(id);
+    const bool hovered = ItemHoverable(frame_bb, id);
 
     if (!display_format)
         display_format = "%.3f";
@@ -8150,6 +8155,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
     ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, NULL, &frame_bb))
         return;
+    const bool hovered = ItemHoverable(inner_bb, 0);
 
     // Determine scale from values if not specified
     if (scale_min == FLT_MAX || scale_max == FLT_MAX)
@@ -8177,7 +8183,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
 
         // Tooltip on hover
         int v_hovered = -1;
-        if (IsHovered(inner_bb, 0))
+        if (hovered)
         {
             const float t = ImClamp((g.IO.MousePos.x - inner_bb.Min.x) / (inner_bb.Max.x - inner_bb.Min.x), 0.0f, 0.9999f);
             const int v_idx = (int)(t * item_count);
@@ -8740,6 +8746,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (!ItemAdd(total_bb, &id, &frame_bb))
             return false;
     }
+    const bool hovered = ItemHoverable(frame_bb, id);
+    if (hovered)
+        g.MouseCursor = ImGuiMouseCursor_TextInput;
 
     // Password pushes a temporary font with only a fallback glyph
     if (is_password)
@@ -8765,12 +8774,6 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
     const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
 
-    const bool hovered = IsHovered(frame_bb, id);
-    if (hovered)
-    {
-        SetHoveredID(id);
-        g.MouseCursor = ImGuiMouseCursor_TextInput;
-    }
     const bool user_clicked = hovered && io.MouseClicked[0];
     const bool user_scrolled = is_multiline && g.ActiveId == 0 && edit_state.Id == id && g.ActiveIdPreviousFrame == draw_window->GetIDNoKeepAlive("#SCROLLY");
 
@@ -9979,8 +9982,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         if (!enabled) PopStyleColor();
     }
 
-    bool hovered = enabled && IsHovered(window->DC.LastItemRect, id); // FIXME: Why not using window->DC.LastItemHoveredAndUsable / IsItemHovered() ?
-
+    const bool hovered = enabled && ItemHoverable(window->DC.LastItemRect, id);
     if (menuset_is_open)
         g.NavWindow = backed_nav_window;
 
