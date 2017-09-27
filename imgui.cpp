@@ -1947,13 +1947,13 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
         return false;
     //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
 
-    // Setting LastItemHoveredAndUsable for public facing IsItemHovered(). This is a sensible default, but widgets are free to override it.
+    // Set up for public-facing IsItemHovered(). We store the result in DC.LastItemHoveredAndUsable.
+    // This is roughly matching the behavior of internal IsHovered()
+    // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
     // FIXME-OPT: Consider moving this code to IsItemHovered() so it's only evaluated if users needs it. 
-    if (IsMouseHoveringRect(bb.Min, bb.Max))
+    if (g.HoveredRootWindow == window->RootWindow)
     {
-        // Matching the behavior of internal IsHovered() but:
-        // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
-        if (g.HoveredRootWindow == window->RootWindow)
+        if (IsMouseHoveringRect(bb.Min, bb.Max))
             if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdAllowOverlap || (g.ActiveId == window->MoveId))
                 if (IsWindowContentHoverable(window))
                     window->DC.LastItemHoveredAndUsable = true;
