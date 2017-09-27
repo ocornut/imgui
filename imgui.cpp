@@ -1950,10 +1950,11 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
     // Set up for public-facing IsItemHovered(). We store the result in DC.LastItemHoveredAndUsable.
     // This is roughly matching the behavior of internal-facing IsHovered()
     // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
+    // - we don't expose the flatten_child feature that IsHovered() has, which is only used by the window resizing widget (may rework this)
     // FIXME-OPT: Consider moving this code to IsItemHovered() so it's only evaluated if users needs it. 
     if (g.HoveredWindow == window)
-        if (IsMouseHoveringRect(bb.Min, bb.Max))
-            if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdAllowOverlap || (g.ActiveId == window->MoveId))
+        if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdAllowOverlap || (g.ActiveId == window->MoveId))
+            if (IsMouseHoveringRect(bb.Min, bb.Max))
                 if (IsWindowContentHoverable(window))
                     window->DC.LastItemHoveredAndUsable = true;
 
