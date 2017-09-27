@@ -1942,29 +1942,27 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
     ImGuiWindow* window = g.CurrentWindow;
     window->DC.LastItemId = id ? *id : 0;
     window->DC.LastItemRect = bb;
-    window->DC.LastItemHoveredAndUsable = false;
     if (IsClippedEx(bb, id, false))
         return false;
     //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
 
-    // Set up for public-facing IsItemHovered(). We store the result in DC.LastItemHoveredAndUsable.
-    // This is roughly matching the behavior of internal-facing IsHovered()
-    // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
-    // - we don't expose the flatten_child feature that IsHovered() has, which is only used by the window resizing widget (may rework this)
-    // FIXME-OPT: Consider moving this code to IsItemHovered() so it's only evaluated if users needs it. 
-    if (g.HoveredWindow == window)
-        if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdAllowOverlap || (g.ActiveId == window->MoveId))
-            if (IsMouseHoveringRect(bb.Min, bb.Max))
-                if (IsWindowContentHoverable(window))
-                    window->DC.LastItemHoveredAndUsable = true;
-
     return true;
 }
 
+// This is roughly matching the behavior of internal-facing IsHovered()
+// - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
+// - we don't expose the flatten_child feature that IsHovered() has, which is only used by the window resizing widget (may rework this)
 bool ImGui::IsItemHovered()
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
-    return window->DC.LastItemHoveredAndUsable;
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    if (g.HoveredWindow == window)
+        if (g.ActiveId == 0 || g.ActiveId == window->DC.LastItemId || g.ActiveIdAllowOverlap || g.ActiveId == window->MoveId)
+            if (IsMouseHoveringRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max))
+                if (IsWindowContentHoverable(window))
+                    return true;
+
+    return false;
 }
 
 bool ImGui::IsItemRectHovered()
@@ -1973,13 +1971,13 @@ bool ImGui::IsItemRectHovered()
     return IsMouseHoveringRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max);
 }
 
-// [Internal] The user-facing IsItemHovered() is using data emitted from ItemAdd(), with a slightly different logic.
+// Internal facing IsHovered() differs slightly from IsItemHovered().
 bool ImGui::IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs)
 {
     ImGuiContext& g = *GImGui;
     if (g.HoveredId == 0 || g.HoveredId == id || g.HoveredIdAllowOverlap)
     {
-        ImGuiWindow* window = GetCurrentWindowRead();
+        ImGuiWindow* window = g.CurrentWindow;
         if (g.HoveredWindow == window || (flatten_childs && g.HoveredRootWindow == window->RootWindow))
             if (g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdAllowOverlap)
                 if (IsMouseHoveringRect(bb.Min, bb.Max))
@@ -10023,11 +10021,7 @@ void ImGui::EndGroup()
     const bool active_id_within_group = (!group_data.BackupActiveIdIsAlive && g.ActiveIdIsAlive && g.ActiveId && g.ActiveIdWindow->RootWindow == window->RootWindow);
     if (active_id_within_group)
         window->DC.LastItemId = g.ActiveId;
-    if (active_id_within_group && g.HoveredId == g.ActiveId)
-    {
-        window->DC.LastItemHoveredAndUsable = true;
-        window->DC.LastItemRect = group_bb;
-    }
+    window->DC.LastItemRect = group_bb;
 
     window->DC.GroupStack.pop_back();
 
