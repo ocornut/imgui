@@ -658,8 +658,6 @@ struct IMGUI_API ImGuiDrawContext
     int                     TreeDepth;
     ImGuiID                 LastItemId;
     ImRect                  LastItemRect;
-    bool                    LastItemHoveredAndUsable;       // Item rectangle is hovered, and its window is currently interactable with (not blocked by a popup preventing access to the window)
-    bool                    LastItemHoveredRect;            // Item rectangle is hovered, but its window may or not be currently interactable with (might be blocked by a popup preventing access to the window)
     bool                    NavHasScroll;                   // Set when scrolling can be used (ScrollMax > 0.0f)
     int                     NavLayerCurrent;                // Current layer, 0..31 (we currently only use 0..1)
     int                     NavLayerActiveFlags, NavLayerActiveFlagsNext;   // Which layer have been written to.
@@ -703,7 +701,6 @@ struct IMGUI_API ImGuiDrawContext
         TreeDepth = 0;
         LastItemId = 0;
         LastItemRect = ImRect(0.0f,0.0f,0.0f,0.0f);
-        LastItemHoveredAndUsable = LastItemHoveredRect = false;
         NavHasScroll = false;
         NavLayerActiveFlags = NavLayerActiveFlagsNext = 0x00;
         NavLayerCurrent = 0;
