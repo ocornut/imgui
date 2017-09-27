@@ -1948,16 +1948,14 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
     //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
 
     // Set up for public-facing IsItemHovered(). We store the result in DC.LastItemHoveredAndUsable.
-    // This is roughly matching the behavior of internal IsHovered()
+    // This is roughly matching the behavior of internal-facing IsHovered()
     // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
     // FIXME-OPT: Consider moving this code to IsItemHovered() so it's only evaluated if users needs it. 
-    if (g.HoveredRootWindow == window->RootWindow)
-    {
+    if (g.HoveredWindow == window)
         if (IsMouseHoveringRect(bb.Min, bb.Max))
             if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdAllowOverlap || (g.ActiveId == window->MoveId))
                 if (IsWindowContentHoverable(window))
                     window->DC.LastItemHoveredAndUsable = true;
-    }
 
     return true;
 }
@@ -1982,9 +1980,10 @@ bool ImGui::IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs)
     {
         ImGuiWindow* window = GetCurrentWindowRead();
         if (g.HoveredWindow == window || (flatten_childs && g.HoveredRootWindow == window->RootWindow))
-            if ((g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdAllowOverlap) && IsMouseHoveringRect(bb.Min, bb.Max))
-                if (IsWindowContentHoverable(g.HoveredRootWindow))
-                    return true;
+            if (g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdAllowOverlap)
+                if (IsMouseHoveringRect(bb.Min, bb.Max))
+                    if (IsWindowContentHoverable(g.HoveredRootWindow))
+                        return true;
     }
     return false;
 }
