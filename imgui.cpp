@@ -1947,11 +1947,13 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
         return false;
     //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
 
-    // Setting LastItemHoveredAndUsable for IsItemHovered(). This is a sensible default, but widgets are free to override it.
+    // Setting LastItemHoveredAndUsable for public facing IsItemHovered(). This is a sensible default, but widgets are free to override it.
+    // FIXME: Consider moving this code to IsItemHovered() so it's only evaluated if users needs it. 
     if (IsMouseHoveringRect(bb.Min, bb.Max))
     {
-        // Matching the behavior of IsHovered() but allow if ActiveId==window->MoveID (we clicked on the window background)
-        // So that clicking on items with no active id such as Text() still returns true with IsItemHovered()
+        // Matching the behavior of internal IsHovered() but:
+        // - we are always setting LastItemHoveredRect, which is returned by IsItemRectHovered(), so the order of tests is tweaked to be different.
+        // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
         window->DC.LastItemHoveredRect = true;
         if (g.HoveredRootWindow == window->RootWindow)
             if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdAllowOverlap || (g.ActiveId == window->MoveId))
@@ -1962,18 +1964,19 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
     return true;
 }
 
-bool ImGui::IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when_logged)
+bool ImGui::IsItemHovered()
 {
-    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindowRead();
-    if (!bb.Overlaps(window->ClipRect))
-        if (!id || *id != g.ActiveId)
-            if (clip_even_when_logged || !g.LogEnabled)
-                return true;
-    return false;
+    return window->DC.LastItemHoveredAndUsable;
 }
 
-// NB: This is an internal helper. The user-facing IsItemHovered() is using data emitted from ItemAdd(), with a slightly different logic.
+bool ImGui::IsItemRectHovered()
+{
+    ImGuiWindow* window = GetCurrentWindowRead();
+    return window->DC.LastItemHoveredRect;
+}
+
+// [Internal] The user-facing IsItemHovered() is using data emitted from ItemAdd(), with a slightly different logic.
 bool ImGui::IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs)
 {
     ImGuiContext& g = *GImGui;
@@ -1985,6 +1988,17 @@ bool ImGui::IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs)
                 if (IsWindowContentHoverable(g.HoveredRootWindow))
                     return true;
     }
+    return false;
+}
+
+bool ImGui::IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when_logged)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = GetCurrentWindowRead();
+    if (!bb.Overlaps(window->ClipRect))
+        if (!id || *id != g.ActiveId)
+            if (clip_even_when_logged || !g.LogEnabled)
+                return true;
     return false;
 }
 
@@ -3321,18 +3335,6 @@ void ImGui::CaptureKeyboardFromApp(bool capture)
 void ImGui::CaptureMouseFromApp(bool capture)
 {
     GImGui->WantCaptureMouseNextFrame = capture ? 1 : 0;
-}
-
-bool ImGui::IsItemHovered()
-{
-    ImGuiWindow* window = GetCurrentWindowRead();
-    return window->DC.LastItemHoveredAndUsable;
-}
-
-bool ImGui::IsItemRectHovered()
-{
-    ImGuiWindow* window = GetCurrentWindowRead();
-    return window->DC.LastItemHoveredRect;
 }
 
 bool ImGui::IsItemActive()
