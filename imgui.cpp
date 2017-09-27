@@ -1954,12 +1954,14 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
 bool ImGui::IsItemHovered()
 {
     ImGuiContext& g = *GImGui;
+
     ImGuiWindow* window = g.CurrentWindow;
-    if (g.HoveredWindow == window)
-        if (g.ActiveId == 0 || g.ActiveId == window->DC.LastItemId || g.ActiveIdAllowOverlap || g.ActiveId == window->MoveId)
-            if (IsMouseHoveringRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max))
-                if (IsWindowContentHoverable(window))
-                    return true;
+    if (g.HoveredWindow != window)
+        return false;
+    if (g.ActiveId == 0 || g.ActiveId == window->DC.LastItemId || g.ActiveIdAllowOverlap || g.ActiveId == window->MoveId)
+        if (IsMouseHoveringRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max))
+            if (IsWindowContentHoverable(window))
+                return true;
 
     return false;
 }
@@ -1974,15 +1976,17 @@ bool ImGui::IsItemRectHovered()
 bool ImGui::IsHovered(const ImRect& bb, ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
-    if (g.HoveredId == 0 || g.HoveredId == id || g.HoveredIdAllowOverlap)
-    {
-        ImGuiWindow* window = g.CurrentWindow;
-        if (g.HoveredWindow == window)
-            if (g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdAllowOverlap)
-                if (IsMouseHoveringRect(bb.Min, bb.Max))
-                    if (IsWindowContentHoverable(g.HoveredRootWindow))
-                        return true;
-    }
+    if (g.HoveredId != 0 && g.HoveredId != id && !g.HoveredIdAllowOverlap)
+        return false;
+
+    ImGuiWindow* window = g.CurrentWindow;
+    if (g.HoveredWindow != window)
+        return false;
+    if (g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdAllowOverlap)
+        if (IsMouseHoveringRect(bb.Min, bb.Max))
+            if (IsWindowContentHoverable(g.HoveredRootWindow))
+                return true;
+
     return false;
 }
 
