@@ -137,7 +137,7 @@ int main(int, char**)
 
     bool show_test_window = true;
     bool show_another_window = false;
-    ImVec4 clear_col = ImColor(114, 144, 154);
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
     MSG msg;
@@ -158,7 +158,7 @@ int main(int, char**)
             static float f = 0.0f;
             ImGui::Text("Hello, world!");
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-            ImGui::ColorEdit3("clear color", (float*)&clear_col);
+            ImGui::ColorEdit3("clear color", (float*)&clear_color);
             if (ImGui::Button("Test Window")) show_test_window ^= 1;
             if (ImGui::Button("Another Window")) show_another_window ^= 1;
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
@@ -180,7 +180,7 @@ int main(int, char**)
         }
 
         // Rendering
-        g_pd3dDevice->ClearRenderTargetView(g_mainRenderTargetView, (float*)&clear_col);
+        g_pd3dDevice->ClearRenderTargetView(g_mainRenderTargetView, (float*)&clear_color);
         ImGui::Render();
 
         g_pSwapChain->Present(1, 0); // Present with vsync
