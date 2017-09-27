@@ -1134,6 +1134,8 @@ void    ImFontAtlas::ClearInputData()
         }
     ConfigData.clear();
     CustomRects.clear();
+    for (int n = 0; n < IM_ARRAYSIZE(CustomRectIds); n++)
+        CustomRectIds[n] = -1;
 }
 
 void    ImFontAtlas::ClearTexData()
@@ -1597,6 +1599,8 @@ void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* pack_context_opaq
     stbrp_context* pack_context = (stbrp_context*)pack_context_opaque;
 
     ImVector<ImFontAtlas::CustomRect>& user_rects = atlas->CustomRects;
+    IM_ASSERT(user_rects.Size >= 1); // We expect at least the default custom rects to be registered, else something went wrong.
+
     ImVector<stbrp_rect> pack_rects;
     pack_rects.resize(user_rects.Size);
     memset(pack_rects.Data, 0, sizeof(stbrp_rect) * user_rects.Size);
