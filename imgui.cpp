@@ -1942,19 +1942,17 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
     ImGuiWindow* window = g.CurrentWindow;
     window->DC.LastItemId = id ? *id : 0;
     window->DC.LastItemRect = bb;
-    window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = false;
+    window->DC.LastItemHoveredAndUsable = false;
     if (IsClippedEx(bb, id, false))
         return false;
     //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
 
     // Setting LastItemHoveredAndUsable for public facing IsItemHovered(). This is a sensible default, but widgets are free to override it.
-    // FIXME: Consider moving this code to IsItemHovered() so it's only evaluated if users needs it. 
+    // FIXME-OPT: Consider moving this code to IsItemHovered() so it's only evaluated if users needs it. 
     if (IsMouseHoveringRect(bb.Min, bb.Max))
     {
         // Matching the behavior of internal IsHovered() but:
-        // - we are always setting LastItemHoveredRect, which is returned by IsItemRectHovered(), so the order of tests is tweaked to be different.
         // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
-        window->DC.LastItemHoveredRect = true;
         if (g.HoveredRootWindow == window->RootWindow)
             if (g.ActiveId == 0 || (id && g.ActiveId == *id) || g.ActiveIdAllowOverlap || (g.ActiveId == window->MoveId))
                 if (IsWindowContentHoverable(window))
@@ -1973,7 +1971,7 @@ bool ImGui::IsItemHovered()
 bool ImGui::IsItemRectHovered()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return window->DC.LastItemHoveredRect;
+    return IsMouseHoveringRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max);
 }
 
 // [Internal] The user-facing IsItemHovered() is using data emitted from ItemAdd(), with a slightly different logic.
@@ -10020,13 +10018,16 @@ void ImGui::EndGroup()
         ItemAdd(group_bb, NULL);
     }
 
-    // If the current ActiveId was declared within the boundary of our group, we copy it to LastItemId so IsItemActive() will function on the entire group.
+    // If the current ActiveId was declared within the boundary of our group, we copy it to LastItemId so IsItemActive() will be functional on the entire group.
     // It would be be neater if we replaced window.DC.LastItemId by e.g. 'bool LastItemIsActive', but if you search for LastItemId you'll notice it is only used in that context.
     const bool active_id_within_group = (!group_data.BackupActiveIdIsAlive && g.ActiveIdIsAlive && g.ActiveId && g.ActiveIdWindow->RootWindow == window->RootWindow);
     if (active_id_within_group)
         window->DC.LastItemId = g.ActiveId;
     if (active_id_within_group && g.HoveredId == g.ActiveId)
-        window->DC.LastItemHoveredAndUsable = window->DC.LastItemHoveredRect = true;
+    {
+        window->DC.LastItemHoveredAndUsable = true;
+        window->DC.LastItemRect = group_bb;
+    }
 
     window->DC.GroupStack.pop_back();
 

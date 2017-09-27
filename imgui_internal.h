@@ -601,7 +601,6 @@ struct IMGUI_API ImGuiDrawContext
     ImGuiID                 LastItemId;
     ImRect                  LastItemRect;
     bool                    LastItemHoveredAndUsable;  // Item rectangle is hovered, and its window is currently interactable with (not blocked by a popup preventing access to the window)
-    bool                    LastItemHoveredRect;       // Item rectangle is hovered, but its window may or not be currently interactable with (might be blocked by a popup preventing access to the window)
     bool                    MenuBarAppending;
     float                   MenuBarOffsetX;
     ImVector<ImGuiWindow*>  ChildWindows;
@@ -642,7 +641,7 @@ struct IMGUI_API ImGuiDrawContext
         TreeDepth = 0;
         LastItemId = 0;
         LastItemRect = ImRect(0.0f,0.0f,0.0f,0.0f);
-        LastItemHoveredAndUsable = LastItemHoveredRect = false;
+        LastItemHoveredAndUsable = false;
         MenuBarAppending = false;
         MenuBarOffsetX = 0.0f;
         StateStorage = NULL;

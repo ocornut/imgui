@@ -1126,11 +1126,11 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::Button("CCC");
                 ImGui::Button("DDD");
                 ImGui::EndGroup();
-                if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("Group hovered");
                 ImGui::SameLine();
                 ImGui::Button("EEE");
                 ImGui::EndGroup();
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("First group hovered");
             }
             // Capture the group size and create widgets using the same size
             ImVec2 size = ImGui::GetItemRectSize();
