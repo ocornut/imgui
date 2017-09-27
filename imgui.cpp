@@ -1951,7 +1951,6 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
 
 // This is roughly matching the behavior of internal-facing IsHovered()
 // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
-// - we don't expose the flatten_child feature that IsHovered() has, which is only used by the window resizing widget (may rework this)
 bool ImGui::IsItemHovered()
 {
     ImGuiContext& g = *GImGui;
@@ -1972,13 +1971,13 @@ bool ImGui::IsItemRectHovered()
 }
 
 // Internal facing IsHovered() differs slightly from IsItemHovered().
-bool ImGui::IsHovered(const ImRect& bb, ImGuiID id, bool flatten_childs)
+bool ImGui::IsHovered(const ImRect& bb, ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     if (g.HoveredId == 0 || g.HoveredId == id || g.HoveredIdAllowOverlap)
     {
         ImGuiWindow* window = g.CurrentWindow;
-        if (g.HoveredWindow == window || (flatten_childs && g.HoveredRootWindow == window->RootWindow))
+        if (g.HoveredWindow == window)
             if (g.ActiveId == 0 || g.ActiveId == id || g.ActiveIdAllowOverlap)
                 if (IsMouseHoveringRect(bb.Min, bb.Max))
                     if (IsWindowContentHoverable(g.HoveredRootWindow))
@@ -4274,6 +4273,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && !(flags & ImGuiWindowFlags_NoResize))
             {
                 // Manual resize
+                // Using the FlattenChilds button flag, we make the resize button accessible even if we are hovering over a child window
                 const ImVec2 br = window->Rect().GetBR();
                 const ImRect resize_rect(br - ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f), br);
                 const ImGuiID resize_id = window->GetID("#RESIZE");
@@ -5673,8 +5673,16 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if ((flags & (ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnRelease | ImGuiButtonFlags_PressedOnDoubleClick)) == 0)
         flags |= ImGuiButtonFlags_PressedOnClickRelease;
 
+    ImGuiWindow* backup_hovered_window = g.HoveredWindow;
+    if ((flags & ImGuiButtonFlags_FlattenChilds) && g.HoveredRootWindow == window)
+        g.HoveredWindow = window;
+
     bool pressed = false;
-    bool hovered = IsHovered(bb, id, (flags & ImGuiButtonFlags_FlattenChilds) != 0);
+    bool hovered = IsHovered(bb, id);
+
+    if ((flags & ImGuiButtonFlags_FlattenChilds) && g.HoveredRootWindow == window)
+        g.HoveredWindow = backup_hovered_window;
+
     if (hovered)
     {
         SetHoveredID(id);
