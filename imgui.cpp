@@ -1999,7 +1999,7 @@ bool ImGui::IsHovered(const ImRect& bb, ImGuiID id)
         return false;
     if (!IsMouseHoveringRect(bb.Min, bb.Max))
         return false;
-    if (!IsWindowContentHoverable(g.HoveredRootWindow))
+    if (!IsWindowContentHoverable(window))
         return false;
     return true;
 }
