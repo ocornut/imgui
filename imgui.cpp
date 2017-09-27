@@ -2226,7 +2226,7 @@ bool ImGui::IsItemHovered()
     if (g.HoveredWindow == window)
         if (g.ActiveId == 0 || g.ActiveId == window->DC.LastItemId || g.ActiveIdAllowOverlap || g.ActiveId == window->MoveId)
             if (IsMouseHoveringRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max))
-                if (IsWindowContentHoverable(window))
+                if (!g.NavDisableMouseHover && IsWindowContentHoverable(window))
                     return true;
 
     return false;
