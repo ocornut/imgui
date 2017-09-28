@@ -9879,63 +9879,68 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
 // Horizontal separating line.
 void ImGui::Separator()
 {
-    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
+    ImGuiContext& g = *GImGui;
 
     ImGuiWindowFlags flags = 0;
     if ((flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical)) == 0)
-    {
-        if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
-            flags |= ImGuiSeparatorFlags_Vertical;
-        else
-            flags |= ImGuiSeparatorFlags_Horizontal;
-    }
+        flags |= (window->DC.LayoutType == ImGuiLayoutType_Horizontal) ? ImGuiSeparatorFlags_Vertical : ImGuiSeparatorFlags_Horizontal;
     IM_ASSERT(ImIsPowerOfTwo((int)(flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical))));   // Check that only 1 option is selected
+    if (flags & ImGuiSeparatorFlags_Vertical)
+    {
+        VerticalSeparator();
+        return;
+    }
 
-    if (flags & ImGuiSeparatorFlags_Horizontal)
+    // Horizontal Separator
+    if (window->DC.ColumnsCount > 1)
+        PopClipRect();
+
+    float x1 = window->Pos.x;
+    float x2 = window->Pos.x + window->Size.x;
+    if (!window->DC.GroupStack.empty())
+        x1 += window->DC.IndentX;
+
+    const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y+1.0f));
+    ItemSize(ImVec2(0.0f, 0.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit, we don't provide height to not alter layout.
+    if (!ItemAdd(bb, NULL))
     {
         if (window->DC.ColumnsCount > 1)
-            PopClipRect();
+            PushColumnClipRect();
+        return;
+    }
 
-        float x1 = window->Pos.x;
-        float x2 = window->Pos.x + window->Size.x;
-        if (!window->DC.GroupStack.empty())
-            x1 += window->DC.IndentX;
+    window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x,bb.Min.y), GetColorU32(ImGuiCol_Separator));
 
-        const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y+1.0f));
-        ItemSize(ImVec2(0.0f, 0.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit, we don't provide height to not alter layout.
-        if (!ItemAdd(bb, NULL))
-        {
-            if (window->DC.ColumnsCount > 1)
-                PushColumnClipRect();
-            return;
-        }
-
-        window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x,bb.Min.y), GetColorU32(ImGuiCol_Separator));
-
-        if (g.LogEnabled)
+    if (g.LogEnabled)
             LogRenderedText(NULL, IM_NEWLINE "--------------------------------");
 
-        if (window->DC.ColumnsCount > 1)
-        {
-            PushColumnClipRect();
-            window->DC.ColumnsCellMinY = window->DC.CursorPos.y;
-        }
-    }
-    else if (flags & ImGuiSeparatorFlags_Vertical)
+    if (window->DC.ColumnsCount > 1)
     {
-        const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(1.0f, window->DC.CurrentLineHeight));
-        ItemSize(ImVec2(bb.GetWidth(), 0.0f));
-        if (!ItemAdd(bb, NULL))
-            return;
-
-        window->DrawList->AddLine(ImVec2(bb.Min.x, bb.Min.y), ImVec2(bb.Min.x, bb.Max.y), GetColorU32(ImGuiCol_Separator));
-
-        if (g.LogEnabled)
-            LogText("|");
+        PushColumnClipRect();
+        window->DC.ColumnsCellMinY = window->DC.CursorPos.y;
     }
+}
+
+void ImGui::VerticalSeparator()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+    ImGuiContext& g = *GImGui;
+
+    float y1 = window->DC.CursorPos.y;
+    float y2 = window->DC.CursorPos.y + window->DC.CurrentLineHeight; 
+    const ImRect bb(ImVec2(window->DC.CursorPos.x, y1), ImVec2(window->DC.CursorPos.x + 1.0f, y2));
+    ItemSize(ImVec2(bb.GetWidth(), 0.0f));
+    if (!ItemAdd(bb, NULL))
+        return;
+
+    window->DrawList->AddLine(ImVec2(bb.Min.x, bb.Min.y), ImVec2(bb.Min.x, bb.Max.y), GetColorU32(ImGuiCol_Separator));
+    if (g.LogEnabled)
+        LogText(" |");
 }
 
 void ImGui::Spacing()
