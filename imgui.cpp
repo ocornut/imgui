@@ -2173,7 +2173,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     window->DC.LastItemRect = bb;
     window->DC.LastItemRectHoveredRect = false;
     if (id != NULL) 
-        window->DC.NavLayerActiveFlagsNext |= (1 << window->DC.NavLayerCurrent);
+        window->DC.NavLayerActiveMaskNext |= (1 << window->DC.NavLayerCurrent);
 
 	// Navigation processing runs prior to clipping early-out
     //  (a) So that NavInitDefaultRequest can be honored, for newly opened windows to select a default widget
@@ -2188,8 +2188,8 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
         const ImRect nav_bb_rel(nav_bb.Min - g.NavWindow->Pos, nav_bb.Max - g.NavWindow->Pos);
         if (g.NavInitDefaultRequest && g.NavLayer == window->DC.NavLayerCurrent)
         {
-            // Even if 'ImGuiItemFlags_AllowNavDefaultFocus' is off (typically collapse/close button) we record the first ResultId so they can be used as fallback
             if (!(window->DC.ItemFlags & ImGuiItemFlags_NoNavDefaultFocus))
+            // Even if 'ImGuiItemFlags_NoNavDefaultFocus' is on (typically collapse/close button) we record the first ResultId so they can be used as a fallback
                 g.NavInitDefaultRequest = g.NavInitDefaultResultExplicit = false; // Found a match, clear request
             if (g.NavInitDefaultResultId == 0 || !(window->DC.ItemFlags & ImGuiItemFlags_NoNavDefaultFocus))
             {
@@ -2695,9 +2695,9 @@ static void NavUpdate()
             // Single press toggles NavLayer
             if (g.NavWindowingToggleLayer && g.NavWindow)
             {
-                if ((g.NavWindow->DC.NavLayerActiveFlags & (1<<1)) == 0 && (g.NavWindow->RootWindow->DC.NavLayerActiveFlags & (1<<1)) != 0)
+                if ((g.NavWindow->DC.NavLayerActiveMask & (1<<1)) == 0 && (g.NavWindow->RootWindow->DC.NavLayerActiveMask & (1<<1)) != 0)
                     ImGui::FocusWindow(g.NavWindow->RootWindow);
-                g.NavLayer = (g.NavWindow->DC.NavLayerActiveFlags & (1<<1)) ? (g.NavLayer ^ 1) : 0;
+                g.NavLayer = (g.NavWindow->DC.NavLayerActiveMask & (1<<1)) ? (g.NavLayer ^ 1) : 0;
                 g.NavDisableHighlight = false;
                 g.NavDisableMouseHover = true;
                 if (g.NavLayer == 0 && g.NavWindow->NavLastId)
@@ -2790,7 +2790,7 @@ static void NavUpdate()
     {
         // Fallback manual-scroll with NavUp/NavDown when window has no navigable item
         const float scroll_speed = ImFloor(g.NavWindow->CalcFontSize() * 100 * g.IO.DeltaTime + 0.5f); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
-        if (!g.NavWindow->DC.NavLayerActiveFlags && g.NavWindow->DC.NavHasScroll && g.NavMoveRequest && (g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down))
+        if (!g.NavWindow->DC.NavLayerActiveMask && g.NavWindow->DC.NavHasScroll && g.NavMoveRequest && (g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down))
             SetWindowScrollY(g.NavWindow, ImFloor(g.NavWindow->Scroll.y + ((g.NavMoveDir == ImGuiDir_Up) ? -1.0f : +1.0f) * scroll_speed));
 
         // Manual scroll with NavScrollXXX keys
@@ -4462,7 +4462,7 @@ static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
         child_window->Flags &= ~ImGuiWindowFlags_ShowBorders;
 
     // Process navigation-in immediately so NavInit can run on first frame
-    if (/*!(flags & ImGuiWindowFlags_NavFlattened) &&*/ (child_window->DC.NavLayerActiveFlags != 0 || child_window->DC.NavHasScroll) && g.NavActivateId == id)
+    if (/*!(flags & ImGuiWindowFlags_NavFlattened) &&*/ (child_window->DC.NavLayerActiveMask != 0 || child_window->DC.NavHasScroll) && g.NavActivateId == id)
     {
         ImGui::FocusWindow(child_window);
         NavInitWindow(child_window, false);
@@ -4506,7 +4506,7 @@ void ImGui::EndChild()
         ImGuiWindow* parent_window = GetCurrentWindow();
         ImRect bb(parent_window->DC.CursorPos, parent_window->DC.CursorPos + sz);
         ItemSize(sz);
-        if (/*!(window->Flags & ImGuiWindowFlags_NavFlattened) &&*/ (window->DC.NavLayerActiveFlags != 0 || window->DC.NavHasScroll))
+        if (/*!(window->Flags & ImGuiWindowFlags_NavFlattened) &&*/ (window->DC.NavLayerActiveMask != 0 || window->DC.NavHasScroll))
         {
             ItemAdd(bb, &window->ChildId);
             RenderNavHighlight(bb, window->ChildId);
@@ -5194,8 +5194,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         window->DC.CursorMaxPos = window->DC.CursorStartPos;
         window->DC.CurrentLineHeight = window->DC.PrevLineHeight = 0.0f;
         window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset = 0.0f;
-        window->DC.NavLayerActiveFlags = window->DC.NavLayerActiveFlagsNext;
-        window->DC.NavLayerActiveFlagsNext = 0x00;
+        window->DC.NavLayerActiveMask = window->DC.NavLayerActiveMaskNext;
+        window->DC.NavLayerActiveMaskNext = 0x00;
         window->DC.NavHasScroll = (GetScrollMaxY() > 0.0f);
         window->DC.MenuBarAppending = false;
         window->DC.MenuBarOffsetX = ImMax(window->WindowPadding.x, style.ItemSpacing.x);
@@ -11585,7 +11585,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::BulletText("Size: (%.1f,%.1f), SizeContents (%.1f,%.1f)", window->Size.x, window->Size.y, window->SizeContents.x, window->SizeContents.y);
                 ImGui::BulletText("Scroll: (%.2f,%.2f)", window->Scroll.x, window->Scroll.y);
                 ImGui::BulletText("Active: %d, Accessed: %d", window->Active, window->Accessed);
-                ImGui::BulletText("NavLastId: 0x%08x, NavLayerActiveFlags: %02X", window->NavLastId, window->DC.NavLayerActiveFlags);
+                ImGui::BulletText("NavLastId: 0x%08x, NavLayerActiveMask: %02X", window->NavLastId, window->DC.NavLayerActiveMask);
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
                 ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.Size * (int)sizeof(ImGuiStorage::Pair));

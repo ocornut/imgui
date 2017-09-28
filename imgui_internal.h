@@ -662,7 +662,7 @@ struct IMGUI_API ImGuiDrawContext
     bool                    LastItemRectHoveredRect;
     bool                    NavHasScroll;                   // Set when scrolling can be used (ScrollMax > 0.0f)
     int                     NavLayerCurrent;                // Current layer, 0..31 (we currently only use 0..1)
-    int                     NavLayerActiveFlags, NavLayerActiveFlagsNext;   // Which layer have been written to.
+    int                     NavLayerActiveMask, NavLayerActiveMaskNext;   // Which layer have been written to.
     bool                    MenuBarAppending;
     float                   MenuBarOffsetX;
     ImVector<ImGuiWindow*>  ChildWindows;
@@ -705,7 +705,7 @@ struct IMGUI_API ImGuiDrawContext
         LastItemRect = ImRect();
         LastItemRectHoveredRect = false;
         NavHasScroll = false;
-        NavLayerActiveFlags = NavLayerActiveFlagsNext = 0x00;
+        NavLayerActiveMask = NavLayerActiveMaskNext = 0x00;
         NavLayerCurrent = 0;
         MenuBarAppending = false;
         MenuBarOffsetX = 0.0f;
