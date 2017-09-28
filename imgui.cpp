@@ -4132,7 +4132,7 @@ void ImGui::SetItemAllowOverlap()
 void ImGui::SetItemDefaultFocus()
 {
     ImGuiContext& g = *GImGui;
-    if (g.NavWindow == g.CurrentWindow->RootNavWindow && (g.NavInitDefaultRequest || g.NavInitDefaultResultId != 0))
+    if (g.NavWindow == g.CurrentWindow->RootNavWindow && (g.NavInitDefaultRequest || g.NavInitDefaultResultId != 0) && g.NavLayer == g.NavWindow->DC.NavLayerCurrent)
     {
         g.NavInitDefaultRequest = false;
         g.NavInitDefaultResultExplicit = true;
