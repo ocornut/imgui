@@ -2182,16 +2182,16 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     //      We could early out with `if (is_clipped && !g.NavInitDefaultRequest) return false;` but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
     //      A more pragmatic solution for handling long lists is relying on the fact that they are likely evenly spread items (so that clipper can be used) and we could Nav at higher-level (apply index, etc.)
     //      So eventually we would like to provide the user will the primitives to be able to implement that customized/efficient navigation handling whenever necessary.
+    const ImGuiItemFlags item_flags = window->DC.ItemFlags;
     if (id != NULL && g.NavWindow == window->RootNavWindow)
         if (g.NavId == *id || g.NavMoveRequest || g.NavInitDefaultRequest)
-            if (g.IO.NavUsable)
+            if (g.IO.NavUsable && !(item_flags & ImGuiItemFlags_NoNav))
             {
                 const ImRect& nav_bb = nav_bb_arg ? *nav_bb_arg : bb;
                 const ImRect nav_bb_rel(nav_bb.Min - g.NavWindow->Pos, nav_bb.Max - g.NavWindow->Pos);
                 if (g.NavInitDefaultRequest && g.NavLayer == window->DC.NavLayerCurrent)
                 {
                     // Even if 'ImGuiItemFlags_NoNavDefaultFocus' is on (typically collapse/close button) we record the first ResultId so they can be used as a fallback
-                    const ImGuiItemFlags item_flags = window->DC.ItemFlags;
                     if (!(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
                         g.NavInitDefaultRequest = g.NavInitDefaultResultExplicit = false; // Found a match, clear request
                     if (g.NavInitDefaultResultId == 0 || !(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
