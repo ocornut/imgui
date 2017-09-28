@@ -811,7 +811,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             }
 
             ImGui::Text("Color button only:");
-            ImGui::ColorButton("MyColor##3b", *(ImVec4*)&color, misc_flags, ImVec2(80,80));
+            ImGui::ColorButton("MyColor##3c", *(ImVec4*)&color, misc_flags, ImVec2(80,80));
 
             ImGui::Text("Color picker:");
             static bool alpha = true;
@@ -1186,7 +1186,8 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::Text("Text aligned to Widget"); ImGui::SameLine();
             ImGui::Button("Widget##1"); ImGui::SameLine();
             ImGui::Text("Widget"); ImGui::SameLine();
-            ImGui::SmallButton("Widget##2");
+            ImGui::SmallButton("Widget##2"); ImGui::SameLine();
+            ImGui::Button("Widget##3");
 
             // Tree
             const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
