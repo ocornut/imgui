@@ -600,6 +600,7 @@ struct IMGUI_API ImGuiDrawContext
     int                     TreeDepth;
     ImGuiID                 LastItemId;
     ImRect                  LastItemRect;
+    bool                    LastItemRectHoveredRect;
     bool                    MenuBarAppending;
     float                   MenuBarOffsetX;
     ImVector<ImGuiWindow*>  ChildWindows;
@@ -639,7 +640,8 @@ struct IMGUI_API ImGuiDrawContext
         LogLinePosY = -1.0f;
         TreeDepth = 0;
         LastItemId = 0;
-        LastItemRect = ImRect(0.0f,0.0f,0.0f,0.0f);
+        LastItemRect = ImRect();
+        LastItemRectHoveredRect = false;
         MenuBarAppending = false;
         MenuBarOffsetX = 0.0f;
         StateStorage = NULL;

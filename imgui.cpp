@@ -1952,12 +1952,16 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
+    const bool is_clipped = IsClippedEx(bb, id, false);
     window->DC.LastItemId = id ? *id : 0;
     window->DC.LastItemRect = bb;
-    if (IsClippedEx(bb, id, false))
+    window->DC.LastItemRectHoveredRect = false;
+    if (is_clipped)
         return false;
     //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
 
+    // We need to calculate this now to take account of the current clipping rectangle (as items like Selectable may change them)
+    window->DC.LastItemRectHoveredRect = IsMouseHoveringRect(bb.Min, bb.Max);
     return true;
 }
 
@@ -1968,11 +1972,11 @@ bool ImGui::IsItemHovered()
     ImGuiContext& g = *GImGui;
 
     ImGuiWindow* window = g.CurrentWindow;
+    if (!window->DC.LastItemRectHoveredRect)
+        return false;
     if (g.HoveredWindow != window)
         return false;
     if (g.ActiveId != 0 && g.ActiveId != window->DC.LastItemId && !g.ActiveIdAllowOverlap && g.ActiveId != window->MoveId)
-        return false;
-    if (!IsMouseHoveringRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max))
         return false;
     if (!IsWindowContentHoverable(window))
         return false;
@@ -1982,7 +1986,7 @@ bool ImGui::IsItemHovered()
 bool ImGui::IsItemRectHovered()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return IsMouseHoveringRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max);
+    return window->DC.LastItemRectHoveredRect;
 }
 
 // Internal facing ItemHoverable() used when submitting widgets. Differs slightly from IsItemHovered().

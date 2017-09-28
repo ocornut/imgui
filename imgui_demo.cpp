@@ -1505,7 +1505,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::Text("ID"); ImGui::NextColumn();
             ImGui::Text("Name"); ImGui::NextColumn();
             ImGui::Text("Path"); ImGui::NextColumn();
-            ImGui::Text("Flags"); ImGui::NextColumn();
+            ImGui::Text("Hovered"); ImGui::NextColumn();
             ImGui::Separator();
             const char* names[3] = { "One", "Two", "Three" };
             const char* paths[3] = { "/path/one", "/path/two", "/path/three" };
@@ -1516,10 +1516,11 @@ void ImGui::ShowTestWindow(bool* p_open)
                 sprintf(label, "%04d", i);
                 if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns))
                     selected = i;
+                bool hovered = ImGui::IsItemHovered();
                 ImGui::NextColumn();
                 ImGui::Text(names[i]); ImGui::NextColumn();
                 ImGui::Text(paths[i]); ImGui::NextColumn();
-                ImGui::Text("...."); ImGui::NextColumn();
+                ImGui::Text("%d", hovered); ImGui::NextColumn();
             }
             ImGui::Columns(1);
             ImGui::Separator();
