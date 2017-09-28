@@ -4448,6 +4448,12 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         // Title bar
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
+            // Collapse button
+            if (!(flags & ImGuiWindowFlags_NoCollapse))
+            {
+                RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f);
+            }
+
             // Close button
             if (p_open != NULL)
             {
@@ -4457,10 +4463,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                     *p_open = false;
             }
 
+            // Title text (FIXME: refactor text alignment facilities along with RenderText helpers)
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
-            if (!(flags & ImGuiWindowFlags_NoCollapse))
-                RenderCollapseTriangle(window->Pos + style.FramePadding, !window->Collapsed, 1.0f);
-
             ImVec2 text_min = window->Pos;
             ImVec2 text_max = window->Pos + ImVec2(window->Size.x, style.FramePadding.y*2 + text_size.y);
             ImRect clip_rect;
@@ -6979,6 +6983,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
 
             if (v_speed == 0.0f && (v_max - v_min) != 0.0f && (v_max - v_min) < FLT_MAX)
                 v_speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
+
             float v_cur = g.DragCurrentValue;
             const ImVec2 mouse_drag_delta = GetMouseDragDelta(0, 1.0f);
             float adjust_delta = 0.0f;
