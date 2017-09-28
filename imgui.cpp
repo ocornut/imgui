@@ -625,8 +625,6 @@
 // Forward Declarations
 //-------------------------------------------------------------------------
 
-static void             LogRenderedText(const ImVec2& ref_pos, const char* text, const char* text_end = NULL);
-
 static float            GetDraggedColumnOffset(int column_index);
 
 static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
@@ -3558,7 +3556,7 @@ void ImGui::LogText(const char* fmt, ...)
 
 // Internal version that takes a position to decide on newline placement and pad items according to their depth.
 // We split text into individual lines to add current tree level padding
-static void LogRenderedText(const ImVec2& ref_pos, const char* text, const char* text_end)
+static void LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end = NULL)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = ImGui::GetCurrentWindowRead();
@@ -3566,8 +3564,9 @@ static void LogRenderedText(const ImVec2& ref_pos, const char* text, const char*
     if (!text_end)
         text_end = ImGui::FindRenderedTextEnd(text, text_end);
 
-    const bool log_new_line = ref_pos.y > window->DC.LogLinePosY+1;
-    window->DC.LogLinePosY = ref_pos.y;
+    const bool log_new_line = ref_pos && (ref_pos->y > window->DC.LogLinePosY + 1);
+    if (ref_pos)
+        window->DC.LogLinePosY = ref_pos->y;
 
     const char* text_remaining = text;
     if (g.LogStartDepth > window->DC.TreeDepth)  // Re-adjust padding if we have popped out of our starting depth
@@ -3632,7 +3631,7 @@ void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
     {
         window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end);
         if (g.LogEnabled)
-            LogRenderedText(pos, text, text_display_end);
+            LogRenderedText(&pos, text, text_display_end);
     }
 }
 
@@ -3649,7 +3648,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
     {
         window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width);
         if (g.LogEnabled)
-            LogRenderedText(pos, text, text_end);
+            LogRenderedText(&pos, text, text_end);
     }
 }
 
@@ -3691,7 +3690,7 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, cons
         window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, NULL);
     }
     if (g.LogEnabled)
-        LogRenderedText(pos, text, text_display_end);
+        LogRenderedText(&pos, text, text_display_end);
 }
 
 // Render a rectangle shaped with optional rounding and borders
@@ -5055,7 +5054,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         {
             // Title bar only
             const bool is_focused = g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow && !g.NavDisableHighlight;
-            RenderFrame(title_bar_rect.GetTL(), title_bar_rect.GetBR(), GetColorU32(is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBgCollapsed), true, window_rounding);
+            RenderFrame(title_bar_rect.Min, title_bar_rect.Max, GetColorU32(is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBgCollapsed), true, window_rounding);
         }
         else
         {
@@ -5247,7 +5246,6 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             window->DC.NavLayerCurrent++;
 
             // Collapse button
-            const ImVec2 text_size = CalcTextSize(name, NULL, true);
             if (!(flags & ImGuiWindowFlags_NoCollapse))
             {
                 ImGuiID id = window->GetID("#COLLAPSE");
@@ -5272,6 +5270,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             window->DC.ItemFlags = backup_item_options;
 
             // Title text (FIXME: refactor text alignment facilities along with RenderText helpers)
+            const ImVec2 text_size = CalcTextSize(name, NULL, true);
             ImVec2 text_min = window->Pos;
             ImVec2 text_max = window->Pos + ImVec2(window->Size.x, style.FramePadding.y*2 + text_size.y);
             ImRect clip_rect;
@@ -7013,9 +7012,9 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             // NB: '##' is normally used to hide text (as a library-wide feature), so we need to specify the text range to make sure the ## aren't stripped out here.
             const char log_prefix[] = "\n##";
             const char log_suffix[] = "##";
-            LogRenderedText(text_pos, log_prefix, log_prefix+3);
+            LogRenderedText(&text_pos, log_prefix, log_prefix+3);
             RenderTextClipped(text_pos, bb.Max, label, label_end, &label_size);
-            LogRenderedText(text_pos, log_suffix+1, log_suffix+3);
+            LogRenderedText(&text_pos, log_suffix+1, log_suffix+3);
         }
         else
         {
@@ -7033,7 +7032,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         else if (!(flags & ImGuiTreeNodeFlags_Leaf))
             RenderCollapseTriangle(bb.Min + ImVec2(padding.x, g.FontSize*0.15f + text_base_offset_y), is_open, 0.70f);
         if (g.LogEnabled)
-            LogRenderedText(text_pos, ">");
+            LogRenderedText(&text_pos, ">");
         RenderText(text_pos, label, label_end, false);
     }
 
@@ -8362,9 +8361,9 @@ bool ImGui::Checkbox(const char* label, bool* v)
     }
 
     if (g.LogEnabled)
-        LogRenderedText(text_bb.GetTL(), *v ? "[x]" : "[ ]");
+        LogRenderedText(&text_bb.Min, *v ? "[x]" : "[ ]");
     if (label_size.x > 0.0f)
-        RenderText(text_bb.GetTL(), label);
+        RenderText(text_bb.Min, label);
 
     return pressed;
 }
@@ -8435,9 +8434,9 @@ bool ImGui::RadioButton(const char* label, bool active)
     }
 
     if (g.LogEnabled)
-        LogRenderedText(text_bb.GetTL(), active ? "(x)" : "( )");
+        LogRenderedText(&text_bb.Min, active ? "(x)" : "( )");
     if (label_size.x > 0.0f)
-        RenderText(text_bb.GetTL(), label);
+        RenderText(text_bb.Min, label);
 
     return pressed;
 }
@@ -9283,7 +9282,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
     // Log as text
     if (g.LogEnabled && !is_password)
-        LogRenderedText(render_pos, buf_display, NULL);
+        LogRenderedText(&render_pos, buf_display, NULL);
 
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
@@ -9729,7 +9728,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_Disabled) PopStyleColor();
 
     // Automatically close popups
-    if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_DontClosePopups) && !((window->DC.ItemFlags & ImGuiItemFlags_SelectableDontClosePopup)))
+    if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_DontClosePopups) && !(window->DC.ItemFlags & ImGuiItemFlags_SelectableDontClosePopup))
         CloseCurrentPopup();
     return pressed;
 }
@@ -10821,63 +10820,68 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
 // Horizontal separating line.
 void ImGui::Separator()
 {
-    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
+    ImGuiContext& g = *GImGui;
 
     ImGuiWindowFlags flags = 0;
     if ((flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical)) == 0)
-    {
-        if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
-            flags |= ImGuiSeparatorFlags_Vertical;
-        else
-            flags |= ImGuiSeparatorFlags_Horizontal;
-    }
+        flags |= (window->DC.LayoutType == ImGuiLayoutType_Horizontal) ? ImGuiSeparatorFlags_Vertical : ImGuiSeparatorFlags_Horizontal;
     IM_ASSERT(ImIsPowerOfTwo((int)(flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical))));   // Check that only 1 option is selected
+    if (flags & ImGuiSeparatorFlags_Vertical)
+    {
+        VerticalSeparator();
+        return;
+    }
 
-    if (flags & ImGuiSeparatorFlags_Horizontal)
+    // Horizontal Separator
+    if (window->DC.ColumnsCount > 1)
+        PopClipRect();
+
+    float x1 = window->Pos.x;
+    float x2 = window->Pos.x + window->Size.x;
+    if (!window->DC.GroupStack.empty())
+        x1 += window->DC.IndentX;
+
+    const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y+1.0f));
+    ItemSize(ImVec2(0.0f, 0.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit, we don't provide height to not alter layout.
+    if (!ItemAdd(bb, NULL))
     {
         if (window->DC.ColumnsCount > 1)
-            PopClipRect();
-
-        float x1 = window->Pos.x;
-        float x2 = window->Pos.x + window->Size.x;
-        if (!window->DC.GroupStack.empty())
-            x1 += window->DC.IndentX;
-
-        const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y+1.0f));
-        ItemSize(ImVec2(0.0f, 0.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit, we don't provide height to not alter layout.
-        if (!ItemAdd(bb, NULL))
-        {
-            if (window->DC.ColumnsCount > 1)
-                PushColumnClipRect();
-            return;
-        }
-
-        window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x,bb.Min.y), GetColorU32(ImGuiCol_Separator));
-
-        if (g.LogEnabled)
-            LogText(IM_NEWLINE "--------------------------------");
-
-        if (window->DC.ColumnsCount > 1)
-        {
             PushColumnClipRect();
-            window->DC.ColumnsCellMinY = window->DC.CursorPos.y;
-        }
+        return;
     }
-    else if (flags & ImGuiSeparatorFlags_Vertical)
+
+    window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x,bb.Min.y), GetColorU32(ImGuiCol_Separator));
+
+    if (g.LogEnabled)
+            LogRenderedText(NULL, IM_NEWLINE "--------------------------------");
+
+    if (window->DC.ColumnsCount > 1)
     {
-        const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(1.0f, window->DC.CurrentLineHeight));
-        ItemSize(ImVec2(bb.GetWidth(), 0.0f));
-        if (!ItemAdd(bb, NULL))
-            return;
-
-        window->DrawList->AddLine(ImVec2(bb.Min.x, bb.Min.y), ImVec2(bb.Min.x, bb.Max.y), GetColorU32(ImGuiCol_Separator));
-
-        if (g.LogEnabled)
-            LogText("|");
+        PushColumnClipRect();
+        window->DC.ColumnsCellMinY = window->DC.CursorPos.y;
     }
+}
+
+void ImGui::VerticalSeparator()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+    ImGuiContext& g = *GImGui;
+
+    float y1 = window->DC.CursorPos.y;
+    float y2 = window->DC.CursorPos.y + window->DC.CurrentLineHeight; 
+    const ImRect bb(ImVec2(window->DC.CursorPos.x, y1), ImVec2(window->DC.CursorPos.x + 1.0f, y2));
+    ItemSize(ImVec2(bb.GetWidth(), 0.0f));
+    if (!ItemAdd(bb, NULL))
+        return;
+
+    window->DrawList->AddLine(ImVec2(bb.Min.x, bb.Min.y), ImVec2(bb.Min.x, bb.Max.y), GetColorU32(ImGuiCol_Separator));
+    if (g.LogEnabled)
+        LogText(" |");
 }
 
 void ImGui::Spacing()
