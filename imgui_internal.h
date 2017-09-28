@@ -580,8 +580,8 @@ enum ImGuiItemFlags_
     ImGuiItemFlags_ButtonRepeat                 = 1 << 1,  // false    // Button() will return true multiple times based on io.KeyRepeatDelay and io.KeyRepeatRate settings.
     //ImGuiItemFlags_Disabled                   = 1 << 2,  // false    // All widgets appears are disabled
     //ImGuiItemFlags_AllowNavDefaultFocus       = 1 << 3,  // true
-    //ImGuiItemFlags_SelectableDontClosePopup   = 1 << 4,  // false    // MenuItem/Selectable() automatically closes current Popup window
-    ImGuiItemFlags_Default_                 = ImGuiItemFlags_AllowKeyboardFocus
+    ImGuiItemFlags_SelectableDontClosePopup     = 1 << 4,  // false    // MenuItem/Selectable() automatically closes current Popup window
+    ImGuiItemFlags_Default_                     = ImGuiItemFlags_AllowKeyboardFocus
 };
 
 // Transient per-window data, reset at the beginning of the frame
