@@ -6589,25 +6589,30 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     }
 
     bool held = false;
-    if (g.ActiveId == id && g.ActiveIdSource == ImGuiInputSource_Mouse)
+    if (g.ActiveId == id)
     {
-        if (g.IO.MouseDown[0])
+        if (g.ActiveIdSource == ImGuiInputSource_Mouse)
         {
-            held = true;
+            if (g.IO.MouseDown[0])
+            {
+                held = true;
+            }
+            else
+            {
+                if (hovered && (flags & ImGuiButtonFlags_PressedOnClickRelease))
+                    if (!((flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[0] >= g.IO.KeyRepeatDelay))  // Repeat mode trumps <on release>
+                        pressed = true;
+                ClearActiveID();
+            }
+            if (!(flags & ImGuiButtonFlags_NoNavOverride))
+                g.NavDisableHighlight = true;
         }
-        else
+        else if (g.ActiveIdSource == ImGuiInputSource_Nav)
         {
-            if (hovered && (flags & ImGuiButtonFlags_PressedOnClickRelease))
-                if (!((flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[0] >= g.IO.KeyRepeatDelay))  // Repeat mode trumps <on release>
-                    pressed = true;
-            ClearActiveID();
+            if (!IsNavInputDown(ImGuiNavInput_PadActivate))
+                ClearActiveID();
         }
-        if (!(flags & ImGuiButtonFlags_NoNavOverride))
-            g.NavDisableHighlight = true;
     }
-    if (g.ActiveId == id && g.ActiveIdSource == ImGuiInputSource_Nav)
-        if (!IsNavInputDown(ImGuiNavInput_PadActivate))
-            ClearActiveID();
 
     // AllowOverlap mode (rarely used) requires previous frame HoveredId to be null or to match. This allows using patterns where a later submitted widget overlaps a previous one.
     if (hovered && (flags & ImGuiButtonFlags_AllowOverlapMode) && (g.HoveredIdPreviousFrame != id && g.HoveredIdPreviousFrame != 0))
