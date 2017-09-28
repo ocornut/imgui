@@ -2189,9 +2189,9 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
         if (g.NavInitDefaultRequest && g.NavLayer == window->DC.NavLayerCurrent)
         {
             // Even if 'ImGuiItemFlags_AllowNavDefaultFocus' is off (typically collapse/close button) we record the first ResultId so they can be used as fallback
-            if (window->DC.ItemFlags & ImGuiItemFlags_AllowNavDefaultFocus)
+            if (!(window->DC.ItemFlags & ImGuiItemFlags_NoNavDefaultFocus))
                 g.NavInitDefaultRequest = g.NavInitDefaultResultExplicit = false; // Found a match, clear request
-            if (g.NavInitDefaultResultId == 0 || (window->DC.ItemFlags & ImGuiItemFlags_AllowNavDefaultFocus))
+            if (g.NavInitDefaultResultId == 0 || !(window->DC.ItemFlags & ImGuiItemFlags_NoNavDefaultFocus))
             {
                 g.NavInitDefaultResultId = *id;
                 g.NavInitDefaultResultRectRel = nav_bb_rel;
@@ -5242,7 +5242,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         {
             // Close & collapse button are on layer 1 (same as menus) and don't default focus
             const ImGuiItemFlags backup_item_options = window->DC.ItemFlags;
-            window->DC.ItemFlags &= ~ImGuiItemFlags_AllowNavDefaultFocus;
+            window->DC.ItemFlags |= ImGuiItemFlags_NoNavDefaultFocus;
             window->DC.NavLayerCurrent++;
 
             // Collapse button

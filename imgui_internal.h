@@ -167,6 +167,7 @@ inline void operator delete(void*, ImPlacementNewDummy, void*) {}
 // Types
 //-----------------------------------------------------------------------------
 
+// NB: Most of those flags are handled by ButtonBehavior(), but some as for the higher level ButtonEx() function only.
 enum ImGuiButtonFlags_
 {
     ImGuiButtonFlags_Repeat                 = 1 << 0,   // hold to repeat
@@ -637,9 +638,9 @@ enum ImGuiItemFlags_
     ImGuiItemFlags_AllowKeyboardFocus           = 1 << 0,  // true
     ImGuiItemFlags_ButtonRepeat                 = 1 << 1,  // false    // Button() will return true multiple times based on io.KeyRepeatDelay and io.KeyRepeatRate settings.
     //ImGuiItemFlags_Disabled                   = 1 << 2,  // false    // All widgets appears are disabled
-    ImGuiItemFlags_AllowNavDefaultFocus         = 1 << 3,  // true
+    ImGuiItemFlags_NoNavDefaultFocus            = 1 << 3,  // true
     ImGuiItemFlags_SelectableDontClosePopup     = 1 << 4,  // false    // MenuItem/Selectable() automatically closes current Popup window
-    ImGuiItemFlags_Default_                     = ImGuiItemFlags_AllowKeyboardFocus|ImGuiItemFlags_AllowNavDefaultFocus
+    ImGuiItemFlags_Default_                     = ImGuiItemFlags_AllowKeyboardFocus
 };
 
 // Transient per-window data, reset at the beginning of the frame
