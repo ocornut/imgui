@@ -594,6 +594,8 @@
 #include <stdint.h>     // intptr_t
 #endif
 
+#define IMGUI_DEBUG_NAV 0
+
 #ifdef _MSC_VER
 #pragma warning (disable: 4127) // condition expression is constant
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
@@ -2091,7 +2093,7 @@ static bool NavScoreItem(ImRect cand)
         quadrant = (window->DC.LastItemId < g.NavId) ? ImGuiDir_Left : ImGuiDir_Right;
     }
 
-#if 0 // [DEBUG]
+#if IMGUI_DEBUG_NAV
     if (ImGui::IsMouseHoveringRect(cand.Min, cand.Max))
     {
         char buf[128];
@@ -2184,7 +2186,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     //      So eventually we would like to provide the user will the primitives to be able to implement that customized/efficient navigation handling whenever necessary.
     const ImGuiItemFlags item_flags = window->DC.ItemFlags;
     if (id != NULL && g.NavWindow == window->RootNavWindow)
-        if (g.NavId == *id || g.NavMoveRequest || g.NavInitDefaultRequest)
+        if (g.NavId == *id || g.NavMoveRequest || g.NavInitDefaultRequest || IMGUI_DEBUG_NAV)
             if (g.IO.NavUsable && !(item_flags & ImGuiItemFlags_NoNav))
             {
                 const ImRect& nav_bb = nav_bb_arg ? *nav_bb_arg : bb;
@@ -2201,15 +2203,21 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
                     }
                 }
 
-                //const bool DEBUG_NAV = false; // [DEBUG] Enable to test scoring on all items.
-                if ((g.NavMoveRequest /*|| DEBUG_NAV*/) && g.NavId != *id)
+                bool new_best = false;
+#if IMGUI_DEBUG_NAV
+                // [DEBUG] Score items at all times
+                if (!g.NavMoveRequest) 
+                    g.NavMoveDir = g.NavMoveDirLast;
+                if (g.NavId != *id)
+                    new_best = NavScoreItem(nav_bb) && g.NavMoveRequest;
+#else
+                if (g.NavMoveRequest && g.NavId != *id)
+                    new_best = NavScoreItem(nav_bb);
+#endif
+                if (new_best)
                 {
-                    //if (DEBUG_NAV && !g.NavMoveRequest) g.NavMoveDir = ImGuiDir_N;
-                    if (NavScoreItem(nav_bb)) //if (!DEBUG || g.NavMoveRequest)
-                    {
-                        g.NavMoveResultId = *id;
-                        g.NavMoveResultRectRel = nav_bb_rel;
-                    }
+                    g.NavMoveResultId = *id;
+                    g.NavMoveResultRectRel = nav_bb_rel;
                 }
 
                 // Update window-relative bounding box of navigated item
@@ -2778,7 +2786,10 @@ static void NavUpdate()
         if ((allowed_dir_flags & (1<<ImGuiDir_Down))  && IsNavInputPressed(ImGuiNavInput_PadDown,  ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Down;
     }
     if (g.NavMoveDir != ImGuiDir_None)
+    {
         g.NavMoveRequest = true;
+        g.NavMoveDirLast = g.NavMoveDir;
+    }
 
     // If we initiate a movement request and have no current NavId, we initiate a InitDefautRequest that will be used as a fallback if the direction fails to find a match
     if (g.NavMoveRequest && g.NavId == 0)

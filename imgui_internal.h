@@ -476,6 +476,7 @@ struct ImGuiContext
     bool                    NavMoveRequest;                     // Move request for this frame
     bool                    NavMoveFromClampedRefRect;          // Set by manual scrolling, if we scroll to a point where NavId isn't visible we reset navigation from visible items
     ImGuiDir                NavMoveDir;                         // West/East/North/South
+    ImGuiDir                NavMoveDirLast;                     //
     ImGuiID                 NavMoveResultId;                    // Best move request candidate
     float                   NavMoveResultDistBox;               // Best move request candidate box distance to current NavId
     float                   NavMoveResultDistCenter;            // Best move request candidate center distance to current NavId
@@ -583,7 +584,7 @@ struct ImGuiContext
         NavInitDefaultResultId = 0;
         NavInitDefaultResultExplicit = false;
         NavMoveRequest = false;
-        NavMoveDir = ImGuiDir_None;
+        NavMoveDir = NavMoveDirLast = ImGuiDir_None;
         NavMoveResultId = 0;
         NavMoveResultDistBox = NavMoveResultDistCenter = NavMoveResultDistAxial = 0.0f;
 
