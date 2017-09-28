@@ -2802,12 +2802,17 @@ static void NavUpdate()
     // Scrolling
     if (g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.NavWindowingTarget)
     {
-        // Fallback manual-scroll with NavUp/NavDown when window has no navigable item
+        // *Fallback* manual-scroll with NavUp/NavDown when window has no navigable item
         const float scroll_speed = ImFloor(g.NavWindow->CalcFontSize() * 100 * g.IO.DeltaTime + 0.5f); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
-        if (!g.NavWindow->DC.NavLayerActiveMask && g.NavWindow->DC.NavHasScroll && g.NavMoveRequest && (g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down))
-            SetWindowScrollY(g.NavWindow, ImFloor(g.NavWindow->Scroll.y + ((g.NavMoveDir == ImGuiDir_Up) ? -1.0f : +1.0f) * scroll_speed));
+        if (!g.NavWindow->DC.NavLayerActiveMask && g.NavWindow->DC.NavHasScroll && g.NavMoveRequest)
+        {
+            if (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right)
+                SetWindowScrollX(g.NavWindow, ImFloor(g.NavWindow->Scroll.x + ((g.NavMoveDir == ImGuiDir_Left) ? -1.0f : +1.0f) * scroll_speed));
+            if (g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down)
+                SetWindowScrollY(g.NavWindow, ImFloor(g.NavWindow->Scroll.y + ((g.NavMoveDir == ImGuiDir_Up) ? -1.0f : +1.0f) * scroll_speed));
+        }
 
-        // Manual scroll with NavScrollXXX keys
+        // *Normal* Manual scroll with NavScrollXXX keys
         ImVec2 scroll_dir = GetNavInputAmount2d(1, ImGuiNavReadMode_Down, 1.0f/10.0f, 10.0f);
         if (scroll_dir.x != 0.0f && g.NavWindow->ScrollbarX)
         {
