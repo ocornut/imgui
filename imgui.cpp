@@ -6575,12 +6575,16 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         hovered = true;
         if (!g.NavWindowingTarget && IsNavInputDown(ImGuiNavInput_PadActivate))
         {
-            // Set active id so it can be queried by user via IsItemActive(), etc. but don't react to it ourselves
-            g.NavActivateId = id;
-            SetActiveID(id, window);
-            g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right) | (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
-            if (IsNavInputPressed(ImGuiNavInput_PadActivate, (flags & ImGuiButtonFlags_Repeat) ? ImGuiNavReadMode_Repeat : ImGuiNavReadMode_Pressed))
+            bool nav_pressed = IsNavInputPressed(ImGuiNavInput_PadActivate, (flags & ImGuiButtonFlags_Repeat) ? ImGuiNavReadMode_Repeat : ImGuiNavReadMode_Pressed);
+            if (nav_pressed)
                 pressed = true;
+            if (nav_pressed || g.ActiveId == id)
+            {
+                // Set active id so it can be queried by user via IsItemActive(), equivalent of holding the mouse button.
+                g.NavActivateId = id; // This is so SetActiveId assign a Nav source
+                SetActiveID(id, window);
+                g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right) | (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
+            }
         }
     }
 
