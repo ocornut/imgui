@@ -658,6 +658,7 @@ struct IMGUI_API ImGuiDrawContext
     int                     TreeDepth;
     ImGuiID                 LastItemId;
     ImRect                  LastItemRect;
+    bool                    LastItemRectHoveredRect;
     bool                    NavHasScroll;                   // Set when scrolling can be used (ScrollMax > 0.0f)
     int                     NavLayerCurrent;                // Current layer, 0..31 (we currently only use 0..1)
     int                     NavLayerActiveFlags, NavLayerActiveFlagsNext;   // Which layer have been written to.
@@ -700,7 +701,8 @@ struct IMGUI_API ImGuiDrawContext
         LogLinePosY = -1.0f;
         TreeDepth = 0;
         LastItemId = 0;
-        LastItemRect = ImRect(0.0f,0.0f,0.0f,0.0f);
+        LastItemRect = ImRect();
+        LastItemRectHoveredRect = false;
         NavHasScroll = false;
         NavLayerActiveFlags = NavLayerActiveFlagsNext = 0x00;
         NavLayerCurrent = 0;
