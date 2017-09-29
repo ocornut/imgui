@@ -1848,7 +1848,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     SetWindowPosVal = SetWindowPosPivot = ImVec2(FLT_MAX, FLT_MAX);
 
     NavLastIds[0] = NavLastIds[1] = 0;
-    NavRefRectRel[0] = NavRefRectRel[1] = ImRect();
+    NavRectRel[0] = NavRectRel[1] = ImRect();
 
     LastFrameActive = -1;
     ItemWidthDefault = 0.0f;
@@ -2225,7 +2225,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
                 // Update window-relative bounding box of navigated item
                 if (g.NavId == *id)
                 {
-                    window->NavRefRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;
+                    window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;
                     g.NavIdIsAlive = true;
                     g.NavIdTabCounter = window->FocusIdxTabCounter;
                 }
@@ -2461,7 +2461,7 @@ static void SetNavIdAndMoveMouse(ImGuiID id, int nav_layer, const ImRect& rect_r
 {
     ImGuiContext& g = *GImGui;
     SetNavId(id, nav_layer);
-    g.NavWindow->NavRefRectRel[nav_layer] = rect_rel;
+    g.NavWindow->NavRectRel[nav_layer] = rect_rel;
     g.NavMousePosDirty = true;
     g.NavDisableHighlight = false;
     g.NavDisableMouseHover = true;
@@ -2492,8 +2492,8 @@ static ImVec2 NavCalcPreferredMousePos()
     ImGuiWindow* window = g.NavWindow;
     if (!window)
         return g.IO.MousePos;
-    const ImRect& ref_rect_rel = window->NavRefRectRel[g.NavLayer];
-    ImVec2 pos = g.NavWindow->Pos + ImVec2(ref_rect_rel.Min.x + ImMin(g.Style.FramePadding.x*4, ref_rect_rel.GetWidth()), ref_rect_rel.Max.y - ImMin(g.Style.FramePadding.y, ref_rect_rel.GetHeight()));
+    const ImRect& rect_rel = window->NavRectRel[g.NavLayer];
+    ImVec2 pos = g.NavWindow->Pos + ImVec2(rect_rel.Min.x + ImMin(g.Style.FramePadding.x*4, rect_rel.GetWidth()), rect_rel.Max.y - ImMin(g.Style.FramePadding.y, rect_rel.GetHeight()));
     ImRect visible_rect = GetVisibleRect();
     return ImFloor(ImClamp(pos, visible_rect.Min, visible_rect.Max));   // ImFloor() is important because non-integer mouse position application in backend might be lossy and result in undesirable non-zero delta.
 }
@@ -2584,7 +2584,7 @@ static void NavUpdate()
         // Apply result from previous navigation init request (typically select the first item, unless SetItemDefaultFocus() has been called)
         IM_ASSERT(g.NavWindow);
         SetNavId(g.NavInitDefaultResultId, g.NavLayer);
-        g.NavWindow->NavRefRectRel[g.NavLayer] = g.NavInitDefaultResultRectRel;
+        g.NavWindow->NavRectRel[g.NavLayer] = g.NavInitDefaultResultRectRel;
         if (g.NavDisableMouseHover)
             g.NavMousePosDirty = true;
     }
@@ -2838,18 +2838,18 @@ static void NavUpdate()
     {
         // When we have manually scrolled and NavId is out of bounds, we clamp its bounding box (used for search) to the visible area to restart navigation within visible items
         ImRect window_rect_rel(g.NavWindow->InnerRect.Min - g.NavWindow->Pos - ImVec2(1,1), g.NavWindow->InnerRect.Max - g.NavWindow->Pos + ImVec2(1,1));
-        if (!window_rect_rel.Contains(g.NavWindow->NavRefRectRel[g.NavLayer]))
+        if (!window_rect_rel.Contains(g.NavWindow->NavRectRel[g.NavLayer]))
         {
             float pad = g.NavWindow->CalcFontSize() * 0.5f;
             window_rect_rel.Expand(ImVec2(-ImMin(window_rect_rel.GetWidth(), pad), -ImMin(window_rect_rel.GetHeight(), pad))); // Terrible approximation for the intend of starting navigation from first fully visible item
-            g.NavWindow->NavRefRectRel[g.NavLayer].ClipWith(window_rect_rel);
+            g.NavWindow->NavRectRel[g.NavLayer].ClipWith(window_rect_rel);
             g.NavId = 0;
         }
         g.NavMoveFromClampedRefRect = false;
     }
 
     // For scoring we use a single segment on the left side our current item bounding box (not touching the edge to avoid box overlap with zero-spaced items)
-    g.NavScoringRectScreen = g.NavWindow ? ImRect(g.NavWindow->Pos + g.NavWindow->NavRefRectRel[g.NavLayer].Min, g.NavWindow->Pos + g.NavWindow->NavRefRectRel[g.NavLayer].Max) : ImRect();
+    g.NavScoringRectScreen = g.NavWindow ? ImRect(g.NavWindow->Pos + g.NavWindow->NavRectRel[g.NavLayer].Min, g.NavWindow->Pos + g.NavWindow->NavRectRel[g.NavLayer].Max) : ImRect();
     g.NavScoringRectScreen.Min.x = ImMin(g.NavScoringRectScreen.Min.x + 1.0f, g.NavScoringRectScreen.Max.x);
     g.NavScoringRectScreen.Max.x = g.NavScoringRectScreen.Min.x;
     //g.OverlayDrawList.AddRect(g.NavScoringRectScreen.Min, g.NavScoringRectScreen.Max, IM_COL32(255,200,0,255)); // [DEBUG]
@@ -5514,7 +5514,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         g.NavLayer = 0;
         if (window && g.NavDisableMouseHover)
             g.NavMousePosDirty = true;
-        window->NavRefRectRel[0].Min = window->NavRefRectRel[1].Max = window ? (window->DC.CursorStartPos - window->Pos) : ImVec2(0,0);
+        window->NavRectRel[0].Min = window->NavRectRel[1].Max = window ? (window->DC.CursorStartPos - window->Pos) : ImVec2(0,0);
         g.NavWindow = window;
     }
 
@@ -11627,7 +11627,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::BulletText("Scroll: (%.2f,%.2f)", window->Scroll.x, window->Scroll.y);
                 ImGui::BulletText("Active: %d, Accessed: %d", window->Active, window->Accessed);
                 ImGui::BulletText("NavLastIds: 0x%08X,0x%08X, NavLayerActiveMask: %X", window->NavLastIds[0], window->NavLastIds[1], window->DC.NavLayerActiveMask);
-                ImGui::BulletText("NavRefRectRel[0]: (%.1f,%.1f)(%.1f,%.1f)", window->NavRefRectRel[0].Min.x, window->NavRefRectRel[0].Min.y, window->NavRefRectRel[0].Max.x, window->NavRefRectRel[0].Max.y);
+                ImGui::BulletText("NavRectRel[0]: (%.1f,%.1f)(%.1f,%.1f)", window->NavRectRel[0].Min.x, window->NavRectRel[0].Min.y, window->NavRectRel[0].Max.x, window->NavRectRel[0].Max.y);
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
                 ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.Size * (int)sizeof(ImGuiStorage::Pair));
