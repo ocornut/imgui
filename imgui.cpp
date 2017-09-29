@@ -3430,11 +3430,14 @@ void ImGui::EndFrame()
             if (g.HoveredRootWindow != NULL)
             {
                 FocusWindow(g.HoveredWindow);
+                // FIXME-NAV: This never execute because of the FocusWindow call above, however we may might this behavior?
+                /*
                 if (g.NavWindow != g.HoveredWindow)
                 {
                     g.NavRefRectRel = ImRect(g.IO.MousePos - g.HoveredWindow->Pos, g.IO.MousePos - g.HoveredWindow->Pos); //ImRect(0,0,0,0);
                     g.NavDisableHighlight = true;
                 }
+                */
                 if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
                 {
                     g.MovedWindow = g.HoveredWindow;
