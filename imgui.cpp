@@ -2446,19 +2446,19 @@ int ImGui::GetFrameCount()
     return GImGui->FrameCount;
 }
 
-static void SetNavId(ImGuiID id)
+static void SetNavId(ImGuiID id, int nav_layer)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindow);
-    IM_ASSERT(g.NavLayer == 0 || g.NavLayer == 1);
+    IM_ASSERT(nav_layer == 0 || nav_layer == 1);
     g.NavId = id;
-    g.NavWindow->NavLastIds[g.NavLayer] = g.NavId;
+    g.NavWindow->NavLastIds[nav_layer] = g.NavId;
 }
 
-static void SetNavIdAndMoveMouse(ImGuiID id, const ImRect& rect_rel)
+static void SetNavIdAndMoveMouse(ImGuiID id, int nav_layer, const ImRect& rect_rel)
 {
     ImGuiContext& g = *GImGui;
-    SetNavId(id);
+    SetNavId(id, nav_layer);
     g.NavRefRectRel = rect_rel;
     g.NavMousePosDirty = true;
     g.NavDisableHighlight = false;
@@ -2472,7 +2472,7 @@ static void NavInitWindow(ImGuiWindow* window, bool force_reinit)
     IM_ASSERT(window == g.NavWindow);
     if (!(window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_Popup) || (window->NavLastIds[0] == 0) || force_reinit)
     {
-        SetNavId(0);
+        SetNavId(0, g.NavLayer);
         g.NavInitDefaultRequest = true;
         g.NavInitDefaultResultId = 0;
         g.NavInitDefaultResultExplicit = false;
@@ -2579,7 +2579,7 @@ static void NavUpdate()
     {
         // Apply result from previous navigation init request (typically select the first item, unless SetItemDefaultFocus() has been called)
         IM_ASSERT(g.NavWindow);
-        SetNavId(g.NavInitDefaultResultId);
+        SetNavId(g.NavInitDefaultResultId, g.NavLayer);
         g.NavRefRectRel = g.NavInitDefaultResultRectRel;
         if (g.NavDisableMouseHover)
             g.NavMousePosDirty = true;
@@ -2627,7 +2627,7 @@ static void NavUpdate()
 
         // Apply result from previous frame navigation directional move request
         ImGui::ClearActiveID();
-        SetNavIdAndMoveMouse(g.NavMoveResultId, g.NavMoveResultRectRel);
+        SetNavIdAndMoveMouse(g.NavMoveResultId, g.NavLayer, g.NavMoveResultRectRel);
         g.NavMoveFromClampedRefRect = false;
     }
 
@@ -2712,7 +2712,7 @@ static void NavUpdate()
                 g.NavDisableHighlight = false;
                 g.NavDisableMouseHover = true;
                 if (g.NavLayer == 0 && g.NavWindow->NavLastIds[0] != 0)
-                    SetNavIdAndMoveMouse(g.NavWindow->NavLastIds[0], ImRect());
+                    SetNavIdAndMoveMouse(g.NavWindow->NavLastIds[0], g.NavLayer, ImRect());
                 else
                     NavInitWindow(g.NavWindow, true);
             }
@@ -2739,7 +2739,7 @@ static void NavUpdate()
             ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
             ImGui::FocusWindow(parent_window);
             IM_ASSERT(child_window->ChildId != 0);
-            SetNavId(child_window->ChildId);
+            SetNavId(child_window->ChildId, g.NavLayer); // FIXME-NAV: Layer not necessarily correct
             g.NavIdIsAlive = false;
             if (g.NavDisableMouseHover)
                 g.NavMousePosDirty = true;
@@ -2754,7 +2754,7 @@ static void NavUpdate()
             // Leave the "menu" layer
             g.NavLayer = 0;
             if (g.NavWindow->NavLastIds[0])
-                SetNavIdAndMoveMouse(g.NavWindow->NavLastIds[0], ImRect());
+                SetNavIdAndMoveMouse(g.NavWindow->NavLastIds[0], g.NavLayer, ImRect());
             else
                 NavInitWindow(g.NavWindow, true);
         }
@@ -9737,7 +9737,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (hovered && !g.NavDisableMouseHover && g.NavWindow == window && (g.IO.MouseDelta.x != 0.0f || g.IO.MouseDelta.y != 0.0f))
     {
         g.NavDisableHighlight = true;
-        SetNavId(id);
+        SetNavId(id, window->DC.NavLayerCurrent);
     }
 
     // Render
