@@ -2098,7 +2098,7 @@ static bool NavScoreItem(ImRect cand)
     if (ImGui::IsMouseHoveringRect(cand.Min, cand.Max))
     {
         char buf[128];
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "db (%.0f,%.0f->%.5f) dc (%.0f,%.0f->%.5f) da (%.0f,%.0f->%.5f) quad %c", dbx, dby, dist_box, dcx, dcy, dist_center, dax, day, dist_axial, "WENS"[quadrant]);
+        ImFormatString(buf, IM_ARRAYSIZE(buf), "dbox (%.2f,%.2f->%.4f) dcen (%.2f,%.2f->%.4f) d (%.2f,%.2f->%.4f) nav %c, quad %c", dbx, dby, dist_box, dcx, dcy, dist_center, dax, day, dist_axial, "WENS"[g.NavMoveDir], "WENS"[quadrant]);
         g.OverlayDrawList.AddRect(cand.Min, cand.Max, IM_COL32(255,255,0,200));
         g.OverlayDrawList.AddRectFilled(cand.Max-ImVec2(4,4), cand.Max+ImGui::CalcTextSize(buf)+ImVec2(4,4), IM_COL32(40,0,0,150));
         g.OverlayDrawList.AddText(cand.Max, ~0U, buf);
@@ -2138,8 +2138,10 @@ static bool NavScoreItem(ImRect cand)
     // Axial check: if 'curr' has no link at all in some direction and 'cand' lies roughly in that direction, add a tentative link. This will only be kept if no "real" matches
     // are found, so it only augments the graph produced by the above method using extra links. (important, since it doesn't guarantee strong connectedness)
     // This is just to avoid buttons having no links in a particular direction when there's a suitable neighbor. you get good graphs without this too.
-    if (g.NavMoveResultDistBox == FLT_MAX) 
-        if (dist_axial < g.NavMoveResultDistAxial) // Check axial match
+    // 2017/09/29: FIXME: This now currently only enabled inside menubars, ideally we'd disable it everywhere. Menus in particular need to catch failure. For general navigation it feels awkward.
+    // Disabling it may however lead to disconnected graphs when nodes are very spaced out on different axis. Perhaps consider offering this as an option?
+    if (g.NavMoveResultDistBox == FLT_MAX && dist_axial < g.NavMoveResultDistAxial)  // Check axial match
+        if (g.NavLayer == 1 && !(g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
             if ((g.NavMoveDir == ImGuiDir_Left && dax < 0.0f) || (g.NavMoveDir == ImGuiDir_Right && dax > 0.0f) || (g.NavMoveDir == ImGuiDir_Up && day < 0.0f) || (g.NavMoveDir == ImGuiDir_Down && day > 0.0f))
                 g.NavMoveResultDistAxial = dist_axial, new_best = true;
 
@@ -9990,7 +9992,7 @@ void ImGui::EndMenuBar()
     ImGuiContext& g = *GImGui;
 
     // When a move request within one of our child menu failed, capture the request to navigate among our siblings.
-    if (g.NavMoveRequest && g.NavMoveResultId == 0 && (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right))
+    if (g.NavMoveRequest && g.NavMoveResultId == 0 && (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right) && (g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
     {
         ImGuiWindow* nav_earliest_child = g.NavWindow;
         while (nav_earliest_child->ParentWindow && (nav_earliest_child->ParentWindow->Flags & ImGuiWindowFlags_ChildMenu))
