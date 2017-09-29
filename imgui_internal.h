@@ -473,8 +473,9 @@ struct ImGuiContext
     ImGuiID                 NavInitDefaultResultId;
     ImRect                  NavInitDefaultResultRectRel;
     bool                    NavInitDefaultResultExplicit;       // Whether the result was explicitly requested with SetItemDefaultFocus()
-    bool                    NavMoveRequest;                     // Move request for this frame
     bool                    NavMoveFromClampedRefRect;          // Set by manual scrolling, if we scroll to a point where NavId isn't visible we reset navigation from visible items
+    bool                    NavMoveRequest;                     // Move request for this frame
+    int                     NavMoveRequestForwardStep;          // 0: no forward, 1: forward request, 2: forward result
     ImGuiDir                NavMoveDir;                         // West/East/North/South
     ImGuiDir                NavMoveDirLast;                     //
     ImGuiID                 NavMoveResultId;                    // Best move request candidate
@@ -585,6 +586,7 @@ struct ImGuiContext
         NavInitDefaultResultExplicit = false;
         NavMoveFromClampedRefRect = false;
         NavMoveRequest = false;
+        NavMoveRequestForwardStep = 0;
         NavMoveDir = NavMoveDirLast = ImGuiDir_None;
         NavMoveResultId = 0;
         NavMoveResultDistBox = NavMoveResultDistCenter = NavMoveResultDistAxial = 0.0f;
@@ -663,8 +665,8 @@ struct IMGUI_API ImGuiDrawContext
     ImGuiID                 LastItemId;
     ImRect                  LastItemRect;
     bool                    LastItemRectHoveredRect;
-    bool                    NavHasScroll;                   // Set when scrolling can be used (ScrollMax > 0.0f)
-    int                     NavLayerCurrent;                // Current layer, 0..31 (we currently only use 0..1)
+    bool                    NavHasScroll;           // Set when scrolling can be used (ScrollMax > 0.0f)
+    int                     NavLayerCurrent;        // Current layer, 0..31 (we currently only use 0..1)
     int                     NavLayerActiveMask;     // Which layer have been written to (result from previous frame)
     int                     NavLayerActiveMaskNext; // Which layer have been written to (buffer for current frame)
     bool                    MenuBarAppending;       // FIXME: Remove this
@@ -672,6 +674,7 @@ struct IMGUI_API ImGuiDrawContext
     ImVector<ImGuiWindow*>  ChildWindows;
     ImGuiStorage*           StateStorage;
     ImGuiLayoutType         LayoutType;
+    ImGuiLayoutType         ParentLayoutType;       // Layout type of parent window at the time of Begin()
 
     // We store the current settings outside of the vectors to increase memory locality (reduce cache misses). The vectors are rarely modified. Also it allows us to not heap allocate for short-lived windows which are not using those settings.
     ImGuiItemFlags          ItemFlags;              // == ItemFlagsStack.back() [empty == ImGuiItemFlags_Default]
@@ -714,7 +717,7 @@ struct IMGUI_API ImGuiDrawContext
         MenuBarAppending = false;
         MenuBarOffsetX = 0.0f;
         StateStorage = NULL;
-        LayoutType = ImGuiLayoutType_Vertical;
+        LayoutType = ParentLayoutType = ImGuiLayoutType_Vertical;
         ItemWidth = 0.0f;
         ItemFlags = ImGuiItemFlags_Default_;
         TextWrapPos = -1.0f;

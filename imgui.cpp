@@ -2634,6 +2634,15 @@ static void NavUpdate()
         g.NavMoveFromClampedRefRect = false;
     }
 
+    // When a forwarded move request failed, we restore the highlight that we disabled during the forward frame
+    if (g.NavMoveRequestForwardStep == 2)
+    {
+        IM_ASSERT(g.NavMoveRequest);
+        if (g.NavMoveResultId == 0)
+            g.NavDisableHighlight = false;
+        g.NavMoveRequestForwardStep = 0;
+    }
+
     // Apply application mouse position movement, after we had a chance to process move request result.
     if (g.NavMousePosDirty && g.NavIdIsAlive)
     {
@@ -2781,14 +2790,24 @@ static void NavUpdate()
 
     // Initiate directional inputs request
     const int allowed_dir_flags = (g.ActiveId == 0) ? ~0 : g.ActiveIdAllowNavDirFlags;
-    g.NavMoveDir = ImGuiDir_None;
-    if (g.NavWindow && !g.NavWindowingTarget && allowed_dir_flags && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
+    if (g.NavMoveRequestForwardStep == 0)
     {
-        if ((allowed_dir_flags & (1<<ImGuiDir_Left))  && IsNavInputPressed(ImGuiNavInput_PadLeft,  ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Left;
-        if ((allowed_dir_flags & (1<<ImGuiDir_Right)) && IsNavInputPressed(ImGuiNavInput_PadRight, ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Right;
-        if ((allowed_dir_flags & (1<<ImGuiDir_Up))    && IsNavInputPressed(ImGuiNavInput_PadUp,    ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Up;
-        if ((allowed_dir_flags & (1<<ImGuiDir_Down))  && IsNavInputPressed(ImGuiNavInput_PadDown,  ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Down;
+        g.NavMoveDir = ImGuiDir_None;
+        if (g.NavWindow && !g.NavWindowingTarget && allowed_dir_flags && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
+        {
+            if ((allowed_dir_flags & (1<<ImGuiDir_Left))  && IsNavInputPressed(ImGuiNavInput_PadLeft,  ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Left;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Right)) && IsNavInputPressed(ImGuiNavInput_PadRight, ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Right;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Up))    && IsNavInputPressed(ImGuiNavInput_PadUp,    ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Up;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Down))  && IsNavInputPressed(ImGuiNavInput_PadDown,  ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Down;
+        }
     }
+    else
+    {
+        IM_ASSERT(g.NavMoveDir != ImGuiDir_None);
+        IM_ASSERT(g.NavMoveRequestForwardStep == 1);
+        g.NavMoveRequestForwardStep = 2;
+    }
+
     if (g.NavMoveDir != ImGuiDir_None)
     {
         g.NavMoveRequest = true;
@@ -2834,9 +2853,10 @@ static void NavUpdate()
     // Reset search 
     g.NavMoveResultId = 0;
     g.NavMoveResultDistAxial = g.NavMoveResultDistBox = g.NavMoveResultDistCenter = FLT_MAX;
+
+    // When we have manually scrolled (without using navigation) and NavId becomes out of bounds, we clamp its bounding box (used for search) to the visible area to restart navigation within visible items
     if (g.NavMoveRequest && g.NavMoveFromClampedRefRect && g.NavLayer == 0)
     {
-        // When we have manually scrolled and NavId is out of bounds, we clamp its bounding box (used for search) to the visible area to restart navigation within visible items
         ImGuiWindow* window = g.NavWindow;
         ImRect window_rect_rel(window->InnerRect.Min - window->Pos - ImVec2(1,1), window->InnerRect.Max - window->Pos + ImVec2(1,1));
         if (!window_rect_rel.Contains(window->NavRectRel[g.NavLayer]))
@@ -5231,6 +5251,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
         window->DC.ChildWindows.resize(0);
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
+        window->DC.ParentLayoutType = parent_window ? parent_window->DC.LayoutType : ImGuiLayoutType_Vertical;
         window->DC.ItemFlags = ImGuiItemFlags_Default_;
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
@@ -9966,6 +9987,27 @@ void ImGui::EndMenuBar()
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
+    ImGuiContext& g = *GImGui;
+
+    // When a move request within one of our child menu failed, capture the request to navigate among our siblings.
+    if (g.NavMoveRequest && g.NavMoveResultId == 0 && (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right))
+    {
+        ImGuiWindow* nav_earliest_child = g.NavWindow;
+        while (nav_earliest_child->ParentWindow && (nav_earliest_child->ParentWindow->Flags & ImGuiWindowFlags_ChildMenu))
+            nav_earliest_child = nav_earliest_child->ParentWindow;
+        if (nav_earliest_child->ParentWindow == window && nav_earliest_child->DC.ParentLayoutType == ImGuiLayoutType_Horizontal && g.NavMoveRequestForwardStep == 0)
+        {
+            // To do so we claim focus back, restore NavId and then process the movement request for yet another frame.
+            // This involve a one-frame delay which isn't very problematic in this situation. We could remove it by scoring in advance for multiple window (probably not worth the hassle/cost)
+            IM_ASSERT(window->DC.NavLayerActiveMaskNext & 0x02); // Sanity check
+            FocusWindow(window);
+            SetNavIdAndMoveMouse(window->NavLastIds[1], 1, window->NavRectRel[1]);
+            g.NavLayer = 1;
+            g.NavDisableHighlight = true; // Hide highlight for the current frame so we don't see the intermediary selection.
+            g.NavMoveRequest = false;
+            g.NavMoveRequestForwardStep = 1;
+        }
+    }
 
     IM_ASSERT(window->Flags & ImGuiWindowFlags_MenuBar);
     IM_ASSERT(window->DC.MenuBarAppending);
