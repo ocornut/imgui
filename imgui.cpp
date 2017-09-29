@@ -5516,7 +5516,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         g.NavLayer = 0;
         if (window && g.NavDisableMouseHover)
             g.NavMousePosDirty = true;
-        window->NavRectRel[0].Min = window->NavRectRel[1].Max = window ? (window->DC.CursorStartPos - window->Pos) : ImVec2(0,0);
+        window->NavRectRel[0].Min = window->NavRectRel[0].Max = window ? (window->DC.CursorStartPos - window->Pos) : ImVec2(0,0);
         g.NavWindow = window;
     }
 
