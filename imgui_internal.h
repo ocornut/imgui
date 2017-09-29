@@ -583,6 +583,7 @@ struct ImGuiContext
         NavInitDefaultRequest = false;
         NavInitDefaultResultId = 0;
         NavInitDefaultResultExplicit = false;
+        NavMoveFromClampedRefRect = false;
         NavMoveRequest = false;
         NavMoveDir = NavMoveDirLast = ImGuiDir_None;
         NavMoveResultId = 0;
