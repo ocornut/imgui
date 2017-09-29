@@ -1839,7 +1839,6 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Appearing = false;
     BeginCount = 0;
     PopupId = 0;
-    NavLastIds[0] = NavLastIds[1] = 0;
     AutoFitFramesX = AutoFitFramesY = -1;
     AutoFitOnlyGrows = false;
     AutoFitChildAxises = 0x00;
@@ -1847,6 +1846,9 @@ ImGuiWindow::ImGuiWindow(const char* name)
     HiddenFrames = 0;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
     SetWindowPosVal = SetWindowPosPivot = ImVec2(FLT_MAX, FLT_MAX);
+
+    NavLastIds[0] = NavLastIds[1] = 0;
+    NavRefRectRel[0] = NavRefRectRel[1] = ImRect();
 
     LastFrameActive = -1;
     ItemWidthDefault = 0.0f;
@@ -2223,7 +2225,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
                 // Update window-relative bounding box of navigated item
                 if (g.NavId == *id)
                 {
-                    g.NavRefRectRel = nav_bb_rel;
+                    window->NavRefRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;
                     g.NavIdIsAlive = true;
                     g.NavIdTabCounter = window->FocusIdxTabCounter;
                 }
@@ -2459,7 +2461,7 @@ static void SetNavIdAndMoveMouse(ImGuiID id, int nav_layer, const ImRect& rect_r
 {
     ImGuiContext& g = *GImGui;
     SetNavId(id, nav_layer);
-    g.NavRefRectRel = rect_rel;
+    g.NavWindow->NavRefRectRel[nav_layer] = rect_rel;
     g.NavMousePosDirty = true;
     g.NavDisableHighlight = false;
     g.NavDisableMouseHover = true;
@@ -2487,11 +2489,13 @@ static void NavInitWindow(ImGuiWindow* window, bool force_reinit)
 static ImVec2 NavCalcPreferredMousePos()
 {
     ImGuiContext& g = *GImGui;
-    if (!g.NavWindow)
+    ImGuiWindow* window = g.NavWindow;
+    if (!window)
         return g.IO.MousePos;
-    ImVec2 p = g.NavWindow->Pos + ImVec2(g.NavRefRectRel.Min.x + ImMin(g.Style.FramePadding.x*4, g.NavRefRectRel.GetWidth()), g.NavRefRectRel.Max.y - ImMin(g.Style.FramePadding.y, g.NavRefRectRel.GetHeight()));
-    ImRect r = GetVisibleRect();
-    return ImFloor(ImClamp(p, r.Min, r.Max));   // ImFloor() is important because non-integer mouse position application in backend might be lossy and result in undesirable non-zero delta.
+    const ImRect& ref_rect_rel = window->NavRefRectRel[g.NavLayer];
+    ImVec2 pos = g.NavWindow->Pos + ImVec2(ref_rect_rel.Min.x + ImMin(g.Style.FramePadding.x*4, ref_rect_rel.GetWidth()), ref_rect_rel.Max.y - ImMin(g.Style.FramePadding.y, ref_rect_rel.GetHeight()));
+    ImRect visible_rect = GetVisibleRect();
+    return ImFloor(ImClamp(pos, visible_rect.Min, visible_rect.Max));   // ImFloor() is important because non-integer mouse position application in backend might be lossy and result in undesirable non-zero delta.
 }
 
 static int FindWindowIndex(ImGuiWindow* window) // FIXME-OPT O(N)
@@ -2580,7 +2584,7 @@ static void NavUpdate()
         // Apply result from previous navigation init request (typically select the first item, unless SetItemDefaultFocus() has been called)
         IM_ASSERT(g.NavWindow);
         SetNavId(g.NavInitDefaultResultId, g.NavLayer);
-        g.NavRefRectRel = g.NavInitDefaultResultRectRel;
+        g.NavWindow->NavRefRectRel[g.NavLayer] = g.NavInitDefaultResultRectRel;
         if (g.NavDisableMouseHover)
             g.NavMousePosDirty = true;
     }
@@ -2834,21 +2838,22 @@ static void NavUpdate()
     {
         // When we have manually scrolled and NavId is out of bounds, we clamp its bounding box (used for search) to the visible area to restart navigation within visible items
         ImRect window_rect_rel(g.NavWindow->InnerRect.Min - g.NavWindow->Pos - ImVec2(1,1), g.NavWindow->InnerRect.Max - g.NavWindow->Pos + ImVec2(1,1));
-        if (!window_rect_rel.Contains(g.NavRefRectRel))
+        if (!window_rect_rel.Contains(g.NavWindow->NavRefRectRel[g.NavLayer]))
         {
             float pad = g.NavWindow->CalcFontSize() * 0.5f;
             window_rect_rel.Expand(ImVec2(-ImMin(window_rect_rel.GetWidth(), pad), -ImMin(window_rect_rel.GetHeight(), pad))); // Terrible approximation for the intend of starting navigation from first fully visible item
-            g.NavRefRectRel.ClipWith(window_rect_rel);
+            g.NavWindow->NavRefRectRel[g.NavLayer].ClipWith(window_rect_rel);
             g.NavId = 0;
         }
         g.NavMoveFromClampedRefRect = false;
     }
 
     // For scoring we use a single segment on the left side our current item bounding box (not touching the edge to avoid box overlap with zero-spaced items)
-    g.NavScoringRectScreen = g.NavWindow ? ImRect(g.NavWindow->Pos + g.NavRefRectRel.Min, g.NavWindow->Pos + g.NavRefRectRel.Max) : ImRect();
+    g.NavScoringRectScreen = g.NavWindow ? ImRect(g.NavWindow->Pos + g.NavWindow->NavRefRectRel[g.NavLayer].Min, g.NavWindow->Pos + g.NavWindow->NavRefRectRel[g.NavLayer].Max) : ImRect();
     g.NavScoringRectScreen.Min.x = ImMin(g.NavScoringRectScreen.Min.x + 1.0f, g.NavScoringRectScreen.Max.x);
     g.NavScoringRectScreen.Max.x = g.NavScoringRectScreen.Min.x;
     //g.OverlayDrawList.AddRect(g.NavScoringRectScreen.Min, g.NavScoringRectScreen.Max, IM_COL32(255,200,0,255)); // [DEBUG]
+    //if (g.NavWindow) for (int layer = 0; layer < 2; layer++) g.OverlayDrawList.AddRect(g.NavWindow->Pos + g.NavWindow->NavRefRectRel[layer].Min, g.NavWindow->Pos + g.NavWindow->NavRefRectRel[layer].Max, IM_COL32(255,200,0,255)); // [DEBUG]
 }
 
 void ImGui::NewFrame()
@@ -5509,7 +5514,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         g.NavLayer = 0;
         if (window && g.NavDisableMouseHover)
             g.NavMousePosDirty = true;
-        g.NavRefRectRel.Min = g.NavRefRectRel.Max = window ? (window->DC.CursorStartPos - window->Pos) : ImVec2(0,0);
+        window->NavRefRectRel[0].Min = window->NavRefRectRel[1].Max = window ? (window->DC.CursorStartPos - window->Pos) : ImVec2(0,0);
         g.NavWindow = window;
     }
 
@@ -11622,6 +11627,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::BulletText("Scroll: (%.2f,%.2f)", window->Scroll.x, window->Scroll.y);
                 ImGui::BulletText("Active: %d, Accessed: %d", window->Active, window->Accessed);
                 ImGui::BulletText("NavLastIds: 0x%08X,0x%08X, NavLayerActiveMask: %X", window->NavLastIds[0], window->NavLastIds[1], window->DC.NavLayerActiveMask);
+                ImGui::BulletText("NavRefRectRel[0]: (%.1f,%.1f)(%.1f,%.1f)", window->NavRefRectRel[0].Min.x, window->NavRefRectRel[0].Min.y, window->NavRefRectRel[0].Max.x, window->NavRefRectRel[0].Max.y);
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
                 ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.Size * (int)sizeof(ImGuiStorage::Pair));
@@ -11655,7 +11661,6 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Text("ActiveId: 0x%08X/0x%08X, ActiveIdSource: %s", g.ActiveId, g.ActiveIdPreviousFrame, input_source_names[g.ActiveIdSource]);
             ImGui::Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
             ImGui::Text("NavWindow: '%s', NavId: 0x%08X, NavLayer: %d", g.NavWindow ? g.NavWindow->Name : "NULL", g.NavId, g.NavLayer);
-            ImGui::Text("NavRefRectRel: (%.1f,%.1f)(%.1f,%.1f)", g.NavRefRectRel.Min.x, g.NavRefRectRel.Min.y, g.NavRefRectRel.Max.x, g.NavRefRectRel.Max.y);
             ImGui::Text("NavUsable: %d, NavActive: %d", g.IO.NavUsable, g.IO.NavActive);
             ImGui::Text("NavActivateId: 0x%08X, NavInputId: 0x%08X", g.NavActivateId, g.NavInputId);
             ImGui::Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);

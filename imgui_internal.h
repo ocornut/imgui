@@ -459,7 +459,7 @@ struct ImGuiContext
     ImGuiID                 NavId;                              // Nav/focused item for navigation
     ImGuiID                 NavActivateId, NavInputId;          // ~~ IsKeyPressedMap(ImGuiKey_NavActive) ? NavId : 0, etc. (to make widget code terser)
     ImGuiID                 NavTabbedId;                        // 
-    ImRect                  NavRefRectRel, NavScoringRectScreen;// Reference rectangle, in window space. Modified rectangle for directional navigation scoring, in screen space.
+    ImRect                  NavScoringRectScreen;               // Rectangle used for scoring, in screen space. Based of window->DC.NavRefRectRel[], modified for directional navigation scoring.
     ImGuiWindow*            NavWindowingTarget;
     float                   NavWindowingDisplayAlpha;
     bool                    NavWindowingToggleLayer;
@@ -571,7 +571,7 @@ struct ImGuiContext
 
         NavWindow = NULL;
         NavId = NavActivateId = NavInputId = NavTabbedId = 0;
-        NavRefRectRel = NavScoringRectScreen = ImRect();
+        NavScoringRectScreen = ImRect();
         NavWindowingTarget = NULL;
         NavWindowingDisplayAlpha = 0.0f;
         NavWindowingToggleLayer = false;
@@ -775,7 +775,8 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  SetWindowPosVal;                    // store window position when using a non-zero Pivot (position set needs to be processed when we know the window size)
     ImVec2                  SetWindowPosPivot;                  // store window pivot for positioning. ImVec2(0,0) when positioning from top-left corner; ImVec2(0.5f,0.5f) for centering; ImVec2(1,1) for bottom right.
 
-    ImGuiID                 NavLastIds[2];                       // Last known NavId for this window, per layer (0/1)
+    ImGuiID                 NavLastIds[2];                      // Last known NavId for this window, per layer (0/1)
+    ImRect                  NavRefRectRel[2];                   // Reference rectangle, in window space
 
     ImGuiDrawContext        DC;                                 // Temporary per-window data, reset at the beginning of the frame
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
