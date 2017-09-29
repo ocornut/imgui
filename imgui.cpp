@@ -1839,7 +1839,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Appearing = false;
     BeginCount = 0;
     PopupId = 0;
-    NavLastId = 0;
+    NavLastIds[0] = NavLastIds[1] = 0;
     AutoFitFramesX = AutoFitFramesY = -1;
     AutoFitOnlyGrows = false;
     AutoFitChildAxises = 0x00;
@@ -1934,8 +1934,8 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
         g.NavId = id;
         if (window)
             g.NavLayer = window->DC.NavLayerCurrent;
-        if (window && window->DC.NavLayerCurrent == 0) // (Assume that id correspond to the current NavLayer, which should be the case)
-            window->NavLastId = id;
+        if (window) // NB: We current assume that SetActiveId() is called in the context where its NavLayer is the current one, which should be the case.
+            window->NavLastIds[window->DC.NavLayerCurrent] = id;
     }
 }
 
@@ -2450,9 +2450,9 @@ static void SetNavId(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindow);
+    IM_ASSERT(g.NavLayer == 0 || g.NavLayer == 1);
     g.NavId = id;
-    if (g.NavLayer == 0)
-        g.NavWindow->NavLastId = g.NavId;
+    g.NavWindow->NavLastIds[g.NavLayer] = g.NavId;
 }
 
 static void SetNavIdAndMoveMouse(ImGuiID id, const ImRect& rect_rel)
@@ -2470,7 +2470,7 @@ static void NavInitWindow(ImGuiWindow* window, bool force_reinit)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(window == g.NavWindow);
-    if (!(window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_Popup) || (window->NavLastId == 0) || force_reinit)
+    if (!(window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_Popup) || (window->NavLastIds[0] == 0) || force_reinit)
     {
         SetNavId(0);
         g.NavInitDefaultRequest = true;
@@ -2480,7 +2480,7 @@ static void NavInitWindow(ImGuiWindow* window, bool force_reinit)
     }
     else
     {
-        g.NavId = window->NavLastId;
+        g.NavId = window->NavLastIds[0];
     }
 }
 
@@ -2699,7 +2699,7 @@ static void NavUpdate()
                 ImGui::FocusWindow(g.NavWindowingTarget);
                 g.NavDisableHighlight = false;
                 g.NavDisableMouseHover = true;
-                if (g.NavWindowingTarget->NavLastId == 0)
+                if (g.NavWindowingTarget->NavLastIds[0] == 0)
                     NavInitWindow(g.NavWindowingTarget, false);
             }
 
@@ -2711,14 +2711,15 @@ static void NavUpdate()
                 g.NavLayer = (g.NavWindow->DC.NavLayerActiveMask & (1<<1)) ? (g.NavLayer ^ 1) : 0;
                 g.NavDisableHighlight = false;
                 g.NavDisableMouseHover = true;
-                if (g.NavLayer == 0 && g.NavWindow->NavLastId)
-                    SetNavIdAndMoveMouse(g.NavWindow->NavLastId, ImRect());
+                if (g.NavLayer == 0 && g.NavWindow->NavLastIds[0] != 0)
+                    SetNavIdAndMoveMouse(g.NavWindow->NavLastIds[0], ImRect());
                 else
                     NavInitWindow(g.NavWindow, true);
             }
             g.NavWindowingTarget = NULL;
         }
     }
+    IM_ASSERT(g.NavLayer == 0 || g.NavLayer == 1);
 
     // Set output flags for user application
     g.IO.NavUsable = g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
@@ -2752,8 +2753,8 @@ static void NavUpdate()
         {
             // Leave the "menu" layer
             g.NavLayer = 0;
-            if (g.NavWindow->NavLastId)
-                SetNavIdAndMoveMouse(g.NavWindow->NavLastId, ImRect());
+            if (g.NavWindow->NavLastIds[0])
+                SetNavIdAndMoveMouse(g.NavWindow->NavLastIds[0], ImRect());
             else
                 NavInitWindow(g.NavWindow, true);
         }
@@ -2761,7 +2762,7 @@ static void NavUpdate()
         {
             // Clear NavLastId for popups but keep it for regular child window so we can leave one and come back where we were
             if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup) || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
-                g.NavWindow->NavLastId = 0;
+                g.NavWindow->NavLastIds[0] = 0;
             g.NavId = 0;
         }
     }
@@ -4807,7 +4808,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
 
     const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames == 1);
     if (window_just_appearing_after_hidden_for_resize)
-        window->NavLastId = 0;
+        window->NavLastIds[0] = 0;
     window->Appearing = (window_just_activated_by_user || window_just_appearing_after_hidden_for_resize);
 
     // Process SetNextWindow***() calls
@@ -5500,7 +5501,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
 
     if (g.NavWindow != window)
     {
-        g.NavId = window ? window->NavLastId : 0; // Restore NavId
+        g.NavId = window ? window->NavLastIds[0] : 0; // Restore NavId
         g.NavIdIsAlive = false;
         g.NavLayer = 0;
         if (window && g.NavDisableMouseHover)
@@ -9588,7 +9589,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImVec2 popu
     if ((pressed || g.NavActivateId == id) && !popup_open)
     {
         if (window->DC.NavLayerCurrent == 0) 
-            window->NavLastId = id;
+            window->NavLastIds[0] = id;
         OpenPopupEx(id, false);
         popup_open = true;
     }
@@ -11617,7 +11618,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::BulletText("Size: (%.1f,%.1f), SizeContents (%.1f,%.1f)", window->Size.x, window->Size.y, window->SizeContents.x, window->SizeContents.y);
                 ImGui::BulletText("Scroll: (%.2f,%.2f)", window->Scroll.x, window->Scroll.y);
                 ImGui::BulletText("Active: %d, Accessed: %d", window->Active, window->Accessed);
-                ImGui::BulletText("NavLastId: 0x%08x, NavLayerActiveMask: %02X", window->NavLastId, window->DC.NavLayerActiveMask);
+                ImGui::BulletText("NavLastIds: 0x%08X,0x%08X, NavLayerActiveMask: %X", window->NavLastIds[0], window->NavLastIds[1], window->DC.NavLayerActiveMask);
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
                 ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.Size * (int)sizeof(ImGuiStorage::Pair));
