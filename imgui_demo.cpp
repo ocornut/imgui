@@ -456,9 +456,9 @@ void ImGui::ShowTestWindow(bool* p_open)
         if (ImGui::TreeNode("Collapsing Headers"))
         {
             static bool closable_group = true;
+            ImGui::Checkbox("Enable extra group", &closable_group);
             if (ImGui::CollapsingHeader("Header"))
             {
-                ImGui::Checkbox("Enable extra group", &closable_group);
                 for (int i = 0; i < 5; i++)
                     ImGui::Text("Some content %d", i);
             }
