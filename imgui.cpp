@@ -2808,25 +2808,26 @@ static void NavUpdate()
     if (g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.NavWindowingTarget)
     {
         // *Fallback* manual-scroll with NavUp/NavDown when window has no navigable item
-        const float scroll_speed = ImFloor(g.NavWindow->CalcFontSize() * 100 * g.IO.DeltaTime + 0.5f); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
-        if (!g.NavWindow->DC.NavLayerActiveMask && g.NavWindow->DC.NavHasScroll && g.NavMoveRequest)
+        ImGuiWindow* window = g.NavWindow;
+        const float scroll_speed = ImFloor(window->CalcFontSize() * 100 * g.IO.DeltaTime + 0.5f); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
+        if (!window->DC.NavLayerActiveMask && window->DC.NavHasScroll && g.NavMoveRequest)
         {
             if (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right)
-                SetWindowScrollX(g.NavWindow, ImFloor(g.NavWindow->Scroll.x + ((g.NavMoveDir == ImGuiDir_Left) ? -1.0f : +1.0f) * scroll_speed));
+                SetWindowScrollX(window, ImFloor(window->Scroll.x + ((g.NavMoveDir == ImGuiDir_Left) ? -1.0f : +1.0f) * scroll_speed));
             if (g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down)
-                SetWindowScrollY(g.NavWindow, ImFloor(g.NavWindow->Scroll.y + ((g.NavMoveDir == ImGuiDir_Up) ? -1.0f : +1.0f) * scroll_speed));
+                SetWindowScrollY(window, ImFloor(window->Scroll.y + ((g.NavMoveDir == ImGuiDir_Up) ? -1.0f : +1.0f) * scroll_speed));
         }
 
         // *Normal* Manual scroll with NavScrollXXX keys
         ImVec2 scroll_dir = GetNavInputAmount2d(1, ImGuiNavReadMode_Down, 1.0f/10.0f, 10.0f);
-        if (scroll_dir.x != 0.0f && g.NavWindow->ScrollbarX)
+        if (scroll_dir.x != 0.0f && window->ScrollbarX)
         {
-            SetWindowScrollX(g.NavWindow, ImFloor(g.NavWindow->Scroll.x + scroll_dir.x * scroll_speed));
+            SetWindowScrollX(window, ImFloor(window->Scroll.x + scroll_dir.x * scroll_speed));
             g.NavMoveFromClampedRefRect = true;
         }
         if (scroll_dir.y != 0.0f)
         {
-            SetWindowScrollY(g.NavWindow, ImFloor(g.NavWindow->Scroll.y + scroll_dir.y * scroll_speed));
+            SetWindowScrollY(window, ImFloor(window->Scroll.y + scroll_dir.y * scroll_speed));
             g.NavMoveFromClampedRefRect = true;
         }
     }
@@ -2837,12 +2838,13 @@ static void NavUpdate()
     if (g.NavMoveRequest && g.NavMoveFromClampedRefRect && g.NavLayer == 0)
     {
         // When we have manually scrolled and NavId is out of bounds, we clamp its bounding box (used for search) to the visible area to restart navigation within visible items
-        ImRect window_rect_rel(g.NavWindow->InnerRect.Min - g.NavWindow->Pos - ImVec2(1,1), g.NavWindow->InnerRect.Max - g.NavWindow->Pos + ImVec2(1,1));
-        if (!window_rect_rel.Contains(g.NavWindow->NavRectRel[g.NavLayer]))
+        ImGuiWindow* window = g.NavWindow;
+        ImRect window_rect_rel(window->InnerRect.Min - window->Pos - ImVec2(1,1), window->InnerRect.Max - window->Pos + ImVec2(1,1));
+        if (!window_rect_rel.Contains(window->NavRectRel[g.NavLayer]))
         {
-            float pad = g.NavWindow->CalcFontSize() * 0.5f;
-            window_rect_rel.Expand(ImVec2(-ImMin(window_rect_rel.GetWidth(), pad), -ImMin(window_rect_rel.GetHeight(), pad))); // Terrible approximation for the intend of starting navigation from first fully visible item
-            g.NavWindow->NavRectRel[g.NavLayer].ClipWith(window_rect_rel);
+            float pad = window->CalcFontSize() * 0.5f;
+            window_rect_rel.Expand(ImVec2(-ImMin(window_rect_rel.GetWidth(), pad), -ImMin(window_rect_rel.GetHeight(), pad))); // Terrible approximation for the intent of starting navigation from first fully visible item
+            window->NavRectRel[g.NavLayer].ClipWith(window_rect_rel);
             g.NavId = 0;
         }
         g.NavMoveFromClampedRefRect = false;
@@ -2853,7 +2855,7 @@ static void NavUpdate()
     g.NavScoringRectScreen.Min.x = ImMin(g.NavScoringRectScreen.Min.x + 1.0f, g.NavScoringRectScreen.Max.x);
     g.NavScoringRectScreen.Max.x = g.NavScoringRectScreen.Min.x;
     //g.OverlayDrawList.AddRect(g.NavScoringRectScreen.Min, g.NavScoringRectScreen.Max, IM_COL32(255,200,0,255)); // [DEBUG]
-    //if (g.NavWindow) for (int layer = 0; layer < 2; layer++) g.OverlayDrawList.AddRect(g.NavWindow->Pos + g.NavWindow->NavRefRectRel[layer].Min, g.NavWindow->Pos + g.NavWindow->NavRefRectRel[layer].Max, IM_COL32(255,200,0,255)); // [DEBUG]
+    //if (g.NavWindow) for (int layer = 0; layer < 2; layer++) g.OverlayDrawList.AddRect(g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Min, g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Max, IM_COL32(255,200,0,255)); // [DEBUG]
 }
 
 void ImGui::NewFrame()
