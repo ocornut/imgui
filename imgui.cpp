@@ -545,6 +545,7 @@
 #endif
 
 #include "imgui.h"
+#include "imfile.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_PLACEMENT_NEW
 #include "imgui_internal.h"
@@ -614,8 +615,8 @@ static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sort
 
 static ImGuiIniData*    FindWindowSettings(const char* name);
 static ImGuiIniData*    AddWindowSettings(const char* name);
-static void             LoadIniSettingsFromDisk(const char* ini_filename);
-static void             SaveIniSettingsToDisk(const char* ini_filename);
+static void             LoadIniSettingsFromDisk(ImFile* fileSystem, const char* ini_filename);
+static void             SaveIniSettingsToDisk(ImFile* fileSystem, const char* ini_filename);
 static void             MarkIniSettingsDirty(ImGuiWindow* window);
 
 static ImRect           GetVisibleRect();
@@ -753,6 +754,7 @@ ImGuiIO::ImGuiIO()
     DisplaySize = ImVec2(-1.0f, -1.0f);
     DeltaTime = 1.0f/60.0f;
     IniSavingRate = 5.0f;
+    FileSystem = nullptr;
     IniFilename = "imgui.ini";
     LogFilename = "imgui_log.txt";
     MouseDoubleClickTime = 0.30f;
@@ -2287,7 +2289,9 @@ void ImGui::NewFrame()
     {
         g.SettingsDirtyTimer -= g.IO.DeltaTime;
         if (g.SettingsDirtyTimer <= 0.0f)
-            SaveIniSettingsToDisk(g.IO.IniFilename);
+        {
+            SaveIniSettingsToDisk(g.IO.FileSystem, g.IO.IniFilename);
+        }
     }
 
     // Find the window we are hovering. Child windows can extend beyond the limit of their parent so we need to derive HoveredRootWindow from HoveredWindow
@@ -2406,7 +2410,7 @@ void ImGui::Initialize()
     IM_PLACEMENT_NEW(g.LogClipboard) ImGuiTextBuffer();
 
     IM_ASSERT(g.Settings.empty());
-    LoadIniSettingsFromDisk(g.IO.IniFilename);
+    LoadIniSettingsFromDisk(g.IO.FileSystem, g.IO.IniFilename);
     g.Initialized = true;
 }
 
@@ -2423,7 +2427,7 @@ void ImGui::Shutdown()
     if (!g.Initialized)
         return;
 
-    SaveIniSettingsToDisk(g.IO.IniFilename);
+    SaveIniSettingsToDisk(g.IO.FileSystem, g.IO.IniFilename);
 
     for (int i = 0; i < g.Windows.Size; i++)
     {
@@ -2496,18 +2500,50 @@ static ImGuiIniData* AddWindowSettings(const char* name)
     return ini;
 }
 
+template <typename T>
+class ImDeleter final
+{
+public:
+    ImDeleter(T* ptr)
+        : m_ptr(ptr)
+    {
+    }
+
+    ~ImDeleter()
+    {
+        delete m_ptr;
+    }
+
+private:
+    T* m_ptr;
+};
+
 // Zero-tolerance, poor-man .ini parsing
 // FIXME: Write something less rubbish
-static void LoadIniSettingsFromDisk(const char* ini_filename)
+static void LoadIniSettingsFromDisk(ImFile* fileSystem, const char* ini_filename)
 {
     ImGuiContext& g = *GImGui;
     if (!ini_filename)
         return;
 
-    int file_size;
-    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_size, 1);
-    if (!file_data)
+    ImFile defaultFileSystem;
+    fileSystem = fileSystem != nullptr ? fileSystem : &defaultFileSystem;
+    auto file = fileSystem->open(ini_filename, "rb");
+    if (file == nullptr)
+    {
         return;
+    }
+
+    ImDeleter<ImInputStream> deleter(file);
+
+    int file_size = file->size();
+    char* file_data = (char*)ImGui::MemAlloc(file_size);
+    if (file_data == nullptr)
+    {
+        return;
+    }
+
+    file->read(file_data, file_size);
 
     ImGuiIniData* settings = NULL;
     const char* buf_end = file_data + file_size;
@@ -2543,7 +2579,7 @@ static void LoadIniSettingsFromDisk(const char* ini_filename)
     ImGui::MemFree(file_data);
 }
 
-static void SaveIniSettingsToDisk(const char* ini_filename)
+static void SaveIniSettingsToDisk(ImFile* fileSystem, const char* ini_filename)
 {
     ImGuiContext& g = *GImGui;
     g.SettingsDirtyTimer = 0.0f;
@@ -2566,25 +2602,37 @@ static void SaveIniSettingsToDisk(const char* ini_filename)
 
     // Write .ini file
     // If a window wasn't opened in this session we preserve its settings
-    FILE* f = ImFileOpen(ini_filename, "wt");
-    if (!f)
-        return;
-    for (int i = 0; i != g.Settings.Size; i++)
+    ImFile defaultFileSystem;
+    fileSystem = fileSystem != nullptr ? fileSystem : &defaultFileSystem;
+    auto file = fileSystem->create(ini_filename, "wt");
+
+    if (file == nullptr)
     {
-        const ImGuiIniData* settings = &g.Settings[i];
-        if (settings->Pos.x == FLT_MAX)
-            continue;
-        const char* name = settings->Name;
-        if (const char* p = strstr(name, "###"))  // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
-            name = p;
-        fprintf(f, "[%s]\n", name);
-        fprintf(f, "Pos=%d,%d\n", (int)settings->Pos.x, (int)settings->Pos.y);
-        fprintf(f, "Size=%d,%d\n", (int)settings->Size.x, (int)settings->Size.y);
-        fprintf(f, "Collapsed=%d\n", settings->Collapsed);
-        fprintf(f, "\n");
+        return;
     }
 
-    fclose(f);
+    ImDeleter<ImOutputStream> deleter(file);
+
+    for (int i = 0; i != g.Settings.Size; i++)
+    {
+        const ImGuiIniData& settings = g.Settings[i];
+        if (settings.Pos.x == FLT_MAX)
+        {
+            continue;
+        }
+
+        const char* name = settings.Name;
+        if (const char* p = strstr(name, "###"))  // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
+        {
+            name = p;
+        }
+
+        file->format("[%s]\n", name);
+        file->format("Pos=%d,%d\n", (int)settings.Pos.x, (int)settings.Pos.y);
+        file->format("Size=%d,%d\n", (int)settings.Size.x, (int)settings.Size.y);
+        file->format("Collapsed=%d\n", settings.Collapsed);
+        file->format("\n");
+    }
 }
 
 static void MarkIniSettingsDirty(ImGuiWindow* window)
