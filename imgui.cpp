@@ -2528,7 +2528,7 @@ static void LoadIniSettingsFromDisk(ImFile* fileSystem, const char* ini_filename
 
     ImFile defaultFileSystem;
     fileSystem = fileSystem != NULL ? fileSystem : &defaultFileSystem;
-    auto file = fileSystem->open(ini_filename, "rb");
+    ImInputStream* file = fileSystem->open(ini_filename, "rb");
     if (file == NULL)
     {
         return;
@@ -2604,7 +2604,7 @@ static void SaveIniSettingsToDisk(ImFile* fileSystem, const char* ini_filename)
     // If a window wasn't opened in this session we preserve its settings
     ImFile defaultFileSystem;
     fileSystem = fileSystem != NULL ? fileSystem : &defaultFileSystem;
-    auto file = fileSystem->create(ini_filename, "wt");
+    ImOutputStream* file = fileSystem->create(ini_filename, "wt");
 
     if (file == NULL)
     {

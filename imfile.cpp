@@ -88,7 +88,7 @@ private:
 
 ImInputStream* ImFile::open(const char* path, const char* mode) const
 {
-    auto stream = new ImInputFileStreamStd();
+    ImInputStream* stream = new ImInputFileStreamStd();
     if (stream->open(path, mode))
     {
         return stream;
@@ -100,7 +100,7 @@ ImInputStream* ImFile::open(const char* path, const char* mode) const
 
 ImOutputStream* ImFile::create(const char* path, const char* mode) const
 {
-    auto stream = new ImOutputFileStreamStd();
+    ImOutputStream* stream = new ImOutputFileStreamStd();
     if (stream->create(path, mode))
     {
         return stream;
