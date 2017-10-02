@@ -11,12 +11,12 @@
 #include <cstdio>
 #include <cstdarg>
 
-class ImInputFileStreamStd final : public ImInputStream
+class ImInputFileStreamStd : public ImInputStream
 {
 public:
     ~ImInputFileStreamStd()
     {
-        if (m_file != nullptr)
+        if (m_file != NULL)
         {
             ::fclose(m_file);
         }
@@ -25,14 +25,14 @@ public:
     bool open(const char* path, const char* mode)
     {
         m_file = ::fopen(path, mode);
-        if (m_file != nullptr)
+        if (m_file != NULL)
         {
             ::fseek(m_file, 0, SEEK_END);
             m_size = ::ftell(m_file);
             ::fseek(m_file, 0, SEEK_SET);
         }
 
-        return m_file != nullptr;
+        return m_file != NULL;
     }
 
     unsigned size() const override
@@ -46,16 +46,16 @@ public:
     }
 
 private:
-    FILE* m_file = nullptr;
+    FILE* m_file = NULL;
     unsigned m_size = 0;
 };
 
-class ImOutputFileStreamStd final : public ImOutputStream
+class ImOutputFileStreamStd : public ImOutputStream
 {
 public:
     ~ImOutputFileStreamStd()
     {
-        if (m_file != nullptr)
+        if (m_file != NULL)
         {
             ::fclose(m_file);
         }
@@ -64,7 +64,7 @@ public:
     bool create(const char* path, const char* mode)
     {
         m_file = ::fopen(path, mode);
-        return m_file != nullptr;
+        return m_file != NULL;
     }
 
     unsigned write(const void* buffer, unsigned count) override
@@ -83,7 +83,7 @@ public:
     }
 
 private:
-    FILE* m_file = nullptr;
+    FILE* m_file = NULL;
 };
 
 ImInputStream* ImFile::open(const char* path, const char* mode) const
@@ -95,7 +95,7 @@ ImInputStream* ImFile::open(const char* path, const char* mode) const
     }
 
     delete stream;
-    return nullptr;
+    return NULL;
 }
 
 ImOutputStream* ImFile::create(const char* path, const char* mode) const
@@ -107,5 +107,5 @@ ImOutputStream* ImFile::create(const char* path, const char* mode) const
     }
 
     delete stream;
-    return nullptr;
+    return NULL;
 }

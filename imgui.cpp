@@ -754,7 +754,7 @@ ImGuiIO::ImGuiIO()
     DisplaySize = ImVec2(-1.0f, -1.0f);
     DeltaTime = 1.0f/60.0f;
     IniSavingRate = 5.0f;
-    FileSystem = nullptr;
+    FileSystem = NULL;
     IniFilename = "imgui.ini";
     LogFilename = "imgui_log.txt";
     MouseDoubleClickTime = 0.30f;
@@ -2501,7 +2501,7 @@ static ImGuiIniData* AddWindowSettings(const char* name)
 }
 
 template <typename T>
-class ImDeleter final
+class ImDeleter
 {
 public:
     ImDeleter(T* ptr)
@@ -2527,9 +2527,9 @@ static void LoadIniSettingsFromDisk(ImFile* fileSystem, const char* ini_filename
         return;
 
     ImFile defaultFileSystem;
-    fileSystem = fileSystem != nullptr ? fileSystem : &defaultFileSystem;
+    fileSystem = fileSystem != NULL ? fileSystem : &defaultFileSystem;
     auto file = fileSystem->open(ini_filename, "rb");
-    if (file == nullptr)
+    if (file == NULL)
     {
         return;
     }
@@ -2538,7 +2538,7 @@ static void LoadIniSettingsFromDisk(ImFile* fileSystem, const char* ini_filename
 
     int file_size = file->size();
     char* file_data = (char*)ImGui::MemAlloc(file_size);
-    if (file_data == nullptr)
+    if (file_data == NULL)
     {
         return;
     }
@@ -2603,10 +2603,10 @@ static void SaveIniSettingsToDisk(ImFile* fileSystem, const char* ini_filename)
     // Write .ini file
     // If a window wasn't opened in this session we preserve its settings
     ImFile defaultFileSystem;
-    fileSystem = fileSystem != nullptr ? fileSystem : &defaultFileSystem;
+    fileSystem = fileSystem != NULL ? fileSystem : &defaultFileSystem;
     auto file = fileSystem->create(ini_filename, "wt");
 
-    if (file == nullptr)
+    if (file == NULL)
     {
         return;
     }

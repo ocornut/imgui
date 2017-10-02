@@ -11,7 +11,9 @@
 class ImInputStream
 {
 public:
-    virtual ~ImInputStream() = default;
+    virtual ~ImInputStream()
+    {
+    }
 
     virtual unsigned size() const = 0;
     virtual unsigned read(void* buffer, unsigned count) = 0;
@@ -20,7 +22,9 @@ public:
 class ImOutputStream
 {
 public:
-    virtual ~ImOutputStream() = default;
+    virtual ~ImOutputStream()
+    {
+    }
 
     virtual unsigned write(const void* buffer, unsigned count) = 0;
     virtual unsigned format(const char* fmt, ...) = 0;
@@ -29,7 +33,10 @@ public:
 class ImFile
 {
 public:
-    virtual ~ImFile() = default;
+    virtual ~ImFile()
+    {
+    }
+
     virtual ImInputStream* open(const char* path, const char* mode) const;
     virtual ImOutputStream* create(const char* path, const char* mode) const;
 };
