@@ -2155,14 +2155,16 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id)
         return;
     ImGuiWindow* window = ImGui::GetCurrentWindow();
 
+    ImRect display_rect = bb;
+    display_rect.ClipWith(window->ClipRect);
     const float THICKNESS = 2.0f;
     const float DISTANCE = 3.0f + THICKNESS * 0.5f;
-    ImRect display_rect(bb.Min - ImVec2(DISTANCE,DISTANCE), bb.Max + ImVec2(DISTANCE,DISTANCE));
-    if (!window->ClipRect.Contains(display_rect))
+    display_rect.Expand(ImVec2(DISTANCE,DISTANCE));
+    bool fully_visible = window->ClipRect.Contains(display_rect);
+    if (!fully_visible)
         window->DrawList->PushClipRect(display_rect.Min, display_rect.Max);
     window->DrawList->AddRect(display_rect.Min + ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), display_rect.Max - ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), GetColorU32(ImGuiCol_NavHighlight), g.Style.FrameRounding, 0x0F, THICKNESS);
-    //window->DrawList->AddRect(g.NavRefRectScreen.Min, g.NavRefRectScreen.Max, IM_COL32(255,0,0,255));
-    if (!window->ClipRect.Contains(display_rect))
+    if (!fully_visible)
         window->DrawList->PopClipRect();
 }
 
