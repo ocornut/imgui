@@ -2148,24 +2148,33 @@ static bool NavScoreItem(ImRect cand)
     return new_best;
 }
 
-void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id)
+void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    if (id != g.NavId || g.NavDisableHighlight)
+    if (id != g.NavId)
         return;
+    if (g.NavDisableHighlight && !(flags & ImGuiNavHighlightFlags_AlwaysRender))
+        return;    
     ImGuiWindow* window = ImGui::GetCurrentWindow();
 
     ImRect display_rect = bb;
     display_rect.ClipWith(window->ClipRect);
-    const float THICKNESS = 2.0f;
-    const float DISTANCE = 3.0f + THICKNESS * 0.5f;
-    display_rect.Expand(ImVec2(DISTANCE,DISTANCE));
-    bool fully_visible = window->ClipRect.Contains(display_rect);
-    if (!fully_visible)
-        window->DrawList->PushClipRect(display_rect.Min, display_rect.Max);
-    window->DrawList->AddRect(display_rect.Min + ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), display_rect.Max - ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), GetColorU32(ImGuiCol_NavHighlight), g.Style.FrameRounding, 0x0F, THICKNESS);
-    if (!fully_visible)
-        window->DrawList->PopClipRect();
+    if (flags & ImGuiNavHighlightFlags_TypeDefault)
+    {
+        const float THICKNESS = 2.0f;
+        const float DISTANCE = 3.0f + THICKNESS * 0.5f;
+        display_rect.Expand(ImVec2(DISTANCE,DISTANCE));
+        bool fully_visible = window->ClipRect.Contains(display_rect);
+        if (!fully_visible)
+            window->DrawList->PushClipRect(display_rect.Min, display_rect.Max);
+        window->DrawList->AddRect(display_rect.Min + ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), display_rect.Max - ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), GetColorU32(ImGuiCol_NavHighlight), g.Style.FrameRounding, 0x0F, THICKNESS);
+        if (!fully_visible)
+            window->DrawList->PopClipRect();
+    }
+    if (flags & ImGuiNavHighlightFlags_TypeThin)
+    {
+        window->DrawList->AddRect(display_rect.Min, display_rect.Max, GetColorU32(ImGuiCol_NavHighlight), g.Style.FrameRounding, ~0, 1.0f);
+    }
 }
 
 // Declare item bounding box for clipping and interaction.
