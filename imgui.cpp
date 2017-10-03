@@ -2220,6 +2220,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
                 if (new_best)
                 {
                     g.NavMoveResultId = *id;
+                    g.NavMoveResultParentId = window->IDStack.back();
                     g.NavMoveResultRectRel = nav_bb_rel;
                 }
 
@@ -2856,6 +2857,7 @@ static void NavUpdate()
 
     // Reset search 
     g.NavMoveResultId = 0;
+    g.NavMoveResultParentId = 0;
     g.NavMoveResultDistAxial = g.NavMoveResultDistBox = g.NavMoveResultDistCenter = FLT_MAX;
 
     // When we have manually scrolled (without using navigation) and NavId becomes out of bounds, we clamp its bounding box (used for search) to the visible area to restart navigation within visible items

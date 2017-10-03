@@ -480,6 +480,7 @@ struct ImGuiContext
     ImGuiDir                NavMoveDir;                         // West/East/North/South
     ImGuiDir                NavMoveDirLast;                     //
     ImGuiID                 NavMoveResultId;                    // Best move request candidate
+    ImGuiID                 NavMoveResultParentId;              //
     float                   NavMoveResultDistBox;               // Best move request candidate box distance to current NavId
     float                   NavMoveResultDistCenter;            // Best move request candidate center distance to current NavId
     float                   NavMoveResultDistAxial;
@@ -590,6 +591,7 @@ struct ImGuiContext
         NavMoveRequestForwardStep = 0;
         NavMoveDir = NavMoveDirLast = ImGuiDir_None;
         NavMoveResultId = 0;
+        NavMoveResultParentId = 0;
         NavMoveResultDistBox = NavMoveResultDistCenter = NavMoveResultDistAxial = 0.0f;
 
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
