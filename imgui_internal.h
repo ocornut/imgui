@@ -458,7 +458,8 @@ struct ImGuiContext
     ImGuiWindow*            NavWindow;                          // Nav/focused window for navigation
     ImGuiID                 NavId;                              // Nav/focused item for navigation
     ImGuiID                 NavActivateId, NavInputId;          // ~~ IsKeyPressedMap(ImGuiKey_NavActive) ? NavId : 0, etc. (to make widget code terser)
-    ImGuiID                 NavTabbedId;                        // 
+    ImGuiID                 NavJustTabbedId;                    // Just tabbed to this id.
+    ImGuiID                 NavJustNavigatedId;                 // Just navigated to this id (result of a successfully MoveRequest)
     ImRect                  NavScoringRectScreen;               // Rectangle used for scoring, in screen space. Based of window->DC.NavRefRectRel[], modified for directional navigation scoring.
     ImGuiWindow*            NavWindowingTarget;
     float                   NavWindowingDisplayAlpha;
@@ -571,7 +572,7 @@ struct ImGuiContext
         SettingsDirtyTimer = 0.0f;
 
         NavWindow = NULL;
-        NavId = NavActivateId = NavInputId = NavTabbedId = 0;
+        NavId = NavActivateId = NavInputId = NavJustTabbedId = 0;
         NavScoringRectScreen = ImRect();
         NavWindowingTarget = NULL;
         NavWindowingDisplayAlpha = 0.0f;

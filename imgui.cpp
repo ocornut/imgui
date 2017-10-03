@@ -1928,7 +1928,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     if (id)
     {
         g.ActiveIdIsAlive = true;
-        g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id || g.NavTabbedId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
+        g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id || g.NavJustTabbedId == id || g.NavJustNavigatedId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
         if (g.ActiveIdSource == ImGuiInputSource_Nav)
             g.NavDisableMouseHover = true;
         else
@@ -2318,7 +2318,7 @@ bool ImGui::FocusableItemRegister(ImGuiWindow* window, ImGuiID id, bool tab_stop
         return true;
     if (allow_keyboard_focus && window->FocusIdxTabCounter == window->FocusIdxTabRequestCurrent)
     {
-        g.NavTabbedId = id;
+        g.NavJustTabbedId = id;
         return true;
     }
 
@@ -2592,6 +2592,7 @@ static void NavUpdate()
     g.NavInitDefaultRequest = false;
     g.NavInitDefaultResultExplicit = false;
     g.NavInitDefaultResultId = 0;
+    g.NavJustNavigatedId = 0;
 
     // Process navigation move request
     if (g.NavMoveRequest && g.NavMoveResultId != 0)
@@ -2633,6 +2634,7 @@ static void NavUpdate()
         // Apply result from previous frame navigation directional move request
         ImGui::ClearActiveID();
         SetNavIdAndMoveMouse(g.NavMoveResultId, g.NavLayer, g.NavMoveResultRectRel);
+        g.NavJustNavigatedId = g.NavMoveResultId;
         g.NavMoveFromClampedRefRect = false;
     }
 
@@ -2657,7 +2659,7 @@ static void NavUpdate()
         g.NavMousePosDirty = false;
     }
     g.NavIdIsAlive = false;
-    g.NavTabbedId = 0;
+    g.NavJustTabbedId = 0;
 
     // Navigation windowing mode (change focus, move/resize window)
     if (!g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiNavReadMode_Pressed))
