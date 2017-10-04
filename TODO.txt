@@ -25,6 +25,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - window: expose contents size. (#1045)
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
+ - window: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. 
 !- scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
 
@@ -55,6 +56,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: flag to disable live update of the user buffer (also applies to float/int text input) (#701)
  - input text: way to dynamically grow the buffer without forcing the user to initially allocate for worse case, e.g. more natural std::string (follow up on #200)
  - input text: hover tooltip could show unclamped text
+ - input text: option to Tab after an Enter validation.
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
  - input text: easier ways to update buffer (from source char*) while owned. preserve some sort of cursor position for multi-line text.
  - input text: add discard flag (e.g. ImGuiInputTextFlags_DiscardActiveBuffer) or make it easier to clear active focus for text replacement during edition (#725)
@@ -80,7 +82,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  
  - columns: sizing policy (e.g. for each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
  - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
- - columns: headers. with sort op/button. reorderable. (#513, #125)
+ - columns: headers. reorderable. (#513, #125)
+ - columns: optional sorting modifiers (up/down), sort list so sorting can be done multi-critera. notify user when sort order changed.
+ - columns: option to alternate background colors on odd/even scanlines.  
  - columns: allow columns to recurse. 
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
  - columns: flag to add horizontal separator above/below?
@@ -134,7 +138,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - combo: option for ComboEx to not return true when unchanged (#1182)
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
  - listbox: multiple selection.
- - listbox: unselect (#1208)
+ - listbox: unselect option (#1208)
  - listbox: make it easier/more natural to implement range-select (need some sort of info/ref about the last clicked/focused item that user can translate to an index?)
  - listbox: user may want to initial scroll to focus on the one selected value?
  - listbox: expose hovered item for a basic ListBox
@@ -142,7 +146,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - listbox: scrolling should track modified selection.
 
 !- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
- - popups/nav: esc/enter default behavior for popups.
  - popups: reopening context menu at new position should be the behavior by default? (equivalent to internal OpenPopupEx() with reopen_existing=true)
  - popups: if the popup functions took explicit ImGuiID it would allow the user to manage the scope of those ID. (#331)
  - popups: clicking outside (to close popup) and holding shouldn't drag window below.
@@ -217,13 +220,16 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: fix AddRemapChar() to work before font has been built.
  - font: (api breaking) removed "TTF" from symbol names. also because it now supports OTF.
 
-!- keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing.
- - keyboard: full keyboard navigation and focus. (#323)
+!- nav/keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing.
+ - nav: integrate navigation branch into master. (#787)
+ - nav: integrate/design keyboard controls. 
+ - nav: once tab should go through most/all widgets (in submission order?)
+ - nav: esc/enter default behavior for popups, e.g. be able to mark an "ok" or "cancel" button that would get triggered by those keys.
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
- - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#343)
+ - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#787)
  - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)
- - inputs: allow to decide and pass explicit double-clicks (e.g. for windows by the CS_DBLCLKS style).
+ - inputs: allow to pass explicit double-clicks if that's the only thing the user's backend can get them. (e.g. for windows by the CS_DBLCLKS style).
  - inputs: support track pad style scrolling & slider edit.
 
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
