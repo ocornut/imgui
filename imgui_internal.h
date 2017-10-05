@@ -573,6 +573,7 @@ struct ImGuiContext
         ActiveIdIsAlive = false;
         ActiveIdIsJustActivated = false;
         ActiveIdAllowOverlap = false;
+        ActiveIdAllowNavDirFlags = 0;
         ActiveIdClickOffset = ImVec2(-1,-1);
         ActiveIdWindow = NULL;
         ActiveIdSource = ImGuiInputSource_None;
@@ -586,6 +587,7 @@ struct ImGuiContext
         NavWindowingTarget = NULL;
         NavWindowingDisplayAlpha = 0.0f;
         NavWindowingToggleLayer = false;
+        NavLayer = 0;
         NavIdTabCounter = INT_MAX;
         NavIdIsAlive = false;
         NavMousePosDirty = false;
