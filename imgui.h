@@ -769,6 +769,7 @@ struct ImGuiStyle
     ImVec4      Colors[ImGuiCol_COUNT];
 
     IMGUI_API ImGuiStyle();
+    IMGUI_API void ScaleAllSizes(float scale_factor);
 };
 
 // This is where your app communicate with ImGui. Access via ImGui::GetIO().
