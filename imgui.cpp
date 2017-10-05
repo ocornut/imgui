@@ -3126,7 +3126,6 @@ void ImGui::NewFrame()
     }
 
     // Pressing TAB activate widget focus
-    //// NB: Don't discard FocusedWindow if it isn't active, so that a window that go on/off programatically won't lose its keyboard focus. // [2016/07/17] That comment was made invalid by 19d02becef94e8e0f1d432a8bd55cd783876583c
     if (g.ActiveId == 0 && g.NavWindow != NULL && g.NavWindow->Active && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab, false))
     {
         if (g.NavId != 0 && g.NavIdTabCounter != INT_MAX)
@@ -6372,6 +6371,7 @@ void ImGui::SetScrollHere(float center_y_ratio)
 
 void ImGui::SetKeyboardFocusHere(int offset)
 {
+    IM_ASSERT(offset >= -1);    // -1 is allowed but not below
     ImGuiWindow* window = GetCurrentWindow();
     window->FocusIdxAllRequestNext = window->FocusIdxAllCounter + 1 + offset;
     window->FocusIdxTabRequestNext = INT_MAX;
