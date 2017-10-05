@@ -4476,11 +4476,28 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags ext
     return is_open;
 }
 
+static void NavProcessMoveRequestWrapAround(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.NavMoveRequest && g.NavWindow == window && g.NavMoveResultId == 0)
+        if ((g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down) && g.NavMoveRequestForwardStep == 0 && g.NavLayer == 0)
+        {
+            g.NavMoveRequest = false;
+            g.NavMoveRequestForwardStep = 1;
+            g.NavWindow->NavRectRel[0].Min.y = g.NavWindow->NavRectRel[0].Max.y = (g.NavMoveDir == ImGuiDir_Up) ? window->SizeFull.y : 0.0f;
+        }
+}
+
 void ImGui::EndPopup()
 {
+    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     IM_ASSERT(window->Flags & ImGuiWindowFlags_Popup);  // Mismatched BeginPopup()/EndPopup() calls
-    IM_ASSERT(GImGui->CurrentPopupStack.Size > 0);
+    IM_ASSERT(g.CurrentPopupStack.Size > 0);
+
+    // Make all menus and popups wrap around for now, may need to expose that policy.
+    NavProcessMoveRequestWrapAround(window);
+    
     End();
     if (!(window->Flags & ImGuiWindowFlags_Modal))
         PopStyleVar();

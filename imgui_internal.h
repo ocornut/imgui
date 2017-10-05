@@ -484,9 +484,9 @@ struct ImGuiContext
     bool                    NavInitDefaultResultExplicit;       // Whether the result was explicitly requested with SetItemDefaultFocus()
     bool                    NavMoveFromClampedRefRect;          // Set by manual scrolling, if we scroll to a point where NavId isn't visible we reset navigation from visible items
     bool                    NavMoveRequest;                     // Move request for this frame
-    int                     NavMoveRequestForwardStep;          // 0: no forward, 1: forward request, 2: forward result
-    ImGuiDir                NavMoveDir;                         // West/East/North/South
-    ImGuiDir                NavMoveDirLast;                     //
+    int                     NavMoveRequestForwardStep;          // 0: no forward, 1: forward request, 2: forward result (this is used to navigate sibling parent menus from a child menu)
+    ImGuiDir                NavMoveDir;                         // Direction of the move request (left/right/up/down)
+    ImGuiDir                NavMoveDirLast;                     // Direction of the previous move request
     ImGuiID                 NavMoveResultId;                    // Best move request candidate
     ImGuiID                 NavMoveResultParentId;              //
     float                   NavMoveResultDistBox;               // Best move request candidate box distance to current NavId
