@@ -2233,7 +2233,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
         //  (b) So that we can scroll up/down past clipped items. This adds a small O(N) cost to regular navigation requests unfortunately, but it is still limited to one window. 
         //      it may not scale very well for windows with ten of thousands of item, but at least NavMoveRequest is only set on user interaction, aka maximum once a frame.
         //      We could early out with `if (is_clipped && !g.NavInitDefaultRequest) return false;` but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
-        window->DC.NavLayerActiveMaskNext |= (1 << window->DC.NavLayerCurrent);
+        window->DC.NavLayerActiveMaskNext |= window->DC.NavLayerCurrentMask;
         if (g.NavWindow == window->RootNavWindow)
             if (g.NavId == id || g.NavMoveRequest || g.NavInitDefaultRequest || IMGUI_DEBUG_NAV)
                 NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, id);
@@ -5377,9 +5377,10 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
             // Close & collapse button are on layer 1 (same as menus) and don't default focus
-            const ImGuiItemFlags backup_item_options = window->DC.ItemFlags;
+            const ImGuiItemFlags item_flags_backup = window->DC.ItemFlags;
             window->DC.ItemFlags |= ImGuiItemFlags_NoNavDefaultFocus;
             window->DC.NavLayerCurrent++;
+            window->DC.NavLayerCurrentMask <<= 1;
 
             // Collapse button
             if (!(flags & ImGuiWindowFlags_NoCollapse))
@@ -5403,7 +5404,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             }
 
             window->DC.NavLayerCurrent--;
-            window->DC.ItemFlags = backup_item_options;
+            window->DC.NavLayerCurrentMask >>= 1;
+            window->DC.ItemFlags = item_flags_backup;
 
             // Title text (FIXME: refactor text alignment facilities along with RenderText helpers)
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
@@ -10093,6 +10095,7 @@ bool ImGui::BeginMenuBar()
     window->DC.CursorPos = ImVec2(rect.Min.x + window->DC.MenuBarOffsetX, rect.Min.y);// + g.Style.FramePadding.y);
     window->DC.LayoutType = ImGuiLayoutType_Horizontal;
     window->DC.NavLayerCurrent++;
+    window->DC.NavLayerCurrentMask <<= 1;
     window->DC.MenuBarAppending = true;
     AlignFirstTextHeightToWidgets();
     return true;
@@ -10134,6 +10137,7 @@ void ImGui::EndMenuBar()
     EndGroup();
     window->DC.LayoutType = ImGuiLayoutType_Vertical;
     window->DC.NavLayerCurrent--;
+    window->DC.NavLayerCurrentMask >>= 1;
     window->DC.MenuBarAppending = false;
 }
 

@@ -683,6 +683,7 @@ struct IMGUI_API ImGuiDrawContext
     bool                    LastItemRectHoveredRect;
     bool                    NavHasScroll;           // Set when scrolling can be used (ScrollMax > 0.0f)
     int                     NavLayerCurrent;        // Current layer, 0..31 (we currently only use 0..1)
+    int                     NavLayerCurrentMask;    // = (1 << NavLayerCurrent) used by ItemAdd prior to clipping.
     int                     NavLayerActiveMask;     // Which layer have been written to (result from previous frame)
     int                     NavLayerActiveMaskNext; // Which layer have been written to (buffer for current frame)
     bool                    MenuBarAppending;       // FIXME: Remove this
@@ -730,6 +731,7 @@ struct IMGUI_API ImGuiDrawContext
         NavHasScroll = false;
         NavLayerActiveMask = NavLayerActiveMaskNext = 0x00;
         NavLayerCurrent = 0;
+        NavLayerCurrentMask = 1 << 0;
         MenuBarAppending = false;
         MenuBarOffsetX = 0.0f;
         StateStorage = NULL;
