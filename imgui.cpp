@@ -2200,6 +2200,50 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFl
     }
 }
 
+static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    const ImGuiItemFlags item_flags = window->DC.ItemFlags;
+    const ImRect nav_bb_rel(nav_bb.Min - g.NavWindow->Pos, nav_bb.Max - g.NavWindow->Pos);
+    if (g.NavInitDefaultRequest && g.NavLayer == window->DC.NavLayerCurrent)
+    {
+        // Even if 'ImGuiItemFlags_NoNavDefaultFocus' is on (typically collapse/close button) we record the first ResultId so they can be used as a fallback
+        if (!(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
+            g.NavInitDefaultRequest = g.NavInitDefaultResultExplicit = false; // Found a match, clear request
+        if (g.NavInitDefaultResultId == 0 || !(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
+        {
+            g.NavInitDefaultResultId = id;
+            g.NavInitDefaultResultRectRel = nav_bb_rel;
+        }
+    }
+
+    bool new_best = false;
+#if IMGUI_DEBUG_NAV
+    // [DEBUG] Score items at all times
+    if (!g.NavMoveRequest) 
+        g.NavMoveDir = g.NavMoveDirLast;
+    if (g.NavId != id)
+        new_best = NavScoreItem(nav_bb) && g.NavMoveRequest;
+#else
+    if (g.NavMoveRequest && g.NavId != id)
+        new_best = NavScoreItem(nav_bb);
+#endif
+    if (new_best)
+    {
+        g.NavMoveResultId = id;
+        g.NavMoveResultParentId = window->IDStack.back();
+        g.NavMoveResultRectRel = nav_bb_rel;
+    }
+
+    // Update window-relative bounding box of navigated item
+    if (g.NavId == id)
+    {
+        window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;
+        g.NavIdIsAlive = true;
+        g.NavIdTabCounter = window->FocusIdxTabCounter;
+    }
+}
+
 // Declare item bounding box for clipping and interaction.
 // Note that the size can be different than the one provided to ItemSize(). Typically, widgets that spread over available surface
 // declare their minimum size requirement to ItemSize() and then use a larger region for drawing/interaction, which is passed to ItemAdd().
@@ -2221,51 +2265,10 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     //      We could early out with `if (is_clipped && !g.NavInitDefaultRequest) return false;` but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
     //      A more pragmatic solution for handling long lists is relying on the fact that they are likely evenly spread items (so that clipper can be used) and we could Nav at higher-level (apply index, etc.)
     //      So eventually we would like to provide the user will the primitives to be able to implement that customized/efficient navigation handling whenever necessary.
-    const ImGuiItemFlags item_flags = window->DC.ItemFlags;
     if (id != NULL && g.NavWindow == window->RootNavWindow)
         if (g.NavId == *id || g.NavMoveRequest || g.NavInitDefaultRequest || IMGUI_DEBUG_NAV)
-            if (g.IO.NavUsable && !(item_flags & ImGuiItemFlags_NoNav))
-            {
-                const ImRect& nav_bb = nav_bb_arg ? *nav_bb_arg : bb;
-                const ImRect nav_bb_rel(nav_bb.Min - g.NavWindow->Pos, nav_bb.Max - g.NavWindow->Pos);
-                if (g.NavInitDefaultRequest && g.NavLayer == window->DC.NavLayerCurrent)
-                {
-                    // Even if 'ImGuiItemFlags_NoNavDefaultFocus' is on (typically collapse/close button) we record the first ResultId so they can be used as a fallback
-                    if (!(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
-                        g.NavInitDefaultRequest = g.NavInitDefaultResultExplicit = false; // Found a match, clear request
-                    if (g.NavInitDefaultResultId == 0 || !(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
-                    {
-                        g.NavInitDefaultResultId = *id;
-                        g.NavInitDefaultResultRectRel = nav_bb_rel;
-                    }
-                }
-
-                bool new_best = false;
-#if IMGUI_DEBUG_NAV
-                // [DEBUG] Score items at all times
-                if (!g.NavMoveRequest) 
-                    g.NavMoveDir = g.NavMoveDirLast;
-                if (g.NavId != *id)
-                    new_best = NavScoreItem(nav_bb) && g.NavMoveRequest;
-#else
-                if (g.NavMoveRequest && g.NavId != *id)
-                    new_best = NavScoreItem(nav_bb);
-#endif
-                if (new_best)
-                {
-                    g.NavMoveResultId = *id;
-                    g.NavMoveResultParentId = window->IDStack.back();
-                    g.NavMoveResultRectRel = nav_bb_rel;
-                }
-
-                // Update window-relative bounding box of navigated item
-                if (g.NavId == *id)
-                {
-                    window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;
-                    g.NavIdIsAlive = true;
-                    g.NavIdTabCounter = window->FocusIdxTabCounter;
-                }
-            }
+            if (g.IO.NavUsable)
+                NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, *id);
 
     if (is_clipped)
         return false;
