@@ -480,6 +480,7 @@ struct ImGuiContext
     bool                    NavMousePosDirty;
     bool                    NavDisableHighlight;                // When user starts using mouse, we hide gamepad/keyboard highlight (nb: but they are still available, which is why NavDisableHighlight isn't always != NavDisableMouseHover)
     bool                    NavDisableMouseHover;               // When user starts using gamepad/keyboard, we hide mouse hovering highlight until mouse is touched again.
+    bool                    NavAnyRequest;                      // ~~ NavMoveRequest || NavInitDefaultRequest
     bool                    NavInitDefaultRequest;              // Init request for appearing window to select first item
     ImGuiID                 NavInitDefaultResultId;
     ImRect                  NavInitDefaultResultRectRel;
@@ -596,6 +597,7 @@ struct ImGuiContext
         NavMousePosDirty = false;
         NavDisableHighlight = true;
         NavDisableMouseHover = false;
+        NavAnyRequest = false;
         NavInitDefaultRequest = false;
         NavInitDefaultResultId = 0;
         NavInitDefaultResultExplicit = false;

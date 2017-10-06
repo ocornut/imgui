@@ -2171,6 +2171,19 @@ static bool NavScoreItem(ImRect cand)
     return new_best;
 }
 
+static inline void NavUpdateAnyRequestFlag()
+{
+    ImGuiContext& g = *GImGui;
+    g.NavAnyRequest = g.NavMoveRequest || g.NavInitDefaultRequest || IMGUI_DEBUG_NAV;
+}
+
+static void NavMoveRequestCancel()
+{
+    ImGuiContext& g = *GImGui;
+    g.NavMoveRequest = false;
+    NavUpdateAnyRequestFlag();
+}
+
 static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
@@ -2182,7 +2195,10 @@ static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGu
     {
         // Even if 'ImGuiItemFlags_NoNavDefaultFocus' is on (typically collapse/close button) we record the first ResultId so they can be used as a fallback
         if (!(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
+        {
             g.NavInitDefaultRequest = g.NavInitDefaultResultExplicit = false; // Found a match, clear request
+            NavUpdateAnyRequestFlag();
+        }
         if (g.NavInitDefaultResultId == 0 || !(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
         {
             g.NavInitDefaultResultId = id;
@@ -2235,7 +2251,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
         //      We could early out with `if (is_clipped && !g.NavInitDefaultRequest) return false;` but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
         window->DC.NavLayerActiveMaskNext |= window->DC.NavLayerCurrentMask;
         if (g.NavWindow == window->RootNavWindow)
-            if (g.NavId == id || g.NavMoveRequest || g.NavInitDefaultRequest || IMGUI_DEBUG_NAV)
+            if (g.NavId == id || g.NavAnyRequest)
                 NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, id);
     }
 
@@ -2499,6 +2515,7 @@ static void NavInitWindow(ImGuiWindow* window, bool force_reinit)
         g.NavInitDefaultResultId = 0;
         g.NavInitDefaultResultExplicit = false;
         g.NavInitDefaultResultRectRel = ImRect();
+        NavUpdateAnyRequestFlag();
     }
     else
     {
@@ -2859,6 +2876,8 @@ static void NavUpdate()
         g.NavInitDefaultResultId = 0;
         g.NavDisableHighlight = false;
     }
+
+    NavUpdateAnyRequestFlag();
 
     // Scrolling
     if (g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.NavWindowingTarget)
@@ -4237,6 +4256,7 @@ void ImGui::SetItemDefaultFocus()
         g.NavInitDefaultResultExplicit = true;
         g.NavInitDefaultResultId = g.NavWindow->DC.LastItemId;
         g.NavInitDefaultResultRectRel = ImRect(g.NavWindow->DC.LastItemRect.Min - g.NavWindow->Pos, g.NavWindow->DC.LastItemRect.Max - g.NavWindow->Pos);
+        NavUpdateAnyRequestFlag();
         if (!IsItemVisible())
             SetScrollHere();
     }
@@ -4511,8 +4531,8 @@ static void NavProcessMoveRequestWrapAround(ImGuiWindow* window)
     if (g.NavMoveRequest && g.NavWindow == window && g.NavMoveResultId == 0)
         if ((g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down) && g.NavMoveRequestForwardStep == 0 && g.NavLayer == 0)
         {
-            g.NavMoveRequest = false;
             g.NavMoveRequestForwardStep = 1;
+            NavMoveRequestCancel();
             g.NavWindow->NavRectRel[0].Min.y = g.NavWindow->NavRectRel[0].Max.y = (g.NavMoveDir == ImGuiDir_Up) ? window->SizeFull.y : 0.0f;
         }
 }
@@ -10123,8 +10143,8 @@ void ImGui::EndMenuBar()
             SetNavIdAndMoveMouse(window->NavLastIds[1], 1, window->NavRectRel[1]);
             g.NavLayer = 1;
             g.NavDisableHighlight = true; // Hide highlight for the current frame so we don't see the intermediary selection.
-            g.NavMoveRequest = false;
             g.NavMoveRequestForwardStep = 1;
+            NavMoveRequestCancel();
         }
     }
 
