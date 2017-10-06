@@ -2818,13 +2818,23 @@ static void NavUpdate()
         }
     }
 
-    g.NavActivateId = (g.NavId && !g.NavDisableHighlight && !g.NavWindowingTarget && g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadActivate, ImGuiNavReadMode_Pressed)) ? g.NavId : 0;
-    g.NavInputId = (g.NavId && !g.NavDisableHighlight && !g.NavWindowingTarget && g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadInput, ImGuiNavReadMode_Pressed)) ? g.NavId : 0;
+    g.NavActivateId = g.NavActivateDownId = g.NavInputId = 0;
+    if (g.NavId != 0 && !g.NavDisableHighlight && !g.NavWindowingTarget)
+    {
+        if (g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadActivate, ImGuiNavReadMode_Pressed))
+            g.NavActivateId = g.NavId;
+        if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && IsNavInputDown(ImGuiNavInput_PadActivate))
+            g.NavActivateDownId = g.NavId;
+        if (g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadInput, ImGuiNavReadMode_Pressed))
+            g.NavInputId = g.NavId;
+    }
     if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
     {
-        g.NavActivateId = g.NavInputId = 0;
+        g.NavActivateId = g.NavActivateDownId = g.NavInputId = 0;
         g.NavDisableHighlight = true;
     }
+    if (g.NavActivateId != 0)
+        IM_ASSERT(g.NavActivateDownId == g.NavActivateId);
     g.NavMoveRequest = false;
 
     // Initiate directional inputs request
@@ -6681,18 +6691,18 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     {
         // We report navigated item as hovered but we don't set g.HoveredId to not interfere with mouse
         hovered = true;
-        if (!g.NavWindowingTarget && IsNavInputDown(ImGuiNavInput_PadActivate))
+    }
+    if (g.NavActivateDownId == id)
+    {
+        bool nav_pressed = (g.NavActivateId == id) || IsNavInputPressed(ImGuiNavInput_PadActivate, (flags & ImGuiButtonFlags_Repeat) ? ImGuiNavReadMode_Repeat : ImGuiNavReadMode_Pressed);
+        if (nav_pressed)
+            pressed = true;
+        if (nav_pressed || g.ActiveId == id)
         {
-            bool nav_pressed = IsNavInputPressed(ImGuiNavInput_PadActivate, (flags & ImGuiButtonFlags_Repeat) ? ImGuiNavReadMode_Repeat : ImGuiNavReadMode_Pressed);
-            if (nav_pressed)
-                pressed = true;
-            if (nav_pressed || g.ActiveId == id)
-            {
-                // Set active id so it can be queried by user via IsItemActive(), equivalent of holding the mouse button.
-                g.NavActivateId = id; // This is so SetActiveId assign a Nav source
-                SetActiveID(id, window);
-                g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right) | (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
-            }
+            // Set active id so it can be queried by user via IsItemActive(), equivalent of holding the mouse button.
+            g.NavActivateId = id; // This is so SetActiveId assign a Nav source
+            SetActiveID(id, window);
+            g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right) | (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
         }
     }
 
@@ -6717,7 +6727,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         }
         else if (g.ActiveIdSource == ImGuiInputSource_Nav)
         {
-            if (!IsNavInputDown(ImGuiNavInput_PadActivate))
+            if (g.NavActivateDownId != id)
                 ClearActiveID();
         }
     }
@@ -7677,7 +7687,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
                 clicked_t = 1.0f - clicked_t;
             set_new_value = true;
         }
-        else if (g.ActiveIdSource == ImGuiInputSource_Nav && IsNavInputDown(ImGuiNavInput_PadActivate))
+        else if (g.ActiveIdSource == ImGuiInputSource_Nav && g.NavActivateDownId == id)
         {
             const ImVec2 delta2 = GetNavInputAmount2d(0, ImGuiNavReadMode_RepeatFast, 0.0f, 0.0f);
             if (float delta = is_horizontal ? delta2.x : -delta2.y)
@@ -7997,7 +8007,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     // Process clicking on the drag
     if (g.ActiveId == id)
     {
-        if (g.IO.MouseDown[0] || IsNavInputDown(ImGuiNavInput_PadActivate))
+        if (g.IO.MouseDown[0] || g.NavActivateDownId == id)
         {
             if (g.ActiveIdIsJustActivated)
             {

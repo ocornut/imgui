@@ -465,7 +465,8 @@ struct ImGuiContext
     // Navigation data (for gamepad/keyboard)
     ImGuiWindow*            NavWindow;                          // Nav/focused window for navigation
     ImGuiID                 NavId;                              // Nav/focused item for navigation
-    ImGuiID                 NavActivateId, NavInputId;          // ~~ IsKeyPressedMap(ImGuiKey_NavActive) ? NavId : 0, etc. (to make widget code terser)
+    ImGuiID                 NavActivateId, NavActivateDownId;   // ~~ IsNavInputPressed(ImGuiNavInput_PadActivate) ? NavId : 0, etc.
+    ImGuiID                 NavInputId;                         // ~~ IsNavInputPressed(ImGuiNavInput_PadInput) ? NavId : 0, etc.
     ImGuiID                 NavJustTabbedId;                    // Just tabbed to this id.
     ImGuiID                 NavJustNavigatedId;                 // Just navigated to this id (result of a successfully MoveRequest)
     ImRect                  NavScoringRectScreen;               // Rectangle used for scoring, in screen space. Based of window->DC.NavRefRectRel[], modified for directional navigation scoring.
@@ -582,7 +583,7 @@ struct ImGuiContext
         SettingsDirtyTimer = 0.0f;
 
         NavWindow = NULL;
-        NavId = NavActivateId = NavInputId = 0;
+        NavId = NavActivateId = NavActivateDownId = NavInputId = 0;
         NavJustTabbedId = NavJustNavigatedId = 0;
         NavScoringRectScreen = ImRect();
         NavWindowingTarget = NULL;
