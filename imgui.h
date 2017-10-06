@@ -69,17 +69,17 @@ typedef unsigned int ImU32;         // 32-bit unsigned integer (typically used t
 typedef unsigned int ImGuiID;       // unique ID used by widgets (typically hashed from a stack of string)
 typedef unsigned short ImWchar;     // character for keyboard input/display
 typedef void* ImTextureID;          // user data to identify a texture (this is whatever to you want it to be! read the FAQ about ImTextureID in imgui.cpp)
-typedef int ImGuiCol;               // a color identifier for styling       // enum ImGuiCol_
-typedef int ImGuiStyleVar;          // a variable identifier for styling    // enum ImGuiStyleVar_
-typedef int ImGuiKey;               // a key identifier (ImGui-side enum)   // enum ImGuiKey_
-typedef int ImGuiColorEditFlags;    // color edit flags for Color*()        // enum ImGuiColorEditFlags_
-typedef int ImGuiMouseCursor;       // a mouse cursor identifier            // enum ImGuiMouseCursor_
-typedef int ImGuiWindowFlags;       // window flags for Begin*()            // enum ImGuiWindowFlags_
-typedef int ImGuiCond;              // condition flags for Set*()           // enum ImGuiCond_
-typedef int ImGuiColumnsFlags;      // flags for *Columns*()                // enum ImGuiColumnsFlags_
-typedef int ImGuiInputTextFlags;    // flags for InputText*()               // enum ImGuiInputTextFlags_
-typedef int ImGuiSelectableFlags;   // flags for Selectable()               // enum ImGuiSelectableFlags_
-typedef int ImGuiTreeNodeFlags;     // flags for TreeNode*(), Collapsing*() // enum ImGuiTreeNodeFlags_
+typedef int ImGuiCol;               // enum: a color identifier for styling     // enum ImGuiCol_
+typedef int ImGuiStyleVar;          // enum: a variable identifier for styling  // enum ImGuiStyleVar_
+typedef int ImGuiKey;               // enum: a key identifier (ImGui-side enum) // enum ImGuiKey_
+typedef int ImGuiMouseCursor;       // enum: a mouse cursor identifier          // enum ImGuiMouseCursor_
+typedef int ImGuiCond;              // enum: a condition for Set*()             // enum ImGuiCond_
+typedef int ImGuiColorEditFlags;    // flags: color edit flags for Color*()     // enum ImGuiColorEditFlags_
+typedef int ImGuiWindowFlags;       // flags: window flags for Begin*()         // enum ImGuiWindowFlags_
+typedef int ImGuiColumnsFlags;      // flags: for *Columns*()                   // enum ImGuiColumnsFlags_
+typedef int ImGuiInputTextFlags;    // flags: for InputText*()                  // enum ImGuiInputTextFlags_
+typedef int ImGuiSelectableFlags;   // flags: for Selectable()                  // enum ImGuiSelectableFlags_
+typedef int ImGuiTreeNodeFlags;     // flags: for TreeNode*(), Collapsing*()    // enum ImGuiTreeNodeFlags_
 typedef int (*ImGuiTextEditCallback)(ImGuiTextEditCallbackData *data);
 typedef void (*ImGuiSizeConstraintCallback)(ImGuiSizeConstraintCallbackData* data);
 #ifdef _MSC_VER
@@ -726,14 +726,14 @@ enum ImGuiMouseCursor_
     ImGuiMouseCursor_Count_
 };
 
-// Condition flags for ImGui::SetWindow***(), SetNextWindow***(), SetNextTreeNode***() functions
-// All those functions treat 0 as a shortcut to ImGuiCond_Always
+// Condition for ImGui::SetWindow***(), SetNextWindow***(), SetNextTreeNode***() functions
+// All those functions treat 0 as a shortcut to ImGuiCond_Always. From the point of view of the user use this as an enum (don't combine multiple values into flags).
 enum ImGuiCond_
 {
-    ImGuiCond_Always        = 1 << 0, // Set the variable
-    ImGuiCond_Once          = 1 << 1, // Set the variable once per runtime session (only the first call with succeed)
-    ImGuiCond_FirstUseEver  = 1 << 2, // Set the variable if the window has no saved data (if doesn't exist in the .ini file)
-    ImGuiCond_Appearing     = 1 << 3  // Set the variable if the window is appearing after being hidden/inactive (or the first time)
+    ImGuiCond_Always        = 1 << 0,   // Set the variable
+    ImGuiCond_Once          = 1 << 1,   // Set the variable once per runtime session (only the first call with succeed)
+    ImGuiCond_FirstUseEver  = 1 << 2,   // Set the variable if the window has no saved data (if doesn't exist in the .ini file)
+    ImGuiCond_Appearing     = 1 << 3    // Set the variable if the window is appearing after being hidden/inactive (or the first time)
 
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
