@@ -2837,6 +2837,11 @@ static void NavUpdate()
         IM_ASSERT(g.NavActivateDownId == g.NavActivateId);
     g.NavMoveRequest = false;
 
+    // Process explicit activation request
+    if (g.NavNextActivateId != 0)
+        g.NavActivateId = g.NavActivateDownId = g.NavInputId = g.NavNextActivateId;
+    g.NavNextActivateId = 0;
+
     // Initiate directional inputs request
     const int allowed_dir_flags = (g.ActiveId == 0) ? ~0 : g.ActiveIdAllowNavDirFlags;
     if (g.NavMoveRequestForwardStep == 0)
@@ -6377,6 +6382,18 @@ void ImGui::SetScrollHere(float center_y_ratio)
     float target_y = window->DC.CursorPosPrevLine.y - window->Pos.y; // Top of last item, in window space
     target_y += (window->DC.PrevLineHeight * center_y_ratio) + (GImGui->Style.ItemSpacing.y * (center_y_ratio - 0.5f) * 2.0f); // Precisely aim above, in the middle or below the last line.
     SetScrollFromPosY(target_y, center_y_ratio);
+}
+
+void ImGui::ActivateItem(ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    g.NavNextActivateId = id;
+}
+
+ImGuiID ImGui::GetItemID()
+{
+    ImGuiContext& g = *GImGui;
+    return g.CurrentWindow->DC.LastItemId;
 }
 
 void ImGui::SetKeyboardFocusHere(int offset)

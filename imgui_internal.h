@@ -469,6 +469,7 @@ struct ImGuiContext
     ImGuiID                 NavInputId;                         // ~~ IsNavInputPressed(ImGuiNavInput_PadInput) ? NavId : 0, etc.
     ImGuiID                 NavJustTabbedId;                    // Just tabbed to this id.
     ImGuiID                 NavJustNavigatedId;                 // Just navigated to this id (result of a successfully MoveRequest)
+    ImGuiID                 NavNextActivateId;                  // Set by ActivateItem(), queued until next frame
     ImRect                  NavScoringRectScreen;               // Rectangle used for scoring, in screen space. Based of window->DC.NavRefRectRel[], modified for directional navigation scoring.
     ImGuiWindow*            NavWindowingTarget;
     float                   NavWindowingDisplayAlpha;
@@ -584,7 +585,7 @@ struct ImGuiContext
 
         NavWindow = NULL;
         NavId = NavActivateId = NavActivateDownId = NavInputId = 0;
-        NavJustTabbedId = NavJustNavigatedId = 0;
+        NavJustTabbedId = NavJustNavigatedId = NavNextActivateId = 0;
         NavScoringRectScreen = ImRect();
         NavWindowingTarget = NULL;
         NavWindowingDisplayAlpha = 0.0f;

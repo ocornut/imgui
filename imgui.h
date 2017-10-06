@@ -177,7 +177,6 @@ namespace ImGui
     IMGUI_API void          SetScrollY(float scroll_y);                                         // set scrolling amount [0..GetScrollMaxY()]
     IMGUI_API void          SetScrollHere(float center_y_ratio = 0.5f);                         // adjust scrolling amount to make current cursor position visible. center_y_ratio=0.0: top, 0.5: center, 1.0: bottom.
     IMGUI_API void          SetScrollFromPosY(float pos_y, float center_y_ratio = 0.5f);        // adjust scrolling amount to make given position valid. use GetCursorPos() or GetCursorStartPos()+offset to get valid positions.
-    IMGUI_API void          SetKeyboardFocusHere(int offset = 0);  // FIXME-NAVIGATION          // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget. Use -1 to access previous widget.
     IMGUI_API void          SetStateStorage(ImGuiStorage* tree);                                // replace tree state storage with our own (if you want to manipulate it yourself, typically clear subsection of it)
     IMGUI_API ImGuiStorage* GetStateStorage();
 
@@ -415,6 +414,11 @@ namespace ImGui
 
     // Styles
     IMGUI_API void          StyleColorsClassic(ImGuiStyle* dst = NULL);
+
+    // Focus, Activation
+    IMGUI_API void          ActivateItem(ImGuiID id);                                           // remotely activate a button, checkbox, tree node etc. given its unique ID. activation is queued and processed on the next frame when the item is encountered again.
+    IMGUI_API ImGuiID       GetItemID();                                                        // get id of previous item, generally ~GetID(label)
+    IMGUI_API void          SetKeyboardFocusHere(int offset = 0);  // FIXME-NAVIGATION          // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget. Use -1 to access previous widget.
 
     // Utilities
     IMGUI_API bool          IsItemHovered();                                                    // is the last item hovered by mouse (and usable)? or we are currently using Nav and the item is focused.

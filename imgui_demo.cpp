@@ -1754,6 +1754,11 @@ void ImGui::ShowTestWindow(bool* p_open)
             if (ImGui::IsItemActive()) has_focus = 3;
             ImGui::PopAllowKeyboardFocus();
 
+            if (has_focus)
+                ImGui::Text("Item with focus: %d", has_focus);
+            else
+                ImGui::Text("Item with focus: <none>");
+
             // Use >= 0 parameter to SetKeyboardFocusHere() to focus an upcoming item
             static float f3[3] = { 0.0f, 0.0f, 0.0f };
             int focus_ahead = -1;
@@ -1763,13 +1768,25 @@ void ImGui::ShowTestWindow(bool* p_open)
             if (focus_ahead != -1) ImGui::SetKeyboardFocusHere(focus_ahead);
             ImGui::SliderFloat3("Float3", &f3[0], 0.0f, 1.0f);
 
-            if (has_focus)
-                ImGui::Text("Item with focus: %d", has_focus);
-            else
-                ImGui::Text("Item with focus: <none>");
-            ImGui::TextWrapped("Cursor & selection are preserved when refocusing last used item in code.");
+            ImGui::TextWrapped("NB: Cursor & selection are preserved when refocusing last used item in code.");
             ImGui::TreePop();
         }
+
+#if 0
+        if (ImGui::TreeNode("Remote Activation"))
+        {
+            static char label[256];
+            ImGui::InputText("Label", label, IM_ARRAYSIZE(label));
+            ImGui::PopID(); // We don't yet have an easy way compute ID at other levels of the ID stack so we pop it manually for now (e.g. we'd like something like GetID("../label"))
+            ImGuiID id = ImGui::GetID(label);
+            ImGui::PushID("Remote Activation");
+            if (ImGui::SmallButton("Activate"))
+                ImGui::ActivateItem(id);
+            ImGui::SameLine();
+            ImGui::Text("ID = 0x%08X", id);
+            ImGui::TreePop();
+        }
+#endif
 
         if (ImGui::TreeNode("Dragging"))
         {
