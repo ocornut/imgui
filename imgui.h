@@ -419,6 +419,7 @@ namespace ImGui
     IMGUI_API void          ActivateItem(ImGuiID id);                                           // remotely activate a button, checkbox, tree node etc. given its unique ID. activation is queued and processed on the next frame when the item is encountered again.
     IMGUI_API ImGuiID       GetItemID();                                                        // get id of previous item, generally ~GetID(label)
     IMGUI_API void          SetKeyboardFocusHere(int offset = 0);  // FIXME-NAVIGATION          // focus keyboard on the next widget. Use positive 'offset' to access sub components of a multiple component widget. Use -1 to access previous widget.
+    IMGUI_API void          SetItemDefaultFocus(); // FIXME-NAVIGATION                          // make last item the default focused item of a window
 
     // Utilities
     IMGUI_API bool          IsItemHovered();                                                    // is the last item hovered by mouse (and usable)? or we are currently using Nav and the item is focused.
@@ -434,7 +435,6 @@ namespace ImGui
     IMGUI_API ImVec2        GetItemRectMax();                                                   // "
     IMGUI_API ImVec2        GetItemRectSize();                                                  // "
     IMGUI_API void          SetItemAllowOverlap();                                              // allow last item to be overlapped by a subsequent item. sometimes useful with invisible buttons, selectables, etc. to catch unused area.
-    IMGUI_API void          SetItemDefaultFocus();                                              // make last item the default focused item of a window
     IMGUI_API bool          IsWindowFocused();                                                  // is current window focused
     IMGUI_API bool          IsWindowHovered();                                                  // is current window hovered and hoverable (not blocked by a popup) (differentiate child windows from each others)
     IMGUI_API bool          IsWindowRectHovered();                                              // is current window rectangle hovered, disregarding of any consideration of being blocked by a popup. (unlike IsWindowHovered() this will return true even if the window is blocked because of a popup)

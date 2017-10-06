@@ -4247,21 +4247,6 @@ void ImGui::SetItemAllowOverlap()
         g.ActiveIdAllowOverlap = true;
 }
 
-void ImGui::SetItemDefaultFocus()
-{
-    ImGuiContext& g = *GImGui;
-    if (g.NavWindow == g.CurrentWindow->RootNavWindow && (g.NavInitDefaultRequest || g.NavInitDefaultResultId != 0) && g.NavLayer == g.NavWindow->DC.NavLayerCurrent)
-    {
-        g.NavInitDefaultRequest = false;
-        g.NavInitDefaultResultExplicit = true;
-        g.NavInitDefaultResultId = g.NavWindow->DC.LastItemId;
-        g.NavInitDefaultResultRectRel = ImRect(g.NavWindow->DC.LastItemRect.Min - g.NavWindow->Pos, g.NavWindow->DC.LastItemRect.Max - g.NavWindow->Pos);
-        NavUpdateAnyRequestFlag();
-        if (!IsItemVisible())
-            SetScrollHere();
-    }
-}
-
 ImVec2 ImGui::GetItemRectMin()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
@@ -6439,6 +6424,21 @@ void ImGui::SetKeyboardFocusHere(int offset)
     ImGuiWindow* window = GetCurrentWindow();
     window->FocusIdxAllRequestNext = window->FocusIdxAllCounter + 1 + offset;
     window->FocusIdxTabRequestNext = INT_MAX;
+}
+
+void ImGui::SetItemDefaultFocus()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.NavWindow == g.CurrentWindow->RootNavWindow && (g.NavInitDefaultRequest || g.NavInitDefaultResultId != 0) && g.NavLayer == g.NavWindow->DC.NavLayerCurrent)
+    {
+        g.NavInitDefaultRequest = false;
+        g.NavInitDefaultResultExplicit = true;
+        g.NavInitDefaultResultId = g.NavWindow->DC.LastItemId;
+        g.NavInitDefaultResultRectRel = ImRect(g.NavWindow->DC.LastItemRect.Min - g.NavWindow->Pos, g.NavWindow->DC.LastItemRect.Max - g.NavWindow->Pos);
+        NavUpdateAnyRequestFlag();
+        if (!IsItemVisible())
+            SetScrollHere();
+    }
 }
 
 void ImGui::SetStateStorage(ImGuiStorage* tree)
