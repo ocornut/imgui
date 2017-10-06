@@ -480,11 +480,11 @@ struct ImGuiContext
     bool                    NavMousePosDirty;
     bool                    NavDisableHighlight;                // When user starts using mouse, we hide gamepad/keyboard highlight (nb: but they are still available, which is why NavDisableHighlight isn't always != NavDisableMouseHover)
     bool                    NavDisableMouseHover;               // When user starts using gamepad/keyboard, we hide mouse hovering highlight until mouse is touched again.
-    bool                    NavAnyRequest;                      // ~~ NavMoveRequest || NavInitDefaultRequest
-    bool                    NavInitDefaultRequest;              // Init request for appearing window to select first item
-    ImGuiID                 NavInitDefaultResultId;
-    ImRect                  NavInitDefaultResultRectRel;
-    bool                    NavInitDefaultResultExplicit;       // Whether the result was explicitly requested with SetItemDefaultFocus()
+    bool                    NavAnyRequest;                      // ~~ NavMoveRequest || NavInitRequest
+    bool                    NavInitRequest;                     // Init request for appearing window to select first item
+    ImGuiID                 NavInitResultId;
+    ImRect                  NavInitResultRectRel;
+    bool                    NavInitResultExplicit;              // Whether the result was explicitly requested with SetItemDefaultFocus()
     bool                    NavMoveFromClampedRefRect;          // Set by manual scrolling, if we scroll to a point where NavId isn't visible we reset navigation from visible items
     bool                    NavMoveRequest;                     // Move request for this frame
     int                     NavMoveRequestForwardStep;          // 0: no forward, 1: forward request, 2: forward result (this is used to navigate sibling parent menus from a child menu)
@@ -598,9 +598,9 @@ struct ImGuiContext
         NavDisableHighlight = true;
         NavDisableMouseHover = false;
         NavAnyRequest = false;
-        NavInitDefaultRequest = false;
-        NavInitDefaultResultId = 0;
-        NavInitDefaultResultExplicit = false;
+        NavInitRequest = false;
+        NavInitResultId = 0;
+        NavInitResultExplicit = false;
         NavMoveFromClampedRefRect = false;
         NavMoveRequest = false;
         NavMoveRequestForwardStep = 0;
