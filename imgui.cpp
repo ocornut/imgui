@@ -2228,19 +2228,19 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     window->DC.LastItemId = id ? *id : 0;
     window->DC.LastItemRect = bb;
     window->DC.LastItemRectHoveredRect = false;
-    if (id != NULL) 
-        window->DC.NavLayerActiveMaskNext |= (1 << window->DC.NavLayerCurrent);
 
 	// Navigation processing runs prior to clipping early-out
     //  (a) So that NavInitDefaultRequest can be honored, for newly opened windows to select a default widget
     //  (b) So that we can scroll up/down past clipped items. This adds a small O(N) cost to regular navigation requests unfortunately, but it is still limited to one window. 
-    //      it may not scale very well for windows with ten of thousands of item, but at least the NavRequest is only performed on user interaction, aka maximum once a frame.
+    //      it may not scale very well for windows with ten of thousands of item, but at least NavMoveRequest is only set on user interaction, aka maximum once a frame.
     //      We could early out with `if (is_clipped && !g.NavInitDefaultRequest) return false;` but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
-    //      A more pragmatic solution for handling long lists is relying on the fact that they are likely evenly spread items (so that clipper can be used) and we could Nav at higher-level (apply index, etc.)
-    //      So eventually we would like to provide the user will the primitives to be able to implement that customized/efficient navigation handling whenever necessary.
-    if (id != NULL && g.NavWindow == window->RootNavWindow)
-        if (g.NavId == *id || g.NavMoveRequest || g.NavInitDefaultRequest || IMGUI_DEBUG_NAV)
-            NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, *id);
+    if (id != NULL)
+    {
+        window->DC.NavLayerActiveMaskNext |= (1 << window->DC.NavLayerCurrent);
+        if (g.NavWindow == window->RootNavWindow)
+            if (g.NavId == *id || g.NavMoveRequest || g.NavInitDefaultRequest || IMGUI_DEBUG_NAV)
+                NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, *id);
+    }
 
     if (is_clipped)
         return false;
