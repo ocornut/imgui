@@ -2014,12 +2014,12 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window)
 // Advance cursor given item size for layout.
 void ImGui::ItemSize(const ImVec2& size, float text_offset_y)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     if (window->SkipItems)
         return;
 
     // Always align ourselves on pixel boundaries
-    ImGuiContext& g = *GImGui;
     const float line_height = ImMax(window->DC.CurrentLineHeight, size.y);
     const float text_base_offset = ImMax(window->DC.CurrentLineTextBaseOffset, text_offset_y);
     //if (g.IO.KeyAlt) window->DrawList->AddRect(window->DC.CursorPos, window->DC.CursorPos + ImVec2(size.x, line_height), IM_COL32(255,0,0,200)); // [DEBUG]
@@ -2221,7 +2221,7 @@ static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGu
 // Declare item bounding box for clipping and interaction.
 // Note that the size can be different than the one provided to ItemSize(). Typically, widgets that spread over available surface
 // declare their minimum size requirement to ItemSize() and then use a larger region for drawing/interaction, which is passed to ItemAdd().
-bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_arg)
+bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -2231,17 +2231,17 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     //  (b) So that we can scroll up/down past clipped items. This adds a small O(N) cost to regular navigation requests unfortunately, but it is still limited to one window. 
     //      it may not scale very well for windows with ten of thousands of item, but at least NavMoveRequest is only set on user interaction, aka maximum once a frame.
     //      We could early out with `if (is_clipped && !g.NavInitDefaultRequest) return false;` but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
-    if (id != NULL)
+    if (id != 0)
     {
         window->DC.NavLayerActiveMaskNext |= (1 << window->DC.NavLayerCurrent);
         if (g.NavWindow == window->RootNavWindow)
-            if (g.NavId == *id || g.NavMoveRequest || g.NavInitDefaultRequest || IMGUI_DEBUG_NAV)
-                NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, *id);
+            if (g.NavId == id || g.NavMoveRequest || g.NavInitDefaultRequest || IMGUI_DEBUG_NAV)
+                NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, id);
     }
 
     // Clipping test + store basic information about the current item.
     const bool is_clipped = IsClippedEx(bb, id, false);
-    window->DC.LastItemId = id ? *id : 0;
+    window->DC.LastItemId = id;
     window->DC.LastItemRect = bb;
     if (is_clipped)
     {
@@ -2303,12 +2303,12 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
     return true;
 }
 
-bool ImGui::IsClippedEx(const ImRect& bb, const ImGuiID* id, bool clip_even_when_logged)
+bool ImGui::IsClippedEx(const ImRect& bb, ImGuiID id, bool clip_even_when_logged)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = g.CurrentWindow;
     if (!bb.Overlaps(window->ClipRect))
-        if (!id || *id != g.ActiveId)
+        if (id == 0 || id != g.ActiveId)
             if (clip_even_when_logged || !g.LogEnabled)
                 return true;
     return false;
@@ -3645,7 +3645,7 @@ void ImGui::LogText(const char* fmt, ...)
 static void LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end = NULL)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = ImGui::GetCurrentWindowRead();
+    ImGuiWindow* window = g.CurrentWindow;
 
     if (!text_end)
         text_end = ImGui::FindRenderedTextEnd(text, text_end);
@@ -3697,7 +3697,7 @@ static void LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
 void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = g.CurrentWindow;
 
     // Hide anything after a '##' string
     const char* text_display_end;
@@ -3724,7 +3724,7 @@ void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
 void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = g.CurrentWindow;
 
     if (!text_end)
         text_end = text + strlen(text); // FIXME-OPT
@@ -3749,7 +3749,7 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, cons
         return;
 
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = g.CurrentWindow;
 
     // Perform CPU side clipping for single clipped element to avoid using scissor state
     ImVec2 pos = pos_min;
@@ -3782,8 +3782,8 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, cons
 // Render a rectangle shaped with optional rounding and borders
 void ImGui::RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border, float rounding)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     window->DrawList->AddRectFilled(p_min, p_max, fill_col, rounding);
     if (border && (window->Flags & ImGuiWindowFlags_ShowBorders))
     {
@@ -3794,7 +3794,8 @@ void ImGui::RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border,
 
 void ImGui::RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     if (window->Flags & ImGuiWindowFlags_ShowBorders)
     {
         window->DrawList->AddRect(p_min+ImVec2(1,1), p_max+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), rounding);
@@ -3806,7 +3807,7 @@ void ImGui::RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding)
 void ImGui::RenderCollapseTriangle(ImVec2 p_min, bool is_open, float scale)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = g.CurrentWindow;
 
     const float h = g.FontSize * 1.00f;
     const float r = h * 0.40f * scale;
@@ -3832,14 +3833,15 @@ void ImGui::RenderCollapseTriangle(ImVec2 p_min, bool is_open, float scale)
 
 void ImGui::RenderBullet(ImVec2 pos)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     window->DrawList->AddCircleFilled(pos, GImGui->FontSize*0.20f, GetColorU32(ImGuiCol_Text), 8);
 }
 
 void ImGui::RenderCheckMark(ImVec2 pos, ImU32 col)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = g.CurrentWindow;
     float start_x = (float)(int)(g.FontSize * 0.307f + 0.5f);
     float rem_third = (float)(int)((g.FontSize - start_x) / 3.0f);
     float bx = pos.x + 0.5f + start_x + rem_third;
@@ -3913,7 +3915,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
 void ImGui::CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = g.CurrentWindow;
     if (g.LogEnabled)
     {
         // If logging is active, do not perform any clipping
@@ -3970,7 +3972,7 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool clip)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = g.CurrentWindow;
 
     // Clip
     ImRect rect_clipped(r_min, r_max);
@@ -4174,7 +4176,7 @@ bool ImGui::IsItemActive()
     ImGuiContext& g = *GImGui;
     if (g.ActiveId)
     {
-        ImGuiWindow* window = GetCurrentWindowRead();
+        ImGuiWindow* window = g.CurrentWindow;
         return g.ActiveId == window->DC.LastItemId;
     }
     return false;
@@ -4640,12 +4642,12 @@ void ImGui::EndChild()
         ItemSize(sz);
         if (/*!(window->Flags & ImGuiWindowFlags_NavFlattened) &&*/ (window->DC.NavLayerActiveMask != 0 || window->DC.NavHasScroll))
         {
-            ItemAdd(bb, &window->ChildId);
+            ItemAdd(bb, window->ChildId);
             RenderNavHighlight(bb, window->ChildId);
         }
         else
         {
-            ItemAdd(bb, NULL);
+            ItemAdd(bb, 0);
         }
     }
 }
@@ -5383,7 +5385,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             {
                 ImGuiID id = window->GetID("#COLLAPSE");
                 ImRect bb(window->Pos + style.FramePadding + ImVec2(1,1), window->Pos + style.FramePadding + ImVec2(g.FontSize,g.FontSize) - ImVec2(1,1));
-                ItemAdd(bb, &id); // To allow navigation
+                ItemAdd(bb, id); // To allow navigation
                 if (ButtonBehavior(bb, id, NULL, NULL))
                     window->CollapseToggleWanted = true; // Defer collapsing to next frame as we are too far in the Begin() function
                 RenderNavHighlight(bb, id);
@@ -6549,7 +6551,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                 while (line < text_end)
                 {
                     const char* line_end = strchr(line, '\n');
-                    if (IsClippedEx(line_rect, NULL, false))
+                    if (IsClippedEx(line_rect, 0, false))
                         break;
 
                     const ImVec2 line_size = CalcTextSize(line, line_end, false);
@@ -6581,7 +6583,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
 
         ImRect bb(text_pos, text_pos + text_size);
         ItemSize(bb);
-        ItemAdd(bb, NULL);
+        ItemAdd(bb, 0);
     }
     else
     {
@@ -6591,7 +6593,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         // Account of baseline offset
         ImRect bb(text_pos, text_pos + text_size);
         ItemSize(text_size);
-        if (!ItemAdd(bb, NULL))
+        if (!ItemAdd(bb, 0))
             return;
 
         // Render (we don't hide text after ## in this end-user function)
@@ -6625,7 +6627,7 @@ void ImGui::LabelTextV(const char* label, const char* fmt, va_list args)
     const ImRect value_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y + style.FramePadding.y*2));
     const ImRect total_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w + (label_size.x > 0.0f ? style.ItemInnerSpacing.x : 0.0f), style.FramePadding.y*2) + label_size);
     ItemSize(total_bb, style.FramePadding.y);
-    if (!ItemAdd(total_bb, NULL))
+    if (!ItemAdd(total_bb, 0))
         return;
 
     // Render
@@ -6787,7 +6789,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
 
     const ImRect bb(pos, pos + size);
     ItemSize(bb, style.FramePadding.y);
-    if (!ItemAdd(bb, &id))
+    if (!ItemAdd(bb, id))
         return false;
 
     if (window->DC.ItemFlags & ImGuiItemFlags_ButtonRepeat) 
@@ -6836,7 +6838,7 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size_arg)
     ImVec2 size = CalcItemSize(size_arg, 0.0f, 0.0f);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
     ItemSize(bb);
-    if (!ItemAdd(bb, &id))
+    if (!ItemAdd(bb, id))
         return false;
 
     bool hovered, held;
@@ -6851,7 +6853,7 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
     ImGuiWindow* window = GetCurrentWindow();
 
     const ImRect bb(pos - ImVec2(radius,radius), pos + ImVec2(radius,radius));
-    if (!ItemAdd(bb, &id)) // To allow navigation
+    if (!ItemAdd(bb, id)) // To allow navigation
         return false;
 
     bool hovered, held;
@@ -6882,7 +6884,7 @@ void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2&
     if (border_col.w > 0.0f)
         bb.Max += ImVec2(2,2);
     ItemSize(bb);
-    if (!ItemAdd(bb, NULL))
+    if (!ItemAdd(bb, 0))
         return;
 
     if (border_col.w > 0.0f)
@@ -6919,7 +6921,7 @@ bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const I
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size + padding*2);
     const ImRect image_bb(window->DC.CursorPos + padding, window->DC.CursorPos + padding + size);
     ItemSize(bb);
-    if (!ItemAdd(bb, &id))
+    if (!ItemAdd(bb, id))
         return false;
 
     bool hovered, held;
@@ -6942,7 +6944,7 @@ void ImGui::LogToTTY(int max_depth)
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
         return;
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = g.CurrentWindow;
 
     g.LogEnabled = true;
     g.LogFile = stdout;
@@ -6957,7 +6959,7 @@ void ImGui::LogToFile(int max_depth, const char* filename)
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
         return;
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = g.CurrentWindow;
 
     if (!filename)
     {
@@ -6984,7 +6986,7 @@ void ImGui::LogToClipboard(int max_depth)
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
         return;
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = g.CurrentWindow;
 
     g.LogEnabled = true;
     g.LogFile = NULL;
@@ -7122,7 +7124,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // (Ideally we'd want to add a flag for the user to specify we want want the hit test to be done up to the right side of the content or not)
     const ImRect interact_bb = display_frame ? bb : ImRect(bb.Min.x, bb.Min.y, bb.Min.x + text_width + style.ItemSpacing.x*2, bb.Max.y);
     bool is_open = TreeNodeBehaviorIsOpen(id, flags);
-    if (!ItemAdd(interact_bb, &id))
+    if (!ItemAdd(interact_bb, id))
     {
         if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
             TreePushRawID(id);
@@ -7409,7 +7411,7 @@ void ImGui::Bullet()
     const float line_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize, line_height));
     ItemSize(bb);
-    if (!ItemAdd(bb, NULL))
+    if (!ItemAdd(bb, 0))
     {
         SameLine(0, style.FramePadding.x*2);
         return;
@@ -7437,7 +7439,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
     const float line_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + g.Style.FramePadding.y*2), g.FontSize);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize + (label_size.x > 0.0f ? (label_size.x + style.FramePadding.x*2) : 0.0f), ImMax(line_height, label_size.y)));  // Empty text doesn't add padding
     ItemSize(bb);
-    if (!ItemAdd(bb, NULL))
+    if (!ItemAdd(bb, 0))
         return;
 
     // Render
@@ -7821,7 +7823,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
 
     // NB- we don't call ItemSize() yet because we may turn into a text edit box below
-    if (!ItemAdd(total_bb, &id, &frame_bb))
+    if (!ItemAdd(total_bb, id, &frame_bb))
     {
         ItemSize(total_bb, style.FramePadding.y);
         return false;
@@ -7878,7 +7880,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     const ImRect bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
 
     ItemSize(bb, style.FramePadding.y);
-    if (!ItemAdd(frame_bb, &id, &frame_bb))
+    if (!ItemAdd(frame_bb, id, &frame_bb))
         return false;
     const bool hovered = ItemHoverable(frame_bb, id);
 
@@ -8122,7 +8124,7 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
 
     // NB- we don't call ItemSize() yet because we may turn into a text edit box below
-    if (!ItemAdd(total_bb, &id, &frame_bb))
+    if (!ItemAdd(total_bb, id, &frame_bb))
     {
         ItemSize(total_bb, style.FramePadding.y);
         return false;
@@ -8328,7 +8330,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
     const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0));
     ItemSize(total_bb, style.FramePadding.y);
-    if (!ItemAdd(total_bb, NULL, &frame_bb))
+    if (!ItemAdd(total_bb, 0, &frame_bb))
         return;
     const bool hovered = ItemHoverable(inner_bb, 0);
 
@@ -8468,7 +8470,7 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
     ImVec2 pos = window->DC.CursorPos;
     ImRect bb(pos, pos + CalcItemSize(size_arg, CalcItemWidth(), g.FontSize + style.FramePadding.y*2.0f));
     ItemSize(bb, style.FramePadding.y);
-    if (!ItemAdd(bb, NULL))
+    if (!ItemAdd(bb, 0))
         return;
 
     // Render
@@ -8515,7 +8517,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
         total_bb = ImRect(ImMin(check_bb.Min, text_bb.Min), ImMax(check_bb.Max, text_bb.Max));
     }
 
-    if (!ItemAdd(total_bb, &id))
+    if (!ItemAdd(total_bb, id))
         return false;
 
     bool hovered, held;
@@ -8579,7 +8581,7 @@ bool ImGui::RadioButton(const char* label, bool active)
         total_bb.Add(text_bb);
     }
 
-    if (!ItemAdd(total_bb, &id))
+    if (!ItemAdd(total_bb, id))
         return false;
 
     ImVec2 center = check_bb.GetCenter();
@@ -8918,7 +8920,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     else
     {
         ItemSize(total_bb, style.FramePadding.y);
-        if (!ItemAdd(total_bb, &id, &frame_bb))
+        if (!ItemAdd(total_bb, id, &frame_bb))
             return false;
     }
     const bool hovered = ItemHoverable(frame_bb, id);
@@ -9706,7 +9708,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImVec2 popu
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y + style.FramePadding.y*2.0f));
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
     ItemSize(total_bb, style.FramePadding.y);
-    if (!ItemAdd(total_bb, &id, &frame_bb))
+    if (!ItemAdd(total_bb, id, &frame_bb))
         return false;
 
     const float arrow_size = SmallSquareSize();
@@ -9858,7 +9860,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     bb_with_spacing.Min.y -= spacing_U;
     bb_with_spacing.Max.x += spacing_R;
     bb_with_spacing.Max.y += spacing_D;
-    if (!ItemAdd(bb_with_spacing, (flags & ImGuiSelectableFlags_Disabled) ? NULL : &id))
+    if (!ItemAdd(bb_with_spacing, (flags & ImGuiSelectableFlags_Disabled) ? 0 : id))
     {
         if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.ColumnsCount > 1)
             PushColumnClipRect();
@@ -10377,7 +10379,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
         size.y = default_size;
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
     ItemSize(bb);
-    if (!ItemAdd(bb, &id))
+    if (!ItemAdd(bb, id))
         return false;
 
     bool hovered, held;
@@ -11050,7 +11052,7 @@ void ImGui::Separator()
 
     const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y+1.0f));
     ItemSize(ImVec2(0.0f, 0.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit, we don't provide height to not alter layout.
-    if (!ItemAdd(bb, NULL))
+    if (!ItemAdd(bb, 0))
     {
         if (window->DC.ColumnsCount > 1)
             PushColumnClipRect();
@@ -11080,7 +11082,7 @@ void ImGui::VerticalSeparator()
     float y2 = window->DC.CursorPos.y + window->DC.CurrentLineHeight; 
     const ImRect bb(ImVec2(window->DC.CursorPos.x, y1), ImVec2(window->DC.CursorPos.x + 1.0f, y2));
     ItemSize(ImVec2(bb.GetWidth(), 0.0f));
-    if (!ItemAdd(bb, NULL))
+    if (!ItemAdd(bb, 0))
         return;
 
     window->DrawList->AddLine(ImVec2(bb.Min.x, bb.Min.y), ImVec2(bb.Min.x, bb.Max.y), GetColorU32(ImGuiCol_Separator));
@@ -11104,7 +11106,7 @@ void ImGui::Dummy(const ImVec2& size)
 
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
     ItemSize(bb);
-    ItemAdd(bb, NULL);
+    ItemAdd(bb, 0);
 }
 
 bool ImGui::IsRectVisible(const ImVec2& size)
@@ -11168,7 +11170,7 @@ void ImGui::EndGroup()
     {
         window->DC.CurrentLineTextBaseOffset = ImMax(window->DC.PrevLineTextBaseOffset, group_data.BackupCurrentLineTextBaseOffset);      // FIXME: Incorrect, we should grab the base offset from the *first line* of the group but it is hard to obtain now.
         ItemSize(group_bb.GetSize(), group_data.BackupCurrentLineTextBaseOffset);
-        ItemAdd(group_bb, NULL);
+        ItemAdd(group_bb, 0);
     }
 
     // If the current ActiveId was declared within the boundary of our group, we copy it to LastItemId so IsItemActive() will be functional on the entire group.
@@ -11287,7 +11289,7 @@ static float GetDraggedColumnOffset(int column_index)
     // Active (dragged) column always follow mouse. The reason we need this is that dragging a column to the right edge of an auto-resizing
     // window creates a feedback loop because we store normalized positions. So while dragging we enforce absolute positioning.
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = ImGui::GetCurrentWindowRead();
+    ImGuiWindow* window = g.CurrentWindow;
     IM_ASSERT(column_index > 0); // We cannot drag column 0. If you get this assert you may have a conflict between the ID of your columns and another widgets.
     IM_ASSERT(g.ActiveId == window->DC.ColumnsSetId + ImGuiID(column_index));
 
@@ -11454,7 +11456,7 @@ void ImGui::EndColumns()
             const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(i);
             const float column_w = 4.0f; // Width for interaction
             const ImRect column_rect(ImVec2(x - column_w, y1), ImVec2(x + column_w, y2));
-            if (IsClippedEx(column_rect, &column_id, false))
+            if (IsClippedEx(column_rect, column_id, false))
                 continue;
             
             bool hovered = false, held = false;
