@@ -2191,22 +2191,22 @@ static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGu
     }
 
     // Scoring for navigation
-    bool new_best = false;
-#if IMGUI_DEBUG_NAV
-    // [DEBUG] Score items at all times
-    if (!g.NavMoveRequest) 
-        g.NavMoveDir = g.NavMoveDirLast;
     if (g.NavId != id)
-        new_best = NavScoreItem(nav_bb) && g.NavMoveRequest;
-#else
-    if (g.NavMoveRequest && g.NavId != id)
-        new_best = NavScoreItem(nav_bb);
-#endif
-    if (new_best)
     {
-        g.NavMoveResultId = id;
-        g.NavMoveResultParentId = window->IDStack.back();
-        g.NavMoveResultRectRel = nav_bb_rel;
+#if IMGUI_DEBUG_NAV
+        // [DEBUG] Score all items in NavWindow at all times
+        if (!g.NavMoveRequest) 
+            g.NavMoveDir = g.NavMoveDirLast;
+        bool new_best = NavScoreItem(nav_bb) && g.NavMoveRequest;
+#else
+        bool new_best = g.NavMoveRequest && NavScoreItem(nav_bb);
+#endif
+        if (new_best)
+        {
+            g.NavMoveResultId = id;
+            g.NavMoveResultParentId = window->IDStack.back();
+            g.NavMoveResultRectRel = nav_bb_rel;
+        }
     }
 
     // Update window-relative bounding box of navigated item
