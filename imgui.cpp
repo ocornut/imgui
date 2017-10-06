@@ -2113,7 +2113,7 @@ static bool NavScoreItem(ImRect cand)
     } 
     else
     {
-        // Degenerate case: two overlapping buttons with same center, break ties using order
+        // Degenerate case: two overlapping buttons with same center, break ties arbitrarily (note that LastItemId here is really the _previous_ item order, but it doesn't matter)
         quadrant = (window->DC.LastItemId < g.NavId) ? ImGuiDir_Left : ImGuiDir_Right;
     }
 
@@ -2190,6 +2190,7 @@ static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGu
         }
     }
 
+    // Scoring for navigation
     bool new_best = false;
 #if IMGUI_DEBUG_NAV
     // [DEBUG] Score items at all times
@@ -2224,10 +2225,6 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    const bool is_clipped = IsClippedEx(bb, id, false);
-    window->DC.LastItemId = id ? *id : 0;
-    window->DC.LastItemRect = bb;
-    window->DC.LastItemRectHoveredRect = false;
 
 	// Navigation processing runs prior to clipping early-out
     //  (a) So that NavInitDefaultRequest can be honored, for newly opened windows to select a default widget
@@ -2242,8 +2239,15 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
                 NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, *id);
     }
 
+    // Clipping test + store basic information about the current item.
+    const bool is_clipped = IsClippedEx(bb, id, false);
+    window->DC.LastItemId = id ? *id : 0;
+    window->DC.LastItemRect = bb;
     if (is_clipped)
+    {
+        window->DC.LastItemRectHoveredRect = false;
         return false;
+    }
     //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
 
     // We need to calculate this now to take account of the current clipping rectangle (as items like Selectable may change them)
