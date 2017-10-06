@@ -2226,23 +2226,24 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-	// Navigation processing runs prior to clipping early-out
-    //  (a) So that NavInitDefaultRequest can be honored, for newly opened windows to select a default widget
-    //  (b) So that we can scroll up/down past clipped items. This adds a small O(N) cost to regular navigation requests unfortunately, but it is still limited to one window. 
-    //      it may not scale very well for windows with ten of thousands of item, but at least NavMoveRequest is only set on user interaction, aka maximum once a frame.
-    //      We could early out with `if (is_clipped && !g.NavInitDefaultRequest) return false;` but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
     if (id != 0)
     {
+        // Navigation processing runs prior to clipping early-out
+        //  (a) So that NavInitDefaultRequest can be honored, for newly opened windows to select a default widget
+        //  (b) So that we can scroll up/down past clipped items. This adds a small O(N) cost to regular navigation requests unfortunately, but it is still limited to one window. 
+        //      it may not scale very well for windows with ten of thousands of item, but at least NavMoveRequest is only set on user interaction, aka maximum once a frame.
+        //      We could early out with `if (is_clipped && !g.NavInitDefaultRequest) return false;` but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
         window->DC.NavLayerActiveMaskNext |= (1 << window->DC.NavLayerCurrent);
         if (g.NavWindow == window->RootNavWindow)
             if (g.NavId == id || g.NavMoveRequest || g.NavInitDefaultRequest || IMGUI_DEBUG_NAV)
                 NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, id);
     }
 
-    // Clipping test + store basic information about the current item.
-    const bool is_clipped = IsClippedEx(bb, id, false);
     window->DC.LastItemId = id;
     window->DC.LastItemRect = bb;
+
+    // Clipping test
+    const bool is_clipped = IsClippedEx(bb, id, false);
     if (is_clipped)
     {
         window->DC.LastItemRectHoveredRect = false;
