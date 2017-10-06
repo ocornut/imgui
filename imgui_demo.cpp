@@ -1753,6 +1753,16 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::InputText("3 (tab skip)", buf, IM_ARRAYSIZE(buf));
             if (ImGui::IsItemActive()) has_focus = 3;
             ImGui::PopAllowKeyboardFocus();
+
+            // Use >= 0 parameter to SetKeyboardFocusHere() to focus an upcoming item
+            static float f3[3] = { 0.0f, 0.0f, 0.0f };
+            int focus_ahead = -1;
+            if (ImGui::Button("Focus on X")) focus_ahead = 0; ImGui::SameLine();
+            if (ImGui::Button("Focus on Y")) focus_ahead = 1; ImGui::SameLine();
+            if (ImGui::Button("Focus on Z")) focus_ahead = 2;
+            if (focus_ahead != -1) ImGui::SetKeyboardFocusHere(focus_ahead);
+            ImGui::SliderFloat3("Float3", &f3[0], 0.0f, 1.0f);
+
             if (has_focus)
                 ImGui::Text("Item with focus: %d", has_focus);
             else
