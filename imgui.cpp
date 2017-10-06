@@ -2174,6 +2174,8 @@ static bool NavScoreItem(ImRect cand)
 static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
+    //if (!g.IO.NavUsable)  // [2017/10/06] Removed this possibly redundant test but I am not sure of all the side-effects yet. Some of the feature here will need to work regardless of using a _NoNavInputs flag.
+    //    return;
     const ImGuiItemFlags item_flags = window->DC.ItemFlags;
     const ImRect nav_bb_rel(nav_bb.Min - g.NavWindow->Pos, nav_bb.Max - g.NavWindow->Pos);
     if (g.NavInitDefaultRequest && g.NavLayer == window->DC.NavLayerCurrent)
@@ -2238,8 +2240,7 @@ bool ImGui::ItemAdd(const ImRect& bb, const ImGuiID* id, const ImRect* nav_bb_ar
     //      So eventually we would like to provide the user will the primitives to be able to implement that customized/efficient navigation handling whenever necessary.
     if (id != NULL && g.NavWindow == window->RootNavWindow)
         if (g.NavId == *id || g.NavMoveRequest || g.NavInitDefaultRequest || IMGUI_DEBUG_NAV)
-            if (g.IO.NavUsable)
-                NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, *id);
+            NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, *id);
 
     if (is_clipped)
         return false;
@@ -2482,7 +2483,11 @@ static void NavInitWindow(ImGuiWindow* window, bool force_reinit)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(window == g.NavWindow);
-    if (!(window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_Popup) || (window->NavLastIds[0] == 0) || force_reinit)
+    bool init_for_nav = false;
+    if (!(window->Flags & ImGuiWindowFlags_NoNavInputs))
+        if (!(window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_Popup) || (window->NavLastIds[0] == 0) || force_reinit)
+            init_for_nav = true;
+    if (init_for_nav)
     {
         SetNavId(0, g.NavLayer);
         g.NavInitDefaultRequest = true;
