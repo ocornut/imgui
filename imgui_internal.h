@@ -582,7 +582,8 @@ struct ImGuiContext
         SettingsDirtyTimer = 0.0f;
 
         NavWindow = NULL;
-        NavId = NavActivateId = NavInputId = NavJustTabbedId = 0;
+        NavId = NavActivateId = NavInputId = 0;
+        NavJustTabbedId = NavJustNavigatedId = 0;
         NavScoringRectScreen = ImRect();
         NavWindowingTarget = NULL;
         NavWindowingDisplayAlpha = 0.0f;
