@@ -3878,7 +3878,7 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFl
     ImGuiContext& g = *GImGui;
     if (id != g.NavId)
         return;
-    if (g.NavDisableHighlight && !(flags & ImGuiNavHighlightFlags_AlwaysRender))
+    if (g.NavDisableHighlight && !(flags & ImGuiNavHighlightFlags_AlwaysDraw))
         return;    
     ImGuiWindow* window = ImGui::GetCurrentWindow();
 
@@ -7204,6 +7204,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     {
         // Framed type
         RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
+        RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_TypeThin);
         RenderCollapseTriangle(bb.Min + ImVec2(padding.x, text_base_offset_y), is_open, 1.0f);
         if (g.LogEnabled)
         {
@@ -7223,8 +7224,10 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     {
         // Unframed typed for tree nodes
         if (hovered || (flags & ImGuiTreeNodeFlags_Selected))
+        {
             RenderFrame(bb.Min, bb.Max, col, false);
-
+            RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_TypeThin);
+        }
         if (flags & ImGuiTreeNodeFlags_Bullet)
             RenderBullet(bb.Min + ImVec2(text_offset_x * 0.5f, g.FontSize*0.50f + text_base_offset_y));
         else if (!(flags & ImGuiTreeNodeFlags_Leaf))
@@ -9914,6 +9917,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     {
         const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
         RenderFrame(bb_with_spacing.Min, bb_with_spacing.Max, col, false, 0.0f);
+        RenderNavHighlight(bb_with_spacing, id, ImGuiNavHighlightFlags_TypeThin);
     }
 
     if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.ColumnsCount > 1)

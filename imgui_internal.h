@@ -255,7 +255,7 @@ enum ImGuiNavHighlightFlags_
 {
     ImGuiNavHighlightFlags_TypeDefault  = 1 << 0,
     ImGuiNavHighlightFlags_TypeThin     = 1 << 1,
-    ImGuiNavHighlightFlags_AlwaysRender = 1 << 2
+    ImGuiNavHighlightFlags_AlwaysDraw   = 1 << 2
 };
 
 enum ImGuiCorner
