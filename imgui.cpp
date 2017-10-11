@@ -1941,30 +1941,6 @@ ImGuiWindow* ImGui::GetParentWindow()
     return g.CurrentWindowStack[(unsigned int)g.CurrentWindowStack.Size - 2];
 }
 
-void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
-{
-    ImGuiContext& g = *GImGui;
-    g.ActiveIdIsJustActivated = (g.ActiveId != id);
-    g.ActiveId = id;
-    g.ActiveIdAllowNavDirFlags = 0;
-    g.ActiveIdAllowOverlap = false;
-    g.ActiveIdWindow = window;
-    if (id)
-    {
-        g.ActiveIdIsAlive = true;
-        g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id || g.NavJustTabbedId == id || g.NavJustNavigatedId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
-        if (g.ActiveIdSource == ImGuiInputSource_Nav)
-            g.NavDisableMouseHover = true;
-        else
-            g.NavDisableHighlight = true;
-        g.NavId = id;
-        if (window)
-            g.NavLayer = window->DC.NavLayerCurrent;
-        if (window) // NB: We current assume that SetActiveId() is called in the context where its NavLayer is the current one, which should be the case.
-            window->NavLastIds[window->DC.NavLayerCurrent] = id;
-    }
-}
-
 void ImGui::SetActiveIDNoNav(ImGuiID id, ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
@@ -1976,7 +1952,25 @@ void ImGui::SetActiveIDNoNav(ImGuiID id, ImGuiWindow* window)
     if (id)
     {
         g.ActiveIdIsAlive = true;
-        g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
+        g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id || g.NavJustTabbedId == id || g.NavJustNavigatedId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
+    }
+}
+
+void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    SetActiveIDNoNav(id, window);
+    if (id)
+    {
+        if (g.ActiveIdSource == ImGuiInputSource_Nav)
+            g.NavDisableMouseHover = true;
+        else
+            g.NavDisableHighlight = true;
+        g.NavId = id;
+        if (window)
+            g.NavLayer = window->DC.NavLayerCurrent;
+        if (window) // NB: We current assume that SetActiveId() is called in the context where its NavLayer is the current one, which should be the case.
+            window->NavLastIds[window->DC.NavLayerCurrent] = id;
     }
 }
 
