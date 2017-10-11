@@ -2224,6 +2224,7 @@ static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGu
     if (g.NavId == id)
     {
         window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;
+        g.NavWindow = window; // Always refresh g.NavWindow, because some operations such as FocusItem() don't have a window.
         g.NavIdIsAlive = true;
         g.NavIdTabCounter = window->FocusIdxTabCounter;
     }
