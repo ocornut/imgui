@@ -67,22 +67,21 @@ Languages:
 
 Frameworks:
 - Main ImGui repository include examples for DirectX9, DirectX10, DirectX11, OpenGL2/3, Vulkan, Allegro 5, SDL+GL2/3, iOS and Marmalade: https://github.com/ocornut/imgui/tree/master/examples
-- Unmerged PR: DirectX12 example (with issues) https://github.com/ocornut/imgui/pull/301
-- Unmerged PR: SDL2 + OpenGLES + Emscripten example https://github.com/ocornut/imgui/pull/336
-- Unmerged PR: FreeGlut + OpenGL2 example https://github.com/ocornut/imgui/pull/801
-- Unmerged PR: Native Win32 and OSX example https://github.com/ocornut/imgui/pull/281
-- Unmerged PR: Android Example https://github.com/ocornut/imgui/pull/421
-- Cinder backend for dear imgui https://github.com/simongeilfus/Cinder-ImGui
-- FlexGUI: Flexium/SFML backend for dear imgui https://github.com/DXsmiley/FlexGUI
-- IrrIMGUI: Irrlicht backend for dear imgui https://github.com/ZahlGraf/IrrIMGUI
-- UnrealEngine_ImGui: Unreal Engine 4 backend for dear imgui https://github.com/sronsse/UnrealEngine_ImGui
-- LÖVE backend for dear imgui https://github.com/slages/love-imgui
-- Ogre backend for dear imgui https://bitbucket.org/LMCrashy/ogreimgui/src
-- ofxImGui: openFrameworks backend for dear imgui https://github.com/jvcleave/ofxImGui
-- SFML backend for dear imgui https://github.com/EliasD/imgui-sfml
-- SFML backend for dear imgui https://github.com/Mischa-Alff/imgui-backends
-- cocos2d-x with imgui https://github.com/c0i/imguix https://github.com/ocornut/imgui/issues/551
-- NanoRT: software raytraced version https://github.com/syoyo/imgui/tree/nanort/examples/raytrace_example
+- Unmerged PR: DirectX12: https://github.com/ocornut/imgui/pull/301
+- Unmerged PR: SDL2 + OpenGLES + Emscripten: https://github.com/ocornut/imgui/pull/336
+- Unmerged PR: FreeGlut + OpenGL2: https://github.com/ocornut/imgui/pull/801
+- Unmerged PR: Native Win32 and OSX: https://github.com/ocornut/imgui/pull/281
+- Unmerged PR: Android: https://github.com/ocornut/imgui/pull/421
+- Cinder: https://github.com/simongeilfus/Cinder-ImGui
+- cocos2d-x: https://github.com/c0i/imguix https://github.com/ocornut/imgui/issues/551
+- Flexium/SFML (FlexGUI): https://github.com/DXsmiley/FlexGUI
+- Irrlicht (IrrIMGUI): https://github.com/ZahlGraf/IrrIMGUI
+- Ogre: https://bitbucket.org/LMCrashy/ogreimgui/src
+- openFrameworks (ofxImGui): https://github.com/jvcleave/ofxImGui
+- LÖVE: https://github.com/slages/love-imgui
+- NanoRT (software raytraced) https://github.com/syoyo/imgui/tree/nanort/examples/raytrace_example
+- Unreal Engine 4: https://github.com/segross/UnrealImGui or https://github.com/sronsse/UnrealEngine_ImGui
+- SFML: https://github.com/EliasD/imgui-sfml or https://github.com/Mischa-Alff/imgui-backends
 
 For other bindings: see [this page](https://github.com/ocornut/imgui/wiki/Links/).
 Please contact me with the Issues tracker or Twitter to fix/update this list.
