@@ -2606,6 +2606,85 @@ static ImVec2 GetNavInputAmount2d(int stick_no, ImGuiNavReadMode mode, float slo
     return delta;
 }
 
+// Window management mode (change focus, move/resize window, jump back and forth to menu layer)
+static void NavUpdateWindowingTarget()
+{
+    ImGuiContext& g = *GImGui;
+    if (!g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiNavReadMode_Pressed))
+    {
+        ImGuiWindow* window = g.NavWindow;
+        if (!window)
+            window = FindWindowNavigable(g.Windows.Size - 1, -1, -1);
+        if (window)
+        {
+            g.NavWindowingTarget = window->RootNonPopupWindow;
+            g.NavWindowingDisplayAlpha = 0.0f;
+            g.NavWindowingToggleLayer = true;
+        }
+    }
+    if (g.NavWindowingTarget)
+    {
+        // Visuals only appears after a brief time holding the button, so that a fast tap (to toggle NavLayer) doesn't add visual noise
+        const float pressed_duration = g.IO.NavInputsDownDuration[ImGuiNavInput_PadMenu];
+        g.NavWindowingDisplayAlpha = ImMax(g.NavWindowingDisplayAlpha, ImSaturate((pressed_duration - 0.20f) / 0.05f));
+        g.NavWindowingToggleLayer &= (g.NavWindowingDisplayAlpha < 1.0f); // Once button is held long enough we don't consider it a tag-to-toggle-layer press anymore.
+
+        // Select window to focus
+        const int focus_change_dir = (int)IsNavInputPressed(ImGuiNavInput_PadFocusPrev, ImGuiNavReadMode_RepeatSlow) - (int)IsNavInputPressed(ImGuiNavInput_PadFocusNext, ImGuiNavReadMode_RepeatSlow);
+        if (focus_change_dir != 0 && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_Modal))
+        {
+            const int i_current = FindWindowIndex(g.NavWindowingTarget);
+            ImGuiWindow* window_target = FindWindowNavigable(i_current + focus_change_dir, -1, focus_change_dir);
+            if (!window_target)
+                window_target = FindWindowNavigable((focus_change_dir < 0) ? (g.Windows.Size - 1) : 0, i_current, focus_change_dir);
+            g.NavWindowingTarget = window_target;
+            g.NavWindowingToggleLayer = false;
+            g.NavWindowingDisplayAlpha = 1.0f;
+        }
+
+        // Move window
+        if (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoMove))
+        {
+            const ImVec2 move_delta = GetNavInputAmount2d(1, ImGuiNavReadMode_Down);
+            if (move_delta.x != 0.0f || move_delta.y != 0.0f)
+            {
+                const float move_speed = ImFloor(600 * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
+                g.NavWindowingTarget->PosFloat += move_delta * move_speed;
+                g.NavDisableMouseHover = true;
+                MarkIniSettingsDirty(g.NavWindowingTarget);
+            }
+        }
+
+        if (!IsNavInputDown(ImGuiNavInput_PadMenu))
+        {
+            // Apply actual focus only when releasing the NavMenu button (until then the window was merely rendered front-most)
+            if (g.NavWindowingTarget && !g.NavWindowingToggleLayer && (!g.NavWindow || g.NavWindowingTarget != g.NavWindow->RootNonPopupWindow))
+            {
+                ImGui::FocusWindow(g.NavWindowingTarget);
+                g.NavDisableHighlight = false;
+                g.NavDisableMouseHover = true;
+                if (g.NavWindowingTarget->NavLastIds[0] == 0)
+                    NavInitWindow(g.NavWindowingTarget, false);
+            }
+
+            // Single press toggles NavLayer
+            if (g.NavWindowingToggleLayer && g.NavWindow)
+            {
+                if ((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) == 0 && (g.NavWindow->RootWindow->DC.NavLayerActiveMask & (1 << 1)) != 0)
+                    ImGui::FocusWindow(g.NavWindow->RootWindow);
+                g.NavLayer = (g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) ? (g.NavLayer ^ 1) : 0;
+                g.NavDisableHighlight = false;
+                g.NavDisableMouseHover = true;
+                if (g.NavLayer == 0 && g.NavWindow->NavLastIds[0] != 0)
+                    SetNavIdAndMoveMouse(g.NavWindow->NavLastIds[0], g.NavLayer, ImRect());
+                else
+                    NavInitWindow(g.NavWindow, true);
+            }
+            g.NavWindowingTarget = NULL;
+        }
+    }
+}
+
 // NB: We modify rect_rel by the amount we scrolled for, so it is immediately updated.
 static void NavScrollToBringItemIntoView(ImGuiWindow* window, ImRect& item_rect_rel)
 {
@@ -2699,82 +2778,9 @@ static void NavUpdate()
     }
     g.NavIdIsAlive = false;
     g.NavJustTabbedId = 0;
-
-    // Navigation windowing mode (change focus, move/resize window)
-    if (!g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiNavReadMode_Pressed))
-    {
-        ImGuiWindow* window = g.NavWindow;
-        if (!window)
-            window = FindWindowNavigable(g.Windows.Size-1, -1, -1);
-        if (window)
-        {
-            g.NavWindowingTarget = window->RootNonPopupWindow;
-            g.NavWindowingDisplayAlpha = 0.0f;
-            g.NavWindowingToggleLayer = true;
-        }
-    }
-    if (g.NavWindowingTarget)
-    {
-        // Visuals only appears after a brief time holding the button, so that a fast tap (to toggle NavLayer) doesn't add visual noise
-        const float pressed_duration = g.IO.NavInputsDownDuration[ImGuiNavInput_PadMenu];
-        g.NavWindowingDisplayAlpha = ImMax(g.NavWindowingDisplayAlpha, ImSaturate((pressed_duration - 0.20f) / 0.05f));
-        g.NavWindowingToggleLayer &= (g.NavWindowingDisplayAlpha < 1.0f); // Once button is held long enough we don't consider it a tag-to-toggle-layer press anymore.
-
-        // Select window to focus
-        const int focus_change_dir = (int)IsNavInputPressed(ImGuiNavInput_PadFocusPrev, ImGuiNavReadMode_RepeatSlow) - (int)IsNavInputPressed(ImGuiNavInput_PadFocusNext, ImGuiNavReadMode_RepeatSlow);
-        if (focus_change_dir != 0 && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_Modal))
-        {
-            const int i_current = FindWindowIndex(g.NavWindowingTarget);
-            ImGuiWindow* window_target = FindWindowNavigable(i_current + focus_change_dir, -1, focus_change_dir);
-            if (!window_target)
-                window_target = FindWindowNavigable((focus_change_dir < 0) ? (g.Windows.Size-1) : 0, i_current, focus_change_dir);
-            g.NavWindowingTarget = window_target;
-            g.NavWindowingToggleLayer = false;
-            g.NavWindowingDisplayAlpha = 1.0f;
-        }
-
-        // Move window
-        if (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoMove))
-        {
-            const ImVec2 move_delta = GetNavInputAmount2d(1, ImGuiNavReadMode_Down);
-            if (move_delta.x != 0.0f || move_delta.y != 0.0f)
-            {
-                const float move_speed = ImFloor(600 * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
-                g.NavWindowingTarget->PosFloat += move_delta * move_speed;
-                g.NavDisableMouseHover = true;
-                MarkIniSettingsDirty(g.NavWindowingTarget);
-            }
-        }
-
-        if (!IsNavInputDown(ImGuiNavInput_PadMenu))
-        {
-            // Apply actual focus only when releasing the NavMenu button (until then the window was merely rendered front-most)
-            if (g.NavWindowingTarget && !g.NavWindowingToggleLayer && (!g.NavWindow || g.NavWindowingTarget != g.NavWindow->RootNonPopupWindow))
-            {
-                ImGui::FocusWindow(g.NavWindowingTarget);
-                g.NavDisableHighlight = false;
-                g.NavDisableMouseHover = true;
-                if (g.NavWindowingTarget->NavLastIds[0] == 0)
-                    NavInitWindow(g.NavWindowingTarget, false);
-            }
-
-            // Single press toggles NavLayer
-            if (g.NavWindowingToggleLayer && g.NavWindow)
-            {
-                if ((g.NavWindow->DC.NavLayerActiveMask & (1<<1)) == 0 && (g.NavWindow->RootWindow->DC.NavLayerActiveMask & (1<<1)) != 0)
-                    ImGui::FocusWindow(g.NavWindow->RootWindow);
-                g.NavLayer = (g.NavWindow->DC.NavLayerActiveMask & (1<<1)) ? (g.NavLayer ^ 1) : 0;
-                g.NavDisableHighlight = false;
-                g.NavDisableMouseHover = true;
-                if (g.NavLayer == 0 && g.NavWindow->NavLastIds[0] != 0)
-                    SetNavIdAndMoveMouse(g.NavWindow->NavLastIds[0], g.NavLayer, ImRect());
-                else
-                    NavInitWindow(g.NavWindow, true);
-            }
-            g.NavWindowingTarget = NULL;
-        }
-    }
     IM_ASSERT(g.NavLayer == 0 || g.NavLayer == 1);
+
+    NavUpdateWindowingTarget();
 
     // Set output flags for user application
     g.IO.NavUsable = g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
