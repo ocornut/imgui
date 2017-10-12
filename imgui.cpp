@@ -1962,15 +1962,15 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     SetActiveIDNoNav(id, window);
     if (id)
     {
-        if (g.ActiveIdSource == ImGuiInputSource_Nav)
-            g.NavDisableMouseHover = true;
-        else
-            g.NavDisableHighlight = true;
         g.NavId = id;
         if (window)
             g.NavLayer = window->DC.NavLayerCurrent;
         if (window) // NB: We current assume that SetActiveId() is called in the context where its NavLayer is the current one, which should be the case.
             window->NavLastIds[window->DC.NavLayerCurrent] = id;
+        if (g.ActiveIdSource == ImGuiInputSource_Nav)
+            g.NavDisableMouseHover = true;
+        else
+            g.NavDisableHighlight = true;
     }
 }
 
@@ -2184,6 +2184,7 @@ static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGu
     ImGuiContext& g = *GImGui;
     //if (!g.IO.NavUsable)  // [2017/10/06] Removed this possibly redundant test but I am not sure of all the side-effects yet. Some of the feature here will need to work regardless of using a _NoNavInputs flag.
     //    return;
+
     const ImGuiItemFlags item_flags = window->DC.ItemFlags;
     const ImRect nav_bb_rel(nav_bb.Min - g.NavWindow->Pos, nav_bb.Max - g.NavWindow->Pos);
     if (g.NavInitRequest && g.NavLayer == window->DC.NavLayerCurrent)
@@ -2223,10 +2224,10 @@ static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGu
     // Update window-relative bounding box of navigated item
     if (g.NavId == id)
     {
-        window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;
-        g.NavWindow = window; // Always refresh g.NavWindow, because some operations such as FocusItem() don't have a window.
+        g.NavWindow = window;                                           // Always refresh g.NavWindow, because some operations such as FocusItem() don't have a window.
         g.NavIdIsAlive = true;
         g.NavIdTabCounter = window->FocusIdxTabCounter;
+        window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;    // Store item bounding box (relative to window position)
     }
 }
 
@@ -2921,7 +2922,7 @@ static void NavUpdate()
     g.NavMoveResultParentId = 0;
     g.NavMoveResultDistAxial = g.NavMoveResultDistBox = g.NavMoveResultDistCenter = FLT_MAX;
 
-    // When we have manually scrolled (without using navigation) and NavId becomes out of bounds, we clamp its bounding box (used for search) to the visible area to restart navigation within visible items
+    // When we have manually scrolled (without using navigation) and NavId becomes out of bounds, we project its bounding box to the visible area to restart navigation within visible items
     if (g.NavMoveRequest && g.NavMoveFromClampedRefRect && g.NavLayer == 0)
     {
         ImGuiWindow* window = g.NavWindow;
@@ -9031,9 +9032,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 select_all = true;
         }
         SetActiveID(id, window);
+        FocusWindow(window);
         if (!is_multiline)
             g.ActiveIdAllowNavDirFlags = ((1 << ImGuiDir_Up) | (1 << ImGuiDir_Down));
-        FocusWindow(window);
     }
     else if (io.MouseClicked[0])
     {
