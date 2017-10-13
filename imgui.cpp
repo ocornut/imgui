@@ -1970,7 +1970,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     if (id)
     {
         g.ActiveIdIsAlive = true;
-        g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id || g.NavJustTabbedId == id || g.NavJustNavigatedId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
+        g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id || g.NavJustTabbedId == id || g.NavJustMovedToId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
     }
 }
 
@@ -2748,7 +2748,7 @@ static void NavUpdate()
     g.NavInitRequest = false;
     g.NavInitResultExplicit = false;
     g.NavInitResultId = 0;
-    g.NavJustNavigatedId = 0;
+    g.NavJustMovedToId = 0;
 
     // Process navigation move request
     if (g.NavMoveRequest && g.NavMoveResultId != 0)
@@ -2761,7 +2761,7 @@ static void NavUpdate()
         // Apply result from previous frame navigation directional move request
         ImGui::ClearActiveID();
         SetNavIDAndMoveMouse(g.NavMoveResultId, g.NavLayer, g.NavMoveResultRectRel);
-        g.NavJustNavigatedId = g.NavMoveResultId;
+        g.NavJustMovedToId = g.NavMoveResultId;
         g.NavMoveFromClampedRefRect = false;
     }
 
