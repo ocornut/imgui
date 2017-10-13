@@ -2205,6 +2205,7 @@ static void NavMoveRequestCancel()
     NavUpdateAnyRequestFlag();
 }
 
+// We get there when either NavId == id, or when g.NavAnyRequest is set (which is updated by NavUpdateAnyRequestFlag above)
 static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
@@ -6758,11 +6759,10 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     }
 
     // Gamepad/Keyboard navigation
-    if (g.NavId == id && !g.NavDisableHighlight && (g.ActiveId == 0 || g.ActiveId == id))
-    {
-        // We report navigated item as hovered but we don't set g.HoveredId to not interfere with mouse
+    // We report navigated item as hovered but we don't set g.HoveredId to not interfere with mouse.
+    if (g.NavId == id && !g.NavDisableHighlight && (g.ActiveId == 0 || g.ActiveId == id || g.ActiveId == window->MoveId))
         hovered = true;
-    }
+
     if (g.NavActivateDownId == id)
     {
         bool nav_activated_by_code = (g.NavActivateId == id);
