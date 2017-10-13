@@ -789,6 +789,7 @@ namespace ImGui
 
     IMGUI_API int           CalcTypematicPressedRepeatAmount(float t, float t_prev, float repeat_delay, float repeat_rate);
 
+    IMGUI_API void          Scrollbar(ImGuiLayoutType direction);
     IMGUI_API void          VerticalSeparator();        // Vertical separator, for menu bars (use current line height). not exposed because it is misleading what it doesn't have an effect on regular layout.
 
     // FIXME-WIP: New Columns API

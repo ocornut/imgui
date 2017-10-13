@@ -606,7 +606,6 @@ static ImGuiWindow*     FindHoveredWindow(ImVec2 pos, bool excluding_childs);
 static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags);
 static void             ClearSetNextWindowData();
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
-static void             Scrollbar(ImGuiWindow* window, bool horizontal);
 static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window);
 
 static void             AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDrawList* draw_list);
@@ -4392,9 +4391,9 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
 
             // Scrollbars
             if (window->ScrollbarX)
-                Scrollbar(window, true);
+                Scrollbar(ImGuiLayoutType_Horizontal);
             if (window->ScrollbarY)
-                Scrollbar(window, false);
+                Scrollbar(ImGuiLayoutType_Vertical);
 
             // Render resize grip
             // (after the input handling so we don't have a frame of latency)
@@ -4586,9 +4585,12 @@ void ImGui::End()
 // - We handle absolute seeking (when first clicking outside the grab) and relative manipulation (afterward or when clicking inside the grab)
 // - We store values as normalized ratio and in a form that allows the window content to change while we are holding on a scrollbar
 // - We handle both horizontal and vertical scrollbars, which makes the terminology not ideal.
-static void Scrollbar(ImGuiWindow* window, bool horizontal)
+void ImGui::Scrollbar(ImGuiLayoutType direction)
 {
     ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    const bool horizontal = (direction == ImGuiLayoutType_Horizontal);
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(horizontal ? "#SCROLLX" : "#SCROLLY");
 
@@ -4611,7 +4613,7 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
         window_rounding_corners = ImGuiCorner_BotLeft | (other_scrollbar ? 0 : ImGuiCorner_BotRight);
     else
         window_rounding_corners = (((window->Flags & ImGuiWindowFlags_NoTitleBar) && !(window->Flags & ImGuiWindowFlags_MenuBar)) ? ImGuiCorner_TopRight : 0) | (other_scrollbar ? 0 : ImGuiCorner_BotRight);
-    window->DrawList->AddRectFilled(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_ScrollbarBg), window_rounding, window_rounding_corners);
+    window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_ScrollbarBg), window_rounding, window_rounding_corners);
     bb.Expand(ImVec2(-ImClamp((float)(int)((bb.Max.x - bb.Min.x - 2.0f) * 0.5f), 0.0f, 3.0f), -ImClamp((float)(int)((bb.Max.y - bb.Min.y - 2.0f) * 0.5f), 0.0f, 3.0f)));
 
     // V denote the main, longer axis of the scrollbar (= height for a vertical scrollbar)
@@ -4631,7 +4633,7 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
     bool held = false;
     bool hovered = false;
     const bool previously_held = (g.ActiveId == id);
-    ImGui::ButtonBehavior(bb, id, &hovered, &held);
+    ButtonBehavior(bb, id, &hovered, &held);
 
     float scroll_max = ImMax(1.0f, win_size_contents_v - win_size_avail_v);
     float scroll_ratio = ImSaturate(scroll_v / scroll_max);
@@ -4644,7 +4646,7 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
 
         // Click position in scrollbar normalized space (0.0f->1.0f)
         const float clicked_v_norm = ImSaturate((mouse_pos_v - scrollbar_pos_v) / scrollbar_size_v);
-        ImGui::SetHoveredID(id);
+        SetHoveredID(id);
 
         bool seek_absolute = false;
         if (!previously_held)
@@ -4680,7 +4682,7 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
     }
 
     // Render
-    const ImU32 grab_col = ImGui::GetColorU32(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
+    const ImU32 grab_col = GetColorU32(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
     if (horizontal)
         window->DrawList->AddRectFilled(ImVec2(ImLerp(bb.Min.x, bb.Max.x, grab_v_norm), bb.Min.y), ImVec2(ImLerp(bb.Min.x, bb.Max.x, grab_v_norm) + grab_h_pixels, bb.Max.y), grab_col, style.ScrollbarRounding);
     else
