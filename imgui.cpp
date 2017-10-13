@@ -2890,7 +2890,7 @@ static void NavUpdate()
         // *Fallback* manual-scroll with NavUp/NavDown when window has no navigable item
         ImGuiWindow* window = g.NavWindow;
         const float scroll_speed = ImFloor(window->CalcFontSize() * 100 * g.IO.DeltaTime + 0.5f); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
-        if (!window->DC.NavLayerActiveMask && window->DC.NavHasScroll && g.NavMoveRequest)
+        if (window->DC.NavLayerActiveMask == 0x00 && window->DC.NavHasScroll && g.NavMoveRequest)
         {
             if (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right)
                 SetWindowScrollX(window, ImFloor(window->Scroll.x + ((g.NavMoveDir == ImGuiDir_Left) ? -1.0f : +1.0f) * scroll_speed));
@@ -6753,10 +6753,11 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     }
     if (g.NavActivateDownId == id)
     {
-        bool nav_pressed = (g.NavActivateId == id) || IsNavInputPressed(ImGuiNavInput_PadActivate, (flags & ImGuiButtonFlags_Repeat) ? ImGuiNavReadMode_Repeat : ImGuiNavReadMode_Pressed);
-        if (nav_pressed)
+        bool nav_activated_by_code = (g.NavActivateId == id);
+        bool nav_activated_by_inputs = IsNavInputPressed(ImGuiNavInput_PadActivate, (flags & ImGuiButtonFlags_Repeat) ? ImGuiNavReadMode_Repeat : ImGuiNavReadMode_Pressed);
+        if (nav_activated_by_code || nav_activated_by_inputs)
             pressed = true;
-        if (nav_pressed || g.ActiveId == id)
+        if (nav_activated_by_code || nav_activated_by_inputs || g.ActiveId == id)
         {
             // Set active id so it can be queried by user via IsItemActive(), equivalent of holding the mouse button.
             g.NavActivateId = id; // This is so SetActiveId assign a Nav source
