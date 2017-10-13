@@ -138,7 +138,7 @@ Frequently Asked Question (FAQ)
 
 <b>Which version should I get?</b>
 
-I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master. The library is pretty stable and regression tend to fixed very fast when reported. You may also want to checkout the [navigation branch](https://github.com/ocornut/imgui/tree/navigation) if you want to use imgui with a gamepad (it is also possible to map keyboard inputs to some degree). The Navigation branch is being kept up to date with Master.
+I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master. The library is fairly stable and regressions tend to fixed fast when reported. You may also want to checkout the [navigation branch](https://github.com/ocornut/imgui/tree/navigation) if you want to use Dear ImGui with a gamepad (it is also possible to map keyboard inputs to some degree). The Navigation branch is being kept up to date with Master.
 
 <b>Why the odd dual naming, "dear imgui" vs "ImGui"?</b>
 
