@@ -1963,10 +1963,10 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     if (id)
     {
         g.NavId = id;
-        if (window)
-            g.NavLayer = window->DC.NavLayerCurrent;
-        if (window) // NB: We current assume that SetActiveId() is called in the context where its NavLayer is the current one, which should be the case.
-            window->NavLastIds[window->DC.NavLayerCurrent] = id;
+
+        // Assume that SetActiveID() is called in the context where its NavLayer is the current layer, which is the case everywhere we call it.
+        g.NavLayer = window->DC.NavLayerCurrent;
+        window->NavLastIds[window->DC.NavLayerCurrent] = id;
         if (g.ActiveIdSource == ImGuiInputSource_Nav)
             g.NavDisableMouseHover = true;
         else
