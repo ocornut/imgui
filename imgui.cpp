@@ -1974,6 +1974,12 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     }
 }
 
+ImGuiID ImGui::GetActiveID()
+{
+    ImGuiContext& g = *GImGui;
+    return g.ActiveId;
+}
+
 // Assume that SetFocusID() is called in the context where its NavLayer is the current window nav layer.
 void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
 {
@@ -1998,6 +2004,12 @@ void ImGui::SetHoveredID(ImGuiID id)
     ImGuiContext& g = *GImGui;
     g.HoveredId = id;
     g.HoveredIdAllowOverlap = false;
+}
+
+ImGuiID ImGui::GetHoveredID()
+{
+    ImGuiContext& g = *GImGui;
+    return g.HoveredId ? g.HoveredId : g.HoveredIdPreviousFrame;
 }
 
 void ImGui::KeepAliveID(ImGuiID id)
