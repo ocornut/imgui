@@ -182,7 +182,7 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_AlignTextBaseLine      = 1 << 8,   // vertically align button to match text baseline - ButtonEx() only // FIXME: Should be removed and handled by SmallButton(), not possible currently because of DC.CursorPosPrevLine
     ImGuiButtonFlags_NoKeyModifiers         = 1 << 9,   // disable interaction if a key modifier is held
     ImGuiButtonFlags_AllowOverlapMode       = 1 << 10,  // require previous frame HoveredId to either match id or be null before being usable
-    ImGuiButtonFlags_NoNavOverride          = 1 << 11   // don't override navigation id when activated
+    ImGuiButtonFlags_NoNavFocus             = 1 << 11   // don't override navigation focus when activated
 };
 
 enum ImGuiSliderFlags_

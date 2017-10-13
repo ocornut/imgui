@@ -5214,7 +5214,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
                 const ImRect resize_rect(br - ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f), br);
                 const ImGuiID resize_id = window->GetID("#RESIZE");
                 bool hovered, held;
-                ButtonBehavior(resize_rect, resize_id, &hovered, &held, ImGuiButtonFlags_FlattenChilds | ImGuiButtonFlags_NoNavOverride);
+                ButtonBehavior(resize_rect, resize_id, &hovered, &held, ImGuiButtonFlags_FlattenChilds | ImGuiButtonFlags_NoNavFocus);
                 if (hovered || held)
                     g.MouseCursor = ImGuiMouseCursor_ResizeNWSE;
 
@@ -5567,7 +5567,7 @@ static void Scrollbar(ImGuiWindow* window, bool horizontal)
     bool held = false;
     bool hovered = false;
     const bool previously_held = (g.ActiveId == id);
-    ImGui::ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_NoNavOverride);
+    ImGui::ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_NoNavFocus);
 
     float scroll_max = ImMax(1.0f, win_size_contents_v - win_size_avail_v);
     float scroll_ratio = ImSaturate(scroll_v / scroll_max);
@@ -6715,7 +6715,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             if ((flags & ImGuiButtonFlags_PressedOnClickRelease) && g.IO.MouseClicked[0])
             {
                 SetActiveID(id, window);
-                if (!(flags & ImGuiButtonFlags_NoNavOverride))
+                if (!(flags & ImGuiButtonFlags_NoNavFocus))
                     SetFocusID(id, window);
                 FocusWindow(window);
                 g.ActiveIdClickOffset = g.IO.MousePos - bb.Min;
@@ -6759,7 +6759,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             // Set active id so it can be queried by user via IsItemActive(), equivalent of holding the mouse button.
             g.NavActivateId = id; // This is so SetActiveId assign a Nav source
             SetActiveID(id, window);
-            SetFocusID(id, window);
+            if (!(flags & ImGuiButtonFlags_NoNavFocus))
+                SetFocusID(id, window);
             g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right) | (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
         }
     }
@@ -6780,7 +6781,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                         pressed = true;
                 ClearActiveID();
             }
-            if (!(flags & ImGuiButtonFlags_NoNavOverride))
+            if (!(flags & ImGuiButtonFlags_NoNavFocus))
                 g.NavDisableHighlight = true;
         }
         else if (g.ActiveIdSource == ImGuiInputSource_Nav)
