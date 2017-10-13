@@ -1960,7 +1960,7 @@ static void SetNavIDAndMoveMouse(ImGuiID id, int nav_layer, const ImRect& rect_r
     g.NavDisableMouseHover = true;
 }
 
-void ImGui::SetActiveIDNoNav(ImGuiID id, ImGuiWindow* window)
+void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     g.ActiveIdIsJustActivated = (g.ActiveId != id);
@@ -1975,22 +1975,18 @@ void ImGui::SetActiveIDNoNav(ImGuiID id, ImGuiWindow* window)
     }
 }
 
-void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
+// Assume that SetFocusID() is called in the context where its NavLayer is the current window nav layer.
+void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
 {
+    IM_ASSERT(id != 0);
     ImGuiContext& g = *GImGui;
-    SetActiveIDNoNav(id, window);
-    if (id)
-    {
-        g.NavId = id;
-
-        // Assume that SetActiveID() is called in the context where its NavLayer is the current layer, which is the case everywhere we call it.
-        g.NavLayer = window->DC.NavLayerCurrent;
-        window->NavLastIds[window->DC.NavLayerCurrent] = id;
-        if (g.ActiveIdSource == ImGuiInputSource_Nav)
-            g.NavDisableMouseHover = true;
-        else
-            g.NavDisableHighlight = true;
-    }
+    g.NavId = id;
+    g.NavLayer = window->DC.NavLayerCurrent;
+    window->NavLastIds[window->DC.NavLayerCurrent] = id;
+    if (g.ActiveIdSource == ImGuiInputSource_Nav)
+        g.NavDisableMouseHover = true;
+    else
+        g.NavDisableHighlight = true;
 }
 
 void ImGui::ClearActiveID()
@@ -3535,7 +3531,7 @@ void ImGui::EndFrame()
                 {
                     g.MovedWindow = g.HoveredWindow;
                     g.MovedWindowMoveId = g.HoveredWindow->MoveId;
-                    SetActiveIDNoNav(g.MovedWindowMoveId, g.HoveredRootWindow);
+                    SetActiveID(g.MovedWindowMoveId, g.HoveredRootWindow);
                 }
             }
             else if (g.NavWindow != NULL && GetFrontMostModalRootWindow() == NULL)
@@ -4616,7 +4612,7 @@ static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
     {
         ImGui::FocusWindow(child_window);
         NavInitWindow(child_window, false);
-        ImGui::SetActiveIDNoNav(id+1, child_window); // Steal ActiveId with a dummy id so that key-press won't activate child item
+        ImGui::SetActiveID(id+1, child_window); // Steal ActiveId with a dummy id so that key-press won't activate child item
         g.ActiveIdSource = ImGuiInputSource_Nav;
     }
 
@@ -6718,10 +6714,9 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             // FIXME-NAVIGATION: We don't honor those different behaviors.
             if ((flags & ImGuiButtonFlags_PressedOnClickRelease) && g.IO.MouseClicked[0])
             {
-                if (flags & ImGuiButtonFlags_NoNavOverride)
-                    SetActiveIDNoNav(id, window);
-                else
-                    SetActiveID(id, window); // Hold on ID
+                SetActiveID(id, window);
+                if (!(flags & ImGuiButtonFlags_NoNavOverride))
+                    SetFocusID(id, window);
                 FocusWindow(window);
                 g.ActiveIdClickOffset = g.IO.MousePos - bb.Min;
             }
@@ -6764,6 +6759,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             // Set active id so it can be queried by user via IsItemActive(), equivalent of holding the mouse button.
             g.NavActivateId = id; // This is so SetActiveId assign a Nav source
             SetActiveID(id, window);
+            SetFocusID(id, window);
             g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right) | (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
         }
     }
@@ -7607,7 +7603,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label
 
     // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
     // On the first frame, g.ScalarAsInputTextId == 0, then on subsequent frames it becomes == id
-    SetActiveIDNoNav(g.ScalarAsInputTextId, window);
+    SetActiveID(g.ScalarAsInputTextId, window);
     g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
     SetHoveredID(0);
     FocusableItemUnregister(window);
@@ -7876,6 +7872,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]) || g.NavActivateId == id || g.NavInputId == id)
     {
         SetActiveID(id, window);
+        SetFocusID(id, window);
         FocusWindow(window);
         if (tab_focus_requested || g.IO.KeyCtrl || g.NavInputId == id)
         {
@@ -7927,6 +7924,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     if ((hovered && g.IO.MouseClicked[0]) || g.NavActivateId == id || g.NavInputId == id)
     {
         SetActiveID(id, window);
+        SetFocusID(id, window);
         FocusWindow(window);
     }
 
@@ -8177,6 +8175,7 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
     if (tab_focus_requested || (hovered && (g.IO.MouseClicked[0] || g.IO.MouseDoubleClicked[0])) || g.NavActivateId == id || g.NavInputId == id)
     {
         SetActiveID(id, window);
+        SetFocusID(id, window);
         FocusWindow(window);
         if (tab_focus_requested || g.IO.KeyCtrl || g.IO.MouseDoubleClicked[0] || g.NavInputId == id)
         {
@@ -9032,6 +9031,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 select_all = true;
         }
         SetActiveID(id, window);
+        SetFocusID(id, window);
         FocusWindow(window);
         if (!is_multiline)
             g.ActiveIdAllowNavDirFlags = ((1 << ImGuiDir_Up) | (1 << ImGuiDir_Down));
