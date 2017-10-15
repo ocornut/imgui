@@ -1980,14 +1980,20 @@ ImGuiID ImGui::GetActiveID()
     return g.ActiveId;
 }
 
-// Assume that SetFocusID() is called in the context where its NavLayer is the current window nav layer.
 void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
 {
     IM_ASSERT(id != 0);
     ImGuiContext& g = *GImGui;
+        
+    // Assume that SetActiveID() is called in the context where its NavLayer is the current layer, which is the case everywhere we call it.
+    const int nav_layer = window->DC.NavLayerCurrent;
     g.NavId = id;
-    g.NavLayer = window->DC.NavLayerCurrent;
-    window->NavLastIds[window->DC.NavLayerCurrent] = id;
+    g.NavWindow = window;
+    g.NavLayer = nav_layer;
+    window->NavLastIds[nav_layer] = id;
+    if (window->DC.LastItemId == id)
+        window->NavRectRel[nav_layer] = ImRect(window->DC.LastItemRect.Min - window->Pos, window->DC.LastItemRect.Max - window->Pos);
+
     if (g.ActiveIdSource == ImGuiInputSource_Nav)
         g.NavDisableMouseHover = true;
     else
