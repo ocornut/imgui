@@ -2219,7 +2219,7 @@ static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGu
     //    return;
 
     const ImGuiItemFlags item_flags = window->DC.ItemFlags;
-    const ImRect nav_bb_rel(nav_bb.Min - g.NavWindow->Pos, nav_bb.Max - g.NavWindow->Pos);
+    const ImRect nav_bb_rel(nav_bb.Min - window->Pos, nav_bb.Max - window->Pos);
     if (g.NavInitRequest && g.NavLayer == window->DC.NavLayerCurrent)
     {
         // Even if 'ImGuiItemFlags_NoNavDefaultFocus' is on (typically collapse/close button) we record the first ResultId so they can be used as a fallback
