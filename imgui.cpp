@@ -672,6 +672,13 @@ static inline void      DataTypeFormatString(ImGuiDataType data_type, void* data
 static void             DataTypeApplyOp(ImGuiDataType data_type, int op, void* value1, const void* value2);
 static bool             DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format);
 
+namespace ImGui
+{
+static void             NavUpdate();
+static void             NavUpdateWindowing();
+static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id);
+}
+
 //-----------------------------------------------------------------------------
 // Platform dependent default implementations
 //-----------------------------------------------------------------------------
@@ -2212,7 +2219,7 @@ static void NavMoveRequestCancel()
 }
 
 // We get there when either NavId == id, or when g.NavAnyRequest is set (which is updated by NavUpdateAnyRequestFlag above)
-static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id)
+static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     //if (!g.IO.NavUsable)  // [2017/10/06] Removed this possibly redundant test but I am not sure of all the side-effects yet. Some of the feature here will need to work regardless of using a _NoNavInputs flag.
@@ -2623,7 +2630,7 @@ static ImVec2 GetNavInputAmount2d(int stick_no, ImGuiNavReadMode mode, float slo
 }
 
 // Window management mode (change focus, move/resize window, jump back and forth to menu layer)
-static void NavUpdateWindowingTarget()
+static void ImGui::NavUpdateWindowing()
 {
     ImGuiContext& g = *GImGui;
     if (!g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiNavReadMode_Pressed))
@@ -2676,7 +2683,7 @@ static void NavUpdateWindowingTarget()
             // Apply actual focus only when releasing the NavMenu button (until then the window was merely rendered front-most)
             if (g.NavWindowingTarget && !g.NavWindowingToggleLayer && (!g.NavWindow || g.NavWindowingTarget != g.NavWindow->RootNonPopupWindow))
             {
-                ImGui::FocusWindow(g.NavWindowingTarget);
+                FocusWindow(g.NavWindowingTarget);
                 g.NavDisableHighlight = false;
                 g.NavDisableMouseHover = true;
                 if (g.NavWindowingTarget->NavLastIds[0] == 0)
@@ -2687,7 +2694,7 @@ static void NavUpdateWindowingTarget()
             if (g.NavWindowingToggleLayer && g.NavWindow)
             {
                 if ((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) == 0 && (g.NavWindow->RootWindow->DC.NavLayerActiveMask & (1 << 1)) != 0)
-                    ImGui::FocusWindow(g.NavWindow->RootWindow);
+                    FocusWindow(g.NavWindow->RootWindow);
                 g.NavLayer = (g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) ? (g.NavLayer ^ 1) : 0;
                 g.NavDisableHighlight = false;
                 g.NavDisableMouseHover = true;
@@ -2737,7 +2744,7 @@ static void NavScrollToBringItemIntoView(ImGuiWindow* window, ImRect& item_rect_
     item_rect_rel.Translate(window->Scroll - next_scroll);
 }
 
-static void NavUpdate()
+static void ImGui::NavUpdate()
 {
     ImGuiContext& g = *GImGui;
     g.IO.WantMoveMouse = false;
@@ -2745,7 +2752,7 @@ static void NavUpdate()
     // Process navigation init request (select first/default focus)
     if (g.NavInitResultId != 0 && (!g.NavDisableHighlight || g.NavInitResultExplicit))
     {
-        // Apply result from previous navigation init request (typically select the first item, unless SetItemDefaultFocus() has been called)
+        // Apply result from previous navigation init request (will typically select the first item, unless SetItemDefaultFocus() has been called)
         IM_ASSERT(g.NavWindow);
         SetNavID(g.NavInitResultId, g.NavLayer);
         g.NavWindow->NavRectRel[g.NavLayer] = g.NavInitResultRectRel;
@@ -2766,7 +2773,7 @@ static void NavUpdate()
             NavScrollToBringItemIntoView(g.NavWindow, g.NavMoveResultRectRel);
 
         // Apply result from previous frame navigation directional move request
-        ImGui::ClearActiveID();
+        ClearActiveID();
         SetNavIDAndMoveMouse(g.NavMoveResultId, g.NavLayer, g.NavMoveResultRectRel);
         g.NavJustMovedToId = g.NavMoveResultId;
         g.NavMoveFromClampedRefRect = false;
@@ -2796,7 +2803,7 @@ static void NavUpdate()
     g.NavJustTabbedId = 0;
     IM_ASSERT(g.NavLayer == 0 || g.NavLayer == 1);
 
-    NavUpdateWindowingTarget();
+    NavUpdateWindowing();
 
     // Set output flags for user application
     g.IO.NavUsable = g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
@@ -2807,14 +2814,14 @@ static void NavUpdate()
     {
         if (g.ActiveId != 0)
         {
-            ImGui::ClearActiveID();
+            ClearActiveID();
         }
         else if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow) && !(g.NavWindow->Flags & ImGuiWindowFlags_Popup) && g.NavWindow->ParentWindow)
         {
             // Exit child window
             ImGuiWindow* child_window = g.NavWindow;
             ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
-            ImGui::FocusWindow(parent_window);
+            FocusWindow(parent_window);
             IM_ASSERT(child_window->ChildId != 0);
             SetNavID(child_window->ChildId, g.NavLayer); // FIXME-NAV: Layer not necessarily correct
             g.NavIdIsAlive = false;
@@ -2919,6 +2926,7 @@ static void NavUpdate()
         }
 
         // *Normal* Manual scroll with NavScrollXXX keys
+        // Next movement request will clamp the NavId reference rectangle to the visible area, so navigation will resume within those bounds.
         ImVec2 scroll_dir = GetNavInputAmount2d(1, ImGuiNavReadMode_Down, 1.0f/10.0f, 10.0f);
         if (scroll_dir.x != 0.0f && window->ScrollbarX)
         {
@@ -2974,7 +2982,7 @@ void ImGui::NewFrame()
 
     // Initialize on first frame
     if (!g.Initialized)
-        ImGui::Initialize();
+        Initialize();
 
     SetCurrentFont(GetDefaultFont());
     IM_ASSERT(g.Font->IsLoaded());
@@ -3204,8 +3212,8 @@ void ImGui::NewFrame()
 
     // Create implicit window - we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
-    ImGui::SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Debug##Default");
+    SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
+    Begin("Debug##Default");
 }
 
 void ImGui::Initialize()
