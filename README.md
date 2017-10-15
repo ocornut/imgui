@@ -45,44 +45,43 @@ Binaries/Demo
 -------------
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20170723.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20170723.zip) (Windows binaries, Dear ImGui 1.51+ 2017/07/23, 5 executables, 808 KB)
+- [imgui-demo-binaries-20171013.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20171013.zip) (Windows binaries, Dear ImGui 1.52 WIP built 2017/10/13, 5 executables)
 
 Bindings
 --------
 
+Integrating Dear ImGui within your custom engine is a matter of wiring mouse/keyboard inputs and providing a render function that can bind a texture and render simple textured triangles. The examples/ folder is populated with applications doing just that. If you are an experienced programmer it should take you less than an hour to integrate Dear ImGui in your custom engine, but make sure to spend time reading the FAQ, the comments and other documentation!
+
 _NB: those third-party bindings may be more or less maintained, more or less close to the spirit of original API and therefore I cannot give much guarantee about them. People who create language bindings sometimes haven't used the C++ API themselves (for the good reason that they aren't C++ users). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
 
-_Integrating Dear ImGui within your custom engine is a matter of wiring mouse/keyboard inputs and providing a render function that can bind a texture and render simple textured triangles. The examples/ folder is populated with applications doing just that. If you are an experienced programmer it should take you less than an hour to integrate Dear ImGui in your custom engine, but make sure to spend time reading the FAQ, the comments and other documentation!_
-
 Languages:
-- C - cimgui: thin c-api wrapper for ImGui https://github.com/Extrawurst/cimgui
-- C#/.Net - ImGui.NET: An ImGui wrapper for .NET Core https://github.com/mellinoe/ImGui.NET
-- D - DerelictImgui: Dynamic bindings for the D programming language: https://github.com/Extrawurst/DerelictImgui
-- Go - go-imgui https://github.com/Armored-Dragon/go-imgui
-- Lua - https://github.com/patrickriordan/imgui_lua_bindings
-- Pascal - imgui-pas https://github.com/dpethes/imgui-pas
-- Python - CyImGui: Python bindings for dear imgui using Cython: https://github.com/chromy/cyimgui
-- Python - pyimgui: Another Python bindings for dear imgui: https://github.com/swistakm/pyimgui
-- Rust - imgui-rs: Rust bindings for dear imgui https://github.com/Gekkio/imgui-rs
+- C (cimgui): thin c-api wrapper for ImGui https://github.com/Extrawurst/cimgui
+- C#/.Net (ImGui.NET): An ImGui wrapper for .NET Core https://github.com/mellinoe/ImGui.NET
+- D (DerelictImgui): Dynamic bindings for the D programming language: https://github.com/Extrawurst/DerelictImgui
+- Go (go-imgui): https://github.com/Armored-Dragon/go-imgui
+- Lua: https://github.com/patrickriordan/imgui_lua_bindings
+- Pascal (imgui-pas) https://github.com/dpethes/imgui-pas
+- Python (CyImGui): Python bindings for dear imgui using Cython: https://github.com/chromy/cyimgui
+- Python (pyimgui): Another Python bindings for dear imgui: https://github.com/swistakm/pyimgui
+- Rust (imgui-rs): Rust bindings for dear imgui https://github.com/Gekkio/imgui-rs
 
 Frameworks:
 - Main ImGui repository include examples for DirectX9, DirectX10, DirectX11, OpenGL2/3, Vulkan, Allegro 5, SDL+GL2/3, iOS and Marmalade: https://github.com/ocornut/imgui/tree/master/examples
-- Unmerged PR: DirectX12 example (with issues) https://github.com/ocornut/imgui/pull/301
-- Unmerged PR: SDL2 + OpenGLES + Emscripten example https://github.com/ocornut/imgui/pull/336
-- Unmerged PR: FreeGlut + OpenGL2 example https://github.com/ocornut/imgui/pull/801
-- Unmerged PR: Native Win32 and OSX example https://github.com/ocornut/imgui/pull/281
-- Unmerged PR: Android Example https://github.com/ocornut/imgui/pull/421
-- Cinder backend for dear imgui https://github.com/simongeilfus/Cinder-ImGui
-- FlexGUI: Flexium/SFML backend for dear imgui https://github.com/DXsmiley/FlexGUI
-- IrrIMGUI: Irrlicht backend for dear imgui https://github.com/ZahlGraf/IrrIMGUI
-- UnrealEngine_ImGui: Unreal Engine 4 backend for dear imgui https://github.com/sronsse/UnrealEngine_ImGui
-- LÖVE backend for dear imgui https://github.com/slages/love-imgui
-- Ogre backend for dear imgui https://bitbucket.org/LMCrashy/ogreimgui/src
-- ofxImGui: openFrameworks backend for dear imgui https://github.com/jvcleave/ofxImGui
-- SFML backend for dear imgui https://github.com/EliasD/imgui-sfml
-- SFML backend for dear imgui https://github.com/Mischa-Alff/imgui-backends
-- cocos2d-x with imgui https://github.com/c0i/imguix https://github.com/ocornut/imgui/issues/551
-- NanoRT: software raytraced version https://github.com/syoyo/imgui/tree/nanort/examples/raytrace_example
+- Unmerged PR: DirectX12: https://github.com/ocornut/imgui/pull/301
+- Unmerged PR: SDL2 + OpenGLES + Emscripten: https://github.com/ocornut/imgui/pull/336
+- Unmerged PR: FreeGlut + OpenGL2: https://github.com/ocornut/imgui/pull/801
+- Unmerged PR: Native Win32 and OSX: https://github.com/ocornut/imgui/pull/281
+- Unmerged PR: Android: https://github.com/ocornut/imgui/pull/421
+- Cinder: https://github.com/simongeilfus/Cinder-ImGui
+- cocos2d-x: https://github.com/c0i/imguix https://github.com/ocornut/imgui/issues/551
+- Flexium/SFML (FlexGUI): https://github.com/DXsmiley/FlexGUI
+- Irrlicht (IrrIMGUI): https://github.com/ZahlGraf/IrrIMGUI
+- Ogre: https://bitbucket.org/LMCrashy/ogreimgui/src
+- openFrameworks (ofxImGui): https://github.com/jvcleave/ofxImGui
+- LÖVE: https://github.com/slages/love-imgui
+- NanoRT (software raytraced) https://github.com/syoyo/imgui/tree/nanort/examples/raytrace_example
+- Unreal Engine 4: https://github.com/segross/UnrealImGui or https://github.com/sronsse/UnrealEngine_ImGui
+- SFML: https://github.com/EliasD/imgui-sfml or https://github.com/Mischa-Alff/imgui-backends
 
 For other bindings: see [this page](https://github.com/ocornut/imgui/wiki/Links/).
 Please contact me with the Issues tracker or Twitter to fix/update this list.
@@ -91,6 +90,7 @@ Gallery
 -------
 
 See the [Screenshots Thread](https://github.com/ocornut/imgui/issues/123) for some user creations.
+Also see the [Mega screenshots](https://github.com/ocornut/imgui/issues/1273) for an idea of the available features.
 
 ![screenshot 1](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_01.png)
 [![screenshot game](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v149/gallery_TheDragonsTrap-01-thumb.jpg)](https://cloud.githubusercontent.com/assets/8225057/20628927/33e14cac-b329-11e6-80f6-9524e93b048a.png)
@@ -137,11 +137,15 @@ Frequently Asked Question (FAQ)
 - Standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder. 
 - We obviously needs better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
 
+<b>Which version should I get?</b>
+
+I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master. The library is fairly stable and regressions tend to be fixed fast when reported. You may also want to checkout the [navigation branch](https://github.com/ocornut/imgui/tree/navigation) if you want to use Dear ImGui with a gamepad (it is also possible to map keyboard inputs to some degree). The Navigation branch is being kept up to date with Master.
+
 <b>Why the odd dual naming, "dear imgui" vs "ImGui"?</b>
 
 The library started its life and is best known as "ImGui" only due to the fact that I didn't give it a proper name when I released it. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations. It seemed confusing and unfair to hog the name. To reduce the ambiguity without affecting existing codebases, I have decided on an alternate, longer name "dear imgui" that people can use to refer to this specific library in ambiguous situations.
 
-<br><b>What is ImTextureID and how do I display an image?</b>
+<b>What is ImTextureID and how do I display an image?</b>
 <br><b>I integrated Dear ImGui in my engine and the text or lines are blurry..</b>
 <br><b>I integrated Dear ImGui in my engine and some elements are disappearing when I move windows around..</b>
 <br><b>How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on labels/IDs.</b>
@@ -157,13 +161,13 @@ See the FAQ in imgui.cpp for answers.
 
 <b>How do you use Dear ImGui on a platform that may not have a mouse or keyboard?</b>
 
-I recommend using [Synergy](http://synergy-project.org) ([sources](https://github.com/symless/synergy)). In particular, the _src/micro/uSynergy.c_ file contains a small client that you can use on any platform to connect to your host PC. You can seamlessly use your PC input devices from a video game console or a tablet. Dear ImGui allows to increase the hit box of widgets (via the _TouchPadding_ setting) to accommodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.
+I recommend using [Synergy](http://synergy-project.org) ([sources](https://github.com/symless/synergy)). In particular, the _src/micro/uSynergy.c_ file contains a small client that you can use on any platform to connect to your host PC. You can seamlessly use your PC input devices from a video game console or a tablet. Dear ImGui allows to increase the hit box of widgets (via the _style.TouchPadding_ setting) to accommodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate. You can also checkout the beta [navigation branch](https://github.com/ocornut/imgui/tree/navigation) which provides support for using Dear ImGui with a game controller.
 
 <b>Can you create elaborate/serious tools with Dear ImGui?</b>
 
-Yes. I have written data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools).
+Yes. People have written game editors, data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools).
 
-Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might requires you to readjust some habits before you can realize its full potential. Many programmers have unfortunately been taught by their environment to make unnecessarily complicated things. Dear ImGui is about making things that are simple, efficient and powerful.
+Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might requires you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient and powerful.
 
 <b>Is Dear ImGui fast?</b>
 
@@ -179,17 +183,15 @@ If you intend to display large lists of items (say, 1000+) it can be beneficial 
 
 <b>Can you reskin the look of Dear ImGui?</b>
 
-You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as Dear ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. 
+You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as Dear ImGui is designed and optimised to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. Below is a screenshot from [LumixEngine](https://github.com/nem0/LumixEngine) with custom colors + a docking/tabs extension (both of which you can find in the Issues section and will eventually be merged):
 
-This is [LumixEngine](https://github.com/nem0/LumixEngine) with a minor skinning hack + a docking/tabs extension (both of which you can find in the Issues section and will eventually be merged).
-
-[![Skinning in LumixEngine](https://cloud.githubusercontent.com/assets/8225057/13198792/92808c5c-d812-11e5-9507-16b63918b05b.jpg)](https://cloud.githubusercontent.com/assets/8225057/13044612/59f07aec-d3cf-11e5-8ccb-39adf2e13e69.png)
+![LumixEngine](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v151/lumix-201710-rearranged.png)
 
 <b>Why using C++ (as opposed to C)?</b>
 
-Dear ImGui takes advantage of a few C++ languages features for convenience but nothing anywhere Boost-insanity/quagmire. Dear ImGui doesn't use any C++ header file. Language-wise, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience.
+Dear ImGui takes advantage of a few C++ languages features for convenience but nothing anywhere Boost-insanity/quagmire. Dear ImGui does NOT require C++11 so it can be used with most old C++ compilers. Dear ImGui doesn't use any C++ header file. Language-wise, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience.
 
-There is an unofficial but reasonably maintained [c-api for ImGui](https://github.com/Extrawurst/cimgui) by Stephan Dilly. I would suggest using your target language functionality to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. It was really designed with C++ in mind and may not make the same amount of sense with another language. Also see [Links](https://github.com/ocornut/imgui/wiki/Links) for third-party bindings to other languages.
+There is an reasonably maintained [c-api for ImGui](https://github.com/Extrawurst/cimgui) by Stephan Dilly designed for binding in other languages. I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Links](https://github.com/ocornut/imgui/wiki/Links) for third-party bindings to other languages.
 
 Support dear imgui
 ------------------

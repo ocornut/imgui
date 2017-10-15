@@ -232,6 +232,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - inputs: allow to pass explicit double-clicks if that's the only thing the user's backend can get them. (e.g. for windows by the CS_DBLCLKS style).
  - inputs: support track pad style scrolling & slider edit.
 
+ - misc: make the ImGuiCond values linear (non-power-of-two). internal storage for ImGuiWindow can use integers to combine into flags.
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: provide HoveredTime and ActivatedTime to ease the creation of animations.
  - misc: fix for compilation settings where stdcall isn't the default (e.g. vectorcall) (#1230)
