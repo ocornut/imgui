@@ -2258,6 +2258,7 @@ static void NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGu
     if (g.NavId == id)
     {
         g.NavWindow = window;                                           // Always refresh g.NavWindow, because some operations such as FocusItem() don't have a window.
+        g.NavLayer = window->DC.NavLayerCurrent;
         g.NavIdIsAlive = true;
         g.NavIdTabCounter = window->FocusIdxTabCounter;
         window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;    // Store item bounding box (relative to window position)
