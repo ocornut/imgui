@@ -3697,38 +3697,43 @@ void ImGui::EndPopup()
         PopStyleVar();
 }
 
-// This is a helper to handle the most simple case of associating one named popup to one given widget.
+// This is a helper to handle the simplest case of associating one named popup to one given widget.
 // 1. If you have many possible popups (for different "instances" of a same widget, or for wholly different widgets), you may be better off handling
 //    this yourself so you can store data relative to the widget that opened the popup instead of choosing different popup identifiers.
 // 2. If you want right-clicking on the same item to reopen the popup at new location, use the same code replacing IsItemHovered() with IsItemRectHovered()
 //    and passing true to the OpenPopupEx().
-//    Because: hovering an item in a window below the popup won't normally trigger is hovering behavior/coloring. The pattern of ignoring the fact that
-//    the item can be interacted with (because it is blocked by the active popup) may useful in some situation when e.g. large canvas as one item, content of menu
-//    driven by click position.
+//    This is because hovering an item in a window below the popup won't work. IsItemRectHovered() skips this test.
+//    The pattern of ignoring the fact that the item can be interacted with (because it is blocked by the active popup) may useful in some situation 
+//    when e.g. large canvas where the content of menu driven by click position.
 bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
 {
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
+    IM_ASSERT(id != 0);                                                  // However, you cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
     if (IsItemHovered() && IsMouseClicked(mouse_button))
-        OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), false);
-    return BeginPopup(str_id);
+        OpenPopupEx(id, false);
+    return BeginPopupEx(id, 0);
 }
 
 bool ImGui::BeginPopupContextWindow(const char* str_id, int mouse_button, bool also_over_items)
 {
     if (!str_id)
         str_id = "window_context";
+    ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
     if (IsWindowRectHovered() && IsMouseClicked(mouse_button))
         if (also_over_items || !IsAnyItemHovered())
-            OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), true);
-    return BeginPopup(str_id);
+            OpenPopupEx(id, true);
+    return BeginPopupEx(id, 0);
 }
 
 bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
 {
     if (!str_id) 
         str_id = "void_context";
+    ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
     if (!IsAnyWindowHovered() && IsMouseClicked(mouse_button))
-        OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), true);
-    return BeginPopup(str_id);
+        OpenPopupEx(id, true);
+    return BeginPopupEx(id, 0);
 }
 
 static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
