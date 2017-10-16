@@ -9066,8 +9066,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         SetActiveID(id, window);
         SetFocusID(id, window);
         FocusWindow(window);
-        if (!is_multiline)
-            g.ActiveIdAllowNavDirFlags = ((1 << ImGuiDir_Up) | (1 << ImGuiDir_Down));
+        if (!is_multiline && !(flags & ImGuiInputTextFlags_CallbackHistory))
+            g.ActiveIdAllowNavDirFlags |= ((1 << ImGuiDir_Up) | (1 << ImGuiDir_Down));
     }
     else if (io.MouseClicked[0])
     {
@@ -9096,8 +9096,6 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         // Down the line we should have a cleaner library-wide concept of Selected vs Active.
         g.ActiveIdAllowOverlap = !io.MouseDown[0];
         g.WantTextInputNextFrame = 1;
-        if (flags & ImGuiInputTextFlags_CallbackHistory)
-            g.ActiveIdAllowNavDirFlags &= ~((1 << ImGuiDir_Up) | (1 << ImGuiDir_Down));
 
         // Edit in progress
         const float mouse_x = (io.MousePos.x - frame_bb.Min.x - style.FramePadding.x) + edit_state.ScrollX;
