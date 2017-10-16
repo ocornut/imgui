@@ -1986,8 +1986,9 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id)
     return true;
 }
 
-// This is roughly matching the behavior of internal-facing ItemHoverable() which is 
+// This is roughly matching the behavior of internal-facing ItemHoverable()
 // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
+// - this should work even for non-interactive items that have no ID, so we cannot use LastItemId
 bool ImGui::IsItemHovered()
 {
     ImGuiContext& g = *GImGui;
@@ -1995,7 +1996,11 @@ bool ImGui::IsItemHovered()
     ImGuiWindow* window = g.CurrentWindow;
     if (!window->DC.LastItemRectHoveredRect)
         return false;
-    if (g.HoveredWindow != window)
+    // [2017/10/16] Reverted commit 344d48be3 and testing RootWindow instead. I believe it is correct to NOT test for RootWindow but this leaves us unable to use IsItemHovered() after EndChild() itself.
+    // Until a solution is found I believe reverting to the test from 2017/09/27 is safe since this was the test that has been running for a long while.
+    //if (g.HoveredWindow != window)
+    //    return false;
+    if (g.HoveredRootWindow != window->RootWindow)
         return false;
     if (g.ActiveId != 0 && g.ActiveId != window->DC.LastItemId && !g.ActiveIdAllowOverlap && g.ActiveId != window->MoveId)
         return false;
