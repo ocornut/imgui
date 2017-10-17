@@ -107,6 +107,7 @@ IMGUI_API void          ImTriangleBarycentricCoords(const ImVec2& a, const ImVec
 // Helpers: String
 IMGUI_API int           ImStricmp(const char* str1, const char* str2);
 IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, int count);
+IMGUI_API void          ImStrncpy(char* dst, const char* src, int count);
 IMGUI_API char*         ImStrdup(const char* str);
 IMGUI_API int           ImStrlenW(const ImWchar* str);
 IMGUI_API const ImWchar*ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin); // Find beginning-of-line
@@ -140,6 +141,7 @@ static inline int    ImClamp(int v, int mn, int mx)                             
 static inline float  ImClamp(float v, float mn, float mx)                       { return (v < mn) ? mn : (v > mx) ? mx : v; }
 static inline ImVec2 ImClamp(const ImVec2& f, const ImVec2& mn, ImVec2 mx)      { return ImVec2(ImClamp(f.x,mn.x,mx.x), ImClamp(f.y,mn.y,mx.y)); }
 static inline float  ImSaturate(float f)                                        { return (f < 0.0f) ? 0.0f : (f > 1.0f) ? 1.0f : f; }
+static inline void   ImSwap(int& a, int& b)                                     { int tmp = a; a = b; b = tmp; }
 static inline void   ImSwap(float& a, float& b)                                 { float tmp = a; a = b; b = tmp; }
 static inline int    ImLerp(int a, int b, float t)                              { return (int)(a + (b - a) * t); }
 static inline float  ImLerp(float a, float b, float t)                          { return a + (b - a) * t; }
