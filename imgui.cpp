@@ -240,6 +240,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/10/17 (1.52) - marked the old 5-parameters version of Begin() as obsolete (still available). Use SetNextWindowSize()+Begin() instead!
  - 2017/10/11 (1.52) - renamed AlignFirstTextHeightToWidgets() to AlignTextToFramePadding(). Kept inline redirection function (will obsolete).
  - 2017/09/25 (1.52) - removed SetNextWindowPosCenter() because SetNextWindowPos() now has the optional pivot information to do the same and more. Kept redirection function (will obsolete). 
  - 2017/08/25 (1.52) - io.MousePos needs to be set to ImVec2(-FLT_MAX,-FLT_MAX) when mouse is unavailable/missing. Previously ImVec2(-1,-1) was enough but we now accept negative mouse coordinates. In your binding if you need to support unavailable mouse, make sure to replace "io.MousePos = ImVec2(-1,-1)" with "io.MousePos = ImVec2(-FLT_MAX,-FLT_MAX)".
@@ -2310,8 +2311,9 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
     return true;
 }
 
-// This is roughly matching the behavior of internal-facing ItemHoverable() which is 
+// This is roughly matching the behavior of internal-facing ItemHoverable()
 // - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
+// - this should work even for non-interactive items that have no ID, so we cannot use LastItemId
 bool ImGui::IsItemHovered()
 {
     ImGuiContext& g = *GImGui;
@@ -2322,7 +2324,11 @@ bool ImGui::IsItemHovered()
 
     if (!window->DC.LastItemRectHoveredRect)
         return false;
-    if (g.HoveredWindow != window)
+    // [2017/10/16] Reverted commit 344d48be3 and testing RootWindow instead. I believe it is correct to NOT test for RootWindow but this leaves us unable to use IsItemHovered() after EndChild() itself.
+    // Until a solution is found I believe reverting to the test from 2017/09/27 is safe since this was the test that has been running for a long while.
+    //if (g.HoveredWindow != window)
+    //    return false;
+    if (g.HoveredRootWindow != window->RootWindow)
         return false;
     if (g.ActiveId != 0 && g.ActiveId != window->DC.LastItemId && !g.ActiveIdAllowOverlap && g.ActiveId != window->MoveId)
         return false;
@@ -4570,38 +4576,43 @@ void ImGui::EndPopup()
         PopStyleVar();
 }
 
-// This is a helper to handle the most simple case of associating one named popup to one given widget.
+// This is a helper to handle the simplest case of associating one named popup to one given widget.
 // 1. If you have many possible popups (for different "instances" of a same widget, or for wholly different widgets), you may be better off handling
 //    this yourself so you can store data relative to the widget that opened the popup instead of choosing different popup identifiers.
 // 2. If you want right-clicking on the same item to reopen the popup at new location, use the same code replacing IsItemHovered() with IsItemRectHovered()
 //    and passing true to the OpenPopupEx().
-//    Because: hovering an item in a window below the popup won't normally trigger is hovering behavior/coloring. The pattern of ignoring the fact that
-//    the item can be interacted with (because it is blocked by the active popup) may useful in some situation when e.g. large canvas as one item, content of menu
-//    driven by click position.
+//    This is because hovering an item in a window below the popup won't work. IsItemRectHovered() skips this test.
+//    The pattern of ignoring the fact that the item can be interacted with (because it is blocked by the active popup) may useful in some situation 
+//    when e.g. large canvas where the content of menu driven by click position.
 bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
 {
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
+    IM_ASSERT(id != 0);                                                  // However, you cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
     if (IsItemHovered() && IsMouseClicked(mouse_button))
-        OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), false);
-    return BeginPopup(str_id);
+        OpenPopupEx(id, false);
+    return BeginPopupEx(id, 0);
 }
 
 bool ImGui::BeginPopupContextWindow(const char* str_id, int mouse_button, bool also_over_items)
 {
     if (!str_id)
         str_id = "window_context";
+    ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
     if (IsWindowRectHovered() && IsMouseClicked(mouse_button))
         if (also_over_items || !IsAnyItemHovered())
-            OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), true);
-    return BeginPopup(str_id);
+            OpenPopupEx(id, true);
+    return BeginPopupEx(id, 0);
 }
 
 bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
 {
     if (!str_id) 
         str_id = "void_context";
+    ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
     if (!IsAnyWindowHovered() && IsMouseClicked(mouse_button))
-        OpenPopupEx(GImGui->CurrentWindow->GetID(str_id), true);
-    return BeginPopup(str_id);
+        OpenPopupEx(id, true);
+    return BeginPopupEx(id, 0);
 }
 
 static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
@@ -4627,7 +4638,8 @@ static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
     else
         ImFormatString(title, IM_ARRAYSIZE(title), "%s/%08X", parent_window->Name, id);
 
-    bool ret = ImGui::Begin(title, NULL, size, -1.0f, flags);
+    ImGui::SetNextWindowSize(size);
+    bool ret = ImGui::Begin(title, NULL, flags);
     ImGuiWindow* child_window = ImGui::GetCurrentWindow();
     child_window->ChildId = id;
     child_window->AutoFitChildAxises = auto_fit_axises;
@@ -4898,21 +4910,25 @@ static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
     return scroll;
 }
 
+static ImGuiCol GetWindowBgColorIdxFromFlags(ImGuiWindowFlags flags)
+{
+    if (flags & ImGuiWindowFlags_ComboBox)
+        return ImGuiCol_ComboBg;
+    if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
+        return ImGuiCol_PopupBg;
+    if (flags & ImGuiWindowFlags_ChildWindow)
+        return ImGuiCol_ChildWindowBg;
+    return ImGuiCol_WindowBg;
+}
+
 // Push a new ImGui window to add widgets to.
 // - A default window called "Debug" is automatically stacked at the beginning of every frame so you can use widgets without explicitly calling a Begin/End pair.
 // - Begin/End can be called multiple times during the frame with the same window name to append content.
-// - 'size_on_first_use' for a regular window denote the initial size for first-time creation (no saved data) and isn't that useful. Use SetNextWindowSize() prior to calling Begin() for more flexible window manipulation.
 // - The window name is used as a unique identifier to preserve window information across frames (and save rudimentary information to the .ini file).
 //   You can use the "##" or "###" markers to use the same label with different id, or same id with different label. See documentation at the top of this file.
 // - Return false when window is collapsed, so you can early out in your code. You always need to call ImGui::End() even if false is returned.
 // - Passing 'bool* p_open' displays a Close button on the upper-right corner of the window, the pointed value will be set to false when the button is pressed.
-// - Passing non-zero 'size' is roughly equivalent to calling SetNextWindowSize(size, ImGuiCond_FirstUseEver) prior to calling Begin().
 bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
-{
-    return ImGui::Begin(name, p_open, ImVec2(0.f, 0.f), -1.0f, flags);
-}
-
-bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
@@ -4931,6 +4947,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
     ImGuiWindow* window = FindWindowByName(name);
     if (!window)
     {
+        ImVec2 size_on_first_use = (g.SetNextWindowSizeCond != 0) ? g.SetNextWindowSizeVal : ImVec2(0.0f, 0.0f); // Any condition flag will do since we are creating a new window here.
         window = CreateNewWindow(name, size_on_first_use, flags);
         window_is_new = true;
     }
@@ -5141,8 +5158,9 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
         }
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
         {
+            IM_ASSERT(window_size_set_by_api); // Submitted by BeginChild()
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
-            window->Size = window->SizeFull = size_on_first_use; // NB: argument name 'size_on_first_use' misleading here, it's really just 'size' as provided by user passed via BeginChild()->Begin().
+            window->Size = window->SizeFull;
         }
 
         const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFrames == 0);
@@ -5297,19 +5315,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             window->BorderSize = (flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
 
             // Window background, Default Alpha
-            ImGuiCol bg_color_idx = ImGuiCol_WindowBg;
-            if ((flags & ImGuiWindowFlags_ComboBox) != 0)
-                bg_color_idx = ImGuiCol_ComboBg;
-            else if ((flags & ImGuiWindowFlags_Tooltip) != 0 || (flags & ImGuiWindowFlags_Popup) != 0)
-                bg_color_idx = ImGuiCol_PopupBg;
-            else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
-                bg_color_idx = ImGuiCol_ChildWindowBg;
-            ImVec4 bg_color = style.Colors[bg_color_idx]; // We don't use GetColorU32() because bg_alpha is assigned (not multiplied) below
-            if (bg_alpha >= 0.0f)
-                bg_color.w = bg_alpha;
-            bg_color.w *= style.Alpha;
-            if (bg_color.w > 0.0f)
-                window->DrawList->AddRectFilled(window->Pos+ImVec2(0,window->TitleBarHeight()), window->Pos+window->Size, ColorConvertFloat4ToU32(bg_color), window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImGuiCorner_All : ImGuiCorner_BotLeft|ImGuiCorner_BotRight);
+            ImU32 bg_col = GetColorU32(GetWindowBgColorIdxFromFlags(flags));
+            window->DrawList->AddRectFilled(window->Pos+ImVec2(0,window->TitleBarHeight()), window->Pos+window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImGuiCorner_All : ImGuiCorner_BotLeft|ImGuiCorner_BotRight);
 
             // Title bar
             const bool is_focused = g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow;
@@ -5522,6 +5529,32 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
     window->SkipItems = (window->Collapsed || !window->Active) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0;
     return !window->SkipItems;
 }
+
+// Old Begin() API with 5 parameters, avoid calling this version directly! Use SetNextWindowSize()+Begin() instead.
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha_override, ImGuiWindowFlags flags)
+{
+    // Old API feature: we could pass the initial window size as a parameter, however this was very misleading because in most cases it would only affect the window when it didn't have storage in the .ini file.
+    if (size_on_first_use.x != 0.0f || size_on_first_use.y != 0.0f)
+        SetNextWindowSize(size_on_first_use, ImGuiCond_FirstUseEver);
+
+    // Old API feature: we could override the window background alpha with a parameter. This is actually tricky to reproduce manually because: 
+    // (1) there are multiple variants of WindowBg (popup, tooltip, etc.) and (2) you can't call PushStyleColor before Begin and PopStyleColor just after Begin() because of how CheckStackSizes() behave.
+    // The user-side solution is to do backup = GetStyleColorVec4(ImGuiCol_xxxBG), PushStyleColor(ImGuiCol_xxxBg), Begin, PushStyleColor(ImGuiCol_xxxBg, backup), [...], PopStyleColor(), End(); PopStyleColor() - which is super awkward.
+    // The alpha override was rarely used but for now we'll leave the Begin() variant around for a bit. We may either lift the constraint on CheckStackSizes() either add a SetNextWindowBgAlpha() helper that does it magically.
+    ImGuiContext& g = *GImGui;
+    const ImGuiCol bg_color_idx = GetWindowBgColorIdxFromFlags(flags);
+    const ImVec4 bg_color_backup = g.Style.Colors[bg_color_idx];
+    if (bg_alpha_override >= 0.0f)
+        g.Style.Colors[bg_color_idx].w = bg_alpha_override;
+
+    bool ret = Begin(name, p_open, flags);
+
+    if (bg_alpha_override >= 0.0f)
+        g.Style.Colors[bg_color_idx] = bg_color_backup;
+    return ret;
+}
+#endif // IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 void ImGui::End()
 {
@@ -6124,8 +6157,7 @@ void ImGui::SetWindowSize(const ImVec2& size, ImGuiCond cond)
 
 void ImGui::SetWindowSize(const char* name, const ImVec2& size, ImGuiCond cond)
 {
-    ImGuiWindow* window = FindWindowByName(name);
-    if (window)
+    if (ImGuiWindow* window = FindWindowByName(name))
         SetWindowSize(window, size, cond);
 }
 

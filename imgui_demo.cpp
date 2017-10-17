@@ -1405,6 +1405,11 @@ void ImGui::ShowTestWindow(bool* p_open)
 
         if (ImGui::TreeNode("Context menus"))
         {
+            // BeginPopupContextItem() is a helper to provide common/simple popup behavior of essentially doing:
+            //    if (IsItemHovered() && IsMouseClicked(0))
+            //       OpenPopup(id);
+            //    return BeginPopup(id);
+            // For more advanced uses you may want to replicate and cuztomize this code. This the comments inside BeginPopupContextItem() implementation.
             static float value = 0.5f;
             ImGui::Text("Value = %.3f (<-- right-click here)", value);
             if (ImGui::BeginPopupContextItem("item context menu"))
@@ -1416,9 +1421,9 @@ void ImGui::ShowTestWindow(bool* p_open)
             }
 
             static char name[32] = "Label1";
-            char buf[64]; sprintf(buf, "Button: %s###Button", name); // ### operator override ID ignoring the preceeding label
+            char buf[64]; sprintf(buf, "Button: %s###Button", name); // ### operator override ID ignoring the preceding label
             ImGui::Button(buf);
-            if (ImGui::BeginPopupContextItem("rename context menu"))
+            if (ImGui::BeginPopupContextItem()) // When used after an item that has an ID (here the Button), we can skip providing an ID to BeginPopupContextItem().
             {
                 ImGui::Text("Edit name:");
                 ImGui::InputText("##edit", name, IM_ARRAYSIZE(name));
@@ -2163,7 +2168,7 @@ static void ShowExampleAppFixedOverlay(bool* p_open)
     ImVec2 window_pos = ImVec2((corner & 1) ? ImGui::GetIO().DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? ImGui::GetIO().DisplaySize.y - DISTANCE : DISTANCE);
     ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
     ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.3f));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.3f)); // Transparent background
     if (ImGui::Begin("Example: Fixed Overlay", p_open, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoNavFocus|ImGuiWindowFlags_NoNavInputs))
     {
         ImGui::Text("Simple overlay\nin the corner of the screen.\n(right-click to change position)");

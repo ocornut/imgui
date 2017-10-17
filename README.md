@@ -80,6 +80,7 @@ Frameworks:
 - openFrameworks (ofxImGui): https://github.com/jvcleave/ofxImGui
 - LÖVE: https://github.com/slages/love-imgui
 - NanoRT (software raytraced) https://github.com/syoyo/imgui/tree/nanort/examples/raytrace_example
+- Qt3d https://github.com/alpqr/imgui-qt3d
 - Unreal Engine 4: https://github.com/segross/UnrealImGui or https://github.com/sronsse/UnrealEngine_ImGui
 - SFML: https://github.com/EliasD/imgui-sfml or https://github.com/Mischa-Alff/imgui-backends
 
