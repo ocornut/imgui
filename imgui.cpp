@@ -3758,7 +3758,8 @@ static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
     else
         ImFormatString(title, IM_ARRAYSIZE(title), "%s/%08X", parent_window->Name, id);
 
-    bool ret = ImGui::Begin(title, NULL, size, -1.0f, flags);
+    ImGui::SetNextWindowSize(size);
+    bool ret = ImGui::Begin(title, NULL, flags);
     ImGuiWindow* child_window = ImGui::GetCurrentWindow();
     child_window->AutoFitChildAxises = auto_fit_axises;
     if (!(parent_window->Flags & ImGuiWindowFlags_ShowBorders))
@@ -4032,15 +4033,17 @@ static ImGuiCol GetWindowBgColorIdxFromFlags(ImGuiWindowFlags flags)
 // - Passing non-zero 'size' is roughly equivalent to calling SetNextWindowSize(size, ImGuiCond_FirstUseEver) prior to calling Begin().
 bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 {
-    return BeginEx(name, p_open, ImVec2(0.f, 0.f), -1.0f, flags);
+    return BeginEx(name, p_open, -1.0f, flags);
 }
 
 bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha, ImGuiWindowFlags flags)
 {
-    return BeginEx(name, p_open, size_on_first_use, bg_alpha, flags);
+    if (size_on_first_use.x != 0.0f || size_on_first_use.y != 0.0f)
+        SetNextWindowSize(size_on_first_use, ImGuiCond_FirstUseEver);
+    return BeginEx(name, p_open, bg_alpha, flags);
 }
 
-bool ImGui::BeginEx(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha, ImGuiWindowFlags flags)
+bool ImGui::BeginEx(const char* name, bool* p_open, float bg_alpha, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
@@ -4056,6 +4059,7 @@ bool ImGui::BeginEx(const char* name, bool* p_open, const ImVec2& size_on_first_
     ImGuiWindow* window = FindWindowByName(name);
     if (!window)
     {
+        ImVec2 size_on_first_use = (g.SetNextWindowSizeCond != 0) ? g.SetNextWindowSizeVal : ImVec2(0.0f, 0.0f); // Any condition flag will do since we are creating a new window here.
         window = CreateNewWindow(name, size_on_first_use, flags);
         window_is_new = true;
     }
@@ -4260,8 +4264,9 @@ bool ImGui::BeginEx(const char* name, bool* p_open, const ImVec2& size_on_first_
         }
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
         {
+            IM_ASSERT(window_size_set_by_api); // Submitted by BeginChild()
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
-            window->Size = window->SizeFull = size_on_first_use; // NB: argument name 'size_on_first_use' misleading here, it's really just 'size' as provided by user passed via BeginChild()->Begin().
+            window->Size = window->SizeFull;
         }
 
         const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFrames == 0);
