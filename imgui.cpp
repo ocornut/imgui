@@ -4010,6 +4010,17 @@ static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
     return scroll;
 }
 
+static ImGuiCol GetWindowBgColorIdxFromFlags(ImGuiWindowFlags flags)
+{
+    if (flags & ImGuiWindowFlags_ComboBox)
+        return ImGuiCol_ComboBg;
+    if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
+        return ImGuiCol_PopupBg;
+    if (flags & ImGuiWindowFlags_ChildWindow)
+        return ImGuiCol_ChildWindowBg;
+    return ImGuiCol_WindowBg;
+}
+
 // Push a new ImGui window to add widgets to.
 // - A default window called "Debug" is automatically stacked at the beginning of every frame so you can use widgets without explicitly calling a Begin/End pair.
 // - Begin/End can be called multiple times during the frame with the same window name to append content.
@@ -4021,10 +4032,15 @@ static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
 // - Passing non-zero 'size' is roughly equivalent to calling SetNextWindowSize(size, ImGuiCond_FirstUseEver) prior to calling Begin().
 bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 {
-    return ImGui::Begin(name, p_open, ImVec2(0.f, 0.f), -1.0f, flags);
+    return BeginEx(name, p_open, ImVec2(0.f, 0.f), -1.0f, flags);
 }
 
 bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha, ImGuiWindowFlags flags)
+{
+    return BeginEx(name, p_open, size_on_first_use, bg_alpha, flags);
+}
+
+bool ImGui::BeginEx(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
@@ -4371,13 +4387,7 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
             window->BorderSize = (flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
 
             // Window background, Default Alpha
-            ImGuiCol bg_color_idx = ImGuiCol_WindowBg;
-            if ((flags & ImGuiWindowFlags_ComboBox) != 0)
-                bg_color_idx = ImGuiCol_ComboBg;
-            else if ((flags & ImGuiWindowFlags_Tooltip) != 0 || (flags & ImGuiWindowFlags_Popup) != 0)
-                bg_color_idx = ImGuiCol_PopupBg;
-            else if ((flags & ImGuiWindowFlags_ChildWindow) != 0)
-                bg_color_idx = ImGuiCol_ChildWindowBg;
+            ImGuiCol bg_color_idx = GetWindowBgColorIdxFromFlags(flags);
             ImVec4 bg_color = style.Colors[bg_color_idx]; // We don't use GetColorU32() because bg_alpha is assigned (not multiplied) below
             if (bg_alpha >= 0.0f)
                 bg_color.w = bg_alpha;
@@ -5151,8 +5161,7 @@ void ImGui::SetWindowSize(const ImVec2& size, ImGuiCond cond)
 
 void ImGui::SetWindowSize(const char* name, const ImVec2& size, ImGuiCond cond)
 {
-    ImGuiWindow* window = FindWindowByName(name);
-    if (window)
+    if (ImGuiWindow* window = FindWindowByName(name))
         SetWindowSize(window, size, cond);
 }
 
