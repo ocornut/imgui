@@ -454,14 +454,16 @@ void ImGui::ShowTestWindow(bool* p_open)
         if (ImGui::TreeNode("Collapsing Headers"))
         {
             static bool closable_group = true;
+            ImGui::Checkbox("Enable extra group", &closable_group);
             if (ImGui::CollapsingHeader("Header"))
             {
-                ImGui::Checkbox("Enable extra group", &closable_group);
+                ImGui::Text("IsItemHovered: %d", IsItemHovered());
                 for (int i = 0; i < 5; i++)
                     ImGui::Text("Some content %d", i);
             }
             if (ImGui::CollapsingHeader("Header with a close button", &closable_group))
             {
+                ImGui::Text("IsItemHovered: %d", IsItemHovered());
                 for (int i = 0; i < 5; i++)
                     ImGui::Text("More content %d", i);
             }
