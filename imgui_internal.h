@@ -811,7 +811,7 @@ namespace ImGui
     IMGUI_API void          RenderColorRectWithAlphaCheckerboard(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, float grid_step, ImVec2 grid_off, float rounding = 0.0f, int rounding_corners_flags = ~0);
     IMGUI_API void          RenderCollapseTriangle(ImVec2 pos, bool is_open, float scale = 1.0f);
     IMGUI_API void          RenderBullet(ImVec2 pos);
-    IMGUI_API void          RenderCheckMark(ImVec2 pos, ImU32 col);
+    IMGUI_API void          RenderCheckMark(ImVec2 pos, ImU32 col, float sz);
     IMGUI_API void          RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, ImU32 col, float x_start_norm, float x_end_norm, float rounding);
     IMGUI_API const char*   FindRenderedTextEnd(const char* text, const char* text_end = NULL); // Find the optional ## from which we stop displaying text.
 
