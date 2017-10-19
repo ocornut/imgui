@@ -860,6 +860,10 @@ namespace ImGui
     IMGUI_API int           ParseFormatPrecision(const char* fmt, int default_value);
     IMGUI_API float         RoundScalar(float value, int decimal_precision);
 
+    // Shade functions
+    IMGUI_API void          ShadeVertsLinearColorGradientKeepAlpha(ImDrawVert* vert_start, ImDrawVert* vert_end, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1);
+    IMGUI_API void          ShadeVertsLinearAlphaGradientForLeftToRightText(ImDrawVert* vert_start, ImDrawVert* vert_end, float gradient_p0_x, float gradient_p1_x);
+
 } // namespace ImGui
 
 // ImFontAtlas internals

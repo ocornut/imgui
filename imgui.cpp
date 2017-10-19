@@ -9684,21 +9684,6 @@ static void RenderArrowsForVerticalBar(ImDrawList* draw_list, ImVec2 pos, ImVec2
     RenderArrow(draw_list, ImVec2(pos.x + bar_w - half_sz.x,     pos.y), half_sz,                              ImGuiDir_Left,  IM_COL32_WHITE);
 }
 
-static void PaintVertsLinearGradientKeepAlpha(ImDrawVert* vert_start, ImDrawVert* vert_end, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1)
-{
-    ImVec2 gradient_extent = gradient_p1 - gradient_p0;
-    float gradient_inv_length2 = 1.0f / ImLengthSqr(gradient_extent);
-    for (ImDrawVert* vert = vert_start; vert < vert_end; vert++)
-    {
-        float d = ImDot(vert->pos - gradient_p0, gradient_extent);
-        float t = ImClamp(d * gradient_inv_length2, 0.0f, 1.0f);
-        int r = ImLerp((int)(col0 >> IM_COL32_R_SHIFT) & 0xFF, (int)(col1 >> IM_COL32_R_SHIFT) & 0xFF, t);
-        int g = ImLerp((int)(col0 >> IM_COL32_G_SHIFT) & 0xFF, (int)(col1 >> IM_COL32_G_SHIFT) & 0xFF, t);
-        int b = ImLerp((int)(col0 >> IM_COL32_B_SHIFT) & 0xFF, (int)(col1 >> IM_COL32_B_SHIFT) & 0xFF, t);
-        vert->col = (r << IM_COL32_R_SHIFT) | (g << IM_COL32_G_SHIFT) | (b << IM_COL32_B_SHIFT) | (vert->col & IM_COL32_A_MASK);
-    }
-}
-
 // ColorPicker
 // Note: only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
 // FIXME: we adjust the big color square height based on item width, which may cause a flickering feedback loop (if automatic height makes a vertical scrollbar appears, affecting automatic width..) 
@@ -9916,7 +9901,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             // Paint colors over existing vertices
             ImVec2 gradient_p0(wheel_center.x + cosf(a0) * wheel_r_inner, wheel_center.y + sinf(a0) * wheel_r_inner);
             ImVec2 gradient_p1(wheel_center.x + cosf(a1) * wheel_r_inner, wheel_center.y + sinf(a1) * wheel_r_inner);
-            PaintVertsLinearGradientKeepAlpha(draw_list->_VtxWritePtr - (draw_list->_VtxCurrentIdx - vert_start_idx), draw_list->_VtxWritePtr, gradient_p0, gradient_p1, hue_colors[n], hue_colors[n+1]);
+            ShadeVertsLinearColorGradientKeepAlpha(draw_list->_VtxWritePtr - (draw_list->_VtxCurrentIdx - vert_start_idx), draw_list->_VtxWritePtr, gradient_p0, gradient_p1, hue_colors[n], hue_colors[n+1]);
         }
 
         // Render Cursor + preview on Hue Wheel
