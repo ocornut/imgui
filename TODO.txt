@@ -236,6 +236,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: provide HoveredTime and ActivatedTime to ease the creation of animations.
  - misc: fix for compilation settings where stdcall isn't the default (e.g. vectorcall) (#1230)
+ - misc: detect user not calling Render() and suggest to call EndFrame()?
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
 
  - demo: add vertical separator demo
