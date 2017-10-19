@@ -871,9 +871,9 @@ struct ImGuiIO
     //------------------------------------------------------------------
 
     ImVec2      MousePosPrev;               // Previous mouse position temporary storage (nb: not for public use, set to MousePos in NewFrame())
-    bool        MouseClicked[5];            // Mouse button went from !Down to Down
     ImVec2      MouseClickedPos[5];         // Position at time of clicking
     float       MouseClickedTime[5];        // Time of last click (used to figure out double-click)
+    bool        MouseClicked[5];            // Mouse button went from !Down to Down
     bool        MouseDoubleClicked[5];      // Has mouse button been double-clicked?
     bool        MouseReleased[5];           // Mouse button went from Down to !Down
     bool        MouseDownOwned[5];          // Track if button was clicked inside a window. We don't request mouse capture from the application if click started outside ImGui bounds.
