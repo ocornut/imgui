@@ -3606,7 +3606,21 @@ void ImGui::EndFrame()
             // (The left mouse button path calls FocusWindow which will lead NewFrame->CloseInactivePopups to trigger)
             if (g.IO.MouseClicked[1])
             {
-                CloseInactivePopups(g.HoveredWindow);
+                // Find the top-most window between HoveredWindow and the front most Modal Window.
+                // This is where we can trim the popup stack.
+                ImGuiWindow* modal = GetFrontMostModalRootWindow();
+                bool hovered_window_above_modal = false;
+                if (modal == NULL)
+                    hovered_window_above_modal = true;
+                for (int i = g.Windows.Size - 1; i >= 0 && hovered_window_above_modal == false; i--)
+                {
+                    ImGuiWindow* window = g.Windows[i];
+                    if (window == modal)
+                        break;
+                    if (window == g.HoveredWindow)
+                        hovered_window_above_modal = true;
+                }
+                CloseInactivePopups(hovered_window_above_modal ? g.HoveredWindow : modal);
             }
         }
     }
@@ -4297,7 +4311,7 @@ bool ImGui::IsItemFocused()
 
 bool ImGui::IsItemClicked(int mouse_button)
 {
-    return IsMouseClicked(mouse_button) && IsItemHovered();
+    return IsMouseClicked(mouse_button) && IsItemHovered(ImGuiHoveredFlags_Default);
 }
 
 bool ImGui::IsAnyItemHovered()
@@ -4430,6 +4444,11 @@ void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
     {
         g.OpenPopupStack.resize(current_stack_size+1);
         g.OpenPopupStack[current_stack_size] = popup_ref;
+
+        // When reopening a popup we first refocus its parent, otherwise if its parent is itself a popup it would get closed by CloseInactivePopups().
+        // This is equivalent to what ClosePopupToLevel() does.
+        if (g.OpenPopupStack[current_stack_size].PopupId == id)
+            FocusWindow(window);
     }
 }
 
@@ -4446,7 +4465,7 @@ static void CloseInactivePopups(ImGuiWindow* ref_window)
         return;
 
     // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it.
-    // Don't close our own child popup windows
+    // Don't close our own child popup windows.
     int n = 0;
     if (ref_window)
     {
@@ -4459,6 +4478,7 @@ static void CloseInactivePopups(ImGuiWindow* ref_window)
             if (popup.Window->Flags & ImGuiWindowFlags_ChildWindow)
                 continue;
 
+            // Trim the stack if popups are not direct descendant of the reference window (which is often the NavWindow)
             bool has_focus = false;
             for (int m = n; m < g.OpenPopupStack.Size && !has_focus; m++)
                 has_focus = (g.OpenPopupStack[m].Window && g.OpenPopupStack[m].Window->RootWindow == ref_window->RootWindow);
@@ -4466,17 +4486,17 @@ static void CloseInactivePopups(ImGuiWindow* ref_window)
                 break;
         }
     }
-    if (n < g.OpenPopupStack.Size)   // This test is not required but it allows to set a useful breakpoint on the line below
-        g.OpenPopupStack.resize(n);
+    if (n < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the block below
+        ClosePopupToLevel(n);
 }
 
 static ImGuiWindow* GetFrontMostModalRootWindow()
 {
     ImGuiContext& g = *GImGui;
     for (int n = g.OpenPopupStack.Size-1; n >= 0; n--)
-        if (ImGuiWindow* front_most_popup = g.OpenPopupStack.Data[n].Window)
-            if (front_most_popup->Flags & ImGuiWindowFlags_Modal)
-                return front_most_popup;
+        if (ImGuiWindow* popup = g.OpenPopupStack.Data[n].Window)
+            if (popup->Flags & ImGuiWindowFlags_Modal)
+                return popup;
     return NULL;
 }
 
@@ -4624,22 +4644,29 @@ void ImGui::EndPopup()
         PopStyleVar();
 }
 
+bool ImGui::OpenPopupOnItemClick(const char* str_id, int mouse_button)
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    if (IsMouseClicked(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+    {
+        ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
+        IM_ASSERT(id != 0);                                                  // However, you cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
+        OpenPopupEx(id, true);
+        return true;
+    }
+    return false;
+}
+
 // This is a helper to handle the simplest case of associating one named popup to one given widget.
-// 1. If you have many possible popups (for different "instances" of a same widget, or for wholly different widgets), you may be better off handling
-//    this yourself so you can store data relative to the widget that opened the popup instead of choosing different popup identifiers.
-// 2. If you want right-clicking on the same item to reopen the popup at new location, use the same code replacing IsItemHovered() with IsItemRectHovered()
-//    and passing true to the OpenPopupEx().
-//    This is because hovering an item in a window below the popup won't work. IsItemRectHovered() skips this test.
-//    The pattern of ignoring the fact that the item can be interacted with (because it is blocked by the active popup) may useful in some situation 
-//    when e.g. large canvas where the content of menu driven by click position.
+// You may want to handle this on user side if you have specific needs (e.g. tweaking IsItemHovered() parameters).
+// You can pass a NULL str_id to use the identifier of the last item.
 bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
     IM_ASSERT(id != 0);                                                  // However, you cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
-    if (IsMouseClicked(mouse_button))
-        if (IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-            OpenPopupEx(id, true);
+    if (IsMouseClicked(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+        OpenPopupEx(id, true);
     return BeginPopupEx(id, ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_AlwaysAutoResize);
 }
 
@@ -10753,8 +10780,8 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
                 value_changed |= value_changed_as_float |= DragFloat(ids[n], &f[n], 1.0f/255.0f, 0.0f, hdr ? 0.0f : 1.0f, fmt_table_float[fmt_idx][n]);
             else
                 value_changed |= DragInt(ids[n], &i[n], 1.0f, 0, hdr ? 0 : 255, fmt_table_int[fmt_idx][n]);
-            if (!(flags & ImGuiColorEditFlags_NoOptions) && IsItemHovered() && IsMouseClicked(1))
-                OpenPopup("context");
+            if (!(flags & ImGuiColorEditFlags_NoOptions))
+                OpenPopupOnItemClick("context");
         }
         PopItemWidth();
         PopItemWidth();
@@ -10780,8 +10807,8 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             else
                 sscanf(p, "%02X%02X%02X", (unsigned int*)&i[0], (unsigned int*)&i[1], (unsigned int*)&i[2]);
         }
-        if (!(flags & ImGuiColorEditFlags_NoOptions) && IsItemHovered() && IsMouseClicked(1))
-            OpenPopup("context");
+        if (!(flags & ImGuiColorEditFlags_NoOptions))
+            OpenPopupOnItemClick("context");
         PopItemWidth();
     }
 
@@ -10802,9 +10829,9 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
                 SetNextWindowPos(window->DC.LastItemRect.GetBL() + ImVec2(-1,style.ItemSpacing.y));
             }
         }
-        if (!(flags & ImGuiColorEditFlags_NoOptions) && IsItemHovered() && IsMouseClicked(1))
-            OpenPopup("context");
-
+        if (!(flags & ImGuiColorEditFlags_NoOptions))
+            OpenPopupOnItemClick("context");
+        
         if (BeginPopup("picker"))
         {
             picker_active = true;
@@ -10970,8 +10997,8 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
                 value_changed = value_changed_sv = true;
             }
         }
-        if (!(flags & ImGuiColorEditFlags_NoOptions) && IsItemHovered() && IsMouseClicked(1))
-            OpenPopup("context");
+        if (!(flags & ImGuiColorEditFlags_NoOptions))
+            OpenPopupOnItemClick("context");
     }
     else if (flags & ImGuiColorEditFlags_PickerHueBar)
     {
@@ -10983,8 +11010,8 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             V = 1.0f - ImSaturate((io.MousePos.y - picker_pos.y) / (sv_picker_size-1));
             value_changed = value_changed_sv = true;
         }
-        if (!(flags & ImGuiColorEditFlags_NoOptions) && IsItemHovered() && IsMouseClicked(1))
-            OpenPopup("context");
+        if (!(flags & ImGuiColorEditFlags_NoOptions))
+            OpenPopupOnItemClick("context");
 
         // Hue bar logic
         SetCursorScreenPos(ImVec2(bar0_pos_x, picker_pos.y));
