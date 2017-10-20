@@ -2802,9 +2802,7 @@ void ImGui::EndFrame()
             // With right mouse button we close popups without changing focus
             // (The left mouse button path calls FocusWindow which will lead NewFrame->CloseInactivePopups to trigger)
             if (g.IO.MouseClicked[1])
-            {
                 CloseInactivePopups(g.HoveredWindow);
-            }
         }
     }
 
@@ -3605,8 +3603,8 @@ static void CloseInactivePopups(ImGuiWindow* ref_window)
                 break;
         }
     }
-    if (n < g.OpenPopupStack.Size)   // This test is not required but it allows to set a useful breakpoint on the line below
-        g.OpenPopupStack.resize(n);
+    if (n < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the block below
+        ClosePopupToLevel(n);
 }
 
 static ImGuiWindow* GetFrontMostModalRootWindow()
