@@ -640,6 +640,7 @@ enum ImGuiNavInput_
     ImGuiNavInput_PadFocusNext,     // prev window (with PadMenu held)              // e.g. R-trigger
     ImGuiNavInput_PadTweakSlow,     // slower tweaks                                // e.g. L-trigger, analog
     ImGuiNavInput_PadTweakFast,     // faster tweaks                                // e.g. R-trigger, analog
+    ImGuiNavInput_KeyMenu,          // access menu                                  // e.g. ALT
     ImGuiNavInput_COUNT,
 };
 

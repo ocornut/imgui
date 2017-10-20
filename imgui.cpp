@@ -2665,7 +2665,7 @@ static ImVec2 GetNavInputAmount2d(int stick_no, ImGuiNavReadMode mode, float slo
 static void ImGui::NavUpdateWindowing()
 {
     ImGuiContext& g = *GImGui;
-    if (!g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiNavReadMode_Pressed))
+    if (!g.NavWindowingTarget && (IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiNavReadMode_Pressed) || IsNavInputPressed(ImGuiNavInput_KeyMenu, ImGuiNavReadMode_Pressed)))
     {
         ImGuiWindow* window = g.NavWindow;
         if (!window)
@@ -2710,7 +2710,7 @@ static void ImGui::NavUpdateWindowing()
             }
         }
 
-        if (!IsNavInputDown(ImGuiNavInput_PadMenu))
+        if (!IsNavInputDown(ImGuiNavInput_PadMenu) && !IsNavInputDown(ImGuiNavInput_KeyMenu))
         {
             // Apply actual focus only when releasing the NavMenu button (until then the window was merely rendered front-most)
             if (g.NavWindowingTarget && !g.NavWindowingToggleLayer && (!g.NavWindow || g.NavWindowingTarget != g.NavWindow->RootNonPopupWindow))
