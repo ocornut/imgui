@@ -1386,22 +1386,6 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::EndPopup();
             }
 
-            ImGui::Spacing();
-            ImGui::TextWrapped("Below we are testing adding menu items to a regular window. It's rather unusual but should work!");
-            ImGui::Separator();
-            // NB: As a quirk in this very specific example, we want to differentiate the parent of this menu from the parent of the various popup menus above.
-            // To do so we are encloding the items in a PushID()/PopID() block to make them two different menusets. If we don't, opening any popup above and hovering our menu here
-            // would open it. This is because once a menu is active, we allow to switch to a sibling menu by just hovering on it, which is the desired behavior for regular menus.
-            ImGui::PushID("foo");
-            ImGui::MenuItem("Menu item", "CTRL+M");
-            if (ImGui::BeginMenu("Menu inside a regular window"))
-            {
-                ShowExampleMenuFile();
-                ImGui::EndMenu();
-            }
-            ImGui::PopID();
-            ImGui::Separator();
-
             ImGui::TreePop();
         }
 
@@ -1418,7 +1402,9 @@ void ImGui::ShowTestWindow(bool* p_open)
             {
                 if (ImGui::Selectable("Set to zero")) value = 0.0f;
                 if (ImGui::Selectable("Set to PI")) value = 3.1415f;
-                ImGui::DragFloat("Value", &value, 0.1f, 0.0f, 0.0f);
+                ImGui::PushItemWidth(-1);
+                ImGui::DragFloat("##Value", &value, 0.1f, 0.0f, 0.0f);
+                ImGui::PopItemWidth();
                 ImGui::EndPopup();
             }
 
@@ -1487,6 +1473,25 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::EndPopup();
             }
 
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Menus inside a regular window"))
+        {
+            ImGui::TextWrapped("Below we are testing adding menu items to a regular window. It's rather unusual but should work!");
+            ImGui::Separator();
+            // NB: As a quirk in this very specific example, we want to differentiate the parent of this menu from the parent of the various popup menus above.
+            // To do so we are encloding the items in a PushID()/PopID() block to make them two different menusets. If we don't, opening any popup above and hovering our menu here
+            // would open it. This is because once a menu is active, we allow to switch to a sibling menu by just hovering on it, which is the desired behavior for regular menus.
+            ImGui::PushID("foo");
+            ImGui::MenuItem("Menu item", "CTRL+M");
+            if (ImGui::BeginMenu("Menu inside a regular window"))
+            {
+                ShowExampleMenuFile();
+                ImGui::EndMenu();
+            }
+            ImGui::PopID();
+            ImGui::Separator();
             ImGui::TreePop();
         }
     }
@@ -1795,6 +1800,34 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::TreePop();
         }
 #endif
+
+        if (ImGui::TreeNode("Hovering"))
+        {
+            // Testing IsWindowHovered() function
+            ImGui::BulletText(
+                "IsWindowHovered() = %d\n"
+                "IsWindowHovered(_AllowWhenBlockedByPopup) = %d\n"
+                "IsWindowHovered(_AllowWhenBlockedByActiveItem) = %d\n",
+                ImGui::IsWindowHovered(),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem));
+
+            // Testing IsItemHovered() function (because BulletText is an item itself and that would affect the output of IsItemHovered, we pass all lines in a single items to shorten the code)
+            ImGui::Button("ITEM");
+            ImGui::BulletText(
+                "IsItemHovered() = %d\n"
+                "IsItemHovered(_AllowWhenBlockedByPopup) = %d\n"
+                "IsItemHovered(_AllowWhenBlockedByActiveItem) = %d\n"
+                "IsItemHovered(_AllowWhenOverlapped) = %d\n"
+                "IsItemhovered(_RectOnly) = %d\n",
+                ImGui::IsItemHovered(),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly));
+
+            ImGui::TreePop();
+        }
 
         if (ImGui::TreeNode("Dragging"))
         {
