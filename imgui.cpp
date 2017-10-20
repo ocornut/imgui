@@ -5091,9 +5091,16 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
 
 bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
 {
-    IM_ASSERT((flags & (ImGuiHoveredFlags_AllowWhenOverlapped | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) == 0);   // Flags not supported by this function
+    IM_ASSERT((flags & ImGuiHoveredFlags_AllowWhenOverlapped) == 0);   // Flags not supported by this function
     ImGuiContext& g = *GImGui;
-    return g.HoveredWindow == g.CurrentWindow && IsWindowContentHoverable(g.HoveredRootWindow, flags);
+    if (g.HoveredWindow != g.CurrentWindow)
+        return false;
+    if (!IsWindowContentHoverable(g.HoveredRootWindow, flags))
+        return false;
+    if (!(flags & ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+        if (g.ActiveId != 0 && g.ActiveIdWindow != g.CurrentWindow)
+            return false;
+    return true;
 }
 
 bool ImGui::IsWindowFocused()
@@ -5116,9 +5123,16 @@ bool ImGui::IsRootWindowOrAnyChildFocused()
 
 bool ImGui::IsRootWindowOrAnyChildHovered(ImGuiHoveredFlags flags)
 {
-    IM_ASSERT((flags & (ImGuiHoveredFlags_AllowWhenOverlapped | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) == 0);   // Flags not supported by this function
+    IM_ASSERT((flags & ImGuiHoveredFlags_AllowWhenOverlapped) == 0);   // Flags not supported by this function
     ImGuiContext& g = *GImGui;
-    return g.HoveredRootWindow && (g.HoveredRootWindow == g.CurrentWindow->RootWindow) && IsWindowContentHoverable(g.HoveredRootWindow, flags);
+    if (!g.HoveredRootWindow || (g.HoveredRootWindow != g.CurrentWindow->RootWindow))
+        return false;
+    if (!IsWindowContentHoverable(g.HoveredRootWindow, flags))
+        return false;
+    if (!(flags & ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+        if (g.ActiveId != 0 && g.ActiveIdWindow != g.CurrentWindow)
+            return false;
+    return true;
 }
 
 float ImGui::GetWindowWidth()
