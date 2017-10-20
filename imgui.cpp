@@ -216,6 +216,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/10/20 (1.52) - changed IsWindowHovered() default parameters behavior to return false if a popup window is blocking access to the window or an item is active in another window. You can use the newly introduced IsWindowHovered() flags to requests those specific behavior if you need them.
  - 2017/10/20 (1.52) - removed the IsItemRectHovered()/IsWindowRectHovered() names introduced in 1.51, the new flags available for IsItemHovered() and IsWindowHovered() are providing much more details/options, and those legacy entry points were confusing/misleading.
  - 2017/10/17 (1.52) - marked the old 5-parameters version of Begin() as obsolete (still available). Use SetNextWindowSize()+Begin() instead!
  - 2017/10/11 (1.52) - renamed AlignFirstTextHeightToWidgets() to AlignTextToFramePadding(). Kept inline redirection function (will obsolete).
@@ -3758,8 +3759,9 @@ bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
     ImGuiWindow* window = GImGui->CurrentWindow;
     ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
     IM_ASSERT(id != 0);                                                  // However, you cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
-    if (IsItemHovered() && IsMouseClicked(mouse_button))
-        OpenPopupEx(id, false);
+    if (IsMouseClicked(mouse_button))
+        if (IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+            OpenPopupEx(id, true);
     return BeginPopupEx(id, ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_AlwaysAutoResize);
 }
 
@@ -3768,9 +3770,10 @@ bool ImGui::BeginPopupContextWindow(const char* str_id, int mouse_button, bool a
     if (!str_id)
         str_id = "window_context";
     ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
-    if (IsWindowRectHovered() && IsMouseClicked(mouse_button))
-        if (also_over_items || !IsAnyItemHovered())
-            OpenPopupEx(id, true);
+    if (IsMouseClicked(mouse_button))
+        if (IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+            if (also_over_items || !IsAnyItemHovered())
+                OpenPopupEx(id, true);
     return BeginPopupEx(id, ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_AlwaysAutoResize);
 }
 
