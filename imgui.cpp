@@ -2771,25 +2771,28 @@ void ImGui::EndFrame()
         g.CurrentWindow->Active = false;
     ImGui::End();
 
-    // Click to focus window and start moving (after we're done with all our widgets)
-    if (g.ActiveId == 0 && g.HoveredId == 0 && g.IO.MouseClicked[0])
+    if (g.ActiveId == 0 && g.HoveredId == 0)
     {
-        if (!(g.NavWindow && !g.NavWindow->WasActive && g.NavWindow->Active)) // Unless we just made a popup appear
+        if (!g.NavWindow || g.NavWindow->WasActive || !g.NavWindow->Active) // Unless we just made a popup appear
         {
-            if (g.HoveredRootWindow != NULL)
+            // Click to focus window and start moving (after we're done with all our widgets)
+            if (g.IO.MouseClicked[0])
             {
-                FocusWindow(g.HoveredWindow);
-                if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
+                if (g.HoveredRootWindow != NULL)
                 {
-                    g.MovedWindow = g.HoveredWindow;
-                    g.MovedWindowMoveId = g.HoveredWindow->MoveId;
-                    SetActiveID(g.MovedWindowMoveId, g.HoveredRootWindow);
+                    FocusWindow(g.HoveredWindow);
+                    if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
+                    {
+                        g.MovedWindow = g.HoveredWindow;
+                        g.MovedWindowMoveId = g.HoveredWindow->MoveId;
+                        SetActiveID(g.MovedWindowMoveId, g.HoveredRootWindow);
+                    }
                 }
-            }
-            else if (g.NavWindow != NULL && GetFrontMostModalRootWindow() == NULL)
-            {
-                // Clicking on void disable focus
-                FocusWindow(NULL);
+                else if (g.NavWindow != NULL && GetFrontMostModalRootWindow() == NULL)
+                {
+                    // Clicking on void disable focus
+                    FocusWindow(NULL);
+                }
             }
         }
     }
