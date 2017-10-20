@@ -485,21 +485,6 @@ namespace ImGui
     IMGUI_API ImGuiContext* GetCurrentContext();
     IMGUI_API void          SetCurrentContext(ImGuiContext* ctx);
 
-    // Obsolete functions (Will be removed! Also see 'API BREAKING CHANGES' section in imgui.cpp)
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    bool                    Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha_override = -1.0f, ImGuiWindowFlags flags = 0); // OBSOLETE 1.52+. use SetNextWindowSize() instead if you want to set a window size.
-    static inline void      AlignFirstTextHeightToWidgets() { AlignTextToFramePadding(); }     // OBSOLETE 1.52+
-    void                    SetNextWindowPosCenter(ImGuiCond cond = 0);                        // OBSOLETE 1.52+
-    static inline bool      IsItemHoveredRect() { return IsItemRectHovered(); }                // OBSOLETE 1.51+
-    static inline bool      IsPosHoveringAnyWindow(const ImVec2&) { IM_ASSERT(0); return false; } // OBSOLETE 1.51+. This was partly broken. You probably wanted to use ImGui::GetIO().WantCaptureMouse instead.
-    static inline bool      IsMouseHoveringAnyWindow() { return IsAnyWindowHovered(); }        // OBSOLETE 1.51+
-    static inline bool      IsMouseHoveringWindow() { return IsWindowRectHovered(); }          // OBSOLETE 1.51+
-    static inline bool      CollapsingHeader(const char* label, const char* str_id, bool framed = true, bool default_open = false) { (void)str_id; (void)framed; ImGuiTreeNodeFlags default_open_flags = 1<<5; return CollapsingHeader(label, (default_open ? default_open_flags : 0)); } // OBSOLETE 1.49+
-    static inline ImFont*   GetWindowFont() { return GetFont(); }                              // OBSOLETE 1.48+
-    static inline float     GetWindowFontSize() { return GetFontSize(); }                      // OBSOLETE 1.48+
-    static inline void      SetScrollPosHere() { SetScrollHere(); }                            // OBSOLETE 1.42+
-#endif
-
 } // namespace ImGui
 
 // Flags for ImGui::Begin()
@@ -885,6 +870,27 @@ struct ImGuiIO
 
     IMGUI_API   ImGuiIO();
 };
+
+//-----------------------------------------------------------------------------
+// Obsolete functions (Will be removed! Also see 'API BREAKING CHANGES' section in imgui.cpp)
+//-----------------------------------------------------------------------------
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+namespace ImGui
+{
+    bool                    Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha_override = -1.0f, ImGuiWindowFlags flags = 0); // OBSOLETE 1.52+. use SetNextWindowSize() instead if you want to set a window size.
+    static inline void      AlignFirstTextHeightToWidgets() { AlignTextToFramePadding(); }     // OBSOLETE 1.52+
+    static inline void      SetNextWindowPosCenter(ImGuiCond cond = 0) { SetNextWindowPos(ImVec2(GetIO().DisplaySize.x * 0.5f, GetIO().DisplaySize.y * 0.5f), cond, ImVec2(0.5f, 0.5f)); } // OBSOLETE 1.52+
+    static inline bool      IsItemHoveredRect() { return IsItemRectHovered(); }                // OBSOLETE 1.51+
+    static inline bool      IsPosHoveringAnyWindow(const ImVec2&) { IM_ASSERT(0); return false; } // OBSOLETE 1.51+. This was partly broken. You probably wanted to use ImGui::GetIO().WantCaptureMouse instead.
+    static inline bool      IsMouseHoveringAnyWindow() { return IsAnyWindowHovered(); }        // OBSOLETE 1.51+
+    static inline bool      IsMouseHoveringWindow() { return IsWindowRectHovered(); }          // OBSOLETE 1.51+
+    static inline bool      CollapsingHeader(const char* label, const char* str_id, bool framed = true, bool default_open = false) { (void)str_id; (void)framed; ImGuiTreeNodeFlags default_open_flags = 1 << 5; return CollapsingHeader(label, (default_open ? default_open_flags : 0)); } // OBSOLETE 1.49+
+    static inline ImFont*   GetWindowFont() { return GetFont(); }                              // OBSOLETE 1.48+
+    static inline float     GetWindowFontSize() { return GetFontSize(); }                      // OBSOLETE 1.48+
+    static inline void      SetScrollPosHere() { SetScrollHere(); }                            // OBSOLETE 1.42+
+}
+#endif
 
 //-----------------------------------------------------------------------------
 // Helpers
