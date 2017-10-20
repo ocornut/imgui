@@ -2275,7 +2275,7 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
     }
 
     // Scoring for navigation
-    if (g.NavId != id)
+    if (g.NavId != id && !(item_flags & ImGuiItemFlags_NoNav))
     {
 #if IMGUI_DEBUG_NAV
         // [DEBUG] Score all items in NavWindow at all times
