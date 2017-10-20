@@ -2781,7 +2781,7 @@ void ImGui::EndFrame()
                 if (g.HoveredRootWindow != NULL)
                 {
                     FocusWindow(g.HoveredWindow);
-                    if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove))
+                    if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
                     {
                         g.MovedWindow = g.HoveredWindow;
                         g.MovedWindowMoveId = g.HoveredWindow->MoveId;
