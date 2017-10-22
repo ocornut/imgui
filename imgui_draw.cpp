@@ -1577,7 +1577,6 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         const float off_x = cfg.GlyphOffset.x;
         const float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
 
-        dst_font->FallbackGlyph = NULL; // Always clear fallback so FindGlyph can return NULL. It will be set again in BuildLookupTable()
         for (int i = 0; i < tmp.RangesCount; i++)
         {
             stbtt_pack_range& range = tmp.Ranges[i];
@@ -1619,14 +1618,16 @@ void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* f
 {
     if (!font_config->MergeMode)
     {
-        font->ContainerAtlas = atlas;
-        font->ConfigData = font_config;
-        font->ConfigDataCount = 0;
+        ImVec2 display_offset = font->DisplayOffset;
+
+        font->Clear();
+
         font->FontSize = font_config->SizePixels;
+        font->DisplayOffset = display_offset;
+        font->ConfigData = font_config;
+        font->ContainerAtlas = atlas;
         font->Ascent = ascent;
         font->Descent = descent;
-        font->Glyphs.resize(0);
-        font->MetricsTotalSurface = 0;
     }
     font->ConfigDataCount++;
 }
