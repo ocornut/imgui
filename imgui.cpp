@@ -9083,7 +9083,8 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected, boo
     float w = window->MenuColumns.DeclColumns(label_size.x, shortcut_size.x, (float)(int)(g.FontSize * 1.20f)); // Feedback for next frame
     float extra_w = ImMax(0.0f, GetContentRegionAvail().x - w);
 
-    bool pressed = Selectable(label, false, ImGuiSelectableFlags_MenuItem | ImGuiSelectableFlags_DrawFillAvailWidth | (enabled ? 0 : ImGuiSelectableFlags_Disabled), ImVec2(w, 0.0f));
+    ImGuiSelectableFlags flags = ImGuiSelectableFlags_MenuItem | (enabled ? 0 : ImGuiSelectableFlags_Disabled) | (window->DC.LayoutType == ImGuiLayoutType_Vertical ? ImGuiSelectableFlags_DrawFillAvailWidth : 0);
+    bool pressed = Selectable(label, false, flags, ImVec2(w, 0.0f));
     if (shortcut_size.x > 0.0f)
     {
         PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
