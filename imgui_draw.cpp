@@ -1618,12 +1618,8 @@ void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* f
 {
     if (!font_config->MergeMode)
     {
-        ImVec2 display_offset = font->DisplayOffset;
-
-        font->Clear();
-
+        font->ClearOutputData();
         font->FontSize = font_config->SizePixels;
-        font->DisplayOffset = display_offset;
         font->ConfigData = font_config;
         font->ContainerAtlas = atlas;
         font->Ascent = ascent;
@@ -1904,7 +1900,8 @@ ImFont::ImFont()
 {
     Scale = 1.0f;
     FallbackChar = (ImWchar)'?';
-    Clear();
+    DisplayOffset = ImVec2(0.0f, 1.0f);
+    ClearOutputData();
 }
 
 ImFont::~ImFont()
@@ -1917,13 +1914,12 @@ ImFont::~ImFont()
     if (g.Font == this)
         g.Font = NULL;
     */
-    Clear();
+    ClearOutputData();
 }
 
-void    ImFont::Clear()
+void    ImFont::ClearOutputData()
 {
     FontSize = 0.0f;
-    DisplayOffset = ImVec2(0.0f, 1.0f);
     Glyphs.clear();
     IndexAdvanceX.clear();
     IndexLookup.clear();
