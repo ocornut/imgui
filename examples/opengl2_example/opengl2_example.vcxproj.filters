@@ -25,6 +25,9 @@
     <ClCompile Include="..\..\imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\imgui_tabs.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\imconfig.h">
@@ -37,6 +40,9 @@
       <Filter>sources</Filter>
     </ClInclude>
     <ClInclude Include="..\..\imgui_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\imgui_tabs.h">
       <Filter>imgui</Filter>
     </ClInclude>
   </ItemGroup>
