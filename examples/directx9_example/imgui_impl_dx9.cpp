@@ -177,21 +177,27 @@ IMGUI_API LRESULT ImGui_ImplDX9_WndProcHandler(HWND, UINT msg, WPARAM wParam, LP
     switch (msg)
     {
     case WM_LBUTTONDOWN:
+        SetCapture( hWnd );
         io.MouseDown[0] = true;
         return true;
     case WM_LBUTTONUP:
+        ReleaseCapture();
         io.MouseDown[0] = false;
         return true;
     case WM_RBUTTONDOWN:
+        SetCapture( hWnd );
         io.MouseDown[1] = true;
         return true;
     case WM_RBUTTONUP:
+        ReleaseCapture();
         io.MouseDown[1] = false;
         return true;
     case WM_MBUTTONDOWN:
+        SetCapture( hWnd );
         io.MouseDown[2] = true;
         return true;
     case WM_MBUTTONUP:
+        ReleaseCapture();
         io.MouseDown[2] = false;
         return true;
     case WM_MOUSEWHEEL:
