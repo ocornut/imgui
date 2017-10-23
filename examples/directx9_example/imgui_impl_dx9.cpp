@@ -171,49 +171,67 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     d3d9_state_block->Release();
 }
 
-IMGUI_API LRESULT ImGui_ImplDX9_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam)
+static bool IsAnyMouseButtonDown()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    for (int n = 0; n < ARRAYSIZE(io.MouseDown); n++)
+        if (io.MouseDown[n])
+            return true;
+    return false;
+}
+
+// We use Win32 SetCapture/ReleaseCapture() API to enable reading the mouse outside our Windows bounds.
+IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
     {
     case WM_LBUTTONDOWN:
+        if (!IsAnyMouseButtonDown()) ::SetCapture(hwnd);
         io.MouseDown[0] = true;
-        return true;
+        return 0;
+    case WM_RBUTTONDOWN:
+        if (!IsAnyMouseButtonDown()) ::SetCapture(hwnd);
+        io.MouseDown[1] = true;
+        return 0;
+    case WM_MBUTTONDOWN:
+        if (!IsAnyMouseButtonDown()) ::SetCapture(hwnd);
+        io.MouseDown[2] = true;
+        return 0;
     case WM_LBUTTONUP:
         io.MouseDown[0] = false;
-        return true;
-    case WM_RBUTTONDOWN:
-        io.MouseDown[1] = true;
-        return true;
+        if (!IsAnyMouseButtonDown()) ::ReleaseCapture();
+        return 0;
     case WM_RBUTTONUP:
         io.MouseDown[1] = false;
-        return true;
-    case WM_MBUTTONDOWN:
-        io.MouseDown[2] = true;
-        return true;
+        if (!IsAnyMouseButtonDown()) ::ReleaseCapture();
+        return 0;
     case WM_MBUTTONUP:
         io.MouseDown[2] = false;
-        return true;
+        if (!IsAnyMouseButtonDown()) ::ReleaseCapture();
+        return 0;
     case WM_MOUSEWHEEL:
         io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
-        return true;
+        return 0;
     case WM_MOUSEMOVE:
         io.MousePos.x = (signed short)(lParam);
         io.MousePos.y = (signed short)(lParam >> 16);
-        return true;
+        return 0;
     case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
         if (wParam < 256)
             io.KeysDown[wParam] = 1;
-        return true;
+        return 0;
     case WM_KEYUP:
+    case WM_SYSKEYUP:
         if (wParam < 256)
             io.KeysDown[wParam] = 0;
-        return true;
+        return 0;
     case WM_CHAR:
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
         if (wParam > 0 && wParam < 0x10000)
             io.AddInputCharacter((unsigned short)wParam);
-        return true;
+        return 0;
     }
     return 0;
 }
