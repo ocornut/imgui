@@ -6472,6 +6472,8 @@ float ImGui::GetTreeNodeToLabelSpacing()
 void ImGui::SetNextTreeNodeOpen(bool is_open, ImGuiCond cond)
 {
     ImGuiContext& g = *GImGui;
+    if (g.CurrentWindow->SkipItems)
+        return;
     g.SetNextTreeNodeOpenVal = is_open;
     g.SetNextTreeNodeOpenCond = cond ? cond : ImGuiCond_Always;
 }
