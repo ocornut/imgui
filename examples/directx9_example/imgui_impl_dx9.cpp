@@ -171,34 +171,44 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     d3d9_state_block->Release();
 }
 
+static bool IsAnyMouseButtonDown()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    for (int n = 0; n < ARRAYSIZE(io.MouseDown); n++)
+        if (io.MouseDown[n])
+            return true;
+    return false;
+}
+
+// We use Win32 SetCapture/ReleaseCapture() API to enable reading the mouse outside our Windows bounds.
 IMGUI_API LRESULT ImGui_ImplDX9_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
     {
     case WM_LBUTTONDOWN:
-        SetCapture(hwnd);
+        if (!IsAnyMouseButtonDown()) ::SetCapture(hwnd);
         io.MouseDown[0] = true;
         return true;
-    case WM_LBUTTONUP:
-        ReleaseCapture();
-        io.MouseDown[0] = false;
-        return true;
     case WM_RBUTTONDOWN:
-        SetCapture(hwnd);
+        if (!IsAnyMouseButtonDown()) ::SetCapture(hwnd);
         io.MouseDown[1] = true;
         return true;
-    case WM_RBUTTONUP:
-        ReleaseCapture();
-        io.MouseDown[1] = false;
-        return true;
     case WM_MBUTTONDOWN:
-        SetCapture(hwnd);
+        if (!IsAnyMouseButtonDown()) ::SetCapture(hwnd);
         io.MouseDown[2] = true;
         return true;
+    case WM_LBUTTONUP:
+        io.MouseDown[0] = false;
+        if (!IsAnyMouseButtonDown()) ::ReleaseCapture();
+        return true;
+    case WM_RBUTTONUP:
+        io.MouseDown[1] = false;
+        if (!IsAnyMouseButtonDown()) ::ReleaseCapture();
+        return true;
     case WM_MBUTTONUP:
-        ReleaseCapture();
         io.MouseDown[2] = false;
+        if (!IsAnyMouseButtonDown()) ::ReleaseCapture();
         return true;
     case WM_MOUSEWHEEL:
         io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
