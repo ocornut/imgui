@@ -2664,11 +2664,13 @@ static ImVec2 GetNavInputAmount2d(int stick_no, ImGuiNavReadMode mode, float slo
     return delta;
 }
 
-// Window management mode (change focus, move/resize window, jump back and forth to menu layer)
+// Window management mode (change focus, move/resize window, toggle menu layer)
 static void ImGui::NavUpdateWindowing()
 {
     ImGuiContext& g = *GImGui;
-    if (!g.NavWindowingTarget && (IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiNavReadMode_Pressed) || IsNavInputPressed(ImGuiNavInput_KeyMenu, ImGuiNavReadMode_Pressed)))
+    bool toggle_layer = false;
+
+    if (!g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiNavReadMode_Pressed))
     {
         ImGuiWindow* window = g.NavWindow;
         if (!window)
@@ -2713,7 +2715,7 @@ static void ImGui::NavUpdateWindowing()
             }
         }
 
-        if (!IsNavInputDown(ImGuiNavInput_PadMenu) && !IsNavInputDown(ImGuiNavInput_KeyMenu))
+        if (!IsNavInputDown(ImGuiNavInput_PadMenu))
         {
             // Apply actual focus only when releasing the NavMenu button (until then the window was merely rendered front-most)
             if (g.NavWindowingTarget && !g.NavWindowingToggleLayer && (!g.NavWindow || g.NavWindowingTarget != g.NavWindow->RootNonPopupWindow))
@@ -2727,19 +2729,26 @@ static void ImGui::NavUpdateWindowing()
 
             // Single press toggles NavLayer
             if (g.NavWindowingToggleLayer && g.NavWindow)
-            {
-                if ((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) == 0 && (g.NavWindow->RootWindow->DC.NavLayerActiveMask & (1 << 1)) != 0)
-                    FocusWindow(g.NavWindow->RootWindow);
-                g.NavLayer = (g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) ? (g.NavLayer ^ 1) : 0;
-                g.NavDisableHighlight = false;
-                g.NavDisableMouseHover = true;
-                if (g.NavLayer == 0 && g.NavWindow->NavLastIds[0] != 0)
-                    SetNavIDAndMoveMouse(g.NavWindow->NavLastIds[0], g.NavLayer, ImRect());
-                else
-                    NavInitWindow(g.NavWindow, true);
-            }
+                toggle_layer = true;
             g.NavWindowingTarget = NULL;
         }
+    }
+    
+    // Keyboard: Press and release ALT to toggle menu
+    if ((g.ActiveId == 0 || g.ActiveIdAllowOverlap) && IsNavInputPressed(ImGuiNavInput_KeyMenu, ImGuiNavReadMode_Released))
+        toggle_layer = true;
+
+    if (toggle_layer && g.NavWindow)
+    {
+        if ((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) == 0 && (g.NavWindow->RootWindow->DC.NavLayerActiveMask & (1 << 1)) != 0)
+            FocusWindow(g.NavWindow->RootWindow);
+        g.NavLayer = (g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) ? (g.NavLayer ^ 1) : 0;
+        g.NavDisableHighlight = false;
+        g.NavDisableMouseHover = true;
+        if (g.NavLayer == 0 && g.NavWindow->NavLastIds[0] != 0)
+            SetNavIDAndMoveMouse(g.NavWindow->NavLastIds[0], g.NavLayer, ImRect());
+        else
+            NavInitWindow(g.NavWindow, true);
     }
 }
 
