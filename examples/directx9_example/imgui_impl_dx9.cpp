@@ -218,10 +218,12 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
         io.MousePos.y = (signed short)(lParam >> 16);
         return 0;
     case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
         if (wParam < 256)
             io.KeysDown[wParam] = 1;
         return 0;
     case WM_KEYUP:
+    case WM_SYSKEYUP:
         if (wParam < 256)
             io.KeysDown[wParam] = 0;
         return 0;
