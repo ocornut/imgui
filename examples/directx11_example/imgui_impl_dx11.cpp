@@ -232,28 +232,43 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     ctx->IASetInputLayout(old.InputLayout); if (old.InputLayout) old.InputLayout->Release();
 }
 
-IMGUI_API LRESULT ImGui_ImplDX11_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam)
+static bool IsAnyMouseButtonDown()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    for (int n = 0; n < ARRAYSIZE(io.MouseDown); n++)
+        if (io.MouseDown[n])
+            return true;
+    return false;
+}
+
+IMGUI_API LRESULT ImGui_ImplDX11_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
     {
     case WM_LBUTTONDOWN:
+        if (!IsAnyMouseButtonDown()) ::SetCapture(hwnd);
         io.MouseDown[0] = true;
+        return true;
+    case WM_RBUTTONDOWN:
+        if (!IsAnyMouseButtonDown()) ::SetCapture(hwnd);
+        io.MouseDown[1] = true;
+        return true;
+    case WM_MBUTTONDOWN:
+        if (!IsAnyMouseButtonDown()) ::SetCapture(hwnd);
+        io.MouseDown[2] = true;
         return true;
     case WM_LBUTTONUP:
         io.MouseDown[0] = false;
-        return true;
-    case WM_RBUTTONDOWN:
-        io.MouseDown[1] = true;
+        if (!IsAnyMouseButtonDown()) ::ReleaseCapture();
         return true;
     case WM_RBUTTONUP:
         io.MouseDown[1] = false;
-        return true;
-    case WM_MBUTTONDOWN:
-        io.MouseDown[2] = true;
+        if (!IsAnyMouseButtonDown()) ::ReleaseCapture();
         return true;
     case WM_MBUTTONUP:
         io.MouseDown[2] = false;
+        if (!IsAnyMouseButtonDown()) ::ReleaseCapture();
         return true;
     case WM_MOUSEWHEEL:
         io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
