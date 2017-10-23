@@ -171,13 +171,13 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     d3d9_state_block->Release();
 }
 
-IMGUI_API LRESULT ImGui_ImplDX9_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam)
+IMGUI_API LRESULT ImGui_ImplDX9_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
     {
     case WM_LBUTTONDOWN:
-        SetCapture( hWnd );
+        SetCapture(hwnd);
         io.MouseDown[0] = true;
         return true;
     case WM_LBUTTONUP:
@@ -185,7 +185,7 @@ IMGUI_API LRESULT ImGui_ImplDX9_WndProcHandler(HWND, UINT msg, WPARAM wParam, LP
         io.MouseDown[0] = false;
         return true;
     case WM_RBUTTONDOWN:
-        SetCapture( hWnd );
+        SetCapture(hwnd);
         io.MouseDown[1] = true;
         return true;
     case WM_RBUTTONUP:
@@ -193,7 +193,7 @@ IMGUI_API LRESULT ImGui_ImplDX9_WndProcHandler(HWND, UINT msg, WPARAM wParam, LP
         io.MouseDown[1] = false;
         return true;
     case WM_MBUTTONDOWN:
-        SetCapture( hWnd );
+        SetCapture(hwnd);
         io.MouseDown[2] = true;
         return true;
     case WM_MBUTTONUP:
