@@ -702,6 +702,7 @@ namespace ImGui
 static void             NavUpdate();
 static void             NavUpdateWindowing();
 static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id);
+static void             FocusPreviousWindow();
 }
 
 //-----------------------------------------------------------------------------
@@ -3241,12 +3242,7 @@ void ImGui::NewFrame()
 
     // Closing the focused window restore focus to the first active root window in descending z-order
     if (g.NavWindow && !g.NavWindow->WasActive)
-        for (int i = g.Windows.Size-1; i >= 0; i--)
-            if (g.Windows[i]->WasActive && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
-            {
-                FocusWindow(g.Windows[i]);
-                break;
-            }
+        FocusPreviousWindow();
 
     // No window should be open at the beginning of the frame.
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
@@ -5816,6 +5812,17 @@ void ImGui::FocusWindow(ImGuiWindow* window)
             break;
         }
     g.Windows.push_back(window);
+}
+
+void ImGui::FocusPreviousWindow()
+{
+    ImGuiContext& g = *GImGui;
+    for (int i = g.Windows.Size - 1; i >= 0; i--)
+        if (g.Windows[i]->WasActive && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
+        {
+            FocusWindow(g.Windows[i]);
+            return;
+        }
 }
 
 void ImGui::PushItemWidth(float item_width)
