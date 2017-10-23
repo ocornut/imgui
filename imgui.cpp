@@ -2611,6 +2611,7 @@ enum ImGuiNavReadMode
 {
     ImGuiNavReadMode_Down,
     ImGuiNavReadMode_Pressed,
+    ImGuiNavReadMode_Released,
     ImGuiNavReadMode_Repeat,
     ImGuiNavReadMode_RepeatSlow,
     ImGuiNavReadMode_RepeatFast
@@ -2625,6 +2626,8 @@ static float GetNavInputAmount(ImGuiNavInput n, ImGuiNavReadMode mode)
     const float t = g.IO.NavInputsDownDuration[n];  // Duration pressed
     if (mode == ImGuiNavReadMode_Pressed)           // Return 1.0f when just pressed, no repeat, ignore analog input (we don't need it for Pressed logic)
         return (t == 0.0f) ? 1.0f : 0.0f;
+    if (mode == ImGuiNavReadMode_Released)           // Return 1.0f when just release, no repeat, ignore analog input (we don't need it for Pressed logic)
+        return (t < 0.0f && g.IO.NavInputsDownDurationPrev[n] >= 0.0f) ? 1.0f : 0.0f;
     if (mode == ImGuiNavReadMode_Repeat)
         return (float)ImGui::CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay * 0.80f, g.IO.KeyRepeatRate * 0.80f);
     if (mode == ImGuiNavReadMode_RepeatSlow)
@@ -3047,7 +3050,7 @@ void ImGui::NewFrame()
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
         g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
-    memcpy(g.IO.NavInputsPrev, g.IO.NavInputs, sizeof(g.IO.NavInputs));
+    memcpy(g.IO.NavInputsDownDurationPrev, g.IO.NavInputsDownDuration, sizeof(g.IO.NavInputsDownDuration));
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.NavInputs); i++)
         g.IO.NavInputsDownDuration[i] = (g.IO.NavInputs[i] > 0.0f) ? (g.IO.NavInputsDownDuration[i] < 0.0f ? 0.0f : g.IO.NavInputsDownDuration[i] + g.IO.DeltaTime) : -1.0f;
 

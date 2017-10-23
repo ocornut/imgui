@@ -924,7 +924,7 @@ struct ImGuiIO
     float       KeysDownDuration[512];      // Duration the keyboard key has been down (0.0f == just pressed)
     float       KeysDownDurationPrev[512];  // Previous duration the key has been down
     float       NavInputsDownDuration[ImGuiNavInput_COUNT];
-    float       NavInputsPrev[ImGuiNavInput_COUNT];
+    float       NavInputsDownDurationPrev[ImGuiNavInput_COUNT];
 
     IMGUI_API   ImGuiIO();
 };
