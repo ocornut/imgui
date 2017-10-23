@@ -467,7 +467,7 @@ struct ImGuiContext
     ImVector<ImGuiPopupRef> CurrentPopupStack;                  // Which level of BeginPopup() we are in (reset every frame)
 
     // Navigation data (for gamepad/keyboard)
-    ImGuiWindow*            NavWindow;                          // Focused window for navigation
+    ImGuiWindow*            NavWindow;                          // Focused window for navigation. Could be called 'FocusWindow'
     ImGuiID                 NavId;                              // Focused item for navigation
     ImGuiID                 NavActivateId;                      // ~~ IsNavInputPressed(ImGuiNavInput_PadActivate) ? NavId : 0, also set when calling ActivateItem()
     ImGuiID                 NavActivateDownId;                  // ~~ IsNavInputPressed(ImGuiNavInput_PadActivate) ? NavId : 0

@@ -2726,6 +2726,10 @@ static void ImGui::NavUpdateWindowing()
                 g.NavDisableMouseHover = true;
                 if (g.NavWindowingTarget->NavLastIds[0] == 0)
                     NavInitWindow(g.NavWindowingTarget, false);
+
+                // If the window only has a menu layer, select it directly
+                if (g.NavWindowingTarget->DC.NavLayerActiveMask == 0x02)
+                    g.NavLayer = 1;
             }
 
             // Single press toggles NavLayer
@@ -4077,7 +4081,7 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
 {
     ImGuiContext& g = *GImGui;
-    for (int i = g.Windows.Size-1; i >= 0; i--)
+    for (int i = g.Windows.Size - 1; i >= 0; i--)
     {
         ImGuiWindow* window = g.Windows[i];
         if (!window->Active)
@@ -5818,7 +5822,7 @@ void ImGui::FocusPreviousWindow()
 {
     ImGuiContext& g = *GImGui;
     for (int i = g.Windows.Size - 1; i >= 0; i--)
-        if (g.Windows[i]->WasActive && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
+        if (g.Windows[i] != g.NavWindow && g.Windows[i]->WasActive && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
         {
             FocusWindow(g.Windows[i]);
             return;
@@ -10293,6 +10297,12 @@ bool ImGui::BeginMainMenuBar()
 void ImGui::EndMainMenuBar()
 {
     EndMenuBar();
+
+    // When the user has left the menu layer (typically: closed menus through activation of an item), we restore focus to the previous window
+    ImGuiContext& g = *GImGui;
+    if (g.CurrentWindow == g.NavWindow && g.NavLayer == 0)
+        FocusPreviousWindow();
+
     End();
     PopStyleVar(2);
 }
