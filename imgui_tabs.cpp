@@ -590,6 +590,7 @@ bool    ImGui::TabItem(const char* label, bool* p_open, ImGuiTabItemFlags flags)
     {
         if (want_clip_rect)
             PopClipRect();
+        window->DC.CursorPos = backup_main_cursor_pos;
         return tab_is_selected && !tab_appearing;
     }
 
