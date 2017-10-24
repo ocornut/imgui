@@ -1011,6 +1011,7 @@ static const char* ImAtoi(const char* src, int* output)
 
 // MSVC version appears to return -1 on overflow, whereas glibc appears to return total count (which may be >= buf_size). 
 // Ideally we would test for only one of those limits at runtime depending on the behavior the vsnprintf(), but trying to deduct it at compile time sounds like a pandora can of worm.
+#ifndef IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS
 int ImFormatString(char* buf, int buf_size, const char* fmt, ...)
 {
     IM_ASSERT(buf_size > 0);
@@ -1033,6 +1034,7 @@ int ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args)
     buf[w] = 0;
     return w;
 }
+#endif // #ifdef IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS
 
 // Pass data_size==0 for zero-terminated strings
 // FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
