@@ -252,8 +252,9 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2017/10/20 (1.52) - changed IsWindowHovered() default parameters behavior to return false an item is active in another window (e.g. click-dragging item from another window to this window). You can use the newly introduced IsWindowHovered() flags to requests that specific behavior if you need it.
- - 2017/10/20 (1.52) - removed the IsItemRectHovered()/IsWindowRectHovered() names introduced in 1.51, the new flags available for IsItemHovered() and IsWindowHovered() are providing much more details/options, and those legacy entry points were confusing/misleading.
+ - 2017/10/20 (1.52) - changed IsWindowHovered() default parameters behavior to return false if an item is active in another window (e.g. click-dragging item from another window to this window). You can use the newly introduced IsWindowHovered() flags to requests this specific behavior if you need it.
+ - 2017/10/20 (1.52) - marked IsItemHoveredRect()/IsMouseHoveringWindow() as obsolete, in favor of using the newly introduced flags for IsItemHovered() and IsWindowHovered(). See https://github.com/ocornut/imgui/issues/1382 for details.
+                       removed the IsItemRectHovered()/IsWindowRectHovered() names introduced in 1.51 since they were merely more consistent names for the two functions we are now obsoleting.
  - 2017/10/17 (1.52) - marked the old 5-parameters version of Begin() as obsolete (still available). Use SetNextWindowSize()+Begin() instead!
  - 2017/10/11 (1.52) - renamed AlignFirstTextHeightToWidgets() to AlignTextToFramePadding(). Kept inline redirection function (will obsolete).
  - 2017/09/25 (1.52) - removed SetNextWindowPosCenter() because SetNextWindowPos() now has the optional pivot information to do the same and more. Kept redirection function (will obsolete). 
@@ -7556,6 +7557,8 @@ float ImGui::GetTreeNodeToLabelSpacing()
 void ImGui::SetNextTreeNodeOpen(bool is_open, ImGuiCond cond)
 {
     ImGuiContext& g = *GImGui;
+    if (g.CurrentWindow->SkipItems)
+        return;
     g.SetNextTreeNodeOpenVal = is_open;
     g.SetNextTreeNodeOpenCond = cond ? cond : ImGuiCond_Always;
 }
@@ -10611,7 +10614,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     if (size.y == 0.0f)
         size.y = default_size;
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
-    ItemSize(bb);
+    ItemSize(bb, (size.y >= default_size) ? g.Style.FramePadding.y : 0.0f);
     if (!ItemAdd(bb, id))
         return false;
 
@@ -10625,7 +10628,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     float grid_step = ImMin(size.x, size.y) / 2.99f;
     float rounding = ImMin(g.Style.FrameRounding, grid_step * 0.5f);
     ImRect bb_inner = bb;
-    float off = -0.75f; // The border (using Col_FrameBg) tends to look off when color is near-opaque and rounding is enabled. This offset seemed like a good middleground to reduce those artefacts.
+    float off = -0.75f; // The border (using Col_FrameBg) tends to look off when color is near-opaque and rounding is enabled. This offset seemed like a good middle ground to reduce those artifacts.
     bb_inner.Expand(off);
     if ((flags & ImGuiColorEditFlags_AlphaPreviewHalf) && col.w < 1.0f)
     {
@@ -10635,7 +10638,12 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     }
     else
     {
-        RenderColorRectWithAlphaCheckerboard(bb_inner.Min, bb_inner.Max, GetColorU32((flags & ImGuiColorEditFlags_AlphaPreview) ? col : col_without_alpha), grid_step, ImVec2(off, off), rounding);
+        // Because GetColorU32() multiplies by the global style Alpha and we don't want to display a checkerboard if the source code had no alpha
+        ImVec4 col_source = (flags & ImGuiColorEditFlags_AlphaPreview) ? col : col_without_alpha;
+        if (col_source.w < 1.0f)
+            RenderColorRectWithAlphaCheckerboard(bb_inner.Min, bb_inner.Max, GetColorU32(col_source), grid_step, ImVec2(off, off), rounding);
+        else
+            window->DrawList->AddRectFilled(bb_inner.Min, bb_inner.Max, GetColorU32(col_source), rounding, ~0);
     }
     RenderNavHighlight(bb, id);
     if (window->Flags & ImGuiWindowFlags_ShowBorders)
