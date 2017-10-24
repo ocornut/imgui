@@ -1475,7 +1475,10 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)cfg.FontData, cfg.FontNo);
         IM_ASSERT(font_offset >= 0);
         if (!stbtt_InitFont(&tmp.FontInfo, (unsigned char*)cfg.FontData, font_offset))
+        {
+            ImGui::MemFree(tmp_array);
             return false;
+        }
     }
 
     // Allocate packing character data and flag packed characters buffer as non-packed (x0=y0=x1=y1=0)
