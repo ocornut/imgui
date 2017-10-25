@@ -2051,6 +2051,8 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
             return false;
     if (!IsWindowContentHoverable(window, flags))
         return false;
+    if (window->DC.ItemFlags & ImGuiItemFlags_Disabled)
+        return false;
     return true;
 }
 
@@ -2069,6 +2071,8 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
     if (!IsMouseHoveringRect(bb.Min, bb.Max))
         return false;
     if (!IsWindowContentHoverable(window, ImGuiHoveredFlags_Default))
+        return false;
+    if (window->DC.ItemFlags & ImGuiItemFlags_Disabled)
         return false;
 
     SetHoveredID(id);
@@ -2090,7 +2094,7 @@ bool ImGui::FocusableItemRegister(ImGuiWindow* window, ImGuiID id, bool tab_stop
 {
     ImGuiContext& g = *GImGui;
 
-    const bool allow_keyboard_focus = (window->DC.ItemFlags & ImGuiItemFlags_AllowKeyboardFocus) != 0;
+    const bool allow_keyboard_focus = (window->DC.ItemFlags & (ImGuiItemFlags_AllowKeyboardFocus | ImGuiItemFlags_Disabled)) == ImGuiItemFlags_AllowKeyboardFocus;
     window->FocusIdxAllCounter++;
     if (allow_keyboard_focus)
         window->FocusIdxTabCounter++;
