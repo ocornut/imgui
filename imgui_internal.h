@@ -45,13 +45,12 @@ struct ImGuiMouseCursorData;
 struct ImGuiPopupRef;
 struct ImGuiWindow;
 
-typedef int ImGuiLayoutType;      // enum ImGuiLayoutType_
-typedef int ImGuiButtonFlags;     // enum ImGuiButtonFlags_
-typedef int ImGuiTreeNodeFlags;   // enum ImGuiTreeNodeFlags_
-typedef int ImGuiSliderFlags;     // enum ImGuiSliderFlags_
-typedef int ImGuiSeparatorFlags;  // enum ImGuiSeparatorFlags_
-typedef int ImGuiItemFlags;       // enum ImGuiItemFlags_
-typedef int ImGuiNavHighlightFlags;
+typedef int ImGuiLayoutType;        // enum: horizontal or vertical             // enum ImGuiLayoutType_
+typedef int ImGuiButtonFlags;       // flags: for ButtonEx(), ButtonBehavior()  // enum ImGuiButtonFlags_
+typedef int ImGuiItemFlags;         // flags: for PushItemFlag()                // enum ImGuiItemFlags_
+typedef int ImGuiNavHighlightFlags; // flags: for RenderNavHighlight()          // enum ImGuiNavHighlightFlags_
+typedef int ImGuiSeparatorFlags;    // flags: for Separator() - internal        // enum ImGuiSeparatorFlags_
+typedef int ImGuiSliderFlags;       // flags: for SliderBehavior()              // enum ImGuiSliderFlags_
 
 //-------------------------------------------------------------------------
 // STB libraries
@@ -129,7 +128,9 @@ static inline ImVec2& operator+=(ImVec2& lhs, const ImVec2& rhs)                
 static inline ImVec2& operator-=(ImVec2& lhs, const ImVec2& rhs)                { lhs.x -= rhs.x; lhs.y -= rhs.y; return lhs; }
 static inline ImVec2& operator*=(ImVec2& lhs, const float rhs)                  { lhs.x *= rhs; lhs.y *= rhs; return lhs; }
 static inline ImVec2& operator/=(ImVec2& lhs, const float rhs)                  { lhs.x /= rhs; lhs.y /= rhs; return lhs; }
+static inline ImVec4 operator+(const ImVec4& lhs, const ImVec4& rhs)            { return ImVec4(lhs.x+rhs.x, lhs.y+rhs.y, lhs.z+rhs.z, lhs.w+rhs.w); }
 static inline ImVec4 operator-(const ImVec4& lhs, const ImVec4& rhs)            { return ImVec4(lhs.x-rhs.x, lhs.y-rhs.y, lhs.z-rhs.z, lhs.w-rhs.w); }
+static inline ImVec4 operator*(const ImVec4& lhs, const ImVec4& rhs)            { return ImVec4(lhs.x*rhs.x, lhs.y*rhs.y, lhs.z*rhs.z, lhs.w*rhs.w); }
 #endif
 
 static inline int    ImMin(int lhs, int rhs)                                    { return lhs < rhs ? lhs : rhs; }
@@ -905,6 +906,7 @@ namespace ImGui
     IMGUI_API void          ClosePopup(ImGuiID id);
     IMGUI_API bool          IsPopupOpen(ImGuiID id);
     IMGUI_API bool          BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags);
+    IMGUI_API void          BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_tooltip = true);
 
     IMGUI_API int           CalcTypematicPressedRepeatAmount(float t, float t_prev, float repeat_delay, float repeat_rate);
 

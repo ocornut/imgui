@@ -667,7 +667,7 @@ static void             SetWindowScrollY(ImGuiWindow* window, float new_scroll_y
 static void             SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond);
 static void             SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond);
 static void             SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond);
-static ImGuiWindow*     FindHoveredWindow(ImVec2 pos, bool excluding_childs);
+static ImGuiWindow*     FindHoveredWindow(ImVec2 pos);
 static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags);
 static void             ClearSetNextWindowData();
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
@@ -3162,12 +3162,12 @@ void ImGui::NewFrame()
             SaveIniSettingsToDisk(g.IO.IniFilename);
     }
 
-    // Find the window we are hovering. Child windows can extend beyond the limit of their parent so we need to derive HoveredRootWindow from HoveredWindow
-    g.HoveredWindow = g.MovingWindow ? g.MovingWindow : FindHoveredWindow(g.IO.MousePos, false);
-    if (g.HoveredWindow && (g.HoveredWindow->Flags & ImGuiWindowFlags_ChildWindow))
-        g.HoveredRootWindow = g.HoveredWindow->RootWindow;
-    else
-        g.HoveredRootWindow = g.MovingWindow ? g.MovingWindow->RootWindow : FindHoveredWindow(g.IO.MousePos, true);
+    // Find the window we are hovering
+    // - Child windows can extend beyond the limit of their parent so we need to derive HoveredRootWindow from HoveredWindow.
+    // - When moving a window we can skip the search, which also conveniently bypasses the fact that window->WindowRectClipped is lagging as this point.
+    // - We also support the moved window toggling the NoInputs flag after moving has started in order to be able to detect windows below it, which is useful for e.g. docking mechanisms.
+    g.HoveredWindow = (g.MovingWindow && !(g.MovingWindow->Flags & ImGuiWindowFlags_NoInputs)) ? g.MovingWindow : FindHoveredWindow(g.IO.MousePos);
+    g.HoveredRootWindow = g.HoveredWindow ? g.HoveredWindow->RootWindow : NULL;
 
     if (ImGuiWindow* modal_window = GetFrontMostModalRootWindow())
     {
@@ -4090,7 +4090,7 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
 
 // Find window given position, search front-to-back
 // FIXME: Note that we have a lag here because WindowRectClipped is updated in Begin() so windows moved by user via SetWindowPos() and not SetNextWindowPos() will have that rectangle lagging by a frame at the time FindHoveredWindow() is called, aka before the next Begin(). Moving window thankfully isn't affected.
-static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
+static ImGuiWindow* FindHoveredWindow(ImVec2 pos)
 {
     ImGuiContext& g = *GImGui;
     for (int i = g.Windows.Size - 1; i >= 0; i--)
@@ -4100,10 +4100,8 @@ static ImGuiWindow* FindHoveredWindow(ImVec2 pos, bool excluding_childs)
             continue;
         if (window->Flags & ImGuiWindowFlags_NoInputs)
             continue;
-        if (excluding_childs && (window->Flags & ImGuiWindowFlags_ChildWindow) != 0)
-            continue;
 
-        // Using the clipped AABB so a child window will typically be clipped by its parent.
+        // Using the clipped AABB, a child window will typically be clipped by its parent (not always)
         ImRect bb(window->WindowRectClipped.Min - g.Style.TouchExtraPadding, window->WindowRectClipped.Max + g.Style.TouchExtraPadding);
         if (bb.Contains(pos))
             return window;
@@ -4407,7 +4405,7 @@ static ImRect GetVisibleRect()
 }
 
 // Not exposed publicly as BeginTooltip() because bool parameters are evil. Let's see if other needs arise first.
-static void BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_tooltip)
+void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_tooltip)
 {
     ImGuiContext& g = *GImGui;
     char window_name[16];
@@ -5581,20 +5579,23 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_C))
                 ImGui::LogToClipboard();
         */
+
+        // Inner rectangle
+        // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
+        // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
+        window->InnerRect.Min.x = title_bar_rect.Min.x;
+        window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight();
+        window->InnerRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
+        window->InnerRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
+        //window->DrawList->AddRect(window->InnerRect.Min, window->InnerRect.Max, IM_COL32_WHITE);
+
+        // Clear 'accessed' flag last thing
+        window->Accessed = false;
     }
 
-    // Inner rectangle and inner clipping rectangle
-    // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
-    // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
-    const ImRect title_bar_rect = window->TitleBarRect();
-    const float border_size = window->BorderSize;
-    window->InnerRect.Min.x = title_bar_rect.Min.x;
-    window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight();
-    window->InnerRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
-    window->InnerRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
-    //window->DrawList->AddRect(window->InnerRect.Min, window->InnerRect.Max, IM_COL32_WHITE);
-
+    // Inner clipping rectangle
     // Force round operator last to ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
+    const float border_size = window->BorderSize;
     ImRect clip_rect;
     clip_rect.Min.x = ImFloor(0.5f + window->InnerRect.Min.x + ImMax(border_size, ImFloor(window->WindowPadding.x*0.5f)));
     clip_rect.Min.y = ImFloor(0.5f + window->InnerRect.Min.y + border_size);
@@ -5602,9 +5603,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     clip_rect.Max.y = ImFloor(0.5f + window->InnerRect.Max.y - border_size);
     PushClipRect(clip_rect.Min, clip_rect.Max, true);
 
-    // Clear 'accessed' flag last thing
-    if (first_begin_of_the_frame)
-        window->Accessed = false;
     window->BeginCount++;
     g.SetNextWindowSizeConstraint = false;
 
