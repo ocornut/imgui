@@ -81,9 +81,8 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit ImGui context pointe
 // Helpers
 //-----------------------------------------------------------------------------
 
-#define IM_ARRAYSIZE(_ARR)      ((int)(sizeof(_ARR)/sizeof(*_ARR)))
-#define IM_PI                   3.14159265358979323846f
-#define IM_OFFSETOF(_TYPE,_ELM) ((size_t)&(((_TYPE*)0)->_ELM))
+#define IM_PI                       3.14159265358979323846f
+#define IM_OFFSETOF(_TYPE,_ELM)     ((size_t)&(((_TYPE*)0)->_ELM))
 
 // Helpers: UTF-8 <> wchar
 IMGUI_API int           ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
@@ -457,8 +456,8 @@ struct ImGuiContext
     ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
     ImGuiWindow*            ActiveIdWindow;
     ImGuiInputSource        ActiveIdSource;                     // Activating with mouse or nav (gamepad/keyboard)
-    ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window (only apply to moving with mouse)
-    ImGuiID                 MovedWindowMoveId;                  // == MovedWindow->RootWindow->MoveId
+    ImGuiWindow*            MovingWindow;                       // Track the child window we clicked on to move a window.
+    ImGuiID                 MovingWindowMoveId;                 // == MovingWindow->MoveId
     ImVector<ImGuiIniData>  Settings;                           // .ini Settings
     float                   SettingsDirtyTimer;                 // Save .ini Settings on disk when time reaches zero
     ImVector<ImGuiColMod>   ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
@@ -586,8 +585,8 @@ struct ImGuiContext
         ActiveIdClickOffset = ImVec2(-1,-1);
         ActiveIdWindow = NULL;
         ActiveIdSource = ImGuiInputSource_None;
-        MovedWindow = NULL;
-        MovedWindowMoveId = 0;
+        MovingWindow = NULL;
+        MovingWindowMoveId = 0;
         SettingsDirtyTimer = 0.0f;
 
         NavWindow = NULL;
