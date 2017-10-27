@@ -5588,9 +5588,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->InnerRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
         window->InnerRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
         //window->DrawList->AddRect(window->InnerRect.Min, window->InnerRect.Max, IM_COL32_WHITE);
-
-        // Clear 'accessed' flag last thing
-        window->Accessed = false;
     }
 
     // Inner clipping rectangle
@@ -5602,6 +5599,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     clip_rect.Max.x = ImFloor(0.5f + window->InnerRect.Max.x - ImMax(border_size, ImFloor(window->WindowPadding.x*0.5f)));
     clip_rect.Max.y = ImFloor(0.5f + window->InnerRect.Max.y - border_size);
     PushClipRect(clip_rect.Min, clip_rect.Max, true);
+
+    // Clear 'accessed' flag last thing (After PushClipRect which will set the flag. We want the flag to stay false when the default "Debug" window is unused)
+    if (first_begin_of_the_frame)
+        window->Accessed = false;
 
     window->BeginCount++;
     g.SetNextWindowSizeConstraint = false;
