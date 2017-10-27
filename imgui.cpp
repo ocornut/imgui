@@ -2328,29 +2328,29 @@ void ImGui::NewFrame()
     g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
 
     // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
-    if (g.MovedWindowMoveId && g.MovedWindowMoveId == g.ActiveId)
+    if (g.MovingWindowMoveId && g.MovingWindowMoveId == g.ActiveId)
     {
-        KeepAliveID(g.MovedWindowMoveId);
-        IM_ASSERT(g.MovedWindow && g.MovedWindow->RootWindow);
-        IM_ASSERT(g.MovedWindow->MoveId == g.MovedWindowMoveId);
+        KeepAliveID(g.MovingWindowMoveId);
+        IM_ASSERT(g.MovingWindow && g.MovingWindow->RootWindow);
+        IM_ASSERT(g.MovingWindow->MoveId == g.MovingWindowMoveId);
         if (g.IO.MouseDown[0])
         {
-            g.MovedWindow->RootWindow->PosFloat += g.IO.MouseDelta;
+            g.MovingWindow->RootWindow->PosFloat += g.IO.MouseDelta;
             if (g.IO.MouseDelta.x != 0.0f || g.IO.MouseDelta.y != 0.0f)
-                MarkIniSettingsDirty(g.MovedWindow->RootWindow);
-            FocusWindow(g.MovedWindow);
+                MarkIniSettingsDirty(g.MovingWindow->RootWindow);
+            FocusWindow(g.MovingWindow);
         }
         else
         {
             ClearActiveID();
-            g.MovedWindow = NULL;
-            g.MovedWindowMoveId = 0;
+            g.MovingWindow = NULL;
+            g.MovingWindowMoveId = 0;
         }
     }
     else
     {
-        g.MovedWindow = NULL;
-        g.MovedWindowMoveId = 0;
+        g.MovingWindow = NULL;
+        g.MovingWindowMoveId = 0;
     }
 
     // Delay saving settings so we don't spam disk too much
@@ -2362,11 +2362,11 @@ void ImGui::NewFrame()
     }
 
     // Find the window we are hovering. Child windows can extend beyond the limit of their parent so we need to derive HoveredRootWindow from HoveredWindow
-    g.HoveredWindow = g.MovedWindow ? g.MovedWindow : FindHoveredWindow(g.IO.MousePos, false);
+    g.HoveredWindow = g.MovingWindow ? g.MovingWindow : FindHoveredWindow(g.IO.MousePos, false);
     if (g.HoveredWindow && (g.HoveredWindow->Flags & ImGuiWindowFlags_ChildWindow))
         g.HoveredRootWindow = g.HoveredWindow->RootWindow;
     else
-        g.HoveredRootWindow = g.MovedWindow ? g.MovedWindow->RootWindow : FindHoveredWindow(g.IO.MousePos, true);
+        g.HoveredRootWindow = g.MovingWindow ? g.MovingWindow->RootWindow : FindHoveredWindow(g.IO.MousePos, true);
 
     if (ImGuiWindow* modal_window = GetFrontMostModalRootWindow())
     {
@@ -2504,7 +2504,7 @@ void ImGui::Shutdown()
     g.HoveredWindow = NULL;
     g.HoveredRootWindow = NULL;
     g.ActiveIdWindow = NULL;
-    g.MovedWindow = NULL;
+    g.MovingWindow = NULL;
     for (int i = 0; i < g.Settings.Size; i++)
         ImGui::MemFree(g.Settings[i].Name);
     g.Settings.clear();
@@ -2799,9 +2799,9 @@ void ImGui::EndFrame()
                     FocusWindow(g.HoveredWindow);
                     if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
                     {
-                        g.MovedWindow = g.HoveredWindow;
-                        g.MovedWindowMoveId = g.HoveredWindow->MoveId;
-                        SetActiveID(g.MovedWindowMoveId, g.HoveredRootWindow);
+                        g.MovingWindow = g.HoveredWindow;
+                        g.MovingWindowMoveId = g.MovingWindow->MoveId;
+                        SetActiveID(g.MovingWindowMoveId, g.HoveredRootWindow);
                     }
                 }
                 else if (g.NavWindow != NULL && GetFrontMostModalRootWindow() == NULL)

@@ -435,8 +435,8 @@ struct ImGuiContext
     bool                    ActiveIdAllowOverlap;               // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
     ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
     ImGuiWindow*            ActiveIdWindow;
-    ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window.
-    ImGuiID                 MovedWindowMoveId;                  // == MovedWindow->RootWindow->MoveId
+    ImGuiWindow*            MovingWindow;                       // Track the child window we clicked on to move a window.
+    ImGuiID                 MovingWindowMoveId;                 // == MovingWindow->MoveId
     ImVector<ImGuiIniData>  Settings;                           // .ini Settings
     float                   SettingsDirtyTimer;                 // Save .ini Settings on disk when time reaches zero
     ImVector<ImGuiColMod>   ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
@@ -527,8 +527,8 @@ struct ImGuiContext
         ActiveIdAllowOverlap = false;
         ActiveIdClickOffset = ImVec2(-1,-1);
         ActiveIdWindow = NULL;
-        MovedWindow = NULL;
-        MovedWindowMoveId = 0;
+        MovingWindow = NULL;
+        MovingWindowMoveId = 0;
         SettingsDirtyTimer = 0.0f;
 
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
