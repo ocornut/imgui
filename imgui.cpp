@@ -10613,7 +10613,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     else
         window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), rounding); // Color button are often in need of some sort of border
 
-    if (!(flags & ImGuiColorEditFlags_NoTooltip) && IsItemHovered()) // FIXME-NAVIGATION: 'hovered' ?
+    if (!(flags & ImGuiColorEditFlags_NoTooltip) && hovered)
         ColorTooltip(desc_id, &col.x, flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf));
 
     return pressed;
