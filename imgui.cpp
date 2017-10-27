@@ -4609,20 +4609,23 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_C))
                 ImGui::LogToClipboard();
         */
+
+        // Inner rectangle
+        // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
+        // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
+        window->InnerRect.Min.x = title_bar_rect.Min.x;
+        window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight();
+        window->InnerRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
+        window->InnerRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
+        //window->DrawList->AddRect(window->InnerRect.Min, window->InnerRect.Max, IM_COL32_WHITE);
+
+        // Clear 'accessed' flag last thing
+        window->Accessed = false;
     }
 
-    // Inner rectangle and inner clipping rectangle
-    // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
-    // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
-    const ImRect title_bar_rect = window->TitleBarRect();
-    const float border_size = window->BorderSize;
-    window->InnerRect.Min.x = title_bar_rect.Min.x;
-    window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight();
-    window->InnerRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
-    window->InnerRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
-    //window->DrawList->AddRect(window->InnerRect.Min, window->InnerRect.Max, IM_COL32_WHITE);
-
+    // Inner clipping rectangle
     // Force round operator last to ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
+    const float border_size = window->BorderSize;
     ImRect clip_rect;
     clip_rect.Min.x = ImFloor(0.5f + window->InnerRect.Min.x + ImMax(border_size, ImFloor(window->WindowPadding.x*0.5f)));
     clip_rect.Min.y = ImFloor(0.5f + window->InnerRect.Min.y + border_size);
@@ -4630,9 +4633,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     clip_rect.Max.y = ImFloor(0.5f + window->InnerRect.Max.y - border_size);
     PushClipRect(clip_rect.Min, clip_rect.Max, true);
 
-    // Clear 'accessed' flag last thing
-    if (first_begin_of_the_frame)
-        window->Accessed = false;
     window->BeginCount++;
     g.SetNextWindowSizeConstraint = false;
 
