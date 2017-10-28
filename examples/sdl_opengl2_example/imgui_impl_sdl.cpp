@@ -1,5 +1,6 @@
 // ImGui SDL2 binding with OpenGL
 // In this binding, ImTextureID is used to store an OpenGL 'GLuint' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
+// (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 
 // *DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL*
 // This is mostly provided as a reference to learn how ImGui integration works, because it is easier to read.

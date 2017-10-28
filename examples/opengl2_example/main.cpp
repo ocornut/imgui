@@ -1,5 +1,9 @@
-// ImGui - standalone example application for Glfw + OpenGL 2, using fixed pipeline
+// ImGui - standalone example application for GLFW + OpenGL 2, using fixed pipeline
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
+// (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
+
+// *DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL*
+// See imgui_impl_glfw.cpp for details.
 
 #include <imgui.h>
 #include "imgui_impl_glfw.h"
