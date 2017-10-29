@@ -599,6 +599,7 @@ enum ImGuiDragDropFlags_
     // BeginDragDropSource() flags
     ImGuiDragDropFlags_SourceNoAutoTooltip      = 1 << 0,
     ImGuiDragDropFlags_SourceNoDisableHover     = 1 << 1,       // By default, when dragging we clear data so that IsItemHovered() will return true, to avoid subsequent user code submitting tooltips.
+    ImGuiDragDropFlags_SourceAllowNullID        = 1 << 2,       // Allow items such as Text(), Image() that have no unique identifier to be used as drag source, by manufacturing a temporary identifier based on their window-relative position. This is extremely unusual within the dear imgui ecosystem and so we made it explicit.
     // BeginDragDropTarget() flags
     ImGuiDragDropFlags_AcceptBeforeDelivery     = 1 << 10,      // AcceptDragDropPayload() returns true even before the mouse button is released. You can then call IsDelivery() to test if the payload needs to be delivered.
     ImGuiDragDropFlags_AcceptNoDrawDefaultRect  = 1 << 11,      // Do not draw the default highlight rectangle when hovering over target.
