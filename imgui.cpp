@@ -10631,6 +10631,10 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
             PushStyleColor(ImGuiCol_PopupBg, GetStyleColorVec4(ImGuiCol_PopupBg) * ImVec4(1.0f, 1.0f, 1.0f, 0.6f));
             BeginTooltipEx(ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_ShowBorders);
         }
+
+        if (!(flags & ImGuiDragDropFlags_SourceNoDisableHover))
+            window->DC.LastItemRectHoveredRect = false;
+
         return true;
     }
     return false;
