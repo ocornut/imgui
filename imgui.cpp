@@ -5848,7 +5848,10 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             hovered = true;
             SetHoveredID(id);
             if (CalcTypematicPressedRepeatAmount(g.HoveredIdTimer + 0.0001f, g.HoveredIdTimer + 0.0001f - g.IO.DeltaTime, 0.01f, 0.70f)) // FIXME: Our formula for CalcTypematicPressedRepeatAmount() is fishy
+            {
                 pressed = true;
+                FocusWindow(window);
+            }
         }
 
     if ((flags & ImGuiButtonFlags_FlattenChilds) && g.HoveredRootWindow == window)
