@@ -43,9 +43,11 @@ struct ImGuiIniData;
 struct ImGuiMouseCursorData;
 struct ImGuiPopupRef;
 struct ImGuiWindow;
+struct ImGuiPayload;                // User data payload for drag and drop operations
 
 typedef int ImGuiLayoutType;        // enum: horizontal or vertical             // enum ImGuiLayoutType_
 typedef int ImGuiButtonFlags;       // flags: for ButtonEx(), ButtonBehavior()  // enum ImGuiButtonFlags_
+typedef int ImGuiDragDropFlags;     // flags: for *DragDrop*()                  // enum ImGuiDragDropFlags_
 typedef int ImGuiItemFlags;         // flags: for PushItemFlag()                // enum ImGuiItemFlags_
 typedef int ImGuiSeparatorFlags;    // flags: for Separator() - internal        // enum ImGuiSeparatorFlags_
 typedef int ImGuiSliderFlags;       // flags: for SliderBehavior()              // enum ImGuiSliderFlags_
@@ -213,6 +215,15 @@ enum ImGuiSeparatorFlags_
 {
     ImGuiSeparatorFlags_Horizontal          = 1 << 0,   // Axis default to current layout type, so generally Horizontal unless e.g. in a menu bar
     ImGuiSeparatorFlags_Vertical            = 1 << 1
+};
+
+// Flags for ImGui::BeginDragDropSource(), ImGui::AcceptDragDropPayload()
+enum ImGuiDragDropFlags_
+{
+    ImGuiDragDropFlags_SourceNoAutoTooltip      = 1 << 0,
+    ImGuiDragDropFlags_AcceptBeforeDelivery     = 1 << 1,       // AcceptDragDropPayload() returns true even before the mouse button is released. You can then call IsDelivery() to test if the payload needs to be delivered.
+    ImGuiDragDropFlags_AcceptNoDrawDefaultRect  = 1 << 2,       // Do not draw the default highlight rectangle when hovering over target.
+    ImGuiDragDropFlags_AcceptPeekOnly           = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect  // For peeking ahead and inspecting the payload before delivery.
 };
 
 // FIXME: this is in development, not exposed/functional as a generic feature yet.
@@ -404,6 +415,28 @@ struct ImGuiPopupRef
     ImGuiPopupRef(ImGuiID id, ImGuiWindow* parent_window, ImGuiID parent_menu_set, const ImVec2& mouse_pos) { PopupId = id; Window = NULL; ParentWindow = parent_window; ParentMenuSet = parent_menu_set; MousePosOnOpen = mouse_pos; }
 };
 
+// Data payload for Drag and Drop operations
+struct ImGuiPayload
+{
+    // Members
+    const void*     Data;               // Data (copied and owned by dear imgui)
+    int             DataSize;           // Data size
+
+    // [Internal]
+    ImGuiID         SourceId;           // Source item id
+    ImGuiID         SourceParentId;     // Source parent id (if available)
+    ImGuiID         AcceptId;           // Target item id (set at the time of accepting the payload)
+    int             AcceptFrameCount;   // Last time a target expressed a desire to accept the source
+    int             DataFrameCount;     // Data timestamp
+    char            DataType[8 + 1];    // Data type tag (short user-supplied string)
+    bool            Delivery;           // Set when AcceptDragDropPayload() was called and the mouse button is released over the target item
+
+    ImGuiPayload()  { Clear(); }
+    void Clear()    { SourceId = SourceParentId = AcceptId = 0; AcceptFrameCount = -1; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Delivery = false; }
+    bool IsDataType(const char* type) const { return DataFrameCount != -1 && strcmp(type, DataType) == 0; }
+    bool IsDelivery() const                 { return Delivery; }
+};
+
 // Main state for ImGui
 struct ImGuiContext
 {
@@ -471,6 +504,14 @@ struct ImGuiContext
     ImDrawList              OverlayDrawList;                    // Optional software render of mouse cursors, if io.MouseDrawCursor is set + a few debug overlays
     ImGuiMouseCursor        MouseCursor;
     ImGuiMouseCursorData    MouseCursorData[ImGuiMouseCursor_Count_];
+
+    // Drag and Drop
+    bool                    DragDropActive;
+    ImGuiDragDropFlags      DragDropSourceFlags;
+    int                     DragDropMouseButton;
+    ImGuiPayload            DragDropPayload;
+    ImVector<unsigned char> DragDropPayloadBufHeap;             // We don't expose the ImVector<> directly
+    unsigned char           DragDropPayloadBufLocal[8];
 
     // Widget state
     ImGuiTextEditState      InputTextState;
@@ -546,6 +587,10 @@ struct ImGuiContext
         SetNextWindowFocus = false;
         SetNextTreeNodeOpenVal = false;
         SetNextTreeNodeOpenCond = 0;
+
+        DragDropActive = false;
+        DragDropSourceFlags = 0;
+        DragDropMouseButton = -1;
 
         ScalarAsInputTextId = 0;
         ColorEditOptions = ImGuiColorEditFlags__OptionsDefault;
@@ -809,6 +854,14 @@ namespace ImGui
 
     IMGUI_API void          Scrollbar(ImGuiLayoutType direction);
     IMGUI_API void          VerticalSeparator();        // Vertical separator, for menu bars (use current line height). not exposed because it is misleading what it doesn't have an effect on regular layout.
+
+    // FIXME-WIP: New Drag and Drop API
+    IMGUI_API bool          BeginDragDropSource(ImGuiDragDropFlags flags = 0, int mouse_button = 0);                      // Call when the current item is active. If this return true, you can call SetDragDropPayload() + EndDragDropSource()
+    IMGUI_API bool          SetDragDropPayload(const char* type, const void* data, size_t data_size, ImGuiCond cond = 0); // Type is a user defined string of maximum 8 characters. Strings starting with '_' are reserved for dear imgui internal types. Data is copied and held by imgui.
+    IMGUI_API void          EndDragDropSource();
+    IMGUI_API bool          BeginDragDropTarget();                                                                        // Call after submitting an item that may receive an item. If this returns true, you can call AcceptDragDropPayload() + EndDragDropTarget()
+    IMGUI_API const ImGuiPayload* AcceptDragDropPayload(const char* type, ImGuiDragDropFlags flags = 0);                  // Accept contents of a given type. If ImGuiDragDropFlags_AcceptBeforeDelivery is set you can peek into the payload before the mouse button is released.
+    IMGUI_API void          EndDragDropTarget();
 
     // FIXME-WIP: New Columns API
     IMGUI_API void          BeginColumns(const char* id, int count, ImGuiColumnsFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().
