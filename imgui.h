@@ -64,6 +64,7 @@ struct ImGuiTextBuffer;             // Text buffer for logging/accumulating text
 struct ImGuiTextEditCallbackData;   // Shared state of ImGui::InputText() when using custom ImGuiTextEditCallback (rare/advanced use)
 struct ImGuiSizeConstraintCallbackData;// Structure used to constraint window size in custom ways when using custom ImGuiSizeConstraintCallback (rare/advanced use)
 struct ImGuiListClipper;            // Helper to manually clip large list of items
+struct ImGuiPayload;                // User data payload for drag and drop operations
 struct ImGuiContext;                // ImGui context (opaque)
 
 // Typedefs and Enumerations (declared as int for compatibility and to not pollute the top of this file)
@@ -77,6 +78,7 @@ typedef int ImGuiKey;               // enum: a key identifier (ImGui-side enum) 
 typedef int ImGuiMouseCursor;       // enum: a mouse cursor identifier          // enum ImGuiMouseCursor_
 typedef int ImGuiCond;              // enum: a condition for Set*()             // enum ImGuiCond_
 typedef int ImGuiColorEditFlags;    // flags: color edit flags for Color*()     // enum ImGuiColorEditFlags_
+typedef int ImGuiDragDropFlags;     // flags: for *DragDrop*()                  // enum ImGuiDragDropFlags_
 typedef int ImGuiWindowFlags;       // flags: window flags for Begin*()         // enum ImGuiWindowFlags_
 typedef int ImGuiColumnsFlags;      // flags: for *Columns*()                   // enum ImGuiColumnsFlags_
 typedef int ImGuiInputTextFlags;    // flags: for InputText*()                  // enum ImGuiInputTextFlags_
@@ -410,6 +412,14 @@ namespace ImGui
     IMGUI_API void          LogButtons();                                                       // helper to display buttons for logging to tty/file/clipboard
     IMGUI_API void          LogText(const char* fmt, ...) IM_FMTARGS(1);                        // pass text data straight to log (without being displayed)
 
+    // Drag and Drop
+    IMGUI_API bool          BeginDragDropSource(ImGuiDragDropFlags flags = 0, int mouse_button = 0);                      // Call when the current item is active. If this return true, you can call SetDragDropPayload() + EndDragDropSource()
+    IMGUI_API bool          SetDragDropPayload(const char* type, const void* data, size_t data_size, ImGuiCond cond = 0); // Type is a user defined string of maximum 8 characters. Strings starting with '_' are reserved for dear imgui internal types. Data is copied and held by imgui.
+    IMGUI_API void          EndDragDropSource();
+    IMGUI_API bool          BeginDragDropTarget();                                                                        // Call after submitting an item that may receive an item. If this returns true, you can call AcceptDragDropPayload() + EndDragDropTarget()
+    IMGUI_API const ImGuiPayload* AcceptDragDropPayload(const char* type, ImGuiDragDropFlags flags = 0);                  // Accept contents of a given type. If ImGuiDragDropFlags_AcceptBeforeDelivery is set you can peek into the payload before the mouse button is released.
+    IMGUI_API void          EndDragDropTarget();
+
     // Clipping
     IMGUI_API void          PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect);
     IMGUI_API void          PopClipRect();
@@ -581,6 +591,18 @@ enum ImGuiHoveredFlags_
     ImGuiHoveredFlags_AllowWhenBlockedByActiveItem  = 1 << 2,   // Return true even if an active item is blocking access to this item/window
     ImGuiHoveredFlags_AllowWhenOverlapped           = 1 << 3,   // Return true even if the position is overlapped by another window
     ImGuiHoveredFlags_RectOnly                      = ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenOverlapped
+};
+
+// Flags for ImGui::BeginDragDropSource(), ImGui::AcceptDragDropPayload()
+enum ImGuiDragDropFlags_
+{
+    // BeginDragDropSource() flags
+    ImGuiDragDropFlags_SourceNoAutoTooltip      = 1 << 0,
+    ImGuiDragDropFlags_SourceNoDisableHover     = 1 << 1,       // By default, when dragging we clear data so that IsItemHovered() will return true, to avoid subsequent user code submitting tooltips.
+    // BeginDragDropTarget() flags
+    ImGuiDragDropFlags_AcceptBeforeDelivery     = 1 << 10,      // AcceptDragDropPayload() returns true even before the mouse button is released. You can then call IsDelivery() to test if the payload needs to be delivered.
+    ImGuiDragDropFlags_AcceptNoDrawDefaultRect  = 1 << 11,      // Do not draw the default highlight rectangle when hovering over target.
+    ImGuiDragDropFlags_AcceptPeekOnly           = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect  // For peeking ahead and inspecting the payload before delivery.
 };
 
 // User fill ImGuiIO.KeyMap[] array with indices into the ImGuiIO.KeysDown[512] array
@@ -1116,6 +1138,28 @@ struct ImGuiSizeConstraintCallbackData
     ImVec2  Pos;            // Read-only.    Window position, for reference.
     ImVec2  CurrentSize;    // Read-only.    Current window size.
     ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
+};
+
+// Data payload for Drag and Drop operations
+struct ImGuiPayload
+{
+    // Members
+    const void*     Data;               // Data (copied and owned by dear imgui)
+    int             DataSize;           // Data size
+
+    // [Internal]
+    ImGuiID         SourceId;           // Source item id
+    ImGuiID         SourceParentId;     // Source parent id (if available)
+    ImGuiID         AcceptId;           // Target item id (set at the time of accepting the payload)
+    int             AcceptFrameCount;   // Last time a target expressed a desire to accept the source
+    int             DataFrameCount;     // Data timestamp
+    char            DataType[8 + 1];    // Data type tag (short user-supplied string)
+    bool            Delivery;           // Set when AcceptDragDropPayload() was called and the mouse button is released over the target item
+
+    ImGuiPayload()  { Clear(); }
+    void Clear()    { SourceId = SourceParentId = AcceptId = 0; AcceptFrameCount = -1; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Delivery = false; }
+    bool IsDataType(const char* type) const { return DataFrameCount != -1 && strcmp(type, DataType) == 0; }
+    bool IsDelivery() const                 { return Delivery; }
 };
 
 // Helpers macros to generate 32-bits encoded colors
