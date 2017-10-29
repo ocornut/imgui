@@ -5841,6 +5841,16 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     bool pressed = false;
     bool hovered = ItemHoverable(bb, id);
 
+    // Special mode for Drag and Drop where holding button pressed for a long time while dragging another item triggers the button
+    if ((flags & ImGuiButtonFlags_PressedOnDragDropHold) && g.DragDropActive && !hovered)
+        if (IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+        {
+            hovered = true;
+            SetHoveredID(id);
+            if (CalcTypematicPressedRepeatAmount(g.HoveredIdTimer + 0.0001f, g.HoveredIdTimer + 0.0001f - g.IO.DeltaTime, 0.01f, 0.70f)) // FIXME: Our formula for CalcTypematicPressedRepeatAmount() is fishy
+                pressed = true;
+        }
+
     if ((flags & ImGuiButtonFlags_FlattenChilds) && g.HoveredRootWindow == window)
         g.HoveredWindow = backup_hovered_window;
 
@@ -6271,6 +6281,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // - OpenOnArrow .................... single-click on arrow to open
     // - OpenOnDoubleClick|OpenOnArrow .. single-click on arrow or double-click anywhere to open
     ImGuiButtonFlags button_flags = ImGuiButtonFlags_NoKeyModifiers | ((flags & ImGuiTreeNodeFlags_AllowOverlapMode) ? ImGuiButtonFlags_AllowOverlapMode : 0);
+    button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
     if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
         button_flags |= ImGuiButtonFlags_PressedOnDoubleClick | ((flags & ImGuiTreeNodeFlags_OpenOnArrow) ? ImGuiButtonFlags_PressedOnClickRelease : 0);
     bool hovered, held, pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags);
@@ -6281,6 +6292,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             toggled |= IsMouseHoveringRect(interact_bb.Min, ImVec2(interact_bb.Min.x + text_offset_x, interact_bb.Max.y));
         if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
             toggled |= g.IO.MouseDoubleClicked[0];
+        if (g.DragDropActive && is_open) // We don't nodes to be highlighted when holding ever after the node has been opened, but don't close them!
+            toggled = false;
         if (toggled)
         {
             is_open = !is_open;
