@@ -7,6 +7,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - doc/test: add a proper documentation+regression testing system (#435)
  - doc/test: checklist app to verify binding/integration of imgui (test inputs, rendering, callback, etc.).
+ - doc/tips: tips of the day: website? applet in imgui_club?
  - project: folder or separate repository with maintained helpers (e.g. imgui_memory_editor.h, imgui_stl.h, maybe imgui_dock would be there?)
 
  - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis). (#690)
@@ -20,7 +21,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: a collapsed window can be stuck behind the main menu bar?
  - window: when window is very small, prioritize resize button over close button.
  - window: detect extra End() call that pop the "Debug" window out and assert at End() call site instead of at end of frame.
- - window/tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
  - window: increase minimum size of a window with menus or fix the menu rendering so that it doesn't look odd.
  - window: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - window: expose contents size. (#1045)
@@ -86,6 +86,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - columns: optional sorting modifiers (up/down), sort list so sorting can be done multi-critera. notify user when sort order changed.
  - columns: option to alternate background colors on odd/even scanlines.  
  - columns: allow columns to recurse. 
+ - columns: allow a same columns set to be interrupted by e.g. CollapsingHeader and resume with columns in sync when moving them. 
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
  - columns: flag to add horizontal separator above/below?
  - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
@@ -152,7 +153,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - popups: add variant using global identifier similar to Begin/End (#402)
  - popups: border options. richer api like BeginChild() perhaps? (#197)
  - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last preferred direction" and may teleport when moving mouse.
-
+ - tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
+ - tooltip: allow tooltips with timers? or general timer policy? (instaneous vs timed)
+ 
  - menus: calling BeginMenu() twice with a same name doesn't append as Begin() does for regular windows (#1207)
  - statusbar: add a per-window status bar helper similar to what menubar does.
  - shortcuts: local-style shortcut api, e.g. parse "&Save"
@@ -205,7 +208,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - markup: simple markup language for color change?
 
 !- font: better CalcTextSizeA() API, at least for simple use cases. current one is horrible (perhaps have simple vs extended versions).
- - font: enforce monospace through ImFontConfig (for icons?)
+ - font: better vertical centering (based e.g on height of lowercase 'x'?). currently Roboto-Medium size 16 px isn't currently centered.
+ - font: enforce monospace through ImFontConfig (for icons?) + create dual ImFont output from same input, reusing rasterized data but with different glyphs/AdvanceX
  - font: finish CustomRectRegister() to allow mapping unicode codepoint to custom texture data 
  - font: PushFontSize API (#1018)
  - font/atlas: incremental updates
