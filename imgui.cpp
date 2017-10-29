@@ -1860,7 +1860,7 @@ ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end)
     return ImHash(str, str_end ? (int)(str_end - str) : 0, seed);
 }
 
-// This is particularly dodgy and used in extremely rare situation.
+// This is only used in rare/specific situations to manufacture an ID out of nowhere.
 ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs)
 {
     ImGuiID seed = IDStack.back();
@@ -10628,10 +10628,9 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
             return false;
         }
 
-        // Magic fallback (=somehow reprehensible) to handle items with no assigned ID, e.g. Text(), Image().
+        // Magic fallback (=somehow reprehensible) to handle items with no assigned ID, e.g. Text(), Image()
         // We build a throwaway ID based on current ID stack + relative AABB of items in window. 
         // THE IDENTIFIER WON'T SURVIVE ANY REPOSITIONING OF THE WIDGET, so if your widget moves your dragging operation will be canceled. 
-        // If you want fail-proof dragging,
         // We don't need to maintain/call ClearActiveID() as releasing the button will early out this function and trigger !ActiveIdIsAlive.
         bool is_hovered = window->DC.LastItemRectHoveredRect;
         if (!is_hovered && (g.ActiveId == 0 || g.ActiveIdWindow != window))
