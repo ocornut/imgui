@@ -448,8 +448,10 @@ struct ImGuiContext
     ImGuiID                 HoveredId;                          // Hovered widget
     bool                    HoveredIdAllowOverlap;
     ImGuiID                 HoveredIdPreviousFrame;
+    float                   HoveredIdTimer;
     ImGuiID                 ActiveId;                           // Active widget
     ImGuiID                 ActiveIdPreviousFrame;
+    float                   ActiveIdTimer;
     bool                    ActiveIdIsAlive;                    // Active widget has been seen this frame
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
     bool                    ActiveIdAllowOverlap;               // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
@@ -577,8 +579,10 @@ struct ImGuiContext
         HoveredId = 0;
         HoveredIdAllowOverlap = false;
         HoveredIdPreviousFrame = 0;
+        HoveredIdTimer = 0.0f;
         ActiveId = 0;
         ActiveIdPreviousFrame = 0;
+        ActiveIdTimer = 0.0f;
         ActiveIdIsAlive = false;
         ActiveIdIsJustActivated = false;
         ActiveIdAllowOverlap = false;

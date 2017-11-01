@@ -63,23 +63,21 @@
  END-USER GUIDE
  ==============
 
- - Double-click title bar to collapse window
- - Click upper right corner to close a window, available when 'bool* p_open' is passed to ImGui::Begin()
- - Click and drag on lower right corner to resize window
- - Click and drag on any empty space to move window
- - Double-click/double-tap on lower right corner grip to auto-fit to content
- - TAB/SHIFT+TAB to cycle through keyboard editable fields
- - Use mouse wheel to scroll
- - Use CTRL+mouse wheel to zoom window contents (if io.FontAllowScaling is true)
- - CTRL+Click on a slider or drag box to input value as text
+ - Double-click on title bar to collapse window.
+ - Click upper right corner to close a window, available when 'bool* p_open' is passed to ImGui::Begin().
+ - Click and drag on lower right corner to resize window (double-click to auto fit window to its contents).
+ - Click and drag on any empty space to move window.
+ - TAB/SHIFT+TAB to cycle through keyboard editable fields.
+ - CTRL+Click on a slider or drag box to input value as text.
+ - Use mouse wheel to scroll.
  - Text editor:
    - Hold SHIFT or use mouse to select text.
-   - CTRL+Left/Right to word jump
-   - CTRL+Shift+Left/Right to select words
-   - CTRL+A our Double-Click to select all
-   - CTRL+X,CTRL+C,CTRL+V to use OS clipboard
-   - CTRL+Z,CTRL+Y to undo/redo
-   - ESCAPE to revert text to its original value
+   - CTRL+Left/Right to word jump.
+   - CTRL+Shift+Left/Right to select words.
+   - CTRL+A our Double-Click to select all.
+   - CTRL+X,CTRL+C,CTRL+V to use OS clipboard/
+   - CTRL+Z,CTRL+Y to undo/redo.
+   - ESCAPE to revert text to its original value.
    - You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract (because - would set a negative value!)
    - Controls are automatically adjusted for OSX to match standard OSX text editing operations.
  - Gamepad/keyboard navigation are in beta-phase, see Programmer Guide below.
@@ -1951,6 +1949,8 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     g.ActiveIdIsJustActivated = (g.ActiveId != id);
+    if (g.ActiveIdIsJustActivated)
+        g.ActiveIdTimer = 0.0f;
     g.ActiveId = id;
     g.ActiveIdAllowNavDirFlags = 0;
     g.ActiveIdAllowOverlap = false;
@@ -1998,6 +1998,7 @@ void ImGui::SetHoveredID(ImGuiID id)
     ImGuiContext& g = *GImGui;
     g.HoveredId = id;
     g.HoveredIdAllowOverlap = false;
+    g.HoveredIdTimer = (id != 0 && g.HoveredIdPreviousFrame == id) ? (g.HoveredIdTimer + g.IO.DeltaTime) : 0.0f;
 }
 
 ImGuiID ImGui::GetHoveredID()
@@ -2299,7 +2300,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
 }
 
 // This is roughly matching the behavior of internal-facing ItemHoverable()
-// - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered())
+// - we allow hovering to be true when ActiveId==window->MoveID, so that clicking on non-interactive items such as a Text() item still returns true with IsItemHovered()
 // - this should work even for non-interactive items that have no ID, so we cannot use LastItemId
 bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
 {
@@ -3008,11 +3009,15 @@ void ImGui::NewFrame()
     g.RenderDrawData.CmdListsCount = g.RenderDrawData.TotalVtxCount = g.RenderDrawData.TotalIdxCount = 0;
 
     // Clear reference to active widget if the widget isn't alive anymore
+    if (!g.HoveredIdPreviousFrame)
+        g.HoveredIdTimer = 0.0f;
     g.HoveredIdPreviousFrame = g.HoveredId;
     g.HoveredId = 0;
     g.HoveredIdAllowOverlap = false;
     if (!g.ActiveIdIsAlive && g.ActiveIdPreviousFrame == g.ActiveId && g.ActiveId != 0)
         ClearActiveID();
+    if (g.ActiveId)
+        g.ActiveIdTimer += g.IO.DeltaTime;
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = false;
     g.ActiveIdIsJustActivated = false;
@@ -6097,25 +6102,29 @@ bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
 bool ImGui::IsWindowFocused()
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.CurrentWindow);     // Not inside a Begin()/End()
     return g.NavWindow == g.CurrentWindow;
 }
 
 bool ImGui::IsRootWindowFocused()
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.CurrentWindow);     // Not inside a Begin()/End()
     return g.NavWindow == g.CurrentWindow->RootWindow;
 }
 
 bool ImGui::IsRootWindowOrAnyChildFocused()
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.CurrentWindow);     // Not inside a Begin()/End()
     return g.NavWindow && g.NavWindow->RootWindow == g.CurrentWindow->RootWindow;
 }
 
 bool ImGui::IsRootWindowOrAnyChildHovered(ImGuiHoveredFlags flags)
 {
-    IM_ASSERT((flags & ImGuiHoveredFlags_AllowWhenOverlapped) == 0);   // Flags not supported by this function
     ImGuiContext& g = *GImGui;
+    IM_ASSERT((flags & ImGuiHoveredFlags_AllowWhenOverlapped) == 0);   // Flags not supported by this function
+    IM_ASSERT(g.CurrentWindow);                                        // Not inside a Begin()/End()
     if (!g.HoveredRootWindow || (g.HoveredRootWindow != g.CurrentWindow->RootWindow))
         return false;
     if (!IsWindowContentHoverable(g.HoveredRootWindow, flags))
@@ -12014,8 +12023,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             const char* input_source_names[] = { "None", "Mouse", "Nav" }; IM_ASSERT(IM_ARRAYSIZE(input_source_names) == ImGuiInputSource_Count_);
             ImGui::Text("HoveredWindow: '%s'", g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
             ImGui::Text("HoveredRootWindow: '%s'", g.HoveredRootWindow ? g.HoveredRootWindow->Name : "NULL");
-            ImGui::Text("HoveredId: 0x%08X/0x%08X", g.HoveredId, g.HoveredIdPreviousFrame); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
-            ImGui::Text("ActiveId: 0x%08X/0x%08X, ActiveIdSource: %s", g.ActiveId, g.ActiveIdPreviousFrame, input_source_names[g.ActiveIdSource]);
+            ImGui::Text("HoveredId: 0x%08X/0x%08X (%.2f sec)", g.HoveredId, g.HoveredIdPreviousFrame, g.HoveredIdTimer); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
+            ImGui::Text("ActiveId: 0x%08X/0x%08X (%.2f sec), ActiveIdSource: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdTimer, input_source_names[g.ActiveIdSource]);
             ImGui::Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
             ImGui::Text("NavWindow: '%s', NavId: 0x%08X, NavLayer: %d", g.NavWindow ? g.NavWindow->Name : "NULL", g.NavId, g.NavLayer);
             ImGui::Text("NavUsable: %d, NavActive: %d", g.IO.NavUsable, g.IO.NavActive);

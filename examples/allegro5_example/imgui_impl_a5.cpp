@@ -204,6 +204,10 @@ void ImGui_ImplA5_Shutdown()
     ImGui::Shutdown();
 }
 
+// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
+// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
+// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 bool ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT *ev)
 {
     ImGuiIO &io = ImGui::GetIO();
@@ -226,7 +230,6 @@ bool ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT *ev)
     }
     return false;
 }
-
 
 void ImGui_ImplA5_NewFrame()
 {
@@ -290,6 +293,6 @@ void ImGui_ImplA5_NewFrame()
         al_set_system_mouse_cursor(g_Display, cursor_id);
     }
 
-    // Start the frame
+    // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
 }

@@ -1959,6 +1959,7 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesThai()
     static const ImWchar ranges[] =
     {
         0x0020, 0x00FF, // Basic Latin
+        0x2010, 0x205E, // Punctuations
         0x0E00, 0x0E7F, // Thai
         0,
     };
