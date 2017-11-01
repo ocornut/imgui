@@ -59,23 +59,21 @@
  END-USER GUIDE
  ==============
 
- - Double-click title bar to collapse window
- - Click upper right corner to close a window, available when 'bool* p_open' is passed to ImGui::Begin()
- - Click and drag on lower right corner to resize window
- - Click and drag on any empty space to move window
- - Double-click/double-tap on lower right corner grip to auto-fit to content
- - TAB/SHIFT+TAB to cycle through keyboard editable fields
- - Use mouse wheel to scroll
- - Use CTRL+mouse wheel to zoom window contents (if io.FontAllowScaling is true)
- - CTRL+Click on a slider or drag box to input value as text
+ - Double-click on title bar to collapse window.
+ - Click upper right corner to close a window, available when 'bool* p_open' is passed to ImGui::Begin().
+ - Click and drag on lower right corner to resize window (double-click to auto fit window to its contents).
+ - Click and drag on any empty space to move window.
+ - TAB/SHIFT+TAB to cycle through keyboard editable fields.
+ - CTRL+Click on a slider or drag box to input value as text.
+ - Use mouse wheel to scroll.
  - Text editor:
    - Hold SHIFT or use mouse to select text.
-   - CTRL+Left/Right to word jump
-   - CTRL+Shift+Left/Right to select words
-   - CTRL+A our Double-Click to select all
-   - CTRL+X,CTRL+C,CTRL+V to use OS clipboard
-   - CTRL+Z,CTRL+Y to undo/redo
-   - ESCAPE to revert text to its original value
+   - CTRL+Left/Right to word jump.
+   - CTRL+Shift+Left/Right to select words.
+   - CTRL+A our Double-Click to select all.
+   - CTRL+X,CTRL+C,CTRL+V to use OS clipboard/
+   - CTRL+Z,CTRL+Y to undo/redo.
+   - ESCAPE to revert text to its original value.
    - You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract (because - would set a negative value!)
    - Controls are automatically adjusted for OSX to match standard OSX text editing operations.
 
