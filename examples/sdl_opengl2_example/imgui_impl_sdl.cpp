@@ -122,6 +122,10 @@ static void ImGui_ImplSdl_SetClipboardText(void*, const char* text)
     SDL_SetClipboardText(text);
 }
 
+// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
+// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
+// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 bool ImGui_ImplSdlGL2_ProcessEvent(SDL_Event* event)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -286,6 +290,6 @@ void ImGui_ImplSdlGL2_NewFrame(SDL_Window *window)
     // Hide OS mouse cursor if ImGui is drawing it
     SDL_ShowCursor(io.MouseDrawCursor ? 0 : 1);
 
-    // Start the frame
+    // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
 }

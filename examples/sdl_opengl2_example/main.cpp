@@ -2,6 +2,9 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 
+// *DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL*
+// See imgui_impl_sdl.cpp for details.
+
 #include <imgui.h>
 #include "imgui_impl_sdl.h"
 #include <stdio.h>
@@ -55,6 +58,10 @@ int main(int, char**)
     bool done = false;
     while (!done)
     {
+        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
+        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
+        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
@@ -65,7 +72,7 @@ int main(int, char**)
         ImGui_ImplSdlGL2_NewFrame(window);
 
         // 1. Show a simple window
-        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
+        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug".
         {
             static float f = 0.0f;
             ImGui::Text("Hello, world!");
@@ -76,7 +83,7 @@ int main(int, char**)
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         }
 
-        // 2. Show another simple window, this time using an explicit Begin/End pair
+        // 2. Show another simple window. In most cases you will use an explicit Begin/End pair to name the window.
         if (show_another_window)
         {
             ImGui::Begin("Another Window", &show_another_window);
@@ -84,7 +91,7 @@ int main(int, char**)
             ImGui::End();
         }
 
-        // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
+        // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow().
         if (show_test_window)
         {
             ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
