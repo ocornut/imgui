@@ -1778,14 +1778,16 @@ void ImGui::ShowTestWindow(bool* p_open)
 
         if (ImGui::TreeNode("Hovering"))
         {
-            // Testing IsWindowHovered() function
+            // Testing IsWindowHovered() function with its various flags (note that the flags can be combined)
             ImGui::BulletText(
                 "IsWindowHovered() = %d\n"
                 "IsWindowHovered(_AllowWhenBlockedByPopup) = %d\n"
-                "IsWindowHovered(_AllowWhenBlockedByActiveItem) = %d\n",
+                "IsWindowHovered(_AllowWhenBlockedByActiveItem) = %d\n"
+                "IsWindowHovered(_FlattenChilds) = %d\n",
                 ImGui::IsWindowHovered(),
                 ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem));
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_FlattenChilds));
 
             // Testing IsItemHovered() function (because BulletText is an item itself and that would affect the output of IsItemHovered, we pass all lines in a single items to shorten the code)
             ImGui::Button("ITEM");
