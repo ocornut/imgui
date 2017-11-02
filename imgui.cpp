@@ -10706,7 +10706,6 @@ void ImGui::EndDragDropSource()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.DragDropActive);
-    IM_ASSERT(g.DragDropPayload.DataFrameCount != -1); // Forgot to call SetDragDropSourcePayload(), at least once on the first frame of a successful BeginDragDropSource()
 
     if (!(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoAutoTooltip))
     {
@@ -10714,9 +10713,16 @@ void ImGui::EndDragDropSource()
         PopStyleColor();
         //PopStyleVar();
     }
+
+    // Discard the drag if have not called SetDragDropPayload()
+    if (g.DragDropPayload.DataFrameCount == -1)
+    {
+        g.DragDropActive = false;
+        g.DragDropPayload.Clear();
+    }
 }
 
-// Use 'cond' to choose to submit paypload on drag start or every frame
+// Use 'cond' to choose to submit payload on drag start or every frame
 bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_size, ImGuiCond cond)
 {
     ImGuiContext& g = *GImGui;
@@ -10783,7 +10789,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     ImGuiPayload& payload = g.DragDropPayload;
     IM_ASSERT(g.DragDropActive);                        // Not called between BeginDragDropTarget() and EndDragDropTarget() ?
     IM_ASSERT(window->DC.LastItemRectHoveredRect);      // Not called between BeginDragDropTarget() and EndDragDropTarget() ?
-    IM_ASSERT(payload.DataFrameCount != -1);            // Internal/usage error, please report!
+    IM_ASSERT(payload.DataFrameCount != -1);            // Forgot to call EndDragDropTarget() ? 
     if (type != NULL && !payload.IsDataType(type))
         return NULL;
 
