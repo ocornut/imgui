@@ -8,15 +8,16 @@ Third party languages and frameworks bindings: https://github.com/ocornut/imgui/
 
 TL;DR; 
  - Newcomers, read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup ImGui in your codebase.
- - To LEARN how the library is setup, you may refer to 'opengl2_example' because is the simplest one.
-   The other examples requires more boilerplate and are harder to read.
-   However, USE 'opengl3_example' in your application if you are using any modern OpenGL3+ calls.
-   Mixing old fixed pipeline OpenGL2 and programmable pipeline OpenGL3+ isn't well supported by some drivers.
-   If you are not sure, in doubt, use 'opengl3_example'.
  - If you are using of the backend provided here, so you can copy the imgui_impl_xxx.cpp/h files
    to your project and use them unmodified.
- - If you have your own engine, you probably want to start from one of the OpenGL example and adapt it to 
-   your engine, but you can read the other examples as well.
+ - To LEARN how the library is setup, you may refer to 'opengl2_example' because is the simplest one to read.
+   However, do NOT USE the 'opengl2_example' if your code is using any modern GL3+ calls.
+   Mixing old fixed-pipeline OpenGL2 and modern OpenGL3+ is going to make everything more complicated.
+   Read comments below for details. If you are not sure, in doubt, use 'opengl3_example'.
+ - If you have your own engine, you probably want to read a few of the examples first then adapt it to
+   your engine. Please note that if your engine is based on OpenGL/DirectX you can perfectly use the
+   existing rendering backends, don't feel forced to rewrite them with your own engine API, or you can
+   do that later when you already got things to work.
 
 ImGui is highly portable and only requires a few things to run:
  - Providing mouse/keyboard inputs
@@ -45,12 +46,12 @@ Also note that some setup or GPU drivers may be causing extra lag (possibly by e
 leaving you with no option but sadness/anger (Intel GPU drivers were reported as such).
 
 opengl2_example/
+    *DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL*
     GLFW + OpenGL example (old, fixed graphic pipeline).
-    This is only provided as a reference to learn how ImGui integration works, because it is easier to read.
-    However, if your code is using GL3+ context, using this may confuse your driver. Please use the GL3 example below.
-	(You might be able to use this code in a GL3/GL4 context but make sure you disable the programmable 
-	pipeline by calling "glUseProgram(0)" before ImGui::Render. It appears that many librairies and drivers
-	are having issues mixing GL2 calls and newer GL3/GL4 calls. So it isn't recommended that you use that.)
+    This is mostly provided as a reference to learn how ImGui integration works, because it is easier to read.
+    If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything
+    more complicated, will require your code to reset every single OpenGL attributes to their initial state,
+    and might confuse your GPU driver. Prefer using opengl3_example.
 
 opengl3_example/
     GLFW + OpenGL example (programmable pipeline, binding modern functions with GL3W).
@@ -74,7 +75,12 @@ apple_example/
     Synergy keyboard integration is rather hacky.
 
 sdl_opengl2_example/
+    *DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL*
     SDL2 + OpenGL example (old fixed pipeline).
+    This is mostly provided as a reference to learn how ImGui integration works, because it is easier to read.
+    If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything
+    more complicated, will require your code to reset every single OpenGL attributes to their initial state,
+    and might confuse your GPU driver. Prefer using sdl_opengl3_example.
 
 sdl_opengl3_example/
     SDL2 + OpenGL3 example.

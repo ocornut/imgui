@@ -332,7 +332,7 @@ void ImGui_ImplGlfwVulkan_MouseButtonCallback(GLFWwindow*, int button, int actio
 
 void ImGui_ImplGlfwVulkan_ScrollCallback(GLFWwindow*, double /*xoffset*/, double yoffset)
 {
-    g_MouseWheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
+    g_MouseWheel += (float)yoffset; // Use fractional mouse wheel.
 }
 
 void ImGui_ImplGlfwVulkan_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
@@ -830,7 +830,7 @@ void ImGui_ImplGlfwVulkan_NewFrame()
     // Hide OS mouse cursor if ImGui is drawing it
     glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
 
-    // Start the frame
+    // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
 }
 
