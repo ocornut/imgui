@@ -1805,7 +1805,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     PopupId = 0;
     AutoFitFramesX = AutoFitFramesY = -1;
     AutoFitOnlyGrows = false;
-    AutoFitChildAxises = 0x00;
+    AutoFitChildAxes = 0x00;
     AutoPosLastDirection = -1;
     HiddenFrames = 0;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
@@ -3809,7 +3809,7 @@ static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
     ImGui::SetNextWindowSize(size);
     bool ret = ImGui::Begin(title, NULL, flags);
     ImGuiWindow* child_window = ImGui::GetCurrentWindow();
-    child_window->AutoFitChildAxises = auto_fit_axises;
+    child_window->AutoFitChildAxes = auto_fit_axes;
     if (!(parent_window->Flags & ImGuiWindowFlags_ShowBorders))
         child_window->Flags &= ~ImGuiWindowFlags_ShowBorders;
 
@@ -3840,9 +3840,9 @@ void ImGui::EndChild()
     {
         // When using auto-filling child window, we don't provide full width/height to ItemSize so that it doesn't feed back into automatic size-fitting.
         ImVec2 sz = GetWindowSize();
-        if (window->AutoFitChildAxises & 0x01) // Arbitrary minimum zero-ish child size of 4.0f causes less trouble than a 0.0f
+        if (window->AutoFitChildAxes & 0x01) // Arbitrary minimum zero-ish child size of 4.0f causes less trouble than a 0.0f
             sz.x = ImMax(4.0f, sz.x);
-        if (window->AutoFitChildAxises & 0x02)
+        if (window->AutoFitChildAxes & 0x02)
             sz.y = ImMax(4.0f, sz.y);
         ImGui::End();
 
