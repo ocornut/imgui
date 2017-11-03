@@ -3105,6 +3105,7 @@ void ImGui::RenderTriangle(ImVec2 p_min, ImGuiDir dir, float scale)
     case ImGuiDir_Left:
         r = -r; // ...fall through, no break!
     case ImGuiDir_Right:
+        center.x -= r * 0.25f;
         a = ImVec2(1,0) * r;
         b = ImVec2(-0.500f,+0.866f) * r;
         c = ImVec2(-0.500f,-0.866f) * r;
@@ -9096,7 +9097,7 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected, boo
             PopStyleColor();
         }
         if (selected)
-            RenderCheckMark(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * (0.20f+0.200f), g.FontSize * 0.134f * 0.5f), GetColorU32(enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled), g.FontSize  * 0.866f);
+            RenderCheckMark(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.40f, g.FontSize * 0.134f * 0.5f), GetColorU32(enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled), g.FontSize  * 0.866f);
     }
     return pressed;
 }
@@ -9215,7 +9216,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         float extra_w = ImMax(0.0f, GetContentRegionAvail().x - w);
         pressed = Selectable(label, menu_is_open, ImGuiSelectableFlags_Menu | ImGuiSelectableFlags_DontClosePopups | ImGuiSelectableFlags_DrawFillAvailWidth | (!enabled ? ImGuiSelectableFlags_Disabled : 0), ImVec2(w, 0.0f));
         if (!enabled) PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
-        RenderTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.20f, 0.0f), ImGuiDir_Right);
+        RenderTriangle(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.30f, 0.0f), ImGuiDir_Right);
         if (!enabled) PopStyleColor();
     }
 
