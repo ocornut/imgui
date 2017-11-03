@@ -1841,6 +1841,7 @@ ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
 {
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHash(str, str_end ? (int)(str_end - str) : 0, seed);
+    IM_ASSERT(id != seed);
     ImGui::KeepAliveID(id);
     return id;
 }
