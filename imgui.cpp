@@ -2250,6 +2250,8 @@ void ImGui::NewFrame()
         g.ScalarAsInputTextId = 0;
 
     // Elapse drag & drop payload
+    g.DragDropPayload.AcceptIdPrev = g.DragDropPayload.AcceptIdCurr;
+    g.DragDropPayload.AcceptIdCurr = 0;
     if (g.DragDropActive && g.DragDropPayload.DataFrameCount + 1 < g.FrameCount)
     {
         g.DragDropActive = false;
@@ -10773,7 +10775,6 @@ bool ImGui::BeginDragDropTarget()
         return false;
 
     ImGuiWindow* window = g.CurrentWindow;
-    //if (!window->DC.LastItemRectHoveredRect || (g.ActiveId == g.DragDropPayload.SourceId || g.ActiveIdPreviousFrame == g.DragDropPayload.SourceId))
     if (!window->DC.LastItemRectHoveredRect || (window->DC.LastItemId && window->DC.LastItemId == g.DragDropPayload.SourceId))
         return false;
     if (window->RootWindow != g.HoveredWindow->RootWindow)
@@ -10793,23 +10794,20 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     if (type != NULL && !payload.IsDataType(type))
         return NULL;
 
-    if (payload.AcceptId == 0)
-        payload.AcceptId = window->DC.LastItemId;
-        
-    bool was_accepted_previously = (payload.AcceptFrameCount == g.FrameCount - 1);
-    if (payload.AcceptFrameCount != g.FrameCount)
-    {
-        // Render drop visuals
-        if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && was_accepted_previously)
-        {
-            ImRect r = window->DC.LastItemRect;
-            r.Expand(4.0f);
-            window->DrawList->AddRectFilled(r.Min, r.Max, IM_COL32(255, 255, 0, 20), 0.0f);        // FIXME-DRAG FIXME-STYLE
-            window->DrawList->AddRect(r.Min, r.Max, IM_COL32(255, 255, 0, 255), 0.0f, ~0, 2.0f);   // FIXME-DRAG FIXME-STYLE
-        }
-        payload.AcceptFrameCount = g.FrameCount;
-    }
+    // NB: We currently accept NULL id however, overlapping targets required unique ID to function
+    const bool was_accepted_previously = (payload.AcceptIdPrev == window->DC.LastItemId);
+    //if (window->DC.LastItemId)
+        payload.AcceptIdCurr = window->DC.LastItemId;
 
+    // Render drop visuals
+    if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && was_accepted_previously)
+    {
+        ImRect r = window->DC.LastItemRect;
+        r.Expand(4.0f);
+        window->DrawList->AddRectFilled(r.Min, r.Max, IM_COL32(255, 255, 0, 20), 0.0f);        // FIXME-DRAG FIXME-STYLE
+        window->DrawList->AddRect(r.Min, r.Max, IM_COL32(255, 255, 0, 255), 0.0f, ~0, 2.0f);   // FIXME-DRAG FIXME-STYLE
+    }
+    payload.AcceptFrameCount = g.FrameCount;
     payload.Delivery = was_accepted_previously && IsMouseReleased(g.DragDropMouseButton);
     if (!payload.Delivery && !(flags & ImGuiDragDropFlags_AcceptBeforeDelivery))
         return NULL;

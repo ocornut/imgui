@@ -587,7 +587,7 @@ enum ImGuiHoveredFlags_
     ImGuiHoveredFlags_Default                       = 0,        // Return true if directly over the item/window, not obstructed by another window, not obstructed by an active popup or modal blocking inputs under them.
     ImGuiHoveredFlags_AllowWhenBlockedByPopup       = 1 << 0,   // Return true even if a popup window is normally blocking access to this item/window
     //ImGuiHoveredFlags_AllowWhenBlockedByModal     = 1 << 1,   // Return true even if a modal popup window is normally blocking access to this item/window. FIXME-TODO: Unavailable yet.
-    ImGuiHoveredFlags_AllowWhenBlockedByActiveItem  = 1 << 2,   // Return true even if an active item is blocking access to this item/window
+    ImGuiHoveredFlags_AllowWhenBlockedByActiveItem  = 1 << 2,   // Return true even if an active item is blocking access to this item/window. Useful for Drag and Drop patterns.
     ImGuiHoveredFlags_AllowWhenOverlapped           = 1 << 3,   // Return true even if the position is overlapped by another window
     ImGuiHoveredFlags_FlattenChilds                 = 1 << 4,   // Treat all child windows as the same window (for IsWindowHovered())
     ImGuiHoveredFlags_RectOnly                      = ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenOverlapped
@@ -1153,14 +1153,15 @@ struct ImGuiPayload
     // [Internal]
     ImGuiID         SourceId;           // Source item id
     ImGuiID         SourceParentId;     // Source parent id (if available)
-    ImGuiID         AcceptId;           // Target item id (set at the time of accepting the payload)
+    ImGuiID         AcceptIdCurr;       // Target item id (set at the time of accepting the payload)
+    ImGuiID         AcceptIdPrev;       // Target item id from previous frame (we need to store this to allow for overlapping drag and drop targets)
     int             AcceptFrameCount;   // Last time a target expressed a desire to accept the source
     int             DataFrameCount;     // Data timestamp
     char            DataType[8 + 1];    // Data type tag (short user-supplied string)
     bool            Delivery;           // Set when AcceptDragDropPayload() was called and the mouse button is released over the target item
 
     ImGuiPayload()  { Clear(); }
-    void Clear()    { SourceId = SourceParentId = AcceptId = 0; AcceptFrameCount = -1; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Delivery = false; }
+    void Clear()    { SourceId = SourceParentId = AcceptIdCurr = AcceptIdPrev = 0; AcceptFrameCount = -1; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Delivery = false; }
     bool IsDataType(const char* type) const { return DataFrameCount != -1 && strcmp(type, DataType) == 0; }
     bool IsDelivery() const                 { return Delivery; }
 };
