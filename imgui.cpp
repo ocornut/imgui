@@ -1859,6 +1859,16 @@ ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end)
     return ImHash(str, str_end ? (int)(str_end - str) : 0, seed);
 }
 
+// This is only used in rare/specific situations to manufacture an ID out of nowhere.
+ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs)
+{
+    ImGuiID seed = IDStack.back();
+    const int r_rel[4] = { (int)(r_abs.Min.x - Pos.x), (int)(r_abs.Min.y - Pos.y), (int)(r_abs.Max.x - Pos.x), (int)(r_abs.Max.y - Pos.y) };
+    ImGuiID id = ImHash(&r_rel, sizeof(r_rel), seed);
+    ImGui::KeepAliveID(id);
+    return id;
+}
+
 //-----------------------------------------------------------------------------
 // Internal API exposed in imgui_internal.h
 //-----------------------------------------------------------------------------
@@ -2238,6 +2248,15 @@ void ImGui::NewFrame()
     g.ActiveIdIsJustActivated = false;
     if (g.ScalarAsInputTextId && g.ActiveId != g.ScalarAsInputTextId)
         g.ScalarAsInputTextId = 0;
+
+    // Elapse drag & drop payload
+    if (g.DragDropActive && g.DragDropPayload.DataFrameCount + 1 < g.FrameCount)
+    {
+        g.DragDropActive = false;
+        g.DragDropPayload.Clear();
+        g.DragDropPayloadBufHeap.clear();
+        memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
+    }
 
     // Update keyboard input state
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
@@ -5820,6 +5839,19 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     bool pressed = false;
     bool hovered = ItemHoverable(bb, id);
 
+    // Special mode for Drag and Drop where holding button pressed for a long time while dragging another item triggers the button
+    if ((flags & ImGuiButtonFlags_PressedOnDragDropHold) && g.DragDropActive && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoHoldToOpenOthers))
+        if (IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+        {
+            hovered = true;
+            SetHoveredID(id);
+            if (CalcTypematicPressedRepeatAmount(g.HoveredIdTimer + 0.0001f, g.HoveredIdTimer + 0.0001f - g.IO.DeltaTime, 0.01f, 0.70f)) // FIXME: Our formula for CalcTypematicPressedRepeatAmount() is fishy
+            {
+                pressed = true;
+                FocusWindow(window);
+            }
+        }
+
     if ((flags & ImGuiButtonFlags_FlattenChilds) && g.HoveredRootWindow == window)
         g.HoveredWindow = backup_hovered_window;
 
@@ -5873,7 +5905,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         {
             if (hovered && (flags & ImGuiButtonFlags_PressedOnClickRelease))
                 if (!((flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[0] >= g.IO.KeyRepeatDelay))  // Repeat mode trumps <on release>
-                    pressed = true;
+                    if (!g.DragDropActive)
+                        pressed = true;
             ClearActiveID();
         }
     }
@@ -6249,6 +6282,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // - OpenOnArrow .................... single-click on arrow to open
     // - OpenOnDoubleClick|OpenOnArrow .. single-click on arrow or double-click anywhere to open
     ImGuiButtonFlags button_flags = ImGuiButtonFlags_NoKeyModifiers | ((flags & ImGuiTreeNodeFlags_AllowOverlapMode) ? ImGuiButtonFlags_AllowOverlapMode : 0);
+    button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
     if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
         button_flags |= ImGuiButtonFlags_PressedOnDoubleClick | ((flags & ImGuiTreeNodeFlags_OpenOnArrow) ? ImGuiButtonFlags_PressedOnClickRelease : 0);
     bool hovered, held, pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags);
@@ -6259,6 +6293,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             toggled |= IsMouseHoveringRect(interact_bb.Min, ImVec2(interact_bb.Min.x + text_offset_x, interact_bb.Max.y));
         if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
             toggled |= g.IO.MouseDoubleClicked[0];
+        if (g.DragDropActive && is_open) // We don't nodes to be highlighted when holding ever after the node has been opened, but don't close them!
+            toggled = false;
         if (toggled)
         {
             is_open = !is_open;
@@ -9431,7 +9467,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     else
         window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), rounding); // Color button are often in need of some sort of border
 
-    if (hovered && !(flags & ImGuiColorEditFlags_NoTooltip))
+    if (!(flags & ImGuiColorEditFlags_NoTooltip) && hovered)
         ColorTooltip(desc_id, &col.x, flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf));
 
     return pressed;
@@ -10587,6 +10623,205 @@ void ImGui::Value(const char* prefix, float v, const char* float_format)
     {
         Text("%s: %.3f", prefix, v);
     }
+}
+
+//-----------------------------------------------------------------------------
+// DRAG AND DROP
+//-----------------------------------------------------------------------------
+
+// Call when current ID is active. 
+// When this returns true you need to: a) call SetDragDropPayload() exactly once, b) you may render the payload visual/description, c) call EndDragDropSource()
+bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    if (g.IO.MouseDown[mouse_button] == false)
+        return false;
+
+    ImGuiID id = window->DC.LastItemId;
+    if (id == 0)
+    {
+        // If you want to use BeginDragDropSource() on an item with no unique identifier for interaction, such as Text() or Image(), you need to:
+        // A) Read the explanation below, B) Use the ImGuiDragDropFlags_SourceAllowNullID flag, C) Swallow your programmer pride.
+        if (!(flags & ImGuiDragDropFlags_SourceAllowNullID))
+        {
+            IM_ASSERT(0);
+            return false;
+        }
+
+        // Magic fallback (=somehow reprehensible) to handle items with no assigned ID, e.g. Text(), Image()
+        // We build a throwaway ID based on current ID stack + relative AABB of items in window. 
+        // THE IDENTIFIER WON'T SURVIVE ANY REPOSITIONING OF THE WIDGET, so if your widget moves your dragging operation will be canceled. 
+        // We don't need to maintain/call ClearActiveID() as releasing the button will early out this function and trigger !ActiveIdIsAlive.
+        bool is_hovered = window->DC.LastItemRectHoveredRect;
+        if (!is_hovered && (g.ActiveId == 0 || g.ActiveIdWindow != window))
+            return false;
+        id = window->DC.LastItemId = window->GetIDFromRectangle(window->DC.LastItemRect);
+        if (is_hovered)
+            SetHoveredID(id);
+        if (is_hovered && g.IO.MouseClicked[mouse_button])
+        {
+            SetActiveID(id, window);
+            FocusWindow(window);
+        }
+        if (g.ActiveId == id) // Allow the underlying widget to display/return hovered during the mouse release frame, else we would get a flicker.
+            g.ActiveIdAllowOverlap = is_hovered;
+    }
+    if (g.ActiveId != id)
+        return false;
+
+    if (IsMouseDragging(mouse_button))
+    {
+        if (!g.DragDropActive)
+        {
+            IM_ASSERT(id != 0);
+            ImGuiPayload& payload = g.DragDropPayload;
+            payload.Clear();
+            payload.SourceId = id;
+            payload.SourceParentId = window->IDStack.back();
+            g.DragDropActive = true;
+            g.DragDropSourceFlags = flags;
+            g.DragDropMouseButton = mouse_button;
+        }
+
+        if (!(flags & ImGuiDragDropFlags_SourceNoAutoTooltip))
+        {
+            // FIXME-DRAG
+            //SetNextWindowPos(g.IO.MousePos - g.ActiveIdClickOffset - g.Style.WindowPadding);
+            //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.60f); // This is better but e.g ColorButton with checkboard has issue with transparent colors :(
+            SetNextWindowPos(g.IO.MousePos);
+            PushStyleColor(ImGuiCol_PopupBg, GetStyleColorVec4(ImGuiCol_PopupBg) * ImVec4(1.0f, 1.0f, 1.0f, 0.6f));
+            BeginTooltipEx(ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_ShowBorders);
+        }
+
+        if (!(flags & ImGuiDragDropFlags_SourceNoDisableHover))
+            window->DC.LastItemRectHoveredRect = false;
+
+        return true;
+    }
+    return false;
+}
+
+void ImGui::EndDragDropSource()
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.DragDropActive);
+
+    if (!(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoAutoTooltip))
+    {
+        EndTooltip();
+        PopStyleColor();
+        //PopStyleVar();
+    }
+
+    // Discard the drag if have not called SetDragDropPayload()
+    if (g.DragDropPayload.DataFrameCount == -1)
+    {
+        g.DragDropActive = false;
+        g.DragDropPayload.Clear();
+    }
+}
+
+// Use 'cond' to choose to submit payload on drag start or every frame
+bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_size, ImGuiCond cond)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiPayload& payload = g.DragDropPayload;
+    if (cond == 0)
+        cond = ImGuiCond_Always;
+
+    IM_ASSERT(type != NULL);
+    IM_ASSERT(strlen(type) < IM_ARRAYSIZE(payload.DataType));       // Payload type can be at most 8 characters longs
+    IM_ASSERT(data != NULL && data_size > 0);
+    IM_ASSERT(cond == ImGuiCond_Always || cond == ImGuiCond_Once);
+    IM_ASSERT(payload.SourceId != 0);                               // Not called between BeginDragDropSource() and EndDragDropSource()
+
+    if (cond == ImGuiCond_Always || payload.DataFrameCount == -1)
+    {
+        // Copy payload
+        ImStrncpy(payload.DataType, type, IM_ARRAYSIZE(payload.DataType));
+        g.DragDropPayloadBufHeap.resize(0);
+        if (data_size > sizeof(g.DragDropPayloadBufLocal))
+        {
+            // Store in heap
+            g.DragDropPayloadBufHeap.resize((int)data_size);
+            payload.Data = g.DragDropPayloadBufHeap.Data;
+            memcpy((void*)payload.Data, data, data_size);
+        }
+        else if (data_size > 0)
+        {
+            // Store locally
+            memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
+            payload.Data = g.DragDropPayloadBufLocal;
+            memcpy((void*)payload.Data, data, data_size);
+        }
+        else
+        {
+            payload.Data = NULL;
+        }
+        payload.DataSize = (int)data_size;
+    }
+    payload.DataFrameCount = g.FrameCount;
+
+    return (payload.AcceptFrameCount == g.FrameCount) || (payload.AcceptFrameCount == g.FrameCount - 1);
+}
+
+bool ImGui::BeginDragDropTarget()
+{
+    ImGuiContext& g = *GImGui;
+    if (!g.DragDropActive)
+        return false;
+
+    ImGuiWindow* window = g.CurrentWindow;
+    //if (!window->DC.LastItemRectHoveredRect || (g.ActiveId == g.DragDropPayload.SourceId || g.ActiveIdPreviousFrame == g.DragDropPayload.SourceId))
+    if (!window->DC.LastItemRectHoveredRect || (window->DC.LastItemId && window->DC.LastItemId == g.DragDropPayload.SourceId))
+        return false;
+    if (window->RootWindow != g.HoveredWindow->RootWindow)
+        return false;
+
+    return true;
+}
+
+const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDropFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiPayload& payload = g.DragDropPayload;
+    IM_ASSERT(g.DragDropActive);                        // Not called between BeginDragDropTarget() and EndDragDropTarget() ?
+    IM_ASSERT(window->DC.LastItemRectHoveredRect);      // Not called between BeginDragDropTarget() and EndDragDropTarget() ?
+    IM_ASSERT(payload.DataFrameCount != -1);            // Forgot to call EndDragDropTarget() ? 
+    if (type != NULL && !payload.IsDataType(type))
+        return NULL;
+
+    if (payload.AcceptId == 0)
+        payload.AcceptId = window->DC.LastItemId;
+        
+    bool was_accepted_previously = (payload.AcceptFrameCount == g.FrameCount - 1);
+    if (payload.AcceptFrameCount != g.FrameCount)
+    {
+        // Render drop visuals
+        if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && was_accepted_previously)
+        {
+            ImRect r = window->DC.LastItemRect;
+            r.Expand(4.0f);
+            window->DrawList->AddRectFilled(r.Min, r.Max, IM_COL32(255, 255, 0, 20), 0.0f);        // FIXME-DRAG FIXME-STYLE
+            window->DrawList->AddRect(r.Min, r.Max, IM_COL32(255, 255, 0, 255), 0.0f, ~0, 2.0f);   // FIXME-DRAG FIXME-STYLE
+        }
+        payload.AcceptFrameCount = g.FrameCount;
+    }
+
+    payload.Delivery = was_accepted_previously && IsMouseReleased(g.DragDropMouseButton);
+    if (!payload.Delivery && !(flags & ImGuiDragDropFlags_AcceptBeforeDelivery))
+        return NULL;
+
+    return &payload;
+}
+
+// We don't really use/need this now, but added it for the sake of consistency and because we might need it later.
+void ImGui::EndDragDropTarget()
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.DragDropActive);
 }
 
 //-----------------------------------------------------------------------------
