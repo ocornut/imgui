@@ -662,6 +662,7 @@ static bool             DataTypeApplyOpFromText(const char* buf, const char* ini
 
 namespace ImGui
 {
+static void             ClearDragDrop();
 static void             FocusPreviousWindow();
 }
 
@@ -2250,15 +2251,14 @@ void ImGui::NewFrame()
         g.ScalarAsInputTextId = 0;
 
     // Elapse drag & drop payload
-    g.DragDropPayload.AcceptIdPrev = g.DragDropPayload.AcceptIdCurr;
-    g.DragDropPayload.AcceptIdCurr = 0;
     if (g.DragDropActive && g.DragDropPayload.DataFrameCount + 1 < g.FrameCount)
     {
-        g.DragDropActive = false;
-        g.DragDropPayload.Clear();
+        ClearDragDrop();
         g.DragDropPayloadBufHeap.clear();
         memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
     }
+    g.DragDropAcceptIdPrev = g.DragDropAcceptIdCurr;
+    g.DragDropAcceptIdCurr = 0;
 
     // Update keyboard input state
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
@@ -10631,6 +10631,15 @@ void ImGui::Value(const char* prefix, float v, const char* float_format)
 // DRAG AND DROP
 //-----------------------------------------------------------------------------
 
+static void ImGui::ClearDragDrop()
+{
+    ImGuiContext& g = *GImGui;
+    g.DragDropActive = false;
+    g.DragDropPayload.Clear();
+    g.DragDropAcceptIdCurr = g.DragDropAcceptIdPrev = 0;
+    g.DragDropAcceptFrameCount = -1;
+}
+
 // Call when current ID is active. 
 // When this returns true you need to: a) call SetDragDropPayload() exactly once, b) you may render the payload visual/description, c) call EndDragDropSource()
 bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
@@ -10677,8 +10686,8 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
         if (!g.DragDropActive)
         {
             IM_ASSERT(id != 0);
+            ClearDragDrop();
             ImGuiPayload& payload = g.DragDropPayload;
-            payload.Clear();
             payload.SourceId = id;
             payload.SourceParentId = window->IDStack.back();
             g.DragDropActive = true;
@@ -10718,10 +10727,7 @@ void ImGui::EndDragDropSource()
 
     // Discard the drag if have not called SetDragDropPayload()
     if (g.DragDropPayload.DataFrameCount == -1)
-    {
-        g.DragDropActive = false;
-        g.DragDropPayload.Clear();
-    }
+        ClearDragDrop();
 }
 
 // Use 'cond' to choose to submit payload on drag start or every frame
@@ -10765,7 +10771,7 @@ bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_s
     }
     payload.DataFrameCount = g.FrameCount;
 
-    return (payload.AcceptFrameCount == g.FrameCount) || (payload.AcceptFrameCount == g.FrameCount - 1);
+    return (g.DragDropAcceptFrameCount == g.FrameCount) || (g.DragDropAcceptFrameCount == g.FrameCount - 1);
 }
 
 bool ImGui::BeginDragDropTarget()
@@ -10795,9 +10801,8 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
         return NULL;
 
     // NB: We currently accept NULL id however, overlapping targets required unique ID to function
-    const bool was_accepted_previously = (payload.AcceptIdPrev == window->DC.LastItemId);
-    //if (window->DC.LastItemId)
-        payload.AcceptIdCurr = window->DC.LastItemId;
+    const bool was_accepted_previously = (g.DragDropAcceptIdPrev == window->DC.LastItemId);
+    g.DragDropAcceptIdCurr = window->DC.LastItemId;
 
     // Render drop visuals
     if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && was_accepted_previously)
@@ -10807,7 +10812,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
         window->DrawList->AddRectFilled(r.Min, r.Max, IM_COL32(255, 255, 0, 20), 0.0f);        // FIXME-DRAG FIXME-STYLE
         window->DrawList->AddRect(r.Min, r.Max, IM_COL32(255, 255, 0, 255), 0.0f, ~0, 2.0f);   // FIXME-DRAG FIXME-STYLE
     }
-    payload.AcceptFrameCount = g.FrameCount;
+    g.DragDropAcceptFrameCount = g.FrameCount;
     payload.Delivery = was_accepted_previously && IsMouseReleased(g.DragDropMouseButton);
     if (!payload.Delivery && !(flags & ImGuiDragDropFlags_AcceptBeforeDelivery))
         return NULL;

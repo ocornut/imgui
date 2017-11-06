@@ -1153,15 +1153,12 @@ struct ImGuiPayload
     // [Internal]
     ImGuiID         SourceId;           // Source item id
     ImGuiID         SourceParentId;     // Source parent id (if available)
-    ImGuiID         AcceptIdCurr;       // Target item id (set at the time of accepting the payload)
-    ImGuiID         AcceptIdPrev;       // Target item id from previous frame (we need to store this to allow for overlapping drag and drop targets)
-    int             AcceptFrameCount;   // Last time a target expressed a desire to accept the source
     int             DataFrameCount;     // Data timestamp
     char            DataType[8 + 1];    // Data type tag (short user-supplied string)
     bool            Delivery;           // Set when AcceptDragDropPayload() was called and the mouse button is released over the target item
 
     ImGuiPayload()  { Clear(); }
-    void Clear()    { SourceId = SourceParentId = AcceptIdCurr = AcceptIdPrev = 0; AcceptFrameCount = -1; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Delivery = false; }
+    void Clear()    { SourceId = SourceParentId = 0; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Delivery = false; }
     bool IsDataType(const char* type) const { return DataFrameCount != -1 && strcmp(type, DataType) == 0; }
     bool IsDelivery() const                 { return Delivery; }
 };

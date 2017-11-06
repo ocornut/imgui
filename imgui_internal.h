@@ -480,6 +480,9 @@ struct ImGuiContext
     ImGuiDragDropFlags      DragDropSourceFlags;
     int                     DragDropMouseButton;
     ImGuiPayload            DragDropPayload;
+    ImGuiID                 DragDropAcceptIdCurr;               // Target item id (set at the time of accepting the payload)
+    ImGuiID                 DragDropAcceptIdPrev;               // Target item id from previous frame (we need to store this to allow for overlapping drag and drop targets)
+    int                     DragDropAcceptFrameCount;           // Last time a target expressed a desire to accept the source
     ImVector<unsigned char> DragDropPayloadBufHeap;             // We don't expose the ImVector<> directly
     unsigned char           DragDropPayloadBufLocal[8];
 
@@ -563,6 +566,8 @@ struct ImGuiContext
         DragDropActive = false;
         DragDropSourceFlags = 0;
         DragDropMouseButton = -1;
+        DragDropAcceptIdPrev = DragDropAcceptIdCurr = 0;
+        DragDropAcceptFrameCount = -1;
         memset(DragDropPayloadBufLocal, 0, sizeof(DragDropPayloadBufLocal));
 
         ScalarAsInputTextId = 0;
