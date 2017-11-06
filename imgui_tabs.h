@@ -23,9 +23,11 @@ enum ImGuiTabBarFlags_
     ImGuiTabBarFlags_None                           = 0,
     ImGuiTabBarFlags_NoAnim                         = 1 << 0,   // Disable horizontal and vertical sliding animations
     ImGuiTabBarFlags_NoReorder                      = 1 << 1,
-    ImGuiTabBarFlags_NoClosingWithMiddleMouseButton = 1 << 2,   // Disable behavior of closing tabs (that are submitted with p_open != NULL) with middle mouse button. You can still repro this behavior on user's side with if (IsItemHovered() && IsMouseClicked(2)) *p_open = false.
-    ImGuiTabBarFlags_SizingPolicyFit                = 1 << 3,
-    ImGuiTabBarFlags_SizingPolicyEqual              = 1 << 4,
+    ImGuiTabBarFlags_NoCloseWithMiddleMouseButton   = 1 << 2,   // Disable behavior of closing tabs (that are submitted with p_open != NULL) with middle mouse button. You can still repro this behavior on user's side with if (IsItemHovered() && IsMouseClicked(2)) *p_open = false.
+    ImGuiTabBarFlags_NoResetOrderOnAppearing        = 1 << 3,
+    ImGuiTabBarFlags_NoSelectionOnAppearing         = 1 << 4,   // Do not become automatically selected when appearing
+    ImGuiTabBarFlags_SizingPolicyFit                = 1 << 5,
+    ImGuiTabBarFlags_SizingPolicyEqual              = 1 << 6,
 
     ImGuiTabBarFlags_SizingPolicyMask_              = ImGuiTabBarFlags_SizingPolicyFit | ImGuiTabBarFlags_SizingPolicyEqual,
     ImGuiTabBarFlags_SizingPolicyDefault_           = ImGuiTabBarFlags_SizingPolicyFit
@@ -35,7 +37,5 @@ enum ImGuiTabItemFlags_
 {
     ImGuiTabItemFlags_None                          = 0,
     ImGuiTabItemFlags_Unsaved                       = 1 << 0,   // Automatically append an '*' to the label without affecting the ID, as a convenience to avoid using ### operator everywhere.
-    ImGuiTabItemFlags_SetSelected                   = 1 << 1,   // Trigger flag to programatically make the tab selected when calling TabItem()
-    ImGuiTabItemFlags_NoSelectionOnAppearing        = 1 << 2,   // Do not become automatically selected when appearing
-    ImGuiTabItemFlags_PreserveOrderOnAppearing      = 1 << 3
+    ImGuiTabItemFlags_SetSelected                   = 1 << 1    // Trigger flag to programatically make the tab selected when calling TabItem()
 };
