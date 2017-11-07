@@ -5835,11 +5835,15 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             {
                 pressed = true;
                 if (flags & ImGuiButtonFlags_NoHoldingActiveID)
+                {
                     ClearActiveID();
+                }
                 else
+                {
                     SetActiveID(id, window); // Hold on ID
+                    g.ActiveIdClickOffset = g.IO.MousePos - bb.Min;
+                }
                 FocusWindow(window);
-                g.ActiveIdClickOffset = g.IO.MousePos - bb.Min;
             }
             if ((flags & ImGuiButtonFlags_PressedOnRelease) && g.IO.MouseReleased[0])
             {
