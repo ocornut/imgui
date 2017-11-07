@@ -4039,7 +4039,7 @@ static ImVec2 CalcSizeAutoFit(ImGuiWindow* window)
         if (size_auto_fit_after_constraint.x < window->SizeContents.x && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar))
             size_auto_fit.y += style.ScrollbarSize;
         if (size_auto_fit_after_constraint.y < window->SizeContents.y && !(flags & ImGuiWindowFlags_NoScrollbar))
-            size_auto_fit.x += style.ScrollbarSize * 2.0f;
+            size_auto_fit.x += style.ScrollbarSize;
         size_auto_fit.y = ImMax(size_auto_fit.y - style.ItemSpacing.y, 0.0f);
     }
     return size_auto_fit;
