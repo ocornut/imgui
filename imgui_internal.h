@@ -2,10 +2,9 @@
 // (internals)
 
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
-// Implement maths operators for ImVec2 (disabled by default to not collide with using IM_VEC2_CLASS_EXTRA along with your own math types+operators)
+// Set:
 //   #define IMGUI_DEFINE_MATH_OPERATORS
-// Define IM_PLACEMENT_NEW() macro helper.
-//   #define IMGUI_DEFINE_PLACEMENT_NEW
+// To implement maths operators for ImVec2 (disabled by default to not collide with using IM_VEC2_CLASS_EXTRA along with your own math types+operators)
 
 #pragma once
 
@@ -159,12 +158,10 @@ static inline float  ImLinearSweep(float current, float target, float speed)    
 
 // We call C++ constructor on own allocated memory via the placement "new(ptr) Type()" syntax.
 // Defining a custom placement new() with a dummy parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
-#ifdef IMGUI_DEFINE_PLACEMENT_NEW
 struct ImPlacementNewDummy {};
 inline void* operator new(size_t, ImPlacementNewDummy, void* ptr) { return ptr; }
 inline void operator delete(void*, ImPlacementNewDummy, void*) {}
 #define IM_PLACEMENT_NEW(_PTR)  new(ImPlacementNewDummy(), _PTR)
-#endif
 
 //-----------------------------------------------------------------------------
 // Types
