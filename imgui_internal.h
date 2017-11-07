@@ -422,6 +422,7 @@ struct ImGuiContext
     ImVector<ImGuiWindow*>  Windows;
     ImVector<ImGuiWindow*>  WindowsSortBuffer;
     ImVector<ImGuiWindow*>  CurrentWindowStack;
+    ImGuiStorage            WindowsById;
     ImGuiWindow*            CurrentWindow;                      // Being drawn into
     ImGuiWindow*            NavWindow;                          // Nav/focused window for navigation
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs

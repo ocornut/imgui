@@ -3920,13 +3920,9 @@ static ImVec2 FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size,
 
 ImGuiWindow* ImGui::FindWindowByName(const char* name)
 {
-    // FIXME-OPT: Store sorted hashes -> pointers so we can do a bissection in a contiguous block
     ImGuiContext& g = *GImGui;
     ImGuiID id = ImHash(name, 0);
-    for (int i = 0; i < g.Windows.Size; i++)
-        if (g.Windows[i]->ID == id)
-            return g.Windows[i];
-    return NULL;
+    return (ImGuiWindow*)g.WindowsById.GetVoidPtr(id);
 }
 
 static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags)
@@ -3937,6 +3933,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
     ImGuiWindow* window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
     IM_PLACEMENT_NEW(window) ImGuiWindow(name);
     window->Flags = flags;
+    g.WindowsById.SetVoidPtr(window->ID, window);
 
     if (flags & ImGuiWindowFlags_NoSavedSettings)
     {
@@ -5280,8 +5277,7 @@ bool ImGui::IsWindowAppearing()
 
 void ImGui::SetWindowCollapsed(const char* name, bool collapsed, ImGuiCond cond)
 {
-    ImGuiWindow* window = FindWindowByName(name);
-    if (window)
+    if (ImGuiWindow* window = FindWindowByName(name))
         SetWindowCollapsed(window, collapsed, cond);
 }
 
