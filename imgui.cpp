@@ -1385,10 +1385,10 @@ static ImVector<ImGuiStorage::Pair>::iterator LowerBound(ImVector<ImGuiStorage::
 {
     ImVector<ImGuiStorage::Pair>::iterator first = data.begin();
     ImVector<ImGuiStorage::Pair>::iterator last = data.end();
-    int count = (int)(last - first);
+    size_t count = (size_t)(last - first);
     while (count > 0)
     {
-        int count2 = count / 2;
+        size_t count2 = count >> 1;
         ImVector<ImGuiStorage::Pair>::iterator mid = first + count2;
         if (mid->key < key)
         {
