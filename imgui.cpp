@@ -2259,6 +2259,7 @@ void ImGui::NewFrame()
     }
     g.DragDropAcceptIdPrev = g.DragDropAcceptIdCurr;
     g.DragDropAcceptIdCurr = 0;
+    g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
 
     // Update keyboard input state
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
@@ -10637,6 +10638,7 @@ static void ImGui::ClearDragDrop()
     g.DragDropActive = false;
     g.DragDropPayload.Clear();
     g.DragDropAcceptIdCurr = g.DragDropAcceptIdPrev = 0;
+    g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
     g.DragDropAcceptFrameCount = -1;
 }
 
@@ -10800,14 +10802,22 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     if (type != NULL && !payload.IsDataType(type))
         return NULL;
 
-    // NB: We currently accept NULL id however, overlapping targets required unique ID to function
+    // NB: We currently accept NULL id as target. However, overlapping targets requires a unique ID to function!
     const bool was_accepted_previously = (g.DragDropAcceptIdPrev == window->DC.LastItemId);
     g.DragDropAcceptIdCurr = window->DC.LastItemId;
+
+    // Accept smallest drag target bounding box, this allows us to nest drag targets conveniently without ordering constraints.
+    ImRect r = window->DC.LastItemRect;
+    float r_surface = r.GetWidth() * r.GetHeight();
+    if (r_surface < g.DragDropAcceptIdCurrRectSurface)
+    {
+        g.DragDropAcceptIdCurr = window->DC.LastItemId;
+        g.DragDropAcceptIdCurrRectSurface = r_surface;
+    }
 
     // Render drop visuals
     if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && was_accepted_previously)
     {
-        ImRect r = window->DC.LastItemRect;
         r.Expand(4.0f);
         window->DrawList->AddRectFilled(r.Min, r.Max, IM_COL32(255, 255, 0, 20), 0.0f);        // FIXME-DRAG FIXME-STYLE
         window->DrawList->AddRect(r.Min, r.Max, IM_COL32(255, 255, 0, 255), 0.0f, ~0, 2.0f);   // FIXME-DRAG FIXME-STYLE

@@ -480,6 +480,7 @@ struct ImGuiContext
     ImGuiDragDropFlags      DragDropSourceFlags;
     int                     DragDropMouseButton;
     ImGuiPayload            DragDropPayload;
+    float                   DragDropAcceptIdCurrRectSurface;
     ImGuiID                 DragDropAcceptIdCurr;               // Target item id (set at the time of accepting the payload)
     ImGuiID                 DragDropAcceptIdPrev;               // Target item id from previous frame (we need to store this to allow for overlapping drag and drop targets)
     int                     DragDropAcceptFrameCount;           // Last time a target expressed a desire to accept the source
