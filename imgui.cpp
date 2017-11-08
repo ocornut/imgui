@@ -4386,7 +4386,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 // Manual resize
                 // Using the FlattenChilds button flag, we make the resize button accessible even if we are hovering over a child window
                 const ImVec2 br = window->Rect().GetBR();
-                const ImRect resize_rect(br - ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f), br);
+                const ImRect resize_rect(br - ImFloor(ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f)), br);
                 const ImGuiID resize_id = window->GetID("#RESIZE");
                 bool hovered, held;
                 ButtonBehavior(resize_rect, resize_id, &hovered, &held, ImGuiButtonFlags_FlattenChilds);
