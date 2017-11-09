@@ -10818,9 +10818,13 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     // Render drop visuals
     if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && was_accepted_previously)
     {
-        r.Expand(4.0f);
-        window->DrawList->AddRectFilled(r.Min, r.Max, IM_COL32(255, 255, 0, 20), 0.0f);        // FIXME-DRAG FIXME-STYLE
-        window->DrawList->AddRect(r.Min, r.Max, IM_COL32(255, 255, 0, 255), 0.0f, ~0, 2.0f);   // FIXME-DRAG FIXME-STYLE
+        // FIXME-DRAG FIXME-STYLE: Settle on a proper default visuals for drop target, w/ ImGuiCol enum value probably.
+        r.Expand(5.0f);
+        bool push_clip_rect = !window->ClipRect.Contains(r);
+        if (push_clip_rect) window->DrawList->PushClipRectFullScreen();
+        window->DrawList->AddRectFilled(r.Min, r.Max, IM_COL32(255, 255, 0, 20), 0.0f);
+        window->DrawList->AddRect(r.Min + ImVec2(1.5f,1.5f), r.Max - ImVec2(1.5f,1.5f), IM_COL32(255, 255, 0, 255), 0.0f, ~0, 2.0f);
+        if (push_clip_rect) window->DrawList->PopClipRect();
     }
     g.DragDropAcceptFrameCount = g.FrameCount;
     payload.Delivery = was_accepted_previously && IsMouseReleased(g.DragDropMouseButton);
