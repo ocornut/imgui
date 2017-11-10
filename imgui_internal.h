@@ -480,6 +480,8 @@ struct ImGuiContext
     ImGuiDragDropFlags      DragDropSourceFlags;
     int                     DragDropMouseButton;
     ImGuiPayload            DragDropPayload;
+    ImRect                  DragDropTargetRect;
+    ImGuiID                 DragDropTargetId;
     float                   DragDropAcceptIdCurrRectSurface;
     ImGuiID                 DragDropAcceptIdCurr;               // Target item id (set at the time of accepting the payload)
     ImGuiID                 DragDropAcceptIdPrev;               // Target item id from previous frame (we need to store this to allow for overlapping drag and drop targets)
@@ -567,6 +569,7 @@ struct ImGuiContext
         DragDropActive = false;
         DragDropSourceFlags = 0;
         DragDropMouseButton = -1;
+        DragDropTargetId = 0;
         DragDropAcceptIdPrev = DragDropAcceptIdCurr = 0;
         DragDropAcceptFrameCount = -1;
         memset(DragDropPayloadBufLocal, 0, sizeof(DragDropPayloadBufLocal));
@@ -834,6 +837,8 @@ namespace ImGui
 
     IMGUI_API void          Scrollbar(ImGuiLayoutType direction);
     IMGUI_API void          VerticalSeparator();        // Vertical separator, for menu bars (use current line height). not exposed because it is misleading what it doesn't have an effect on regular layout.
+
+    IMGUI_API bool          BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id);
 
     // FIXME-WIP: New Columns API
     IMGUI_API void          BeginColumns(const char* id, int count, ImGuiColumnsFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().

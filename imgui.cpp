@@ -10776,6 +10776,27 @@ bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_s
     return (g.DragDropAcceptFrameCount == g.FrameCount) || (g.DragDropAcceptFrameCount == g.FrameCount - 1);
 }
 
+bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    if (!g.DragDropActive)
+        return false;
+
+    ImGuiWindow* window = g.CurrentWindow;
+    if (g.HoveredWindow == NULL || window->RootWindow != g.HoveredWindow->RootWindow)
+        return false;
+    if (!IsMouseHoveringRect(bb.Min, bb.Max) || (id && id == g.DragDropPayload.SourceId))
+        return false;
+
+    g.DragDropTargetRect = bb;
+    g.DragDropTargetId = id;
+    return true;
+}
+
+// We don't use BeginDragDropTargetCustom() and duplicate its code because:
+// 1) LastItemRectHoveredRect which handles items that pushes a temporarily clip rectangle in their code. Calling BeginDragDropTargetCustom(LastItemRect) would not handle it.
+// 2) and it's faster. as this code may be very frequently called, we want to early out as fast as we can.
+// Also note how the HoveredWindow test is positioned differently in both functions (in both functions we optimize for the cheapest early out case)
 bool ImGui::BeginDragDropTarget()
 {
     ImGuiContext& g = *GImGui;
@@ -10785,9 +10806,11 @@ bool ImGui::BeginDragDropTarget()
     ImGuiWindow* window = g.CurrentWindow;
     if (!window->DC.LastItemRectHoveredRect || (window->DC.LastItemId && window->DC.LastItemId == g.DragDropPayload.SourceId))
         return false;
-    if (window->RootWindow != g.HoveredWindow->RootWindow)
+    if (g.HoveredWindow == NULL || window->RootWindow != g.HoveredWindow->RootWindow)
         return false;
 
+    g.DragDropTargetRect = window->DC.LastItemRect;
+    g.DragDropTargetId = window->DC.LastItemId;
     return true;
 }
 
@@ -10797,25 +10820,22 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiPayload& payload = g.DragDropPayload;
     IM_ASSERT(g.DragDropActive);                        // Not called between BeginDragDropTarget() and EndDragDropTarget() ?
-    IM_ASSERT(window->DC.LastItemRectHoveredRect);      // Not called between BeginDragDropTarget() and EndDragDropTarget() ?
     IM_ASSERT(payload.DataFrameCount != -1);            // Forgot to call EndDragDropTarget() ? 
     if (type != NULL && !payload.IsDataType(type))
         return NULL;
 
-    // NB: We currently accept NULL id as target. However, overlapping targets requires a unique ID to function!
-    const bool was_accepted_previously = (g.DragDropAcceptIdPrev == window->DC.LastItemId);
-    g.DragDropAcceptIdCurr = window->DC.LastItemId;
-
     // Accept smallest drag target bounding box, this allows us to nest drag targets conveniently without ordering constraints.
-    ImRect r = window->DC.LastItemRect;
+    // NB: We currently accept NULL id as target. However, overlapping targets requires a unique ID to function!
+    const bool was_accepted_previously = (g.DragDropAcceptIdPrev == g.DragDropTargetId);
+    ImRect r = g.DragDropTargetRect;
     float r_surface = r.GetWidth() * r.GetHeight();
     if (r_surface < g.DragDropAcceptIdCurrRectSurface)
     {
-        g.DragDropAcceptIdCurr = window->DC.LastItemId;
+        g.DragDropAcceptIdCurr = g.DragDropTargetId;
         g.DragDropAcceptIdCurrRectSurface = r_surface;
     }
 
-    // Render drop visuals
+    // Render default drop visuals
     if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && was_accepted_previously)
     {
         // FIXME-DRAG FIXME-STYLE: Settle on a proper default visuals for drop target, w/ ImGuiCol enum value probably.
@@ -10826,6 +10846,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
         window->DrawList->AddRect(r.Min + ImVec2(1.5f,1.5f), r.Max - ImVec2(1.5f,1.5f), IM_COL32(255, 255, 0, 255), 0.0f, ~0, 2.0f);
         if (push_clip_rect) window->DrawList->PopClipRect();
     }
+
     g.DragDropAcceptFrameCount = g.FrameCount;
     payload.Delivery = was_accepted_previously && IsMouseReleased(g.DragDropMouseButton);
     if (!payload.Delivery && !(flags & ImGuiDragDropFlags_AcceptBeforeDelivery))
