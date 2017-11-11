@@ -129,6 +129,8 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 - [Nicolas Guillemot's CppCon'16 flashtalk about Dear ImGui](https://www.youtube.com/watch?v=LSRJ1jZq90k).
 - [Thierry Excoffier's Zero Memory Widget](http://perso.univ-lyon1.fr/thierry.excoffier/ZMW/).
 
+See the [Software using dear imgui page](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) for an incomplete list of software which are publicly known to use dear migui.
+
 See the [Links page](https://github.com/ocornut/imgui/wiki/Links) for third-party bindings to different languages and frameworks.
 
 Frequently Asked Question (FAQ)
