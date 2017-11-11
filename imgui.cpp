@@ -5995,6 +5995,32 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
     return pressed;
 }
 
+// [Internal]
+bool ImGui::ArrowButton(ImGuiID id, ImGuiDir dir, ImVec2 padding, ImGuiButtonFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    if (window->SkipItems)
+        return false;
+
+    const ImGuiStyle& style = g.Style;
+
+    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize + padding.x * 2.0f, g.FontSize + padding.y * 2.0f));
+    ItemSize(bb, style.FramePadding.y);
+    if (!ItemAdd(bb, id))
+        return false;
+
+    bool hovered, held;
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
+
+    const ImU32 col = GetColorU32((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+    RenderNavHighlight(bb, id);
+    RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
+    RenderTriangle(bb.Min + padding, dir, 1.0f);
+
+    return pressed;
+}
+
 void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
 {
     ImGuiWindow* window = GetCurrentWindow();
