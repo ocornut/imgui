@@ -1,6 +1,8 @@
 
- The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' that you can use without any external files.
- The files in this folder are only provided as a convenience, you can use any .TTF/.OTF.
+ The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer) that is used by default.
+ We embed the font in source code so you can use Dear ImGui without any file system access.
+ You may also load external .TTF/.OTF files. 
+ The files in this folder are suggested fonts, provided as a convenience.
  (Note: .OTF support in stb_truetype.h currently doesn't appear to load every font)
 
  Fonts are rasterized in a single texture at the time of calling either of io.Fonts.GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
@@ -12,6 +14,7 @@
  Using an icon font (such as FontAwesome: http://fontawesome.io) is an easy and practical way to use icons in your ImGui application.
  A common pattern is to merge the icon font within your main font, so you can refer to the icons directly from your strings without having to change fonts back and forth.
  To refer to the icon from your C++ code, you can use headers files created by Juliette Foucaut, at https://github.com/juliettef/IconFontCppHeaders
+ See Links below for other icons fonts and related tools.
 
     // Merge icons into default tool font
    #include "IconsFontAwesome.h"
@@ -40,7 +43,7 @@
    ImGuiIO& io = ImGui::GetIO();
    io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
   
- Detailed options:
+ Advanced options:
 
    ImFontConfig config;
    config.OversampleH = 3;
@@ -106,17 +109,23 @@
  REMAPPING CODEPOINTS
 ---------------------------------
 
- All your strings needs to use UTF-8 encoding. Specifying literal in your source code using a local code page (such as CP-923 for Japanese CP-1251 for Cyrillic) will NOT work!
+ All your strings needs to use UTF-8 encoding. Specifying literal in your source code using a local code page (such as CP-923 for Japanese, or CP-1251 for Cyrillic) will NOT work!
  In C++11 you can encode a string literal in UTF-8 by using the u8"hello" syntax. Otherwise you can convert yourself to UTF-8 or load text data from file already saved as UTF-8.
- You can also try to remap your local codepage characters to their Unicode codepoint using font->AddRemapChar(), but international users may have problems reading/editing your source code.
+ e.g.
+      u8"hello"
+      u8"こんにちは"
+ You may also try to remap your local codepage characters to their Unicode codepoint using font->AddRemapChar(), but international users may have problems reading/editing your source code.
 
 
 ---------------------------------
  EMBEDDING FONT IN SOURCE CODE
 ---------------------------------
 
- Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array. 
+ Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array that you can embed in source code.
  See the documentation in binary_to_compressed_c.cpp for instruction on how to use the tool.
+ You may find a precompiled version binary_to_compressed_c.exe for Windows instead of demo binaries package (see README).
+ The tool optionally used Base85 encoding to reduce the size of _source code_ but the read-only arrays will be about 20% bigger. 
+
  Then load the font with:
  
    ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
@@ -164,36 +173,40 @@
 
 
 ---------------------------------
- LINKS
+ LINKS & OTHER FONTS
 ---------------------------------
 
- Icon fonts
+ (Icons) Icon fonts
    https://fortawesome.github.io/Font-Awesome/
    https://github.com/SamBrishes/kenney-icon-font
    https://design.google.com/icons/
+   You can use https://github.com/juliettef/IconFontCppHeaders for C/C++ header files with name #define to access icon codepoint in source code.
 
- IcoMoon - Custom Icon font builder
+ (Icons) IcoMoon - Custom Icon font builder
    https://icomoon.io/app
 
- Typefaces for source code beautification
-   https://github.com/chrissimpkins/codeface
+ (Regular) Open Sans Fonts
+   https://fonts.google.com/specimen/Open+Sans
+
+ (Regular) Google Noto Fonts (worldwide languages)
+   https://www.google.com/get/noto/
  
- Programmation fonts
+ (Monospace) Typefaces for source code beautification
+   https://github.com/chrissimpkins/codeface
+
+ (Monospace) Programmation fonts
    http://s9w.github.io/font_compare/
 
- Proggy Programming Fonts
+ (Monospace) Proggy Programming Fonts
    http://upperbounds.net
    
- Inconsolata
+ (Monospace) Inconsolata
    http://www.levien.com/type/myfonts/inconsolata.html
 
- Google Noto Fonts (worldwide languages)
-   https://www.google.com/get/noto/
-
- Adobe Source Code Pro: Monospaced font family for user interface and coding environments
+ (Monospace) Adobe Source Code Pro: Monospaced font family for user interface and coding environments
    https://github.com/adobe-fonts/source-code-pro
 
- Monospace/Fixed Width Programmer's Fonts
+ (Monospace) Monospace/Fixed Width Programmer's Fonts
    http://www.lowing.org/fonts/
 
  (Japanese) M+ fonts by Coji Morishita are free and include most useful Kanjis you would need.
