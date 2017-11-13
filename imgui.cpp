@@ -1800,6 +1800,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Collapsed = false;
     SkipItems = false;
     Appearing = false;
+    CloseButton = false;
     BeginCount = 0;
     PopupId = 0;
     AutoFitFramesX = AutoFitFramesY = -1;
@@ -4130,6 +4131,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames == 1);
     window->Appearing = (window_just_activated_by_user || window_just_appearing_after_hidden_for_resize);
+    window->CloseButton = (p_open != NULL);
 
     // Process SetNextWindow***() calls
     bool window_pos_set_by_api = false, window_size_set_by_api = false;
