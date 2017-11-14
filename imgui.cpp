@@ -10836,7 +10836,8 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     }
 
     // Render default drop visuals
-    if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && was_accepted_previously)
+    payload.Preview = was_accepted_previously;
+    if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && payload.Preview)
     {
         // FIXME-DRAG FIXME-STYLE: Settle on a proper default visuals for drop target, w/ ImGuiCol enum value probably.
         r.Expand(5.0f);
