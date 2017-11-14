@@ -1652,14 +1652,19 @@ void ImGui::ShowTestWindow(bool* p_open)
         if (ImGui::TreeNode("Horizontal Scrolling"))
         {
             ImGui::SetNextWindowContentWidth(1500);
-            ImGui::BeginChild("##scrollingregion", ImVec2(0, 120), false, ImGuiWindowFlags_HorizontalScrollbar);
+            ImGui::BeginChild("##ScrollingRegion", ImVec2(0, ImGui::GetFontSize() * 20), false, ImGuiWindowFlags_HorizontalScrollbar);
             ImGui::Columns(10);
-            for (int i = 0; i < 20; i++)
-                for (int j = 0; j < 10; j++)
-                {
-                    ImGui::Text("Line %d Column %d...", i, j);
-                    ImGui::NextColumn();
-                }
+            int ITEMS_COUNT = 2000;
+            ImGuiListClipper clipper(ITEMS_COUNT);  // Also demonstrate using the clipper for large list
+            while (clipper.Step())
+            {
+                for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                    for (int j = 0; j < 10; j++)
+                    {
+                        ImGui::Text("Line %d Column %d...", i, j);
+                        ImGui::NextColumn();
+                    }
+            }
             ImGui::Columns(1);
             ImGui::EndChild();
             ImGui::TreePop();
