@@ -264,7 +264,7 @@ void ImDrawList::ClearFreeMemory()
     _Channels.clear();
 }
 
-// Use macros because C++ is a terrible language, we want guaranteed inline, no code in header, and no overhead in Debug mode
+// Using macros because C++ is a terrible language, we want guaranteed inline, no code in header, and no overhead in Debug builds
 #define GetCurrentClipRect()    (_ClipRectStack.Size ? _ClipRectStack.Data[_ClipRectStack.Size-1]  : GNullClipRect)
 #define GetCurrentTextureId()   (_TextureIdStack.Size ? _TextureIdStack.Data[_TextureIdStack.Size-1] : NULL)
 
@@ -388,7 +388,7 @@ void ImDrawList::ChannelsSplit(int channels_count)
         _Channels.resize(channels_count);
     _ChannelsCount = channels_count;
 
-    // _Channels[] (24 bytes each) hold storage that we'll swap with this->_CmdBuffer/_IdxBuffer
+    // _Channels[] (24/32 bytes each) hold storage that we'll swap with this->_CmdBuffer/_IdxBuffer
     // The content of _Channels[0] at this point doesn't matter. We clear it to make state tidy in a debugger but we don't strictly need to.
     // When we switch to the next channel, we'll copy _CmdBuffer/_IdxBuffer into _Channels[0] and then _Channels[1] into _CmdBuffer/_IdxBuffer
     memset(&_Channels[0], 0, sizeof(ImDrawChannel));
@@ -1208,7 +1208,7 @@ ImFontConfig::ImFontConfig()
 const int FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF = 90;
 const int FONT_ATLAS_DEFAULT_TEX_DATA_H      = 27;
 const unsigned int FONT_ATLAS_DEFAULT_TEX_DATA_ID = 0x80000000;
-const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF * FONT_ATLAS_DEFAULT_TEX_DATA_H + 1] =
+static const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF * FONT_ATLAS_DEFAULT_TEX_DATA_H + 1] =
 {
     "..-         -XXXXXXX-    X    -           X           -XXXXXXX          -          XXXXXXX"
     "..-         -X.....X-   X.X   -          X.X          -X.....X          -          X.....X"
@@ -1238,6 +1238,19 @@ const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF
     "                                                      -   X.X           X.X   -           "
     "                                                      -    XX           XX    -           "
 };
+
+static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_Count_][3] =
+{
+    // Pos ........ Size ......... Offset ......
+    { ImVec2(0,3),  ImVec2(12,19), ImVec2( 0, 0) }, // ImGuiMouseCursor_Arrow
+    { ImVec2(13,0), ImVec2(7,16),  ImVec2( 4, 8) }, // ImGuiMouseCursor_TextInput
+    { ImVec2(31,0), ImVec2(23,23), ImVec2(11,11) }, // ImGuiMouseCursor_Move
+    { ImVec2(21,0), ImVec2( 9,23), ImVec2( 5,11) }, // ImGuiMouseCursor_ResizeNS
+    { ImVec2(55,18),ImVec2(23, 9), ImVec2(11, 5) }, // ImGuiMouseCursor_ResizeEW
+    { ImVec2(73,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNESW
+    { ImVec2(55,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNWSE
+};
+
 
 ImFontAtlas::ImFontAtlas()
 {
@@ -1784,26 +1797,14 @@ static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
     atlas->TexUvWhitePixel = ImVec2((r.X + 0.5f) * tex_uv_scale.x, (r.Y + 0.5f) * tex_uv_scale.y);
 
     // Setup mouse cursors
-    const ImVec2 cursor_datas[ImGuiMouseCursor_Count_][3] =
-    {
-        // Pos ........ Size ......... Offset ......
-        { ImVec2(0,3),  ImVec2(12,19), ImVec2( 0, 0) }, // ImGuiMouseCursor_Arrow
-        { ImVec2(13,0), ImVec2(7,16),  ImVec2( 4, 8) }, // ImGuiMouseCursor_TextInput
-        { ImVec2(31,0), ImVec2(23,23), ImVec2(11,11) }, // ImGuiMouseCursor_Move
-        { ImVec2(21,0), ImVec2( 9,23), ImVec2( 5,11) }, // ImGuiMouseCursor_ResizeNS
-        { ImVec2(55,18),ImVec2(23, 9), ImVec2(11, 5) }, // ImGuiMouseCursor_ResizeEW
-        { ImVec2(73,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNESW
-        { ImVec2(55,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNWSE
-    };
-
     for (int type = 0; type < ImGuiMouseCursor_Count_; type++)
     {
         ImGuiMouseCursorData& cursor_data = GImGui->MouseCursorData[type];
-        ImVec2 pos = cursor_datas[type][0] + ImVec2((float)r.X, (float)r.Y);
-        const ImVec2 size = cursor_datas[type][1];
+        ImVec2 pos = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[type][0] + ImVec2((float)r.X, (float)r.Y);
+        const ImVec2 size = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[type][1];
         cursor_data.Type = type;
         cursor_data.Size = size;
-        cursor_data.HotOffset = cursor_datas[type][2];
+        cursor_data.HotOffset = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[type][2];
         cursor_data.TexUvMin[0] = (pos) * tex_uv_scale;
         cursor_data.TexUvMax[0] = (pos + size) * tex_uv_scale;
         pos.x += FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;

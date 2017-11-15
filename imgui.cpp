@@ -1375,13 +1375,8 @@ void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, int* 
 
 //-----------------------------------------------------------------------------
 // ImGuiStorage
-//-----------------------------------------------------------------------------
-
 // Helper: Key->value storage
-void ImGuiStorage::Clear()
-{
-    Data.clear();
-}
+//-----------------------------------------------------------------------------
 
 // std::lower_bound but without the bullshit
 static ImVector<ImGuiStorage::Pair>::iterator LowerBound(ImVector<ImGuiStorage::Pair>& data, ImGuiID key)
@@ -1651,7 +1646,7 @@ void ImGuiTextBuffer::append(const char* fmt, ...)
 }
 
 //-----------------------------------------------------------------------------
-// ImGuiSimpleColumns
+// ImGuiSimpleColumns (internal use only)
 //-----------------------------------------------------------------------------
 
 ImGuiSimpleColumns::ImGuiSimpleColumns()
