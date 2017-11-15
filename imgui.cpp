@@ -8544,13 +8544,13 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (is_multiline)
             text_size = ImVec2(size.x, InputTextCalcTextLenAndLineCount(buf_display, &buf_end) * g.FontSize); // We don't need width
 
-        //Find render position for right alignment if flag is set.
-        //render_pos could be updated directly, but create a temp ImVec2 to hold the new position just in case.
+        // Find render position for right alignment if flag is set.
+        // render_pos could be updated directly, but create a temp ImVec2 to hold the new position just in case.
         ImVec2 text_pos = render_pos;
         if (flags & ImGuiInputTextFlags_AlignRight)
         {
-        	const ImVec2 text_size = CalcTextSize(buf_display, NULL, true, 0);
-        	text_pos = ImVec2(frame_bb.Max.x - text_size.x - style.FramePadding.x, render_pos.y);
+            const ImVec2 text_size = CalcTextSize(buf_display, NULL, true, 0);
+            text_pos = ImVec2(frame_bb.Max.x - text_size.x - style.FramePadding.x, render_pos.y);
         }
 
         draw_window->DrawList->AddText(g.Font, g.FontSize, text_pos, GetColorU32(ImGuiCol_Text), buf_display, buf_end, 0.0f, is_multiline ? NULL : &clip_rect);
