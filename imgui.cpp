@@ -9187,10 +9187,12 @@ bool ImGui::BeginMenuBar()
     if (!(window->Flags & ImGuiWindowFlags_MenuBar))
         return false;
 
+    ImGuiContext& g = *GImGui;
     IM_ASSERT(!window->DC.MenuBarAppending);
     BeginGroup(); // Save position
     PushID("##menubar");
     ImRect rect = window->MenuBarRect();
+    rect.Max.x = ImMax(rect.Min.x, rect.Max.x - g.Style.WindowRounding);
     PushClipRect(ImVec2(ImFloor(rect.Min.x+0.5f), ImFloor(rect.Min.y + window->BorderSize + 0.5f)), ImVec2(ImFloor(rect.Max.x+0.5f), ImFloor(rect.Max.y+0.5f)), false);
     window->DC.CursorPos = ImVec2(rect.Min.x + window->DC.MenuBarOffsetX, rect.Min.y);// + g.Style.FramePadding.y);
     window->DC.LayoutType = ImGuiLayoutType_Horizontal;
@@ -9241,6 +9243,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     {
         // Menu inside an horizontal menu bar
         // Selectable extend their highlight by half ItemSpacing in each direction.
+        // For ChildMenu, the popup position will be overwritten by the call to FindBestPopupWindowPos() in Begin()
         popup_pos = ImVec2(pos.x - window->WindowPadding.x, pos.y - style.FramePadding.y + window->MenuBarHeight());
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
         PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
