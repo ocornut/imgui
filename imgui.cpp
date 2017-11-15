@@ -4611,6 +4611,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->InnerRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
         window->InnerRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
         //window->DrawList->AddRect(window->InnerRect.Min, window->InnerRect.Max, IM_COL32_WHITE);
+
+        // After Begin() we fill the last item / hovered data using the title bar data. Make that a standard behavior (to allow usage of context menus on title bar only, etc.).
+        window->DC.LastItemId = window->MoveId;
+        window->DC.LastItemRect = title_bar_rect;
+        window->DC.LastItemRectHoveredRect = IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false);
     }
 
     // Inner clipping rectangle
