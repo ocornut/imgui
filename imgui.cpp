@@ -1845,6 +1845,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     CollapseToggleWanted = false;
     SkipItems = false;
     Appearing = false;
+    CloseButton = false;
     BeginCount = 0;
     PopupId = 0;
     AutoFitFramesX = AutoFitFramesY = -1;
@@ -4825,6 +4826,13 @@ static ImVec2 FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size,
     return pos;
 }
 
+static void SetWindowConditionAllowFlags(ImGuiWindow* window, ImGuiCond flags, bool enabled)
+{
+    window->SetWindowPosAllowFlags       = enabled ? (window->SetWindowPosAllowFlags       | flags) : (window->SetWindowPosAllowFlags       & ~flags);
+    window->SetWindowSizeAllowFlags      = enabled ? (window->SetWindowSizeAllowFlags      | flags) : (window->SetWindowSizeAllowFlags      & ~flags);
+    window->SetWindowCollapsedAllowFlags = enabled ? (window->SetWindowCollapsedAllowFlags | flags) : (window->SetWindowCollapsedAllowFlags & ~flags);
+}
+
 ImGuiWindow* ImGui::FindWindowByName(const char* name)
 {
     ImGuiContext& g = *GImGui;
@@ -4856,15 +4864,9 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 
         ImGuiIniData* settings = FindWindowSettings(name);
         if (!settings)
-        {
             settings = AddWindowSettings(name);
-        }
         else
-        {
-            window->SetWindowPosAllowFlags &= ~ImGuiCond_FirstUseEver;
-            window->SetWindowSizeAllowFlags &= ~ImGuiCond_FirstUseEver;
-            window->SetWindowCollapsedAllowFlags &= ~ImGuiCond_FirstUseEver;
-        }
+            SetWindowConditionAllowFlags(window, ImGuiCond_FirstUseEver, false);
 
         if (settings->Pos.x != FLT_MAX)
         {
@@ -5043,13 +5045,14 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     if (window_just_appearing_after_hidden_for_resize)
         window->NavLastIds[0] = 0;
     window->Appearing = (window_just_activated_by_user || window_just_appearing_after_hidden_for_resize);
+    window->CloseButton = (p_open != NULL);
 
     // Process SetNextWindow***() calls
+    if (window->Appearing)
+        SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
     bool window_pos_set_by_api = false, window_size_set_by_api = false;
     if (g.SetNextWindowPosCond)
     {
-        if (window->Appearing) 
-            window->SetWindowPosAllowFlags |= ImGuiCond_Appearing;
         window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) != 0;
         if (window_pos_set_by_api && ImLengthSqr(g.SetNextWindowPosPivot) > 0.00001f)
         {
@@ -5067,8 +5070,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     }
     if (g.SetNextWindowSizeCond)
     {
-        if (window->Appearing) 
-            window->SetWindowSizeAllowFlags |= ImGuiCond_Appearing;
         window_size_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0;
         SetWindowSize(window, g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
         g.SetNextWindowSizeCond = 0;
@@ -5084,8 +5085,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     }
     if (g.SetNextWindowCollapsedCond)
     {
-        if (window->Appearing)
-            window->SetWindowCollapsedAllowFlags |= ImGuiCond_Appearing;
         SetWindowCollapsed(window, g.SetNextWindowCollapsedVal, g.SetNextWindowCollapsedCond);
         g.SetNextWindowCollapsedCond = 0;
     }
@@ -5094,6 +5093,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         SetWindowFocus();
         g.SetNextWindowFocus = false;
     }
+    if (window->Appearing)
+        SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, false);
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
@@ -5758,7 +5759,35 @@ void ImGui::Scrollbar(ImGuiLayoutType direction)
     window->DrawList->AddRectFilled(grab_rect.Min, grab_rect.Max, grab_col, style.ScrollbarRounding);
 }
 
-// Moving window to front of display (which happens to be back of our sorted list)
+void ImGui::BringWindowToFront(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.Windows.back() == window)
+        return;
+    for (int i = 0; i < g.Windows.Size; i++)
+        if (g.Windows[i] == window)
+        {
+            g.Windows.erase(g.Windows.begin() + i);
+            g.Windows.push_back(window);
+            break;
+        }
+}
+
+void ImGui::BringWindowToBack(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.Windows[0] == window)
+        return;
+    for (int i = 0; i < g.Windows.Size; i++)
+        if (g.Windows[i] == window)
+        {
+            memmove(&g.Windows[1], &g.Windows[0], (size_t)i * sizeof(ImGuiWindow*));
+            g.Windows[0] = window;
+            break;
+        }
+}
+
+// Moving window to front of display and set focus (which happens to be back of our sorted list)
 void ImGui::FocusWindow(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
@@ -5779,7 +5808,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
     if (!window)
         return;
 
-    // And move its root window to the top of the pile
+    // Move the root window to the top of the pile
     if (window->RootWindow)
         window = window->RootWindow;
 
@@ -5789,15 +5818,8 @@ void ImGui::FocusWindow(ImGuiWindow* window)
             ClearActiveID();
 
     // Bring to front
-    if ((window->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus) || g.Windows.back() == window)
-        return;
-    for (int i = 0; i < g.Windows.Size; i++)
-        if (g.Windows[i] == window)
-        {
-            g.Windows.erase(g.Windows.begin() + i);
-            break;
-        }
-    g.Windows.push_back(window);
+    if (!(window->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus))
+        BringWindowToFront(window);
 }
 
 void ImGui::FocusPreviousWindow()
