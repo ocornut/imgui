@@ -1376,13 +1376,8 @@ void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, int* 
 
 //-----------------------------------------------------------------------------
 // ImGuiStorage
-//-----------------------------------------------------------------------------
-
 // Helper: Key->value storage
-void ImGuiStorage::Clear()
-{
-    Data.clear();
-}
+//-----------------------------------------------------------------------------
 
 // std::lower_bound but without the bullshit
 static ImVector<ImGuiStorage::Pair>::iterator LowerBound(ImVector<ImGuiStorage::Pair>& data, ImGuiID key)
@@ -1652,7 +1647,7 @@ void ImGuiTextBuffer::append(const char* fmt, ...)
 }
 
 //-----------------------------------------------------------------------------
-// ImGuiSimpleColumns
+// ImGuiSimpleColumns (internal use only)
 //-----------------------------------------------------------------------------
 
 ImGuiSimpleColumns::ImGuiSimpleColumns()
@@ -1806,6 +1801,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Collapsed = false;
     SkipItems = false;
     Appearing = false;
+    CloseButton = false;
     BeginCount = 0;
     PopupId = 0;
     AutoFitFramesX = AutoFitFramesY = -1;
@@ -3944,6 +3940,13 @@ static ImVec2 FindBestPopupWindowPos(const ImVec2& base_pos, const ImVec2& size,
     return pos;
 }
 
+static void SetWindowConditionAllowFlags(ImGuiWindow* window, ImGuiCond flags, bool enabled)
+{
+    window->SetWindowPosAllowFlags       = enabled ? (window->SetWindowPosAllowFlags       | flags) : (window->SetWindowPosAllowFlags       & ~flags);
+    window->SetWindowSizeAllowFlags      = enabled ? (window->SetWindowSizeAllowFlags      | flags) : (window->SetWindowSizeAllowFlags      & ~flags);
+    window->SetWindowCollapsedAllowFlags = enabled ? (window->SetWindowCollapsedAllowFlags | flags) : (window->SetWindowCollapsedAllowFlags & ~flags);
+}
+
 ImGuiWindow* ImGui::FindWindowByName(const char* name)
 {
     ImGuiContext& g = *GImGui;
@@ -3975,15 +3978,9 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 
         ImGuiIniData* settings = FindWindowSettings(name);
         if (!settings)
-        {
             settings = AddWindowSettings(name);
-        }
         else
-        {
-            window->SetWindowPosAllowFlags &= ~ImGuiCond_FirstUseEver;
-            window->SetWindowSizeAllowFlags &= ~ImGuiCond_FirstUseEver;
-            window->SetWindowCollapsedAllowFlags &= ~ImGuiCond_FirstUseEver;
-        }
+            SetWindowConditionAllowFlags(window, ImGuiCond_FirstUseEver, false);
 
         if (settings->Pos.x != FLT_MAX)
         {
@@ -4039,7 +4036,10 @@ static ImVec2 CalcSizeFullWithConstraint(ImGuiWindow* window, ImVec2 new_size)
         }
     }
     if (!(window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_AlwaysAutoResize)))
+    {
         new_size = ImMax(new_size, g.Style.WindowMinSize);
+        new_size.y = ImMax(new_size.y, window->TitleBarHeight() + window->MenuBarHeight() + ImMax(0.0f, g.Style.WindowRounding - 1.0f)); // Reduce artifacts with very small windows
+    }
     return new_size;
 }
 
@@ -4154,13 +4154,14 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames == 1);
     window->Appearing = (window_just_activated_by_user || window_just_appearing_after_hidden_for_resize);
+    window->CloseButton = (p_open != NULL);
 
     // Process SetNextWindow***() calls
+    if (window->Appearing)
+        SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
     bool window_pos_set_by_api = false, window_size_set_by_api = false;
     if (g.SetNextWindowPosCond)
     {
-        if (window->Appearing) 
-            window->SetWindowPosAllowFlags |= ImGuiCond_Appearing;
         window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) != 0;
         if (window_pos_set_by_api && ImLengthSqr(g.SetNextWindowPosPivot) > 0.00001f)
         {
@@ -4178,8 +4179,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     }
     if (g.SetNextWindowSizeCond)
     {
-        if (window->Appearing) 
-            window->SetWindowSizeAllowFlags |= ImGuiCond_Appearing;
         window_size_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0;
         SetWindowSize(window, g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
         g.SetNextWindowSizeCond = 0;
@@ -4195,8 +4194,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     }
     if (g.SetNextWindowCollapsedCond)
     {
-        if (window->Appearing)
-            window->SetWindowCollapsedAllowFlags |= ImGuiCond_Appearing;
         SetWindowCollapsed(window, g.SetNextWindowCollapsedVal, g.SetNextWindowCollapsedCond);
         g.SetNextWindowCollapsedCond = 0;
     }
@@ -4205,6 +4202,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         SetWindowFocus();
         g.SetNextWindowFocus = false;
     }
+    if (window->Appearing)
+        SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, false);
 
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
@@ -4315,7 +4314,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->SizeFull = CalcSizeFullWithConstraint(window, window->SizeFull);
         window->Size = window->Collapsed ? window->TitleBarRect().GetSize() : window->SizeFull;
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
+        {
+            IM_ASSERT(window_size_set_by_api); // Submitted by BeginChild()
             window->Size = window->SizeFull;
+        }
 
         // SCROLLBAR STATUS
 
@@ -4338,11 +4340,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->OrderWithinParent = parent_window->DC.ChildWindows.Size;
             parent_window->DC.ChildWindows.push_back(window);
         }
-        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
-        {
-            IM_ASSERT(window_size_set_by_api); // Submitted by BeginChild()
+        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api)
             window->Pos = window->PosFloat = parent_window->DC.CursorPos;
-        }
 
         const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFrames == 0);
         if (window_pos_with_pivot)
@@ -4809,13 +4808,43 @@ void ImGui::Scrollbar(ImGuiLayoutType direction)
 
     // Render
     const ImU32 grab_col = GetColorU32(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
+    ImRect grab_rect;
     if (horizontal)
-        window->DrawList->AddRectFilled(ImVec2(ImLerp(bb.Min.x, bb.Max.x, grab_v_norm), bb.Min.y), ImVec2(ImLerp(bb.Min.x, bb.Max.x, grab_v_norm) + grab_h_pixels, bb.Max.y), grab_col, style.ScrollbarRounding);
+        grab_rect = ImRect(ImLerp(bb.Min.x, bb.Max.x, grab_v_norm), bb.Min.y, ImMin(ImLerp(bb.Min.x, bb.Max.x, grab_v_norm) + grab_h_pixels, window_rect.Max.x), bb.Max.y);
     else
-        window->DrawList->AddRectFilled(ImVec2(bb.Min.x, ImLerp(bb.Min.y, bb.Max.y, grab_v_norm)), ImVec2(bb.Max.x, ImLerp(bb.Min.y, bb.Max.y, grab_v_norm) + grab_h_pixels), grab_col, style.ScrollbarRounding);
+        grab_rect = ImRect(bb.Min.x, ImLerp(bb.Min.y, bb.Max.y, grab_v_norm), bb.Max.x, ImMin(ImLerp(bb.Min.y, bb.Max.y, grab_v_norm) + grab_h_pixels, window_rect.Max.y));
+    window->DrawList->AddRectFilled(grab_rect.Min, grab_rect.Max, grab_col, style.ScrollbarRounding);
 }
 
-// Moving window to front of display (which happens to be back of our sorted list)
+void ImGui::BringWindowToFront(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.Windows.back() == window)
+        return;
+    for (int i = 0; i < g.Windows.Size; i++)
+        if (g.Windows[i] == window)
+        {
+            g.Windows.erase(g.Windows.begin() + i);
+            g.Windows.push_back(window);
+            break;
+        }
+}
+
+void ImGui::BringWindowToBack(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.Windows[0] == window)
+        return;
+    for (int i = 0; i < g.Windows.Size; i++)
+        if (g.Windows[i] == window)
+        {
+            memmove(&g.Windows[1], &g.Windows[0], (size_t)i * sizeof(ImGuiWindow*));
+            g.Windows[0] = window;
+            break;
+        }
+}
+
+// Moving window to front of display and set focus (which happens to be back of our sorted list)
 void ImGui::FocusWindow(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
@@ -4827,7 +4856,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
     if (!window)
         return;
 
-    // And move its root window to the top of the pile
+    // Move the root window to the top of the pile
     if (window->RootWindow)
         window = window->RootWindow;
 
@@ -4837,15 +4866,8 @@ void ImGui::FocusWindow(ImGuiWindow* window)
             ClearActiveID();
 
     // Bring to front
-    if ((window->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus) || g.Windows.back() == window)
-        return;
-    for (int i = 0; i < g.Windows.Size; i++)
-        if (g.Windows[i] == window)
-        {
-            g.Windows.erase(g.Windows.begin() + i);
-            break;
-        }
-    g.Windows.push_back(window);
+    if (!(window->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus))
+        BringWindowToFront(window);
 }
 
 void ImGui::FocusPreviousWindow()
@@ -9229,10 +9251,12 @@ bool ImGui::BeginMenuBar()
     if (!(window->Flags & ImGuiWindowFlags_MenuBar))
         return false;
 
+    ImGuiContext& g = *GImGui;
     IM_ASSERT(!window->DC.MenuBarAppending);
     BeginGroup(); // Save position
     PushID("##menubar");
     ImRect rect = window->MenuBarRect();
+    rect.Max.x = ImMax(rect.Min.x, rect.Max.x - g.Style.WindowRounding);
     PushClipRect(ImVec2(ImFloor(rect.Min.x+0.5f), ImFloor(rect.Min.y + window->BorderSize + 0.5f)), ImVec2(ImFloor(rect.Max.x+0.5f), ImFloor(rect.Max.y+0.5f)), false);
     window->DC.CursorPos = ImVec2(rect.Min.x + window->DC.MenuBarOffsetX, rect.Min.y);// + g.Style.FramePadding.y);
     window->DC.LayoutType = ImGuiLayoutType_Horizontal;
@@ -9283,6 +9307,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     {
         // Menu inside an horizontal menu bar
         // Selectable extend their highlight by half ItemSpacing in each direction.
+        // For ChildMenu, the popup position will be overwritten by the call to FindBestPopupWindowPos() in Begin()
         popup_pos = ImVec2(pos.x - window->WindowPadding.x, pos.y - style.FramePadding.y + window->MenuBarHeight());
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
         PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
