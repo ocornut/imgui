@@ -194,7 +194,8 @@ enum ImGuiColumnsFlags_
     ImGuiColumnsFlags_NoBorder              = 1 << 0,   // Disable column dividers
     ImGuiColumnsFlags_NoResize              = 1 << 1,   // Disable resizing columns when clicking on the dividers
     ImGuiColumnsFlags_NoPreserveWidths      = 1 << 2,   // Disable column width preservation when adjusting columns
-    ImGuiColumnsFlags_NoForceWithinWindow   = 1 << 3    // Disable forcing columns to fit within window
+    ImGuiColumnsFlags_NoForceWithinWindow   = 1 << 3,   // Disable forcing columns to fit within window
+    ImGuiColumnsFlags_GrowParentContentsSize= 1 << 4,   // (WIP) Restore pre-1.51 behavior of extending the parent window contents size but _without affecting the columns width at all_. Will eventually remove.
 };
 
 enum ImGuiSelectableFlagsPrivate_

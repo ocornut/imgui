@@ -10515,7 +10515,8 @@ void ImGui::EndColumns()
 
     window->DC.ColumnsCellMaxY = ImMax(window->DC.ColumnsCellMaxY, window->DC.CursorPos.y);
     window->DC.CursorPos.y = window->DC.ColumnsCellMaxY;
-    window->DC.CursorMaxPos.x = ImMax(window->DC.ColumnsStartMaxPosX, window->DC.ColumnsMaxX);  // Columns don't grow parent
+    if (!(window->DC.ColumnsFlags & ImGuiColumnsFlags_GrowParentContentsSize))
+        window->DC.CursorMaxPos.x = ImMax(window->DC.ColumnsStartMaxPosX, window->DC.ColumnsMaxX);  // Restore cursor max pos, as columns don't grow parent
 
     // Draw columns borders and handle resize
     if (!(window->DC.ColumnsFlags & ImGuiColumnsFlags_NoBorder) && !window->SkipItems)
