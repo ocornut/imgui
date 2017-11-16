@@ -4793,7 +4793,35 @@ void ImGui::Scrollbar(ImGuiLayoutType direction)
     window->DrawList->AddRectFilled(grab_rect.Min, grab_rect.Max, grab_col, style.ScrollbarRounding);
 }
 
-// Moving window to front of display (which happens to be back of our sorted list)
+void ImGui::BringWindowToFront(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.Windows.back() == window)
+        return;
+    for (int i = 0; i < g.Windows.Size; i++)
+        if (g.Windows[i] == window)
+        {
+            g.Windows.erase(g.Windows.begin() + i);
+            g.Windows.push_back(window);
+            break;
+        }
+}
+
+void ImGui::BringWindowToBack(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.Windows[0] == window)
+        return;
+    for (int i = 0; i < g.Windows.Size; i++)
+        if (g.Windows[i] == window)
+        {
+            memmove(&g.Windows[1], &g.Windows[0], (size_t)i * sizeof(ImGuiWindow*));
+            g.Windows[0] = window;
+            break;
+        }
+}
+
+// Moving window to front of display and set focus (which happens to be back of our sorted list)
 void ImGui::FocusWindow(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
@@ -4805,7 +4833,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
     if (!window)
         return;
 
-    // And move its root window to the top of the pile
+    // Move the root window to the top of the pile
     if (window->RootWindow)
         window = window->RootWindow;
 
@@ -4815,15 +4843,8 @@ void ImGui::FocusWindow(ImGuiWindow* window)
             ClearActiveID();
 
     // Bring to front
-    if ((window->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus) || g.Windows.back() == window)
-        return;
-    for (int i = 0; i < g.Windows.Size; i++)
-        if (g.Windows[i] == window)
-        {
-            g.Windows.erase(g.Windows.begin() + i);
-            break;
-        }
-    g.Windows.push_back(window);
+    if (!(window->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus))
+        BringWindowToFront(window);
 }
 
 void ImGui::FocusPreviousWindow()
