@@ -726,26 +726,26 @@ ImGuiStyle::ImGuiStyle()
 }
 
 // To scale your entire UI (e.g. if you want your app to use High DPI or generally be DPI aware) you may use this helper function. Scaling the fonts is done separately and is up to you.
-// Tips: if you need to change your scale multiple times, prefer calling this on a freshly initialized ImGuiStyle structure rather than scaling multiple times (because floating point multiplications are lossy).
+// Important: This operation is lossy because we round all sizes to integer. If you need to change your scale multiples, call this over a freshly initialized ImGuiStyle structure rather than scaling multiple times.
 void ImGuiStyle::ScaleAllSizes(float scale_factor)
 {
-    WindowPadding *= scale_factor;
-    WindowMinSize *= scale_factor;
-    WindowRounding *= scale_factor;
-    ChildWindowRounding *= scale_factor;
-    FramePadding *= scale_factor;
-    FrameRounding *= scale_factor;
-    ItemSpacing *= scale_factor;
-    ItemInnerSpacing *= scale_factor;
-    TouchExtraPadding *= scale_factor;
-    IndentSpacing *= scale_factor;
-    ColumnsMinSpacing *= scale_factor;
-    ScrollbarSize *= scale_factor;
-    ScrollbarRounding *= scale_factor;
-    GrabMinSize *= scale_factor;
-    GrabRounding *= scale_factor;
-    DisplayWindowPadding *= scale_factor;
-    DisplaySafeAreaPadding *= scale_factor;
+    WindowPadding = ImFloor(WindowPadding * scale_factor);
+    WindowMinSize = ImFloor(WindowMinSize * scale_factor);
+    WindowRounding = ImFloor(WindowRounding * scale_factor);
+    ChildWindowRounding = ImFloor(ChildWindowRounding * scale_factor);
+    FramePadding = ImFloor(FramePadding * scale_factor);
+    FrameRounding = ImFloor(FrameRounding * scale_factor);
+    ItemSpacing = ImFloor(ItemSpacing * scale_factor);
+    ItemInnerSpacing = ImFloor(ItemInnerSpacing * scale_factor);
+    TouchExtraPadding = ImFloor(TouchExtraPadding * scale_factor);
+    IndentSpacing = ImFloor(IndentSpacing * scale_factor);
+    ColumnsMinSpacing = ImFloor(ColumnsMinSpacing * scale_factor);
+    ScrollbarSize = ImFloor(ScrollbarSize * scale_factor);
+    ScrollbarRounding = ImFloor(ScrollbarRounding * scale_factor);
+    GrabMinSize = ImFloor(GrabMinSize * scale_factor);
+    GrabRounding = ImFloor(GrabRounding * scale_factor);
+    DisplayWindowPadding = ImFloor(DisplayWindowPadding * scale_factor);
+    DisplaySafeAreaPadding = ImFloor(DisplaySafeAreaPadding * scale_factor);
 }
 
 ImGuiIO::ImGuiIO()
