@@ -260,7 +260,7 @@ namespace ImGui
     IMGUI_API ImGuiID       GetID(const void* ptr_id);
 
     // Widgets: Text
-    IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL);               // doesn't require null terminated string if 'text_end' is specified. no copy done, no limits, recommended for long chunks of text
+    IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL);               // raw text without formatting. Roughly equivalent to Text("%s", text) but: A) doesn't require null terminated string if 'text_end' is specified, B) it's faster, no memory copy is done, no buffer size limits, recommended for long chunks of text.
     IMGUI_API void          Text(const char* fmt, ...)                                     IM_FMTARGS(1); // simple formatted text
     IMGUI_API void          TextV(const char* fmt, va_list args)                           IM_FMTLIST(1);
     IMGUI_API void          TextColored(const ImVec4& col, const char* fmt, ...)           IM_FMTARGS(2); // shortcut for PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
@@ -427,6 +427,7 @@ namespace ImGui
     // Styles
     IMGUI_API void          StyleColorsClassic(ImGuiStyle* dst = NULL);
     IMGUI_API void          StyleColorsDark(ImGuiStyle* dst = NULL);
+    IMGUI_API void          StyleColorsLight(ImGuiStyle* dst = NULL);
 
     // Utilities
     IMGUI_API bool          IsItemHovered(ImGuiHoveredFlags flags = 0);                         // is the last item hovered by mouse (and usable)?
@@ -653,7 +654,6 @@ enum ImGuiCol_
     ImGuiCol_ScrollbarGrab,
     ImGuiCol_ScrollbarGrabHovered,
     ImGuiCol_ScrollbarGrabActive,
-    ImGuiCol_ComboBg,
     ImGuiCol_CheckMark,
     ImGuiCol_SliderGrab,
     ImGuiCol_SliderGrabActive,
@@ -696,7 +696,8 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_WindowPadding,       // ImVec2    WindowPadding
     ImGuiStyleVar_WindowRounding,      // float     WindowRounding
     ImGuiStyleVar_WindowMinSize,       // ImVec2    WindowMinSize
-    ImGuiStyleVar_ChildWindowRounding, // float     ChildWindowRounding
+    ImGuiStyleVar_ChildRounding,       // float     ChildRounding
+    ImGuiStyleVar_PopupRounding,       // float     PopupRounding
     ImGuiStyleVar_FramePadding,        // ImVec2    FramePadding
     ImGuiStyleVar_FrameRounding,       // float     FrameRounding
     ImGuiStyleVar_ItemSpacing,         // ImVec2    ItemSpacing
@@ -705,6 +706,11 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_GrabMinSize,         // float     GrabMinSize
     ImGuiStyleVar_ButtonTextAlign,     // ImVec2    ButtonTextAlign
     ImGuiStyleVar_Count_
+
+    // Obsolete names (will be removed)
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    , ImGuiStyleVar_ChildWindowRounding = ImGuiStyleVar_ChildRounding
+#endif
 };
 
 // Enumeration for ColorEdit3() / ColorEdit4() / ColorPicker3() / ColorPicker4() / ColorButton()
@@ -773,7 +779,8 @@ struct ImGuiStyle
     ImVec2      WindowMinSize;              // Minimum window size
     float       WindowRounding;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
     ImVec2      WindowTitleAlign;           // Alignment for title bar text. Defaults to (0.0f,0.5f) for left-aligned,vertically centered.
-    float       ChildWindowRounding;        // Radius of child window corners rounding. Set to 0.0f to have rectangular windows
+    float       ChildRounding;              // Radius of child window corners rounding. Set to 0.0f to have rectangular windows.
+    float       PopupRounding;              // Radius of popup window corners rounding.
     ImVec2      FramePadding;               // Padding within a framed rectangle (used by most widgets)
     float       FrameRounding;              // Radius of frame corners rounding. Set to 0.0f to have rectangular frame (used by most widgets).
     ImVec2      ItemSpacing;                // Horizontal and vertical spacing between widgets/lines
