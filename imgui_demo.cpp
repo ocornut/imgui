@@ -1851,29 +1851,40 @@ void ImGui::ShowTestWindow(bool* p_open)
 
 void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 {
+    // You can pass in a reference ImGuiStyle structure to compare to, revert to and save to (else it compares to an internally stored reference)
     ImGuiStyle& style = ImGui::GetStyle();
-    ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.55f);
+    static ImGuiStyle ref_saved_style;
 
-    // Style selector
+    // Default to using internal storage as reference
+    static bool init = true;
+    if (init && ref == NULL)
+        ref_saved_style = style;
+    init = false;
+    if (ref == NULL)
+        ref = &ref_saved_style;
+
+    ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.50f);
+
+    // Default Styles Selector
     static int style_idx = 0;
     if (ImGui::Combo("Colors##Selector", &style_idx, "Classic\0Dark\0"))
+    {
         switch (style_idx)
         {
         case 0: ImGui::StyleColorsClassic(); break;
         case 1: ImGui::StyleColorsDark(); break;
         }
-
-    // You can pass in a reference ImGuiStyle structure to compare to, revert to and save to (else it compares to the default style)
-    const ImGuiStyle default_style; // Default style
-    if (ImGui::Button("Revert Style"))
-        style = ref ? *ref : default_style;
-
-    if (ref)
-    {
-        ImGui::SameLine();
-        if (ImGui::Button("Save Style"))
-            *ref = style;
+        ref_saved_style = style;
     }
+
+    // Save/Revert button
+    if (ImGui::Button("Save Ref"))
+        *ref = ref_saved_style = style;
+    ImGui::SameLine();
+    if (ImGui::Button("Revert Ref"))
+        style = *ref;
+    ImGui::SameLine();
+    ShowHelpMarker("Save/Revert in local non-persistent storage. Default Colors definition are not affected. Use \"Export Colors\" below to save them somewhere.");
 
     if (ImGui::TreeNode("Rendering"))
     {
@@ -1911,8 +1922,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     if (ImGui::TreeNode("Colors"))
     {
         static int output_dest = 0;
-        static bool output_only_modified = false;
-        if (ImGui::Button("Copy Colors"))
+        static bool output_only_modified = true;
+        if (ImGui::Button("Export Unsaved"))
         {
             if (output_dest == 0)
                 ImGui::LogToClipboard();
@@ -1923,13 +1934,13 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             {
                 const ImVec4& col = style.Colors[i];
                 const char* name = ImGui::GetStyleColorName(i);
-                if (!output_only_modified || memcmp(&col, (ref ? &ref->Colors[i] : &default_style.Colors[i]), sizeof(ImVec4)) != 0)
+                if (!output_only_modified || memcmp(&col, &ref->Colors[i], sizeof(ImVec4)) != 0)
                     ImGui::LogText("colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" IM_NEWLINE, name, 23-(int)strlen(name), "", col.x, col.y, col.z, col.w);
             }
             ImGui::LogFinish();
         }
         ImGui::SameLine(); ImGui::PushItemWidth(120); ImGui::Combo("##output_type", &output_dest, "To Clipboard\0To TTY\0"); ImGui::PopItemWidth();
-        ImGui::SameLine(); ImGui::Checkbox("Only Modified Fields", &output_only_modified);
+        ImGui::SameLine(); ImGui::Checkbox("Only Modified Colors", &output_only_modified);
 
         ImGui::Text("Tip: Left-click on colored square to open color picker,\nRight-click to open edit options menu.");
 
@@ -1941,7 +1952,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::RadioButton("Alpha", &alpha_flags, ImGuiColorEditFlags_AlphaPreview); ImGui::SameLine(); 
         ImGui::RadioButton("Both", &alpha_flags, ImGuiColorEditFlags_AlphaPreviewHalf);
 
-        ImGui::BeginChild("#colors", ImVec2(0, 300), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+        ImGui::BeginChild("#colors", ImVec2(0, 300), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
         ImGui::PushItemWidth(-160);
         for (int i = 0; i < ImGuiCol_COUNT; i++)
         {
@@ -1949,12 +1960,16 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             if (!filter.PassFilter(name))
                 continue;
             ImGui::PushID(i);
-            ImGui::ColorEdit4(name, (float*)&style.Colors[i], ImGuiColorEditFlags_AlphaBar | alpha_flags);
-            if (memcmp(&style.Colors[i], (ref ? &ref->Colors[i] : &default_style.Colors[i]), sizeof(ImVec4)) != 0)
+            ImGui::ColorEdit4("##color", (float*)&style.Colors[i], ImGuiColorEditFlags_AlphaBar | alpha_flags);
+            if (memcmp(&style.Colors[i], &ref->Colors[i], sizeof(ImVec4)) != 0)
             {
-                ImGui::SameLine(); if (ImGui::Button("Revert")) style.Colors[i] = ref ? ref->Colors[i] : default_style.Colors[i];
-                if (ref) { ImGui::SameLine(); if (ImGui::Button("Save")) ref->Colors[i] = style.Colors[i]; }
+                // Tips: in a real user application, you may want to merge and use an icon font into the main font, so instead of "Save"/"Revert" you'd use icons.
+                // Read the FAQ and extra_fonts/README.txt about using icon fonts. It's really easy and super convenient!
+                ImGui::SameLine(0.0f, style.ItemInnerSpacing.x); if (ImGui::Button("Save")) ref->Colors[i] = style.Colors[i];
+                ImGui::SameLine(0.0f, style.ItemInnerSpacing.x); if (ImGui::Button("Revert")) style.Colors[i] = ref->Colors[i];
             }
+            ImGui::SameLine(0.0f, style.ItemInnerSpacing.x);
+            ImGui::TextUnformatted(name);
             ImGui::PopID();
         }
         ImGui::PopItemWidth();
