@@ -706,6 +706,7 @@ ImGuiStyle::ImGuiStyle()
     WindowRounding          = 9.0f;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
     WindowTitleAlign        = ImVec2(0.0f,0.5f);// Alignment for title bar text
     ChildRounding           = 0.0f;             // Radius of child window corners rounding. Set to 0.0f to have rectangular child windows
+    PopupRounding           = 0.0f;             // Radius of popup window corners rounding. Set to 0.0f to have rectangular child windows
     FramePadding            = ImVec2(4,3);      // Padding within a framed rectangle (used by most widgets)
     FrameRounding           = 0.0f;             // Radius of frame corners rounding. Set to 0.0f to have rectangular frames (used by most widgets).
     ItemSpacing             = ImVec2(8,4);      // Horizontal and vertical spacing between widgets/lines
@@ -735,6 +736,7 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     WindowMinSize = ImFloor(WindowMinSize * scale_factor);
     WindowRounding = ImFloor(WindowRounding * scale_factor);
     ChildRounding = ImFloor(ChildRounding * scale_factor);
+    PopupRounding = ImFloor(PopupRounding * scale_factor);
     FramePadding = ImFloor(FramePadding * scale_factor);
     FrameRounding = ImFloor(FrameRounding * scale_factor);
     ItemSpacing = ImFloor(ItemSpacing * scale_factor);
@@ -4263,8 +4265,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->WindowPadding = style.WindowPadding;
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup)))
             window->WindowPadding = ImVec2(0.0f, (flags & ImGuiWindowFlags_MenuBar) ? style.WindowPadding.y : 0.0f);
-        window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : style.WindowRounding;
         window->WindowBorderSize = (flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
+        window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
         const float window_rounding = window->WindowRounding;
 
         // Calculate auto-fit size, handle automatic resize
@@ -5038,6 +5040,7 @@ static const ImGuiStyleVarInfo GStyleVarInfo[ImGuiStyleVar_Count_] =
     { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, WindowRounding) },       // ImGuiStyleVar_WindowRounding
     { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowMinSize) },        // ImGuiStyleVar_WindowMinSize
     { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, ChildRounding) },        // ImGuiStyleVar_ChildRounding
+    { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, PopupRounding) },        // ImGuiStyleVar_PopupRounding
     { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, FramePadding) },         // ImGuiStyleVar_FramePadding
     { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, FrameRounding) },        // ImGuiStyleVar_FrameRounding
     { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, ItemSpacing) },          // ImGuiStyleVar_ItemSpacing

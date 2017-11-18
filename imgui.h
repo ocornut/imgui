@@ -673,6 +673,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_WindowRounding,      // float     WindowRounding
     ImGuiStyleVar_WindowMinSize,       // ImVec2    WindowMinSize
     ImGuiStyleVar_ChildRounding,       // float     ChildRounding
+    ImGuiStyleVar_PopupRounding,       // float     PopupRounding
     ImGuiStyleVar_FramePadding,        // ImVec2    FramePadding
     ImGuiStyleVar_FrameRounding,       // float     FrameRounding
     ImGuiStyleVar_ItemSpacing,         // ImVec2    ItemSpacing
@@ -755,6 +756,7 @@ struct ImGuiStyle
     float       WindowRounding;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
     ImVec2      WindowTitleAlign;           // Alignment for title bar text. Defaults to (0.0f,0.5f) for left-aligned,vertically centered.
     float       ChildRounding;              // Radius of child window corners rounding. Set to 0.0f to have rectangular windows.
+    float       PopupRounding;              // Radius of popup window corners rounding.
     ImVec2      FramePadding;               // Padding within a framed rectangle (used by most widgets)
     float       FrameRounding;              // Radius of frame corners rounding. Set to 0.0f to have rectangular frame (used by most widgets).
     ImVec2      ItemSpacing;                // Horizontal and vertical spacing between widgets/lines
