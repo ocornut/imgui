@@ -2009,6 +2009,9 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
         return false;
     if (window->DC.ItemFlags & ImGuiItemFlags_Disabled)
         return false;
+    // Special handling for the 1st item after Begin() which represent the title bar. When the window is collapsed (SkipItems==true) that last item will never be overwritten.
+    if (window->DC.LastItemId == window->MoveId && window->WriteAccessed)
+        return false;
     return true;
 }
 
