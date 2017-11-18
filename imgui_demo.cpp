@@ -1867,12 +1867,13 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
     // Default Styles Selector
     static int style_idx = 0;
-    if (ImGui::Combo("Colors##Selector", &style_idx, "Classic\0Dark\0"))
+    if (ImGui::Combo("Colors##Selector", &style_idx, "Classic\0Dark\0Light\0"))
     {
         switch (style_idx)
         {
         case 0: ImGui::StyleColorsClassic(); break;
         case 1: ImGui::StyleColorsDark(); break;
+        case 2: ImGui::StyleColorsLight(); break;
         }
         ref_saved_style = style;
     }

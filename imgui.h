@@ -417,6 +417,7 @@ namespace ImGui
     // Styles
     IMGUI_API void          StyleColorsClassic(ImGuiStyle* dst = NULL);
     IMGUI_API void          StyleColorsDark(ImGuiStyle* dst = NULL);
+    IMGUI_API void          StyleColorsLight(ImGuiStyle* dst = NULL);
 
     // Utilities
     IMGUI_API bool          IsItemHovered(ImGuiHoveredFlags flags = 0);                         // is the last item hovered by mouse (and usable)?
