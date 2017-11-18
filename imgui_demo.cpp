@@ -1341,7 +1341,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             if (ImGui::Button("Select.."))
                 ImGui::OpenPopup("select");
             ImGui::SameLine();
-            ImGui::Text(selected_fish == -1 ? "<None>" : names[selected_fish]);
+            ImGui::TextUnformatted(selected_fish == -1 ? "<None>" : names[selected_fish]);
             if (ImGui::BeginPopup("select"))
             {
                 ImGui::Text("Aquarium");
