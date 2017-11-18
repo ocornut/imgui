@@ -1789,13 +1789,14 @@ ImGuiWindow::ImGuiWindow(const char* name)
     Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContents = SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     WindowPadding = ImVec2(0.0f, 0.0f);
+    WindowRounding = 0.0f;
+    WindowBorderSize = 0.0f;
     MoveId = GetID("#MOVE");
     Scroll = ImVec2(0.0f, 0.0f);
     ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
     ScrollTargetCenterRatio = ImVec2(0.5f, 0.5f);
     ScrollbarX = ScrollbarY = false;
     ScrollbarSizes = ImVec2(0.0f, 0.0f);
-    BorderSize = 0.0f;
     Active = WasActive = false;
     Accessed = false;
     Collapsed = false;
@@ -4260,6 +4261,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->WindowPadding = style.WindowPadding;
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_ShowBorders | ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_Popup)))
             window->WindowPadding = ImVec2(0.0f, (flags & ImGuiWindowFlags_MenuBar) ? style.WindowPadding.y : 0.0f);
+        window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : style.WindowRounding;
+        window->WindowBorderSize = (flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
+        const float window_rounding = window->WindowRounding;
 
         // Calculate auto-fit size, handle automatic resize
         const ImVec2 size_auto_fit = CalcSizeAutoFit(window);
@@ -4308,7 +4312,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (window->ScrollbarX && !window->ScrollbarY)
                 window->ScrollbarY = (window->SizeContents.y > window->SizeFull.y + style.ItemSpacing.y - style.ScrollbarSize) && !(flags & ImGuiWindowFlags_NoScrollbar);
             window->ScrollbarSizes = ImVec2(window->ScrollbarY ? style.ScrollbarSize : 0.0f, window->ScrollbarX ? style.ScrollbarSize : 0.0f);
-            window->BorderSize = (flags & ImGuiWindowFlags_ShowBorders) ? 1.0f : 0.0f;
         }
 
         // POSITION
@@ -4391,7 +4394,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Draw window + handle manual resize
         ImRect title_bar_rect = window->TitleBarRect();
-        const float window_rounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : style.WindowRounding;
         if (window->Collapsed)
         {
             // Title bar only
@@ -4465,9 +4467,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (!(flags & ImGuiWindowFlags_NoResize))
             {
                 const ImVec2 br = window->Rect().GetBR();
-                window->DrawList->PathLineTo(br + ImVec2(-resize_corner_size, -window->BorderSize));
-                window->DrawList->PathLineTo(br + ImVec2(-window->BorderSize, -resize_corner_size));
-                window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding - window->BorderSize, br.y - window_rounding - window->BorderSize), window_rounding, 0, 3);
+                window->DrawList->PathLineTo(br + ImVec2(-resize_corner_size, -window->WindowBorderSize));
+                window->DrawList->PathLineTo(br + ImVec2(-window->WindowBorderSize, -resize_corner_size));
+                window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding - window->WindowBorderSize, br.y - window_rounding - window->WindowBorderSize), window_rounding, 0, 3);
                 window->DrawList->PathFillConvex(resize_col);
             }
 
@@ -4598,7 +4600,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     // Inner clipping rectangle
     // Force round operator last to ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
-    const float border_size = window->BorderSize;
+    const float border_size = window->WindowBorderSize;
     ImRect clip_rect;
     clip_rect.Min.x = ImFloor(0.5f + window->InnerRect.Min.x + ImMax(border_size, ImFloor(window->WindowPadding.x*0.5f)));
     clip_rect.Min.y = ImFloor(0.5f + window->InnerRect.Min.y + border_size);
@@ -4702,7 +4704,7 @@ void ImGui::Scrollbar(ImGuiLayoutType direction)
     bool other_scrollbar = (horizontal ? window->ScrollbarY : window->ScrollbarX);
     float other_scrollbar_size_w = other_scrollbar ? style.ScrollbarSize : 0.0f;
     const ImRect window_rect = window->Rect();
-    const float border_size = window->BorderSize;
+    const float border_size = window->WindowBorderSize;
     ImRect bb = horizontal
         ? ImRect(window->Pos.x + border_size, window_rect.Max.y - style.ScrollbarSize, window_rect.Max.x - other_scrollbar_size_w - border_size, window_rect.Max.y - border_size)
         : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + border_size, window_rect.Max.x - border_size, window_rect.Max.y - other_scrollbar_size_w - border_size);
@@ -4711,13 +4713,12 @@ void ImGui::Scrollbar(ImGuiLayoutType direction)
     if (bb.GetWidth() <= 0.0f || bb.GetHeight() <= 0.0f)
         return;
 
-    float window_rounding = (window->Flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : style.WindowRounding;
     int window_rounding_corners;
     if (horizontal)
         window_rounding_corners = ImGuiCorner_BotLeft | (other_scrollbar ? 0 : ImGuiCorner_BotRight);
     else
         window_rounding_corners = (((window->Flags & ImGuiWindowFlags_NoTitleBar) && !(window->Flags & ImGuiWindowFlags_MenuBar)) ? ImGuiCorner_TopRight : 0) | (other_scrollbar ? 0 : ImGuiCorner_BotRight);
-    window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_ScrollbarBg), window_rounding, window_rounding_corners);
+    window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_ScrollbarBg), window->WindowRounding, window_rounding_corners);
     bb.Expand(ImVec2(-ImClamp((float)(int)((bb.Max.x - bb.Min.x - 2.0f) * 0.5f), 0.0f, 3.0f), -ImClamp((float)(int)((bb.Max.y - bb.Min.y - 2.0f) * 0.5f), 0.0f, 3.0f)));
 
     // V denote the main, longer axis of the scrollbar (= height for a vertical scrollbar)
@@ -7610,7 +7611,7 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
     // Render
     fraction = ImSaturate(fraction);
     RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
-    bb.Expand(ImVec2(-window->BorderSize, -window->BorderSize));
+    bb.Expand(ImVec2(-window->WindowBorderSize, -window->WindowBorderSize));
     const ImVec2 fill_br = ImVec2(ImLerp(bb.Min.x, bb.Max.x, fraction), bb.Max.y);
     RenderRectFilledRangeH(window->DrawList, bb, GetColorU32(ImGuiCol_PlotHistogram), 0.0f, fraction, style.FrameRounding);
 
@@ -9219,7 +9220,7 @@ bool ImGui::BeginMenuBar()
     PushID("##menubar");
     ImRect rect = window->MenuBarRect();
     rect.Max.x = ImMax(rect.Min.x, rect.Max.x - g.Style.WindowRounding);
-    PushClipRect(ImVec2(ImFloor(rect.Min.x+0.5f), ImFloor(rect.Min.y + window->BorderSize + 0.5f)), ImVec2(ImFloor(rect.Max.x+0.5f), ImFloor(rect.Max.y+0.5f)), false);
+    PushClipRect(ImVec2(ImFloor(rect.Min.x+0.5f), ImFloor(rect.Min.y + window->WindowBorderSize + 0.5f)), ImVec2(ImFloor(rect.Max.x+0.5f), ImFloor(rect.Max.y+0.5f)), false);
     window->DC.CursorPos = ImVec2(rect.Min.x + window->DC.MenuBarOffsetX, rect.Min.y);// + g.Style.FramePadding.y);
     window->DC.LayoutType = ImGuiLayoutType_Horizontal;
     window->DC.MenuBarAppending = true;
