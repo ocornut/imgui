@@ -2135,8 +2135,15 @@ static void ShowExampleMenuFile()
     }
     if (ImGui::BeginMenu("Colors"))
     {
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
         for (int i = 0; i < ImGuiCol_COUNT; i++)
-            ImGui::MenuItem(ImGui::GetStyleColorName((ImGuiCol)i));
+        {
+            const char* name = ImGui::GetStyleColorName((ImGuiCol)i);
+            ImGui::ColorButton(name, ImGui::GetStyleColorVec4((ImGuiCol)i));
+            ImGui::SameLine();
+            ImGui::MenuItem(name);
+        }
+        ImGui::PopStyleVar();
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Disabled", false)) // Disabled
