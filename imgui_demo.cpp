@@ -1852,6 +1852,16 @@ void ImGui::ShowTestWindow(bool* p_open)
 void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 {
     ImGuiStyle& style = ImGui::GetStyle();
+    ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.55f);
+
+    // Style selector
+    static int style_idx = 0;
+    if (ImGui::Combo("Colors##Selector", &style_idx, "Classic\0Dark\0"))
+        switch (style_idx)
+        {
+        case 0: ImGui::StyleColorsClassic(); break;
+        case 1: ImGui::StyleColorsDark(); break;
+        }
 
     // You can pass in a reference ImGuiStyle structure to compare to, revert to and save to (else it compares to the default style)
     const ImGuiStyle default_style; // Default style
@@ -1864,8 +1874,6 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         if (ImGui::Button("Save Style"))
             *ref = style;
     }
-
-    ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.55f);
 
     if (ImGui::TreeNode("Rendering"))
     {
