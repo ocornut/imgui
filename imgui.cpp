@@ -1799,7 +1799,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     ScrollbarX = ScrollbarY = false;
     ScrollbarSizes = ImVec2(0.0f, 0.0f);
     Active = WasActive = false;
-    Accessed = false;
+    WriteAccessed = false;
     Collapsed = false;
     SkipItems = false;
     Appearing = false;
@@ -2410,7 +2410,7 @@ void ImGui::NewFrame()
         ImGuiWindow* window = g.Windows[i];
         window->WasActive = window->Active;
         window->Active = false;
-        window->Accessed = false;
+        window->WriteAccessed = false;
     }
 
     // Closing the focused window restore focus to the first active root window in descending z-order
@@ -2748,7 +2748,7 @@ void ImGui::EndFrame()
 
     // Hide implicit "Debug" window if it hasn't been used
     IM_ASSERT(g.CurrentWindowStack.Size == 1);    // Mismatched Begin()/End() calls
-    if (g.CurrentWindow && !g.CurrentWindow->Accessed)
+    if (g.CurrentWindow && !g.CurrentWindow->WriteAccessed)
         g.CurrentWindow->Active = false;
     ImGui::End();
 
@@ -4609,7 +4609,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     // Clear 'accessed' flag last thing (After PushClipRect which will set the flag. We want the flag to stay false when the default "Debug" window is unused)
     if (first_begin_of_the_frame)
-        window->Accessed = false;
+        window->WriteAccessed = false;
 
     window->BeginCount++;
     g.SetNextWindowSizeConstraint = false;
@@ -10867,7 +10867,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 if (ImGui::IsItemHovered())
                     GImGui->OverlayDrawList.AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255,255,0,255));
                 ImGui::BulletText("Scroll: (%.2f,%.2f)", window->Scroll.x, window->Scroll.y);
-                ImGui::BulletText("Active: %d, Accessed: %d", window->Active, window->Accessed);
+                ImGui::BulletText("Active: %d, WriteAccessed: %d", window->Active, window->WriteAccessed);
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
                 ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.Size * (int)sizeof(ImGuiStorage::Pair));
