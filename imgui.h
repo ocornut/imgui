@@ -125,8 +125,9 @@ namespace ImGui
     IMGUI_API ImGuiIO&      GetIO();
     IMGUI_API ImGuiStyle&   GetStyle();
     IMGUI_API ImDrawData*   GetDrawData();                              // same value as passed to your io.RenderDrawListsFn() function. valid after Render() and until the next call to NewFrame()
-    IMGUI_API void          NewFrame();                                 // start a new ImGui frame, you can submit any command from this point until NewFrame()/Render().
-    IMGUI_API void          Render();                                   // ends the ImGui frame, finalize rendering data, then call your io.RenderDrawListsFn() function if set.
+    IMGUI_API void          NewFrame();                                 // start a new ImGui frame, you can submit any command from this point until Render()/EndFrame().
+    IMGUI_API void          Render();                                   // ends the ImGui frame, finalize the draw data, then call your io.RenderDrawListsFn() function if set.
+    IMGUI_API void          EndFrame();                                 // ends the ImGui frame. automatically called by Render(), so most likely don't need to ever call that yourself directly. If you don't need to render you may call EndFrame() but you'll have wasted CPU already. If you don't need to render, better to not create any imgui windows instead!
     IMGUI_API void          Shutdown();
 
     // Demo/Debug/Info
@@ -352,7 +353,7 @@ namespace ImGui
     IMGUI_API bool          TreeNodeEx(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_FMTARGS(3);
     IMGUI_API bool          TreeNodeExV(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) IM_FMTLIST(3);
     IMGUI_API bool          TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) IM_FMTLIST(3);
-    IMGUI_API void          TreePush(const char* str_id = NULL);                                    // ~ Indent()+PushId(). Already called by TreeNode() when returning true, but you can call Push/Pop yourself for layout purpose
+    IMGUI_API void          TreePush(const char* str_id);                                           // ~ Indent()+PushId(). Already called by TreeNode() when returning true, but you can call Push/Pop yourself for layout purpose
     IMGUI_API void          TreePush(const void* ptr_id = NULL);                                    // "
     IMGUI_API void          TreePop();                                                              // ~ Unindent()+PopId()
     IMGUI_API void          TreeAdvanceToLabelPos();                                                // advance cursor x position by GetTreeNodeToLabelSpacing()
@@ -511,7 +512,7 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_NoScrollWithMouse      = 1 << 4,   // Disable user vertically scrolling with mouse wheel
     ImGuiWindowFlags_NoCollapse             = 1 << 5,   // Disable user collapsing window by double-clicking on it
     ImGuiWindowFlags_AlwaysAutoResize       = 1 << 6,   // Resize every window to its content every frame
-    ImGuiWindowFlags_ShowBorders            = 1 << 7,   // Show borders around windows and items
+    //ImGuiWindowFlags_ShowBorders          = 1 << 7,   // Show borders around windows and items (OBSOLETE! Use e.g. style.FrameBorderSize=1.0f to enable borders).
     ImGuiWindowFlags_NoSavedSettings        = 1 << 8,   // Never load/save settings in .ini file
     ImGuiWindowFlags_NoInputs               = 1 << 9,   // Disable catching mouse or keyboard inputs, hovering test with pass through.
     ImGuiWindowFlags_MenuBar                = 1 << 10,  // Has a menu-bar
@@ -639,7 +640,7 @@ enum ImGuiCol_
     ImGuiCol_Text,
     ImGuiCol_TextDisabled,
     ImGuiCol_WindowBg,              // Background of normal windows
-    ImGuiCol_ChildWindowBg,         // Background of child windows
+    ImGuiCol_ChildBg,               // Background of child windows
     ImGuiCol_PopupBg,               // Background of popups, menus, tooltips windows
     ImGuiCol_Border,
     ImGuiCol_BorderShadow,
@@ -682,7 +683,7 @@ enum ImGuiCol_
 
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    , ImGuiCol_Column = ImGuiCol_Separator, ImGuiCol_ColumnHovered = ImGuiCol_SeparatorHovered, ImGuiCol_ColumnActive = ImGuiCol_SeparatorActive
+    , ImGuiCol_ChildWindowBg = ImGuiCol_ChildBg, ImGuiCol_Column = ImGuiCol_Separator, ImGuiCol_ColumnHovered = ImGuiCol_SeparatorHovered, ImGuiCol_ColumnActive = ImGuiCol_SeparatorActive
 #endif
 };
 
@@ -695,11 +696,15 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_Alpha,               // float     Alpha
     ImGuiStyleVar_WindowPadding,       // ImVec2    WindowPadding
     ImGuiStyleVar_WindowRounding,      // float     WindowRounding
+    ImGuiStyleVar_WindowBorderSize,    // float     WindowBorderSize
     ImGuiStyleVar_WindowMinSize,       // ImVec2    WindowMinSize
     ImGuiStyleVar_ChildRounding,       // float     ChildRounding
+    ImGuiStyleVar_ChildBorderSize,     // float     ChildBorderSize
     ImGuiStyleVar_PopupRounding,       // float     PopupRounding
+    ImGuiStyleVar_PopupBorderSize,     // float     PopupBorderSize
     ImGuiStyleVar_FramePadding,        // ImVec2    FramePadding
     ImGuiStyleVar_FrameRounding,       // float     FrameRounding
+    ImGuiStyleVar_FrameBorderSize,     // float     FrameBorderSize
     ImGuiStyleVar_ItemSpacing,         // ImVec2    ItemSpacing
     ImGuiStyleVar_ItemInnerSpacing,    // ImVec2    ItemInnerSpacing
     ImGuiStyleVar_IndentSpacing,       // float     IndentSpacing
@@ -776,13 +781,17 @@ struct ImGuiStyle
 {
     float       Alpha;                      // Global alpha applies to everything in ImGui
     ImVec2      WindowPadding;              // Padding within a window
-    ImVec2      WindowMinSize;              // Minimum window size
     float       WindowRounding;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
+    float       WindowBorderSize;           // Thickness of border around windows. Generally set to 0.0f or 1.0f. (Other values are not well tested and more CPU/GPU costly)
+    ImVec2      WindowMinSize;              // Minimum window size
     ImVec2      WindowTitleAlign;           // Alignment for title bar text. Defaults to (0.0f,0.5f) for left-aligned,vertically centered.
     float       ChildRounding;              // Radius of child window corners rounding. Set to 0.0f to have rectangular windows.
+    float       ChildBorderSize;            // Thickness of border around child windows. Generally set to 0.0f or 1.0f. (Other values are not well tested and more CPU/GPU costly)
     float       PopupRounding;              // Radius of popup window corners rounding.
+    float       PopupBorderSize;            // Thickness of border around popup windows. Generally set to 0.0f or 1.0f. (Other values are not well tested and more CPU/GPU costly)
     ImVec2      FramePadding;               // Padding within a framed rectangle (used by most widgets)
     float       FrameRounding;              // Radius of frame corners rounding. Set to 0.0f to have rectangular frame (used by most widgets).
+    float       FrameBorderSize;            // Thickness of border around frames. Generally set to 0.0f or 1.0f. (Other values are not well tested and more CPU/GPU costly)
     ImVec2      ItemSpacing;                // Horizontal and vertical spacing between widgets/lines
     ImVec2      ItemInnerSpacing;           // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
     ImVec2      TouchExtraPadding;          // Expand reactive bounding box for touch-based system where touch position is not accurate enough. Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget. So don't grow this too much!
@@ -1042,12 +1051,11 @@ struct ImGuiTextFilter
     int                 CountGrep;
 
     IMGUI_API           ImGuiTextFilter(const char* default_filter = "");
-                        ~ImGuiTextFilter() {}
-    void                Clear() { InputBuf[0] = 0; Build(); }
     IMGUI_API bool      Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
     IMGUI_API bool      PassFilter(const char* text, const char* text_end = NULL) const;
-    bool                IsActive() const { return !Filters.empty(); }
     IMGUI_API void      Build();
+    void                Clear() { InputBuf[0] = 0; Build(); }
+    bool                IsActive() const { return !Filters.empty(); }
 };
 
 // Helper: Text buffer for logging/accumulating text
@@ -1138,7 +1146,7 @@ struct ImGuiTextEditCallbackData
     // NB: Helper functions for text manipulation. Calling those function loses selection.
     IMGUI_API void    DeleteChars(int pos, int bytes_count);
     IMGUI_API void    InsertChars(int pos, const char* text, const char* text_end = NULL);
-    bool    HasSelection() const { return SelectionStart != SelectionEnd; }
+    bool              HasSelection() const { return SelectionStart != SelectionEnd; }
 };
 
 // Resizing callback data to apply custom constraint. As enabled by SetNextWindowSizeConstraints(). Callback is called during the next Begin().
