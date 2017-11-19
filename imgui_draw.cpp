@@ -1226,6 +1226,30 @@ void ImGui::ShadeVertsLinearAlphaGradientForLeftToRightText(ImDrawVert* vert_sta
     }
 }
 
+// Distribute UV over (a, b) rectangle
+void ImGui::ShadeVertsLinearUV(ImDrawVert* vert_start, ImDrawVert* vert_end, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, bool clamp)
+{
+    const ImVec2 size = b - a;
+    const ImVec2 uv_size = uv_b - uv_a;
+    const ImVec2 scale = ImVec2(
+        size.x ? (uv_size.x / size.x) : 0.0f,
+        size.y ? (uv_size.y / size.y) : 0.0f);
+
+    if (clamp)
+    {
+        const ImVec2 min = ImMin(uv_a, uv_b);
+        const ImVec2 max = ImMax(uv_a, uv_b);
+
+        for (ImDrawVert* vertex = vert_start; vertex < vert_end; ++vertex)
+            vertex->uv = ImClamp(uv_a + ImMul(ImVec2(vertex->pos.x, vertex->pos.y) - a, scale), min, max);
+    }
+    else
+    {
+        for (ImDrawVert* vertex = vert_start; vertex < vert_end; ++vertex)
+            vertex->uv = uv_a + ImMul(ImVec2(vertex->pos.x, vertex->pos.y) - a, scale);
+    }
+}
+
 //-----------------------------------------------------------------------------
 // ImFontConfig
 //-----------------------------------------------------------------------------
