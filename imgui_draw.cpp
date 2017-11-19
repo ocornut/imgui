@@ -1152,6 +1152,41 @@ void ImDrawList::AddImageQuad(ImTextureID user_texture_id, const ImVec2& a, cons
         PopTextureID();
 }
 
+void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, float rounding, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col, int rounding_corners)
+{
+    if ((col & IM_COL32_A_MASK) == 0)
+        return;
+
+    if (rounding <= 0.0f)
+    {
+        AddImage(user_texture_id, a, b, uv_a, uv_b, col);
+        return;
+    }
+
+    // FIXME-OPT: This is wasting draw calls.
+    const bool push_texture_id = _TextureIdStack.empty() || user_texture_id != _TextureIdStack.back();
+    if (push_texture_id)
+        PushTextureID(user_texture_id);
+
+    if (rounding > 0.0f && rounding_corners != 0)
+    {
+        size_t startIndex = VtxBuffer.size();
+        PathRect(a, b, rounding, rounding_corners);
+        PathFillConvex(col);
+        size_t endIndex = VtxBuffer.size();
+
+        ImGui::ShadeVertsLinearUV(VtxBuffer.Data + startIndex, VtxBuffer.Data + endIndex, a, b, uv_a, uv_b, true);
+    }
+    else
+    {
+        PrimReserve(6, 4);
+        PrimRectUV(a, b, uv_a, uv_b, col);
+    }
+
+    if (push_texture_id)
+        PopTextureID();
+}
+
 //-----------------------------------------------------------------------------
 // ImDrawData
 //-----------------------------------------------------------------------------
