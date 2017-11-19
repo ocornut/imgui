@@ -10796,7 +10796,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
             //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.60f); // This is better but e.g ColorButton with checkboard has issue with transparent colors :(
             SetNextWindowPos(g.IO.MousePos);
             PushStyleColor(ImGuiCol_PopupBg, GetStyleColorVec4(ImGuiCol_PopupBg) * ImVec4(1.0f, 1.0f, 1.0f, 0.6f));
-            BeginTooltipEx(ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_ShowBorders);
+            BeginTooltipEx(ImGuiWindowFlags_NoInputs);
         }
 
         if (!(flags & ImGuiDragDropFlags_SourceNoDisableHover))
