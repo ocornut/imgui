@@ -1019,12 +1019,11 @@ struct ImGuiTextFilter
     int                 CountGrep;
 
     IMGUI_API           ImGuiTextFilter(const char* default_filter = "");
-                        ~ImGuiTextFilter() {}
-    void                Clear() { InputBuf[0] = 0; Build(); }
     IMGUI_API bool      Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
     IMGUI_API bool      PassFilter(const char* text, const char* text_end = NULL) const;
-    bool                IsActive() const { return !Filters.empty(); }
     IMGUI_API void      Build();
+    void                Clear() { InputBuf[0] = 0; Build(); }
+    bool                IsActive() const { return !Filters.empty(); }
 };
 
 // Helper: Text buffer for logging/accumulating text
@@ -1115,7 +1114,7 @@ struct ImGuiTextEditCallbackData
     // NB: Helper functions for text manipulation. Calling those function loses selection.
     IMGUI_API void    DeleteChars(int pos, int bytes_count);
     IMGUI_API void    InsertChars(int pos, const char* text, const char* text_end = NULL);
-    bool    HasSelection() const { return SelectionStart != SelectionEnd; }
+    bool              HasSelection() const { return SelectionStart != SelectionEnd; }
 };
 
 // Resizing callback data to apply custom constraint. As enabled by SetNextWindowSizeConstraints(). Callback is called during the next Begin().
