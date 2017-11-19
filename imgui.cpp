@@ -215,6 +215,7 @@
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
  - 2017/11/18 (1.53) - Style: removed ImGuiCol_ComboBg in favor of combo boxes using ImGuiCol_PopupBg for consistency.
+ - 2017/11/18 (1.53) - Style: renamed ImGuiCol_ChildWindowBg to ImGuiCol_ChildBg.
  - 2017/11/18 (1.53) - Style: renamed style.ChildWindowRounding to style.ChildRounding, ImGuiStyleVar_ChildWindowRounding to ImGuiStyleVar_ChildRounding.
  - 2017/11/02 (1.53) - marked IsRootWindowOrAnyChildHovered() as obsolete is favor of using IsWindowHovered(ImGuiHoveredFlags_FlattenChilds);
  - 2017/10/24 (1.52) - renamed IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS/IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS to IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS/IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS for consistency.
@@ -3873,7 +3874,7 @@ bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags ext
 {
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    PushStyleColor(ImGuiCol_ChildWindowBg, style.Colors[ImGuiCol_FrameBg]);
+    PushStyleColor(ImGuiCol_ChildBg, style.Colors[ImGuiCol_FrameBg]);
     PushStyleVar(ImGuiStyleVar_ChildRounding, style.FrameRounding);
     PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
     return BeginChild(id, size, (g.CurrentWindow->Flags & ImGuiWindowFlags_ShowBorders) ? true : false, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysUseWindowPadding | extra_flags);
@@ -4080,7 +4081,7 @@ static ImGuiCol GetWindowBgColorIdxFromFlags(ImGuiWindowFlags flags)
     if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
         return ImGuiCol_PopupBg;
     if (flags & ImGuiWindowFlags_ChildWindow)
-        return ImGuiCol_ChildWindowBg;
+        return ImGuiCol_ChildBg;
     return ImGuiCol_WindowBg;
 }
 
@@ -5110,7 +5111,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_Text: return "Text";
     case ImGuiCol_TextDisabled: return "TextDisabled";
     case ImGuiCol_WindowBg: return "WindowBg";
-    case ImGuiCol_ChildWindowBg: return "ChildWindowBg";
+    case ImGuiCol_ChildBg: return "ChildBg";
     case ImGuiCol_PopupBg: return "PopupBg";
     case ImGuiCol_Border: return "Border";
     case ImGuiCol_BorderShadow: return "BorderShadow";

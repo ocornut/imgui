@@ -616,7 +616,7 @@ enum ImGuiCol_
     ImGuiCol_Text,
     ImGuiCol_TextDisabled,
     ImGuiCol_WindowBg,              // Background of normal windows
-    ImGuiCol_ChildWindowBg,         // Background of child windows
+    ImGuiCol_ChildBg,               // Background of child windows
     ImGuiCol_PopupBg,               // Background of popups, menus, tooltips windows
     ImGuiCol_Border,
     ImGuiCol_BorderShadow,
@@ -659,7 +659,7 @@ enum ImGuiCol_
 
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    , ImGuiCol_Column = ImGuiCol_Separator, ImGuiCol_ColumnHovered = ImGuiCol_SeparatorHovered, ImGuiCol_ColumnActive = ImGuiCol_SeparatorActive
+    , ImGuiCol_ChildWindowBg = ImGuiCol_ChildBg, ImGuiCol_Column = ImGuiCol_Separator, ImGuiCol_ColumnHovered = ImGuiCol_SeparatorHovered, ImGuiCol_ColumnActive = ImGuiCol_SeparatorActive
 #endif
 };
 
