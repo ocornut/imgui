@@ -753,8 +753,8 @@ struct ImGuiStyle
 {
     float       Alpha;                      // Global alpha applies to everything in ImGui
     ImVec2      WindowPadding;              // Padding within a window
-    ImVec2      WindowMinSize;              // Minimum window size
     float       WindowRounding;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
+    ImVec2      WindowMinSize;              // Minimum window size
     ImVec2      WindowTitleAlign;           // Alignment for title bar text. Defaults to (0.0f,0.5f) for left-aligned,vertically centered.
     float       ChildRounding;              // Radius of child window corners rounding. Set to 0.0f to have rectangular windows.
     float       PopupRounding;              // Radius of popup window corners rounding.
