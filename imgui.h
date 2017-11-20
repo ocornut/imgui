@@ -659,6 +659,7 @@ enum ImGuiCol_
 
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    //, ImGuiCol_ComboBg = ImGuiCol_PopupBg     // ComboBg has been merged with PopupBg, so a redirect isn't accurate.
     , ImGuiCol_ChildWindowBg = ImGuiCol_ChildBg, ImGuiCol_Column = ImGuiCol_Separator, ImGuiCol_ColumnHovered = ImGuiCol_SeparatorHovered, ImGuiCol_ColumnActive = ImGuiCol_SeparatorActive
 #endif
 };
