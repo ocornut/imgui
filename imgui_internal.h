@@ -243,15 +243,6 @@ enum ImGuiDir
     ImGuiDir_Down    = 3
 };
 
-enum ImGuiCorner
-{
-    ImGuiCorner_TopLeft     = 1 << 0, // 1
-    ImGuiCorner_TopRight    = 1 << 1, // 2
-    ImGuiCorner_BotRight    = 1 << 2, // 4
-    ImGuiCorner_BotLeft     = 1 << 3, // 8
-    ImGuiCorner_All         = 0x0F
-};
-
 // 2D axis aligned bounding-box
 // NB: we can't rely on ImVec2 math operators being available here
 struct IMGUI_API ImRect
