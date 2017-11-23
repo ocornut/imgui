@@ -198,7 +198,7 @@ static ImU32   TabGetColorU32(int idx)
 }
 
 // FIXME: flags can be removed once we move border to style
-static void RenderTabBackground(ImDrawList* draw_list, const ImRect& bb, ImU32 col, ImGuiWindowFlags window_flags)
+static void RenderTabBackground(ImDrawList* draw_list, const ImRect& bb, ImU32 col)
 {
     ImGuiContext& g = *GImGui;
     const float rounding = ImMin(g.FontSize * 0.35f, bb.GetWidth() * 0.5f);
@@ -207,8 +207,8 @@ static void RenderTabBackground(ImDrawList* draw_list, const ImRect& bb, ImU32 c
     draw_list->PathArcToFast(ImVec2(bb.Max.x - rounding, bb.Min.y + rounding), rounding, 9, 12);
     draw_list->PathLineTo(ImVec2(bb.Max.x, bb.Max.y));
     draw_list->AddConvexPolyFilled(draw_list->_Path.Data, draw_list->_Path.Size, col, true);
-    if (window_flags & ImGuiWindowFlags_ShowBorders)
-        draw_list->AddPolyline(draw_list->_Path.Data, draw_list->_Path.Size, ImGui::GetColorU32(ImGuiCol_Border), false, 1.0f, true);
+    if (g.Style.FrameBorderSize > 0.0f)
+        draw_list->AddPolyline(draw_list->_Path.Data, draw_list->_Path.Size, ImGui::GetColorU32(ImGuiCol_Border), false, g.Style.FrameBorderSize, true);
     draw_list->PathClear();
 }
 
@@ -693,7 +693,7 @@ bool    ImGui::TabItem(const char* label, bool* p_open, ImGuiTabItemFlags flags)
 
         // Render tab shape
         const ImU32 col = TabGetColorU32((hovered && held) ? ImGuiCol_TabActive : hovered ? ImGuiCol_TabHovered : tab_selected ? (unfocused ? ImGuiCol_TabUnfocused : ImGuiCol_TabActive) : ImGuiCol_Tab);
-        RenderTabBackground(draw_list, bb, col, window->Flags);
+        RenderTabBackground(draw_list, bb, col);
 
         // Render text label (with clipping + alpha gradient) + unsaved marker
         const char* TAB_UNSAVED_MARKER = "*";
