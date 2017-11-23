@@ -667,6 +667,7 @@ static bool             DataTypeApplyOpFromText(const char* buf, const char* ini
 
 namespace ImGui
 {
+static void             ClearDragDrop();
 static void             FocusPreviousWindow();
 }
 
@@ -2268,11 +2269,13 @@ void ImGui::NewFrame()
     // Elapse drag & drop payload
     if (g.DragDropActive && g.DragDropPayload.DataFrameCount + 1 < g.FrameCount)
     {
-        g.DragDropActive = false;
-        g.DragDropPayload.Clear();
+        ClearDragDrop();
         g.DragDropPayloadBufHeap.clear();
         memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
     }
+    g.DragDropAcceptIdPrev = g.DragDropAcceptIdCurr;
+    g.DragDropAcceptIdCurr = 0;
+    g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
 
     // Update keyboard input state
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
@@ -10775,6 +10778,16 @@ void ImGui::Value(const char* prefix, float v, const char* float_format)
 // DRAG AND DROP
 //-----------------------------------------------------------------------------
 
+static void ImGui::ClearDragDrop()
+{
+    ImGuiContext& g = *GImGui;
+    g.DragDropActive = false;
+    g.DragDropPayload.Clear();
+    g.DragDropAcceptIdCurr = g.DragDropAcceptIdPrev = 0;
+    g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
+    g.DragDropAcceptFrameCount = -1;
+}
+
 // Call when current ID is active. 
 // When this returns true you need to: a) call SetDragDropPayload() exactly once, b) you may render the payload visual/description, c) call EndDragDropSource()
 bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
@@ -10821,8 +10834,8 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
         if (!g.DragDropActive)
         {
             IM_ASSERT(id != 0);
+            ClearDragDrop();
             ImGuiPayload& payload = g.DragDropPayload;
-            payload.Clear();
             payload.SourceId = id;
             payload.SourceParentId = window->IDStack.back();
             g.DragDropActive = true;
@@ -10837,7 +10850,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
             //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.60f); // This is better but e.g ColorButton with checkboard has issue with transparent colors :(
             SetNextWindowPos(g.IO.MousePos);
             PushStyleColor(ImGuiCol_PopupBg, GetStyleColorVec4(ImGuiCol_PopupBg) * ImVec4(1.0f, 1.0f, 1.0f, 0.6f));
-            BeginTooltipEx(ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_ShowBorders);
+            BeginTooltipEx(ImGuiWindowFlags_NoInputs);
         }
 
         if (!(flags & ImGuiDragDropFlags_SourceNoDisableHover))
@@ -10862,10 +10875,7 @@ void ImGui::EndDragDropSource()
 
     // Discard the drag if have not called SetDragDropPayload()
     if (g.DragDropPayload.DataFrameCount == -1)
-    {
-        g.DragDropActive = false;
-        g.DragDropPayload.Clear();
-    }
+        ClearDragDrop();
 }
 
 // Use 'cond' to choose to submit payload on drag start or every frame
@@ -10878,7 +10888,7 @@ bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_s
 
     IM_ASSERT(type != NULL);
     IM_ASSERT(strlen(type) < IM_ARRAYSIZE(payload.DataType));       // Payload type can be at most 8 characters longs
-    IM_ASSERT(data != NULL && data_size > 0);
+    IM_ASSERT((data != NULL && data_size > 0) || (data == NULL && data_size == 0));
     IM_ASSERT(cond == ImGuiCond_Always || cond == ImGuiCond_Once);
     IM_ASSERT(payload.SourceId != 0);                               // Not called between BeginDragDropSource() and EndDragDropSource()
 
@@ -10909,9 +10919,30 @@ bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_s
     }
     payload.DataFrameCount = g.FrameCount;
 
-    return (payload.AcceptFrameCount == g.FrameCount) || (payload.AcceptFrameCount == g.FrameCount - 1);
+    return (g.DragDropAcceptFrameCount == g.FrameCount) || (g.DragDropAcceptFrameCount == g.FrameCount - 1);
 }
 
+bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    if (!g.DragDropActive)
+        return false;
+
+    ImGuiWindow* window = g.CurrentWindow;
+    if (g.HoveredWindow == NULL || window->RootWindow != g.HoveredWindow->RootWindow)
+        return false;
+    if (!IsMouseHoveringRect(bb.Min, bb.Max) || (id && id == g.DragDropPayload.SourceId))
+        return false;
+
+    g.DragDropTargetRect = bb;
+    g.DragDropTargetId = id;
+    return true;
+}
+
+// We don't use BeginDragDropTargetCustom() and duplicate its code because:
+// 1) LastItemRectHoveredRect which handles items that pushes a temporarily clip rectangle in their code. Calling BeginDragDropTargetCustom(LastItemRect) would not handle it.
+// 2) and it's faster. as this code may be very frequently called, we want to early out as fast as we can.
+// Also note how the HoveredWindow test is positioned differently in both functions (in both functions we optimize for the cheapest early out case)
 bool ImGui::BeginDragDropTarget()
 {
     ImGuiContext& g = *GImGui;
@@ -10919,12 +10950,13 @@ bool ImGui::BeginDragDropTarget()
         return false;
 
     ImGuiWindow* window = g.CurrentWindow;
-    //if (!window->DC.LastItemRectHoveredRect || (g.ActiveId == g.DragDropPayload.SourceId || g.ActiveIdPreviousFrame == g.DragDropPayload.SourceId))
     if (!window->DC.LastItemRectHoveredRect || (window->DC.LastItemId && window->DC.LastItemId == g.DragDropPayload.SourceId))
         return false;
-    if (window->RootWindow != g.HoveredWindow->RootWindow)
+    if (g.HoveredWindow == NULL || window->RootWindow != g.HoveredWindow->RootWindow)
         return false;
 
+    g.DragDropTargetRect = window->DC.LastItemRect;
+    g.DragDropTargetId = window->DC.LastItemId;
     return true;
 }
 
@@ -10934,28 +10966,35 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiPayload& payload = g.DragDropPayload;
     IM_ASSERT(g.DragDropActive);                        // Not called between BeginDragDropTarget() and EndDragDropTarget() ?
-    IM_ASSERT(window->DC.LastItemRectHoveredRect);      // Not called between BeginDragDropTarget() and EndDragDropTarget() ?
     IM_ASSERT(payload.DataFrameCount != -1);            // Forgot to call EndDragDropTarget() ? 
     if (type != NULL && !payload.IsDataType(type))
         return NULL;
 
-    if (payload.AcceptId == 0)
-        payload.AcceptId = window->DC.LastItemId;
-        
-    bool was_accepted_previously = (payload.AcceptFrameCount == g.FrameCount - 1);
-    if (payload.AcceptFrameCount != g.FrameCount)
+    // Accept smallest drag target bounding box, this allows us to nest drag targets conveniently without ordering constraints.
+    // NB: We currently accept NULL id as target. However, overlapping targets requires a unique ID to function!
+    const bool was_accepted_previously = (g.DragDropAcceptIdPrev == g.DragDropTargetId);
+    ImRect r = g.DragDropTargetRect;
+    float r_surface = r.GetWidth() * r.GetHeight();
+    if (r_surface < g.DragDropAcceptIdCurrRectSurface)
     {
-        // Render drop visuals
-        if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && was_accepted_previously)
-        {
-            ImRect r = window->DC.LastItemRect;
-            r.Expand(4.0f);
-            window->DrawList->AddRectFilled(r.Min, r.Max, IM_COL32(255, 255, 0, 20), 0.0f);        // FIXME-DRAG FIXME-STYLE
-            window->DrawList->AddRect(r.Min, r.Max, IM_COL32(255, 255, 0, 255), 0.0f, ~0, 2.0f);   // FIXME-DRAG FIXME-STYLE
-        }
-        payload.AcceptFrameCount = g.FrameCount;
+        g.DragDropAcceptIdCurr = g.DragDropTargetId;
+        g.DragDropAcceptIdCurrRectSurface = r_surface;
     }
 
+    // Render default drop visuals
+    payload.Preview = was_accepted_previously;
+    if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && payload.Preview)
+    {
+        // FIXME-DRAG FIXME-STYLE: Settle on a proper default visuals for drop target, w/ ImGuiCol enum value probably.
+        r.Expand(5.0f);
+        bool push_clip_rect = !window->ClipRect.Contains(r);
+        if (push_clip_rect) window->DrawList->PushClipRectFullScreen();
+        window->DrawList->AddRectFilled(r.Min, r.Max, IM_COL32(255, 255, 0, 20), 0.0f);
+        window->DrawList->AddRect(r.Min + ImVec2(1.5f,1.5f), r.Max - ImVec2(1.5f,1.5f), IM_COL32(255, 255, 0, 255), 0.0f, ~0, 2.0f);
+        if (push_clip_rect) window->DrawList->PopClipRect();
+    }
+
+    g.DragDropAcceptFrameCount = g.FrameCount;
     payload.Delivery = was_accepted_previously && IsMouseReleased(g.DragDropMouseButton);
     if (!payload.Delivery && !(flags & ImGuiDragDropFlags_AcceptBeforeDelivery))
         return NULL;
