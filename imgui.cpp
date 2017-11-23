@@ -2867,7 +2867,7 @@ static void AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiW
         ImGuiWindow* child = window->DC.ChildWindows[i];
         if (!child->Active) // clipped children may have been marked not active
             continue;
-        if ((child->Flags & ImGuiWindowFlags_Popup) && child->HiddenFrames > 0)
+        if (child->HiddenFrames > 0)
             continue;
         AddWindowToRenderList(out_render_list, child);
     }
