@@ -6856,7 +6856,8 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     const ImGuiStyle& style = g.Style;
 
     // Draw frame
-    RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, style.FrameRounding);
 
     const bool is_non_linear = (power < 1.0f-0.00001f) || (power > 1.0f+0.00001f);
     const bool is_horizontal = (flags & ImGuiSliderFlags_Vertical) == 0;
