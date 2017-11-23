@@ -16,6 +16,14 @@ struct ImGuiBigStorage
     ImGuiStorage    Map;    // ID->Index
     ImVector<T>     Data;
 
+    ~ImGuiBigStorage() { Clear(); }
+    void Clear() 
+    { 
+        for (int n = 0; n < Data.Size; n++) 
+            Data[n].~T(); 
+        Map.Clear(); 
+        Data.clear(); 
+    }
     T*  GetOrCreateByKey(ImGuiID key)
     {
         int* p_idx = Map.GetIntRef(key, -1);
