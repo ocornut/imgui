@@ -46,12 +46,13 @@ Also note that some setup or GPU drivers may be causing extra lag (possibly by e
 leaving you with no option but sadness/anger (Intel GPU drivers were reported as such).
 
 opengl2_example/
-    *DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL*
-    GLFW + OpenGL example (old, fixed graphic pipeline).
-    This is mostly provided as a reference to learn how ImGui integration works, because it is easier to read.
-    If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything
-    more complicated, will require your code to reset every single OpenGL attributes to their initial state,
-    and might confuse your GPU driver. Prefer using opengl3_example.
+    **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
+    **Prefer using the code in the opengl3_example/ folder**
+    GLFW + OpenGL example (legacy fixed graphic pipeline).
+    This code is mostly provided as a reference to learn how ImGui integration works, because it is shorter to read.
+    If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything more
+    complicated, will require your code to reset every single OpenGL attributes to their initial state, and might
+    confuse your GPU driver. 
 
 opengl3_example/
     GLFW + OpenGL example (programmable pipeline, binding modern functions with GL3W).
