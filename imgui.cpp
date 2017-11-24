@@ -2528,7 +2528,7 @@ int ImGui::GetFrameCount()
 }
 
 // This needs to be called before we submit any widget (aka in or before Begin)
-static void NavInitWindow(ImGuiWindow* window, bool force_reinit)
+void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(window == g.NavWindow);
@@ -4724,7 +4724,7 @@ static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
     if (/*!(flags & ImGuiWindowFlags_NavFlattened) &&*/ (child_window->DC.NavLayerActiveMask != 0 || child_window->DC.NavHasScroll) && g.NavActivateId == id)
     {
         ImGui::FocusWindow(child_window);
-        NavInitWindow(child_window, false);
+        ImGui::NavInitWindow(child_window, false);
         ImGui::SetActiveID(id+1, child_window); // Steal ActiveId with a dummy id so that key-press won't activate child item
         g.ActiveIdSource = ImGuiInputSource_Nav;
     }

@@ -914,6 +914,8 @@ namespace ImGui
     IMGUI_API bool          BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags);
     IMGUI_API void          BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_tooltip = true);
 
+    IMGUI_API void          NavInitWindow(ImGuiWindow* window, bool force_reinit);
+
     IMGUI_API int           CalcTypematicPressedRepeatAmount(float t, float t_prev, float repeat_delay, float repeat_rate);
 
     IMGUI_API void          Scrollbar(ImGuiLayoutType direction);
