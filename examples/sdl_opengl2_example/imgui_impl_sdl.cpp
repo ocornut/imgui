@@ -1,12 +1,13 @@
-// ImGui SDL2 binding with OpenGL
+// ImGui SDL2 binding with OpenGL (legacy, fixed pipeline)
 // In this binding, ImTextureID is used to store an OpenGL 'GLuint' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
 // (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 
-// *DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL*
-// This is mostly provided as a reference to learn how ImGui integration works, because it is easier to read.
-// If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything
-// more complicated, will require your code to reset every single OpenGL attributes to their initial state,
-// and might confuse your GPU driver. Prefer using sdl_opengl3_example.
+// **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
+// **Prefer using the code in the sdl_opengl3_example/ folder**
+// This code is mostly provided as a reference to learn how ImGui integration works, because it is shorter to read.
+// If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything more
+// complicated, will require your code to reset every single OpenGL attributes to their initial state, and might
+// confuse your GPU driver. 
 // The GL2 code is unable to reset attributes or even call e.g. "glUseProgram(0)" because they don't exist in that API.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
