@@ -1097,6 +1097,9 @@ struct ImGuiStorage
 
     // Use on your own storage if you know only integer are being stored (open/close all tree nodes)
     IMGUI_API void      SetAllInt(int val);
+
+    // For quicker full rebuild of a storage (instead of an incremental one), you may add all your contents and then sort once.
+    IMGUI_API void      BuildSortByKey();
 };
 
 // Shared state of InputText(), passed to callback when a ImGuiInputTextFlags_Callback* flag is used and the corresponding callback is triggered.
