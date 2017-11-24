@@ -5054,7 +5054,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     }
 
     const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames == 1);
-    if (window_just_appearing_after_hidden_for_resize)
+    if (window_just_appearing_after_hidden_for_resize && !(flags & ImGuiWindowFlags_ChildWindow))
         window->NavLastIds[0] = 0;
     window->Appearing = (window_just_activated_by_user || window_just_appearing_after_hidden_for_resize);
     window->CloseButton = (p_open != NULL);
