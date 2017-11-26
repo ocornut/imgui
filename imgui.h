@@ -791,6 +791,8 @@ struct ImGuiStyle
     IMGUI_API void ScaleAllSizes(float scale_factor);
 };
 
+class ImFile;
+
 // This is where your app communicate with ImGui. Access via ImGui::GetIO().
 // Read 'Programmer guide' section in .cpp file for general usage.
 struct ImGuiIO
@@ -802,6 +804,7 @@ struct ImGuiIO
     ImVec2        DisplaySize;              // <unset>              // Display size, in pixels. For clamping windows positions.
     float         DeltaTime;                // = 1.0f/60.0f         // Time elapsed since last frame, in seconds.
     float         IniSavingRate;            // = 5.0f               // Maximum time between saving positions/sizes to .ini file, in seconds.
+    ImFile*       FileSystem;               // = NULL               // ImFile based class
     const char*   IniFilename;              // = "imgui.ini"        // Path to .ini file. NULL to disable .ini saving.
     const char*   LogFilename;              // = "imgui_log.txt"    // Path to .log file (default parameter to ImGui::LogToFile when no file is specified).
     float         MouseDoubleClickTime;     // = 0.30f              // Time for a double-click, in seconds.
