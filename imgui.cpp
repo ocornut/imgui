@@ -2725,6 +2725,13 @@ static void SaveIniSettingsToMemory(ImVector<char>& out_buf)
     out_buf.swap(buf.Buf);
 }
 
+void ImGui::MarkIniSettingsDirty()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.SettingsDirtyTimer <= 0.0f)
+        g.SettingsDirtyTimer = g.IO.IniSavingRate;
+}
+
 static void MarkIniSettingsDirty(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;

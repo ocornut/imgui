@@ -378,6 +378,8 @@ struct ImGuiSettingsWindow
     ImVec2      Pos;
     ImVec2      Size;
     bool        Collapsed;
+
+    ImGuiSettingsWindow() { Name = NULL; Id = 0; Pos = Size = ImVec2(0,0); Collapsed = false; }
 };
 
 struct ImGuiSettingsHandler
@@ -800,6 +802,8 @@ namespace ImGui
     IMGUI_API void          BringWindowToBack(ImGuiWindow* window);
 
     IMGUI_API void          Initialize();
+
+    IMGUI_API void          MarkIniSettingsDirty();
 
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          ClearActiveID();
