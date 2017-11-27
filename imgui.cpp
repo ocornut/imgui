@@ -647,7 +647,7 @@ static ImGuiSettingsWindow* FindWindowSettings(const char* name);
 static ImGuiSettingsWindow* AddWindowSettings(const char* name);
 
 static void             LoadIniSettingsFromDisk(const char* ini_filename);
-static void             LoadIniSettingsFromMemory(const char* buf, const char* buf_end = NULL);
+static void             LoadIniSettingsFromMemory(const char* buf);
 static void             SaveIniSettingsToDisk(const char* ini_filename);
 static void             SaveIniSettingsToMemory(ImVector<char>& out_buf);
 static void             MarkIniSettingsDirty(ImGuiWindow* window);
@@ -924,8 +924,16 @@ void ImStrncpy(char* dst, const char* src, int count)
 char* ImStrdup(const char *str)
 {
     size_t len = strlen(str) + 1;
-    void* buff = ImGui::MemAlloc(len);
-    return (char*)memcpy(buff, (const void*)str, len);
+    void* buf = ImGui::MemAlloc(len);
+    return (char*)memcpy(buf, (const void*)str, len);
+}
+
+char* ImStrchrRange(const char* str, const char* str_end, char c)
+{
+    for ( ; str < str_end; str++)
+        if (*str == c) 
+            return (char*)str; 
+    return NULL;
 }
 
 int ImStrlenW(const ImWchar* str)
@@ -2463,12 +2471,75 @@ void ImGui::NewFrame()
     ImGui::Begin("Debug##Default");
 }
 
+static void* SettingsHandlerWindow_ReadOpenEntry(ImGuiContext&, const char* name)
+{
+    ImGuiSettingsWindow* settings = FindWindowSettings(name);
+    if (!settings)
+        settings = AddWindowSettings(name);
+    return (void*)settings;
+}
+
+static void SettingsHandlerWindow_ReadLine(ImGuiContext&, void* entry, const char* line)
+{
+    ImGuiSettingsWindow* settings = (ImGuiSettingsWindow*)entry;
+    float x, y; 
+    int i;
+    if (sscanf(line, "Pos=%f,%f", &x, &y) == 2)         settings->Pos = ImVec2(x, y);
+    else if (sscanf(line, "Size=%f,%f", &x, &y) == 2)   settings->Size = ImMax(ImVec2(x, y), GImGui->Style.WindowMinSize);
+    else if (sscanf(line, "Collapsed=%d", &i) == 1)     settings->Collapsed = (i != 0);
+}
+
+static void SettingsHandlerWindow_WriteAll(ImGuiContext& g, ImGuiTextBuffer* buf)
+{
+    // Gather data from windows that were active during this session
+    for (int i = 0; i != g.Windows.Size; i++)
+    {
+        ImGuiWindow* window = g.Windows[i];
+        if (window->Flags & ImGuiWindowFlags_NoSavedSettings)
+            continue;
+        ImGuiSettingsWindow* settings = FindWindowSettings(window->Name);
+        if (!settings)  // This will only return NULL in the rare instance where the window was first created with ImGuiWindowFlags_NoSavedSettings then had the flag disabled later on. We don't bind settings in this case (bug #1000).
+            continue;
+        settings->Pos = window->Pos;
+        settings->Size = window->SizeFull;
+        settings->Collapsed = window->Collapsed;
+    }
+
+    // Write a buffer
+    // If a window wasn't opened in this session we preserve its settings
+    buf->reserve(buf->size() + g.SettingsWindows.Size * 96); // ballpark reserve
+    for (int i = 0; i != g.SettingsWindows.Size; i++)
+    {
+        const ImGuiSettingsWindow* settings = &g.SettingsWindows[i];
+        if (settings->Pos.x == FLT_MAX)
+            continue;
+        const char* name = settings->Name;
+        if (const char* p = strstr(name, "###"))  // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
+            name = p;
+        buf->appendf("[Window][%s]\n", name);
+        buf->appendf("Pos=%d,%d\n", (int)settings->Pos.x, (int)settings->Pos.y);
+        buf->appendf("Size=%d,%d\n", (int)settings->Size.x, (int)settings->Size.y);
+        buf->appendf("Collapsed=%d\n", settings->Collapsed);
+        buf->appendf("\n");
+    }
+}
+
 void ImGui::Initialize()
 {
     ImGuiContext& g = *GImGui;
     g.LogClipboard = (ImGuiTextBuffer*)ImGui::MemAlloc(sizeof(ImGuiTextBuffer));
     IM_PLACEMENT_NEW(g.LogClipboard) ImGuiTextBuffer();
 
+    // Add .ini handle for ImGuiWindow type
+    ImGuiSettingsHandler ini_handler;
+    ini_handler.TypeName = "Window";
+    ini_handler.TypeHash = ImHash("Window", 0, 0);
+    ini_handler.ReadOpenEntryFn = SettingsHandlerWindow_ReadOpenEntry;
+    ini_handler.ReadLineFn = SettingsHandlerWindow_ReadLine;
+    ini_handler.WriteAllFn = SettingsHandlerWindow_WriteAll;
+    g.SettingsHandlers.push_back(ini_handler);
+
+    // Load .ini file
     IM_ASSERT(g.SettingsWindows.empty());
     LoadIniSettingsFromDisk(g.IO.IniFilename);
     g.Initialized = true;
@@ -2506,7 +2577,6 @@ void ImGui::Shutdown()
     g.MovingWindow = NULL;
     for (int i = 0; i < g.SettingsWindows.Size; i++)
         ImGui::MemFree(g.SettingsWindows[i].Name);
-    g.SettingsWindows.clear();
     g.ColorModifiers.clear();
     g.StyleModifiers.clear();
     g.FontStack.clear();
@@ -2521,6 +2591,9 @@ void ImGui::Shutdown()
     g.InputTextState.Text.clear();
     g.InputTextState.InitialText.clear();
     g.InputTextState.TempTextBuffer.clear();
+
+    g.SettingsWindows.clear();
+    g.SettingsHandlers.clear();
 
     if (g.LogFile && g.LogFile != stdout)
     {
@@ -2562,54 +2635,64 @@ static ImGuiSettingsWindow* AddWindowSettings(const char* name)
     return settings;
 }
 
-// Zero-tolerance, poor-man .ini parsing
-// FIXME: Write something less rubbish
 static void LoadIniSettingsFromDisk(const char* ini_filename)
 {
     if (!ini_filename)
         return;
-    int file_size;
-    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_size, 1);
+    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", NULL, +1);
     if (!file_data)
         return;
-    LoadIniSettingsFromMemory(file_data, file_data + file_size);
+    LoadIniSettingsFromMemory(file_data);
     ImGui::MemFree(file_data);
 }
 
-static void LoadIniSettingsFromMemory(const char* buf, const char* buf_end)
+// Zero-tolerance, no error reporting, cheap .ini parsing
+static void LoadIniSettingsFromMemory(const char* buf_readonly)
 {
+    // For convenience and to make the code simpler, we'll write zero terminators inside the buffer. So let's create a writable copy.
+    char* buf = ImStrdup(buf_readonly);
+    char* buf_end = buf + strlen(buf);
+
     ImGuiContext& g = *GImGui;
-    if (!buf_end)
-        buf_end = buf + strlen(buf);
-    ImGuiSettingsWindow* settings = NULL;
-    for (const char* line_start = buf; line_start < buf_end; )
+    void* entry_data = NULL;
+    const ImGuiSettingsHandler* entry_handler = NULL;
+
+    char* line_end = NULL;
+    for (char* line = buf; line < buf_end; line = line_end + 1)
     {
-        const char* line_end = line_start;
+        // Skip new lines markers, then find end of the line
+        while (*line == '\n' || *line == '\r')
+            line++;
+        line_end = line;
         while (line_end < buf_end && *line_end != '\n' && *line_end != '\r')
             line_end++;
+        line_end[0] = 0;
 
-        if (line_start[0] == '[' && line_end > line_start && line_end[-1] == ']')
+        if (line[0] == '[' && line_end > line && line_end[-1] == ']')
         {
-            char name[64];
-            ImFormatString(name, IM_ARRAYSIZE(name), "%.*s", (int)(line_end-line_start-2), line_start+1);
-            settings = FindWindowSettings(name);
-            if (!settings)
-                settings = AddWindowSettings(name);
+            // Parse "[Type][Name]". Note that 'Name' can itself contains [] characters, which is acceptable with the current format and parsing code.
+            char* name_end = line_end - 1; 
+            *name_end = 0;
+            char* type_start = line + 1;
+            char* type_end = ImStrchrRange(type_start, name_end, ']');
+            char* name_start = type_end ? ImStrchrRange(type_end + 1, name_end, '[') : NULL;
+            if (type_start && type_end && name_start++ && name_end)
+            {
+                const ImGuiID type_hash = ImHash(type_start, type_end - type_start, 0);
+                entry_handler = NULL;
+                for (int handler_n = 0; handler_n < g.SettingsHandlers.Size && entry_handler == NULL; handler_n++)
+                    if (g.SettingsHandlers[handler_n].TypeHash == type_hash)
+                        entry_handler = &g.SettingsHandlers[handler_n];
+                entry_data = entry_handler ? entry_handler->ReadOpenEntryFn(g, name_start) : NULL;
+            }
         }
-        else if (settings)
+        else if (entry_handler != NULL && entry_data != NULL)
         {
-            float x, y;
-            int i;
-            if (sscanf(line_start, "Pos=%f,%f", &x, &y) == 2)
-                settings->Pos = ImVec2(x, y);
-            else if (sscanf(line_start, "Size=%f,%f", &x, &y) == 2)
-                settings->Size = ImMax(ImVec2(x, y), g.Style.WindowMinSize);
-            else if (sscanf(line_start, "Collapsed=%d", &i) == 1)
-                settings->Collapsed = (i != 0);
+            // Let type handler parse the line
+            entry_handler->ReadLineFn(g, entry_data, line);
         }
-
-        line_start = line_end+1;
     }
+    ImGui::MemFree(buf);
 }
 
 static void SaveIniSettingsToDisk(const char* ini_filename)
@@ -2622,7 +2705,6 @@ static void SaveIniSettingsToDisk(const char* ini_filename)
     ImVector<char> buf;
     SaveIniSettingsToMemory(buf);
 
-    // Write .ini file
     FILE* f = ImFileOpen(ini_filename, "wt");
     if (!f)
         return;
@@ -2635,39 +2717,11 @@ static void SaveIniSettingsToMemory(ImVector<char>& out_buf)
     ImGuiContext& g = *GImGui;
     g.SettingsDirtyTimer = 0.0f;
 
-    // Gather data from windows that were active during this session
-    for (int i = 0; i != g.Windows.Size; i++)
-    {
-        ImGuiWindow* window = g.Windows[i];
-        if (window->Flags & ImGuiWindowFlags_NoSavedSettings)
-            continue;
-        ImGuiSettingsWindow* settings = FindWindowSettings(window->Name);
-        if (!settings)  // This will only return NULL in the rare instance where the window was first created with ImGuiWindowFlags_NoSavedSettings then had the flag disabled later on. We don't bind settings in this case (bug #1000).
-            continue;
-        settings->Pos = window->Pos;
-        settings->Size = window->SizeFull;
-        settings->Collapsed = window->Collapsed;
-    }
-
-    // Write a buffer
-    // If a window wasn't opened in this session we preserve its settings
     ImGuiTextBuffer buf;
-    buf.reserve(g.SettingsWindows.Size * 64); // ballpark reserve
-    for (int i = 0; i != g.SettingsWindows.Size; i++)
-    {
-        const ImGuiSettingsWindow* settings = &g.SettingsWindows[i];
-        if (settings->Pos.x == FLT_MAX)
-            continue;
-        const char* name = settings->Name;
-        if (const char* p = strstr(name, "###"))  // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
-            name = p;
-        buf.appendf("[%s]\n", name);
-        buf.appendf("Pos=%d,%d\n", (int)settings->Pos.x, (int)settings->Pos.y);
-        buf.appendf("Size=%d,%d\n", (int)settings->Size.x, (int)settings->Size.y);
-        buf.appendf("Collapsed=%d\n", settings->Collapsed);
-        buf.appendf("\n");
-    }
+    for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
+        g.SettingsHandlers[handler_n].WriteAllFn(g, &buf);
 
+    buf.Buf.pop_back(); // Remove extra zero-terminator used by ImGuiTextBuffer
     out_buf.swap(buf.Buf);
 }
 
