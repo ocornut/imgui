@@ -1048,9 +1048,10 @@ struct ImGuiTextBuffer
     int                 size() const { return Buf.Size - 1; }
     bool                empty() { return Buf.Size <= 1; }
     void                clear() { Buf.clear(); Buf.push_back(0); }
+    void                reserve(int capacity) { Buf.reserve(capacity); }
     const char*         c_str() const { return Buf.Data; }
-    IMGUI_API void      append(const char* fmt, ...) IM_FMTARGS(2);
-    IMGUI_API void      appendv(const char* fmt, va_list args) IM_FMTLIST(2);
+    IMGUI_API void      appendf(const char* fmt, ...) IM_FMTARGS(2);
+    IMGUI_API void      appendfv(const char* fmt, va_list args) IM_FMTLIST(2);
 };
 
 // Helper: Simple Key->value storage

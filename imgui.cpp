@@ -213,6 +213,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/11/27 (1.53) - renamed ImGuiTextBuffer::append() helper to appendf(), appendv() to appendfv(). If you copied the 'Log' demo in your code, it uses appendv() so that needs to be renamed.
  - 2017/11/18 (1.53) - Style, Begin: removed ImGuiWindowFlags_ShowBorders window flag. Borders are now fully set up in the ImGuiStyle structure (see e.g. style.FrameBorderSize, style.WindowBorderSize). Use ImGui::ShowStyleEditor() to look them up.
                        Please note that the style system will keep evolving (hopefully stabilizing in Q1 2018), and so custom styles will probably subtly break over time. It is recommended you use the StyleColorsClassic(), StyleColorsDark(), StyleColorsLight() functions.
  - 2017/11/18 (1.53) - Style: removed ImGuiCol_ComboBg in favor of combo boxes using ImGuiCol_PopupBg for consistency.
@@ -1643,7 +1644,7 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 #endif
 
 // Helper: Text buffer for logging/accumulating text
-void ImGuiTextBuffer::appendv(const char* fmt, va_list args)
+void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
 {
     va_list args_copy;
     va_copy(args_copy, args);
@@ -1664,11 +1665,11 @@ void ImGuiTextBuffer::appendv(const char* fmt, va_list args)
     ImFormatStringV(&Buf[write_off - 1], len + 1, fmt, args_copy);
 }
 
-void ImGuiTextBuffer::append(const char* fmt, ...)
+void ImGuiTextBuffer::appendf(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    appendv(fmt, args);
+    appendfv(fmt, args);
     va_end(args);
 }
 
@@ -2947,7 +2948,7 @@ void ImGui::LogText(const char* fmt, ...)
     }
     else
     {
-        g.LogClipboard->appendv(fmt, args);
+        g.LogClipboard->appendfv(fmt, args);
     }
     va_end(args);
 }
