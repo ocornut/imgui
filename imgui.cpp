@@ -2537,7 +2537,7 @@ void ImGui::Initialize()
     ini_handler.ReadOpenEntryFn = SettingsHandlerWindow_ReadOpenEntry;
     ini_handler.ReadLineFn = SettingsHandlerWindow_ReadLine;
     ini_handler.WriteAllFn = SettingsHandlerWindow_WriteAll;
-    g.SettingsHandlers.push_back(ini_handler);
+    g.SettingsHandlers.push_front(ini_handler);
 
     // Load .ini file
     IM_ASSERT(g.SettingsWindows.empty());
