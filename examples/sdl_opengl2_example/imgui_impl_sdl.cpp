@@ -24,6 +24,7 @@
 // Data
 static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
+static float        g_MouseHorizWheel = 0.0f;
 static float        g_MouseWheel = 0.0f;
 static GLuint       g_FontTexture = 0;
 
@@ -134,6 +135,10 @@ bool ImGui_ImplSdlGL2_ProcessEvent(SDL_Event* event)
     {
     case SDL_MOUSEWHEEL:
         {
+            if (event->wheel.x > 0)
+                g_MouseHorizWheel = 1;
+            if (event->wheel.x < 0)
+                g_MouseHorizWheel = -1;
             if (event->wheel.y > 0)
                 g_MouseWheel = 1;
             if (event->wheel.y < 0)
@@ -285,8 +290,9 @@ void ImGui_ImplSdlGL2_NewFrame(SDL_Window *window)
     io.MouseDown[2] = g_MousePressed[2] || (mouseMask & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
     g_MousePressed[0] = g_MousePressed[1] = g_MousePressed[2] = false;
 
+    io.MouseHorizWheel = g_MouseHorizWheel;
     io.MouseWheel = g_MouseWheel;
-    g_MouseWheel = 0.0f;
+    g_MouseWheel = g_MouseHorizWheel = 0.0f;
 
     // Hide OS mouse cursor if ImGui is drawing it
     SDL_ShowCursor(io.MouseDrawCursor ? 0 : 1);

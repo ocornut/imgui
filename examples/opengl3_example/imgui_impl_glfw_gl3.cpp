@@ -25,6 +25,7 @@
 static GLFWwindow*  g_Window = NULL;
 static double       g_Time = 0.0f;
 static bool         g_MouseJustPressed[3] = { false, false, false };
+static float        g_MouseHorizWheel = 0.0f;
 static float        g_MouseWheel = 0.0f;
 static GLuint       g_FontTexture = 0;
 static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
@@ -155,9 +156,10 @@ void ImGui_ImplGlfwGL3_MouseButtonCallback(GLFWwindow*, int button, int action, 
         g_MouseJustPressed[button] = true;
 }
 
-void ImGui_ImplGlfwGL3_ScrollCallback(GLFWwindow*, double /*xoffset*/, double yoffset)
+void ImGui_ImplGlfwGL3_ScrollCallback(GLFWwindow*, double xoffset, double yoffset)
 {
-    g_MouseWheel += (float)yoffset; // Use fractional mouse wheel.
+    g_MouseHorizWheel += (float)xoffset; // Use fractional mouse wheel.
+    g_MouseWheel += (float)yoffset;
 }
 
 void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
@@ -408,8 +410,9 @@ void ImGui_ImplGlfwGL3_NewFrame()
         g_MouseJustPressed[i] = false;
     }
 
+    io.MouseHorizWheel = g_MouseHorizWheel;
     io.MouseWheel = g_MouseWheel;
-    g_MouseWheel = 0.0f;
+    g_MouseHorizWheel = g_MouseWheel = 0.0f;
 
     // Hide OS mouse cursor if ImGui is drawing it
     glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
