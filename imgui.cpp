@@ -646,7 +646,9 @@ static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sort
 static ImGuiIniData*    FindWindowSettings(const char* name);
 static ImGuiIniData*    AddWindowSettings(const char* name);
 static void             LoadIniSettingsFromDisk(const char* ini_filename);
+static void             LoadIniSettingsFromMemory(const char* buf, const char* buf_end = NULL);
 static void             SaveIniSettingsToDisk(const char* ini_filename);
+static void             SaveIniSettingsToMemory(ImVector<char>& out_buf);
 static void             MarkIniSettingsDirty(ImGuiWindow* window);
 
 static ImRect           GetVisibleRect();
@@ -2562,18 +2564,23 @@ static ImGuiIniData* AddWindowSettings(const char* name)
 // FIXME: Write something less rubbish
 static void LoadIniSettingsFromDisk(const char* ini_filename)
 {
-    ImGuiContext& g = *GImGui;
     if (!ini_filename)
         return;
-
     int file_size;
     char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_size, 1);
     if (!file_data)
         return;
+    LoadIniSettingsFromMemory(file_data, file_data + file_size);
+    ImGui::MemFree(file_data);
+}
 
+static void LoadIniSettingsFromMemory(const char* buf, const char* buf_end)
+{
+    ImGuiContext& g = *GImGui;
+    if (!buf_end)
+        buf_end = buf + strlen(buf);
     ImGuiIniData* settings = NULL;
-    const char* buf_end = file_data + file_size;
-    for (const char* line_start = file_data; line_start < buf_end; )
+    for (const char* line_start = buf; line_start < buf_end; )
     {
         const char* line_end = line_start;
         while (line_end < buf_end && *line_end != '\n' && *line_end != '\r')
@@ -2601,8 +2608,6 @@ static void LoadIniSettingsFromDisk(const char* ini_filename)
 
         line_start = line_end+1;
     }
-
-    ImGui::MemFree(file_data);
 }
 
 static void SaveIniSettingsToDisk(const char* ini_filename)
@@ -2611,6 +2616,22 @@ static void SaveIniSettingsToDisk(const char* ini_filename)
     g.SettingsDirtyTimer = 0.0f;
     if (!ini_filename)
         return;
+
+    ImVector<char> buf;
+    SaveIniSettingsToMemory(buf);
+
+    // Write .ini file
+    FILE* f = ImFileOpen(ini_filename, "wt");
+    if (!f)
+        return;
+    fwrite(buf.Data, sizeof(char), (size_t)buf.Size, f);
+    fclose(f);
+}
+
+static void SaveIniSettingsToMemory(ImVector<char>& out_buf)
+{
+    ImGuiContext& g = *GImGui;
+    g.SettingsDirtyTimer = 0.0f;
 
     // Gather data from windows that were active during this session
     for (int i = 0; i != g.Windows.Size; i++)
@@ -2626,11 +2647,10 @@ static void SaveIniSettingsToDisk(const char* ini_filename)
         settings->Collapsed = window->Collapsed;
     }
 
-    // Write .ini file
+    // Write a buffer
     // If a window wasn't opened in this session we preserve its settings
-    FILE* f = ImFileOpen(ini_filename, "wt");
-    if (!f)
-        return;
+    ImGuiTextBuffer buf;
+    buf.reserve(g.Settings.Size * 64); // ballpark reserve
     for (int i = 0; i != g.Settings.Size; i++)
     {
         const ImGuiIniData* settings = &g.Settings[i];
@@ -2639,14 +2659,14 @@ static void SaveIniSettingsToDisk(const char* ini_filename)
         const char* name = settings->Name;
         if (const char* p = strstr(name, "###"))  // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
             name = p;
-        fprintf(f, "[%s]\n", name);
-        fprintf(f, "Pos=%d,%d\n", (int)settings->Pos.x, (int)settings->Pos.y);
-        fprintf(f, "Size=%d,%d\n", (int)settings->Size.x, (int)settings->Size.y);
-        fprintf(f, "Collapsed=%d\n", settings->Collapsed);
-        fprintf(f, "\n");
+        buf.appendf("[%s]\n", name);
+        buf.appendf("Pos=%d,%d\n", (int)settings->Pos.x, (int)settings->Pos.y);
+        buf.appendf("Size=%d,%d\n", (int)settings->Size.x, (int)settings->Size.y);
+        buf.appendf("Collapsed=%d\n", settings->Collapsed);
+        buf.appendf("\n");
     }
 
-    fclose(f);
+    out_buf.swap(buf.Buf);
 }
 
 static void MarkIniSettingsDirty(ImGuiWindow* window)
