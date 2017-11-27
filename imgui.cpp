@@ -643,8 +643,9 @@ static void             AddDrawListToRenderList(ImVector<ImDrawList*>& out_rende
 static void             AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiWindow* window);
 static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, ImGuiWindow* window);
 
-static ImGuiIniData*    FindWindowSettings(const char* name);
-static ImGuiIniData*    AddWindowSettings(const char* name);
+static ImGuiSettingsWindow* FindWindowSettings(const char* name);
+static ImGuiSettingsWindow* AddWindowSettings(const char* name);
+
 static void             LoadIniSettingsFromDisk(const char* ini_filename);
 static void             LoadIniSettingsFromMemory(const char* buf, const char* buf_end = NULL);
 static void             SaveIniSettingsToDisk(const char* ini_filename);
@@ -2468,7 +2469,7 @@ void ImGui::Initialize()
     g.LogClipboard = (ImGuiTextBuffer*)ImGui::MemAlloc(sizeof(ImGuiTextBuffer));
     IM_PLACEMENT_NEW(g.LogClipboard) ImGuiTextBuffer();
 
-    IM_ASSERT(g.Settings.empty());
+    IM_ASSERT(g.SettingsWindows.empty());
     LoadIniSettingsFromDisk(g.IO.IniFilename);
     g.Initialized = true;
 }
@@ -2503,9 +2504,9 @@ void ImGui::Shutdown()
     g.HoveredRootWindow = NULL;
     g.ActiveIdWindow = NULL;
     g.MovingWindow = NULL;
-    for (int i = 0; i < g.Settings.Size; i++)
-        ImGui::MemFree(g.Settings[i].Name);
-    g.Settings.clear();
+    for (int i = 0; i < g.SettingsWindows.Size; i++)
+        ImGui::MemFree(g.SettingsWindows[i].Name);
+    g.SettingsWindows.clear();
     g.ColorModifiers.clear();
     g.StyleModifiers.clear();
     g.FontStack.clear();
@@ -2535,29 +2536,30 @@ void ImGui::Shutdown()
     g.Initialized = false;
 }
 
-static ImGuiIniData* FindWindowSettings(const char* name)
+static ImGuiSettingsWindow* FindWindowSettings(const char* name)
 {
     ImGuiContext& g = *GImGui;
     ImGuiID id = ImHash(name, 0);
-    for (int i = 0; i != g.Settings.Size; i++)
+    for (int i = 0; i != g.SettingsWindows.Size; i++)
     {
-        ImGuiIniData* ini = &g.Settings[i];
+        ImGuiSettingsWindow* ini = &g.SettingsWindows[i];
         if (ini->Id == id)
             return ini;
     }
     return NULL;
 }
 
-static ImGuiIniData* AddWindowSettings(const char* name)
+static ImGuiSettingsWindow* AddWindowSettings(const char* name)
 {
-    GImGui->Settings.resize(GImGui->Settings.Size + 1);
-    ImGuiIniData* ini = &GImGui->Settings.back();
-    ini->Name = ImStrdup(name);
-    ini->Id = ImHash(name, 0);
-    ini->Collapsed = false;
-    ini->Pos = ImVec2(FLT_MAX,FLT_MAX);
-    ini->Size = ImVec2(0,0);
-    return ini;
+    ImGuiContext& g = *GImGui;
+    g.SettingsWindows.resize(g.SettingsWindows.Size + 1);
+    ImGuiSettingsWindow* settings = &g.SettingsWindows.back();
+    settings->Name = ImStrdup(name);
+    settings->Id = ImHash(name, 0);
+    settings->Collapsed = false;
+    settings->Pos = ImVec2(FLT_MAX,FLT_MAX);
+    settings->Size = ImVec2(0,0);
+    return settings;
 }
 
 // Zero-tolerance, poor-man .ini parsing
@@ -2579,7 +2581,7 @@ static void LoadIniSettingsFromMemory(const char* buf, const char* buf_end)
     ImGuiContext& g = *GImGui;
     if (!buf_end)
         buf_end = buf + strlen(buf);
-    ImGuiIniData* settings = NULL;
+    ImGuiSettingsWindow* settings = NULL;
     for (const char* line_start = buf; line_start < buf_end; )
     {
         const char* line_end = line_start;
@@ -2639,7 +2641,7 @@ static void SaveIniSettingsToMemory(ImVector<char>& out_buf)
         ImGuiWindow* window = g.Windows[i];
         if (window->Flags & ImGuiWindowFlags_NoSavedSettings)
             continue;
-        ImGuiIniData* settings = FindWindowSettings(window->Name);
+        ImGuiSettingsWindow* settings = FindWindowSettings(window->Name);
         if (!settings)  // This will only return NULL in the rare instance where the window was first created with ImGuiWindowFlags_NoSavedSettings then had the flag disabled later on. We don't bind settings in this case (bug #1000).
             continue;
         settings->Pos = window->Pos;
@@ -2650,10 +2652,10 @@ static void SaveIniSettingsToMemory(ImVector<char>& out_buf)
     // Write a buffer
     // If a window wasn't opened in this session we preserve its settings
     ImGuiTextBuffer buf;
-    buf.reserve(g.Settings.Size * 64); // ballpark reserve
-    for (int i = 0; i != g.Settings.Size; i++)
+    buf.reserve(g.SettingsWindows.Size * 64); // ballpark reserve
+    for (int i = 0; i != g.SettingsWindows.Size; i++)
     {
-        const ImGuiIniData* settings = &g.Settings[i];
+        const ImGuiSettingsWindow* settings = &g.SettingsWindows[i];
         if (settings->Pos.x == FLT_MAX)
             continue;
         const char* name = settings->Name;
@@ -4008,7 +4010,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
         window->PosFloat = ImVec2(60, 60);
         window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
 
-        ImGuiIniData* settings = FindWindowSettings(name);
+        ImGuiSettingsWindow* settings = FindWindowSettings(name);
         if (!settings)
             settings = AddWindowSettings(name);
         else

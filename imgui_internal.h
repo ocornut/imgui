@@ -38,7 +38,7 @@ struct ImGuiGroupData;
 struct ImGuiSimpleColumns;
 struct ImGuiDrawContext;
 struct ImGuiTextEditState;
-struct ImGuiIniData;
+struct ImGuiSettingsWindow;
 struct ImGuiMouseCursorData;
 struct ImGuiPopupRef;
 struct ImGuiWindow;
@@ -370,7 +370,7 @@ struct IMGUI_API ImGuiTextEditState
 };
 
 // Data saved in imgui.ini file
-struct ImGuiIniData
+struct ImGuiSettingsWindow
 {
     char*       Name;
     ImGuiID     Id;
@@ -438,7 +438,7 @@ struct ImGuiContext
     ImGuiWindow*            ActiveIdWindow;
     ImGuiWindow*            MovingWindow;                       // Track the child window we clicked on to move a window.
     ImGuiID                 MovingWindowMoveId;                 // == MovingWindow->MoveId
-    ImVector<ImGuiIniData>  Settings;                           // .ini Settings
+    ImVector<ImGuiSettingsWindow>  SettingsWindows;                    // .ini Settings
     float                   SettingsDirtyTimer;                 // Save .ini Settings on disk when time reaches zero
     ImVector<ImGuiColMod>   ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
     ImVector<ImGuiStyleMod> StyleModifiers;                     // Stack for PushStyleVar()/PopStyleVar()
