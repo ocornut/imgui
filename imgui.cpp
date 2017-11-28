@@ -2671,11 +2671,11 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
         if (line[0] == '[' && line_end > line && line_end[-1] == ']')
         {
             // Parse "[Type][Name]". Note that 'Name' can itself contains [] characters, which is acceptable with the current format and parsing code.
-            char* name_end = line_end - 1; 
-            *name_end = 0;
-            char* type_start = line + 1;
+            line_end[-1] = 0;
+            const char* name_end = line_end - 1; 
+            const char* type_start = line + 1;
             char* type_end = ImStrchrRange(type_start, name_end, ']');
-            char* name_start = type_end ? ImStrchrRange(type_end + 1, name_end, '[') : NULL;
+            const char* name_start = type_end ? ImStrchrRange(type_end + 1, name_end, '[') : NULL;
             if (!type_end || !name_start)
             {
                 name_start = type_start; // Import legacy entries that have no type
