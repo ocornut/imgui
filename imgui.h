@@ -1032,6 +1032,7 @@ public:
 
     inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(_grow_capacity(Size+1)); Data[Size++] = v; }
     inline void                 pop_back()                      { IM_ASSERT(Size > 0); Size--; }
+    inline void                 push_front(const value_type& v) { if (Size == 0) push_back(v); else insert(Data, v); }
 
     inline iterator             erase(const_iterator it)        { IM_ASSERT(it >= Data && it < Data+Size); const ptrdiff_t off = it - Data; memmove(Data + off, Data + off + 1, ((size_t)Size - (size_t)off - 1) * sizeof(value_type)); Size--; return Data + off; }
     inline iterator             insert(const_iterator it, const value_type& v)  { IM_ASSERT(it >= Data && it <= Data+Size); const ptrdiff_t off = it - Data; if (Size == Capacity) reserve(Capacity ? Capacity * 2 : 4); if (off < (int)Size) memmove(Data + off + 1, Data + off, ((size_t)Size - (size_t)off) * sizeof(value_type)); Data[off] = v; Size++; return Data + off; }
@@ -1097,9 +1098,10 @@ struct ImGuiTextBuffer
     int                 size() const { return Buf.Size - 1; }
     bool                empty() { return Buf.Size <= 1; }
     void                clear() { Buf.clear(); Buf.push_back(0); }
+    void                reserve(int capacity) { Buf.reserve(capacity); }
     const char*         c_str() const { return Buf.Data; }
-    IMGUI_API void      append(const char* fmt, ...) IM_FMTARGS(2);
-    IMGUI_API void      appendv(const char* fmt, va_list args) IM_FMTLIST(2);
+    IMGUI_API void      appendf(const char* fmt, ...) IM_FMTARGS(2);
+    IMGUI_API void      appendfv(const char* fmt, va_list args) IM_FMTLIST(2);
 };
 
 // Helper: Simple Key->value storage
@@ -1146,6 +1148,9 @@ struct ImGuiStorage
 
     // Use on your own storage if you know only integer are being stored (open/close all tree nodes)
     IMGUI_API void      SetAllInt(int val);
+
+    // For quicker full rebuild of a storage (instead of an incremental one), you may add all your contents and then sort once.
+    IMGUI_API void      BuildSortByKey();
 };
 
 // Shared state of InputText(), passed to callback when a ImGuiInputTextFlags_Callback* flag is used and the corresponding callback is triggered.

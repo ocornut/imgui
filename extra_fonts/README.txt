@@ -153,7 +153,7 @@
  DroidSans.ttf
    Copyright (c) Steve Matteson
    Apache License, version 2.0
-   http://www.google.com/fonts/specimen/Droid+Sans
+   https://www.fontsquirrel.com/fonts/droid-sans
 
  ProggyClean.ttf
    Copyright (c) 2004, 2005 Tristan Grimmer
