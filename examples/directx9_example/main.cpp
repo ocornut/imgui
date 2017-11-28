@@ -144,6 +144,7 @@ int main(int, char**)
         }
 
         // Rendering
+        ImGui::EndFrame();
         g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, false);
         g_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
         g_pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
@@ -154,7 +155,15 @@ int main(int, char**)
             ImGui::Render();
             g_pd3dDevice->EndScene();
         }
-        g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
+        HRESULT result = g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
+
+        // Handle loss of D3D9 device
+        if (result == D3DERR_DEVICELOST && g_pd3dDevice->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
+        {
+            ImGui_ImplDX9_InvalidateDeviceObjects();
+            g_pd3dDevice->Reset(&g_d3dpp);
+            ImGui_ImplDX9_CreateDeviceObjects();
+        }
     }
 
     ImGui_ImplDX9_Shutdown();

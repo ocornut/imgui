@@ -38,7 +38,7 @@ struct ImGuiGroupData;
 struct ImGuiSimpleColumns;
 struct ImGuiDrawContext;
 struct ImGuiTextEditState;
-struct ImGuiIniData;
+struct ImGuiSettingsWindow;
 struct ImGuiMouseCursorData;
 struct ImGuiPopupRef;
 struct ImGuiWindow;
@@ -106,6 +106,7 @@ IMGUI_API int           ImStricmp(const char* str1, const char* str2);
 IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, int count);
 IMGUI_API void          ImStrncpy(char* dst, const char* src, int count);
 IMGUI_API char*         ImStrdup(const char* str);
+IMGUI_API char*         ImStrchrRange(const char* str_begin, const char* str_end, char c);
 IMGUI_API int           ImStrlenW(const ImWchar* str);
 IMGUI_API const ImWchar*ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin); // Find beginning-of-line
 IMGUI_API const char*   ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end);
@@ -155,6 +156,7 @@ static inline ImVec2 ImFloor(const ImVec2& v)                                   
 static inline float  ImDot(const ImVec2& a, const ImVec2& b)                    { return a.x * b.x + a.y * b.y; }
 static inline ImVec2 ImRotate(const ImVec2& v, float cos_a, float sin_a)        { return ImVec2(v.x * cos_a - v.y * sin_a, v.x * sin_a + v.y * cos_a); }
 static inline float  ImLinearSweep(float current, float target, float speed)    { if (current < target) return ImMin(current + speed, target); if (current > target) return ImMax(current - speed, target); return current; }
+static inline ImVec2 ImMul(const ImVec2& lhs, const ImVec2& rhs)                { return ImVec2(lhs.x * rhs.x, lhs.y * rhs.y); }
 
 // We call C++ constructor on own allocated memory via the placement "new(ptr) Type()" syntax.
 // Defining a custom placement new() with a dummy parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
@@ -225,6 +227,13 @@ enum ImGuiLayoutType_
     ImGuiLayoutType_Horizontal
 };
 
+enum ImGuiAxis
+{
+    ImGuiAxis_None = -1,
+    ImGuiAxis_X = 0,
+    ImGuiAxis_Y = 1,
+};
+
 enum ImGuiPlotType
 {
     ImGuiPlotType_Lines,
@@ -246,15 +255,6 @@ enum ImGuiDir
     ImGuiDir_Up      = 2,
     ImGuiDir_Down    = 3,
     ImGuiDir_Count_
-};
-
-enum ImGuiCorner
-{
-    ImGuiCorner_TopLeft     = 1 << 0, // 1
-    ImGuiCorner_TopRight    = 1 << 1, // 2
-    ImGuiCorner_BotRight    = 1 << 2, // 4
-    ImGuiCorner_BotLeft     = 1 << 3, // 8
-    ImGuiCorner_All         = 0x0F
 };
 
 // 2D axis aligned bounding-box
@@ -377,13 +377,24 @@ struct IMGUI_API ImGuiTextEditState
 };
 
 // Data saved in imgui.ini file
-struct ImGuiIniData
+struct ImGuiSettingsWindow
 {
     char*       Name;
     ImGuiID     Id;
     ImVec2      Pos;
     ImVec2      Size;
     bool        Collapsed;
+
+    ImGuiSettingsWindow() { Name = NULL; Id = 0; Pos = Size = ImVec2(0,0); Collapsed = false; }
+};
+
+struct ImGuiSettingsHandler
+{
+    const char* TypeName;   // Short description stored in .ini file. Disallowed characters: '[' ']'  
+    ImGuiID     TypeHash;   // == ImHash(TypeName, 0, 0)
+    void*       (*ReadOpenEntryFn)(ImGuiContext& ctx, const char* name);
+    void        (*ReadLineFn)(ImGuiContext& ctx, void* entry, const char* line);
+    void        (*WriteAllFn)(ImGuiContext& ctx, ImGuiTextBuffer* out_buf);
 };
 
 // Mouse cursor data (used when io.MouseDrawCursor is set)
@@ -445,8 +456,6 @@ struct ImGuiContext
     ImGuiWindow*            ActiveIdWindow;
     ImGuiWindow*            MovingWindow;                       // Track the child window we clicked on to move a window.
     ImGuiID                 MovingWindowMoveId;                 // == MovingWindow->MoveId
-    ImVector<ImGuiIniData>  Settings;                           // .ini Settings
-    float                   SettingsDirtyTimer;                 // Save .ini Settings on disk when time reaches zero
     ImVector<ImGuiColMod>   ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
     ImVector<ImGuiStyleMod> StyleModifiers;                     // Stack for PushStyleVar()/PopStyleVar()
     ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont()
@@ -509,6 +518,11 @@ struct ImGuiContext
     ImVector<char>          PrivateClipboard;                   // If no custom clipboard handler is defined
     ImVec2                  OsImePosRequest, OsImePosSet;       // Cursor position request & last passed to the OS Input Method Editor
 
+    // Settings
+    float                          SettingsDirtyTimer;          // Save .ini Settings on disk when time reaches zero
+    ImVector<ImGuiSettingsWindow>  SettingsWindows;             // .ini settings for ImGuiWindow
+    ImVector<ImGuiSettingsHandler> SettingsHandlers;            // List of .ini settings handlers
+
     // Logging
     bool                    LogEnabled;
     FILE*                   LogFile;                            // If != NULL log to stdout/ file
@@ -553,7 +567,6 @@ struct ImGuiContext
         ActiveIdWindow = NULL;
         MovingWindow = NULL;
         MovingWindowMoveId = 0;
-        SettingsDirtyTimer = 0.0f;
 
         SetNextWindowPosVal = ImVec2(0.0f, 0.0f);
         SetNextWindowSizeVal = ImVec2(0.0f, 0.0f);
@@ -593,6 +606,8 @@ struct ImGuiContext
         OverlayDrawList._OwnerName = "##Overlay"; // Give it a name for debugging
         MouseCursor = ImGuiMouseCursor_Arrow;
         memset(MouseCursorData, 0, sizeof(MouseCursorData));
+
+        SettingsDirtyTimer = 0.0f;
 
         LogEnabled = false;
         LogFile = NULL;
@@ -776,6 +791,7 @@ public:
     ImGuiID     GetIDNoKeepAlive(const char* str, const char* str_end = NULL);
     ImGuiID     GetIDFromRectangle(const ImRect& r_abs);
 
+    // We don't use g.FontSize because the window may be != g.CurrentWidow.
     ImRect      Rect() const                            { return ImRect(Pos.x, Pos.y, Pos.x+Size.x, Pos.y+Size.y); }
     float       CalcFontSize() const                    { return GImGui->FontBaseSize * FontWindowScale; }
     float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0.0f : CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f; }
@@ -816,6 +832,8 @@ namespace ImGui
 
     IMGUI_API void          Initialize();
 
+    IMGUI_API void          MarkIniSettingsDirty();
+
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          ClearActiveID();
     IMGUI_API void          SetHoveredID(ImGuiID id);
@@ -844,6 +862,7 @@ namespace ImGui
 
     IMGUI_API void          Scrollbar(ImGuiLayoutType direction);
     IMGUI_API void          VerticalSeparator();        // Vertical separator, for menu bars (use current line height). not exposed because it is misleading what it doesn't have an effect on regular layout.
+    IMGUI_API bool          SplitterBehavior(ImGuiID id, const ImRect& bb, ImGuiAxis axis, float* size1, float* size2, float min_size1, float min_size2, float hover_extend = 0.0f);
 
     IMGUI_API bool          BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id);
 
@@ -904,6 +923,7 @@ namespace ImGui
     // Shade functions
     IMGUI_API void          ShadeVertsLinearColorGradientKeepAlpha(ImDrawVert* vert_start, ImDrawVert* vert_end, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1);
     IMGUI_API void          ShadeVertsLinearAlphaGradientForLeftToRightText(ImDrawVert* vert_start, ImDrawVert* vert_end, float gradient_p0_x, float gradient_p1_x);
+    IMGUI_API void          ShadeVertsLinearUV(ImDrawVert* vert_start, ImDrawVert* vert_end, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, bool clamp);
 
 } // namespace ImGui
 

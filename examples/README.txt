@@ -46,17 +46,18 @@ Also note that some setup or GPU drivers may be causing extra lag (possibly by e
 leaving you with no option but sadness/anger (Intel GPU drivers were reported as such).
 
 opengl2_example/
-    *DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL*
-    GLFW + OpenGL example (old, fixed graphic pipeline).
-    This is mostly provided as a reference to learn how ImGui integration works, because it is easier to read.
-    If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything
-    more complicated, will require your code to reset every single OpenGL attributes to their initial state,
-    and might confuse your GPU driver. Prefer using opengl3_example.
+    **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
+    **Prefer using the code in the opengl3_example/ folder**
+    GLFW + OpenGL example (legacy, fixed pipeline).
+    This code is mostly provided as a reference to learn how ImGui integration works, because it is shorter to read.
+    If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything more
+    complicated, will require your code to reset every single OpenGL attributes to their initial state, and might
+    confuse your GPU driver. 
 
 opengl3_example/
     GLFW + OpenGL example (programmable pipeline, binding modern functions with GL3W).
     This uses more modern OpenGL calls and custom shaders. 
-    Prefer using that if you are using modern OpenGL3/4 in your application.
+    Prefer using that if you are using modern OpenGL in your application (anything with shaders, vbo, vao, etc.).
 
 directx9_example/
     DirectX9 example, Windows only.
@@ -75,15 +76,18 @@ apple_example/
     Synergy keyboard integration is rather hacky.
 
 sdl_opengl2_example/
-    *DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL*
-    SDL2 + OpenGL example (old fixed pipeline).
-    This is mostly provided as a reference to learn how ImGui integration works, because it is easier to read.
-    If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything
-    more complicated, will require your code to reset every single OpenGL attributes to their initial state,
-    and might confuse your GPU driver. Prefer using sdl_opengl3_example.
+    **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
+    **Prefer using the code in the sdl_opengl3_example/ folder**
+    SDL2 + OpenGL example (legacy, fixed pipeline).
+    This code is mostly provided as a reference to learn how ImGui integration works, because it is shorter to read.
+    If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything more
+    complicated, will require your code to reset every single OpenGL attributes to their initial state, and might
+    confuse your GPU driver. 
 
 sdl_opengl3_example/
     SDL2 + OpenGL3 example.
+    This uses more modern OpenGL calls and custom shaders. 
+    Prefer using that if you are using modern OpenGL in your application (anything with shaders, vbo, vao, etc.).
 
 allegro5_example/
     Allegro 5 example.

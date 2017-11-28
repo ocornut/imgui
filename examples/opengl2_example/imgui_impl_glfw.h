@@ -1,8 +1,9 @@
-// ImGui GLFW binding with OpenGL
+// ImGui GLFW binding with OpenGL (legacy, fixed pipeline)
 // In this binding, ImTextureID is used to store an OpenGL 'GLuint' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
 // (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 
-// *DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL*
+// **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
+// **Prefer using the code in the opengl3_example/ folder**
 // See imgui_impl_glfw.cpp for details.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
