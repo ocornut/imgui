@@ -2470,7 +2470,7 @@ void ImGui::NewFrame()
     ImGui::Begin("Debug##Default");
 }
 
-static void* SettingsHandlerWindow_ReadOpenEntry(ImGuiContext&, const char* name)
+static void* SettingsHandlerWindow_ReadOpen(ImGuiContext&, const char* name)
 {
     ImGuiWindowSettings* settings = ImGui::FindWindowSettings(ImHash(name, 0));
     if (!settings)
@@ -2533,7 +2533,7 @@ void ImGui::Initialize()
     ImGuiSettingsHandler ini_handler;
     ini_handler.TypeName = "Window";
     ini_handler.TypeHash = ImHash("Window", 0, 0);
-    ini_handler.ReadOpenEntryFn = SettingsHandlerWindow_ReadOpenEntry;
+    ini_handler.ReadOpenFn = SettingsHandlerWindow_ReadOpen;
     ini_handler.ReadLineFn = SettingsHandlerWindow_ReadLine;
     ini_handler.WriteAllFn = SettingsHandlerWindow_WriteAll;
     g.SettingsHandlers.push_front(ini_handler);
@@ -2689,7 +2689,7 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
             }
             const ImGuiID type_hash = ImHash(type_start, 0, 0);
             entry_handler = ImGui::FindSettingsHandler(type_hash);
-            entry_data = entry_handler ? entry_handler->ReadOpenEntryFn(g, name_start) : NULL;
+            entry_data = entry_handler ? entry_handler->ReadOpenFn(g, name_start) : NULL;
         }
         else if (entry_handler != NULL && entry_data != NULL)
         {

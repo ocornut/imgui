@@ -386,7 +386,7 @@ struct ImGuiSettingsHandler
 {
     const char* TypeName;   // Short description stored in .ini file. Disallowed characters: '[' ']'  
     ImGuiID     TypeHash;   // == ImHash(TypeName, 0, 0)
-    void*       (*ReadOpenEntryFn)(ImGuiContext& ctx, const char* name);
+    void*       (*ReadOpenFn)(ImGuiContext& ctx, const char* name);
     void        (*ReadLineFn)(ImGuiContext& ctx, void* entry, const char* line);
     void        (*WriteAllFn)(ImGuiContext& ctx, ImGuiTextBuffer* out_buf);
 };
