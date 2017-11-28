@@ -144,6 +144,7 @@ int main(int, char**)
         }
 
         // Rendering
+        ImGui::EndFrame();
         g_pd3dDevice->SetRenderState(D3DRS_ZENABLE, false);
         g_pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
         g_pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
