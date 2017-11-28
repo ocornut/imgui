@@ -643,8 +643,8 @@ static void             AddDrawListToRenderList(ImVector<ImDrawList*>& out_rende
 static void             AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiWindow* window);
 static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, ImGuiWindow* window);
 
-static ImGuiSettingsWindow* FindWindowSettings(const char* name);
-static ImGuiSettingsWindow* AddWindowSettings(const char* name);
+static ImGuiWindowSettings* FindWindowSettings(const char* name);
+static ImGuiWindowSettings* AddWindowSettings(const char* name);
 
 static void             LoadIniSettingsFromDisk(const char* ini_filename);
 static void             LoadIniSettingsFromMemory(const char* buf);
@@ -2473,7 +2473,7 @@ void ImGui::NewFrame()
 
 static void* SettingsHandlerWindow_ReadOpenEntry(ImGuiContext&, const char* name)
 {
-    ImGuiSettingsWindow* settings = FindWindowSettings(name);
+    ImGuiWindowSettings* settings = FindWindowSettings(name);
     if (!settings)
         settings = AddWindowSettings(name);
     return (void*)settings;
@@ -2481,7 +2481,7 @@ static void* SettingsHandlerWindow_ReadOpenEntry(ImGuiContext&, const char* name
 
 static void SettingsHandlerWindow_ReadLine(ImGuiContext&, void* entry, const char* line)
 {
-    ImGuiSettingsWindow* settings = (ImGuiSettingsWindow*)entry;
+    ImGuiWindowSettings* settings = (ImGuiWindowSettings*)entry;
     float x, y; 
     int i;
     if (sscanf(line, "Pos=%f,%f", &x, &y) == 2)         settings->Pos = ImVec2(x, y);
@@ -2497,7 +2497,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext& g, ImGuiTextBuffer* buf
         ImGuiWindow* window = g.Windows[i];
         if (window->Flags & ImGuiWindowFlags_NoSavedSettings)
             continue;
-        ImGuiSettingsWindow* settings = FindWindowSettings(window->Name);
+        ImGuiWindowSettings* settings = FindWindowSettings(window->Name);
         if (!settings)  // This will only return NULL in the rare instance where the window was first created with ImGuiWindowFlags_NoSavedSettings then had the flag disabled later on. We don't bind settings in this case (bug #1000).
             continue;
         settings->Pos = window->Pos;
@@ -2510,7 +2510,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext& g, ImGuiTextBuffer* buf
     buf->reserve(buf->size() + g.SettingsWindows.Size * 96); // ballpark reserve
     for (int i = 0; i != g.SettingsWindows.Size; i++)
     {
-        const ImGuiSettingsWindow* settings = &g.SettingsWindows[i];
+        const ImGuiWindowSettings* settings = &g.SettingsWindows[i];
         if (settings->Pos.x == FLT_MAX)
             continue;
         const char* name = settings->Name;
@@ -2609,24 +2609,24 @@ void ImGui::Shutdown()
     g.Initialized = false;
 }
 
-static ImGuiSettingsWindow* FindWindowSettings(const char* name)
+static ImGuiWindowSettings* FindWindowSettings(const char* name)
 {
     ImGuiContext& g = *GImGui;
     ImGuiID id = ImHash(name, 0);
     for (int i = 0; i != g.SettingsWindows.Size; i++)
     {
-        ImGuiSettingsWindow* ini = &g.SettingsWindows[i];
+        ImGuiWindowSettings* ini = &g.SettingsWindows[i];
         if (ini->Id == id)
             return ini;
     }
     return NULL;
 }
 
-static ImGuiSettingsWindow* AddWindowSettings(const char* name)
+static ImGuiWindowSettings* AddWindowSettings(const char* name)
 {
     ImGuiContext& g = *GImGui;
     g.SettingsWindows.resize(g.SettingsWindows.Size + 1);
-    ImGuiSettingsWindow* settings = &g.SettingsWindows.back();
+    ImGuiWindowSettings* settings = &g.SettingsWindows.back();
     settings->Name = ImStrdup(name);
     settings->Id = ImHash(name, 0);
     settings->Collapsed = false;
@@ -4078,7 +4078,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
         window->PosFloat = ImVec2(60, 60);
         window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
 
-        ImGuiSettingsWindow* settings = FindWindowSettings(name);
+        ImGuiWindowSettings* settings = FindWindowSettings(name);
         if (!settings)
             settings = AddWindowSettings(name);
         else

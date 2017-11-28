@@ -38,10 +38,10 @@ struct ImGuiGroupData;
 struct ImGuiSimpleColumns;
 struct ImGuiDrawContext;
 struct ImGuiTextEditState;
-struct ImGuiSettingsWindow;
 struct ImGuiMouseCursorData;
 struct ImGuiPopupRef;
 struct ImGuiWindow;
+struct ImGuiWindowSettings;
 
 typedef int ImGuiLayoutType;        // enum: horizontal or vertical             // enum ImGuiLayoutType_
 typedef int ImGuiButtonFlags;       // flags: for ButtonEx(), ButtonBehavior()  // enum ImGuiButtonFlags_
@@ -371,7 +371,7 @@ struct IMGUI_API ImGuiTextEditState
 };
 
 // Data saved in imgui.ini file
-struct ImGuiSettingsWindow
+struct ImGuiWindowSettings
 {
     char*       Name;
     ImGuiID     Id;
@@ -379,7 +379,7 @@ struct ImGuiSettingsWindow
     ImVec2      Size;
     bool        Collapsed;
 
-    ImGuiSettingsWindow() { Name = NULL; Id = 0; Pos = Size = ImVec2(0,0); Collapsed = false; }
+    ImGuiWindowSettings() { Name = NULL; Id = 0; Pos = Size = ImVec2(0,0); Collapsed = false; }
 };
 
 struct ImGuiSettingsHandler
@@ -500,7 +500,7 @@ struct ImGuiContext
 
     // Settings
     float                          SettingsDirtyTimer;          // Save .ini Settings on disk when time reaches zero
-    ImVector<ImGuiSettingsWindow>  SettingsWindows;             // .ini settings for ImGuiWindow
+    ImVector<ImGuiWindowSettings>  SettingsWindows;             // .ini settings for ImGuiWindow
     ImVector<ImGuiSettingsHandler> SettingsHandlers;            // List of .ini settings handlers
 
     // Logging
