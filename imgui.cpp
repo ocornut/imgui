@@ -2676,15 +2676,22 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
             char* type_start = line + 1;
             char* type_end = ImStrchrRange(type_start, name_end, ']');
             char* name_start = type_end ? ImStrchrRange(type_end + 1, name_end, '[') : NULL;
-            if (type_start && type_end && name_start++ && name_end)
+            if (!type_end || !name_start)
             {
-                const ImGuiID type_hash = ImHash(type_start, type_end - type_start, 0);
-                entry_handler = NULL;
-                for (int handler_n = 0; handler_n < g.SettingsHandlers.Size && entry_handler == NULL; handler_n++)
-                    if (g.SettingsHandlers[handler_n].TypeHash == type_hash)
-                        entry_handler = &g.SettingsHandlers[handler_n];
-                entry_data = entry_handler ? entry_handler->ReadOpenEntryFn(g, name_start) : NULL;
+                name_start = type_start; // Import legacy entries that have no type
+                type_start = "Window";
             }
+            else
+            {
+                *type_end = 0; // Overwrite first ']' 
+                name_start++;  // Skip second '['
+            }
+            const ImGuiID type_hash = ImHash(type_start, 0, 0);
+            entry_handler = NULL;
+            for (int handler_n = 0; handler_n < g.SettingsHandlers.Size && entry_handler == NULL; handler_n++)
+                if (g.SettingsHandlers[handler_n].TypeHash == type_hash)
+                    entry_handler = &g.SettingsHandlers[handler_n];
+            entry_data = entry_handler ? entry_handler->ReadOpenEntryFn(g, name_start) : NULL;
         }
         else if (entry_handler != NULL && entry_data != NULL)
         {
