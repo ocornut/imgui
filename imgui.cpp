@@ -2639,6 +2639,15 @@ static void LoadIniSettingsFromDisk(const char* ini_filename)
     ImGui::MemFree(file_data);
 }
 
+ImGuiSettingsHandler* ImGui::FindSettingsHandler(ImGuiID type_hash)
+{
+    ImGuiContext& g = *GImGui;
+    for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
+        if (g.SettingsHandlers[handler_n].TypeHash == type_hash)
+            return &g.SettingsHandlers[handler_n];
+    return NULL;
+}
+
 // Zero-tolerance, no error reporting, cheap .ini parsing
 static void LoadIniSettingsFromMemory(const char* buf_readonly)
 {
@@ -2680,10 +2689,7 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
                 name_start++;  // Skip second '['
             }
             const ImGuiID type_hash = ImHash(type_start, 0, 0);
-            entry_handler = NULL;
-            for (int handler_n = 0; handler_n < g.SettingsHandlers.Size && entry_handler == NULL; handler_n++)
-                if (g.SettingsHandlers[handler_n].TypeHash == type_hash)
-                    entry_handler = &g.SettingsHandlers[handler_n];
+            entry_handler = ImGui::FindSettingsHandler(type_hash);
             entry_data = entry_handler ? entry_handler->ReadOpenEntryFn(g, name_start) : NULL;
         }
         else if (entry_handler != NULL && entry_data != NULL)
