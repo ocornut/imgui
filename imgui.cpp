@@ -2497,8 +2497,8 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext& g, ImGuiTextBuffer* buf
         if (window->Flags & ImGuiWindowFlags_NoSavedSettings)
             continue;
         ImGuiWindowSettings* settings = ImGui::FindWindowSettings(window->ID);
-        if (!settings)  // This will only return NULL in the rare instance where the window was first created with ImGuiWindowFlags_NoSavedSettings then had the flag disabled later on. We don't bind settings in this case (bug #1000).
-            continue;
+        if (!settings)
+            settings = AddWindowSettings(window->Name);
         settings->Pos = window->Pos;
         settings->Size = window->SizeFull;
         settings->Collapsed = window->Collapsed;
@@ -2624,7 +2624,6 @@ static ImGuiWindowSettings* AddWindowSettings(const char* name)
     ImGuiWindowSettings* settings = &g.SettingsWindows.back();
     settings->Name = ImStrdup(name);
     settings->Id = ImHash(name, 0);
-    settings->Pos = ImVec2(FLT_MAX,FLT_MAX);
     return settings;
 }
 
@@ -4077,21 +4076,15 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
         window->PosFloat = ImVec2(60, 60);
         window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
 
-        ImGuiWindowSettings* settings = ImGui::FindWindowSettings(window->ID);
-        if (!settings)
-            settings = AddWindowSettings(name);
-        else
-            SetWindowConditionAllowFlags(window, ImGuiCond_FirstUseEver, false);
-
-        if (settings->Pos.x != FLT_MAX)
+        if (ImGuiWindowSettings* settings = ImGui::FindWindowSettings(window->ID))
         {
+            SetWindowConditionAllowFlags(window, ImGuiCond_FirstUseEver, false);
             window->PosFloat = settings->Pos;
             window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
             window->Collapsed = settings->Collapsed;
+            if (ImLengthSqr(settings->Size) > 0.00001f)
+                size = settings->Size;
         }
-
-        if (ImLengthSqr(settings->Size) > 0.00001f)
-            size = settings->Size;
         window->Size = window->SizeFull = size;
     }
 
