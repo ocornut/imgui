@@ -803,7 +803,8 @@ namespace ImGui
 
     IMGUI_API void          Initialize();
 
-    IMGUI_API void          MarkIniSettingsDirty();
+    IMGUI_API void                 MarkIniSettingsDirty();
+    IMGUI_API ImGuiWindowSettings* FindWindowSettings(ImGuiID id);
 
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          ClearActiveID();

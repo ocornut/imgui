@@ -643,7 +643,6 @@ static void             AddDrawListToRenderList(ImVector<ImDrawList*>& out_rende
 static void             AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiWindow* window);
 static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, ImGuiWindow* window);
 
-static ImGuiWindowSettings* FindWindowSettings(const char* name);
 static ImGuiWindowSettings* AddWindowSettings(const char* name);
 
 static void             LoadIniSettingsFromDisk(const char* ini_filename);
@@ -2473,7 +2472,7 @@ void ImGui::NewFrame()
 
 static void* SettingsHandlerWindow_ReadOpenEntry(ImGuiContext&, const char* name)
 {
-    ImGuiWindowSettings* settings = FindWindowSettings(name);
+    ImGuiWindowSettings* settings = ImGui::FindWindowSettings(ImHash(name, 0));
     if (!settings)
         settings = AddWindowSettings(name);
     return (void*)settings;
@@ -2497,7 +2496,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext& g, ImGuiTextBuffer* buf
         ImGuiWindow* window = g.Windows[i];
         if (window->Flags & ImGuiWindowFlags_NoSavedSettings)
             continue;
-        ImGuiWindowSettings* settings = FindWindowSettings(window->Name);
+        ImGuiWindowSettings* settings = ImGui::FindWindowSettings(window->ID);
         if (!settings)  // This will only return NULL in the rare instance where the window was first created with ImGuiWindowFlags_NoSavedSettings then had the flag disabled later on. We don't bind settings in this case (bug #1000).
             continue;
         settings->Pos = window->Pos;
@@ -2609,29 +2608,23 @@ void ImGui::Shutdown()
     g.Initialized = false;
 }
 
-static ImGuiWindowSettings* FindWindowSettings(const char* name)
+ImGuiWindowSettings* ImGui::FindWindowSettings(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiID id = ImHash(name, 0);
     for (int i = 0; i != g.SettingsWindows.Size; i++)
-    {
-        ImGuiWindowSettings* ini = &g.SettingsWindows[i];
-        if (ini->Id == id)
-            return ini;
-    }
+        if (g.SettingsWindows[i].Id == id)
+            return &g.SettingsWindows[i];
     return NULL;
 }
 
 static ImGuiWindowSettings* AddWindowSettings(const char* name)
 {
     ImGuiContext& g = *GImGui;
-    g.SettingsWindows.resize(g.SettingsWindows.Size + 1);
+    g.SettingsWindows.push_back(ImGuiWindowSettings());
     ImGuiWindowSettings* settings = &g.SettingsWindows.back();
     settings->Name = ImStrdup(name);
     settings->Id = ImHash(name, 0);
-    settings->Collapsed = false;
     settings->Pos = ImVec2(FLT_MAX,FLT_MAX);
-    settings->Size = ImVec2(0,0);
     return settings;
 }
 
@@ -4078,7 +4071,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
         window->PosFloat = ImVec2(60, 60);
         window->Pos = ImVec2((float)(int)window->PosFloat.x, (float)(int)window->PosFloat.y);
 
-        ImGuiWindowSettings* settings = FindWindowSettings(name);
+        ImGuiWindowSettings* settings = ImGui::FindWindowSettings(window->ID);
         if (!settings)
             settings = AddWindowSettings(name);
         else
