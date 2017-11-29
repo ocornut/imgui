@@ -4162,6 +4162,16 @@ static ImVec2 CalcSizeAutoFit(ImGuiWindow* window)
     return size_auto_fit;
 }
 
+static float GetScrollMaxX(ImGuiWindow* window)
+{
+    return ImMax(0.0f, window->SizeContents.x - (window->SizeFull.x - window->ScrollbarSizes.x));
+}
+
+static float GetScrollMaxY(ImGuiWindow* window)
+{
+    return ImMax(0.0f, window->SizeContents.y - (window->SizeFull.y - window->ScrollbarSizes.y));
+}
+
 static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
 {
     ImVec2 scroll = window->Scroll;
@@ -4174,8 +4184,8 @@ static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
     scroll = ImMax(scroll, ImVec2(0.0f, 0.0f));
     if (!window->Collapsed && !window->SkipItems)
     {
-        scroll.x = ImMin(scroll.x, ImMax(0.0f, window->SizeContents.x - (window->SizeFull.x - window->ScrollbarSizes.x))); // == GetScrollMaxX for that window
-        scroll.y = ImMin(scroll.y, ImMax(0.0f, window->SizeContents.y - (window->SizeFull.y - window->ScrollbarSizes.y))); // == GetScrollMaxY for that window
+        scroll.x = ImMin(scroll.x, GetScrollMaxX(window));
+        scroll.y = ImMin(scroll.y, GetScrollMaxY(window));
     }
     return scroll;
 }
@@ -5671,14 +5681,12 @@ float ImGui::GetScrollY()
 
 float ImGui::GetScrollMaxX()
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
-    return ImMax(0.0f, window->SizeContents.x - (window->SizeFull.x - window->ScrollbarSizes.x));
+    return GetScrollMaxX(GImGui->CurrentWindow);
 }
 
 float ImGui::GetScrollMaxY()
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
-    return ImMax(0.0f, window->SizeContents.y - (window->SizeFull.y - window->ScrollbarSizes.y));
+    return GetScrollMaxY(GImGui->CurrentWindow);
 }
 
 void ImGui::SetScrollX(float scroll_x)
@@ -11039,7 +11047,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::BulletText("Pos: (%.1f,%.1f), Size: (%.1f,%.1f), SizeContents (%.1f,%.1f)", window->Pos.x, window->Pos.y, window->Size.x, window->Size.y, window->SizeContents.x, window->SizeContents.y);
                 if (ImGui::IsItemHovered())
                     GImGui->OverlayDrawList.AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255,255,0,255));
-                ImGui::BulletText("Scroll: (%.2f,%.2f)", window->Scroll.x, window->Scroll.y);
+                ImGui::BulletText("Scroll: (%.2f/%.2f,%.2f/%.2f)", window->Scroll.x, GetScrollMaxX(window), window->Scroll.y, GetScrollMaxY(window));
                 ImGui::BulletText("Active: %d, WriteAccessed: %d", window->Active, window->WriteAccessed);
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
