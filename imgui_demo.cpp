@@ -2807,11 +2807,9 @@ static void ShowExampleAppLayout(bool* p_open)
                 ImGui::Separator();
                 ImGui::TextWrapped("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ");
             ImGui::EndChild();
-            ImGui::BeginChild("buttons");
                 if (ImGui::Button("Revert")) {}
                 ImGui::SameLine();
                 if (ImGui::Button("Save")) {}
-            ImGui::EndChild();
         ImGui::EndGroup();
     }
     ImGui::End();
