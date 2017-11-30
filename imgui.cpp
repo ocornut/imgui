@@ -10343,7 +10343,7 @@ bool ImGui::SplitterBehavior(ImGuiID id, const ImRect& bb, ImGuiAxis axis, float
 
     // Render
     const ImU32 col = GetColorU32(held ? ImGuiCol_SeparatorActive : hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
-    RenderFrame(bb_render.Min, bb_render.Max, col, true, g.Style.FrameRounding);
+    window->DrawList->AddRectFilled(bb_render.Min, bb_render.Max, col, g.Style.FrameRounding);
 
     return held;
 }
