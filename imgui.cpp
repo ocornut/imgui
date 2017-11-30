@@ -9671,6 +9671,16 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     else
         window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), rounding); // Color button are often in need of some sort of border
 
+    if (g.ActiveId == id && BeginDragDropSource()) // NB: The ActiveId test is merely an optional micro-optimization
+    {
+        SetDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F, &col, sizeof(col), ImGuiCond_Once);
+        ColorButton(desc_id, col, flags);
+        SameLine();
+        TextUnformatted("Color");
+        EndDragDropSource();
+        hovered = false;
+    }
+
     if (!(flags & ImGuiColorEditFlags_NoTooltip) && hovered)
         ColorTooltip(desc_id, &col.x, flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf));
 
@@ -9946,6 +9956,17 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
     PopID();
     EndGroup();
+
+    if (window->DC.LastItemRectHoveredRect && BeginDragDropTarget()) // NB: The LastItemRectHoveredRect test is merely an optional micro-optimization
+    {
+        if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F))
+        {
+            IM_ASSERT(payload->DataSize == sizeof(ImVec4));
+            memcpy((float*)col, payload->Data, sizeof(ImVec4));
+            value_changed = true;
+        }
+        EndDragDropTarget();
+    }
 
     return value_changed;
 }
