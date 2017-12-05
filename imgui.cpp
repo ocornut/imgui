@@ -4575,7 +4575,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         else
         {
             // Handle resize for: Resize Grips, Borders, Gamepad
-            int border_hovered = -1, border_held = -1;
+            int border_held = -1;
             ImU32 resize_grip_col[4] = { 0 };
             const int resize_grip_count = (flags & ImGuiWindowFlags_ResizeFromAnySide) ? 2 : 1; // 4
             const int resize_border_count = (flags & ImGuiWindowFlags_ResizeFromAnySide) ? 4 : 0;
@@ -4624,10 +4624,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                     bool hovered, held;
                     ImRect border_rect = GetBorderRect(window, border_n, grip_hover_size, BORDER_SIZE);
                     ButtonBehavior(border_rect, window->GetID((void*)(border_n+4)), &hovered, &held, ImGuiButtonFlags_FlattenChilds);
-                    if ((hovered && g.HoveredIdTimer > BORDER_APPEAR_TIMER) || (held && g.ActiveIdTimer > BORDER_APPEAR_TIMER))
+                    if ((hovered && g.HoveredIdTimer > BORDER_APPEAR_TIMER) || held)
                     {
                         g.MouseCursor = (border_n & 1) ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS;
-                        if (hovered) border_hovered = border_n;
                         if (held) border_held = border_n;
                     }
                     if (held)
@@ -4701,10 +4700,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Borders
             if (window_border_size > 0.0f)
                 window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding, ImDrawCornerFlags_All, window_border_size);
-            if (border_held != -1 || border_hovered != -1)
+            if (border_held != -1)
             {
-                ImRect border = GetBorderRect(window, border_held != -1 ? border_held : border_hovered, grip_draw_size, 0.0f);
-                window->DrawList->AddLine(border.Min, border.Max, GetColorU32(border_held != -1 ? ImGuiCol_SeparatorActive : ImGuiCol_SeparatorHovered), ImMax(1.0f, window_border_size));
+                ImRect border = GetBorderRect(window, border_held, grip_draw_size, 0.0f);
+                window->DrawList->AddLine(border.Min, border.Max, GetColorU32(ImGuiCol_SeparatorActive), ImMax(1.0f, window_border_size));
             }
             if (style.FrameBorderSize > 0 && !(flags & ImGuiWindowFlags_NoTitleBar))
                 window->DrawList->AddLine(title_bar_rect.GetBL()+ImVec2(1,-1), title_bar_rect.GetBR()+ImVec2(-1,-1), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
