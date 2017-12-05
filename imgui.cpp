@@ -4198,6 +4198,37 @@ static ImGuiCol GetWindowBgColorIdxFromFlags(ImGuiWindowFlags flags)
     return ImGuiCol_WindowBg;
 }
 
+static void CalcResizePosSizeFromAnyCorner(ImGuiWindow* window, const ImVec2& corner_target, const ImVec2& corner_norm, ImVec2* out_pos, ImVec2* out_size)
+{
+    ImVec2 pos_min = ImLerp(corner_target, window->Pos, corner_norm);                // Expected window upper-left
+    ImVec2 pos_max = ImLerp(window->Pos + window->Size, corner_target, corner_norm); // Expected window lower-right
+    ImVec2 size_expected = pos_max - pos_min;
+    ImVec2 size_constrained = CalcSizeFullWithConstraint(window, size_expected);
+    *out_pos = pos_min;
+    if (corner_norm.x == 0.0f)
+        out_pos->x -= (size_constrained.x - size_expected.x);
+    if (corner_norm.y == 0.0f)
+        out_pos->y -= (size_constrained.y - size_expected.y);
+    *out_size = size_constrained;
+}
+
+struct ImGuiResizeGripDef
+{
+    const char*      StrId;
+    ImVec2           CornerNorm;
+    ImVec2           InnerDir;
+    int              AngleMin12, AngleMax12;
+    ImGuiMouseCursor MouseCursor;
+};
+
+const ImGuiResizeGripDef resize_grip_def[4] =
+{
+    { "#RESIZE0", ImVec2(1,1), ImVec2(-1,-1), 0, 3, ImGuiMouseCursor_ResizeNWSE }, // Lower right
+    { "#RESIZE1", ImVec2(0,1), ImVec2(+1,-1), 3, 6, ImGuiMouseCursor_ResizeNESW }, // Lower left
+    { "#RESIZE2", ImVec2(0,0), ImVec2(+1,+1), 6, 9, ImGuiMouseCursor_ResizeNWSE }, // Upper left
+    { "#RESIZE3", ImVec2(1,0), ImVec2(-1,+1), 9,12, ImGuiMouseCursor_ResizeNESW }, // Upper right
+};
+
 // Push a new ImGui window to add widgets to.
 // - A default window called "Debug" is automatically stacked at the beginning of every frame so you can use widgets without explicitly calling a Begin/End pair.
 // - Begin/End can be called multiple times during the frame with the same window name to append content.
@@ -4533,39 +4564,58 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
         else
         {
-            ImU32 resize_col = 0;
-            const float resize_corner_size = ImMax(g.FontSize * 1.35f, window_rounding + 1.0f + g.FontSize * 0.2f);
+            // Handle resize for: Resize Grips, Gamepad
+            ImU32 resize_grip_col[4] = { 0 };
+            const int resize_grip_count = (flags & ImGuiWindowFlags_ResizeFromAnySide) ? 2 : 1; // 4
+            const float resize_corner_size = (float)(int)ImMax(g.FontSize * 1.35f, window_rounding + 1.0f + g.FontSize * 0.2f);
             if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && !(flags & ImGuiWindowFlags_NoResize))
             {
-                // Manual resize
-                // Using the FlattenChilds button flag, we make the resize button accessible even if we are hovering over a child window
-                const ImVec2 br = window->Rect().GetBR();
-                const ImRect resize_rect(br - ImFloor(ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f)), br);
-                const ImGuiID resize_id = window->GetID("#RESIZE");
-                bool hovered, held;
-                ButtonBehavior(resize_rect, resize_id, &hovered, &held, ImGuiButtonFlags_FlattenChilds);
-                resize_col = GetColorU32(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
-                if (hovered || held)
-                    g.MouseCursor = ImGuiMouseCursor_ResizeNWSE;
+                ImVec2 pos_target(FLT_MAX, FLT_MAX);
+                ImVec2 size_target(FLT_MAX, FLT_MAX);
 
-                ImVec2 size_target(FLT_MAX,FLT_MAX);
-                if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0])
+                // Manual resize grips
+                for (int resize_grip_n = 0; resize_grip_n < resize_grip_count; resize_grip_n++)
                 {
-                    // Manual auto-fit when double-clicking
-                    size_target = size_auto_fit;
-                    ClearActiveID();
-                }
-                else if (held)
-                {
-                    // We don't use an incremental MouseDelta but rather compute an absolute target size based on mouse position
-                    size_target = (g.IO.MousePos - g.ActiveIdClickOffset - window->Pos) + resize_rect.GetSize();
+                    const ImGuiResizeGripDef& grip = resize_grip_def[resize_grip_n];
+                    const ImVec2 corner = ImLerp(window->Pos, window->Pos + window->Size, grip.CornerNorm);
+
+                    // Using the FlattenChilds button flag we make the resize button accessible even if we are hovering over a child window
+                    ImRect resize_rect;
+                    resize_rect.Add(corner);
+                    resize_rect.Add(corner + grip.InnerDir * (float)(int)(resize_corner_size * 0.75f));
+                    bool hovered, held;
+                    ButtonBehavior(resize_rect, window->GetID(grip.StrId), &hovered, &held, ImGuiButtonFlags_FlattenChilds);
+                    if (hovered || held)
+                        g.MouseCursor = grip.MouseCursor;
+
+                    if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0])
+                    {
+                        // Manual auto-fit when double-clicking
+                        size_target = CalcSizeFullWithConstraint(window, size_auto_fit);
+                        ClearActiveID();
+                    }
+                    else if (held)
+                    {
+                        // Resize from any of the four corners
+                        // We don't use an incremental MouseDelta but rather compute an absolute target size based on mouse position
+                        ImVec2 corner_target = g.IO.MousePos - g.ActiveIdClickOffset + resize_rect.GetSize() * grip.CornerNorm; // Corner of the window corresponding to our corner grip
+                        CalcResizePosSizeFromAnyCorner(window, corner_target, grip.CornerNorm, &pos_target, &size_target);
+                    }
+                    resize_grip_col[resize_grip_n] = GetColorU32(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
                 }
 
-                if (size_target.x != FLT_MAX && size_target.y != FLT_MAX)
+                // Apply back modified position/size to window
+                if (size_target.x != FLT_MAX)
                 {
-                    window->SizeFull = CalcSizeFullWithConstraint(window, size_target);
+                    window->SizeFull = size_target;
                     MarkIniSettingsDirty(window);
                 }
+                if (pos_target.x != FLT_MAX)
+                {
+                    window->Pos = window->PosFloat = ImVec2((float)(int)pos_target.x, (float)(int)pos_target.y);
+                    MarkIniSettingsDirty(window);
+                }
+
                 window->Size = window->SizeFull;
                 title_bar_rect = window->TitleBarRect();
             }
@@ -4595,15 +4645,18 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (window->ScrollbarY)
                 Scrollbar(ImGuiLayoutType_Vertical);
 
-            // Render resize grip
-            // (after the input handling so we don't have a frame of latency)
+            // Render resize grips (after their input handling so we don't have a frame of latency)
             if (!(flags & ImGuiWindowFlags_NoResize))
             {
-                const ImVec2 br = window->Rect().GetBR();
-                window->DrawList->PathLineTo(br + ImVec2(-resize_corner_size, -window_border_size));
-                window->DrawList->PathLineTo(br + ImVec2(-window_border_size, -resize_corner_size));
-                window->DrawList->PathArcToFast(ImVec2(br.x - window_rounding - window_border_size, br.y - window_rounding - window_border_size), window_rounding, 0, 3);
-                window->DrawList->PathFillConvex(resize_col);
+                for (int resize_grip_n = 0; resize_grip_n < resize_grip_count; resize_grip_n++)
+                {
+                    const ImGuiResizeGripDef& grip = resize_grip_def[resize_grip_n];
+                    const ImVec2 corner = ImLerp(window->Pos, window->Pos + window->Size, grip.CornerNorm);
+                    window->DrawList->PathLineTo(corner + grip.InnerDir * ((resize_grip_n & 1) ? ImVec2(window_border_size, resize_corner_size) : ImVec2(resize_corner_size, window_border_size)));
+                    window->DrawList->PathLineTo(corner + grip.InnerDir * ((resize_grip_n & 1) ? ImVec2(resize_corner_size, window_border_size) : ImVec2(window_border_size, resize_corner_size)));
+                    window->DrawList->PathArcToFast(ImVec2(corner.x + grip.InnerDir.x * (window_rounding + window_border_size), corner.y + grip.InnerDir.y * (window_rounding + window_border_size)), window_rounding, grip.AngleMin12, grip.AngleMax12);
+                    window->DrawList->PathFillConvex(resize_grip_col[resize_grip_n]);
+                }
             }
 
             // Borders
