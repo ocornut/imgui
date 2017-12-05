@@ -4227,6 +4227,18 @@ const ImGuiResizeGripDef resize_grip_def[4] =
     { ImVec2(1,0), ImVec2(-1,+1), 9,12 }, // Upper right
 };
 
+static ImRect GetBorderRect(ImGuiWindow* window, int border_n, float perp_padding, float thickness)
+{
+    ImRect rect = window->Rect();
+    if (thickness == 0.0f) rect.Max -= ImVec2(1,1);
+    if (border_n == 0) return ImRect(rect.Min.x + perp_padding, rect.Min.y,                rect.Max.x - perp_padding, rect.Min.y + thickness);
+    if (border_n == 1) return ImRect(rect.Max.x - thickness,    rect.Min.y + perp_padding, rect.Max.x,                rect.Max.y - perp_padding);
+    if (border_n == 2) return ImRect(rect.Min.x + perp_padding, rect.Max.y - thickness,    rect.Max.x - perp_padding, rect.Max.y);
+    if (border_n == 3) return ImRect(rect.Min.x,                rect.Min.y + perp_padding, rect.Min.x + thickness,    rect.Max.y - perp_padding);
+    IM_ASSERT(0);
+    return ImRect();
+}
+
 // Push a new ImGui window to add widgets to.
 // - A default window called "Debug" is automatically stacked at the beginning of every frame so you can use widgets without explicitly calling a Begin/End pair.
 // - Begin/End can be called multiple times during the frame with the same window name to append content.
@@ -4562,9 +4574,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
         else
         {
-            // Handle resize for: Resize Grips, Gamepad
+            // Handle resize for: Resize Grips, Borders, Gamepad
+            int border_hovered = -1, border_held = -1;
             ImU32 resize_grip_col[4] = { 0 };
             const int resize_grip_count = (flags & ImGuiWindowFlags_ResizeFromAnySide) ? 2 : 1; // 4
+            const int resize_border_count = (flags & ImGuiWindowFlags_ResizeFromAnySide) ? 4 : 0;
 
             const float grip_draw_size = (float)(int)ImMax(g.FontSize * 1.35f, window_rounding + 1.0f + g.FontSize * 0.2f);
             const float grip_hover_size = (float)(int)(grip_draw_size * 0.75f);
@@ -4602,6 +4616,30 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                         CalcResizePosSizeFromAnyCorner(window, corner_target, grip.CornerPos, &pos_target, &size_target);
                     }
                     resize_grip_col[resize_grip_n] = GetColorU32(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
+                }
+                for (int border_n = 0; border_n < resize_border_count; border_n++)
+                {
+                    const float BORDER_SIZE = 5.0f;          // FIXME: Only works _inside_ window because of HoveredWindow check.
+                    const float BORDER_APPEAR_TIMER = 0.05f; // Reduce visual noise
+                    bool hovered, held;
+                    ImRect border_rect = GetBorderRect(window, border_n, grip_hover_size, BORDER_SIZE);
+                    ButtonBehavior(border_rect, window->GetID((void*)(border_n+4)), &hovered, &held, ImGuiButtonFlags_FlattenChilds);
+                    if ((hovered && g.HoveredIdTimer > BORDER_APPEAR_TIMER) || (held && g.ActiveIdTimer > BORDER_APPEAR_TIMER))
+                    {
+                        g.MouseCursor = (border_n & 1) ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS;
+                        if (hovered) border_hovered = border_n;
+                        if (held) border_held = border_n;
+                    }
+                    if (held)
+                    {
+                        ImVec2 border_target = window->Pos;
+                        ImVec2 border_posn;
+                        if (border_n == 0) { border_posn = ImVec2(0, 0); border_target.y = (g.IO.MousePos.y - g.ActiveIdClickOffset.y); }
+                        if (border_n == 1) { border_posn = ImVec2(1, 0); border_target.x = (g.IO.MousePos.x - g.ActiveIdClickOffset.x + BORDER_SIZE); }
+                        if (border_n == 2) { border_posn = ImVec2(0, 1); border_target.y = (g.IO.MousePos.y - g.ActiveIdClickOffset.y + BORDER_SIZE); }
+                        if (border_n == 3) { border_posn = ImVec2(0, 0); border_target.x = (g.IO.MousePos.x - g.ActiveIdClickOffset.x); }
+                        CalcResizePosSizeFromAnyCorner(window, border_target, border_posn, &pos_target, &size_target);
+                    }
                 }
                 PopID();
 
@@ -4663,6 +4701,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Borders
             if (window_border_size > 0.0f)
                 window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding, ImDrawCornerFlags_All, window_border_size);
+            if (border_held != -1 || border_hovered != -1)
+            {
+                ImRect border = GetBorderRect(window, border_held != -1 ? border_held : border_hovered, grip_draw_size, 0.0f);
+                window->DrawList->AddLine(border.Min, border.Max, GetColorU32(border_held != -1 ? ImGuiCol_SeparatorActive : ImGuiCol_SeparatorHovered), ImMax(1.0f, window_border_size));
+            }
             if (style.FrameBorderSize > 0 && !(flags & ImGuiWindowFlags_NoTitleBar))
                 window->DrawList->AddLine(title_bar_rect.GetBL()+ImVec2(1,-1), title_bar_rect.GetBR()+ImVec2(-1,-1), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
         }
