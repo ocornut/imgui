@@ -38,10 +38,10 @@ struct ImGuiGroupData;
 struct ImGuiSimpleColumns;
 struct ImGuiDrawContext;
 struct ImGuiTextEditState;
-struct ImGuiSettingsWindow;
 struct ImGuiMouseCursorData;
 struct ImGuiPopupRef;
 struct ImGuiWindow;
+struct ImGuiWindowSettings;
 
 typedef int ImGuiLayoutType;        // enum: horizontal or vertical             // enum ImGuiLayoutType_
 typedef int ImGuiButtonFlags;       // flags: for ButtonEx(), ButtonBehavior()  // enum ImGuiButtonFlags_
@@ -287,6 +287,7 @@ struct IMGUI_API ImRect
     void        Translate(const ImVec2& v)      { Min.x += v.x; Min.y += v.y; Max.x += v.x; Max.y += v.y; }
     void        ClipWith(const ImRect& clip)    { if (Min.x < clip.Min.x) Min.x = clip.Min.x; if (Min.y < clip.Min.y) Min.y = clip.Min.y; if (Max.x > clip.Max.x) Max.x = clip.Max.x; if (Max.y > clip.Max.y) Max.y = clip.Max.y; }
     void        Floor()                         { Min.x = (float)(int)Min.x; Min.y = (float)(int)Min.y; Max.x = (float)(int)Max.x; Max.y = (float)(int)Max.y; }
+    bool        IsFinite() const                { return Min.x != FLT_MAX; }
     ImVec2      GetClosestPoint(ImVec2 p, bool on_edge) const
     {
         if (!on_edge && Contains(p))
@@ -377,7 +378,7 @@ struct IMGUI_API ImGuiTextEditState
 };
 
 // Data saved in imgui.ini file
-struct ImGuiSettingsWindow
+struct ImGuiWindowSettings
 {
     char*       Name;
     ImGuiID     Id;
@@ -385,14 +386,14 @@ struct ImGuiSettingsWindow
     ImVec2      Size;
     bool        Collapsed;
 
-    ImGuiSettingsWindow() { Name = NULL; Id = 0; Pos = Size = ImVec2(0,0); Collapsed = false; }
+    ImGuiWindowSettings() { Name = NULL; Id = 0; Pos = Size = ImVec2(0,0); Collapsed = false; }
 };
 
 struct ImGuiSettingsHandler
 {
     const char* TypeName;   // Short description stored in .ini file. Disallowed characters: '[' ']'  
     ImGuiID     TypeHash;   // == ImHash(TypeName, 0, 0)
-    void*       (*ReadOpenEntryFn)(ImGuiContext& ctx, const char* name);
+    void*       (*ReadOpenFn)(ImGuiContext& ctx, const char* name);
     void        (*ReadLineFn)(ImGuiContext& ctx, void* entry, const char* line);
     void        (*WriteAllFn)(ImGuiContext& ctx, ImGuiTextBuffer* out_buf);
 };
@@ -520,7 +521,7 @@ struct ImGuiContext
 
     // Settings
     float                          SettingsDirtyTimer;          // Save .ini Settings on disk when time reaches zero
-    ImVector<ImGuiSettingsWindow>  SettingsWindows;             // .ini settings for ImGuiWindow
+    ImVector<ImGuiWindowSettings>  SettingsWindows;             // .ini settings for ImGuiWindow
     ImVector<ImGuiSettingsHandler> SettingsHandlers;            // List of .ini settings handlers
 
     // Logging
@@ -832,7 +833,9 @@ namespace ImGui
 
     IMGUI_API void          Initialize();
 
-    IMGUI_API void          MarkIniSettingsDirty();
+    IMGUI_API void                  MarkIniSettingsDirty();
+    IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(ImGuiID type_id);
+    IMGUI_API ImGuiWindowSettings*  FindWindowSettings(ImGuiID id);
 
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          ClearActiveID();
