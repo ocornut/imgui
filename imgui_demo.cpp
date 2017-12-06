@@ -1810,6 +1810,8 @@ void ImGui::ShowTestWindow(bool* p_open)
         if (ImGui::TreeNode("Dragging"))
         {
             ImGui::TextWrapped("You can use ImGui::GetMouseDragDelta(0) to query for the dragged amount on any widget.");
+            for (int button = 0; button < 3; button++)
+                ImGui::Text("IsMouseDragging(%d) = %d", button, ImGui::IsMouseDragging(button));
             ImGui::Button("Drag Me");
             if (ImGui::IsItemActive())
             {
