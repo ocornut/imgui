@@ -738,7 +738,7 @@ enum ImGuiMouseCursor_
     ImGuiMouseCursor_Move,              // Unused
     ImGuiMouseCursor_ResizeNS,          // Unused
     ImGuiMouseCursor_ResizeEW,          // When hovering over a column
-    ImGuiMouseCursor_ResizeNESW,        // Unused
+    ImGuiMouseCursor_ResizeNESW,        // When hovering over the bottom-left corner of a window
     ImGuiMouseCursor_ResizeNWSE,        // When hovering over the bottom-right corner of a window
     ImGuiMouseCursor_Count_
 };
