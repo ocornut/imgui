@@ -4270,6 +4270,20 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     else
         flags = window->Flags;
 
+    // Update the Appearing flag
+    bool window_just_activated_by_user = (window->LastFrameActive < current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
+    const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames == 1);
+    if (flags & ImGuiWindowFlags_Popup)
+    {
+        ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.CurrentPopupStack.Size];
+        window_just_activated_by_user |= (window->PopupId != popup_ref.PopupId); // We recycle popups so treat window as activated if popup id changed
+        window_just_activated_by_user |= (window != popup_ref.Window);
+    }
+    window->Appearing = (window_just_activated_by_user || window_just_appearing_after_hidden_for_resize);
+    window->CloseButton = (p_open != NULL);
+    if (window->Appearing)
+        SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
+
     // Parent window is latched only on the first call to Begin() of the frame, so further append-calls can be done from a different window stack
     ImGuiWindow* parent_window = first_begin_of_the_frame ? (!g.CurrentWindowStack.empty() ? g.CurrentWindowStack.back() : NULL) : window->ParentWindow;
     IM_ASSERT(parent_window != NULL || !(flags & ImGuiWindowFlags_ChildWindow));
@@ -4278,25 +4292,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     g.CurrentWindowStack.push_back(window);
     SetCurrentWindow(window);
     CheckStacksSize(window, true);
-
-    bool window_just_activated_by_user = (window->LastFrameActive < current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
     if (flags & ImGuiWindowFlags_Popup)
     {
         ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.CurrentPopupStack.Size];
-        window_just_activated_by_user |= (window->PopupId != popup_ref.PopupId); // We recycle popups so treat window as activated if popup id changed
-        window_just_activated_by_user |= (window != popup_ref.Window);
         popup_ref.Window = window;
         g.CurrentPopupStack.push_back(popup_ref);
         window->PopupId = popup_ref.PopupId;
     }
 
-    const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames == 1);
-    window->Appearing = (window_just_activated_by_user || window_just_appearing_after_hidden_for_resize);
-    window->CloseButton = (p_open != NULL);
-
     // Process SetNextWindow***() calls
-    if (window->Appearing)
-        SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
     bool window_pos_set_by_api = false, window_size_set_by_api = false;
     if (g.SetNextWindowPosCond)
     {
