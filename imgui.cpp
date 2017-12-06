@@ -5521,7 +5521,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                     ImRect resize_rect(corner, corner + grip.InnerDir * grip_hover_size);
                     resize_rect.FixInverted();
                     bool hovered, held;
-                    ButtonBehavior(resize_rect, window->GetID((void*)resize_grip_n), &hovered, &held, ImGuiButtonFlags_FlattenChilds);
+                    ButtonBehavior(resize_rect, window->GetID((void*)resize_grip_n), &hovered, &held, ImGuiButtonFlags_FlattenChilds | ImGuiButtonFlags_NoNavFocus);
                     if (hovered || held)
                         g.MouseCursor = (resize_grip_n & 1) ? ImGuiMouseCursor_ResizeNESW : ImGuiMouseCursor_ResizeNWSE;
 
@@ -5547,7 +5547,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                     const float BORDER_APPEAR_TIMER = 0.05f; // Reduce visual noise
                     bool hovered, held;
                     ImRect border_rect = GetBorderRect(window, border_n, grip_hover_size, BORDER_SIZE);
-                    ButtonBehavior(border_rect, window->GetID((void*)(border_n+4)), &hovered, &held, ImGuiButtonFlags_FlattenChilds);
+                    ButtonBehavior(border_rect, window->GetID((void*)(border_n+4)), &hovered, &held, ImGuiButtonFlags_FlattenChilds | ImGuiButtonFlags_NoNavFocus);
                     if ((hovered && g.HoveredIdTimer > BORDER_APPEAR_TIMER) || held)
                     {
                         g.MouseCursor = (border_n & 1) ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS;
