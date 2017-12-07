@@ -4447,28 +4447,29 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Calculate auto-fit size, handle automatic resize
         const ImVec2 size_auto_fit = CalcSizeAutoFit(window);
+        ImVec2 size_for_scrollbars_visibility = window->SizeFullAtLastBegin;
         if (window->Collapsed)
         {
             // We still process initial auto-fit on collapsed windows to get a window width,
             // But otherwise we don't honor ImGuiWindowFlags_AlwaysAutoResize when collapsed.
             if (window->AutoFitFramesX > 0)
-                window->SizeFull.x = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.x, size_auto_fit.x) : size_auto_fit.x;
+                window->SizeFull.x = size_for_scrollbars_visibility.x = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.x, size_auto_fit.x) : size_auto_fit.x;
             if (window->AutoFitFramesY > 0)
-                window->SizeFull.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
+                window->SizeFull.y = size_for_scrollbars_visibility.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
         }
         else if (!window_size_set_by_api)
         {
             if (flags & ImGuiWindowFlags_AlwaysAutoResize)
             {
-                window->SizeFull = size_auto_fit;
+                window->SizeFull = size_for_scrollbars_visibility = size_auto_fit;
             }
             else if (window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0)
             {
                 // Auto-fit only grows during the first few frames
                 if (window->AutoFitFramesX > 0)
-                    window->SizeFull.x = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.x, size_auto_fit.x) : size_auto_fit.x;
+                    window->SizeFull.x = size_for_scrollbars_visibility.x = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.x, size_auto_fit.x) : size_auto_fit.x;
                 if (window->AutoFitFramesY > 0)
-                    window->SizeFull.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
+                    window->SizeFull.y = size_for_scrollbars_visibility.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
                 MarkIniSettingsDirty(window);
             }
         }
@@ -4487,10 +4488,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Update scrollbar status (based on the Size that was effective during last frame or the auto-resized Size). 
         if (!window->Collapsed)
         {
-            window->ScrollbarY = (flags & ImGuiWindowFlags_AlwaysVerticalScrollbar) || ((window->SizeContents.y > window->SizeFullAtLastBegin.y) && !(flags & ImGuiWindowFlags_NoScrollbar));
-            window->ScrollbarX = (flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar) || ((window->SizeContents.x > window->SizeFullAtLastBegin.x - (window->ScrollbarY ? style.ScrollbarSize : 0.0f) - window->WindowPadding.x) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar));
+            window->ScrollbarY = (flags & ImGuiWindowFlags_AlwaysVerticalScrollbar) || ((window->SizeContents.y > size_for_scrollbars_visibility.y) && !(flags & ImGuiWindowFlags_NoScrollbar));
+            window->ScrollbarX = (flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar) || ((window->SizeContents.x > size_for_scrollbars_visibility.x - (window->ScrollbarY ? style.ScrollbarSize : 0.0f) - window->WindowPadding.x) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar));
             if (window->ScrollbarX && !window->ScrollbarY)
-                window->ScrollbarY = (window->SizeContents.y > window->SizeFullAtLastBegin.y + style.ScrollbarSize) && !(flags & ImGuiWindowFlags_NoScrollbar);
+                window->ScrollbarY = (window->SizeContents.y > size_for_scrollbars_visibility.y + style.ScrollbarSize) && !(flags & ImGuiWindowFlags_NoScrollbar);
             window->ScrollbarSizes = ImVec2(window->ScrollbarY ? style.ScrollbarSize : 0.0f, window->ScrollbarX ? style.ScrollbarSize : 0.0f);
         }
 
