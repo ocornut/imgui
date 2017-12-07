@@ -2233,6 +2233,11 @@ int ImGui::GetFrameCount()
     return GImGui->FrameCount;
 }
 
+ImDrawList* ImGui::GetOverlayDrawList()
+{
+    return &GImGui->OverlayDrawList;
+}
+
 void ImGui::NewFrame()
 {
     ImGuiContext& g = *GImGui;
