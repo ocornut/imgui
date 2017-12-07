@@ -248,7 +248,8 @@ enum ImGuiDir
     ImGuiDir_Left    = 0,
     ImGuiDir_Right   = 1,
     ImGuiDir_Up      = 2,
-    ImGuiDir_Down    = 3
+    ImGuiDir_Down    = 3,
+    ImGuiDir_Count_
 };
 
 // 2D axis aligned bounding-box
@@ -726,7 +727,7 @@ struct IMGUI_API ImGuiWindow
     int                     AutoFitFramesX, AutoFitFramesY;
     bool                    AutoFitOnlyGrows;
     int                     AutoFitChildAxises;
-    int                     AutoPosLastDirection;
+    ImGuiDir                AutoPosLastDirection;
     int                     HiddenFrames;
     ImGuiCond               SetWindowPosAllowFlags;             // store condition flags for next SetWindowPos() call.
     ImGuiCond               SetWindowSizeAllowFlags;            // store condition flags for next SetWindowSize() call.
