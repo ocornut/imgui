@@ -4149,6 +4149,14 @@ static ImVec2 CalcSizeFullWithConstraint(ImGuiWindow* window, ImVec2 new_size)
     return new_size;
 }
 
+static ImVec2 CalcSizeContents(ImGuiWindow* window)
+{
+    ImVec2 sz;
+    sz.x = (float)(int)((window->SizeContentsExplicit.x != 0.0f) ? window->SizeContentsExplicit.x : (window->DC.CursorMaxPos.x - window->Pos.x + window->Scroll.x));
+    sz.y = (float)(int)((window->SizeContentsExplicit.y != 0.0f) ? window->SizeContentsExplicit.y : (window->DC.CursorMaxPos.y - window->Pos.y + window->Scroll.y));
+    return sz + window->WindowPadding;
+}
+
 static ImVec2 CalcSizeAutoFit(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
@@ -4418,9 +4426,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // SIZE
 
         // Update contents size from last frame for auto-fitting (unless explicitly specified)
-        window->SizeContents.x = (float)(int)((window->SizeContentsExplicit.x != 0.0f) ? window->SizeContentsExplicit.x : (window->DC.CursorMaxPos.x - window->Pos.x + window->Scroll.x));
-        window->SizeContents.y = (float)(int)((window->SizeContentsExplicit.y != 0.0f) ? window->SizeContentsExplicit.y : (window->DC.CursorMaxPos.y - window->Pos.y + window->Scroll.y));
-        window->SizeContents += window->WindowPadding;
+        window->SizeContents = CalcSizeContents(window);
 
         // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
         if (window->HiddenFrames > 0)
