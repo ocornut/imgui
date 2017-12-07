@@ -9071,8 +9071,9 @@ bool ImGui::Combo(const char* label, int* current_item, const char* items_separa
     return value_changed;
 }
 
-bool ImGui::BeginCombo(const char* label, const char* preview_value, ImVec2 popup_size)
+bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags, ImVec2 popup_size)
 {
+    (void)flags; // Unused
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
@@ -9167,7 +9168,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         height_in_items = 7;
     float popup_height = (g.FontSize + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
 
-    if (!BeginCombo(label, preview_text, ImVec2(0.0f, popup_height)))
+    if (!BeginCombo(label, preview_text, 0, ImVec2(0.0f, popup_height)))
         return false;
 
     // Display items
