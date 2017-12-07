@@ -4317,7 +4317,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     }
 
     // Process SetNextWindow***() calls
-    bool window_pos_set_by_api = false, window_size_set_by_api = false;
+    bool window_pos_set_by_api = false;
+    bool window_size_x_set_by_api = false, window_size_y_set_by_api = false;
     if (g.SetNextWindowPosCond)
     {
         window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) != 0;
@@ -4337,7 +4338,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     }
     if (g.SetNextWindowSizeCond)
     {
-        window_size_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0;
+        window_size_x_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0 && (g.SetNextWindowSizeVal.x > 0.0f);
+        window_size_y_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0 && (g.SetNextWindowSizeVal.y > 0.0f);
         SetWindowSize(window, g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
         g.SetNextWindowSizeCond = 0;
     }
@@ -4422,7 +4424,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->SizeContents.y = (float)(int)((window->SizeContentsExplicit.y != 0.0f) ? window->SizeContentsExplicit.y : ((window_is_new ? 0.0f : window->DC.CursorMaxPos.y - window->Pos.y) + window->Scroll.y));
         window->SizeContents += window->WindowPadding;
 
-        // Hide popup/tooltip window when first appearing while we measure size (because we recycle them)
+        // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
         if (window->HiddenFrames > 0)
             window->HiddenFrames--;
         if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && window_just_activated_by_user)
@@ -4430,8 +4432,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->HiddenFrames = 1;
             if (flags & ImGuiWindowFlags_AlwaysAutoResize)
             {
-                if (!window_size_set_by_api)
-                    window->Size = window->SizeFull = ImVec2(0.f, 0.f);
+                if (!window_size_x_set_by_api)
+                    window->Size.x = window->SizeFull.x = 0.f;
+                if (!window_size_y_set_by_api)
+                    window->Size.y = window->SizeFull.y = 0.f;
                 window->SizeContents = ImVec2(0.f, 0.f);
             }
         }
@@ -4457,18 +4461,22 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (window->AutoFitFramesY > 0)
                 window->SizeFull.y = size_for_scrollbars_visibility.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
         }
-        else if (!window_size_set_by_api)
+        else
         {
+            // Using SetNextWindowSize() overrides ImGuiWindowFlags_AlwaysAutoResize, so it can be used on tooltips/popups, etc.
             if (flags & ImGuiWindowFlags_AlwaysAutoResize)
             {
-                window->SizeFull = size_for_scrollbars_visibility = size_auto_fit;
+                if (!window_size_x_set_by_api)
+                    window->SizeFull.x = size_for_scrollbars_visibility.x = size_auto_fit.x;
+                if (!window_size_y_set_by_api)
+                    window->SizeFull.y = size_for_scrollbars_visibility.y = size_auto_fit.y;
             }
             else if (window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0)
             {
                 // Auto-fit only grows during the first few frames
-                if (window->AutoFitFramesX > 0)
+                if (!window_size_x_set_by_api && window->AutoFitFramesX > 0)
                     window->SizeFull.x = size_for_scrollbars_visibility.x = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.x, size_auto_fit.x) : size_auto_fit.x;
-                if (window->AutoFitFramesY > 0)
+                if (!window_size_y_set_by_api && window->AutoFitFramesY > 0)
                     window->SizeFull.y = size_for_scrollbars_visibility.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
                 MarkIniSettingsDirty(window);
             }
@@ -4479,7 +4487,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->Size = window->Collapsed ? window->TitleBarRect().GetSize() : window->SizeFull;
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
         {
-            IM_ASSERT(window_size_set_by_api); // Submitted by BeginChild()
+            IM_ASSERT(window_size_x_set_by_api && window_size_x_set_by_api); // Submitted by BeginChild()
             window->Size = window->SizeFull;
         }
 
