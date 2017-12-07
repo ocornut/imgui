@@ -9135,11 +9135,12 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     if (popup_size.x == 0.0f)
         popup_size.x = w;
 
+    // FIXME: Start using shared helpers or handle in Begin(). We have similar code in Begin() calling FindBestWindowPosForPopup()
     float popup_y1 = frame_bb.Max.y;
     float popup_y2 = ImClamp(popup_y1 + popup_size.y, popup_y1, g.IO.DisplaySize.y - style.DisplaySafeAreaPadding.y);
     if ((popup_y2 - popup_y1) < ImMin(popup_size.y, frame_bb.Min.y - style.DisplaySafeAreaPadding.y))
     {
-        // Position our combo ABOVE because there's more space to fit! (FIXME: Handle in Begin() or use a shared helper. We have similar code in Begin() for popup placement)
+        // Position our combo ABOVE because there's more space to fit!
         popup_y1 = ImClamp(frame_bb.Min.y - popup_size.y, style.DisplaySafeAreaPadding.y, frame_bb.Min.y);
         popup_y2 = frame_bb.Min.y;
         SetNextWindowPos(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FrameBorderSize), ImGuiCond_Always, ImVec2(0.0f, 1.0f));
@@ -9150,22 +9151,26 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
         SetNextWindowPos(ImVec2(frame_bb.Min.x, frame_bb.Max.y - style.FrameBorderSize), ImGuiCond_Always, ImVec2(0.0f, 0.0f));
     }
     SetNextWindowSize(ImVec2(popup_size.x, popup_y2 - popup_y1), ImGuiCond_Appearing);
-    PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
 
     if (!BeginPopupEx(id, ImGuiWindowFlags_ComboBox))
     {
         IM_ASSERT(0);   // This should never happen as we tested for IsPopupOpen() above
         return false;
     }
-    Spacing();
+
+    // Horizontally align ourselves with the framed text
+    if (style.FramePadding.x != style.WindowPadding.x)
+        Indent(style.FramePadding.x - style.WindowPadding.x);
 
     return true;
 }
 
 void ImGui::EndCombo()
 {
+    const ImGuiStyle& style = GImGui->Style;
+    if (style.FramePadding.x != style.WindowPadding.x)
+        Unindent(style.FramePadding.x - style.WindowPadding.x);
     EndPopup();
-    PopStyleVar();
 }
 
 // Combo box function.
@@ -9181,7 +9186,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     // Size default to hold ~7 items
     if (height_in_items < 0)
         height_in_items = 7;
-    float popup_height = (g.FontSize + style.ItemSpacing.y) * ImMin(items_count, height_in_items) + (style.FramePadding.y * 3);
+    float popup_height = (g.FontSize + style.ItemSpacing.y) * ImMin(items_count, height_in_items) - style.ItemSpacing.y + (style.WindowPadding.y * 2);
 
     if (!BeginCombo(label, preview_text, 0, ImVec2(0.0f, popup_height)))
         return false;
