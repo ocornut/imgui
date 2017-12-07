@@ -4452,34 +4452,24 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Calculate auto-fit size, handle automatic resize
         const ImVec2 size_auto_fit = CalcSizeAutoFit(window);
         ImVec2 size_for_scrollbars_visibility = window->SizeFullAtLastBegin;
-        if (window->Collapsed)
-        {
-            // We still process initial auto-fit on collapsed windows to get a window width,
-            // But otherwise we don't honor ImGuiWindowFlags_AlwaysAutoResize when collapsed.
-            if (window->AutoFitFramesX > 0)
-                window->SizeFull.x = size_for_scrollbars_visibility.x = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.x, size_auto_fit.x) : size_auto_fit.x;
-            if (window->AutoFitFramesY > 0)
-                window->SizeFull.y = size_for_scrollbars_visibility.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
-        }
-        else
+        if (flags & ImGuiWindowFlags_AlwaysAutoResize && !window->Collapsed)
         {
             // Using SetNextWindowSize() overrides ImGuiWindowFlags_AlwaysAutoResize, so it can be used on tooltips/popups, etc.
-            if (flags & ImGuiWindowFlags_AlwaysAutoResize)
-            {
-                if (!window_size_x_set_by_api)
-                    window->SizeFull.x = size_for_scrollbars_visibility.x = size_auto_fit.x;
-                if (!window_size_y_set_by_api)
-                    window->SizeFull.y = size_for_scrollbars_visibility.y = size_auto_fit.y;
-            }
-            else if (window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0)
-            {
-                // Auto-fit only grows during the first few frames
-                if (!window_size_x_set_by_api && window->AutoFitFramesX > 0)
-                    window->SizeFull.x = size_for_scrollbars_visibility.x = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.x, size_auto_fit.x) : size_auto_fit.x;
-                if (!window_size_y_set_by_api && window->AutoFitFramesY > 0)
-                    window->SizeFull.y = size_for_scrollbars_visibility.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
+            if (!window_size_x_set_by_api)
+                window->SizeFull.x = size_for_scrollbars_visibility.x = size_auto_fit.x;
+            if (!window_size_y_set_by_api)
+                window->SizeFull.y = size_for_scrollbars_visibility.y = size_auto_fit.y;
+        }
+        else if (window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0)
+        {
+            // Auto-fit only grows during the first few frames
+            // We still process initial auto-fit on collapsed windows to get a window width, but otherwise don't honor ImGuiWindowFlags_AlwaysAutoResize ImGuiWindowFlags_AlwaysAutoResize.
+            if (!window_size_x_set_by_api && window->AutoFitFramesX > 0)
+                window->SizeFull.x = size_for_scrollbars_visibility.x = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.x, size_auto_fit.x) : size_auto_fit.x;
+            if (!window_size_y_set_by_api && window->AutoFitFramesY > 0)
+                window->SizeFull.y = size_for_scrollbars_visibility.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
+            if (!window->Collapsed)
                 MarkIniSettingsDirty(window);
-            }
         }
 
         // Apply minimum/maximum window size constraints and final size
