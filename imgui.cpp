@@ -3633,7 +3633,7 @@ void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_
     char window_name[16];
     ImFormatString(window_name, IM_ARRAYSIZE(window_name), "##Tooltip%02d", g.TooltipOverrideCount);
     if (override_previous_tooltip)
-        if (ImGuiWindow* window = ImGui::FindWindowByName(window_name))
+        if (ImGuiWindow* window = FindWindowByName(window_name))
             if (window->Active)
             {
                 // Hide previous tooltips. We can't easily "reset" the content of a window so we create a new one.
@@ -3641,7 +3641,7 @@ void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_
                 ImFormatString(window_name, IM_ARRAYSIZE(window_name), "##Tooltip%02d", ++g.TooltipOverrideCount);
             }
     ImGuiWindowFlags flags = ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize;
-    ImGui::Begin(window_name, NULL, flags | extra_flags);
+    Begin(window_name, NULL, flags | extra_flags);
 }
 
 void ImGui::SetTooltipV(const char* fmt, va_list args)
@@ -3920,7 +3920,7 @@ static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
 
     const ImVec2 content_avail = ImGui::GetContentRegionAvail();
     ImVec2 size = ImFloor(size_arg);
-    const int auto_fit_axises = ((size.x == 0.0f) ? 0x01 : 0x00) | ((size.y == 0.0f) ? 0x02 : 0x00);
+    const int auto_fit_axises = ((size.x == 0.0f) ? (1 << ImGuiAxis_X) : 0x00) | ((size.y == 0.0f) ? (1 << ImGuiAxis_Y) : 0x00);
     if (size.x <= 0.0f)
         size.x = ImMax(content_avail.x, 4.0f) - fabsf(size.x); // Arbitrary minimum zero-ish child size of 4.0f (0.0f causing too much issues)
     if (size.y <= 0.0f)
@@ -3970,9 +3970,9 @@ void ImGui::EndChild()
     {
         // When using auto-filling child window, we don't provide full width/height to ItemSize so that it doesn't feed back into automatic size-fitting.
         ImVec2 sz = GetWindowSize();
-        if (window->AutoFitChildAxises & 0x01) // Arbitrary minimum zero-ish child size of 4.0f causes less trouble than a 0.0f
+        if (window->AutoFitChildAxises & (1 << ImGuiAxis_X)) // Arbitrary minimum zero-ish child size of 4.0f causes less trouble than a 0.0f
             sz.x = ImMax(4.0f, sz.x);
-        if (window->AutoFitChildAxises & 0x02)
+        if (window->AutoFitChildAxises & (1 << ImGuiAxis_Y))
             sz.y = ImMax(4.0f, sz.y);
         ImGui::End();
 
