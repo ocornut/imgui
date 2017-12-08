@@ -9061,55 +9061,6 @@ bool ImGui::InputInt4(const char* label, int v[4], ImGuiInputTextFlags extra_fla
     return InputIntN(label, v, 4, extra_flags);
 }
 
-static bool Items_ArrayGetter(void* data, int idx, const char** out_text)
-{
-    const char* const* items = (const char* const*)data;
-    if (out_text)
-        *out_text = items[idx];
-    return true;
-}
-
-static bool Items_SingleStringGetter(void* data, int idx, const char** out_text)
-{
-    // FIXME-OPT: we could pre-compute the indices to fasten this. But only 1 active combo means the waste is limited.
-    const char* items_separated_by_zeros = (const char*)data;
-    int items_count = 0;
-    const char* p = items_separated_by_zeros;
-    while (*p)
-    {
-        if (idx == items_count)
-            break;
-        p += strlen(p) + 1;
-        items_count++;
-    }
-    if (!*p)
-        return false;
-    if (out_text)
-        *out_text = p;
-    return true;
-}
-
-// Combo box helper allowing to pass an array of strings.
-bool ImGui::Combo(const char* label, int* current_item, const char* const* items, int items_count, int height_in_items)
-{
-    const bool value_changed = Combo(label, current_item, Items_ArrayGetter, (void*)items, items_count, height_in_items);
-    return value_changed;
-}
-
-// Combo box helper allowing to pass all items in a single string.
-bool ImGui::Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int height_in_items)
-{
-    int items_count = 0;
-    const char* p = items_separated_by_zeros;       // FIXME-OPT: Avoid computing this, or at least only when combo is open
-    while (*p)
-    {
-        p += strlen(p) + 1;
-        items_count++;
-    }
-    bool value_changed = Combo(label, current_item, Items_SingleStringGetter, (void*)items_separated_by_zeros, items_count, height_in_items);
-    return value_changed;
-}
-
 static float CalcMaxPopupHeightFromItemCount(int items_count)
 {
     ImGuiContext& g = *GImGui;
@@ -9259,6 +9210,55 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     }
 
     EndCombo();
+    return value_changed;
+}
+
+static bool Items_ArrayGetter(void* data, int idx, const char** out_text)
+{
+    const char* const* items = (const char* const*)data;
+    if (out_text)
+        *out_text = items[idx];
+    return true;
+}
+
+static bool Items_SingleStringGetter(void* data, int idx, const char** out_text)
+{
+    // FIXME-OPT: we could pre-compute the indices to fasten this. But only 1 active combo means the waste is limited.
+    const char* items_separated_by_zeros = (const char*)data;
+    int items_count = 0;
+    const char* p = items_separated_by_zeros;
+    while (*p)
+    {
+        if (idx == items_count)
+            break;
+        p += strlen(p) + 1;
+        items_count++;
+    }
+    if (!*p)
+        return false;
+    if (out_text)
+        *out_text = p;
+    return true;
+}
+
+// Combo box helper allowing to pass an array of strings.
+bool ImGui::Combo(const char* label, int* current_item, const char* const* items, int items_count, int height_in_items)
+{
+    const bool value_changed = Combo(label, current_item, Items_ArrayGetter, (void*)items, items_count, height_in_items);
+    return value_changed;
+}
+
+// Combo box helper allowing to pass all items in a single string.
+bool ImGui::Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int height_in_items)
+{
+    int items_count = 0;
+    const char* p = items_separated_by_zeros;       // FIXME-OPT: Avoid computing this, or at least only when combo is open
+    while (*p)
+    {
+        p += strlen(p) + 1;
+        items_count++;
+    }
+    bool value_changed = Combo(label, current_item, Items_SingleStringGetter, (void*)items_separated_by_zeros, items_count, height_in_items);
     return value_changed;
 }
 
