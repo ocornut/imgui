@@ -2449,9 +2449,10 @@ void ImGui::NewFrame()
         }
         else if (!g.IO.KeyCtrl && !(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
         {
-            // Scroll
-            const int scroll_lines = (window->Flags & ImGuiWindowFlags_ComboBox) ? 3 : 5;
-            SetWindowScrollY(window, window->Scroll.y - g.IO.MouseWheel * window->CalcFontSize() * scroll_lines);
+            // Mouse wheel Scrolling
+            float scroll_amount = 5 * window->CalcFontSize();
+            scroll_amount = (float)(int)ImMin(scroll_amount, (window->ContentsRegionRect.GetHeight() + window->WindowPadding.y * 2.0f) * 0.67f);
+            SetWindowScrollY(window, window->Scroll.y - g.IO.MouseWheel * scroll_amount);
         }
     }
 
