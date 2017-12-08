@@ -9135,8 +9135,8 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
         SetNextWindowSizeConstraints(ImVec2(w, 0.0f), ImVec2(FLT_MAX, CalcMaxPopupHeightFromItemCount(popup_max_height_in_items)));
     }
 
-    char name[20];
-    ImFormatString(name, IM_ARRAYSIZE(name), "##combo_%08X", id);
+    char name[16];
+    ImFormatString(name, IM_ARRAYSIZE(name), "##combo_%d", g.CurrentPopupStack.Size); // Recycle windows based on depth
 
     // Peak into expected window size so we can position it
     if (ImGuiWindow* popup_window = FindWindowByName(name))
