@@ -4026,7 +4026,7 @@ static void CheckStacksSize(ImGuiWindow* window, bool write)
     IM_ASSERT(p_backup == window->DC.StackSizesBackup + IM_ARRAYSIZE(window->DC.StackSizesBackup));
 }
 
-static ImVec2 FindBestWindowPosForPopup(const ImVec2& base_pos, const ImVec2& size, ImGuiDir* last_dir, const ImRect& r_avoid)
+static ImVec2 FindBestWindowPosForPopup(const ImVec2& base_pos, const ImVec2& size, ImGuiDir* last_dir, const ImRect& r_avoid, ImGuiWindowFlags flags)
 {
     const ImGuiStyle& style = GImGui->Style;
 
@@ -4039,17 +4039,38 @@ static ImVec2 FindBestWindowPosForPopup(const ImVec2& base_pos, const ImVec2& si
     //GImGui->OverlayDrawList.AddRect(r_avoid.Min, r_avoid.Max, IM_COL32(255,0,0,255));
     //GImGui->OverlayDrawList.AddRect(r_outer.Min, r_outer.Max, IM_COL32(0,255,0,255));
 
+    // Combo Box policy (we want a connecting edge)
+    if (flags & ImGuiWindowFlags_ComboBox)
+    {
+        const ImGuiDir dir_prefered_order[ImGuiDir_Count_] = { ImGuiDir_Down, ImGuiDir_Right, ImGuiDir_Left, ImGuiDir_Up };
+        for (int n = (*last_dir != ImGuiDir_None) ? -1 : 0; n < ImGuiDir_Count_; n++)
+        {
+            const ImGuiDir dir = (n == -1) ? *last_dir : dir_prefered_order[n];
+            if (n != -1 && dir == *last_dir) // Already tried this direction?
+                continue;
+            ImVec2 pos;
+            if (dir == ImGuiDir_Down)  pos = ImVec2(r_avoid.Min.x, r_avoid.Max.y);          // Below, Toward Right (default)
+            if (dir == ImGuiDir_Right) pos = ImVec2(r_avoid.Min.x, r_avoid.Min.y - size.y); // Above, Toward Right
+            if (dir == ImGuiDir_Left)  pos = ImVec2(r_avoid.Max.x - size.x, r_avoid.Max.y); // Below, Toward Left
+            if (dir == ImGuiDir_Up)    pos = ImVec2(r_avoid.Max.x - size.x, r_avoid.Min.y - size.y); // Above, Toward Left
+            if (!r_outer.Contains(ImRect(pos, pos + size)))
+                continue;
+            *last_dir = dir;
+            return pos;
+        }
+    }
+
+    // Default popup policy
     const ImGuiDir dir_prefered_order[ImGuiDir_Count_] = { ImGuiDir_Right, ImGuiDir_Down, ImGuiDir_Up, ImGuiDir_Left };
     for (int n = (*last_dir != ImGuiDir_None) ? -1 : 0; n < ImGuiDir_Count_; n++)
     {
         const ImGuiDir dir = (n == -1) ? *last_dir : dir_prefered_order[n];
+        if (n != -1 && dir == *last_dir) // Already tried this direction?
+            continue;
         float avail_w = (dir == ImGuiDir_Left ? r_avoid.Min.x : r_outer.Max.x) - (dir == ImGuiDir_Right ? r_avoid.Max.x : r_outer.Min.x);
-        if (avail_w < size.x)
-            continue;
         float avail_h = (dir == ImGuiDir_Up ? r_avoid.Min.y : r_outer.Max.y) - (dir == ImGuiDir_Down ? r_avoid.Max.y : r_outer.Min.y);
-        if (avail_h < size.y)
+        if (avail_w < size.x || avail_h < size.y)
             continue;
-
         ImVec2 pos;
         pos.x = (dir == ImGuiDir_Left) ? r_avoid.Min.x - size.x : (dir == ImGuiDir_Right) ? r_avoid.Max.x : base_pos_clamped.x;
         pos.y = (dir == ImGuiDir_Up)   ? r_avoid.Min.y - size.y : (dir == ImGuiDir_Down)  ? r_avoid.Max.y : base_pos_clamped.y;
@@ -4539,12 +4560,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 rect_to_avoid = ImRect(-FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight(), FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight() + parent_window->MenuBarHeight());
             else
                 rect_to_avoid = ImRect(parent_window->Pos.x + horizontal_overlap, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - horizontal_overlap - parent_window->ScrollbarSizes.x, FLT_MAX);
-            window->PosFloat = FindBestWindowPosForPopup(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
+            window->PosFloat = FindBestWindowPosForPopup(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid, flags);
         }
         else if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api && window_just_appearing_after_hidden_for_resize)
         {
             ImRect rect_to_avoid(window->PosFloat.x - 1, window->PosFloat.y - 1, window->PosFloat.x + 1, window->PosFloat.y + 1);
-            window->PosFloat = FindBestWindowPosForPopup(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
+            window->PosFloat = FindBestWindowPosForPopup(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid, flags);
         }
 
         // Position tooltip (always follows mouse)
@@ -4552,7 +4573,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             ImVec2 ref_pos = g.IO.MousePos;
             ImRect rect_to_avoid(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24, ref_pos.y + 24); // FIXME: Completely hard-coded. Store boxes in mouse cursor data? Scale? Center on cursor hit-point?
-            window->PosFloat = FindBestWindowPosForPopup(ref_pos, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
+            window->PosFloat = FindBestWindowPosForPopup(ref_pos, window->Size, &window->AutoPosLastDirection, rect_to_avoid, flags);
             if (window->AutoPosLastDirection == ImGuiDir_None)
                 window->PosFloat = ref_pos + ImVec2(2,2); // If there's not enough room, for tooltip we prefer avoiding the cursor at all cost even if it means that part of the tooltip won't be visible.
         }
@@ -9089,14 +9110,25 @@ bool ImGui::Combo(const char* label, int* current_item, const char* items_separa
     return value_changed;
 }
 
-bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags, ImVec2 popup_size)
+static float CalcMaxPopupHeightFromItemCount(int items_count)
 {
-    (void)flags; // Unused
+    ImGuiContext& g = *GImGui;
+    if (items_count <= 0)
+        return FLT_MAX;
+    return (g.FontSize + g.Style.ItemSpacing.y) * items_count - g.Style.ItemSpacing.y + (g.Style.WindowPadding.y * 2);
+}
+
+bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags)
+{
+    // Always consume the SetNextWindowSizeConstraint() call in our early return paths
+    ImGuiContext& g = *GImGui;
+    bool backup_has_next_window_size_constraint = g.SetNextWindowSizeConstraint;
+    g.SetNextWindowSizeConstraint = false;
+        
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
 
-    ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
     const float w = CalcItemWidth();
@@ -9135,28 +9167,41 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     if (!popup_open)
         return false;
 
-    if (popup_size.x == 0.0f)
-        popup_size.x = w;
-
-    // FIXME: Start using shared helpers or handle in Begin(). We have similar code in Begin() calling FindBestWindowPosForPopup()
-    float popup_y1 = frame_bb.Max.y;
-    float popup_y2 = ImClamp(popup_y1 + popup_size.y, popup_y1, g.IO.DisplaySize.y - style.DisplaySafeAreaPadding.y);
-    if ((popup_y2 - popup_y1) < ImMin(popup_size.y, frame_bb.Min.y - style.DisplaySafeAreaPadding.y))
+    if (backup_has_next_window_size_constraint)
     {
-        // Position our combo ABOVE because there's more space to fit!
-        popup_y1 = ImClamp(frame_bb.Min.y - popup_size.y, style.DisplaySafeAreaPadding.y, frame_bb.Min.y);
-        popup_y2 = frame_bb.Min.y;
-        SetNextWindowPos(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FrameBorderSize), ImGuiCond_Always, ImVec2(0.0f, 1.0f));
+        g.SetNextWindowSizeConstraint = true;
+        g.SetNextWindowSizeConstraintRect.Min.x = ImMax(g.SetNextWindowSizeConstraintRect.Min.x, w);
     }
     else
     {
-        // Position our combo below
-        SetNextWindowPos(ImVec2(frame_bb.Min.x, frame_bb.Max.y - style.FrameBorderSize), ImGuiCond_Always, ImVec2(0.0f, 0.0f));
+        if ((flags & ImGuiComboFlags_HeightMask_) == 0)
+            flags |= ImGuiComboFlags_HeightRegular;
+        IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiComboFlags_HeightMask_));    // Only one
+        int popup_max_height_in_items = -1;
+        if (flags & ImGuiComboFlags_HeightRegular)     popup_max_height_in_items = 8;
+        else if (flags & ImGuiComboFlags_HeightSmall)  popup_max_height_in_items = 4;
+        else if (flags & ImGuiComboFlags_HeightLarge)  popup_max_height_in_items = 20;
+        SetNextWindowSizeConstraints(ImVec2(w, 0.0f), ImVec2(FLT_MAX, CalcMaxPopupHeightFromItemCount(popup_max_height_in_items)));
     }
-    SetNextWindowSize(ImVec2(popup_size.x, popup_y2 - popup_y1), ImGuiCond_Appearing);
 
-    if (!BeginPopupEx(id, ImGuiWindowFlags_ComboBox))
+    char name[20];
+    ImFormatString(name, IM_ARRAYSIZE(name), "##combo_%08X", id);
+
+    // Peak into expected window size so we can position it
+    if (ImGuiWindow* popup_window = FindWindowByName(name))
     {
+        ImVec2 size_contents = CalcSizeContents(popup_window);
+        ImVec2 size_expected = CalcSizeAfterConstraint(popup_window, CalcSizeAutoFit(popup_window, size_contents));
+        if (flags & ImGuiComboFlags_PopupAlignLeft)
+            popup_window->AutoPosLastDirection = ImGuiDir_Left;
+        ImVec2 pos = FindBestWindowPosForPopup(frame_bb.GetBL(), size_expected, &popup_window->AutoPosLastDirection, frame_bb, ImGuiWindowFlags_ComboBox);
+        SetNextWindowPos(pos);
+    }
+
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
+    if (!Begin(name, NULL, window_flags))
+    {
+        EndPopup();
         IM_ASSERT(0);   // This should never happen as we tested for IsPopupOpen() above
         return false;
     }
@@ -9177,21 +9222,20 @@ void ImGui::EndCombo()
 }
 
 // Combo box function.
-bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int height_in_items)
+bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int popup_max_height_in_items)
 {
     ImGuiContext& g = *GImGui;
-    const ImGuiStyle& style = g.Style;
 
     const char* preview_text = NULL;
     if (*current_item >= 0 && *current_item < items_count)
         items_getter(data, *current_item, &preview_text);
 
-    // Size default to hold ~7 items
-    if (height_in_items < 0)
-        height_in_items = 7;
-    float popup_height = (g.FontSize + style.ItemSpacing.y) * ImMin(items_count, height_in_items) - style.ItemSpacing.y + (style.WindowPadding.y * 2);
-
-    if (!BeginCombo(label, preview_text, 0, ImVec2(0.0f, popup_height)))
+    if (popup_max_height_in_items != -1 && !g.SetNextWindowSizeConstraint)
+    {
+        float popup_max_height = CalcMaxPopupHeightFromItemCount(popup_max_height_in_items);
+        SetNextWindowSizeConstraints(ImVec2(0,0), ImVec2(FLT_MAX, popup_max_height));
+    }
+    if (!BeginCombo(label, preview_text, 0))
         return false;
 
     // Display items
