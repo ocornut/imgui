@@ -5633,7 +5633,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                         {
                             // FIXME-NAVIGATION: Should store and accumulate into a separate size buffer to handle sizing constraints properly, right now a constraint will make us stuck.
                             g.NavWindowingToggleLayer = false;
-                            size_target = CalcSizeFullWithConstraint(window, window->SizeFull + nav_resize_delta);
+                            size_target = CalcSizeAfterConstraint(window, window->SizeFull + nav_resize_delta);
                         }
                     }
                 }
