@@ -216,6 +216,14 @@ enum ImGuiSelectableFlagsPrivate_
 
 enum ImGuiComboFlags_
 {
+    ImGuiComboFlags_PopupAlignLeft      = 1 << 0,   // Align the popup toward the left by default
+
+    // If you want your combo popup to be a specific size you can use SetNextWindowSizeConstraints() prior to calling BeginCombo()
+    ImGuiComboFlags_HeightSmall         = 1 << 1,   // Max ~4 items visible
+    ImGuiComboFlags_HeightRegular       = 1 << 2,   // Max ~8 items visible (default)
+    ImGuiComboFlags_HeightLarge         = 1 << 3,   // Max ~20 items visible
+    ImGuiComboFlags_HeightLargest       = 1 << 4,   // As many fitting items as possible
+    ImGuiComboFlags_HeightMask_         = ImGuiComboFlags_HeightSmall | ImGuiComboFlags_HeightRegular | ImGuiComboFlags_HeightLarge | ImGuiComboFlags_HeightLargest
 };
 
 enum ImGuiSeparatorFlags_
@@ -957,7 +965,7 @@ namespace ImGui
     IMGUI_API void          PushColumnClipRect(int column_index = -1);
 
     // FIXME-WIP: New Combo API
-    IMGUI_API bool          BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags = 0, ImVec2 popup_size = ImVec2(0.0f,0.0f));
+    IMGUI_API bool          BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags = 0);
     IMGUI_API void          EndCombo();
 
     // NB: All position are in absolute pixels coordinates (never using window coordinates internally)
