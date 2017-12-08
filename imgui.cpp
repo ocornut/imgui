@@ -656,7 +656,6 @@ static ImRect           GetVisibleRect();
 static void             CloseInactivePopups(ImGuiWindow* ref_window);
 static void             ClosePopupToLevel(int remaining);
 static ImGuiWindow*     GetFrontMostModalRootWindow();
-static ImVec2           FindBestWindowPosForPopup(const ImVec2& base_pos, const ImVec2& size, ImGuiDir* last_dir, const ImRect& rect_to_avoid);
 
 static bool             InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data);
 static int              InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end);
@@ -4025,7 +4024,13 @@ static void CheckStacksSize(ImGuiWindow* window, bool write)
     IM_ASSERT(p_backup == window->DC.StackSizesBackup + IM_ARRAYSIZE(window->DC.StackSizesBackup));
 }
 
-static ImVec2 FindBestWindowPosForPopup(const ImVec2& base_pos, const ImVec2& size, ImGuiDir* last_dir, const ImRect& r_avoid, ImGuiWindowFlags flags)
+enum ImGuiPopupPositionPolicy
+{
+    ImGuiPopupPositionPolicy_Default,
+    ImGuiPopupPositionPolicy_ComboBox
+};
+
+static ImVec2 FindBestWindowPosForPopup(const ImVec2& ref_pos, const ImVec2& size, ImGuiDir* last_dir, const ImRect& r_avoid, ImGuiPopupPositionPolicy policy = ImGuiPopupPositionPolicy_Default)
 {
     const ImGuiStyle& style = GImGui->Style;
 
@@ -4034,12 +4039,12 @@ static ImVec2 FindBestWindowPosForPopup(const ImVec2& base_pos, const ImVec2& si
     ImVec2 safe_padding = style.DisplaySafeAreaPadding;
     ImRect r_outer(GetVisibleRect());
     r_outer.Expand(ImVec2((size.x - r_outer.GetWidth() > safe_padding.x*2) ? -safe_padding.x : 0.0f, (size.y - r_outer.GetHeight() > safe_padding.y*2) ? -safe_padding.y : 0.0f));
-    ImVec2 base_pos_clamped = ImClamp(base_pos, r_outer.Min, r_outer.Max - size);
+    ImVec2 base_pos_clamped = ImClamp(ref_pos, r_outer.Min, r_outer.Max - size);
     //GImGui->OverlayDrawList.AddRect(r_avoid.Min, r_avoid.Max, IM_COL32(255,0,0,255));
     //GImGui->OverlayDrawList.AddRect(r_outer.Min, r_outer.Max, IM_COL32(0,255,0,255));
 
     // Combo Box policy (we want a connecting edge)
-    if (flags & ImGuiWindowFlags_ComboBox)
+    if (policy == ImGuiPopupPositionPolicy_ComboBox)
     {
         const ImGuiDir dir_prefered_order[ImGuiDir_Count_] = { ImGuiDir_Down, ImGuiDir_Right, ImGuiDir_Left, ImGuiDir_Up };
         for (int n = (*last_dir != ImGuiDir_None) ? -1 : 0; n < ImGuiDir_Count_; n++)
@@ -4079,7 +4084,7 @@ static ImVec2 FindBestWindowPosForPopup(const ImVec2& base_pos, const ImVec2& si
 
     // Fallback, try to keep within display
     *last_dir = ImGuiDir_None;
-    ImVec2 pos = base_pos;
+    ImVec2 pos = ref_pos;
     pos.x = ImMax(ImMin(pos.x + size.x, r_outer.Max.x) - size.x, r_outer.Min.x);
     pos.y = ImMax(ImMin(pos.y + size.y, r_outer.Max.y) - size.y, r_outer.Min.y);
     return pos;
@@ -4559,12 +4564,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 rect_to_avoid = ImRect(-FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight(), FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight() + parent_window->MenuBarHeight());
             else
                 rect_to_avoid = ImRect(parent_window->Pos.x + horizontal_overlap, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - horizontal_overlap - parent_window->ScrollbarSizes.x, FLT_MAX);
-            window->PosFloat = FindBestWindowPosForPopup(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid, flags);
+            window->PosFloat = FindBestWindowPosForPopup(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
         }
         else if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api && window_just_appearing_after_hidden_for_resize)
         {
             ImRect rect_to_avoid(window->PosFloat.x - 1, window->PosFloat.y - 1, window->PosFloat.x + 1, window->PosFloat.y + 1);
-            window->PosFloat = FindBestWindowPosForPopup(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid, flags);
+            window->PosFloat = FindBestWindowPosForPopup(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
         }
 
         // Position tooltip (always follows mouse)
@@ -4572,7 +4577,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             ImVec2 ref_pos = g.IO.MousePos;
             ImRect rect_to_avoid(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24, ref_pos.y + 24); // FIXME: Completely hard-coded. Store boxes in mouse cursor data? Scale? Center on cursor hit-point?
-            window->PosFloat = FindBestWindowPosForPopup(ref_pos, window->Size, &window->AutoPosLastDirection, rect_to_avoid, flags);
+            window->PosFloat = FindBestWindowPosForPopup(ref_pos, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
             if (window->AutoPosLastDirection == ImGuiDir_None)
                 window->PosFloat = ref_pos + ImVec2(2,2); // If there's not enough room, for tooltip we prefer avoiding the cursor at all cost even if it means that part of the tooltip won't be visible.
         }
@@ -9140,11 +9145,11 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
         ImVec2 size_expected = CalcSizeAfterConstraint(popup_window, CalcSizeAutoFit(popup_window, size_contents));
         if (flags & ImGuiComboFlags_PopupAlignLeft)
             popup_window->AutoPosLastDirection = ImGuiDir_Left;
-        ImVec2 pos = FindBestWindowPosForPopup(frame_bb.GetBL(), size_expected, &popup_window->AutoPosLastDirection, frame_bb, ImGuiWindowFlags_ComboBox);
+        ImVec2 pos = FindBestWindowPosForPopup(frame_bb.GetBL(), size_expected, &popup_window->AutoPosLastDirection, frame_bb, ImGuiPopupPositionPolicy_ComboBox);
         SetNextWindowPos(pos);
     }
 
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_ComboBox | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
     if (!Begin(name, NULL, window_flags))
     {
         EndPopup();
