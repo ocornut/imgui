@@ -169,8 +169,7 @@ inline void operator delete(void*, ImPlacementNewDummy, void*) {}
 // Types
 //-----------------------------------------------------------------------------
 
-// Drag and Drop payload types. String starting with '_' are managed by Dear ImGui.
-#define IMGUI_PAYLOAD_TYPE_COLOR_4F         "_COL4F"    // float[4]     // Standard type for colors. User code may use this type. Build a float[4] out of a float[3] if you don't have alpha.
+// Internal Drag and Drop payload types. String starting with '_' are reserved for Dear ImGui.
 #define IMGUI_PAYLOAD_TYPE_DOCKABLE         "_IMDOCK"   // ImGuiWindow* // [Internal] Docking/tabs
 
 enum ImGuiButtonFlags_

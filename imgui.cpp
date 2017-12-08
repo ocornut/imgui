@@ -9677,7 +9677,10 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
 
     if (g.ActiveId == id && BeginDragDropSource()) // NB: The ActiveId test is merely an optional micro-optimization
     {
-        SetDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F, &col, sizeof(col), ImGuiCond_Once);
+        if (flags & ImGuiColorEditFlags_NoAlpha)
+            SetDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F, &col, sizeof(float) * 3, ImGuiCond_Once);
+        else
+            SetDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F, &col, sizeof(float) * 4, ImGuiCond_Once);
         ColorButton(desc_id, col, flags);
         SameLine();
         TextUnformatted("Color");
@@ -9963,10 +9966,14 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
     if (window->DC.LastItemRectHoveredRect && BeginDragDropTarget()) // NB: The LastItemRectHoveredRect test is merely an optional micro-optimization
     {
+        if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
+        {
+            memcpy((float*)col, payload->Data, sizeof(float) * 3);
+            value_changed = true;
+        }
         if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F))
         {
-            IM_ASSERT(payload->DataSize == sizeof(ImVec4));
-            memcpy((float*)col, payload->Data, sizeof(ImVec4));
+            memcpy((float*)col, payload->Data, sizeof(float) * components);
             value_changed = true;
         }
         EndDragDropTarget();
