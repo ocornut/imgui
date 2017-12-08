@@ -4130,7 +4130,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
     return window;
 }
 
-static ImVec2 CalcSizeFullWithConstraint(ImGuiWindow* window, ImVec2 new_size)
+static ImVec2 CalcSizeAfterConstraint(ImGuiWindow* window, ImVec2 new_size)
 {
     ImGuiContext& g = *GImGui;
     if (g.SetNextWindowSizeConstraint)
@@ -4168,7 +4168,7 @@ static ImVec2 CalcSizeContents(ImGuiWindow* window)
     return sz + window->WindowPadding;
 }
 
-static ImVec2 CalcSizeAutoFit(ImGuiWindow* window)
+static ImVec2 CalcSizeAutoFit(ImGuiWindow* window, const ImVec2& size_contents)
 {
     ImGuiContext& g = *GImGui;
     ImGuiStyle& style = g.Style;
@@ -4177,16 +4177,16 @@ static ImVec2 CalcSizeAutoFit(ImGuiWindow* window)
     if ((flags & ImGuiWindowFlags_Tooltip) != 0)
     {
         // Tooltip always resize. We keep the spacing symmetric on both axises for aesthetic purpose.
-        size_auto_fit = window->SizeContents;
+        size_auto_fit = size_contents;
     }
     else
     {
         // Handling case of auto fit window not fitting on the screen (on either axis): we are growing the size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than DisplaySize-WindowPadding.
-        size_auto_fit = ImClamp(window->SizeContents, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - g.Style.DisplaySafeAreaPadding));
-        ImVec2 size_auto_fit_after_constraint = CalcSizeFullWithConstraint(window, size_auto_fit);
-        if (size_auto_fit_after_constraint.x < window->SizeContents.x && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar))
+        size_auto_fit = ImClamp(size_contents, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - g.Style.DisplaySafeAreaPadding));
+        ImVec2 size_auto_fit_after_constraint = CalcSizeAfterConstraint(window, size_auto_fit);
+        if (size_auto_fit_after_constraint.x < size_contents.x && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar))
             size_auto_fit.y += style.ScrollbarSize;
-        if (size_auto_fit_after_constraint.y < window->SizeContents.y && !(flags & ImGuiWindowFlags_NoScrollbar))
+        if (size_auto_fit_after_constraint.y < size_contents.y && !(flags & ImGuiWindowFlags_NoScrollbar))
             size_auto_fit.x += style.ScrollbarSize;
     }
     return size_auto_fit;
@@ -4234,7 +4234,7 @@ static void CalcResizePosSizeFromAnyCorner(ImGuiWindow* window, const ImVec2& co
     ImVec2 pos_min = ImLerp(corner_target, window->Pos, corner_norm);                // Expected window upper-left
     ImVec2 pos_max = ImLerp(window->Pos + window->Size, corner_target, corner_norm); // Expected window lower-right
     ImVec2 size_expected = pos_max - pos_min;
-    ImVec2 size_constrained = CalcSizeFullWithConstraint(window, size_expected);
+    ImVec2 size_constrained = CalcSizeAfterConstraint(window, size_expected);
     *out_pos = pos_min;
     if (corner_norm.x == 0.0f)
         out_pos->x -= (size_constrained.x - size_expected.x);
@@ -4465,7 +4465,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         const float window_border_size = window->WindowBorderSize;
 
         // Calculate auto-fit size, handle automatic resize
-        const ImVec2 size_auto_fit = CalcSizeAutoFit(window);
+        const ImVec2 size_auto_fit = CalcSizeAutoFit(window, window->SizeContents);
         ImVec2 size_full_modified(FLT_MAX, FLT_MAX);
         if (flags & ImGuiWindowFlags_AlwaysAutoResize && !window->Collapsed)
         {
@@ -4488,7 +4488,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
 
         // Apply minimum/maximum window size constraints and final size
-        window->SizeFull = CalcSizeFullWithConstraint(window, window->SizeFull);
+        window->SizeFull = CalcSizeAfterConstraint(window, window->SizeFull);
         window->Size = window->Collapsed ? window->TitleBarRect().GetSize() : window->SizeFull;
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
         {
@@ -4638,7 +4638,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                     if (g.HoveredWindow == window && held && g.IO.MouseDoubleClicked[0] && resize_grip_n == 0)
                     {
                         // Manual auto-fit when double-clicking
-                        size_target = CalcSizeFullWithConstraint(window, size_auto_fit);
+                        size_target = CalcSizeAfterConstraint(window, size_auto_fit);
                         ClearActiveID();
                     }
                     else if (held)
