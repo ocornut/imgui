@@ -10036,7 +10036,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         PopItemWidth();
     }
 
-    bool picker_active = false;
+    ImGuiWindow* picker_active_window = NULL;
     if (!(flags & ImGuiColorEditFlags_NoSmallPreview))
     {
         if (!(flags & ImGuiColorEditFlags_NoInputs))
@@ -10058,7 +10058,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         
         if (BeginPopup("picker"))
         {
-            picker_active = true;
+            picker_active_window = g.CurrentWindow;
             if (label != label_display_end)
             {
                 TextUnformatted(label, label_display_end);
@@ -10080,7 +10080,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     }
 
     // Convert back
-    if (!picker_active)
+    if (picker_active_window == NULL)
     {
         if (!value_changed_as_float) 
             for (int n = 0; n < 4; n++)
@@ -10099,6 +10099,10 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
     PopID();
     EndGroup();
+
+    // When picker is being actively used, use its active id so IsItemActive() will function on ColorEdit4().
+    if (picker_active_window && g.ActiveId != 0 && g.ActiveIdWindow == picker_active_window)
+        window->DC.LastItemId = g.ActiveId;
 
     return value_changed;
 }
