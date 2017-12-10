@@ -9166,7 +9166,7 @@ void ImGui::EndCombo()
     EndPopup();
 }
 
-// Combo box function.
+// Old API, prefer using BeginCombo() nowadays if you can.
 bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(void*, int, const char**), void* data, int items_count, int popup_max_height_in_items)
 {
     ImGuiContext& g = *GImGui;
@@ -9175,16 +9175,18 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     if (*current_item >= 0 && *current_item < items_count)
         items_getter(data, *current_item, &preview_text);
 
+    // The old Combo() API exposed "popup_max_height_in_items", however the new more general BeginCombo() API doesn't, so we emulate it here.
     if (popup_max_height_in_items != -1 && !g.SetNextWindowSizeConstraint)
     {
         float popup_max_height = CalcMaxPopupHeightFromItemCount(popup_max_height_in_items);
         SetNextWindowSizeConstraints(ImVec2(0,0), ImVec2(FLT_MAX, popup_max_height));
     }
+
     if (!BeginCombo(label, preview_text, 0))
         return false;
 
     // Display items
-    // FIXME-OPT: Use clipper
+    // FIXME-OPT: Use clipper (if we can disable it on the appearing frame to make sure our call to SetScrollHere() is processed)
     bool value_changed = false;
     for (int i = 0; i < items_count; i++)
     {
@@ -9236,7 +9238,7 @@ static bool Items_SingleStringGetter(void* data, int idx, const char** out_text)
 }
 
 // Combo box helper allowing to pass an array of strings.
-bool ImGui::Combo(const char* label, int* current_item, const char* const* items, int items_count, int height_in_items)
+bool ImGui::Combo(const char* label, int* current_item, const char* const items[], int items_count, int height_in_items)
 {
     const bool value_changed = Combo(label, current_item, Items_ArrayGetter, (void*)items, items_count, height_in_items);
     return value_changed;
