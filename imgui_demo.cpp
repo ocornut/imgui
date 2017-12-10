@@ -170,6 +170,7 @@ void ImGui::ShowTestWindow(bool* p_open)
     static bool no_move = false;
     static bool no_resize = false;
     static bool no_collapse = false;
+    static bool no_close = false;
 
     // Demonstrate the various window flags. Typically you would just use the default.
     ImGuiWindowFlags window_flags = 0;
@@ -179,6 +180,8 @@ void ImGui::ShowTestWindow(bool* p_open)
     if (no_move)      window_flags |= ImGuiWindowFlags_NoMove;
     if (no_resize)    window_flags |= ImGuiWindowFlags_NoResize;
     if (no_collapse)  window_flags |= ImGuiWindowFlags_NoCollapse;
+    if (no_close)     p_open = NULL; // Don't pass our bool* to Begin
+
     ImGui::SetNextWindowSize(ImVec2(550,680), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin("ImGui Demo", p_open, window_flags))
     {
@@ -241,6 +244,7 @@ void ImGui::ShowTestWindow(bool* p_open)
         ImGui::Checkbox("No move", &no_move); ImGui::SameLine(150);
         ImGui::Checkbox("No resize", &no_resize); ImGui::SameLine(300);
         ImGui::Checkbox("No collapse", &no_collapse);
+        ImGui::Checkbox("No close", &no_close);
 
         if (ImGui::TreeNode("Style"))
         {
@@ -248,7 +252,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Logging"))
+        if (ImGui::TreeNode("Capture/Logging"))
         {
             ImGui::TextWrapped("The logging API redirects all text output so you can easily capture the content of a window or a block. Tree nodes can be automatically expanded. You can also call ImGui::LogText() to output directly to the log without a visual output.");
             ImGui::LogButtons();
