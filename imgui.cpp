@@ -213,6 +213,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/12/10 (1.53) - removed SetNextWindowContentWidth(), prefer using SetNextWindowContentSize(). Kept redirection function (will obsolete).
  - 2017/11/27 (1.53) - renamed ImGuiTextBuffer::append() helper to appendf(), appendv() to appendfv(). If you copied the 'Log' demo in your code, it uses appendv() so that needs to be renamed.
  - 2017/11/18 (1.53) - Style, Begin: removed ImGuiWindowFlags_ShowBorders window flag. Borders are now fully set up in the ImGuiStyle structure (see e.g. style.FrameBorderSize, style.WindowBorderSize). Use ImGui::ShowStyleEditor() to look them up.
                        Please note that the style system will keep evolving (hopefully stabilizing in Q1 2018), and so custom styles will probably subtly break over time. It is recommended you use the StyleColorsClassic(), StyleColorsDark(), StyleColorsLight() functions.
@@ -5662,13 +5663,6 @@ void ImGui::SetNextWindowContentSize(const ImVec2& size)
 {
     ImGuiContext& g = *GImGui;
     g.SetNextWindowContentSizeVal = size;
-    g.SetNextWindowContentSizeCond = ImGuiCond_Always;
-}
-
-void ImGui::SetNextWindowContentWidth(float width)
-{
-    ImGuiContext& g = *GImGui;
-    g.SetNextWindowContentSizeVal = ImVec2(width, g.SetNextWindowContentSizeCond ? g.SetNextWindowContentSizeVal.y : 0.0f);
     g.SetNextWindowContentSizeCond = ImGuiCond_Always;
 }
 
