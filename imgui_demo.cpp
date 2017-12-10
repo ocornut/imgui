@@ -80,7 +80,7 @@ static void ShowExampleAppLongText(bool* p_open);
 static void ShowExampleAppAutoResize(bool* p_open);
 static void ShowExampleAppConstrainedResize(bool* p_open);
 static void ShowExampleAppFixedOverlay(bool* p_open);
-static void ShowExampleAppManipulatingWindowTitle(bool* p_open);
+static void ShowExampleAppWindowTitles(bool* p_open);
 static void ShowExampleAppCustomRendering(bool* p_open);
 static void ShowExampleAppMainMenuBar();
 static void ShowExampleMenuFile();
@@ -133,27 +133,27 @@ void ImGui::ShowTestWindow(bool* p_open)
     static bool show_app_auto_resize = false;
     static bool show_app_constrained_resize = false;
     static bool show_app_fixed_overlay = false;
-    static bool show_app_manipulating_window_title = false;
+    static bool show_app_window_titles = false;
     static bool show_app_custom_rendering = false;
     static bool show_app_style_editor = false;
 
     static bool show_app_metrics = false;
     static bool show_app_about = false;
 
-    if (show_app_main_menu_bar) ShowExampleAppMainMenuBar();
-    if (show_app_console) ShowExampleAppConsole(&show_app_console);
-    if (show_app_log) ShowExampleAppLog(&show_app_log);
-    if (show_app_layout) ShowExampleAppLayout(&show_app_layout);
-    if (show_app_property_editor) ShowExampleAppPropertyEditor(&show_app_property_editor);
-    if (show_app_long_text) ShowExampleAppLongText(&show_app_long_text);
-    if (show_app_auto_resize) ShowExampleAppAutoResize(&show_app_auto_resize);
-    if (show_app_constrained_resize) ShowExampleAppConstrainedResize(&show_app_constrained_resize);
-    if (show_app_fixed_overlay) ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
-    if (show_app_manipulating_window_title) ShowExampleAppManipulatingWindowTitle(&show_app_manipulating_window_title);
-    if (show_app_custom_rendering) ShowExampleAppCustomRendering(&show_app_custom_rendering);
+    if (show_app_main_menu_bar)       ShowExampleAppMainMenuBar();
+    if (show_app_console)             ShowExampleAppConsole(&show_app_console);
+    if (show_app_log)                 ShowExampleAppLog(&show_app_log);
+    if (show_app_layout)              ShowExampleAppLayout(&show_app_layout);
+    if (show_app_property_editor)     ShowExampleAppPropertyEditor(&show_app_property_editor);
+    if (show_app_long_text)           ShowExampleAppLongText(&show_app_long_text);
+    if (show_app_auto_resize)         ShowExampleAppAutoResize(&show_app_auto_resize);
+    if (show_app_constrained_resize)  ShowExampleAppConstrainedResize(&show_app_constrained_resize);
+    if (show_app_fixed_overlay)       ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
+    if (show_app_window_titles)       ShowExampleAppWindowTitles(&show_app_window_titles);
+    if (show_app_custom_rendering)    ShowExampleAppCustomRendering(&show_app_custom_rendering);
 
-    if (show_app_metrics) ImGui::ShowMetricsWindow(&show_app_metrics);
-    if (show_app_style_editor) { ImGui::Begin("Style Editor", &show_app_style_editor); ImGui::ShowStyleEditor(); ImGui::End(); }
+    if (show_app_metrics)             { ImGui::ShowMetricsWindow(&show_app_metrics); }
+    if (show_app_style_editor)        { ImGui::Begin("Style Editor", &show_app_style_editor); ImGui::ShowStyleEditor(); ImGui::End(); }
     if (show_app_about)
     {
         ImGui::Begin("About Dear ImGui", &show_app_about, ImGuiWindowFlags_AlwaysAutoResize);
@@ -214,7 +214,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::MenuItem("Auto-resizing window", NULL, &show_app_auto_resize);
             ImGui::MenuItem("Constrained-resizing window", NULL, &show_app_constrained_resize);
             ImGui::MenuItem("Simple overlay", NULL, &show_app_fixed_overlay);
-            ImGui::MenuItem("Manipulating window title", NULL, &show_app_manipulating_window_title);
+            ImGui::MenuItem("Manipulating window titles", NULL, &show_app_window_titles);
             ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
             ImGui::EndMenu();
         }
@@ -2269,8 +2269,8 @@ static void ShowExampleAppFixedOverlay(bool* p_open)
 }
 
 // Demonstrate using "##" and "###" in identifiers to manipulate ID generation.
-// Read section "How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on the purpose of labels/IDs." about ID.
-static void ShowExampleAppManipulatingWindowTitle(bool*)
+// This apply to regular items as well. Read FAQ section "How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on the purpose of labels/IDs." for details.
+static void ShowExampleAppWindowTitles(bool*)
 {
     // By default, Windows are uniquely identified by their title.
     // You can use the "##" and "###" markers to manipulate the display/ID.
@@ -2288,7 +2288,7 @@ static void ShowExampleAppManipulatingWindowTitle(bool*)
 
     // Using "###" to display a changing title but keep a static identifier "AnimatedTitle"
     char buf[128];
-    sprintf(buf, "Animated title %c %d###AnimatedTitle", "|/-\\"[(int)(ImGui::GetTime()/0.25f)&3], rand());
+    sprintf(buf, "Animated title %c %d###AnimatedTitle", "|/-\\"[(int)(ImGui::GetTime()/0.25f)&3], ImGui::GetFrameCount());
     ImGui::SetNextWindowPos(ImVec2(100,300), ImGuiCond_FirstUseEver);
     ImGui::Begin(buf);
     ImGui::Text("This window has a changing title.");
@@ -2774,7 +2774,7 @@ static void ShowExampleAppLog(bool* p_open)
     if (time - last_time >= 0.20f && !ImGui::GetIO().KeyCtrl)
     {
         const char* random_words[] = { "system", "info", "warning", "error", "fatal", "notice", "log" };
-        log.AddLog("[%s] Hello, time is %.1f, rand() %d\n", random_words[rand() % IM_ARRAYSIZE(random_words)], time, (int)rand());
+        log.AddLog("[%s] Hello, time is %.1f, frame count is %d\n", random_words[rand() % IM_ARRAYSIZE(random_words)], time, ImGui::GetFrameCount());
         last_time = time;
     }
 
