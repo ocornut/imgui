@@ -609,8 +609,43 @@ void ImGui_ImplDX11_NewFrame()
     }
 
     // Hide OS mouse cursor if ImGui is drawing it
-    if (io.MouseDrawCursor)
+    if(io.MouseDrawCursor)
+    {
         SetCursor(NULL);
+    }
+    else
+    {
+        HCURSOR cursor = NULL;
+
+        switch(ImGui::GetMouseCursor())
+        {
+        case ImGuiMouseCursor_None:
+            break;
+        case ImGuiMouseCursor_Arrow:
+            cursor = LoadCursor(NULL, IDC_ARROW);
+            break;
+        case ImGuiMouseCursor_TextInput:
+            cursor = LoadCursor(NULL, IDC_IBEAM);
+            break;
+        case ImGuiMouseCursor_Move:
+            cursor = LoadCursor(NULL, IDC_SIZEALL);
+            break;
+        case ImGuiMouseCursor_ResizeNS:
+            cursor = LoadCursor(NULL, IDC_SIZENS);
+            break;
+        case ImGuiMouseCursor_ResizeEW:
+            cursor = LoadCursor(NULL, IDC_SIZEWE);
+            break;
+        case ImGuiMouseCursor_ResizeNESW:
+            cursor = LoadCursor(NULL, IDC_SIZENESW);
+            break;
+        case ImGuiMouseCursor_ResizeNWSE:
+            cursor = LoadCursor(NULL, IDC_SIZENWSE);
+            break;
+        }
+
+        SetCursor(cursor);
+    }
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
