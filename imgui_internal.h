@@ -829,6 +829,8 @@ namespace ImGui
     IMGUI_API void          PushItemFlag(ImGuiItemFlags option, bool enabled);
     IMGUI_API void          PopItemFlag();
 
+    inline float            GetSmallSquareSize() { ImGuiContext& g = *GImGui; return g.FontSize + g.Style.FramePadding.y * 2.0f; }
+
     IMGUI_API void          OpenPopupEx(ImGuiID id, bool reopen_existing);
     IMGUI_API void          ClosePopup(ImGuiID id);
     IMGUI_API bool          IsPopupOpen(ImGuiID id);
