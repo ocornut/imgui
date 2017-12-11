@@ -77,6 +77,7 @@ Frameworks:
 - Cinder: https://github.com/simongeilfus/Cinder-ImGui
 - cocos2d-x: https://github.com/c0i/imguix https://github.com/ocornut/imgui/issues/551
 - Flexium/SFML (FlexGUI): https://github.com/DXsmiley/FlexGUI
+- GML/GameMakerStudio2 (ImGuiGML): https://marketplace.yoyogames.com/assets/6221/imguigml
 - Irrlicht (IrrIMGUI): https://github.com/ZahlGraf/IrrIMGUI
 - Ogre: https://bitbucket.org/LMCrashy/ogreimgui/src
 - openFrameworks (ofxImGui): https://github.com/jvcleave/ofxImGui
