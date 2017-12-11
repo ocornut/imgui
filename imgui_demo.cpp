@@ -1655,7 +1655,7 @@ void ImGui::ShowTestWindow(bool* p_open)
 
         if (ImGui::TreeNode("Horizontal Scrolling"))
         {
-            ImGui::SetNextWindowContentWidth(1500);
+            ImGui::SetNextWindowContentSize(ImVec2(1500.0f, 0.0f));
             ImGui::BeginChild("##ScrollingRegion", ImVec2(0, ImGui::GetFontSize() * 20), false, ImGuiWindowFlags_HorizontalScrollbar);
             ImGui::Columns(10);
             int ITEMS_COUNT = 2000;

@@ -6888,7 +6888,10 @@ void ImGui::SetKeyboardFocusHere(int offset)
 void ImGui::SetItemDefaultFocus()
 {
     ImGuiContext& g = *GImGui;
-    if (g.NavWindow == g.CurrentWindow->RootNavWindow && (g.NavInitRequest || g.NavInitResultId != 0) && g.NavLayer == g.NavWindow->DC.NavLayerCurrent)
+    ImGuiWindow* window = g.CurrentWindow;
+    if (!window->Appearing)
+        return;
+    if (g.NavWindow == window->RootNavWindow && (g.NavInitRequest || g.NavInitResultId != 0) && g.NavLayer == g.NavWindow->DC.NavLayerCurrent)
     {
         g.NavInitRequest = false;
         g.NavInitResultExplicit = true;
@@ -10304,7 +10307,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         return false;
 
     // Display items
-    // FIXME-OPT: Use clipper (if we can disable it on the appearing frame to make sure our call to SetScrollHere() is processed)
+    // FIXME-OPT: Use clipper (but we need to disable it on the appearing frame to make sure our call to SetItemDefaultFocus() is processed)
     bool value_changed = false;
     for (int i = 0; i < items_count; i++)
     {
@@ -10318,8 +10321,8 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
             value_changed = true;
             *current_item = i;
         }
-        if (item_selected && IsWindowAppearing())
-            SetItemDefaultFocus(); //SetScrollHere();
+        if (item_selected)
+            SetItemDefaultFocus();
         PopID();
     }
 
