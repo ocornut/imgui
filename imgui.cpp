@@ -221,7 +221,7 @@
  - 2017/11/18 (1.53) - Style: removed ImGuiCol_ComboBg in favor of combo boxes using ImGuiCol_PopupBg for consistency.
  - 2017/11/18 (1.53) - Style: renamed ImGuiCol_ChildWindowBg to ImGuiCol_ChildBg.
  - 2017/11/18 (1.53) - Style: renamed style.ChildWindowRounding to style.ChildRounding, ImGuiStyleVar_ChildWindowRounding to ImGuiStyleVar_ChildRounding.
- - 2017/11/02 (1.53) - marked IsRootWindowOrAnyChildHovered() as obsolete is favor of using IsWindowHovered(ImGuiHoveredFlags_FlattenChilds);
+ - 2017/11/02 (1.53) - marked IsRootWindowOrAnyChildHovered() as obsolete is favor of using IsWindowHovered(ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows);
  - 2017/10/24 (1.52) - renamed IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS/IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS to IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS/IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS for consistency.
  - 2017/10/20 (1.52) - changed IsWindowHovered() default parameters behavior to return false if an item is active in another window (e.g. click-dragging item from another window to this window). You can use the newly introduced IsWindowHovered() flags to requests this specific behavior if you need it.
  - 2017/10/20 (1.52) - marked IsItemHoveredRect()/IsMouseHoveringWindow() as obsolete, in favor of using the newly introduced flags for IsItemHovered() and IsWindowHovered(). See https://github.com/ocornut/imgui/issues/1382 for details.
@@ -2032,7 +2032,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
     // Test for bounding box overlap, as updated as ItemAdd()
     if (!window->DC.LastItemRectHoveredRect)
         return false;
-    IM_ASSERT((flags & ImGuiHoveredFlags_FlattenChilds) == 0);   // Flags not supported by this function
+    IM_ASSERT((flags & (ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows)) == 0);   // Flags not supported by this function
 
     // Test if we are hovering the right window (our window could be behind another window)
     // [2017/10/16] Reverted commit 344d48be3 and testing RootWindow instead. I believe it is correct to NOT test for RootWindow but this leaves us unable to use IsItemHovered() after EndChild() itself.
@@ -5440,20 +5440,43 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     return "Unknown";
 }
 
+bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent)
+{
+    if (window->RootWindow == potential_parent)
+        return true;
+    while (window != NULL)
+    {
+        if (window == potential_parent)
+            return true;
+        window = window->ParentWindow;
+    }
+    return false;
+}
+
 bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
 {
     IM_ASSERT((flags & ImGuiHoveredFlags_AllowWhenOverlapped) == 0);   // Flags not supported by this function
     ImGuiContext& g = *GImGui;
-    if (flags & ImGuiHoveredFlags_FlattenChilds)
+    switch (flags & (ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows))
     {
+    case ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows:
         if (g.HoveredRootWindow != g.CurrentWindow->RootWindow)
             return false;
-    }
-    else
-    {
+        break;
+    case ImGuiHoveredFlags_RootWindow:
+        if (g.HoveredWindow != g.CurrentWindow->RootWindow)
+            return false;
+        break;
+    case ImGuiHoveredFlags_ChildWindows:
+        if (g.HoveredWindow == NULL || !IsWindowChildOf(g.HoveredWindow, g.CurrentWindow))
+            return false;
+        break;
+    default:
         if (g.HoveredWindow != g.CurrentWindow)
             return false;
+        break;
     }
+
     if (!IsWindowContentHoverable(g.HoveredRootWindow, flags))
         return false;
     if (!(flags & ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))

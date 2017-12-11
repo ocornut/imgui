@@ -607,7 +607,8 @@ enum ImGuiHoveredFlags_
     //ImGuiHoveredFlags_AllowWhenBlockedByModal     = 1 << 1,   // Return true even if a modal popup window is normally blocking access to this item/window. FIXME-TODO: Unavailable yet.
     ImGuiHoveredFlags_AllowWhenBlockedByActiveItem  = 1 << 2,   // Return true even if an active item is blocking access to this item/window
     ImGuiHoveredFlags_AllowWhenOverlapped           = 1 << 3,   // Return true even if the position is overlapped by another window
-    ImGuiHoveredFlags_FlattenChilds                 = 1 << 4,   // Treat all child windows as the same window (for IsWindowHovered())
+    ImGuiHoveredFlags_ChildWindows                  = 1 << 4,   // IsWindowHovered() only: Return true if any children of the window is hovered
+    ImGuiHoveredFlags_RootWindow                    = 1 << 5,   // IsWindowHovered() only: Test from root window (top most parent of the current hierarchy)
     ImGuiHoveredFlags_RectOnly                      = ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenOverlapped
 };
 
@@ -937,8 +938,8 @@ struct ImGuiIO
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 namespace ImGui
 {
-    static inline void      SetNextWindowContentWidth(float width) { ImGui::SetNextWindowContentSize(ImVec2(width, 0.0f)); } // OBSOLETE 1.53+ (nb: original version preserved last Y value set by SetNextWindowContentSize())
-    static inline bool      IsRootWindowOrAnyChildHovered(ImGuiHoveredFlags flags = 0) { return IsItemHovered(flags | ImGuiHoveredFlags_FlattenChilds); } // OBSOLETE 1.53+ use flags directly
+    static inline void      SetNextWindowContentWidth(float width) { SetNextWindowContentSize(ImVec2(width, 0.0f)); } // OBSOLETE 1.53+ (nb: original version preserved last Y value set by SetNextWindowContentSize())
+    static inline bool      IsRootWindowOrAnyChildHovered(ImGuiHoveredFlags flags = 0) { return IsItemHovered(flags | ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows); } // OBSOLETE 1.53+ use flags directly
     bool                    Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha_override = -1.0f, ImGuiWindowFlags flags = 0); // OBSOLETE 1.52+. use SetNextWindowSize() instead if you want to set a window size.
     static inline void      AlignFirstTextHeightToWidgets() { AlignTextToFramePadding(); }     // OBSOLETE 1.52+
     static inline void      SetNextWindowPosCenter(ImGuiCond cond = 0) { SetNextWindowPos(ImVec2(GetIO().DisplaySize.x * 0.5f, GetIO().DisplaySize.y * 0.5f), cond, ImVec2(0.5f, 0.5f)); } // OBSOLETE 1.52+

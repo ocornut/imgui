@@ -1788,11 +1788,15 @@ void ImGui::ShowTestWindow(bool* p_open)
                 "IsWindowHovered() = %d\n"
                 "IsWindowHovered(_AllowWhenBlockedByPopup) = %d\n"
                 "IsWindowHovered(_AllowWhenBlockedByActiveItem) = %d\n"
-                "IsWindowHovered(_FlattenChilds) = %d\n",
+                "IsWindowHovered(_ChildWindows) = %d\n"
+                "IsWindowHovered(_ChildWindows|_RootWindow) = %d\n"
+                "IsWindowHovered(_RootWindow) = %d\n",
                 ImGui::IsWindowHovered(),
                 ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
                 ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_FlattenChilds));
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow));
 
             // Testing IsItemHovered() function (because BulletText is an item itself and that would affect the output of IsItemHovered, we pass all lines in a single items to shorten the code)
             ImGui::Button("ITEM");
@@ -1807,6 +1811,10 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
                 ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped),
                 ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly));
+
+            ImGui::BeginChild("child", ImVec2(0,50), true);
+            ImGui::Text("This is a child window for testing IsWindowHovered() flags.");
+            ImGui::EndChild();
 
             ImGui::TreePop();
         }
