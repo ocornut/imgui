@@ -1910,13 +1910,6 @@ static void SetCurrentWindow(ImGuiWindow* window)
         g.FontSize = window->CalcFontSize();
 }
 
-ImGuiWindow* ImGui::GetParentWindow()
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.CurrentWindowStack.Size >= 2);
-    return g.CurrentWindowStack[(unsigned int)g.CurrentWindowStack.Size - 2];
-}
-
 void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
@@ -3686,9 +3679,9 @@ void ImGui::EndTooltip()
 void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiWindow* parent_window = g.CurrentWindow;
     int current_stack_size = g.CurrentPopupStack.Size;
-    ImGuiPopupRef popup_ref = ImGuiPopupRef(id, window, window->GetID("##Menus"), g.IO.MousePos); // Tagged as new ref because constructor sets Window to NULL (we are passing the ParentWindow info here)
+    ImGuiPopupRef popup_ref = ImGuiPopupRef(id, parent_window, parent_window->GetID("##Menus"), g.IO.MousePos); // Tagged as new ref because constructor sets Window to NULL.
     if (g.OpenPopupStack.Size < current_stack_size + 1)
         g.OpenPopupStack.push_back(popup_ref);
     else if (reopen_existing || g.OpenPopupStack[current_stack_size].PopupId != id)
@@ -3699,7 +3692,7 @@ void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
         // When reopening a popup we first refocus its parent, otherwise if its parent is itself a popup it would get closed by CloseInactivePopups().
         // This is equivalent to what ClosePopupToLevel() does.
         if (g.OpenPopupStack[current_stack_size].PopupId == id)
-            FocusWindow(window);
+            FocusWindow(parent_window);
     }
 }
 
@@ -9426,7 +9419,7 @@ bool ImGui::ListBoxHeader(const char* label, int items_count, int height_in_item
 
 void ImGui::ListBoxFooter()
 {
-    ImGuiWindow* parent_window = GetParentWindow();
+    ImGuiWindow* parent_window = GetCurrentWindow()->ParentWindow;
     const ImRect bb = parent_window->DC.LastItemRect;
     const ImGuiStyle& style = GetStyle();
 
