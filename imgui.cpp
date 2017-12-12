@@ -6685,7 +6685,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             toggled |= IsMouseHoveringRect(interact_bb.Min, ImVec2(interact_bb.Min.x + text_offset_x, interact_bb.Max.y));
         if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
             toggled |= g.IO.MouseDoubleClicked[0];
-        if (g.DragDropActive && is_open) // We don't nodes to be highlighted when holding ever after the node has been opened, but don't close them!
+        if (g.DragDropActive && is_open) // When using Drag and Drop "hold to open" we keep the node highlighted after opening, but never close it again.
             toggled = false;
         if (toggled)
         {
@@ -9886,6 +9886,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     else
         window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), rounding); // Color button are often in need of some sort of border
 
+    // Drag and Drop Source
     if (g.ActiveId == id && BeginDragDropSource()) // NB: The ActiveId test is merely an optional micro-optimization
     {
         if (flags & ImGuiColorEditFlags_NoAlpha)
@@ -9899,6 +9900,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
         hovered = false;
     }
 
+    // Tooltip
     if (!(flags & ImGuiColorEditFlags_NoTooltip) && hovered)
         ColorTooltip(desc_id, &col.x, flags & (ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf));
 
