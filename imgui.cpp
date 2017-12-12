@@ -11292,7 +11292,8 @@ bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
     ImGuiWindow* window = g.CurrentWindow;
     if (g.HoveredWindow == NULL || window->RootWindow != g.HoveredWindow->RootWindow)
         return false;
-    if (!IsMouseHoveringRect(bb.Min, bb.Max) || (id && id == g.DragDropPayload.SourceId))
+    IM_ASSERT(id != 0);
+    if (!IsMouseHoveringRect(bb.Min, bb.Max) || (id == g.DragDropPayload.SourceId))
         return false;
 
     g.DragDropTargetRect = bb;
@@ -11301,7 +11302,7 @@ bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
 }
 
 // We don't use BeginDragDropTargetCustom() and duplicate its code because:
-// 1) LastItemRectHoveredRect which handles items that pushes a temporarily clip rectangle in their code. Calling BeginDragDropTargetCustom(LastItemRect) would not handle it.
+// 1) we use LastItemRectHoveredRect which handles items that pushes a temporarily clip rectangle in their code. Calling BeginDragDropTargetCustom(LastItemRect) would not handle them.
 // 2) and it's faster. as this code may be very frequently called, we want to early out as fast as we can.
 // Also note how the HoveredWindow test is positioned differently in both functions (in both functions we optimize for the cheapest early out case)
 bool ImGui::BeginDragDropTarget()
@@ -11311,13 +11312,19 @@ bool ImGui::BeginDragDropTarget()
         return false;
 
     ImGuiWindow* window = g.CurrentWindow;
-    if (!window->DC.LastItemRectHoveredRect || (window->DC.LastItemId && window->DC.LastItemId == g.DragDropPayload.SourceId))
+    if (!window->DC.LastItemRectHoveredRect)
         return false;
     if (g.HoveredWindow == NULL || window->RootWindow != g.HoveredWindow->RootWindow)
         return false;
 
+    ImGuiID id = window->DC.LastItemId;
+    if (id == 0)
+        id = window->GetIDFromRectangle(window->DC.LastItemRect);
+    if (g.DragDropPayload.SourceId == id)
+        return false;
+
     g.DragDropTargetRect = window->DC.LastItemRect;
-    g.DragDropTargetId = window->DC.LastItemId;
+    g.DragDropTargetId = id;
     return true;
 }
 
