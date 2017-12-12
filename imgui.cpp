@@ -4409,8 +4409,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     {
         // Initialize
         window->ParentWindow = parent_window;
-        window->RootWindow = ((flags & ImGuiWindowFlags_ChildWindow) && parent_window) ? parent_window->RootWindow : window;
-        window->RootNonPopupWindow = !(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)) || (flags & ImGuiWindowFlags_Modal) || (parent_window == NULL) ? window : parent_window->RootNonPopupWindow; // Used to display TitleBgActive color and for selecting which window to use for NavWindowing
+        window->RootWindow = window->RootNonPopupWindow = window;
+        if (parent_window && (flags & ImGuiWindowFlags_ChildWindow))
+            window->RootWindow = parent_window->RootWindow;
+        if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
+            window->RootNonPopupWindow = parent_window->RootNonPopupWindow;
         //window->RootNavWindow = window;
         //while (window->RootNavWindow->Flags & ImGuiWindowFlags_NavFlattened)
         //    window->RootNavWindow = window->RootNavWindow->ParentWindow;
