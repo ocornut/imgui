@@ -79,8 +79,8 @@ typedef int ImGuiMouseCursor;       // enum: a mouse cursor identifier          
 typedef int ImGuiStyleVar;          // enum: a variable identifier for styling  // enum ImGuiStyleVar_
 typedef int ImDrawCornerFlags;      // flags: for ImDrawList::AddRect*() etc.   // enum ImDrawCornerFlags_
 typedef int ImGuiColorEditFlags;    // flags: for ColorEdit*(), ColorPicker*()  // enum ImGuiColorEditFlags_
-typedef int ImGuiDragDropFlags;     // flags: for *DragDrop*()                  // enum ImGuiDragDropFlags_
 typedef int ImGuiColumnsFlags;      // flags: for *Columns*()                   // enum ImGuiColumnsFlags_
+typedef int ImGuiDragDropFlags;     // flags: for *DragDrop*()                  // enum ImGuiDragDropFlags_
 typedef int ImGuiComboFlags;        // flags: for BeginCombo()                  // enum ImGuiComboFlags_
 typedef int ImGuiFocusedFlags;      // flags: for IsWindowFocused()             // enum ImGuiFocusedFlags_
 typedef int ImGuiHoveredFlags;      // flags: for IsItemHovered() etc.          // enum ImGuiHoveredFlags_
@@ -627,7 +627,7 @@ enum ImGuiHoveredFlags_
     ImGuiHoveredFlags_RootWindow                    = 1 << 1,   // IsWindowHovered() only: Test from root window (top most parent of the current hierarchy)
     ImGuiHoveredFlags_AllowWhenBlockedByPopup       = 1 << 2,   // Return true even if a popup window is normally blocking access to this item/window
     //ImGuiHoveredFlags_AllowWhenBlockedByModal     = 1 << 3,   // Return true even if a modal popup window is normally blocking access to this item/window. FIXME-TODO: Unavailable yet.
-    ImGuiHoveredFlags_AllowWhenBlockedByActiveItem  = 1 << 4,   // Return true even if an active item is blocking access to this item/window
+    ImGuiHoveredFlags_AllowWhenBlockedByActiveItem  = 1 << 4,   // Return true even if an active item is blocking access to this item/window. Useful for Drag and Drop patterns.
     ImGuiHoveredFlags_AllowWhenOverlapped           = 1 << 5,   // Return true even if the position is overlapped by another window
     ImGuiHoveredFlags_RectOnly                      = ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenOverlapped
 };

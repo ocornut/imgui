@@ -1826,7 +1826,6 @@ ImGuiWindow::ImGuiWindow(const char* name)
     ID = ImHash(name, 0);
     IDStack.push_back(ID);
     Flags = 0;
-    OrderWithinParent = 0;
     PosFloat = Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContents = SizeContentsExplicit = ImVec2(0.0f, 0.0f);
@@ -1845,6 +1844,8 @@ ImGuiWindow::ImGuiWindow(const char* name)
     SkipItems = false;
     Appearing = false;
     CloseButton = false;
+    BeginOrderWithinParent = -1;
+    BeginOrderWithinContext = -1;
     BeginCount = 0;
     PopupId = 0;
     AutoFitFramesX = AutoFitFramesY = -1;
@@ -2271,7 +2272,7 @@ void ImGui::NewFrame()
 
     // Initialize on first frame
     if (!g.Initialized)
-        ImGui::Initialize();
+        Initialize();
 
     SetCurrentFont(GetDefaultFont());
     IM_ASSERT(g.Font->IsLoaded());
@@ -2279,6 +2280,7 @@ void ImGui::NewFrame()
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
     g.TooltipOverrideCount = 0;
+    g.WindowsActiveCount = 0;
     g.OverlayDrawList.Clear();
     g.OverlayDrawList.PushTextureID(g.IO.Fonts->TexID);
     g.OverlayDrawList.PushClipRectFullScreen();
@@ -2497,8 +2499,8 @@ void ImGui::NewFrame()
 
     // Create implicit window - we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
-    ImGui::SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Debug##Default");
+    SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
+    Begin("Debug##Default");
 }
 
 static void* SettingsHandlerWindow_ReadOpen(ImGuiContext&, const char* name)
@@ -2785,7 +2787,7 @@ static int ChildWindowComparer(const void* lhs, const void* rhs)
         return d;
     if (int d = (a->Flags & ImGuiWindowFlags_Tooltip) - (b->Flags & ImGuiWindowFlags_Tooltip))
         return d;
-    return (a->OrderWithinParent - b->OrderWithinParent);
+    return (a->BeginOrderWithinParent - b->BeginOrderWithinParent);
 }
 
 static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, ImGuiWindow* window)
@@ -3359,7 +3361,7 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
 static ImGuiWindow* FindHoveredWindow(ImVec2 pos)
 {
     ImGuiContext& g = *GImGui;
-    for (int i = g.Windows.Size-1; i >= 0; i--)
+    for (int i = g.Windows.Size - 1; i >= 0; i--)
     {
         ImGuiWindow* window = g.Windows[i];
         if (!window->Active)
@@ -3598,7 +3600,8 @@ bool ImGui::IsItemClicked(int mouse_button)
 
 bool ImGui::IsAnyItemHovered()
 {
-    return GImGui->HoveredId != 0 || GImGui->HoveredIdPreviousFrame != 0;
+    ImGuiContext& g = *GImGui;
+    return g.HoveredId != 0 || g.HoveredIdPreviousFrame != 0;
 }
 
 bool ImGui::IsAnyItemActive()
@@ -3914,8 +3917,9 @@ bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
     ImGuiWindow* window = GImGui->CurrentWindow;
     ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
     IM_ASSERT(id != 0);                                                  // However, you cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
-    if (IsMouseClicked(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-        OpenPopupEx(id, true);
+    if (IsMouseClicked(mouse_button))
+        if (IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+            OpenPopupEx(id, true);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize);
 }
 
@@ -4448,7 +4452,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         //    window->RootNavWindow = window->RootNavWindow->ParentWindow;
 
         window->Active = true;
-        window->OrderWithinParent = 0;
+        window->BeginOrderWithinParent = 0;
+        window->BeginOrderWithinContext = g.WindowsActiveCount++;
         window->BeginCount = 0;
         window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
         window->LastFrameActive = current_frame;
@@ -4570,7 +4575,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Position child window
         if (flags & ImGuiWindowFlags_ChildWindow)
         {
-            window->OrderWithinParent = parent_window->DC.ChildWindows.Size;
+            window->BeginOrderWithinParent = parent_window->DC.ChildWindows.Size;
             parent_window->DC.ChildWindows.push_back(window);
         }
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api)
@@ -6685,6 +6690,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
     if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
         button_flags |= ImGuiButtonFlags_PressedOnDoubleClick | ((flags & ImGuiTreeNodeFlags_OpenOnArrow) ? ImGuiButtonFlags_PressedOnClickRelease : 0);
+
     bool hovered, held, pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags);
     if (pressed && !(flags & ImGuiTreeNodeFlags_Leaf))
     {
@@ -6774,7 +6780,6 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_open, ImGuiTreeNodeFlags
         ImGuiContext& g = *GImGui;
         float button_sz = g.FontSize * 0.5f;
         ImGuiItemHoveredDataBackup last_item_backup;
-        last_item_backup.Backup();
         if (CloseButton(window->GetID((void*)(intptr_t)(id+1)), ImVec2(ImMin(window->DC.LastItemRect.Max.x, window->ClipRect.Max.x) - g.Style.FramePadding.x - button_sz, window->DC.LastItemRect.Min.y + g.Style.FramePadding.y + button_sz), button_sz))
             *p_open = false;
         last_item_backup.Restore();

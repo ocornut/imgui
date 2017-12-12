@@ -183,7 +183,7 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_AllowItemOverlap       = 1 << 6,   // require previous frame HoveredId to either match id or be null before being usable, use along with SetItemAllowOverlap()
     ImGuiButtonFlags_DontClosePopups        = 1 << 7,   // disable automatically closing parent popup on press // [UNUSED]
     ImGuiButtonFlags_Disabled               = 1 << 8,   // disable interactions
-    ImGuiButtonFlags_AlignTextBaseLine      = 1 << 9,   // vertically align button to match text baseline (ButtonEx() only)
+    ImGuiButtonFlags_AlignTextBaseLine      = 1 << 9,   // vertically align button to match text baseline - ButtonEx() only // FIXME: Should be removed and handled by SmallButton(), not possible currently because of DC.CursorPosPrevLine
     ImGuiButtonFlags_NoKeyModifiers         = 1 << 10,  // disable interaction if a key modifier is held
     ImGuiButtonFlags_NoHoldingActiveID      = 1 << 11,  // don't set ActiveId while holding the mouse (ImGuiButtonFlags_PressedOnClick only)
     ImGuiButtonFlags_PressedOnDragDropHold  = 1 << 12   // press when held into while we are drag and dropping another item (used by e.g. tree nodes, collapsing headers)
@@ -207,8 +207,8 @@ enum ImGuiColumnsFlags_
 enum ImGuiSelectableFlagsPrivate_
 {
     // NB: need to be in sync with last value of ImGuiSelectableFlags_
-    ImGuiSelectableFlags_Menu               = 1 << 3,
-    ImGuiSelectableFlags_MenuItem           = 1 << 4,
+    ImGuiSelectableFlags_Menu               = 1 << 3,   // -> PressedOnClick
+    ImGuiSelectableFlags_MenuItem           = 1 << 4,   // -> PressedOnRelease
     ImGuiSelectableFlags_Disabled           = 1 << 5,
     ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 6
 };
@@ -439,6 +439,7 @@ struct ImGuiContext
     ImVector<ImGuiWindow*>  WindowsSortBuffer;
     ImVector<ImGuiWindow*>  CurrentWindowStack;
     ImGuiStorage            WindowsById;
+    int                     WindowsActiveCount;
     ImGuiWindow*            CurrentWindow;                      // Being drawn into
     ImGuiWindow*            NavWindow;                          // Nav/focused window for navigation
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs
@@ -550,6 +551,7 @@ struct ImGuiContext
         Time = 0.0f;
         FrameCount = 0;
         FrameCountEnded = FrameCountRendered = -1;
+        WindowsActiveCount = 0;
         CurrentWindow = NULL;
         NavWindow = NULL;
         HoveredWindow = NULL;
@@ -723,7 +725,6 @@ struct IMGUI_API ImGuiWindow
     char*                   Name;
     ImGuiID                 ID;                                 // == ImHash(Name)
     ImGuiWindowFlags        Flags;                              // See enum ImGuiWindowFlags_
-    int                     OrderWithinParent;                  // Order within immediate parent window, if we are a child window. Otherwise 0.
     ImVec2                  PosFloat;
     ImVec2                  Pos;                                // Position rounded-up to nearest pixel
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
@@ -748,6 +749,8 @@ struct IMGUI_API ImGuiWindow
     bool                    SkipItems;                          // Set when items can safely be all clipped (e.g. window not visible or collapsed)
     bool                    Appearing;                          // Set during the frame where the window is appearing (or re-appearing)
     bool                    CloseButton;                        // Set when the window has a close button (p_open != NULL)
+    int                     BeginOrderWithinParent;             // Order within immediate parent window, if we are a child window. Otherwise 0.
+    int                     BeginOrderWithinContext;            // Order within entire imgui context. This is mostly used for debugging submission order related issues.
     int                     BeginCount;                         // Number of Begin() during the current frame (generally 0 or 1, 1+ if appending via multiple Begin/End pairs)
     ImGuiID                 PopupId;                            // ID in the popup stack when this window is used as a popup/menu (because we use generic Name/ID for recycling)
     int                     AutoFitFramesX, AutoFitFramesY;
@@ -809,8 +812,9 @@ struct ImGuiItemHoveredDataBackup
     ImRect      LastItemRect;
     bool        LastItemRectHoveredRect;
 
-    void Backup()  { ImGuiWindow* window = GImGui->CurrentWindow; LastItemId = window->DC.LastItemId; LastItemRect = window->DC.LastItemRect; LastItemRectHoveredRect = window->DC.LastItemRectHoveredRect; }
-    void Restore() { ImGuiWindow* window = GImGui->CurrentWindow; window->DC.LastItemId = LastItemId; window->DC.LastItemRect = LastItemRect; window->DC.LastItemRectHoveredRect = LastItemRectHoveredRect; }
+    ImGuiItemHoveredDataBackup() { Backup(); }
+    void Backup()        { ImGuiWindow* window = GImGui->CurrentWindow; LastItemId = window->DC.LastItemId; LastItemRect = window->DC.LastItemRect; LastItemRectHoveredRect = window->DC.LastItemRectHoveredRect; }
+    void Restore() const { ImGuiWindow* window = GImGui->CurrentWindow; window->DC.LastItemId = LastItemId; window->DC.LastItemRect = LastItemRect; window->DC.LastItemRectHoveredRect = LastItemRectHoveredRect; }
 };
 
 //-----------------------------------------------------------------------------
