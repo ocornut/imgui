@@ -6354,6 +6354,10 @@ void ImGui::PopID()
     window->IDStack.pop_back();
 }
 
+ImGuiID ImGui::GetID(const char* str_id, const char* str_id_end) {
+    return GImGui->CurrentWindow->GetID(ImStr(str_id, str_id_end));
+}
+
 ImGuiID ImGui::GetID(ImStr str_id)
 {
     return GImGui->CurrentWindow->GetID(str_id);
