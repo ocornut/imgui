@@ -673,7 +673,6 @@ static bool             DataTypeApplyOpFromText(const char* buf, const char* ini
 
 namespace ImGui
 {
-static void             ClearDragDrop();
 static void             FocusPreviousWindow();
 }
 
@@ -11151,7 +11150,7 @@ void ImGui::Value(const char* prefix, float v, const char* float_format)
 // DRAG AND DROP
 //-----------------------------------------------------------------------------
 
-static void ImGui::ClearDragDrop()
+void ImGui::ClearDragDrop()
 {
     ImGuiContext& g = *GImGui;
     g.DragDropActive = false;
@@ -11338,6 +11337,12 @@ bool ImGui::BeginDragDropTarget()
     g.DragDropTargetRect = window->DC.LastItemRect;
     g.DragDropTargetId = id;
     return true;
+}
+
+bool ImGui::IsDragDropPayloadBeingAccepted()
+{
+    ImGuiContext& g = *GImGui;
+    return g.DragDropActive && g.DragDropAcceptIdPrev != 0;
 }
 
 const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDropFlags flags)
