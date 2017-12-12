@@ -169,6 +169,9 @@ inline void operator delete(void*, ImPlacementNewDummy, void*) {}
 // Types
 //-----------------------------------------------------------------------------
 
+// Internal Drag and Drop payload types. String starting with '_' are reserved for Dear ImGui.
+#define IMGUI_PAYLOAD_TYPE_DOCKABLE         "_IMDOCK"   // ImGuiWindow* // [Internal] Docking/tabs
+
 enum ImGuiButtonFlags_
 {
     ImGuiButtonFlags_Repeat                 = 1 << 0,   // hold to repeat
@@ -182,7 +185,8 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_Disabled               = 1 << 8,   // disable interactions
     ImGuiButtonFlags_AlignTextBaseLine      = 1 << 9,   // vertically align button to match text baseline (ButtonEx() only)
     ImGuiButtonFlags_NoKeyModifiers         = 1 << 10,  // disable interaction if a key modifier is held
-    ImGuiButtonFlags_NoHoldingActiveID      = 1 << 11   // don't set ActiveId while holding the mouse (ImGuiButtonFlags_PressedOnClick only)
+    ImGuiButtonFlags_NoHoldingActiveID      = 1 << 11,  // don't set ActiveId while holding the mouse (ImGuiButtonFlags_PressedOnClick only)
+    ImGuiButtonFlags_PressedOnDragDropHold  = 1 << 12   // press when held into while we are drag and dropping another item (used by e.g. tree nodes, collapsing headers)
 };
 
 enum ImGuiSliderFlags_
@@ -485,6 +489,20 @@ struct ImGuiContext
     ImGuiMouseCursor        MouseCursor;
     ImGuiMouseCursorData    MouseCursorData[ImGuiMouseCursor_Count_];
 
+    // Drag and Drop
+    bool                    DragDropActive;
+    ImGuiDragDropFlags      DragDropSourceFlags;
+    int                     DragDropMouseButton;
+    ImGuiPayload            DragDropPayload;
+    ImRect                  DragDropTargetRect;
+    ImGuiID                 DragDropTargetId;
+    float                   DragDropAcceptIdCurrRectSurface;
+    ImGuiID                 DragDropAcceptIdCurr;               // Target item id (set at the time of accepting the payload)
+    ImGuiID                 DragDropAcceptIdPrev;               // Target item id from previous frame (we need to store this to allow for overlapping drag and drop targets)
+    int                     DragDropAcceptFrameCount;           // Last time a target expressed a desire to accept the source
+    ImVector<unsigned char> DragDropPayloadBufHeap;             // We don't expose the ImVector<> directly
+    unsigned char           DragDropPayloadBufLocal[8];
+
     // Widget state
     ImGuiTextEditState      InputTextState;
     ImFont                  InputTextPasswordFont;
@@ -565,6 +583,14 @@ struct ImGuiContext
         SetNextWindowFocus = false;
         SetNextTreeNodeOpenVal = false;
         SetNextTreeNodeOpenCond = 0;
+
+        DragDropActive = false;
+        DragDropSourceFlags = 0;
+        DragDropMouseButton = -1;
+        DragDropTargetId = 0;
+        DragDropAcceptIdPrev = DragDropAcceptIdCurr = 0;
+        DragDropAcceptFrameCount = -1;
+        memset(DragDropPayloadBufLocal, 0, sizeof(DragDropPayloadBufLocal));
 
         ScalarAsInputTextId = 0;
         ColorEditOptions = ImGuiColorEditFlags__OptionsDefault;
@@ -765,6 +791,7 @@ public:
     ImGuiID     GetID(const char* str, const char* str_end = NULL);
     ImGuiID     GetID(const void* ptr);
     ImGuiID     GetIDNoKeepAlive(const char* str, const char* str_end = NULL);
+    ImGuiID     GetIDFromRectangle(const ImRect& r_abs);
 
     // We don't use g.FontSize because the window may be != g.CurrentWidow.
     ImRect      Rect() const                            { return ImRect(Pos.x, Pos.y, Pos.x+Size.x, Pos.y+Size.y); }
@@ -840,6 +867,8 @@ namespace ImGui
     IMGUI_API void          Scrollbar(ImGuiLayoutType direction);
     IMGUI_API void          VerticalSeparator();        // Vertical separator, for menu bars (use current line height). not exposed because it is misleading what it doesn't have an effect on regular layout.
     IMGUI_API bool          SplitterBehavior(ImGuiID id, const ImRect& bb, ImGuiAxis axis, float* size1, float* size2, float min_size1, float min_size2, float hover_extend = 0.0f);
+
+    IMGUI_API bool          BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id);
 
     // FIXME-WIP: New Columns API
     IMGUI_API void          BeginColumns(const char* id, int count, ImGuiColumnsFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().

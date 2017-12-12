@@ -779,12 +779,19 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::ColorEdit4("MyColor##3", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | misc_flags);
 
             ImGui::Text("Color button with Custom Picker Popup:");
+
+            // Generate a dummy palette
             static bool saved_palette_inited = false;
             static ImVec4 saved_palette[32];
-            static ImVec4 backup_color;
             if (!saved_palette_inited)
                 for (int n = 0; n < IM_ARRAYSIZE(saved_palette); n++)
+                {
                     ImGui::ColorConvertHSVtoRGB(n / 31.0f, 0.8f, 0.8f, saved_palette[n].x, saved_palette[n].y, saved_palette[n].z);
+                    saved_palette[n].w = 1.0f; // Alpha
+                }
+            saved_palette_inited = true;
+
+            static ImVec4 backup_color;
             bool open_popup = ImGui::ColorButton("MyColor##3b", color, misc_flags);
             ImGui::SameLine();
             open_popup |= ImGui::Button("Palette");
@@ -813,8 +820,18 @@ void ImGui::ShowTestWindow(bool* p_open)
                     ImGui::PushID(n);
                     if ((n % 8) != 0)
                         ImGui::SameLine(0.0f, ImGui::GetStyle().ItemSpacing.y);
-                    if (ImGui::ColorButton("##palette", saved_palette[n], ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoTooltip, ImVec2(20,20)))
+                    if (ImGui::ColorButton("##palette", saved_palette[n], ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoTooltip, ImVec2(20,20)))
                         color = ImVec4(saved_palette[n].x, saved_palette[n].y, saved_palette[n].z, color.w); // Preserve alpha!
+
+                    if (ImGui::BeginDragDropTarget())
+                    {
+                        if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
+                            memcpy((float*)&saved_palette[n], payload->Data, sizeof(float) * 3);
+                        if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F))
+                            memcpy((float*)&saved_palette[n], payload->Data, sizeof(float) * 4);
+                        EndDragDropTarget();
+                    }
+
                     ImGui::PopID();
                 }
                 ImGui::EndGroup();
