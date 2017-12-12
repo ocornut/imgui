@@ -213,8 +213,9 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2017/12/23 (1.53) - marked IsRootWindowFocused() as obsolete in favor of using IsWindowFocused(ImGuiFocusedFlags_RootWindow).
-                     - marked IsRootWindowOrAnyChildFocused() as obsolete in favor of using IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows).
+ - 2017/12/13 (1.53) - renamed GetItemsLineHeightWithSpacing() to GetFrameHeightWithSpacing(). Kept redirection function (will obsolete).
+ - 2017/12/13 (1.53) - marked IsRootWindowFocused() as obsolete in favor of using IsWindowFocused(ImGuiFocusedFlags_RootWindow). Kept redirection function (will obsolete).
+                     - marked IsRootWindowOrAnyChildFocused() as obsolete in favor of using IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows). Kept redirection function (will obsolete).
  - 2017/12/12 (1.53) - renamed ImGuiTreeNodeFlags_AllowOverlapMode to ImGuiTreeNodeFlags_AllowItemOverlap. Kept redirection enum (will obsolete).
  - 2017/12/10 (1.53) - removed SetNextWindowContentWidth(), prefer using SetNextWindowContentSize(). Kept redirection function (will obsolete).
  - 2017/11/27 (1.53) - renamed ImGuiTextBuffer::append() helper to appendf(), appendv() to appendfv(). If you copied the 'Log' demo in your code, it uses appendv() so that needs to be renamed.
@@ -5754,7 +5755,7 @@ float ImGui::GetFrameHeight()
     return g.FontSize + g.Style.FramePadding.y * 2.0f;
 }
 
-float ImGui::GetItemsLineHeightWithSpacing()
+float ImGui::GetFrameHeightWithSpacing()
 {
     ImGuiContext& g = *GImGui;
     return g.FontSize + g.Style.FramePadding.y * 2.0f + g.Style.ItemSpacing.y;
