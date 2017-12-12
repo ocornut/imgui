@@ -24,7 +24,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: increase minimum size of a window with menus or fix the menu rendering so that it doesn't look odd.
  - window: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - window: expose contents size. (#1045)
- - window: resize from borders and/or all corners. (#822)
+ - window: resize from borders: support some form of outer padding to make it easier to grab borders. (#822)
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
  - window: refactor IsWindowFocused(), merge all three existing variants, add flags, similar to #1382.
  - window: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. 

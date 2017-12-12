@@ -179,12 +179,12 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_PressedOnClick         = 1 << 2,   // return true on click (default requires click+release)
     ImGuiButtonFlags_PressedOnRelease       = 1 << 3,   // return true on release (default requires click+release)
     ImGuiButtonFlags_PressedOnDoubleClick   = 1 << 4,   // return true on double-click (default requires click+release)
-    ImGuiButtonFlags_FlattenChilds          = 1 << 5,   // allow interactions even if a child window is overlapping
-    ImGuiButtonFlags_DontClosePopups        = 1 << 6,   // disable automatically closing parent popup on press // [UNUSED]
-    ImGuiButtonFlags_Disabled               = 1 << 7,   // disable interactions
-    ImGuiButtonFlags_AlignTextBaseLine      = 1 << 8,   // vertically align button to match text baseline (ButtonEx() only)
-    ImGuiButtonFlags_NoKeyModifiers         = 1 << 9,   // disable interaction if a key modifier is held
-    ImGuiButtonFlags_AllowOverlapMode       = 1 << 10,  // require previous frame HoveredId to either match id or be null before being usable
+    ImGuiButtonFlags_FlattenChildren        = 1 << 5,   // allow interactions even if a child window is overlapping
+    ImGuiButtonFlags_AllowItemOverlap       = 1 << 6,   // require previous frame HoveredId to either match id or be null before being usable, use along with SetItemAllowOverlap()
+    ImGuiButtonFlags_DontClosePopups        = 1 << 7,   // disable automatically closing parent popup on press // [UNUSED]
+    ImGuiButtonFlags_Disabled               = 1 << 8,   // disable interactions
+    ImGuiButtonFlags_AlignTextBaseLine      = 1 << 9,   // vertically align button to match text baseline (ButtonEx() only)
+    ImGuiButtonFlags_NoKeyModifiers         = 1 << 10,  // disable interaction if a key modifier is held
     ImGuiButtonFlags_NoHoldingActiveID      = 1 << 11,  // don't set ActiveId while holding the mouse (ImGuiButtonFlags_PressedOnClick only)
     ImGuiButtonFlags_PressedOnDragDropHold  = 1 << 12   // press when held into while we are drag and dropping another item (used by e.g. tree nodes, collapsing headers)
 };
@@ -772,7 +772,7 @@ struct IMGUI_API ImGuiWindow
     ImGuiStorage            StateStorage;
     float                   FontWindowScale;                    // Scale multiplier per-window
     ImDrawList*             DrawList;
-    ImGuiWindow*            ParentWindow;                       // Immediate parent in the window stack *regardless* of whether this window is a child window or not)
+    ImGuiWindow*            ParentWindow;                       // If we are a child window, this is pointing to our parent.
     ImGuiWindow*            RootWindow;                         // Generally point to ourself. If we are a child window, this is pointing to the first non-child parent window.
     ImGuiWindow*            RootNonPopupWindow;                 // Generally point to ourself. Used to display TitleBgActive color and for selecting which window to use for NavWindowing
 
@@ -826,11 +826,11 @@ namespace ImGui
     // - You are calling ImGui functions after ImGui::Render() and before the next ImGui::NewFrame(), which is also illegal.
     inline    ImGuiWindow*  GetCurrentWindowRead()      { ImGuiContext& g = *GImGui; return g.CurrentWindow; }
     inline    ImGuiWindow*  GetCurrentWindow()          { ImGuiContext& g = *GImGui; g.CurrentWindow->WriteAccessed = true; return g.CurrentWindow; }
-    IMGUI_API ImGuiWindow*  GetParentWindow();
     IMGUI_API ImGuiWindow*  FindWindowByName(const char* name);
     IMGUI_API void          FocusWindow(ImGuiWindow* window);
     IMGUI_API void          BringWindowToFront(ImGuiWindow* window);
     IMGUI_API void          BringWindowToBack(ImGuiWindow* window);
+    IMGUI_API bool          IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent);
 
     IMGUI_API void          Initialize();
 
