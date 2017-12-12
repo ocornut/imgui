@@ -249,6 +249,10 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/12/13 (1.53) - renamed GetItemsLineHeightWithSpacing() to GetFrameHeightWithSpacing(). Kept redirection function (will obsolete).
+ - 2017/12/13 (1.53) - marked IsRootWindowFocused() as obsolete in favor of using IsWindowFocused(ImGuiFocusedFlags_RootWindow). Kept redirection function (will obsolete).
+                     - marked IsRootWindowOrAnyChildFocused() as obsolete in favor of using IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows). Kept redirection function (will obsolete).
+ - 2017/12/12 (1.53) - renamed ImGuiTreeNodeFlags_AllowOverlapMode to ImGuiTreeNodeFlags_AllowItemOverlap. Kept redirection enum (will obsolete).
  - 2017/12/10 (1.53) - removed SetNextWindowContentWidth(), prefer using SetNextWindowContentSize(). Kept redirection function (will obsolete).
  - 2017/11/27 (1.53) - renamed ImGuiTextBuffer::append() helper to appendf(), appendv() to appendfv(). If you copied the 'Log' demo in your code, it uses appendv() so that needs to be renamed.
  - 2017/11/18 (1.53) - Style, Begin: removed ImGuiWindowFlags_ShowBorders window flag. Borders are now fully set up in the ImGuiStyle structure (see e.g. style.FrameBorderSize, style.WindowBorderSize). Use ImGui::ShowStyleEditor() to look them up.
@@ -256,7 +260,7 @@
  - 2017/11/18 (1.53) - Style: removed ImGuiCol_ComboBg in favor of combo boxes using ImGuiCol_PopupBg for consistency.
  - 2017/11/18 (1.53) - Style: renamed ImGuiCol_ChildWindowBg to ImGuiCol_ChildBg.
  - 2017/11/18 (1.53) - Style: renamed style.ChildWindowRounding to style.ChildRounding, ImGuiStyleVar_ChildWindowRounding to ImGuiStyleVar_ChildRounding.
- - 2017/11/02 (1.53) - marked IsRootWindowOrAnyChildHovered() as obsolete is favor of using IsWindowHovered(ImGuiHoveredFlags_FlattenChilds);
+ - 2017/11/02 (1.53) - marked IsRootWindowOrAnyChildHovered() as obsolete is favor of using IsWindowHovered(ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows);
  - 2017/10/24 (1.52) - renamed IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS/IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS to IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS/IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS for consistency.
  - 2017/10/20 (1.52) - changed IsWindowHovered() default parameters behavior to return false if an item is active in another window (e.g. click-dragging item from another window to this window). You can use the newly introduced IsWindowHovered() flags to requests this specific behavior if you need it.
  - 2017/10/20 (1.52) - marked IsItemHoveredRect()/IsMouseHoveringWindow() as obsolete, in favor of using the newly introduced flags for IsItemHovered() and IsWindowHovered(). See https://github.com/ocornut/imgui/issues/1382 for details.
@@ -1958,13 +1962,6 @@ static void SetCurrentWindow(ImGuiWindow* window)
         g.FontSize = window->CalcFontSize();
 }
 
-ImGuiWindow* ImGui::GetParentWindow()
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.CurrentWindowStack.Size >= 2);
-    return g.CurrentWindowStack[(unsigned int)g.CurrentWindowStack.Size - 2];
-}
-
 static void SetNavID(ImGuiID id, int nav_layer)
 {
     ImGuiContext& g = *GImGui;
@@ -2351,7 +2348,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
     // Test for bounding box overlap, as updated as ItemAdd()
     if (!window->DC.LastItemRectHoveredRect)
         return false;
-    IM_ASSERT((flags & ImGuiHoveredFlags_FlattenChilds) == 0);   // Flags not supported by this function
+    IM_ASSERT((flags & (ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows)) == 0);   // Flags not supported by this function
 
     // Test if we are hovering the right window (our window could be behind another window)
     // [2017/10/16] Reverted commit 344d48be3 and testing RootWindow instead. I believe it is correct to NOT test for RootWindow but this leaves us unable to use IsItemHovered() after EndChild() itself.
@@ -4553,11 +4550,11 @@ void ImGui::EndTooltip()
 void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiWindow* parent_window = g.CurrentWindow;
     int current_stack_size = g.CurrentPopupStack.Size;
     ImVec2 mouse_pos = g.IO.MousePos;
     ImVec2 popup_pos = (!g.NavDisableHighlight && g.NavDisableMouseHover) ? NavCalcPreferredMousePos() : mouse_pos;
-    ImGuiPopupRef popup_ref = ImGuiPopupRef(id, window, window->GetID("##Menus"), popup_pos, mouse_pos); // Tagged as new ref because constructor sets Window to NULL (we are passing the ParentWindow info here)
+    ImGuiPopupRef popup_ref = ImGuiPopupRef(id, parent_window, parent_window->GetID("##Menus"), popup_pos, mouse_pos); // Tagged as new ref because constructor sets Window to NULL.
     if (g.OpenPopupStack.Size < current_stack_size + 1)
         g.OpenPopupStack.push_back(popup_ref);
     else if (reopen_existing || g.OpenPopupStack[current_stack_size].PopupId != id)
@@ -4568,7 +4565,7 @@ void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
         // When reopening a popup we first refocus its parent, otherwise if its parent is itself a popup it would get closed by CloseInactivePopups().
         // This is equivalent to what ClosePopupToLevel() does.
         if (g.OpenPopupStack[current_stack_size].PopupId == id)
-            FocusWindow(window);
+            FocusWindow(parent_window);
     }
 }
 
@@ -5252,7 +5249,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
 
     // Parent window is latched only on the first call to Begin() of the frame, so further append-calls can be done from a different window stack
-    ImGuiWindow* parent_window = first_begin_of_the_frame ? (!g.CurrentWindowStack.empty() ? g.CurrentWindowStack.back() : NULL) : window->ParentWindow;
+    ImGuiWindow* parent_window = first_begin_of_the_frame ? ((flags & ImGuiWindowFlags_ChildWindow) && !g.CurrentWindowStack.empty() ? g.CurrentWindowStack.back() : NULL) : window->ParentWindow;
     IM_ASSERT(parent_window != NULL || !(flags & ImGuiWindowFlags_ChildWindow));
 
     // Add to stack
@@ -5326,8 +5323,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     {
         // Initialize
         window->ParentWindow = parent_window;
-        window->RootWindow = !(flags & ImGuiWindowFlags_ChildWindow) ? window : parent_window->RootWindow;
-        window->RootNonPopupWindow = !(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)) || (flags & ImGuiWindowFlags_Modal) ? window : parent_window->RootNonPopupWindow; // Used to display TitleBgActive color and for selecting which window to use for NavWindowing
+        window->RootWindow = ((flags & ImGuiWindowFlags_ChildWindow) && parent_window) ? parent_window->RootWindow : window;
+        window->RootNonPopupWindow = !(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)) || (flags & ImGuiWindowFlags_Modal) || (parent_window == NULL) ? window : parent_window->RootNonPopupWindow; // Used to display TitleBgActive color and for selecting which window to use for NavWindowing
         window->RootNavWindow = window;
         //while (window->RootNavWindow->Flags & ImGuiWindowFlags_NavFlattened)
         //    window->RootNavWindow = window->RootNavWindow->ParentWindow;
@@ -5474,11 +5471,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // This is how we end up with child menus appearing (most-commonly) on the right of the parent menu.
             IM_ASSERT(window_pos_set_by_api);
             float horizontal_overlap = style.ItemSpacing.x; // We want some overlap to convey the relative depth of each popup (currently the amount of overlap it is hard-coded to style.ItemSpacing.x, may need to introduce another style value).
+            ImGuiWindow* parent_menu = g.CurrentWindowStack[g.CurrentWindowStack.Size - 2];
             ImRect rect_to_avoid;
-            if (parent_window->DC.MenuBarAppending)
-                rect_to_avoid = ImRect(-FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight(), FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight() + parent_window->MenuBarHeight());
+            if (parent_menu->DC.MenuBarAppending)
+                rect_to_avoid = ImRect(-FLT_MAX, parent_menu->Pos.y + parent_menu->TitleBarHeight(), FLT_MAX, parent_menu->Pos.y + parent_menu->TitleBarHeight() + parent_menu->MenuBarHeight());
             else
-                rect_to_avoid = ImRect(parent_window->Pos.x + horizontal_overlap, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - horizontal_overlap - parent_window->ScrollbarSizes.x, FLT_MAX);
+                rect_to_avoid = ImRect(parent_menu->Pos.x + horizontal_overlap, -FLT_MAX, parent_menu->Pos.x + parent_menu->Size.x - horizontal_overlap - parent_menu->ScrollbarSizes.x, FLT_MAX);
             window->PosFloat = FindBestWindowPosForPopup(window->PosFloat, window->Size, &window->AutoPosLastDirection, rect_to_avoid);
         }
         else if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api && window_just_appearing_after_hidden_for_resize)
@@ -5581,7 +5579,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                     ImRect resize_rect(corner, corner + grip.InnerDir * grip_hover_size);
                     resize_rect.FixInverted();
                     bool hovered, held;
-                    ButtonBehavior(resize_rect, window->GetID((void*)(intptr_t)resize_grip_n), &hovered, &held, ImGuiButtonFlags_FlattenChilds | ImGuiButtonFlags_NoNavFocus);
+                    ButtonBehavior(resize_rect, window->GetID((void*)(intptr_t)resize_grip_n), &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_NoNavFocus);
                     if (hovered || held)
                         g.MouseCursor = (resize_grip_n & 1) ? ImGuiMouseCursor_ResizeNESW : ImGuiMouseCursor_ResizeNWSE;
 
@@ -5607,7 +5605,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                     const float BORDER_APPEAR_TIMER = 0.05f; // Reduce visual noise
                     bool hovered, held;
                     ImRect border_rect = GetBorderRect(window, border_n, grip_hover_size, BORDER_SIZE);
-                    ButtonBehavior(border_rect, window->GetID((void*)(intptr_t)(border_n+4)), &hovered, &held, ImGuiButtonFlags_FlattenChilds | ImGuiButtonFlags_NoNavFocus);
+                    ButtonBehavior(border_rect, window->GetID((void*)(intptr_t)(border_n+4)), &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_NoNavFocus);
                     if ((hovered && g.HoveredIdTimer > BORDER_APPEAR_TIMER) || held)
                     {
                         g.MouseCursor = (border_n & 1) ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS;
@@ -6413,20 +6411,43 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     return "Unknown";
 }
 
+bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent)
+{
+    if (window->RootWindow == potential_parent)
+        return true;
+    while (window != NULL)
+    {
+        if (window == potential_parent)
+            return true;
+        window = window->ParentWindow;
+    }
+    return false;
+}
+
 bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
 {
     IM_ASSERT((flags & ImGuiHoveredFlags_AllowWhenOverlapped) == 0);   // Flags not supported by this function
     ImGuiContext& g = *GImGui;
-    if (flags & ImGuiHoveredFlags_FlattenChilds)
+    switch (flags & (ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows))
     {
+    case ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows:
         if (g.HoveredRootWindow != g.CurrentWindow->RootWindow)
             return false;
-    }
-    else
-    {
+        break;
+    case ImGuiHoveredFlags_RootWindow:
+        if (g.HoveredWindow != g.CurrentWindow->RootWindow)
+            return false;
+        break;
+    case ImGuiHoveredFlags_ChildWindows:
+        if (g.HoveredWindow == NULL || !IsWindowChildOf(g.HoveredWindow, g.CurrentWindow))
+            return false;
+        break;
+    default:
         if (g.HoveredWindow != g.CurrentWindow)
             return false;
+        break;
     }
+
     if (!IsWindowContentHoverable(g.HoveredRootWindow, flags))
         return false;
     if (!(flags & ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
@@ -6435,25 +6456,22 @@ bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
     return true;
 }
 
-bool ImGui::IsWindowFocused()
+bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.CurrentWindow);     // Not inside a Begin()/End()
-    return g.NavWindow == g.CurrentWindow;
-}
 
-bool ImGui::IsRootWindowFocused()
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.CurrentWindow);     // Not inside a Begin()/End()
-    return g.NavWindow == g.CurrentWindow->RootWindow;
-}
-
-bool ImGui::IsRootWindowOrAnyChildFocused()
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.CurrentWindow);     // Not inside a Begin()/End()
-    return g.NavWindow && g.NavWindow->RootWindow == g.CurrentWindow->RootWindow;
+    switch (flags & (ImGuiFocusedFlags_RootWindow | ImGuiHoveredFlags_ChildWindows))
+    {
+    case ImGuiFocusedFlags_RootWindow | ImGuiHoveredFlags_ChildWindows:
+        return g.NavWindow && g.CurrentWindow->RootWindow == g.NavWindow->RootWindow;
+    case ImGuiFocusedFlags_RootWindow:
+        return g.CurrentWindow->RootWindow == g.NavWindow;
+    case ImGuiHoveredFlags_ChildWindows:
+        return g.NavWindow && IsWindowChildOf(g.NavWindow, g.CurrentWindow);
+    default:
+        return g.CurrentWindow == g.NavWindow;
+    }
 }
 
 float ImGui::GetWindowWidth()
@@ -6712,7 +6730,13 @@ float ImGui::GetTextLineHeightWithSpacing()
     return g.FontSize + g.Style.ItemSpacing.y;
 }
 
-float ImGui::GetItemsLineHeightWithSpacing()
+float ImGui::GetFrameHeight()
+{
+    ImGuiContext& g = *GImGui;
+    return g.FontSize + g.Style.FramePadding.y * 2.0f;
+}
+
+float ImGui::GetFrameHeightWithSpacing()
 {
     ImGuiContext& g = *GImGui;
     return g.FontSize + g.Style.FramePadding.y * 2.0f + g.Style.ItemSpacing.y;
@@ -7149,17 +7173,17 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         flags |= ImGuiButtonFlags_PressedOnClickRelease;
 
     ImGuiWindow* backup_hovered_window = g.HoveredWindow;
-    if ((flags & ImGuiButtonFlags_FlattenChilds) && g.HoveredRootWindow == window)
+    if ((flags & ImGuiButtonFlags_FlattenChildren) && g.HoveredRootWindow == window)
         g.HoveredWindow = window;
 
     bool pressed = false;
     bool hovered = ItemHoverable(bb, id);
 
-    if ((flags & ImGuiButtonFlags_FlattenChilds) && g.HoveredRootWindow == window)
+    if ((flags & ImGuiButtonFlags_FlattenChildren) && g.HoveredRootWindow == window)
         g.HoveredWindow = backup_hovered_window;
 
     // AllowOverlap mode (rarely used) requires previous frame HoveredId to be null or to match. This allows using patterns where a later submitted widget overlaps a previous one.
-    if (hovered && (flags & ImGuiButtonFlags_AllowOverlapMode) && (g.HoveredIdPreviousFrame != id && g.HoveredIdPreviousFrame != 0))
+    if (hovered && (flags & ImGuiButtonFlags_AllowItemOverlap) && (g.HoveredIdPreviousFrame != id && g.HoveredIdPreviousFrame != 0))
         hovered = false;
 
     if (hovered)
@@ -7658,7 +7682,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // - OpenOnDoubleClick .............. double-click anywhere to open
     // - OpenOnArrow .................... single-click on arrow to open
     // - OpenOnDoubleClick|OpenOnArrow .. single-click on arrow or double-click anywhere to open
-    ImGuiButtonFlags button_flags = ImGuiButtonFlags_NoKeyModifiers | ((flags & ImGuiTreeNodeFlags_AllowOverlapMode) ? ImGuiButtonFlags_AllowOverlapMode : 0);
+    ImGuiButtonFlags button_flags = ImGuiButtonFlags_NoKeyModifiers | ((flags & ImGuiTreeNodeFlags_AllowItemOverlap) ? ImGuiButtonFlags_AllowItemOverlap : 0);
     if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
         button_flags |= ImGuiButtonFlags_PressedOnDoubleClick | ((flags & ImGuiTreeNodeFlags_OpenOnArrow) ? ImGuiButtonFlags_PressedOnClickRelease : 0);
 
@@ -7692,7 +7716,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             window->DC.StateStorage->SetInt(id, is_open);
         }
     }
-    if (flags & ImGuiTreeNodeFlags_AllowOverlapMode)
+    if (flags & ImGuiTreeNodeFlags_AllowItemOverlap)
         SetItemAllowOverlap();
 
     // Render
@@ -7761,7 +7785,7 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_open, ImGuiTreeNodeFlags
         return false;
 
     ImGuiID id = window->GetID(label);
-    bool is_open = TreeNodeBehavior(id, flags | ImGuiTreeNodeFlags_CollapsingHeader | ImGuiTreeNodeFlags_NoTreePushOnOpen | (p_open ? ImGuiTreeNodeFlags_AllowOverlapMode : 0), label);
+    bool is_open = TreeNodeBehavior(id, flags | ImGuiTreeNodeFlags_CollapsingHeader | ImGuiTreeNodeFlags_NoTreePushOnOpen | (p_open ? ImGuiTreeNodeFlags_AllowItemOverlap : 0), label);
     if (p_open)
     {
         // Create a small overlapping close button // FIXME: We can evolve this into user accessible helpers to add extra buttons on title bars, headers, etc.
@@ -10013,12 +10037,6 @@ bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, co
     return InputTextEx(label, buf, (int)buf_size, size, flags | ImGuiInputTextFlags_Multiline, callback, user_data);
 }
 
-static inline float SmallSquareSize()
-{
-    ImGuiContext& g = *GImGui;
-    return g.FontSize + g.Style.FramePadding.y * 2.0f;
-}
-
 // NB: scalar_format here must be a simple "%xx" format string with no prefix/suffix (unlike the Drag/Slider functions "display_format" argument)
 bool ImGui::InputScalarEx(const char* label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, const char* scalar_format, ImGuiInputTextFlags extra_flags)
 {
@@ -10032,7 +10050,7 @@ bool ImGui::InputScalarEx(const char* label, ImGuiDataType data_type, void* data
 
     BeginGroup();
     PushID(label);
-    const ImVec2 button_sz = ImVec2(SmallSquareSize(), SmallSquareSize());
+    const ImVec2 button_sz = ImVec2(GetFrameHeight(), GetFrameHeight());
     if (step_ptr)
         PushItemWidth(ImMax(1.0f, CalcItemWidth() - (button_sz.x + style.ItemInnerSpacing.x)*2));
 
@@ -10211,7 +10229,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     bool pressed = ButtonBehavior(frame_bb, id, &hovered, &held);
     bool popup_open = IsPopupOpen(id);
 
-    const float arrow_size = SmallSquareSize();
+    const float arrow_size = GetFrameHeight();
     const ImRect value_bb(frame_bb.Min, frame_bb.Max - ImVec2(arrow_size, 0.0f));
     RenderNavHighlight(frame_bb, id);
     RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
@@ -10523,7 +10541,7 @@ bool ImGui::ListBoxHeader(const char* label, int items_count, int height_in_item
 
 void ImGui::ListBoxFooter()
 {
-    ImGuiWindow* parent_window = GetParentWindow();
+    ImGuiWindow* parent_window = GetCurrentWindow()->ParentWindow;
     const ImRect bb = parent_window->DC.LastItemRect;
     const ImGuiStyle& style = GetStyle();
 
@@ -10962,7 +10980,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
 
     ImGuiContext& g = *GImGui;
     const ImGuiID id = window->GetID(desc_id);
-    float default_size = SmallSquareSize();
+    float default_size = GetFrameHeight();
     if (size.x == 0.0f)
         size.x = default_size;
     if (size.y == 0.0f)
@@ -11073,7 +11091,7 @@ static void ColorPickerOptionsPopup(ImGuiColorEditFlags flags, const float* ref_
     ImGuiContext& g = *GImGui;
     if (allow_opt_picker)
     {
-        ImVec2 picker_size(g.FontSize * 8, ImMax(g.FontSize * 8 - (SmallSquareSize() + g.Style.ItemInnerSpacing.x), 1.0f)); // FIXME: Picker size copied from main picker function
+        ImVec2 picker_size(g.FontSize * 8, ImMax(g.FontSize * 8 - (ImGui::GetFrameHeight() + g.Style.ItemInnerSpacing.x), 1.0f)); // FIXME: Picker size copied from main picker function
         ImGui::PushItemWidth(picker_size.x);
         for (int picker_type = 0; picker_type < 2; picker_type++)
         {
@@ -11113,7 +11131,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    const float square_sz = SmallSquareSize();
+    const float square_sz = GetFrameHeight();
     const float w_extra = (flags & ImGuiColorEditFlags_NoSmallPreview) ? 0.0f : (square_sz + style.ItemInnerSpacing.x);
     const float w_items_all = CalcItemWidth() - w_extra;
     const char* label_display_end = FindRenderedTextEnd(label);
@@ -11351,7 +11369,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     int components = (flags & ImGuiColorEditFlags_NoAlpha) ? 3 : 4;
     bool alpha_bar = (flags & ImGuiColorEditFlags_AlphaBar) && !(flags & ImGuiColorEditFlags_NoAlpha);
     ImVec2 picker_pos = window->DC.CursorPos;
-    float square_sz = SmallSquareSize();
+    float square_sz = GetFrameHeight();
     float bars_width = square_sz; // Arbitrary smallish width of Hue/Alpha picking bars
     float sv_picker_size = ImMax(bars_width * 1, CalcItemWidth() - (alpha_bar ? 2 : 1) * (bars_width + style.ItemInnerSpacing.x)); // Saturation/Value picking box
     float bar0_pos_x = picker_pos.x + sv_picker_size + style.ItemInnerSpacing.x;
@@ -11696,7 +11714,7 @@ bool ImGui::SplitterBehavior(ImGuiID id, const ImRect& bb, ImGuiAxis axis, float
     bool hovered, held;
     ImRect bb_interact = bb;
     bb_interact.Expand(axis == ImGuiAxis_Y ? ImVec2(0.0f, hover_extend) : ImVec2(hover_extend, 0.0f));
-    ButtonBehavior(bb_interact, id, &hovered, &held, ImGuiButtonFlags_FlattenChilds | ImGuiButtonFlags_AllowOverlapMode);
+    ButtonBehavior(bb_interact, id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap);
     if (g.ActiveId != id)
         SetItemAllowOverlap();
 
