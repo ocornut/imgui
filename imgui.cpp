@@ -4794,8 +4794,9 @@ bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
     ImGuiWindow* window = GImGui->CurrentWindow;
     ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
     IM_ASSERT(id != 0);                                                  // However, you cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
-    if (IsMouseClicked(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-        OpenPopupEx(id, true);
+    if (IsMouseClicked(mouse_button))
+        if (IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+            OpenPopupEx(id, true);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize);
 }
 
@@ -11525,9 +11526,10 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             value_changed = value_changed_h = true;
         }
     }
+
+    // Alpha bar logic
     if (alpha_bar)
     {
-        // Alpha bar logic
         SetCursorScreenPos(ImVec2(bar1_pos_x, picker_pos.y));
         InvisibleButton("alpha", ImVec2(bars_width, sv_picker_size));
         if (IsItemActive())
