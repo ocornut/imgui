@@ -325,39 +325,38 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
             {
                 switch(LOWORD(lParam))
                 {
-                case 0: //move
-                    SetCursor(g_NativeCursors[ImGuiMouseCursor_Move]);
-                    ImGui::SetMouseCursor(ImGuiMouseCursor_Move);
-                    break;
-                case 1: //window area
+                case HTCLIENT: //window area
                     SetCursor(g_NativeCursors[ImGui::GetMouseCursor()]);
                     g_LastCursorSet = ImGui::GetMouseCursor();
                     break;
-                case 2: //title bar
-                case 3: //window icon title bar
-                case 8: //minimize button
-                case 9: //maximize button
-                case 20: //close window button
+                case HTNOWHERE:
+                case HTCAPTION: //title bar
+                case HTMENU:
+                case HTSYSMENU: //window icon title bar
+                case HTMINBUTTON: //minimize button
+                case HTMAXBUTTON: //maximize button
+                case HTBORDER:
+                case HTCLOSE: //close window button
                     SetCursor(g_NativeCursors[ImGuiMouseCursor_Arrow]);
                     ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
                     break;
-                case 10: //left border
-                case 11: //right border
+                case HTLEFT: //left border
+                case HTRIGHT: //right border
                     SetCursor(g_NativeCursors[ImGuiMouseCursor_ResizeEW]);
                     ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
                     break;
-                case 12: //top border
-                case 15: //bottom border
+                case HTTOP: //top border
+                case HTBOTTOM: //bottom border
                     SetCursor(g_NativeCursors[ImGuiMouseCursor_ResizeNS]);
                     ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
                     break;
-                case 14: //top right
-                case 16: //bottom left
+                case HTTOPRIGHT: //top right
+                case HTBOTTOMLEFT: //bottom left
                     SetCursor(g_NativeCursors[ImGuiMouseCursor_ResizeNESW]);
                     ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
                     break;
-                case 13: //top left
-                case 17: //bottom right
+                case HTTOPLEFT: //top left
+                case HTBOTTOMRIGHT: //bottom right
                     SetCursor(g_NativeCursors[ImGuiMouseCursor_ResizeNWSE]);
                     ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNWSE);
                     break;
