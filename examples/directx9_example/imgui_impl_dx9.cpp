@@ -73,8 +73,8 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        const ImDrawVert* vtx_src = &cmd_list->VtxBuffer[0];
-        for (int i = 0; i < cmd_list->VtxBuffer.size(); i++)
+        const ImDrawVert* vtx_src = cmd_list->VtxBuffer.Data;
+        for (int i = 0; i < cmd_list->VtxBuffer.Size; i++)
         {
             vtx_dst->pos[0] = vtx_src->pos.x;
             vtx_dst->pos[1] = vtx_src->pos.y;
@@ -85,14 +85,23 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
             vtx_dst++;
             vtx_src++;
         }
-        memcpy(idx_dst, &cmd_list->IdxBuffer[0], cmd_list->IdxBuffer.size() * sizeof(ImDrawIdx));
-        idx_dst += cmd_list->IdxBuffer.size();
+        memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+        idx_dst += cmd_list->IdxBuffer.Size;
     }
     g_pVB->Unlock();
     g_pIB->Unlock();
     g_pd3dDevice->SetStreamSource(0, g_pVB, 0, sizeof(CUSTOMVERTEX));
     g_pd3dDevice->SetIndices(g_pIB);
     g_pd3dDevice->SetFVF(D3DFVF_CUSTOMVERTEX);
+
+    // Setup viewport
+    D3DVIEWPORT9 vp;
+    vp.X = vp.Y = 0;
+    vp.Width = (DWORD)io.DisplaySize.x;
+    vp.Height = (DWORD)io.DisplaySize.y;
+    vp.MinZ = 0.0f;
+    vp.MaxZ = 1.0f;
+    g_pd3dDevice->SetViewport(&vp);
 
     // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
     g_pd3dDevice->SetPixelShader(NULL);
@@ -138,7 +147,7 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++)
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
@@ -150,11 +159,11 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
                 const RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
                 g_pd3dDevice->SetTexture(0, (LPDIRECT3DTEXTURE9)pcmd->TextureId);
                 g_pd3dDevice->SetScissorRect(&r);
-                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.size(), idx_offset, pcmd->ElemCount/3);
+                g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.Size, idx_offset, pcmd->ElemCount/3);
             }
             idx_offset += pcmd->ElemCount;
         }
-        vtx_offset += cmd_list->VtxBuffer.size();
+        vtx_offset += cmd_list->VtxBuffer.Size;
     }
 
     // Restore the DX9 state
@@ -302,12 +311,14 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
         g_pIB->Release();
         g_pIB = NULL;
     }
-    if (LPDIRECT3DTEXTURE9 tex = (LPDIRECT3DTEXTURE9)ImGui::GetIO().Fonts->TexID)
-    {
-        tex->Release();
-        ImGui::GetIO().Fonts->TexID = 0;
-    }
+
+    // At this point note that we set ImGui::GetIO().Fonts->TexID to be == g_FontTexture, so clear both.
+    ImGuiIO& io = ImGui::GetIO();
+    IM_ASSERT(g_FontTexture == io.Fonts->TexID);
+    if (g_FontTexture)
+        g_FontTexture->Release();
     g_FontTexture = NULL;
+    io.Fonts->TexID = NULL;
 }
 
 void ImGui_ImplDX9_NewFrame()
@@ -339,7 +350,8 @@ void ImGui_ImplDX9_NewFrame()
     // io.MouseWheel : filled by WM_MOUSEWHEEL events
 
     // Hide OS mouse cursor if ImGui is drawing it
-    SetCursor(io.MouseDrawCursor ? NULL : LoadCursor(NULL, IDC_ARROW));
+    if (io.MouseDrawCursor)
+        SetCursor(NULL);
 
     // Start the frame
     ImGui::NewFrame();

@@ -8,11 +8,14 @@ Third party languages and frameworks bindings: https://github.com/ocornut/imgui/
 
 TL;DR; 
  - Newcomers, read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup ImGui in your codebase.
- - Refer to 'opengl_example' to understand how the library is setup, it is the simplest one.
+ - To LEARN how the library is setup, you may refer to 'opengl2_example' because is the simplest one.
    The other examples requires more boilerplate and are harder to read.
+   However, USE 'opengl3_example' in your application if you are using any modern OpenGL3+ calls.
+   Mixing old fixed pipeline OpenGL2 and programmable pipeline OpenGL3+ isn't well supported by some drivers.
+   If you are not sure, in doubt, use 'opengl3_example'.
  - If you are using of the backend provided here, so you can copy the imgui_impl_xxx.cpp/h files
    to your project and use them unmodified.
- - If you have your own engine, you probably want to start from 'opengl_example' and adapt it to 
+ - If you have your own engine, you probably want to start from one of the OpenGL example and adapt it to 
    your engine, but you can read the other examples as well.
 
 ImGui is highly portable and only requires a few things to run:
@@ -36,21 +39,23 @@ ImGui has zero frame of lag for most behaviors and one frame of lag for some beh
 At 60 FPS your experience should be pleasant. Consider that OS mouse cursors are typically drawn through 
 a specific hardware accelerated route and may feel smoother than other GPU rendered contents. You may 
 experiment with the io.MouseDrawCursor flag to request ImGui to draw a mouse cursor itself, to visualize 
-the lag between an hardware cursor and a software cursor. It might be beneficial to the user experience
+the lag between a hardware cursor and a software cursor. It might be beneficial to the user experience
 to switch to a software rendered cursor when an interactive drag is in progress. 
 Also note that some setup or GPU drivers may be causing extra lag (possibly by enforcing triple buffering), 
 leaving you with no option but sadness/anger (Intel GPU drivers were reported as such).
 
-opengl_example/
-    OpenGL example, using GLFW + fixed pipeline.
-    This is simple and should work for all OpenGL enabled applications.
-    Prefer following this example to learn how ImGui works!
-	(You can use this code in a GL3/GL4 context but make sure you disable the programmable pipeline
-	by calling "glUseProgram(0)" before ImGui::Render.)
+opengl2_example/
+    GLFW + OpenGL example (old, fixed graphic pipeline).
+    This is only provided as a reference to learn how ImGui integration works, because it is easier to read.
+    However, if your code is using GL3+ context, using this may confuse your driver. Please use the GL3 example below.
+	(You might be able to use this code in a GL3/GL4 context but make sure you disable the programmable 
+	pipeline by calling "glUseProgram(0)" before ImGui::Render. It appears that many librairies and drivers
+	are having issues mixing GL2 calls and newer GL3/GL4 calls. So it isn't recommended that you use that.)
 
 opengl3_example/
-    OpenGL example, using GLFW/GL3W + programmable pipeline.
-    This uses more modern OpenGL calls and custom shaders. It's more messy.
+    GLFW + OpenGL example (programmable pipeline, binding modern functions with GL3W).
+    This uses more modern OpenGL calls and custom shaders. 
+    Prefer using that if you are using modern OpenGL3/4 in your application.
 
 directx9_example/
     DirectX9 example, Windows only.
@@ -68,8 +73,8 @@ apple_example/
     On iOS, Using Synergy to access keyboard/mouse data from server computer.
     Synergy keyboard integration is rather hacky.
 
-sdl_opengl_example/
-    SDL2 + OpenGL example.
+sdl_opengl2_example/
+    SDL2 + OpenGL example (old fixed pipeline).
 
 sdl_opengl3_example/
     SDL2 + OpenGL3 example.

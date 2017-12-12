@@ -15,16 +15,24 @@ directx11_example/Debug/*
 directx11_example/Release/*
 directx11_example/ipch/*
 directx11_example/x64/*
-opengl_example/Debug/*
-opengl_example/Release/*
-opengl_example/ipch/*
-opengl_example/x64/*
-opengl_example/opengl_example
+opengl2_example/Debug/*
+opengl2_example/Release/*
+opengl2_example/ipch/*
+opengl2_example/x64/*
+opengl2_example/opengl_example
 opengl3_example/Debug/*
 opengl3_example/Release/*
 opengl3_example/ipch/*
 opengl3_example/x64/*
 opengl3_example/opengl3_example
+sdl_opengl2_example/Debug/*
+sdl_opengl2_example/Release/*
+sdl_opengl2_example/ipch/*
+sdl_opengl2_example/x64/*
+sdl_opengl3_example/Debug/*
+sdl_opengl3_example/Release/*
+sdl_opengl3_example/ipch/*
+sdl_opengl3_example/x64/*
 *.opensdf
 *.sdf
 *.suo
@@ -33,6 +41,9 @@ opengl3_example/opengl3_example
 *.obj
 *.exe
 *.pdb
+*.ilk
+*.VC.db
+*.VC.VC.opendb
 
 ## Ini files
 imgui.ini

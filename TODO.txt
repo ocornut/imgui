@@ -1,0 +1,237 @@
+dear imgui
+ISSUES & TODO LIST
+
+Issue numbers (#) refer to github issues listed at https://github.com/ocornut/imgui/issues/XXXX
+The list below consist mostly of ideas noted down before they are requested/discussed by users (at which point they usually exist on the github issue tracker).
+It's mostly a bunch of personal notes, probably incomplete. Feel free to query if you have any questions.
+
+ - doc/test: add a proper documentation+regression testing system (#435)
+ - doc/test: checklist app to verify binding/integration of imgui (test inputs, rendering, callback, etc.).
+ - project: folder or separate repository with maintained helpers (e.g. imgui_memory_editor.h, imgui_stl.h, maybe imgui_dock would be there?)
+
+ - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis). (#690)
+ - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. perhaps a lightweight explicit cleanup pass.
+ - window: auto-fit feedback loop when user relies on any dynamic layout (window width multiplier, column) appears weird to end-user. clarify.
+ - window: allow resizing of child windows (possibly given min/max for each axis?.)
+ - window: background options for child windows, border option (disable rounding).
+ - window: resizing from any sides? + mouse cursor directives for app. (#822)
+!- window: begin with *p_open == false should return false.
+ - window: get size/pos helpers given names (see discussion in #249)
+ - window: a collapsed window can be stuck behind the main menu bar?
+ - window: when window is very small, prioritize resize button over close button.
+ - window: detect extra End() call that pop the "Debug" window out and assert at End() call site instead of at end of frame.
+ - window/tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
+ - window: increase minimum size of a window with menus or fix the menu rendering so that it doesn't look odd.
+ - window: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
+ - window: expose contents size. (#1045)
+ - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
+!- scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
+ - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
+
+ - drawlist: move Font, FontSize, FontTexUvWhitePixel inside ImDrawList and make it self-contained (apart from drawing settings?)
+ - drawlist: make it easier to toggle AA per primitive, so we can use e.g. non-AA fill + AA borders more naturally
+ - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
+ - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
+ - drawlist: avoid passing null (-9999,+9999) rectangle to end-user, instead perhaps pass rectangle based on io.DisplaySize?
+ - drawlist: primtiives/helpers to manipulate vertices post submission, so e.g. a quad/rect can be resized to fit later submitted content, _without_ using the ChannelSplit api
+
+ - main: considering adding an Init() function? some constructs are awkward in the implementation because of the lack of them.
+ - main: find a way to preserve relative orders of multiple reappearing windows (so an app toggling between "modes" e.g. fullscreen vs all tools) won't lose relative ordering.
+ - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
+ - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
+ - main: rename the main "Debug" window to avoid ID collision with user who may want to use "Debug" with specific flags.
+
+ - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc. (#395)
+ - widgets: clean up widgets internal toward exposing everything and stabilizing imgui_internals.h.
+ - widgets: add disabled and read-only modes (#211)
+ - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
+ - widgets: activate by identifier (trigger button, focus given id)
+
+ - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile. 
+ - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
+ - input text: expose CursorPos in char filter event (#816)
+ - input text: access public fields via a non-callback API e.g. InputTextGetState("xxx") that may return NULL if not active.
+ - input text: flag to disable live update of the user buffer (also applies to float/int text input) (#701)
+ - input text: way to dynamically grow the buffer without forcing the user to initially allocate for worse case, e.g. more natural std::string (follow up on #200)
+ - input text: hover tooltip could show unclamped text
+ - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
+ - input text: easier ways to update buffer (from source char*) while owned. preserve some sort of cursor position for multi-line text.
+ - input text: add discard flag (e.g. ImGuiInputTextFlags_DiscardActiveBuffer) or make it easier to clear active focus for text replacement during edition (#725)
+ - input text: display bug when clicking a drag/slider after an input text in a different window has all-selected text (order dependant). actually a very old bug but no one appears to have noticed it.
+ - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
+ - input text multi-line: line numbers? status bar? (follow up on #200)
+ - input text multi-line: behave better when user changes input buffer while editing is active (even though it is illegal behavior). namely, the change of buffer can create a scrollbar glitch (#725)
+ - input text multi-line: better horizontal scrolling support (#383, #1224)
+ - input text: allow centering/positioning text so that ctrl+clicking Drag or Slider keeps the textual value at the same pixel position.
+ - input number: optional range min/max for Input*() functions
+ - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
+ - input number: use mouse wheel to step up/down
+ - input number: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
+
+ - layout: helper or a way to express ImGui::SameLine(ImGui::GetCursorStartPos().x + ImGui::CalcItemWidth() + ImGui::GetStyle().ItemInnerSpacing.x); in a simpler manner.
+ - layout: generalization of the above: a concept equivalent to word processor ruler tab stop ~ mini columns (position in X, no clipping implied) (vaguely relate to #267, #395, also what is used internally for menu items)
+ - layout: horizontal layout helper (#97)
+ - layout: horizontal flow until no space left (#404)
+ - layout: more generic alignment state (left/right/centered) for single items?
+ - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
+ - layout: BeginGroup() needs a border option.
+ - layout: vertical alignement of mixed height items (e.g. buttons) within a same line (#1284)
+ 
+ - columns: sizing policy (e.g. for each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
+ - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
+ - columns: headers. with sort op/button. reorderable. (#513, #125)
+ - columns: allow columns to recurse. 
+ - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
+ - columns: flag to add horizontal separator above/below?
+ - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
+
+!- color: the color conversion helpers/types are a mess and needs sorting out. 
+ - color: (api breaking) ImGui::ColorConvertXXX functions should be loose ImColorConvertXX to match imgui_internals.h
+ - coloredit: it is still somehow awkward to copy colors around (unless going through Hex mode).
+
+ - plot: full featured plot/graph api w/ scrolling, zooming etc. all bell & whistle. why not!
+ - plot: PlotLines() should use the polygon-stroke facilities, less verticles (currently issues with averaging normals)
+ - plot: make it easier for user to draw extra stuff into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
+ - plot: "smooth" automatic scale over time, user give an input 0.0(full user scale) 1.0(full derived from value)
+ - plot: option/feature: draw the zero line
+ - plot: option/feature: draw grid, vertical markers
+ - plot: option/feature: draw unit
+ - plot: add a helper e.g. Plot(char* label, float value, float time_span=2.0f) that stores values and Plot them for you - probably another function name. and/or automatically allow to plot ANY displayed value (more reliance on stable ID)
+
+ - clipper: ability to force display 1 item in the list would be convenient. 
+
+ - splitter/separator: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
+ 
+ - dock: docking extension
+ - dock: dock out from a collapsing header? would work nicely but need emitting window to keep submitting the code.
+
+ - tabs: re-ordering, close buttons, context menu, persistent order (#261, #351)
+
+ - ext: stl-ish friendly extension (imgui_stl.h) that has wrapped for std::string, std::vector etc.
+
+ - button: provide a button that looks framed.
+ - image/image button: misalignment on padded/bordered button?
+ - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
+ - image button: not taking an explicit id is odd.
+ - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
+ - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar).
+ - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
+ - slider: tint background based on value (e.g. v_min -> v_max, or use 0.0f either side of the sign)
+ - slider: precision dragging
+ - slider: step option (#1183)
+ - knob: rotating knob widget (#942)
+ - slider & drag: int data passing through a float
+ - drag float: up/down axis
+ - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
+
+ - combo: sparse combo boxes (via function call?) / iterators
+ - combo: active item type could be anything else e.g. void*
+ - combo: use clipper
+ - combo: contents should extends to fit label if combo widget is small
+ - combo: option for ComboEx to not return true when unchanged (#1182)
+ - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
+ - listbox: multiple selection.
+ - listbox: unselect (#1208)
+ - listbox: make it easier/more natural to implement range-select (need some sort of info/ref about the last clicked/focused item that user can translate to an index?)
+ - listbox: user may want to initial scroll to focus on the one selected value?
+ - listbox: expose hovered item for a basic ListBox
+ - listbox: keyboard navigation.
+ - listbox: scrolling should track modified selection.
+
+!- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
+ - popups/nav: esc/enter default behavior for popups.
+ - popups: reopening context menu at new position should be the behavior by default? (equivalent to internal OpenPopupEx() with reopen_existing=true)
+ - popups: if the popup functions took explicit ImGuiID it would allow the user to manage the scope of those ID. (#331)
+ - popups: clicking outside (to close popup) and holding shouldn't drag window below.
+ - popups: add variant using global identifier similar to Begin/End (#402)
+ - popups: border options. richer api like BeginChild() perhaps? (#197)
+ - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last preferred direction" and may teleport when moving mouse.
+
+ - menus: calling BeginMenu() twice with a same name doesn't append as Begin() does for regular windows (#1207)
+ - statusbar: add a per-window status bar helper similar to what menubar does.
+ - shortcuts: local-style shortcut api, e.g. parse "&Save"
+ - shortcuts,menus: global-style shortcut api e.g. "Save (CTRL+S)" -> explicit flag for recursing into closed menu
+ - shortcuts: programmatically access shortcuts "Focus("&Save"))
+ - menus: menubars: main menu-bar could affect clamping of windows position (~ akin to modifying DisplayMin)
+
+ - text: proper alignment options in imgui_internal.h
+ - text wrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
+
+ - tree node / optimization: avoid formatting when clipped.
+ - tree node: tree-node/header right-most side doesn't take account of horizontal scrolling.
+ - tree node: add treenode/treepush int variants? not there because (void*) cast from int warns on some platforms/settings?
+ - tree node: try to apply scrolling at time of TreePop() if node was just opened and end of node is past scrolling limits?
+ - tree node / selectable render mismatch which is visible if you use them both next to each other (e.g. cf. property viewer)
+ - tree node: tweak color scheme to distinguish headers from selected tree node (#581)
+
+!- settings: expose enough to save/load .ini from RAM instead of fopen
+ - settings: write more decent code to allow saving/loading new fields
+ - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)
+ - stb: add defines to disable stb implementations
+
+!- style: better default styles.
+!- style: move border to style structure, remove _ShowBorder flag.
+ - style: border types: out-screen, in-screen, etc. 
+ - style/optimization: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding.
+ - style: add window shadow (fading away from the window. Paint-style calculation of vertices alpha after drawlist would be easier)
+ - style: color-box not always square?
+ - style: a concept of "compact style" that the end-user can easily rely on (e.g. PushStyleCompact()?) that maps to other settings? avoid implementing duplicate helpers such as SmallCheckbox(), etc.
+ - style: try to make PushStyleVar() more robust to incorrect parameters (to be more friendly to edit & continues situation).
+ - style: global scale setting.
+ - style: WindowPadding needs to be EVEN as the 0.5 multiplier used on this value probably have a subtle effect on clip rectangle
+ - style: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space? (#438, #707, #1223)
+ - style: gradients fill (#1223) ~ 2 bg colors for each fill? tricky with rounded shapes and using textures for corners.
+ - style editor: color child window height expressed in multiple of line height.
+
+ - log: LogButtons() options for specifying depth and/or hiding depth slider
+ - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
+ - log: be able to log anything (e.g. right-click on a window/tree-node, shows context menu? log into tty/file/clipboard)
+ - log: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?). code is commented because it fails with multiple Begin/End pairs.
+
+ - filters: set a current filter that tree node can automatically query to hide themselves
+ - filters: handle wildcards (with implicit leading/trailing *), regexps
+ - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
+
+ - drag'n drop, dragging helpers, demo (carry dragging info, visualize drag source before clicking, drop target, etc.) (#143, #479)
+ - node/graph editor (#306)
+ - pie menus patterns (#434)
+ - markup: simple markup language for color change?
+
+!- font: better CalcTextSizeA() API, at least for simple use cases. current one is horrible (perhaps have simple vs extended versions).
+ - font: PushFontSize API (#1018)
+ - font/atlas: incremental updates
+ - font/atlas: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
+ - font/atlas: allow user to submit its own primitive to be rectpacked, and allow to map them on a Unicode point.
+ - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
+ - font/text: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
+ - font: imgui_freetype.h alternative renderer (#618)
+ - font: optimization: for monospace font (like the default one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance (need to make sure TAB is still correct).
+ - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
+ - font: add a simpler CalcTextSizeA() api? current one ok but not welcome if user needs to call it directly (without going through ImGui::CalcTextSize)
+ - font: fix AddRemapChar() to work before font has been built.
+ - font: (api breaking) removed "TTF" from symbol names. also because it now supports OTF.
+
+!- keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing.
+ - keyboard: full keyboard navigation and focus. (#323)
+ - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
+ - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
+ - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)
+ - inputs: allow to decide and pass explicit double-clicks (e.g. for windows by the CS_DBLCLKS style).
+ - inputs: support track pad style scrolling & slider edit.
+
+ - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
+ - misc: provide HoveredTime and ActivatedTime to ease the creation of animations.
+ - misc: fix for compilation settings where stdcall isn't the default (e.g. vectorcall) (#1230)
+ - remote: make a system like RemoteImGui first-class citizen/project (#75)
+
+ - demo: demo: add a virtual scrolling example?
+ - examples: directx9: save/restore device state more thoroughly.
+ - examples: window minimize, maximize (#583)
+ - examples: provide a zero-framerate/idle example.
+ - examples: document WantCaptureKeyboard, WantCaptureMouse in example apps. (#446)
+ - optimization: replace vsnprintf with stb_printf? or enable the defines/infrastructure to allow it (#1038)
+ - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
+ - optimization: add a flag to disable most of rendering, for the case where the user expect to skip it (#335)
+ - optimization: use another hash function than crc32, e.g. FNV1a
+ - optimization/render: merge command-lists with same clip-rect into one even if they aren't sequential? (as long as in-between clip rectangle don't overlap)?
+ - optimization: turn some the various stack vectors into statically-sized arrays

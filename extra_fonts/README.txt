@@ -1,15 +1,33 @@
 
  The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' that you can use without any external files.
- The files in this folder are only provided as a convenience, you can use any of your own .TTF files.
+ The files in this folder are only provided as a convenience, you can use any .TTF/.OTF.
+ (Note: .OTF support in stb_truetype.h currently doesn't appear to load every font)
 
  Fonts are rasterized in a single texture at the time of calling either of io.Fonts.GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 
- If you want to use icons in ImGui, a good idea is to merge an icon font within your main font, and refer to icons directly in your strings.
- You can use headers files with definitions for popular icon fonts codepoints, by Juliette Foucaut, at https://github.com/juliettef/IconFontCppHeaders
+---------------------------------
+ USING ICONS
+---------------------------------
+
+ Using an icon font (such as FontAwesome: http://fontawesome.io) is an easy and practical way to use icons in your ImGui application.
+ A common pattern is to merge the icon font within your main font, so you can refer to the icons directly from your strings without having to change fonts back and forth.
+ To refer to the icon from your C++ code, you can use headers files created by Juliette Foucaut, at https://github.com/juliettef/IconFontCppHeaders
+
+    // Merge icons into default tool font
+   #include "IconsFontAwesome.h"
+   ImGuiIO& io = ImGui::GetIO();
+   io.Fonts->AddFontDefault();
+   ImFontConfig config;
+   config.MergeMode = true;
+   static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+   io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config, icon_ranges);
+
+   // Usage, e.g.
+   ImGui::Text("%s Search", ICON_FA_SEARCH);
 
 
 ---------------------------------
- LOADING INSTRUCTIONS
+ FONTS LOADING INSTRUCTIONS
 ---------------------------------
 
  Load default font with:
@@ -17,7 +35,7 @@
    ImGuiIO& io = ImGui::GetIO();
    io.Fonts->AddFontDefault();
 
- Load .TTF file with:
+ Load .TTF/.OTF file with:
 
    ImGuiIO& io = ImGui::GetIO();
    io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
@@ -69,19 +87,37 @@
 
 
 ---------------------------------
- REMAP CODEPOINTS
+ BUILDING CUSTOM GLYPH RANGES
 ---------------------------------
 
- All your strings needs to use UTF-8 encoding. Specifying literal in your source code using a local code page (such as CP-923 for Japanese CP-1251 for Cyrillic) will not work.
+ You can use the ImFontAtlas::GlyphRangesBuilder helper to create glyph ranges based on text input.
+ For exemple: for a game where your script is known, if you can feed your entire script to it and only build the characters the game needs. 
+
+   ImVector<ImWchar> ranges;
+   ImFontAtlas::GlyphRangesBuilder builder;
+   builder.AddText("Hello world");                        // Add a string (here "Hello world" contains 7 unique characters)
+   builder.AddChar(0x7262);                               // Add a specific character
+   builder.AddRanges(io.Fonts->GetGlyphRangesJapanese()); // Add one of the default ranges
+   builder.BuildRanges(&ranges);                          // Build the final result (ordered ranges with all the unique characters submitted)
+   io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, ranges.Data);
+
+
+---------------------------------
+ REMAPPING CODEPOINTS
+---------------------------------
+
+ All your strings needs to use UTF-8 encoding. Specifying literal in your source code using a local code page (such as CP-923 for Japanese CP-1251 for Cyrillic) will NOT work!
  In C++11 you can encode a string literal in UTF-8 by using the u8"hello" syntax. Otherwise you can convert yourself to UTF-8 or load text data from file already saved as UTF-8.
  You can also try to remap your local codepage characters to their Unicode codepoint using font->AddRemapChar(), but international users may have problems reading/editing your source code.
 
 
 ---------------------------------
- EMBED A FONT IN SOURCE CODE
+ EMBEDDING FONT IN SOURCE CODE
 ---------------------------------
 
- Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array. Then load the font with:
+ Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array. 
+ See the documentation in binary_to_compressed_c.cpp for instruction on how to use the tool.
+ Then load the font with:
  
    ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
    
@@ -94,9 +130,16 @@
  FONT FILES INCLUDED IN THIS FOLDER
 ---------------------------------
 
+ Roboto-Medium.ttf
+   Apache License 2.0
+   by Christian Robertson
+   https://fonts.google.com/specimen/Roboto
+
  Cousine-Regular.ttf
+   by Steve Matteson
    Digitized data copyright (c) 2010 Google Corporation.
-   Licensed under the SIL Open Font License, Version 1.1   
+   Licensed under the SIL Open Font License, Version 1.1
+   https://fonts.google.com/specimen/Cousine 
 
  DroidSans.ttf
    Copyright (c) Steve Matteson
@@ -107,13 +150,15 @@
    Copyright (c) 2004, 2005 Tristan Grimmer
    MIT License
    recommended loading setting in ImGui: Size = 13.0, DisplayOffset.Y = +1
+   http://www.proggyfonts.net/
 
  ProggyTiny.ttf
    Copyright (c) 2004, 2005 Tristan Grimmer
    MIT License
    recommended loading setting in ImGui: Size = 10.0, DisplayOffset.Y = +1
+   http://www.proggyfonts.net/
 
- Karla-Regular
+ Karla-Regular.ttf
    Copyright (c) 2012, Jonathan Pinhorn
    SIL OPEN FONT LICENSE Version 1.1
 
@@ -127,6 +172,9 @@
    https://github.com/SamBrishes/kenney-icon-font
    https://design.google.com/icons/
 
+ IcoMoon - Custom Icon font builder
+   https://icomoon.io/app
+
  Typefaces for source code beautification
    https://github.com/chrissimpkins/codeface
  
@@ -138,6 +186,9 @@
    
  Inconsolata
    http://www.levien.com/type/myfonts/inconsolata.html
+
+ Google Noto Fonts (worldwide languages)
+   https://www.google.com/get/noto/
 
  Adobe Source Code Pro: Monospaced font family for user interface and coding environments
    https://github.com/adobe-fonts/source-code-pro

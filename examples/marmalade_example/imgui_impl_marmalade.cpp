@@ -40,9 +40,8 @@ void ImGui_Marmalade_RenderDrawLists(ImDrawData* draw_data)
     for(int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        const unsigned char* vtx_buffer = (const unsigned char*)&cmd_list->VtxBuffer.front();
-        const ImDrawIdx* idx_buffer = &cmd_list->IdxBuffer.front();
-        int nVert = cmd_list->VtxBuffer.size();
+        const ImDrawIdx* idx_buffer = cmd_list->IdxBuffer.Data;
+        const int nVert = cmd_list->VtxBuffer.Size;
         CIwFVec2* pVertStream = IW_GX_ALLOC(CIwFVec2, nVert);
         CIwFVec2* pUVStream = IW_GX_ALLOC(CIwFVec2, nVert);
         CIwColour* pColStream = IW_GX_ALLOC(CIwColour, nVert);
@@ -62,12 +61,12 @@ void ImGui_Marmalade_RenderDrawLists(ImDrawData* draw_data)
         IwGxSetColStream(pColStream, nVert);
         IwGxSetNormStream(0);
 
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++)
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
             {
-                pcmd->UserCallback(cmd_list,pcmd);
+                pcmd->UserCallback(cmd_list, pcmd);
             }
             else
             {
@@ -90,28 +89,24 @@ void ImGui_Marmalade_RenderDrawLists(ImDrawData* draw_data)
     // TODO: restore modified state (i.e. mvp matrix)
 }
 
-static const char* ImGui_Marmalade_GetClipboardText()
+static const char* ImGui_Marmalade_GetClipboardText(void* /*user_data*/)
 {
-    if (s3eClipboardAvailable())
+    if (!s3eClipboardAvailable())
+        return NULL;
+
+    if (int size = s3eClipboardGetText(NULL, 0))
     {
-        int size = s3eClipboardGetText(NULL, 0);
-        if (size > 0)
-        {
-            if (g_ClipboardText)
-            {
-                delete[] g_ClipboardText;
-                g_ClipboardText = NULL;
-            }
-            g_ClipboardText = new char[size];
-            g_ClipboardText[0] = '\0';
-            s3eClipboardGetText(g_ClipboardText, size);
-        }
+        if (g_ClipboardText)
+            delete[] g_ClipboardText;
+        g_ClipboardText = new char[size];
+        g_ClipboardText[0] = '\0';
+        s3eClipboardGetText(g_ClipboardText, size);
     }
 
     return g_ClipboardText;
 }
 
-static void ImGui_Marmalade_SetClipboardText(const char* text)
+static void ImGui_Marmalade_SetClipboardText(void* /*user_data*/, const char* text)
 {
     if (s3eClipboardAvailable())
         s3eClipboardSetText(text);
