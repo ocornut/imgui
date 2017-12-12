@@ -5521,13 +5521,13 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.CurrentWindow);     // Not inside a Begin()/End()
 
-    switch (flags & (ImGuiFocusedFlags_RootWindow | ImGuiHoveredFlags_ChildWindows))
+    switch (flags & (ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_ChildWindows))
     {
-    case ImGuiFocusedFlags_RootWindow | ImGuiHoveredFlags_ChildWindows:
+    case ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_ChildWindows:
         return g.NavWindow && g.CurrentWindow->RootWindow == g.NavWindow->RootWindow;
     case ImGuiFocusedFlags_RootWindow:
         return g.CurrentWindow->RootWindow == g.NavWindow;
-    case ImGuiHoveredFlags_ChildWindows:
+    case ImGuiFocusedFlags_ChildWindows:
         return g.NavWindow && IsWindowChildOf(g.NavWindow, g.CurrentWindow);
     default:
         return g.CurrentWindow == g.NavWindow;
