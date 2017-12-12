@@ -213,6 +213,8 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/12/23 (1.53) - marked IsRootWindowFocused() as obsolete in favor of using IsWindowFocused(ImGuiFocusedFlags_RootWindow).
+                     - marked IsRootWindowOrAnyChildFocused() as obsolete in favor of using IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows).
  - 2017/12/12 (1.53) - renamed ImGuiTreeNodeFlags_AllowOverlapMode to ImGuiTreeNodeFlags_AllowItemOverlap. Kept redirection enum (will obsolete).
  - 2017/12/10 (1.53) - removed SetNextWindowContentWidth(), prefer using SetNextWindowContentSize(). Kept redirection function (will obsolete).
  - 2017/11/27 (1.53) - renamed ImGuiTextBuffer::append() helper to appendf(), appendv() to appendfv(). If you copied the 'Log' demo in your code, it uses appendv() so that needs to be renamed.
@@ -5479,25 +5481,22 @@ bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
     return true;
 }
 
-bool ImGui::IsWindowFocused()
+bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.CurrentWindow);     // Not inside a Begin()/End()
-    return g.NavWindow == g.CurrentWindow;
-}
 
-bool ImGui::IsRootWindowFocused()
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.CurrentWindow);     // Not inside a Begin()/End()
-    return g.NavWindow == g.CurrentWindow->RootWindow;
-}
-
-bool ImGui::IsRootWindowOrAnyChildFocused()
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.CurrentWindow);     // Not inside a Begin()/End()
-    return g.NavWindow && g.NavWindow->RootWindow == g.CurrentWindow->RootWindow;
+    switch (flags & (ImGuiFocusedFlags_RootWindow | ImGuiHoveredFlags_ChildWindows))
+    {
+    case ImGuiFocusedFlags_RootWindow | ImGuiHoveredFlags_ChildWindows:
+        return g.NavWindow && g.CurrentWindow->RootWindow == g.NavWindow->RootWindow;
+    case ImGuiFocusedFlags_RootWindow:
+        return g.CurrentWindow->RootWindow == g.NavWindow;
+    case ImGuiHoveredFlags_ChildWindows:
+        return g.NavWindow && IsWindowChildOf(g.NavWindow, g.CurrentWindow);
+    default:
+        return g.CurrentWindow == g.NavWindow;
+    }
 }
 
 float ImGui::GetWindowWidth()

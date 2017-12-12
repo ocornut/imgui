@@ -1781,8 +1781,24 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Hovering"))
+        if (ImGui::TreeNode("Focused & Hovered Test"))
         {
+            static bool embed_all_inside_a_child_window = false;
+            ImGui::Checkbox("Embed everything inside a child window (for additional testing)", &embed_all_inside_a_child_window);
+            if (embed_all_inside_a_child_window)
+                ImGui::BeginChild("embeddingchild", ImVec2(0, ImGui::GetFontSize() * 25), true);
+
+            // Testing IsWindowFocused() function with its various flags (note that the flags can be combined)
+            ImGui::BulletText(
+                "IsWindowFocused() = %d\n"
+                "IsWindowFocused(_ChildWindows) = %d\n"
+                "IsWindowFocused(_ChildWindows|_RootWindow) = %d\n"
+                "IsWindowFocused(_RootWindow) = %d\n",
+                ImGui::IsWindowFocused(),
+                ImGui::IsWindowFocused(ImGuiHoveredFlags_ChildWindows),
+                ImGui::IsWindowFocused(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow),
+                ImGui::IsWindowFocused(ImGuiHoveredFlags_RootWindow));
+
             // Testing IsWindowHovered() function with its various flags (note that the flags can be combined)
             ImGui::BulletText(
                 "IsWindowHovered() = %d\n"
@@ -1813,8 +1829,11 @@ void ImGui::ShowTestWindow(bool* p_open)
                 ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly));
 
             ImGui::BeginChild("child", ImVec2(0,50), true);
-            ImGui::Text("This is a child window for testing IsWindowHovered() flags.");
+            ImGui::Text("This is another child window for testing IsWindowHovered() flags.");
             ImGui::EndChild();
+
+            if (embed_all_inside_a_child_window)
+                EndChild();
 
             ImGui::TreePop();
         }
