@@ -5454,6 +5454,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_PlotHistogramHovered: return "PlotHistogramHovered";
     case ImGuiCol_TextSelectedBg: return "TextSelectedBg";
     case ImGuiCol_ModalWindowDarkening: return "ModalWindowDarkening";
+    case ImGuiCol_DragDropTarget: return "DragDropTarget";
     }
     IM_ASSERT(0);
     return "Unknown";
@@ -11345,12 +11346,11 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     payload.Preview = was_accepted_previously;
     if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && payload.Preview)
     {
-        // FIXME-DRAG FIXME-STYLE: Settle on a proper default visuals for drop target, w/ ImGuiCol enum value probably.
-        r.Expand(5.0f);
+        // FIXME-DRAG: Settle on a proper default visuals for drop target.
+        r.Expand(3.5f);
         bool push_clip_rect = !window->ClipRect.Contains(r);
         if (push_clip_rect) window->DrawList->PushClipRectFullScreen();
-        window->DrawList->AddRectFilled(r.Min, r.Max, IM_COL32(255, 255, 0, 20), 0.0f);
-        window->DrawList->AddRect(r.Min + ImVec2(1.5f,1.5f), r.Max - ImVec2(1.5f,1.5f), IM_COL32(255, 255, 0, 255), 0.0f, ~0, 2.0f);
+        window->DrawList->AddRect(r.Min, r.Max, GetColorU32(ImGuiCol_DragDropTarget), 0.0f, ~0, 2.0f);
         if (push_clip_rect) window->DrawList->PopClipRect();
     }
 

@@ -719,6 +719,7 @@ enum ImGuiCol_
     ImGuiCol_PlotHistogramHovered,
     ImGuiCol_TextSelectedBg,
     ImGuiCol_ModalWindowDarkening,  // darken entire screen when a modal window is active
+    ImGuiCol_DragDropTarget,
     ImGuiCol_COUNT
 
     // Obsolete names (will be removed)
