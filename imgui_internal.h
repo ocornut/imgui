@@ -204,7 +204,7 @@ enum ImGuiColumnsFlags_
     ImGuiColumnsFlags_NoResize              = 1 << 1,   // Disable resizing columns when clicking on the dividers
     ImGuiColumnsFlags_NoPreserveWidths      = 1 << 2,   // Disable column width preservation when adjusting columns
     ImGuiColumnsFlags_NoForceWithinWindow   = 1 << 3,   // Disable forcing columns to fit within window
-    ImGuiColumnsFlags_GrowParentContentsSize= 1 << 4,   // (WIP) Restore pre-1.51 behavior of extending the parent window contents size but _without affecting the columns width at all_. Will eventually remove.
+    ImGuiColumnsFlags_GrowParentContentsSize= 1 << 4    // (WIP) Restore pre-1.51 behavior of extending the parent window contents size but _without affecting the columns width at all_. Will eventually remove.
 };
 
 enum ImGuiSelectableFlagsPrivate_
@@ -349,14 +349,6 @@ struct ImGuiGroupData
     bool        AdvanceCursor;
 };
 
-// Per column data for Columns()
-struct ImGuiColumnData
-{
-    float       OffsetNorm; // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
-    ImRect      ClipRect;
-    //float     IndentX;
-};
-
 // Simple column measurement currently used for MenuItem() only. This is very short-sighted/throw-away code and NOT a generic helper.
 struct IMGUI_API ImGuiSimpleColumns
 {
@@ -429,14 +421,54 @@ struct ImGuiMouseCursorData
 // Storage for current popup stack
 struct ImGuiPopupRef
 {
-    ImGuiID         PopupId;        // Set on OpenPopup()
-    ImGuiWindow*    Window;         // Resolved on BeginPopup() - may stay unresolved if user never calls OpenPopup()
-    ImGuiWindow*    ParentWindow;   // Set on OpenPopup()
-    ImGuiID         ParentMenuSet;  // Set on OpenPopup()
-    ImVec2          PopupPosOnOpen; // Preferred popup position (typically == MousePosOnOpen when using mouse)
-    ImVec2          MousePosOnOpen; // Copy of mouse position at the time of opening popup
+    ImGuiID             PopupId;        // Set on OpenPopup()
+    ImGuiWindow*        Window;         // Resolved on BeginPopup() - may stay unresolved if user never calls OpenPopup()
+    ImGuiWindow*        ParentWindow;   // Set on OpenPopup()
+    ImGuiID             ParentMenuSet;  // Set on OpenPopup()
+    ImVec2              PopupPosOnOpen; // Preferred popup position (typically == MousePosOnOpen when using mouse)
+    ImVec2              MousePosOnOpen; // Copy of mouse position at the time of opening popup
 
     ImGuiPopupRef(ImGuiID id, ImGuiWindow* parent_window, ImGuiID parent_menu_set, const ImVec2& popup_pos, const ImVec2& mouse_pos) { PopupId = id; Window = NULL; ParentWindow = parent_window; ParentMenuSet = parent_menu_set; PopupPosOnOpen = popup_pos; MousePosOnOpen = mouse_pos; }
+};
+
+struct ImGuiColumnData
+{
+    float               OffsetNorm;         // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
+    float               OffsetNormBeforeResize;
+    ImRect              ClipRect;
+
+    ImGuiColumnData()   { OffsetNorm = OffsetNormBeforeResize = 0.0f; }
+};
+
+struct ImGuiColumnsSet
+{
+    ImGuiID             ID;
+    ImGuiColumnsFlags   Flags;
+    bool                IsFirstFrame;
+    bool                IsBeingResized;
+    int                 Current;
+    int                 Count;
+    float               MinX, MaxX;
+    float               StartPosY;
+    float               StartMaxPosX;       // Backup of CursorMaxPos
+    float               CellMinY, CellMaxY;
+    ImVector<ImGuiColumnData> Columns;
+
+    ImGuiColumnsSet()   { Clear(); }
+    void Clear()
+    {
+        ID = 0;
+        Flags = 0;
+        IsFirstFrame = false;
+        IsBeingResized = false;
+        Current = 0;
+        Count = 1;
+        MinX = MaxX = 0.0f;
+        StartPosY = 0.0f;
+        StartMaxPosX = 0.0f;
+        CellMinY = CellMaxY = 0.0f;
+        Columns.clear();
+    }
 };
 
 // Main state for ImGui
@@ -762,17 +794,7 @@ struct IMGUI_API ImGuiDrawContext
     float                   IndentX;                // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
     float                   GroupOffsetX;
     float                   ColumnsOffsetX;         // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
-    int                     ColumnsCurrent;
-    int                     ColumnsCount;
-    float                   ColumnsMinX;
-    float                   ColumnsMaxX;
-    float                   ColumnsStartPosY;
-    float                   ColumnsStartMaxPosX;   // Backup of CursorMaxPos
-    float                   ColumnsCellMinY;
-    float                   ColumnsCellMaxY;
-    ImGuiColumnsFlags       ColumnsFlags;
-    ImGuiID                 ColumnsSetId;
-    ImVector<ImGuiColumnData> ColumnsData;
+    ImGuiColumnsSet*        ColumnsSet;             // Current columns set
 
     ImGuiDrawContext()
     {
@@ -800,14 +822,7 @@ struct IMGUI_API ImGuiDrawContext
         IndentX = 0.0f;
         GroupOffsetX = 0.0f;
         ColumnsOffsetX = 0.0f;
-        ColumnsCurrent = 0;
-        ColumnsCount = 1;
-        ColumnsMinX = ColumnsMaxX = 0.0f;
-        ColumnsStartPosY = 0.0f;
-        ColumnsStartMaxPosX = 0.0f;
-        ColumnsCellMinY = ColumnsCellMaxY = 0.0f;
-        ColumnsFlags = 0;
-        ColumnsSetId = 0;
+        ColumnsSet = NULL;
     }
 };
 
@@ -870,6 +885,7 @@ struct IMGUI_API ImGuiWindow
     float                   ItemWidthDefault;
     ImGuiSimpleColumns      MenuColumns;                        // Simplified columns storage for menu items
     ImGuiStorage            StateStorage;
+    ImVector<ImGuiColumnsSet> ColumnsStorage;
     float                   FontWindowScale;                    // Scale multiplier per-window
     ImDrawList*             DrawList;
     ImGuiWindow*            ParentWindow;                       // If we are a child _or_ popup window, this is pointing to our parent. Otherwise NULL.
@@ -981,8 +997,8 @@ namespace ImGui
     IMGUI_API bool          IsDragDropPayloadBeingAccepted();
 
     // FIXME-WIP: New Columns API
-    IMGUI_API void          BeginColumns(const char* id, int count, ImGuiColumnsFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().
-    IMGUI_API void          EndColumns();                                                         // close columns
+    IMGUI_API void          BeginColumns(const char* str_id, int count, ImGuiColumnsFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().
+    IMGUI_API void          EndColumns();                                                             // close columns
     IMGUI_API void          PushColumnClipRect(int column_index = -1);
 
     // NB: All position are in absolute pixels coordinates (never using window coordinates internally)
