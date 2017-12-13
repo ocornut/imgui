@@ -414,10 +414,11 @@ struct ImGuiPopupRef
 
 struct ImGuiColumnData
 {
-    float               OffsetNorm; // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
+    float               OffsetNorm;         // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
+    float               OffsetNormBeforeResize;
     ImRect              ClipRect;
 
-    ImGuiColumnData()   { OffsetNorm = 0.0f; }
+    ImGuiColumnData()   { OffsetNorm = OffsetNormBeforeResize = 0.0f; }
 };
 
 struct ImGuiColumnsSet

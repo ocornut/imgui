@@ -10879,6 +10879,19 @@ float ImGui::GetColumnOffset(int column_index)
     return x_offset;
 }
 
+static float GetColumnWidthEx(ImGuiColumnsSet* columns, int column_index, bool before_resize = false)
+{
+    if (column_index < 0)
+        column_index = columns->Current;
+
+    float offset_norm;
+    if (before_resize)
+        offset_norm = columns->Columns[column_index + 1].OffsetNormBeforeResize - columns->Columns[column_index].OffsetNormBeforeResize;
+    else
+        offset_norm = columns->Columns[column_index + 1].OffsetNorm - columns->Columns[column_index].OffsetNorm;
+    return OffsetNormToPixels(columns, offset_norm);
+}
+
 float ImGui::GetColumnWidth(int column_index)
 {
     ImGuiWindow* window = GetCurrentWindowRead();
@@ -10902,7 +10915,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     IM_ASSERT(column_index < columns->Columns.Size);
 
     const bool preserve_width = !(columns->Flags & ImGuiColumnsFlags_NoPreserveWidths) && (column_index < columns->Count-1);
-    const float width = preserve_width ? GetColumnWidth(column_index) : 0.0f;
+    const float width = preserve_width ? GetColumnWidthEx(columns, column_index, columns->IsBeingResized) : 0.0f;
 
     if (!(columns->Flags & ImGuiColumnsFlags_NoForceWithinWindow))
         offset = ImMin(offset, columns->MaxX - g.Style.ColumnsMinSpacing * (columns->Count - column_index));
@@ -11033,7 +11046,7 @@ void ImGui::EndColumns()
         window->DC.CursorMaxPos.x = ImMax(columns->StartMaxPosX, columns->MaxX);  // Restore cursor max pos, as columns don't grow parent
 
     // Draw columns borders and handle resize
-    columns->IsBeingResized = false;
+    bool is_being_resized = false;
     if (!(columns->Flags & ImGuiColumnsFlags_NoBorder) && !window->SkipItems)
     {
         const float y1 = columns->StartPosY;
@@ -11070,11 +11083,15 @@ void ImGui::EndColumns()
         // Apply dragging after drawing the column lines, so our rendered lines are in sync with how items were displayed during the frame.
         if (dragging_column != -1)
         {
+            if (!columns->IsBeingResized)
+                for (int n = 0; n < columns->Count + 1; n++)
+                    columns->Columns[n].OffsetNormBeforeResize = columns->Columns[n].OffsetNorm;
+            columns->IsBeingResized = is_being_resized = true;
             float x = GetDraggedColumnOffset(columns, dragging_column);
             SetColumnOffset(dragging_column, x);
-            columns->IsBeingResized = true;
         }
     }
+    columns->IsBeingResized = is_being_resized;
 
     window->DC.ColumnsSet = NULL;
     window->DC.ColumnsOffsetX = 0.0f;
