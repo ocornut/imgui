@@ -421,30 +421,28 @@ struct ImGuiColumnData
 
 struct ImGuiColumnsSet
 {
-    int                 ColumnsCurrent;
-    int                 ColumnsCount;
-    float               ColumnsMinX;
-    float               ColumnsMaxX;
-    float               ColumnsStartPosY;
-    float               ColumnsStartMaxPosX;   // Backup of CursorMaxPos
-    float               ColumnsCellMinY;
-    float               ColumnsCellMaxY;
-    ImGuiColumnsFlags   ColumnsFlags;
-    ImGuiID             ColumnsSetId;
-    ImVector<ImGuiColumnData> ColumnsData;
+    ImGuiID             ID;
+    ImGuiColumnsFlags   Flags;
+    int                 Current;
+    int                 Count;
+    float               MinX, MaxX;
+    float               StartPosY;
+    float               StartMaxPosX;       // Backup of CursorMaxPos
+    float               CellMinY, CellMaxY;
+    ImVector<ImGuiColumnData> Columns;
 
     ImGuiColumnsSet()   { Clear(); }
     void Clear()
     {
-        ColumnsCurrent = 0;
-        ColumnsCount = 1;
-        ColumnsMinX = ColumnsMaxX = 0.0f;
-        ColumnsStartPosY = 0.0f;
-        ColumnsStartMaxPosX = 0.0f;
-        ColumnsCellMinY = ColumnsCellMaxY = 0.0f;
-        ColumnsFlags = 0;
-        ColumnsSetId = 0;
-        ColumnsData.clear();
+        ID = 0;
+        Flags = 0;
+        Current = 0;
+        Count = 1;
+        MinX = MaxX = 0.0f;
+        StartPosY = 0.0f;
+        StartMaxPosX = 0.0f;
+        CellMinY = CellMaxY = 0.0f;
+        Columns.clear();
     }
 };
 
