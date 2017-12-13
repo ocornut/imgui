@@ -412,11 +412,12 @@ struct ImGuiPopupRef
     ImGuiPopupRef(ImGuiID id, ImGuiWindow* parent_window, ImGuiID parent_menu_set, const ImVec2& mouse_pos) { PopupId = id; Window = NULL; ParentWindow = parent_window; ParentMenuSet = parent_menu_set; MousePosOnOpen = mouse_pos; }
 };
 
-// Per column data for Columns()
 struct ImGuiColumnData
 {
-    float       OffsetNorm; // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
+    float       OffsetNorm;         // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
     ImRect      ClipRect;
+
+    ImGuiColumnData()   { OffsetNorm = 0.0f; }
 };
 
 struct ImGuiColumnsSet
