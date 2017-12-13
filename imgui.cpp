@@ -10935,12 +10935,12 @@ void ImGui::PushColumnClipRect(int column_index)
 
 static ImGuiColumnsSet* FindOrAddColumnsSet(ImGuiWindow* window, ImGuiID id)
 {
-    for (int n = 0; n < window->DC.ColumnsSets.Size; n++)
-        if (window->DC.ColumnsSets[n].ID == id)
-            return &window->DC.ColumnsSets[n];
+    for (int n = 0; n < window->ColumnsStorage.Size; n++)
+        if (window->ColumnsStorage[n].ID == id)
+            return &window->ColumnsStorage[n];
 
-    window->DC.ColumnsSets.push_back(ImGuiColumnsSet());
-    ImGuiColumnsSet* columns = &window->DC.ColumnsSets.back();
+    window->ColumnsStorage.push_back(ImGuiColumnsSet());
+    ImGuiColumnsSet* columns = &window->ColumnsStorage.back();
     columns->ID = id;
     return columns;
 }
