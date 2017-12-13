@@ -5021,8 +5021,10 @@ void ImGui::Scrollbar(ImGuiLayoutType direction)
     const ImRect window_rect = window->Rect();
     const float border_size = window->WindowBorderSize;
     ImRect bb = horizontal
-        ? ImRect(window->InnerRect.Min.x, window_rect.Max.y - style.ScrollbarSize, window->InnerRect.Max.x, window_rect.Max.y - border_size)
-        : ImRect(window_rect.Max.x - style.ScrollbarSize, window->InnerRect.Min.y, window_rect.Max.x - border_size, window->InnerRect.Max.y);
+        ? ImRect(window->Pos.x + border_size, window_rect.Max.y - style.ScrollbarSize, window_rect.Max.x - other_scrollbar_size_w - border_size, window_rect.Max.y - border_size)
+        : ImRect(window_rect.Max.x - style.ScrollbarSize, window->Pos.y + border_size, window_rect.Max.x - border_size, window_rect.Max.y - other_scrollbar_size_w - border_size);
+    if (!horizontal)
+        bb.Min.y += window->TitleBarHeight() + ((window->Flags & ImGuiWindowFlags_MenuBar) ? window->MenuBarHeight() : 0.0f);
     if (bb.GetWidth() <= 0.0f || bb.GetHeight() <= 0.0f)
         return;
 
