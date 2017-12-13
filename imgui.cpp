@@ -10879,6 +10879,17 @@ float ImGui::GetColumnOffset(int column_index)
     return x_offset;
 }
 
+float ImGui::GetColumnWidth(int column_index)
+{
+    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiColumnsSet* columns = window->DC.ColumnsSet;
+    IM_ASSERT(columns != NULL);
+
+    if (column_index < 0)
+        column_index = columns->Current;
+    return OffsetNormToPixels(columns, columns->Columns[column_index + 1].OffsetNorm - columns->Columns[column_index].OffsetNorm);
+}
+
 void ImGui::SetColumnOffset(int column_index, float offset)
 {
     ImGuiContext& g = *GImGui;
@@ -10899,17 +10910,6 @@ void ImGui::SetColumnOffset(int column_index, float offset)
 
     if (preserve_width)
         SetColumnOffset(column_index + 1, offset + ImMax(g.Style.ColumnsMinSpacing, width));
-}
-
-float ImGui::GetColumnWidth(int column_index)
-{
-    ImGuiWindow* window = GetCurrentWindowRead();
-    ImGuiColumnsSet* columns = window->DC.ColumnsSet;
-    IM_ASSERT(columns != NULL);
-
-    if (column_index < 0)
-        column_index = columns->Current;
-    return OffsetNormToPixels(columns, columns->Columns[column_index+1].OffsetNorm - columns->Columns[column_index].OffsetNorm);
 }
 
 void ImGui::SetColumnWidth(int column_index, float width)
@@ -11039,10 +11039,10 @@ void ImGui::EndColumns()
         const float y1 = columns->StartPosY;
         const float y2 = window->DC.CursorPos.y;
         int dragging_column = -1;
-        for (int i = 1; i < columns->Count; i++)
+        for (int n = 1; n < columns->Count; n++)
         {
-            float x = window->Pos.x + GetColumnOffset(i);
-            const ImGuiID column_id = columns->ID + ImGuiID(i);
+            float x = window->Pos.x + GetColumnOffset(n);
+            const ImGuiID column_id = columns->ID + ImGuiID(n);
             const float column_hw = 4.0f; // Half-width for interaction
             const ImRect column_rect(ImVec2(x - column_hw, y1), ImVec2(x + column_hw, y2));
             KeepAliveID(column_id);
@@ -11058,7 +11058,7 @@ void ImGui::EndColumns()
                 if (held && g.ActiveIdIsJustActivated)
                     g.ActiveIdClickOffset.x -= column_hw; // Store from center of column line (we used a 8 wide rect for columns clicking). This is used by GetDraggedColumnOffset().
                 if (held)
-                    dragging_column = i;
+                    dragging_column = n;
             }
 
             // Draw column (we clip the Y boundaries CPU side because very long triangles are mishandled by some GPU drivers.)
