@@ -202,6 +202,7 @@ enum ImGuiColumnsFlags_
     ImGuiColumnsFlags_NoPreserveWidths      = 1 << 2,   // Disable column width preservation when adjusting columns
     ImGuiColumnsFlags_NoForceWithinWindow   = 1 << 3,   // Disable forcing columns to fit within window
     ImGuiColumnsFlags_GrowParentContentsSize= 1 << 4,   // (WIP) Restore pre-1.51 behavior of extending the parent window contents size but _without affecting the columns width at all_. Will eventually remove.
+    ImGuiColumnsFlags_DraggingColumns       = 1 << 5,   // Returns true if the columns are currently being dragged
 };
 
 enum ImGuiSelectableFlagsPrivate_
@@ -335,6 +336,7 @@ struct ImGuiGroupData
 struct ImGuiColumnData
 {
     float       OffsetNorm; // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
+    float       OffsetNormDragged; // Column start offset while it is being dragged
     ImRect      ClipRect;
     //float     IndentX;
 };
