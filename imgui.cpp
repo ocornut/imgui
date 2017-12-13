@@ -10849,7 +10849,7 @@ static float GetDraggedColumnOffset(int column_index)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     IM_ASSERT(column_index > 0); // We cannot drag column 0. If you get this assert you may have a conflict between the ID of your columns and another widgets.
-    IM_ASSERT(g.ActiveId == window->DC.ColumnsSetId + ImGuiID(column_index));
+    IM_ASSERT(g.ActiveId == window->DC.ColumnsSetId + ImGuiID(2 * column_index));
 
     float x = g.IO.MousePos.x - g.ActiveIdClickOffset.x - window->Pos.x;
     x = ImMax(x, ImGui::GetColumnOffset(column_index-1) + g.Style.ColumnsMinSpacing);
@@ -10876,7 +10876,11 @@ float ImGui::GetColumnOffset(int column_index)
     */
 
     IM_ASSERT(column_index < window->DC.ColumnsData.Size);
-    const float t = window->DC.ColumnsData[column_index].OffsetNorm;
+    float t = 0.f;
+    if (window->DC.ColumnsFlags & ImGuiColumnsFlags_DraggingColumns)
+        t = window->DC.ColumnsData[column_index].OffsetNormDragged;
+    else
+        t = window->DC.ColumnsData[column_index].OffsetNorm;
     const float x_offset = ImLerp(window->DC.ColumnsMinX, window->DC.ColumnsMaxX, t);
     return x_offset;
 }
@@ -10891,18 +10895,28 @@ void ImGui::SetColumnOffset(int column_index, float offset)
     IM_ASSERT(column_index < window->DC.ColumnsData.Size);
 
     const bool preserve_width = !(window->DC.ColumnsFlags & ImGuiColumnsFlags_NoPreserveWidths) && (column_index < window->DC.ColumnsCount-1);
-    const float width = preserve_width ? GetColumnWidth(column_index) : 0.0f;
+    float width = preserve_width ? GetColumnWidth(column_index) : 0.0f;
 
     if (!(window->DC.ColumnsFlags & ImGuiColumnsFlags_NoForceWithinWindow))
         offset = ImMin(offset, window->DC.ColumnsMaxX - g.Style.ColumnsMinSpacing * (window->DC.ColumnsCount - column_index));
     const float offset_norm = PixelsToOffsetNorm(window, offset);
 
-    const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(column_index);
-    window->DC.StateStorage->SetFloat(column_id, offset_norm);
-    window->DC.ColumnsData[column_index].OffsetNorm = offset_norm;
+    const ImGuiID column_dragged_id = window->DC.ColumnsSetId + ImGuiID(2 * column_index + 1);
+    window->DC.StateStorage->SetFloat(column_dragged_id, offset_norm);
+    window->DC.ColumnsData[column_index].OffsetNormDragged = offset_norm;
+    if (!(window->DC.ColumnsFlags & ImGuiColumnsFlags_DraggingColumns)) {
+        const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(2 * column_index);
+        window->DC.StateStorage->SetFloat(column_id, offset_norm);
+        window->DC.ColumnsData[column_index].OffsetNorm = offset_norm;
+    }
 
     if (preserve_width)
+    {
+        // Remember the existing column widths so long as the columns are still being dragged
+        if (window->DC.ColumnsFlags & ImGuiColumnsFlags_DraggingColumns)
+            width = ImMax(width, OffsetNormToPixels(window, window->DC.ColumnsData[column_index + 1].OffsetNorm - window->DC.ColumnsData[column_index].OffsetNorm));
         SetColumnOffset(column_index + 1, offset + ImMax(g.Style.ColumnsMinSpacing, width));
+    }
 }
 
 float ImGui::GetColumnWidth(int column_index)
@@ -10911,7 +10925,18 @@ float ImGui::GetColumnWidth(int column_index)
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
 
-    return OffsetNormToPixels(window, window->DC.ColumnsData[column_index+1].OffsetNorm - window->DC.ColumnsData[column_index].OffsetNorm);
+    float offsetNorm = 0.f;
+    float nextOffsetNorm = 0.f;
+    if (window->DC.ColumnsFlags & ImGuiColumnsFlags_DraggingColumns) {
+        offsetNorm = window->DC.ColumnsData[column_index].OffsetNormDragged;
+        nextOffsetNorm = window->DC.ColumnsData[column_index + 1].OffsetNormDragged;
+    }
+    else {
+        offsetNorm = window->DC.ColumnsData[column_index].OffsetNorm;
+        nextOffsetNorm = window->DC.ColumnsData[column_index + 1].OffsetNorm;
+    }
+
+    return OffsetNormToPixels(window, nextOffsetNorm - offsetNorm);
 }
 
 void ImGui::SetColumnWidth(int column_index, float width)
@@ -10920,7 +10945,7 @@ void ImGui::SetColumnWidth(int column_index, float width)
     if (column_index < 0)
         column_index = window->DC.ColumnsCurrent;
 
-    SetColumnOffset(column_index+1, GetColumnOffset(column_index) + width);
+    SetColumnOffset(column_index + 1, GetColumnOffset(column_index) + width);
 }
 
 void ImGui::PushColumnClipRect(int column_index)
@@ -10946,6 +10971,10 @@ void ImGui::BeginColumns(const char* id, int columns_count, ImGuiColumnsFlags fl
     window->DC.ColumnsSetId = window->GetID(id ? id : "columns");
     PopID();
 
+    // The columns are 'dragging' if they were being dragged last update
+    if (window->DC.StateStorage->GetBool(window->DC.ColumnsSetId - ImGuiID(1)))
+        flags |= ImGuiColumnsFlags_DraggingColumns;
+
     // Set state for first column
     window->DC.ColumnsCurrent = 0;
     window->DC.ColumnsCount = columns_count;
@@ -10965,13 +10994,20 @@ void ImGui::BeginColumns(const char* id, int columns_count, ImGuiColumnsFlags fl
     window->DC.ColumnsData.resize(columns_count + 1);
     for (int column_index = 0; column_index < columns_count + 1; column_index++)
     {
-        const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(column_index);
+        const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(2 * column_index);
+        const ImGuiID column_dragged_id = window->DC.ColumnsSetId + ImGuiID(2 * column_index + 1);
         KeepAliveID(column_id);
+        KeepAliveID(column_dragged_id);
         const float default_t = column_index / (float)window->DC.ColumnsCount;
         float t = window->DC.StateStorage->GetFloat(column_id, default_t);
+        float t_dragged = window->DC.StateStorage->GetFloat(column_dragged_id, default_t);
         if (!(window->DC.ColumnsFlags & ImGuiColumnsFlags_NoForceWithinWindow))
+        {
             t = ImMin(t, PixelsToOffsetNorm(window, window->DC.ColumnsMaxX - g.Style.ColumnsMinSpacing * (window->DC.ColumnsCount - column_index)));
+            t_dragged = ImMin(t_dragged, PixelsToOffsetNorm(window, window->DC.ColumnsMaxX - g.Style.ColumnsMinSpacing * (window->DC.ColumnsCount - column_index)));
+        }
         window->DC.ColumnsData[column_index].OffsetNorm = t;
+        window->DC.ColumnsData[column_index].OffsetNormDragged = t_dragged;
     }
 
     // Cache clipping rectangles
@@ -11012,7 +11048,7 @@ void ImGui::EndColumns()
         for (int i = 1; i < window->DC.ColumnsCount; i++)
         {
             float x = window->Pos.x + GetColumnOffset(i);
-            const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(i);
+            const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(2 * i);
             const float column_hw = 4.0f; // Half-width for interaction
             const ImRect column_rect(ImVec2(x - column_hw, y1), ImVec2(x + column_hw, y2));
             if (IsClippedEx(column_rect, column_id, false))
@@ -11040,8 +11076,19 @@ void ImGui::EndColumns()
         // Apply dragging after drawing the column lines, so our rendered lines are in sync with how items were displayed during the frame.
         if (dragging_column != -1)
         {
+            window->DC.StateStorage->SetBool(window->DC.ColumnsSetId - ImGuiID(1), true);
             float x = GetDraggedColumnOffset(dragging_column);
             SetColumnOffset(dragging_column, x);
+        }
+        else if (window->DC.ColumnsFlags & ImGuiColumnsFlags_DraggingColumns)
+        {
+            window->DC.StateStorage->SetBool(window->DC.ColumnsSetId - ImGuiID(1), false);
+            for (int i = 1; i < window->DC.ColumnsCount; i++)
+            {
+                const ImGuiID column_id = window->DC.ColumnsSetId + ImGuiID(2 * i);
+                window->DC.StateStorage->SetFloat(column_id, window->DC.ColumnsData[i].OffsetNormDragged);
+                window->DC.ColumnsData[i].OffsetNorm = window->DC.ColumnsData[i].OffsetNormDragged;
+            }
         }
     }
 
@@ -11064,6 +11111,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
         EndColumns();
     
     ImGuiColumnsFlags flags = (border ? 0 : ImGuiColumnsFlags_NoBorder);
+
     //flags |= ImGuiColumnsFlags_NoPreserveWidths; // NB: Legacy behavior
     if (columns_count != 1)
         BeginColumns(id, columns_count, flags);
