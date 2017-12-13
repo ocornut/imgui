@@ -10979,6 +10979,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
 
     // Initialize defaults
+    columns->IsFirstFrame = (columns->Columns.Size == 0);
     if (columns->Columns.Size == 0)
     {
         columns->Columns.reserve(columns_count + 1);
@@ -11032,6 +11033,7 @@ void ImGui::EndColumns()
         window->DC.CursorMaxPos.x = ImMax(columns->StartMaxPosX, columns->MaxX);  // Restore cursor max pos, as columns don't grow parent
 
     // Draw columns borders and handle resize
+    columns->IsBeingResized = false;
     if (!(columns->Flags & ImGuiColumnsFlags_NoBorder) && !window->SkipItems)
     {
         const float y1 = columns->StartPosY;
@@ -11070,6 +11072,7 @@ void ImGui::EndColumns()
         {
             float x = GetDraggedColumnOffset(columns, dragging_column);
             SetColumnOffset(dragging_column, x);
+            columns->IsBeingResized = true;
         }
     }
 

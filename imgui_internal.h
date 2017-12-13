@@ -424,6 +424,8 @@ struct ImGuiColumnsSet
 {
     ImGuiID             ID;
     ImGuiColumnsFlags   Flags;
+    bool                IsFirstFrame;
+    bool                IsBeingResized;
     int                 Current;
     int                 Count;
     float               MinX, MaxX;
@@ -437,6 +439,8 @@ struct ImGuiColumnsSet
     {
         ID = 0;
         Flags = 0;
+        IsFirstFrame = false;
+        IsBeingResized = false;
         Current = 0;
         Count = 1;
         MinX = MaxX = 0.0f;
