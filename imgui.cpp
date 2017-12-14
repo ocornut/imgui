@@ -11434,7 +11434,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
 // We don't really use/need this now, but added it for the sake of consistency and because we might need it later.
 void ImGui::EndDragDropTarget()
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *GImGui; (void)g;
     IM_ASSERT(g.DragDropActive);
 }
 
