@@ -11220,50 +11220,67 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (g.IO.MouseDown[mouse_button] == false)
-        return false;
 
-    ImGuiID id = window->DC.LastItemId;
-    if (id == 0)
+    bool source_drag_active = false;
+    ImGuiID source_id = 0;
+    ImGuiID source_parent_id = 0;
+    if (!(flags & ImGuiDragDropFlags_SourceExtern))
     {
-        // If you want to use BeginDragDropSource() on an item with no unique identifier for interaction, such as Text() or Image(), you need to:
-        // A) Read the explanation below, B) Use the ImGuiDragDropFlags_SourceAllowNullID flag, C) Swallow your programmer pride.
-        if (!(flags & ImGuiDragDropFlags_SourceAllowNullID))
-        {
-            IM_ASSERT(0);
+        source_id = window->DC.LastItemId;
+        if (source_id != 0 && g.ActiveId != source_id) // Early out for most common case
             return false;
-        }
+        if (g.IO.MouseDown[mouse_button] == false)
+            return false;
 
-        // Magic fallback (=somehow reprehensible) to handle items with no assigned ID, e.g. Text(), Image()
-        // We build a throwaway ID based on current ID stack + relative AABB of items in window. 
-        // THE IDENTIFIER WON'T SURVIVE ANY REPOSITIONING OF THE WIDGET, so if your widget moves your dragging operation will be canceled. 
-        // We don't need to maintain/call ClearActiveID() as releasing the button will early out this function and trigger !ActiveIdIsAlive.
-        bool is_hovered = window->DC.LastItemRectHoveredRect;
-        if (!is_hovered && (g.ActiveId == 0 || g.ActiveIdWindow != window))
-            return false;
-        id = window->DC.LastItemId = window->GetIDFromRectangle(window->DC.LastItemRect);
-        if (is_hovered)
-            SetHoveredID(id);
-        if (is_hovered && g.IO.MouseClicked[mouse_button])
+        if (source_id == 0)
         {
-            SetActiveID(id, window);
-            FocusWindow(window);
+            // If you want to use BeginDragDropSource() on an item with no unique identifier for interaction, such as Text() or Image(), you need to:
+            // A) Read the explanation below, B) Use the ImGuiDragDropFlags_SourceAllowNullID flag, C) Swallow your programmer pride.
+            if (!(flags & ImGuiDragDropFlags_SourceAllowNullID))
+            {
+                IM_ASSERT(0);
+                return false;
+            }
+
+            // Magic fallback (=somehow reprehensible) to handle items with no assigned ID, e.g. Text(), Image()
+            // We build a throwaway ID based on current ID stack + relative AABB of items in window. 
+            // THE IDENTIFIER WON'T SURVIVE ANY REPOSITIONING OF THE WIDGET, so if your widget moves your dragging operation will be canceled. 
+            // We don't need to maintain/call ClearActiveID() as releasing the button will early out this function and trigger !ActiveIdIsAlive.
+            bool is_hovered = window->DC.LastItemRectHoveredRect;
+            if (!is_hovered && (g.ActiveId == 0 || g.ActiveIdWindow != window))
+                return false;
+            source_id = window->DC.LastItemId = window->GetIDFromRectangle(window->DC.LastItemRect);
+            if (is_hovered)
+                SetHoveredID(source_id);
+            if (is_hovered && g.IO.MouseClicked[mouse_button])
+            {
+                SetActiveID(source_id, window);
+                FocusWindow(window);
+            }
+            if (g.ActiveId == source_id) // Allow the underlying widget to display/return hovered during the mouse release frame, else we would get a flicker.
+                g.ActiveIdAllowOverlap = is_hovered;
         }
-        if (g.ActiveId == id) // Allow the underlying widget to display/return hovered during the mouse release frame, else we would get a flicker.
-            g.ActiveIdAllowOverlap = is_hovered;
+        if (g.ActiveId != source_id)
+            return false;
+        source_parent_id = window->IDStack.back();
+        source_drag_active = IsMouseDragging(mouse_button);
     }
-    if (g.ActiveId != id)
-        return false;
+    else
+    {
+        window = NULL;
+        source_id = ImHash("#SourceExtern", 0);
+        source_drag_active = true;
+    }
 
-    if (IsMouseDragging(mouse_button))
+    if (source_drag_active)
     {
         if (!g.DragDropActive)
         {
-            IM_ASSERT(id != 0);
+            IM_ASSERT(source_id != 0);
             ClearDragDrop();
             ImGuiPayload& payload = g.DragDropPayload;
-            payload.SourceId = id;
-            payload.SourceParentId = window->IDStack.back();
+            payload.SourceId = source_id;
+            payload.SourceParentId = source_parent_id;
             g.DragDropActive = true;
             g.DragDropSourceFlags = flags;
             g.DragDropMouseButton = mouse_button;
@@ -11279,7 +11296,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
             BeginTooltipEx(ImGuiWindowFlags_NoInputs);
         }
 
-        if (!(flags & ImGuiDragDropFlags_SourceNoDisableHover))
+        if (!(flags & ImGuiDragDropFlags_SourceNoDisableHover) && !(flags & ImGuiDragDropFlags_SourceExtern))
             window->DC.LastItemRectHoveredRect = false;
 
         return true;
@@ -11434,7 +11451,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     }
 
     g.DragDropAcceptFrameCount = g.FrameCount;
-    payload.Delivery = was_accepted_previously && IsMouseReleased(g.DragDropMouseButton);
+    payload.Delivery = was_accepted_previously && !IsMouseDown(g.DragDropMouseButton); // For extern drag sources affecting os window focus, it's easier to just test !IsMouseDown() instead of IsMouseReleased()
     if (!payload.Delivery && !(flags & ImGuiDragDropFlags_AcceptBeforeDelivery))
         return NULL;
 
