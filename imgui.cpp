@@ -11422,6 +11422,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
 
     // Render default drop visuals
     payload.Preview = was_accepted_previously;
+    flags |= (g.DragDropSourceFlags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect); // Source can also inhibit the preview (useful for external sources that lives for 1 frame)
     if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && payload.Preview)
     {
         // FIXME-DRAG: Settle on a proper default visuals for drop target.
