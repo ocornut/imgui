@@ -376,9 +376,12 @@ struct ImGuiSettingsHandler
 {
     const char* TypeName;   // Short description stored in .ini file. Disallowed characters: '[' ']'  
     ImGuiID     TypeHash;   // == ImHash(TypeName, 0, 0)
-    void*       (*ReadOpenFn)(ImGuiContext& ctx, const char* name);
-    void        (*ReadLineFn)(ImGuiContext& ctx, void* entry, const char* line);
-    void        (*WriteAllFn)(ImGuiContext& ctx, ImGuiTextBuffer* out_buf);
+    void*       (*ReadOpenFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, const char* name);
+    void        (*ReadLineFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry, const char* line);
+    void        (*WriteAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* out_buf);
+    void*       UserData;
+
+    ImGuiSettingsHandler() { memset(this, 0, sizeof(*this)); }
 };
 
 // Mouse cursor data (used when io.MouseDrawCursor is set)
@@ -870,7 +873,7 @@ namespace ImGui
     IMGUI_API void          Initialize();
 
     IMGUI_API void                  MarkIniSettingsDirty();
-    IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(ImGuiID type_id);
+    IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);
     IMGUI_API ImGuiWindowSettings*  FindWindowSettings(ImGuiID id);
 
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);

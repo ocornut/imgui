@@ -2525,7 +2525,7 @@ void ImGui::NewFrame()
     Begin("Debug##Default");
 }
 
-static void* SettingsHandlerWindow_ReadOpen(ImGuiContext&, const char* name)
+static void* SettingsHandlerWindow_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
 {
     ImGuiWindowSettings* settings = ImGui::FindWindowSettings(ImHash(name, 0));
     if (!settings)
@@ -2533,7 +2533,7 @@ static void* SettingsHandlerWindow_ReadOpen(ImGuiContext&, const char* name)
     return (void*)settings;
 }
 
-static void SettingsHandlerWindow_ReadLine(ImGuiContext&, void* entry, const char* line)
+static void SettingsHandlerWindow_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line)
 {
     ImGuiWindowSettings* settings = (ImGuiWindowSettings*)entry;
     float x, y; 
@@ -2543,9 +2543,10 @@ static void SettingsHandlerWindow_ReadLine(ImGuiContext&, void* entry, const cha
     else if (sscanf(line, "Collapsed=%d", &i) == 1)     settings->Collapsed = (i != 0);
 }
 
-static void SettingsHandlerWindow_WriteAll(ImGuiContext& g, ImGuiTextBuffer* buf)
+static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf)
 {
     // Gather data from windows that were active during this session
+    ImGuiContext& g = *imgui_ctx;
     for (int i = 0; i != g.Windows.Size; i++)
     {
         ImGuiWindow* window = g.Windows[i];
@@ -2570,7 +2571,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext& g, ImGuiTextBuffer* buf
         const char* name = settings->Name;
         if (const char* p = strstr(name, "###"))  // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
             name = p;
-        buf->appendf("[Window][%s]\n", name);
+        buf->appendf("[%s][%s]\n", handler->TypeName, name);
         buf->appendf("Pos=%d,%d\n", (int)settings->Pos.x, (int)settings->Pos.y);
         buf->appendf("Size=%d,%d\n", (int)settings->Size.x, (int)settings->Size.y);
         buf->appendf("Collapsed=%d\n", settings->Collapsed);
@@ -2684,9 +2685,10 @@ static void LoadIniSettingsFromDisk(const char* ini_filename)
     ImGui::MemFree(file_data);
 }
 
-ImGuiSettingsHandler* ImGui::FindSettingsHandler(ImGuiID type_hash)
+ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name)
 {
     ImGuiContext& g = *GImGui;
+    const ImGuiID type_hash = ImHash(type_name, 0, 0);
     for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
         if (g.SettingsHandlers[handler_n].TypeHash == type_hash)
             return &g.SettingsHandlers[handler_n];
@@ -2702,7 +2704,7 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
 
     ImGuiContext& g = *GImGui;
     void* entry_data = NULL;
-    const ImGuiSettingsHandler* entry_handler = NULL;
+    ImGuiSettingsHandler* entry_handler = NULL;
 
     char* line_end = NULL;
     for (char* line = buf; line < buf_end; line = line_end + 1)
@@ -2733,14 +2735,13 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
                 *type_end = 0; // Overwrite first ']' 
                 name_start++;  // Skip second '['
             }
-            const ImGuiID type_hash = ImHash(type_start, 0, 0);
-            entry_handler = ImGui::FindSettingsHandler(type_hash);
-            entry_data = entry_handler ? entry_handler->ReadOpenFn(g, name_start) : NULL;
+            entry_handler = ImGui::FindSettingsHandler(type_start);
+            entry_data = entry_handler ? entry_handler->ReadOpenFn(&g, entry_handler, name_start) : NULL;
         }
         else if (entry_handler != NULL && entry_data != NULL)
         {
             // Let type handler parse the line
-            entry_handler->ReadLineFn(g, entry_data, line);
+            entry_handler->ReadLineFn(&g, entry_handler, entry_data, line);
         }
     }
     ImGui::MemFree(buf);
@@ -2770,7 +2771,10 @@ static void SaveIniSettingsToMemory(ImVector<char>& out_buf)
 
     ImGuiTextBuffer buf;
     for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
-        g.SettingsHandlers[handler_n].WriteAllFn(g, &buf);
+    {
+        ImGuiSettingsHandler* handler = &g.SettingsHandlers[handler_n];
+        handler->WriteAllFn(&g, handler, &buf);
+    }
 
     buf.Buf.pop_back(); // Remove extra zero-terminator used by ImGuiTextBuffer
     out_buf.swap(buf.Buf);
