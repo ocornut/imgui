@@ -634,7 +634,7 @@ bool    ImGui::TabItem(const char* label, bool* p_open, ImGuiTabItemFlags flags)
 
     // Click to Select a tab
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnDragDropHold | ImGuiButtonFlags_AllowOverlapMode);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnDragDropHold | ImGuiButtonFlags_AllowItemOverlap);
     hovered |= (g.HoveredId == id);
     if (pressed || (flags & ImGuiTabItemFlags_SetSelected))
         tab_bar->NextSelectedTabId = id;
@@ -700,7 +700,7 @@ bool    ImGui::TabItem(const char* label, bool* p_open, ImGuiTabItemFlags flags)
         ImRect text_clip_bb(bb.Min + style.FramePadding, bb.Max);
         text_clip_bb.Max.x -= g.Style.ItemInnerSpacing.x;
         float text_gradient_extent = g.FontSize * 1.5f;
-        if (flags & ImGuiTabItemFlags_Unsaved)
+        if (flags & ImGuiTabItemFlags_UnsavedDocument)
         {
             text_clip_bb.Max.x -= CalcTextSize(TAB_UNSAVED_MARKER, NULL, false).x;
             ImVec2 unsaved_marker_pos(ImMin(bb.Min.x + style.FramePadding.x + label_size.x + 1, text_clip_bb.Max.x), bb.Min.y + style.FramePadding.y + (float)(int)(-g.FontSize * 0.25f));
@@ -759,7 +759,7 @@ bool    ImGui::TabItem(const char* label, bool* p_open, ImGuiTabItemFlags flags)
     if (just_closed)
     {
         *p_open = false;
-        if (tab_selected && !(flags & ImGuiTabItemFlags_Unsaved))
+        if (tab_selected && !(flags & ImGuiTabItemFlags_UnsavedDocument))
         {
             // This will remove a frame of lag for selecting another tab on closure.
             // However we don't run it in the case where the 'Unsaved' flag is set, so user gets a chance to fully undo the closure
@@ -767,7 +767,7 @@ bool    ImGui::TabItem(const char* label, bool* p_open, ImGuiTabItemFlags flags)
             tab_bar->NextSelectedTabId = 0;
             tab_bar->CurrSelectedTabIdIsAlive = false;
         }
-        else if (!tab_selected && (flags & ImGuiTabItemFlags_Unsaved))
+        else if (!tab_selected && (flags & ImGuiTabItemFlags_UnsavedDocument))
         {
             // Actually select before expecting closure
             tab_bar->NextSelectedTabId = id;
@@ -929,7 +929,7 @@ void    ImGui::ShowTabsDemo(const char* title, bool* p_open)
     {
         MyDocument& doc = GDocs[doc_n];
         const bool was_open = doc.Open;
-        const ImGuiTabItemFlags flags = (doc.Dirty ? ImGuiTabItemFlags_Unsaved : 0);
+        const ImGuiTabItemFlags flags = (doc.Dirty ? ImGuiTabItemFlags_UnsavedDocument : 0);
         //if (doc_n == 1 && ImGui::GetIO().KeyCtrl) flags |= ImGuiTabItemFlags_SetSelected; // [DEBUG]
         const bool selected = ImGui::TabItem(doc.Name, &doc.Open, flags);
         MyContextMenu(doc);

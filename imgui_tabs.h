@@ -10,6 +10,7 @@ IMGUI_API void          BeginTabBar(const char* str_id, ImGuiTabBarFlags flags =
 IMGUI_API void          EndTabBar();
 IMGUI_API bool          TabItem(const char* label, bool* p_open = NULL, ImGuiTabItemFlags = 0);
 
+// FIXME-WIP: Obsolete API
 IMGUI_API void          SetTabItemClosed(const char* label);
 IMGUI_API void          SetTabItemSelected(const char* label);
 
@@ -36,6 +37,6 @@ enum ImGuiTabBarFlags_
 enum ImGuiTabItemFlags_
 {
     ImGuiTabItemFlags_None                          = 0,
-    ImGuiTabItemFlags_Unsaved                       = 1 << 0,   // Automatically append an '*' to the label without affecting the ID, as a convenience to avoid using ### operator everywhere.
+    ImGuiTabItemFlags_UnsavedDocument               = 1 << 0,   // Automatically append an '*' to the label without affecting the ID, as a convenience to avoid using ### operator everywhere.
     ImGuiTabItemFlags_SetSelected                   = 1 << 1    // Trigger flag to programatically make the tab selected when calling TabItem()
 };
