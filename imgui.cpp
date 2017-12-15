@@ -10807,15 +10807,15 @@ void ImGui::NextColumn()
     if (++columns->Current < columns->Count)
     {
         // Columns 1+ cancel out IndentX
-        window->DC.ColumnsOffsetX = GetColumnOffset(columns->Current) - window->DC.IndentX + g.Style.ItemSpacing.x;
+        window->DC.ColumnsOffsetX = columns->Columns[columns->Current].LockedOffset - window->DC.IndentX + g.Style.ItemSpacing.x;
         window->DrawList->ChannelsSetCurrent(columns->Current);
     }
     else
     {
         window->DC.ColumnsOffsetX = 0.0f;
+        window->DrawList->ChannelsSetCurrent(0);
         columns->Current = 0;
         columns->CellMinY = columns->CellMaxY;
-        window->DrawList->ChannelsSetCurrent(0);
     }
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
     window->DC.CursorPos.y = columns->CellMinY;
@@ -11018,7 +11018,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
 
     for (int n = 0; n < columns_count + 1; n++)
     {
-        // Clamp
+        // Clamp position
         ImGuiColumnData* column = &columns->Columns[n];
         float t = column->OffsetNorm;
         if (!(columns->Flags & ImGuiColumnsFlags_NoForceWithinWindow))
@@ -11028,7 +11028,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
         if (n == columns_count)
             continue;
 
-        // Compute clipping rectangles
+        // Compute clipping rectangle
         float clip_x1 = ImFloor(0.5f + window->Pos.x + GetColumnOffset(n) - 1.0f);
         float clip_x2 = ImFloor(0.5f + window->Pos.x + GetColumnOffset(n + 1) - 1.0f);
         column->ClipRect = ImRect(clip_x1, -FLT_MAX, clip_x2, +FLT_MAX);
@@ -11081,7 +11081,7 @@ void ImGui::EndColumns()
                     g.MouseCursor = ImGuiMouseCursor_ResizeEW;
                 if (held && g.ActiveIdIsJustActivated)
                     g.ActiveIdClickOffset.x -= column_hw; // Store from center of column line (we used a 8 wide rect for columns clicking). This is used by GetDraggedColumnOffset().
-                if (held)
+                if (held && !(columns->Columns[n].Flags & ImGuiColumnsFlags_NoResize))
                     dragging_column = n;
             }
 
