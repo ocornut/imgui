@@ -1000,6 +1000,9 @@ void ImGui::ShowTestWindow(bool* p_open)
     {
         if (ImGui::TreeNode("Child regions"))
         {
+            static bool disable_mouse_wheel = false;
+            ImGui::Checkbox("Disable Mouse Wheel", &disable_mouse_wheel);
+
             ImGui::Text("Without border");
             static int line = 50;
             bool goto_line = ImGui::Button("Goto");
@@ -1007,7 +1010,8 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::PushItemWidth(100);
             goto_line |= ImGui::InputInt("##Line", &line, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue);
             ImGui::PopItemWidth();
-            ImGui::BeginChild("Sub1", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.5f,300), false, ImGuiWindowFlags_HorizontalScrollbar);
+
+            ImGui::BeginChild("Sub1", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.5f,300), false, ImGuiWindowFlags_HorizontalScrollbar | (disable_mouse_wheel ? ImGuiWindowFlags_NoScrollWithMouse : 0));
             for (int i = 0; i < 100; i++)
             {
                 ImGui::Text("%04d: scrollable region", i);
@@ -1021,7 +1025,7 @@ void ImGui::ShowTestWindow(bool* p_open)
             ImGui::SameLine();
 
             ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
-            ImGui::BeginChild("Sub2", ImVec2(0,300), true);
+            ImGui::BeginChild("Sub2", ImVec2(0,300), true, (disable_mouse_wheel ? ImGuiWindowFlags_NoScrollWithMouse : 0));
             ImGui::Text("With border");
             ImGui::Columns(2);
             for (int i = 0; i < 100; i++)
@@ -2601,7 +2605,8 @@ struct ExampleAppConsole
         ImGui::PopStyleVar();
         ImGui::Separator();
 
-        ImGui::BeginChild("ScrollingRegion", ImVec2(0, -ImGui::GetStyle().ItemSpacing.y - ImGui::GetFrameHeightWithSpacing()), false, ImGuiWindowFlags_HorizontalScrollbar); // Leave room for 1 separator + 1 InputText
+        const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing(); // 1 separator, 1 input text
+        ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height_to_reserve), false, ImGuiWindowFlags_HorizontalScrollbar); // Leave room for 1 separator + 1 InputText
         if (ImGui::BeginPopupContextWindow())
         {
             if (ImGui::Selectable("Clear")) ClearLog();

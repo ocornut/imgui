@@ -249,9 +249,10 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/12/14 (1.53) - using the ImGuiWindowFlags_NoScrollWithMouse flag on a child window forwards the mouse wheel event to the parent window, unless either ImGuiWindowFlags_NoInputs or ImGuiWindowFlags_NoScrollbar are also set.
  - 2017/12/13 (1.53) - renamed GetItemsLineHeightWithSpacing() to GetFrameHeightWithSpacing(). Kept redirection function (will obsolete).
- - 2017/12/13 (1.53) - marked IsRootWindowFocused() as obsolete in favor of using IsWindowFocused(ImGuiFocusedFlags_RootWindow). Kept redirection function (will obsolete).
-                     - marked IsRootWindowOrAnyChildFocused() as obsolete in favor of using IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows). Kept redirection function (will obsolete).
+ - 2017/12/13 (1.53) - obsoleted IsRootWindowFocused() in favor of using IsWindowFocused(ImGuiFocusedFlags_RootWindow). Kept redirection function (will obsolete).
+                     - obsoleted IsRootWindowOrAnyChildFocused() in favor of using IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows). Kept redirection function (will obsolete).
  - 2017/12/12 (1.53) - renamed ImGuiTreeNodeFlags_AllowOverlapMode to ImGuiTreeNodeFlags_AllowItemOverlap. Kept redirection enum (will obsolete).
  - 2017/12/10 (1.53) - removed SetNextWindowContentWidth(), prefer using SetNextWindowContentSize(). Kept redirection function (will obsolete).
  - 2017/11/27 (1.53) - renamed ImGuiTextBuffer::append() helper to appendf(), appendv() to appendfv(). If you copied the 'Log' demo in your code, it uses appendv() so that needs to be renamed.
@@ -260,7 +261,7 @@
  - 2017/11/18 (1.53) - Style: removed ImGuiCol_ComboBg in favor of combo boxes using ImGuiCol_PopupBg for consistency.
  - 2017/11/18 (1.53) - Style: renamed ImGuiCol_ChildWindowBg to ImGuiCol_ChildBg.
  - 2017/11/18 (1.53) - Style: renamed style.ChildWindowRounding to style.ChildRounding, ImGuiStyleVar_ChildWindowRounding to ImGuiStyleVar_ChildRounding.
- - 2017/11/02 (1.53) - marked IsRootWindowOrAnyChildHovered() as obsolete is favor of using IsWindowHovered(ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows);
+ - 2017/11/02 (1.53) - obsoleted IsRootWindowOrAnyChildHovered() in favor of using IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
  - 2017/10/24 (1.52) - renamed IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS/IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS to IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS/IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS for consistency.
  - 2017/10/20 (1.52) - changed IsWindowHovered() default parameters behavior to return false if an item is active in another window (e.g. click-dragging item from another window to this window). You can use the newly introduced IsWindowHovered() flags to requests this specific behavior if you need it.
  - 2017/10/20 (1.52) - marked IsItemHoveredRect()/IsMouseHoveringWindow() as obsolete, in favor of using the newly introduced flags for IsItemHovered() and IsWindowHovered(). See https://github.com/ocornut/imgui/issues/1382 for details.
@@ -3260,12 +3261,20 @@ void ImGui::NewFrame()
             window->Size *= scale;
             window->SizeFull *= scale;
         }
-        else if (!g.IO.KeyCtrl && !(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
+        else if (!g.IO.KeyCtrl)
         {
             // Mouse wheel Scrolling
-            float scroll_amount = 5 * window->CalcFontSize();
-            scroll_amount = (float)(int)ImMin(scroll_amount, (window->ContentsRegionRect.GetHeight() + window->WindowPadding.y * 2.0f) * 0.67f);
-            SetWindowScrollY(window, window->Scroll.y - g.IO.MouseWheel * scroll_amount);
+            // If a child window has the ImGuiWindowFlags_NoScrollWithMouse flag, we give a chance to scroll its parent (unless either ImGuiWindowFlags_NoInputs or ImGuiWindowFlags_NoScrollbar are also set).
+            ImGuiWindow* scroll_window = window;
+            while ((scroll_window->Flags & ImGuiWindowFlags_ChildWindow) && (scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoScrollbar) && !(scroll_window->Flags & ImGuiWindowFlags_NoInputs) && scroll_window->ParentWindow)
+                scroll_window = scroll_window->ParentWindow;
+
+            if (!(scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoInputs))
+            {
+                float scroll_amount = 5 * scroll_window->CalcFontSize();
+                scroll_amount = (float)(int)ImMin(scroll_amount, (scroll_window->ContentsRegionRect.GetHeight() + scroll_window->WindowPadding.y * 2.0f) * 0.67f);
+                SetWindowScrollY(scroll_window, scroll_window->Scroll.y - g.IO.MouseWheel * scroll_amount);
+            }
         }
     }
 
@@ -12383,56 +12392,73 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (g.IO.MouseDown[mouse_button] == false)
-        return false;
 
-    ImGuiID id = window->DC.LastItemId;
-    if (id == 0)
+    bool source_drag_active = false;
+    ImGuiID source_id = 0;
+    ImGuiID source_parent_id = 0;
+    if (!(flags & ImGuiDragDropFlags_SourceExtern))
     {
-        // If you want to use BeginDragDropSource() on an item with no unique identifier for interaction, such as Text() or Image(), you need to:
-        // A) Read the explanation below, B) Use the ImGuiDragDropFlags_SourceAllowNullID flag, C) Swallow your programmer pride.
-        if (!(flags & ImGuiDragDropFlags_SourceAllowNullID))
-        {
-            IM_ASSERT(0);
+        source_id = window->DC.LastItemId;
+        if (source_id != 0 && g.ActiveId != source_id) // Early out for most common case
             return false;
-        }
+        if (g.IO.MouseDown[mouse_button] == false)
+            return false;
 
-        // Magic fallback (=somehow reprehensible) to handle items with no assigned ID, e.g. Text(), Image()
-        // We build a throwaway ID based on current ID stack + relative AABB of items in window. 
-        // THE IDENTIFIER WON'T SURVIVE ANY REPOSITIONING OF THE WIDGET, so if your widget moves your dragging operation will be canceled. 
-        // We don't need to maintain/call ClearActiveID() as releasing the button will early out this function and trigger !ActiveIdIsAlive.
-        bool is_hovered = window->DC.LastItemRectHoveredRect;
-        if (!is_hovered && (g.ActiveId == 0 || g.ActiveIdWindow != window))
-            return false;
-        id = window->DC.LastItemId = window->GetIDFromRectangle(window->DC.LastItemRect);
-        if (is_hovered)
-            SetHoveredID(id);
-        if (is_hovered && g.IO.MouseClicked[mouse_button])
+        if (source_id == 0)
         {
-            SetActiveID(id, window);
-            FocusWindow(window);
+            // If you want to use BeginDragDropSource() on an item with no unique identifier for interaction, such as Text() or Image(), you need to:
+            // A) Read the explanation below, B) Use the ImGuiDragDropFlags_SourceAllowNullID flag, C) Swallow your programmer pride.
+            if (!(flags & ImGuiDragDropFlags_SourceAllowNullID))
+            {
+                IM_ASSERT(0);
+                return false;
+            }
+
+            // Magic fallback (=somehow reprehensible) to handle items with no assigned ID, e.g. Text(), Image()
+            // We build a throwaway ID based on current ID stack + relative AABB of items in window. 
+            // THE IDENTIFIER WON'T SURVIVE ANY REPOSITIONING OF THE WIDGET, so if your widget moves your dragging operation will be canceled. 
+            // We don't need to maintain/call ClearActiveID() as releasing the button will early out this function and trigger !ActiveIdIsAlive.
+            bool is_hovered = window->DC.LastItemRectHoveredRect;
+            if (!is_hovered && (g.ActiveId == 0 || g.ActiveIdWindow != window))
+                return false;
+            source_id = window->DC.LastItemId = window->GetIDFromRectangle(window->DC.LastItemRect);
+            if (is_hovered)
+                SetHoveredID(source_id);
+            if (is_hovered && g.IO.MouseClicked[mouse_button])
+            {
+                SetActiveID(source_id, window);
+                FocusWindow(window);
+            }
+            if (g.ActiveId == source_id) // Allow the underlying widget to display/return hovered during the mouse release frame, else we would get a flicker.
+                g.ActiveIdAllowOverlap = is_hovered;
         }
-        if (g.ActiveId == id) // Allow the underlying widget to display/return hovered during the mouse release frame, else we would get a flicker.
-            g.ActiveIdAllowOverlap = is_hovered;
+        if (g.ActiveId != source_id)
+            return false;
+        source_parent_id = window->IDStack.back();
+        source_drag_active = IsMouseDragging(mouse_button);
     }
-    if (g.ActiveId != id)
-        return false;
+    else
+    {
+        window = NULL;
+        source_id = ImHash("#SourceExtern", 0);
+        source_drag_active = true;
+    }
 
-    if (IsMouseDragging(mouse_button))
+    if (source_drag_active)
     {
         if (!g.DragDropActive)
         {
-            IM_ASSERT(id != 0);
+            IM_ASSERT(source_id != 0);
             ClearDragDrop();
             ImGuiPayload& payload = g.DragDropPayload;
-            payload.SourceId = id;
-            payload.SourceParentId = window->IDStack.back();
+            payload.SourceId = source_id;
+            payload.SourceParentId = source_parent_id;
             g.DragDropActive = true;
             g.DragDropSourceFlags = flags;
             g.DragDropMouseButton = mouse_button;
         }
 
-        if (!(flags & ImGuiDragDropFlags_SourceNoAutoTooltip))
+        if (!(flags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
         {
             // FIXME-DRAG
             //SetNextWindowPos(g.IO.MousePos - g.ActiveIdClickOffset - g.Style.WindowPadding);
@@ -12442,7 +12468,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
             BeginTooltipEx(ImGuiWindowFlags_NoInputs);
         }
 
-        if (!(flags & ImGuiDragDropFlags_SourceNoDisableHover))
+        if (!(flags & ImGuiDragDropFlags_SourceNoDisableHover) && !(flags & ImGuiDragDropFlags_SourceExtern))
             window->DC.LastItemRectHoveredRect = false;
 
         return true;
@@ -12455,7 +12481,7 @@ void ImGui::EndDragDropSource()
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.DragDropActive);
 
-    if (!(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoAutoTooltip))
+    if (!(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
     {
         EndTooltip();
         PopStyleColor();
@@ -12585,6 +12611,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
 
     // Render default drop visuals
     payload.Preview = was_accepted_previously;
+    flags |= (g.DragDropSourceFlags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect); // Source can also inhibit the preview (useful for external sources that lives for 1 frame)
     if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && payload.Preview)
     {
         // FIXME-DRAG: Settle on a proper default visuals for drop target.
@@ -12596,7 +12623,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     }
 
     g.DragDropAcceptFrameCount = g.FrameCount;
-    payload.Delivery = was_accepted_previously && IsMouseReleased(g.DragDropMouseButton);
+    payload.Delivery = was_accepted_previously && !IsMouseDown(g.DragDropMouseButton); // For extern drag sources affecting os window focus, it's easier to just test !IsMouseDown() instead of IsMouseReleased()
     if (!payload.Delivery && !(flags & ImGuiDragDropFlags_AcceptBeforeDelivery))
         return NULL;
 
@@ -12606,7 +12633,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
 // We don't really use/need this now, but added it for the sake of consistency and because we might need it later.
 void ImGui::EndDragDropTarget()
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *GImGui; (void)g;
     IM_ASSERT(g.DragDropActive);
 }
 
