@@ -3622,6 +3622,13 @@ void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_
     ImGui::Begin(window_name, NULL, flags | extra_flags);
 }
 
+void ImGui::SetTooltip(ImStr text)
+{
+    BeginTooltipEx(0, true);
+    Text(text);
+    EndTooltip();
+}
+
 void ImGui::SetTooltipV(const char* fmt, va_list args)
 {
     BeginTooltipEx(0, true);
@@ -4737,7 +4744,7 @@ bool ImGui::Begin(ImStr name, bool* p_open, ImGuiWindowFlags flags)
 
 // Old Begin() API with 5 parameters, avoid calling this version directly! Use SetNextWindowSize()+Begin() instead.
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha_override, ImGuiWindowFlags flags)
+bool ImGui::Begin(ImStr name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha_override, ImGuiWindowFlags flags)
 {
     // Old API feature: we could pass the initial window size as a parameter, however this was very misleading because in most cases it would only affect the window when it didn't have storage in the .ini file.
     if (size_on_first_use.x != 0.0f || size_on_first_use.y != 0.0f)
