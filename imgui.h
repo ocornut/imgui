@@ -50,6 +50,7 @@ struct ImDrawChannel;               // Temporary storage for outputting drawing 
 struct ImDrawCmd;                   // A single draw command within a parent ImDrawList (generally maps to 1 GPU draw call)
 struct ImDrawData;                  // All draw command lists required to render the frame
 struct ImDrawList;                  // A single draw command list (generally one per window)
+struct ImDrawListSharedData;        // Data shared among multiple draw lists (typically owned by parent ImGui context, but you may create one yourself)
 struct ImDrawVert;                  // A single vertex (20 bytes by default, override layout with IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT)
 struct ImFont;                      // Runtime data for a single font within a parent ImFontAtlas
 struct ImFontAtlas;                 // Runtime data for multiple fonts, bake multiple fonts into a single texture, TTF/OTF font loader
@@ -466,6 +467,7 @@ namespace ImGui
     IMGUI_API float         GetTime();
     IMGUI_API int           GetFrameCount();
     IMGUI_API ImDrawList*   GetOverlayDrawList();                                               // this draw list will be the last rendered one, useful to quickly draw overlays shapes/text
+    IMGUI_API ImDrawListSharedData* GetDrawListSharedData();
     IMGUI_API const char*   GetStyleColorName(ImGuiCol idx);
     IMGUI_API ImVec2        CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge = false, float outward = +0.0f);   // utility to find the closest point the last item bounding rectangle edge. useful to visually link items
     IMGUI_API ImVec2        CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
@@ -1325,7 +1327,7 @@ struct ImDrawCmd
     ImDrawCallback  UserCallback;           // If != NULL, call the function instead of rendering the vertices. clip_rect and texture_id will be set normally.
     void*           UserCallbackData;       // The draw callback code can access this.
 
-    ImDrawCmd() { ElemCount = 0; ClipRect.x = ClipRect.y = -8192.0f; ClipRect.z = ClipRect.w = +8192.0f; TextureId = NULL; UserCallback = NULL; UserCallbackData = NULL; }
+    ImDrawCmd() { ElemCount = 0; ClipRect.x = ClipRect.y = ClipRect.z = ClipRect.w = 0.0f; TextureId = NULL; UserCallback = NULL; UserCallbackData = NULL; }
 };
 
 // Vertex index (override with '#define ImDrawIdx unsigned int' inside in imconfig.h)
@@ -1384,6 +1386,7 @@ struct ImDrawList
     ImVector<ImDrawVert>    VtxBuffer;          // Vertex buffer.
 
     // [Internal, used while building lists]
+    const ImDrawListSharedData* _Data;          // Pointer to shared draw data (you can use ImGui::GetDrawListSharedData() to get the one from current ImGui context)
     const char*             _OwnerName;         // Pointer to owner window's name for debugging
     unsigned int            _VtxCurrentIdx;     // [Internal] == VtxBuffer.Size
     ImDrawVert*             _VtxWritePtr;       // [Internal] point within VtxBuffer.Data after each add command (to avoid using the ImVector<> operators too much)
@@ -1395,7 +1398,7 @@ struct ImDrawList
     int                     _ChannelsCount;     // [Internal] number of active channels (1+)
     ImVector<ImDrawChannel> _Channels;          // [Internal] draw channels for columns API (not resized down so _ChannelsCount may be smaller than _Channels.Size)
 
-    ImDrawList()  { _OwnerName = NULL; Clear(); }
+    ImDrawList(const ImDrawListSharedData* shared_data) { _Data = shared_data; _OwnerName = NULL; Clear(); }
     ~ImDrawList() { ClearFreeMemory(); }
     IMGUI_API void  PushClipRect(ImVec2 clip_rect_min, ImVec2 clip_rect_max, bool intersect_with_current_clip_rect = false);  // Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
     IMGUI_API void  PushClipRectFullScreen();

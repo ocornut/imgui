@@ -1818,7 +1818,7 @@ bool ImGuiListClipper::Step()
 // ImGuiWindow
 //-----------------------------------------------------------------------------
 
-ImGuiWindow::ImGuiWindow(const char* name)
+ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
 {
     Name = ImStrdup(name);
     ID = ImHash(name, 0);
@@ -1859,7 +1859,7 @@ ImGuiWindow::ImGuiWindow(const char* name)
     FontWindowScale = 1.0f;
 
     DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
-    IM_PLACEMENT_NEW(DrawList) ImDrawList();
+    IM_PLACEMENT_NEW(DrawList) ImDrawList(&context->DrawListSharedData);
     DrawList->_OwnerName = Name;
     ParentWindow = NULL;
     RootWindow = NULL;
@@ -2254,6 +2254,11 @@ ImDrawList* ImGui::GetOverlayDrawList()
     return &GImGui->OverlayDrawList;
 }
 
+ImDrawListSharedData* ImGui::GetDrawListSharedData()
+{
+    return &GImGui->DrawListSharedData;
+}
+
 void ImGui::NewFrame()
 {
     ImGuiContext& g = *GImGui;
@@ -2274,6 +2279,8 @@ void ImGui::NewFrame()
 
     SetCurrentFont(GetDefaultFont());
     IM_ASSERT(g.Font->IsLoaded());
+    g.DrawListSharedData.ClipRectFullscreen = ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y);
+    g.DrawListSharedData.CurveTessellationTol = g.Style.CurveTessellationTol;
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
@@ -4145,7 +4152,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 
     // Create window the first time
     ImGuiWindow* window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
-    IM_PLACEMENT_NEW(window) ImGuiWindow(name);
+    IM_PLACEMENT_NEW(window) ImGuiWindow(&g, name);
     window->Flags = flags;
     g.WindowsById.SetVoidPtr(window->ID, window);
 
@@ -5243,7 +5250,11 @@ static void SetCurrentFont(ImFont* font)
     g.Font = font;
     g.FontBaseSize = g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale;
     g.FontSize = g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;
-    g.FontTexUvWhitePixel = g.Font->ContainerAtlas->TexUvWhitePixel;
+
+    ImFontAtlas* atlas = g.Font->ContainerAtlas;
+    g.DrawListSharedData.TexUvWhitePixel = atlas->TexUvWhitePixel;
+    g.DrawListSharedData.Font = g.Font;
+    g.DrawListSharedData.FontSize = g.FontSize;
 }
 
 void ImGui::PushFont(ImFont* font)
@@ -5820,7 +5831,7 @@ float ImGui::GetFontSize()
 
 ImVec2 ImGui::GetFontTexUvWhitePixel()
 {
-    return GImGui->FontTexUvWhitePixel;
+    return GImGui->DrawListSharedData.TexUvWhitePixel;
 }
 
 void ImGui::SetWindowFontScale(float scale)
@@ -10489,7 +10500,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         ImVec2 tra = wheel_center + ImRotate(triangle_pa, cos_hue_angle, sin_hue_angle);
         ImVec2 trb = wheel_center + ImRotate(triangle_pb, cos_hue_angle, sin_hue_angle);
         ImVec2 trc = wheel_center + ImRotate(triangle_pc, cos_hue_angle, sin_hue_angle);
-        ImVec2 uv_white = g.FontTexUvWhitePixel;
+        ImVec2 uv_white = GetFontTexUvWhitePixel();
         draw_list->PrimReserve(6, 6);
         draw_list->PrimVtx(tra, uv_white, hue_color32);
         draw_list->PrimVtx(trb, uv_white, hue_color32);
@@ -11609,7 +11620,6 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     return;
 
                 ImDrawList* overlay_draw_list = &GImGui->OverlayDrawList;   // Render additional visuals into the top-most draw list
-                overlay_draw_list->PushClipRectFullScreen();
                 int elem_offset = 0;
                 for (const ImDrawCmd* pcmd = draw_list->CmdBuffer.begin(); pcmd < draw_list->CmdBuffer.end(); elem_offset += pcmd->ElemCount, pcmd++)
                 {
@@ -11652,7 +11662,6 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                         }
                     ImGui::TreePop();
                 }
-                overlay_draw_list->PopClipRect();
                 ImGui::TreePop();
             }
 
