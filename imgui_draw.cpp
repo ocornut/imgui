@@ -592,13 +592,13 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 }
 
 // TODO: Thickness anti-aliased lines cap are missing their AA fringe.
-void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness, bool anti_aliased)
+void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness)
 {
     if (points_count < 2)
         return;
 
     const ImVec2 uv = _Data->TexUvWhitePixel;
-    anti_aliased &= GImGui->Style.AntiAliasedLines;
+    bool anti_aliased = GImGui->Style.AntiAliasedLines;
     //if (ImGui::GetIO().KeyCtrl) anti_aliased = false; // Debug
 
     int count = points_count;
@@ -773,10 +773,10 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     }
 }
 
-void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col, bool anti_aliased)
+void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col)
 {
     const ImVec2 uv = _Data->TexUvWhitePixel;
-    anti_aliased &= GImGui->Style.AntiAliasedShapes;
+    bool anti_aliased = GImGui->Style.AntiAliasedShapes;
     //if (ImGui::GetIO().KeyCtrl) anti_aliased = false; // Debug
 
     if (anti_aliased)
