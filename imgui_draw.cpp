@@ -304,6 +304,7 @@ void ImDrawList::Clear()
     CmdBuffer.resize(0);
     IdxBuffer.resize(0);
     VtxBuffer.resize(0);
+    Flags = ImDrawListFlags_AntiAliasedLines | ImDrawListFlags_AntiAliasedFill;
     _VtxCurrentIdx = 0;
     _VtxWritePtr = NULL;
     _IdxWritePtr = NULL;
@@ -598,15 +599,13 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         return;
 
     const ImVec2 uv = _Data->TexUvWhitePixel;
-    bool anti_aliased = GImGui->Style.AntiAliasedLines;
-    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false; // Debug
 
     int count = points_count;
     if (!closed)
         count = points_count-1;
 
     const bool thick_line = thickness > 1.0f;
-    if (anti_aliased)
+    if (Flags & ImDrawListFlags_AntiAliasedLines)
     {
         // Anti-aliased stroke
         const float AA_SIZE = 1.0f;
@@ -776,10 +775,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col)
 {
     const ImVec2 uv = _Data->TexUvWhitePixel;
-    bool anti_aliased = GImGui->Style.AntiAliasedShapes;
-    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false; // Debug
 
-    if (anti_aliased)
+    if (Flags & ImDrawListFlags_AntiAliasedFill)
     {
         // Anti-aliased Fill
         const float AA_SIZE = 1.0f;

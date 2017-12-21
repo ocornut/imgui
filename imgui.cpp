@@ -213,7 +213,8 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2017/12/21 (1.53) - removed 'bool anti_aliased = true' final parameter of ImDrawList::AddPolyline() and ImDrawList::AddConvexPolyFilled(). Anti-aliasing is controlled via the regular style.AntiAliased flags.
+ - 2017/12/21 (1.53) - renamed style.AntiAliasedShapes to style.AntiAliasedFill for consistency and as a way to explicitly break code that manipulate those flag at runtime. You can now manipulate ImDrawList::Flags
+ - 2017/12/21 (1.53) - removed 'bool anti_aliased = true' final parameter of ImDrawList::AddPolyline() and ImDrawList::AddConvexPolyFilled(). Prefer manipulating ImDrawList::Flags.
  - 2017/12/14 (1.53) - using the ImGuiWindowFlags_NoScrollWithMouse flag on a child window forwards the mouse wheel event to the parent window, unless either ImGuiWindowFlags_NoInputs or ImGuiWindowFlags_NoScrollbar are also set.
  - 2017/12/13 (1.53) - renamed GetItemsLineHeightWithSpacing() to GetFrameHeightWithSpacing(). Kept redirection function (will obsolete).
  - 2017/12/13 (1.53) - obsoleted IsRootWindowFocused() in favor of using IsWindowFocused(ImGuiFocusedFlags_RootWindow). Kept redirection function (will obsolete).
@@ -735,7 +736,7 @@ ImGuiStyle::ImGuiStyle()
     DisplayWindowPadding    = ImVec2(22,22);    // Window positions are clamped to be visible within the display area by at least this amount. Only covers regular windows.
     DisplaySafeAreaPadding  = ImVec2(4,4);      // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
     AntiAliasedLines        = true;             // Enable anti-aliasing on lines/borders. Disable if you are really short on CPU/GPU.
-    AntiAliasedShapes       = true;             // Enable anti-aliasing on filled shapes (rounded rectangles, circles, etc.)
+    AntiAliasedFill         = true;             // Enable anti-aliasing on filled shapes (rounded rectangles, circles, etc.)
     CurveTessellationTol    = 1.25f;            // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
 
     ImGui::StyleColorsClassic(this);
@@ -2290,6 +2291,7 @@ void ImGui::NewFrame()
     g.OverlayDrawList.Clear();
     g.OverlayDrawList.PushTextureID(g.IO.Fonts->TexID);
     g.OverlayDrawList.PushClipRectFullScreen();
+    g.OverlayDrawList.Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
 
     // Mark rendering data as invalid to prevent user who may have a handle on it to use it
     g.RenderDrawData.Valid = false;
@@ -4475,8 +4477,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->LastFrameActive = current_frame;
         window->IDStack.resize(1);
 
-        // Clear draw list, setup texture, outer clipping rectangle
+        // Setup draw list and outer clipping rectangle
         window->DrawList->Clear();
+        window->DrawList->Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
         ImRect fullscreen_rect(GetVisibleRect());
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
@@ -11662,11 +11665,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                             ImGui::Selectable(buf, false);
                             if (ImGui::IsItemHovered())
                             {
-                                ImGuiStyle& style = ImGui::GetStyle();
-                                bool backup_aa_lines = style.AntiAliasedLines;
-                                style.AntiAliasedLines = false; // Disable AA on triangle outlines at is more readable for very large and thin triangles.
+                                ImDrawListFlags backup_flags = overlay_draw_list->Flags;
+                                overlay_draw_list->Flags &= ~ImDrawListFlags_AntiAliasedLines; // Disable AA on triangle outlines at is more readable for very large and thin triangles.
                                 overlay_draw_list->AddPolyline(triangles_pos, 3, IM_COL32(255,255,0,255), true, 1.0f);
-                                style.AntiAliasedLines = backup_aa_lines;
+                                overlay_draw_list->Flags = backup_flags;
                             }
                         }
                     ImGui::TreePop();
