@@ -4661,15 +4661,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->Scroll = CalcNextScrollFromScrollTargetAndClamp(window);
         window->ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
 
-        // Modal window darkens what is behind them
-        if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
-            window->DrawList->AddRectFilled(fullscreen_rect.Min, fullscreen_rect.Max, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
-
         // Apply focus, new windows appears in front
         bool want_focus = false;
         if (window_just_activated_by_user && !(flags & ImGuiWindowFlags_NoFocusOnAppearing))
             if (!(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) || (flags & ImGuiWindowFlags_Popup))
                 want_focus = true;
+
+        // Draw modal window background (darkens what is behind them)
+        if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
+            window->DrawList->AddRectFilled(fullscreen_rect.Min, fullscreen_rect.Max, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
 
         // Draw window + handle manual resize
         ImRect title_bar_rect = window->TitleBarRect();
@@ -11644,6 +11644,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     }
                     if (!pcmd_node_open)
                         continue;
+
+                    // Display individual triangles/vertices. Hover on to get the corresponding triangle highlighted.
                     ImGuiListClipper clipper(pcmd->ElemCount/3); // Manually coarse clip our print out of individual vertices to save CPU, only items that may be visible.
                     while (clipper.Step())
                         for (int prim = clipper.DisplayStart, vtx_i = elem_offset + clipper.DisplayStart*3; prim < clipper.DisplayEnd; prim++)
