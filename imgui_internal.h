@@ -105,15 +105,15 @@ IMGUI_API void          ImTriangleBarycentricCoords(const ImVec2& a, const ImVec
 
 // Helpers: String
 IMGUI_API int           ImStricmp(const char* str1, const char* str2);
-IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, int count);
-IMGUI_API void          ImStrncpy(char* dst, const char* src, int count);
+IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, size_t count);
+IMGUI_API void          ImStrncpy(char* dst, const char* src, size_t count);
 IMGUI_API char*         ImStrdup(const char* str);
 IMGUI_API char*         ImStrchrRange(const char* str_begin, const char* str_end, char c);
 IMGUI_API int           ImStrlenW(const ImWchar* str);
 IMGUI_API const ImWchar*ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin); // Find beginning-of-line
 IMGUI_API const char*   ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end);
-IMGUI_API int           ImFormatString(char* buf, int buf_size, const char* fmt, ...) IM_FMTARGS(3);
-IMGUI_API int           ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args) IM_FMTLIST(3);
+IMGUI_API int           ImFormatString(char* buf, size_t buf_size, const char* fmt, ...) IM_FMTARGS(3);
+IMGUI_API int           ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args) IM_FMTLIST(3);
 
 // Helpers: Math
 // We are keeping those not leaking to the user by default, in the case the user has implicit cast operators between ImVec2 and its own types (when IM_VEC2_CLASS_EXTRA is defined)
@@ -472,6 +472,21 @@ struct ImGuiColumnsSet
     }
 };
 
+struct ImDrawListSharedData
+{
+    ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas
+    ImFont*         Font;                       // Current/default font (optional, for simplified AddText overload)
+    float           FontSize;                   // Current/default font size (optional, for simplified AddText overload)
+    float           CurveTessellationTol;
+    ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
+
+    // Const data
+    // FIXME: Bake rounded corners fill/borders in atlas
+    ImVec2          CircleVtx12[12];
+
+    ImDrawListSharedData();
+};
+
 // Main state for ImGui
 struct ImGuiContext
 {
@@ -481,7 +496,7 @@ struct ImGuiContext
     ImFont*                 Font;                               // (Shortcut) == FontStack.empty() ? IO.Font : FontStack.back()
     float                   FontSize;                           // (Shortcut) == FontBaseSize * g.CurrentWindow->FontWindowScale == window->FontSize(). Text height for current window.
     float                   FontBaseSize;                       // (Shortcut) == IO.FontGlobalScale * Font->Scale * Font->FontSize. Base text height.
-    ImVec2                  FontTexUvWhitePixel;                // (Shortcut) == Font->TexUvWhitePixel
+    ImDrawListSharedData    DrawListSharedData;
 
     float                   Time;
     int                     FrameCount;
@@ -630,12 +645,11 @@ struct ImGuiContext
     int                     WantTextInputNextFrame;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
 
-    ImGuiContext()
+    ImGuiContext() : OverlayDrawList(NULL)
     {
         Initialized = false;
         Font = NULL;
         FontSize = FontBaseSize = 0.0f;
-        FontTexUvWhitePixel = ImVec2(0.0f, 0.0f);
 
         Time = 0.0f;
         FrameCount = 0;
@@ -721,6 +735,7 @@ struct ImGuiContext
         OsImePosRequest = OsImePosSet = ImVec2(-1.0f, -1.0f);
 
         ModalWindowDarkeningRatio = 0.0f;
+        OverlayDrawList._Data = &DrawListSharedData;
         OverlayDrawList._OwnerName = "##Overlay"; // Give it a name for debugging
         MouseCursor = ImGuiMouseCursor_Arrow;
         memset(MouseCursorData, 0, sizeof(MouseCursorData));
@@ -904,7 +919,7 @@ struct IMGUI_API ImGuiWindow
     int                     FocusIdxTabRequestNext;             // "
 
 public:
-    ImGuiWindow(const char* name);
+    ImGuiWindow(ImGuiContext* context, const char* name);
     ~ImGuiWindow();
 
     ImGuiID     GetID(const char* str, const char* str_end = NULL);
