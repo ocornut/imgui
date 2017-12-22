@@ -1922,7 +1922,7 @@ static void SetCurrentWindow(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     g.CurrentWindow = window;
     if (window)
-        g.FontSize = window->CalcFontSize();
+        g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
 }
 
 void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
@@ -5843,7 +5843,7 @@ void ImGui::SetWindowFontScale(float scale)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     window->FontWindowScale = scale;
-    g.FontSize = window->CalcFontSize();
+    g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
 }
 
 // User generally sees positions in window coordinates. Internally we store CursorPos in absolute screen coordinates because it is more convenient.
