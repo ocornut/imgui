@@ -10867,6 +10867,8 @@ static float PixelsToOffsetNorm(const ImGuiColumnsSet* columns, float offset)
     return (offset - columns->MinX) / (columns->MaxX - columns->MinX);
 }
 
+static inline float GetColumnsRectHalfWidth() { return 4.0f; }
+
 static float GetDraggedColumnOffset(ImGuiColumnsSet* columns, int column_index)
 {
     // Active (dragged) column always follow mouse. The reason we need this is that dragging a column to the right edge of an auto-resizing
@@ -10876,7 +10878,7 @@ static float GetDraggedColumnOffset(ImGuiColumnsSet* columns, int column_index)
     IM_ASSERT(column_index > 0); // We cannot drag column 0. If you get this assert you may have a conflict between the ID of your columns and another widgets.
     IM_ASSERT(g.ActiveId == columns->ID + ImGuiID(column_index));
 
-    float x = g.IO.MousePos.x - g.ActiveIdClickOffset.x - window->Pos.x;
+    float x = g.IO.MousePos.x - g.ActiveIdClickOffset.x + GetColumnsRectHalfWidth() - window->Pos.x;
     x = ImMax(x, ImGui::GetColumnOffset(column_index - 1) + g.Style.ColumnsMinSpacing);
     if ((columns->Flags & ImGuiColumnsFlags_NoPreserveWidths))
         x = ImMin(x, ImGui::GetColumnOffset(column_index + 1) - g.Style.ColumnsMinSpacing);
@@ -11086,7 +11088,7 @@ void ImGui::EndColumns()
         {
             float x = window->Pos.x + GetColumnOffset(n);
             const ImGuiID column_id = columns->ID + ImGuiID(n);
-            const float column_hw = 4.0f; // Half-width for interaction
+            const float column_hw = GetColumnsRectHalfWidth(); // Half-width for interaction
             const ImRect column_rect(ImVec2(x - column_hw, y1), ImVec2(x + column_hw, y2));
             KeepAliveID(column_id);
             if (IsClippedEx(column_rect, column_id, false))
@@ -11098,8 +11100,6 @@ void ImGui::EndColumns()
                 ButtonBehavior(column_rect, column_id, &hovered, &held);
                 if (hovered || held)
                     g.MouseCursor = ImGuiMouseCursor_ResizeEW;
-                if (held && g.ActiveIdIsJustActivated)
-                    g.ActiveIdClickOffset.x -= column_hw; // Store from center of column line (we used a 8 wide rect for columns clicking). This is used by GetDraggedColumnOffset().
                 if (held && !(columns->Columns[n].Flags & ImGuiColumnsFlags_NoResize))
                     dragging_column = n;
             }
