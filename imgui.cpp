@@ -10864,7 +10864,7 @@ static float OffsetNormToPixels(const ImGuiColumnsSet* columns, float offset_nor
 
 static float PixelsToOffsetNorm(const ImGuiColumnsSet* columns, float offset)
 {
-    return (offset - columns->MinX) / (columns->MaxX - columns->MinX);
+    return offset / (columns->MaxX - columns->MinX);
 }
 
 static inline float GetColumnsRectHalfWidth() { return 4.0f; }
@@ -10951,7 +10951,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
 
     if (!(columns->Flags & ImGuiColumnsFlags_NoForceWithinWindow))
         offset = ImMin(offset, columns->MaxX - g.Style.ColumnsMinSpacing * (columns->Count - column_index));
-    columns->Columns[column_index].OffsetNorm = PixelsToOffsetNorm(columns, offset);
+    columns->Columns[column_index].OffsetNorm = PixelsToOffsetNorm(columns, offset - columns->MinX);
 
     if (preserve_width)
         SetColumnOffset(column_index + 1, offset + ImMax(g.Style.ColumnsMinSpacing, width));
@@ -11015,7 +11015,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     // Set state for first column
     const float content_region_width = (window->SizeContentsExplicit.x != 0.0f) ? (window->SizeContentsExplicit.x) : (window->Size.x -window->ScrollbarSizes.x);
     columns->MinX = window->DC.IndentX - g.Style.ItemSpacing.x; // Lock our horizontal range
-    //column->ColumnsMaxX = content_region_width - window->Scroll.x -((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
+    //column->MaxX = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
     columns->MaxX = content_region_width - window->Scroll.x;
     columns->StartPosY = window->DC.CursorPos.y;
     columns->StartMaxPosX = window->DC.CursorMaxPos.x;
@@ -11043,7 +11043,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
         ImGuiColumnData* column = &columns->Columns[n];
         float t = column->OffsetNorm;
         if (!(columns->Flags & ImGuiColumnsFlags_NoForceWithinWindow))
-            t = ImMin(t, PixelsToOffsetNorm(columns, columns->MaxX - g.Style.ColumnsMinSpacing * (columns->Count - n)));
+            t = ImMin(t, PixelsToOffsetNorm(columns, (columns->MaxX - columns->MinX) - g.Style.ColumnsMinSpacing * (columns->Count - n)));
         column->OffsetNorm = t;
 
         if (n == columns_count)
