@@ -1018,10 +1018,10 @@ public:
     typedef value_type*         iterator;
     typedef const value_type*   const_iterator;
 
-    ImVector()                  { Size = Capacity = 0; Data = NULL; }
-    ~ImVector()                 { if (Data) ImGui::MemFree(Data); }
-    ImVector(const ImVector<T>& rhs)                            { Size = Capacity = 0; Data = NULL; if (rhs.Size) { resize(rhs.Size); memcpy(Data, rhs.Data, (size_t)rhs.Size * sizeof(T)); } }
-    ImVector<T>& operator=(const ImVector<T>& rhs)              { resize(rhs.Size); if (rhs.Size) memcpy(Data, rhs.Data, (size_t)rhs.Size * sizeof(T)); return *this; }
+    inline ImVector()                                           { Size = Capacity = 0; Data = NULL; }
+    inline ~ImVector()                                          { if (Data) ImGui::MemFree(Data); }
+    inline ImVector(const ImVector<T>& rhs)                     { Size = Capacity = 0; Data = NULL; if (rhs.Size) { resize(rhs.Size); memcpy(Data, rhs.Data, (size_t)rhs.Size * sizeof(T)); } }
+    inline ImVector<T>& operator=(const ImVector<T>& rhs)       { resize(rhs.Size); if (rhs.Size) memcpy(Data, rhs.Data, (size_t)rhs.Size * sizeof(T)); return *this; }
 
     inline bool                 empty() const                   { return Size == 0; }
     inline int                  size() const                    { return Size; }
@@ -1037,8 +1037,8 @@ public:
     inline const_iterator       end() const                     { return Data + Size; }
     inline value_type&          front()                         { IM_ASSERT(Size > 0); return Data[0]; }
     inline const value_type&    front() const                   { IM_ASSERT(Size > 0); return Data[0]; }
-    inline value_type&          back()                          { IM_ASSERT(Size > 0); return Data[Size-1]; }
-    inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size-1]; }
+    inline value_type&          back()                          { IM_ASSERT(Size > 0); return Data[Size - 1]; }
+    inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size - 1]; }
     inline void                 swap(ImVector<T>& rhs)          { int rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; int rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
 
     inline int                  _grow_capacity(int size) const  { int new_capacity = Capacity ? (Capacity + Capacity/2) : 8; return new_capacity > size ? new_capacity : size; }
@@ -1047,7 +1047,8 @@ public:
     inline void                 resize(int new_size, const T& v){ if (new_size > Capacity) reserve(_grow_capacity(new_size)); if (new_size > Size) for (int n = Size; n < new_size; n++) Data[n] = v; Size = new_size; }
     inline void                 reserve(int new_capacity)
     {
-        if (new_capacity <= Capacity) return;
+        if (new_capacity <= Capacity) 
+            return;
         T* new_data = (value_type*)ImGui::MemAlloc((size_t)new_capacity * sizeof(T));
         if (Data)
             memcpy(new_data, Data, (size_t)Size * sizeof(T));
@@ -1056,7 +1057,7 @@ public:
         Capacity = new_capacity;
     }
 
-    inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(_grow_capacity(Size+1)); Data[Size++] = v; }
+    inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(_grow_capacity(Size + 1)); Data[Size++] = v; }
     inline void                 pop_back()                      { IM_ASSERT(Size > 0); Size--; }
     inline void                 push_front(const value_type& v) { if (Size == 0) push_back(v); else insert(Data, v); }
 
