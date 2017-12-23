@@ -15,7 +15,6 @@
 
 #include "imgui.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
-#define IMGUI_DEFINE_PLACEMENT_NEW
 #include "imgui_internal.h"
 
 #include <stdio.h>      // vsnprintf, sscanf, printf
@@ -43,6 +42,7 @@
 #pragma clang diagnostic ignored "-Wfloat-equal"            // warning : comparing floating point with == or != is unsafe   // storing and comparing against same constants ok.
 #pragma clang diagnostic ignored "-Wglobal-constructors"    // warning : declaration requires a global destructor           // similar to above, not sure what the exact difference it.
 #pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion changes signedness             //
+#pragma clang diagnostic ignored "-Wcomma"                  // warning : possible misuse of comma operator here             //
 #if __has_warning("-Wreserved-id-macro")
 #pragma clang diagnostic ignored "-Wreserved-id-macro"      // warning : macro name is a reserved identifier                //
 #endif
@@ -78,6 +78,7 @@ namespace IMGUI_STB_NAMESPACE
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wimplicit-fallthrough"
 #endif
 
 #ifdef __GNUC__
@@ -1260,8 +1261,8 @@ void ImGui::ShadeVertsLinearUV(ImDrawVert* vert_start, ImDrawVert* vert_end, con
     const ImVec2 size = b - a;
     const ImVec2 uv_size = uv_b - uv_a;
     const ImVec2 scale = ImVec2(
-        size.x ? (uv_size.x / size.x) : 0.0f,
-        size.y ? (uv_size.y / size.y) : 0.0f);
+        size.x != 0.0f ? (uv_size.x / size.x) : 0.0f,
+        size.y != 0.0f ? (uv_size.y / size.y) : 0.0f);
 
     if (clamp)
     {
@@ -1408,10 +1409,7 @@ void    ImFontAtlas::ClearTexData()
 void    ImFontAtlas::ClearFonts()
 {
     for (int i = 0; i < Fonts.Size; i++)
-    {
-        Fonts[i]->~ImFont();
-        ImGui::MemFree(Fonts[i]);
-    }
+        IM_DELETE(Fonts[i]);
     Fonts.clear();
 }
 
@@ -1466,15 +1464,9 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 
     // Create new font
     if (!font_cfg->MergeMode)
-    {
-        ImFont* font = (ImFont*)ImGui::MemAlloc(sizeof(ImFont));
-        IM_PLACEMENT_NEW(font) ImFont();
-        Fonts.push_back(font);
-    }
+        Fonts.push_back(IM_NEW(ImFont));
     else
-    {
         IM_ASSERT(!Fonts.empty()); // When using MergeMode make sure that a font has already been added before. You can use ImGui::GetIO().Fonts->AddFontDefault() to add the default imgui font.
-    }
 
     ConfigData.push_back(*font_cfg);
     ImFontConfig& new_font_cfg = ConfigData.back();

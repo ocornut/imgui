@@ -162,10 +162,14 @@ static inline ImVec2 ImMul(const ImVec2& lhs, const ImVec2& rhs)                
 
 // We call C++ constructor on own allocated memory via the placement "new(ptr) Type()" syntax.
 // Defining a custom placement new() with a dummy parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
-struct ImPlacementNewDummy {};
-inline void* operator new(size_t, ImPlacementNewDummy, void* ptr) { return ptr; }
-inline void operator delete(void*, ImPlacementNewDummy, void*) {}
-#define IM_PLACEMENT_NEW(_PTR)  new(ImPlacementNewDummy(), _PTR)
+struct ImNewAllocDummy {};
+struct ImNewPlacementDummy {};
+inline void* operator   new(size_t, ImNewPlacementDummy, void* ptr) { return ptr; }
+inline void  operator   delete(void*, ImNewPlacementDummy, void*)   {} // This is only required so we can use the symetrical new()
+inline void  operator   delete(void* p, ImNewAllocDummy)            { ImGui::MemFree(p); }
+#define IM_PLACEMENT_NEW(_PTR)  new(ImNewPlacementDummy(), _PTR)
+#define IM_NEW(_TYPE)           new(ImNewPlacementDummy(), ImGui::MemAlloc(sizeof(_TYPE))) _TYPE
+#define IM_DELETE(_PTR)         delete(ImNewAllocDummy(), _PTR), _PTR = NULL
 
 //-----------------------------------------------------------------------------
 // Types
@@ -233,7 +237,7 @@ enum ImGuiAxis
 {
     ImGuiAxis_None = -1,
     ImGuiAxis_X = 0,
-    ImGuiAxis_Y = 1,
+    ImGuiAxis_Y = 1
 };
 
 enum ImGuiPlotType

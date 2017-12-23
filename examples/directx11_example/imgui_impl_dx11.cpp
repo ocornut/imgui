@@ -235,7 +235,7 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
 static bool IsAnyMouseButtonDown()
 {
     ImGuiIO& io = ImGui::GetIO();
-    for (int n = 0; n < ARRAYSIZE(io.MouseDown); n++)
+    for (int n = 0; n < IM_ARRAYSIZE(io.MouseDown); n++)
         if (io.MouseDown[n])
             return true;
     return false;
