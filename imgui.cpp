@@ -2149,7 +2149,7 @@ static bool NavScoreItem(ImRect cand)
     // FIXME-NAVIGATION: Introducing biases for vertical navigation, needs to be removed.
     float dbx = NavScoreItemDistInterval(cand.Min.x, cand.Max.x, curr.Min.x, curr.Max.x);
     float dby = NavScoreItemDistInterval(ImLerp(cand.Min.y, cand.Max.y, 0.2f), ImLerp(cand.Min.y, cand.Max.y, 0.8f), ImLerp(curr.Min.y, curr.Max.y, 0.2f), ImLerp(curr.Min.y, curr.Max.y, 0.8f)); // Scale down on Y to keep using box-distance for vertically touching items
-    if (dby && dbx)
+    if (dby != 0.0f && dbx != 0.0f)
        dbx = (dbx/1000.0f) + ((dbx > 0.0f) ? +1.0f : -1.0f);
     float dist_box = fabsf(dbx) + fabsf(dby);
 
@@ -2161,7 +2161,7 @@ static bool NavScoreItem(ImRect cand)
     // Determine which quadrant of 'curr' our candidate item 'cand' lies in based on distance
     ImGuiDir quadrant;
     float dax = 0.0f, day = 0.0f, dist_axial = 0.0f;
-    if (dbx || dby) 
+    if (dbx != 0.0f || dby != 0.0f) 
     { 
         // For non-overlapping boxes, use distance between boxes
         dax = dbx;
@@ -2169,7 +2169,7 @@ static bool NavScoreItem(ImRect cand)
         dist_axial = dist_box;
         quadrant = NavScoreItemGetQuadrant(dbx, dby);
     } 
-    else if (dcx || dcy) 
+    else if (dcx != 0.0f || dcy != 0.0f) 
     { 
         // For overlapping boxes with different centers, use distance between centers
         dax = dcx;
@@ -2232,7 +2232,10 @@ static bool NavScoreItem(ImRect cand)
     if (g.NavMoveResultDistBox == FLT_MAX && dist_axial < g.NavMoveResultDistAxial)  // Check axial match
         if (g.NavLayer == 1 && !(g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
             if ((g.NavMoveDir == ImGuiDir_Left && dax < 0.0f) || (g.NavMoveDir == ImGuiDir_Right && dax > 0.0f) || (g.NavMoveDir == ImGuiDir_Up && day < 0.0f) || (g.NavMoveDir == ImGuiDir_Down && day > 0.0f))
-                g.NavMoveResultDistAxial = dist_axial, new_best = true;
+            {
+                g.NavMoveResultDistAxial = dist_axial;
+                new_best = true;
+            }
 
     return new_best;
 }
@@ -8329,7 +8332,8 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
         else if (g.ActiveIdSource == ImGuiInputSource_Nav && g.NavActivateDownId == id)
         {
             const ImVec2 delta2 = GetNavInputAmount2d(0, ImGuiNavReadMode_RepeatFast, 0.0f, 0.0f);
-            if (float delta = is_horizontal ? delta2.x : -delta2.y)
+            float delta = is_horizontal ? delta2.x : -delta2.y;
+            if (delta != 0.0f)
             {
                 clicked_t = SliderBehaviorCalcRatioFromValue(*v, v_min, v_max, power, linear_zero_pos);
                 if (decimal_precision == 0 && !is_non_linear)
