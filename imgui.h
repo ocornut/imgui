@@ -1061,10 +1061,8 @@ public:
     typedef value_type*         iterator;
     typedef const value_type*   const_iterator;
 
-    inline ImVector()                                           { Size = Capacity = 0; Data = NULL; }
-    inline ~ImVector()                                          { if (Data) ImGui::MemFree(Data); }
-    inline ImVector(const ImVector<T>& rhs)                     { Size = Capacity = 0; Data = NULL; if (rhs.Size) { resize(rhs.Size); memcpy(Data, rhs.Data, (size_t)rhs.Size * sizeof(T)); } }
-    inline ImVector<T>& operator=(const ImVector<T>& rhs)       { resize(rhs.Size); if (rhs.Size) memcpy(Data, rhs.Data, (size_t)rhs.Size * sizeof(T)); return *this; }
+    inline ImVector()           { Size = Capacity = 0; Data = NULL; }
+    inline ~ImVector()          { if (Data) ImGui::MemFree(Data); }
 
     inline bool                 empty() const                   { return Size == 0; }
     inline int                  size() const                    { return Size; }
