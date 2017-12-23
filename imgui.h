@@ -1005,7 +1005,7 @@ namespace ImGui
 //-----------------------------------------------------------------------------
 
 // Lightweight std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug).
-// Our implementation does NOT call c++ constructors because we don't use them in ImGui. Don't use this class as a straight std::vector replacement in your code!
+// Our implementation does NOT call C++ constructors/destructors. This is intentional and we do not require it. Do not use this class as a straight std::vector replacement in your code!
 template<typename T>
 class ImVector
 {
@@ -1020,6 +1020,8 @@ public:
 
     ImVector()                  { Size = Capacity = 0; Data = NULL; }
     ~ImVector()                 { if (Data) ImGui::MemFree(Data); }
+    ImVector(const ImVector<T>& rhs)                            { Size = Capacity = 0; Data = NULL; if (rhs.Size) { resize(rhs.Size); memcpy(Data, rhs.Data, (size_t)rhs.Size * sizeof(T)); } }
+    ImVector<T>& operator=(const ImVector<T>& rhs)              { resize(rhs.Size); if (rhs.Size) memcpy(Data, rhs.Data, (size_t)rhs.Size * sizeof(T)); return *this; }
 
     inline bool                 empty() const                   { return Size == 0; }
     inline int                  size() const                    { return Size; }
