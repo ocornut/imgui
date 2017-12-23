@@ -1859,8 +1859,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     ItemWidthDefault = 0.0f;
     FontWindowScale = 1.0f;
 
-    DrawList = (ImDrawList*)ImGui::MemAlloc(sizeof(ImDrawList));
-    IM_PLACEMENT_NEW(DrawList) ImDrawList(&context->DrawListSharedData);
+    DrawList = IM_NEW(ImDrawList)(&context->DrawListSharedData);
     DrawList->_OwnerName = Name;
     ParentWindow = NULL;
     RootWindow = NULL;
@@ -1873,11 +1872,8 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
 
 ImGuiWindow::~ImGuiWindow()
 {
-    DrawList->~ImDrawList();
-    ImGui::MemFree(DrawList);
-    DrawList = NULL;
-    ImGui::MemFree(Name);
-    Name = NULL;
+    IM_DELETE(DrawList);
+    IM_DELETE(Name);
 }
 
 ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
@@ -2579,8 +2575,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext& g, ImGuiTextBuffer* buf
 void ImGui::Initialize()
 {
     ImGuiContext& g = *GImGui;
-    g.LogClipboard = (ImGuiTextBuffer*)ImGui::MemAlloc(sizeof(ImGuiTextBuffer));
-    IM_PLACEMENT_NEW(g.LogClipboard) ImGuiTextBuffer();
+    g.LogClipboard = IM_NEW(ImGuiTextBuffer)();
 
     // Add .ini handle for ImGuiWindow type
     ImGuiSettingsHandler ini_handler;
@@ -2613,10 +2608,7 @@ void ImGui::Shutdown()
     SaveIniSettingsToDisk(g.IO.IniFilename);
 
     for (int i = 0; i < g.Windows.Size; i++)
-    {
-        g.Windows[i]->~ImGuiWindow();
-        ImGui::MemFree(g.Windows[i]);
-    }
+        IM_DELETE(g.Windows[i]);
     g.Windows.clear();
     g.WindowsSortBuffer.clear();
     g.CurrentWindow = NULL;
@@ -2628,7 +2620,7 @@ void ImGui::Shutdown()
     g.ActiveIdWindow = NULL;
     g.MovingWindow = NULL;
     for (int i = 0; i < g.SettingsWindows.Size; i++)
-        ImGui::MemFree(g.SettingsWindows[i].Name);
+        IM_DELETE(g.SettingsWindows[i].Name);
     g.ColorModifiers.clear();
     g.StyleModifiers.clear();
     g.FontStack.clear();
@@ -2653,10 +2645,7 @@ void ImGui::Shutdown()
         g.LogFile = NULL;
     }
     if (g.LogClipboard)
-    {
-        g.LogClipboard->~ImGuiTextBuffer();
-        ImGui::MemFree(g.LogClipboard);
-    }
+        IM_DELETE(g.LogClipboard);
 
     g.Initialized = false;
 }
@@ -4157,8 +4146,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
     ImGuiContext& g = *GImGui;
 
     // Create window the first time
-    ImGuiWindow* window = (ImGuiWindow*)ImGui::MemAlloc(sizeof(ImGuiWindow));
-    IM_PLACEMENT_NEW(window) ImGuiWindow(&g, name);
+    ImGuiWindow* window = IM_NEW(ImGuiWindow)(&g, name);
     window->Flags = flags;
     g.WindowsById.SetVoidPtr(window->ID, window);
 
