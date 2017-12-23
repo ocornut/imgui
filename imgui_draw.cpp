@@ -15,7 +15,6 @@
 
 #include "imgui.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
-#define IMGUI_DEFINE_PLACEMENT_NEW
 #include "imgui_internal.h"
 
 #include <stdio.h>      // vsnprintf, sscanf, printf
@@ -1254,8 +1253,8 @@ void ImGui::ShadeVertsLinearUV(ImDrawVert* vert_start, ImDrawVert* vert_end, con
     const ImVec2 size = b - a;
     const ImVec2 uv_size = uv_b - uv_a;
     const ImVec2 scale = ImVec2(
-        size.x ? (uv_size.x / size.x) : 0.0f,
-        size.y ? (uv_size.y / size.y) : 0.0f);
+        size.x != 0.0f ? (uv_size.x / size.x) : 0.0f,
+        size.y != 0.0f ? (uv_size.y / size.y) : 0.0f);
 
     if (clamp)
     {

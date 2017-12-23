@@ -230,7 +230,7 @@ enum ImGuiAxis
 {
     ImGuiAxis_None = -1,
     ImGuiAxis_X = 0,
-    ImGuiAxis_Y = 1,
+    ImGuiAxis_Y = 1
 };
 
 enum ImGuiPlotType

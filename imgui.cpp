@@ -586,7 +586,6 @@
 
 #include "imgui.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
-#define IMGUI_DEFINE_PLACEMENT_NEW
 #include "imgui_internal.h"
 
 #include <ctype.h>      // toupper, isprint
@@ -3272,16 +3271,16 @@ void ImGui::RenderTriangle(ImVec2 p_min, ImGuiDir dir, float scale)
     switch (dir)
     {
     case ImGuiDir_Up:
-        r = -r; // ...fall through, no break!
     case ImGuiDir_Down:
+        if (dir == ImGuiDir_Up) r = -r;
         center.y -= r * 0.25f;
         a = ImVec2(0,1) * r;
         b = ImVec2(-0.866f,-0.5f) * r;
         c = ImVec2(+0.866f,-0.5f) * r;
         break;
     case ImGuiDir_Left:
-        r = -r; // ...fall through, no break!
     case ImGuiDir_Right:
+        if (dir == ImGuiDir_Left) r = -r;
         center.x -= r * 0.25f;
         a = ImVec2(1,0) * r;
         b = ImVec2(-0.500f,+0.866f) * r;
@@ -10254,7 +10253,7 @@ static void RenderArrow(ImDrawList* draw_list, ImVec2 pos, ImVec2 half_sz, ImGui
     case ImGuiDir_Right: draw_list->AddTriangleFilled(ImVec2(pos.x - half_sz.x, pos.y + half_sz.y), ImVec2(pos.x - half_sz.x, pos.y - half_sz.y), pos, col); return;
     case ImGuiDir_Up:    draw_list->AddTriangleFilled(ImVec2(pos.x + half_sz.x, pos.y + half_sz.y), ImVec2(pos.x - half_sz.x, pos.y + half_sz.y), pos, col); return;
     case ImGuiDir_Down:  draw_list->AddTriangleFilled(ImVec2(pos.x - half_sz.x, pos.y - half_sz.y), ImVec2(pos.x + half_sz.x, pos.y - half_sz.y), pos, col); return;
-    default: return; // Fix warning for ImGuiDir_None
+    default: break; // Fix warning for ImGuiDir_None
     }
 }
 
@@ -11491,7 +11490,7 @@ void ImGui::EndDragDropTarget()
 #if defined(_WIN32) && !defined(_WINDOWS_) && (!defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS) || !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS))
 #undef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <Windows.h>
 #endif
 
 // Win32 API clipboard implementation
