@@ -3288,7 +3288,8 @@ void ImGui::RenderTriangle(ImVec2 p_min, ImGuiDir dir, float scale)
         b = ImVec2(-0.500f,+0.866f) * r;
         c = ImVec2(-0.500f,-0.866f) * r;
         break;
-    default:
+    case ImGuiDir_None: 
+    case ImGuiDir_Count_: 
         IM_ASSERT(0);
         break;
     }
@@ -10255,7 +10256,7 @@ static void RenderArrow(ImDrawList* draw_list, ImVec2 pos, ImVec2 half_sz, ImGui
     case ImGuiDir_Right: draw_list->AddTriangleFilled(ImVec2(pos.x - half_sz.x, pos.y + half_sz.y), ImVec2(pos.x - half_sz.x, pos.y - half_sz.y), pos, col); return;
     case ImGuiDir_Up:    draw_list->AddTriangleFilled(ImVec2(pos.x + half_sz.x, pos.y + half_sz.y), ImVec2(pos.x - half_sz.x, pos.y + half_sz.y), pos, col); return;
     case ImGuiDir_Down:  draw_list->AddTriangleFilled(ImVec2(pos.x - half_sz.x, pos.y - half_sz.y), ImVec2(pos.x + half_sz.x, pos.y - half_sz.y), pos, col); return;
-    default: break; // Fix warning for ImGuiDir_None
+    case ImGuiDir_None: case ImGuiDir_Count_: break; // Fix warnings
     }
 }
 
