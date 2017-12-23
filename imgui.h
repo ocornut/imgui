@@ -92,7 +92,7 @@ typedef int ImGuiTreeNodeFlags;     // flags: for TreeNode*(),CollapsingHeader()
 typedef int ImGuiWindowFlags;       // flags: for Begin*()                      // enum ImGuiWindowFlags_
 typedef int (*ImGuiTextEditCallback)(ImGuiTextEditCallbackData *data);
 typedef void (*ImGuiSizeConstraintCallback)(ImGuiSizeConstraintCallbackData* data);
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 typedef unsigned __int64 ImU64;     // 64-bit unsigned integer
 #else
 typedef unsigned long long ImU64;   // 64-bit unsigned integer
