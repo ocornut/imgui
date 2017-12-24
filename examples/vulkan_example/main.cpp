@@ -726,11 +726,7 @@ int main(int, char**)
             ImGui::ShowDemoWindow(&show_demo_window);
         }
 
-        g_ClearValue.color.float32[0] = clear_color.x;
-        g_ClearValue.color.float32[1] = clear_color.y;
-        g_ClearValue.color.float32[2] = clear_color.z;
-        g_ClearValue.color.float32[3] = clear_color.w;
-
+        memcpy(&g_ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
         frame_begin();
         ImGui_ImplGlfwVulkan_Render(g_CommandBuffer[g_FrameIndex]);
         frame_end();
