@@ -3,20 +3,20 @@
 
 // Message to the person tempted to delete this file when integrating ImGui into their code base:
 // Don't do it! Do NOT remove this file from your project! It is useful reference code that you and other users will want to refer to.
-// Everything in this file will be stripped out by the linker if you don't call ImGui::ShowTestWindow().
-// During development, you can call ImGui::ShowTestWindow() in your code to learn about various features of ImGui. Have it wired in a debug menu!
+// Everything in this file will be stripped out by the linker if you don't call ImGui::ShowDemoWindow().
+// During development, you can call ImGui::ShowDemoWindow() in your code to learn about various features of ImGui. Have it wired in a debug menu!
 // Removing this file from your project is hindering access to documentation for everyone in your team, likely leading you to poorer usage of the library.
-// Note that you can #define IMGUI_DISABLE_TEST_WINDOWS in imconfig.h for the same effect.
-// If you want to link core ImGui in your public builds but not those test windows, #define IMGUI_DISABLE_TEST_WINDOWS in imconfig.h and those functions will be empty.
-// For any other case, if you have ImGui available you probably want this to be available for reference and execution.
+// Note that you can #define IMGUI_DISABLE_DEMO_WINDOWS in imconfig.h for the same effect.
+// If you want to link core ImGui in your final builds but not those demo windows, #define IMGUI_DISABLE_DEMO_WINDOWS in imconfig.h and those functions will be empty.
+// In other situation, when you have ImGui available you probably want this to be available for reference and execution.
 // Thank you,
 // -Your beloved friend, imgui_demo.cpp (that you won't delete)
 
-// Message to beginner C/C++ programmer about the meaning of 'static': in this demo code, we frequently we use 'static' variables inside functions. 
-// We do this as a way to gather code and data in the same place, make the demo code faster to read, faster to write, and smaller. A static variable persist across calls, 
-// so it is essentially like a global variable but declared inside the scope of the function.
+// Message to beginner C/C++ programmers. About the meaning of 'static': in this demo code, we frequently we use 'static' variables inside functions. 
+// We do this as a way to gather code and data in the same place, just to make the demo code faster to read, faster to write, and use less code. 
+// A static variable persist across calls, so it is essentially like a global variable but declared inside the scope of the function. 
 // It also happens to be a convenient way of storing simple UI related information as long as your function doesn't need to be reentrant or used in threads.
-// This may be a pattern you want to use in your code (simple is beautiful!), but most of the real data you would be editing is likely to be stored outside your function.
+// This might be a pattern you occasionally want to use in your code, but most of the real data you would be editing is likely to be stored outside your function.
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
@@ -52,25 +52,28 @@
 #pragma GCC diagnostic ignored "-Wdouble-promotion"             // warning: implicit conversion from 'float' to 'double' when passing argument to function
 #pragma GCC diagnostic ignored "-Wconversion"                   // warning: conversion to 'xxxx' from 'xxxx' may alter its value
 #if (__GNUC__ >= 6)
-#pragma GCC diagnostic ignored "-Wmisleading-indentation"       // warning: this 'if' clause does not guard this statement      // GCC 6.0+ only. See #883 on github.
+#pragma GCC diagnostic ignored "-Wmisleading-indentation"       // warning: this 'if' clause does not guard this statement      // GCC 6.0+ only. See #883 on GitHub.
 #endif
 #endif
 
-// Play it nice with Windows users. Notepad in 2015 still doesn't display text data with Unix-style \n.
+// Play it nice with Windows users. Notepad in 2017 still doesn't display text data with Unix-style \n.
 #ifdef _WIN32
 #define IM_NEWLINE "\r\n"
 #else
 #define IM_NEWLINE "\n"
 #endif
 
-#define IM_ARRAYSIZE(_ARR)  ((int)(sizeof(_ARR)/sizeof(*_ARR)))
 #define IM_MAX(_A,_B)       (((_A) >= (_B)) ? (_A) : (_B))
 
 //-----------------------------------------------------------------------------
 // DEMO CODE
 //-----------------------------------------------------------------------------
 
-#ifndef IMGUI_DISABLE_TEST_WINDOWS
+#if !defined(IMGUI_DISABLE_OBSOLETE_FUNCTIONS) && defined(IMGUI_DISABLE_TEST_WINDOWS) && !defined(IMGUI_DISABLE_DEMO_WINDOWS)   // Obsolete name since 1.53, TEST->DEMO
+#define IMGUI_DISABLE_DEMO_WINDOWS
+#endif
+
+#if !defined(IMGUI_DISABLE_DEMO_WINDOWS)
 
 static void ShowExampleAppConsole(bool* p_open);
 static void ShowExampleAppLog(bool* p_open);
@@ -121,7 +124,7 @@ void ImGui::ShowUserGuide()
 }
 
 // Demonstrate most ImGui features (big function!)
-void ImGui::ShowTestWindow(bool* p_open)
+void ImGui::ShowDemoWindow(bool* p_open)
 {
     // Examples apps
     static bool show_app_main_menu_bar = false;
@@ -233,7 +236,7 @@ void ImGui::ShowTestWindow(bool* p_open)
     ImGui::Spacing();
     if (ImGui::CollapsingHeader("Help"))
     {
-        ImGui::TextWrapped("This window is being created by the ShowTestWindow() function. Please refer to the code in imgui_demo.cpp for reference.\n\n");
+        ImGui::TextWrapped("This window is being created by the ShowDemoWindow() function. Please refer to the code in imgui_demo.cpp for reference.\n\n");
         ImGui::Text("USER GUIDE:");
         ImGui::ShowUserGuide();
     }
@@ -1949,6 +1952,8 @@ void ImGui::ShowTestWindow(bool* p_open)
     ImGui::End();
 }
 
+// Demo helper function to select among default colors. See ShowStyleEditor() for more advanced options.
+// Here we use the simplified Combo() api that packs items into a single literal string. Useful for quick combo boxes where the choices are known locally.
 bool ImGui::ShowStyleSelector(const char* label)
 {
     static int style_idx = 0;
@@ -1965,6 +1970,8 @@ bool ImGui::ShowStyleSelector(const char* label)
     return false;
 }
 
+// Demo helper function to select among loaded fonts.
+// Here we use the regular BeginCombo()/EndCombo() api which is more the more flexible one.
 void ImGui::ShowFontSelector(const char* label)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -3078,7 +3085,7 @@ static void ShowExampleAppLongText(bool* p_open)
 // End of Demo code
 #else
 
-void ImGui::ShowTestWindow(bool*) {}
+void ImGui::ShowDemoWindow(bool*) {}
 void ImGui::ShowUserGuide() {}
 void ImGui::ShowStyleEditor(ImGuiStyle*) {}
 

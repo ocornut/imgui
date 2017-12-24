@@ -140,7 +140,7 @@ Frequently Asked Question (FAQ)
 <b>Where is the documentation?</b>
 
 - The documentation is at the top of imgui.cpp + effectively imgui.h. 
-- Example code is in imgui_demo.cpp and particularly the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
+- Example code is in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
 - Standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder. 
 - We obviously needs better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
 
