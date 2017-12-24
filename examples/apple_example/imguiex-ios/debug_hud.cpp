@@ -28,7 +28,7 @@ void DebugHUD_DoInterface(DebugHUD *hud)
 {
     if (hud->show_demo_window)
     {
-        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver); // Normally user code doesn't need/want to call this because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
         ImGui::ShowDemoWindow(&hud->show_demo_window );
     }
     
