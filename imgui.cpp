@@ -8,7 +8,7 @@
 // Gallery (please post your screenshots/video there!): https://github.com/ocornut/imgui/issues/1269
 // Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
 // This library is free but I need your support to sustain development and maintenance.
-// If you work for a company, please consider financial support, e.g: https://www.patreon.com/imgui
+// If you work for a company, please consider financial support, see Readme. For individuals: https://www.patreon.com/imgui
 
 /*
 
