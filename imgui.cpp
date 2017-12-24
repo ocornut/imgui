@@ -1,7 +1,7 @@
 // dear imgui, v1.53 WIP
 // (main code and documentation)
 
-// See ImGui::ShowTestWindow() in imgui_demo.cpp for demo code.
+// Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp for demo code.
 // Newcomers, read 'Programmer guide' below for notes on how to setup Dear ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
 // Releases change-log at https://github.com/ocornut/imgui/releases
@@ -86,7 +86,7 @@
  - Read the FAQ below this section!
  - Your code creates the UI, if your code doesn't run the UI is gone! == very dynamic UI, no construction/destructions steps, less data retention
    on your side, no state duplication, less sync, less bugs.
- - Call and read ImGui::ShowTestWindow() for demo code demonstrating most features.
+ - Call and read ImGui::ShowDemoWindow() for demo code demonstrating most features.
  - You can learn about immediate-mode gui principles at http://www.johno.se/book/imgui.html or watch http://mollyrocket.com/861
 
  HOW TO UPDATE TO A NEWER VERSION OF DEAR IMGUI
@@ -213,6 +213,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/12/24 (1.53) - renamed the emblematic ShowTestWindow() function to ShowDemoWindow(). Kept redirection function (will obsolete).
  - 2017/12/21 (1.53) - ImDrawList: renamed style.AntiAliasedShapes to style.AntiAliasedFill for consistency and as a way to explicitly break code that manipulate those flag at runtime. You can now manipulate ImDrawList::Flags
  - 2017/12/21 (1.53) - ImDrawList: removed 'bool anti_aliased = true' final parameter of ImDrawList::AddPolyline() and ImDrawList::AddConvexPolyFilled(). Prefer manipulating ImDrawList::Flags if you need to toggle them during the frame.
  - 2017/12/14 (1.53) - using the ImGuiWindowFlags_NoScrollWithMouse flag on a child window forwards the mouse wheel event to the parent window, unless either ImGuiWindowFlags_NoInputs or ImGuiWindowFlags_NoScrollbar are also set.
@@ -576,7 +577,7 @@
  - tip: the ImGuiOnceUponAFrame helper will allow run the block of code only once a frame. You can use it to quickly add custom UI in the middle
    of a deep nested inner loop in your code.
  - tip: you can call Render() multiple times (e.g for VR renders).
- - tip: call and read the ShowTestWindow() code in imgui_demo.cpp for more example of how to use ImGui!
+ - tip: call and read the ShowDemoWindow() code in imgui_demo.cpp for more example of how to use ImGui!
 
 */
 

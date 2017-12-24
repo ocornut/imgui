@@ -3,11 +3,11 @@
 
 // Message to the person tempted to delete this file when integrating ImGui into their code base:
 // Don't do it! Do NOT remove this file from your project! It is useful reference code that you and other users will want to refer to.
-// Everything in this file will be stripped out by the linker if you don't call ImGui::ShowTestWindow().
-// During development, you can call ImGui::ShowTestWindow() in your code to learn about various features of ImGui. Have it wired in a debug menu!
+// Everything in this file will be stripped out by the linker if you don't call ImGui::ShowDemoWindow().
+// During development, you can call ImGui::ShowDemoWindow() in your code to learn about various features of ImGui. Have it wired in a debug menu!
 // Removing this file from your project is hindering access to documentation for everyone in your team, likely leading you to poorer usage of the library.
-// Note that you can #define IMGUI_DISABLE_TEST_WINDOWS in imconfig.h for the same effect.
-// If you want to link core ImGui in your public builds but not those test windows, #define IMGUI_DISABLE_TEST_WINDOWS in imconfig.h and those functions will be empty.
+// Note that you can #define IMGUI_DISABLE_DEMO_WINDOWS in imconfig.h for the same effect.
+// If you want to link core ImGui in your public builds but not those demo windows, #define IMGUI_DISABLE_DEMO_WINDOWS in imconfig.h and those functions will be empty.
 // For any other case, if you have ImGui available you probably want this to be available for reference and execution.
 // Thank you,
 // -Your beloved friend, imgui_demo.cpp (that you won't delete)
@@ -70,7 +70,11 @@
 // DEMO CODE
 //-----------------------------------------------------------------------------
 
-#ifndef IMGUI_DISABLE_TEST_WINDOWS
+#if !defined(IMGUI_DISABLE_OBSOLETE_FUNCTIONS) && defined(IMGUI_DISABLE_TEST_WINDOWS) && !defined(IMGUI_DISABLE_DEMO_WINDOWS)   // Obsolete name since 1.53, TEST->DEMO
+#define IMGUI_DISABLE_DEMO_WINDOWS
+#endif
+
+#if !defined(IMGUI_DISABLE_DEMO_WINDOWS)
 
 static void ShowExampleAppConsole(bool* p_open);
 static void ShowExampleAppLog(bool* p_open);
@@ -121,7 +125,7 @@ void ImGui::ShowUserGuide()
 }
 
 // Demonstrate most ImGui features (big function!)
-void ImGui::ShowTestWindow(bool* p_open)
+void ImGui::ShowDemoWindow(bool* p_open)
 {
     // Examples apps
     static bool show_app_main_menu_bar = false;
@@ -231,7 +235,7 @@ void ImGui::ShowTestWindow(bool* p_open)
     ImGui::Spacing();
     if (ImGui::CollapsingHeader("Help"))
     {
-        ImGui::TextWrapped("This window is being created by the ShowTestWindow() function. Please refer to the code in imgui_demo.cpp for reference.\n\n");
+        ImGui::TextWrapped("This window is being created by the ShowDemoWindow() function. Please refer to the code in imgui_demo.cpp for reference.\n\n");
         ImGui::Text("USER GUIDE:");
         ImGui::ShowUserGuide();
     }
@@ -3041,7 +3045,7 @@ static void ShowExampleAppLongText(bool* p_open)
 // End of Demo code
 #else
 
-void ImGui::ShowTestWindow(bool*) {}
+void ImGui::ShowDemoWindow(bool*) {}
 void ImGui::ShowUserGuide() {}
 void ImGui::ShowStyleEditor(ImGuiStyle*) {}
 
