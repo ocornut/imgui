@@ -1911,6 +1911,8 @@ void ImGui::ShowTestWindow(bool* p_open)
     ImGui::End();
 }
 
+// Demo helper function to select among default colors. See ShowStyleEditor() for more advanced options.
+// Here we use the simplified Combo() api that packs items into a single literal string. Useful for quick combo boxes where the choices are known locally.
 bool ImGui::ShowStyleSelector(const char* label)
 {
     static int style_idx = 0;
@@ -1927,6 +1929,8 @@ bool ImGui::ShowStyleSelector(const char* label)
     return false;
 }
 
+// Demo helper function to select among loaded fonts.
+// Here we use the regular BeginCombo()/EndCombo() api which is more the more flexible one.
 void ImGui::ShowFontSelector(const char* label)
 {
     ImGuiIO& io = ImGui::GetIO();
