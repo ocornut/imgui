@@ -27,7 +27,6 @@ void CreateRenderTarget()
     render_target_view_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
     g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
     g_pd3dDevice->CreateRenderTargetView(pBackBuffer, &render_target_view_desc, &g_mainRenderTargetView);
-    g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, NULL);
     pBackBuffer->Release();
 }
 
@@ -199,6 +198,7 @@ int main(int, char**)
         }
 
         // Rendering
+        g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, NULL);
         g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, (float*)&clear_color);
         ImGui::Render();
 
