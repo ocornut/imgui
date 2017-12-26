@@ -45,7 +45,7 @@ Binaries/Demo
 -------------
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20171013.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20171013.zip) (Windows binaries, Dear ImGui 1.52 WIP built 2017/10/13, 5 executables)
+- [imgui-demo-binaries-20171226.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20171226.zip) (Windows binaries, Dear ImGui 1.53 built 2017/12/26, 5 executables)
 
 Bindings
 --------
