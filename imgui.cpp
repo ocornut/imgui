@@ -2914,7 +2914,7 @@ void ImGui::EndFrame()
     IM_ASSERT(g.CurrentWindowStack.Size == 1);    // Mismatched Begin()/End() calls
     if (g.CurrentWindow && !g.CurrentWindow->WriteAccessed)
         g.CurrentWindow->Active = false;
-    ImGui::End();
+    End();
 
     if (g.ActiveId == 0 && g.HoveredId == 0)
     {
@@ -3715,7 +3715,7 @@ void ImGui::BeginTooltip()
 void ImGui::EndTooltip()
 {
     IM_ASSERT(GetCurrentWindowRead()->Flags & ImGuiWindowFlags_Tooltip);   // Mismatched BeginTooltip()/EndTooltip() calls
-    ImGui::End();
+    End();
 }
 
 // Mark popup as open (toggle toward open state).
@@ -4011,7 +4011,7 @@ void ImGui::EndChild()
     IM_ASSERT(window->Flags & ImGuiWindowFlags_ChildWindow);   // Mismatched BeginChild()/EndChild() callss
     if (window->BeginCount > 1)
     {
-        ImGui::End();
+        End();
     }
     else
     {
@@ -4021,7 +4021,7 @@ void ImGui::EndChild()
             sz.x = ImMax(4.0f, sz.x);
         if (window->AutoFitChildAxises & (1 << ImGuiAxis_Y))
             sz.y = ImMax(4.0f, sz.y);
-        ImGui::End();
+        End();
 
         ImGuiWindow* parent_window = GetCurrentWindow();
         ImRect bb(parent_window->DC.CursorPos, parent_window->DC.CursorPos + sz);
@@ -11730,6 +11730,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Text("ActiveId: 0x%08X/0x%08X (%.2f sec)", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdTimer);
             ImGui::Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
             ImGui::Text("NavWindow: '%s'", g.NavWindow ? g.NavWindow->Name : "NULL");
+            ImGui::Text("DragDrop: %d, SourceId = 0x%08X, Payload \"%s\" (%d bytes)", g.DragDropActive, g.DragDropPayload.SourceId, g.DragDropPayload.DataType, g.DragDropPayload.DataSize);
             ImGui::TreePop();
         }
     }
