@@ -77,8 +77,7 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit ImGui context pointe
 // Helpers
 //-----------------------------------------------------------------------------
 
-#define IM_PI                       3.14159265358979323846f
-#define IM_OFFSETOF(_TYPE,_ELM)     ((size_t)&(((_TYPE*)0)->_ELM))
+#define IM_PI           3.14159265358979323846f
 
 // Helpers: UTF-8 <> wchar
 IMGUI_API int           ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count

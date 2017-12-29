@@ -39,6 +39,7 @@
 #define IM_FMTLIST(FMT)
 #endif
 #define IM_ARRAYSIZE(_ARR)          ((int)(sizeof(_ARR)/sizeof(*_ARR)))
+#define IM_OFFSETOF(_TYPE,_ELM)     ((size_t)&(((_TYPE*)0)->_ELM))
 
 #if defined(__clang__)
 #pragma clang diagnostic push
