@@ -290,16 +290,6 @@ struct IMGUI_API ImRect
     void        Floor()                         { Min.x = (float)(int)Min.x; Min.y = (float)(int)Min.y; Max.x = (float)(int)Max.x; Max.y = (float)(int)Max.y; }
     void        FixInverted()                   { if (Min.x > Max.x) ImSwap(Min.x, Max.x); if (Min.y > Max.y) ImSwap(Min.y, Max.y); }
     bool        IsFinite() const                { return Min.x != FLT_MAX; }
-    ImVec2      GetClosestPoint(ImVec2 p, bool on_edge) const
-    {
-        if (!on_edge && Contains(p))
-            return p;
-        if (p.x > Max.x) p.x = Max.x;
-        else if (p.x < Min.x) p.x = Min.x;
-        if (p.y > Max.y) p.y = Max.y;
-        else if (p.y < Min.y) p.y = Min.y;
-        return p;
-    }
 };
 
 // Stacked color modifier, backup of modified data so we can restore it

@@ -213,6 +213,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2017/12/29 (1.54) - removed CalcItemRectClosestPoint() which was weird and not really used by anyone except demo code. If you need it it's easy to replicate on your side.
  - 2017/12/24 (1.53) - renamed the emblematic ShowTestWindow() function to ShowDemoWindow(). Kept redirection function (will obsolete).
  - 2017/12/21 (1.53) - ImDrawList: renamed style.AntiAliasedShapes to style.AntiAliasedFill for consistency and as a way to explicitly break code that manipulate those flag at runtime. You can now manipulate ImDrawList::Flags
  - 2017/12/21 (1.53) - ImDrawList: removed 'bool anti_aliased = true' final parameter of ImDrawList::AddPolyline() and ImDrawList::AddConvexPolyFilled(). Prefer manipulating ImDrawList::Flags if you need to toggle them during the frame.
@@ -3656,14 +3657,6 @@ ImVec2 ImGui::GetItemRectSize()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.LastItemRect.GetSize();
-}
-
-ImVec2 ImGui::CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge, float outward)
-{
-    ImGuiWindow* window = GetCurrentWindowRead();
-    ImRect rect = window->DC.LastItemRect;
-    rect.Expand(outward);
-    return rect.GetClosestPoint(pos, on_edge);
 }
 
 static ImRect GetVisibleRect()
