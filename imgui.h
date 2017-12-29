@@ -980,26 +980,31 @@ struct ImGuiIO
 };
 
 //-----------------------------------------------------------------------------
-// Obsolete functions (Will be removed! Also see 'API BREAKING CHANGES' section in imgui.cpp)
+// Obsolete functions (Will be removed! Read 'API BREAKING CHANGES' section in imgui.cpp for details)
 //-----------------------------------------------------------------------------
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 namespace ImGui
 {
-    static inline ImVec2 CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge = false, float outward = +0.0f) { (void)on_edge; (void)outward; return pos; } // OBSOLETE 1.54+
-    static inline void  ShowTestWindow() { return ShowDemoWindow(); } // OBSOLETE 1.53+
-    static inline bool  IsRootWindowFocused() { return IsWindowFocused(ImGuiFocusedFlags_RootWindow); } // OBSOLETE 1.53+
-    static inline bool  IsRootWindowOrAnyChildFocused() { return IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows); } // OBSOLETE 1.53+
-    static inline void  SetNextWindowContentWidth(float width) { SetNextWindowContentSize(ImVec2(width, 0.0f)); } // OBSOLETE 1.53+ (nb: original version preserved last Y value set by SetNextWindowContentSize())
-    static inline bool  IsRootWindowOrAnyChildHovered(ImGuiHoveredFlags flags = 0) { return IsItemHovered(flags | ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows); } // OBSOLETE 1.53+ use flags directly
-    bool                Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha_override = -1.0f, ImGuiWindowFlags flags = 0); // OBSOLETE 1.52+. use SetNextWindowSize() instead if you want to set a window size.
-    static inline void  AlignFirstTextHeightToWidgets() { AlignTextToFramePadding(); }     // OBSOLETE 1.52+
-    static inline void  SetNextWindowPosCenter(ImGuiCond cond = 0) { SetNextWindowPos(ImVec2(GetIO().DisplaySize.x * 0.5f, GetIO().DisplaySize.y * 0.5f), cond, ImVec2(0.5f, 0.5f)); } // OBSOLETE 1.52+
-    static inline bool  IsItemHoveredRect() { return IsItemHovered(ImGuiHoveredFlags_RectOnly); } // OBSOLETE 1.51+
-    static inline bool  IsPosHoveringAnyWindow(const ImVec2&) { IM_ASSERT(0); return false; } // OBSOLETE 1.51+. This was partly broken. You probably wanted to use ImGui::GetIO().WantCaptureMouse instead.
-    static inline bool  IsMouseHoveringAnyWindow() { return IsAnyWindowHovered(); }        // OBSOLETE 1.51+
-    static inline bool  IsMouseHoveringWindow() { return IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem); } // OBSOLETE 1.51+
-    static inline bool  CollapsingHeader(const char* label, const char* str_id, bool framed = true, bool default_open = false) { (void)str_id; (void)framed; ImGuiTreeNodeFlags default_open_flags = 1 << 5; return CollapsingHeader(label, (default_open ? default_open_flags : 0)); } // OBSOLETE 1.49+
+    // OBSOLETED in 1.54 (from Dec 2017)
+    static inline ImVec2 CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge = false, float outward = 0.f) { (void)on_edge; (void)outward; IM_ASSERT(0); return pos; }
+    // OBSOLETED in 1.53 (between Oct 2017 and Dec 2017)
+    static inline void  ShowTestWindow()                      { return ShowDemoWindow(); }
+    static inline bool  IsRootWindowFocused()                 { return IsWindowFocused(ImGuiFocusedFlags_RootWindow); }
+    static inline bool  IsRootWindowOrAnyChildFocused()       { return IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows); }
+    static inline void  SetNextWindowContentWidth(float w)    { SetNextWindowContentSize(ImVec2(w, 0.0f)); }
+    // OBSOLETED in 1.52 (between Aug 2017 and Oct 2017)
+    bool                Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha_override = -1.0f, ImGuiWindowFlags flags = 0); // Use SetNextWindowSize() instead if you want to set a window size.
+    static inline bool  IsRootWindowOrAnyChildHovered()       { return IsItemHovered(ImGuiHoveredFlags_RootAndChildWindows); }  // Use flags directly!
+    static inline void  AlignFirstTextHeightToWidgets()       { AlignTextToFramePadding(); }
+    static inline void  SetNextWindowPosCenter(ImGuiCond c=0) { ImGuiIO& io = GetIO(); SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), c, ImVec2(0.5f, 0.5f)); }
+    // OBSOLETED in 1.51 (between Jun 2017 and Aug 2017)
+    static inline bool  IsItemHoveredRect()                   { return IsItemHovered(ImGuiHoveredFlags_RectOnly); }
+    static inline bool  IsPosHoveringAnyWindow(const ImVec2&) { IM_ASSERT(0); return false; } // This was misleading and partly broken. You probably want to use the ImGui::GetIO().WantCaptureMouse flag instead.
+    static inline bool  IsMouseHoveringAnyWindow()            { return IsAnyWindowHovered(); }
+    static inline bool  IsMouseHoveringWindow()               { return IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem); }
+    // OBSOLETED IN 1.49 (between Apr 2016 and May 2016)
+    static inline bool  CollapsingHeader(const char* label, const char* str_id, bool framed = true, bool default_open = false) { (void)str_id; (void)framed; ImGuiTreeNodeFlags default_open_flags = 1 << 5; return CollapsingHeader(label, (default_open ? default_open_flags : 0)); }
 }
 #endif
 
