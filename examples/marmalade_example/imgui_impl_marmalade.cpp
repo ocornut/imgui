@@ -273,7 +273,7 @@ void ImGui_Marmalade_NewFrame()
     double mouse_x, mouse_y;
     mouse_x = s3ePointerGetX();
     mouse_y = s3ePointerGetY();
-    io.MousePos = ImVec2((float)mouse_x/g_scale.x, (float)mouse_y/g_scale.y);   // Mouse position in screen coordinates (set to -1,-1 if no mouse / on another screen, etc.)
+    io.MousePos = ImVec2((float)mouse_x/g_scale.x, (float)mouse_y/g_scale.y);   // Mouse position (set to -FLT_MAX,-FLT_MAX if no mouse / on another screen, etc.)
 
     for (int i = 0; i < 3; i++)
     {
