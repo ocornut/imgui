@@ -276,7 +276,7 @@ void ImGui_ImplSdlGL2_NewFrame(SDL_Window *window)
     int mx, my;
     Uint32 mouseMask = SDL_GetMouseState(&mx, &my);
     if (SDL_GetWindowFlags(window) & SDL_WINDOW_MOUSE_FOCUS)
-        io.MousePos = ImVec2((float)mx, (float)my);   // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)mx, (float)my);
     else
         io.MousePos = ImVec2(-FLT_MAX,-FLT_MAX);
 
