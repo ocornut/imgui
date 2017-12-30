@@ -9795,7 +9795,7 @@ bool ImGui::ColorEdit4(ImStr label, float col[4], ImGuiColorEditFlags flags)
     const float square_sz = SmallSquareSize();
     const float w_extra = (flags & ImGuiColorEditFlags_NoSmallPreview) ? 0.0f : (square_sz + style.ItemInnerSpacing.x);
     const float w_items_all = CalcItemWidth() - w_extra;
-    const char* label_display_end = FindRenderedTextEnd(label);
+    label.End = FindRenderedTextEnd(label);
 
     const bool alpha = (flags & ImGuiColorEditFlags_NoAlpha) == 0;
     const bool hdr = (flags & ImGuiColorEditFlags_HDR) != 0;
@@ -9919,9 +9919,9 @@ bool ImGui::ColorEdit4(ImStr label, float col[4], ImGuiColorEditFlags flags)
         if (BeginPopup("picker"))
         {
             picker_active = true;
-            if (label.End != label_display_end)
+            if (label.Begin != label.End)
             {
-                TextUnformatted(label.Begin, label_display_end);
+                TextUnformatted(label);
                 Separator();
             }
             ImGuiColorEditFlags picker_flags_to_forward = ImGuiColorEditFlags__DataTypeMask | ImGuiColorEditFlags__PickerMask | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaBar;
@@ -9933,10 +9933,10 @@ bool ImGui::ColorEdit4(ImStr label, float col[4], ImGuiColorEditFlags flags)
         }
     }
 
-    if (label.End != label_display_end && !(flags & ImGuiColorEditFlags_NoLabel))
+    if (label.Begin != label.End && !(flags & ImGuiColorEditFlags_NoLabel))
     {
         SameLine(0, style.ItemInnerSpacing.x);
-        TextUnformatted(label.Begin, label_display_end);
+        TextUnformatted(label);
     }
 
     // Convert back
