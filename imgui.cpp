@@ -1925,6 +1925,8 @@ ImGuiWindow::~ImGuiWindow()
 {
     IM_DELETE(DrawList);
     IM_DELETE(Name);
+    for (int i = 0; i != ColumnsStorage.Size; i++)
+        ColumnsStorage[i].~ImGuiColumnsSet();
 }
 
 ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
@@ -3066,15 +3068,16 @@ void ImGui::NewFrame()
     if (!g.Initialized)
         Initialize();
 
+    g.Time += g.IO.DeltaTime;
+    g.FrameCount += 1;
+    g.TooltipOverrideCount = 0;
+    g.WindowsActiveCount = 0;
+
     SetCurrentFont(GetDefaultFont());
     IM_ASSERT(g.Font->IsLoaded());
     g.DrawListSharedData.ClipRectFullscreen = ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y);
     g.DrawListSharedData.CurveTessellationTol = g.Style.CurveTessellationTol;
 
-    g.Time += g.IO.DeltaTime;
-    g.FrameCount += 1;
-    g.TooltipOverrideCount = 0;
-    g.WindowsActiveCount = 0;
     g.OverlayDrawList.Clear();
     g.OverlayDrawList.PushTextureID(g.IO.Fonts->TexID);
     g.OverlayDrawList.PushClipRectFullScreen();
