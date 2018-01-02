@@ -1876,6 +1876,8 @@ ImGuiWindow::~ImGuiWindow()
 {
     IM_DELETE(DrawList);
     IM_DELETE(Name);
+    for (int i = 0; i != ColumnsStorage.Size; i++)
+        ColumnsStorage[i].~ImGuiColumnsSet();
 }
 
 ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
