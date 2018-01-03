@@ -487,6 +487,11 @@ struct ImGuiNextWindowData
         SizeConstraintCallback = NULL;
         SizeConstraintCallbackUserData = NULL;
     }
+
+    void    Clear()
+    {
+        PosCond = SizeCond = ContentSizeCond = CollapsedCond = SizeConstraintCond = FocusCond = 0;
+    }
 };
 
 // Main state for ImGui
@@ -532,7 +537,7 @@ struct ImGuiContext
     ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont()
     ImVector<ImGuiPopupRef> OpenPopupStack;                     // Which popups are open (persistent)
     ImVector<ImGuiPopupRef> CurrentPopupStack;                  // Which level of BeginPopup() we are in (reset every frame)
-    ImGuiNextWindowData     NextWindow;                         // Storage for SetNextWindow** functions
+    ImGuiNextWindowData     NextWindowData;                     // Storage for SetNextWindow** functions
     bool                    NextTreeNodeOpenVal;                // Storage for SetNextTreeNode** functions
     ImGuiCond               NextTreeNodeOpenCond;
 
