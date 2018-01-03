@@ -1693,7 +1693,7 @@ void ImGuiTextBuffer::appendf(const char* fmt, ...)
 // ImGuiSimpleColumns (internal use only)
 //-----------------------------------------------------------------------------
 
-ImGuiSimpleColumns::ImGuiSimpleColumns()
+ImGuiMenuColumns::ImGuiMenuColumns()
 {
     Count = 0;
     Spacing = Width = NextWidth = 0.0f;
@@ -1701,7 +1701,7 @@ ImGuiSimpleColumns::ImGuiSimpleColumns()
     memset(NextWidths, 0, sizeof(NextWidths));
 }
 
-void ImGuiSimpleColumns::Update(int count, float spacing, bool clear)
+void ImGuiMenuColumns::Update(int count, float spacing, bool clear)
 {
     IM_ASSERT(Count <= IM_ARRAYSIZE(Pos));
     Count = count;
@@ -1718,7 +1718,7 @@ void ImGuiSimpleColumns::Update(int count, float spacing, bool clear)
     }
 }
 
-float ImGuiSimpleColumns::DeclColumns(float w0, float w1, float w2) // not using va_arg because they promote float to double
+float ImGuiMenuColumns::DeclColumns(float w0, float w1, float w2) // not using va_arg because they promote float to double
 {
     NextWidth = 0.0f;
     NextWidths[0] = ImMax(NextWidths[0], w0);
@@ -1729,7 +1729,7 @@ float ImGuiSimpleColumns::DeclColumns(float w0, float w1, float w2) // not using
     return ImMax(Width, NextWidth);
 }
 
-float ImGuiSimpleColumns::CalcExtraSpace(float avail_w)
+float ImGuiMenuColumns::CalcExtraSpace(float avail_w)
 {
     return ImMax(0.0f, avail_w - Width);
 }
