@@ -11004,6 +11004,10 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     window->DC.ColumnsOffsetX = 0.0f;
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
 
+    // Clear data if columns count changed
+    if (columns->Columns.Size != 0 && columns->Columns.Size != columns_count + 1)
+        columns->Columns.resize(0);
+
     // Initialize defaults
     columns->IsFirstFrame = (columns->Columns.Size == 0);
     if (columns->Columns.Size == 0)
@@ -11016,7 +11020,6 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
             columns->Columns.push_back(column);
         }
     }
-    IM_ASSERT(columns->Columns.Size == columns_count + 1);
 
     for (int n = 0; n < columns_count + 1; n++)
     {
