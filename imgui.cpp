@@ -11468,12 +11468,6 @@ void ImGui::EndDragDropTarget()
     IM_ASSERT(g.DragDropActive);
 }
 
-bool ImGui::IsDragDropActive()
-{
-    ImGuiContext& g = *GImGui;
-    return g.DragDropActive;
-}
-
 //-----------------------------------------------------------------------------
 // PLATFORM DEPENDENT HELPERS
 //-----------------------------------------------------------------------------
