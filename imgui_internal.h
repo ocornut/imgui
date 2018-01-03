@@ -36,7 +36,7 @@ struct ImRect;
 struct ImGuiColMod;
 struct ImGuiStyleMod;
 struct ImGuiGroupData;
-struct ImGuiSimpleColumns;
+struct ImGuiMenuColumns;
 struct ImGuiDrawContext;
 struct ImGuiTextEditState;
 struct ImGuiMouseCursorData;
@@ -341,14 +341,14 @@ struct ImGuiGroupData
 };
 
 // Simple column measurement currently used for MenuItem() only. This is very short-sighted/throw-away code and NOT a generic helper.
-struct IMGUI_API ImGuiSimpleColumns
+struct IMGUI_API ImGuiMenuColumns
 {
     int         Count;
     float       Spacing;
     float       Width, NextWidth;
-    float       Pos[8], NextWidths[8];
+    float       Pos[4], NextWidths[4];
 
-    ImGuiSimpleColumns();
+    ImGuiMenuColumns();
     void        Update(int count, float spacing, bool clear);
     float       DeclColumns(float w0, float w1, float w2);
     float       CalcExtraSpace(float avail_w);
@@ -898,7 +898,7 @@ struct IMGUI_API ImGuiWindow
     ImRect                  InnerRect;
     int                     LastFrameActive;
     float                   ItemWidthDefault;
-    ImGuiSimpleColumns      MenuColumns;                        // Simplified columns storage for menu items
+    ImGuiMenuColumns        MenuColumns;                        // Simplified columns storage for menu items
     ImGuiStorage            StateStorage;
     ImVector<ImGuiColumnsSet> ColumnsStorage;
     float                   FontWindowScale;                    // Scale multiplier per-window

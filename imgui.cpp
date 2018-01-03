@@ -1736,7 +1736,7 @@ void ImGuiTextBuffer::appendf(const char* fmt, ...)
 // ImGuiSimpleColumns (internal use only)
 //-----------------------------------------------------------------------------
 
-ImGuiSimpleColumns::ImGuiSimpleColumns()
+ImGuiMenuColumns::ImGuiMenuColumns()
 {
     Count = 0;
     Spacing = Width = NextWidth = 0.0f;
@@ -1744,7 +1744,7 @@ ImGuiSimpleColumns::ImGuiSimpleColumns()
     memset(NextWidths, 0, sizeof(NextWidths));
 }
 
-void ImGuiSimpleColumns::Update(int count, float spacing, bool clear)
+void ImGuiMenuColumns::Update(int count, float spacing, bool clear)
 {
     IM_ASSERT(Count <= IM_ARRAYSIZE(Pos));
     Count = count;
@@ -1761,7 +1761,7 @@ void ImGuiSimpleColumns::Update(int count, float spacing, bool clear)
     }
 }
 
-float ImGuiSimpleColumns::DeclColumns(float w0, float w1, float w2) // not using va_arg because they promote float to double
+float ImGuiMenuColumns::DeclColumns(float w0, float w1, float w2) // not using va_arg because they promote float to double
 {
     NextWidth = 0.0f;
     NextWidths[0] = ImMax(NextWidths[0], w0);
@@ -1772,7 +1772,7 @@ float ImGuiSimpleColumns::DeclColumns(float w0, float w1, float w2) // not using
     return ImMax(Width, NextWidth);
 }
 
-float ImGuiSimpleColumns::CalcExtraSpace(float avail_w)
+float ImGuiMenuColumns::CalcExtraSpace(float avail_w)
 {
     return ImMax(0.0f, avail_w - Width);
 }
@@ -12180,6 +12180,10 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     window->DC.ColumnsOffsetX = 0.0f;
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
 
+    // Clear data if columns count changed
+    if (columns->Columns.Size != 0 && columns->Columns.Size != columns_count + 1)
+        columns->Columns.resize(0);
+
     // Initialize defaults
     columns->IsFirstFrame = (columns->Columns.Size == 0);
     if (columns->Columns.Size == 0)
@@ -12192,7 +12196,6 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
             columns->Columns.push_back(column);
         }
     }
-    IM_ASSERT(columns->Columns.Size == columns_count + 1);
 
     for (int n = 0; n < columns_count + 1; n++)
     {
@@ -12641,12 +12644,6 @@ void ImGui::EndDragDropTarget()
     IM_ASSERT(g.DragDropActive);
 }
 
-bool ImGui::IsDragDropActive()
-{
-    ImGuiContext& g = *GImGui;
-    return g.DragDropActive;
-}
-
 //-----------------------------------------------------------------------------
 // PLATFORM DEPENDENT HELPERS
 //-----------------------------------------------------------------------------
@@ -12764,7 +12761,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 {
     if (ImGui::Begin("ImGui Metrics", p_open))
     {
-        ImGui::Text("ImGui %s", ImGui::GetVersion());
+        ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::Text("%d vertices, %d indices (%d triangles)", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices, ImGui::GetIO().MetricsRenderIndices / 3);
         ImGui::Text("%d allocations", ImGui::GetIO().MetricsAllocs);
