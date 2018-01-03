@@ -2632,8 +2632,8 @@ void ImGui::Shutdown()
     g.FontStack.clear();
     g.OpenPopupStack.clear();
     g.CurrentPopupStack.clear();
-    g.SetNextWindowSizeConstraintCallback = NULL;
-    g.SetNextWindowSizeConstraintCallbackUserData = NULL;
+    g.NextWindow.SizeConstraintCallback = NULL;
+    g.NextWindow.SizeConstraintCallbackUserData = NULL;
     for (int i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
         g.RenderDrawLists[i].clear();
     g.OverlayDrawList.ClearFreeMemory();
@@ -3820,8 +3820,8 @@ static inline void ClearSetNextWindowData()
 {
     // FIXME-OPT
     ImGuiContext& g = *GImGui;
-    g.SetNextWindowPosCond = g.SetNextWindowSizeCond = g.SetNextWindowContentSizeCond = g.SetNextWindowCollapsedCond = 0;
-    g.SetNextWindowSizeConstraint = g.SetNextWindowFocus = false;
+    g.NextWindow.PosCond = g.NextWindow.SizeCond = g.NextWindow.ContentSizeCond = g.NextWindow.CollapsedCond = 0;
+    g.NextWindow.SizeConstraint = g.NextWindow.Focus = false;
 }
 
 bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
@@ -3881,7 +3881,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags ext
     }
 
     // Center modal windows by default
-    if (g.SetNextWindowPosCond == 0)
+    if (g.NextWindow.PosCond == 0)
         SetNextWindowPos(g.IO.DisplaySize * 0.5f, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
     ImGuiWindowFlags flags = extra_flags|ImGuiWindowFlags_Popup|ImGuiWindowFlags_Modal|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings;
@@ -4193,20 +4193,20 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 static ImVec2 CalcSizeAfterConstraint(ImGuiWindow* window, ImVec2 new_size)
 {
     ImGuiContext& g = *GImGui;
-    if (g.SetNextWindowSizeConstraint)
+    if (g.NextWindow.SizeConstraint)
     {
         // Using -1,-1 on either X/Y axis to preserve the current size.
-        ImRect cr = g.SetNextWindowSizeConstraintRect;
+        ImRect cr = g.NextWindow.SizeConstraintRect;
         new_size.x = (cr.Min.x >= 0 && cr.Max.x >= 0) ? ImClamp(new_size.x, cr.Min.x, cr.Max.x) : window->SizeFull.x;
         new_size.y = (cr.Min.y >= 0 && cr.Max.y >= 0) ? ImClamp(new_size.y, cr.Min.y, cr.Max.y) : window->SizeFull.y;
-        if (g.SetNextWindowSizeConstraintCallback)
+        if (g.NextWindow.SizeConstraintCallback)
         {
             ImGuiSizeConstraintCallbackData data;
-            data.UserData = g.SetNextWindowSizeConstraintCallbackUserData;
+            data.UserData = g.NextWindow.SizeConstraintCallbackUserData;
             data.Pos = window->Pos;
             data.CurrentSize = window->SizeFull;
             data.DesiredSize = new_size;
-            g.SetNextWindowSizeConstraintCallback(&data);
+            g.NextWindow.SizeConstraintCallback(&data);
             new_size = data.DesiredSize;
         }
     }
@@ -4352,7 +4352,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     ImGuiWindow* window = FindWindowByName(name);
     if (!window)
     {
-        ImVec2 size_on_first_use = (g.SetNextWindowSizeCond != 0) ? g.SetNextWindowSizeVal : ImVec2(0.0f, 0.0f); // Any condition flag will do since we are creating a new window here.
+        ImVec2 size_on_first_use = (g.NextWindow.SizeCond != 0) ? g.NextWindow.SizeVal : ImVec2(0.0f, 0.0f); // Any condition flag will do since we are creating a new window here.
         window = CreateNewWindow(name, size_on_first_use, flags);
     }
 
@@ -4397,50 +4397,50 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     // Process SetNextWindow***() calls
     bool window_pos_set_by_api = false;
     bool window_size_x_set_by_api = false, window_size_y_set_by_api = false;
-    if (g.SetNextWindowPosCond)
+    if (g.NextWindow.PosCond)
     {
-        window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.SetNextWindowPosCond) != 0;
-        if (window_pos_set_by_api && ImLengthSqr(g.SetNextWindowPosPivot) > 0.00001f)
+        window_pos_set_by_api = (window->SetWindowPosAllowFlags & g.NextWindow.PosCond) != 0;
+        if (window_pos_set_by_api && ImLengthSqr(g.NextWindow.PosPivotVal) > 0.00001f)
         {
             // May be processed on the next frame if this is our first frame and we are measuring size
             // FIXME: Look into removing the branch so everything can go through this same code path for consistency.
-            window->SetWindowPosVal = g.SetNextWindowPosVal;
-            window->SetWindowPosPivot = g.SetNextWindowPosPivot;
+            window->SetWindowPosVal = g.NextWindow.PosVal;
+            window->SetWindowPosPivot = g.NextWindow.PosPivotVal;
             window->SetWindowPosAllowFlags &= ~(ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing);
         }
         else
         {
-            SetWindowPos(window, g.SetNextWindowPosVal, g.SetNextWindowPosCond);
+            SetWindowPos(window, g.NextWindow.PosVal, g.NextWindow.PosCond);
         }
-        g.SetNextWindowPosCond = 0;
+        g.NextWindow.PosCond = 0;
     }
-    if (g.SetNextWindowSizeCond)
+    if (g.NextWindow.SizeCond)
     {
-        window_size_x_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0 && (g.SetNextWindowSizeVal.x > 0.0f);
-        window_size_y_set_by_api = (window->SetWindowSizeAllowFlags & g.SetNextWindowSizeCond) != 0 && (g.SetNextWindowSizeVal.y > 0.0f);
-        SetWindowSize(window, g.SetNextWindowSizeVal, g.SetNextWindowSizeCond);
-        g.SetNextWindowSizeCond = 0;
+        window_size_x_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindow.SizeCond) != 0 && (g.NextWindow.SizeVal.x > 0.0f);
+        window_size_y_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindow.SizeCond) != 0 && (g.NextWindow.SizeVal.y > 0.0f);
+        SetWindowSize(window, g.NextWindow.SizeVal, g.NextWindow.SizeCond);
+        g.NextWindow.SizeCond = 0;
     }
-    if (g.SetNextWindowContentSizeCond)
+    if (g.NextWindow.ContentSizeCond)
     {
         // Adjust passed "client size" to become a "window size"
-        window->SizeContentsExplicit = g.SetNextWindowContentSizeVal;
+        window->SizeContentsExplicit = g.NextWindow.ContentSizeVal;
         window->SizeContentsExplicit.y += window->TitleBarHeight() + window->MenuBarHeight();
-        g.SetNextWindowContentSizeCond = 0;
+        g.NextWindow.ContentSizeCond = 0;
     }
     else if (first_begin_of_the_frame)
     {
         window->SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     }
-    if (g.SetNextWindowCollapsedCond)
+    if (g.NextWindow.CollapsedCond)
     {
-        SetWindowCollapsed(window, g.SetNextWindowCollapsedVal, g.SetNextWindowCollapsedCond);
-        g.SetNextWindowCollapsedCond = 0;
+        SetWindowCollapsed(window, g.NextWindow.CollapsedVal, g.NextWindow.CollapsedCond);
+        g.NextWindow.CollapsedCond = 0;
     }
-    if (g.SetNextWindowFocus)
+    if (g.NextWindow.Focus)
     {
         SetWindowFocus();
-        g.SetNextWindowFocus = false;
+        g.NextWindow.Focus = false;
     }
     if (window->Appearing)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, false);
@@ -4940,7 +4940,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->WriteAccessed = false;
 
     window->BeginCount++;
-    g.SetNextWindowSizeConstraint = false;
+    g.NextWindow.SizeConstraint = false;
 
     // Child window can be out of sight and have "negative" clip windows.
     // Mark them as collapsed so commands are skipped earlier (we can't manually collapse because they have no title bar).
@@ -5702,45 +5702,45 @@ void ImGui::SetWindowFocus(const char* name)
 void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiCond cond, const ImVec2& pivot)
 {
     ImGuiContext& g = *GImGui;
-    g.SetNextWindowPosVal = pos;
-    g.SetNextWindowPosPivot = pivot;
-    g.SetNextWindowPosCond = cond ? cond : ImGuiCond_Always;
+    g.NextWindow.PosVal = pos;
+    g.NextWindow.PosPivotVal = pivot;
+    g.NextWindow.PosCond = cond ? cond : ImGuiCond_Always;
 }
 
 void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiCond cond)
 {
     ImGuiContext& g = *GImGui;
-    g.SetNextWindowSizeVal = size;
-    g.SetNextWindowSizeCond = cond ? cond : ImGuiCond_Always;
+    g.NextWindow.SizeVal = size;
+    g.NextWindow.SizeCond = cond ? cond : ImGuiCond_Always;
 }
 
 void ImGui::SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeConstraintCallback custom_callback, void* custom_callback_user_data)
 {
     ImGuiContext& g = *GImGui;
-    g.SetNextWindowSizeConstraint = true;
-    g.SetNextWindowSizeConstraintRect = ImRect(size_min, size_max);
-    g.SetNextWindowSizeConstraintCallback = custom_callback;
-    g.SetNextWindowSizeConstraintCallbackUserData = custom_callback_user_data;
+    g.NextWindow.SizeConstraint = true;
+    g.NextWindow.SizeConstraintRect = ImRect(size_min, size_max);
+    g.NextWindow.SizeConstraintCallback = custom_callback;
+    g.NextWindow.SizeConstraintCallbackUserData = custom_callback_user_data;
 }
 
 void ImGui::SetNextWindowContentSize(const ImVec2& size)
 {
     ImGuiContext& g = *GImGui;
-    g.SetNextWindowContentSizeVal = size;  // In Begin() we will add the size of window decorations (title bar, menu etc.) to that to form a SizeContents value.
-    g.SetNextWindowContentSizeCond = ImGuiCond_Always;
+    g.NextWindow.ContentSizeVal = size;  // In Begin() we will add the size of window decorations (title bar, menu etc.) to that to form a SizeContents value.
+    g.NextWindow.ContentSizeCond = ImGuiCond_Always;
 }
 
 void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiCond cond)
 {
     ImGuiContext& g = *GImGui;
-    g.SetNextWindowCollapsedVal = collapsed;
-    g.SetNextWindowCollapsedCond = cond ? cond : ImGuiCond_Always;
+    g.NextWindow.CollapsedVal = collapsed;
+    g.NextWindow.CollapsedCond = cond ? cond : ImGuiCond_Always;
 }
 
 void ImGui::SetNextWindowFocus()
 {
     ImGuiContext& g = *GImGui;
-    g.SetNextWindowFocus = true;
+    g.NextWindow.Focus = true;
 }
 
 // In window space (not screen space!)
@@ -6615,11 +6615,11 @@ bool ImGui::TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags)
     ImGuiStorage* storage = window->DC.StateStorage;
 
     bool is_open;
-    if (g.SetNextTreeNodeOpenCond != 0)
+    if (g.NextTreeNodeOpenCond != 0)
     {
-        if (g.SetNextTreeNodeOpenCond & ImGuiCond_Always)
+        if (g.NextTreeNodeOpenCond & ImGuiCond_Always)
         {
-            is_open = g.SetNextTreeNodeOpenVal;
+            is_open = g.NextTreeNodeOpenVal;
             storage->SetInt(id, is_open);
         }
         else
@@ -6628,7 +6628,7 @@ bool ImGui::TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags)
             const int stored_value = storage->GetInt(id, -1);
             if (stored_value == -1)
             {
-                is_open = g.SetNextTreeNodeOpenVal;
+                is_open = g.NextTreeNodeOpenVal;
                 storage->SetInt(id, is_open);
             }
             else
@@ -6636,7 +6636,7 @@ bool ImGui::TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags)
                 is_open = stored_value != 0;
             }
         }
-        g.SetNextTreeNodeOpenCond = 0;
+        g.NextTreeNodeOpenCond = 0;
     }
     else
     {
@@ -6903,8 +6903,8 @@ void ImGui::SetNextTreeNodeOpen(bool is_open, ImGuiCond cond)
     ImGuiContext& g = *GImGui;
     if (g.CurrentWindow->SkipItems)
         return;
-    g.SetNextTreeNodeOpenVal = is_open;
-    g.SetNextTreeNodeOpenCond = cond ? cond : ImGuiCond_Always;
+    g.NextTreeNodeOpenVal = is_open;
+    g.NextTreeNodeOpenCond = cond ? cond : ImGuiCond_Always;
 }
 
 void ImGui::PushID(const char* str_id)
@@ -9163,8 +9163,8 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
 {
     // Always consume the SetNextWindowSizeConstraint() call in our early return paths
     ImGuiContext& g = *GImGui;
-    bool backup_has_next_window_size_constraint = g.SetNextWindowSizeConstraint;
-    g.SetNextWindowSizeConstraint = false;
+    bool backup_has_next_window_size_constraint = g.NextWindow.SizeConstraint;
+    g.NextWindow.SizeConstraint = false;
         
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -9206,8 +9206,8 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
 
     if (backup_has_next_window_size_constraint)
     {
-        g.SetNextWindowSizeConstraint = true;
-        g.SetNextWindowSizeConstraintRect.Min.x = ImMax(g.SetNextWindowSizeConstraintRect.Min.x, w);
+        g.NextWindow.SizeConstraint = true;
+        g.NextWindow.SizeConstraintRect.Min.x = ImMax(g.NextWindow.SizeConstraintRect.Min.x, w);
     }
     else
     {
@@ -9269,7 +9269,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         items_getter(data, *current_item, &preview_text);
 
     // The old Combo() API exposed "popup_max_height_in_items", however the new more general BeginCombo() API doesn't, so we emulate it here.
-    if (popup_max_height_in_items != -1 && !g.SetNextWindowSizeConstraint)
+    if (popup_max_height_in_items != -1 && !g.NextWindow.SizeConstraint)
     {
         float popup_max_height = CalcMaxPopupHeightFromItemCount(popup_max_height_in_items);
         SetNextWindowSizeConstraints(ImVec2(0,0), ImVec2(FLT_MAX, popup_max_height));
