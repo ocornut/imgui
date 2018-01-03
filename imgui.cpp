@@ -3332,7 +3332,7 @@ void ImGui::NewFrame()
     Begin("Debug##Default");
 }
 
-static void* SettingsHandlerWindow_ReadOpen(ImGuiContext&, const char* name)
+static void* SettingsHandlerWindow_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
 {
     ImGuiWindowSettings* settings = ImGui::FindWindowSettings(ImHash(name, 0));
     if (!settings)
@@ -3340,7 +3340,7 @@ static void* SettingsHandlerWindow_ReadOpen(ImGuiContext&, const char* name)
     return (void*)settings;
 }
 
-static void SettingsHandlerWindow_ReadLine(ImGuiContext&, void* entry, const char* line)
+static void SettingsHandlerWindow_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line)
 {
     ImGuiWindowSettings* settings = (ImGuiWindowSettings*)entry;
     float x, y; 
@@ -3350,9 +3350,10 @@ static void SettingsHandlerWindow_ReadLine(ImGuiContext&, void* entry, const cha
     else if (sscanf(line, "Collapsed=%d", &i) == 1)     settings->Collapsed = (i != 0);
 }
 
-static void SettingsHandlerWindow_WriteAll(ImGuiContext& g, ImGuiTextBuffer* buf)
+static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf)
 {
     // Gather data from windows that were active during this session
+    ImGuiContext& g = *imgui_ctx;
     for (int i = 0; i != g.Windows.Size; i++)
     {
         ImGuiWindow* window = g.Windows[i];
@@ -3377,7 +3378,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext& g, ImGuiTextBuffer* buf
         const char* name = settings->Name;
         if (const char* p = strstr(name, "###"))  // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
             name = p;
-        buf->appendf("[Window][%s]\n", name);
+        buf->appendf("[%s][%s]\n", handler->TypeName, name);
         buf->appendf("Pos=%d,%d\n", (int)settings->Pos.x, (int)settings->Pos.y);
         buf->appendf("Size=%d,%d\n", (int)settings->Size.x, (int)settings->Size.y);
         buf->appendf("Collapsed=%d\n", settings->Collapsed);
@@ -3491,9 +3492,10 @@ static void LoadIniSettingsFromDisk(const char* ini_filename)
     ImGui::MemFree(file_data);
 }
 
-ImGuiSettingsHandler* ImGui::FindSettingsHandler(ImGuiID type_hash)
+ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name)
 {
     ImGuiContext& g = *GImGui;
+    const ImGuiID type_hash = ImHash(type_name, 0, 0);
     for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
         if (g.SettingsHandlers[handler_n].TypeHash == type_hash)
             return &g.SettingsHandlers[handler_n];
@@ -3509,7 +3511,7 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
 
     ImGuiContext& g = *GImGui;
     void* entry_data = NULL;
-    const ImGuiSettingsHandler* entry_handler = NULL;
+    ImGuiSettingsHandler* entry_handler = NULL;
 
     char* line_end = NULL;
     for (char* line = buf; line < buf_end; line = line_end + 1)
@@ -3540,14 +3542,13 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
                 *type_end = 0; // Overwrite first ']' 
                 name_start++;  // Skip second '['
             }
-            const ImGuiID type_hash = ImHash(type_start, 0, 0);
-            entry_handler = ImGui::FindSettingsHandler(type_hash);
-            entry_data = entry_handler ? entry_handler->ReadOpenFn(g, name_start) : NULL;
+            entry_handler = ImGui::FindSettingsHandler(type_start);
+            entry_data = entry_handler ? entry_handler->ReadOpenFn(&g, entry_handler, name_start) : NULL;
         }
         else if (entry_handler != NULL && entry_data != NULL)
         {
             // Let type handler parse the line
-            entry_handler->ReadLineFn(g, entry_data, line);
+            entry_handler->ReadLineFn(&g, entry_handler, entry_data, line);
         }
     }
     ImGui::MemFree(buf);
@@ -3577,7 +3578,10 @@ static void SaveIniSettingsToMemory(ImVector<char>& out_buf)
 
     ImGuiTextBuffer buf;
     for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
-        g.SettingsHandlers[handler_n].WriteAllFn(g, &buf);
+    {
+        ImGuiSettingsHandler* handler = &g.SettingsHandlers[handler_n];
+        handler->WriteAllFn(&g, handler, &buf);
+    }
 
     buf.Buf.pop_back(); // Remove extra zero-terminator used by ImGuiTextBuffer
     out_buf.swap(buf.Buf);
@@ -3670,7 +3674,7 @@ static void AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiW
         ImGuiWindow* child = window->DC.ChildWindows[i];
         if (!child->Active) // clipped children may have been marked not active
             continue;
-        if ((child->Flags & ImGuiWindowFlags_Popup) && child->HiddenFrames > 0)
+        if (child->HiddenFrames > 0)
             continue;
         AddWindowToRenderList(out_render_list, child);
     }
@@ -5236,12 +5240,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // Called ImGui::Render() or ImGui::EndFrame() and haven't called ImGui::NewFrame() again yet
 
-    if (flags & ImGuiWindowFlags_NoInputs)
-        flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
-
-    //if (flags & ImGuiWindowFlags_NavFlattened)
-    //    IM_ASSERT(flags & ImGuiWindowFlags_ChildWindow);
-
     // Find or create
     ImGuiWindow* window = FindWindowByName(name);
     if (!window)
@@ -5249,6 +5247,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         ImVec2 size_on_first_use = (g.NextWindowData.SizeCond != 0) ? g.NextWindowData.SizeVal : ImVec2(0.0f, 0.0f); // Any condition flag will do since we are creating a new window here.
         window = CreateNewWindow(name, size_on_first_use, flags);
     }
+
+    // Automatically disable manual moving/resizing when NoInputs is set
+    if (flags & ImGuiWindowFlags_NoInputs)
+        flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
+    //if (flags & ImGuiWindowFlags_NavFlattened)
+    //    IM_ASSERT(flags & ImGuiWindowFlags_ChildWindow);
 
     const int current_frame = g.FrameCount;
     const bool first_begin_of_the_frame = (window->LastFrameActive != current_frame);
@@ -5832,18 +5836,16 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->DC.ItemFlags = item_flags_backup;
 
             // Title text (FIXME: refactor text alignment facilities along with RenderText helpers)
-            const ImVec2 text_size = CalcTextSize(name, NULL, true);
-            ImVec2 text_min = window->Pos;
-            ImVec2 text_max = window->Pos + ImVec2(window->Size.x, style.FramePadding.y*2 + text_size.y);
-            ImRect clip_rect;
-            clip_rect.Max = ImVec2(window->Pos.x + window->Size.x - (p_open ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x), text_max.y); // Match the size of CloseWindowButton()
+            ImVec2 text_size = CalcTextSize(name, NULL, true);
+            ImRect text_r = title_bar_rect;
             float pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0 ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : style.FramePadding.x;
             float pad_right = (p_open != NULL) ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : style.FramePadding.x;
             if (style.WindowTitleAlign.x > 0.0f) pad_right = ImLerp(pad_right, pad_left, style.WindowTitleAlign.x);
-            text_min.x += pad_left;
-            text_max.x -= pad_right;
-            clip_rect.Min = ImVec2(text_min.x, window->Pos.y);
-            RenderTextClipped(text_min, text_max, name, NULL, &text_size, style.WindowTitleAlign, &clip_rect);
+            text_r.Min.x += pad_left;
+            text_r.Max.x -= pad_right;
+            ImRect clip_rect = text_r;
+            clip_rect.Max.x = window->Pos.x + window->Size.x - (p_open ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x); // Match the size of CloseButton()
+            RenderTextClipped(text_r.Min, text_r.Max, name, NULL, &text_size, style.WindowTitleAlign, &clip_rect);
         }
 
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
