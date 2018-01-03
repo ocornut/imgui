@@ -213,6 +213,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2018/01/03 (1.54) - renamed ImGuiSizeConstraintCallback to ImGuiSizeCallback, ImGuiSizeConstraintCallbackData to ImGuiSizeCallbackData.
  - 2017/12/29 (1.54) - removed CalcItemRectClosestPoint() which was weird and not really used by anyone except demo code. If you need it it's easy to replicate on your side.
  - 2017/12/24 (1.53) - renamed the emblematic ShowTestWindow() function to ShowDemoWindow(). Kept redirection function (will obsolete).
  - 2017/12/21 (1.53) - ImDrawList: renamed style.AntiAliasedShapes to style.AntiAliasedFill for consistency and as a way to explicitly break code that manipulate those flag at runtime. You can now manipulate ImDrawList::Flags
@@ -4188,14 +4189,14 @@ static ImVec2 CalcSizeAfterConstraint(ImGuiWindow* window, ImVec2 new_size)
         ImRect cr = g.NextWindowData.SizeConstraintRect;
         new_size.x = (cr.Min.x >= 0 && cr.Max.x >= 0) ? ImClamp(new_size.x, cr.Min.x, cr.Max.x) : window->SizeFull.x;
         new_size.y = (cr.Min.y >= 0 && cr.Max.y >= 0) ? ImClamp(new_size.y, cr.Min.y, cr.Max.y) : window->SizeFull.y;
-        if (g.NextWindowData.SizeConstraintCallback)
+        if (g.NextWindowData.SizeCallback)
         {
-            ImGuiSizeConstraintCallbackData data;
-            data.UserData = g.NextWindowData.SizeConstraintCallbackUserData;
+            ImGuiSizeCallbackData data;
+            data.UserData = g.NextWindowData.SizeCallbackUserData;
             data.Pos = window->Pos;
             data.CurrentSize = window->SizeFull;
             data.DesiredSize = new_size;
-            g.NextWindowData.SizeConstraintCallback(&data);
+            g.NextWindowData.SizeCallback(&data);
             new_size = data.DesiredSize;
         }
     }
@@ -5703,13 +5704,13 @@ void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiCond cond)
     g.NextWindowData.SizeCond = cond ? cond : ImGuiCond_Always;
 }
 
-void ImGui::SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeConstraintCallback custom_callback, void* custom_callback_user_data)
+void ImGui::SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeCallback custom_callback, void* custom_callback_user_data)
 {
     ImGuiContext& g = *GImGui;
     g.NextWindowData.SizeConstraintCond = ImGuiCond_Always;
     g.NextWindowData.SizeConstraintRect = ImRect(size_min, size_max);
-    g.NextWindowData.SizeConstraintCallback = custom_callback;
-    g.NextWindowData.SizeConstraintCallbackUserData = custom_callback_user_data;
+    g.NextWindowData.SizeCallback = custom_callback;
+    g.NextWindowData.SizeCallbackUserData = custom_callback_user_data;
 }
 
 void ImGui::SetNextWindowContentSize(const ImVec2& size)

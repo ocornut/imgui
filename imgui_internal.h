@@ -474,8 +474,8 @@ struct ImGuiNextWindowData
     ImVec2                  ContentSizeVal;
     bool                    CollapsedVal;
     ImRect                  SizeConstraintRect;                 // Valid if 'SetNextWindowSizeConstraint' is true
-    ImGuiSizeConstraintCallback SizeConstraintCallback;
-    void*                   SizeConstraintCallbackUserData;
+    ImGuiSizeCallback       SizeCallback;
+    void*                   SizeCallbackUserData;
 
     ImGuiNextWindowData()
     {
@@ -484,8 +484,8 @@ struct ImGuiNextWindowData
         ContentSizeVal = ImVec2(0.0f, 0.0f);
         CollapsedVal = false;
         SizeConstraintRect = ImRect();
-        SizeConstraintCallback = NULL;
-        SizeConstraintCallbackUserData = NULL;
+        SizeCallback = NULL;
+        SizeCallbackUserData = NULL;
     }
 
     void    Clear()
