@@ -466,6 +466,8 @@ struct ImGuiNextWindowData
     ImGuiCond               SizeCond;
     ImGuiCond               ContentSizeCond;
     ImGuiCond               CollapsedCond;
+    ImGuiCond               SizeConstraintCond;
+    ImGuiCond               FocusCond;
     ImVec2                  PosVal;
     ImVec2                  PosPivotVal;
     ImVec2                  SizeVal;
@@ -474,20 +476,16 @@ struct ImGuiNextWindowData
     ImRect                  SizeConstraintRect;                 // Valid if 'SetNextWindowSizeConstraint' is true
     ImGuiSizeConstraintCallback SizeConstraintCallback;
     void*                   SizeConstraintCallbackUserData;
-    bool                    SizeConstraint;
-    bool                    Focus;
 
     ImGuiNextWindowData()
     {
-        PosCond = SizeCond = ContentSizeCond = CollapsedCond = 0;
+        PosCond = SizeCond = ContentSizeCond = CollapsedCond = SizeConstraintCond = FocusCond = 0;
         PosVal = PosPivotVal = SizeVal = ImVec2(0.0f, 0.0f);
         ContentSizeVal = ImVec2(0.0f, 0.0f);
         CollapsedVal = false;
         SizeConstraintRect = ImRect();
         SizeConstraintCallback = NULL;
         SizeConstraintCallbackUserData = NULL;
-        SizeConstraint = false;
-        Focus = false;
     }
 };
 

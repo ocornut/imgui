@@ -3820,8 +3820,7 @@ static inline void ClearSetNextWindowData()
 {
     // FIXME-OPT
     ImGuiContext& g = *GImGui;
-    g.NextWindow.PosCond = g.NextWindow.SizeCond = g.NextWindow.ContentSizeCond = g.NextWindow.CollapsedCond = 0;
-    g.NextWindow.SizeConstraint = g.NextWindow.Focus = false;
+    g.NextWindow.PosCond = g.NextWindow.SizeCond = g.NextWindow.ContentSizeCond = g.NextWindow.CollapsedCond = g.NextWindow.SizeConstraintCond = g.NextWindow.FocusCond = 0;
 }
 
 bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
@@ -4193,7 +4192,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
 static ImVec2 CalcSizeAfterConstraint(ImGuiWindow* window, ImVec2 new_size)
 {
     ImGuiContext& g = *GImGui;
-    if (g.NextWindow.SizeConstraint)
+    if (g.NextWindow.SizeConstraintCond != 0)
     {
         // Using -1,-1 on either X/Y axis to preserve the current size.
         ImRect cr = g.NextWindow.SizeConstraintRect;
@@ -4437,10 +4436,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         SetWindowCollapsed(window, g.NextWindow.CollapsedVal, g.NextWindow.CollapsedCond);
         g.NextWindow.CollapsedCond = 0;
     }
-    if (g.NextWindow.Focus)
+    if (g.NextWindow.FocusCond)
     {
         SetWindowFocus();
-        g.NextWindow.Focus = false;
+        g.NextWindow.FocusCond = 0;
     }
     if (window->Appearing)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, false);
@@ -4940,7 +4939,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->WriteAccessed = false;
 
     window->BeginCount++;
-    g.NextWindow.SizeConstraint = false;
+    g.NextWindow.SizeConstraintCond = 0;
 
     // Child window can be out of sight and have "negative" clip windows.
     // Mark them as collapsed so commands are skipped earlier (we can't manually collapse because they have no title bar).
@@ -5717,7 +5716,7 @@ void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiCond cond)
 void ImGui::SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeConstraintCallback custom_callback, void* custom_callback_user_data)
 {
     ImGuiContext& g = *GImGui;
-    g.NextWindow.SizeConstraint = true;
+    g.NextWindow.SizeConstraintCond = ImGuiCond_Always;
     g.NextWindow.SizeConstraintRect = ImRect(size_min, size_max);
     g.NextWindow.SizeConstraintCallback = custom_callback;
     g.NextWindow.SizeConstraintCallbackUserData = custom_callback_user_data;
@@ -5740,7 +5739,7 @@ void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiCond cond)
 void ImGui::SetNextWindowFocus()
 {
     ImGuiContext& g = *GImGui;
-    g.NextWindow.Focus = true;
+    g.NextWindow.FocusCond = ImGuiCond_Always;
 }
 
 // In window space (not screen space!)
@@ -9163,8 +9162,8 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
 {
     // Always consume the SetNextWindowSizeConstraint() call in our early return paths
     ImGuiContext& g = *GImGui;
-    bool backup_has_next_window_size_constraint = g.NextWindow.SizeConstraint;
-    g.NextWindow.SizeConstraint = false;
+    ImGuiCond backup_next_window_size_constraint = g.NextWindow.SizeConstraintCond;
+    g.NextWindow.SizeConstraintCond = 0;
         
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -9204,9 +9203,9 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     if (!popup_open)
         return false;
 
-    if (backup_has_next_window_size_constraint)
+    if (backup_next_window_size_constraint)
     {
-        g.NextWindow.SizeConstraint = true;
+        g.NextWindow.SizeConstraintCond = backup_next_window_size_constraint;
         g.NextWindow.SizeConstraintRect.Min.x = ImMax(g.NextWindow.SizeConstraintRect.Min.x, w);
     }
     else
@@ -9269,7 +9268,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
         items_getter(data, *current_item, &preview_text);
 
     // The old Combo() API exposed "popup_max_height_in_items", however the new more general BeginCombo() API doesn't, so we emulate it here.
-    if (popup_max_height_in_items != -1 && !g.NextWindow.SizeConstraint)
+    if (popup_max_height_in_items != -1 && !g.NextWindow.SizeConstraintCond)
     {
         float popup_max_height = CalcMaxPopupHeightFromItemCount(popup_max_height_in_items);
         SetNextWindowSizeConstraints(ImVec2(0,0), ImVec2(FLT_MAX, popup_max_height));
