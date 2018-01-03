@@ -413,7 +413,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                     {
                         ImGui::Text("blah blah");
                         ImGui::SameLine(); 
-                        if (ImGui::SmallButton("print")) printf("Child %d pressed", i);
+                        if (ImGui::SmallButton("button")) { };
                         ImGui::TreePop();
                     }
                 ImGui::TreePop();
@@ -807,14 +807,14 @@ void ImGui::ShowDemoWindow(bool* p_open)
         {
             static ImVec4 color = ImColor(114, 144, 154, 200);
 
-            static bool hdr = false;
             static bool alpha_preview = true;
             static bool alpha_half_preview = false;
             static bool options_menu = true;
-            ImGui::Checkbox("With HDR", &hdr); ImGui::SameLine(); ShowHelpMarker("Currently all this does is to lift the 0..1 limits on dragging widgets.");
+            static bool hdr = false;
             ImGui::Checkbox("With Alpha Preview", &alpha_preview);
             ImGui::Checkbox("With Half Alpha Preview", &alpha_half_preview);
             ImGui::Checkbox("With Options Menu", &options_menu); ImGui::SameLine(); ShowHelpMarker("Right-click on the individual color widget to show options.");
+            ImGui::Checkbox("With HDR", &hdr); ImGui::SameLine(); ShowHelpMarker("Currently all this does is to lift the 0..1 limits on dragging widgets.");
             int misc_flags = (hdr ? ImGuiColorEditFlags_HDR : 0) | (alpha_half_preview ? ImGuiColorEditFlags_AlphaPreviewHalf : (alpha_preview ? ImGuiColorEditFlags_AlphaPreview : 0)) | (options_menu ? 0 : ImGuiColorEditFlags_NoOptions);
 
             ImGui::Text("Color widget:");
