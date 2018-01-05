@@ -174,15 +174,17 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool no_resize = false;
     static bool no_collapse = false;
     static bool no_close = false;
+    static bool resize_any_side = false;
 
     // Demonstrate the various window flags. Typically you would just use the default.
     ImGuiWindowFlags window_flags = 0;
-    if (no_titlebar)  window_flags |= ImGuiWindowFlags_NoTitleBar;
-    if (no_scrollbar) window_flags |= ImGuiWindowFlags_NoScrollbar;
-    if (!no_menu)     window_flags |= ImGuiWindowFlags_MenuBar;
-    if (no_move)      window_flags |= ImGuiWindowFlags_NoMove;
-    if (no_resize)    window_flags |= ImGuiWindowFlags_NoResize;
-    if (no_collapse)  window_flags |= ImGuiWindowFlags_NoCollapse;
+    if (no_titlebar)     window_flags |= ImGuiWindowFlags_NoTitleBar;
+    if (no_scrollbar)    window_flags |= ImGuiWindowFlags_NoScrollbar;
+    if (!no_menu)        window_flags |= ImGuiWindowFlags_MenuBar;
+    if (no_move)         window_flags |= ImGuiWindowFlags_NoMove;
+    if (no_resize)       window_flags |= ImGuiWindowFlags_NoResize;
+    if (no_collapse)     window_flags |= ImGuiWindowFlags_NoCollapse;
+    if (resize_any_side) window_flags |= ImGuiWindowFlags_ResizeFromAnySide;
     if (no_close)     p_open = NULL; // Don't pass our bool* to Begin
 
     ImGui::SetNextWindowSize(ImVec2(550,680), ImGuiCond_FirstUseEver);
@@ -248,6 +250,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::Checkbox("No resize", &no_resize); ImGui::SameLine(300);
         ImGui::Checkbox("No collapse", &no_collapse);
         ImGui::Checkbox("No close", &no_close);
+        ImGui::Checkbox("Resize from any side", &resize_any_side);
 
         if (ImGui::TreeNode("Style"))
         {

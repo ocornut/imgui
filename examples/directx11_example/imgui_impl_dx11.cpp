@@ -37,6 +37,10 @@ static ID3D11BlendState*        g_pBlendState = NULL;
 static ID3D11DepthStencilState* g_pDepthStencilState = NULL;
 static int                      g_VertexBufferSize = 5000, g_IndexBufferSize = 10000;
 
+static HCURSOR                  g_NativeCursors[ImGuiMouseCursor_Count_] = {NULL};
+static bool                     g_WindowsSetCursorThisFrame = false;
+ImGuiMouseCursor                g_LastCursorSet = ImGuiMouseCursor_None;
+
 struct VERTEX_CONSTANT_BUFFER
 {
     float        mvp[4][4];
@@ -249,9 +253,23 @@ static bool IsAnyMouseButtonDown()
 // PS: In this Win32 handler, we use the capture API (GetCapture/SetCapture/ReleaseCapture) to be able to read mouse coordinations when dragging mouse outside of our window bounds.
 IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    char buffer[1024];
+
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
     {
+    case WM_CREATE:
+    {
+        g_NativeCursors[ImGuiMouseCursor_Arrow] = LoadCursor(NULL, IDC_ARROW);
+        g_NativeCursors[ImGuiMouseCursor_TextInput] = LoadCursor(NULL, IDC_IBEAM);
+        g_NativeCursors[ImGuiMouseCursor_Move] = LoadCursor(NULL, IDC_SIZEALL);
+        g_NativeCursors[ImGuiMouseCursor_ResizeNS] = LoadCursor(NULL, IDC_SIZENS);
+        g_NativeCursors[ImGuiMouseCursor_ResizeEW] = LoadCursor(NULL, IDC_SIZEWE);
+        g_NativeCursors[ImGuiMouseCursor_ResizeNESW] = LoadCursor(NULL, IDC_SIZENESW);
+        g_NativeCursors[ImGuiMouseCursor_ResizeNWSE] = LoadCursor(NULL, IDC_SIZENWSE);
+
+        return 0;
+    }
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN:
     case WM_MBUTTONDOWN:
@@ -299,6 +317,65 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
         if (wParam > 0 && wParam < 0x10000)
             io.AddInputCharacter((unsigned short)wParam);
+        return 0;
+    case WM_SETCURSOR:
+        if(g_hWnd == (HWND)wParam)
+        {
+            if(!io.MouseDrawCursor)
+            {
+                switch(LOWORD(lParam))
+                {
+                case HTCLIENT: //window area
+                    SetCursor(g_NativeCursors[ImGui::GetMouseCursor()]);
+                    g_LastCursorSet = ImGui::GetMouseCursor();
+                    break;
+                case HTNOWHERE:
+                case HTCAPTION: //title bar
+                case HTMENU:
+                case HTSYSMENU: //window icon title bar
+                case HTMINBUTTON: //minimize button
+                case HTMAXBUTTON: //maximize button
+                case HTBORDER:
+                case HTCLOSE: //close window button
+                    SetCursor(g_NativeCursors[ImGuiMouseCursor_Arrow]);
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+                    break;
+                case HTLEFT: //left border
+                case HTRIGHT: //right border
+                    SetCursor(g_NativeCursors[ImGuiMouseCursor_ResizeEW]);
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+                    break;
+                case HTTOP: //top border
+                case HTBOTTOM: //bottom border
+                    SetCursor(g_NativeCursors[ImGuiMouseCursor_ResizeNS]);
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+                    break;
+                case HTTOPRIGHT: //top right
+                case HTBOTTOMLEFT: //bottom left
+                    SetCursor(g_NativeCursors[ImGuiMouseCursor_ResizeNESW]);
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+                    break;
+                case HTTOPLEFT: //top left
+                case HTBOTTOMRIGHT: //bottom right
+                    SetCursor(g_NativeCursors[ImGuiMouseCursor_ResizeNWSE]);
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNWSE);
+                    break;
+                }
+            }
+            else
+            {
+                SetCursor(NULL);
+            }
+
+            g_WindowsSetCursorThisFrame = true;
+
+            return TRUE;
+        }
+        else
+        {
+            return FALSE;
+        }
+
         return 0;
     }
     return 0;
@@ -608,9 +685,20 @@ void ImGui_ImplDX11_NewFrame()
         SetCursorPos(pos.x, pos.y);
     }
 
-    // Hide OS mouse cursor if ImGui is drawing it
-    if (io.MouseDrawCursor)
-        SetCursor(NULL);
+    if(!g_WindowsSetCursorThisFrame && ImGui::GetMouseCursor() != g_LastCursorSet)
+    {
+        if(io.MouseDrawCursor)
+        {
+            SetCursor(NULL);
+        }
+        else
+        {
+            assert(ImGui::GetMouseCursor() != ImGuiMouseCursor_None);
+             SetCursor(g_NativeCursors[ImGui::GetMouseCursor()]);
+        }
+    }
+
+    g_WindowsSetCursorThisFrame = false;
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();

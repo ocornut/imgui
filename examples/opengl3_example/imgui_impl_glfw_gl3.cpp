@@ -23,6 +23,12 @@
 
 // Data
 static GLFWwindow*  g_Window = NULL;
+static GLFWcursor*  g_ArrowCursor = NULL;
+static GLFWcursor*  g_VResizeCursor = NULL;
+static GLFWcursor*  g_HResizeCursor = NULL;
+static GLFWcursor*  g_IBeamCursor = NULL;
+static GLFWcursor*  g_HandCursor = NULL;
+static GLFWcursor*  g_CrosshairCursor = NULL;
 static double       g_Time = 0.0f;
 static bool         g_MouseJustPressed[3] = { false, false, false };
 static float        g_MouseWheel = 0.0f;
@@ -314,6 +320,12 @@ void    ImGui_ImplGlfwGL3_InvalidateDeviceObjects()
 bool    ImGui_ImplGlfwGL3_Init(GLFWwindow* window, bool install_callbacks)
 {
     g_Window = window;
+    g_ArrowCursor = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+    g_IBeamCursor = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
+    g_CrosshairCursor = glfwCreateStandardCursor(GLFW_CROSSHAIR_CURSOR);
+    g_HandCursor = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
+    g_HResizeCursor = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR);
+    g_VResizeCursor = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR);
 
     ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                         // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
@@ -412,7 +424,45 @@ void ImGui_ImplGlfwGL3_NewFrame()
     g_MouseWheel = 0.0f;
 
     // Hide OS mouse cursor if ImGui is drawing it
-    glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
+    if(io.MouseDrawCursor)
+    {
+        glfwSetInputMode(g_Window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    }
+    else
+    {
+        glfwSetInputMode(g_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+        GLFWcursor *cursor = NULL;
+
+        switch(ImGui::GetMouseCursor())
+        {
+        case ImGuiMouseCursor_None:
+            break;
+        case ImGuiMouseCursor_Arrow:
+            cursor = g_ArrowCursor;
+            break;
+        case ImGuiMouseCursor_TextInput:
+            cursor = g_IBeamCursor;
+            break;
+        case ImGuiMouseCursor_Move:
+            cursor = g_HandCursor;
+            break;
+        case ImGuiMouseCursor_ResizeNS:
+            cursor = g_VResizeCursor;
+            break;
+        case ImGuiMouseCursor_ResizeEW:
+            cursor = g_HResizeCursor;
+            break;
+        case ImGuiMouseCursor_ResizeNESW:
+            cursor = g_ArrowCursor;
+            break;
+        case ImGuiMouseCursor_ResizeNWSE:
+            cursor = g_ArrowCursor;
+            break;
+        }
+
+        glfwSetCursor(g_Window, cursor);
+    }
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
