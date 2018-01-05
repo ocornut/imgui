@@ -627,6 +627,8 @@ struct ImGuiContext
     ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
     ImGuiWindow*            ActiveIdWindow;
     ImGuiInputSource        ActiveIdSource;                     // Activating with mouse or nav (gamepad/keyboard)
+    ImGuiID                 LastActiveId;                       // Store the last non-zero ActiveId, useful for animation.
+    float                   LastActiveIdTimer;                  // Store the last non-zero ActiveId timer since the beginning of activation, useful for animation.
     ImGuiWindow*            MovingWindow;                       // Track the window we clicked on (in order to preserve focus). The actually window that is moved is generally MovingWindow->RootWindow.
     ImVector<ImGuiColMod>   ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
     ImVector<ImGuiStyleMod> StyleModifiers;                     // Stack for PushStyleVar()/PopStyleVar()
@@ -762,6 +764,8 @@ struct ImGuiContext
         ActiveIdClickOffset = ImVec2(-1,-1);
         ActiveIdWindow = NULL;
         ActiveIdSource = ImGuiInputSource_None;
+        LastActiveId = 0;
+        LastActiveIdTimer = 0.0f;
         MovingWindow = NULL;
         NextTreeNodeOpenVal = false;
         NextTreeNodeOpenCond = 0;
