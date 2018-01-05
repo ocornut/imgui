@@ -1929,14 +1929,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     g.ActiveIdIsJustActivated = (g.ActiveId != id);
     if (g.ActiveIdIsJustActivated)
-    {
         g.ActiveIdTimer = 0.0f;
-        if (id != 0)
-        {
-            g.LastActiveId = id;
-            g.LastActiveIdTimer = 0.0f;
-        }
-    }
     g.ActiveId = id;
     g.ActiveIdAllowOverlap = false;
     g.ActiveIdIsAlive |= (id != 0);
@@ -2315,7 +2308,6 @@ void ImGui::NewFrame()
         ClearActiveID();
     if (g.ActiveId)
         g.ActiveIdTimer += g.IO.DeltaTime;
-    g.LastActiveIdTimer += g.IO.DeltaTime;
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = false;
     g.ActiveIdIsJustActivated = false;
