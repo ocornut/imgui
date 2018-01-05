@@ -253,13 +253,16 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
     switch (msg)
     {
     case WM_LBUTTONDOWN:
+    case WM_LBUTTONDBLCLK:
     case WM_RBUTTONDOWN:
+    case WM_RBUTTONDBLCLK:
     case WM_MBUTTONDOWN:
+    case WM_MBUTTONDBLCLK:
     {
         int button = 0;
-        if (msg == WM_LBUTTONDOWN) button = 0;
-        if (msg == WM_RBUTTONDOWN) button = 1;
-        if (msg == WM_MBUTTONDOWN) button = 2;
+        if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONDBLCLK) button = 0;
+        if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONDBLCLK) button = 1;
+        if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONDBLCLK) button = 2;
         if (!IsAnyMouseButtonDown() && GetCapture() == NULL)
             SetCapture(hwnd);
         io.MouseDown[button] = true;
