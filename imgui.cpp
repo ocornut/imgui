@@ -3725,9 +3725,13 @@ void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* parent_window = g.CurrentWindow;
     int current_stack_size = g.CurrentPopupStack.Size;
-    ImVec2 mouse_pos = g.IO.MousePos;
-    ImVec2 popup_pos = mouse_pos; // NB: In the Navigation branch popup_pos may not use mouse_pos.
-    ImGuiPopupRef popup_ref = ImGuiPopupRef(id, parent_window, parent_window->GetID("##Menus"), popup_pos, mouse_pos); // Tagged as new ref because constructor sets Window to NULL.
+    ImGuiPopupRef popup_ref; // Tagged as new ref as Window will be set back to NULL if we write this into OpenPopupStack.
+    popup_ref.PopupId = id;
+    popup_ref.Window = NULL;
+    popup_ref.ParentWindow = parent_window;
+    popup_ref.ParentMenuSet = parent_window->GetID("##Menus");
+    popup_ref.MousePosOnOpen = g.IO.MousePos;
+    popup_ref.PopupPosOnOpen = g.IO.MousePos; // NB: In the Navigation branch popup_pos may not use mouse_pos.
     if (g.OpenPopupStack.Size < current_stack_size + 1)
         g.OpenPopupStack.push_back(popup_ref);
     else if (reopen_existing || g.OpenPopupStack[current_stack_size].PopupId != id)
