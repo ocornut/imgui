@@ -6253,20 +6253,14 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             {
                 SetActiveID(id, window); // Hold on ID
                 FocusWindow(window);
-                g.ActiveIdClickOffset = g.IO.MousePos - bb.Min;
             }
             if (((flags & ImGuiButtonFlags_PressedOnClick) && g.IO.MouseClicked[0]) || ((flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseDoubleClicked[0]))
             {
                 pressed = true;
                 if (flags & ImGuiButtonFlags_NoHoldingActiveID)
-                {
                     ClearActiveID();
-                }
                 else
-                {
                     SetActiveID(id, window); // Hold on ID
-                    g.ActiveIdClickOffset = g.IO.MousePos - bb.Min;
-                }
                 FocusWindow(window);
             }
             if ((flags & ImGuiButtonFlags_PressedOnRelease) && g.IO.MouseReleased[0])
@@ -6286,6 +6280,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     bool held = false;
     if (g.ActiveId == id)
     {
+        if (g.ActiveIdIsJustActivated)
+            g.ActiveIdClickOffset = g.IO.MousePos - bb.Min;
         if (g.IO.MouseDown[0])
         {
             held = true;
