@@ -3729,15 +3729,27 @@ void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
     popup_ref.PopupId = id;
     popup_ref.Window = NULL;
     popup_ref.ParentWindow = parent_window;
+    popup_ref.OpenFrameCount = g.FrameCount;
     popup_ref.OpenParentId = parent_window->IDStack.back();
     popup_ref.OpenMousePos = g.IO.MousePos;
-    popup_ref.OpenPopupPos = g.IO.MousePos; // NB: In the Navigation branch popup_pos may not use mouse_pos.
+    popup_ref.OpenPopupPos = g.IO.MousePos; // NB: In the Navigation branch OpenPopupPos doesn't use the mouse position, hence the separation here.
+
     if (g.OpenPopupStack.Size < current_stack_size + 1)
+    {
         g.OpenPopupStack.push_back(popup_ref);
+    }
     else if (reopen_existing || g.OpenPopupStack[current_stack_size].PopupId != id)
     {
-        g.OpenPopupStack.resize(current_stack_size+1);
-        g.OpenPopupStack[current_stack_size] = popup_ref;
+        // Close child popups if any
+        g.OpenPopupStack.resize(current_stack_size + 1);
+
+        // Gently handle the user mistakenly calling OpenPopup() every frame. It is a programming mistake! However, if we were to run the regular code path, the ui
+        // would become completely unusable because the popup will always be in hidden-while-calculating-size state _while_ claiming focus. Which would be a very confusing
+        // situation for the programmer. Instead, we silently allow the popup to proceed, it will keep reappearing and the programming error will be more obvious to understand. 
+        if (g.OpenPopupStack[current_stack_size].PopupId == id && g.OpenPopupStack[current_stack_size].OpenFrameCount == g.FrameCount - 1)
+            g.OpenPopupStack[current_stack_size].OpenFrameCount = popup_ref.OpenFrameCount;
+        else
+            g.OpenPopupStack[current_stack_size] = popup_ref;
 
         // When reopening a popup we first refocus its parent, otherwise if its parent is itself a popup it would get closed by CloseInactivePopups().
         // This is equivalent to what ClosePopupToLevel() does.
