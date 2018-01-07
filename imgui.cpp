@@ -716,7 +716,7 @@ namespace ImGui
 static void             NavUpdate();
 static void             NavUpdateWindowing();
 static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id);
-static void             FocusFrontMostActiveWindow();
+static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
 }
 
 //-----------------------------------------------------------------------------
@@ -3318,7 +3318,7 @@ void ImGui::NewFrame()
 
     // Closing the focused window restore focus to the first active root window in descending z-order
     if (g.NavWindow && !g.NavWindow->WasActive)
-        FocusFrontMostActiveWindow();
+        FocusFrontMostActiveWindow(NULL);
 
     // No window should be open at the beginning of the frame.
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
@@ -6137,11 +6137,11 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         BringWindowToFront(window);
 }
 
-void ImGui::FocusFrontMostActiveWindow()
+void ImGui::FocusFrontMostActiveWindow(ImGuiWindow* ignore_window)
 {
     ImGuiContext& g = *GImGui;
     for (int i = g.Windows.Size - 1; i >= 0; i--)
-        if (g.Windows[i] != g.NavWindow && g.Windows[i]->WasActive && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
+        if (g.Windows[i] != ignore_window && g.Windows[i]->WasActive && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
         {
             FocusWindow(g.Windows[i]);
             return;
@@ -10723,7 +10723,7 @@ void ImGui::EndMainMenuBar()
     // When the user has left the menu layer (typically: closed menus through activation of an item), we restore focus to the previous window
     ImGuiContext& g = *GImGui;
     if (g.CurrentWindow == g.NavWindow && g.NavLayer == 0)
-        FocusPreviousWindow();
+        FocusFrontMostActiveWindow(g.NavWindow);
 
     End();
     PopStyleVar(2);
