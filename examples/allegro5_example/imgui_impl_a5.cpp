@@ -28,8 +28,6 @@ static double                   g_Time = 0.0;
 static ALLEGRO_MOUSE_CURSOR*    g_MouseCursorInvisible = NULL;
 static ALLEGRO_VERTEX_DECL*     g_VertexDecl = NULL;
 
-#define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
-
 struct ImDrawVertAllegro
 {
     ImVec2 pos;
@@ -162,9 +160,9 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
     // We still use a custom declaration to use 'ALLEGRO_PRIM_TEX_COORD' instead of 'ALLEGRO_PRIM_TEX_COORD_PIXEL' else we can't do a reliable conversion.
     ALLEGRO_VERTEX_ELEMENT elems[] =
     {
-        { ALLEGRO_PRIM_POSITION, ALLEGRO_PRIM_FLOAT_2, OFFSETOF(ImDrawVertAllegro, pos) },
-        { ALLEGRO_PRIM_TEX_COORD, ALLEGRO_PRIM_FLOAT_2, OFFSETOF(ImDrawVertAllegro, uv) },
-        { ALLEGRO_PRIM_COLOR_ATTR, 0, OFFSETOF(ImDrawVertAllegro, col) },
+        { ALLEGRO_PRIM_POSITION, ALLEGRO_PRIM_FLOAT_2, IM_OFFSETOF(ImDrawVertAllegro, pos) },
+        { ALLEGRO_PRIM_TEX_COORD, ALLEGRO_PRIM_FLOAT_2, IM_OFFSETOF(ImDrawVertAllegro, uv) },
+        { ALLEGRO_PRIM_COLOR_ATTR, 0, IM_OFFSETOF(ImDrawVertAllegro, col) },
         { 0, 0, 0 }
     };
     g_VertexDecl = al_create_vertex_decl(elems, sizeof(ImDrawVertAllegro));

@@ -1445,7 +1445,7 @@ void    ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_wid
     // Although it is likely to be the most commonly used format, our font rendering is 1 channel / 8 bpp
     if (!TexPixelsRGBA32)
     {
-        unsigned char* pixels;
+        unsigned char* pixels = NULL;
         GetTexDataAsAlpha8(&pixels, NULL, NULL);
         if (pixels)
         {
