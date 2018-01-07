@@ -5123,10 +5123,10 @@ void ImGui::BringWindowToFront(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     if (g.Windows.back() == window)
         return;
-    for (int i = 0; i < g.Windows.Size; i++)
+    for (int i = g.Windows.Size - 2; i >= 0; i--) // We can ignore the front most window
         if (g.Windows[i] == window)
         {
-            g.Windows.erase(g.Windows.begin() + i);
+            g.Windows.erase(g.Windows.Data + i);
             g.Windows.push_back(window);
             break;
         }
