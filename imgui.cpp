@@ -675,7 +675,7 @@ static bool             DataTypeApplyOpFromText(const char* buf, const char* ini
 
 namespace ImGui
 {
-static void             FocusPreviousWindow();
+static void             FocusFrontMostActiveWindow();
 }
 
 //-----------------------------------------------------------------------------
@@ -2511,7 +2511,7 @@ void ImGui::NewFrame()
 
     // Closing the focused window restore focus to the first active root window in descending z-order
     if (g.NavWindow && !g.NavWindow->WasActive)
-        FocusPreviousWindow();
+        FocusFrontMostActiveWindow();
 
     // No window should be open at the beginning of the frame.
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
@@ -5172,7 +5172,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         BringWindowToFront(window);
 }
 
-void ImGui::FocusPreviousWindow()
+void ImGui::FocusFrontMostActiveWindow()
 {
     ImGuiContext& g = *GImGui;
     for (int i = g.Windows.Size - 1; i >= 0; i--)
