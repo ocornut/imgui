@@ -3550,7 +3550,7 @@ ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup()
 {
     ImGuiContext& g = *GImGui;
     if (g.CurrentPopupStack.Size > 0)
-        return g.OpenPopupStack[g.CurrentPopupStack.Size-1].MousePosOnOpen;
+        return g.OpenPopupStack[g.CurrentPopupStack.Size-1].OpenMousePos;
     return g.IO.MousePos;
 }
 
@@ -3729,9 +3729,9 @@ void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
     popup_ref.PopupId = id;
     popup_ref.Window = NULL;
     popup_ref.ParentWindow = parent_window;
-    popup_ref.ParentIdOnOpen = parent_window->IDStack.back();
-    popup_ref.MousePosOnOpen = g.IO.MousePos;
-    popup_ref.PopupPosOnOpen = g.IO.MousePos; // NB: In the Navigation branch popup_pos may not use mouse_pos.
+    popup_ref.OpenParentId = parent_window->IDStack.back();
+    popup_ref.OpenMousePos = g.IO.MousePos;
+    popup_ref.OpenPopupPos = g.IO.MousePos; // NB: In the Navigation branch popup_pos may not use mouse_pos.
     if (g.OpenPopupStack.Size < current_stack_size + 1)
         g.OpenPopupStack.push_back(popup_ref);
     else if (reopen_existing || g.OpenPopupStack[current_stack_size].PopupId != id)
@@ -4483,7 +4483,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Popup first latch mouse position, will position itself when it appears next frame
             window->AutoPosLastDirection = ImGuiDir_None;
             if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api)
-                window->PosFloat = g.CurrentPopupStack.back().PopupPosOnOpen;
+                window->PosFloat = g.CurrentPopupStack.back().OpenPopupPos;
         }
 
         // Collapse window by double-clicking on title bar
@@ -9664,7 +9664,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
 
     bool pressed;
     bool menu_is_open = IsPopupOpen(id);
-    bool menuset_is_open = !(window->Flags & ImGuiWindowFlags_Popup) && (g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].ParentIdOnOpen == window->IDStack.back());
+    bool menuset_is_open = !(window->Flags & ImGuiWindowFlags_Popup) && (g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].OpenParentId == window->IDStack.back());
     ImGuiWindow* backed_nav_window = g.NavWindow;
     if (menuset_is_open)
         g.NavWindow = window;  // Odd hack to allow hovering across menus of a same menu-set (otherwise we wouldn't be able to hover parent)
