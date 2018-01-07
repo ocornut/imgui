@@ -3720,7 +3720,7 @@ void ImGui::EndTooltip()
 // Popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
 // Popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
 // One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
-void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
+void ImGui::OpenPopupEx(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* parent_window = g.CurrentWindow;
@@ -3738,7 +3738,7 @@ void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
     {
         g.OpenPopupStack.push_back(popup_ref);
     }
-    else if (reopen_existing || g.OpenPopupStack[current_stack_size].PopupId != id)
+    else
     {
         // Close child popups if any
         g.OpenPopupStack.resize(current_stack_size + 1);
@@ -3761,7 +3761,7 @@ void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
 void ImGui::OpenPopup(const char* str_id)
 {
     ImGuiContext& g = *GImGui;
-    OpenPopupEx(g.CurrentWindow->GetID(str_id), false);
+    OpenPopupEx(g.CurrentWindow->GetID(str_id));
 }
 
 static void CloseInactivePopups(ImGuiWindow* ref_window)
@@ -3924,7 +3924,7 @@ bool ImGui::OpenPopupOnItemClick(const char* str_id, int mouse_button)
     {
         ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
         IM_ASSERT(id != 0);                                                  // However, you cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
-        OpenPopupEx(id, true);
+        OpenPopupEx(id);
         return true;
     }
     return false;
@@ -3939,7 +3939,7 @@ bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
     ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
     IM_ASSERT(id != 0);                                                  // However, you cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
     if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-        OpenPopupEx(id, true);
+        OpenPopupEx(id);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
 }
 
@@ -3950,7 +3950,7 @@ bool ImGui::BeginPopupContextWindow(const char* str_id, int mouse_button, bool a
     ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
     if (IsMouseReleased(mouse_button) && IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
         if (also_over_items || !IsAnyItemHovered())
-            OpenPopupEx(id, true);
+            OpenPopupEx(id);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
 }
 
@@ -3960,7 +3960,7 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
         str_id = "void_context";
     ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
     if (IsMouseReleased(mouse_button) && !IsAnyWindowHovered())
-        OpenPopupEx(id, true);
+        OpenPopupEx(id);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
 }
 
@@ -9204,7 +9204,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
 
     if (pressed && !popup_open)
     {
-        OpenPopupEx(id, false);
+        OpenPopupEx(id);
         popup_open = true;
     }
 
