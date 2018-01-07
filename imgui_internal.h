@@ -400,7 +400,7 @@ struct ImGuiPopupRef
     ImGuiID             PopupId;        // Set on OpenPopup()
     ImGuiWindow*        Window;         // Resolved on BeginPopup() - may stay unresolved if user never calls OpenPopup()
     ImGuiWindow*        ParentWindow;   // Set on OpenPopup()
-    ImGuiID             ParentMenuSet;  // Set on OpenPopup()
+    ImGuiID             ParentIdOnOpen; // Set on OpenPopup(), we need this to differenciate multiple menu sets from each others (e.g. inside menu bar vs loose menu items)
     ImVec2              PopupPosOnOpen; // Preferred popup position (typically == MousePosOnOpen when using mouse)
     ImVec2              MousePosOnOpen; // Copy of mouse position at the time of opening popup
 };

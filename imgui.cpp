@@ -3729,7 +3729,7 @@ void ImGui::OpenPopupEx(ImGuiID id, bool reopen_existing)
     popup_ref.PopupId = id;
     popup_ref.Window = NULL;
     popup_ref.ParentWindow = parent_window;
-    popup_ref.ParentMenuSet = parent_window->GetID("##Menus");
+    popup_ref.ParentIdOnOpen = parent_window->IDStack.back();
     popup_ref.MousePosOnOpen = g.IO.MousePos;
     popup_ref.PopupPosOnOpen = g.IO.MousePos; // NB: In the Navigation branch popup_pos may not use mouse_pos.
     if (g.OpenPopupStack.Size < current_stack_size + 1)
@@ -9664,7 +9664,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
 
     bool pressed;
     bool menu_is_open = IsPopupOpen(id);
-    bool menuset_is_open = !(window->Flags & ImGuiWindowFlags_Popup) && (g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].ParentMenuSet == window->GetID("##Menus"));
+    bool menuset_is_open = !(window->Flags & ImGuiWindowFlags_Popup) && (g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].ParentIdOnOpen == window->IDStack.back());
     ImGuiWindow* backed_nav_window = g.NavWindow;
     if (menuset_is_open)
         g.NavWindow = window;  // Odd hack to allow hovering across menus of a same menu-set (otherwise we wouldn't be able to hover parent)
