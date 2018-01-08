@@ -177,6 +177,7 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_PageDown] = ALLEGRO_KEY_PGDN;
     io.KeyMap[ImGuiKey_Home] = ALLEGRO_KEY_HOME;
     io.KeyMap[ImGuiKey_End] = ALLEGRO_KEY_END;
+    io.KeyMap[ImGuiKey_Insert] = ALLEGRO_KEY_INSERT;
     io.KeyMap[ImGuiKey_Delete] = ALLEGRO_KEY_DELETE;
     io.KeyMap[ImGuiKey_Backspace] = ALLEGRO_KEY_BACKSPACE;
     io.KeyMap[ImGuiKey_Enter] = ALLEGRO_KEY_ENTER;
