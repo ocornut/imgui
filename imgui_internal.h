@@ -285,7 +285,8 @@ struct IMGUI_API ImRect
     void        Expand(const float amount)          { Min.x -= amount;   Min.y -= amount;   Max.x += amount;   Max.y += amount; }
     void        Expand(const ImVec2& amount)        { Min.x -= amount.x; Min.y -= amount.y; Max.x += amount.x; Max.y += amount.y; }
     void        Translate(const ImVec2& v)          { Min.x += v.x; Min.y += v.y; Max.x += v.x; Max.y += v.y; }
-    void        ClipWith(const ImRect& r)           { if (Min.x < r.Min.x) Min.x = r.Min.x; if (Min.y < r.Min.y) Min.y = r.Min.y; if (Max.x > r.Max.x) Max.x = r.Max.x; if (Max.y > r.Max.y) Max.y = r.Max.y; }
+    void        ClipWith(const ImRect& r)           { Min = ImMax(Min, r.Min); Max = ImMin(Max, r.Max); }                   // Simple version, may lead to an inverted rectangle, which is fine for Contains/Overlaps test but not for display.
+    void        ClipWithFull(const ImRect& r)       { Min = ImClamp(Min, r.Min, r.Max); Max = ImClamp(Max, r.Min, r.Max); } // Full version, ensure both points are fully clipped.
     void        Floor()                             { Min.x = (float)(int)Min.x; Min.y = (float)(int)Min.y; Max.x = (float)(int)Max.x; Max.y = (float)(int)Max.y; }
     void        FixInverted()                       { if (Min.x > Max.x) ImSwap(Min.x, Max.x); if (Min.y > Max.y) ImSwap(Min.y, Max.y); }
     bool        IsFinite() const                    { return Min.x != FLT_MAX; }
