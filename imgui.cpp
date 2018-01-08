@@ -4147,7 +4147,6 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFl
     ImGuiWindow* window = ImGui::GetCurrentWindow();
 
     ImRect display_rect = bb;
-    display_rect.ClipWith(window->ClipRect);
     if (flags & ImGuiNavHighlightFlags_TypeDefault)
     {
         const float THICKNESS = 2.0f;
