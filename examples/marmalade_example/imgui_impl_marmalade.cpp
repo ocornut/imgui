@@ -220,6 +220,7 @@ bool    ImGui_Marmalade_Init(bool install_callbacks)
     io.KeyMap[ImGuiKey_PageDown] = s3eKeyPageDown;
     io.KeyMap[ImGuiKey_Home] = s3eKeyHome;
     io.KeyMap[ImGuiKey_End] = s3eKeyEnd;
+    io.KeyMap[ImGuiKey_Insert] = s3eKeyInsert;
     io.KeyMap[ImGuiKey_Delete] = s3eKeyDelete;
     io.KeyMap[ImGuiKey_Backspace] = s3eKeyBackspace;
     io.KeyMap[ImGuiKey_Enter] = s3eKeyEnter;

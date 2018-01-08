@@ -671,6 +671,7 @@ enum ImGuiKey_
     ImGuiKey_PageDown,
     ImGuiKey_Home,      // for text edit
     ImGuiKey_End,       // for text edit
+    ImGuiKey_Insert,    // for text edit
     ImGuiKey_Delete,    // for text edit
     ImGuiKey_Backspace, // for text edit
     ImGuiKey_Enter,     // for text edit
