@@ -23,9 +23,9 @@
 //#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS
 //#define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS
 
-//---- Don't implement test window functionality (ShowTestWindow()/ShowStyleEditor()/ShowUserGuide() methods will be empty)
-//---- It is very strongly recommended to NOT disable the test windows. Please read the comment at the top of imgui_demo.cpp to learn why.
-//#define IMGUI_DISABLE_TEST_WINDOWS
+//---- Don't implement demo windows functionality (ShowDemoWindow()/ShowStyleEditor()/ShowUserGuide() methods will be empty)
+//---- It is very strongly recommended to NOT disable the demo windows. Please read the comment at the top of imgui_demo.cpp to learn why.
+//#define IMGUI_DISABLE_DEMO_WINDOWS
 
 //---- Don't implement ImFormatString(), ImFormatStringV() so you can reimplement them yourself.
 //#define IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS

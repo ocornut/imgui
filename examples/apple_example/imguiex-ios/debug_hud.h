@@ -6,7 +6,7 @@
 
 typedef struct DebugHUD
 {
-    bool show_test_window;
+    bool show_demo_window;
     bool show_example_window;
     float rotation_speed;
     float cubeColor1[4];

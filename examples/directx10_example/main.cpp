@@ -27,7 +27,6 @@ void CreateRenderTarget()
     render_target_view_desc.ViewDimension = D3D10_RTV_DIMENSION_TEXTURE2D;
     g_pSwapChain->GetBuffer(0, __uuidof(ID3D10Texture2D), (LPVOID*)&pBackBuffer);
     g_pd3dDevice->CreateRenderTargetView(pBackBuffer, &render_target_view_desc, &g_mainRenderTargetView);
-    g_pd3dDevice->OMSetRenderTargets(1, &g_mainRenderTargetView, NULL);
     pBackBuffer->Release();
 }
 
@@ -125,6 +124,10 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui_ImplDX10_Init(hwnd, g_pd3dDevice);
 
+    // Setup style
+    ImGui::StyleColorsClassic();
+    //ImGui::StyleColorsDark();
+
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them. 
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple. 
@@ -141,7 +144,7 @@ int main(int, char**)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
 
-    bool show_test_window = true;
+    bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -163,14 +166,16 @@ int main(int, char**)
         ImGui_ImplDX10_NewFrame();
 
         // 1. Show a simple window.
-        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug".
+        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
         {
             static float f = 0.0f;
-            ImGui::Text("Hello, world!");
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-            ImGui::ColorEdit3("clear color", (float*)&clear_color);
-            if (ImGui::Button("Test Window")) show_test_window ^= 1;
-            if (ImGui::Button("Another Window")) show_another_window ^= 1;
+            ImGui::Text("Hello, world!");                           // Some text (you can use a format string too)
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float as a slider from 0.0f to 1.0f
+            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats as a color
+            if (ImGui::Button("Demo Window"))                       // Use buttons to toggle our bools. We could use Checkbox() as well.
+                show_demo_window ^= 1;
+            if (ImGui::Button("Another Window"))
+                show_another_window ^= 1;
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         }
 
@@ -182,14 +187,15 @@ int main(int, char**)
             ImGui::End();
         }
 
-        // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow().
-        if (show_test_window)
+        // 3. Show the ImGui demo window. Most of the sample code is in ImGui::ShowDemoWindow().
+        if (show_demo_window)
         {
-            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);     // Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
-            ImGui::ShowTestWindow(&show_test_window);
+            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver); // Normally user code doesn't need/want to call this because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
+            ImGui::ShowDemoWindow(&show_demo_window);
         }
 
         // Rendering
+        g_pd3dDevice->OMSetRenderTargets(1, &g_mainRenderTargetView, NULL);
         g_pd3dDevice->ClearRenderTargetView(g_mainRenderTargetView, (float*)&clear_color);
         ImGui::Render();
 

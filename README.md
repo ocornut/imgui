@@ -45,7 +45,7 @@ Binaries/Demo
 -------------
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20171013.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20171013.zip) (Windows binaries, Dear ImGui 1.52 WIP built 2017/10/13, 5 executables)
+- [imgui-demo-binaries-20171226.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20171226.zip) (Windows binaries, Dear ImGui 1.53 built 2017/12/26, 5 executables)
 
 Bindings
 --------
@@ -60,6 +60,7 @@ Languages:
 - ChaiScript: https://github.com/JuJuBoSc/imgui-chaiscript
 - D (DerelictImgui): https://github.com/Extrawurst/DerelictImgui
 - Go (go-imgui): https://github.com/Armored-Dragon/go-imgui
+- Haxe/hxcpp (linc_imgui): https://github.com/Aidan63/linc_imgui    
 - Lua: https://github.com/patrickriordan/imgui_lua_bindings
 - Odin: https://github.com/ThisDrunkDane/odin-dear_imgui
 - Pascal (imgui-pas): https://github.com/dpethes/imgui-pas
@@ -140,7 +141,7 @@ Frequently Asked Question (FAQ)
 <b>Where is the documentation?</b>
 
 - The documentation is at the top of imgui.cpp + effectively imgui.h. 
-- Example code is in imgui_demo.cpp and particularly the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
+- Example code is in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
 - Standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder. 
 - We obviously needs better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
 
