@@ -170,7 +170,7 @@ static ImGuiTabsContext GTabs;
 // TABS
 //-----------------------------------------------------------------------------
 
-#define TAB_UNFOCUSED_LERP 0
+#define TAB_UNFOCUSED_LERP 1
 
 enum
 {
@@ -206,9 +206,9 @@ static void RenderTabBackground(ImDrawList* draw_list, const ImRect& bb, ImU32 c
     draw_list->PathArcToFast(ImVec2(bb.Min.x + rounding, bb.Min.y + rounding), rounding, 6, 9);
     draw_list->PathArcToFast(ImVec2(bb.Max.x - rounding, bb.Min.y + rounding), rounding, 9, 12);
     draw_list->PathLineTo(ImVec2(bb.Max.x, bb.Max.y));
-    draw_list->AddConvexPolyFilled(draw_list->_Path.Data, draw_list->_Path.Size, col, true);
+    draw_list->AddConvexPolyFilled(draw_list->_Path.Data, draw_list->_Path.Size, col);
     if (g.Style.FrameBorderSize > 0.0f)
-        draw_list->AddPolyline(draw_list->_Path.Data, draw_list->_Path.Size, ImGui::GetColorU32(ImGuiCol_Border), false, g.Style.FrameBorderSize, true);
+        draw_list->AddPolyline(draw_list->_Path.Data, draw_list->_Path.Size, ImGui::GetColorU32(ImGuiCol_Border), false, g.Style.FrameBorderSize);
     draw_list->PathClear();
 }
 
