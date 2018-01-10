@@ -4485,16 +4485,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_Popup)) && window->WindowBorderSize == 0.0f)
             window->WindowPadding = ImVec2(0.0f, (flags & ImGuiWindowFlags_MenuBar) ? style.WindowPadding.y : 0.0f);
 
-        // Setup draw list and outer clipping rectangle
-        window->DrawList->Clear();
-        window->DrawList->Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
-        window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
-        ImRect fullscreen_rect(GetVisibleRect());
-        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
-            PushClipRect(parent_window->ClipRect.Min, parent_window->ClipRect.Max, true);
-        else
-            PushClipRect(fullscreen_rect.Min, fullscreen_rect.Max, true);
-
         if (window_just_activated_by_user)
         {
             // Popup first latch mouse position, will position itself when it appears next frame
@@ -4668,6 +4658,18 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         if (window_just_activated_by_user && !(flags & ImGuiWindowFlags_NoFocusOnAppearing))
             if (!(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) || (flags & ImGuiWindowFlags_Popup))
                 want_focus = true;
+
+        // DRAWING
+
+        // Setup draw list and outer clipping rectangle
+        window->DrawList->Clear();
+        window->DrawList->Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
+        window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
+        ImRect fullscreen_rect(GetVisibleRect());
+        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup))
+            PushClipRect(parent_window->ClipRect.Min, parent_window->ClipRect.Max, true);
+        else
+            PushClipRect(fullscreen_rect.Min, fullscreen_rect.Max, true);
 
         // Draw modal window background (darkens what is behind them)
         if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
