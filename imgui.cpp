@@ -3179,22 +3179,19 @@ void ImGui::NewFrame()
     g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_ARRAYSIZE(g.FramerateSecPerFrame);
     g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
 
-    // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering). Only valid for root windows.
+    // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering).
     if (g.MovingWindowMoveId && g.MovingWindowMoveId == g.ActiveId && g.ActiveIdSource == ImGuiInputSource_Mouse)
     {
-        KeepAliveID(g.MovingWindowMoveId);
+        KeepAliveID(g.ActiveId);
         IM_ASSERT(g.MovingWindow && g.MovingWindow->RootWindow);
         IM_ASSERT(g.MovingWindow->MoveId == g.MovingWindowMoveId);
         if (g.IO.MouseDown[0])
         {
-            if (!(g.MovingWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.MovingWindow->RootWindow->Flags & ImGuiWindowFlags_NoMove))
-            {
-                ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
-                if (g.MovingWindow->RootWindow->PosFloat.x != pos.x || g.MovingWindow->RootWindow->PosFloat.y != pos.y)
-                    MarkIniSettingsDirty(g.MovingWindow->RootWindow);
-                g.MovingWindow->RootWindow->PosFloat = pos;
-                FocusWindow(g.MovingWindow);
-            }
+            ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
+            if (g.MovingWindow->RootWindow->PosFloat.x != pos.x || g.MovingWindow->RootWindow->PosFloat.y != pos.y)
+                MarkIniSettingsDirty(g.MovingWindow->RootWindow);
+            g.MovingWindow->RootWindow->PosFloat = pos;
+            FocusWindow(g.MovingWindow);
         }
         else
         {
@@ -3205,6 +3202,13 @@ void ImGui::NewFrame()
     }
     else
     {
+        // When clicking/dragging from a window that has the _NoMove flag, we still set the ActiveId in order to prevent hovering others.
+        if (g.ActiveIdWindow && g.ActiveIdWindow->MoveId == g.ActiveId)
+        {
+            KeepAliveID(g.ActiveId);
+            if (!g.IO.MouseDown[0])
+                ClearActiveID();
+        }
         g.MovingWindow = NULL;
         g.MovingWindowMoveId = 0;
     }
@@ -3744,14 +3748,16 @@ void ImGui::EndFrame()
             {
                 if (g.HoveredRootWindow != NULL)
                 {
-                    // Mark for moving even if the _NoMove flag is set (the tests will be done during actual moving)
-                    // Because we always want to set an ActiveId, without it dragging away from a window with _NoMove would activate hover on other windows.
+                    // Set ActiveId even if the _NoMove flag is set, without it dragging away from a window with _NoMove would activate hover on other windows.
                     FocusWindow(g.HoveredWindow);
-                    g.MovingWindow = g.HoveredWindow;
-                    g.MovingWindowMoveId = g.MovingWindow->MoveId;
-                    SetActiveID(g.MovingWindowMoveId, g.HoveredRootWindow);
+                    SetActiveID(g.HoveredWindow->MoveId, g.HoveredWindow);
                     g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredRootWindow->Pos;
-
+                    if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
+                    {
+                        g.MovingWindow = g.HoveredWindow;
+                        g.MovingWindowMoveId = g.MovingWindow->MoveId;
+                    }
+                    
                     // FIXME-NAV: This never execute because of the FocusWindow call above, however we may want this behavior?
                     /*
                     if (g.NavWindow != g.HoveredWindow)
