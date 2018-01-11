@@ -1871,11 +1871,13 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 "IsWindowFocused() = %d\n"
                 "IsWindowFocused(_ChildWindows) = %d\n"
                 "IsWindowFocused(_ChildWindows|_RootWindow) = %d\n"
-                "IsWindowFocused(_RootWindow) = %d\n",
+                "IsWindowFocused(_RootWindow) = %d\n"
+                "IsWindowFocused(_AnyWindow) = %d\n",
                 ImGui::IsWindowFocused(),
-                ImGui::IsWindowFocused(ImGuiHoveredFlags_ChildWindows),
-                ImGui::IsWindowFocused(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow),
-                ImGui::IsWindowFocused(ImGuiHoveredFlags_RootWindow));
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows),
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_RootWindow),
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow),
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow));
 
             // Testing IsWindowHovered() function with its various flags (note that the flags can be combined)
             ImGui::BulletText(
@@ -1884,13 +1886,15 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 "IsWindowHovered(_AllowWhenBlockedByActiveItem) = %d\n"
                 "IsWindowHovered(_ChildWindows) = %d\n"
                 "IsWindowHovered(_ChildWindows|_RootWindow) = %d\n"
-                "IsWindowHovered(_RootWindow) = %d\n",
+                "IsWindowHovered(_RootWindow) = %d\n"
+                "IsWindowHovered(_AnyWindow) = %d\n",
                 ImGui::IsWindowHovered(),
                 ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
                 ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
                 ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows),
                 ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow));
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
 
             // Testing IsItemHovered() function (because BulletText is an item itself and that would affect the output of IsItemHovered, we pass all lines in a single items to shorten the code)
             ImGui::Button("ITEM");

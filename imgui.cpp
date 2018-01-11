@@ -213,6 +213,8 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2018/01/11 (1.54) - obsoleted IsAnyWindowHovered() in favor of IsWindowHovered(ImGuiHoveredFlags_AnyWindow). Kept redirection function (will obsolete).
+ - 2018/01/11 (1.54) - obsoleted IsAnyWindowFocused() in favor of IsWindowFocused(ImGuiFocusedFlags_AnyWindow). Kept redirection function (will obsolete).
  - 2018/01/03 (1.54) - renamed ImGuiSizeConstraintCallback to ImGuiSizeCallback, ImGuiSizeConstraintCallbackData to ImGuiSizeCallbackData.
  - 2017/12/29 (1.54) - removed CalcItemRectClosestPoint() which was weird and not really used by anyone except demo code. If you need it it's easy to replicate on your side.
  - 2017/12/24 (1.53) - renamed the emblematic ShowTestWindow() function to ShowDemoWindow(). Kept redirection function (will obsolete).
@@ -3417,18 +3419,6 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     return rect_for_touch.Contains(g.IO.MousePos);
 }
 
-bool ImGui::IsAnyWindowHovered()
-{
-    ImGuiContext& g = *GImGui;
-    return g.HoveredWindow != NULL;
-}
-
-bool ImGui::IsAnyWindowFocused()
-{
-    ImGuiContext& g = *GImGui;
-    return g.NavWindow != NULL;
-}
-
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
 {
     const int key_index = GImGui->IO.KeyMap[key];
@@ -3959,7 +3949,7 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
     if (!str_id) 
         str_id = "void_context";
     ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
-    if (IsMouseReleased(mouse_button) && !IsAnyWindowHovered())
+    if (IsMouseReleased(mouse_button) && !IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
         OpenPopupEx(id);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
 }
@@ -5522,24 +5512,33 @@ bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
 {
     IM_ASSERT((flags & ImGuiHoveredFlags_AllowWhenOverlapped) == 0);   // Flags not supported by this function
     ImGuiContext& g = *GImGui;
-    switch (flags & (ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows))
+
+    if (flags & ImGuiHoveredFlags_AnyWindow)
     {
-    case ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows:
-        if (g.HoveredRootWindow != g.CurrentWindow->RootWindow)
+        if (g.HoveredWindow == NULL)
             return false;
-        break;
-    case ImGuiHoveredFlags_RootWindow:
-        if (g.HoveredWindow != g.CurrentWindow->RootWindow)
-            return false;
-        break;
-    case ImGuiHoveredFlags_ChildWindows:
-        if (g.HoveredWindow == NULL || !IsWindowChildOf(g.HoveredWindow, g.CurrentWindow))
-            return false;
-        break;
-    default:
-        if (g.HoveredWindow != g.CurrentWindow)
-            return false;
-        break;
+    }
+    else
+    {
+        switch (flags & (ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows))
+        {
+        case ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows:
+            if (g.HoveredRootWindow != g.CurrentWindow->RootWindow)
+                return false;
+            break;
+        case ImGuiHoveredFlags_RootWindow:
+            if (g.HoveredWindow != g.CurrentWindow->RootWindow)
+                return false;
+            break;
+        case ImGuiHoveredFlags_ChildWindows:
+            if (g.HoveredWindow == NULL || !IsWindowChildOf(g.HoveredWindow, g.CurrentWindow))
+                return false;
+            break;
+        default:
+            if (g.HoveredWindow != g.CurrentWindow)
+                return false;
+            break;
+        }
     }
 
     if (!IsWindowContentHoverable(g.HoveredRootWindow, flags))
@@ -5555,16 +5554,19 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.CurrentWindow);     // Not inside a Begin()/End()
 
+    if (flags & ImGuiFocusedFlags_AnyWindow)
+        return g.NavWindow != NULL;
+
     switch (flags & (ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_ChildWindows))
     {
     case ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_ChildWindows:
-        return g.NavWindow && g.CurrentWindow->RootWindow == g.NavWindow->RootWindow;
+        return g.NavWindow && g.NavWindow->RootWindow == g.CurrentWindow->RootWindow;
     case ImGuiFocusedFlags_RootWindow:
-        return g.CurrentWindow->RootWindow == g.NavWindow;
+        return g.NavWindow == g.CurrentWindow->RootWindow;
     case ImGuiFocusedFlags_ChildWindows:
         return g.NavWindow && IsWindowChildOf(g.NavWindow, g.CurrentWindow);
     default:
-        return g.CurrentWindow == g.NavWindow;
+        return g.NavWindow == g.CurrentWindow;
     }
 }
 
