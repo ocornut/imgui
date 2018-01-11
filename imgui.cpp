@@ -3074,6 +3074,9 @@ void ImGui::Render()
 
 const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end)
 {
+    if (!text)
+        return NULL;
+ 
     const char* text_display_end = text;
     if (!text_end)
         text_end = (const char*)-1;
