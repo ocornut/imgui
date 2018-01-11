@@ -249,6 +249,8 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2018/01/11 (1.54) - obsoleted IsAnyWindowHovered() in favor of IsWindowHovered(ImGuiHoveredFlags_AnyWindow). Kept redirection function (will obsolete).
+ - 2018/01/11 (1.54) - obsoleted IsAnyWindowFocused() in favor of IsWindowFocused(ImGuiFocusedFlags_AnyWindow). Kept redirection function (will obsolete).
  - 2018/01/03 (1.54) - renamed ImGuiSizeConstraintCallback to ImGuiSizeCallback, ImGuiSizeConstraintCallbackData to ImGuiSizeCallbackData.
  - 2017/12/29 (1.54) - removed CalcItemRectClosestPoint() which was weird and not really used by anyone except demo code. If you need it it's easy to replicate on your side.
  - 2017/12/24 (1.53) - renamed the emblematic ShowTestWindow() function to ShowDemoWindow(). Kept redirection function (will obsolete).
@@ -3185,11 +3187,14 @@ void ImGui::NewFrame()
         IM_ASSERT(g.MovingWindow->MoveId == g.MovingWindowMoveId);
         if (g.IO.MouseDown[0])
         {
-            ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
-            if (g.MovingWindow->RootWindow->PosFloat.x != pos.x || g.MovingWindow->RootWindow->PosFloat.y != pos.y)
-                MarkIniSettingsDirty(g.MovingWindow->RootWindow);
-            g.MovingWindow->RootWindow->PosFloat = pos;
-            FocusWindow(g.MovingWindow);
+            if (!(g.MovingWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.MovingWindow->RootWindow->Flags & ImGuiWindowFlags_NoMove))
+            {
+                ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
+                if (g.MovingWindow->RootWindow->PosFloat.x != pos.x || g.MovingWindow->RootWindow->PosFloat.y != pos.y)
+                    MarkIniSettingsDirty(g.MovingWindow->RootWindow);
+                g.MovingWindow->RootWindow->PosFloat = pos;
+                FocusWindow(g.MovingWindow);
+            }
         }
         else
         {
@@ -3739,8 +3744,15 @@ void ImGui::EndFrame()
             {
                 if (g.HoveredRootWindow != NULL)
                 {
+                    // Mark for moving even if the _NoMove flag is set (the tests will be done during actual moving)
+                    // Because we always want to set an ActiveId, without it dragging away from a window with _NoMove would activate hover on other windows.
                     FocusWindow(g.HoveredWindow);
-                    // FIXME-NAV: This never execute because of the FocusWindow call above, however we may might this behavior?
+                    g.MovingWindow = g.HoveredWindow;
+                    g.MovingWindowMoveId = g.MovingWindow->MoveId;
+                    SetActiveID(g.MovingWindowMoveId, g.HoveredRootWindow);
+                    g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredRootWindow->Pos;
+
+                    // FIXME-NAV: This never execute because of the FocusWindow call above, however we may want this behavior?
                     /*
                     if (g.NavWindow != g.HoveredWindow)
                     {
@@ -3748,13 +3760,6 @@ void ImGui::EndFrame()
                         g.NavDisableHighlight = true;
                     }
                     */
-                    if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
-                    {
-                        g.MovingWindow = g.HoveredWindow;
-                        g.MovingWindowMoveId = g.MovingWindow->MoveId;
-                        SetActiveID(g.MovingWindowMoveId, g.HoveredRootWindow);
-                        g.ActiveIdClickOffset = g.IO.MousePos - g.MovingWindow->RootWindow->Pos;
-                    }
                 }
                 else if (g.NavWindow != NULL && GetFrontMostModalRootWindow() == NULL)
                 {
@@ -4265,18 +4270,6 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     // Expand for touch input
     const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
     return rect_for_touch.Contains(g.IO.MousePos);
-}
-
-bool ImGui::IsAnyWindowHovered()
-{
-    ImGuiContext& g = *GImGui;
-    return g.HoveredWindow != NULL;
-}
-
-bool ImGui::IsAnyWindowFocused()
-{
-    ImGuiContext& g = *GImGui;
-    return g.NavWindow != NULL;
 }
 
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
@@ -4838,7 +4831,7 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
     if (!str_id) 
         str_id = "void_context";
     ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
-    if (IsMouseReleased(mouse_button) && !IsAnyWindowHovered())
+    if (IsMouseReleased(mouse_button) && !IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
         OpenPopupEx(id);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
 }
@@ -6486,24 +6479,33 @@ bool ImGui::IsWindowHovered(ImGuiHoveredFlags flags)
 {
     IM_ASSERT((flags & ImGuiHoveredFlags_AllowWhenOverlapped) == 0);   // Flags not supported by this function
     ImGuiContext& g = *GImGui;
-    switch (flags & (ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows))
+
+    if (flags & ImGuiHoveredFlags_AnyWindow)
     {
-    case ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows:
-        if (g.HoveredRootWindow != g.CurrentWindow->RootWindow)
+        if (g.HoveredWindow == NULL)
             return false;
-        break;
-    case ImGuiHoveredFlags_RootWindow:
-        if (g.HoveredWindow != g.CurrentWindow->RootWindow)
-            return false;
-        break;
-    case ImGuiHoveredFlags_ChildWindows:
-        if (g.HoveredWindow == NULL || !IsWindowChildOf(g.HoveredWindow, g.CurrentWindow))
-            return false;
-        break;
-    default:
-        if (g.HoveredWindow != g.CurrentWindow)
-            return false;
-        break;
+    }
+    else
+    {
+        switch (flags & (ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows))
+        {
+        case ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows:
+            if (g.HoveredRootWindow != g.CurrentWindow->RootWindow)
+                return false;
+            break;
+        case ImGuiHoveredFlags_RootWindow:
+            if (g.HoveredWindow != g.CurrentWindow->RootWindow)
+                return false;
+            break;
+        case ImGuiHoveredFlags_ChildWindows:
+            if (g.HoveredWindow == NULL || !IsWindowChildOf(g.HoveredWindow, g.CurrentWindow))
+                return false;
+            break;
+        default:
+            if (g.HoveredWindow != g.CurrentWindow)
+                return false;
+            break;
+        }
     }
 
     if (!IsWindowContentHoverable(g.HoveredRootWindow, flags))
@@ -6519,16 +6521,19 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.CurrentWindow);     // Not inside a Begin()/End()
 
+    if (flags & ImGuiFocusedFlags_AnyWindow)
+        return g.NavWindow != NULL;
+
     switch (flags & (ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_ChildWindows))
     {
     case ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_ChildWindows:
-        return g.NavWindow && g.CurrentWindow->RootWindow == g.NavWindow->RootWindow;
+        return g.NavWindow && g.NavWindow->RootWindow == g.CurrentWindow->RootWindow;
     case ImGuiFocusedFlags_RootWindow:
-        return g.CurrentWindow->RootWindow == g.NavWindow;
+        return g.NavWindow == g.CurrentWindow->RootWindow;
     case ImGuiFocusedFlags_ChildWindows:
         return g.NavWindow && IsWindowChildOf(g.NavWindow, g.CurrentWindow);
     default:
-        return g.CurrentWindow == g.NavWindow;
+        return g.NavWindow == g.CurrentWindow;
     }
 }
 
