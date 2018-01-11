@@ -2386,11 +2386,14 @@ void ImGui::NewFrame()
         IM_ASSERT(g.MovingWindow->MoveId == g.MovingWindowMoveId);
         if (g.IO.MouseDown[0])
         {
-            ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
-            if (g.MovingWindow->RootWindow->PosFloat.x != pos.x || g.MovingWindow->RootWindow->PosFloat.y != pos.y)
-                MarkIniSettingsDirty(g.MovingWindow->RootWindow);
-            g.MovingWindow->RootWindow->PosFloat = pos;
-            FocusWindow(g.MovingWindow);
+            if (!(g.MovingWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.MovingWindow->RootWindow->Flags & ImGuiWindowFlags_NoMove))
+            {
+                ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
+                if (g.MovingWindow->RootWindow->PosFloat.x != pos.x || g.MovingWindow->RootWindow->PosFloat.y != pos.y)
+                    MarkIniSettingsDirty(g.MovingWindow->RootWindow);
+                g.MovingWindow->RootWindow->PosFloat = pos;
+                FocusWindow(g.MovingWindow);
+            }
         }
         else
         {
@@ -2934,14 +2937,13 @@ void ImGui::EndFrame()
             {
                 if (g.HoveredRootWindow != NULL)
                 {
+                    // Mark for moving even if the _NoMove flag is set (the tests will be done during actual moving)
+                    // Because we always want to set an ActiveId, without it dragging away from a window with _NoMove would activate hover on other windows.
                     FocusWindow(g.HoveredWindow);
-                    if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
-                    {
-                        g.MovingWindow = g.HoveredWindow;
-                        g.MovingWindowMoveId = g.MovingWindow->MoveId;
-                        SetActiveID(g.MovingWindowMoveId, g.HoveredRootWindow);
-                        g.ActiveIdClickOffset = g.IO.MousePos - g.MovingWindow->RootWindow->Pos;
-                    }
+                    g.MovingWindow = g.HoveredWindow;
+                    g.MovingWindowMoveId = g.MovingWindow->MoveId;
+                    SetActiveID(g.MovingWindowMoveId, g.HoveredRootWindow);
+                    g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredRootWindow->Pos;
                 }
                 else if (g.NavWindow != NULL && GetFrontMostModalRootWindow() == NULL)
                 {
