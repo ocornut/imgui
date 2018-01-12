@@ -880,6 +880,7 @@ namespace ImGui
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          ClearActiveID();
     IMGUI_API void          SetHoveredID(ImGuiID id);
+    IMGUI_API ImGuiID       GetHoveredID();
     IMGUI_API void          KeepAliveID(ImGuiID id);
 
     IMGUI_API void          ItemSize(const ImVec2& size, float text_offset_y = 0.0f);
