@@ -6965,12 +6965,6 @@ void ImGui::ActivateItem(ImGuiID id)
     g.NavNextActivateId = id;
 }
 
-ImGuiID ImGui::GetItemID()
-{
-    ImGuiContext& g = *GImGui;
-    return g.CurrentWindow->DC.LastItemId;
-}
-
 void ImGui::SetKeyboardFocusHere(int offset)
 {
     IM_ASSERT(offset >= -1);    // -1 is allowed but not below

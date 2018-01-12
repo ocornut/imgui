@@ -1887,22 +1887,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-#if 0
-        if (ImGui::TreeNode("Remote Activation"))
-        {
-            static char label[256];
-            ImGui::InputText("Label", label, IM_ARRAYSIZE(label));
-            ImGui::PopID(); // We don't yet have an easy way compute ID at other levels of the ID stack so we pop it manually for now (e.g. we'd like something like GetID("../label"))
-            ImGuiID id = ImGui::GetID(label);
-            ImGui::PushID("Remote Activation");
-            if (ImGui::SmallButton("Activate"))
-                ImGui::ActivateItem(id);
-            ImGui::SameLine();
-            ImGui::Text("ID = 0x%08X", id);
-            ImGui::TreePop();
-        }
-#endif
-
         if (ImGui::TreeNode("Focused & Hovered Test"))
         {
             static bool embed_all_inside_a_child_window = false;
