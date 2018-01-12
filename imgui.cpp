@@ -2,7 +2,7 @@
 // (main code and documentation)
 
 // ** EXPERIMENTAL GAMEPAD/KEYBOARD NAVIGATION BRANCH
-// ** Grep for FIXME-NAVIGATION
+// ** Grep for FIXME-NAV
 
 // Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp for demo code.
 // Newcomers, read 'Programmer guide' below for notes on how to setup Dear ImGui in your codebase.
@@ -2153,7 +2153,7 @@ static bool NavScoreItem(ImRect cand)
     }
 
     // Compute distance between boxes
-    // FIXME-NAVIGATION: Introducing biases for vertical navigation, needs to be removed.
+    // FIXME-NAV: Introducing biases for vertical navigation, needs to be removed.
     float dbx = NavScoreItemDistInterval(cand.Min.x, cand.Max.x, curr.Min.x, curr.Max.x);
     float dby = NavScoreItemDistInterval(ImLerp(cand.Min.y, cand.Max.y, 0.2f), ImLerp(cand.Min.y, cand.Max.y, 0.8f), ImLerp(curr.Min.y, curr.Max.y, 0.2f), ImLerp(curr.Min.y, curr.Max.y, 0.8f)); // Scale down on Y to keep using box-distance for vertically touching items
     if (dby != 0.0f && dbx != 0.0f)
@@ -2654,7 +2654,7 @@ enum ImGuiNavReadMode
     ImGuiNavReadMode_RepeatFast
 };
 
-// FIXME-NAVIGATION: Expose navigation repeat delay/rate
+// FIXME-NAV: Expose navigation repeat delay/rate
 static float GetNavInputAmount(ImGuiNavInput n, ImGuiNavReadMode mode)
 {
     ImGuiContext& g = *GImGui;
@@ -5320,7 +5320,7 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
             resize_grip_col[0] = GetColorU32(ImGuiCol_ResizeGripActive);
             if (nav_resize_delta.x != 0.0f || nav_resize_delta.y != 0.0f)
             {
-                // FIXME-NAVIGATION: Should store and accumulate into a separate size buffer to handle sizing constraints properly, right now a constraint will make us stuck.
+                // FIXME-NAV: Should store and accumulate into a separate size buffer to handle sizing constraints properly, right now a constraint will make us stuck.
                 g.NavWindowingToggleLayer = false;
                 size_target = CalcSizeAfterConstraint(window, window->SizeFull + nav_resize_delta);
             }
@@ -7278,7 +7278,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             // PressedOnClick         |  <on click>     |  <on click> <on repeat> <on repeat> ..
             // PressedOnRelease       |  <on release>   |  <on repeat> <on repeat> .. (NOT on release)
             // PressedOnDoubleClick   |  <on dclick>    |  <on dclick> <on repeat> <on repeat> ..
-            // FIXME-NAVIGATION: We don't honor those different behaviors.
+            // FIXME-NAV: We don't honor those different behaviors.
             if ((flags & ImGuiButtonFlags_PressedOnClickRelease) && g.IO.MouseClicked[0])
             {
                 SetActiveID(id, window);
@@ -8375,7 +8375,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
                 }
                 if (IsNavInputDown(ImGuiNavInput_PadTweakFast))
                     delta *= 10.0f;
-                clicked_t = ImSaturate(clicked_t + delta); // FIXME-NAVIGATION: todo: cancel adjustment if current value already past edge and we are moving in edge direction, to avoid clamping value to edge.
+                clicked_t = ImSaturate(clicked_t + delta); // FIXME-NAV: todo: cancel adjustment if current value already past edge and we are moving in edge direction, to avoid clamping value to edge.
                 set_new_value = true;
             }
         }
