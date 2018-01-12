@@ -674,7 +674,6 @@
 static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
 static ImFont*          GetDefaultFont();
-static void             SetCurrentFont(ImFont* font);
 static void             SetCurrentWindow(ImGuiWindow* window);
 static void             SetWindowScrollX(ImGuiWindow* window, float new_scroll_x);
 static void             SetWindowScrollY(ImGuiWindow* window, float new_scroll_y);
@@ -6220,7 +6219,7 @@ static ImFont* GetDefaultFont()
     return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0];
 }
 
-static void SetCurrentFont(ImFont* font)
+void ImGui::SetCurrentFont(ImFont* font)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
