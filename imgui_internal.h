@@ -688,7 +688,6 @@ struct ImGuiContext
         ActiveIdSource = ImGuiInputSource_None;
         MovingWindow = NULL;
         MovingWindowMoveId = 0;
-
         NextTreeNodeOpenVal = false;
         NextTreeNodeOpenCond = 0;
 
@@ -717,10 +716,17 @@ struct ImGuiContext
         NavMoveResultParentId = 0;
         NavMoveResultDistBox = NavMoveResultDistCenter = NavMoveResultDistAxial = 0.0f;
 
+        ModalWindowDarkeningRatio = 0.0f;
+        OverlayDrawList._Data = &DrawListSharedData;
+        OverlayDrawList._OwnerName = "##Overlay"; // Give it a name for debugging
+        MouseCursor = ImGuiMouseCursor_Arrow;
+        memset(MouseCursorData, 0, sizeof(MouseCursorData));
+
         DragDropActive = false;
         DragDropSourceFlags = 0;
         DragDropMouseButton = -1;
         DragDropTargetId = 0;
+        DragDropAcceptIdCurrRectSurface = 0.0f;
         DragDropAcceptIdPrev = DragDropAcceptIdCurr = 0;
         DragDropAcceptFrameCount = -1;
         memset(DragDropPayloadBufLocal, 0, sizeof(DragDropPayloadBufLocal));
@@ -735,12 +741,6 @@ struct ImGuiContext
         ScrollbarClickDeltaToGrabCenter = ImVec2(0.0f, 0.0f);
         TooltipOverrideCount = 0;
         OsImePosRequest = OsImePosSet = ImVec2(-1.0f, -1.0f);
-
-        ModalWindowDarkeningRatio = 0.0f;
-        OverlayDrawList._Data = &DrawListSharedData;
-        OverlayDrawList._OwnerName = "##Overlay"; // Give it a name for debugging
-        MouseCursor = ImGuiMouseCursor_Arrow;
-        memset(MouseCursorData, 0, sizeof(MouseCursorData));
 
         SettingsDirtyTimer = 0.0f;
 

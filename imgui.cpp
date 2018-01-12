@@ -718,7 +718,8 @@ namespace ImGui
 static void             NavUpdate();
 static void             NavUpdateWindowing();
 static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id);
-static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, ImU32 resize_grip_col[4]);
+
+static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
 static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
 }
 
@@ -5237,14 +5238,13 @@ static ImRect GetBorderRect(ImGuiWindow* window, int border_n, float perp_paddin
 }
 
 // Handle resize for: Resize Grips, Borders, Gamepad
-static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, ImU32 resize_grip_col[4])
+static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4])
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindowFlags flags = window->Flags;
     if ((flags & ImGuiWindowFlags_NoResize) || (flags & ImGuiWindowFlags_AlwaysAutoResize) || window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0)
         return;
 
-    const int resize_grip_count = (flags & ImGuiWindowFlags_ResizeFromAnySide) ? 2 : 1; // 4
     const int resize_border_count = (flags & ImGuiWindowFlags_ResizeFromAnySide) ? 4 : 0;
     const float grip_draw_size = (float)(int)ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f);
     const float grip_hover_size = (float)(int)(grip_draw_size * 0.75f);
@@ -5668,6 +5668,14 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (!(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) || (flags & ImGuiWindowFlags_Popup))
                 want_focus = true;
 
+        // Handle manual resize: Resize Grips, Borders, Gamepad
+        int border_held = -1;
+        ImU32 resize_grip_col[4] = { 0 };
+        const int resize_grip_count = (flags & ImGuiWindowFlags_ResizeFromAnySide) ? 2 : 1; // 4
+        const float grip_draw_size = (float)(int)ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f);
+        if (!window->Collapsed)
+            UpdateManualResize(window, size_auto_fit, &border_held, resize_grip_count, &resize_grip_col[0]);
+
         // DRAWING
 
         // Setup draw list and outer clipping rectangle
@@ -5708,14 +5716,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
         else
         {
-            // Handle resize for: Resize Grips, Borders, Gamepad
-            int border_held = -1;
-            ImU32 resize_grip_col[4] = { 0 };
-            const int resize_grip_count = (flags & ImGuiWindowFlags_ResizeFromAnySide) ? 2 : 1; // 4
-            const float grip_draw_size = (float)(int)ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f);
-            UpdateManualResize(window, size_auto_fit, &border_held, &resize_grip_col[0]);
-            title_bar_rect = window->TitleBarRect();
-
             // Window background, Default Alpha
             ImU32 bg_col = GetColorU32(GetWindowBgColorIdxFromFlags(flags));
             window->DrawList->AddRectFilled(window->Pos+ImVec2(0,window->TitleBarHeight()), window->Pos+window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawCornerFlags_All : ImDrawCornerFlags_Bot);
