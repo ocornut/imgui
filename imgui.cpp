@@ -648,8 +648,8 @@ static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWind
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
 static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window);
 
-static void             AddDrawListToRenderList(ImVector<ImDrawList*>* out_render_list, ImDrawList* draw_list);
-static void             AddWindowToRenderList(ImVector<ImDrawList*>* out_render_list, ImGuiWindow* window);
+static void             AddDrawListToDrawData(ImVector<ImDrawList*>* out_render_list, ImDrawList* draw_list);
+static void             AddWindowToDrawData(ImVector<ImDrawList*>* out_render_list, ImGuiWindow* window);
 static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window);
 
 static ImGuiWindowSettings* AddWindowSettings(const char* name);
@@ -2303,9 +2303,7 @@ void ImGui::NewFrame()
     g.OverlayDrawList.Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
 
     // Mark rendering data as invalid to prevent user who may have a handle on it to use it
-    g.DrawData.Valid = false;
-    g.DrawData.CmdLists = NULL;
-    g.DrawData.CmdListsCount = g.DrawData.TotalVtxCount = g.DrawData.TotalIdxCount = 0;
+    g.DrawData.Clear();
 
     // Clear reference to active widget if the widget isn't alive anymore
     if (!g.HoveredIdPreviousFrame)
@@ -2846,7 +2844,7 @@ static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, 
     }
 }
 
-static void AddDrawListToRenderList(ImVector<ImDrawList*>* out_render_list, ImDrawList* draw_list)
+static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_render_list, ImDrawList* draw_list)
 {
     if (draw_list->CmdBuffer.empty())
         return;
@@ -2879,25 +2877,25 @@ static void AddDrawListToRenderList(ImVector<ImDrawList*>* out_render_list, ImDr
     out_render_list->push_back(draw_list);
 }
 
-static void AddWindowToRenderList(ImVector<ImDrawList*>* out_render_list, ImGuiWindow* window)
+static void AddWindowToDrawData(ImVector<ImDrawList*>* out_render_list, ImGuiWindow* window)
 {
-    AddDrawListToRenderList(out_render_list, window->DrawList);
+    AddDrawListToDrawData(out_render_list, window->DrawList);
     for (int i = 0; i < window->DC.ChildWindows.Size; i++)
     {
         ImGuiWindow* child = window->DC.ChildWindows[i];
         if (child->Active && child->HiddenFrames <= 0) // clipped children may have been marked not active
-            AddWindowToRenderList(out_render_list, child);
+            AddWindowToDrawData(out_render_list, child);
     }
 }
 
-static void AddWindowToDrawDataSelectLayer(ImDrawDataBuilder* builder, ImGuiWindow* window)
+static void AddWindowToDrawDataSelectLayer(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     g.IO.MetricsActiveWindows++;
     if (window->Flags & ImGuiWindowFlags_Tooltip)
-        AddWindowToRenderList(&builder->Layers[1], window);
+        AddWindowToDrawData(&g.DrawDataBuilder.Layers[1], window);
     else
-        AddWindowToRenderList(&builder->Layers[0], window);
+        AddWindowToDrawData(&g.DrawDataBuilder.Layers[0], window);
 }
 
 void ImDrawDataBuilder::FlattenIntoSingleLayer()
@@ -2918,16 +2916,16 @@ void ImDrawDataBuilder::FlattenIntoSingleLayer()
     }
 }
 
-void ImDrawDataBuilder::SetupDrawData(ImDrawData* out_draw_data)
+static void SetupDrawData(ImVector<ImDrawList*>* draw_lists, ImDrawData* out_draw_data)
 {
     out_draw_data->Valid = true;
-    out_draw_data->CmdLists = (Layers[0].Size > 0) ? Layers[0].Data : NULL;
-    out_draw_data->CmdListsCount = Layers[0].Size;
+    out_draw_data->CmdLists = (draw_lists->Size > 0) ? draw_lists->Data : NULL;
+    out_draw_data->CmdListsCount = draw_lists->Size;
     out_draw_data->TotalVtxCount = out_draw_data->TotalIdxCount = 0;
-    for (int n = 0; n < Layers[0].Size; n++)
+    for (int n = 0; n < draw_lists->Size; n++)
     {
-        out_draw_data->TotalVtxCount += Layers[0][n]->VtxBuffer.Size;
-        out_draw_data->TotalIdxCount += Layers[0][n]->IdxBuffer.Size;
+        out_draw_data->TotalVtxCount += draw_lists->Data[n]->VtxBuffer.Size;
+        out_draw_data->TotalIdxCount += draw_lists->Data[n]->IdxBuffer.Size;
     }
 }
 
@@ -3054,11 +3052,11 @@ void ImGui::Render()
         // Gather windows to render
         g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
         g.DrawDataBuilder.Clear();
-        for (int i = 0; i != g.Windows.Size; i++)
+        for (int n = 0; n != g.Windows.Size; n++)
         {
-            ImGuiWindow* window = g.Windows[i];
+            ImGuiWindow* window = g.Windows[n];
             if (window->Active && window->HiddenFrames <= 0 && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0)
-                AddWindowToDrawDataSelectLayer(&g.DrawDataBuilder, window);
+                AddWindowToDrawDataSelectLayer(window);
         }
         g.DrawDataBuilder.FlattenIntoSingleLayer();
 
@@ -3077,10 +3075,10 @@ void ImGui::Render()
             g.OverlayDrawList.PopTextureID();
         }
         if (!g.OverlayDrawList.VtxBuffer.empty())
-            AddDrawListToRenderList(&g.DrawDataBuilder.Layers[0], &g.OverlayDrawList);
+            AddDrawListToDrawData(&g.DrawDataBuilder.Layers[0], &g.OverlayDrawList);
 
         // Setup ImDrawData structure for end-user
-        g.DrawDataBuilder.SetupDrawData(&g.DrawData);
+        SetupDrawData(&g.DrawDataBuilder.Layers[0], &g.DrawData);
         g.IO.MetricsRenderVertices = g.DrawData.TotalVtxCount;
         g.IO.MetricsRenderIndices = g.DrawData.TotalIdxCount;
 

@@ -470,7 +470,6 @@ struct ImDrawDataBuilder
     void Clear()            { for (int n = 0; n < IM_ARRAYSIZE(Layers); n++) Layers[n].resize(0); }
     void ClearFreeMemory()  { for (int n = 0; n < IM_ARRAYSIZE(Layers); n++) Layers[n].clear(); }
     IMGUI_API void FlattenIntoSingleLayer();
-    IMGUI_API void SetupDrawData(ImDrawData* out_draw_data);
 };
 
 // Storage for SetNexWindow** functions
