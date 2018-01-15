@@ -3869,7 +3869,7 @@ void ImGui::Render()
                 AddWindowToDrawDataSelectLayer(window);
         }
         if (g.NavWindowingTarget && g.NavWindowingTarget->Active && g.NavWindowingTarget->HiddenFrames <= 0) // NavWindowingTarget is always temporarily displayed as the front-most window
-            AddWindowToDrawDataSelectLayer(&g.DrawDataBuilder, g.NavWindowingTarget);
+            AddWindowToDrawDataSelectLayer(g.NavWindowingTarget);
         g.DrawDataBuilder.FlattenIntoSingleLayer();
 
         // Draw software mouse cursor if requested
