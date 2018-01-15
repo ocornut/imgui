@@ -463,6 +463,16 @@ struct IMGUI_API ImDrawListSharedData
     ImDrawListSharedData();
 };
 
+struct ImDrawDataBuilder
+{
+    ImVector<ImDrawList*>   Layers[3];           // Layered for: regular, popup, tooltip
+
+    void Clear()            { for (int n = 0; n < IM_ARRAYSIZE(Layers); n++) Layers[n].resize(0); }
+    void ClearFreeMemory()  { for (int n = 0; n < IM_ARRAYSIZE(Layers); n++) Layers[n].clear(); }
+    IMGUI_API void FlattenIntoSingleLayer();
+    IMGUI_API void SetupDrawData(ImDrawData* out_draw_data);
+};
+
 // Storage for SetNexWindow** functions
 struct ImGuiNextWindowData
 {
@@ -547,7 +557,7 @@ struct ImGuiContext
 
     // Render
     ImDrawData              DrawData;                           // Main ImDrawData instance to pass render information to the user
-    ImVector<ImDrawList*>   DrawDataLists[3];
+    ImDrawDataBuilder       DrawDataBuilder;
     float                   ModalWindowDarkeningRatio;
     ImDrawList              OverlayDrawList;                    // Optional software render of mouse cursors, if io.MouseDrawCursor is set + a few debug overlays
     ImGuiMouseCursor        MouseCursor;
