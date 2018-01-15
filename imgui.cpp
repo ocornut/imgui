@@ -4790,7 +4790,7 @@ static void NavProcessMoveRequestWrapAround(ImGuiWindow* window)
         {
             g.NavMoveRequestForwardStep = 1;
             NavMoveRequestCancel();
-            g.NavWindow->NavRectRel[0].Min.y = g.NavWindow->NavRectRel[0].Max.y = (g.NavMoveDir == ImGuiDir_Up) ? window->SizeFull.y : 0.0f;
+            g.NavWindow->NavRectRel[0].Min.y = g.NavWindow->NavRectRel[0].Max.y = ((g.NavMoveDir == ImGuiDir_Up) ? ImMax(window->SizeFull.y, window->SizeContents.y) : 0.0f) - window->Scroll.y;
         }
 }
 
