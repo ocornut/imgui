@@ -448,7 +448,7 @@ struct ImGuiColumnsSet
     }
 };
 
-struct ImDrawListSharedData
+struct IMGUI_API ImDrawListSharedData
 {
     ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas
     ImFont*         Font;                       // Current/default font (optional, for simplified AddText overload)
