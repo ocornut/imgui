@@ -583,7 +583,7 @@ struct ImGuiContext
     ImGuiID                 NavNextActivateId;                  // Set by ActivateItem(), queued until next frame
     ImGuiID                 NavJustMovedToId;                   // Just navigated to this id (result of a successfully MoveRequest)
     ImRect                  NavScoringRectScreen;               // Rectangle used for scoring, in screen space. Based of window->DC.NavRefRectRel[], modified for directional navigation scoring.
-    ImGuiWindow*            NavWindowingTarget;
+    ImGuiWindow*            NavWindowingTarget;                 // When selecting a window (holding Menu+FocusPrev/Next, or equivalent of CTRL-TAB) this window is temporarily displayed front-most. 
     float                   NavWindowingDisplayAlpha;
     bool                    NavWindowingToggleLayer;
     int                     NavLayer;                           // Layer we are navigating on. For now the system is hard-coded for 0=main contents and 1=menu/title bar, may expose layers later.
