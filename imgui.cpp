@@ -685,9 +685,9 @@ static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWind
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
 static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window);
 
-static void             AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDrawList* draw_list);
-static void             AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiWindow* window);
-static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, ImGuiWindow* window);
+static void             AddDrawListToRenderList(ImVector<ImDrawList*>* out_render_list, ImDrawList* draw_list);
+static void             AddWindowToRenderList(ImVector<ImDrawList*>* out_render_list, ImGuiWindow* window);
+static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window);
 
 static ImGuiWindowSettings* AddWindowSettings(const char* name);
 
@@ -2564,7 +2564,7 @@ ImGuiStyle& ImGui::GetStyle()
 // Same value as passed to your RenderDrawListsFn() function. valid after Render() and until the next call to NewFrame()
 ImDrawData* ImGui::GetDrawData()
 {
-    return GImGui->RenderDrawData.Valid ? &GImGui->RenderDrawData : NULL;
+    return GImGui->DrawData.Valid ? &GImGui->DrawData : NULL;
 }
 
 float ImGui::GetTime()
@@ -3087,9 +3087,9 @@ void ImGui::NewFrame()
     g.OverlayDrawList.Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
 
     // Mark rendering data as invalid to prevent user who may have a handle on it to use it
-    g.RenderDrawData.Valid = false;
-    g.RenderDrawData.CmdLists = NULL;
-    g.RenderDrawData.CmdListsCount = g.RenderDrawData.TotalVtxCount = g.RenderDrawData.TotalIdxCount = 0;
+    g.DrawData.Valid = false;
+    g.DrawData.CmdLists = NULL;
+    g.DrawData.CmdListsCount = g.DrawData.TotalVtxCount = g.DrawData.TotalIdxCount = 0;
 
     // Clear reference to active widget if the widget isn't alive anymore
     if (!g.HoveredIdPreviousFrame)
@@ -3187,10 +3187,17 @@ void ImGui::NewFrame()
         IM_ASSERT(g.MovingWindow->MoveId == g.MovingWindowMoveId);
         if (g.IO.MouseDown[0])
         {
+            // MovingWindow = window we clicked on, could be a child window. We track it to preserve Focus and so that ActiveIdWindow == MovingWindow and ActiveId == MovingWindow->MoveId for consistency.
+            // actually_moving_window = MovingWindow->RootWindow.
+            ImGuiWindow* actually_moving_window = g.MovingWindow->RootWindow;
             ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
-            if (g.MovingWindow->RootWindow->PosFloat.x != pos.x || g.MovingWindow->RootWindow->PosFloat.y != pos.y)
-                MarkIniSettingsDirty(g.MovingWindow->RootWindow);
-            g.MovingWindow->RootWindow->PosFloat = pos;
+            if (actually_moving_window != g.MovingWindow)
+                pos += actually_moving_window->PosFloat - g.MovingWindow->PosFloat;
+            if (actually_moving_window->PosFloat.x != pos.x || actually_moving_window->PosFloat.y != pos.y)
+            {
+                MarkIniSettingsDirty(actually_moving_window);
+                actually_moving_window->PosFloat = pos;
+            }
             FocusWindow(g.MovingWindow);
         }
         else
@@ -3450,8 +3457,7 @@ void ImGui::Shutdown()
     g.FontStack.clear();
     g.OpenPopupStack.clear();
     g.CurrentPopupStack.clear();
-    for (int i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
-        g.RenderDrawLists[i].clear();
+    g.DrawDataBuilder.ClearFreeMemory();
     g.OverlayDrawList.ClearFreeMemory();
     g.PrivateClipboard.clear();
     g.InputTextState.Text.clear();
@@ -3641,7 +3647,7 @@ static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, 
     }
 }
 
-static void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDrawList* draw_list)
+static void AddDrawListToRenderList(ImVector<ImDrawList*>* out_render_list, ImDrawList* draw_list)
 {
     if (draw_list->CmdBuffer.empty())
         return;
@@ -3660,9 +3666,9 @@ static void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDr
     IM_ASSERT(draw_list->IdxBuffer.Size == 0 || draw_list->_IdxWritePtr == draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size);
     IM_ASSERT((int)draw_list->_VtxCurrentIdx == draw_list->VtxBuffer.Size);
 
-    // Check that draw_list doesn't use more vertices than indexable in a single draw call (default ImDrawIdx = unsigned short = 2 bytes = 64K vertices per ImDrawList = per window)
+    // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = unsigned short = 2 bytes = 64K vertices per ImDrawList = per window)
     // If this assert triggers because you are drawing lots of stuff manually:
-    // A) Make sure you are coarse clipping, because ImDrawList let all your vertices pass. You can use thre Metrics window to inspect draw list contents.
+    // A) Make sure you are coarse clipping, because ImDrawList let all your vertices pass. You can use the Metrics window to inspect draw list contents.
     // B) If you need/want meshes with more than 64K vertices, uncomment the '#define ImDrawIdx unsigned int' line in imconfig.h to set the index size to 4 bytes. 
     //    You'll need to handle the 4-bytes indices to your renderer. For example, the OpenGL example code detect index size at compile-time by doing:
     //      glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer_offset);
@@ -3671,36 +3677,59 @@ static void AddDrawListToRenderList(ImVector<ImDrawList*>& out_render_list, ImDr
     if (sizeof(ImDrawIdx) == 2)
         IM_ASSERT(draw_list->_VtxCurrentIdx < (1 << 16) && "Too many vertices in ImDrawList using 16-bit indices. Read comment above");
 
-    out_render_list.push_back(draw_list);
-    GImGui->IO.MetricsRenderVertices += draw_list->VtxBuffer.Size;
-    GImGui->IO.MetricsRenderIndices += draw_list->IdxBuffer.Size;
+    out_render_list->push_back(draw_list);
 }
 
-static void AddWindowToRenderList(ImVector<ImDrawList*>& out_render_list, ImGuiWindow* window)
+static void AddWindowToRenderList(ImVector<ImDrawList*>* out_render_list, ImGuiWindow* window)
 {
     AddDrawListToRenderList(out_render_list, window->DrawList);
     for (int i = 0; i < window->DC.ChildWindows.Size; i++)
     {
         ImGuiWindow* child = window->DC.ChildWindows[i];
-        if (!child->Active) // clipped children may have been marked not active
-            continue;
-        if (child->HiddenFrames > 0)
-            continue;
-        AddWindowToRenderList(out_render_list, child);
+        if (child->Active && child->HiddenFrames <= 0) // clipped children may have been marked not active
+            AddWindowToRenderList(out_render_list, child);
     }
 }
 
-static void AddWindowToRenderListSelectLayer(ImGuiWindow* window)
+static void AddWindowToDrawDataSelectLayer(ImDrawDataBuilder* builder, ImGuiWindow* window)
 {
-    // FIXME: Generalize this with a proper layering system so e.g. user can draw in specific layers, below text, ..
     ImGuiContext& g = *GImGui;
     g.IO.MetricsActiveWindows++;
-    if (window->Flags & ImGuiWindowFlags_Popup)
-        AddWindowToRenderList(g.RenderDrawLists[1], window);
-    else if (window->Flags & ImGuiWindowFlags_Tooltip)
-        AddWindowToRenderList(g.RenderDrawLists[2], window);
+    if (window->Flags & ImGuiWindowFlags_Tooltip)
+        AddWindowToRenderList(&builder->Layers[1], window);
     else
-        AddWindowToRenderList(g.RenderDrawLists[0], window);
+        AddWindowToRenderList(&builder->Layers[0], window);
+}
+
+void ImDrawDataBuilder::FlattenIntoSingleLayer()
+{
+    int n = Layers[0].Size;
+    int size = n;
+    for (int i = 1; i < IM_ARRAYSIZE(Layers); i++)
+        size += Layers[i].Size;
+    Layers[0].resize(size);
+    for (int layer_n = 1; layer_n < IM_ARRAYSIZE(Layers); layer_n++)
+    {
+        ImVector<ImDrawList*>& layer = Layers[layer_n];
+        if (layer.empty())
+            continue;
+        memcpy(&Layers[0][n], &layer[0], layer.Size * sizeof(ImDrawList*));
+        n += layer.Size;
+        layer.resize(0);
+    }
+}
+
+void ImDrawDataBuilder::SetupDrawData(ImDrawData* out_draw_data)
+{
+    out_draw_data->Valid = true;
+    out_draw_data->CmdLists = (Layers[0].Size > 0) ? Layers[0].Data : NULL;
+    out_draw_data->CmdListsCount = Layers[0].Size;
+    out_draw_data->TotalVtxCount = out_draw_data->TotalIdxCount = 0;
+    for (int n = 0; n < Layers[0].Size; n++)
+    {
+        out_draw_data->TotalVtxCount += Layers[0][n]->VtxBuffer.Size;
+        out_draw_data->TotalIdxCount += Layers[0][n]->IdxBuffer.Size;
+    }
 }
 
 // When using this function it is sane to ensure that float are perfectly rounded to integer values, to that e.g. (int)(max.x-min.x) in user's render produce correct result.
@@ -3751,7 +3780,7 @@ void ImGui::EndFrame()
                     // Set ActiveId even if the _NoMove flag is set, without it dragging away from a window with _NoMove would activate hover on other windows.
                     FocusWindow(g.HoveredWindow);
                     SetActiveID(g.HoveredWindow->MoveId, g.HoveredWindow);
-                    g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredRootWindow->Pos;
+                    g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredWindow->Pos;
                     if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
                     {
                         g.MovingWindow = g.HoveredWindow;
@@ -3834,31 +3863,16 @@ void ImGui::Render()
     {
         // Gather windows to render
         g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
-        for (int i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
-            g.RenderDrawLists[i].resize(0);
+        g.DrawDataBuilder.Clear();
         for (int i = 0; i != g.Windows.Size; i++)
         {
             ImGuiWindow* window = g.Windows[i];
             if (window->Active && window->HiddenFrames <= 0 && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0 && window != g.NavWindowingTarget)
-                AddWindowToRenderListSelectLayer(window);
+                AddWindowToDrawDataSelectLayer(&g.DrawDataBuilder, window);
         }
-        if (g.NavWindowingTarget && g.NavWindowingTarget->Active && g.NavWindowingTarget->HiddenFrames <= 0) // NavWindowing target is always displayed front-most
-            AddWindowToRenderListSelectLayer(g.NavWindowingTarget);
-
-        // Flatten layers
-        int n = g.RenderDrawLists[0].Size;
-        int flattened_size = n;
-        for (int i = 1; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
-            flattened_size += g.RenderDrawLists[i].Size;
-        g.RenderDrawLists[0].resize(flattened_size);
-        for (int i = 1; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
-        {
-            ImVector<ImDrawList*>& layer = g.RenderDrawLists[i];
-            if (layer.empty())
-                continue;
-            memcpy(&g.RenderDrawLists[0][n], &layer[0], layer.Size * sizeof(ImDrawList*));
-            n += layer.Size;
-        }
+        if (g.NavWindowingTarget && g.NavWindowingTarget->Active && g.NavWindowingTarget->HiddenFrames <= 0) // NavWindowingTarget is always temporarily displayed as the front-most window
+            AddWindowToDrawDataSelectLayer(&g.DrawDataBuilder, g.NavWindowingTarget);
+        g.DrawDataBuilder.FlattenIntoSingleLayer();
 
         // Draw software mouse cursor if requested
         if (g.IO.MouseDrawCursor)
@@ -3875,18 +3889,16 @@ void ImGui::Render()
             g.OverlayDrawList.PopTextureID();
         }
         if (!g.OverlayDrawList.VtxBuffer.empty())
-            AddDrawListToRenderList(g.RenderDrawLists[0], &g.OverlayDrawList);
+            AddDrawListToRenderList(&g.DrawDataBuilder.Layers[0], &g.OverlayDrawList);
 
-        // Setup draw data
-        g.RenderDrawData.Valid = true;
-        g.RenderDrawData.CmdLists = (g.RenderDrawLists[0].Size > 0) ? &g.RenderDrawLists[0][0] : NULL;
-        g.RenderDrawData.CmdListsCount = g.RenderDrawLists[0].Size;
-        g.RenderDrawData.TotalVtxCount = g.IO.MetricsRenderVertices;
-        g.RenderDrawData.TotalIdxCount = g.IO.MetricsRenderIndices;
+        // Setup ImDrawData structure for end-user
+        g.DrawDataBuilder.SetupDrawData(&g.DrawData);
+        g.IO.MetricsRenderVertices = g.DrawData.TotalVtxCount;
+        g.IO.MetricsRenderIndices = g.DrawData.TotalIdxCount;
 
         // Render. If user hasn't set a callback then they may retrieve the draw data via GetDrawData()
-        if (g.RenderDrawData.CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
-            g.IO.RenderDrawListsFn(&g.RenderDrawData);
+        if (g.DrawData.CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
+            g.IO.RenderDrawListsFn(&g.DrawData);
     }
 }
 
@@ -7384,7 +7396,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     if (!ItemAdd(bb, id))
         return false;
 
-    if (window->DC.ItemFlags & ImGuiItemFlags_ButtonRepeat) 
+    if (window->DC.ItemFlags & ImGuiItemFlags_ButtonRepeat)
         flags |= ImGuiButtonFlags_Repeat;
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
@@ -12683,7 +12695,11 @@ void ImGui::EndDragDropTarget()
 #if defined(_WIN32) && !defined(_WINDOWS_) && (!defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS) || !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS))
 #undef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#ifndef __MINGW32__
 #include <Windows.h>
+#else
+#include <windows.h>
+#endif
 #endif
 
 // Win32 API clipboard implementation
@@ -12804,7 +12820,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
         struct Funcs
         {
-            static void NodeDrawList(ImDrawList* draw_list, const char* label)
+            static void NodeDrawList(ImGuiWindow* window, ImDrawList* draw_list, const char* label)
             {
                 bool node_open = ImGui::TreeNode(draw_list, "%s: '%s' %d vtx, %d indices, %d cmds", label, draw_list->_OwnerName ? draw_list->_OwnerName : "", draw_list->VtxBuffer.Size, draw_list->IdxBuffer.Size, draw_list->CmdBuffer.Size);
                 if (draw_list == ImGui::GetWindowDrawList())
@@ -12814,10 +12830,13 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     if (node_open) ImGui::TreePop();
                     return;
                 }
+
+                ImDrawList* overlay_draw_list = &GImGui->OverlayDrawList;   // Render additional visuals into the top-most draw list
+                if (window && ImGui::IsItemHovered())
+                    overlay_draw_list->AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255, 255, 0, 255));
                 if (!node_open)
                     return;
 
-                ImDrawList* overlay_draw_list = &GImGui->OverlayDrawList;   // Render additional visuals into the top-most draw list
                 int elem_offset = 0;
                 for (const ImDrawCmd* pcmd = draw_list->CmdBuffer.begin(); pcmd < draw_list->CmdBuffer.end(); elem_offset += pcmd->ElemCount, pcmd++)
                 {
@@ -12883,10 +12902,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             {
                 if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Active || window->WasActive, window))
                     return;
-                NodeDrawList(window->DrawList, "DrawList");
+                NodeDrawList(window, window->DrawList, "DrawList");
                 ImGui::BulletText("Pos: (%.1f,%.1f), Size: (%.1f,%.1f), SizeContents (%.1f,%.1f)", window->Pos.x, window->Pos.y, window->Size.x, window->Size.y, window->SizeContents.x, window->SizeContents.y);
-                if (ImGui::IsItemHovered())
-                    GImGui->OverlayDrawList.AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255,255,0,255));
                 ImGui::BulletText("Scroll: (%.2f/%.2f,%.2f/%.2f)", window->Scroll.x, GetScrollMaxX(window), window->Scroll.y, GetScrollMaxY(window));
                 ImGui::BulletText("Active: %d, WriteAccessed: %d", window->Active, window->WriteAccessed);
                 ImGui::BulletText("NavLastIds: 0x%08X,0x%08X, NavLayerActiveMask: %X", window->NavLastIds[0], window->NavLastIds[1], window->DC.NavLayerActiveMask);
@@ -12898,13 +12915,13 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             }
         };
 
-        ImGuiContext& g = *GImGui;                // Access private state
+        // Access private state, we are going to display the draw lists from last frame
+        ImGuiContext& g = *GImGui;
         Funcs::NodeWindows(g.Windows, "Windows");
-        if (ImGui::TreeNode("DrawList", "Active DrawLists (%d)", g.RenderDrawLists[0].Size))
+        if (ImGui::TreeNode("DrawList", "Active DrawLists (%d)", g.DrawDataBuilder.Layers[0].Size))
         {
-            for (int layer = 0; layer < IM_ARRAYSIZE(g.RenderDrawLists); layer++)
-                for (int i = 0; i < g.RenderDrawLists[layer].Size; i++)
-                    Funcs::NodeDrawList(g.RenderDrawLists[0][i], "DrawList");
+            for (int i = 0; i < g.DrawDataBuilder.Layers[0].Size; i++)
+                Funcs::NodeDrawList(NULL, g.DrawDataBuilder.Layers[0][i], "DrawList");
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("Popups", "Open Popups Stack (%d)", g.OpenPopupStack.Size))
