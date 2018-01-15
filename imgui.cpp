@@ -2895,8 +2895,6 @@ static void AddWindowToDrawDataSelectLayer(ImDrawDataBuilder* builder, ImGuiWind
     ImGuiContext& g = *GImGui;
     g.IO.MetricsActiveWindows++;
     if (window->Flags & ImGuiWindowFlags_Tooltip)
-        AddWindowToRenderList(&builder->Layers[2], window);
-    else if (window->Flags & ImGuiWindowFlags_Popup)
         AddWindowToRenderList(&builder->Layers[1], window);
     else
         AddWindowToRenderList(&builder->Layers[0], window);
