@@ -2246,7 +2246,7 @@ ImGuiStyle& ImGui::GetStyle()
 // Same value as passed to your RenderDrawListsFn() function. valid after Render() and until the next call to NewFrame()
 ImDrawData* ImGui::GetDrawData()
 {
-    return GImGui->RenderDrawData.Valid ? &GImGui->RenderDrawData : NULL;
+    return GImGui->DrawData.Valid ? &GImGui->DrawData : NULL;
 }
 
 float ImGui::GetTime()
@@ -2303,9 +2303,9 @@ void ImGui::NewFrame()
     g.OverlayDrawList.Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
 
     // Mark rendering data as invalid to prevent user who may have a handle on it to use it
-    g.RenderDrawData.Valid = false;
-    g.RenderDrawData.CmdLists = NULL;
-    g.RenderDrawData.CmdListsCount = g.RenderDrawData.TotalVtxCount = g.RenderDrawData.TotalIdxCount = 0;
+    g.DrawData.Valid = false;
+    g.DrawData.CmdLists = NULL;
+    g.DrawData.CmdListsCount = g.DrawData.TotalVtxCount = g.DrawData.TotalIdxCount = 0;
 
     // Clear reference to active widget if the widget isn't alive anymore
     if (!g.HoveredIdPreviousFrame)
@@ -2656,8 +2656,8 @@ void ImGui::Shutdown()
     g.FontStack.clear();
     g.OpenPopupStack.clear();
     g.CurrentPopupStack.clear();
-    for (int i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
-        g.RenderDrawLists[i].clear();
+    for (int i = 0; i < IM_ARRAYSIZE(g.DrawDataLists); i++)
+        g.DrawDataLists[i].clear();
     g.OverlayDrawList.ClearFreeMemory();
     g.PrivateClipboard.clear();
     g.InputTextState.Text.clear();
@@ -2902,11 +2902,11 @@ static void AddWindowToRenderListSelectLayer(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     g.IO.MetricsActiveWindows++;
     if (window->Flags & ImGuiWindowFlags_Popup)
-        AddWindowToRenderList(g.RenderDrawLists[1], window);
+        AddWindowToRenderList(g.DrawDataLists[1], window);
     else if (window->Flags & ImGuiWindowFlags_Tooltip)
-        AddWindowToRenderList(g.RenderDrawLists[2], window);
+        AddWindowToRenderList(g.DrawDataLists[2], window);
     else
-        AddWindowToRenderList(g.RenderDrawLists[0], window);
+        AddWindowToRenderList(g.DrawDataLists[0], window);
 }
 
 // When using this function it is sane to ensure that float are perfectly rounded to integer values, to that e.g. (int)(max.x-min.x) in user's render produce correct result.
@@ -3031,8 +3031,8 @@ void ImGui::Render()
     {
         // Gather windows to render
         g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
-        for (int i = 0; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
-            g.RenderDrawLists[i].resize(0);
+        for (int i = 0; i < IM_ARRAYSIZE(g.DrawDataLists); i++)
+            g.DrawDataLists[i].resize(0);
         for (int i = 0; i != g.Windows.Size; i++)
         {
             ImGuiWindow* window = g.Windows[i];
@@ -3041,17 +3041,17 @@ void ImGui::Render()
         }
 
         // Flatten layers
-        int n = g.RenderDrawLists[0].Size;
+        int n = g.DrawDataLists[0].Size;
         int flattened_size = n;
-        for (int i = 1; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
-            flattened_size += g.RenderDrawLists[i].Size;
-        g.RenderDrawLists[0].resize(flattened_size);
-        for (int i = 1; i < IM_ARRAYSIZE(g.RenderDrawLists); i++)
+        for (int i = 1; i < IM_ARRAYSIZE(g.DrawDataLists); i++)
+            flattened_size += g.DrawDataLists[i].Size;
+        g.DrawDataLists[0].resize(flattened_size);
+        for (int i = 1; i < IM_ARRAYSIZE(g.DrawDataLists); i++)
         {
-            ImVector<ImDrawList*>& layer = g.RenderDrawLists[i];
+            ImVector<ImDrawList*>& layer = g.DrawDataLists[i];
             if (layer.empty())
                 continue;
-            memcpy(&g.RenderDrawLists[0][n], &layer[0], layer.Size * sizeof(ImDrawList*));
+            memcpy(&g.DrawDataLists[0][n], &layer[0], layer.Size * sizeof(ImDrawList*));
             n += layer.Size;
         }
 
@@ -3070,18 +3070,18 @@ void ImGui::Render()
             g.OverlayDrawList.PopTextureID();
         }
         if (!g.OverlayDrawList.VtxBuffer.empty())
-            AddDrawListToRenderList(g.RenderDrawLists[0], &g.OverlayDrawList);
+            AddDrawListToRenderList(g.DrawDataLists[0], &g.OverlayDrawList);
 
         // Setup draw data
-        g.RenderDrawData.Valid = true;
-        g.RenderDrawData.CmdLists = (g.RenderDrawLists[0].Size > 0) ? &g.RenderDrawLists[0][0] : NULL;
-        g.RenderDrawData.CmdListsCount = g.RenderDrawLists[0].Size;
-        g.RenderDrawData.TotalVtxCount = g.IO.MetricsRenderVertices;
-        g.RenderDrawData.TotalIdxCount = g.IO.MetricsRenderIndices;
+        g.DrawData.Valid = true;
+        g.DrawData.CmdLists = (g.DrawDataLists[0].Size > 0) ? &g.DrawDataLists[0][0] : NULL;
+        g.DrawData.CmdListsCount = g.DrawDataLists[0].Size;
+        g.DrawData.TotalVtxCount = g.IO.MetricsRenderVertices;
+        g.DrawData.TotalIdxCount = g.IO.MetricsRenderIndices;
 
         // Render. If user hasn't set a callback then they may retrieve the draw data via GetDrawData()
-        if (g.RenderDrawData.CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
-            g.IO.RenderDrawListsFn(&g.RenderDrawData);
+        if (g.DrawData.CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
+            g.IO.RenderDrawListsFn(&g.DrawData);
     }
 }
 
@@ -11749,11 +11749,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
         ImGuiContext& g = *GImGui;                // Access private state
         Funcs::NodeWindows(g.Windows, "Windows");
-        if (ImGui::TreeNode("DrawList", "Active DrawLists (%d)", g.RenderDrawLists[0].Size))
+        if (ImGui::TreeNode("DrawList", "Active DrawLists (%d)", g.DrawDataLists[0].Size))
         {
-            for (int layer = 0; layer < IM_ARRAYSIZE(g.RenderDrawLists); layer++)
-                for (int i = 0; i < g.RenderDrawLists[layer].Size; i++)
-                    Funcs::NodeDrawList(g.RenderDrawLists[0][i], "DrawList");
+            for (int layer = 0; layer < IM_ARRAYSIZE(g.DrawDataLists); layer++)
+                for (int i = 0; i < g.DrawDataLists[layer].Size; i++)
+                    Funcs::NodeDrawList(g.DrawDataLists[0][i], "DrawList");
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("Popups", "Open Popups Stack (%d)", g.OpenPopupStack.Size))
