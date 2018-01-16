@@ -11,8 +11,9 @@
 #CXX = g++
 
 EXE = opengl2_example
-OBJS = main.o imgui_impl_glfw.o
-OBJS += ../../imgui.o ../../imgui_demo.o ../../imgui_draw.o
+SOURCES = main.cpp imgui_impl_glfw.cpp
+SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp
+OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
 UNAME_S := $(shell uname -s)
 
@@ -46,15 +47,18 @@ ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
    CFLAGS = $(CXXFLAGS)
 endif
 
-.cpp.o:
+%.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o:../../%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 all: $(EXE)
 	@echo Build complete for $(ECHO_MESSAGE)
 
 $(EXE): $(OBJS)
-	$(CXX) -o $(EXE) $(OBJS) $(CXXFLAGS) $(LIBS)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
 
 clean:
-	rm $(EXE) $(OBJS)
+	rm -f $(EXE) $(OBJS)
 
