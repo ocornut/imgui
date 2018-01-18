@@ -325,7 +325,7 @@ bool    ImGui_ImplSdlGL3_Init(SDL_Window* window)
     io.KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
     io.KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
     io.KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
-    io.KeyMap[ImGuiKey_Insert] = SDLK_INSERT;
+    io.KeyMap[ImGuiKey_Insert] = SDL_SCANCODE_INSERT;
     io.KeyMap[ImGuiKey_Delete] = SDLK_DELETE;
     io.KeyMap[ImGuiKey_Backspace] = SDLK_BACKSPACE;
     io.KeyMap[ImGuiKey_Enter] = SDLK_RETURN;
