@@ -11397,7 +11397,7 @@ bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_s
         cond = ImGuiCond_Always;
 
     IM_ASSERT(type != NULL);
-    IM_ASSERT(strlen(type) < IM_ARRAYSIZE(payload.DataType));       // Payload type can be at most 8 characters longs
+    IM_ASSERT(strlen(type) < IM_ARRAYSIZE(payload.DataType) && "Payload type can be at most 12 characters long");
     IM_ASSERT((data != NULL && data_size > 0) || (data == NULL && data_size == 0));
     IM_ASSERT(cond == ImGuiCond_Always || cond == ImGuiCond_Once);
     IM_ASSERT(payload.SourceId != 0);                               // Not called between BeginDragDropSource() and EndDragDropSource()
