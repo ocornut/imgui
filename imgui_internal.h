@@ -170,9 +170,6 @@ template <typename T> void IM_DELETE(T*& p) { if (p) { p->~T(); ImGui::MemFree(p
 // Types
 //-----------------------------------------------------------------------------
 
-// Internal Drag and Drop payload types. String starting with '_' are reserved for Dear ImGui.
-#define IMGUI_PAYLOAD_TYPE_DOCKABLE         "_IMDOCK"   // ImGuiWindow* // [Internal] Docking/tabs
-
 enum ImGuiButtonFlags_
 {
     ImGuiButtonFlags_Repeat                 = 1 << 0,   // hold to repeat
