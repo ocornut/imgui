@@ -7,7 +7,7 @@
 // See imgui_impl_sdl.cpp for details.
 
 #include <imgui.h>
-#include "imgui_impl_sdl.h"
+#include "imgui_impl_sdl_gl2.h"
 #include <stdio.h>
 #include <SDL.h>
 #include <SDL_opengl.h>

@@ -7,7 +7,7 @@
 // See imgui_impl_glfw.cpp for details.
 
 #include <imgui.h>
-#include "imgui_impl_glfw.h"
+#include "imgui_impl_glfw_gl2.h"
 #include <stdio.h>
 #include <GLFW/glfw3.h>
 
