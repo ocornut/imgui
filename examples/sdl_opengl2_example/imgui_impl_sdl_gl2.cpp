@@ -19,7 +19,7 @@
 #include <SDL_syswm.h>
 #include <SDL_opengl.h>
 #include <imgui.h>
-#include "imgui_impl_sdl.h"
+#include "imgui_impl_sdl_gl2.h"
 
 // Data
 static double       g_Time = 0.0f;
@@ -30,7 +30,7 @@ static GLuint       g_FontTexture = 0;
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so. 
 // If text or lines are blurry when integrating ImGui in your engine: in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-void ImGui_ImplSdl_RenderDrawLists(ImDrawData* draw_data)
+void ImGui_ImplSdlGL2_RenderDrawLists(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     ImGuiIO& io = ImGui::GetIO();
@@ -226,7 +226,7 @@ bool    ImGui_ImplSdlGL2_Init(SDL_Window* window)
     io.KeyMap[ImGuiKey_Y] = SDLK_y;
     io.KeyMap[ImGuiKey_Z] = SDLK_z;
 
-    io.RenderDrawListsFn = ImGui_ImplSdl_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
+    io.RenderDrawListsFn = ImGui_ImplSdlGL2_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
     io.SetClipboardTextFn = ImGui_ImplSdl_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplSdl_GetClipboardText;
     io.ClipboardUserData = NULL;
