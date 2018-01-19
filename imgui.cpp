@@ -2393,11 +2393,8 @@ void ImGui::NewFrame()
         if (g.IO.MouseDown[0])
         {
             // MovingWindow = window we clicked on, could be a child window. We track it to preserve Focus and so that ActiveIdWindow == MovingWindow and ActiveId == MovingWindow->MoveId for consistency.
-            // actually_moving_window = MovingWindow->RootWindow.
             ImGuiWindow* actually_moving_window = g.MovingWindow->RootWindow;
             ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
-            if (actually_moving_window != g.MovingWindow)
-                pos += actually_moving_window->PosFloat - g.MovingWindow->PosFloat;
             if (actually_moving_window->PosFloat.x != pos.x || actually_moving_window->PosFloat.y != pos.y)
             {
                 MarkIniSettingsDirty(actually_moving_window);
@@ -2979,7 +2976,7 @@ void ImGui::EndFrame()
                     // Set ActiveId even if the _NoMove flag is set, without it dragging away from a window with _NoMove would activate hover on other windows.
                     FocusWindow(g.HoveredWindow);
                     SetActiveID(g.HoveredWindow->MoveId, g.HoveredWindow);
-                    g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredWindow->Pos;
+                    g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredRootWindow->Pos;
                     if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
                     {
                         g.MovingWindow = g.HoveredWindow;
