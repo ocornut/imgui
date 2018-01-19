@@ -111,12 +111,12 @@ void ImGui_ImplSdlGL2_RenderDrawLists(ImDrawData* draw_data)
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 }
 
-static const char* ImGui_ImplSdl_GetClipboardText(void*)
+static const char* ImGui_ImplSdlGL2_GetClipboardText(void*)
 {
     return SDL_GetClipboardText();
 }
 
-static void ImGui_ImplSdl_SetClipboardText(void*, const char* text)
+static void ImGui_ImplSdlGL2_SetClipboardText(void*, const char* text)
 {
     SDL_SetClipboardText(text);
 }
@@ -227,8 +227,8 @@ bool    ImGui_ImplSdlGL2_Init(SDL_Window* window)
     io.KeyMap[ImGuiKey_Z] = SDLK_z;
 
     io.RenderDrawListsFn = ImGui_ImplSdlGL2_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
-    io.SetClipboardTextFn = ImGui_ImplSdl_SetClipboardText;
-    io.GetClipboardTextFn = ImGui_ImplSdl_GetClipboardText;
+    io.SetClipboardTextFn = ImGui_ImplSdlGL2_SetClipboardText;
+    io.GetClipboardTextFn = ImGui_ImplSdlGL2_GetClipboardText;
     io.ClipboardUserData = NULL;
 
 #ifdef _WIN32
@@ -267,7 +267,7 @@ void ImGui_ImplSdlGL2_NewFrame(SDL_Window *window)
     // Setup time step
     Uint32	time = SDL_GetTicks();
     double current_time = time / 1000.0;
-    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f/60.0f);
+    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f / 60.0f);
     g_Time = current_time;
 
     // Setup inputs
