@@ -11,7 +11,7 @@
 #CXX = g++
 
 EXE = opengl2_example
-OBJS = main.o imgui_impl_glfw.o
+OBJS = main.o imgui_impl_glfw_gl2.o
 OBJS += ../../imgui.o ../../imgui_demo.o ../../imgui_draw.o
 
 UNAME_S := $(shell uname -s)
