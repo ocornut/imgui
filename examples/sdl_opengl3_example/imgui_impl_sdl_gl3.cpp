@@ -385,7 +385,7 @@ void ImGui_ImplSdlGL3_NewFrame(SDL_Window* window)
     // (we already got mouse wheel, keyboard keys & characters from SDL_PollEvent())
     int mx, my;
     Uint32 mouseMask = SDL_GetMouseState(&mx, &my);
-    if (SDL_GetWindowFlags(window) & SDL_WINDOW_MOUSE_FOCUS)
+    if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS)
         io.MousePos = ImVec2((float)mx, (float)my);
     else
         io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
