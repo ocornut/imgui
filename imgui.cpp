@@ -3580,6 +3580,7 @@ bool ImGui::IsMousePosValid(const ImVec2* mouse_pos)
     return mouse_pos->x >= MOUSE_INVALID && mouse_pos->y >= MOUSE_INVALID;
 }
 
+// NB: This is only valid if IsMousePosValid(). Backends in theory should always keep mouse position valid when dragging even outside the client window.
 ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
 {
     ImGuiContext& g = *GImGui;
@@ -7622,16 +7623,19 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
             float v_cur = g.DragCurrentValue;
             const ImVec2 mouse_drag_delta = GetMouseDragDelta(0, 1.0f);
             float adjust_delta = 0.0f;
-            //if (g.ActiveIdSource == ImGuiInputSource_Mouse)
+            if (IsMousePosValid())
             {
-                adjust_delta = mouse_drag_delta.x - g.DragLastMouseDelta.x;
-                if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
-                    adjust_delta *= g.DragSpeedScaleFast;
-                if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
-                    adjust_delta *= g.DragSpeedScaleSlow;
+                //if (g.ActiveIdSource == ImGuiInputSource_Mouse)
+                {
+                    adjust_delta = mouse_drag_delta.x - g.DragLastMouseDelta.x;
+                    if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
+                        adjust_delta *= g.DragSpeedScaleFast;
+                    if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
+                        adjust_delta *= g.DragSpeedScaleSlow;
+                }
+                g.DragLastMouseDelta.x = mouse_drag_delta.x;
             }
             adjust_delta *= v_speed;
-            g.DragLastMouseDelta.x = mouse_drag_delta.x;
 
             if (fabsf(adjust_delta) > 0.0f)
             {
