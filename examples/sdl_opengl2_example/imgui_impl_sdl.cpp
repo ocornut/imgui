@@ -273,15 +273,15 @@ void ImGui_ImplSdlGL2_NewFrame(SDL_Window *window)
     // Setup inputs
     // (we already got mouse wheel, keyboard keys & characters from SDL_PollEvent())
     int mx, my;
-    Uint32 mouseMask = SDL_GetMouseState(&mx, &my);
+    Uint32 mouse_buttons = SDL_GetMouseState(&mx, &my);
     if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS)
         io.MousePos = ImVec2((float)mx, (float)my);
     else
         io.MousePos = ImVec2(-FLT_MAX,-FLT_MAX);
 
-    io.MouseDown[0] = g_MousePressed[0] || (mouseMask & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;		// If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-    io.MouseDown[1] = g_MousePressed[1] || (mouseMask & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
-    io.MouseDown[2] = g_MousePressed[2] || (mouseMask & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
+    io.MouseDown[0] = g_MousePressed[0] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+    io.MouseDown[1] = g_MousePressed[1] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
+    io.MouseDown[2] = g_MousePressed[2] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
     g_MousePressed[0] = g_MousePressed[1] = g_MousePressed[2] = false;
 
     io.MouseWheel = g_MouseWheel;
