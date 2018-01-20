@@ -213,6 +213,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2018/01/20 (1.XX) - removed allocator parameters from CreateContext(), they are now setup with SetMemoryAllocators() and shared by all contexts.
  - 2018/01/11 (1.54) - obsoleted IsAnyWindowHovered() in favor of IsWindowHovered(ImGuiHoveredFlags_AnyWindow). Kept redirection function (will obsolete).
  - 2018/01/11 (1.54) - obsoleted IsAnyWindowFocused() in favor of IsWindowFocused(ImGuiFocusedFlags_AnyWindow). Kept redirection function (will obsolete).
  - 2018/01/03 (1.54) - renamed ImGuiSizeConstraintCallback to ImGuiSizeCallback, ImGuiSizeConstraintCallbackData to ImGuiSizeCallbackData.
@@ -709,6 +710,17 @@ static ImGuiContext     GImDefaultContext;
 ImGuiContext*           GImGui = &GImDefaultContext;
 #endif
 
+// Memory Allocator Functions. Use SetMemoryAllocators() to change them.
+// If you use DLL hotreloading you might need to call SetMemoryAllocators() after reloading code from this file. 
+// Otherwise, you probably don't want to modify them mid-program, and if you use global/static e.g. ImVector<> instances you may need to keep them accessible during program destruction.
+static void*   MallocWrapper(size_t size, void* user_data)    { (void)user_data; return malloc(size); }
+static void    FreeWrapper(void* ptr, void* user_data)        { (void)user_data; free(ptr); }
+
+static void*  (*GImAllocatorAllocFunc)(size_t size, void* user_data) = MallocWrapper;
+static void   (*GImAllocatorFreeFunc)(void* ptr, void* user_data) = FreeWrapper;
+static void*    GImAllocatorUserData = NULL;
+static size_t   GImAllocatorActiveCount = 0;
+
 //-----------------------------------------------------------------------------
 // User facing structures
 //-----------------------------------------------------------------------------
@@ -807,8 +819,6 @@ ImGuiIO::ImGuiIO()
                                 
     // Settings (User Functions)
     RenderDrawListsFn = NULL;
-    MemAllocFn = malloc;
-    MemFreeFn = free;
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
     ClipboardUserData = NULL;
@@ -2173,14 +2183,14 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 
 void* ImGui::MemAlloc(size_t sz)
 {
-    GImGui->IO.MetricsAllocs++;
-    return GImGui->IO.MemAllocFn(sz);
+    GImAllocatorActiveCount++;
+    return GImAllocatorAllocFunc(sz, GImAllocatorUserData);
 }
 
 void ImGui::MemFree(void* ptr)
 {
-    if (ptr) GImGui->IO.MetricsAllocs--;
-    return GImGui->IO.MemFreeFn(ptr);
+    if (ptr) GImAllocatorActiveCount--;
+    return GImAllocatorFreeFunc(ptr, GImAllocatorUserData);
 }
 
 const char* ImGui::GetClipboardText()
@@ -2215,23 +2225,24 @@ void ImGui::SetCurrentContext(ImGuiContext* ctx)
 #endif
 }
 
-ImGuiContext* ImGui::CreateContext(void* (*malloc_fn)(size_t), void (*free_fn)(void*))
+void ImGui::SetMemoryAllocators(void* (*alloc_fn)(size_t sz, void* user_data), void(*free_fn)(void* ptr, void* user_data), void* user_data)
 {
-    if (!malloc_fn) malloc_fn = malloc;
-    ImGuiContext* ctx = (ImGuiContext*)malloc_fn(sizeof(ImGuiContext));
-    IM_PLACEMENT_NEW(ctx) ImGuiContext();
-    ctx->IO.MemAllocFn = malloc_fn;
-    ctx->IO.MemFreeFn = free_fn ? free_fn : free;
+    GImAllocatorAllocFunc = alloc_fn;
+    GImAllocatorFreeFunc = free_fn;
+    GImAllocatorUserData = user_data;
+}
+
+ImGuiContext* ImGui::CreateContext()
+{
+    ImGuiContext* ctx = IM_NEW(ImGuiContext)();
     return ctx;
 }
 
 void ImGui::DestroyContext(ImGuiContext* ctx)
 {
-    void (*free_fn)(void*) = ctx->IO.MemFreeFn;
-    ctx->~ImGuiContext();
-    free_fn(ctx);
     if (GImGui == ctx)
         SetCurrentContext(NULL);
+    IM_DELETE(ctx);
 }
 
 ImGuiIO& ImGui::GetIO()
@@ -11668,7 +11679,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::Text("%d vertices, %d indices (%d triangles)", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices, ImGui::GetIO().MetricsRenderIndices / 3);
-        ImGui::Text("%d allocations", ImGui::GetIO().MetricsAllocs);
+        ImGui::Text("%d allocations", GImAllocatorActiveCount);
         static bool show_clip_rects = true;
         ImGui::Checkbox("Show clipping rectangles when hovering an ImDrawCmd", &show_clip_rects);
         ImGui::Separator();
