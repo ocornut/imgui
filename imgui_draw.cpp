@@ -1352,7 +1352,6 @@ static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_Count_][
     { ImVec2(55,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNWSE
 };
 
-
 ImFontAtlas::ImFontAtlas()
 {
     TexID = NULL;
@@ -1607,6 +1606,26 @@ void ImFontAtlas::CalcCustomRectUV(const CustomRect* rect, ImVec2* out_uv_min, I
     IM_ASSERT(rect->IsPacked());                // Make sure the rectangle has been packed
     *out_uv_min = ImVec2((float)rect->X / TexWidth, (float)rect->Y / TexHeight);
     *out_uv_max = ImVec2((float)(rect->X + rect->Width) / TexWidth, (float)(rect->Y + rect->Height) / TexHeight);
+}
+
+bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2])
+{
+    if (cursor_type <= ImGuiMouseCursor_None || cursor_type >= ImGuiMouseCursor_Count_)
+        return false;
+
+    ImFontAtlas::CustomRect& r = CustomRects[CustomRectIds[0]];
+    IM_ASSERT(r.ID == FONT_ATLAS_DEFAULT_TEX_DATA_ID);
+    ImVec2 uv_scale(1.0f / TexWidth, 1.0f / TexHeight);
+    ImVec2 pos = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][0] + ImVec2((float)r.X, (float)r.Y);
+    ImVec2 size = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][1];
+    *out_size = size;
+    *out_offset = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][2];
+    out_uv_border[0] = (pos) * uv_scale;
+    out_uv_border[1] = (pos + size) * uv_scale;
+    pos.x += FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;
+    out_uv_fill[0] = (pos) * uv_scale;
+    out_uv_fill[1] = (pos + size) * uv_scale;
+    return true;
 }
 
 bool    ImFontAtlas::Build()
@@ -1891,22 +1910,6 @@ static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
         }
     const ImVec2 tex_uv_scale(1.0f / atlas->TexWidth, 1.0f / atlas->TexHeight);
     atlas->TexUvWhitePixel = ImVec2((r.X + 0.5f) * tex_uv_scale.x, (r.Y + 0.5f) * tex_uv_scale.y);
-
-    // Setup mouse cursors
-    for (int type = 0; type < ImGuiMouseCursor_Count_; type++)
-    {
-        ImGuiMouseCursorData& cursor_data = GImGui->MouseCursorData[type];
-        ImVec2 pos = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[type][0] + ImVec2((float)r.X, (float)r.Y);
-        const ImVec2 size = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[type][1];
-        cursor_data.Type = type;
-        cursor_data.Size = size;
-        cursor_data.HotOffset = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[type][2];
-        cursor_data.TexUvMin[0] = (pos) * tex_uv_scale;
-        cursor_data.TexUvMax[0] = (pos + size) * tex_uv_scale;
-        pos.x += FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;
-        cursor_data.TexUvMin[1] = (pos) * tex_uv_scale;
-        cursor_data.TexUvMax[1] = (pos + size) * tex_uv_scale;
-    }
 }
 
 void ImFontAtlasBuildFinish(ImFontAtlas* atlas)

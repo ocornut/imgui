@@ -38,7 +38,6 @@ struct ImGuiGroupData;
 struct ImGuiMenuColumns;
 struct ImGuiDrawContext;
 struct ImGuiTextEditState;
-struct ImGuiMouseCursorData;
 struct ImGuiPopupRef;
 struct ImGuiWindow;
 struct ImGuiWindowSettings;
@@ -382,16 +381,6 @@ struct ImGuiSettingsHandler
     ImGuiSettingsHandler() { memset(this, 0, sizeof(*this)); }
 };
 
-// Mouse cursor data (used when io.MouseDrawCursor is set)
-struct ImGuiMouseCursorData
-{
-    ImGuiMouseCursor    Type;
-    ImVec2              HotOffset;
-    ImVec2              Size;
-    ImVec2              TexUvMin[2];
-    ImVec2              TexUvMax[2];
-};
-
 // Storage for current popup stack
 struct ImGuiPopupRef
 {
@@ -557,7 +546,6 @@ struct ImGuiContext
     float                   ModalWindowDarkeningRatio;
     ImDrawList              OverlayDrawList;                    // Optional software render of mouse cursors, if io.MouseDrawCursor is set + a few debug overlays
     ImGuiMouseCursor        MouseCursor;
-    ImGuiMouseCursorData    MouseCursorData[ImGuiMouseCursor_Count_];
 
     // Drag and Drop
     bool                    DragDropActive;
@@ -645,7 +633,6 @@ struct ImGuiContext
         OverlayDrawList._Data = &DrawListSharedData;
         OverlayDrawList._OwnerName = "##Overlay"; // Give it a name for debugging
         MouseCursor = ImGuiMouseCursor_Arrow;
-        memset(MouseCursorData, 0, sizeof(MouseCursorData));
 
         DragDropActive = false;
         DragDropSourceFlags = 0;
