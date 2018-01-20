@@ -25,7 +25,7 @@
 static GLFWwindow*  g_Window = NULL;
 static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
-static float        g_MouseWheel = 0.0f;
+static ImVec2       g_MouseWheel = ImVec2(0.0f, 0.0f);
 
 // Vulkan Data
 static VkAllocationCallbacks* g_Allocator = NULL;
@@ -330,9 +330,10 @@ void ImGui_ImplGlfwVulkan_MouseButtonCallback(GLFWwindow*, int button, int actio
         g_MousePressed[button] = true;
 }
 
-void ImGui_ImplGlfwVulkan_ScrollCallback(GLFWwindow*, double /*xoffset*/, double yoffset)
+void ImGui_ImplGlfwVulkan_ScrollCallback(GLFWwindow*, double xoffset, double yoffset)
 {
-    g_MouseWheel += (float)yoffset; // Use fractional mouse wheel.
+    g_MouseWheel.x += (float)xoffset; // Use fractional mouse wheel.
+    g_MouseWheel.y += (float)yoffset;
 }
 
 void ImGui_ImplGlfwVulkan_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
@@ -825,8 +826,9 @@ void ImGui_ImplGlfwVulkan_NewFrame()
         g_MousePressed[i] = false;
     }
 
-    io.MouseWheel = g_MouseWheel;
-    g_MouseWheel = 0.0f;
+    io.MouseWheel = g_MouseWheel.y;
+    io.MouseWheelH = g_MouseWheel.x;
+    g_MouseWheel.x = g_MouseWheel.x = 0.0f;
 
     // Hide OS mouse cursor if ImGui is drawing it
     glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);

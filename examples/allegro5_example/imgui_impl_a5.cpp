@@ -215,6 +215,7 @@ bool ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT *ev)
     {
     case ALLEGRO_EVENT_MOUSE_AXES:
         io.MouseWheel += ev->mouse.dz;
+        io.MouseWheelH += ev->mouse.dw;
         return true;
     case ALLEGRO_EVENT_KEY_CHAR:
         if (ev->keyboard.display == g_Display)
