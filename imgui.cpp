@@ -639,6 +639,7 @@ static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 static ImFont*          GetDefaultFont();
 static void             SetCurrentFont(ImFont* font);
 static void             SetCurrentWindow(ImGuiWindow* window);
+static void             SetWindowScrollX(ImGuiWindow* window, float new_scroll_x);
 static void             SetWindowScrollY(ImGuiWindow* window, float new_scroll_y);
 static void             SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond);
 static void             SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond);
@@ -2513,6 +2514,16 @@ void ImGui::NewFrame()
                 scroll_amount = (float)(int)ImMin(scroll_amount, (scroll_window->ContentsRegionRect.GetHeight() + scroll_window->WindowPadding.y * 2.0f) * 0.67f);
                 SetWindowScrollY(scroll_window, scroll_window->Scroll.y - g.IO.MouseWheel * scroll_amount);
             }
+        }
+    }
+
+    // Horizontal wheel scrolling; for consistency, only allowed if Ctrl is not pressed.
+    if (g.HoveredWindow && g.IO.MouseHorizWheel != 0.0f && !g.HoveredWindow->Collapsed)
+    {
+        ImGuiWindow* window = g.HoveredWindow;
+        if (!g.IO.KeyCtrl && !(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
+        {
+            SetWindowScrollX(window, window->Scroll.x - g.IO.MouseHorizWheel * 10.f);
         }
     }
 
@@ -5607,6 +5618,13 @@ ImVec2 ImGui::GetWindowPos()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     return window->Pos;
+}
+
+static void SetWindowScrollX(ImGuiWindow* window, float new_scroll_x)
+{
+    window->DC.CursorMaxPos.x += window->Scroll.x; // SizeContents is generally computed based on CursorMaxPos which is affected by scroll position, so we need to apply our change to it.
+    window->Scroll.x = new_scroll_x;
+    window->DC.CursorMaxPos.x -= window->Scroll.x;
 }
 
 static void SetWindowScrollY(ImGuiWindow* window, float new_scroll_y)
