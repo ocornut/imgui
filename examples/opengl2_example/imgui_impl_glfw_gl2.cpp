@@ -31,8 +31,7 @@
 static GLFWwindow*  g_Window = NULL;
 static double       g_Time = 0.0f;
 static bool         g_MouseJustPressed[3] = { false, false, false };
-static float        g_MouseHorizWheel = 0.0f;
-static float        g_MouseWheel = 0.0f;
+static ImVec2       g_MouseWheel = ImVec2(0.0f, 0.0f);
 static GLuint       g_FontTexture = 0;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
@@ -137,8 +136,8 @@ void ImGui_ImplGlfwGL2_MouseButtonCallback(GLFWwindow*, int button, int action, 
 
 void ImGui_ImplGlfwGL2_ScrollCallback(GLFWwindow*, double xoffset, double yoffset)
 {
-    g_MouseHorizWheel += (float)xoffset; // Use fractional mouse wheel.
-    g_MouseWheel += (float)yoffset;
+    g_MouseWheel.x += (float)xoffset; // Use fractional mouse wheel.
+    g_MouseWheel.y += (float)yoffset;
 }
 
 void ImGui_ImplGlfwGL2_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
@@ -297,9 +296,9 @@ void ImGui_ImplGlfwGL2_NewFrame()
         g_MouseJustPressed[i] = false;
     }
 
-    io.MouseHorizWheel = g_MouseHorizWheel;
-    io.MouseWheel = g_MouseWheel;
-    g_MouseHorizWheel = g_MouseWheel = 0.0f;
+    io.MouseWheel = g_MouseWheel.y;
+    io.MouseWheelH = g_MouseWheel.x;
+    g_MouseWheel.x = g_MouseWheel.x = 0.0f;
 
     // Hide OS mouse cursor if ImGui is drawing it
     glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
