@@ -243,6 +243,9 @@ static bool IsAnyMouseButtonDown()
 // PS: We treat DBLCLK messages as regular mouse down messages, so this code will work on windows classes that have the CS_DBLCLKS flag set. Our own example app code doesn't set this flag.
 IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    if (ImGui::GetCurrentContext() == NULL)
+        return 0;
+
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
     {
