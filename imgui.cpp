@@ -713,8 +713,13 @@ ImGuiContext*           GImGui = &GImDefaultContext;
 // Memory Allocator Functions. Use SetMemoryAllocators() to change them.
 // If you use DLL hotreloading you might need to call SetMemoryAllocators() after reloading code from this file. 
 // Otherwise, you probably don't want to modify them mid-program, and if you use global/static e.g. ImVector<> instances you may need to keep them accessible during program destruction.
+#ifndef IMGUI_DISABLE_DEFAULT_ALLOCATORS
 static void*   MallocWrapper(size_t size, void* user_data)    { (void)user_data; return malloc(size); }
 static void    FreeWrapper(void* ptr, void* user_data)        { (void)user_data; free(ptr); }
+#else
+static void*   MallocWrapper(size_t size, void* user_data)    { (void)user_data; (void)size; IM_ASSERT(0); return NULL; }
+static void    FreeWrapper(void* ptr, void* user_data)        { (void)user_data; (void)ptr; IM_ASSERT(0); }
+#endif
 
 static void*  (*GImAllocatorAllocFunc)(size_t size, void* user_data) = MallocWrapper;
 static void   (*GImAllocatorFreeFunc)(void* ptr, void* user_data) = FreeWrapper;
