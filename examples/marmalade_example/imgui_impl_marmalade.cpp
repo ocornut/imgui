@@ -207,8 +207,6 @@ void    ImGui_Marmalade_InvalidateDeviceObjects()
 
 bool    ImGui_Marmalade_Init(bool install_callbacks)
 {
-    IwGxInit();
-
     ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = s3eKeyTab;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     io.KeyMap[ImGuiKey_LeftArrow] = s3eKeyLeft;
@@ -248,8 +246,6 @@ bool    ImGui_Marmalade_Init(bool install_callbacks)
 void ImGui_Marmalade_Shutdown()
 {
     ImGui_Marmalade_InvalidateDeviceObjects();
-    ImGui::Shutdown();
-    IwGxTerminate();
 }
 
 void ImGui_Marmalade_NewFrame()

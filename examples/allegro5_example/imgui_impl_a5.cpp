@@ -200,7 +200,6 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
 void ImGui_ImplA5_Shutdown()
 {
     ImGui_ImplA5_InvalidateDeviceObjects();
-    ImGui::Shutdown();
 }
 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.

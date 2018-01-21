@@ -122,6 +122,7 @@ int main(int, char**)
     UpdateWindow(hwnd);
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGui_ImplDX10_Init(hwnd, g_pd3dDevice);
 
     // Setup style
@@ -204,6 +205,8 @@ int main(int, char**)
     }
 
     ImGui_ImplDX10_Shutdown();
+    ImGui::DestroyContext();
+
     CleanupDeviceD3D();
     UnregisterClass(_T("ImGui Example"), wc.hInstance);
 

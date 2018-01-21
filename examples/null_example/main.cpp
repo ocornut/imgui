@@ -4,6 +4,7 @@
 
 int main(int, char**)
 {
+    ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
 
     // Build atlas
@@ -27,7 +28,7 @@ int main(int, char**)
         ImGui::Render();
     }
 
-    printf("Shutdown()\n");
-    ImGui::Shutdown();
+    printf("DestroyContext()\n");
+    ImGui::DestroyContext();
     return 0;
 }

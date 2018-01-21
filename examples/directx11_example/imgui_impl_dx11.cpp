@@ -571,7 +571,6 @@ bool    ImGui_ImplDX11_Init(void* hwnd, ID3D11Device* device, ID3D11DeviceContex
 void ImGui_ImplDX11_Shutdown()
 {
     ImGui_ImplDX11_InvalidateDeviceObjects();
-    ImGui::Shutdown();
     g_pd3dDevice = NULL;
     g_pd3dDeviceContext = NULL;
     g_hWnd = (HWND)0;

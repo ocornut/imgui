@@ -23,6 +23,7 @@ int main(int, char**)
     al_register_event_source(queue, al_get_mouse_event_source());
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGui_ImplA5_Init(display);
 
     // Setup style
@@ -109,6 +110,7 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplA5_Shutdown();
+    ImGui::DestroyContext();
     al_destroy_event_queue(queue);
     al_destroy_display(display);
 

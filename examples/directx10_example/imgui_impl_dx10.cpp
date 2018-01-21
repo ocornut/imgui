@@ -569,7 +569,6 @@ bool    ImGui_ImplDX10_Init(void* hwnd, ID3D10Device* device)
 void ImGui_ImplDX10_Shutdown()
 {
     ImGui_ImplDX10_InvalidateDeviceObjects();
-    ImGui::Shutdown();
     g_pd3dDevice = NULL;
     g_hWnd = (HWND)0;
 }

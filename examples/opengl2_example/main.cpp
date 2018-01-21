@@ -27,6 +27,7 @@ int main(int, char**)
     glfwSwapInterval(1); // Enable vsync
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGui_ImplGlfwGL2_Init(window, true);
 
     // Setup style
@@ -105,6 +106,7 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplGlfwGL2_Shutdown();
+    ImGui::DestroyContext();
     glfwTerminate();
 
     return 0;

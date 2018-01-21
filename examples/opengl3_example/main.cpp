@@ -32,6 +32,7 @@ int main(int, char**)
     gl3wInit();
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGui_ImplGlfwGL3_Init(window, true);
 
     // Setup style
@@ -109,6 +110,7 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplGlfwGL3_Shutdown();
+    ImGui::DestroyContext();
     glfwTerminate();
 
     return 0;

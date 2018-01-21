@@ -14,7 +14,10 @@
 
 int main(int, char**)
 {
+    IwGxInit();
+
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGui_Marmalade_Init(true);
 
     // Setup style
@@ -95,6 +98,8 @@ int main(int, char**)
 
     // Cleanup
     ImGui_Marmalade_Shutdown();
+    ImGui::DestroyContext();
+    IwGxTerminate();
 
     return 0;
 }

@@ -787,7 +787,6 @@ bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, Im
 void ImGui_ImplGlfwVulkan_Shutdown()
 {
     ImGui_ImplGlfwVulkan_InvalidateDeviceObjects();
-    ImGui::Shutdown();
 }
 
 void ImGui_ImplGlfwVulkan_NewFrame()

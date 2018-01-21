@@ -33,6 +33,7 @@ int main(int, char**)
     gl3wInit();
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGui_ImplSdlGL3_Init(window);
 
     // Setup style
@@ -115,6 +116,8 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplSdlGL3_Shutdown();
+    ImGui::DestroyContext();
+
     SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(window);
     SDL_Quit();

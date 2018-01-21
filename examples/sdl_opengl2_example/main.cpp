@@ -33,6 +33,7 @@ int main(int, char**)
     SDL_GLContext glcontext = SDL_GL_CreateContext(window);
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGui_ImplSdlGL2_Init(window);
 
     // Setup style
@@ -116,6 +117,8 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplSdlGL2_Shutdown();
+    ImGui::DestroyContext();
+
     SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(window);
     SDL_Quit();
