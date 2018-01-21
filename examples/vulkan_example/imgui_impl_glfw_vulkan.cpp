@@ -24,8 +24,7 @@
 // GLFW Data
 static GLFWwindow*  g_Window = NULL;
 static double       g_Time = 0.0f;
-static bool         g_MousePressed[3] = { false, false, false };
-static float        g_MouseWheel = 0.0f;
+static bool         g_MouseJustPressed[3] = { false, false, false };
 
 // Vulkan Data
 static VkAllocationCallbacks* g_Allocator = NULL;
@@ -327,12 +326,14 @@ static void ImGui_ImplGlfwVulkan_SetClipboardText(void* user_data, const char* t
 void ImGui_ImplGlfwVulkan_MouseButtonCallback(GLFWwindow*, int button, int action, int /*mods*/)
 {
     if (action == GLFW_PRESS && button >= 0 && button < 3)
-        g_MousePressed[button] = true;
+        g_MouseJustPressed[button] = true;
 }
 
-void ImGui_ImplGlfwVulkan_ScrollCallback(GLFWwindow*, double /*xoffset*/, double yoffset)
+void ImGui_ImplGlfwVulkan_ScrollCallback(GLFWwindow*, double xoffset, double yoffset)
 {
-    g_MouseWheel += (float)yoffset; // Use fractional mouse wheel.
+    ImGuiIO& io = ImGui::GetIO();
+    io.MouseWheelH += (float)xoffset;
+    io.MouseWheel += (float)yoffset;
 }
 
 void ImGui_ImplGlfwVulkan_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
@@ -821,12 +822,9 @@ void ImGui_ImplGlfwVulkan_NewFrame()
 
     for (int i = 0; i < 3; i++)
     {
-        io.MouseDown[i] = g_MousePressed[i] || glfwGetMouseButton(g_Window, i) != 0;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-        g_MousePressed[i] = false;
+        io.MouseDown[i] = g_MouseJustPressed[i] || glfwGetMouseButton(g_Window, i) != 0;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+        g_MouseJustPressed[i] = false;
     }
-
-    io.MouseWheel = g_MouseWheel;
-    g_MouseWheel = 0.0f;
 
     // Hide OS mouse cursor if ImGui is drawing it
     glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);

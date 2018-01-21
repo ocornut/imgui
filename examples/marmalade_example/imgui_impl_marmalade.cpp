@@ -21,7 +21,6 @@
 // Data
 static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
-static float        g_MouseWheel = 0.0f;
 static CIwTexture*  g_FontTexture = NULL;
 static char*        g_ClipboardText = NULL;
 static bool         g_osdKeyboardEnabled = false;
@@ -128,9 +127,9 @@ int32 ImGui_Marmalade_PointerButtonEventCallback(void* SystemData, void* pUserDa
         if (pEvent->m_Button == S3E_POINTER_BUTTON_MIDDLEMOUSE)
             g_MousePressed[2] = true;
         if (pEvent->m_Button == S3E_POINTER_BUTTON_MOUSEWHEELUP)
-            g_MouseWheel += pEvent->m_y;
+            io.MouseWheel += pEvent->m_y;
         if (pEvent->m_Button == S3E_POINTER_BUTTON_MOUSEWHEELDOWN)
-            g_MouseWheel += pEvent->m_y;
+            io.MouseWheel += pEvent->m_y;
     }
 
     return 0;
@@ -281,9 +280,6 @@ void ImGui_Marmalade_NewFrame()
         io.MouseDown[i] = g_MousePressed[i] || s3ePointerGetState((s3ePointerButton)i) != S3E_POINTER_STATE_UP;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
         g_MousePressed[i] = false;
     }
-
-    io.MouseWheel = g_MouseWheel;
-    g_MouseWheel = 0.0f;
 
     // TODO: Hide OS mouse cursor if ImGui is drawing it
     // s3ePointerSetInt(S3E_POINTER_HIDE_CURSOR,(io.MouseDrawCursor ? 0 : 1));

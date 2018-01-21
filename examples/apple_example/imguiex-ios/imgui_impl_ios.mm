@@ -587,9 +587,9 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
             io.MouseDown[i] = g_MousePressed[i];
         }
 
-        // This is an arbitrary scaling factor that works for me. Not sure what units these
-        // mousewheel values from synergy are supposed to be in
+        // This is an arbitrary scaling factor that works for me. Not sure what units these mousewheel values from synergy are supposed to be in.
         io.MouseWheel = g_mouseWheelY / 500.0;
+        io.MouseWheelH = g_mouseWheelX / 500.0;
     }
     else
     {

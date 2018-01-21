@@ -221,6 +221,9 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
     case WM_MOUSEWHEEL:
         io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
         return 0;
+    case WM_MOUSEHWHEEL:
+        io.MouseWheelH += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
+        return 0;
     case WM_MOUSEMOVE:
         io.MousePos.x = (signed short)(lParam);
         io.MousePos.y = (signed short)(lParam >> 16);
