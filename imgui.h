@@ -503,8 +503,9 @@ namespace ImGui
     IMGUI_API void          CaptureKeyboardFromApp(bool capture = true);                        // manually override io.WantCaptureKeyboard flag next frame (said flag is entirely left for your application handle). e.g. force capture keyboard when your widget is being hovered.
     IMGUI_API void          CaptureMouseFromApp(bool capture = true);                           // manually override io.WantCaptureMouse flag next frame (said flag is entirely left for your application handle).
 
-    // Helpers functions to access functions pointers in ImGui::GetIO()
-    IMGUI_API void*         MemAlloc(size_t sz);
+    // Helpers functions to access memory allocators and clipboard functions.
+    IMGUI_API void          SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void(*free_func)(void* ptr, void* user_data), void* user_data = NULL);
+    IMGUI_API void*         MemAlloc(size_t size);
     IMGUI_API void          MemFree(void* ptr);
     IMGUI_API const char*   GetClipboardText();
     IMGUI_API void          SetClipboardText(const char* text);
@@ -513,7 +514,6 @@ namespace ImGui
     // All contexts share a same ImFontAtlas by default. If you want different font atlas, you can new() them and overwrite the GetIO().Fonts variable of an ImGui context.
     // All those functions are not reliant on the current context.
     IMGUI_API const char*   GetVersion();
-    IMGUI_API void          SetMemoryAllocators(void* (*alloc_fn)(size_t sz, void* user_data), void(*free_fn)(void* ptr, void* user_data), void* user_data = NULL);
     IMGUI_API ImGuiContext* CreateContext();
     IMGUI_API void          DestroyContext(ImGuiContext* ctx);
     IMGUI_API ImGuiContext* GetCurrentContext();
