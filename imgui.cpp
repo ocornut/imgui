@@ -2300,6 +2300,7 @@ ImDrawListSharedData* ImGui::GetDrawListSharedData()
 
 void ImGui::NewFrame()
 {
+    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() or ImGui::SetCurrentContext()?");
     ImGuiContext& g = *GImGui;
 
     // Check user data
