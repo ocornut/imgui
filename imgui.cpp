@@ -3507,9 +3507,7 @@ bool ImGui::IsKeyReleased(int user_key_index)
     ImGuiContext& g = *GImGui;
     if (user_key_index < 0) return false;
     IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(g.IO.KeysDown));
-    if (g.IO.KeysDownDurationPrev[user_key_index] >= 0.0f && !g.IO.KeysDown[user_key_index])
-        return true;
-    return false;
+    return g.IO.KeysDownDurationPrev[user_key_index] >= 0.0f && !g.IO.KeysDown[user_key_index];
 }
 
 bool ImGui::IsMouseDown(int button)
