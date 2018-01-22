@@ -2393,11 +2393,10 @@ void ImGui::NewFrame()
     g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
 
     // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering).
-    if (g.MovingWindowMoveId && g.MovingWindowMoveId == g.ActiveId)
+    if (g.MovingWindow && g.MovingWindow->MoveId == g.ActiveId)
     {
         KeepAliveID(g.ActiveId);
         IM_ASSERT(g.MovingWindow && g.MovingWindow->RootWindow);
-        IM_ASSERT(g.MovingWindow->MoveId == g.MovingWindowMoveId);
         if (g.IO.MouseDown[0])
         {
             // MovingWindow = window we clicked on, could be a child window. We track it to preserve Focus and so that ActiveIdWindow == MovingWindow and ActiveId == MovingWindow->MoveId for consistency.
@@ -2414,7 +2413,6 @@ void ImGui::NewFrame()
         {
             ClearActiveID();
             g.MovingWindow = NULL;
-            g.MovingWindowMoveId = 0;
         }
     }
     else
@@ -2427,7 +2425,6 @@ void ImGui::NewFrame()
                 ClearActiveID();
         }
         g.MovingWindow = NULL;
-        g.MovingWindowMoveId = 0;
     }
 
     // Delay saving settings so we don't spam disk too much
@@ -2994,10 +2991,7 @@ void ImGui::EndFrame()
                     SetActiveID(g.HoveredWindow->MoveId, g.HoveredWindow);
                     g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredRootWindow->Pos;
                     if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
-                    {
                         g.MovingWindow = g.HoveredWindow;
-                        g.MovingWindowMoveId = g.MovingWindow->MoveId;
-                    }
                 }
                 else if (g.NavWindow != NULL && GetFrontMostModalRootWindow() == NULL)
                 {
