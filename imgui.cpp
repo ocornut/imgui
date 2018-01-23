@@ -645,7 +645,8 @@
 #include <stdint.h>     // intptr_t
 #endif
 
-#define IMGUI_DEBUG_NAV 0
+#define IMGUI_DEBUG_NAV_SCORING     0
+#define IMGUI_DEBUG_NAV_RECTS       0
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4127) // condition expression is constant
@@ -2197,7 +2198,7 @@ static bool NavScoreItem(ImRect cand)
         quadrant = (window->DC.LastItemId < g.NavId) ? ImGuiDir_Left : ImGuiDir_Right;
     }
 
-#if IMGUI_DEBUG_NAV
+#if IMGUI_DEBUG_NAV_SCORING
     if (ImGui::IsMouseHoveringRect(cand.Min, cand.Max))
     {
         char buf[128];
@@ -2257,7 +2258,7 @@ static bool NavScoreItem(ImRect cand)
 static inline void NavUpdateAnyRequestFlag()
 {
     ImGuiContext& g = *GImGui;
-    g.NavAnyRequest = g.NavMoveRequest || g.NavInitRequest || IMGUI_DEBUG_NAV;
+    g.NavAnyRequest = g.NavMoveRequest || g.NavInitRequest || IMGUI_DEBUG_NAV_SCORING;
 }
 
 static void NavMoveRequestCancel()
@@ -2294,7 +2295,7 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
     // Scoring for navigation
     if (g.NavId != id && !(item_flags & ImGuiItemFlags_NoNav))
     {
-#if IMGUI_DEBUG_NAV
+#if IMGUI_DEBUG_NAV_SCORING
         // [DEBUG] Score all items in NavWindow at all times
         if (!g.NavMoveRequest) 
             g.NavMoveDir = g.NavMoveDirLast;
@@ -2666,12 +2667,15 @@ static float GetNavInputAmount(ImGuiNavInput n, ImGuiNavReadMode mode)
 {
     ImGuiContext& g = *GImGui;
     if (mode == ImGuiNavReadMode_Down)
-        return g.IO.NavInputs[n];                   // Instant, read analog input (0.0f..1.0f, as provided by user)
-    const float t = g.IO.NavInputsDownDuration[n];  // Duration pressed
-    if (mode == ImGuiNavReadMode_Pressed)           // Return 1.0f when just pressed, no repeat, ignore analog input (we don't need it for Pressed logic)
+        return g.IO.NavInputs[n];                       // Instant, read analog input (0.0f..1.0f, as provided by user)
+
+    const float t = g.IO.NavInputsDownDuration[n];
+    if (t < 0.0f && mode == ImGuiNavReadMode_Released)  // Return 1.0f when just released, no repeat, ignore analog input.
+        return (g.IO.NavInputsDownDurationPrev[n] >= 0.0f ? 1.0f : 0.0f);
+    if (t < 0.0f)
+        return 0.0f;
+    if (mode == ImGuiNavReadMode_Pressed)               // Return 1.0f when just pressed, no repeat, ignore analog input.
         return (t == 0.0f) ? 1.0f : 0.0f;
-    if (mode == ImGuiNavReadMode_Released)           // Return 1.0f when just release, no repeat, ignore analog input (we don't need it for Pressed logic)
-        return (t < 0.0f && g.IO.NavInputsDownDurationPrev[n] >= 0.0f) ? 1.0f : 0.0f;
     if (mode == ImGuiNavReadMode_Repeat)
         return (float)ImGui::CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay * 0.80f, g.IO.KeyRepeatRate * 0.80f);
     if (mode == ImGuiNavReadMode_RepeatSlow)
@@ -2688,7 +2692,7 @@ static bool IsNavInputDown(ImGuiNavInput n)
 }
 
 // Equivalent of IsKeyPressed() for NavInputs[]
-static bool IsNavInputPressed(ImGuiNavInput n, ImGuiNavReadMode mode)// = ImGuiNavReadMode_Re)
+static bool IsNavInputPressed(ImGuiNavInput n, ImGuiNavReadMode mode)
 {
     return GetNavInputAmount(n, mode) > 0.0f;
 }
@@ -2708,7 +2712,7 @@ static ImVec2 GetNavInputAmount2d(int stick_no, ImGuiNavReadMode mode, float slo
     return delta;
 }
 
-// Window management mode (change focus, move/resize window, toggle menu layer)
+// Window management mode (hold to: change focus/move/resize, tap to: toggle menu layer)
 static void ImGui::NavUpdateWindowing()
 {
     ImGuiContext& g = *GImGui;
@@ -3057,7 +3061,9 @@ static void ImGui::NavUpdate()
     g.NavScoringRectScreen.Min.x = ImMin(g.NavScoringRectScreen.Min.x + 1.0f, g.NavScoringRectScreen.Max.x);
     g.NavScoringRectScreen.Max.x = g.NavScoringRectScreen.Min.x;
     //g.OverlayDrawList.AddRect(g.NavScoringRectScreen.Min, g.NavScoringRectScreen.Max, IM_COL32(255,200,0,255)); // [DEBUG]
-    //if (g.NavWindow) for (int layer = 0; layer < 2; layer++) g.OverlayDrawList.AddRect(g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Min, g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Max, IM_COL32(255,200,0,255)); // [DEBUG]
+#if IMGUI_DEBUG_NAV_RECTS
+    if (g.NavWindow) for (int layer = 0; layer < 2; layer++) g.OverlayDrawList.AddRect(g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Min, g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Max, IM_COL32(255,200,0,255)); // [DEBUG]
+#endif
 }
 
 void ImGui::NewFrame()
