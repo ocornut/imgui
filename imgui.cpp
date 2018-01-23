@@ -2020,10 +2020,10 @@ ImGuiID ImGui::GetActiveID()
 
 void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
 {
-    IM_ASSERT(id != 0);
     ImGuiContext& g = *GImGui;
-        
-    // Assume that SetActiveID() is called in the context where its NavLayer is the current layer, which is the case everywhere we call it.
+    IM_ASSERT(id != 0);
+
+    // Assume that SetFocusID() is called in the context where its NavLayer is the current layer, which is the case everywhere we call it.
     const int nav_layer = window->DC.NavLayerCurrent;
     g.NavId = id;
     g.NavWindow = window;

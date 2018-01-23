@@ -698,6 +698,7 @@ enum ImGuiKey_
 // Your code passing analog gamepad values is likely to want to transform your raw inputs, using a dead-zone and maybe a power curve.
 enum ImGuiNavInput_
 {
+    // Gamepad Mapping
     ImGuiNavInput_PadActivate,      // press button, tweak value                    // e.g. Circle button
     ImGuiNavInput_PadCancel,        // close menu/popup/child, lose selection       // e.g. Cross button
     ImGuiNavInput_PadInput,         // text input                                   // e.g. Triangle button
@@ -714,6 +715,8 @@ enum ImGuiNavInput_
     ImGuiNavInput_PadFocusNext,     // prev window (with PadMenu held)              // e.g. R-trigger
     ImGuiNavInput_PadTweakSlow,     // slower tweaks                                // e.g. L-trigger, analog
     ImGuiNavInput_PadTweakFast,     // faster tweaks                                // e.g. R-trigger, analog
+    // Keyboard Mapping
+    // [BETA] You can use gamepad mapping for most inputs
     ImGuiNavInput_KeyMenu,          // access menu                                  // e.g. ALT
     ImGuiNavInput_COUNT,
 };
@@ -920,7 +923,6 @@ struct ImGuiIO
     int           KeyMap[ImGuiKey_COUNT];   // <unset>              // Map of indices into the KeysDown[512] entries array which represent your "native" keyboard state.
     float         KeyRepeatDelay;           // = 0.250f             // When holding a key/button, time before it starts repeating, in seconds (for buttons in Repeat mode, etc.).
     float         KeyRepeatRate;            // = 0.050f             // When holding a key/button, rate at which it repeats, in seconds.
-    bool          NavMovesMouse;            // = false              // Directional navigation can move the mouse cursor. Updates MousePos and set WantMoveMouse=true. If enabled you MUST honor those requests in your binding, otherwise ImGui will react as if mouse is jumping around.
     void*         UserData;                 // = NULL               // Store your own data for retrieval by callbacks.
 
     ImFontAtlas*  Fonts;                    // <auto>               // Load and assemble one or more fonts into a single tightly packed texture. Output to Fonts array.
@@ -931,6 +933,8 @@ struct ImGuiIO
     ImVec2        DisplayVisibleMin;        // <unset> (0.0f,0.0f)  // If you use DisplaySize as a virtual space larger than your screen, set DisplayVisibleMin/Max to the visible area.
     ImVec2        DisplayVisibleMax;        // <unset> (0.0f,0.0f)  // If the values are the same, we defaults to Min=(0.0f) and Max=DisplaySize
 
+    // Gamepad/Keyboard Navigation
+    bool          NavMovesMouse;            // = false              // Directional navigation can move the mouse cursor. Updates MousePos and set WantMoveMouse=true. If enabled you MUST honor those requests in your binding, otherwise ImGui will react as if mouse is jumping around.
     // Advanced/subtle behaviors
     bool          OptMacOSXBehaviors;       // = defined(__APPLE__) // OS X style: Text editing cursor movement using Alt instead of Ctrl, Shortcuts using Cmd/Super instead of Ctrl, Line/Text Start and End using Cmd+Arrows instead of Home/End, Double click selects by word instead of selecting whole text, Multi-selection in lists uses Cmd/Super instead of Ctrl
     bool          OptCursorBlink;           // = true               // Enable blinking cursor, for users who consider it annoying.
