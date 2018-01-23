@@ -27,10 +27,8 @@
  - ISSUES & TODO LIST
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - How can I help?
-   - What is ImTextureID and how do I display an image?
-   - I integrated Dear ImGui in my engine and the text or lines are blurry..
-   - I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
-   - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on labels/IDs.
+   - How can I dipslay an image? What is ImTextureID, how does it works?
+   - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on labels and the ID stack.
    - How can I tell when Dear ImGui wants my mouse/keyboard inputs VS when I can pass them to my application?
    - How can I load a different font than the default?
    - How can I easily use icons in my application?
@@ -38,6 +36,8 @@
    - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
    - How can I preserve my Dear ImGui context across reloading a DLL? (loss of the global/static variables)
    - How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
+   - I integrated Dear ImGui in my engine and the text or lines are blurry..
+   - I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
  - ISSUES & TODO-LIST
  - CODE
 
@@ -410,10 +410,14 @@
  ======================================
 
  Q: How can I help?
- A: - If you are experienced enough with Dear ImGui and with C/C++, look at the todo list and see how you want/can help!
-    - Become a Patron/donate! Convince your company to become a Patron or provide serious funding for development time! See http://www.patreon.com/imgui
+ A: - If you are experienced with Dear ImGui and C++, look at the github issues, or TODO.txt and see how you want/can help!
+    - Convince your company to fund development time! Individual users: you can also become a Patron (patreon.com/imgui) or donate on PayPal! See README.
+    - Disclose your usage of dear imgui via a dev blog post, a tweet, a screenshot, a mention somewhere etc. 
+      You may post screenshot or links in the gallery threads (github.com/ocornut/imgui/issues/1269). Visuals are ideal as they inspire other programmers.
+      But even without visuals, disclosing your use of dear imgui help the library grow credibility, and help other teams and programmers with taking decisions.
+    - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues (on github or privately).
 
- Q: What is ImTextureID and how do I display an image?
+ Q: How can I display an image? What is ImTextureID, how does it works?
  A: ImTextureID is a void* used to pass renderer-agnostic texture references around until it hits your render function.
     Dear ImGui knows nothing about what those bits represent, it just passes them around. It is up to you to decide what you want the void* to carry!
     It could be an identifier to your OpenGL texture (cast GLuint to void*), a pointer to your custom engine material (cast MyMaterial* to void*), etc.
@@ -422,26 +426,19 @@
     (c++ tip: OpenGL uses integers to identify textures. You can safely store an integer into a void*, just cast it to void*, don't take it's address!)
     To display a custom image/texture within an ImGui window, you may use ImGui::Image(), ImGui::ImageButton(), ImDrawList::AddImage() functions.
     Dear ImGui will generate the geometry and draw calls using the ImTextureID that you passed and which your renderer can use.
+    You may call ImGui::ShowMetricsWindow() to explore active draw lists and visualize/understand how the draw data is generated.
     It is your responsibility to get textures uploaded to your GPU.
 
- Q: I integrated Dear ImGui in my engine and the text or lines are blurry..
- A: In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
-    Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
-
- Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
- A: You are probably mishandling the clipping rectangles in your render function. 
-    Rectangles provided by ImGui are defined as (x1=left,y1=top,x2=right,y2=bottom) and NOT as (x1,y1,width,height).
-
  Q: Can I have multiple widgets with the same label? Can I have widget without a label?
- A: Yes. A primer on the use of labels/IDs in Dear ImGui..
+ A: Yes. A primer on labels and the ID stack...
 
-   - Elements that are not clickable, such as Text() items don't need an ID.
+   - Elements that are typically not clickable, such as Text() items don't need an ID.
 
    - Interactive widgets require state to be carried over multiple frames (most typically Dear ImGui often needs to remember what is 
      the "active" widget). to do so they need a unique ID. unique ID are typically derived from a string label, an integer index or a pointer.
 
-       Button("OK");        // Label = "OK",     ID = hash of "OK"
-       Button("Cancel");    // Label = "Cancel", ID = hash of "Cancel"
+       Button("OK");          // Label = "OK",     ID = hash of "OK"
+       Button("Cancel");      // Label = "Cancel", ID = hash of "Cancel"
 
    - ID are uniquely scoped within windows, tree nodes, etc. so no conflict can happen if you have two buttons called "OK"
      in two different windows or in two different locations of a tree.
@@ -449,34 +446,35 @@
    - If you have a same ID twice in the same location, you'll have a conflict:
 
        Button("OK");
-       Button("OK");           // ID collision! Both buttons will be treated as the same.
+       Button("OK");          // ID collision! Both buttons will be treated as the same.
 
      Fear not! this is easy to solve and there are many ways to solve it!
 
-   - When passing a label you can optionally specify extra unique ID information within string itself. 
-     This helps solving the simpler collision cases. Use "##" to pass a complement to the ID that won't be visible to the end-user:
+   - When passing a label you can optionally specify extra unique ID information within string itself.
+     Use "##" to pass a complement to the ID that won't be visible to the end-user.
+     This helps solving the simple collision cases when you know which items are going to be created.
 
-       Button("Play");         // Label = "Play",   ID = hash of "Play"
-       Button("Play##foo1");   // Label = "Play",   ID = hash of "Play##foo1" (different from above)
-       Button("Play##foo2");   // Label = "Play",   ID = hash of "Play##foo2" (different from above)
+       Button("Play");        // Label = "Play",   ID = hash of "Play"
+       Button("Play##foo1");  // Label = "Play",   ID = hash of "Play##foo1" (different from above)
+       Button("Play##foo2");  // Label = "Play",   ID = hash of "Play##foo2" (different from above)
 
    - If you want to completely hide the label, but still need an ID:
 
-       Checkbox("##On", &b);   // Label = "",       ID = hash of "##On" (no label!)
+       Checkbox("##On", &b);  // Label = "",       ID = hash of "##On" (no label!)
 
    - Occasionally/rarely you might want change a label while preserving a constant ID. This allows you to animate labels.
-     For example you may want to include varying information in a window title bar (and windows are uniquely identified by their ID.. obviously)
+     For example you may want to include varying information in a window title bar, but windows are uniquely identified by their ID..
      Use "###" to pass a label that isn't part of ID:
 
        Button("Hello###ID";   // Label = "Hello",  ID = hash of "ID"
        Button("World###ID";   // Label = "World",  ID = hash of "ID" (same as above)
 
-       sprintf(buf, "My game (%f FPS)###MyGame");
+       sprintf(buf, "My game (%f FPS)###MyGame", fps);
        Begin(buf);            // Variable label,   ID = hash of "MyGame"
 
    - Use PushID() / PopID() to create scopes and avoid ID conflicts within the same Window.
      This is the most convenient way of distinguishing ID if you are iterating and creating many UI elements.
-     You can push a pointer, a string or an integer value. Remember that ID are formed from the concatenation of everything in the ID stack!
+     You can push a pointer, a string or an integer value. Remember that ID are formed from the concatenation of _everything_ in the ID stack!
 
        for (int i = 0; i < 100; i++)
        {
@@ -606,16 +604,25 @@
     so you don't rely on the default globals.
 
  Q: How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
- A: The easiest way is to create a dummy window. Call Begin() with NoTitleBar|NoResize|NoMove|NoScrollbar|NoSavedSettings|NoInputs flag, 
-    zero background alpha, then retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
-    You can also perfectly create a standalone ImDrawList instance _but_ you need ImGui to be initialized because ImDrawList pulls from ImGui 
-    data to retrieve the coordinates of the white pixel.
+ A: - You can create a dummy window. Call Begin() with NoTitleBar|NoResize|NoMove|NoScrollbar|NoSavedSettings|NoInputs flag, 
+      push a ImGuiCol_WindowBg with zero alpha, then retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
+    - You can call ImGui::GetOverlayDrawList() and use this draw list to display contents over every other imgui windows.
+    - You can create your own ImDrawList instance. You'll need to initialize them ImGui::GetDrawListSharedData(), or create your own ImDrawListSharedData.
+
+ Q: I integrated Dear ImGui in my engine and the text or lines are blurry..
+ A: In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
+    Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
+
+ Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
+ A: You are probably mishandling the clipping rectangles in your render function. 
+    Rectangles provided by ImGui are defined as (x1=left,y1=top,x2=right,y2=bottom) and NOT as (x1,y1,width,height).
+
 
  - tip: you can call Begin() multiple times with the same name during the same frame, it will keep appending to the same window. 
-   this is also useful to set yourself in the context of another window (to get/set other settings)
+        this is also useful to set yourself in the context of another window (to get/set other settings)
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug".
  - tip: the ImGuiOnceUponAFrame helper will allow run the block of code only once a frame. You can use it to quickly add custom UI in the middle
-   of a deep nested inner loop in your code.
+        of a deep nested inner loop in your code.
  - tip: you can call Render() multiple times (e.g for VR renders).
  - tip: call and read the ShowDemoWindow() code in imgui_demo.cpp for more example of how to use ImGui!
 
@@ -3180,11 +3187,10 @@ void ImGui::NewFrame()
     g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
 
     // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering).
-    if (g.MovingWindowMoveId && g.MovingWindowMoveId == g.ActiveId && g.ActiveIdSource == ImGuiInputSource_Mouse)
+    if (g.MovingWindow && g.MovingWindow->MoveId == g.ActiveId && g.ActiveIdSource == ImGuiInputSource_Mouse)
     {
         KeepAliveID(g.ActiveId);
         IM_ASSERT(g.MovingWindow && g.MovingWindow->RootWindow);
-        IM_ASSERT(g.MovingWindow->MoveId == g.MovingWindowMoveId);
         if (g.IO.MouseDown[0])
         {
             // MovingWindow = window we clicked on, could be a child window. We track it to preserve Focus and so that ActiveIdWindow == MovingWindow and ActiveId == MovingWindow->MoveId for consistency.
@@ -3201,7 +3207,6 @@ void ImGui::NewFrame()
         {
             ClearActiveID();
             g.MovingWindow = NULL;
-            g.MovingWindowMoveId = 0;
         }
     }
     else
@@ -3214,7 +3219,6 @@ void ImGui::NewFrame()
                 ClearActiveID();
         }
         g.MovingWindow = NULL;
-        g.MovingWindowMoveId = 0;
     }
 
     // Delay saving settings so we don't spam disk too much
@@ -3787,10 +3791,7 @@ void ImGui::EndFrame()
                     SetActiveID(g.HoveredWindow->MoveId, g.HoveredWindow);
                     g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredRootWindow->Pos;
                     if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
-                    {
                         g.MovingWindow = g.HoveredWindow;
-                        g.MovingWindowMoveId = g.MovingWindow->MoveId;
-                    }
                     
                     // FIXME-NAV: This never execute because of the FocusWindow call above, however we may want this behavior?
                     /*
@@ -4772,6 +4773,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
     }
 
     // Center modal windows by default
+    // FIXME: Should test for (PosCond & window->SetWindowPosAllowFlags) with the upcoming window.
     if (g.NextWindowData.PosCond == 0)
         SetNextWindowPos(g.IO.DisplaySize * 0.5f, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
@@ -5727,8 +5729,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
         else
         {
-            // Window background, Default Alpha
+            // Window background
             ImU32 bg_col = GetColorU32(GetWindowBgColorIdxFromFlags(flags));
+            if (g.NextWindowData.BgAlphaCond != 0)
+                bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(g.NextWindowData.BgAlphaVal) << IM_COL32_A_SHIFT);
             window->DrawList->AddRectFilled(window->Pos+ImVec2(0,window->TitleBarHeight()), window->Pos+window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawCornerFlags_All : ImDrawCornerFlags_Bot);
 
             // Title bar
@@ -5957,22 +5961,12 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_on_first_us
 {
     // Old API feature: we could pass the initial window size as a parameter, however this was very misleading because in most cases it would only affect the window when it didn't have storage in the .ini file.
     if (size_on_first_use.x != 0.0f || size_on_first_use.y != 0.0f)
-        SetNextWindowSize(size_on_first_use, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(size_on_first_use, ImGuiCond_FirstUseEver);
 
-    // Old API feature: we could override the window background alpha with a parameter. This is actually tricky to reproduce manually because: 
-    // (1) there are multiple variants of WindowBg (popup, tooltip, etc.) and (2) you can't call PushStyleColor before Begin and PopStyleColor just after Begin() because of how CheckStackSizes() behave.
-    // The user-side solution is to do backup = GetStyleColorVec4(ImGuiCol_xxxBG), PushStyleColor(ImGuiCol_xxxBg), Begin, PushStyleColor(ImGuiCol_xxxBg, backup), [...], PopStyleColor(), End(); PopStyleColor() - which is super awkward.
-    // The alpha override was rarely used but for now we'll leave the Begin() variant around for a bit. We may either lift the constraint on CheckStackSizes() either add a SetNextWindowBgAlpha() helper that does it magically.
-    ImGuiContext& g = *GImGui;
-    const ImGuiCol bg_color_idx = GetWindowBgColorIdxFromFlags(flags);
-    const ImVec4 bg_color_backup = g.Style.Colors[bg_color_idx];
-    if (bg_alpha_override >= 0.0f)
-        g.Style.Colors[bg_color_idx].w = bg_alpha_override;
+    // Old API feature: override the window background alpha with a parameter.
+    ImGui::SetNextWindowBgAlpha(bg_alpha_override);
 
-    bool ret = Begin(name, p_open, flags);
-
-    if (bg_alpha_override >= 0.0f)
-        g.Style.Colors[bg_color_idx] = bg_color_backup;
+    bool ret = ImGui::Begin(name, p_open, flags);
     return ret;
 }
 #endif // IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -6355,13 +6349,14 @@ struct ImGuiStyleVarInfo
     void*           GetVarPtr(ImGuiStyle* style) const { return (void*)((unsigned char*)style + Offset); }
 };
 
-static const ImGuiStyleVarInfo GStyleVarInfo[ImGuiStyleVar_Count_] =
+static const ImGuiStyleVarInfo GStyleVarInfo[] =
 {
     { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, Alpha) },                // ImGuiStyleVar_Alpha
     { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowPadding) },        // ImGuiStyleVar_WindowPadding
     { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, WindowRounding) },       // ImGuiStyleVar_WindowRounding
     { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, WindowBorderSize) },     // ImGuiStyleVar_WindowBorderSize
     { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowMinSize) },        // ImGuiStyleVar_WindowMinSize
+    { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowTitleAlign) },     // ImGuiStyleVar_WindowTitleAlign
     { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, ChildRounding) },        // ImGuiStyleVar_ChildRounding
     { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, ChildBorderSize) },      // ImGuiStyleVar_ChildBorderSize
     { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, PopupRounding) },        // ImGuiStyleVar_PopupRounding
@@ -6372,13 +6367,17 @@ static const ImGuiStyleVarInfo GStyleVarInfo[ImGuiStyleVar_Count_] =
     { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, ItemSpacing) },          // ImGuiStyleVar_ItemSpacing
     { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, ItemInnerSpacing) },     // ImGuiStyleVar_ItemInnerSpacing
     { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, IndentSpacing) },        // ImGuiStyleVar_IndentSpacing
+    { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, ScrollbarSize) },        // ImGuiStyleVar_ScrollbarSize
+    { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, ScrollbarRounding) },    // ImGuiStyleVar_ScrollbarRounding
     { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, GrabMinSize) },          // ImGuiStyleVar_GrabMinSize
+    { ImGuiDataType_Float,  (ImU32)IM_OFFSETOF(ImGuiStyle, GrabRounding) },         // ImGuiStyleVar_GrabRounding
     { ImGuiDataType_Float2, (ImU32)IM_OFFSETOF(ImGuiStyle, ButtonTextAlign) },      // ImGuiStyleVar_ButtonTextAlign
 };
 
 static const ImGuiStyleVarInfo* GetStyleVarInfo(ImGuiStyleVar idx)
 {
     IM_ASSERT(idx >= 0 && idx < ImGuiStyleVar_Count_);
+    IM_ASSERT(IM_ARRAYSIZE(GStyleVarInfo) == ImGuiStyleVar_Count_);
     return &GStyleVarInfo[idx];
 }
 
@@ -6756,7 +6755,14 @@ void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiCond cond)
 void ImGui::SetNextWindowFocus()
 {
     ImGuiContext& g = *GImGui;
-    g.NextWindowData.FocusCond = ImGuiCond_Always;
+    g.NextWindowData.FocusCond = ImGuiCond_Always;   // Using a Cond member for consistency (may transition all of them to single flag set for fast Clear() op)
+}
+
+void ImGui::SetNextWindowBgAlpha(float alpha)
+{
+    ImGuiContext& g = *GImGui;
+    g.NextWindowData.BgAlphaVal = alpha;
+    g.NextWindowData.BgAlphaCond = ImGuiCond_Always; // Using a Cond member for consistency (may transition all of them to single flag set for fast Clear() op)
 }
 
 // In window space (not screen space!)

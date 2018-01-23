@@ -485,6 +485,7 @@ struct ImGuiNextWindowData
     ImGuiCond               CollapsedCond;
     ImGuiCond               SizeConstraintCond;
     ImGuiCond               FocusCond;
+    ImGuiCond               BgAlphaCond;
     ImVec2                  PosVal;
     ImVec2                  PosPivotVal;
     ImVec2                  SizeVal;
@@ -493,21 +494,23 @@ struct ImGuiNextWindowData
     ImRect                  SizeConstraintRect;                 // Valid if 'SetNextWindowSizeConstraint' is true
     ImGuiSizeCallback       SizeCallback;
     void*                   SizeCallbackUserData;
+    float                   BgAlphaVal;
 
     ImGuiNextWindowData()
     {
-        PosCond = SizeCond = ContentSizeCond = CollapsedCond = SizeConstraintCond = FocusCond = 0;
+        PosCond = SizeCond = ContentSizeCond = CollapsedCond = SizeConstraintCond = FocusCond = BgAlphaCond = 0;
         PosVal = PosPivotVal = SizeVal = ImVec2(0.0f, 0.0f);
         ContentSizeVal = ImVec2(0.0f, 0.0f);
         CollapsedVal = false;
         SizeConstraintRect = ImRect();
         SizeCallback = NULL;
         SizeCallbackUserData = NULL;
+        BgAlphaVal = FLT_MAX;
     }
 
     void    Clear()
     {
-        PosCond = SizeCond = ContentSizeCond = CollapsedCond = SizeConstraintCond = FocusCond = 0;
+        PosCond = SizeCond = ContentSizeCond = CollapsedCond = SizeConstraintCond = FocusCond = BgAlphaCond = 0;
     }
 };
 
@@ -549,7 +552,6 @@ struct ImGuiContext
     ImGuiWindow*            ActiveIdWindow;
     ImGuiInputSource        ActiveIdSource;                     // Activating with mouse or nav (gamepad/keyboard)
     ImGuiWindow*            MovingWindow;                       // Track the window we clicked on (in order to preserve focus). The actually window that is moved is generally MovingWindow->RootWindow.
-    ImGuiID                 MovingWindowMoveId;                 // == MovingWindow->MoveId
     ImVector<ImGuiColMod>   ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
     ImVector<ImGuiStyleMod> StyleModifiers;                     // Stack for PushStyleVar()/PopStyleVar()
     ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont()
@@ -681,7 +683,6 @@ struct ImGuiContext
         ActiveIdWindow = NULL;
         ActiveIdSource = ImGuiInputSource_None;
         MovingWindow = NULL;
-        MovingWindowMoveId = 0;
         NextTreeNodeOpenVal = false;
         NextTreeNodeOpenCond = 0;
 
