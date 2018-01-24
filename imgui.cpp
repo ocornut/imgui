@@ -4806,7 +4806,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Window background
             ImU32 bg_col = GetColorU32(GetWindowBgColorIdxFromFlags(flags));
             if (g.NextWindowData.BgAlphaCond != 0)
+            {
                 bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(g.NextWindowData.BgAlphaVal) << IM_COL32_A_SHIFT);
+                g.NextWindowData.BgAlphaCond = 0;
+            }
             window->DrawList->AddRectFilled(window->Pos+ImVec2(0,window->TitleBarHeight()), window->Pos+window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawCornerFlags_All : ImDrawCornerFlags_Bot);
 
             // Title bar
