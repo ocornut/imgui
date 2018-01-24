@@ -28,7 +28,7 @@
     <Item Name="Min">Min</Item>
     <Item Name="Max">Max</Item>
     <Item Name="[Width]">Max.x - Min.x</Item>
-    <Item Name="[Height]">Max.x - Min.x</Item>
+    <Item Name="[Height]">Max.y - Min.y</Item>
   </Expand>
 </Type>
 
