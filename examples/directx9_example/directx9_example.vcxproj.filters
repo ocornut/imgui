@@ -42,5 +42,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.txt" />
+    <None Include="..\libs\imgui.natvis">
+      <Filter>sources</Filter>
+    </None>
   </ItemGroup>
 </Project>
