@@ -703,21 +703,21 @@ enum ImGuiNavInput_
     ImGuiNavInput_PadActivate,      // press button, tweak value                    // e.g. Circle button
     ImGuiNavInput_PadCancel,        // close menu/popup/child, lose selection       // e.g. Cross button
     ImGuiNavInput_PadInput,         // text input                                   // e.g. Triangle button
-    ImGuiNavInput_PadMenu,          // access menu, focus, move, resize             // e.g. Square button
-    ImGuiNavInput_PadUp,            // move up, resize window (with PadMenu held)   // e.g. D-pad up/down/left/right, analog
-    ImGuiNavInput_PadDown,          // move down
-    ImGuiNavInput_PadLeft,          // move left
+    ImGuiNavInput_PadMenu,          // toggle menu, hold to: focus, move, resize    // e.g. Square button
+    ImGuiNavInput_PadLeft,          // move left, resize window (with PadMenu)      // e.g. D-pad or left stick directions (analog)
     ImGuiNavInput_PadRight,         // move right
-    ImGuiNavInput_PadScrollUp,      // scroll up, move window (with PadMenu held)   // e.g. right stick up/down/left/right, analog
-    ImGuiNavInput_PadScrollDown,    // "
-    ImGuiNavInput_PadScrollLeft,    //
-    ImGuiNavInput_PadScrollRight,   //
-    ImGuiNavInput_PadFocusPrev,     // next window (with PadMenu held)              // e.g. L-trigger
-    ImGuiNavInput_PadFocusNext,     // prev window (with PadMenu held)              // e.g. R-trigger
+    ImGuiNavInput_PadUp,            // move up                                      
+    ImGuiNavInput_PadDown,          // move down
+    ImGuiNavInput_PadScrollLeft,    // scroll up, move window (with PadMenu)        // e.g. right stick directions (analog)
+    ImGuiNavInput_PadScrollRight,   // scroll right
+    ImGuiNavInput_PadScrollUp,      // scroll up
+    ImGuiNavInput_PadScrollDown,    // scroll down
+    ImGuiNavInput_PadFocusPrev,     // next window (with PadMenu)                   // e.g. L-trigger
+    ImGuiNavInput_PadFocusNext,     // prev window (with PadMenu)                   // e.g. R-trigger
     ImGuiNavInput_PadTweakSlow,     // slower tweaks                                // e.g. L-trigger, analog
     ImGuiNavInput_PadTweakFast,     // faster tweaks                                // e.g. R-trigger, analog
     // Keyboard Mapping
-    // [BETA] You can use gamepad mapping for most inputs
+    // [BETA] You can map keyboard keys on the gamepad mapping for most inputs. Will add specialized keyboard mappings as we add features.
     ImGuiNavInput_KeyMenu,          // access menu                                  // e.g. ALT
     ImGuiNavInput_COUNT,
 };
