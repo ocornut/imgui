@@ -718,7 +718,11 @@ enum ImGuiNavInput_
     ImGuiNavInput_PadTweakFast,     // faster tweaks                                // e.g. R-trigger, analog
     // Keyboard Mapping
     // [BETA] You can map keyboard keys on the gamepad mapping for most inputs. Will add specialized keyboard mappings as we add features.
-    ImGuiNavInput_KeyMenu,          // access menu                                  // e.g. ALT
+    ImGuiNavInput_KeyMenu,          // toggle menu                                  // e.g. ALT
+    ImGuiNavInput_KeyLeft,          // move left                                    // e.g. Arrow keys
+    ImGuiNavInput_KeyRight,         // move right
+    ImGuiNavInput_KeyUp,            // move up
+    ImGuiNavInput_KeyDown,          // move down
     ImGuiNavInput_COUNT,
 };
 

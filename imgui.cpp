@@ -2662,6 +2662,15 @@ enum ImGuiNavReadMode
     ImGuiNavReadMode_RepeatFast
 };
 
+typedef int ImGuiNavDirSource;
+
+enum ImGuiNavDirSource_
+{
+    ImGuiNavDirSource_Key       = 1 << 0,
+    ImGuiNavDirSource_PadStickL = 1 << 1,
+    ImGuiNavDirSource_PadStickR = 1 << 2
+};
+
 // FIXME-NAV: Expose navigation repeat delay/rate
 static float GetNavInputAmount(ImGuiNavInput n, ImGuiNavReadMode mode)
 {
@@ -2697,14 +2706,20 @@ static bool IsNavInputPressed(ImGuiNavInput n, ImGuiNavReadMode mode)
     return GetNavInputAmount(n, mode) > 0.0f;
 }
 
-static ImVec2 GetNavInputAmount2d(int stick_no, ImGuiNavReadMode mode, float slow_factor = 0.0f, float fast_factor = 0.0f)
+static bool IsNavInputPressedAnyOfTwo(ImGuiNavInput n1, ImGuiNavInput n2, ImGuiNavReadMode mode)
 {
-    IM_ASSERT(ImGuiNavInput_PadScrollUp == ImGuiNavInput_PadUp + 4);
-    IM_ASSERT(stick_no >= 0 && stick_no < 2);
+    return (GetNavInputAmount(n1, mode) + GetNavInputAmount(n2, mode)) > 0.0f;
+}
 
-    ImVec2 delta;
-    delta.x = GetNavInputAmount(ImGuiNavInput_PadRight + stick_no*4, mode) - GetNavInputAmount(ImGuiNavInput_PadLeft + stick_no*4, mode); 
-    delta.y = GetNavInputAmount(ImGuiNavInput_PadDown  + stick_no*4, mode) - GetNavInputAmount(ImGuiNavInput_PadUp   + stick_no*4, mode); 
+static ImVec2 GetNavInputAmount2d(ImGuiNavDirSource dir_sources, ImGuiNavReadMode mode, float slow_factor = 0.0f, float fast_factor = 0.0f)
+{
+    ImVec2 delta(0.0f, 0.0f);
+    if (dir_sources & ImGuiNavDirSource_Key)
+        delta += ImVec2(GetNavInputAmount(ImGuiNavInput_KeyRight, mode) - GetNavInputAmount(ImGuiNavInput_KeyLeft, mode), GetNavInputAmount(ImGuiNavInput_KeyDown,  mode) - GetNavInputAmount(ImGuiNavInput_KeyUp,   mode));
+    if (dir_sources & ImGuiNavDirSource_PadStickL)
+        delta += ImVec2(GetNavInputAmount(ImGuiNavInput_PadRight, mode) - GetNavInputAmount(ImGuiNavInput_PadLeft, mode), GetNavInputAmount(ImGuiNavInput_PadDown,  mode) - GetNavInputAmount(ImGuiNavInput_PadUp,   mode));
+    if (dir_sources & ImGuiNavDirSource_PadStickR)
+        delta += ImVec2(GetNavInputAmount(ImGuiNavInput_PadScrollRight, mode) - GetNavInputAmount(ImGuiNavInput_PadScrollLeft, mode), GetNavInputAmount(ImGuiNavInput_PadScrollDown,  mode) - GetNavInputAmount(ImGuiNavInput_PadScrollUp,   mode));
     if (slow_factor != 0.0f && IsNavInputDown(ImGuiNavInput_PadTweakSlow))
         delta *= slow_factor;
     if (fast_factor != 0.0f && IsNavInputDown(ImGuiNavInput_PadTweakFast))
@@ -2753,7 +2768,7 @@ static void ImGui::NavUpdateWindowing()
         // Move window
         if (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoMove))
         {
-            const ImVec2 move_delta = GetNavInputAmount2d(1, ImGuiNavReadMode_Down);
+            const ImVec2 move_delta = GetNavInputAmount2d(ImGuiNavDirSource_PadStickR, ImGuiNavReadMode_Down);
             if (move_delta.x != 0.0f || move_delta.y != 0.0f)
             {
                 const float move_speed = ImFloor(600 * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
@@ -2978,10 +2993,10 @@ static void ImGui::NavUpdate()
         g.NavMoveDir = ImGuiDir_None;
         if (g.NavWindow && !g.NavWindowingTarget && allowed_dir_flags && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
         {
-            if ((allowed_dir_flags & (1<<ImGuiDir_Left))  && IsNavInputPressed(ImGuiNavInput_PadLeft,  ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Left;
-            if ((allowed_dir_flags & (1<<ImGuiDir_Right)) && IsNavInputPressed(ImGuiNavInput_PadRight, ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Right;
-            if ((allowed_dir_flags & (1<<ImGuiDir_Up))    && IsNavInputPressed(ImGuiNavInput_PadUp,    ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Up;
-            if ((allowed_dir_flags & (1<<ImGuiDir_Down))  && IsNavInputPressed(ImGuiNavInput_PadDown,  ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Down;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Left))  && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLeft, ImGuiNavInput_KeyLeft, ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Left;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Right)) && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadRight,ImGuiNavInput_KeyRight,ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Right;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Up))    && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadUp,   ImGuiNavInput_KeyUp,   ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Up;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Down))  && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadDown, ImGuiNavInput_KeyDown, ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Down;
         }
     }
     else
@@ -3023,7 +3038,7 @@ static void ImGui::NavUpdate()
 
         // *Normal* Manual scroll with NavScrollXXX keys
         // Next movement request will clamp the NavId reference rectangle to the visible area, so navigation will resume within those bounds.
-        ImVec2 scroll_dir = GetNavInputAmount2d(1, ImGuiNavReadMode_Down, 1.0f/10.0f, 10.0f);
+        ImVec2 scroll_dir = GetNavInputAmount2d(ImGuiNavDirSource_PadStickR, ImGuiNavReadMode_Down, 1.0f/10.0f, 10.0f);
         if (scroll_dir.x != 0.0f && window->ScrollbarX)
         {
             SetWindowScrollX(window, ImFloor(window->Scroll.x + scroll_dir.x * scroll_speed));
@@ -5334,7 +5349,7 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     // Navigation/gamepad resize
     if (g.NavWindowingTarget == window)
     {
-        ImVec2 nav_resize_delta = GetNavInputAmount2d(0, ImGuiNavReadMode_Down);
+        ImVec2 nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSource_PadStickL, ImGuiNavReadMode_Down);
         if (nav_resize_delta.x != 0.0f || nav_resize_delta.y != 0.0f)
         {
             const float GAMEPAD_RESIZE_SPEED = 600.0f;
@@ -8379,7 +8394,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
         }
         else if (g.ActiveIdSource == ImGuiInputSource_Nav && g.NavActivateDownId == id)
         {
-            const ImVec2 delta2 = GetNavInputAmount2d(0, ImGuiNavReadMode_RepeatFast, 0.0f, 0.0f);
+            const ImVec2 delta2 = GetNavInputAmount2d(ImGuiNavDirSource_Key|ImGuiNavDirSource_PadStickL, ImGuiNavReadMode_RepeatFast, 0.0f, 0.0f);
             float delta = is_horizontal ? delta2.x : -delta2.y;
             if (delta != 0.0f)
             {
@@ -8726,7 +8741,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
             }
             if (g.ActiveIdSource == ImGuiInputSource_Nav)
             {
-                adjust_delta = GetNavInputAmount2d(0, ImGuiNavReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
+                adjust_delta = GetNavInputAmount2d(ImGuiNavDirSource_Key|ImGuiNavDirSource_PadStickL, ImGuiNavReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
                 v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
             }
             adjust_delta *= v_speed;
