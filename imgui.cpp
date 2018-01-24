@@ -10842,7 +10842,7 @@ void ImGui::EndMenuBar()
         return;
     ImGuiContext& g = *GImGui;
 
-    // When a move request within one of our child menu failed, capture the request to navigate among our siblings.
+    // Nav: When a move request within one of our child menu failed, capture the request to navigate among our siblings.
     if (g.NavMoveRequest && g.NavMoveResultId == 0 && (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right) && (g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
     {
         ImGuiWindow* nav_earliest_child = g.NavWindow;
@@ -10926,7 +10926,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         g.NavWindow = backed_nav_window;
 
     bool want_open = false, want_close = false;
-    if (window->DC.LayoutType != ImGuiLayoutType_Horizontal) // (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
+    if (window->DC.LayoutType == ImGuiLayoutType_Vertical) // (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
     {
         // Implement http://bjk5.com/post/44698559168/breaking-down-amazons-mega-dropdown to avoid using timers, so menus feels more reactive.
         bool moving_within_opened_triangle = false;
@@ -10958,11 +10958,6 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         if (g.NavId == id && g.NavMoveRequest && g.NavMoveDir == ImGuiDir_Right) // Nav-Right to open
         {
             want_open = true;
-            g.NavMoveRequest = false;
-        }
-        if (g.NavWindow && g.NavWindow->ParentWindow == window && g.NavMoveRequest && g.NavMoveDir == ImGuiDir_Left && IsPopupOpen(id)) // Nav-Left to close
-        {
-            want_close = true;
             g.NavMoveRequest = false;
         }
     }
@@ -11013,6 +11008,15 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
 
 void ImGui::EndMenu()
 {
+    // Nav: When a left move request within our child menu failed, close the menu
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    if (g.NavWindow && g.NavWindow->ParentWindow == window && g.NavMoveRequest && g.NavMoveResultId == 0 && g.NavMoveDir == ImGuiDir_Left && window->DC.LayoutType == ImGuiLayoutType_Vertical)
+    {
+        ClosePopupToLevel(g.OpenPopupStack.Size - 1);
+        g.NavMoveRequest = false;
+    }
+
     EndPopup();
 }
 
