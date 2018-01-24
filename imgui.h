@@ -90,6 +90,7 @@ typedef int ImGuiComboFlags;        // flags: for BeginCombo()                  
 typedef int ImGuiFocusedFlags;      // flags: for IsWindowFocused()             // enum ImGuiFocusedFlags_
 typedef int ImGuiHoveredFlags;      // flags: for IsItemHovered() etc.          // enum ImGuiHoveredFlags_
 typedef int ImGuiInputTextFlags;    // flags: for InputText*()                  // enum ImGuiInputTextFlags_
+typedef int ImGuiNavFlags;          // flags: for io.NavFlags                   // enum ImGuiNavFlags_
 typedef int ImGuiSelectableFlags;   // flags: for Selectable()                  // enum ImGuiSelectableFlags_
 typedef int ImGuiTreeNodeFlags;     // flags: for TreeNode*(),CollapsingHeader()// enum ImGuiTreeNodeFlags_
 typedef int ImGuiWindowFlags;       // flags: for Begin*()                      // enum ImGuiWindowFlags_
@@ -726,6 +727,14 @@ enum ImGuiNavInput_
     ImGuiNavInput_COUNT,
 };
 
+// [BETA] Gamepad/Keyboard directional navigation options
+enum ImGuiNavFlags_
+{
+    ImGuiNavFlags_EnableGamepad     = 1 << 0,   // Master gamepad navigation enable flag. This is to instruct your imgui binding whether to fill in gamepad navigation inputs. imgui itself won't use this flag.
+    ImGuiNavFlags_EnableKeyboard    = 1 << 1,   // Master keyboard navigation enable flag. This is to instruct your imgui binding whether to fill in keyboard navigation inputs. imgui itself won't use this flag.
+    ImGuiNavFlags_MoveMouse         = 1 << 2    // Allow directional navigation to move the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantMoveMouse=true. If enabled you MUST honor io.WantMoveMouse requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
+};
+
 // Enumeration for PushStyleColor() / PopStyleColor()
 enum ImGuiCol_
 {
@@ -926,6 +935,7 @@ struct ImGuiIO
     float         IniSavingRate;            // = 5.0f               // Maximum time between saving positions/sizes to .ini file, in seconds.
     const char*   IniFilename;              // = "imgui.ini"        // Path to .ini file. NULL to disable .ini saving.
     const char*   LogFilename;              // = "imgui_log.txt"    // Path to .log file (default parameter to ImGui::LogToFile when no file is specified).
+    ImGuiNavFlags NavFlags;                 // = 0                  // See ImGuiNavFlags_. Gamepad/keyboard navigation options.
     float         MouseDoubleClickTime;     // = 0.30f              // Time for a double-click, in seconds.
     float         MouseDoubleClickMaxDist;  // = 6.0f               // Distance threshold to stay in to validate a double-click, in pixels.
     float         MouseDragThreshold;       // = 6.0f               // Distance threshold before considering we are dragging.
@@ -942,8 +952,6 @@ struct ImGuiIO
     ImVec2        DisplayVisibleMin;        // <unset> (0.0f,0.0f)  // If you use DisplaySize as a virtual space larger than your screen, set DisplayVisibleMin/Max to the visible area.
     ImVec2        DisplayVisibleMax;        // <unset> (0.0f,0.0f)  // If the values are the same, we defaults to Min=(0.0f) and Max=DisplaySize
 
-    // Gamepad/Keyboard Navigation
-    bool          NavMovesMouse;            // = false              // Directional navigation can move the mouse cursor. Updates MousePos and set WantMoveMouse=true. If enabled you MUST honor those requests in your binding, otherwise ImGui will react as if mouse is jumping around.
     // Advanced/subtle behaviors
     bool          OptMacOSXBehaviors;       // = defined(__APPLE__) // OS X style: Text editing cursor movement using Alt instead of Ctrl, Shortcuts using Cmd/Super instead of Ctrl, Line/Text Start and End using Cmd+Arrows instead of Home/End, Double click selects by word instead of selecting whole text, Multi-selection in lists uses Cmd/Super instead of Ctrl
     bool          OptCursorBlink;           // = true               // Enable blinking cursor, for users who consider it annoying.
