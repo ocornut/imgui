@@ -2652,45 +2652,25 @@ static ImGuiWindow* FindWindowNavigable(int i_start, int i_stop, int dir) // FIX
     return NULL;
 }
 
-enum ImGuiNavReadMode
-{
-    ImGuiNavReadMode_Down,
-    ImGuiNavReadMode_Pressed,
-    ImGuiNavReadMode_Released,
-    ImGuiNavReadMode_Repeat,
-    ImGuiNavReadMode_RepeatSlow,
-    ImGuiNavReadMode_RepeatFast
-};
-
-typedef int ImGuiNavDirSource;
-
-enum ImGuiNavDirSource_
-{
-    ImGuiNavDirSource_Key       = 1 << 0,
-    ImGuiNavDirSource_PadLStick = 1 << 1,
-    ImGuiNavDirSource_PadRStick = 1 << 2
-};
-
-// FIXME-NAV: Expose navigation repeat delay/rate
-static float GetNavInputAmount(ImGuiNavInput n, ImGuiNavReadMode mode)
+float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode)
 {
     ImGuiContext& g = *GImGui;
-    if (mode == ImGuiNavReadMode_Down)
-        return g.IO.NavInputs[n];                       // Instant, read analog input (0.0f..1.0f, as provided by user)
+    if (mode == ImGuiInputReadMode_Down)
+        return g.IO.NavInputs[n];                         // Instant, read analog input (0.0f..1.0f, as provided by user)
 
     const float t = g.IO.NavInputsDownDuration[n];
-    if (t < 0.0f && mode == ImGuiNavReadMode_Released)  // Return 1.0f when just released, no repeat, ignore analog input.
+    if (t < 0.0f && mode == ImGuiInputReadMode_Released)  // Return 1.0f when just released, no repeat, ignore analog input.
         return (g.IO.NavInputsDownDurationPrev[n] >= 0.0f ? 1.0f : 0.0f);
     if (t < 0.0f)
         return 0.0f;
-    if (mode == ImGuiNavReadMode_Pressed)               // Return 1.0f when just pressed, no repeat, ignore analog input.
+    if (mode == ImGuiInputReadMode_Pressed)               // Return 1.0f when just pressed, no repeat, ignore analog input.
         return (t == 0.0f) ? 1.0f : 0.0f;
-    if (mode == ImGuiNavReadMode_Repeat)
-        return (float)ImGui::CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay * 0.80f, g.IO.KeyRepeatRate * 0.80f);
-    if (mode == ImGuiNavReadMode_RepeatSlow)
-        return (float)ImGui::CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay * 1.00f, g.IO.KeyRepeatRate * 2.00f);
-    if (mode == ImGuiNavReadMode_RepeatFast)
-        return (float)ImGui::CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay * 0.80f, g.IO.KeyRepeatRate * 0.30f);
+    if (mode == ImGuiInputReadMode_Repeat)
+        return (float)CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay * 0.80f, g.IO.KeyRepeatRate * 0.80f);
+    if (mode == ImGuiInputReadMode_RepeatSlow)
+        return (float)CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay * 1.00f, g.IO.KeyRepeatRate * 2.00f);
+    if (mode == ImGuiInputReadMode_RepeatFast)
+        return (float)CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay * 0.80f, g.IO.KeyRepeatRate * 0.30f);
     return 0.0f;
 }
 
@@ -2701,24 +2681,24 @@ static bool IsNavInputDown(ImGuiNavInput n)
 }
 
 // Equivalent of IsKeyPressed() for NavInputs[]
-static bool IsNavInputPressed(ImGuiNavInput n, ImGuiNavReadMode mode)
+static bool IsNavInputPressed(ImGuiNavInput n, ImGuiInputReadMode mode)
 {
-    return GetNavInputAmount(n, mode) > 0.0f;
+    return ImGui::GetNavInputAmount(n, mode) > 0.0f;
 }
 
-static bool IsNavInputPressedAnyOfTwo(ImGuiNavInput n1, ImGuiNavInput n2, ImGuiNavReadMode mode)
+static bool IsNavInputPressedAnyOfTwo(ImGuiNavInput n1, ImGuiNavInput n2, ImGuiInputReadMode mode)
 {
-    return (GetNavInputAmount(n1, mode) + GetNavInputAmount(n2, mode)) > 0.0f;
+    return (ImGui::GetNavInputAmount(n1, mode) + ImGui::GetNavInputAmount(n2, mode)) > 0.0f;
 }
 
-static ImVec2 GetNavInputAmount2d(ImGuiNavDirSource dir_sources, ImGuiNavReadMode mode, float slow_factor = 0.0f, float fast_factor = 0.0f)
+ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInputReadMode mode, float slow_factor, float fast_factor)
 {
     ImVec2 delta(0.0f, 0.0f);
-    if (dir_sources & ImGuiNavDirSource_Key)
+    if (dir_sources & ImGuiNavDirSourceFlags_Key)
         delta += ImVec2(GetNavInputAmount(ImGuiNavInput_KeyRight, mode)       - GetNavInputAmount(ImGuiNavInput_KeyLeft,       mode), GetNavInputAmount(ImGuiNavInput_KeyDown,        mode) - GetNavInputAmount(ImGuiNavInput_KeyUp,         mode));
-    if (dir_sources & ImGuiNavDirSource_PadLStick)
+    if (dir_sources & ImGuiNavDirSourceFlags_PadLStick)
         delta += ImVec2(GetNavInputAmount(ImGuiNavInput_PadLStickRight, mode) - GetNavInputAmount(ImGuiNavInput_PadLStickLeft, mode), GetNavInputAmount(ImGuiNavInput_PadLStickDown,  mode) - GetNavInputAmount(ImGuiNavInput_PadLStickUp,   mode));
-    if (dir_sources & ImGuiNavDirSource_PadRStick)
+    if (dir_sources & ImGuiNavDirSourceFlags_PadRStick)
         delta += ImVec2(GetNavInputAmount(ImGuiNavInput_PadRStickRight, mode) - GetNavInputAmount(ImGuiNavInput_PadRStickLeft, mode), GetNavInputAmount(ImGuiNavInput_PadRStickDown,  mode) - GetNavInputAmount(ImGuiNavInput_PadRStickUp,   mode));
     if (slow_factor != 0.0f && IsNavInputDown(ImGuiNavInput_PadTweakSlow))
         delta *= slow_factor;
@@ -2733,7 +2713,7 @@ static void ImGui::NavUpdateWindowing()
     ImGuiContext& g = *GImGui;
     bool toggle_layer = false;
 
-    if (!g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiNavReadMode_Pressed))
+    if (!g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiInputReadMode_Pressed))
     {
         ImGuiWindow* window = g.NavWindow;
         if (!window)
@@ -2753,7 +2733,7 @@ static void ImGui::NavUpdateWindowing()
         g.NavWindowingToggleLayer &= (g.NavWindowingDisplayAlpha < 1.0f); // Once button is held long enough we don't consider it a tag-to-toggle-layer press anymore.
 
         // Select window to focus
-        const int focus_change_dir = (int)IsNavInputPressed(ImGuiNavInput_PadFocusPrev, ImGuiNavReadMode_RepeatSlow) - (int)IsNavInputPressed(ImGuiNavInput_PadFocusNext, ImGuiNavReadMode_RepeatSlow);
+        const int focus_change_dir = (int)IsNavInputPressed(ImGuiNavInput_PadFocusPrev, ImGuiInputReadMode_RepeatSlow) - (int)IsNavInputPressed(ImGuiNavInput_PadFocusNext, ImGuiInputReadMode_RepeatSlow);
         if (focus_change_dir != 0 && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_Modal))
         {
             const int i_current = FindWindowIndex(g.NavWindowingTarget);
@@ -2768,7 +2748,7 @@ static void ImGui::NavUpdateWindowing()
         // Move window
         if (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoMove))
         {
-            const ImVec2 move_delta = GetNavInputAmount2d(ImGuiNavDirSource_PadRStick, ImGuiNavReadMode_Down);
+            const ImVec2 move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadRStick, ImGuiInputReadMode_Down);
             if (move_delta.x != 0.0f || move_delta.y != 0.0f)
             {
                 const float move_speed = ImFloor(600 * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
@@ -2802,7 +2782,7 @@ static void ImGui::NavUpdateWindowing()
     }
     
     // Keyboard: Press and release ALT to toggle menu
-    if ((g.ActiveId == 0 || g.ActiveIdAllowOverlap) && IsNavInputPressed(ImGuiNavInput_KeyMenu, ImGuiNavReadMode_Released))
+    if ((g.ActiveId == 0 || g.ActiveIdAllowOverlap) && IsNavInputPressed(ImGuiNavInput_KeyMenu, ImGuiInputReadMode_Released))
         toggle_layer = true;
 
     if (toggle_layer && g.NavWindow)
@@ -2921,7 +2901,7 @@ static void ImGui::NavUpdate()
     g.IO.NavActive = (g.IO.NavUsable && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL) || g.NavInitRequest;
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
-    if (IsNavInputPressed(ImGuiNavInput_PadCancel, ImGuiNavReadMode_Pressed))
+    if (IsNavInputPressed(ImGuiNavInput_PadCancel, ImGuiInputReadMode_Pressed))
     {
         if (g.ActiveId != 0)
         {
@@ -2965,11 +2945,11 @@ static void ImGui::NavUpdate()
     g.NavActivateId = g.NavActivateDownId = g.NavInputId = 0;
     if (g.NavId != 0 && !g.NavDisableHighlight && !g.NavWindowingTarget)
     {
-        if (g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadActivate, ImGuiNavReadMode_Pressed))
+        if (g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadActivate, ImGuiInputReadMode_Pressed))
             g.NavActivateId = g.NavId;
         if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && IsNavInputDown(ImGuiNavInput_PadActivate))
             g.NavActivateDownId = g.NavId;
-        if (g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadInput, ImGuiNavReadMode_Pressed))
+        if (g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadInput, ImGuiInputReadMode_Pressed))
             g.NavInputId = g.NavId;
     }
     if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
@@ -2993,10 +2973,10 @@ static void ImGui::NavUpdate()
         g.NavMoveDir = ImGuiDir_None;
         if (g.NavWindow && !g.NavWindowingTarget && allowed_dir_flags && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
         {
-            if ((allowed_dir_flags & (1<<ImGuiDir_Left))  && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLStickLeft, ImGuiNavInput_KeyLeft, ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Left;
-            if ((allowed_dir_flags & (1<<ImGuiDir_Right)) && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLStickRight,ImGuiNavInput_KeyRight,ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Right;
-            if ((allowed_dir_flags & (1<<ImGuiDir_Up))    && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLStickUp,   ImGuiNavInput_KeyUp,   ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Up;
-            if ((allowed_dir_flags & (1<<ImGuiDir_Down))  && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLStickDown, ImGuiNavInput_KeyDown, ImGuiNavReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Down;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Left))  && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLStickLeft, ImGuiNavInput_KeyLeft, ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Left;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Right)) && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLStickRight,ImGuiNavInput_KeyRight,ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Right;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Up))    && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLStickUp,   ImGuiNavInput_KeyUp,   ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Up;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Down))  && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLStickDown, ImGuiNavInput_KeyDown, ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Down;
         }
     }
     else
@@ -3038,7 +3018,7 @@ static void ImGui::NavUpdate()
 
         // *Normal* Manual scroll with NavScrollXXX keys
         // Next movement request will clamp the NavId reference rectangle to the visible area, so navigation will resume within those bounds.
-        ImVec2 scroll_dir = GetNavInputAmount2d(ImGuiNavDirSource_PadRStick, ImGuiNavReadMode_Down, 1.0f/10.0f, 10.0f);
+        ImVec2 scroll_dir = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadRStick, ImGuiInputReadMode_Down, 1.0f/10.0f, 10.0f);
         if (scroll_dir.x != 0.0f && window->ScrollbarX)
         {
             SetWindowScrollX(window, ImFloor(window->Scroll.x + scroll_dir.x * scroll_speed));
@@ -5349,7 +5329,7 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     // Navigation/gamepad resize
     if (g.NavWindowingTarget == window)
     {
-        ImVec2 nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSource_PadLStick, ImGuiNavReadMode_Down);
+        ImVec2 nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_Down);
         if (nav_resize_delta.x != 0.0f || nav_resize_delta.y != 0.0f)
         {
             const float GAMEPAD_RESIZE_SPEED = 600.0f;
@@ -7359,7 +7339,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if (g.NavActivateDownId == id)
     {
         bool nav_activated_by_code = (g.NavActivateId == id);
-        bool nav_activated_by_inputs = IsNavInputPressed(ImGuiNavInput_PadActivate, (flags & ImGuiButtonFlags_Repeat) ? ImGuiNavReadMode_Repeat : ImGuiNavReadMode_Pressed);
+        bool nav_activated_by_inputs = IsNavInputPressed(ImGuiNavInput_PadActivate, (flags & ImGuiButtonFlags_Repeat) ? ImGuiInputReadMode_Repeat : ImGuiInputReadMode_Pressed);
         if (nav_activated_by_code || nav_activated_by_inputs)
             pressed = true;
         if (nav_activated_by_code || nav_activated_by_inputs || g.ActiveId == id)
@@ -8394,7 +8374,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
         }
         else if (g.ActiveIdSource == ImGuiInputSource_Nav && g.NavActivateDownId == id)
         {
-            const ImVec2 delta2 = GetNavInputAmount2d(ImGuiNavDirSource_Key|ImGuiNavDirSource_PadLStick, ImGuiNavReadMode_RepeatFast, 0.0f, 0.0f);
+            const ImVec2 delta2 = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Key|ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_RepeatFast, 0.0f, 0.0f);
             float delta = is_horizontal ? delta2.x : -delta2.y;
             if (delta != 0.0f)
             {
@@ -8741,7 +8721,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
             }
             if (g.ActiveIdSource == ImGuiInputSource_Nav)
             {
-                adjust_delta = GetNavInputAmount2d(ImGuiNavDirSource_Key|ImGuiNavDirSource_PadLStick, ImGuiNavReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
+                adjust_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Key|ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
                 v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
             }
             adjust_delta *= v_speed;
