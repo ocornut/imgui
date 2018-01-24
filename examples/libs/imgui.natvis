@@ -31,5 +31,10 @@
     <Item Name="[Height]">Max.x - Min.x</Item>
   </Expand>
 </Type>
+
+<Type Name="ImGuiWindow">
+  <DisplayString Condition="Active||WasActive">{{Name={Name,s}}}</DisplayString>
+  <DisplayString Condition="!(Active||WasActive)">{{Name={Name,s}} Inactive}</DisplayString>
+</Type>
   
 </AutoVisualizer>
