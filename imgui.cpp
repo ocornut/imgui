@@ -3057,7 +3057,8 @@ static void ImGui::NavUpdate()
     g.NavScoringRectScreen.Max.x = g.NavScoringRectScreen.Min.x;
     //g.OverlayDrawList.AddRect(g.NavScoringRectScreen.Min, g.NavScoringRectScreen.Max, IM_COL32(255,200,0,255)); // [DEBUG]
 #if IMGUI_DEBUG_NAV_RECTS
-    if (g.NavWindow) for (int layer = 0; layer < 2; layer++) g.OverlayDrawList.AddRect(g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Min, g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Max, IM_COL32(255,200,0,255)); // [DEBUG]
+    if (g.NavWindow) { for (int layer = 0; layer < 2; layer++) g.OverlayDrawList.AddRect(g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Min, g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Max, IM_COL32(255,200,0,255)); } // [DEBUG] 
+    if (g.NavWindow) { ImU32 col = (g.NavWindow->HiddenFrames <= 0) ? IM_COL32(255,0,255,255) : IM_COL32(255,0,0,255); ImVec2 p = NavCalcPreferredMousePos(); char buf[32]; ImFormatString(buf, 32, "%d", g.NavLayer); g.OverlayDrawList.AddCircleFilled(p, 3.0f, col); g.OverlayDrawList.AddText(NULL, 13.0f, p + ImVec2(8,-4), col, buf); }
 #endif
 }
 
@@ -6151,8 +6152,6 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         g.NavLayer = 0;
         if (window && g.NavDisableMouseHover)
             g.NavMousePosDirty = true;
-        if (window)
-            window->NavRectRel[0].Min = window->NavRectRel[0].Max = window->DC.CursorStartPos - window->Pos;
         g.NavWindow = window;
     }
 
