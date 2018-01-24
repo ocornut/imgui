@@ -5018,7 +5018,8 @@ bool ImGui::Begin(const char* name, bool* p_open, const ImVec2& size_first_use, 
         ImGui::SetNextWindowSize(size_first_use, ImGuiCond_FirstUseEver);
 
     // Old API feature: override the window background alpha with a parameter.
-    ImGui::SetNextWindowBgAlpha(bg_alpha_override);
+    if (bg_alpha_override >= 0.0f)
+        ImGui::SetNextWindowBgAlpha(bg_alpha_override);
 
     return ImGui::Begin(name, p_open, flags);
 }
