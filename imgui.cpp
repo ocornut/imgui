@@ -217,29 +217,22 @@
  - Consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
  - Consider using Synergy host (on your computer) + uSynergy.c (in your console/tablet/phone app) to use PC mouse/keyboard.
  - Your inputs are passed to imgui by filling the io.NavInputs[] array. See 'enum ImGuiNavInput_' in imgui.h for a description of available inputs.
+ - The ImGuiNavFlags_EnableGamepad and ImGuiNavFlags_EnableKeyboard flags of io.NavFlags are only here to instruct your binding whether to find inputs.
  - For gamepad use, the easiest approach is to go all-or-nothing, with a buttons combo that toggle your inputs between imgui and your game/application.
    Sharing inputs in a more advanced or granular way between imgui and your game/application may be tricky and requires further work on imgui.
    For more advanced uses, you may want to use:
      - io.NavUsable: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
      - io.NavActive: true when the navigation cursor is visible (and usually goes false when mouse is used).
      - query focus information with IsWindowFocused(), IsAnyWindowFocused(), IsAnyItemFocused() functions.
-   The reality is more complex than what those flags can express. Please discuss your issues and usage scenario in the thread above. 
+   The reality is more complex than what those flags can express. Please discuss your issues and usage scenario in the thread above! 
    As we head toward more keyboard-oriented development this aspect will need to be improved.
- - It is recommended that you enable the 'io.NavMovesMouse' option. Enabling it instructs ImGui that it can move your move cursor to track navigated items and ease readability.
-   When enabled and using directional navigation (with d-pad or arrow keys), the NewFrame() functions may alter 'io.MousePos' and set 'io.WantMoveMouse' to notify you that it did so.
-   When that happens your back-end NEEDS to move the OS or underlying mouse cursor on the next frame. The examples binding in examples/ do that.
-   (Important: It you set 'io.NavMovesMouse' to true but don't honor 'io.WantMoveMouse' properly, imgui will misbehave as it will think your mouse is moving back and forth.)
-     
-     // Application init
-     io.NavMovesMouse = true;
-
-     // Application main loop
-     if (io.WantMoveMouse)
-        MyFuncToSetMousePosition(io.MousePos.x, io.MousePos.y);
-     ImGui::NewFrame();
-
-   In a setup when you may not have easy control over the mouse cursor (e.g. uSynergy.c doesn't expose moving remote mouse cursor),
-   you might want to set a boolean to ignore your other external mouse positions until they move again.
+ - On a TV/console system where readability may be lower or mouse inputs may be awkward, you may want to set the ImGuiNavFlags_MoveMouse flag in io.NavFlags. 
+   Enabling ImGuiNavFlags_MoveMouse instructs dear imgui to move your mouse cursor along when navigation movement.
+   When enabled, the NewFrame() functions may alter 'io.MousePos' and set 'io.WantMoveMouse' to notify you that it did so.
+   When that happens your back-end NEEDS to move the OS or underlying mouse cursor on the next frame. Some of the binding in examples/ do that.
+   (Important: It you set the ImGuiNavFlags_MoveMouse flag but don't honor 'io.WantMoveMouse' properly, imgui will misbehave as it will think your mouse is moving back and forth.)
+   (In a setup when you may not have easy control over the mouse cursor, e.g. uSynergy.c doesn't expose moving remote mouse cursor, you may want
+   to set a boolean to ignore your other external mouse positions until the external source is moved again.)
 
 
  API BREAKING CHANGES
@@ -3135,7 +3128,7 @@ void ImGui::NewFrame()
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.NavInputs); i++)
         g.IO.NavInputsDownDuration[i] = (g.IO.NavInputs[i] > 0.0f) ? (g.IO.NavInputsDownDuration[i] < 0.0f ? 0.0f : g.IO.NavInputsDownDuration[i] + g.IO.DeltaTime) : -1.0f;
 
-    // Update directional navigation which may override MousePos if 'NavMovesMouse=true'
+    // Update directional navigation which may override MousePos if ImGuiNavFlags_MoveMouse is enabled.
     NavUpdate();
 
     // Update mouse input state

@@ -732,7 +732,7 @@ enum ImGuiNavFlags_
 {
     ImGuiNavFlags_EnableGamepad     = 1 << 0,   // Master gamepad navigation enable flag. This is to instruct your imgui binding whether to fill in gamepad navigation inputs. imgui itself won't use this flag.
     ImGuiNavFlags_EnableKeyboard    = 1 << 1,   // Master keyboard navigation enable flag. This is to instruct your imgui binding whether to fill in keyboard navigation inputs. imgui itself won't use this flag.
-    ImGuiNavFlags_MoveMouse         = 1 << 2    // Allow directional navigation to move the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantMoveMouse=true. If enabled you MUST honor io.WantMoveMouse requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
+    ImGuiNavFlags_MoveMouse         = 1 << 2    // Request navigation to allow move the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantMoveMouse=true. If enabled you MUST honor io.WantMoveMouse requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -1010,7 +1010,7 @@ struct ImGuiIO
     bool        WantCaptureMouse;           // When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application. This is set by ImGui when it wants to use your mouse (e.g. unclicked mouse is hovering a window, or a widget is active). 
     bool        WantCaptureKeyboard;        // When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application. This is set by ImGui when it wants to use your keyboard inputs.
     bool        WantTextInput;              // Mobile/console: when io.WantTextInput is true, you may display an on-screen keyboard. This is set by ImGui when it wants textual keyboard input to happen (e.g. when a InputText widget is active).
-    bool        WantMoveMouse;              // MousePos has been altered, back-end should reposition mouse on next frame. Set only when 'NavMovesMouse=true'.
+    bool        WantMoveMouse;              // MousePos has been altered, back-end should reposition mouse on next frame. Set only when ImGuiNavFlags_MoveMouse flag is enabled in io.NavFlags.
     bool        NavUsable;                  // Directional navigation is currently allowed (will handle ImGuiKey_NavXXX events) ~ a window is focused and it doesn't use the ImGuiWindowFlags_NoNavInputs flag.
     bool        NavActive;                  // Directional navigation is active/visible and currently allowed (will handle ImGuiKey_NavXXX events).
     float       Framerate;                  // Application framerate estimation, in frame per second. Solely for convenience. Rolling average estimation based on IO.DeltaTime over 120 frames
