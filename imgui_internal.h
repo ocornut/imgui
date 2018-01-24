@@ -905,7 +905,7 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  SetWindowPosPivot;                  // store window pivot for positioning. ImVec2(0,0) when positioning from top-left corner; ImVec2(0.5f,0.5f) for centering; ImVec2(1,1) for bottom right.
 
     ImGuiID                 NavLastIds[2];                      // Last known NavId for this window, per layer (0/1)
-    ImRect                  NavRectRel[2];                      // Reference rectangle, in window space
+    ImRect                  NavRectRel[2];                      // Reference rectangle, in window relative space
 
     ImGuiDrawContext        DC;                                 // Temporary per-window data, reset at the beginning of the frame
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack

@@ -3791,6 +3791,7 @@ void ImGui::EndFrame()
                     // Set ActiveId even if the _NoMove flag is set, without it dragging away from a window with _NoMove would activate hover on other windows.
                     FocusWindow(g.HoveredWindow);
                     SetActiveID(g.HoveredWindow->MoveId, g.HoveredWindow);
+                    g.NavDisableHighlight = true;
                     g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredRootWindow->Pos;
                     if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
                         g.MovingWindow = g.HoveredWindow;
