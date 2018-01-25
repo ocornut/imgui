@@ -411,6 +411,28 @@ void ImGui_ImplGlfwGL3_NewFrame()
     // Hide OS mouse cursor if ImGui is drawing it
     glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
 
+    // Gamepad/keyboard navigation mapping [BETA]
+    memset(io.NavInputs, 0, sizeof(io.NavInputs));
+    if (io.NavFlags & ImGuiNavFlags_EnableKeyboard)
+    {
+        // Update keyboard
+        // FIXME-NAV: We are still using some of the ImGuiNavInput_PadXXX enums as keyboard support is incomplete.
+        #define MAP_KEY(NAV_NO, KEY_NO) { if (io.KeysDown[KEY_NO]) io.NavInputs[NAV_NO] = 1.0f; }
+        MAP_KEY(ImGuiNavInput_KeyLeft,      GLFW_KEY_LEFT);
+        MAP_KEY(ImGuiNavInput_KeyRight,     GLFW_KEY_RIGHT);
+        MAP_KEY(ImGuiNavInput_KeyUp,        GLFW_KEY_UP);
+        MAP_KEY(ImGuiNavInput_KeyDown,      GLFW_KEY_DOWN);
+        MAP_KEY(ImGuiNavInput_KeyMenu,      GLFW_KEY_LEFT_ALT);
+        MAP_KEY(ImGuiNavInput_PadActivate,  GLFW_KEY_SPACE);
+        MAP_KEY(ImGuiNavInput_PadCancel,    GLFW_KEY_ESCAPE);
+        MAP_KEY(ImGuiNavInput_PadInput,     GLFW_KEY_ENTER);
+        MAP_KEY(ImGuiNavInput_PadTweakSlow, GLFW_KEY_LEFT_ALT);
+        MAP_KEY(ImGuiNavInput_PadTweakSlow, GLFW_KEY_RIGHT_ALT);
+        MAP_KEY(ImGuiNavInput_PadTweakFast, GLFW_KEY_LEFT_SHIFT);
+        MAP_KEY(ImGuiNavInput_PadTweakFast, GLFW_KEY_RIGHT_SHIFT);
+        #undef MAP_KEY
+    }
+
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
 }
