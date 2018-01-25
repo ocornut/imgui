@@ -705,14 +705,14 @@ enum ImGuiNavInput_
     ImGuiNavInput_PadCancel,        // close menu/popup/child, lose selection       // e.g. Cross button
     ImGuiNavInput_PadInput,         // text input                                   // e.g. Triangle button
     ImGuiNavInput_PadMenu,          // toggle menu, hold to: focus, move, resize    // e.g. Square button
-    ImGuiNavInput_PadLStickLeft,    // move left, resize window (with PadMenu)      // e.g. D-pad + left stick directions (analog)
-    ImGuiNavInput_PadLStickRight,   // move right
-    ImGuiNavInput_PadLStickUp,      // move up                                      
-    ImGuiNavInput_PadLStickDown,    // move down
-    ImGuiNavInput_PadRStickLeft,    // scroll up, move window (with PadMenu)        // e.g. right stick directions (analog)
-    ImGuiNavInput_PadRStickRight,   // scroll right
-    ImGuiNavInput_PadRStickUp,      // scroll up
-    ImGuiNavInput_PadRStickDown,    // scroll down
+    ImGuiNavInput_PadDpadLeft,      // move left, resize window (with PadMenu)      // e.g. D-pad directions
+    ImGuiNavInput_PadDpadRight,     // move right
+    ImGuiNavInput_PadDpadUp,        // move up                                      
+    ImGuiNavInput_PadDpadDown,      // move down
+    ImGuiNavInput_PadLStickLeft,    // scroll up, move window (with PadMenu)        // e.g. left stick directions (analog)
+    ImGuiNavInput_PadLStickRight,   // scroll right
+    ImGuiNavInput_PadLStickUp,      // scroll up
+    ImGuiNavInput_PadLStickDown,    // scroll down
     ImGuiNavInput_PadFocusPrev,     // next window (with PadMenu)                   // e.g. L-trigger
     ImGuiNavInput_PadFocusNext,     // prev window (with PadMenu)                   // e.g. R-trigger
     ImGuiNavInput_PadTweakSlow,     // slower tweaks                                // e.g. L-trigger, analog

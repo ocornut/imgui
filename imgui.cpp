@@ -2688,11 +2688,11 @@ ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInput
 {
     ImVec2 delta(0.0f, 0.0f);
     if (dir_sources & ImGuiNavDirSourceFlags_Key)
-        delta += ImVec2(GetNavInputAmount(ImGuiNavInput_KeyRight, mode)       - GetNavInputAmount(ImGuiNavInput_KeyLeft,       mode), GetNavInputAmount(ImGuiNavInput_KeyDown,        mode) - GetNavInputAmount(ImGuiNavInput_KeyUp,         mode));
+        delta += ImVec2(GetNavInputAmount(ImGuiNavInput_KeyRight, mode)       - GetNavInputAmount(ImGuiNavInput_KeyLeft,       mode), GetNavInputAmount(ImGuiNavInput_KeyDown,       mode) - GetNavInputAmount(ImGuiNavInput_KeyUp,       mode));
     if (dir_sources & ImGuiNavDirSourceFlags_PadLStick)
-        delta += ImVec2(GetNavInputAmount(ImGuiNavInput_PadLStickRight, mode) - GetNavInputAmount(ImGuiNavInput_PadLStickLeft, mode), GetNavInputAmount(ImGuiNavInput_PadLStickDown,  mode) - GetNavInputAmount(ImGuiNavInput_PadLStickUp,   mode));
+        delta += ImVec2(GetNavInputAmount(ImGuiNavInput_PadDpadRight, mode)   - GetNavInputAmount(ImGuiNavInput_PadDpadLeft,   mode), GetNavInputAmount(ImGuiNavInput_PadDpadDown,   mode) - GetNavInputAmount(ImGuiNavInput_PadDpadUp,   mode));
     if (dir_sources & ImGuiNavDirSourceFlags_PadRStick)
-        delta += ImVec2(GetNavInputAmount(ImGuiNavInput_PadRStickRight, mode) - GetNavInputAmount(ImGuiNavInput_PadRStickLeft, mode), GetNavInputAmount(ImGuiNavInput_PadRStickDown,  mode) - GetNavInputAmount(ImGuiNavInput_PadRStickUp,   mode));
+        delta += ImVec2(GetNavInputAmount(ImGuiNavInput_PadLStickRight, mode) - GetNavInputAmount(ImGuiNavInput_PadLStickLeft, mode), GetNavInputAmount(ImGuiNavInput_PadLStickDown, mode) - GetNavInputAmount(ImGuiNavInput_PadLStickUp, mode));
     if (slow_factor != 0.0f && IsNavInputDown(ImGuiNavInput_PadTweakSlow))
         delta *= slow_factor;
     if (fast_factor != 0.0f && IsNavInputDown(ImGuiNavInput_PadTweakFast))
@@ -2966,10 +2966,10 @@ static void ImGui::NavUpdate()
         g.NavMoveDir = ImGuiDir_None;
         if (g.NavWindow && !g.NavWindowingTarget && allowed_dir_flags && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
         {
-            if ((allowed_dir_flags & (1<<ImGuiDir_Left))  && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLStickLeft, ImGuiNavInput_KeyLeft, ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Left;
-            if ((allowed_dir_flags & (1<<ImGuiDir_Right)) && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLStickRight,ImGuiNavInput_KeyRight,ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Right;
-            if ((allowed_dir_flags & (1<<ImGuiDir_Up))    && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLStickUp,   ImGuiNavInput_KeyUp,   ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Up;
-            if ((allowed_dir_flags & (1<<ImGuiDir_Down))  && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadLStickDown, ImGuiNavInput_KeyDown, ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Down;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Left))  && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadDpadLeft, ImGuiNavInput_KeyLeft, ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Left;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Right)) && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadDpadRight,ImGuiNavInput_KeyRight,ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Right;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Up))    && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadDpadUp,   ImGuiNavInput_KeyUp,   ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Up;
+            if ((allowed_dir_flags & (1<<ImGuiDir_Down))  && IsNavInputPressedAnyOfTwo(ImGuiNavInput_PadDpadDown, ImGuiNavInput_KeyDown, ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Down;
         }
     }
     else
