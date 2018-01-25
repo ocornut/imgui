@@ -730,8 +730,8 @@ enum ImGuiNavInput_
 // [BETA] Gamepad/Keyboard directional navigation options
 enum ImGuiNavFlags_
 {
-    ImGuiNavFlags_EnableGamepad     = 1 << 0,   // Master gamepad navigation enable flag. This is to instruct your imgui binding whether to fill in gamepad navigation inputs. imgui itself won't use this flag.
-    ImGuiNavFlags_EnableKeyboard    = 1 << 1,   // Master keyboard navigation enable flag. This is to instruct your imgui binding whether to fill in keyboard navigation inputs. imgui itself won't use this flag.
+    ImGuiNavFlags_EnableGamepad     = 1 << 0,   // Master gamepad navigation enable flag. This is mostly to instruct your imgui binding whether to fill in gamepad navigation inputs.
+    ImGuiNavFlags_EnableKeyboard    = 1 << 1,   // Master keyboard navigation enable flag. This is mostly to instruct your imgui binding whether to fill in keyboard navigation inputs.
     ImGuiNavFlags_MoveMouse         = 1 << 2    // Request navigation to allow move the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantMoveMouse=true. If enabled you MUST honor io.WantMoveMouse requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
 };
 

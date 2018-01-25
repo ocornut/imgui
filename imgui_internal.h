@@ -591,8 +591,10 @@ struct ImGuiContext
     ImGuiID                 NavJustMovedToId;                   // Just navigated to this id (result of a successfully MoveRequest)
     ImRect                  NavScoringRectScreen;               // Rectangle used for scoring, in screen space. Based of window->DC.NavRefRectRel[], modified for directional navigation scoring.
     ImGuiWindow*            NavWindowingTarget;                 // When selecting a window (holding Menu+FocusPrev/Next, or equivalent of CTRL-TAB) this window is temporarily displayed front-most. 
-    float                   NavWindowingDisplayAlpha;
+    float                   NavWindowingHighlightTimer;
+    float                   NavWindowingHighlightAlpha;
     bool                    NavWindowingToggleLayer;
+    bool                    NavWindowingIsKeyboardMode;         // Gamepad or keyboard mode
     int                     NavLayer;                           // Layer we are navigating on. For now the system is hard-coded for 0=main contents and 1=menu/title bar, may expose layers later.
     int                     NavIdTabCounter;                    // == NavWindow->DC.FocusIdxTabCounter at time of NavId processing
     bool                    NavIdIsAlive;                       // Nav widget has been seen this frame ~~ NavRefRectRel is valid
@@ -710,8 +712,9 @@ struct ImGuiContext
         NavJustTabbedId = NavJustMovedToId = NavNextActivateId = 0;
         NavScoringRectScreen = ImRect();
         NavWindowingTarget = NULL;
-        NavWindowingDisplayAlpha = 0.0f;
+        NavWindowingHighlightTimer = NavWindowingHighlightAlpha = 0.0f;
         NavWindowingToggleLayer = false;
+        NavWindowingIsKeyboardMode = false;
         NavLayer = 0;
         NavIdTabCounter = INT_MAX;
         NavIdIsAlive = false;

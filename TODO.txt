@@ -237,7 +237,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
  - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#787)
  - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)
- - inputs: allow to pass explicit double-clicks if that's the only thing the user's backend can get them. (e.g. for windows by the CS_DBLCLKS style).
  - inputs: support track pad style scrolling & slider edit.
 
  - misc: idle refresh: expose cursor blink animation timer for backend to be able to lower framerate.

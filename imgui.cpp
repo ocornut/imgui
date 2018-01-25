@@ -2700,42 +2700,52 @@ ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInput
     return delta;
 }
 
+static void NavUpdateWindowingHighlightWindow(int focus_change_dir)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.NavWindowingTarget);
+    if (g.NavWindowingTarget->Flags & ImGuiWindowFlags_Modal)
+        return;
+
+    const int i_current = FindWindowIndex(g.NavWindowingTarget);
+    ImGuiWindow* window_target = FindWindowNavigable(i_current + focus_change_dir, -INT_MAX, focus_change_dir);
+    if (!window_target)
+        window_target = FindWindowNavigable((focus_change_dir < 0) ? (g.Windows.Size - 1) : 0, i_current, focus_change_dir);
+    g.NavWindowingTarget = window_target;
+    g.NavWindowingToggleLayer = false;
+}
+
 // Window management mode (hold to: change focus/move/resize, tap to: toggle menu layer)
 static void ImGui::NavUpdateWindowing()
 {
     ImGuiContext& g = *GImGui;
-    bool toggle_layer = false;
+    ImGuiWindow* apply_focus_window = NULL;
+    bool apply_toggle_layer = false;
 
-    if (!g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiInputReadMode_Pressed))
-    {
-        ImGuiWindow* window = g.NavWindow;
-        if (!window)
-            window = FindWindowNavigable(g.Windows.Size - 1, -1, -1);
-        if (window)
+    bool start_windowing_with_gamepad = !g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_PadMenu, ImGuiInputReadMode_Pressed);
+    bool start_windowing_with_keyboard = !g.NavWindowingTarget && g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab) && (g.IO.NavFlags & ImGuiNavFlags_EnableKeyboard);
+    if (start_windowing_with_gamepad || start_windowing_with_keyboard)
+        if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavigable(g.Windows.Size - 1, -INT_MAX, -1))
         {
             g.NavWindowingTarget = window->RootNonPopupWindow;
-            g.NavWindowingDisplayAlpha = 0.0f;
-            g.NavWindowingToggleLayer = true;
+            g.NavWindowingHighlightTimer = g.NavWindowingHighlightAlpha = 0.0f;
+            g.NavWindowingToggleLayer = start_windowing_with_keyboard ? false : true;
+            g.NavWindowingIsKeyboardMode = start_windowing_with_keyboard;
         }
-    }
-    if (g.NavWindowingTarget)
+
+    // Gamepad update
+    g.NavWindowingHighlightTimer += g.IO.DeltaTime;
+    if (g.NavWindowingTarget && !g.NavWindowingIsKeyboardMode)
     {
-        // Visuals only appears after a brief time holding the button, so that a fast tap (to toggle NavLayer) doesn't add visual noise
-        const float pressed_duration = g.IO.NavInputsDownDuration[ImGuiNavInput_PadMenu];
-        g.NavWindowingDisplayAlpha = ImMax(g.NavWindowingDisplayAlpha, ImSaturate((pressed_duration - 0.20f) / 0.05f));
-        g.NavWindowingToggleLayer &= (g.NavWindowingDisplayAlpha < 1.0f); // Once button is held long enough we don't consider it a tag-to-toggle-layer press anymore.
+        // Highlight only appears after a brief time holding the button, so that a fast tap on PadMenu (to toggle NavLayer) doesn't add visual noise
+        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingHighlightTimer - 0.20f) / 0.05f));
 
         // Select window to focus
         const int focus_change_dir = (int)IsNavInputPressed(ImGuiNavInput_PadFocusPrev, ImGuiInputReadMode_RepeatSlow) - (int)IsNavInputPressed(ImGuiNavInput_PadFocusNext, ImGuiInputReadMode_RepeatSlow);
-        if (focus_change_dir != 0 && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_Modal))
+        if (focus_change_dir != 0)
         {
-            const int i_current = FindWindowIndex(g.NavWindowingTarget);
-            ImGuiWindow* window_target = FindWindowNavigable(i_current + focus_change_dir, -1, focus_change_dir);
-            if (!window_target)
-                window_target = FindWindowNavigable((focus_change_dir < 0) ? (g.Windows.Size - 1) : 0, i_current, focus_change_dir);
-            g.NavWindowingTarget = window_target;
-            g.NavWindowingToggleLayer = false;
-            g.NavWindowingDisplayAlpha = 1.0f;
+            NavUpdateWindowingHighlightWindow(focus_change_dir);
+            g.NavWindowingHighlightAlpha = 1.0f;
         }
 
         // Move window
@@ -2751,34 +2761,51 @@ static void ImGui::NavUpdateWindowing()
             }
         }
 
+        // Single press toggles NavLayer, long press with L/R apply actual focus on release (until then the window was merely rendered front-most)
         if (!IsNavInputDown(ImGuiNavInput_PadMenu))
         {
-            // Apply actual focus only when releasing the NavMenu button (until then the window was merely rendered front-most)
-            if (g.NavWindowingTarget && !g.NavWindowingToggleLayer && (!g.NavWindow || g.NavWindowingTarget != g.NavWindow->RootNonPopupWindow))
-            {
-                FocusWindow(g.NavWindowingTarget);
-                g.NavDisableHighlight = false;
-                g.NavDisableMouseHover = true;
-                if (g.NavWindowingTarget->NavLastIds[0] == 0)
-                    NavInitWindow(g.NavWindowingTarget, false);
-
-                // If the window only has a menu layer, select it directly
-                if (g.NavWindowingTarget->DC.NavLayerActiveMask == 0x02)
-                    g.NavLayer = 1;
-            }
-
-            // Single press toggles NavLayer
+            g.NavWindowingToggleLayer &= (g.NavWindowingHighlightAlpha < 1.0f); // Once button was held long enough we don't consider it a tap-to-toggle-layer press anymore.
             if (g.NavWindowingToggleLayer && g.NavWindow)
-                toggle_layer = true;
+                apply_toggle_layer = true;
+            else if (!g.NavWindowingToggleLayer)
+                apply_focus_window = g.NavWindowingTarget;
             g.NavWindowingTarget = NULL;
         }
     }
-    
-    // Keyboard: Press and release ALT to toggle menu
-    if ((g.ActiveId == 0 || g.ActiveIdAllowOverlap) && IsNavInputPressed(ImGuiNavInput_KeyMenu, ImGuiInputReadMode_Released))
-        toggle_layer = true;
 
-    if (toggle_layer && g.NavWindow)
+    // Keyboard: Focus
+    if (g.NavWindowingTarget && g.NavWindowingIsKeyboardMode)
+    {
+        // Visuals only appears after a brief time after pressing TAB the first time, so that a fast CTRL+TAB doesn't add visual noise
+        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingHighlightTimer - 0.15f) / 0.04f)); // 1.0f
+        if (IsKeyPressedMap(ImGuiKey_Tab, true))
+            NavUpdateWindowingHighlightWindow(g.IO.KeyShift ? +1 : -1);
+        if (!g.IO.KeyCtrl)
+            apply_focus_window = g.NavWindowingTarget;
+    }
+
+    // Keyboard: Press and release ALT to toggle menu layer
+    if ((g.ActiveId == 0 || g.ActiveIdAllowOverlap) && IsNavInputPressed(ImGuiNavInput_KeyMenu, ImGuiInputReadMode_Released))
+        apply_toggle_layer = true;
+
+    // Apply final focus
+    if (apply_focus_window && (g.NavWindow == NULL || apply_focus_window != g.NavWindow->RootNonPopupWindow))
+    {
+        g.NavDisableHighlight = false;
+        g.NavDisableMouseHover = true;
+        FocusWindow(apply_focus_window);
+        if (apply_focus_window->NavLastIds[0] == 0)
+            NavInitWindow(apply_focus_window, false);
+
+        // If the window only has a menu layer, select it directly
+        if (apply_focus_window->DC.NavLayerActiveMask == (1 << 1))
+            g.NavLayer = 1;
+    }
+    if (apply_focus_window)
+        g.NavWindowingTarget = NULL;
+
+    // Apply menu/layer toggle
+    if (apply_toggle_layer && g.NavWindow)
     {
         if ((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) == 0 && (g.NavWindow->RootWindow->DC.NavLayerActiveMask & (1 << 1)) != 0)
             FocusWindow(g.NavWindow->RootWindow);
@@ -5710,8 +5737,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             ImRect bb = window->Rect();
             bb.Expand(g.FontSize);
-            window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingDisplayAlpha * 0.25f), g.Style.WindowRounding);
-            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingDisplayAlpha), g.Style.WindowRounding, ~0, 3.0f);
+            window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha * 0.25f), g.Style.WindowRounding);
+            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), g.Style.WindowRounding, ~0, 3.0f);
         }
 
         // Draw window + handle manual resize
