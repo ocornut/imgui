@@ -4,7 +4,7 @@
 - On Ubuntu 14.04+
 
 ```bash
-g++ -I ../imgui main.cpp imgui_impl_a5.cpp ../imgui/imgui*.cpp -lallegro -lallegro_primitives
+g++ -I ../.. main.cpp imgui_impl_a5.cpp ../../imgui*.cpp -lallegro -lallegro_primitives -o allegro5_example
 ```
 
 - On Windows with Visual Studio's CLI
