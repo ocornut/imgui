@@ -4544,7 +4544,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     {
         // Adjust passed "client size" to become a "window size"
         window->SizeContentsExplicit = g.NextWindowData.ContentSizeVal;
-        window->SizeContentsExplicit.y += window->TitleBarHeight() + window->MenuBarHeight();
+        if (window->SizeContentsExplicit.y != 0.0f)
+            window->SizeContentsExplicit.y += window->TitleBarHeight() + window->MenuBarHeight();
         g.NextWindowData.ContentSizeCond = 0;
     }
     else if (first_begin_of_the_frame)
