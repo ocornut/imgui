@@ -27,7 +27,7 @@
  - ISSUES & TODO LIST
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - How can I help?
-   - How can I dipslay an image? What is ImTextureID, how does it works?
+   - How can I display an image? What is ImTextureID, how does it works?
    - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on labels and the ID stack.
    - How can I tell when Dear ImGui wants my mouse/keyboard inputs VS when I can pass them to my application?
    - How can I load a different font than the default?
@@ -2748,19 +2748,6 @@ static void ImGui::NavUpdateWindowing()
             g.NavWindowingHighlightAlpha = 1.0f;
         }
 
-        // Move window
-        if (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoMove))
-        {
-            const ImVec2 move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadRStick, ImGuiInputReadMode_Down);
-            if (move_delta.x != 0.0f || move_delta.y != 0.0f)
-            {
-                const float move_speed = ImFloor(600 * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
-                g.NavWindowingTarget->PosFloat += move_delta * move_speed;
-                g.NavDisableMouseHover = true;
-                MarkIniSettingsDirty(g.NavWindowingTarget);
-            }
-        }
-
         // Single press toggles NavLayer, long press with L/R apply actual focus on release (until then the window was merely rendered front-most)
         if (!IsNavInputDown(ImGuiNavInput_PadMenu))
         {
@@ -2787,6 +2774,24 @@ static void ImGui::NavUpdateWindowing()
     // Keyboard: Press and release ALT to toggle menu layer
     if ((g.ActiveId == 0 || g.ActiveIdAllowOverlap) && IsNavInputPressed(ImGuiNavInput_KeyMenu, ImGuiInputReadMode_Released))
         apply_toggle_layer = true;
+
+    // Move window
+    if (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoMove))
+    {
+        ImVec2 move_delta;
+        if (g.NavWindowingIsKeyboardMode && !g.IO.KeyShift)
+            move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Key, ImGuiInputReadMode_Down);
+        if (!g.NavWindowingIsKeyboardMode)
+            move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadRStick, ImGuiInputReadMode_Down);
+        if (move_delta.x != 0.0f || move_delta.y != 0.0f)
+        {
+            const float NAV_MOVE_SPEED = 800.0f;
+            const float move_speed = ImFloor(NAV_MOVE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
+            g.NavWindowingTarget->PosFloat += move_delta * move_speed;
+            g.NavDisableMouseHover = true;
+            MarkIniSettingsDirty(g.NavWindowingTarget);
+        }
+    }
 
     // Apply final focus
     if (apply_focus_window && (g.NavWindow == NULL || apply_focus_window != g.NavWindow->RootNonPopupWindow))
@@ -5351,19 +5356,20 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     // Navigation/gamepad resize
     if (g.NavWindowingTarget == window)
     {
-        ImVec2 nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_Down);
+        ImVec2 nav_resize_delta;
+        if (g.NavWindowingIsKeyboardMode && g.IO.KeyShift)
+            nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Key, ImGuiInputReadMode_Down);
+        if (!g.NavWindowingIsKeyboardMode)
+            nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_Down);
         if (nav_resize_delta.x != 0.0f || nav_resize_delta.y != 0.0f)
         {
-            const float GAMEPAD_RESIZE_SPEED = 600.0f;
-            nav_resize_delta *= ImFloor(GAMEPAD_RESIZE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
+            const float NAV_RESIZE_SPEED = 600.0f;
+            nav_resize_delta *= ImFloor(NAV_RESIZE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
+            g.NavWindowingToggleLayer = false;
             g.NavDisableMouseHover = true;
             resize_grip_col[0] = GetColorU32(ImGuiCol_ResizeGripActive);
-            if (nav_resize_delta.x != 0.0f || nav_resize_delta.y != 0.0f)
-            {
-                // FIXME-NAV: Should store and accumulate into a separate size buffer to handle sizing constraints properly, right now a constraint will make us stuck.
-                g.NavWindowingToggleLayer = false;
-                size_target = CalcSizeAfterConstraint(window, window->SizeFull + nav_resize_delta);
-            }
+            // FIXME-NAV: Should store and accumulate into a separate size buffer to handle sizing constraints properly, right now a constraint will make us stuck.
+            size_target = CalcSizeAfterConstraint(window, window->SizeFull + nav_resize_delta);
         }
     }
 
