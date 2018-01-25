@@ -2687,11 +2687,11 @@ static bool IsNavInputPressedAnyOfTwo(ImGuiNavInput n1, ImGuiNavInput n2, ImGuiI
 ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInputReadMode mode, float slow_factor, float fast_factor)
 {
     ImVec2 delta(0.0f, 0.0f);
-    if (dir_sources & ImGuiNavDirSourceFlags_Key)
+    if (dir_sources & ImGuiNavDirSourceFlags_Keyboard)
         delta += ImVec2(GetNavInputAmount(ImGuiNavInput_KeyRight, mode)       - GetNavInputAmount(ImGuiNavInput_KeyLeft,       mode), GetNavInputAmount(ImGuiNavInput_KeyDown,       mode) - GetNavInputAmount(ImGuiNavInput_KeyUp,       mode));
-    if (dir_sources & ImGuiNavDirSourceFlags_PadLStick)
+    if (dir_sources & ImGuiNavDirSourceFlags_PadDPad)
         delta += ImVec2(GetNavInputAmount(ImGuiNavInput_PadDpadRight, mode)   - GetNavInputAmount(ImGuiNavInput_PadDpadLeft,   mode), GetNavInputAmount(ImGuiNavInput_PadDpadDown,   mode) - GetNavInputAmount(ImGuiNavInput_PadDpadUp,   mode));
-    if (dir_sources & ImGuiNavDirSourceFlags_PadRStick)
+    if (dir_sources & ImGuiNavDirSourceFlags_PadLStick)
         delta += ImVec2(GetNavInputAmount(ImGuiNavInput_PadLStickRight, mode) - GetNavInputAmount(ImGuiNavInput_PadLStickLeft, mode), GetNavInputAmount(ImGuiNavInput_PadLStickDown, mode) - GetNavInputAmount(ImGuiNavInput_PadLStickUp, mode));
     if (slow_factor != 0.0f && IsNavInputDown(ImGuiNavInput_PadTweakSlow))
         delta *= slow_factor;
@@ -2730,12 +2730,12 @@ static void ImGui::NavUpdateWindowing()
             g.NavWindowingTarget = window->RootNonPopupWindow;
             g.NavWindowingHighlightTimer = g.NavWindowingHighlightAlpha = 0.0f;
             g.NavWindowingToggleLayer = start_windowing_with_keyboard ? false : true;
-            g.NavWindowingIsKeyboardMode = start_windowing_with_keyboard;
+            g.NavWindowingInputSource = start_windowing_with_keyboard ? ImGuiInputSource_NavKeyboard : ImGuiInputSource_NavGamepad;
         }
 
     // Gamepad update
     g.NavWindowingHighlightTimer += g.IO.DeltaTime;
-    if (g.NavWindowingTarget && !g.NavWindowingIsKeyboardMode)
+    if (g.NavWindowingTarget && g.NavWindowingInputSource == ImGuiInputSource_NavGamepad)
     {
         // Highlight only appears after a brief time holding the button, so that a fast tap on PadMenu (to toggle NavLayer) doesn't add visual noise
         g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingHighlightTimer - 0.20f) / 0.05f));
@@ -2761,7 +2761,7 @@ static void ImGui::NavUpdateWindowing()
     }
 
     // Keyboard: Focus
-    if (g.NavWindowingTarget && g.NavWindowingIsKeyboardMode)
+    if (g.NavWindowingTarget && g.NavWindowingInputSource == ImGuiInputSource_NavKeyboard)
     {
         // Visuals only appears after a brief time after pressing TAB the first time, so that a fast CTRL+TAB doesn't add visual noise
         g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingHighlightTimer - 0.15f) / 0.04f)); // 1.0f
@@ -2779,10 +2779,10 @@ static void ImGui::NavUpdateWindowing()
     if (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoMove))
     {
         ImVec2 move_delta;
-        if (g.NavWindowingIsKeyboardMode && !g.IO.KeyShift)
-            move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Key, ImGuiInputReadMode_Down);
-        if (!g.NavWindowingIsKeyboardMode)
-            move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadRStick, ImGuiInputReadMode_Down);
+        if (g.NavWindowingInputSource == ImGuiInputSource_NavKeyboard && !g.IO.KeyShift)
+            move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard, ImGuiInputReadMode_Down);
+        if (g.NavWindowingInputSource == ImGuiInputSource_NavGamepad)
+            move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_Down);
         if (move_delta.x != 0.0f || move_delta.y != 0.0f)
         {
             const float NAV_MOVE_SPEED = 800.0f;
@@ -3043,7 +3043,7 @@ static void ImGui::NavUpdate()
 
         // *Normal* Manual scroll with NavScrollXXX keys
         // Next movement request will clamp the NavId reference rectangle to the visible area, so navigation will resume within those bounds.
-        ImVec2 scroll_dir = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadRStick, ImGuiInputReadMode_Down, 1.0f/10.0f, 10.0f);
+        ImVec2 scroll_dir = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_Down, 1.0f/10.0f, 10.0f);
         if (scroll_dir.x != 0.0f && window->ScrollbarX)
         {
             SetWindowScrollX(window, ImFloor(window->Scroll.x + scroll_dir.x * scroll_speed));
@@ -5357,10 +5357,10 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     if (g.NavWindowingTarget == window)
     {
         ImVec2 nav_resize_delta;
-        if (g.NavWindowingIsKeyboardMode && g.IO.KeyShift)
-            nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Key, ImGuiInputReadMode_Down);
-        if (!g.NavWindowingIsKeyboardMode)
-            nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_Down);
+        if (g.NavWindowingInputSource == ImGuiInputSource_NavKeyboard && g.IO.KeyShift)
+            nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard, ImGuiInputReadMode_Down);
+        if (g.NavWindowingInputSource == ImGuiInputSource_NavGamepad)
+            nav_resize_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_Down);
         if (nav_resize_delta.x != 0.0f || nav_resize_delta.y != 0.0f)
         {
             const float NAV_RESIZE_SPEED = 600.0f;
@@ -8401,7 +8401,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
         }
         else if (g.ActiveIdSource == ImGuiInputSource_Nav && g.NavActivateDownId == id)
         {
-            const ImVec2 delta2 = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Key|ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_RepeatFast, 0.0f, 0.0f);
+            const ImVec2 delta2 = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard|ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 0.0f, 0.0f);
             float delta = is_horizontal ? delta2.x : -delta2.y;
             if (delta != 0.0f)
             {
@@ -8748,7 +8748,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
             }
             if (g.ActiveIdSource == ImGuiInputSource_Nav)
             {
-                adjust_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Key|ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
+                adjust_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard|ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
                 v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
             }
             adjust_delta *= v_speed;
@@ -12981,7 +12981,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         }
         if (ImGui::TreeNode("Basic state"))
         {
-            const char* input_source_names[] = { "None", "Mouse", "Nav" }; IM_ASSERT(IM_ARRAYSIZE(input_source_names) == ImGuiInputSource_Count_);
+            const char* input_source_names[] = { "None", "Mouse", "Nav", "NavGamepad", "NavKeyboard" }; IM_ASSERT(IM_ARRAYSIZE(input_source_names) == ImGuiInputSource_Count_);
             ImGui::Text("HoveredWindow: '%s'", g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
             ImGui::Text("HoveredRootWindow: '%s'", g.HoveredRootWindow ? g.HoveredRootWindow->Name : "NULL");
             ImGui::Text("HoveredId: 0x%08X/0x%08X (%.2f sec)", g.HoveredId, g.HoveredIdPreviousFrame, g.HoveredIdTimer); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not

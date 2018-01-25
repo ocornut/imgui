@@ -252,6 +252,8 @@ enum ImGuiInputSource
     ImGuiInputSource_None = 0,
     ImGuiInputSource_Mouse,
     ImGuiInputSource_Nav,
+    ImGuiInputSource_NavKeyboard,   // Only used occasionally for storage, not tested/handled by most code
+    ImGuiInputSource_NavGamepad,    // "
     ImGuiInputSource_Count_,
 };
 
@@ -285,9 +287,9 @@ enum ImGuiNavHighlightFlags_
 
 enum ImGuiNavDirSourceFlags_
 {
-    ImGuiNavDirSourceFlags_Key          = 1 << 0,
-    ImGuiNavDirSourceFlags_PadLStick    = 1 << 1,
-    ImGuiNavDirSourceFlags_PadRStick    = 1 << 2
+    ImGuiNavDirSourceFlags_Keyboard     = 1 << 0,
+    ImGuiNavDirSourceFlags_PadDPad      = 1 << 1,
+    ImGuiNavDirSourceFlags_PadLStick    = 1 << 2
 };
 
 // 2D axis aligned bounding-box
@@ -594,7 +596,7 @@ struct ImGuiContext
     float                   NavWindowingHighlightTimer;
     float                   NavWindowingHighlightAlpha;
     bool                    NavWindowingToggleLayer;
-    bool                    NavWindowingIsKeyboardMode;         // Gamepad or keyboard mode
+    ImGuiInputSource        NavWindowingInputSource;            // Gamepad or keyboard mode
     int                     NavLayer;                           // Layer we are navigating on. For now the system is hard-coded for 0=main contents and 1=menu/title bar, may expose layers later.
     int                     NavIdTabCounter;                    // == NavWindow->DC.FocusIdxTabCounter at time of NavId processing
     bool                    NavIdIsAlive;                       // Nav widget has been seen this frame ~~ NavRefRectRel is valid
@@ -714,7 +716,7 @@ struct ImGuiContext
         NavWindowingTarget = NULL;
         NavWindowingHighlightTimer = NavWindowingHighlightAlpha = 0.0f;
         NavWindowingToggleLayer = false;
-        NavWindowingIsKeyboardMode = false;
+        NavWindowingInputSource = ImGuiInputSource_None;
         NavLayer = 0;
         NavIdTabCounter = INT_MAX;
         NavIdIsAlive = false;
