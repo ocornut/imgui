@@ -2939,7 +2939,7 @@ static void ImGui::NavUpdate()
             ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
             FocusWindow(parent_window);
             IM_ASSERT(child_window->ChildId != 0);
-            SetNavID(child_window->ChildId, g.NavLayer); // FIXME-NAV: Layer not necessarily correct
+            SetNavID(child_window->ChildId, 0);
             g.NavIdIsAlive = false;
             if (g.NavDisableMouseHover)
                 g.NavMousePosDirty = true;
@@ -8421,8 +8421,10 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
                 }
                 if (IsNavInputDown(ImGuiNavInput_PadTweakFast))
                     delta *= 10.0f;
-                clicked_t = ImSaturate(clicked_t + delta); // FIXME-NAV: todo: cancel adjustment if current value already past edge and we are moving in edge direction, to avoid clamping value to edge.
+                clicked_t = ImSaturate(clicked_t + delta);
                 set_new_value = true;
+                if ((clicked_t >= 1.0f && delta > 0.0f) || (clicked_t <= 0.0f && delta < 0.0f)) // This is to avoid applying the saturation when already past the limits
+                    set_new_value = false;
             }
         }
         else
@@ -8749,6 +8751,8 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
             if (g.ActiveIdSource == ImGuiInputSource_Nav)
             {
                 adjust_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard|ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
+                if (v_min < v_max && ((v_cur >= v_max && adjust_delta > 0.0f) || (v_cur <= v_min && adjust_delta < 0.0f))) // This is to avoid applying the saturation when already past the limits
+                    adjust_delta = 0.0f;
                 v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
             }
             adjust_delta *= v_speed;
