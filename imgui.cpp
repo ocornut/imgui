@@ -2838,9 +2838,9 @@ static int ChildWindowComparer(const void* lhs, const void* rhs)
     return (a->BeginOrderWithinParent - b->BeginOrderWithinParent);
 }
 
-static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>& out_sorted_windows, ImGuiWindow* window)
+static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window)
 {
-    out_sorted_windows.push_back(window);
+    out_sorted_windows->push_back(window);
     if (window->Active)
     {
         int count = window->DC.ChildWindows.Size;
@@ -3031,7 +3031,7 @@ void ImGui::EndFrame()
         ImGuiWindow* window = g.Windows[i];
         if (window->Active && (window->Flags & ImGuiWindowFlags_ChildWindow))       // if a child is active its parent will add it
             continue;
-        AddWindowToSortedBuffer(g.WindowsSortBuffer, window);
+        AddWindowToSortedBuffer(&g.WindowsSortBuffer, window);
     }
 
     IM_ASSERT(g.Windows.Size == g.WindowsSortBuffer.Size);  // we done something wrong
