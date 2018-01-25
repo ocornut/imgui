@@ -25,6 +25,14 @@ opengl3_example/Release/*
 opengl3_example/ipch/*
 opengl3_example/x64/*
 opengl3_example/opengl3_example
+sdl_opengl2_example/Debug/*
+sdl_opengl2_example/Release/*
+sdl_opengl2_example/ipch/*
+sdl_opengl2_example/x64/*
+sdl_opengl3_example/Debug/*
+sdl_opengl3_example/Release/*
+sdl_opengl3_example/ipch/*
+sdl_opengl3_example/x64/*
 *.opensdf
 *.sdf
 *.suo
@@ -34,6 +42,8 @@ opengl3_example/opengl3_example
 *.exe
 *.pdb
 *.ilk
+*.VC.db
+*.VC.VC.opendb
 
 ## Ini files
 imgui.ini

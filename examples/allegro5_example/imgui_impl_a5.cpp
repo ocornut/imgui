@@ -28,8 +28,6 @@ static double                   g_Time = 0.0;
 static ALLEGRO_MOUSE_CURSOR*    g_MouseCursorInvisible = NULL;
 static ALLEGRO_VERTEX_DECL*     g_VertexDecl = NULL;
 
-#define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
-
 struct ImDrawVertAllegro
 {
     ImVec2 pos;
@@ -162,9 +160,9 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
     // We still use a custom declaration to use 'ALLEGRO_PRIM_TEX_COORD' instead of 'ALLEGRO_PRIM_TEX_COORD_PIXEL' else we can't do a reliable conversion.
     ALLEGRO_VERTEX_ELEMENT elems[] =
     {
-        { ALLEGRO_PRIM_POSITION, ALLEGRO_PRIM_FLOAT_2, OFFSETOF(ImDrawVertAllegro, pos) },
-        { ALLEGRO_PRIM_TEX_COORD, ALLEGRO_PRIM_FLOAT_2, OFFSETOF(ImDrawVertAllegro, uv) },
-        { ALLEGRO_PRIM_COLOR_ATTR, 0, OFFSETOF(ImDrawVertAllegro, col) },
+        { ALLEGRO_PRIM_POSITION, ALLEGRO_PRIM_FLOAT_2, IM_OFFSETOF(ImDrawVertAllegro, pos) },
+        { ALLEGRO_PRIM_TEX_COORD, ALLEGRO_PRIM_FLOAT_2, IM_OFFSETOF(ImDrawVertAllegro, uv) },
+        { ALLEGRO_PRIM_COLOR_ATTR, 0, IM_OFFSETOF(ImDrawVertAllegro, col) },
         { 0, 0, 0 }
     };
     g_VertexDecl = al_create_vertex_decl(elems, sizeof(ImDrawVertAllegro));
@@ -179,6 +177,7 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_PageDown] = ALLEGRO_KEY_PGDN;
     io.KeyMap[ImGuiKey_Home] = ALLEGRO_KEY_HOME;
     io.KeyMap[ImGuiKey_End] = ALLEGRO_KEY_END;
+    io.KeyMap[ImGuiKey_Insert] = ALLEGRO_KEY_INSERT;
     io.KeyMap[ImGuiKey_Delete] = ALLEGRO_KEY_DELETE;
     io.KeyMap[ImGuiKey_Backspace] = ALLEGRO_KEY_BACKSPACE;
     io.KeyMap[ImGuiKey_Enter] = ALLEGRO_KEY_ENTER;
@@ -204,6 +203,10 @@ void ImGui_ImplA5_Shutdown()
     ImGui::Shutdown();
 }
 
+// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
+// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
+// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 bool ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT *ev)
 {
     ImGuiIO &io = ImGui::GetIO();
@@ -212,6 +215,7 @@ bool ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT *ev)
     {
     case ALLEGRO_EVENT_MOUSE_AXES:
         io.MouseWheel += ev->mouse.dz;
+        io.MouseWheelH += ev->mouse.dw;
         return true;
     case ALLEGRO_EVENT_KEY_CHAR:
         if (ev->keyboard.display == g_Display)
@@ -226,7 +230,6 @@ bool ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT *ev)
     }
     return false;
 }
-
 
 void ImGui_ImplA5_NewFrame()
 {
@@ -262,7 +265,7 @@ void ImGui_ImplA5_NewFrame()
     }
     else
     {
-        io.MousePos = ImVec2(-1, -1);
+        io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     }
 
     al_get_mouse_state(&mouse);
@@ -290,6 +293,6 @@ void ImGui_ImplA5_NewFrame()
         al_set_system_mouse_cursor(g_Display, cursor_id);
     }
 
-    // Start the frame
+    // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
 }

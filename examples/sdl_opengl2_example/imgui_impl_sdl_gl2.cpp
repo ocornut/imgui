@@ -1,5 +1,14 @@
-// ImGui SDL2 binding with OpenGL
+// ImGui SDL2 binding with OpenGL (legacy, fixed pipeline)
 // In this binding, ImTextureID is used to store an OpenGL 'GLuint' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
+// (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
+
+// **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
+// **Prefer using the code in the sdl_opengl3_example/ folder**
+// This code is mostly provided as a reference to learn how ImGui integration works, because it is shorter to read.
+// If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything more
+// complicated, will require your code to reset every single OpenGL attributes to their initial state, and might
+// confuse your GPU driver. 
+// The GL2 code is unable to reset attributes or even call e.g. "glUseProgram(0)" because they don't exist in that API.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -10,18 +19,17 @@
 #include <SDL_syswm.h>
 #include <SDL_opengl.h>
 #include <imgui.h>
-#include "imgui_impl_sdl.h"
+#include "imgui_impl_sdl_gl2.h"
 
 // Data
 static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
-static float        g_MouseWheel = 0.0f;
 static GLuint       g_FontTexture = 0;
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
-// If text or lines are blurry when integrating ImGui in your engine:
-// - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-void ImGui_ImplSdl_RenderDrawLists(ImDrawData* draw_data)
+// Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so. 
+// If text or lines are blurry when integrating ImGui in your engine: in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
+void ImGui_ImplSdlGL2_RenderDrawLists(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     ImGuiIO& io = ImGui::GetIO();
@@ -32,8 +40,9 @@ void ImGui_ImplSdl_RenderDrawLists(ImDrawData* draw_data)
     draw_data->ScaleClipRects(io.DisplayFramebufferScale);
 
     // We are using the OpenGL fixed pipeline to make the example code simpler to read!
-    // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
+    // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers, polygon fill.
     GLint last_texture; glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+    GLint last_polygon_mode[2]; glGetIntegerv(GL_POLYGON_MODE, last_polygon_mode);
     GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
     GLint last_scissor_box[4]; glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box); 
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
@@ -46,7 +55,8 @@ void ImGui_ImplSdl_RenderDrawLists(ImDrawData* draw_data)
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
     glEnable(GL_TEXTURE_2D);
-    //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
 
     // Setup viewport, orthographic projection matrix
     glViewport(0, 0, (GLsizei)fb_width, (GLsizei)fb_height);
@@ -59,15 +69,14 @@ void ImGui_ImplSdl_RenderDrawLists(ImDrawData* draw_data)
     glLoadIdentity();
 
     // Render command lists
-    #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
         const ImDrawVert* vtx_buffer = cmd_list->VtxBuffer.Data;
         const ImDrawIdx* idx_buffer = cmd_list->IdxBuffer.Data;
-        glVertexPointer(2, GL_FLOAT, sizeof(ImDrawVert), (const GLvoid*)((const char*)vtx_buffer + OFFSETOF(ImDrawVert, pos)));
-        glTexCoordPointer(2, GL_FLOAT, sizeof(ImDrawVert), (const GLvoid*)((const char*)vtx_buffer + OFFSETOF(ImDrawVert, uv)));
-        glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (const GLvoid*)((const char*)vtx_buffer + OFFSETOF(ImDrawVert, col)));
+        glVertexPointer(2, GL_FLOAT, sizeof(ImDrawVert), (const GLvoid*)((const char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, pos)));
+        glTexCoordPointer(2, GL_FLOAT, sizeof(ImDrawVert), (const GLvoid*)((const char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, uv)));
+        glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (const GLvoid*)((const char*)vtx_buffer + IM_OFFSETOF(ImDrawVert, col)));
 
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
@@ -85,7 +94,6 @@ void ImGui_ImplSdl_RenderDrawLists(ImDrawData* draw_data)
             idx_buffer += pcmd->ElemCount;
         }
     }
-    #undef OFFSETOF
 
     // Restore modified state
     glDisableClientState(GL_COLOR_ARRAY);
@@ -97,31 +105,36 @@ void ImGui_ImplSdl_RenderDrawLists(ImDrawData* draw_data)
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glPopAttrib();
+    glPolygonMode(GL_FRONT, last_polygon_mode[0]); glPolygonMode(GL_BACK, last_polygon_mode[1]);
     glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 }
 
-static const char* ImGui_ImplSdl_GetClipboardText(void*)
+static const char* ImGui_ImplSdlGL2_GetClipboardText(void*)
 {
     return SDL_GetClipboardText();
 }
 
-static void ImGui_ImplSdl_SetClipboardText(void*, const char* text)
+static void ImGui_ImplSdlGL2_SetClipboardText(void*, const char* text)
 {
     SDL_SetClipboardText(text);
 }
 
-bool ImGui_ImplSdl_ProcessEvent(SDL_Event* event)
+// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
+// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
+// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+bool ImGui_ImplSdlGL2_ProcessEvent(SDL_Event* event)
 {
     ImGuiIO& io = ImGui::GetIO();
     switch (event->type)
     {
     case SDL_MOUSEWHEEL:
         {
-            if (event->wheel.y > 0)
-                g_MouseWheel = 1;
-            if (event->wheel.y < 0)
-                g_MouseWheel = -1;
+            if (event->wheel.x > 0) io.MouseWheelH += 1;
+            if (event->wheel.x < 0) io.MouseWheelH -= 1;
+            if (event->wheel.y > 0) io.MouseWheel += 1;
+            if (event->wheel.y < 0) io.MouseWheel -= 1;
             return true;
         }
     case SDL_MOUSEBUTTONDOWN:
@@ -151,7 +164,7 @@ bool ImGui_ImplSdl_ProcessEvent(SDL_Event* event)
     return false;
 }
 
-bool ImGui_ImplSdl_CreateDeviceObjects()
+bool ImGui_ImplSdlGL2_CreateDeviceObjects()
 {
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
@@ -178,7 +191,7 @@ bool ImGui_ImplSdl_CreateDeviceObjects()
     return true;
 }
 
-void    ImGui_ImplSdl_InvalidateDeviceObjects()
+void    ImGui_ImplSdlGL2_InvalidateDeviceObjects()
 {
     if (g_FontTexture)
     {
@@ -188,7 +201,7 @@ void    ImGui_ImplSdl_InvalidateDeviceObjects()
     }
 }
 
-bool    ImGui_ImplSdl_Init(SDL_Window* window)
+bool    ImGui_ImplSdlGL2_Init(SDL_Window* window)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = SDLK_TAB;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
@@ -200,6 +213,7 @@ bool    ImGui_ImplSdl_Init(SDL_Window* window)
     io.KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
     io.KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
     io.KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
+    io.KeyMap[ImGuiKey_Insert] = SDL_SCANCODE_INSERT;
     io.KeyMap[ImGuiKey_Delete] = SDLK_DELETE;
     io.KeyMap[ImGuiKey_Backspace] = SDLK_BACKSPACE;
     io.KeyMap[ImGuiKey_Enter] = SDLK_RETURN;
@@ -211,9 +225,9 @@ bool    ImGui_ImplSdl_Init(SDL_Window* window)
     io.KeyMap[ImGuiKey_Y] = SDLK_y;
     io.KeyMap[ImGuiKey_Z] = SDLK_z;
 
-    io.RenderDrawListsFn = ImGui_ImplSdl_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
-    io.SetClipboardTextFn = ImGui_ImplSdl_SetClipboardText;
-    io.GetClipboardTextFn = ImGui_ImplSdl_GetClipboardText;
+    io.RenderDrawListsFn = ImGui_ImplSdlGL2_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
+    io.SetClipboardTextFn = ImGui_ImplSdlGL2_SetClipboardText;
+    io.GetClipboardTextFn = ImGui_ImplSdlGL2_GetClipboardText;
     io.ClipboardUserData = NULL;
 
 #ifdef _WIN32
@@ -228,16 +242,16 @@ bool    ImGui_ImplSdl_Init(SDL_Window* window)
     return true;
 }
 
-void ImGui_ImplSdl_Shutdown()
+void ImGui_ImplSdlGL2_Shutdown()
 {
-    ImGui_ImplSdl_InvalidateDeviceObjects();
+    ImGui_ImplSdlGL2_InvalidateDeviceObjects();
     ImGui::Shutdown();
 }
 
-void ImGui_ImplSdl_NewFrame(SDL_Window *window)
+void ImGui_ImplSdlGL2_NewFrame(SDL_Window *window)
 {
     if (!g_FontTexture)
-        ImGui_ImplSdl_CreateDeviceObjects();
+        ImGui_ImplSdlGL2_CreateDeviceObjects();
 
     ImGuiIO& io = ImGui::GetIO();
 
@@ -252,29 +266,37 @@ void ImGui_ImplSdl_NewFrame(SDL_Window *window)
     // Setup time step
     Uint32	time = SDL_GetTicks();
     double current_time = time / 1000.0;
-    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f/60.0f);
+    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f / 60.0f);
     g_Time = current_time;
 
-    // Setup inputs
-    // (we already got mouse wheel, keyboard keys & characters from SDL_PollEvent())
+    // Setup mouse inputs (we already got mouse wheel, keyboard keys & characters from our event handler)
     int mx, my;
-    Uint32 mouseMask = SDL_GetMouseState(&mx, &my);
-    if (SDL_GetWindowFlags(window) & SDL_WINDOW_MOUSE_FOCUS)
-        io.MousePos = ImVec2((float)mx, (float)my);   // Mouse position, in pixels (set to -1,-1 if no mouse / on another screen, etc.)
-    else
-        io.MousePos = ImVec2(-1,-1);
-
-    io.MouseDown[0] = g_MousePressed[0] || (mouseMask & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;		// If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-    io.MouseDown[1] = g_MousePressed[1] || (mouseMask & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
-    io.MouseDown[2] = g_MousePressed[2] || (mouseMask & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
+    Uint32 mouse_buttons = SDL_GetMouseState(&mx, &my);
+    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+    io.MouseDown[0] = g_MousePressed[0] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+    io.MouseDown[1] = g_MousePressed[1] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
+    io.MouseDown[2] = g_MousePressed[2] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
     g_MousePressed[0] = g_MousePressed[1] = g_MousePressed[2] = false;
 
-    io.MouseWheel = g_MouseWheel;
-    g_MouseWheel = 0.0f;
+    // We need to use SDL_CaptureMouse() to easily retrieve mouse coordinates outside of the client area. This is only supported from SDL 2.0.4 (released Jan 2016)
+#if (SDL_MAJOR_VERSION >= 2) && (SDL_MINOR_VERSION >= 0) && (SDL_PATCHLEVEL >= 4)   
+    if ((SDL_GetWindowFlags(window) & (SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_MOUSE_CAPTURE)) != 0)
+        io.MousePos = ImVec2((float)mx, (float)my);
+    bool any_mouse_button_down = false;
+    for (int n = 0; n < IM_ARRAYSIZE(io.MouseDown); n++)
+        any_mouse_button_down |= io.MouseDown[n];
+    if (any_mouse_button_down && (SDL_GetWindowFlags(window) & SDL_WINDOW_MOUSE_CAPTURE) == 0)
+        SDL_CaptureMouse(SDL_TRUE);
+    if (!any_mouse_button_down && (SDL_GetWindowFlags(window) & SDL_WINDOW_MOUSE_CAPTURE) != 0)
+        SDL_CaptureMouse(SDL_FALSE);
+#else
+    if ((SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) != 0)
+        io.MousePos = ImVec2((float)mx, (float)my);
+#endif
 
     // Hide OS mouse cursor if ImGui is drawing it
     SDL_ShowCursor(io.MouseDrawCursor ? 0 : 1);
 
-    // Start the frame
+    // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
 }

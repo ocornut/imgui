@@ -24,8 +24,7 @@
 // GLFW Data
 static GLFWwindow*  g_Window = NULL;
 static double       g_Time = 0.0f;
-static bool         g_MousePressed[3] = { false, false, false };
-static float        g_MouseWheel = 0.0f;
+static bool         g_MouseJustPressed[3] = { false, false, false };
 
 // Vulkan Data
 static VkAllocationCallbacks* g_Allocator = NULL;
@@ -236,10 +235,10 @@ void ImGui_ImplGlfwVulkan_RenderDrawLists(ImDrawData* draw_data)
         VkMappedMemoryRange range[2] = {};
         range[0].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
         range[0].memory = g_VertexBufferMemory[g_FrameIndex];
-        range[0].size = vertex_size;
+        range[0].size = VK_WHOLE_SIZE;
         range[1].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
         range[1].memory = g_IndexBufferMemory[g_FrameIndex];
-        range[1].size = index_size;
+        range[1].size = VK_WHOLE_SIZE;
         err = vkFlushMappedMemoryRanges(g_Device, 2, range);
         ImGui_ImplGlfwVulkan_VkResult(err);
         vkUnmapMemory(g_Device, g_VertexBufferMemory[g_FrameIndex]);
@@ -301,10 +300,10 @@ void ImGui_ImplGlfwVulkan_RenderDrawLists(ImDrawData* draw_data)
             else
             {
                 VkRect2D scissor;
-                scissor.offset.x = (int32_t)(pcmd->ClipRect.x);
-                scissor.offset.y = (int32_t)(pcmd->ClipRect.y);
+                scissor.offset.x = (int32_t)(pcmd->ClipRect.x) > 0 ? (int32_t)(pcmd->ClipRect.x) : 0;
+                scissor.offset.y = (int32_t)(pcmd->ClipRect.y) > 0 ? (int32_t)(pcmd->ClipRect.y) : 0;
                 scissor.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
-                scissor.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y + 1); // TODO: + 1??????
+                scissor.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y + 1); // FIXME: Why +1 here?
                 vkCmdSetScissor(g_CommandBuffer, 0, 1, &scissor);
                 vkCmdDrawIndexed(g_CommandBuffer, pcmd->ElemCount, 1, idx_offset, vtx_offset, 0);
             }
@@ -327,12 +326,14 @@ static void ImGui_ImplGlfwVulkan_SetClipboardText(void* user_data, const char* t
 void ImGui_ImplGlfwVulkan_MouseButtonCallback(GLFWwindow*, int button, int action, int /*mods*/)
 {
     if (action == GLFW_PRESS && button >= 0 && button < 3)
-        g_MousePressed[button] = true;
+        g_MouseJustPressed[button] = true;
 }
 
-void ImGui_ImplGlfwVulkan_ScrollCallback(GLFWwindow*, double /*xoffset*/, double yoffset)
+void ImGui_ImplGlfwVulkan_ScrollCallback(GLFWwindow*, double xoffset, double yoffset)
 {
-    g_MouseWheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
+    ImGuiIO& io = ImGui::GetIO();
+    io.MouseWheelH += (float)xoffset;
+    io.MouseWheel += (float)yoffset;
 }
 
 void ImGui_ImplGlfwVulkan_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
@@ -483,6 +484,7 @@ bool ImGui_ImplGlfwVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
         region.imageSubresource.layerCount = 1;
         region.imageExtent.width = width;
         region.imageExtent.height = height;
+        region.imageExtent.depth = 1;
         vkCmdCopyBufferToImage(command_buffer, g_UploadBuffer, g_FontImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
         VkImageMemoryBarrier use_barrier[1] = {};
@@ -540,6 +542,7 @@ bool ImGui_ImplGlfwVulkan_CreateDeviceObjects()
         info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         info.minLod = -1000;
         info.maxLod = 1000;
+        info.maxAnisotropy = 1.0f;
         err = vkCreateSampler(g_Device, &info, g_Allocator, &g_FontSampler);
         ImGui_ImplGlfwVulkan_VkResult(err);
     }
@@ -748,6 +751,7 @@ bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, Im
     io.KeyMap[ImGuiKey_PageDown] = GLFW_KEY_PAGE_DOWN;
     io.KeyMap[ImGuiKey_Home] = GLFW_KEY_HOME;
     io.KeyMap[ImGuiKey_End] = GLFW_KEY_END;
+    io.KeyMap[ImGuiKey_Insert] = GLFW_KEY_INSERT;
     io.KeyMap[ImGuiKey_Delete] = GLFW_KEY_DELETE;
     io.KeyMap[ImGuiKey_Backspace] = GLFW_KEY_BACKSPACE;
     io.KeyMap[ImGuiKey_Enter] = GLFW_KEY_ENTER;
@@ -809,26 +813,23 @@ void ImGui_ImplGlfwVulkan_NewFrame()
     {
         double mouse_x, mouse_y;
         glfwGetCursorPos(g_Window, &mouse_x, &mouse_y);
-        io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);   // Mouse position in screen coordinates (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
     }
     else
     {
-        io.MousePos = ImVec2(-1,-1);
+        io.MousePos = ImVec2(-FLT_MAX,-FLT_MAX);
     }
 
     for (int i = 0; i < 3; i++)
     {
-        io.MouseDown[i] = g_MousePressed[i] || glfwGetMouseButton(g_Window, i) != 0;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-        g_MousePressed[i] = false;
+        io.MouseDown[i] = g_MouseJustPressed[i] || glfwGetMouseButton(g_Window, i) != 0;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+        g_MouseJustPressed[i] = false;
     }
-
-    io.MouseWheel = g_MouseWheel;
-    g_MouseWheel = 0.0f;
 
     // Hide OS mouse cursor if ImGui is drawing it
     glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
 
-    // Start the frame
+    // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
 }
 
