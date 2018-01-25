@@ -432,6 +432,33 @@ void ImGui_ImplGlfwGL3_NewFrame()
         MAP_KEY(ImGuiNavInput_PadTweakFast, GLFW_KEY_RIGHT_SHIFT);
         #undef MAP_KEY
     }
+    if (io.NavFlags & ImGuiNavFlags_EnableGamepad)
+    {
+        // Update gamepad inputs
+        #define MAP_BUTTON(NAV_NO, BUTTON_NO)       { if (buttons_count > BUTTON_NO && buttons[BUTTON_NO] == GLFW_PRESS) io.NavInputs[NAV_NO] = 1.0f; }
+        #define MAP_ANALOG(NAV_NO, AXIS_NO, V0, V1) { float v = (axes_count > AXIS_NO) ? axes[AXIS_NO] : V0; v = (v - V0) / (V1 - V0); if (v > 1.0f) v = 1.0f; if (io.NavInputs[NAV_NO] < v) io.NavInputs[NAV_NO] = v; }
+        int axes_count = 0, buttons_count = 0;
+        const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axes_count);
+        const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttons_count);
+        MAP_BUTTON(ImGuiNavInput_PadActivate,   0);     // Cross / A
+        MAP_BUTTON(ImGuiNavInput_PadCancel,     1);     // Circle / B
+        MAP_BUTTON(ImGuiNavInput_PadMenu,       2);     // Square / X
+        MAP_BUTTON(ImGuiNavInput_PadInput,      3);     // Triangle / Y
+        MAP_BUTTON(ImGuiNavInput_PadDpadLeft,   13);    // D-Pad Left
+        MAP_BUTTON(ImGuiNavInput_PadDpadRight,  11);    // D-Pad Right
+        MAP_BUTTON(ImGuiNavInput_PadDpadUp,     10);    // D-Pad Up
+        MAP_BUTTON(ImGuiNavInput_PadDpadDown,   12);    // D-Pad Down
+        MAP_BUTTON(ImGuiNavInput_PadFocusPrev,  4);     // L Trigger
+        MAP_BUTTON(ImGuiNavInput_PadFocusNext,  5);     // R Trigger
+        MAP_BUTTON(ImGuiNavInput_PadTweakSlow,  4);     // L Trigger
+        MAP_BUTTON(ImGuiNavInput_PadTweakFast,  5);     // R Trigger
+        MAP_ANALOG(ImGuiNavInput_PadLStickLeft, 0,  -0.3f,  -0.9f);
+        MAP_ANALOG(ImGuiNavInput_PadLStickRight,0,  +0.3f,  +0.9f);
+        MAP_ANALOG(ImGuiNavInput_PadLStickUp,   1,  +0.3f,  +0.9f);
+        MAP_ANALOG(ImGuiNavInput_PadLStickDown, 1,  -0.3f,  -0.9f);
+        #undef MAP_BUTTON
+        #undef MAP_ANALOG
+    }
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
