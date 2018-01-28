@@ -12,7 +12,7 @@
 #
 
 #CXX = g++
-CXX = clang++
+#CXX = clang++
 
 EXE = sdl_opengl3_example
 OBJS = main.o imgui_impl_sdl_gl3.o
