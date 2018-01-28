@@ -12,6 +12,7 @@
 #
 
 #CXX = g++
+CXX = clang++
 
 EXE = opengl3_example
 OBJS = main.o imgui_impl_glfw_gl3.o
