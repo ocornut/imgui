@@ -8,9 +8,14 @@
 
 #pragma once
 
-#if !defined(IMGUI_DISABLE_INCLUDE_IMCONFIG_H) || defined(IMGUI_INCLUDE_IMCONFIG_H)
-#include "imconfig.h"       // User-editable configuration file
+// User-editable configuration files (edit stock imconfig.h or define IMGUI_USER_CONFIG to your own filename)
+#ifdef IMGUI_USER_CONFIG
+#include IMGUI_USER_CONFIG
 #endif
+#if !defined(IMGUI_DISABLE_INCLUDE_IMCONFIG_H) || defined(IMGUI_INCLUDE_IMCONFIG_H)
+#include "imconfig.h"
+#endif
+
 #include <float.h>          // FLT_MAX
 #include <stdarg.h>         // va_list
 #include <stddef.h>         // ptrdiff_t, NULL
