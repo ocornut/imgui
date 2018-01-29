@@ -18,7 +18,7 @@
 #include <SDL.h>
 #include <SDL_syswm.h>
 #include <SDL_opengl.h>
-#include <imgui.h>
+#include "imgui.h"
 #include "imgui_impl_sdl_gl2.h"
 
 // Data

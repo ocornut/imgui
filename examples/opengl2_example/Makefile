@@ -2,13 +2,17 @@
 # Cross Platform Makefile
 # Compatible with MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X
 #
-#
-# if you using Mac OS X:
-# You'll need glfw
-#    http://www.glfw.org
+# You will need GLFW (http://www.glfw.org):
+# Linux:
+#   apt-get install libglfw-dev
+# Mac OS X:
+#   brew install glfw
+# MSYS2:
+#   pacman -S --noconfirm --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-glfw
 #
 
 #CXX = g++
+#CXX = clang++
 
 EXE = opengl2_example
 OBJS = main.o imgui_impl_glfw_gl2.o
@@ -45,6 +49,7 @@ ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
    CXXFLAGS += -Wall -Wformat
    CFLAGS = $(CXXFLAGS)
 endif
+
 
 .cpp.o:
 	$(CXX) $(CXXFLAGS) -c -o $@ $<

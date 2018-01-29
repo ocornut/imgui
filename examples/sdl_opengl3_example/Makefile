@@ -2,15 +2,17 @@
 # Cross Platform Makefile
 # Compatible with MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X
 #
-#
-# You will need SDL2 (http://www.libsdl.org)
-#
-#   apt-get install libsdl2-dev  # Linux
-#   brew install sdl2            # Mac OS X
-#   pacman -S mingw-w64-i686-SDL # MSYS2
+# You will need SDL2 (http://www.libsdl.org):
+# Linux:
+#   apt-get install libsdl2-dev
+# Mac OS X:
+#   brew install sdl2
+# MSYS2:
+#   pacman -S mingw-w64-i686-SDL
 #
 
 #CXX = g++
+#CXX = clang++
 
 EXE = sdl_opengl3_example
 OBJS = main.o imgui_impl_sdl_gl3.o
