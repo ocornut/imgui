@@ -2896,12 +2896,12 @@ static void ImGui::NavUpdate()
     }
 
     // When a forwarded move request failed, we restore the highlight that we disabled during the forward frame
-    if (g.NavMoveRequestForwardStep == 2)
+    if (g.NavMoveRequestForward == ImGuiNavForward_ForwardResult)
     {
         IM_ASSERT(g.NavMoveRequest);
         if (g.NavMoveResultId == 0)
             g.NavDisableHighlight = false;
-        g.NavMoveRequestForwardStep = 0;
+        g.NavMoveRequestForward = ImGuiNavForward_None;
     }
 
     // Apply application mouse position movement, after we had a chance to process move request result.
@@ -2993,7 +2993,7 @@ static void ImGui::NavUpdate()
 
     // Initiate directional inputs request
     const int allowed_dir_flags = (g.ActiveId == 0) ? ~0 : g.ActiveIdAllowNavDirFlags;
-    if (g.NavMoveRequestForwardStep == 0)
+    if (g.NavMoveRequestForward == ImGuiNavForward_None)
     {
         g.NavMoveDir = ImGuiDir_None;
         if (g.NavWindow && !g.NavWindowingTarget && allowed_dir_flags && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
@@ -3006,9 +3006,10 @@ static void ImGui::NavUpdate()
     }
     else
     {
+        // Forwarding previous request (which has been modified, e.g. wrap around menus rewrite the requests with a starting rectangle at the other side of the window)
         IM_ASSERT(g.NavMoveDir != ImGuiDir_None);
-        IM_ASSERT(g.NavMoveRequestForwardStep == 1);
-        g.NavMoveRequestForwardStep = 2;
+        IM_ASSERT(g.NavMoveRequestForward == ImGuiNavForward_Forwarding);
+        g.NavMoveRequestForward = ImGuiNavForward_ForwardResult;
     }
 
     if (g.NavMoveDir != ImGuiDir_None)
@@ -4821,9 +4822,9 @@ static void NavProcessMoveRequestWrapAround(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     if (g.NavMoveRequest && g.NavWindow == window && g.NavMoveResultId == 0)
-        if ((g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down) && g.NavMoveRequestForwardStep == 0 && g.NavLayer == 0)
+        if ((g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down) && g.NavMoveRequestForward == ImGuiNavForward_None && g.NavLayer == 0)
         {
-            g.NavMoveRequestForwardStep = 1;
+            g.NavMoveRequestForward = ImGuiNavForward_Forwarding;
             NavMoveRequestCancel();
             g.NavWindow->NavRectRel[0].Min.y = g.NavWindow->NavRectRel[0].Max.y = ((g.NavMoveDir == ImGuiDir_Up) ? ImMax(window->SizeFull.y, window->SizeContents.y) : 0.0f) - window->Scroll.y;
         }
@@ -10860,7 +10861,7 @@ void ImGui::EndMenuBar()
         ImGuiWindow* nav_earliest_child = g.NavWindow;
         while (nav_earliest_child->ParentWindow && (nav_earliest_child->ParentWindow->Flags & ImGuiWindowFlags_ChildMenu))
             nav_earliest_child = nav_earliest_child->ParentWindow;
-        if (nav_earliest_child->ParentWindow == window && nav_earliest_child->DC.ParentLayoutType == ImGuiLayoutType_Horizontal && g.NavMoveRequestForwardStep == 0)
+        if (nav_earliest_child->ParentWindow == window && nav_earliest_child->DC.ParentLayoutType == ImGuiLayoutType_Horizontal && g.NavMoveRequestForward == ImGuiNavForward_None)
         {
             // To do so we claim focus back, restore NavId and then process the movement request for yet another frame.
             // This involve a one-frame delay which isn't very problematic in this situation. We could remove it by scoring in advance for multiple window (probably not worth the hassle/cost)
@@ -10869,7 +10870,7 @@ void ImGui::EndMenuBar()
             SetNavIDAndMoveMouse(window->NavLastIds[1], 1, window->NavRectRel[1]);
             g.NavLayer = 1;
             g.NavDisableHighlight = true; // Hide highlight for the current frame so we don't see the intermediary selection.
-            g.NavMoveRequestForwardStep = 1;
+            g.NavMoveRequestForward = ImGuiNavForward_Forwarding;
             NavMoveRequestCancel();
         }
     }

@@ -292,6 +292,13 @@ enum ImGuiNavDirSourceFlags_
     ImGuiNavDirSourceFlags_PadLStick    = 1 << 2
 };
 
+enum ImGuiNavForward
+{
+    ImGuiNavForward_None,
+    ImGuiNavForward_Forwarding,
+    ImGuiNavForward_ForwardResult
+};
+
 // 2D axis aligned bounding-box
 // NB: we can't rely on ImVec2 math operators being available here
 struct IMGUI_API ImRect
@@ -610,11 +617,11 @@ struct ImGuiContext
     bool                    NavInitResultExplicit;              // Whether the result was explicitly requested with SetItemDefaultFocus()
     bool                    NavMoveFromClampedRefRect;          // Set by manual scrolling, if we scroll to a point where NavId isn't visible we reset navigation from visible items
     bool                    NavMoveRequest;                     // Move request for this frame
-    int                     NavMoveRequestForwardStep;          // 0: no forward, 1: forward request, 2: forward result (this is used to navigate sibling parent menus from a child menu)
+    ImGuiNavForward         NavMoveRequestForward;              // No forward / Forwarding / ForwardResult (this is used to navigate sibling parent menus from a child menu)
     ImGuiDir                NavMoveDir;                         // Direction of the move request (left/right/up/down)
     ImGuiDir                NavMoveDirLast;                     // Direction of the previous move request
     ImGuiID                 NavMoveResultId;                    // Best move request candidate
-    ImGuiID                 NavMoveResultParentId;              //
+    ImGuiID                 NavMoveResultParentId;              // Best move request candidate window->IDStack.back() - to compare context
     float                   NavMoveResultDistBox;               // Best move request candidate box distance to current NavId
     float                   NavMoveResultDistCenter;            // Best move request candidate center distance to current NavId
     float                   NavMoveResultDistAxial;
@@ -729,7 +736,7 @@ struct ImGuiContext
         NavInitResultExplicit = false;
         NavMoveFromClampedRefRect = false;
         NavMoveRequest = false;
-        NavMoveRequestForwardStep = 0;
+        NavMoveRequestForward = ImGuiNavForward_None;
         NavMoveDir = NavMoveDirLast = ImGuiDir_None;
         NavMoveResultId = 0;
         NavMoveResultParentId = 0;
