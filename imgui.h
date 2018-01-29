@@ -552,9 +552,9 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_ResizeFromAnySide      = 1 << 17,  // (WIP) Enable resize from any corners and borders. Your back-end needs to honor the different values of io.MouseCursor set by imgui.
     ImGuiWindowFlags_NoNavFocus             = 1 << 18,  // No focusing of this window with gamepad/keyboard navigation
     ImGuiWindowFlags_NoNavInputs            = 1 << 19,  // No gamepad/keyboard navigation within the window
-    //ImGuiWindowFlags_NavFlattened         = 1 << 20,  // Allow gamepad/keyboard navigation to cross over parent border to this child (only use on child that have no scrolling!)
 
     // [Internal]
+    ImGuiWindowFlags_NavFlattened           = 1 << 20,  // (WIP) Allow gamepad/keyboard navigation to cross over parent border to this child (only use on child that have no scrolling!)
     ImGuiWindowFlags_ChildWindow            = 1 << 24,  // Don't use! For internal use by BeginChild()
     ImGuiWindowFlags_Tooltip                = 1 << 25,  // Don't use! For internal use by BeginTooltip()
     ImGuiWindowFlags_Popup                  = 1 << 26,  // Don't use! For internal use by BeginPopup()

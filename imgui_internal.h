@@ -514,7 +514,8 @@ struct ImGuiNavMoveResult
     float         DistAxial;
     ImRect        RectRel;      // Best candidate bounding box in window relative space
 
-    ImGuiNavMoveResult() { ID = ParentID = 0; Window = NULL; DistBox = DistCenter = DistAxial = 0.0f; }
+    ImGuiNavMoveResult() { Clear(); }
+    void Clear()         { ID = ParentID = 0; Window = NULL; DistBox = DistCenter = DistAxial = FLT_MAX; RectRel = ImRect(); }
 };
 
 // Storage for SetNexWindow** functions
@@ -633,7 +634,8 @@ struct ImGuiContext
     ImGuiNavForward         NavMoveRequestForward;              // None / ForwardQueued / ForwardActive (this is used to navigate sibling parent menus from a child menu)
     ImGuiDir                NavMoveDir;                         // Direction of the move request (left/right/up/down)
     ImGuiDir                NavMoveDirLast;                     // Direction of the previous move request
-    ImGuiNavMoveResult      NavMoveResult;                      // Best move request candidate
+    ImGuiNavMoveResult      NavMoveResultLocal;                 // Best move request candidate within NavWindow
+    ImGuiNavMoveResult      NavMoveResultOther;                 // Best move request candidate within NavWindow's flattened hierarchy (when using the NavFlattened flag)
 
     // Render
     ImDrawData              DrawData;                           // Main ImDrawData instance to pass render information to the user

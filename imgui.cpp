@@ -2254,6 +2254,12 @@ static inline void NavUpdateAnyRequestFlag()
     g.NavAnyRequest = g.NavMoveRequest || g.NavInitRequest || IMGUI_DEBUG_NAV_SCORING;
 }
 
+static bool NavMoveRequestButNoResultYet()
+{
+    ImGuiContext& g = *GImGui;
+    return g.NavMoveRequest && g.NavMoveResultLocal.ID == 0 && g.NavMoveResultOther.ID == 0;
+}
+
 static void NavMoveRequestCancel()
 {
     ImGuiContext& g = *GImGui;
@@ -2288,7 +2294,7 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
     // Scoring for navigation
     if (g.NavId != id && !(item_flags & ImGuiItemFlags_NoNav))
     {
-        ImGuiNavMoveResult* result = &g.NavMoveResult;
+        ImGuiNavMoveResult* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
 #if IMGUI_DEBUG_NAV_SCORING
         // [DEBUG] Score all items in NavWindow at all times
         if (!g.NavMoveRequest) 
@@ -2333,9 +2339,10 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
         //      it may not scale very well for windows with ten of thousands of item, but at least NavMoveRequest is only set on user interaction, aka maximum once a frame.
         //      We could early out with "if (is_clipped && !g.NavInitRequest) return false;" but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
         window->DC.NavLayerActiveMaskNext |= window->DC.NavLayerCurrentMask;
-        if (g.NavWindow == window->NavRootWindow)
-            if (g.NavId == id || g.NavAnyRequest)
-                NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, id);
+        if (g.NavId == id || g.NavAnyRequest)
+            if (g.NavWindow->NavRootWindow == window->NavRootWindow)
+                if (window == g.NavWindow || ((window->Flags | g.NavWindow->Flags) & ImGuiWindowFlags_NavFlattened))
+                    NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, id);
     }
 
     window->DC.LastItemId = id;
@@ -2883,9 +2890,14 @@ static void ImGui::NavUpdate()
     g.NavJustMovedToId = 0;
 
     // Process navigation move request
-    if (g.NavMoveRequest && g.NavMoveResult.ID != 0)
+    if (g.NavMoveRequest && (g.NavMoveResultLocal.ID != 0 || g.NavMoveResultOther.ID != 0))
     {
-        ImGuiNavMoveResult* result = &g.NavMoveResult;
+        // Select which result to use
+        ImGuiNavMoveResult* result = (g.NavMoveResultLocal.ID != 0) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
+        if (g.NavMoveResultOther.ID != 0 && g.NavMoveResultOther.Window->ParentWindow == g.NavWindow) // Maybe entering a flattened child? In this case solve the tie using the regular scoring rules
+            if ((g.NavMoveResultOther.DistBox < g.NavMoveResultLocal.DistBox) || (g.NavMoveResultOther.DistBox == g.NavMoveResultLocal.DistBox && g.NavMoveResultOther.DistCenter < g.NavMoveResultLocal.DistCenter))
+                result = &g.NavMoveResultOther;
+
         IM_ASSERT(g.NavWindow && result->Window);
 
         // Scroll to keep newly navigated item fully into view
@@ -2894,6 +2906,7 @@ static void ImGui::NavUpdate()
 
         // Apply result from previous frame navigation directional move request
         ClearActiveID();
+        g.NavWindow = result->Window;
         SetNavIDAndMoveMouse(result->ID, g.NavLayer, result->RectRel);
         g.NavJustMovedToId = result->ID;
         g.NavMoveFromClampedRefRect = false;
@@ -2903,7 +2916,7 @@ static void ImGui::NavUpdate()
     if (g.NavMoveRequestForward == ImGuiNavForward_ForwardActive)
     {
         IM_ASSERT(g.NavMoveRequest);
-        if (g.NavMoveResult.ID == 0)
+        if (g.NavMoveResultLocal.ID == 0 && g.NavMoveResultOther.ID == 0)
             g.NavDisableHighlight = false;
         g.NavMoveRequestForward = ImGuiNavForward_None;
     }
@@ -3061,11 +3074,9 @@ static void ImGui::NavUpdate()
         }
     }
 
-    // Reset search 
-    ImGuiNavMoveResult* result = &g.NavMoveResult;
-    result->ID = result->ParentID = 0;
-    result->Window = NULL;
-    result->DistAxial = result->DistBox = result->DistCenter = FLT_MAX;
+    // Reset search results
+    g.NavMoveResultLocal.Clear();
+    g.NavMoveResultOther.Clear();
 
     // When we have manually scrolled (without using navigation) and NavId becomes out of bounds, we project its bounding box to the visible area to restart navigation within visible items
     if (g.NavMoveRequest && g.NavMoveFromClampedRefRect && g.NavLayer == 0)
@@ -4826,7 +4837,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
 static void NavProcessMoveRequestWrapAround(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
-    if (g.NavMoveRequest && g.NavWindow == window && g.NavMoveResult.ID == 0)
+    if (g.NavWindow == window && NavMoveRequestButNoResultYet())
         if ((g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down) && g.NavMoveRequestForward == ImGuiNavForward_None && g.NavLayer == 0)
         {
             g.NavMoveRequestForward = ImGuiNavForward_ForwardQueued;
@@ -4928,7 +4939,7 @@ static bool BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, b
     g.Style.ChildBorderSize = backup_border_size;
 
     // Process navigation-in immediately so NavInit can run on first frame
-    if (/*!(flags & ImGuiWindowFlags_NavFlattened) &&*/ (child_window->DC.NavLayerActiveMask != 0 || child_window->DC.NavHasScroll) && g.NavActivateId == id)
+    if (!(flags & ImGuiWindowFlags_NavFlattened) && (child_window->DC.NavLayerActiveMask != 0 || child_window->DC.NavHasScroll) && g.NavActivateId == id)
     {
         ImGui::FocusWindow(child_window);
         ImGui::NavInitWindow(child_window, false);
@@ -4972,7 +4983,7 @@ void ImGui::EndChild()
         ImGuiWindow* parent_window = GetCurrentWindow();
         ImRect bb(parent_window->DC.CursorPos, parent_window->DC.CursorPos + sz);
         ItemSize(sz);
-        if (/*!(window->Flags & ImGuiWindowFlags_NavFlattened) &&*/ (window->DC.NavLayerActiveMask != 0 || window->DC.NavHasScroll))
+        if (!(window->Flags & ImGuiWindowFlags_NavFlattened) && (window->DC.NavLayerActiveMask != 0 || window->DC.NavHasScroll))
         {
             ItemAdd(bb, window->ChildId);
             RenderNavHighlight(bb, window->ChildId);
@@ -5420,8 +5431,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     // Automatically disable manual moving/resizing when NoInputs is set
     if (flags & ImGuiWindowFlags_NoInputs)
         flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
-    //if (flags & ImGuiWindowFlags_NavFlattened)
-    //    IM_ASSERT(flags & ImGuiWindowFlags_ChildWindow);
+    
+    if (flags & ImGuiWindowFlags_NavFlattened)
+        IM_ASSERT(flags & ImGuiWindowFlags_ChildWindow);
 
     const int current_frame = g.FrameCount;
     const bool first_begin_of_the_frame = (window->LastFrameActive != current_frame);
@@ -5529,8 +5541,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
             window->RootNonPopupWindow = parent_window->RootNonPopupWindow;
         window->NavRootWindow = window;
-        //while (window->NavRootWindow->Flags & ImGuiWindowFlags_NavFlattened)
-        //    window->NavRootWindow = window->NavRootWindow->ParentWindow;
+        while (window->NavRootWindow->Flags & ImGuiWindowFlags_NavFlattened)
+            window->NavRootWindow = window->NavRootWindow->ParentWindow;
 
         window->Active = true;
         window->BeginOrderWithinParent = 0;
@@ -10861,7 +10873,7 @@ void ImGui::EndMenuBar()
     ImGuiContext& g = *GImGui;
 
     // Nav: When a move request within one of our child menu failed, capture the request to navigate among our siblings.
-    if (g.NavMoveRequest && g.NavMoveResult.ID == 0 && (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right) && (g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
+    if (NavMoveRequestButNoResultYet() && (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right) && (g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
     {
         ImGuiWindow* nav_earliest_child = g.NavWindow;
         while (nav_earliest_child->ParentWindow && (nav_earliest_child->ParentWindow->Flags & ImGuiWindowFlags_ChildMenu))
@@ -11029,7 +11041,7 @@ void ImGui::EndMenu()
     // Nav: When a left move request within our child menu failed, close the menu
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (g.NavWindow && g.NavWindow->ParentWindow == window && g.NavMoveRequest && g.NavMoveResult.ID == 0 && g.NavMoveDir == ImGuiDir_Left && window->DC.LayoutType == ImGuiLayoutType_Vertical)
+    if (g.NavWindow && g.NavWindow->ParentWindow == window && NavMoveRequestButNoResultYet() && g.NavMoveDir == ImGuiDir_Left && window->DC.LayoutType == ImGuiLayoutType_Vertical)
     {
         ClosePopupToLevel(g.OpenPopupStack.Size - 1);
         NavMoveRequestCancel();
