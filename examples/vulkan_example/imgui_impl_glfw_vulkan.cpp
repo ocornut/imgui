@@ -6,7 +6,8 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
-#include <imgui.h>
+#include "imgui.h"
+#include "imgui_impl_glfw_vulkan.h"
 
 // GLFW
 #define GLFW_INCLUDE_NONE
@@ -18,8 +19,6 @@
 #define GLFW_EXPOSE_NATIVE_WGL
 #include <GLFW/glfw3native.h>
 #endif
-
-#include "imgui_impl_glfw_vulkan.h"
 
 // GLFW Data
 static GLFWwindow*  g_Window = NULL;

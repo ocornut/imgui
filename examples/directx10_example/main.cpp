@@ -1,7 +1,7 @@
 // ImGui - standalone example application for DirectX 10
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 
-#include <imgui.h>
+#include "imgui.h"
 #include "imgui_impl_dx10.h"
 #include <d3d10_1.h>
 #include <d3d10.h>

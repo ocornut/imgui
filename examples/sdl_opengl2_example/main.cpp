@@ -6,7 +6,7 @@
 // **Prefer using the code in the sdl_opengl3_example/ folder**
 // See imgui_impl_sdl.cpp for details.
 
-#include <imgui.h>
+#include "imgui.h"
 #include "imgui_impl_sdl_gl2.h"
 #include <stdio.h>
 #include <SDL.h>
