@@ -7839,12 +7839,12 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         if (g.NavId == id && g.NavMoveRequest && g.NavMoveDir == ImGuiDir_Left && is_open)
         {
             toggled = true;
-            g.NavMoveRequest = false;
+            NavMoveRequestCancel();
         }
         if (g.NavId == id && g.NavMoveRequest && g.NavMoveDir == ImGuiDir_Right && !is_open) // If there's something upcoming on the line we may want to give it the priority?
         {
             toggled = true;
-            g.NavMoveRequest = false;
+            NavMoveRequestCancel();
         }
 
         if (toggled)
@@ -10976,7 +10976,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         if (g.NavId == id && g.NavMoveRequest && g.NavMoveDir == ImGuiDir_Right) // Nav-Right to open
         {
             want_open = true;
-            g.NavMoveRequest = false;
+            NavMoveRequestCancel();
         }
     }
     else
@@ -10993,8 +10993,8 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         }
         else if (g.NavId == id && g.NavMoveRequest && g.NavMoveDir == ImGuiDir_Down) // Nav-Down to open
         {
-            g.NavMoveRequest = false;
             want_open = true;
+            NavMoveRequestCancel();
         }
     }
 
@@ -11032,7 +11032,7 @@ void ImGui::EndMenu()
     if (g.NavWindow && g.NavWindow->ParentWindow == window && g.NavMoveRequest && g.NavMoveResult.ID == 0 && g.NavMoveDir == ImGuiDir_Left && window->DC.LayoutType == ImGuiLayoutType_Vertical)
     {
         ClosePopupToLevel(g.OpenPopupStack.Size - 1);
-        g.NavMoveRequest = false;
+        NavMoveRequestCancel();
     }
 
     EndPopup();
