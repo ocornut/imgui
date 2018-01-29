@@ -504,6 +504,19 @@ struct ImDrawDataBuilder
     IMGUI_API void FlattenIntoSingleLayer();
 };
 
+struct ImGuiNavMoveResult
+{
+    ImGuiID       ID;           // Best candidate
+    ImGuiID       ParentID;     // Best candidate window->IDStack.back() - to compare context
+    ImGuiWindow*  Window;       // Best candidate window
+    float         DistBox;      // Best candidate box distance to current NavId
+    float         DistCenter;   // Best candidate center distance to current NavId
+    float         DistAxial;    // Best candidate selected distance (box/center) to current NavId
+    ImRect        RectRel;      // Best candidate bounding box in window relative space
+
+    ImGuiNavMoveResult() { ID = ParentID = 0; Window = NULL; DistBox = DistCenter = DistAxial = 0.0f; }
+};
+
 // Storage for SetNexWindow** functions
 struct ImGuiNextWindowData
 {
@@ -620,12 +633,7 @@ struct ImGuiContext
     ImGuiNavForward         NavMoveRequestForward;              // None / ForwardQueued / ForwardActive (this is used to navigate sibling parent menus from a child menu)
     ImGuiDir                NavMoveDir;                         // Direction of the move request (left/right/up/down)
     ImGuiDir                NavMoveDirLast;                     // Direction of the previous move request
-    ImGuiID                 NavMoveResultId;                    // Best move request candidate
-    ImGuiID                 NavMoveResultParentId;              // Best move request candidate window->IDStack.back() - to compare context
-    float                   NavMoveResultDistBox;               // Best move request candidate box distance to current NavId
-    float                   NavMoveResultDistCenter;            // Best move request candidate center distance to current NavId
-    float                   NavMoveResultDistAxial;
-    ImRect                  NavMoveResultRectRel;               // Best move request candidate bounding box in window relative space
+    ImGuiNavMoveResult      NavMoveResult;                      // Best move request candidate
 
     // Render
     ImDrawData              DrawData;                           // Main ImDrawData instance to pass render information to the user
@@ -738,9 +746,6 @@ struct ImGuiContext
         NavMoveRequest = false;
         NavMoveRequestForward = ImGuiNavForward_None;
         NavMoveDir = NavMoveDirLast = ImGuiDir_None;
-        NavMoveResultId = 0;
-        NavMoveResultParentId = 0;
-        NavMoveResultDistBox = NavMoveResultDistCenter = NavMoveResultDistAxial = 0.0f;
 
         ModalWindowDarkeningRatio = 0.0f;
         OverlayDrawList._Data = &DrawListSharedData;

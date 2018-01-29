@@ -2132,7 +2132,7 @@ static float NavScoreItemDistInterval(float a0, float a1, float b0, float b1)
 }
 
 // Scoring function for directional navigation. Based on https://gist.github.com/rygorous/6981057
-static bool NavScoreItem(ImRect cand)
+static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.NavWindow;
@@ -2207,21 +2207,21 @@ static bool NavScoreItem(ImRect cand)
     if (quadrant == g.NavMoveDir) 
     {
         // Does it beat the current best candidate?
-        if (dist_box < g.NavMoveResultDistBox) 
+        if (dist_box < result->DistBox) 
         {
-            g.NavMoveResultDistBox = dist_box;
-            g.NavMoveResultDistCenter = dist_center;
+            result->DistBox = dist_box;
+            result->DistCenter = dist_center;
             return true;
         } 
-        if (dist_box == g.NavMoveResultDistBox) 
+        if (dist_box == result->DistBox) 
         {
             // Try using distance between center points to break ties
-            if (dist_center < g.NavMoveResultDistCenter) 
+            if (dist_center < result->DistCenter) 
             {
-                g.NavMoveResultDistCenter = dist_center;
+                result->DistCenter = dist_center;
                 new_best = true;
             } 
-            else if (dist_center == g.NavMoveResultDistCenter) 
+            else if (dist_center == result->DistCenter) 
             {
                 // Still tied! we need to be extra-careful to make sure everything gets linked properly. We consistently break ties by symbolically moving "later" items 
                 // (with higher index) to the right/downwards by an infinitesimal amount since we the current "best" button already (so it must have a lower index), 
@@ -2237,11 +2237,11 @@ static bool NavScoreItem(ImRect cand)
     // This is just to avoid buttons having no links in a particular direction when there's a suitable neighbor. you get good graphs without this too.
     // 2017/09/29: FIXME: This now currently only enabled inside menubars, ideally we'd disable it everywhere. Menus in particular need to catch failure. For general navigation it feels awkward.
     // Disabling it may however lead to disconnected graphs when nodes are very spaced out on different axis. Perhaps consider offering this as an option?
-    if (g.NavMoveResultDistBox == FLT_MAX && dist_axial < g.NavMoveResultDistAxial)  // Check axial match
+    if (result->DistBox == FLT_MAX && dist_axial < result->DistAxial)  // Check axial match
         if (g.NavLayer == 1 && !(g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
             if ((g.NavMoveDir == ImGuiDir_Left && dax < 0.0f) || (g.NavMoveDir == ImGuiDir_Right && dax > 0.0f) || (g.NavMoveDir == ImGuiDir_Up && day < 0.0f) || (g.NavMoveDir == ImGuiDir_Down && day > 0.0f))
             {
-                g.NavMoveResultDistAxial = dist_axial;
+                result->DistAxial = dist_axial;
                 new_best = true;
             }
 
@@ -2288,19 +2288,21 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
     // Scoring for navigation
     if (g.NavId != id && !(item_flags & ImGuiItemFlags_NoNav))
     {
+        ImGuiNavMoveResult* result = &g.NavMoveResult;
 #if IMGUI_DEBUG_NAV_SCORING
         // [DEBUG] Score all items in NavWindow at all times
         if (!g.NavMoveRequest) 
             g.NavMoveDir = g.NavMoveDirLast;
-        bool new_best = NavScoreItem(nav_bb) && g.NavMoveRequest;
+        bool new_best = NavScoreItem(result, nav_bb) && g.NavMoveRequest;
 #else
-        bool new_best = g.NavMoveRequest && NavScoreItem(nav_bb);
+        bool new_best = g.NavMoveRequest && NavScoreItem(result, nav_bb);
 #endif
         if (new_best)
         {
-            g.NavMoveResultId = id;
-            g.NavMoveResultParentId = window->IDStack.back();
-            g.NavMoveResultRectRel = nav_bb_rel;
+            result->ID = id;
+            result->ParentID = window->IDStack.back();
+            result->Window = window;
+            result->RectRel = nav_bb_rel;
         }
     }
 
@@ -2881,17 +2883,18 @@ static void ImGui::NavUpdate()
     g.NavJustMovedToId = 0;
 
     // Process navigation move request
-    if (g.NavMoveRequest && g.NavMoveResultId != 0)
+    if (g.NavMoveRequest && g.NavMoveResult.ID != 0)
     {
         // Scroll to keep newly navigated item fully into view
-        IM_ASSERT(g.NavWindow);
+        ImGuiNavMoveResult* result = &g.NavMoveResult;
+        IM_ASSERT(g.NavWindow && result->Window);
         if (g.NavLayer == 0)
-            NavScrollToBringItemIntoView(g.NavWindow, g.NavMoveResultRectRel);
+            NavScrollToBringItemIntoView(result->Window, result->RectRel);
 
         // Apply result from previous frame navigation directional move request
         ClearActiveID();
-        SetNavIDAndMoveMouse(g.NavMoveResultId, g.NavLayer, g.NavMoveResultRectRel);
-        g.NavJustMovedToId = g.NavMoveResultId;
+        SetNavIDAndMoveMouse(result->ID, g.NavLayer, result->RectRel);
+        g.NavJustMovedToId = result->ID;
         g.NavMoveFromClampedRefRect = false;
     }
 
@@ -2899,7 +2902,7 @@ static void ImGui::NavUpdate()
     if (g.NavMoveRequestForward == ImGuiNavForward_ForwardActive)
     {
         IM_ASSERT(g.NavMoveRequest);
-        if (g.NavMoveResultId == 0)
+        if (g.NavMoveResult.ID == 0)
             g.NavDisableHighlight = false;
         g.NavMoveRequestForward = ImGuiNavForward_None;
     }
@@ -3058,9 +3061,10 @@ static void ImGui::NavUpdate()
     }
 
     // Reset search 
-    g.NavMoveResultId = 0;
-    g.NavMoveResultParentId = 0;
-    g.NavMoveResultDistAxial = g.NavMoveResultDistBox = g.NavMoveResultDistCenter = FLT_MAX;
+    ImGuiNavMoveResult* result = &g.NavMoveResult;
+    result->ID = result->ParentID = 0;
+    result->Window = NULL;
+    result->DistAxial = result->DistBox = result->DistCenter = FLT_MAX;
 
     // When we have manually scrolled (without using navigation) and NavId becomes out of bounds, we project its bounding box to the visible area to restart navigation within visible items
     if (g.NavMoveRequest && g.NavMoveFromClampedRefRect && g.NavLayer == 0)
@@ -4821,7 +4825,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
 static void NavProcessMoveRequestWrapAround(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
-    if (g.NavMoveRequest && g.NavWindow == window && g.NavMoveResultId == 0)
+    if (g.NavMoveRequest && g.NavWindow == window && g.NavMoveResult.ID == 0)
         if ((g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down) && g.NavMoveRequestForward == ImGuiNavForward_None && g.NavLayer == 0)
         {
             g.NavMoveRequestForward = ImGuiNavForward_ForwardQueued;
@@ -10856,7 +10860,7 @@ void ImGui::EndMenuBar()
     ImGuiContext& g = *GImGui;
 
     // Nav: When a move request within one of our child menu failed, capture the request to navigate among our siblings.
-    if (g.NavMoveRequest && g.NavMoveResultId == 0 && (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right) && (g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
+    if (g.NavMoveRequest && g.NavMoveResult.ID == 0 && (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right) && (g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
     {
         ImGuiWindow* nav_earliest_child = g.NavWindow;
         while (nav_earliest_child->ParentWindow && (nav_earliest_child->ParentWindow->Flags & ImGuiWindowFlags_ChildMenu))
@@ -11024,7 +11028,7 @@ void ImGui::EndMenu()
     // Nav: When a left move request within our child menu failed, close the menu
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (g.NavWindow && g.NavWindow->ParentWindow == window && g.NavMoveRequest && g.NavMoveResultId == 0 && g.NavMoveDir == ImGuiDir_Left && window->DC.LayoutType == ImGuiLayoutType_Vertical)
+    if (g.NavWindow && g.NavWindow->ParentWindow == window && g.NavMoveRequest && g.NavMoveResult.ID == 0 && g.NavMoveDir == ImGuiDir_Left && window->DC.LayoutType == ImGuiLayoutType_Vertical)
     {
         ClosePopupToLevel(g.OpenPopupStack.Size - 1);
         g.NavMoveRequest = false;
