@@ -2896,7 +2896,7 @@ static void ImGui::NavUpdate()
     }
 
     // When a forwarded move request failed, we restore the highlight that we disabled during the forward frame
-    if (g.NavMoveRequestForward == ImGuiNavForward_ForwardResult)
+    if (g.NavMoveRequestForward == ImGuiNavForward_ForwardActive)
     {
         IM_ASSERT(g.NavMoveRequest);
         if (g.NavMoveResultId == 0)
@@ -3008,8 +3008,8 @@ static void ImGui::NavUpdate()
     {
         // Forwarding previous request (which has been modified, e.g. wrap around menus rewrite the requests with a starting rectangle at the other side of the window)
         IM_ASSERT(g.NavMoveDir != ImGuiDir_None);
-        IM_ASSERT(g.NavMoveRequestForward == ImGuiNavForward_Forwarding);
-        g.NavMoveRequestForward = ImGuiNavForward_ForwardResult;
+        IM_ASSERT(g.NavMoveRequestForward == ImGuiNavForward_ForwardQueued);
+        g.NavMoveRequestForward = ImGuiNavForward_ForwardActive;
     }
 
     if (g.NavMoveDir != ImGuiDir_None)
@@ -4824,7 +4824,7 @@ static void NavProcessMoveRequestWrapAround(ImGuiWindow* window)
     if (g.NavMoveRequest && g.NavWindow == window && g.NavMoveResultId == 0)
         if ((g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down) && g.NavMoveRequestForward == ImGuiNavForward_None && g.NavLayer == 0)
         {
-            g.NavMoveRequestForward = ImGuiNavForward_Forwarding;
+            g.NavMoveRequestForward = ImGuiNavForward_ForwardQueued;
             NavMoveRequestCancel();
             g.NavWindow->NavRectRel[0].Min.y = g.NavWindow->NavRectRel[0].Max.y = ((g.NavMoveDir == ImGuiDir_Up) ? ImMax(window->SizeFull.y, window->SizeContents.y) : 0.0f) - window->Scroll.y;
         }
@@ -10870,7 +10870,7 @@ void ImGui::EndMenuBar()
             SetNavIDAndMoveMouse(window->NavLastIds[1], 1, window->NavRectRel[1]);
             g.NavLayer = 1;
             g.NavDisableHighlight = true; // Hide highlight for the current frame so we don't see the intermediary selection.
-            g.NavMoveRequestForward = ImGuiNavForward_Forwarding;
+            g.NavMoveRequestForward = ImGuiNavForward_ForwardQueued;
             NavMoveRequestCancel();
         }
     }

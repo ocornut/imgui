@@ -295,8 +295,8 @@ enum ImGuiNavDirSourceFlags_
 enum ImGuiNavForward
 {
     ImGuiNavForward_None,
-    ImGuiNavForward_Forwarding,
-    ImGuiNavForward_ForwardResult
+    ImGuiNavForward_ForwardQueued,
+    ImGuiNavForward_ForwardActive
 };
 
 // 2D axis aligned bounding-box
@@ -617,7 +617,7 @@ struct ImGuiContext
     bool                    NavInitResultExplicit;              // Whether the result was explicitly requested with SetItemDefaultFocus()
     bool                    NavMoveFromClampedRefRect;          // Set by manual scrolling, if we scroll to a point where NavId isn't visible we reset navigation from visible items
     bool                    NavMoveRequest;                     // Move request for this frame
-    ImGuiNavForward         NavMoveRequestForward;              // No forward / Forwarding / ForwardResult (this is used to navigate sibling parent menus from a child menu)
+    ImGuiNavForward         NavMoveRequestForward;              // None / ForwardQueued / ForwardActive (this is used to navigate sibling parent menus from a child menu)
     ImGuiDir                NavMoveDir;                         // Direction of the move request (left/right/up/down)
     ImGuiDir                NavMoveDirLast;                     // Direction of the previous move request
     ImGuiID                 NavMoveResultId;                    // Best move request candidate
