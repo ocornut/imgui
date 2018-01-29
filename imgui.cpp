@@ -2198,7 +2198,7 @@ static bool NavScoreItem(ImRect cand)
         ImFormatString(buf, IM_ARRAYSIZE(buf), "dbox (%.2f,%.2f->%.4f) dcen (%.2f,%.2f->%.4f) d (%.2f,%.2f->%.4f) nav %c, quad %c", dbx, dby, dist_box, dcx, dcy, dist_center, dax, day, dist_axial, "WENS"[g.NavMoveDir], "WENS"[quadrant]);
         g.OverlayDrawList.AddRect(cand.Min, cand.Max, IM_COL32(255,255,0,200));
         g.OverlayDrawList.AddRectFilled(cand.Max-ImVec2(4,4), cand.Max+ImGui::CalcTextSize(buf)+ImVec2(4,4), IM_COL32(40,0,0,150));
-        g.OverlayDrawList.AddText(cand.Max, ~0U, buf);
+        g.OverlayDrawList.AddText(g.IO.FontDefault, 13.0f, cand.Max, ~0U, buf);
     }
  #endif
 
