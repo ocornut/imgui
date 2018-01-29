@@ -511,7 +511,7 @@ struct ImGuiNavMoveResult
     ImGuiWindow*  Window;       // Best candidate window
     float         DistBox;      // Best candidate box distance to current NavId
     float         DistCenter;   // Best candidate center distance to current NavId
-    float         DistAxial;    // Best candidate selected distance (box/center) to current NavId
+    float         DistAxial;
     ImRect        RectRel;      // Best candidate bounding box in window relative space
 
     ImGuiNavMoveResult() { ID = ParentID = 0; Window = NULL; DistBox = DistCenter = DistAxial = 0.0f; }
@@ -921,9 +921,6 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  SetWindowPosVal;                    // store window position when using a non-zero Pivot (position set needs to be processed when we know the window size)
     ImVec2                  SetWindowPosPivot;                  // store window pivot for positioning. ImVec2(0,0) when positioning from top-left corner; ImVec2(0.5f,0.5f) for centering; ImVec2(1,1) for bottom right.
 
-    ImGuiID                 NavLastIds[2];                      // Last known NavId for this window, per layer (0/1)
-    ImRect                  NavRectRel[2];                      // Reference rectangle, in window relative space
-
     ImGuiDrawContext        DC;                                 // Temporary per-window data, reset at the beginning of the frame
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
     ImRect                  ClipRect;                           // = DrawList->clip_rect_stack.back(). Scissoring / clipping rectangle. x1, y1, x2, y2.
@@ -939,7 +936,10 @@ struct IMGUI_API ImGuiWindow
     ImGuiWindow*            ParentWindow;                       // If we are a child _or_ popup window, this is pointing to our parent. Otherwise NULL.
     ImGuiWindow*            RootWindow;                         // Generally point to ourself. If we are a child window, this is pointing to the first non-child parent window.
     ImGuiWindow*            RootNonPopupWindow;                 // Generally point to ourself. Used to display TitleBgActive color and for selecting which window to use for NavWindowing
-    ImGuiWindow*            RootNavWindow;                      // Generally point to ourself. If we are a child window with the ImGuiWindowFlags_NavFlattenedChild flag, point to parent. Used to display TitleBgActive color and for selecting which window to use for NavWindowing.
+
+    ImGuiWindow*            NavRootWindow;                      // Generally point to ourself. If we are a child window with the NavFlattened flag, point to a parent window. 
+    ImGuiID                 NavLastIds[2];                      // Last known NavId for this window, per layer (0/1)
+    ImRect                  NavRectRel[2];                      // Reference rectangle, in window relative space
 
     // Navigation / Focus
     // FIXME-NAV: Merge all this with the new Nav system, at least the request variables should be moved to ImGuiContext

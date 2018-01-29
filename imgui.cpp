@@ -1906,9 +1906,6 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
     SetWindowPosVal = SetWindowPosPivot = ImVec2(FLT_MAX, FLT_MAX);
 
-    NavLastIds[0] = NavLastIds[1] = 0;
-    NavRectRel[0] = NavRectRel[1] = ImRect();
-
     LastFrameActive = -1;
     ItemWidthDefault = 0.0f;
     FontWindowScale = 1.0f;
@@ -1918,7 +1915,10 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     ParentWindow = NULL;
     RootWindow = NULL;
     RootNonPopupWindow = NULL;
-    RootNavWindow = NULL;
+
+    NavRootWindow = NULL;
+    NavLastIds[0] = NavLastIds[1] = 0;
+    NavRectRel[0] = NavRectRel[1] = ImRect();
 
     FocusIdxAllCounter = FocusIdxTabCounter = -1;
     FocusIdxAllRequestCurrent = FocusIdxTabRequestCurrent = INT_MAX;
@@ -2235,7 +2235,7 @@ static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
     // Axial check: if 'curr' has no link at all in some direction and 'cand' lies roughly in that direction, add a tentative link. This will only be kept if no "real" matches
     // are found, so it only augments the graph produced by the above method using extra links. (important, since it doesn't guarantee strong connectedness)
     // This is just to avoid buttons having no links in a particular direction when there's a suitable neighbor. you get good graphs without this too.
-    // 2017/09/29: FIXME: This now currently only enabled inside menubars, ideally we'd disable it everywhere. Menus in particular need to catch failure. For general navigation it feels awkward.
+    // 2017/09/29: FIXME: This now currently only enabled inside menu bars, ideally we'd disable it everywhere. Menus in particular need to catch failure. For general navigation it feels awkward.
     // Disabling it may however lead to disconnected graphs when nodes are very spaced out on different axis. Perhaps consider offering this as an option?
     if (result->DistBox == FLT_MAX && dist_axial < result->DistAxial)  // Check axial match
         if (g.NavLayer == 1 && !(g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
@@ -2333,7 +2333,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
         //      it may not scale very well for windows with ten of thousands of item, but at least NavMoveRequest is only set on user interaction, aka maximum once a frame.
         //      We could early out with "if (is_clipped && !g.NavInitRequest) return false;" but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
         window->DC.NavLayerActiveMaskNext |= window->DC.NavLayerCurrentMask;
-        if (g.NavWindow == window->RootNavWindow)
+        if (g.NavWindow == window->NavRootWindow)
             if (g.NavId == id || g.NavAnyRequest)
                 NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, id);
     }
@@ -2885,9 +2885,10 @@ static void ImGui::NavUpdate()
     // Process navigation move request
     if (g.NavMoveRequest && g.NavMoveResult.ID != 0)
     {
-        // Scroll to keep newly navigated item fully into view
         ImGuiNavMoveResult* result = &g.NavMoveResult;
         IM_ASSERT(g.NavWindow && result->Window);
+
+        // Scroll to keep newly navigated item fully into view
         if (g.NavLayer == 0)
             NavScrollToBringItemIntoView(result->Window, result->RectRel);
 
@@ -5527,9 +5528,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->RootWindow = parent_window->RootWindow;
         if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
             window->RootNonPopupWindow = parent_window->RootNonPopupWindow;
-        window->RootNavWindow = window;
-        //while (window->RootNavWindow->Flags & ImGuiWindowFlags_NavFlattened)
-        //    window->RootNavWindow = window->RootNavWindow->ParentWindow;
+        window->NavRootWindow = window;
+        //while (window->NavRootWindow->Flags & ImGuiWindowFlags_NavFlattened)
+        //    window->NavRootWindow = window->NavRootWindow->ParentWindow;
 
         window->Active = true;
         window->BeginOrderWithinParent = 0;
@@ -7036,7 +7037,7 @@ void ImGui::SetItemDefaultFocus()
     ImGuiWindow* window = g.CurrentWindow;
     if (!window->Appearing)
         return;
-    if (g.NavWindow == window->RootNavWindow && (g.NavInitRequest || g.NavInitResultId != 0) && g.NavLayer == g.NavWindow->DC.NavLayerCurrent)
+    if (g.NavWindow == window->NavRootWindow && (g.NavInitRequest || g.NavInitResultId != 0) && g.NavLayer == g.NavWindow->DC.NavLayerCurrent)
     {
         g.NavInitRequest = false;
         g.NavInitResultExplicit = true;
