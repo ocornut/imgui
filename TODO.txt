@@ -229,10 +229,13 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: fix AddRemapChar() to work before font has been built.
  - font: (api breaking) removed "TTF" from symbol names. also because it now supports OTF.
 
-!- nav/keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing.
  - nav: integrate navigation branch into master. (#787)
+ - nav: Menu/Esc on a menu restore layer 0 but lose child window position.
+ - nav: Esc on a flattened child
+ - nav: menus: allow pressing Menu to leave a sub-menu.
  - nav: integrate/design keyboard controls. 
- - nav: once tab should go through most/all widgets (in submission order?)
+ - nav: simulate right-click or context activation? (SHIFT+F10)
+ - nav: tabs should go through most/all widgets (in submission order?)
  - nav: currently cannot access menubar of a child window with Alt/menu key. 
  - nav: esc/enter default behavior for popups, e.g. be able to mark an "ok" or "cancel" button that would get triggered by those keys.
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
