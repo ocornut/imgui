@@ -3917,14 +3917,15 @@ void ImGui::Render()
         // Gather windows to render
         g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
         g.DrawDataBuilder.Clear();
+        ImGuiWindow* window_to_render_front_most = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget : NULL;
         for (int n = 0; n != g.Windows.Size; n++)
         {
             ImGuiWindow* window = g.Windows[n];
-            if (window->Active && window->HiddenFrames <= 0 && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0 && window != g.NavWindowingTarget)
+            if (window->Active && window->HiddenFrames <= 0 && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0 && window != window_to_render_front_most)
                 AddWindowToDrawDataSelectLayer(window);
         }
-        if (g.NavWindowingTarget && g.NavWindowingTarget->Active && g.NavWindowingTarget->HiddenFrames <= 0) // NavWindowingTarget is always temporarily displayed as the front-most window
-            AddWindowToDrawDataSelectLayer(g.NavWindowingTarget);
+        if (window_to_render_front_most && window_to_render_front_most->Active && window_to_render_front_most->HiddenFrames <= 0) // NavWindowingTarget is always temporarily displayed as the front-most window
+            AddWindowToDrawDataSelectLayer(window_to_render_front_most);
         g.DrawDataBuilder.FlattenIntoSingleLayer();
 
         // Draw software mouse cursor if requested
