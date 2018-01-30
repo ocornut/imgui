@@ -221,8 +221,8 @@
  - For gamepad use, the easiest approach is to go all-or-nothing, with a buttons combo that toggle your inputs between imgui and your game/application.
    Sharing inputs in a more advanced or granular way between imgui and your game/application may be tricky and requires further work on imgui.
    For more advanced uses, you may want to use:
-     - io.NavUsable: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
-     - io.NavActive: true when the navigation cursor is visible (and usually goes false when mouse is used).
+     - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
+     - io.NavVisible: true when the navigation cursor is visible (and usually goes false when mouse is used).
      - query focus information with IsWindowFocused(), IsAnyWindowFocused(), IsAnyItemFocused() functions.
    The reality is more complex than what those flags can express. Please discuss your issues and usage scenario in the thread above! 
    As we head toward more keyboard-oriented development this aspect will need to be improved.
@@ -2281,7 +2281,7 @@ static void NavMoveRequestCancel()
 static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
-    //if (!g.IO.NavUsable)  // [2017/10/06] Removed this possibly redundant test but I am not sure of all the side-effects yet. Some of the feature here will need to work regardless of using a _NoNavInputs flag.
+    //if (!g.IO.NavActive)  // [2017/10/06] Removed this possibly redundant test but I am not sure of all the side-effects yet. Some of the feature here will need to work regardless of using a _NoNavInputs flag.
     //    return;
 
     const ImGuiItemFlags item_flags = window->DC.ItemFlags;
@@ -2947,8 +2947,8 @@ static void ImGui::NavUpdate()
     NavUpdateWindowing();
 
     // Set output flags for user application
-    g.IO.NavUsable = g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
-    g.IO.NavActive = (g.IO.NavUsable && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL) || g.NavInitRequest;
+    g.IO.NavActive = (g.IO.NavFlags & (ImGuiNavFlags_EnableGamepad | ImGuiNavFlags_EnableKeyboard)) && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
+    g.IO.NavVisible = (g.IO.NavActive && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL) || g.NavInitRequest;
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
     if (IsNavInputPressed(ImGuiNavInput_PadCancel, ImGuiInputReadMode_Pressed))
@@ -13017,7 +13017,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Text("ActiveId: 0x%08X/0x%08X (%.2f sec), ActiveIdSource: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdTimer, input_source_names[g.ActiveIdSource]);
             ImGui::Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
             ImGui::Text("NavWindow: '%s', NavId: 0x%08X, NavLayer: %d", g.NavWindow ? g.NavWindow->Name : "NULL", g.NavId, g.NavLayer);
-            ImGui::Text("NavUsable: %d, NavActive: %d", g.IO.NavUsable, g.IO.NavActive);
+            ImGui::Text("NavActive: %d, NavVisible: %d", g.IO.NavActive, g.IO.NavVisible);
             ImGui::Text("NavActivateId: 0x%08X, NavInputId: 0x%08X", g.NavActivateId, g.NavInputId);
             ImGui::Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
             ImGui::Text("DragDrop: %d, SourceId = 0x%08X, Payload \"%s\" (%d bytes)", g.DragDropActive, g.DragDropPayload.SourceId, g.DragDropPayload.DataType, g.DragDropPayload.DataSize);

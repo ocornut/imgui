@@ -1016,8 +1016,8 @@ struct ImGuiIO
     bool        WantCaptureKeyboard;        // When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application. This is set by ImGui when it wants to use your keyboard inputs.
     bool        WantTextInput;              // Mobile/console: when io.WantTextInput is true, you may display an on-screen keyboard. This is set by ImGui when it wants textual keyboard input to happen (e.g. when a InputText widget is active).
     bool        WantMoveMouse;              // MousePos has been altered, back-end should reposition mouse on next frame. Set only when ImGuiNavFlags_MoveMouse flag is enabled in io.NavFlags.
-    bool        NavUsable;                  // Directional navigation is currently allowed (will handle ImGuiKey_NavXXX events) ~ a window is focused and it doesn't use the ImGuiWindowFlags_NoNavInputs flag.
-    bool        NavActive;                  // Directional navigation is active/visible and currently allowed (will handle ImGuiKey_NavXXX events).
+    bool        NavActive;                  // Directional navigation is currently allowed (will handle ImGuiKey_NavXXX events) = a window is focused and it doesn't use the ImGuiWindowFlags_NoNavInputs flag.
+    bool        NavVisible;                 // Directional navigation is visible and allowed (will handle ImGuiKey_NavXXX events).
     float       Framerate;                  // Application framerate estimation, in frame per second. Solely for convenience. Rolling average estimation based on IO.DeltaTime over 120 frames
     int         MetricsAllocs;              // Number of active memory allocations
     int         MetricsRenderVertices;      // Vertices output during last call to Render()
