@@ -6020,6 +6020,31 @@ void ImGui::SetScrollHere(float center_y_ratio)
     SetScrollFromPosY(target_y, center_y_ratio);
 }
 
+void ImGui::SetScrollFromPosX(float pos_x, float center_x_ratio)
+{
+    // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
+    ImGuiWindow* window = GetCurrentWindow();
+    IM_ASSERT(center_x_ratio >= 0.0f && center_x_ratio <= 1.0f);
+    window->ScrollTarget.x = (float)(int)(pos_x + window->Scroll.x);
+    window->ScrollTargetCenterRatio.x = center_x_ratio;
+
+    // Minor hack to to make scrolling to left/right of window take account of WindowPadding, it looks more right to the user this way
+    if (center_x_ratio <= 0.0f && window->ScrollTarget.x <= window->WindowPadding.x)
+        window->ScrollTarget.x = 0.0f;
+    else if (center_x_ratio >= 1.0f && window->ScrollTarget.x >= window->SizeContents.x - window->WindowPadding.x + GImGui->Style.ItemSpacing.x)
+        window->ScrollTarget.x = window->SizeContents.x;
+}
+
+// center_x_ratio: 0.0f left of last item, 0.5f horizontal center of last item, 1.0f right of last item.
+void ImGui::SetScrollXHere(float center_x_ratio)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    float target_x = window->DC.LastItemRect.GetTL().x - window->Pos.x; // left of last item, in window space
+    float last_item_width = window->DC.LastItemRect.GetWidth();
+    target_x += (last_item_width * center_x_ratio) + (GImGui->Style.ItemSpacing.x * (center_x_ratio - 0.5f) * 2.0f); // Precisely aim before, in the middle or after the last item.
+    SetScrollFromPosX(target_x, center_x_ratio);
+}
+
 // FIXME-NAV: This function is a placeholder for the upcoming Navigation branch + Focusing features.
 // In the current branch this function will only set the scrolling, in the navigation branch it will also set your navigation cursor.
 // Prefer using "SetItemDefaultFocus()" over "if (IsWindowAppearing()) SetScrollHere()" when applicable.
