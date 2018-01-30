@@ -2248,6 +2248,16 @@ static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
     return new_best;
 }
 
+static void NavRestoreLayer(int layer)
+{
+    ImGuiContext& g = *GImGui;
+    g.NavLayer = layer;
+    if (layer == 0 && g.NavWindow->NavLastIds[0] != 0)
+        SetNavIDAndMoveMouse(g.NavWindow->NavLastIds[0], layer, g.NavWindow->NavRectRel[0]);
+    else
+        ImGui::NavInitWindow(g.NavWindow, true);
+}
+
 static inline void NavUpdateAnyRequestFlag()
 {
     ImGuiContext& g = *GImGui;
@@ -2825,13 +2835,9 @@ static void ImGui::NavUpdateWindowing()
     {
         if ((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) == 0 && (g.NavWindow->RootWindow->DC.NavLayerActiveMask & (1 << 1)) != 0)
             FocusWindow(g.NavWindow->RootWindow);
-        g.NavLayer = (g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) ? (g.NavLayer ^ 1) : 0;
         g.NavDisableHighlight = false;
         g.NavDisableMouseHover = true;
-        if (g.NavLayer == 0 && g.NavWindow->NavLastIds[0] != 0)
-            SetNavIDAndMoveMouse(g.NavWindow->NavLastIds[0], g.NavLayer, ImRect());
-        else
-            NavInitWindow(g.NavWindow, true);
+        NavRestoreLayer((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) ? (g.NavLayer ^ 1) : 0);
     }
 }
 
@@ -2971,11 +2977,7 @@ static void ImGui::NavUpdate()
         else if (g.NavLayer != 0)
         {
             // Leave the "menu" layer
-            g.NavLayer = 0;
-            if (g.NavWindow->NavLastIds[0])
-                SetNavIDAndMoveMouse(g.NavWindow->NavLastIds[0], g.NavLayer, ImRect());
-            else
-                NavInitWindow(g.NavWindow, true);
+            NavRestoreLayer(0);
         }
         else
         {
