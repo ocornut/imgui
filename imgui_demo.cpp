@@ -1979,7 +1979,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 // Here we use the simplified Combo() api that packs items into a single literal string. Useful for quick combo boxes where the choices are known locally.
 bool ImGui::ShowStyleSelector(const char* label)
 {
-    static int style_idx = 0;
+    static int style_idx = -1;
     if (ImGui::Combo(label, &style_idx, "Classic\0Dark\0Light\0"))
     {
         switch (style_idx)
