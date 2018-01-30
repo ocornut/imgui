@@ -4841,7 +4841,12 @@ static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool s
     if (window->ScrollTarget.x < FLT_MAX)
     {
         float cr_x = window->ScrollTargetCenterRatio.x;
-        scroll.x = window->ScrollTarget.x - cr_x * window->InnerRect.GetWidth();
+        float target_x = window->ScrollTarget.x;
+        if (snap_on_edges && cr_x <= 0.0f && target_x <= window->WindowPadding.x)
+            target_x = 0.0f;
+        else if (snap_on_edges && cr_x >= 1.0f && target_x >= window->ContentSize.x + window->WindowPadding.x + GImGui->Style.ItemSpacing.x)
+            target_x = window->ContentSize.x + window->WindowPadding.x * 2.0f;
+        scroll.x = target_x - cr_x * window->InnerRect.GetWidth();
     }
     if (window->ScrollTarget.y < FLT_MAX)
     {
@@ -6859,6 +6864,25 @@ void ImGui::SetScrollFromPosY(float local_y, float center_y_ratio)
     IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
     window->ScrollTarget.y = (float)(int)(local_y + window->Scroll.y);
     window->ScrollTargetCenterRatio.y = center_y_ratio;
+}
+
+void ImGui::SetScrollFromPosX(float local_x, float center_x_ratio)
+{
+    // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
+    ImGuiWindow* window = GetCurrentWindow();
+    IM_ASSERT(center_x_ratio >= 0.0f && center_x_ratio <= 1.0f);
+    window->ScrollTarget.x = (float)(int)(local_x + window->Scroll.x);
+    window->ScrollTargetCenterRatio.x = center_x_ratio;
+}
+
+// center_x_ratio: 0.0f left of last item, 0.5f horizontal center of last item, 1.0f right of last item.
+void ImGui::SetScrollHereX(float center_x_ratio)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    float target_x = window->DC.LastItemRect.Min.x - window->Pos.x; // Left of last item, in window space
+    float last_item_width = window->DC.LastItemRect.GetWidth();
+    target_x += (last_item_width * center_x_ratio) + (GImGui->Style.ItemSpacing.x * (center_x_ratio - 0.5f) * 2.0f); // Precisely aim before, in the middle or after the last item.
+    SetScrollFromPosX(target_x, center_x_ratio);
 }
 
 // center_y_ratio: 0.0f top of last item, 0.5f vertical center of last item, 1.0f bottom of last item.
