@@ -153,7 +153,7 @@
     <ClInclude Include="imgui_impl_dx9.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\libs\imgui.natvis" />
+    <None Include="..\..\misc\natvis\imgui.natvis" />
     <None Include="..\README.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
