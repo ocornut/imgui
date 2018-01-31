@@ -5161,7 +5161,8 @@ void ImGui::Scrollbar(ImGuiLayoutType direction)
 void ImGui::BringWindowToFront(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
-    if (g.Windows.back() == window)
+    ImGuiWindow* current_front_window = g.Windows.back();
+    if (current_front_window == window || current_front_window->RootWindow == window)
         return;
     for (int i = g.Windows.Size - 2; i >= 0; i--) // We can ignore the front most window
         if (g.Windows[i] == window)
