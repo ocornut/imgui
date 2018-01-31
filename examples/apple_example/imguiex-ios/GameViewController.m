@@ -294,35 +294,33 @@ GLfloat gCubeVertexData[216] =
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect
 {
+	// Start the dear imgui frame
+    [self.imgui newFrame];
+    
+    // Create some UI elements
+    DebugHUD_DoInterface( &_hud );
+
+	// Render
     glClearColor(0.65f, 0.65f, 0.65f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
+   
     glBindVertexArrayOES(_vertexArray);
     
     // Render the object with GLKit
     [self.effect prepareToDraw];
-    
     glDrawArrays(GL_TRIANGLES, 0, 36);
     
     // Render the object again with ES2
     glUseProgram(_program);
-    
     glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, _modelViewProjectionMatrix.m);
     glUniformMatrix3fv(uniforms[UNIFORM_NORMAL_MATRIX], 1, 0, _normalMatrix.m);
     glUniform3f(uniforms[UNIFORM_DIFFUSE_COLOR], _hud.cubeColor1[0], _hud.cubeColor1[1], _hud.cubeColor1[2] );
-
     glDrawArrays(GL_TRIANGLES, 0, 36);
-    
-    [self.imgui newFrame];
-    
-    // Now do our ImGUI UI
-    DebugHUD_DoInterface( &_hud );
-    
+        
     self.effect.light0.diffuseColor = GLKVector4Make( _hud.cubeColor2[0], _hud.cubeColor2[1], _hud.cubeColor2[2], 1.0f);
     
-    // Now render Imgui
+    // Render dear imgui as the last thing in the frame if possible
     [self.imgui render];
-    
 }
 
 #pragma mark -  OpenGL ES 2 shader compilation

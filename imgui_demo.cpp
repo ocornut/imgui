@@ -94,7 +94,7 @@ static void ShowHelpMarker(const char* desc)
     if (ImGui::IsItemHovered())
     {
         ImGui::BeginTooltip();
-        ImGui::PushTextWrapPos(450.0f);
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
         ImGui::TextUnformatted(desc);
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
@@ -1979,7 +1979,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 // Here we use the simplified Combo() api that packs items into a single literal string. Useful for quick combo boxes where the choices are known locally.
 bool ImGui::ShowStyleSelector(const char* label)
 {
-    static int style_idx = 0;
+    static int style_idx = -1;
     if (ImGui::Combo(label, &style_idx, "Classic\0Dark\0Light\0"))
     {
         switch (style_idx)
@@ -2010,7 +2010,7 @@ void ImGui::ShowFontSelector(const char* label)
     ShowHelpMarker(
         "- Load additional fonts with io.Fonts->AddFontFromFileTTF().\n"
         "- The font atlas is built when calling io.Fonts->GetTexDataAsXXXX() or io.Fonts->Build().\n"
-        "- Read FAQ and documentation in extra_fonts/ for more details.\n"
+        "- Read FAQ and documentation in misc/fonts/ for more details.\n"
         "- If you need to add/remove fonts at runtime (e.g. for DPI change), do it before calling NewFrame().");
 }
 
@@ -2137,7 +2137,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             if (memcmp(&style.Colors[i], &ref->Colors[i], sizeof(ImVec4)) != 0)
             {
                 // Tips: in a real user application, you may want to merge and use an icon font into the main font, so instead of "Save"/"Revert" you'd use icons.
-                // Read the FAQ and extra_fonts/README.txt about using icon fonts. It's really easy and super convenient!
+                // Read the FAQ and misc/fonts/README.txt about using icon fonts. It's really easy and super convenient!
                 ImGui::SameLine(0.0f, style.ItemInnerSpacing.x); if (ImGui::Button("Save")) ref->Colors[i] = style.Colors[i];
                 ImGui::SameLine(0.0f, style.ItemInnerSpacing.x); if (ImGui::Button("Revert")) style.Colors[i] = ref->Colors[i];
             }
