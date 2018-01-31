@@ -8457,10 +8457,11 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
                 }
                 if (IsNavInputDown(ImGuiNavInput_PadTweakFast))
                     delta *= 10.0f;
-                clicked_t = ImSaturate(clicked_t + delta);
                 set_new_value = true;
                 if ((clicked_t >= 1.0f && delta > 0.0f) || (clicked_t <= 0.0f && delta < 0.0f)) // This is to avoid applying the saturation when already past the limits
                     set_new_value = false;
+                else
+                    clicked_t = ImSaturate(clicked_t + delta);
             }
         }
         else
