@@ -2291,7 +2291,7 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
         // Even if 'ImGuiItemFlags_NoNavDefaultFocus' is on (typically collapse/close button) we record the first ResultId so they can be used as a fallback
         if (!(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
         {
-            g.NavInitRequest = g.NavInitResultExplicit = false; // Found a match, clear request
+            g.NavInitRequest = false; // Found a match, clear request
             NavUpdateAnyRequestFlag();
         }
         if (g.NavInitResultId == 0 || !(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
@@ -2887,10 +2887,11 @@ static void ImGui::NavUpdate()
     {
         // Apply result from previous navigation init request (will typically select the first item, unless SetItemDefaultFocus() has been called)
         IM_ASSERT(g.NavWindow);
-        SetNavID(g.NavInitResultId, g.NavLayer);
+        if (g.NavInitResultExplicit)
+            SetNavIDAndMoveMouse(g.NavInitResultId, g.NavLayer, g.NavInitResultRectRel);
+        else
+            SetNavID(g.NavInitResultId, g.NavLayer);
         g.NavWindow->NavRectRel[g.NavLayer] = g.NavInitResultRectRel;
-        if (g.NavDisableMouseHover)
-            g.NavMousePosDirty = true;
     }
     g.NavInitRequest = false;
     g.NavInitResultExplicit = false;
