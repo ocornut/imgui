@@ -539,11 +539,11 @@
 
  Q: How can I easily use icons in my application?
  A: The most convenient and practical way is to merge an icon font such as FontAwesome inside you main font. Then you can refer to icons within your 
-    strings. Read 'How can I load multiple fonts?' and the file 'extra_fonts/README.txt' for instructions and useful header files.
+    strings. Read 'How can I load multiple fonts?' and the file 'misc/fonts/README.txt' for instructions and useful header files.
 
  Q: How can I load multiple fonts?
  A: Use the font atlas to pack them into a single texture:
-    (Read extra_fonts/README.txt and the code in ImFontAtlas for more details.)
+    (Read misc/fonts/README.txt and the code in ImFontAtlas for more details.)
 
       ImGuiIO& io = ImGui::GetIO();
       ImFont* font0 = io.Fonts->AddFontDefault();
