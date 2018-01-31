@@ -6570,8 +6570,9 @@ void ImGui::LogToTTY(int max_depth)
         return;
     ImGuiWindow* window = g.CurrentWindow;
 
-    g.LogEnabled = true;
+    IM_ASSERT(g.LogFile == NULL);
     g.LogFile = stdout;
+    g.LogEnabled = true;
     g.LogStartDepth = window->DC.TreeDepth;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
@@ -6592,6 +6593,7 @@ void ImGui::LogToFile(int max_depth, const char* filename)
             return;
     }
 
+    IM_ASSERT(g.LogFile == NULL);
     g.LogFile = ImFileOpen(filename, "ab");
     if (!g.LogFile)
     {
@@ -6612,8 +6614,9 @@ void ImGui::LogToClipboard(int max_depth)
         return;
     ImGuiWindow* window = g.CurrentWindow;
 
-    g.LogEnabled = true;
+    IM_ASSERT(g.LogFile == NULL);
     g.LogFile = NULL;
+    g.LogEnabled = true;
     g.LogStartDepth = window->DC.TreeDepth;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
@@ -6626,7 +6629,6 @@ void ImGui::LogFinish()
         return;
 
     LogText(IM_NEWLINE);
-    g.LogEnabled = false;
     if (g.LogFile != NULL)
     {
         if (g.LogFile == stdout)
@@ -6640,6 +6642,7 @@ void ImGui::LogFinish()
         SetClipboardText(g.LogClipboard->begin());
         g.LogClipboard->clear();
     }
+    g.LogEnabled = false;
 }
 
 // Helper to display logging buttons
