@@ -12,7 +12,7 @@
 
 #include <stdint.h>     // uint64_t
 #include <cstring>      // memcpy
-#include <imgui.h>
+#include "imgui.h"
 #include "imgui_impl_a5.h"
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
@@ -215,6 +215,7 @@ bool ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT *ev)
     {
     case ALLEGRO_EVENT_MOUSE_AXES:
         io.MouseWheel += ev->mouse.dz;
+        io.MouseWheelH += ev->mouse.dw;
         return true;
     case ALLEGRO_EVENT_KEY_CHAR:
         if (ev->keyboard.display == g_Display)
