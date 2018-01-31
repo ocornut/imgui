@@ -1919,6 +1919,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     NavRootWindow = NULL;
     NavLastIds[0] = NavLastIds[1] = 0;
     NavRectRel[0] = NavRectRel[1] = ImRect();
+    NavLastChildNavWindow = NULL;
 
     FocusIdxAllCounter = FocusIdxTabCounter = -1;
     FocusIdxAllRequestCurrent = FocusIdxTabRequestCurrent = INT_MAX;
@@ -1983,7 +1984,7 @@ static void SetNavID(ImGuiID id, int nav_layer)
     IM_ASSERT(g.NavWindow);
     IM_ASSERT(nav_layer == 0 || nav_layer == 1);
     g.NavId = id;
-    g.NavWindow->NavLastIds[nav_layer] = g.NavId;
+    g.NavWindow->NavLastIds[nav_layer] = id;
 }
 
 static void SetNavIDAndMoveMouse(ImGuiID id, int nav_layer, const ImRect& rect_rel)
@@ -2248,10 +2249,22 @@ static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
     return new_best;
 }
 
+// Call when we are expected to land on Layer 0 after FocusWindow()
+static ImGuiWindow* NavRestoreLastChildNavWindow(ImGuiWindow* window)
+{
+    ImGuiWindow* child_window = window->NavLastChildNavWindow;
+    if (child_window == NULL)
+        return window;
+    window->NavLastChildNavWindow = NULL;
+    return child_window;
+}
+
 static void NavRestoreLayer(int layer)
 {
     ImGuiContext& g = *GImGui;
     g.NavLayer = layer;
+    if (layer == 0)
+        g.NavWindow = NavRestoreLastChildNavWindow(g.NavWindow);
     if (layer == 0 && g.NavWindow->NavLastIds[0] != 0)
         SetNavIDAndMoveMouse(g.NavWindow->NavLastIds[0], layer, g.NavWindow->NavRectRel[0]);
     else
@@ -2819,6 +2832,7 @@ static void ImGui::NavUpdateWindowing()
     {
         g.NavDisableHighlight = false;
         g.NavDisableMouseHover = true;
+        apply_focus_window = NavRestoreLastChildNavWindow(apply_focus_window);
         FocusWindow(apply_focus_window);
         if (apply_focus_window->NavLastIds[0] == 0)
             NavInitWindow(apply_focus_window, false);
@@ -2833,8 +2847,14 @@ static void ImGui::NavUpdateWindowing()
     // Apply menu/layer toggle
     if (apply_toggle_layer && g.NavWindow)
     {
+        // FIXME-NAV: Iterate parent windows to find first one with an active menu layer, instead of aiming at root window immediately
         if ((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) == 0 && (g.NavWindow->RootWindow->DC.NavLayerActiveMask & (1 << 1)) != 0)
-            FocusWindow(g.NavWindow->RootWindow);
+        {
+            ImGuiWindow* old_nav_window = g.NavWindow;
+            ImGuiWindow* new_nav_window = g.NavWindow->RootWindow;
+            FocusWindow(new_nav_window);
+            new_nav_window->NavLastChildNavWindow = old_nav_window;
+        }
         g.NavDisableHighlight = false;
         g.NavDisableMouseHover = true;
         NavRestoreLayer((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) ? (g.NavLayer ^ 1) : 0);
@@ -2944,6 +2964,12 @@ static void ImGui::NavUpdate()
     g.NavIdIsAlive = false;
     g.NavJustTabbedId = 0;
     IM_ASSERT(g.NavLayer == 0 || g.NavLayer == 1);
+
+    // Store our return window (for returning from Layer 1 to Layer 0) and clear it as soon as we step back in our own Layer 0
+    if (g.NavWindow && g.NavWindow != g.NavWindow->RootWindow)
+        g.NavWindow->RootWindow->NavLastChildNavWindow = g.NavWindow;
+    if (g.NavWindow && g.NavWindow->NavLastChildNavWindow != NULL && g.NavLayer == 0)
+        g.NavWindow->NavLastChildNavWindow = NULL;
 
     NavUpdateWindowing();
 
@@ -4731,10 +4757,10 @@ static ImGuiWindow* GetFrontMostModalRootWindow()
 static void ClosePopupToLevel(int remaining)
 {
     ImGuiContext& g = *GImGui;
-    if (remaining > 0)
-        ImGui::FocusWindow(g.OpenPopupStack[remaining-1].Window);
-    else
-        ImGui::FocusWindow(g.OpenPopupStack[0].ParentWindow);
+    ImGuiWindow* focus_window = (remaining > 0) ? g.OpenPopupStack[remaining-1].Window : g.OpenPopupStack[0].ParentWindow;
+    if (g.NavLayer == 0)
+        focus_window = NavRestoreLastChildNavWindow(focus_window);
+    ImGui::FocusWindow(focus_window);
     g.OpenPopupStack.resize(remaining);
 }
 
@@ -6210,9 +6236,11 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         g.NavId = window ? window->NavLastIds[0] : 0; // Restore NavId
         g.NavIdIsAlive = false;
         g.NavLayer = 0;
+        g.NavWindow = window;
         if (window && g.NavDisableMouseHover)
             g.NavMousePosDirty = true;
-        g.NavWindow = window;
+        if (window && window->NavLastChildNavWindow != NULL)
+            window->NavLastChildNavWindow = NULL;
     }
 
     // Passing NULL allow to disable keyboard focus
@@ -6239,7 +6267,8 @@ void ImGui::FocusFrontMostActiveWindow(ImGuiWindow* ignore_window)
     for (int i = g.Windows.Size - 1; i >= 0; i--)
         if (g.Windows[i] != ignore_window && g.Windows[i]->WasActive && !(g.Windows[i]->Flags & ImGuiWindowFlags_ChildWindow))
         {
-            FocusWindow(g.Windows[i]);
+            ImGuiWindow* focus_window = NavRestoreLastChildNavWindow(g.Windows[i]); 
+            FocusWindow(focus_window);
             return;
         }
 }
@@ -12994,6 +13023,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::BulletText("Scroll: (%.2f/%.2f,%.2f/%.2f)", window->Scroll.x, GetScrollMaxX(window), window->Scroll.y, GetScrollMaxY(window));
                 ImGui::BulletText("Active: %d, WriteAccessed: %d", window->Active, window->WriteAccessed);
                 ImGui::BulletText("NavLastIds: 0x%08X,0x%08X, NavLayerActiveMask: %X", window->NavLastIds[0], window->NavLastIds[1], window->DC.NavLayerActiveMask);
+                ImGui::BulletText("NavLastChildNavWindow: %s", window->NavLastChildNavWindow ? window->NavLastChildNavWindow->Name : "NULL");
                 ImGui::BulletText("NavRectRel[0]: (%.1f,%.1f)(%.1f,%.1f)", window->NavRectRel[0].Min.x, window->NavRectRel[0].Min.y, window->NavRectRel[0].Max.x, window->NavRectRel[0].Max.y);
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");

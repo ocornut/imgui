@@ -940,6 +940,7 @@ struct IMGUI_API ImGuiWindow
     ImGuiWindow*            RootNonPopupWindow;                 // Generally point to ourself. Used to display TitleBgActive color and for selecting which window to use for NavWindowing
 
     ImGuiWindow*            NavRootWindow;                      // Generally point to ourself. If we are a child window with the NavFlattened flag, point to a parent window. 
+    ImGuiWindow*            NavLastChildNavWindow;              // When going to the menu bar, we remember the child window we came from. (This could probably be made implicit if we kept g.Windows sorted by last focused including child window.)
     ImGuiID                 NavLastIds[2];                      // Last known NavId for this window, per layer (0/1)
     ImRect                  NavRectRel[2];                      // Reference rectangle, in window relative space
 
