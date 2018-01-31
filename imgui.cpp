@@ -2289,15 +2289,15 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
     if (g.NavInitRequest && g.NavLayer == window->DC.NavLayerCurrent)
     {
         // Even if 'ImGuiItemFlags_NoNavDefaultFocus' is on (typically collapse/close button) we record the first ResultId so they can be used as a fallback
+        if (!(item_flags & ImGuiItemFlags_NoNavDefaultFocus) || g.NavInitResultId == 0)
+        {
+            g.NavInitResultId = id;
+            g.NavInitResultRectRel = nav_bb_rel;
+        }
         if (!(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
         {
             g.NavInitRequest = false; // Found a match, clear request
             NavUpdateAnyRequestFlag();
-        }
-        if (g.NavInitResultId == 0 || !(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
-        {
-            g.NavInitResultId = id;
-            g.NavInitResultRectRel = nav_bb_rel;
         }
     }
 
@@ -13017,7 +13017,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Text("HoveredId: 0x%08X/0x%08X (%.2f sec)", g.HoveredId, g.HoveredIdPreviousFrame, g.HoveredIdTimer); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
             ImGui::Text("ActiveId: 0x%08X/0x%08X (%.2f sec), ActiveIdSource: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdTimer, input_source_names[g.ActiveIdSource]);
             ImGui::Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
-            ImGui::Text("NavWindow: '%s', NavId: 0x%08X, NavLayer: %d", g.NavWindow ? g.NavWindow->Name : "NULL", g.NavId, g.NavLayer);
+            ImGui::Text("NavWindow: '%s'", g.NavWindow ? g.NavWindow->Name : "NULL");
+            ImGui::Text("NavId: 0x%08X, NavLayer: %d", g.NavId, g.NavLayer);
             ImGui::Text("NavActive: %d, NavVisible: %d", g.IO.NavActive, g.IO.NavVisible);
             ImGui::Text("NavActivateId: 0x%08X, NavInputId: 0x%08X", g.NavActivateId, g.NavInputId);
             ImGui::Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
