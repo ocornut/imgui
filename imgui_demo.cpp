@@ -1054,7 +1054,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
         if (ImGui::TreeNode("Child regions"))
         {
             static bool disable_mouse_wheel = false;
+            static bool disable_menu = false;
             ImGui::Checkbox("Disable Mouse Wheel", &disable_mouse_wheel);
+            ImGui::Checkbox("Disable Menu", &disable_menu);
 
             static int line = 50;
             bool goto_line = ImGui::Button("Goto");
@@ -1082,8 +1084,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
             // Child 2: rounded border
             {
                 ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
-                ImGui::BeginChild("Child2", ImVec2(0,300), true, (disable_mouse_wheel ? ImGuiWindowFlags_NoScrollWithMouse : 0) | ImGuiWindowFlags_MenuBar);
-                if (ImGui::BeginMenuBar())
+                ImGui::BeginChild("Child2", ImVec2(0,300), true, (disable_mouse_wheel ? ImGuiWindowFlags_NoScrollWithMouse : 0) | (disable_menu ? 0 : ImGuiWindowFlags_MenuBar));
+                if (!disable_menu && ImGui::BeginMenuBar())
                 {
                     if (ImGui::BeginMenu("Menu"))
                     {
