@@ -4247,6 +4247,8 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFl
     if (g.NavDisableHighlight && !(flags & ImGuiNavHighlightFlags_AlwaysDraw))
         return;    
     ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->DC.NavHideHighlightOneFrame)
+        return;
 
     float rounding = (flags & ImGuiNavHighlightFlags_NoRounding) ? 0.0f : g.Style.FrameRounding;
     ImRect display_rect = bb;
@@ -4767,6 +4769,7 @@ static void ClosePopupToLevel(int remaining)
     if (g.NavLayer == 0)
         focus_window = NavRestoreLastChildNavWindow(focus_window);
     ImGui::FocusWindow(focus_window);
+    focus_window->DC.NavHideHighlightOneFrame = true;
     g.OpenPopupStack.resize(remaining);
 }
 
@@ -5901,9 +5904,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.CursorMaxPos = window->DC.CursorStartPos;
         window->DC.CurrentLineHeight = window->DC.PrevLineHeight = 0.0f;
         window->DC.CurrentLineTextBaseOffset = window->DC.PrevLineTextBaseOffset = 0.0f;
+        window->DC.NavHideHighlightOneFrame = false;
+        window->DC.NavHasScroll = (GetScrollMaxY() > 0.0f);
         window->DC.NavLayerActiveMask = window->DC.NavLayerActiveMaskNext;
         window->DC.NavLayerActiveMaskNext = 0x00;
-        window->DC.NavHasScroll = (GetScrollMaxY() > 0.0f);
         window->DC.MenuBarAppending = false;
         window->DC.MenuBarOffsetX = ImMax(window->WindowPadding.x, style.ItemSpacing.x);
         window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;

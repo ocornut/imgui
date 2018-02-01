@@ -820,6 +820,7 @@ struct IMGUI_API ImGuiDrawContext
     ImGuiID                 LastItemId;
     ImRect                  LastItemRect;
     bool                    LastItemRectHoveredRect;
+    bool                    NavHideHighlightOneFrame;
     bool                    NavHasScroll;           // Set when scrolling can be used (ScrollMax > 0.0f)
     int                     NavLayerCurrent;        // Current layer, 0..31 (we currently only use 0..1)
     int                     NavLayerCurrentMask;    // = (1 << NavLayerCurrent) used by ItemAdd prior to clipping.
@@ -857,6 +858,7 @@ struct IMGUI_API ImGuiDrawContext
         LastItemId = 0;
         LastItemRect = ImRect();
         LastItemRectHoveredRect = false;
+        NavHideHighlightOneFrame = false;
         NavHasScroll = false;
         NavLayerActiveMask = NavLayerActiveMaskNext = 0x00;
         NavLayerCurrent = 0;
