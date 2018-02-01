@@ -211,26 +211,27 @@
 
  USING GAMEPAD/KEYBOARD NAVIGATION [BETA]
 
- - Gamepad/keyboard navigation support is available, currently in Beta with some issues. Your feedback and bug reports are welcome.
+ - Gamepad/keyboard navigation support is now available. Your feedback and bug reports are greatly welcome!
  - See https://github.com/ocornut/imgui/issues/787 discussion thread and ask questions there.
- - The current primary focus is to support game controllers.
- - Consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
- - Consider using Synergy host (on your computer) + uSynergy.c (in your console/tablet/phone app) to use PC mouse/keyboard.
+ - The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable.
  - Your inputs are passed to imgui by filling the io.NavInputs[] array. See 'enum ImGuiNavInput_' in imgui.h for a description of available inputs.
+ - Please refer to the examples/ application for suggested keyboard and gamepad mapping.
+ - PS4 users: Consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
+ - Consoles/Tablet/Phone users: Consider using Synergy host (on your computer) + uSynergy.c (in your console/tablet/phone app) to use your PC mouse/keyboard.
  - The ImGuiNavFlags_EnableGamepad and ImGuiNavFlags_EnableKeyboard flags of io.NavFlags are only here to instruct your binding whether to find inputs.
  - For gamepad use, the easiest approach is to go all-or-nothing, with a buttons combo that toggle your inputs between imgui and your game/application.
    Sharing inputs in a more advanced or granular way between imgui and your game/application may be tricky and requires further work on imgui.
    For more advanced uses, you may want to use:
      - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
      - io.NavVisible: true when the navigation cursor is visible (and usually goes false when mouse is used).
-     - query focus information with IsWindowFocused(), IsAnyWindowFocused(), IsAnyItemFocused() functions.
+     - query focus information with e.g. IsWindowFocused(), IsItemFocused() etc. functions.
    The reality is more complex than what those flags can express. Please discuss your issues and usage scenario in the thread above! 
    As we head toward more keyboard-oriented development this aspect will need to be improved.
  - On a TV/console system where readability may be lower or mouse inputs may be awkward, you may want to set the ImGuiNavFlags_MoveMouse flag in io.NavFlags. 
-   Enabling ImGuiNavFlags_MoveMouse instructs dear imgui to move your mouse cursor along when navigation movement.
+   Enabling ImGuiNavFlags_MoveMouse instructs dear imgui to move your mouse cursor along with navigation movement.
    When enabled, the NewFrame() functions may alter 'io.MousePos' and set 'io.WantMoveMouse' to notify you that it did so.
    When that happens your back-end NEEDS to move the OS or underlying mouse cursor on the next frame. Some of the binding in examples/ do that.
-   (Important: It you set the ImGuiNavFlags_MoveMouse flag but don't honor 'io.WantMoveMouse' properly, imgui will misbehave as it will think your mouse is moving back and forth.)
+   (If you set the ImGuiNavFlags_MoveMouse flag but don't honor 'io.WantMoveMouse' properly, imgui will misbehave as it will see your mouse as moving back and forth.)
    (In a setup when you may not have easy control over the mouse cursor, e.g. uSynergy.c doesn't expose moving remote mouse cursor, you may want
    to set a boolean to ignore your other external mouse positions until the external source is moved again.)
 
