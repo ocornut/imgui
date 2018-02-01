@@ -11099,7 +11099,7 @@ void ImGui::EndMenu()
     // Nav: When a left move request within our child menu failed, close the menu
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (g.NavWindow && g.NavWindow->ParentWindow == window && NavMoveRequestButNoResultYet() && g.NavMoveDir == ImGuiDir_Left && window->DC.LayoutType == ImGuiLayoutType_Vertical)
+    if (g.NavWindow == window && g.NavMoveDir == ImGuiDir_Left && NavMoveRequestButNoResultYet() && window->DC.LayoutType == ImGuiLayoutType_Vertical)
     {
         ClosePopupToLevel(g.OpenPopupStack.Size - 1);
         NavMoveRequestCancel();
