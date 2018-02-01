@@ -3005,7 +3005,8 @@ static void ImGui::NavUpdate()
         else if (g.OpenPopupStack.Size > 0)
         {
             // Close open popup/menu
-            ClosePopupToLevel(g.OpenPopupStack.Size - 1);
+            if (!(g.OpenPopupStack.back().Window->Flags & ImGuiWindowFlags_Modal))
+                ClosePopupToLevel(g.OpenPopupStack.Size - 1);
         }
         else if (g.NavLayer != 0)
         {
