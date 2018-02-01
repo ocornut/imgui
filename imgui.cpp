@@ -4248,6 +4248,7 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFl
         return;    
     ImGuiWindow* window = ImGui::GetCurrentWindow();
 
+    float rounding = (flags & ImGuiNavHighlightFlags_NoRounding) ? 0.0f : g.Style.FrameRounding;
     ImRect display_rect = bb;
     display_rect.ClipWith(window->ClipRect);
     if (flags & ImGuiNavHighlightFlags_TypeDefault)
@@ -4258,13 +4259,13 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFl
         bool fully_visible = window->ClipRect.Contains(display_rect);
         if (!fully_visible)
             window->DrawList->PushClipRect(display_rect.Min, display_rect.Max);
-        window->DrawList->AddRect(display_rect.Min + ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), display_rect.Max - ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), GetColorU32(ImGuiCol_NavHighlight), g.Style.FrameRounding, 0x0F, THICKNESS);
+        window->DrawList->AddRect(display_rect.Min + ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), display_rect.Max - ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), GetColorU32(ImGuiCol_NavHighlight), rounding, ImDrawCornerFlags_All, THICKNESS);
         if (!fully_visible)
             window->DrawList->PopClipRect();
     }
     if (flags & ImGuiNavHighlightFlags_TypeThin)
     {
-        window->DrawList->AddRect(display_rect.Min, display_rect.Max, GetColorU32(ImGuiCol_NavHighlight), g.Style.FrameRounding, ~0, 1.0f);
+        window->DrawList->AddRect(display_rect.Min, display_rect.Max, GetColorU32(ImGuiCol_NavHighlight), rounding, ~0, 1.0f);
     }
 }
 
@@ -10690,7 +10691,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     {
         const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
         RenderFrame(bb_with_spacing.Min, bb_with_spacing.Max, col, false, 0.0f);
-        RenderNavHighlight(bb_with_spacing, id, ImGuiNavHighlightFlags_TypeThin);
+        RenderNavHighlight(bb_with_spacing, id, ImGuiNavHighlightFlags_TypeThin | ImGuiNavHighlightFlags_NoRounding);
     }
 
     if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.ColumnsSet)

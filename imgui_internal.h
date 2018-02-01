@@ -282,7 +282,8 @@ enum ImGuiNavHighlightFlags_
 {
     ImGuiNavHighlightFlags_TypeDefault  = 1 << 0,
     ImGuiNavHighlightFlags_TypeThin     = 1 << 1,
-    ImGuiNavHighlightFlags_AlwaysDraw   = 1 << 2
+    ImGuiNavHighlightFlags_AlwaysDraw   = 1 << 2,
+    ImGuiNavHighlightFlags_NoRounding   = 1 << 3
 };
 
 enum ImGuiNavDirSourceFlags_
