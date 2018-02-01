@@ -2250,14 +2250,19 @@ static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
     return new_best;
 }
 
+static void NavSaveLastChildNavWindow(ImGuiWindow* child_window)
+{
+    ImGuiWindow* parent_window = child_window;
+    while (parent_window && (parent_window->Flags & ImGuiWindowFlags_ChildWindow) != 0 && (parent_window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) == 0)
+        parent_window = parent_window->ParentWindow;
+    if (parent_window && parent_window != child_window)
+        parent_window->NavLastChildNavWindow = child_window;
+}
+
 // Call when we are expected to land on Layer 0 after FocusWindow()
 static ImGuiWindow* NavRestoreLastChildNavWindow(ImGuiWindow* window)
 {
-    ImGuiWindow* child_window = window->NavLastChildNavWindow;
-    if (child_window == NULL)
-        return window;
-    window->NavLastChildNavWindow = NULL;
-    return child_window;
+    return window->NavLastChildNavWindow ? window->NavLastChildNavWindow : window;
 }
 
 static void NavRestoreLayer(int layer)
@@ -2846,11 +2851,12 @@ static void ImGui::NavUpdateWindowing()
     // Apply menu/layer toggle
     if (apply_toggle_layer && g.NavWindow)
     {
-        // FIXME-NAV: Iterate parent windows to find first one with an active menu layer, instead of aiming at root window immediately
-        if ((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) == 0 && (g.NavWindow->RootWindow->DC.NavLayerActiveMask & (1 << 1)) != 0)
+        ImGuiWindow* new_nav_window = g.NavWindow;
+        while ((new_nav_window->DC.NavLayerActiveMask & (1 << 1)) == 0 && (new_nav_window->Flags & ImGuiWindowFlags_ChildWindow) != 0 && (new_nav_window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) == 0)
+            new_nav_window = new_nav_window->ParentWindow;
+        if (new_nav_window != g.NavWindow)
         {
             ImGuiWindow* old_nav_window = g.NavWindow;
-            ImGuiWindow* new_nav_window = g.NavWindow->RootWindow;
             FocusWindow(new_nav_window);
             new_nav_window->NavLastChildNavWindow = old_nav_window;
         }
@@ -2965,8 +2971,8 @@ static void ImGui::NavUpdate()
     IM_ASSERT(g.NavLayer == 0 || g.NavLayer == 1);
 
     // Store our return window (for returning from Layer 1 to Layer 0) and clear it as soon as we step back in our own Layer 0
-    if (g.NavWindow && g.NavWindow != g.NavWindow->RootWindow)
-        g.NavWindow->RootWindow->NavLastChildNavWindow = g.NavWindow;
+    if (g.NavWindow)
+        NavSaveLastChildNavWindow(g.NavWindow);
     if (g.NavWindow && g.NavWindow->NavLastChildNavWindow != NULL && g.NavLayer == 0)
         g.NavWindow->NavLastChildNavWindow = NULL;
 
@@ -6238,8 +6244,6 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         g.NavWindow = window;
         if (window && g.NavDisableMouseHover)
             g.NavMousePosDirty = true;
-        if (window && window->NavLastChildNavWindow != NULL)
-            window->NavLastChildNavWindow = NULL;
         g.NavInitRequest = false;
     }
 
