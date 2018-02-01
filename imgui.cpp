@@ -7564,17 +7564,21 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size_arg)
     return pressed;
 }
 
-// Upper-right button to close a window.
+// Button to close a window
 bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
 
+    // We intentionally allow interaction when clipped so that a mechanical Alt,Right,Validate sequence close a window.
+    // (this isn't the regular behavior of buttons, but it doesn't affect the user much because navigation tends to keep items visible).
     const ImRect bb(pos - ImVec2(radius,radius), pos + ImVec2(radius,radius));
-    if (!ItemAdd(bb, id)) // To allow navigation
-        return false;
+    bool is_clipped = !ItemAdd(bb, id);
 
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+    if (is_clipped)
+        return pressed;
 
     // Render
     const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_CloseButtonActive : hovered ? ImGuiCol_CloseButtonHovered : ImGuiCol_CloseButton);
@@ -7587,7 +7591,6 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
         window->DrawList->AddLine(center + ImVec2(+cross_extent,+cross_extent), center + ImVec2(-cross_extent,-cross_extent), GetColorU32(ImGuiCol_Text));
         window->DrawList->AddLine(center + ImVec2(+cross_extent,-cross_extent), center + ImVec2(-cross_extent,+cross_extent), GetColorU32(ImGuiCol_Text));
     }
-
     return pressed;
 }
 
