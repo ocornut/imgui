@@ -2669,11 +2669,8 @@ static ImGuiWindow* FindWindowNavigable(int i_start, int i_stop, int dir) // FIX
 {
     ImGuiContext& g = *GImGui;
     for (int i = i_start; i >= 0 && i < g.Windows.Size && i != i_stop; i += dir)
-    {
-        ImGuiWindow* window = g.Windows[i];
-        if (window->Active && window == window->RootNonPopupWindow && (!(window->Flags & ImGuiWindowFlags_NoNavFocus) || window == g.NavWindow))
-            return window;
-    }
+        if (ImGui::IsWindowNavFocusable(g.Windows[i]))
+            return g.Windows[i];
     return NULL;
 }
 
@@ -6648,6 +6645,13 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
     default:
         return g.NavWindow == g.CurrentWindow;
     }
+}
+
+// Can we focus this window with CTRL+TAB (or PadMenu + PadFocusPrev/PadFocusNext)
+bool ImGui::IsWindowNavFocusable(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    return window->Active && window == window->RootNonPopupWindow && (!(window->Flags & ImGuiWindowFlags_NoNavFocus) || window == g.NavWindow);
 }
 
 float ImGui::GetWindowWidth()

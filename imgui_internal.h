@@ -1001,6 +1001,7 @@ namespace ImGui
     IMGUI_API void          BringWindowToFront(ImGuiWindow* window);
     IMGUI_API void          BringWindowToBack(ImGuiWindow* window);
     IMGUI_API bool          IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent);
+    IMGUI_API bool          IsWindowNavFocusable(ImGuiWindow* window);
 
     IMGUI_API void          Initialize();
 
