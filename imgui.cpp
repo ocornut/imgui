@@ -6238,6 +6238,8 @@ void ImGui::FocusWindow(ImGuiWindow* window)
             g.NavMousePosDirty = true;
         if (window && window->NavLastChildNavWindow != NULL)
             window->NavLastChildNavWindow = NULL;
+        if (g.NavInitRequest)
+            g.NavInitRequest = false;
     }
 
     // Passing NULL allow to disable keyboard focus
