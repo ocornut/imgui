@@ -669,7 +669,6 @@ static void             MarkIniSettingsDirty(ImGuiWindow* window);
 
 static ImRect           GetViewportRect();
 
-static void             CloseInactivePopups(ImGuiWindow* ref_window);
 static void             ClosePopupToLevel(int remaining);
 static ImGuiWindow*     GetFrontMostModalRootWindow();
 
@@ -2549,7 +2548,7 @@ void ImGui::NewFrame()
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
     g.CurrentWindowStack.resize(0);
     g.CurrentPopupStack.resize(0);
-    CloseInactivePopups(g.NavWindow);
+    ClosePopupsOverWindow(g.NavWindow);
 
     // Create implicit window - we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
@@ -3000,7 +2999,7 @@ void ImGui::EndFrame()
             }
 
             // With right mouse button we close popups without changing focus
-            // (The left mouse button path calls FocusWindow which will lead NewFrame->CloseInactivePopups to trigger)
+            // (The left mouse button path calls FocusWindow which will lead NewFrame->ClosePopupsOverWindow to trigger)
             if (g.IO.MouseClicked[1])
             {
                 // Find the top-most window between HoveredWindow and the front most Modal Window.
@@ -3017,7 +3016,7 @@ void ImGui::EndFrame()
                     if (window == g.HoveredWindow)
                         hovered_window_above_modal = true;
                 }
-                CloseInactivePopups(hovered_window_above_modal ? g.HoveredWindow : modal);
+                ClosePopupsOverWindow(hovered_window_above_modal ? g.HoveredWindow : modal);
             }
         }
     }
@@ -3772,7 +3771,7 @@ void ImGui::OpenPopupEx(ImGuiID id)
         else
             g.OpenPopupStack[current_stack_size] = popup_ref;
 
-        // When reopening a popup we first refocus its parent, otherwise if its parent is itself a popup it would get closed by CloseInactivePopups().
+        // When reopening a popup we first refocus its parent, otherwise if its parent is itself a popup it would get closed by ClosePopupsOverWindow().
         // This is equivalent to what ClosePopupToLevel() does.
         //if (g.OpenPopupStack[current_stack_size].PopupId == id)
         //    FocusWindow(parent_window);
@@ -3785,7 +3784,7 @@ void ImGui::OpenPopup(const char* str_id)
     OpenPopupEx(g.CurrentWindow->GetID(str_id));
 }
 
-static void CloseInactivePopups(ImGuiWindow* ref_window)
+void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
 {
     ImGuiContext& g = *GImGui;
     if (g.OpenPopupStack.empty())
