@@ -11107,10 +11107,12 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
 
 void ImGui::EndMenu()
 {
-    // Nav: When a left move request within our child menu failed, close the menu
+    // Nav: When a left move request _within our child menu_ failed, close the menu.
+    // A menu doesn't close itself because EndMenuBar() wants the catch the last Left<>Right inputs.
+    // However it means that with the current code, a BeginMenu() from outside another menu or a menu-bar won't be closable with the Left direction.
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (g.NavWindow == window && g.NavMoveDir == ImGuiDir_Left && NavMoveRequestButNoResultYet() && window->DC.LayoutType == ImGuiLayoutType_Vertical)
+    if (g.NavWindow && g.NavWindow->ParentWindow == window && g.NavMoveDir == ImGuiDir_Left && NavMoveRequestButNoResultYet() && window->DC.LayoutType == ImGuiLayoutType_Vertical)
     {
         ClosePopupToLevel(g.OpenPopupStack.Size - 1);
         NavMoveRequestCancel();
