@@ -2027,6 +2027,8 @@ void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
 
     // Assume that SetFocusID() is called in the context where its NavLayer is the current layer, which is the case everywhere we call it.
     const int nav_layer = window->DC.NavLayerCurrent;
+    if (g.NavWindow != window)
+        g.NavInitRequest = false;
     g.NavId = id;
     g.NavWindow = window;
     g.NavLayer = nav_layer;
@@ -6238,8 +6240,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
             g.NavMousePosDirty = true;
         if (window && window->NavLastChildNavWindow != NULL)
             window->NavLastChildNavWindow = NULL;
-        if (g.NavInitRequest)
-            g.NavInitRequest = false;
+        g.NavInitRequest = false;
     }
 
     // Passing NULL allow to disable keyboard focus
