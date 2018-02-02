@@ -12545,9 +12545,7 @@ void ImGui::TreePop()
     if (g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
         if (g.NavIdIsAlive && (window->DC.TreeDepthMayCloseOnPop & (1 << window->DC.TreeDepth)))
         {
-            ImGuiID id = window->IDStack.back();
-            window->DC.StateStorage->SetBool(id, false);
-            SetNavID(id, g.NavLayer);
+            SetNavID(window->IDStack.back(), g.NavLayer);
             NavMoveRequestCancel();
         }
     window->DC.TreeDepthMayCloseOnPop &= (1 << window->DC.TreeDepth) - 1;
