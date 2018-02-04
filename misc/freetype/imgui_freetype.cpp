@@ -1,16 +1,17 @@
 // Wrapper to use Freetype (instead of stb_truetype) for Dear ImGui
-// Get latest version at http://www.github.com/ocornut/imgui_club
-// Original code by @Vuhdo (Aleksei Skriabin)
+// Get latest version at https://github.com/ocornut/imgui/tree/master/misc/freetype
+// Original code by @Vuhdo (Aleksei Skriabin). Improvements by @mikesart. Maintained by @ocornut
 
 // Changelog:
-// - v0.50: (2017/08/16) imported from https://github.com/Vuhdo/imgui_freetype, updated for latest changes in ImFontAtlas, minor tweaks.
+// - v0.50: (2017/08/16) imported from https://github.com/Vuhdo/imgui_freetype into http://www.github.com/ocornut/imgui_club, updated for latest changes in ImFontAtlas, minor tweaks.
 // - v0.51: (2017/08/26) cleanup, optimizations, support for ImFontConfig::RasterizerFlags, ImFontConfig::RasterizerMultiply.
 // - v0.52: (2017/09/26) fixes for imgui internal changes
 // - v0.53: (2017/10/22) minor inconsequential change to match change in master (removed an unnecessary statement)
 // - v0.54: (2018/01/22) fix for addition of ImFontAtlas::TexUvscale member
+// - v0.55: (2018/02/04) moved to main imgui repository (away from http://www.github.com/ocornut/imgui_club)
 
-// Todo/Bugs:
-// - Font size has lots of waste.
+// TODO:
+// - Output texture has excessive resolution (lots of vertical waste)
 // - FreeType's memory allocator is not overridden.
 
 #include "imgui_freetype.h"
