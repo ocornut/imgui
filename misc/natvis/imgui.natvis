@@ -33,8 +33,7 @@
 </Type>
 
 <Type Name="ImGuiWindow">
-  <DisplayString Condition="Active||WasActive">{{Name={Name,s}}}</DisplayString>
-  <DisplayString Condition="!(Active||WasActive)">{{Name={Name,s}} Inactive}</DisplayString>
+  <DisplayString>{{Name={Name,s} Active {(Active||WasActive)?1:0,d} Child {(Flags &amp; 0x01000000)?1:0,d} Popup {(Flags &amp; 0x04000000)?1:0,d}}</DisplayString>
 </Type>
   
 </AutoVisualizer>
