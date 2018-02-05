@@ -17,6 +17,12 @@ ImGuiFreeType::BuildFontAtlas(io.Fonts, flags);
 io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 ```
 
+**Gamma Correct Blending**
+FreeType assumes blending in linear space rather than gamma space.
+See FreeType note for [FT_Render_Glyph](https://www.freetype.org/freetype2/docs/reference/ft2-base_interface.html#FT_Render_Glyph).
+For correct results you need to be using sRGB and convert to linear space in the pixel shader output.
+The default imgui styles will be impacted by this change (alpha values will need tweaking).
+
 **Test code Usage**
 ```cpp
 #include "misc/freetype/imgui_freetype.h"
