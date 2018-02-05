@@ -17,7 +17,7 @@
 #include <GL/gl3w.h>    // This example is using gl3w to access OpenGL functions (because it is small). You may use glew/glad/glLoadGen/etc. whatever already works for you.
 
 // Data
-static double       g_Time = 0.0f;
+static Uint64       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
 static GLuint       g_FontTexture = 0;
 static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
@@ -376,10 +376,10 @@ void ImGui_ImplSdlGL3_NewFrame(SDL_Window* window)
     io.DisplaySize = ImVec2((float)w, (float)h);
     io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, h > 0 ? ((float)display_h / h) : 0);
 
-    // Setup time step
-    Uint32	time = SDL_GetTicks();
-    double current_time = time / 1000.0;
-    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f / 60.0f);
+    // Setup time step (we don't use SDL_GetTicks() because it is using millisecond resolution)
+    static Uint64 frequency = SDL_GetPerformanceFrequency();
+    Uint64 current_time = SDL_GetPerformanceCounter();
+    io.DeltaTime = g_Time > 0 ? (float)((double)(current_time - g_Time) / frequency) : (float)(1.0f / 60.0f);
     g_Time = current_time;
 
     // Setup mouse inputs (we already got mouse wheel, keyboard keys & characters from our event handler)
