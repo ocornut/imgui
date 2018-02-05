@@ -7653,9 +7653,7 @@ bool ImGui::ArrowButton(ImGuiID id, ImGuiDir dir, ImVec2 padding, ImGuiButtonFla
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
 
     const ImU32 col = GetColorU32((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-#ifdef IMGUI_HAS_NAV
     RenderNavHighlight(bb, id);
-#endif
     RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
     RenderTriangle(bb.Min + padding, dir, 1.0f);
 
@@ -12011,9 +12009,7 @@ bool ImGui::SplitterBehavior(ImGuiID id, const ImRect& bb, ImGuiAxis axis, float
     ImGuiWindow* window = g.CurrentWindow;
 
     const ImGuiItemFlags item_flags_backup = window->DC.ItemFlags;
-#ifdef IMGUI_HAS_NAV
     window->DC.ItemFlags |= ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus;
-#endif
     bool add = ItemAdd(bb, id);
     window->DC.ItemFlags = item_flags_backup;
     if (!add)
