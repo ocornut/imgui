@@ -608,8 +608,9 @@ struct ImGuiContext
     // Navigation data (for gamepad/keyboard)
     ImGuiWindow*            NavWindow;                          // Focused window for navigation. Could be called 'FocusWindow'
     ImGuiID                 NavId;                              // Focused item for navigation
-    ImGuiID                 NavActivateId;                      // ~~ IsNavInputPressed(ImGuiNavInput_PadActivate) ? NavId : 0, also set when calling ActivateItem()
-    ImGuiID                 NavActivateDownId;                  // ~~ IsNavInputPressed(ImGuiNavInput_PadActivate) ? NavId : 0
+    ImGuiID                 NavActivateId;                      // ~~ (g.ActiveId == 0) && IsNavInputPressed(ImGuiNavInput_PadActivate) ? NavId : 0, also set when calling ActivateItem()
+    ImGuiID                 NavActivateDownId;                  // ~~ IsNavInputDown(ImGuiNavInput_PadActivate) ? NavId : 0
+    ImGuiID                 NavActivatePressedId;               // ~~ IsNavInputPressed(ImGuiNavInput_PadActivate) ? NavId : 0
     ImGuiID                 NavInputId;                         // ~~ IsNavInputPressed(ImGuiNavInput_PadInput) ? NavId : 0
     ImGuiID                 NavJustTabbedId;                    // Just tabbed to this id.
     ImGuiID                 NavNextActivateId;                  // Set by ActivateItem(), queued until next frame
@@ -730,7 +731,7 @@ struct ImGuiContext
         NextTreeNodeOpenCond = 0;
 
         NavWindow = NULL;
-        NavId = NavActivateId = NavActivateDownId = NavInputId = 0;
+        NavId = NavActivateId = NavActivateDownId = NavActivatePressedId = NavInputId = 0;
         NavJustTabbedId = NavJustMovedToId = NavNextActivateId = 0;
         NavScoringRectScreen = ImRect();
         NavScoringCount = 0;

@@ -3042,28 +3042,31 @@ static void ImGui::NavUpdate()
         }
     }
 
-    g.NavActivateId = g.NavActivateDownId = g.NavInputId = 0;
-    if (g.NavId != 0 && !g.NavDisableHighlight && !g.NavWindowingTarget)
+    // Process manual activation request
+    g.NavActivateId = g.NavActivateDownId = g.NavActivatePressedId = g.NavInputId = 0;
+    if (g.NavId != 0 && !g.NavDisableHighlight && !g.NavWindowingTarget && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
     {
-        if (g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadActivate, ImGuiInputReadMode_Pressed))
+        bool activate_down = IsNavInputDown(ImGuiNavInput_PadActivate);
+        bool activate_pressed = activate_down && IsNavInputPressed(ImGuiNavInput_PadActivate, ImGuiInputReadMode_Pressed);
+        if (g.ActiveId == 0 && activate_pressed)
             g.NavActivateId = g.NavId;
-        if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && IsNavInputDown(ImGuiNavInput_PadActivate))
+        if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && activate_down)
             g.NavActivateDownId = g.NavId;
+        if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && activate_pressed)
+            g.NavActivatePressedId = g.NavId;
+
         if (g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadInput, ImGuiInputReadMode_Pressed))
             g.NavInputId = g.NavId;
     }
     if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
-    {
-        g.NavActivateId = g.NavActivateDownId = g.NavInputId = 0;
         g.NavDisableHighlight = true;
-    }
     if (g.NavActivateId != 0)
         IM_ASSERT(g.NavActivateDownId == g.NavActivateId);
     g.NavMoveRequest = false;
 
-    // Process explicit activation request
+    // Process programmatic activation request
     if (g.NavNextActivateId != 0)
-        g.NavActivateId = g.NavActivateDownId = g.NavInputId = g.NavNextActivateId;
+        g.NavActivateId = g.NavActivateDownId = g.NavActivatePressedId = g.NavInputId = g.NavNextActivateId;
     g.NavNextActivateId = 0;
 
     // Initiate directional inputs request
