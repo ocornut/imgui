@@ -726,7 +726,8 @@ enum ImGuiNavInput_
     ImGuiNavInput_PadTweakSlow,     // slower tweaks                                // e.g. L-trigger, analog
     ImGuiNavInput_PadTweakFast,     // faster tweaks                                // e.g. R-trigger, analog
     // Keyboard Mapping
-    // [BETA] You can map keyboard keys on the gamepad mapping for most inputs. Will add specialized keyboard mappings as we add features.
+    // [BETA] To use keyboard control you currently need to map keys to those gamepad inputs: PadActivate (Enter), PadCancel (Escape), PadInput (Enter). 
+    // Will add specialized keyboard mappings as we add features and clarify the input interface. 
     ImGuiNavInput_KeyMenu,          // toggle menu                                  // e.g. ALT
     ImGuiNavInput_KeyLeft,          // move left                                    // e.g. Arrow keys
     ImGuiNavInput_KeyRight,         // move right
@@ -740,7 +741,8 @@ enum ImGuiNavFlags_
 {
     ImGuiNavFlags_EnableGamepad     = 1 << 0,   // Master gamepad navigation enable flag. This is mostly to instruct your imgui binding whether to fill in gamepad navigation inputs.
     ImGuiNavFlags_EnableKeyboard    = 1 << 1,   // Master keyboard navigation enable flag. This is mostly to instruct your imgui binding whether to fill in keyboard navigation inputs.
-    ImGuiNavFlags_MoveMouse         = 1 << 2    // Request navigation to allow move the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantMoveMouse=true. If enabled you MUST honor io.WantMoveMouse requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
+    ImGuiNavFlags_MoveMouse         = 1 << 2,   // Request navigation to allow moving the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantMoveMouse=true. If enabled you MUST honor io.WantMoveMouse requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
+    ImGuiNavFlags_NoCaptureKeyboard = 1 << 3    // Do not set the io.WantCaptureKeyboard flag with io.NavActive is set. 
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
