@@ -10,6 +10,12 @@
 // - v0.54: (2018/01/22) fix for addition of ImFontAtlas::TexUvscale member
 // - v0.55: (2018/02/04) moved to main imgui repository (away from http://www.github.com/ocornut/imgui_club)
 
+// Gamma Correct Blending:
+//  FreeType assumes blending in linear space rather than gamma space.
+//  See https://www.freetype.org/freetype2/docs/reference/ft2-base_interface.html#FT_Render_Glyph
+//  For correct results you need to be using sRGB and convert to linear space in the pixel shader output.
+//  The default imgui styles will be impacted by this change (alpha values will need tweaking).
+
 // TODO:
 // - Output texture has excessive resolution (lots of vertical waste)
 // - FreeType's memory allocator is not overridden.
