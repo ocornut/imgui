@@ -2147,6 +2147,7 @@ static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
         return false;
 
     const ImRect& curr = g.NavScoringRectScreen; // Current modified source rect (NB: we've applied Max.x = Min.x in NavUpdate() to inhibit the effect of having varied item width)
+    g.NavScoringCount++;
 
     // We perform scoring on items bounding box clipped by their parent window on the other axis (clipping on our movement axis would give us equal scores for all clipped items)
     if (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right)
@@ -2923,6 +2924,10 @@ static void ImGui::NavUpdate()
     ImGuiContext& g = *GImGui;
     g.IO.WantMoveMouse = false;
 
+#if 0
+    if (g.NavScoringCount > 0) printf("[%05d] NavScoringCount %d for '%s' layer %d (Init:%d, Move:%d)\n", g.FrameCount, g.NavScoringCount, g.NavWindow ? g.NavWindow->Name : "NULL", g.NavLayer, g.NavInitRequest || g.NavInitResultId != 0, g.NavMoveRequest);
+#endif
+
     // Process navigation init request (select first/default focus)
     if (g.NavInitResultId != 0 && (!g.NavDisableHighlight || g.NavInitResultExplicit))
     {
@@ -3153,6 +3158,7 @@ static void ImGui::NavUpdate()
     g.NavScoringRectScreen.Max.x = g.NavScoringRectScreen.Min.x;
     IM_ASSERT(!g.NavScoringRectScreen.IsInverted()); // Ensure if we have a finite, non-inverted bounding box here will allows us to remove extraneous fabsf() calls in NavScoreItem().
     //g.OverlayDrawList.AddRect(g.NavScoringRectScreen.Min, g.NavScoringRectScreen.Max, IM_COL32(255,200,0,255)); // [DEBUG]
+    g.NavScoringCount = 0;
 #if IMGUI_DEBUG_NAV_RECTS
     if (g.NavWindow) { for (int layer = 0; layer < 2; layer++) g.OverlayDrawList.AddRect(g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Min, g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Max, IM_COL32(255,200,0,255)); } // [DEBUG] 
     if (g.NavWindow) { ImU32 col = (g.NavWindow->HiddenFrames <= 0) ? IM_COL32(255,0,255,255) : IM_COL32(255,0,0,255); ImVec2 p = NavCalcPreferredMousePos(); char buf[32]; ImFormatString(buf, 32, "%d", g.NavLayer); g.OverlayDrawList.AddCircleFilled(p, 3.0f, col); g.OverlayDrawList.AddText(NULL, 13.0f, p + ImVec2(8,-4), col, buf); }
