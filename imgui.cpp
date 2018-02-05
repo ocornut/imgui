@@ -23,7 +23,7 @@
  - ISSUES & TODO LIST
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - How can I help?
-   - How can I dipslay an image? What is ImTextureID, how does it works?
+   - How can I display an image? What is ImTextureID, how does it works?
    - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on labels and the ID stack.
    - How can I tell when Dear ImGui wants my mouse/keyboard inputs VS when I can pass them to my application?
    - How can I load a different font than the default?
@@ -2135,9 +2135,8 @@ bool ImGui::FocusableItemRegister(ImGuiWindow* window, ImGuiID id, bool tab_stop
     if (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent)
         return true;
 
-    if (allow_keyboard_focus)
-        if (window->FocusIdxTabCounter == window->FocusIdxTabRequestCurrent)
-            return true;
+    if (allow_keyboard_focus && window->FocusIdxTabCounter == window->FocusIdxTabRequestCurrent)
+        return true;
 
     return false;
 }
@@ -3831,10 +3830,8 @@ static ImGuiWindow* GetFrontMostModalRootWindow()
 static void ClosePopupToLevel(int remaining)
 {
     ImGuiContext& g = *GImGui;
-    if (remaining > 0)
-        ImGui::FocusWindow(g.OpenPopupStack[remaining-1].Window);
-    else
-        ImGui::FocusWindow(g.OpenPopupStack[0].ParentWindow);
+    ImGuiWindow* focus_window = (remaining > 0) ? g.OpenPopupStack[remaining-1].Window : g.OpenPopupStack[0].ParentWindow;
+    ImGui::FocusWindow(focus_window);
     g.OpenPopupStack.resize(remaining);
 }
 
@@ -4029,12 +4026,14 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
 
 bool ImGui::BeginChild(ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
 {
+    IM_ASSERT(id != 0);
     return BeginChildEx(NULL, id, size_arg, border, extra_flags);
 }
 
 void ImGui::EndChild()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
 
     IM_ASSERT(window->Flags & ImGuiWindowFlags_ChildWindow);   // Mismatched BeginChild()/EndChild() callss
     if (window->BeginCount > 1)
@@ -4051,7 +4050,7 @@ void ImGui::EndChild()
             sz.y = ImMax(4.0f, sz.y);
         End();
 
-        ImGuiWindow* parent_window = GetCurrentWindow();
+        ImGuiWindow* parent_window = g.CurrentWindow;
         ImRect bb(parent_window->DC.CursorPos, parent_window->DC.CursorPos + sz);
         ItemSize(sz);
         ItemAdd(bb, 0);
@@ -4473,6 +4472,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     // Automatically disable manual moving/resizing when NoInputs is set
     if (flags & ImGuiWindowFlags_NoInputs)
         flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
+
     //if (flags & ImGuiWindowFlags_NavFlattened)
     //    IM_ASSERT(flags & ImGuiWindowFlags_ChildWindow);
 
@@ -4578,9 +4578,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->RootWindow = parent_window->RootWindow;
         if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
             window->RootNonPopupWindow = parent_window->RootNonPopupWindow;
-        //window->RootNavWindow = window;
-        //while (window->RootNavWindow->Flags & ImGuiWindowFlags_NavFlattened)
-        //    window->RootNavWindow = window->RootNavWindow->ParentWindow;
+        //window->NavRootWindow = window;
+        //while (window->NavRootWindow->Flags & ImGuiWindowFlags_NavFlattened)
+        //    window->NavRootWindow = window->NavRootWindow->ParentWindow;
 
         window->Active = true;
         window->BeginOrderWithinParent = 0;
@@ -4796,12 +4796,13 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         const float window_border_size = window->WindowBorderSize;
         ImRect title_bar_rect = window->TitleBarRect();
         const bool window_is_focused = want_focus || (g.NavWindow && window->RootNonPopupWindow == g.NavWindow->RootNonPopupWindow);
+        ImU32 title_bar_col = GetColorU32(window->Collapsed ? ImGuiCol_TitleBgCollapsed : window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
         if (window->Collapsed)
         {
             // Title bar only
             float backup_border_size = style.FrameBorderSize;
             g.Style.FrameBorderSize = window->WindowBorderSize;
-            RenderFrame(title_bar_rect.Min, title_bar_rect.Max, GetColorU32(ImGuiCol_TitleBgCollapsed), true, window_rounding);
+            RenderFrame(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, true, window_rounding);
             g.Style.FrameBorderSize = backup_border_size;
         }
         else
@@ -4817,7 +4818,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
             // Title bar
             if (!(flags & ImGuiWindowFlags_NoTitleBar))
-                window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, GetColorU32(window_is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg), window_rounding, ImDrawCornerFlags_Top);
+                window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, window_rounding, ImDrawCornerFlags_Top);
 
             // Menu bar
             if (flags & ImGuiWindowFlags_MenuBar)
@@ -6449,7 +6450,7 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size_arg)
     return pressed;
 }
 
-// Upper-right button to close a window.
+// Button to close a window
 bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -6471,7 +6472,6 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
         window->DrawList->AddLine(center + ImVec2(+cross_extent,+cross_extent), center + ImVec2(-cross_extent,-cross_extent), GetColorU32(ImGuiCol_Text));
         window->DrawList->AddLine(center + ImVec2(+cross_extent,-cross_extent), center + ImVec2(-cross_extent,+cross_extent), GetColorU32(ImGuiCol_Text));
     }
-
     return pressed;
 }
 
@@ -7647,14 +7647,11 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
             float adjust_delta = 0.0f;
             if (IsMousePosValid())
             {
-                //if (g.ActiveIdSource == ImGuiInputSource_Mouse)
-                {
-                    adjust_delta = mouse_drag_delta.x - g.DragLastMouseDelta.x;
-                    if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
-                        adjust_delta *= g.DragSpeedScaleFast;
-                    if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
-                        adjust_delta *= g.DragSpeedScaleSlow;
-                }
+                adjust_delta = mouse_drag_delta.x - g.DragLastMouseDelta.x;
+                if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
+                    adjust_delta *= g.DragSpeedScaleFast;
+                if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
+                    adjust_delta *= g.DragSpeedScaleSlow;
                 g.DragLastMouseDelta.x = mouse_drag_delta.x;
             }
             adjust_delta *= v_speed;
@@ -9786,7 +9783,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         g.NavWindow = backed_nav_window;
 
     bool want_open = false, want_close = false;
-    if (window->DC.LayoutType != ImGuiLayoutType_Horizontal) // (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
+    if (window->DC.LayoutType == ImGuiLayoutType_Vertical) // (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
     {
         // Implement http://bjk5.com/post/44698559168/breaking-down-amazons-mega-dropdown to avoid using timers, so menus feels more reactive.
         bool moving_within_opened_triangle = false;
@@ -11771,8 +11768,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             {
                 if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Active || window->WasActive, window))
                     return;
+                ImGuiWindowFlags flags = window->Flags;
                 NodeDrawList(window, window->DrawList, "DrawList");
                 ImGui::BulletText("Pos: (%.1f,%.1f), Size: (%.1f,%.1f), SizeContents (%.1f,%.1f)", window->Pos.x, window->Pos.y, window->Size.x, window->Size.y, window->SizeContents.x, window->SizeContents.y);
+                ImGui::BulletText("Flags: 0x%08X (%s%s%s%s%s%s..)", flags, 
+                    (flags & ImGuiWindowFlags_ChildWindow) ? "Child " : "", (flags & ImGuiWindowFlags_Tooltip)   ? "Tooltip "   : "", (flags & ImGuiWindowFlags_Popup) ? "Popup " : "",
+                    (flags & ImGuiWindowFlags_Modal)       ? "Modal " : "", (flags & ImGuiWindowFlags_ChildMenu) ? "ChildMenu " : "", (flags & ImGuiWindowFlags_NoSavedSettings) ? "NoSavedSettings " : "");
                 ImGui::BulletText("Scroll: (%.2f/%.2f,%.2f/%.2f)", window->Scroll.x, GetScrollMaxX(window), window->Scroll.y, GetScrollMaxY(window));
                 ImGui::BulletText("Active: %d, WriteAccessed: %d", window->Active, window->WriteAccessed);
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
