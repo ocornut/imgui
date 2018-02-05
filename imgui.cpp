@@ -5035,7 +5035,6 @@ void ImGui::EndChild()
 
         ImGuiWindow* parent_window = g.CurrentWindow;
         ImRect bb(parent_window->DC.CursorPos, parent_window->DC.CursorPos + sz);
-
         ItemSize(sz);
         if ((window->DC.NavLayerActiveMask != 0 || window->DC.NavHasScroll) && !(window->Flags & ImGuiWindowFlags_NavFlattened))
         {
@@ -6265,13 +6264,13 @@ void ImGui::FocusWindow(ImGuiWindow* window)
 
     if (g.NavWindow != window)
     {
-        g.NavId = window ? window->NavLastIds[0] : 0; // Restore NavId
-        g.NavIdIsAlive = false;
-        g.NavLayer = 0;
         g.NavWindow = window;
         if (window && g.NavDisableMouseHover)
             g.NavMousePosDirty = true;
         g.NavInitRequest = false;
+        g.NavId = window ? window->NavLastIds[0] : 0; // Restore NavId
+        g.NavIdIsAlive = false;
+        g.NavLayer = 0;
     }
 
     // Passing NULL allow to disable keyboard focus

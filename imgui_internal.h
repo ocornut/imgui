@@ -247,6 +247,16 @@ enum ImGuiDataType
     ImGuiDataType_Float2
 };
 
+enum ImGuiDir
+{
+    ImGuiDir_None    = -1,
+    ImGuiDir_Left    = 0,
+    ImGuiDir_Right   = 1,
+    ImGuiDir_Up      = 2,
+    ImGuiDir_Down    = 3,
+    ImGuiDir_Count_
+};
+
 enum ImGuiInputSource
 {
     ImGuiInputSource_None = 0,
@@ -266,16 +276,6 @@ enum ImGuiInputReadMode
     ImGuiInputReadMode_Repeat,
     ImGuiInputReadMode_RepeatSlow,
     ImGuiInputReadMode_RepeatFast
-};
-
-enum ImGuiDir
-{
-    ImGuiDir_None    = -1,
-    ImGuiDir_Left    = 0,
-    ImGuiDir_Right   = 1,
-    ImGuiDir_Up      = 2,
-    ImGuiDir_Down    = 3,
-    ImGuiDir_Count_
 };
 
 enum ImGuiNavHighlightFlags_

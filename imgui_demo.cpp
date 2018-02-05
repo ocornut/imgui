@@ -2730,7 +2730,7 @@ struct ExampleAppConsole
 
         // Demonstrate keeping focus on the input box
         ImGui::SetItemDefaultFocus();
-        if (reclaim_focus) //|| ImGui::IsItemHovered())
+        if (reclaim_focus)
             ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
 
         ImGui::End();
