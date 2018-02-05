@@ -3009,8 +3009,8 @@ static void ImGui::NavUpdate()
             // Exit child window
             ImGuiWindow* child_window = g.NavWindow;
             ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
-            FocusWindow(parent_window);
             IM_ASSERT(child_window->ChildId != 0);
+            FocusWindow(parent_window);
             SetNavID(child_window->ChildId, 0);
             g.NavIdIsAlive = false;
             if (g.NavDisableMouseHover)
@@ -5009,6 +5009,7 @@ bool ImGui::BeginChild(const char* str_id, const ImVec2& size_arg, bool border, 
 
 bool ImGui::BeginChild(ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags extra_flags)
 {
+    IM_ASSERT(id != 0);
     return BeginChildEx(NULL, id, size_arg, border, extra_flags);
 }
 
