@@ -3054,8 +3054,7 @@ static void ImGui::NavUpdate()
             g.NavActivateDownId = g.NavId;
         if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && activate_pressed)
             g.NavActivatePressedId = g.NavId;
-
-        if (g.ActiveId == 0 && IsNavInputPressed(ImGuiNavInput_PadInput, ImGuiInputReadMode_Pressed))
+        if ((g.ActiveId == 0 || g.ActiveId == g.NavId) && IsNavInputPressed(ImGuiNavInput_PadInput, ImGuiInputReadMode_Pressed))
             g.NavInputId = g.NavId;
     }
     if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
@@ -8512,25 +8511,36 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
         linear_zero_pos = v_min < 0.0f ? 1.0f : 0.0f;
     }
 
-    // Process clicking on the slider
+    // Process interacting with the slider
     bool value_changed = false;
     if (g.ActiveId == id)
     {
         bool set_new_value = false;
         float clicked_t = 0.0f;
-        if (g.ActiveIdSource == ImGuiInputSource_Mouse && g.IO.MouseDown[0])
+        if (g.ActiveIdSource == ImGuiInputSource_Mouse)
         {
-            const float mouse_abs_pos = is_horizontal ? g.IO.MousePos.x : g.IO.MousePos.y;
-            clicked_t = (slider_usable_sz > 0.0f) ? ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f) : 0.0f;
-            if (!is_horizontal)
-                clicked_t = 1.0f - clicked_t;
-            set_new_value = true;
+            if (!g.IO.MouseDown[0])
+            {
+                ClearActiveID();
+            }
+            else
+            {
+                const float mouse_abs_pos = is_horizontal ? g.IO.MousePos.x : g.IO.MousePos.y;
+                clicked_t = (slider_usable_sz > 0.0f) ? ImClamp((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz, 0.0f, 1.0f) : 0.0f;
+                if (!is_horizontal)
+                    clicked_t = 1.0f - clicked_t;
+                set_new_value = true;
+            }
         }
-        else if (g.ActiveIdSource == ImGuiInputSource_Nav && g.NavActivateDownId == id)
+        else if (g.ActiveIdSource == ImGuiInputSource_Nav)
         {
-            const ImVec2 delta2 = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard|ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 0.0f, 0.0f);
+            const ImVec2 delta2 = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard | ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 0.0f, 0.0f);
             float delta = is_horizontal ? delta2.x : -delta2.y;
-            if (delta != 0.0f)
+            if (g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
+            {
+                ClearActiveID();
+            }
+            else if (delta != 0.0f)
             {
                 clicked_t = SliderBehaviorCalcRatioFromValue(*v, v_min, v_max, power, linear_zero_pos);
                 if (decimal_precision == 0 && !is_non_linear)
@@ -8554,10 +8564,6 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
                 else
                     clicked_t = ImSaturate(clicked_t + delta);
             }
-        }
-        else
-        {
-            ClearActiveID();
         }
 
         if (set_new_value)
@@ -8651,11 +8657,12 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     // Tabbing or CTRL-clicking on Slider turns it into an input box
     bool start_text_input = false;
     const bool tab_focus_requested = FocusableItemRegister(window, id);
-    if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]) || g.NavActivateId == id || g.NavInputId == id)
+    if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]) || g.NavActivateId == id || (g.NavInputId == id && g.ScalarAsInputTextId != id))
     {
         SetActiveID(id, window);
         SetFocusID(id, window);
         FocusWindow(window);
+        g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
         if (tab_focus_requested || g.IO.KeyCtrl || g.NavInputId == id)
         {
             start_text_input = true;
@@ -8708,6 +8715,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
         SetActiveID(id, window);
         SetFocusID(id, window);
         FocusWindow(window);
+        g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
     }
 
     // Actual slider behavior + render grab
@@ -8849,12 +8857,12 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
 
     bool value_changed = false;
 
-    // Process clicking on the drag
+    // Process interacting with the drag
     if (g.ActiveId == id)
     {
         if (g.ActiveIdSource == ImGuiInputSource_Mouse && !g.IO.MouseDown[0])
             ClearActiveID();
-        else if (g.ActiveIdSource == ImGuiInputSource_Nav && g.NavActivateDownId != id)
+        else if (g.ActiveIdSource == ImGuiInputSource_Nav && g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
             ClearActiveID();
     }
     if (g.ActiveId == id)
@@ -8956,11 +8964,12 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
     // Tabbing or CTRL-clicking on Drag turns it into an input box
     bool start_text_input = false;
     const bool tab_focus_requested = FocusableItemRegister(window, id);
-    if (tab_focus_requested || (hovered && (g.IO.MouseClicked[0] || g.IO.MouseDoubleClicked[0])) || g.NavActivateId == id || g.NavInputId == id)
+    if (tab_focus_requested || (hovered && (g.IO.MouseClicked[0] || g.IO.MouseDoubleClicked[0])) || g.NavActivateId == id || (g.NavInputId == id && g.ScalarAsInputTextId != id))
     {
         SetActiveID(id, window);
         SetFocusID(id, window);
         FocusWindow(window);
+        g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
         if (tab_focus_requested || g.IO.KeyCtrl || g.IO.MouseDoubleClicked[0] || g.NavInputId == id)
         {
             start_text_input = true;
