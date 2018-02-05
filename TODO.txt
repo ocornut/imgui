@@ -231,6 +231,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: (api breaking) removed "TTF" from symbol names. also because it now supports OTF.
 
  - nav: integrate navigation branch into master. (#787)
+ - nav: allow input system to be be more tolerant of io.DeltaTime=0.0f
  - nav: Left within a tree node block as a fallback.
  - nav: Esc on a flattened child
  - nav: menus: allow pressing Menu to leave a sub-menu.

@@ -2656,8 +2656,8 @@ void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit)
     {
         SetNavID(0, g.NavLayer);
         g.NavInitRequest = true;
+        g.NavInitRequestFromMove = false;
         g.NavInitResultId = 0;
-        g.NavInitResultExplicit = false;
         g.NavInitResultRectRel = ImRect();
         NavUpdateAnyRequestFlag();
     }
@@ -2929,18 +2929,18 @@ static void ImGui::NavUpdate()
 #endif
 
     // Process navigation init request (select first/default focus)
-    if (g.NavInitResultId != 0 && (!g.NavDisableHighlight || g.NavInitResultExplicit))
+    if (g.NavInitResultId != 0 && (!g.NavDisableHighlight || g.NavInitRequestFromMove))
     {
         // Apply result from previous navigation init request (will typically select the first item, unless SetItemDefaultFocus() has been called)
         IM_ASSERT(g.NavWindow);
-        if (g.NavInitResultExplicit)
+        if (g.NavInitRequestFromMove)
             SetNavIDAndMoveMouse(g.NavInitResultId, g.NavLayer, g.NavInitResultRectRel);
         else
             SetNavID(g.NavInitResultId, g.NavLayer);
         g.NavWindow->NavRectRel[g.NavLayer] = g.NavInitResultRectRel;
     }
     g.NavInitRequest = false;
-    g.NavInitResultExplicit = false;
+    g.NavInitRequestFromMove = false;
     g.NavInitResultId = 0;
     g.NavJustMovedToId = 0;
 
@@ -3098,7 +3098,7 @@ static void ImGui::NavUpdate()
     // If we initiate a movement request and have no current NavId, we initiate a InitDefautRequest that will be used as a fallback if the direction fails to find a match
     if (g.NavMoveRequest && g.NavId == 0)
     {
-        g.NavInitRequest = g.NavInitResultExplicit = true;
+        g.NavInitRequest = g.NavInitRequestFromMove = true;
         g.NavInitResultId = 0;
         g.NavDisableHighlight = false;
     }
@@ -7147,7 +7147,6 @@ void ImGui::SetItemDefaultFocus()
     if (g.NavWindow == window->NavRootWindow && (g.NavInitRequest || g.NavInitResultId != 0) && g.NavLayer == g.NavWindow->DC.NavLayerCurrent)
     {
         g.NavInitRequest = false;
-        g.NavInitResultExplicit = true;
         g.NavInitResultId = g.NavWindow->DC.LastItemId;
         g.NavInitResultRectRel = ImRect(g.NavWindow->DC.LastItemRect.Min - g.NavWindow->Pos, g.NavWindow->DC.LastItemRect.Max - g.NavWindow->Pos);
         NavUpdateAnyRequestFlag();

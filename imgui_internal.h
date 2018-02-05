@@ -630,9 +630,9 @@ struct ImGuiContext
     bool                    NavDisableMouseHover;               // When user starts using gamepad/keyboard, we hide mouse hovering highlight until mouse is touched again.
     bool                    NavAnyRequest;                      // ~~ NavMoveRequest || NavInitRequest
     bool                    NavInitRequest;                     // Init request for appearing window to select first item
+    bool                    NavInitRequestFromMove;
     ImGuiID                 NavInitResultId;
     ImRect                  NavInitResultRectRel;
-    bool                    NavInitResultExplicit;              // Whether the result was explicitly requested with SetItemDefaultFocus()
     bool                    NavMoveFromClampedRefRect;          // Set by manual scrolling, if we scroll to a point where NavId isn't visible we reset navigation from visible items
     bool                    NavMoveRequest;                     // Move request for this frame
     ImGuiNavForward         NavMoveRequestForward;              // None / ForwardQueued / ForwardActive (this is used to navigate sibling parent menus from a child menu)
@@ -747,8 +747,8 @@ struct ImGuiContext
         NavDisableMouseHover = false;
         NavAnyRequest = false;
         NavInitRequest = false;
+        NavInitRequestFromMove = false;
         NavInitResultId = 0;
-        NavInitResultExplicit = false;
         NavMoveFromClampedRefRect = false;
         NavMoveRequest = false;
         NavMoveRequestForward = ImGuiNavForward_None;
