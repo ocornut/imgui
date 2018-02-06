@@ -80,7 +80,8 @@
    - ESCAPE to revert text to its original value.
    - You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract (because - would set a negative value!)
    - Controls are automatically adjusted for OSX to match standard OSX text editing operations.
- - Gamepad/keyboard navigation are in beta-phase, see Programmer Guide below.
+ - Gamepad navigation: see suggested mappings in imgui.h ImGuiNavInput_
+ - Keyboard navigation: see suggested mappings in imgui.h ImGuiNavInput_
 
 
  PROGRAMMER GUIDE
@@ -211,8 +212,7 @@
 
  USING GAMEPAD/KEYBOARD NAVIGATION [BETA]
 
- - Gamepad/keyboard navigation support is now available. Your feedback and bug reports are greatly welcome!
- - See https://github.com/ocornut/imgui/issues/787 discussion thread and ask questions there.
+ - Ask questions and report issues at https://github.com/ocornut/imgui/issues/787.
  - The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable.
  - Your inputs are passed to imgui by filling the io.NavInputs[] array. See 'enum ImGuiNavInput_' in imgui.h for a description of available inputs.
  - Please refer to the examples/ application for suggested keyboard and gamepad mapping.
@@ -221,12 +221,12 @@
  - The ImGuiNavFlags_EnableGamepad and ImGuiNavFlags_EnableKeyboard flags of io.NavFlags are only here to instruct your binding whether to find inputs.
  - For gamepad use, the easiest approach is to go all-or-nothing, with a buttons combo that toggle your inputs between imgui and your game/application.
    Sharing inputs in a more advanced or granular way between imgui and your game/application may be tricky and requires further work on imgui.
+   When keyboard navigation is active (io.NavActive + NavFlags_EnableKeyboard), the io.WantCaptureKeyboard is set.
    For more advanced uses, you may want to use:
      - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
      - io.NavVisible: true when the navigation cursor is visible (and usually goes false when mouse is used).
      - query focus information with e.g. IsWindowFocused(), IsItemFocused() etc. functions.
-   The reality is more complex than what those flags can express. Please discuss your issues and usage scenario in the thread above! 
-   As we head toward more keyboard-oriented development this aspect will need to be improved.
+   Please reach out if you think the game vs navigation input sharing could be improved.
  - On a TV/console system where readability may be lower or mouse inputs may be awkward, you may want to set the ImGuiNavFlags_MoveMouse flag in io.NavFlags. 
    Enabling ImGuiNavFlags_MoveMouse instructs dear imgui to move your mouse cursor along with navigation movement.
    When enabled, the NewFrame() functions may alter 'io.MousePos' and set 'io.WantMoveMouse' to notify you that it did so.
@@ -2675,7 +2675,7 @@ static ImVec2 NavCalcPreferredMousePos()
     const ImRect& rect_rel = window->NavRectRel[g.NavLayer];
     ImVec2 pos = g.NavWindow->Pos + ImVec2(rect_rel.Min.x + ImMin(g.Style.FramePadding.x*4, rect_rel.GetWidth()), rect_rel.Max.y - ImMin(g.Style.FramePadding.y, rect_rel.GetHeight()));
     ImRect visible_rect = GetViewportRect();
-    return ImFloor(ImClamp(pos, visible_rect.Min, visible_rect.Max));   // ImFloor() is important because non-integer mouse position application in backend might be lossy and result in undesirable non-zero delta.
+    return ImFloor(ImClamp(pos, visible_rect.Min, visible_rect.Max));   // ImFloor() is important because non-integer mouse position application in back-end might be lossy and result in undesirable non-zero delta.
 }
 
 static int FindWindowIndex(ImGuiWindow* window) // FIXME-OPT O(N)
@@ -2823,7 +2823,7 @@ static void ImGui::NavUpdateWindowing()
     }
 
     // Keyboard: Press and Release ALT to toggle menu layer
-    // FIXME: We lack an explicit IO variable for "is the imgui window focused", so compare mouse validity to detect the common case of backend clearing releases all keys on ALT-TAB
+    // FIXME: We lack an explicit IO variable for "is the imgui window focused", so compare mouse validity to detect the common case of back-end clearing releases all keys on ALT-TAB
     if ((g.ActiveId == 0 || g.ActiveIdAllowOverlap) && IsNavInputPressed(ImGuiNavInput_KeyMenu, ImGuiInputReadMode_Released))
         if (IsMousePosValid(&g.IO.MousePos) == IsMousePosValid(&g.IO.MousePosPrev))
             apply_toggle_layer = true;
@@ -4415,7 +4415,7 @@ int ImGui::GetKeyIndex(ImGuiKey imgui_key)
     return GImGui->IO.KeyMap[imgui_key];
 }
 
-// Note that imgui doesn't know the semantic of each entry of io.KeyDown[]. Use your own indices/enums according to how your backend/engine stored them into KeyDown[]!
+// Note that imgui doesn't know the semantic of each entry of io.KeyDown[]. Use your own indices/enums according to how your back-end/engine stored them into KeyDown[]!
 bool ImGui::IsKeyDown(int user_key_index)
 {
     if (user_key_index < 0) return false;
@@ -4536,7 +4536,7 @@ bool ImGui::IsMousePosValid(const ImVec2* mouse_pos)
     return mouse_pos->x >= MOUSE_INVALID && mouse_pos->y >= MOUSE_INVALID;
 }
 
-// NB: This is only valid if IsMousePosValid(). Backends in theory should always keep mouse position valid when dragging even outside the client window.
+// NB: This is only valid if IsMousePosValid(). Back-ends in theory should always keep mouse position valid when dragging even outside the client window.
 ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
 {
     ImGuiContext& g = *GImGui;

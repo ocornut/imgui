@@ -238,6 +238,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav: integrate/design keyboard controls. 
  - nav: simulate right-click or context activation? (SHIFT+F10)
  - nav: tabs should go through most/all widgets (in submission order?).
+ - nav: when CTRL-Tab/windowing is active, the HoveredWindow detection doesn't take account of the window display re-ordering.
  - nav: cannot access menubar of a flattened child window with Alt/menu key (not a very common use case..).
  - nav: esc/enter default behavior for popups, e.g. be able to mark an "ok" or "cancel" button that would get triggered by those keys.
  - nav: when activating a button that changes label (without a static ID) or disappear, can we somehow automatically recover into a nearest highlight item?

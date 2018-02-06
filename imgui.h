@@ -710,27 +710,27 @@ enum ImGuiKey_
 enum ImGuiNavInput_
 {
     // Gamepad Mapping
-    ImGuiNavInput_PadActivate,      // press button, tweak value                    // e.g. Circle button
-    ImGuiNavInput_PadCancel,        // close menu/popup/child, lose selection       // e.g. Cross button
-    ImGuiNavInput_PadInput,         // text input                                   // e.g. Triangle button
-    ImGuiNavInput_PadMenu,          // toggle menu, hold to: focus, move, resize    // e.g. Square button
-    ImGuiNavInput_PadDpadLeft,      // move left, resize window (with PadMenu)      // e.g. D-pad directions
-    ImGuiNavInput_PadDpadRight,     // move right
-    ImGuiNavInput_PadDpadUp,        // move up                                      
-    ImGuiNavInput_PadDpadDown,      // move down
-    ImGuiNavInput_PadLStickLeft,    // scroll up, move window (with PadMenu)        // e.g. left stick directions (analog)
-    ImGuiNavInput_PadLStickRight,   // scroll right
-    ImGuiNavInput_PadLStickUp,      // scroll up
-    ImGuiNavInput_PadLStickDown,    // scroll down
-    ImGuiNavInput_PadFocusPrev,     // next window (with PadMenu)                   // e.g. L-trigger
-    ImGuiNavInput_PadFocusNext,     // prev window (with PadMenu)                   // e.g. R-trigger
-    ImGuiNavInput_PadTweakSlow,     // slower tweaks                                // e.g. L-trigger, analog
-    ImGuiNavInput_PadTweakFast,     // faster tweaks                                // e.g. R-trigger, analog
+    ImGuiNavInput_PadActivate,      // activate / open / toggle / tweak value         // e.g. Circle (PS4), A (Xbox), B (Switch)
+    ImGuiNavInput_PadCancel,        // cancel / close / exit                          // e.g. Cross  (PS4), B (Xbox), A (Switch)
+    ImGuiNavInput_PadInput,         // text input / on-screen keyboard                // e.g. Triang.(PS4), Y (Xbox), X (Switch)
+    ImGuiNavInput_PadMenu,          // tap: toggle menu / hold: focus, move, resize   // e.g. Square (PS4), X (Xbox), Y (Switch)
+    ImGuiNavInput_PadDpadLeft,      // move / tweak / resize window (w/ PadMenu)      // e.g. D-pad Left/Right/Up/Down
+    ImGuiNavInput_PadDpadRight,     // 
+    ImGuiNavInput_PadDpadUp,        // 
+    ImGuiNavInput_PadDpadDown,      // 
+    ImGuiNavInput_PadLStickLeft,    // scroll / move window (w/ PadMenu)              // e.g. Left Analog Stick Left/Right/Up/Down
+    ImGuiNavInput_PadLStickRight,   // 
+    ImGuiNavInput_PadLStickUp,      // 
+    ImGuiNavInput_PadLStickDown,    // 
+    ImGuiNavInput_PadFocusPrev,     // next window (w/ PadMenu)                       // e.g. L1 (PS4), LB (Xbox), L (Switch)
+    ImGuiNavInput_PadFocusNext,     // prev window (w/ PadMenu)                       // e.g. R1 (PS4), RB (Xbox), R (Switch) 
+    ImGuiNavInput_PadTweakSlow,     // slower tweaks                                  // e.g. L2 (PS4), LT (Xbox), ZL (Switch), Analog
+    ImGuiNavInput_PadTweakFast,     // faster tweaks                                  // e.g. R2 (PS4), RT (Xbox), ZR (Switch), Analog
     // Keyboard Mapping
     // [BETA] To use keyboard control you currently need to map keys to those gamepad inputs: PadActivate (Enter), PadCancel (Escape), PadInput (Enter). 
     // Will add specialized keyboard mappings as we add features and clarify the input interface. 
-    ImGuiNavInput_KeyMenu,          // toggle menu                                  // e.g. ALT
-    ImGuiNavInput_KeyLeft,          // move left                                    // e.g. Arrow keys
+    ImGuiNavInput_KeyMenu,          // toggle menu                                    // e.g. Alt
+    ImGuiNavInput_KeyLeft,          // move left                                      // e.g. Arrow keys
     ImGuiNavInput_KeyRight,         // move right
     ImGuiNavInput_KeyUp,            // move up
     ImGuiNavInput_KeyDown,          // move down
