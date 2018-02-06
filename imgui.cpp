@@ -8701,7 +8701,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     const ImRect bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
 
     ItemSize(bb, style.FramePadding.y);
-    if (!ItemAdd(frame_bb, id, &frame_bb))
+    if (!ItemAdd(frame_bb, id))
         return false;
     const bool hovered = ItemHoverable(frame_bb, id);
 
