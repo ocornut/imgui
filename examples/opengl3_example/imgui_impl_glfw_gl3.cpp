@@ -4,7 +4,6 @@
 
 // Implemented features:
 //  [X] User texture binding. Cast 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
-//  [X] Keyboard navigation mapping. Enable with 'io.NavFlags |= ImGuiNavFlags_EnableKeyboard'.
 //  [X] Gamepad navigation mapping. Enable with 'io.NavFlags |= ImGuiNavFlags_EnableGamepad'.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
@@ -416,27 +415,8 @@ void ImGui_ImplGlfwGL3_NewFrame()
     // Hide OS mouse cursor if ImGui is drawing it
     glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
 
-    // Gamepad/keyboard navigation mapping [BETA]
+    // Gamepad navigation mapping [BETA]
     memset(io.NavInputs, 0, sizeof(io.NavInputs));
-    if (io.NavFlags & ImGuiNavFlags_EnableKeyboard)
-    {
-        // Update keyboard
-        // FIXME-NAV: We are still using some of the ImGuiNavInput_PadXXX enums as keyboard support is incomplete.
-        #define MAP_KEY(NAV_NO, KEY_NO) { if (io.KeysDown[KEY_NO]) io.NavInputs[NAV_NO] = 1.0f; }
-        MAP_KEY(ImGuiNavInput_KeyLeft,      GLFW_KEY_LEFT);
-        MAP_KEY(ImGuiNavInput_KeyRight,     GLFW_KEY_RIGHT);
-        MAP_KEY(ImGuiNavInput_KeyUp,        GLFW_KEY_UP);
-        MAP_KEY(ImGuiNavInput_KeyDown,      GLFW_KEY_DOWN);
-        MAP_KEY(ImGuiNavInput_KeyMenu,      GLFW_KEY_LEFT_ALT);
-        MAP_KEY(ImGuiNavInput_PadActivate,  GLFW_KEY_SPACE);
-        MAP_KEY(ImGuiNavInput_PadCancel,    GLFW_KEY_ESCAPE);
-        MAP_KEY(ImGuiNavInput_PadInput,     GLFW_KEY_ENTER);
-        MAP_KEY(ImGuiNavInput_PadTweakSlow, GLFW_KEY_LEFT_ALT);
-        MAP_KEY(ImGuiNavInput_PadTweakSlow, GLFW_KEY_RIGHT_ALT);
-        MAP_KEY(ImGuiNavInput_PadTweakFast, GLFW_KEY_LEFT_SHIFT);
-        MAP_KEY(ImGuiNavInput_PadTweakFast, GLFW_KEY_RIGHT_SHIFT);
-        #undef MAP_KEY
-    }
     if (io.NavFlags & ImGuiNavFlags_EnableGamepad)
     {
         // Update gamepad inputs
@@ -453,10 +433,10 @@ void ImGui_ImplGlfwGL3_NewFrame()
         MAP_BUTTON(ImGuiNavInput_DpadRight,  11);    // D-Pad Right
         MAP_BUTTON(ImGuiNavInput_DpadUp,     10);    // D-Pad Up
         MAP_BUTTON(ImGuiNavInput_DpadDown,   12);    // D-Pad Down
-        MAP_BUTTON(ImGuiNavInput_FocusPrev,  4);     // L Trigger
-        MAP_BUTTON(ImGuiNavInput_FocusNext,  5);     // R Trigger
-        MAP_BUTTON(ImGuiNavInput_TweakSlow,  4);     // L Trigger
-        MAP_BUTTON(ImGuiNavInput_TweakFast,  5);     // R Trigger
+        MAP_BUTTON(ImGuiNavInput_FocusPrev,  4);     // L1 / LB
+        MAP_BUTTON(ImGuiNavInput_FocusNext,  5);     // R1 / RB
+        MAP_BUTTON(ImGuiNavInput_TweakSlow,  4);     // L1 / LB
+        MAP_BUTTON(ImGuiNavInput_TweakFast,  5);     // R1 / RB
         MAP_ANALOG(ImGuiNavInput_LStickLeft, 0,  -0.3f,  -0.9f);
         MAP_ANALOG(ImGuiNavInput_LStickRight,0,  +0.3f,  +0.9f);
         MAP_ANALOG(ImGuiNavInput_LStickUp,   1,  +0.3f,  +0.9f);

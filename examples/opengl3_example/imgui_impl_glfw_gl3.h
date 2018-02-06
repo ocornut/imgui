@@ -4,7 +4,6 @@
 
 // Implemented features:
 //  [X] User texture binding. Cast 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
-//  [X] Keyboard navigation mapping. Enable with 'io.NavFlags |= ImGuiNavFlags_EnableKeyboard'.
 //  [X] Gamepad navigation mapping. Enable with 'io.NavFlags |= ImGuiNavFlags_EnableGamepad'.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.

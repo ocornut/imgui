@@ -704,45 +704,49 @@ enum ImGuiKey_
 };
 
 // [BETA] Gamepad/Keyboard directional navigation
-// Fill ImGuiIO.NavInputs[] float array every frame to feed gamepad/keyboard navigation inputs.
-// 0.0f= not held. 1.0f= fully held. Pass intermediate 0.0f..1.0f values for analog triggers/sticks.
-// ImGui uses a simple >0.0f for activation testing, and won't attempt to test for a dead-zone.
-// Your code passing analog gamepad values is likely to want to transform your raw inputs, using a dead-zone and maybe a power curve.
+// Keyboard:
+// - io.NavInputs[] is automatically filled in by NewFrame() if you set io.NavFlags |= ImGuiNavFlags_EnableKeyboard.
+// Gamepad: 
+// - Fill io.NavInputs[] every frame with your gamepad inputs. Note that io.NavInputs[] is _cleared_ in EndFrame().
+//   0.0f= not held. 1.0f= fully held. Pass intermediate 0.0f..1.0f values for analog triggers/sticks.
+// - We uses a simple >0.0f test for activation testing, and won't attempt to test for a dead-zone.
+//   Your code will probably need to transform your raw inputs (such as e.g. remapping your 0.2..0.9 raw input range to 0.0..1.0 imgui range, maybe a power curve, etc.).
 enum ImGuiNavInput_
 {
     // Gamepad Mapping
-    ImGuiNavInput_Activate,      // activate / open / toggle / tweak value         // e.g. Circle (PS4), A (Xbox), B (Switch)
-    ImGuiNavInput_Cancel,        // cancel / close / exit                          // e.g. Cross  (PS4), B (Xbox), A (Switch)
-    ImGuiNavInput_Input,         // text input / on-screen keyboard                // e.g. Triang.(PS4), Y (Xbox), X (Switch)
-    ImGuiNavInput_Menu,          // tap: toggle menu / hold: focus, move, resize   // e.g. Square (PS4), X (Xbox), Y (Switch)
-    ImGuiNavInput_DpadLeft,      // move / tweak / resize window (w/ PadMenu)      // e.g. D-pad Left/Right/Up/Down
+    ImGuiNavInput_Activate,      // activate / open / toggle / tweak value       // e.g. Circle (PS4), A (Xbox), B (Switch), Space (Keyboard)
+    ImGuiNavInput_Cancel,        // cancel / close / exit                        // e.g. Cross  (PS4), B (Xbox), A (Switch), Escape (Keyboard)
+    ImGuiNavInput_Input,         // text input / on-screen keyboard              // e.g. Triang.(PS4), Y (Xbox), X (Switch), Return (Keyboard)
+    ImGuiNavInput_Menu,          // tap: toggle menu / hold: focus, move, resize // e.g. Square (PS4), X (Xbox), Y (Switch), Alt (Keyboard)
+    ImGuiNavInput_DpadLeft,      // move / tweak / resize window (w/ PadMenu)    // e.g. D-pad Left/Right/Up/Down (Gamepads), Arrow keys (Keyboard)
     ImGuiNavInput_DpadRight,     // 
     ImGuiNavInput_DpadUp,        // 
     ImGuiNavInput_DpadDown,      // 
-    ImGuiNavInput_LStickLeft,    // scroll / move window (w/ PadMenu)              // e.g. Left Analog Stick Left/Right/Up/Down
+    ImGuiNavInput_LStickLeft,    // scroll / move window (w/ PadMenu)            // e.g. Left Analog Stick Left/Right/Up/Down
     ImGuiNavInput_LStickRight,   // 
     ImGuiNavInput_LStickUp,      // 
     ImGuiNavInput_LStickDown,    // 
-    ImGuiNavInput_FocusPrev,     // next window (w/ PadMenu)                       // e.g. L1 (PS4), LB (Xbox), L (Switch)
-    ImGuiNavInput_FocusNext,     // prev window (w/ PadMenu)                       // e.g. R1 (PS4), RB (Xbox), R (Switch) 
-    ImGuiNavInput_TweakSlow,     // slower tweaks                                  // e.g. L2 (PS4), LT (Xbox), ZL (Switch), Analog
-    ImGuiNavInput_TweakFast,     // faster tweaks                                  // e.g. R2 (PS4), RT (Xbox), ZR (Switch), Analog
-    // Keyboard Mapping
-    // [BETA] To use keyboard control you currently need to map keys to those gamepad inputs: PadActivate (Enter), PadCancel (Escape), PadInput (Enter). 
-    // Will add specialized keyboard mappings as we add features and clarify the input interface. 
-    ImGuiNavInput_KeyMenu_,      // toggle menu                                    // e.g. Alt
-    ImGuiNavInput_KeyLeft_,      // move left                                      // e.g. Arrow keys
+    ImGuiNavInput_FocusPrev,     // next window (w/ PadMenu)                     // e.g. L1 or L2 (PS4), LB or LT (Xbox), L or ZL (Switch)
+    ImGuiNavInput_FocusNext,     // prev window (w/ PadMenu)                     // e.g. R1 or R2 (PS4), RB or RT (Xbox), R or ZL (Switch) 
+    ImGuiNavInput_TweakSlow,     // slower tweaks                                // e.g. L1 or L2 (PS4), LB or LT (Xbox), L or ZL (Switch)
+    ImGuiNavInput_TweakFast,     // faster tweaks                                // e.g. R1 or R2 (PS4), RB or RT (Xbox), R or ZL (Switch)
+
+    // [Internal] Don't use directly! This is used internally to differentiate keyboard from gamepad inputs for behaviors that require to differentiate them.
+    // Keyboard behavior that have no corresponding gamepad mapping (e.g. CTRL+TAB) may be directly reading from io.KeyDown[] instead of io.NavInputs[].
+    ImGuiNavInput_KeyMenu_,      // toggle menu                                  // = io.KeyAlt
+    ImGuiNavInput_KeyLeft_,      // move left                                    // = Arrow keys
     ImGuiNavInput_KeyRight_,     // move right
     ImGuiNavInput_KeyUp_,        // move up
     ImGuiNavInput_KeyDown_,      // move down
     ImGuiNavInput_COUNT,
+    ImGuiNavInput_InternalStart_ = ImGuiNavInput_KeyMenu_
 };
 
 // [BETA] Gamepad/Keyboard directional navigation options
 enum ImGuiNavFlags_
 {
-    ImGuiNavFlags_EnableGamepad     = 1 << 0,   // Master gamepad navigation enable flag. This is mostly to instruct your imgui binding whether to fill in gamepad navigation inputs.
-    ImGuiNavFlags_EnableKeyboard    = 1 << 1,   // Master keyboard navigation enable flag. This is mostly to instruct your imgui binding whether to fill in keyboard navigation inputs.
+    ImGuiNavFlags_EnableKeyboard    = 1 << 0,   // Master keyboard navigation enable flag. NewFrame() will automatically fill io.NavInputs[] based on io.KeyDown[].
+    ImGuiNavFlags_EnableGamepad     = 1 << 1,   // Master gamepad navigation enable flag. This is mostly to instruct your imgui back-end to fill io.NavInputs[].
     ImGuiNavFlags_MoveMouse         = 1 << 2,   // Request navigation to allow moving the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantMoveMouse=true. If enabled you MUST honor io.WantMoveMouse requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
     ImGuiNavFlags_NoCaptureKeyboard = 1 << 3    // Do not set the io.WantCaptureKeyboard flag with io.NavActive is set. 
 };
@@ -1011,7 +1015,7 @@ struct ImGuiIO
     bool        KeySuper;                       // Keyboard modifier pressed: Cmd/Super/Windows
     bool        KeysDown[512];                  // Keyboard keys that are pressed (ideally left in the "native" order your engine has access to keyboard keys, so you can use your own defines/enums for keys).
     ImWchar     InputCharacters[16+1];          // List of characters input (translated by user from keypress+keyboard state). Fill using AddInputCharacter() helper.
-    float       NavInputs[ImGuiNavInput_COUNT];
+    float       NavInputs[ImGuiNavInput_COUNT]; // Gamepad inputs (keyboard keys will be auto-mapped and be written here by ImGui::NewFrame)
 
     // Functions
     IMGUI_API void AddInputCharacter(ImWchar c);                        // Add new character into InputCharacters[]

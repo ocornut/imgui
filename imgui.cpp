@@ -2927,6 +2927,28 @@ static void ImGui::NavUpdate()
     if (g.NavScoringCount > 0) printf("[%05d] NavScoringCount %d for '%s' layer %d (Init:%d, Move:%d)\n", g.FrameCount, g.NavScoringCount, g.NavWindow ? g.NavWindow->Name : "NULL", g.NavLayer, g.NavInitRequest || g.NavInitResultId != 0, g.NavMoveRequest);
 #endif
 
+    // Update Keyboard->Nav inputs mapping
+    memset(g.IO.NavInputs + ImGuiNavInput_InternalStart_, 0, (ImGuiNavInput_COUNT - ImGuiNavInput_InternalStart_) * sizeof(g.IO.NavInputs[0]));
+    if (g.IO.NavFlags & ImGuiNavFlags_EnableKeyboard)
+    {
+        #define NAV_MAP_KEY(_KEY, _NAV_INPUT)   if (g.IO.KeyMap[_KEY] != -1 && IsKeyDown(g.IO.KeyMap[_KEY])) g.IO.NavInputs[_NAV_INPUT] = 1.0f;
+        NAV_MAP_KEY(ImGuiKey_Space,     ImGuiNavInput_Activate );
+        NAV_MAP_KEY(ImGuiKey_Enter,     ImGuiNavInput_Input    );
+        NAV_MAP_KEY(ImGuiKey_Escape,    ImGuiNavInput_Cancel   );
+        NAV_MAP_KEY(ImGuiKey_LeftArrow, ImGuiNavInput_KeyLeft_ );
+        NAV_MAP_KEY(ImGuiKey_RightArrow,ImGuiNavInput_KeyRight_);
+        NAV_MAP_KEY(ImGuiKey_UpArrow,   ImGuiNavInput_KeyUp_   );
+        NAV_MAP_KEY(ImGuiKey_DownArrow, ImGuiNavInput_KeyDown_ );
+        if (g.IO.KeyCtrl)   g.IO.NavInputs[ImGuiNavInput_TweakSlow] = 1.0f;
+        if (g.IO.KeyShift)  g.IO.NavInputs[ImGuiNavInput_TweakFast] = 1.0f;
+        if (g.IO.KeyAlt)    g.IO.NavInputs[ImGuiNavInput_KeyMenu_]  = 1.0f;
+#undef NAV_MAP_KEY
+    }
+
+    memcpy(g.IO.NavInputsDownDurationPrev, g.IO.NavInputsDownDuration, sizeof(g.IO.NavInputsDownDuration));
+    for (int i = 0; i < IM_ARRAYSIZE(g.IO.NavInputs); i++)
+        g.IO.NavInputsDownDuration[i] = (g.IO.NavInputs[i] > 0.0f) ? (g.IO.NavInputsDownDuration[i] < 0.0f ? 0.0f : g.IO.NavInputsDownDuration[i] + g.IO.DeltaTime) : -1.0f;
+
     // Process navigation init request (select first/default focus)
     if (g.NavInitResultId != 0 && (!g.NavDisableHighlight || g.NavInitRequestFromMove))
     {
@@ -3182,6 +3204,10 @@ void ImGui::NewFrame()
     for (int n = 0; n < ImGuiKey_COUNT; n++)
         IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..512, or -1 for unmapped key)");
 
+    // Do a simple check for required key mapping (we intentionally do NOT check all keys to not pressure user into setting up everything, but Space is required and was super recently added in 1.54 WIP)
+    if (g.IO.NavFlags & ImGuiNavFlags_EnableKeyboard)
+        IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
+
     // Initialize on first frame
     if (!g.Initialized)
         Initialize();
@@ -3235,11 +3261,8 @@ void ImGui::NewFrame()
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
         g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
-    memcpy(g.IO.NavInputsDownDurationPrev, g.IO.NavInputsDownDuration, sizeof(g.IO.NavInputsDownDuration));
-    for (int i = 0; i < IM_ARRAYSIZE(g.IO.NavInputs); i++)
-        g.IO.NavInputsDownDuration[i] = (g.IO.NavInputs[i] > 0.0f) ? (g.IO.NavInputsDownDuration[i] < 0.0f ? 0.0f : g.IO.NavInputsDownDuration[i] + g.IO.DeltaTime) : -1.0f;
 
-    // Update directional navigation which may override MousePos if ImGuiNavFlags_MoveMouse is enabled.
+    // Update gamepad/keyboard directional navigation
     NavUpdate();
 
     // Update mouse input state
@@ -3952,6 +3975,7 @@ void ImGui::EndFrame()
     // Clear Input data for next frame
     g.IO.MouseWheel = g.IO.MouseWheelH = 0.0f;
     memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
+    memset(g.IO.NavInputs, 0, sizeof(g.IO.NavInputs));
 
     g.FrameCountEnded = g.FrameCount;
 }

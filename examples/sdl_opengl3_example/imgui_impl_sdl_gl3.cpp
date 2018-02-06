@@ -4,7 +4,6 @@
 
 // Implemented features:
 //  [X] User texture binding. Cast 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
-//  [X] Keyboard navigation mapping. Enable with 'io.NavFlags |= ImGuiNavFlags_EnableKeyboard'.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -413,29 +412,6 @@ void ImGui_ImplSdlGL3_NewFrame(SDL_Window* window)
 
     // Hide OS mouse cursor if ImGui is drawing it
     SDL_ShowCursor(io.MouseDrawCursor ? 0 : 1);
-
-    // Gamepad/keyboard navigation mapping [BETA]
-    memset(io.NavInputs, 0, sizeof(io.NavInputs));
-    if (io.NavFlags & ImGuiNavFlags_EnableKeyboard)
-    {
-        // Update keyboard
-        // FIXME-NAV: We are still using some of the ImGuiNavInput_PadXXX enums as keyboard support is incomplete.
-        #define MAP_KEY(NAV_NO, KEY_NO) { if (io.KeysDown[KEY_NO]) io.NavInputs[NAV_NO] = 1.0f; }
-        MAP_KEY(ImGuiNavInput_KeyLeft,      SDL_SCANCODE_LEFT);
-        MAP_KEY(ImGuiNavInput_KeyRight,     SDL_SCANCODE_RIGHT);
-        MAP_KEY(ImGuiNavInput_KeyUp,        SDL_SCANCODE_UP);
-        MAP_KEY(ImGuiNavInput_KeyDown,      SDL_SCANCODE_DOWN);
-        MAP_KEY(ImGuiNavInput_KeyMenu,      SDL_SCANCODE_LALT);
-        MAP_KEY(ImGuiNavInput_KeyMenu,      SDL_SCANCODE_RALT);
-        MAP_KEY(ImGuiNavInput_PadActivate,  SDL_SCANCODE_SPACE);
-        MAP_KEY(ImGuiNavInput_PadCancel,    SDL_SCANCODE_ESCAPE);
-        MAP_KEY(ImGuiNavInput_PadInput,     SDL_SCANCODE_RETURN);
-        MAP_KEY(ImGuiNavInput_PadTweakSlow, SDL_SCANCODE_LALT);
-        MAP_KEY(ImGuiNavInput_PadTweakSlow, SDL_SCANCODE_LALT);
-        MAP_KEY(ImGuiNavInput_PadTweakFast, SDL_SCANCODE_LSHIFT);
-        MAP_KEY(ImGuiNavInput_PadTweakFast, SDL_SCANCODE_RSHIFT);
-        #undef MAP_KEY
-    }
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();

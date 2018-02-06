@@ -2,7 +2,6 @@
 
 // Implemented features:
 //  [X] User texture binding. Use 'ID3D11ShaderResourceView*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
-//  [X] Keyboard navigation mapping. Enable with 'io.NavFlags |= ImGuiNavFlags_EnableKeyboard'.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -608,26 +607,6 @@ void ImGui_ImplDX11_NewFrame()
     // io.MousePos : filled by WM_MOUSEMOVE events
     // io.MouseDown : filled by WM_*BUTTON* events
     // io.MouseWheel : filled by WM_MOUSEWHEEL events
-
-    // Gamepad/keyboard navigation mapping [BETA]
-    memset(io.NavInputs, 0, sizeof(io.NavInputs));
-    if (io.NavFlags & ImGuiNavFlags_EnableKeyboard)
-    {
-        // Update keyboard
-        // FIXME-NAV: We are still using some of the ImGuiNavInput_PadXXX enums as keyboard support is incomplete.
-        #define MAP_KEY(NAV_NO, KEY_NO) { if (io.KeysDown[KEY_NO]) io.NavInputs[NAV_NO] = 1.0f; }
-        MAP_KEY(ImGuiNavInput_KeyLeft,      VK_LEFT);
-        MAP_KEY(ImGuiNavInput_KeyRight,     VK_RIGHT);
-        MAP_KEY(ImGuiNavInput_KeyUp,        VK_UP);
-        MAP_KEY(ImGuiNavInput_KeyDown,      VK_DOWN);
-        MAP_KEY(ImGuiNavInput_KeyMenu,      VK_MENU);
-        MAP_KEY(ImGuiNavInput_PadActivate,  VK_SPACE);
-        MAP_KEY(ImGuiNavInput_PadCancel,    VK_ESCAPE);
-        MAP_KEY(ImGuiNavInput_PadInput,     VK_RETURN);
-        MAP_KEY(ImGuiNavInput_PadTweakFast, VK_SHIFT);
-        MAP_KEY(ImGuiNavInput_PadTweakSlow, VK_CONTROL);
-        #undef MAP_KEY
-    }
 
     // Set OS mouse position if requested last frame by io.WantMoveMouse flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
     if (io.WantMoveMouse)
