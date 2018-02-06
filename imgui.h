@@ -704,13 +704,9 @@ enum ImGuiKey_
 };
 
 // [BETA] Gamepad/Keyboard directional navigation
-// Keyboard:
-// - io.NavInputs[] is automatically filled in by NewFrame() if you set io.NavFlags |= ImGuiNavFlags_EnableKeyboard.
-// Gamepad: 
-// - Fill io.NavInputs[] every frame with your gamepad inputs. Note that io.NavInputs[] is _cleared_ in EndFrame().
-//   0.0f= not held. 1.0f= fully held. Pass intermediate 0.0f..1.0f values for analog triggers/sticks.
-// - We uses a simple >0.0f test for activation testing, and won't attempt to test for a dead-zone.
-//   Your code will probably need to transform your raw inputs (such as e.g. remapping your 0.2..0.9 raw input range to 0.0..1.0 imgui range, maybe a power curve, etc.).
+// Keyboard: Set io.NavFlags |= ImGuiNavFlags_EnableKeyboard to enable. NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
+// Gamepad:  Set io.NavFlags |= ImGuiNavFlags_EnableGamepad to enable. Fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
+// Read instructions in imgui.cpp for more details.
 enum ImGuiNavInput_
 {
     // Gamepad Mapping
