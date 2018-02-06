@@ -34,6 +34,7 @@ int main(int, char**)
     SDL_GL_SetSwapInterval(1); // Enable vsync
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_ImplSdlGL2_Init(window);
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
@@ -126,6 +127,8 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplSdlGL2_Shutdown();
+    ImGui::DestroyContext();
+
     SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(window);
     SDL_Quit();

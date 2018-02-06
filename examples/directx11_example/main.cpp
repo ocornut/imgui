@@ -123,6 +123,7 @@ int main(int, char**)
     UpdateWindow(hwnd);
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_ImplDX11_Init(hwnd, g_pd3dDevice, g_pd3dDeviceContext);
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
@@ -214,6 +215,8 @@ int main(int, char**)
     }
 
     ImGui_ImplDX11_Shutdown();
+    ImGui::DestroyContext();
+
     CleanupDeviceD3D();
     UnregisterClass(_T("ImGui Example"), wc.hInstance);
 

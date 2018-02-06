@@ -23,6 +23,7 @@ int main(int, char**)
     al_register_event_source(queue, al_get_mouse_event_source());
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_ImplA5_Init(display);
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
@@ -118,6 +119,7 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplA5_Shutdown();
+    ImGui::DestroyContext();
     al_destroy_event_queue(queue);
     al_destroy_display(display);
 

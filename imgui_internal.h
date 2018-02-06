@@ -570,6 +570,7 @@ struct ImGuiNextWindowData
 struct ImGuiContext
 {
     bool                    Initialized;
+    bool                    FontAtlasOwnedByContext;            // Io.Fonts-> is owned by the ImGuiContext and will be destructed along with it.
     ImGuiIO                 IO;
     ImGuiStyle              Style;
     ImFont*                 Font;                               // (Shortcut) == FontStack.empty() ? IO.Font : FontStack.back()
@@ -706,11 +707,13 @@ struct ImGuiContext
     int                     WantTextInputNextFrame;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
 
-    ImGuiContext() : OverlayDrawList(NULL)
+    ImGuiContext(ImFontAtlas* shared_font_atlas) : OverlayDrawList(NULL)
     {
         Initialized = false;
         Font = NULL;
         FontSize = FontBaseSize = 0.0f;
+        FontAtlasOwnedByContext = shared_font_atlas ? false : true;
+        IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
 
         Time = 0.0f;
         FrameCount = 0;
@@ -1022,7 +1025,8 @@ namespace ImGui
     IMGUI_API bool          IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent);
     IMGUI_API bool          IsWindowNavFocusable(ImGuiWindow* window);
 
-    IMGUI_API void          Initialize();
+    IMGUI_API void          Initialize(ImGuiContext* context);
+    IMGUI_API void          Shutdown(ImGuiContext* context);    // Since 1.54 this is a _private_ function. You can call DestroyContext() to destroy the context created by CreateContext().
 
     IMGUI_API void                  MarkIniSettingsDirty();
     IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);

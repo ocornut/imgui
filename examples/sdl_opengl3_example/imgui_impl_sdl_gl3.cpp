@@ -361,7 +361,6 @@ bool    ImGui_ImplSdlGL3_Init(SDL_Window* window)
 void ImGui_ImplSdlGL3_Shutdown()
 {
     ImGui_ImplSdlGL3_InvalidateDeviceObjects();
-    ImGui::Shutdown();
 }
 
 void ImGui_ImplSdlGL3_NewFrame(SDL_Window* window)

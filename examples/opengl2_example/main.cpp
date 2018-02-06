@@ -27,6 +27,7 @@ int main(int, char**)
     glfwSwapInterval(1); // Enable vsync
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_ImplGlfwGL2_Init(window, true);
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
@@ -114,6 +115,7 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplGlfwGL2_Shutdown();
+    ImGui::DestroyContext();
     glfwTerminate();
 
     return 0;

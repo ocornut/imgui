@@ -32,6 +32,7 @@ int main(int, char**)
     gl3wInit();
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_ImplGlfwGL3_Init(window, true);
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
@@ -119,6 +120,7 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplGlfwGL3_Shutdown();
+    ImGui::DestroyContext();
     glfwTerminate();
 
     return 0;

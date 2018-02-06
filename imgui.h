@@ -136,6 +136,14 @@ struct ImVec4
 // In a namespace so that user can add extra functions in a separate file (e.g. Value() helpers for your vector or common types)
 namespace ImGui
 {
+    // Context creation and access, if you want to use multiple context, share context between modules (e.g. DLL). 
+    // All contexts share a same ImFontAtlas by default. If you want different font atlas, you can new() them and overwrite the GetIO().Fonts variable of an ImGui context.
+    // All those functions are not reliant on the current context.
+    IMGUI_API ImGuiContext* CreateContext(ImFontAtlas* shared_font_atlas = NULL);
+    IMGUI_API void          DestroyContext(ImGuiContext* ctx = NULL);   // NULL = Destroy current context
+    IMGUI_API ImGuiContext* GetCurrentContext();
+    IMGUI_API void          SetCurrentContext(ImGuiContext* ctx);
+
     // Main
     IMGUI_API ImGuiIO&      GetIO();
     IMGUI_API ImGuiStyle&   GetStyle();
@@ -143,7 +151,6 @@ namespace ImGui
     IMGUI_API void          NewFrame();                                 // start a new ImGui frame, you can submit any command from this point until Render()/EndFrame().
     IMGUI_API void          Render();                                   // ends the ImGui frame, finalize the draw data, then call your io.RenderDrawListsFn() function if set.
     IMGUI_API void          EndFrame();                                 // ends the ImGui frame. automatically called by Render(), so most likely don't need to ever call that yourself directly. If you don't need to render you may call EndFrame() but you'll have wasted CPU already. If you don't need to render, better to not create any imgui windows instead!
-    IMGUI_API void          Shutdown();
 
     // Demo, Debug, Informations
     IMGUI_API void          ShowDemoWindow(bool* p_open = NULL);        // create demo/test window (previously called ShowTestWindow). demonstrate most ImGui features. call this to learn about the library! try to make it always available in your application!
@@ -152,6 +159,7 @@ namespace ImGui
     IMGUI_API bool          ShowStyleSelector(const char* label);
     IMGUI_API void          ShowFontSelector(const char* label);
     IMGUI_API void          ShowUserGuide();                            // add basic help/info block (not a window): how to manipulate ImGui as a end-user (mouse/keyboard controls).
+    IMGUI_API const char*   GetVersion();
 
     // Window
     IMGUI_API bool          Begin(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0);   // push window to the stack and start appending to it. see .cpp for details. return false when window is collapsed (so you can early out in your code) but you always need to call End() regardless. 'bool* p_open' creates a widget on the upper-right to close the window (which sets your bool to false).
@@ -515,19 +523,12 @@ namespace ImGui
     IMGUI_API void          CaptureKeyboardFromApp(bool capture = true);                        // manually override io.WantCaptureKeyboard flag next frame (said flag is entirely left for your application handle). e.g. force capture keyboard when your widget is being hovered.
     IMGUI_API void          CaptureMouseFromApp(bool capture = true);                           // manually override io.WantCaptureMouse flag next frame (said flag is entirely left for your application handle).
 
-    // Helpers functions to access functions pointers in ImGui::GetIO()
-    IMGUI_API void*         MemAlloc(size_t sz);
+    // Helpers functions to access memory allocators and clipboard functions.
+    IMGUI_API void          SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void(*free_func)(void* ptr, void* user_data), void* user_data = NULL);
+    IMGUI_API void*         MemAlloc(size_t size);
     IMGUI_API void          MemFree(void* ptr);
     IMGUI_API const char*   GetClipboardText();
     IMGUI_API void          SetClipboardText(const char* text);
-
-    // Internal context access - if you want to use multiple context, share context between modules (e.g. DLL). There is a default context created and active by default.
-    // All contexts share a same ImFontAtlas by default. If you want different font atlas, you can new() them and overwrite the GetIO().Fonts variable of an ImGui context.
-    IMGUI_API const char*   GetVersion();
-    IMGUI_API ImGuiContext* CreateContext(void* (*malloc_fn)(size_t) = NULL, void (*free_fn)(void*) = NULL);
-    IMGUI_API void          DestroyContext(ImGuiContext* ctx);
-    IMGUI_API ImGuiContext* GetCurrentContext();
-    IMGUI_API void          SetCurrentContext(ImGuiContext* ctx);
 
 } // namespace ImGui
 
@@ -986,11 +987,6 @@ struct ImGuiIO
     void        (*SetClipboardTextFn)(void* user_data, const char* text);
     void*       ClipboardUserData;
 
-    // Optional: override memory allocations. MemFreeFn() may be called with a NULL pointer.
-    // (default to posix malloc/free)
-    void*       (*MemAllocFn)(size_t sz);
-    void        (*MemFreeFn)(void* ptr);
-
     // Optional: notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME in Windows)
     // (default to use native imm32 api on Windows)
     void        (*ImeSetInputScreenPosFn)(int x, int y);
@@ -1029,7 +1025,6 @@ struct ImGuiIO
     bool        NavActive;                  // Directional navigation is currently allowed (will handle ImGuiKey_NavXXX events) = a window is focused and it doesn't use the ImGuiWindowFlags_NoNavInputs flag.
     bool        NavVisible;                 // Directional navigation is visible and allowed (will handle ImGuiKey_NavXXX events).
     float       Framerate;                  // Application framerate estimation, in frame per second. Solely for convenience. Rolling average estimation based on IO.DeltaTime over 120 frames
-    int         MetricsAllocs;              // Number of active memory allocations
     int         MetricsRenderVertices;      // Vertices output during last call to Render()
     int         MetricsRenderIndices;       // Indices output during last call to Render() = number of triangles * 3
     int         MetricsActiveWindows;       // Number of visible root windows (exclude child windows)

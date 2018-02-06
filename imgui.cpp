@@ -130,6 +130,7 @@
  - A minimal application skeleton may be:
 
      // Application init
+     ImGui::CreateContext();
      ImGuiIO& io = ImGui::GetIO();
      io.DisplaySize.x = 1920.0f;
      io.DisplaySize.y = 1280.0f;
@@ -166,6 +167,10 @@
         ImGui::Render();
         SwapBuffers();
      }
+
+     // Shutdown
+     ImGui::DestroyContext();
+
 
  - A minimal render function skeleton may be:
 
@@ -248,6 +253,12 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2018/01/21 (1.XX) - reorganized context handling to be more explicit,
+                       - YOU NOW NEED TO CALL ImGui::CreateContext() AT THE BEGINNING OF YOUR APP, AND CALL ImGui::DestroyContext() AT THE END.
+                       - removed Shutdown() function, as DestroyContext() serve this purpose.
+                       - you may pass a ImFontAtlas* pointer to CreateContext() to share a font atlas between contexts. Otherwhise CreateContext() will create its own font atlas instance.
+                       - removed allocator parameters from CreateContext(), they are now setup with SetAllocatorFunctions(), and shared by all contexts.
+                       - removed the default global context and font atlas instance, which were confusing for users of DLL reloading and users of multiple contexts.
  - 2018/01/11 (1.54) - obsoleted IsAnyWindowHovered() in favor of IsWindowHovered(ImGuiHoveredFlags_AnyWindow). Kept redirection function (will obsolete).
  - 2018/01/11 (1.54) - obsoleted IsAnyWindowFocused() in favor of IsWindowFocused(ImGuiFocusedFlags_AnyWindow). Kept redirection function (will obsolete).
  - 2018/01/03 (1.54) - renamed ImGuiSizeConstraintCallback to ImGuiSizeCallback, ImGuiSizeConstraintCallbackData to ImGuiSizeCallbackData.
@@ -740,20 +751,31 @@ static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 // Context
 //-----------------------------------------------------------------------------
 
-// Default font atlas storage.
-// New contexts always point by default to this font atlas. It can be changed by reassigning the GetIO().Fonts variable.
-static ImFontAtlas      GImDefaultFontAtlas;
-
-// Default context storage + current context pointer.
-// Implicitely used by all ImGui functions. Always assumed to be != NULL. Change to a different context by calling ImGui::SetCurrentContext()
-// If you are hot-reloading this code in a DLL you will lose the static/global variables. Create your own context+font atlas instead of relying on those default (see FAQ entry "How can I preserve my ImGui context across reloading a DLL?").
-// ImGui is currently not thread-safe because of this variable. If you want thread-safety to allow N threads to access N different contexts, you might work around it by:
+// Current context pointer. Implicitely used by all ImGui functions. Always assumed to be != NULL. 
+// CreateContext() will automatically set this pointer if it is NULL. Change to a different context by calling ImGui::SetCurrentContext(). 
+// If you use DLL hotreloading you might need to call SetCurrentContext() after reloading code from this file. 
+// ImGui functions are not thread-safe because of this pointer. If you want thread-safety to allow N threads to access N different contexts, you can:
+// - Change this variable to use thread local storage. You may #define GImGui in imconfig.h for that purpose. Future development aim to make this context pointer explicit to all calls. Also read https://github.com/ocornut/imgui/issues/586
 // - Having multiple instances of the ImGui code compiled inside different namespace (easiest/safest, if you have a finite number of contexts)
-// - or: Changing this variable to be TLS. You may #define GImGui in imconfig.h for further custom hackery. Future development aim to make this context pointer explicit to all calls. Also read https://github.com/ocornut/imgui/issues/586
 #ifndef GImGui
-static ImGuiContext     GImDefaultContext;
-ImGuiContext*           GImGui = &GImDefaultContext;
+ImGuiContext*   GImGui = NULL;
 #endif
+
+// Memory Allocator functions. Use SetAllocatorFunctions() to change them.
+// If you use DLL hotreloading you might need to call SetAllocatorFunctions() after reloading code from this file. 
+// Otherwise, you probably don't want to modify them mid-program, and if you use global/static e.g. ImVector<> instances you may need to keep them accessible during program destruction.
+#ifndef IMGUI_DISABLE_DEFAULT_ALLOCATORS
+static void*   MallocWrapper(size_t size, void* user_data)    { (void)user_data; return malloc(size); }
+static void    FreeWrapper(void* ptr, void* user_data)        { (void)user_data; free(ptr); }
+#else
+static void*   MallocWrapper(size_t size, void* user_data)    { (void)user_data; (void)size; IM_ASSERT(0); return NULL; }
+static void    FreeWrapper(void* ptr, void* user_data)        { (void)user_data; (void)ptr; IM_ASSERT(0); }
+#endif
+
+static void*  (*GImAllocatorAllocFunc)(size_t size, void* user_data) = MallocWrapper;
+static void   (*GImAllocatorFreeFunc)(void* ptr, void* user_data) = FreeWrapper;
+static void*    GImAllocatorUserData = NULL;
+static size_t   GImAllocatorActiveAllocationsCount = 0;
 
 //-----------------------------------------------------------------------------
 // User facing structures
@@ -839,7 +861,7 @@ ImGuiIO::ImGuiIO()
     KeyRepeatRate = 0.050f;
     UserData = NULL;
 
-    Fonts = &GImDefaultFontAtlas;
+    Fonts = NULL;
     FontGlobalScale = 1.0f;
     FontDefault = NULL;
     FontAllowUserScaling = false;
@@ -856,8 +878,6 @@ ImGuiIO::ImGuiIO()
                                 
     // Settings (User Functions)
     RenderDrawListsFn = NULL;
-    MemAllocFn = malloc;
-    MemFreeFn = free;
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
     ClipboardUserData = NULL;
@@ -2550,14 +2570,14 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 
 void* ImGui::MemAlloc(size_t sz)
 {
-    GImGui->IO.MetricsAllocs++;
-    return GImGui->IO.MemAllocFn(sz);
+    GImAllocatorActiveAllocationsCount++;
+    return GImAllocatorAllocFunc(sz, GImAllocatorUserData);
 }
 
 void ImGui::MemFree(void* ptr)
 {
-    if (ptr) GImGui->IO.MetricsAllocs--;
-    return GImGui->IO.MemFreeFn(ptr);
+    if (ptr) GImAllocatorActiveAllocationsCount--;
+    return GImAllocatorFreeFunc(ptr, GImAllocatorUserData);
 }
 
 const char* ImGui::GetClipboardText()
@@ -2592,32 +2612,40 @@ void ImGui::SetCurrentContext(ImGuiContext* ctx)
 #endif
 }
 
-ImGuiContext* ImGui::CreateContext(void* (*malloc_fn)(size_t), void (*free_fn)(void*))
+void ImGui::SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void(*free_func)(void* ptr, void* user_data), void* user_data)
 {
-    if (!malloc_fn) malloc_fn = malloc;
-    ImGuiContext* ctx = (ImGuiContext*)malloc_fn(sizeof(ImGuiContext));
-    IM_PLACEMENT_NEW(ctx) ImGuiContext();
-    ctx->IO.MemAllocFn = malloc_fn;
-    ctx->IO.MemFreeFn = free_fn ? free_fn : free;
+    GImAllocatorAllocFunc = alloc_func;
+    GImAllocatorFreeFunc = free_func;
+    GImAllocatorUserData = user_data;
+}
+
+ImGuiContext* ImGui::CreateContext(ImFontAtlas* shared_font_atlas)
+{
+    ImGuiContext* ctx = IM_NEW(ImGuiContext)(shared_font_atlas);
+    if (GImGui == NULL)
+        SetCurrentContext(ctx);
     return ctx;
 }
 
 void ImGui::DestroyContext(ImGuiContext* ctx)
 {
-    void (*free_fn)(void*) = ctx->IO.MemFreeFn;
-    ctx->~ImGuiContext();
-    free_fn(ctx);
+    if (ctx == NULL)
+        ctx = GImGui;
+    Shutdown(ctx);
     if (GImGui == ctx)
         SetCurrentContext(NULL);
+    IM_DELETE(ctx);
 }
 
 ImGuiIO& ImGui::GetIO()
 {
+    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() or ImGui::SetCurrentContext()?");
     return GImGui->IO;
 }
 
 ImGuiStyle& ImGui::GetStyle()
 {
+    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() or ImGui::SetCurrentContext()?");
     return GImGui->Style;
 }
 
@@ -3195,6 +3223,7 @@ static void ImGui::NavUpdate()
 
 void ImGui::NewFrame()
 {
+    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() or ImGui::SetCurrentContext()?");
     ImGuiContext& g = *GImGui;
 
     // Check user data
@@ -3215,7 +3244,7 @@ void ImGui::NewFrame()
 
     // Initialize on first frame
     if (!g.Initialized)
-        Initialize();
+        Initialize(&g);
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
@@ -3550,9 +3579,9 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSetting
     }
 }
 
-void ImGui::Initialize()
+void ImGui::Initialize(ImGuiContext* context)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *context;
     g.LogClipboard = IM_NEW(ImGuiTextBuffer)();
 
     // Add .ini handle for ImGuiWindow type
@@ -3571,13 +3600,13 @@ void ImGui::Initialize()
 }
 
 // This function is merely here to free heap allocations.
-void ImGui::Shutdown()
+void ImGui::Shutdown(ImGuiContext* context)
 {
-    ImGuiContext& g = *GImGui;
+    ImGuiContext& g = *context;
 
     // The fonts atlas can be used prior to calling NewFrame(), so we clear it even if g.Initialized is FALSE (which would happen if we never called NewFrame)
-    if (g.IO.Fonts) // Testing for NULL to allow user to NULLify in case of running Shutdown() on multiple contexts. Bit hacky.
-        g.IO.Fonts->Clear();
+    if (g.IO.Fonts && g.FontAtlasOwnedByContext)
+        IM_DELETE(g.IO.Fonts);
 
     // Cleanup of other data are conditional on actually having initialize ImGui.
     if (!g.Initialized)
@@ -13043,7 +13072,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::Text("%d vertices, %d indices (%d triangles)", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices, ImGui::GetIO().MetricsRenderIndices / 3);
-        ImGui::Text("%d allocations", ImGui::GetIO().MetricsAllocs);
+        ImGui::Text("%d allocations", GImAllocatorActiveAllocationsCount);
         static bool show_clip_rects = true;
         ImGui::Checkbox("Show clipping rectangles when hovering draw commands", &show_clip_rects);
         ImGui::Separator();

@@ -249,7 +249,6 @@ bool    ImGui_ImplGlfwGL2_Init(GLFWwindow* window, bool install_callbacks)
 void ImGui_ImplGlfwGL2_Shutdown()
 {
     ImGui_ImplGlfwGL2_InvalidateDeviceObjects();
-    ImGui::Shutdown();
 }
 
 void ImGui_ImplGlfwGL2_NewFrame()

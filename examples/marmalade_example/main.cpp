@@ -14,7 +14,10 @@
 
 int main(int, char**)
 {
+    IwGxInit();
+
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_Marmalade_Init(true);
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
@@ -104,6 +107,8 @@ int main(int, char**)
 
     // Cleanup
     ImGui_Marmalade_Shutdown();
+    ImGui::DestroyContext();
+    IwGxTerminate();
 
     return 0;
 }

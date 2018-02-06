@@ -614,6 +614,7 @@ int main(int, char**)
     setup_vulkan(window);
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_ImplGlfwVulkan_Init_Data init_data = {};
     init_data.allocator = g_Allocator;
@@ -745,6 +746,7 @@ int main(int, char**)
     VkResult err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
     ImGui_ImplGlfwVulkan_Shutdown();
+    ImGui::DestroyContext();
     cleanup_vulkan();
     glfwTerminate();
 

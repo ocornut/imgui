@@ -34,6 +34,7 @@ int main(int, char**)
     gl3wInit();
 
     // Setup ImGui binding
+    ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_ImplSdlGL3_Init(window);
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;
@@ -125,6 +126,8 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplSdlGL3_Shutdown();
+    ImGui::DestroyContext();
+
     SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(window);
     SDL_Quit();
