@@ -1,4 +1,4 @@
-// dear imgui, v1.54 WIP
+// dear imgui, v1.60 WIP
 // (internals)
 
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
@@ -1026,7 +1026,7 @@ namespace ImGui
     IMGUI_API bool          IsWindowNavFocusable(ImGuiWindow* window);
 
     IMGUI_API void          Initialize(ImGuiContext* context);
-    IMGUI_API void          Shutdown(ImGuiContext* context);    // Since 1.54 this is a _private_ function. You can call DestroyContext() to destroy the context created by CreateContext().
+    IMGUI_API void          Shutdown(ImGuiContext* context);    // Since 1.60 this is a _private_ function. You can call DestroyContext() to destroy the context created by CreateContext().
 
     IMGUI_API void                  MarkIniSettingsDirty();
     IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);
