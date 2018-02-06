@@ -30,6 +30,7 @@ int main(int, char**)
     SDL_GetCurrentDisplayMode(0, &current);
     SDL_Window *window = SDL_CreateWindow("ImGui SDL2+OpenGL3 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
     SDL_GLContext glcontext = SDL_GL_CreateContext(window);
+    SDL_GL_SetSwapInterval(1); // Enable vsync
     gl3wInit();
 
     // Setup ImGui binding

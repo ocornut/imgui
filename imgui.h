@@ -113,6 +113,7 @@ struct ImVec2
     float x, y;
     ImVec2() { x = y = 0.0f; }
     ImVec2(float _x, float _y) { x = _x; y = _y; }
+    float operator[] (size_t idx) const { IM_ASSERT(idx == 0 || idx == 1); return *(&x + idx); }    // We very rarely use this [] operator, thus an assert is fine.
 #ifdef IM_VEC2_CLASS_EXTRA          // Define constructor and implicit cast operators in imconfig.h to convert back<>forth from your math types and ImVec2.
     IM_VEC2_CLASS_EXTRA
 #endif
@@ -870,6 +871,7 @@ struct ImGuiStyle
     ImVec2      ButtonTextAlign;            // Alignment of button text when button is larger than text. Defaults to (0.5f,0.5f) for horizontally+vertically centered.
     ImVec2      DisplayWindowPadding;       // Window positions are clamped to be visible within the display area by at least this amount. Only covers regular windows.
     ImVec2      DisplaySafeAreaPadding;     // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
+    float       MouseCursorScale;           // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). May be removed later.
     bool        AntiAliasedLines;           // Enable anti-aliasing on lines/borders. Disable if you are really tight on CPU/GPU.
     bool        AntiAliasedFill;            // Enable anti-aliasing on filled shapes (rounded rectangles, circles, etc.)
     float       CurveTessellationTol;       // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.

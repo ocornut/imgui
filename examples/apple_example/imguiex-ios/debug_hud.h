@@ -11,6 +11,7 @@ typedef struct DebugHUD
     float rotation_speed;
     float cubeColor1[4];
     float cubeColor2[4];
+    float clearColor[4];
 } DebugHUD;
 
 #if __cplusplus
