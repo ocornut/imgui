@@ -116,6 +116,7 @@ struct ImVec2
     float x, y;
     ImVec2() { x = y = 0.0f; }
     ImVec2(float _x, float _y) { x = _x; y = _y; }
+    float operator[] (size_t idx) const { IM_ASSERT(idx == 0 || idx == 1); return *(&x + idx); }    // We very rarely use this [] operator, thus an assert is fine.
 #ifdef IM_VEC2_CLASS_EXTRA          // Define constructor and implicit cast operators in imconfig.h to convert back<>forth from your math types and ImVec2.
     IM_VEC2_CLASS_EXTRA
 #endif
