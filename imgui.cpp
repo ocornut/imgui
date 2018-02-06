@@ -6741,12 +6741,12 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // We vertically grow up to current line height up the typical widget height.
     const float text_base_offset_y = ImMax(padding.y, window->DC.CurrentLineTextBaseOffset); // Latch before ItemSize changes it
     const float frame_height = ImMax(ImMin(window->DC.CurrentLineHeight, g.FontSize + style.FramePadding.y*2), label_size.y + padding.y*2);
-    ImRect bb = ImRect(window->DC.CursorPos, ImVec2(window->Pos.x + GetContentRegionMax().x, window->DC.CursorPos.y + frame_height));
+    ImRect frame_bb = ImRect(window->DC.CursorPos, ImVec2(window->Pos.x + GetContentRegionMax().x, window->DC.CursorPos.y + frame_height));
     if (display_frame)
     {
         // Framed header expand a little outside the default padding
-        bb.Min.x -= (float)(int)(window->WindowPadding.x*0.5f) - 1;
-        bb.Max.x += (float)(int)(window->WindowPadding.x*0.5f) - 1;
+        frame_bb.Min.x -= (float)(int)(window->WindowPadding.x*0.5f) - 1;
+        frame_bb.Max.x += (float)(int)(window->WindowPadding.x*0.5f) - 1;
     }
 
     const float text_offset_x = (g.FontSize + (display_frame ? padding.x*3 : padding.x*2));   // Collapser arrow width + Spacing
@@ -6755,7 +6755,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
     // For regular tree nodes, we arbitrary allow to click past 2 worth of ItemSpacing
     // (Ideally we'd want to add a flag for the user to specify if we want the hit test to be done up to the right side of the content or not)
-    const ImRect interact_bb = display_frame ? bb : ImRect(bb.Min.x, bb.Min.y, bb.Min.x + text_width + style.ItemSpacing.x*2, bb.Max.y);
+    const ImRect interact_bb = display_frame ? frame_bb : ImRect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + text_width + style.ItemSpacing.x*2, frame_bb.Max.y);
     bool is_open = TreeNodeBehaviorIsOpen(id, flags);
     if (!ItemAdd(interact_bb, id))
     {
@@ -6796,36 +6796,36 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
     // Render
     const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
-    const ImVec2 text_pos = bb.Min + ImVec2(text_offset_x, text_base_offset_y);
+    const ImVec2 text_pos = frame_bb.Min + ImVec2(text_offset_x, text_base_offset_y);
     if (display_frame)
     {
         // Framed type
-        RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
-        RenderTriangle(bb.Min + ImVec2(padding.x, text_base_offset_y), is_open ? ImGuiDir_Down : ImGuiDir_Right, 1.0f);
+        RenderFrame(frame_bb.Min, frame_bb.Max, col, true, style.FrameRounding);
+        RenderTriangle(frame_bb.Min + ImVec2(padding.x, text_base_offset_y), is_open ? ImGuiDir_Down : ImGuiDir_Right, 1.0f);
         if (g.LogEnabled)
         {
             // NB: '##' is normally used to hide text (as a library-wide feature), so we need to specify the text range to make sure the ## aren't stripped out here.
             const char log_prefix[] = "\n##";
             const char log_suffix[] = "##";
             LogRenderedText(&text_pos, log_prefix, log_prefix+3);
-            RenderTextClipped(text_pos, bb.Max, label, label_end, &label_size);
+            RenderTextClipped(text_pos, frame_bb.Max, label, label_end, &label_size);
             LogRenderedText(&text_pos, log_suffix+1, log_suffix+3);
         }
         else
         {
-            RenderTextClipped(text_pos, bb.Max, label, label_end, &label_size);
+            RenderTextClipped(text_pos, frame_bb.Max, label, label_end, &label_size);
         }
     }
     else
     {
         // Unframed typed for tree nodes
         if (hovered || (flags & ImGuiTreeNodeFlags_Selected))
-            RenderFrame(bb.Min, bb.Max, col, false);
+            RenderFrame(frame_bb.Min, frame_bb.Max, col, false);
 
         if (flags & ImGuiTreeNodeFlags_Bullet)
-            RenderBullet(bb.Min + ImVec2(text_offset_x * 0.5f, g.FontSize*0.50f + text_base_offset_y));
+            RenderBullet(frame_bb.Min + ImVec2(text_offset_x * 0.5f, g.FontSize*0.50f + text_base_offset_y));
         else if (!(flags & ImGuiTreeNodeFlags_Leaf))
-            RenderTriangle(bb.Min + ImVec2(padding.x, g.FontSize*0.15f + text_base_offset_y), is_open ? ImGuiDir_Down : ImGuiDir_Right, 0.70f);
+            RenderTriangle(frame_bb.Min + ImVec2(padding.x, g.FontSize*0.15f + text_base_offset_y), is_open ? ImGuiDir_Down : ImGuiDir_Right, 0.70f);
         if (g.LogEnabled)
             LogRenderedText(&text_pos, ">");
         RenderText(text_pos, label, label_end, false);
