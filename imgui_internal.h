@@ -220,7 +220,8 @@ enum ImGuiSeparatorFlags_
 // Storage for LastItem data
 enum ImGuiItemStatusFlags_
 {
-    ImGuiItemStatusFlags_HoveredRect        = 1 << 0
+    ImGuiItemStatusFlags_HoveredRect        = 1 << 0,
+    ImGuiItemStatusFlags_HasDisplayRect     = 1 << 1
 };
 
 // FIXME: this is in development, not exposed/functional as a generic feature yet.
@@ -709,6 +710,7 @@ struct IMGUI_API ImGuiDrawContext
     ImGuiID                 LastItemId;
     ImGuiItemStatusFlags    LastItemStatusFlags;
     ImRect                  LastItemRect;           // Interaction rect
+    ImRect                  LastItemDisplayRect;    // End-user display rect (only valid if LastItemStatusFlags & ImGuiItemStatusFlags_HasDisplayRect)
     bool                    MenuBarAppending;
     float                   MenuBarOffsetX;
     ImVector<ImGuiWindow*>  ChildWindows;
@@ -739,7 +741,7 @@ struct IMGUI_API ImGuiDrawContext
         TreeDepth = 0;
         LastItemId = 0;
         LastItemStatusFlags = 0;
-        LastItemRect = ImRect();
+        LastItemRect = LastItemDisplayRect = ImRect();
         MenuBarAppending = false;
         MenuBarOffsetX = 0.0f;
         StateStorage = NULL;
@@ -847,12 +849,13 @@ public:
 struct ImGuiItemHoveredDataBackup
 {
     ImGuiID                 LastItemId;
-    ImGuiItemStatusFlags    LastItemFlags;
+    ImGuiItemStatusFlags    LastItemStatusFlags;
     ImRect                  LastItemRect;
+    ImRect                  LastItemDisplayRect;
 
     ImGuiItemHoveredDataBackup() { Backup(); }
-    void Backup()        { ImGuiWindow* window = GImGui->CurrentWindow; LastItemId = window->DC.LastItemId; LastItemFlags = window->DC.LastItemStatusFlags; LastItemRect = window->DC.LastItemRect; }
-    void Restore() const { ImGuiWindow* window = GImGui->CurrentWindow; window->DC.LastItemId = LastItemId; window->DC.LastItemStatusFlags = LastItemFlags; window->DC.LastItemRect = LastItemRect; }
+    void Backup()        { ImGuiWindow* window = GImGui->CurrentWindow; LastItemId = window->DC.LastItemId; LastItemStatusFlags = window->DC.LastItemStatusFlags; LastItemRect = window->DC.LastItemRect; LastItemDisplayRect = window->DC.LastItemDisplayRect; }
+    void Restore() const { ImGuiWindow* window = GImGui->CurrentWindow; window->DC.LastItemId = LastItemId; window->DC.LastItemStatusFlags = LastItemStatusFlags; window->DC.LastItemRect = LastItemRect; window->DC.LastItemDisplayRect = LastItemDisplayRect; }
 };
 
 //-----------------------------------------------------------------------------

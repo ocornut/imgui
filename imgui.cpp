@@ -6757,7 +6757,11 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // (Ideally we'd want to add a flag for the user to specify if we want the hit test to be done up to the right side of the content or not)
     const ImRect interact_bb = display_frame ? frame_bb : ImRect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + text_width + style.ItemSpacing.x*2, frame_bb.Max.y);
     bool is_open = TreeNodeBehaviorIsOpen(id, flags);
-    if (!ItemAdd(interact_bb, id))
+    bool item_add = ItemAdd(interact_bb, id);
+    window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_HasDisplayRect;
+    window->DC.LastItemDisplayRect = frame_bb;
+
+    if (!item_add)
     {
         if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
             TreePushRawID(id);
@@ -9537,7 +9541,7 @@ bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
     ImVec2 frame_size = ImVec2(size.x, ImMax(size.y, label_size.y));
     ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + frame_size);
     ImRect bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
-    window->DC.LastItemRect = bb;
+    window->DC.LastItemRect = bb; // Forward storage for ListBoxFooter.. dodgy.
 
     BeginGroup();
     if (label_size.x > 0)
@@ -10703,9 +10707,9 @@ bool ImGui::SplitterBehavior(ImGuiID id, const ImRect& bb, ImGuiAxis axis, float
 #ifdef IMGUI_HAS_NAV
     window->DC.ItemFlags |= ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus;
 #endif
-    bool add = ItemAdd(bb, id);
+    bool item_add = ItemAdd(bb, id);
     window->DC.ItemFlags = item_flags_backup;
-    if (!add)
+    if (!item_add)
         return false;
 
     bool hovered, held;
@@ -11491,13 +11495,14 @@ bool ImGui::BeginDragDropTarget()
     if (g.HoveredWindow == NULL || window->RootWindow != g.HoveredWindow->RootWindow)
         return false;
 
+    const ImRect& display_rect = (window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_HasDisplayRect) ? window->DC.LastItemDisplayRect : window->DC.LastItemRect;
     ImGuiID id = window->DC.LastItemId;
     if (id == 0)
-        id = window->GetIDFromRectangle(window->DC.LastItemRect);
+        id = window->GetIDFromRectangle(display_rect);
     if (g.DragDropPayload.SourceId == id)
         return false;
 
-    g.DragDropTargetRect = window->DC.LastItemRect;
+    g.DragDropTargetRect = display_rect;
     g.DragDropTargetId = id;
     return true;
 }
