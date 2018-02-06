@@ -180,6 +180,7 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_Insert] = ALLEGRO_KEY_INSERT;
     io.KeyMap[ImGuiKey_Delete] = ALLEGRO_KEY_DELETE;
     io.KeyMap[ImGuiKey_Backspace] = ALLEGRO_KEY_BACKSPACE;
+    io.KeyMap[ImGuiKey_Space] = ALLEGRO_KEY_SPACE;
     io.KeyMap[ImGuiKey_Enter] = ALLEGRO_KEY_ENTER;
     io.KeyMap[ImGuiKey_Escape] = ALLEGRO_KEY_ESCAPE;
     io.KeyMap[ImGuiKey_A] = ALLEGRO_KEY_A;

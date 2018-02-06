@@ -220,6 +220,7 @@ bool    ImGui_ImplSdlGL2_Init(SDL_Window* window)
     io.KeyMap[ImGuiKey_Insert] = SDL_SCANCODE_INSERT;
     io.KeyMap[ImGuiKey_Delete] = SDL_SCANCODE_DELETE;
     io.KeyMap[ImGuiKey_Backspace] = SDL_SCANCODE_BACKSPACE;
+    io.KeyMap[ImGuiKey_Space] = SDL_SCANCODE_SPACE;
     io.KeyMap[ImGuiKey_Enter] = SDL_SCANCODE_RETURN;
     io.KeyMap[ImGuiKey_Escape] = SDL_SCANCODE_ESCAPE;
     io.KeyMap[ImGuiKey_A] = SDL_SCANCODE_A;

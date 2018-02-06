@@ -491,6 +491,7 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
     io.KeyMap[ImGuiKey_Insert] = kVK_Help+1;
     io.KeyMap[ImGuiKey_Delete] = kVK_ForwardDelete+1;
     io.KeyMap[ImGuiKey_Backspace] = kVK_Delete+1;
+    io.KeyMap[ImGuiKey_Space] = kVK_Space+1;
     io.KeyMap[ImGuiKey_Enter] = kVK_Return+1;
     io.KeyMap[ImGuiKey_Escape] = kVK_Escape+1;
     io.KeyMap[ImGuiKey_A] = kVK_ANSI_A+1;
