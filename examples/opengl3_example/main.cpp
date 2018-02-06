@@ -34,8 +34,8 @@ int main(int, char**)
     // Setup ImGui binding
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_ImplGlfwGL3_Init(window, true);
-    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;
-    //io.NavFlags |= ImGuiNavFlags_EnableGamepad;
+    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
+    //io.NavFlags |= ImGuiNavFlags_EnableGamepad;   // Enable Gamepad Controls
 
     // Setup style
     ImGui::StyleColorsDark();

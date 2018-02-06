@@ -125,7 +125,7 @@ int main(int, char**)
     // Setup ImGui binding
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_ImplDX11_Init(hwnd, g_pd3dDevice, g_pd3dDeviceContext);
-    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;
+    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
 
     // Setup style
     ImGui::StyleColorsDark();
