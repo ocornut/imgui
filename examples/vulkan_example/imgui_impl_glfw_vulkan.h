@@ -10,6 +10,8 @@
 
 struct GLFWwindow;
 
+#include <vulkan/vulkan.h>
+
 #define IMGUI_VK_QUEUED_FRAMES 2
 
 struct ImGui_ImplGlfwVulkan_Init_Data
