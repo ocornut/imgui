@@ -444,22 +444,22 @@ void ImGui_ImplGlfwGL3_NewFrame()
         int axes_count = 0, buttons_count = 0;
         const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axes_count);
         const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttons_count);
-        MAP_BUTTON(ImGuiNavInput_PadActivate,   0);     // Cross / A
-        MAP_BUTTON(ImGuiNavInput_PadCancel,     1);     // Circle / B
-        MAP_BUTTON(ImGuiNavInput_PadMenu,       2);     // Square / X
-        MAP_BUTTON(ImGuiNavInput_PadInput,      3);     // Triangle / Y
-        MAP_BUTTON(ImGuiNavInput_PadDpadLeft,   13);    // D-Pad Left
-        MAP_BUTTON(ImGuiNavInput_PadDpadRight,  11);    // D-Pad Right
-        MAP_BUTTON(ImGuiNavInput_PadDpadUp,     10);    // D-Pad Up
-        MAP_BUTTON(ImGuiNavInput_PadDpadDown,   12);    // D-Pad Down
-        MAP_BUTTON(ImGuiNavInput_PadFocusPrev,  4);     // L Trigger
-        MAP_BUTTON(ImGuiNavInput_PadFocusNext,  5);     // R Trigger
-        MAP_BUTTON(ImGuiNavInput_PadTweakSlow,  4);     // L Trigger
-        MAP_BUTTON(ImGuiNavInput_PadTweakFast,  5);     // R Trigger
-        MAP_ANALOG(ImGuiNavInput_PadLStickLeft, 0,  -0.3f,  -0.9f);
-        MAP_ANALOG(ImGuiNavInput_PadLStickRight,0,  +0.3f,  +0.9f);
-        MAP_ANALOG(ImGuiNavInput_PadLStickUp,   1,  +0.3f,  +0.9f);
-        MAP_ANALOG(ImGuiNavInput_PadLStickDown, 1,  -0.3f,  -0.9f);
+        MAP_BUTTON(ImGuiNavInput_Activate,   0);     // Cross / A
+        MAP_BUTTON(ImGuiNavInput_Cancel,     1);     // Circle / B
+        MAP_BUTTON(ImGuiNavInput_Menu,       2);     // Square / X
+        MAP_BUTTON(ImGuiNavInput_Input,      3);     // Triangle / Y
+        MAP_BUTTON(ImGuiNavInput_DpadLeft,   13);    // D-Pad Left
+        MAP_BUTTON(ImGuiNavInput_DpadRight,  11);    // D-Pad Right
+        MAP_BUTTON(ImGuiNavInput_DpadUp,     10);    // D-Pad Up
+        MAP_BUTTON(ImGuiNavInput_DpadDown,   12);    // D-Pad Down
+        MAP_BUTTON(ImGuiNavInput_FocusPrev,  4);     // L Trigger
+        MAP_BUTTON(ImGuiNavInput_FocusNext,  5);     // R Trigger
+        MAP_BUTTON(ImGuiNavInput_TweakSlow,  4);     // L Trigger
+        MAP_BUTTON(ImGuiNavInput_TweakFast,  5);     // R Trigger
+        MAP_ANALOG(ImGuiNavInput_LStickLeft, 0,  -0.3f,  -0.9f);
+        MAP_ANALOG(ImGuiNavInput_LStickRight,0,  +0.3f,  +0.9f);
+        MAP_ANALOG(ImGuiNavInput_LStickUp,   1,  +0.3f,  +0.9f);
+        MAP_ANALOG(ImGuiNavInput_LStickDown, 1,  -0.3f,  -0.9f);
         #undef MAP_BUTTON
         #undef MAP_ANALOG
     }
