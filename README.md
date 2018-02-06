@@ -41,11 +41,12 @@ _A common misunderstanding is to think that immediate mode gui == immediate mode
 
 Dear ImGui allows you create elaborate tools as well as very short-lived ones. On the extreme side of short-liveness: using the Edit&Continue feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! Dear ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, an entire game making editor/framework, etc.  
 
-Binaries/Demo
+Demo Binaries
 -------------
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
 - [imgui-demo-binaries-20180207.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20180207.zip) (Windows binaries, Dear ImGui 1.60 WIP built 2018/01/07, 5 executables)
+
 The demo applications are unfortunately not yet DPI aware so expect some blurryness on a 4K screen. 
 
 Bindings
