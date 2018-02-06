@@ -2035,13 +2035,14 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id)
     const bool is_clipped = IsClippedEx(bb, id, false);
     window->DC.LastItemId = id;
     window->DC.LastItemRect = bb;
-    window->DC.LastItemRectHoveredRect = false;
+    window->DC.LastItemStatusFlags = 0;
     if (is_clipped)
         return false;
     //if (g.IO.KeyAlt) window->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255,255,0,120)); // [DEBUG]
 
     // We need to calculate this now to take account of the current clipping rectangle (as items like Selectable may change them)
-    window->DC.LastItemRectHoveredRect = IsMouseHoveringRect(bb.Min, bb.Max);
+    if (IsMouseHoveringRect(bb.Min, bb.Max))
+        window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_HoveredRect;
     return true;
 }
 
@@ -2054,7 +2055,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
     ImGuiWindow* window = g.CurrentWindow;
 
     // Test for bounding box overlap, as updated as ItemAdd()
-    if (!window->DC.LastItemRectHoveredRect)
+    if (!(window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_HoveredRect))
         return false;
     IM_ASSERT((flags & (ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows)) == 0);   // Flags not supported by this function
 
@@ -4970,8 +4971,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // After Begin() we fill the last item / hovered data using the title bar data. Make that a standard behavior (to allow usage of context menus on title bar only, etc.).
         window->DC.LastItemId = window->MoveId;
+        window->DC.LastItemStatusFlags = IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0;
         window->DC.LastItemRect = title_bar_rect;
-        window->DC.LastItemRectHoveredRect = IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false);
     }
 
     // Inner clipping rectangle
@@ -10283,7 +10284,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     EndGroup();
 
     // Drag and Drop Target
-    if (window->DC.LastItemRectHoveredRect && BeginDragDropTarget()) // NB: The LastItemRectHoveredRect test is merely an optional micro-optimization
+    if ((window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_HoveredRect) && BeginDragDropTarget()) // NB: The flag test is merely an optional micro-optimization, BeginDragDropTarget() does the same test.
     {
         if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
         {
@@ -11337,7 +11338,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
             // We build a throwaway ID based on current ID stack + relative AABB of items in window. 
             // THE IDENTIFIER WON'T SURVIVE ANY REPOSITIONING OF THE WIDGET, so if your widget moves your dragging operation will be canceled. 
             // We don't need to maintain/call ClearActiveID() as releasing the button will early out this function and trigger !ActiveIdIsAlive.
-            bool is_hovered = window->DC.LastItemRectHoveredRect;
+            bool is_hovered = (window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_HoveredRect) != 0;
             if (!is_hovered && (g.ActiveId == 0 || g.ActiveIdWindow != window))
                 return false;
             source_id = window->DC.LastItemId = window->GetIDFromRectangle(window->DC.LastItemRect);
@@ -11388,7 +11389,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags, int mouse_button)
         }
 
         if (!(flags & ImGuiDragDropFlags_SourceNoDisableHover) && !(flags & ImGuiDragDropFlags_SourceExtern))
-            window->DC.LastItemRectHoveredRect = false;
+            window->DC.LastItemStatusFlags &= ~ImGuiItemStatusFlags_HoveredRect;
 
         return true;
     }
@@ -11485,7 +11486,7 @@ bool ImGui::BeginDragDropTarget()
         return false;
 
     ImGuiWindow* window = g.CurrentWindow;
-    if (!window->DC.LastItemRectHoveredRect)
+    if (!(window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_HoveredRect))
         return false;
     if (g.HoveredWindow == NULL || window->RootWindow != g.HoveredWindow->RootWindow)
         return false;
