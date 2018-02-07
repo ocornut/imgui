@@ -1,7 +1,9 @@
 // ImGui SDL2 binding with OpenGL3
-// In this binding, ImTextureID is used to store an OpenGL 'GLuint' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
 // (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 // (GL3W is a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc.)
+
+// Implemented features:
+//  [X] User texture binding. Cast 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -17,7 +19,7 @@
 #include <GL/gl3w.h>    // This example is using gl3w to access OpenGL functions (because it is small). You may use glew/glad/glLoadGen/etc. whatever already works for you.
 
 // Data
-static double       g_Time = 0.0f;
+static Uint64       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
 static GLuint       g_FontTexture = 0;
 static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
@@ -174,7 +176,8 @@ bool ImGui_ImplSdlGL3_ProcessEvent(SDL_Event* event)
     case SDL_KEYDOWN:
     case SDL_KEYUP:
         {
-            int key = event->key.keysym.sym & ~SDLK_SCANCODE_MASK;
+            int key = event->key.keysym.scancode;
+            IM_ASSERT(key >= 0 && key < IM_ARRAYSIZE(io.KeysDown));
             io.KeysDown[key] = (event->type == SDL_KEYDOWN);
             io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
             io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
@@ -314,8 +317,9 @@ void    ImGui_ImplSdlGL3_InvalidateDeviceObjects()
 
 bool    ImGui_ImplSdlGL3_Init(SDL_Window* window)
 {
+    // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     ImGuiIO& io = ImGui::GetIO();
-    io.KeyMap[ImGuiKey_Tab] = SDLK_TAB;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
+    io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
     io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = SDL_SCANCODE_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = SDL_SCANCODE_UP;
@@ -325,16 +329,17 @@ bool    ImGui_ImplSdlGL3_Init(SDL_Window* window)
     io.KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
     io.KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
     io.KeyMap[ImGuiKey_Insert] = SDL_SCANCODE_INSERT;
-    io.KeyMap[ImGuiKey_Delete] = SDLK_DELETE;
-    io.KeyMap[ImGuiKey_Backspace] = SDLK_BACKSPACE;
-    io.KeyMap[ImGuiKey_Enter] = SDLK_RETURN;
-    io.KeyMap[ImGuiKey_Escape] = SDLK_ESCAPE;
-    io.KeyMap[ImGuiKey_A] = SDLK_a;
-    io.KeyMap[ImGuiKey_C] = SDLK_c;
-    io.KeyMap[ImGuiKey_V] = SDLK_v;
-    io.KeyMap[ImGuiKey_X] = SDLK_x;
-    io.KeyMap[ImGuiKey_Y] = SDLK_y;
-    io.KeyMap[ImGuiKey_Z] = SDLK_z;
+    io.KeyMap[ImGuiKey_Delete] = SDL_SCANCODE_DELETE;
+    io.KeyMap[ImGuiKey_Backspace] = SDL_SCANCODE_BACKSPACE;
+    io.KeyMap[ImGuiKey_Space] = SDL_SCANCODE_SPACE;
+    io.KeyMap[ImGuiKey_Enter] = SDL_SCANCODE_RETURN;
+    io.KeyMap[ImGuiKey_Escape] = SDL_SCANCODE_ESCAPE;
+    io.KeyMap[ImGuiKey_A] = SDL_SCANCODE_A;
+    io.KeyMap[ImGuiKey_C] = SDL_SCANCODE_C;
+    io.KeyMap[ImGuiKey_V] = SDL_SCANCODE_V;
+    io.KeyMap[ImGuiKey_X] = SDL_SCANCODE_X;
+    io.KeyMap[ImGuiKey_Y] = SDL_SCANCODE_Y;
+    io.KeyMap[ImGuiKey_Z] = SDL_SCANCODE_Z;
 
     io.RenderDrawListsFn = ImGui_ImplSdlGL3_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
     io.SetClipboardTextFn = ImGui_ImplSdlGL3_SetClipboardText;
@@ -356,7 +361,6 @@ bool    ImGui_ImplSdlGL3_Init(SDL_Window* window)
 void ImGui_ImplSdlGL3_Shutdown()
 {
     ImGui_ImplSdlGL3_InvalidateDeviceObjects();
-    ImGui::Shutdown();
 }
 
 void ImGui_ImplSdlGL3_NewFrame(SDL_Window* window)
@@ -374,10 +378,10 @@ void ImGui_ImplSdlGL3_NewFrame(SDL_Window* window)
     io.DisplaySize = ImVec2((float)w, (float)h);
     io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, h > 0 ? ((float)display_h / h) : 0);
 
-    // Setup time step
-    Uint32	time = SDL_GetTicks();
-    double current_time = time / 1000.0;
-    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f / 60.0f);
+    // Setup time step (we don't use SDL_GetTicks() because it is using millisecond resolution)
+    static Uint64 frequency = SDL_GetPerformanceFrequency();
+    Uint64 current_time = SDL_GetPerformanceCounter();
+    io.DeltaTime = g_Time > 0 ? (float)((double)(current_time - g_Time) / frequency) : (float)(1.0f / 60.0f);
     g_Time = current_time;
 
     // Setup mouse inputs (we already got mouse wheel, keyboard keys & characters from our event handler)

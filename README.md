@@ -41,11 +41,13 @@ _A common misunderstanding is to think that immediate mode gui == immediate mode
 
 Dear ImGui allows you create elaborate tools as well as very short-lived ones. On the extreme side of short-liveness: using the Edit&Continue feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! Dear ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, an entire game making editor/framework, etc.  
 
-Binaries/Demo
+Demo Binaries
 -------------
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20171226.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20171226.zip) (Windows binaries, Dear ImGui 1.53 built 2017/12/26, 5 executables)
+- [imgui-demo-binaries-20180207.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20180207.zip) (Windows binaries, Dear ImGui 1.60 WIP built 2018/01/07, 5 executables)
+
+The demo applications are unfortunately not yet DPI aware so expect some blurryness on a 4K screen. 
 
 Bindings
 --------
@@ -233,18 +235,20 @@ Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Bin
 Ongoing dear imgui development is financially supported on [**Patreon**](http://www.patreon.com/imgui).
 
 Double-chocolate sponsors:
+- Blizzard
 - Media Molecule
 - Mobigame
-- Insomniac Games (sponsored the gamepad/keyboard navigation branch)
+- Insomniac Games
 - Aras Pranckevičius
 - Lizardcube
 - Greggman
+- DotEmu
 
 Salty caramel supporters:
-- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Recognition Robotics, Chris Genova, ikrima, Glenn Fiedler, Geoffrey Evans, Dakko Dakko, Mercury Labs, Singularity Demo Group, Mischa Alff, Sebastien Ronsse.
+- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Recognition Robotics, Chris Genova, ikrima, Glenn Fiedler, Geoffrey Evans, Dakko Dakko, Mercury Labs, Singularity Demo Group, Mischa Alff, Sebastien Ronsse, Lionel Landwerlin.
 
 Caramel supporters:
-- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm, Farhan Wali, Jeff Roberts, Matt Reyer, Colin Riley, Victor Martins, Josh Simmons, Garrett Hoofman, Sergio Gonzales, Andrew Berridge, Roy Eltham, Game Preservation Society, Kit framework, Josh Faust, Martin Donlon, Quinton, Felix, Andrew Belt, Codecat, Cort Stratton, Claudio Canepa, Doug McNabb, Emmanuel Julien, Guillaume Chereau, Jeffrey Slutter, Jeremiah Deckard, r-lyeh, Roger Clark, Nekith, Joshua Fisher, Malte Hoffmann, Mustafa Karaalioglu, Merlyn Morgan-Graham, Per Vognsen, Fabian Giesen, Jan Staubach, Matt Hargett, John Shearer, Jesse Chounard, kingcoopa, Miloš Tošić.
+- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm, Farhan Wali, Jeff Roberts, Matt Reyer, Colin Riley, Victor Martins, Josh Simmons, Garrett Hoofman, Sergio Gonzales, Andrew Berridge, Roy Eltham, Game Preservation Society, Kit framework, Josh Faust, Martin Donlon, Quinton, Felix, Andrew Belt, Codecat, Cort Stratton, Claudio Canepa, Doug McNabb, Emmanuel Julien, Guillaume Chereau, Jeffrey Slutter, Jeremiah Deckard, r-lyeh, Roger Clark, Nekith, Joshua Fisher, Malte Hoffmann, Mustafa Karaalioglu, Merlyn Morgan-Graham, Per Vognsen, Fabian Giesen, Jan Staubach, Matt Hargett, John Shearer, Jesse Chounard, kingcoopa, Miloš Tošić, Jonas Bernemann, Johan Andersson, Nathan Hartman, Michael Labbe, Tomasz Golebiowski, Louis Schnellbach, Felipe Alfonso, Jimmy Andrews, Bojan Endrovski, Robin Berg Pettersen, Rachel Crawford, Edsel Malasig, Andrew Johnson.
 
 And other supporters; thanks!
 (Please contact me or PR if you would like to be added or removed from this list)

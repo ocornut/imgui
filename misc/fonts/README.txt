@@ -120,9 +120,7 @@ In this document:
 
  Dear Imgui uses stb_truetype.h to rasterize fonts (with optional oversampling).
  This technique and implementation are not ideal for fonts rendered at _small sizes_, which may appear a little blurry.
- There is an implementation of the ImFontAtlas builder using FreeType that you can use:
-
-   https://github.com/ocornut/imgui_club
+ There is an implementation of the ImFontAtlas builder using FreeType that you can use in the misc/freetype/ folder.
 
  FreeType supports auto-hinting which tends to improve the readability of small fonts.
  Note that this code currently creates textures that are unoptimally too large (could be fixed with some work)

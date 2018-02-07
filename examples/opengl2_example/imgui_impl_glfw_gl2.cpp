@@ -1,6 +1,8 @@
 // ImGui GLFW binding with OpenGL (legacy, fixed pipeline)
-// In this binding, ImTextureID is used to store an OpenGL 'GLuint' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
 // (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
+
+// Implemented features:
+//  [X] User texture binding. Cast 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
 
 // **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
 // **Prefer using the code in the opengl3_example/ folder**
@@ -215,6 +217,7 @@ bool    ImGui_ImplGlfwGL2_Init(GLFWwindow* window, bool install_callbacks)
     io.KeyMap[ImGuiKey_Insert] = GLFW_KEY_INSERT;
     io.KeyMap[ImGuiKey_Delete] = GLFW_KEY_DELETE;
     io.KeyMap[ImGuiKey_Backspace] = GLFW_KEY_BACKSPACE;
+    io.KeyMap[ImGuiKey_Space] = GLFW_KEY_SPACE;
     io.KeyMap[ImGuiKey_Enter] = GLFW_KEY_ENTER;
     io.KeyMap[ImGuiKey_Escape] = GLFW_KEY_ESCAPE;
     io.KeyMap[ImGuiKey_A] = GLFW_KEY_A;
@@ -246,7 +249,6 @@ bool    ImGui_ImplGlfwGL2_Init(GLFWwindow* window, bool install_callbacks)
 void ImGui_ImplGlfwGL2_Shutdown()
 {
     ImGui_ImplGlfwGL2_InvalidateDeviceObjects();
-    ImGui::Shutdown();
 }
 
 void ImGui_ImplGlfwGL2_NewFrame()

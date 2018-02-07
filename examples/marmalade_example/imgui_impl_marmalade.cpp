@@ -1,5 +1,7 @@
 // ImGui Marmalade binding with IwGx
-// In this binding, ImTextureID is used to store a 'CIwTexture*' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
+
+// Implemented features:
+//  [X] User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -207,8 +209,6 @@ void    ImGui_Marmalade_InvalidateDeviceObjects()
 
 bool    ImGui_Marmalade_Init(bool install_callbacks)
 {
-    IwGxInit();
-
     ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = s3eKeyTab;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     io.KeyMap[ImGuiKey_LeftArrow] = s3eKeyLeft;
@@ -222,6 +222,7 @@ bool    ImGui_Marmalade_Init(bool install_callbacks)
     io.KeyMap[ImGuiKey_Insert] = s3eKeyInsert;
     io.KeyMap[ImGuiKey_Delete] = s3eKeyDelete;
     io.KeyMap[ImGuiKey_Backspace] = s3eKeyBackspace;
+    io.KeyMap[ImGuiKey_Space] = s3eKeySpace;
     io.KeyMap[ImGuiKey_Enter] = s3eKeyEnter;
     io.KeyMap[ImGuiKey_Escape] = s3eKeyEsc;
     io.KeyMap[ImGuiKey_A] = s3eKeyA;
@@ -248,8 +249,6 @@ bool    ImGui_Marmalade_Init(bool install_callbacks)
 void ImGui_Marmalade_Shutdown()
 {
     ImGui_Marmalade_InvalidateDeviceObjects();
-    ImGui::Shutdown();
-    IwGxTerminate();
 }
 
 void ImGui_Marmalade_NewFrame()

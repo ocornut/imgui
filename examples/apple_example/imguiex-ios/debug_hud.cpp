@@ -22,6 +22,11 @@ void DebugHUD_InitDefaults( DebugHUD *hud )
     hud->cubeColor2[1] = 0.4f;
     hud->cubeColor2[2] = 0.4f;
     hud->cubeColor2[3] = 1.0f;
+    
+    hud->clearColor[0] = 0.45f;
+    hud->clearColor[1] = 0.55f;
+    hud->clearColor[2] = 0.60f;
+    hud->clearColor[3] = 1.00f;
 }
 
 void DebugHUD_DoInterface(DebugHUD *hud)
@@ -33,7 +38,7 @@ void DebugHUD_DoInterface(DebugHUD *hud)
         static int counter = 0;
         ImGui::Text("Hello, world!");                           // Display some text (you can use a format string too)
         ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f    
-        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+        ImGui::ColorEdit3("clear color", hud->clearColor);      // Edit 3 floats representing a color
 
         ImGui::Checkbox("Demo Window", &hud->show_demo_window);      // Edit bools storing our windows open/close state
         ImGui::Checkbox("Another Window", &hud->show_another_window);
@@ -49,7 +54,7 @@ void DebugHUD_DoInterface(DebugHUD *hud)
     // 2. Show another simple window. In most cases you will use an explicit Begin/End pair to name your windows.
     if (hud->show_another_window)
     {
-        ImGui::Begin("Another Window", &hud-?show_another_window);
+        ImGui::Begin("Another Window", &hud->show_another_window);
         ImGui::Text("Hello from another window!");
         ImGui::ColorEdit3("Cube 1 Color", hud->cubeColor1);
         ImGui::ColorEdit3("Cube 2 Color", hud->cubeColor2);

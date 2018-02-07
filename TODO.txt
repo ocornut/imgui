@@ -157,6 +157,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tooltip: allow tooltips with timers? or general timer policy? (instaneous vs timed)
  
  - menus: calling BeginMenu() twice with a same name doesn't append as Begin() does for regular windows (#1207)
+ - menus: menu bars inside modals windows are acting weird.
  - statusbar: add a per-window status bar helper similar to what menubar does.
  - shortcuts: local-style shortcut api, e.g. parse "&Save"
  - shortcuts,menus: global-style shortcut api e.g. "Save (CTRL+S)" -> explicit flag for recursing into closed menu
@@ -229,17 +230,24 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: fix AddRemapChar() to work before font has been built.
  - font: (api breaking) removed "TTF" from symbol names. also because it now supports OTF.
 
-!- nav/keyboard: tooltip & combo boxes are messing up / not honoring keyboard tabbing.
  - nav: integrate navigation branch into master. (#787)
+ - nav: allow input system to be be more tolerant of io.DeltaTime=0.0f
+ - nav: Left within a tree node block as a fallback.
+ - nav: Esc on a flattened child
+ - nav: menus: allow pressing Menu to leave a sub-menu.
  - nav: integrate/design keyboard controls. 
- - nav: once tab should go through most/all widgets (in submission order?)
- - nav: currently cannot access menubar of a child window with Alt/menu key. 
+ - nav: simulate right-click or context activation? (SHIFT+F10)
+ - nav: tabs should go through most/all widgets (in submission order?).
+ - nav: when CTRL-Tab/windowing is active, the HoveredWindow detection doesn't take account of the window display re-ordering.
+ - nav: cannot access menubar of a flattened child window with Alt/menu key (not a very common use case..).
  - nav: esc/enter default behavior for popups, e.g. be able to mark an "ok" or "cancel" button that would get triggered by those keys.
+ - nav: when activating a button that changes label (without a static ID) or disappear, can we somehow automatically recover into a nearest highlight item?
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
  - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#787)
+
+ - inputs: we need an explicit flag about whether the imgui window is focused, to be able to distinguish focused key releases vs alt-tabbing all release behaviors.
  - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)
- - inputs: allow to pass explicit double-clicks if that's the only thing the user's backend can get them. (e.g. for windows by the CS_DBLCLKS style).
  - inputs: support track pad style scrolling & slider edit.
 
  - misc: idle refresh: expose cursor blink animation timer for backend to be able to lower framerate.

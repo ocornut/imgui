@@ -1,5 +1,7 @@
 // ImGui Win32 + DirectX10 binding
-// In this binding, ImTextureID is used to store a 'ID3D10ShaderResourceView*' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
+
+// Implemented features:
+//  [X] User texture binding. Use 'ID3D10ShaderResourceView*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -243,6 +245,9 @@ static bool IsAnyMouseButtonDown()
 // PS: We treat DBLCLK messages as regular mouse down messages, so this code will work on windows classes that have the CS_DBLCLKS flag set. Our own example app code doesn't set this flag.
 IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    if (ImGui::GetCurrentContext() == NULL)
+        return 0;
+
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
     {
@@ -551,6 +556,7 @@ bool    ImGui_ImplDX10_Init(void* hwnd, ID3D10Device* device)
     io.KeyMap[ImGuiKey_Insert] = VK_INSERT;
     io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
     io.KeyMap[ImGuiKey_Backspace] = VK_BACK;
+    io.KeyMap[ImGuiKey_Space] = VK_SPACE;
     io.KeyMap[ImGuiKey_Enter] = VK_RETURN;
     io.KeyMap[ImGuiKey_Escape] = VK_ESCAPE;
     io.KeyMap[ImGuiKey_A] = 'A';
@@ -569,7 +575,6 @@ bool    ImGui_ImplDX10_Init(void* hwnd, ID3D10Device* device)
 void ImGui_ImplDX10_Shutdown()
 {
     ImGui_ImplDX10_InvalidateDeviceObjects();
-    ImGui::Shutdown();
     g_pd3dDevice = NULL;
     g_hWnd = (HWND)0;
 }
