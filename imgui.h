@@ -160,6 +160,11 @@ namespace ImGui
     IMGUI_API void          ShowUserGuide();                            // add basic help/info block (not a window): how to manipulate ImGui as a end-user (mouse/keyboard controls).
     IMGUI_API const char*   GetVersion();
 
+    // Styles
+    IMGUI_API void          StyleColorsDark(ImGuiStyle* dst = NULL);    // New, recommended style
+    IMGUI_API void          StyleColorsClassic(ImGuiStyle* dst = NULL); // Classic imgui style (default)
+    IMGUI_API void          StyleColorsLight(ImGuiStyle* dst = NULL);   // Best used with borders and a custom, thicker font
+
     // Window
     IMGUI_API bool          Begin(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0);   // push window to the stack and start appending to it. see .cpp for details. return false when window is collapsed (so you can early out in your code) but you always need to call End() regardless. 'bool* p_open' creates a widget on the upper-right to close the window (which sets your bool to false).
     IMGUI_API void          End();                                                              // always call even if Begin() return false (which indicates a collapsed window)! finish appending to current window, pop it off the window stack.
@@ -456,11 +461,6 @@ namespace ImGui
     // Clipping
     IMGUI_API void          PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect);
     IMGUI_API void          PopClipRect();
-
-    // Styles
-    IMGUI_API void          StyleColorsClassic(ImGuiStyle* dst = NULL);
-    IMGUI_API void          StyleColorsDark(ImGuiStyle* dst = NULL);
-    IMGUI_API void          StyleColorsLight(ImGuiStyle* dst = NULL);
 
     // Focus, Activation
     // (Prefer using "SetItemDefaultFocus()" over "if (IsWindowAppearing()) SetScrollHere()" when applicable, to make your code more forward compatible when navigation branch is merged)
