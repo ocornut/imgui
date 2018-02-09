@@ -110,7 +110,7 @@ User screenshots:
 Various tools
 <br>[![screenshot game](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v149/gallery_TheDragonsTrap-01-thumb.jpg)](https://cloud.githubusercontent.com/assets/8225057/20628927/33e14cac-b329-11e6-80f6-9524e93b048a.png)
 
-A custom profiler
+Custom profiler
 <br>[![screenshot profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler-880.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler.png)
 
 Color Pickers
@@ -119,8 +119,11 @@ Color Pickers
 Menus
 <br>![screenshot 5](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v151/menus.png)
 
-![screenshot 6](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/skinning_sample_02.png)
-![screenshot 7](https://cloud.githubusercontent.com/assets/8225057/7903336/96f0fb7c-07d0-11e5-95d6-41c6a1595e5a.png)
+Colors
+<br>![screenshot 6](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/skinning_sample_02.png)
+
+Custom rendering
+<br>![screenshot 7](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/v160-drawdatabase.jpg)
 
 Dear ImGui can load TTF/OTF fonts. UTF-8 is supported for text display and input. Here using Arial Unicode font to display Japanese. Initialize custom font with:
 ```cpp
@@ -167,7 +170,7 @@ The library started its life and is best known as "ImGui" only due to the fact t
 
 <b>How can I help?</b>
 <br><b>How can I display an image? What is ImTextureID, how does it works?</b>
-<br><b>How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on labels and ID stack.</b>
+<br><b>How can I have multiple widgets with the same label, or without any label? (Yes). A primer on labels and ID stack.</b>
 <br><b>How can I tell when Dear ImGui wants my mouse/keyboard inputs VS when I can pass them to my application?</b>
 <br><b>How can I load a different font than the default?</b>
 <br><b>How can I easily use icons in my application?</b>
@@ -246,7 +249,7 @@ Embeds [stb_textedit.h, stb_truetype.h, stb_rectpack.h](https://github.com/nothi
 
 Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. And everybody posting feedback, questions and patches on the GitHub.
 
-Ongoing dear imgui development is financially supported on [**Patreon**](http://www.patreon.com/imgui).
+Ongoing dear imgui development is financially supported on [**Patreon**](http://www.patreon.com/imgui) and by private sponsors.
 
 Double-chocolate sponsors:
 - Blizzard
