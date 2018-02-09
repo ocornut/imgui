@@ -72,11 +72,11 @@ Languages:
 
 Frameworks:
 - Main ImGui repository include examples for DirectX9, DirectX10, DirectX11, OpenGL2/3, Vulkan, Allegro 5, SDL+GL2/3, iOS and Marmalade: https://github.com/ocornut/imgui/tree/master/examples
-- Unmerged PR: DirectX12: https://github.com/ocornut/imgui/pull/301
-- Unmerged PR: SDL2 + OpenGLES + Emscripten: https://github.com/ocornut/imgui/pull/336
-- Unmerged PR: FreeGlut + OpenGL2: https://github.com/ocornut/imgui/pull/801
-- Unmerged PR: Native Win32 and OSX: https://github.com/ocornut/imgui/pull/281
-- Unmerged PR: Android: https://github.com/ocornut/imgui/pull/421
+- PR: DirectX12: https://github.com/ocornut/imgui/pull/301
+- PR: SDL2 + OpenGLES + Emscripten: https://github.com/ocornut/imgui/pull/336
+- PR: FreeGlut + OpenGL2: https://github.com/ocornut/imgui/pull/801
+- PR: Native Win32 and OSX: https://github.com/ocornut/imgui/pull/281
+- PR: Android: https://github.com/ocornut/imgui/pull/421
 - Cinder: https://github.com/simongeilfus/Cinder-ImGui
 - cocos2d-x: https://github.com/c0i/imguix https://github.com/ocornut/imgui/issues/551
 - Flexium/SFML (FlexGUI): https://github.com/DXsmiley/FlexGUI
@@ -86,7 +86,7 @@ Frameworks:
 - openFrameworks (ofxImGui): https://github.com/jvcleave/ofxImGui
 - OpenSceneGraph/OSG: https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c
 - LÖVE: https://github.com/slages/love-imgui
-- NanoRT (software raytraced) https://github.com/syoyo/imgui/tree/nanort/examples/raytrace_example
+- NanoRT (software raytraced) https://github.com/syoyo/imgui/tree/nanort
 - Qt3d https://github.com/alpqr/imgui-qt3d
 - Unreal Engine 4: https://github.com/segross/UnrealImGui or https://github.com/sronsse/UnrealEngine_ImGui
 - SFML: https://github.com/EliasD/imgui-sfml or https://github.com/Mischa-Alff/imgui-backends
@@ -97,23 +97,33 @@ Please contact me with the Issues tracker or Twitter to fix/update this list.
 Gallery
 -------
 
-See the [Screenshots Thread](https://github.com/ocornut/imgui/issues/123) for some user creations.
-Also see the [Mega screenshots](https://github.com/ocornut/imgui/issues/1273) for an idea of the available features.
+User screenshots:
+<br>[Gallery Part 1](https://github.com/ocornut/imgui/issues/123) (Feb 2015 to Feb 2016)
+<br>[Gallery Part 2](https://github.com/ocornut/imgui/issues/539) (Feb 2016 to Aug 2016)
+<br>[Gallery Part 3](https://github.com/ocornut/imgui/issues/772) (Aug 2016 to Jan 2017)
+<br>[Gallery Part 4](https://github.com/ocornut/imgui/issues/973) (Jan 2017 to Aug 2017)
+<br>[Gallery Part 5](https://github.com/ocornut/imgui/issues/1269) (Aug 2017 onward)
+<br>Also see the [Mega screenshots](https://github.com/ocornut/imgui/issues/1273) for an idea of the available features.
 
 ![screenshot 1](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_01.png)
-[![screenshot game](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v149/gallery_TheDragonsTrap-01-thumb.jpg)](https://cloud.githubusercontent.com/assets/8225057/20628927/33e14cac-b329-11e6-80f6-9524e93b048a.png)
-![screenshot 2](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_02.png)
 
-[![screenshot profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler-880.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler.png)
+Various tools
+<br>[![screenshot game](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v149/gallery_TheDragonsTrap-01-thumb.jpg)](https://cloud.githubusercontent.com/assets/8225057/20628927/33e14cac-b329-11e6-80f6-9524e93b048a.png)
 
-![screenshot picker](https://user-images.githubusercontent.com/8225057/29062188-471e95ba-7c53-11e7-9618-c4484c0b75fe.PNG)
+A custom profiler
+<br>[![screenshot profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler-880.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler.png)
 
-![screenshot 5](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v151/menus.png)
+Color Pickers
+<br>![screenshot picker](https://user-images.githubusercontent.com/8225057/29062188-471e95ba-7c53-11e7-9618-c4484c0b75fe.PNG)
+
+Menus
+<br>![screenshot 5](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v151/menus.png)
+
 ![screenshot 6](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/skinning_sample_02.png)
 ![screenshot 7](https://cloud.githubusercontent.com/assets/8225057/7903336/96f0fb7c-07d0-11e5-95d6-41c6a1595e5a.png)
 
 Dear ImGui can load TTF/OTF fonts. UTF-8 is supported for text display and input. Here using Arial Unicode font to display Japanese. Initialize custom font with:
-```
+```cpp
 ImGuiIO& io = ImGui::GetIO();
 io.Fonts->AddFontFromFileTTF("ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
 
@@ -149,15 +159,15 @@ Frequently Asked Question (FAQ)
 
 <b>Which version should I get?</b>
 
-I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master. The library is fairly stable and regressions tend to be fixed fast when reported. You may also want to checkout the [navigation branch](https://github.com/ocornut/imgui/tree/navigation) if you want to use Dear ImGui with a gamepad (it is also possible to map keyboard inputs to some degree). The Navigation branch is being kept up to date with Master.
+I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master. The library is fairly stable and regressions tend to be fixed fast when reported. 
 
 <b>Why the odd dual naming, "dear imgui" vs "ImGui"?</b>
 
 The library started its life and is best known as "ImGui" only due to the fact that I didn't give it a proper name when I released it. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations. It seemed confusing and unfair to hog the name. To reduce the ambiguity without affecting existing codebases, I have decided on an alternate, longer name "dear imgui" that people can use to refer to this specific library in ambiguous situations.
 
-<b>How can I help</b>
+<b>How can I help?</b>
 <br><b>How can I display an image? What is ImTextureID, how does it works?</b>
-<br><b>How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on labels and the ID stack.</b>
+<br><b>How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on labels and ID stack.</b>
 <br><b>How can I tell when Dear ImGui wants my mouse/keyboard inputs VS when I can pass them to my application?</b>
 <br><b>How can I load a different font than the default?</b>
 <br><b>How can I easily use icons in my application?</b>
@@ -172,11 +182,15 @@ See the FAQ in imgui.cpp for answers.
 
 <b>How do you use Dear ImGui on a platform that may not have a mouse or keyboard?</b>
 
-I recommend using [Synergy](http://synergy-project.org) ([sources](https://github.com/symless/synergy)). In particular, the _src/micro/uSynergy.c_ file contains a small client that you can use on any platform to connect to your host PC. You can seamlessly use your PC input devices from a video game console or a tablet. Dear ImGui allows to increase the hit box of widgets (via the _style.TouchPadding_ setting) to accommodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate. You can also checkout the beta [navigation branch](https://github.com/ocornut/imgui/tree/navigation) which provides support for using Dear ImGui with a game controller.
+You can control Dear ImGui with a gamepad, see the explanation in imgui.cpp about how to use the navigation feature (short version: map your gamepad inputs into the `io.NavInputs[]` array and set `io.NavFlags |= ImGuiNavFlags_EnableGamepad`).
+
+You can share your computer mouse seamlessy with your console/tablet/phone using [Synergy](http://synergy-project.org) ([sources](https://github.com/symless/synergy)). This is the prefered solution for developer productivity. In particular, their [micro-synergy-client](https://github.com/symless/micro-synergy-client) repo there is _uSynergy.c_ sources for a small embeddable that you can use on any platform to connect to your host PC. You may also use a third party solution such as [Remote  ImGui](https://github.com/JordiRos/remoteimgui).
+
+For touch inputs, you can increase the hit box of widgets (via the _style.TouchPadding_ setting) to accommodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse or gamepad to allow optimising for screen real-estate and precision.
 
 <b>Can you create elaborate/serious tools with Dear ImGui?</b>
 
-Yes. People have written game editors, data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools).
+Yes. People have written game editors, data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools). The list of sponsors below is also an indicator that serious game teams have been using the library.
 
 Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might requires you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient and powerful.
 
