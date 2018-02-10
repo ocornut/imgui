@@ -234,15 +234,6 @@ void ImGui_ImplDX11_RenderDrawLists(ImDrawData* draw_data)
     ctx->IASetInputLayout(old.InputLayout); if (old.InputLayout) old.InputLayout->Release();
 }
 
-static bool IsAnyMouseButtonDown()
-{
-    ImGuiIO& io = ImGui::GetIO();
-    for (int n = 0; n < IM_ARRAYSIZE(io.MouseDown); n++)
-        if (io.MouseDown[n])
-            return true;
-    return false;
-}
-
 // Process Win32 mouse/keyboard inputs. 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
@@ -266,8 +257,8 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
         if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONDBLCLK) button = 0;
         if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONDBLCLK) button = 1;
         if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONDBLCLK) button = 2;
-        if (!IsAnyMouseButtonDown() && GetCapture() == NULL)
-            SetCapture(hwnd);
+        if (!ImGui::IsAnyMouseDown() && ::GetCapture() == NULL)
+            ::SetCapture(hwnd);
         io.MouseDown[button] = true;
         return 0;
     }
@@ -280,8 +271,8 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
         if (msg == WM_RBUTTONUP) button = 1;
         if (msg == WM_MBUTTONUP) button = 2;
         io.MouseDown[button] = false;
-        if (!IsAnyMouseButtonDown() && GetCapture() == hwnd)
-            ReleaseCapture();
+        if (!ImGui::IsAnyMouseDown() && ::GetCapture() == hwnd)
+            ::ReleaseCapture();
         return 0;
     }
     case WM_MOUSEWHEEL:
