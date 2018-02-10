@@ -62,7 +62,8 @@ Languages:
 - ChaiScript: https://github.com/JuJuBoSc/imgui-chaiscript
 - D (DerelictImgui): https://github.com/Extrawurst/DerelictImgui
 - Go (go-imgui): https://github.com/Armored-Dragon/go-imgui
-- Haxe/hxcpp (linc_imgui): https://github.com/Aidan63/linc_imgui    
+- Haxe/hxcpp (linc_imgui): https://github.com/Aidan63/linc_imgui
+- JavaScript (imgui-js): https://github.com/flyover/imgui-js
 - Lua: https://github.com/patrickriordan/imgui_lua_bindings
 - Odin: https://github.com/ThisDrunkDane/odin-dear_imgui
 - Pascal (imgui-pas): https://github.com/dpethes/imgui-pas
