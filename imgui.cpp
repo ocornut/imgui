@@ -732,6 +732,7 @@ static void             NavUpdate();
 static void             NavUpdateWindowing();
 static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id);
 
+static void             UpdateMovingWindow();
 static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
 static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
 }
@@ -3219,6 +3220,45 @@ static void ImGui::NavUpdate()
 #endif
 }
 
+static void ImGui::UpdateMovingWindow()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.MovingWindow && g.MovingWindow->MoveId == g.ActiveId && g.ActiveIdSource == ImGuiInputSource_Mouse)
+    {
+        // We actually want to move the root window. g.MovingWindow == window we clicked on (could be a child window). 
+        // We track it to preserve Focus and so that ActiveIdWindow == MovingWindow and ActiveId == MovingWindow->MoveId for consistency.
+        KeepAliveID(g.ActiveId);
+        IM_ASSERT(g.MovingWindow && g.MovingWindow->RootWindow);
+        ImGuiWindow* moving_window = g.MovingWindow->RootWindow;
+        if (g.IO.MouseDown[0])
+        {
+            ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
+            if (moving_window->PosFloat.x != pos.x || moving_window->PosFloat.y != pos.y)
+            {
+                MarkIniSettingsDirty(moving_window);
+                moving_window->PosFloat = pos;
+            }
+            FocusWindow(g.MovingWindow);
+        }
+        else
+        {
+            ClearActiveID();
+            g.MovingWindow = NULL;
+        }
+    }
+    else
+    {
+        // When clicking/dragging from a window that has the _NoMove flag, we still set the ActiveId in order to prevent hovering others.
+        if (g.ActiveIdWindow && g.ActiveIdWindow->MoveId == g.ActiveId)
+        {
+            KeepAliveID(g.ActiveId);
+            if (!g.IO.MouseDown[0])
+                ClearActiveID();
+        }
+        g.MovingWindow = NULL;
+    }
+}
+
 void ImGui::NewFrame()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() or ImGui::SetCurrentContext()?");
@@ -3347,40 +3387,8 @@ void ImGui::NewFrame()
     g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_ARRAYSIZE(g.FramerateSecPerFrame);
     g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
 
-    // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering).
-    if (g.MovingWindow && g.MovingWindow->MoveId == g.ActiveId && g.ActiveIdSource == ImGuiInputSource_Mouse)
-    {
-        KeepAliveID(g.ActiveId);
-        IM_ASSERT(g.MovingWindow && g.MovingWindow->RootWindow);
-        if (g.IO.MouseDown[0])
-        {
-            // MovingWindow = window we clicked on, could be a child window. We track it to preserve Focus and so that ActiveIdWindow == MovingWindow and ActiveId == MovingWindow->MoveId for consistency.
-            ImGuiWindow* actually_moving_window = g.MovingWindow->RootWindow;
-            ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
-            if (actually_moving_window->PosFloat.x != pos.x || actually_moving_window->PosFloat.y != pos.y)
-            {
-                MarkIniSettingsDirty(actually_moving_window);
-                actually_moving_window->PosFloat = pos;
-            }
-            FocusWindow(g.MovingWindow);
-        }
-        else
-        {
-            ClearActiveID();
-            g.MovingWindow = NULL;
-        }
-    }
-    else
-    {
-        // When clicking/dragging from a window that has the _NoMove flag, we still set the ActiveId in order to prevent hovering others.
-        if (g.ActiveIdWindow && g.ActiveIdWindow->MoveId == g.ActiveId)
-        {
-            KeepAliveID(g.ActiveId);
-            if (!g.IO.MouseDown[0])
-                ClearActiveID();
-        }
-        g.MovingWindow = NULL;
-    }
+    // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering)
+    UpdateMovingWindow();
 
     // Delay saving settings so we don't spam disk too much
     if (g.SettingsDirtyTimer > 0.0f)
