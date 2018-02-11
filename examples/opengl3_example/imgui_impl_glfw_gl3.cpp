@@ -169,7 +169,7 @@ void ImGui_ImplGlfwGL3_KeyCallback(GLFWwindow*, int key, int, int action, int mo
     ImGuiIO& io = ImGui::GetIO();
     if (action == GLFW_PRESS)
         io.KeysDown[key] = true;
-    if (action == GLFW_RELEASE)
+    else if (action == GLFW_RELEASE)
         io.KeysDown[key] = false;
 
     (void)mods; // Modifiers are not reliable across systems
