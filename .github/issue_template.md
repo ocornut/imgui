@@ -1,1 +1,1 @@
-(Please read guidelines [here](https://github.com/ocornut/imgui/blob/master/.github/CONTRIBUTING.md))
+(Please read guidelines in https://github.com/ocornut/imgui/blob/master/.github/CONTRIBUTING.md then delete this line)
