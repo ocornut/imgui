@@ -1,4 +1,8 @@
-Hello! You may submit bug reports, feature requests or suggestions. You may ask for help or advices as well, however please read this wall of text before doing so. Thank you!
+## How to create an Issue
+
+Hello! 
+
+You may use the Issue tracker to submit bug reports, feature requests or suggestions. You may ask for help or advices as well, however please read this wall of text before doing so. Thank you!
 
 **Prerequisites for new users of dear imgui:**
 - Please read the FAQ in imgui.cpp.
@@ -17,8 +21,4 @@ Hello! You may submit bug reports, feature requests or suggestions. You may ask 
 - When requesting a new feature or pushing code, please describe the usage context (how you intend to use it, why you need it, etc.).
 
 If you have been using dear imgui for a while and/or have been using C/C++ for several years and/or have demonstrated good behavior here, it is ok to not fullfill every item to the letter. Those are guidelines and experienced users of dear imgui will know what information are useful in a given context.
-
-*Please delete this wall of text before submitting your issue.*
-
-----
 
