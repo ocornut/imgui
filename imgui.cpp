@@ -661,6 +661,12 @@
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
 
+#ifdef _MSC_VER
+#define IMGUI_CDECL __cdecl
+#else
+#define IMGUI_CDECL
+#endif
+
 // Clang warnings with -Weverything
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wunknown-pragmas"        // warning : unknown warning group '-Wformat-pedantic *'        // not all warnings are known by all clang versions.. so ignoring warnings triggers new warnings on some configuration. great!
@@ -1505,7 +1511,7 @@ void ImGuiStorage::BuildSortByKey()
 {
     struct StaticFunc 
     { 
-        static int PairCompareByID(const void* lhs, const void* rhs) 
+        static int IMGUI_CDECL PairCompareByID(const void* lhs, const void* rhs) 
         {
             // We can't just do a subtraction because qsort uses signed integers and subtracting our ID doesn't play well with that.
             if (((const Pair*)lhs)->key > ((const Pair*)rhs)->key) return +1;
@@ -3801,7 +3807,7 @@ static void MarkIniSettingsDirty(ImGuiWindow* window)
 }
 
 // FIXME: Add a more explicit sort order in the window structure.
-static int ChildWindowComparer(const void* lhs, const void* rhs)
+static int IMGUI_CDECL ChildWindowComparer(const void* lhs, const void* rhs)
 {
     const ImGuiWindow* a = *(const ImGuiWindow**)lhs;
     const ImGuiWindow* b = *(const ImGuiWindow**)rhs;
