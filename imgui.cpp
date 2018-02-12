@@ -655,16 +655,11 @@
 #define IMGUI_DEBUG_NAV_SCORING     0
 #define IMGUI_DEBUG_NAV_RECTS       0
 
+// Visual Studio warnings
 #ifdef _MSC_VER
 #pragma warning (disable: 4127) // condition expression is constant
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
-#endif
-
-#ifdef _MSC_VER
-#define IMGUI_CDECL __cdecl
-#else
-#define IMGUI_CDECL
 #endif
 
 // Clang warnings with -Weverything
@@ -686,6 +681,13 @@
 #pragma GCC diagnostic ignored "-Wconversion"               // warning: conversion to 'xxxx' from 'xxxx' may alter its value
 #pragma GCC diagnostic ignored "-Wcast-qual"                // warning: cast from type 'xxxx' to type 'xxxx' casts away qualifiers
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"        // warning: format not a string literal, format string not checked
+#endif
+
+// Enforce cdecl calling convention for functions called by the standard library, in case compilation settings changed the default to e.g. __vectorcall
+#ifdef _MSC_VER
+#define IMGUI_CDECL __cdecl
+#else
+#define IMGUI_CDECL
 #endif
 
 //-------------------------------------------------------------------------
