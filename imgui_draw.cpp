@@ -1688,7 +1688,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     // Start packing
     const int max_tex_height = 1024*32;
     stbtt_pack_context spc = {};
-    stbtt_PackBegin(&spc, NULL, atlas->TexWidth, max_tex_height, 0, atlas->TexGlyphPadding, NULL);
+    if (!stbtt_PackBegin(&spc, NULL, atlas->TexWidth, max_tex_height, 0, atlas->TexGlyphPadding, NULL))
+        return false;
     stbtt_PackSetOversampling(&spc, 1, 1);
 
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
