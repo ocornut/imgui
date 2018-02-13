@@ -123,28 +123,41 @@ Languages:
 - Rust (imgui-rs): https://github.com/Gekkio/imgui-rs
 
 Frameworks:
-- This repository include examples for DirectX9, DirectX10, DirectX11, OpenGL2/3, Vulkan, Allegro 5, SDL+GL2/3, iOS and Marmalade: https://github.com/ocornut/imgui/tree/master/examples
-- PR: DirectX12: https://github.com/ocornut/imgui/pull/301
-- PR: SDL2 + OpenGLES + Emscripten: https://github.com/ocornut/imgui/pull/336
-- PR: FreeGlut + OpenGL2: https://github.com/ocornut/imgui/pull/801
-- PR: Native Win32 and OSX: https://github.com/ocornut/imgui/pull/281
-- PR: Android: https://github.com/ocornut/imgui/pull/421
-- Cinder: https://github.com/simongeilfus/Cinder-ImGui
-- cocos2d-x: https://github.com/c0i/imguix https://github.com/ocornut/imgui/issues/551
-- Flexium/SFML (FlexGUI): https://github.com/DXsmiley/FlexGUI
-- GML/GameMakerStudio2 (ImGuiGML): https://marketplace.yoyogames.com/assets/6221/imguigml
-- Irrlicht (IrrIMGUI): https://github.com/ZahlGraf/IrrIMGUI
-- Ogre: https://bitbucket.org/LMCrashy/ogreimgui/src
-- openFrameworks (ofxImGui): https://github.com/jvcleave/ofxImGui
-- OpenSceneGraph/OSG: https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c
-- LÖVE: https://github.com/slages/love-imgui
-- NanoRT (software raytraced) https://github.com/syoyo/imgui/tree/nanort
-- Qt3d https://github.com/alpqr/imgui-qt3d
-- Unreal Engine 4: https://github.com/segross/UnrealImGui or https://github.com/sronsse/UnrealEngine_ImGui
-- SFML: https://github.com/EliasD/imgui-sfml or https://github.com/Mischa-Alff/imgui-backends
+- DirectX 9, DirectX 10, DirectX 11: [github/ocornut/imgui/tree/master/examples](https://github.com/ocornut/imgui/tree/master/examples) (this repository)
+- OpenGL 2/3 (with GLFW or SDL): [github/ocornut/imgui/tree/master/examples](https://github.com/ocornut/imgui/tree/master/examples) (this repository)
+- Vulkan (with GLFW): [github/ocornut/imgui/tree/master/examples](https://github.com/ocornut/imgui/tree/master/examples) (this repository)
+- Allegro 5, iOS, Marmalade: [github/ocornut/imgui/tree/master/examples](https://github.com/ocornut/imgui/tree/master/examples) (this repository)
+- Unmerged PR: DirectX12: [github/ocornut/imgui/pull/301](https://github.com/ocornut/imgui/pull/301)
+- Unmerged PR: SDL2 + OpenGLES + Emscripten: [github/ocornut/imgui/pull/336](https://github.com/ocornut/imgui/pull/336)
+- Unmerged PR: FreeGlut + OpenGL2: [github/ocornut/imgui/pull/801](https://github.com/ocornut/imgui/pull/801)
+- Unmerged PR: Native Win32 and OSX: [github/ocornut/imgui/pull/281](https://github.com/ocornut/imgui/pull/281)
+- Unmerged PR: Android: [github/ocornut/imgui/pull/421](https://github.com/ocornut/imgui/pull/421)
+- Cinder: [github/simongeilfus/Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
+- Cocos2d-x: [github/c0i/imguix](https://github.com/c0i/imguix), [github/ocornut/imgui/issues/551](https://github.com/ocornut/imgui/issues/551)
+- Flexium/SFML (FlexGUI): [github/DXsmiley/FlexGUI](https://github.com/DXsmiley/FlexGUI)
+- GML/GameMakerStudio2 (ImGuiGML): [marketplace.yoyogames.com/assets/6221/imguigml](https://marketplace.yoyogames.com/assets/6221/imguigml)
+- Irrlicht (IrrIMGUI): [github/ZahlGraf/IrrIMGUI](https://github.com/ZahlGraf/IrrIMGUI)
+- Ogre: [bitbucket.org/LMCrashy/ogreimgui/src](https://bitbucket.org/LMCrashy/ogreimgui/src)
+- OpenFrameworks (ofxImGui): [github/jvcleave/ofxImGui](https://github.com/jvcleave/ofxImGui)
+- OpenSceneGraph/OSG: [gist](https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c)
+- LÖVE: [github/slages/love-imgui](https://github.com/slages/love-imgui)
+- NanoRT: [github/syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
+- Qt3d: [github/alpqr/imgui-qt3d](https://github.com/alpqr/imgui-qt3d)
+- Unreal Engine 4: [github/segross/UnrealImGui](https://github.com/segross/UnrealImGui) or [github/sronsse/UnrealEngine_ImGui](https://github.com/sronsse/UnrealEngine_ImGui)
+- SFML: [github.com/EliasD/imgui-sfml](https://github.com/EliasD/imgui-sfml) or [Mischa-Alff/imgui-backends](https://github.com/Mischa-Alff/imgui-backends)
 
 For other bindings: see [this page](https://github.com/ocornut/imgui/wiki/Links/).
 Please contact me with the Issues tracker or Twitter to fix/update this list.
+
+Roadmap
+-------
+Some of the goals for 2018 are:
+- Finish work on gamepad/keyboard controls. (see [#787](https://github.com/ocornut/imgui/issues/787))
+- Finish work on viewports and multiple OS windows management. (see [#1542](https://github.com/ocornut/imgui/issues/1542))
+- Finish work on docking, tabs. (see [#351](https://github.com/ocornut/imgui/issues/351#issuecomment-346865709))
+- Make Columns better (they are currently pretty terrible!).
+- Make the examples look better, improve styles, improve font support, make the examples hi-DPI aware.
+
 
 Gallery
 -------
@@ -195,8 +208,6 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 - [Nicolas Guillemot's CppCon'16 flashtalk about Dear ImGui](https://www.youtube.com/watch?v=LSRJ1jZq90k).
 - [Thierry Excoffier's Zero Memory Widget](http://perso.univ-lyon1.fr/thierry.excoffier/ZMW/).
 
-See the [Software using dear imgui page](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) for an incomplete list of software which are publicly known to use dear migui.
-
 See the [Links page](https://github.com/ocornut/imgui/wiki/Links) for third-party bindings to different languages and frameworks.
 
 Frequently Asked Question (FAQ)
@@ -211,7 +222,11 @@ Frequently Asked Question (FAQ)
 
 <b>Which version should I get?</b>
 
-I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master. The library is fairly stable and regressions tend to be fixed fast when reported. 
+I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master/latest. The library is fairly stable and regressions tend to be fixed fast when reported. 
+
+<b>Who uses Dear ImGui?</b>
+
+See the [Software using dear imgui page](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) for an (incomplete) list of games/software which are publicly known to use dear imgui. Please add yours if you can!
 
 <b>Why the odd dual naming, "dear imgui" vs "ImGui"?</b>
 
