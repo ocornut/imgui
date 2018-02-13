@@ -31,7 +31,9 @@ Dear ImGui is self-contained within a few files that you can easily copy and com
 
 No specific build process is required. You can add the .cpp files to your project or #include them from an existing file.
 
-Your code passes mouse/keyboard inputs and settings to Dear ImGui (see example applications for more details). After Dear ImGui is setup, you can use it like in this example:
+### Usage
+
+Your code passes mouse/keyboard inputs and settings to Dear ImGui (see example applications for more details). After Dear ImGui is setup, you can use it from anywhere in your code:
 
 ```cpp
 // C++ code
@@ -47,11 +49,46 @@ ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 ![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_02.png)
 <br>_(settings: Dark style (left), Light style (right) / Font: Roboto-Medium, 16px / Rounding: 5)_
 
+```cpp
+ImGui::Begin("My First Tool", &my_tool_active, ImGuiWindowFlags_MenuBar);
+if (ImGui::BeginMenuBar())
+{
+    if (ImGui::BeginMenu("File"))
+    {
+        if (ImGui::MenuItem("Open..", "Ctrl+O")) { /* Do stuff */ }
+        if (ImGui::MenuItem("Save", "Ctrl+S"))   { /* Do stuff */ }
+        if (ImGui::MenuItem("Close", "Ctrl+W"))  { my_tool_active = false; }
+        ImGui::EndMenu();
+    }
+    ImGui::EndMenuBar();
+}
+ImGui::ColorEdit4("Color", my_color);
+
+const float my_values[] = { 0.2f, 0.1f, 1.0f, 0.5f, 0.9f, 2.2f };
+ImGui::PlotLines("Frame Times", my_values, IM_ARRAYSIZE(my_values));
+            
+ImGui::TextColored(ImVec4(1,1,0,1), "Important Stuff");
+ImGui::BeginChild("Scrolling", ImVec2(0,0), true);
+for (int n = 0; n < 50; n++)
+    ImGui::Text("%04d: Some text", n);
+ImGui::EndChild();
+ImGui::End();
+```
+
+![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_03_color.gif)
+<br>_(Gif compression added dithering to the color wheel)_
+
+### How it works
+
+Check out the References section if you want to understand the core principles behind the immediate-mode gui paradigm.
+
 Dear ImGui outputs vertex buffers and simple command-lists that you can render in your application. The number of draw calls and state changes is typically very small. Because it doesn't know or touch graphics state directly, you can call ImGui commands anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate dear imgui with your existing codebase. 
 
 _A common misunderstanding is to think that immediate mode gui == immediate mode rendering, which usually implies hammering your driver/GPU with a bunch of inefficient draw calls and state changes, as the gui functions are called by the user. This is NOT what Dear ImGui does. Dear ImGui outputs vertex buffers and a small list of draw calls batches. It never touches your GPU directly. The draw call batches are decently optimal and you can render them later, in your app or even remotely._
 
 Dear ImGui allows you create elaborate tools as well as very short-lived ones. On the extreme side of short-liveness: using the Edit&Continue feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! Dear ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, an entire game making editor/framework, etc.  
+
+You may read 
 
 Demo Binaries
 -------------
@@ -209,18 +246,6 @@ For touch inputs, you can increase the hit box of widgets (via the _style.TouchP
 Yes. People have written game editors, data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools). The list of sponsors below is also an indicator that serious game teams have been using the library.
 
 Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might requires you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient and powerful.
-
-<b>Is Dear ImGui fast?</b>
-
-Probably fast enough for most uses. Down to the foundation of its visual design, Dear ImGui is engineered to be fairly performant both in term of CPU and GPU usage. Running elaborate code and creating elaborate UI will of course have a cost but Dear ImGui aims to minimize it.
-
-Mileage may vary but the following screenshot can give you a rough idea of the cost of running and rendering UI code (In the case of a trivial demo application like this one, your driver/os setup are likely to be the bottleneck. Testing performance as part of a real application is recommended).
-
-![performance screenshot](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v138/performance_01.png)
-
-This is showing framerate for the full application loop on my 2011 iMac running Windows 7, OpenGL, AMD Radeon HD 6700M with an optimized executable. In contrast, librairies featuring higher-quality rendering and layouting techniques may have a higher resources footprint.
-
-If you intend to display large lists of items (say, 1000+) it can be beneficial for your code to perform clipping manually - one way is using helpers such as ImGuiListClipper - in order to avoid submitting them to Dear ImGui in the first place. Even though ImGui will discard your clipped items it still needs to calculate their size and that overhead will add up if you have thousands of items. If you can handle clipping and height positionning yourself then browsing a list with millions of items isn't a problem.
 
 <b>Can you reskin the look of Dear ImGui?</b>
 
