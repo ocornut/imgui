@@ -11,32 +11,31 @@ Monthly donations via Patreon:
 One-off donations via PayPal:
 <br>[![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
-Dear ImGui is a bloat-free graphical user interface library for C++. It outputs optimized vertex buffers that you can render anytime in your 3D-pipeline enabled application. It is fast, portable, renderer agnostic and self-contained (no external dependencies).
+**Dear ImGui is a bloat-free graphical user interface library for C++. It outputs optimized vertex buffers that you can render anytime in your 3D-pipeline enabled application. It is fast, portable, renderer agnostic and self-contained (no external dependencies).**
 
-Dear ImGui is designed to enable fast iteration and empower programmers to create content creation tools and visualization/ debug tools (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal, and thus lacks certain features normally found in more high-level libraries.
+**Dear ImGui is designed to enable fast iterations and to empower programmers to create content creation tools and visualization / debug tools (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal, and lacks certain features normally found in more high-level libraries. Within the scope of what is has to offer, working with Dear ImGui is simpler and faster than working with Qt, WPF, etc. probably by a large order of magnitude.**
 
-Dear ImGui is particularly suited to integration in realtime 3D applications, fullscreen applications, embedded applications, games, or any applications on consoles platforms where operating system features are non-standard. 
+Dear ImGui is particularly suited to integration in games, realtime 3D applications, fullscreen applications, embedded applications, or any applications on consoles platforms where operating system features are non-standard. 
 
 Dear ImGui is self-contained within a few files that you can easily copy and compile into your application/engine:
-
-  - imgui.cpp
-  - imgui.h
-  - imgui_demo.cpp
-  - imgui_draw.cpp
-  - imgui_internal.h
-  - imconfig.h (empty by default, user-editable)
-  - stb_rect_pack.h
-  - stb_textedit.h
-  - stb_truetype.h
+- imgui.cpp
+- imgui.h
+- imgui_demo.cpp
+- imgui_draw.cpp
+- imgui_internal.h
+- imconfig.h (empty by default, user-editable)
+- stb_rect_pack.h
+- stb_textedit.h
+- stb_truetype.h
 
 No specific build process is required. You can add the .cpp files to your project or #include them from an existing file.
 
 ### Usage
 
-Your code passes mouse/keyboard inputs and settings to Dear ImGui (see example applications for more details). After Dear ImGui is setup, you can use it from anywhere in your code:
+Your code passes mouse/keyboard inputs and settings to Dear ImGui (see example applications for more details). After Dear ImGui is setup, you can use it from anywhere in your program loop:
 
+Code:
 ```cpp
-// C++ code
 ImGui::Text("Hello, world %d", 123);
 if (ImGui::Button("Save"))
 {
@@ -45,11 +44,12 @@ if (ImGui::Button("Save"))
 ImGui::InputText("string", buf, IM_ARRAYSIZE(buf));
 ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 ```
-![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_02.png)
+Result:
+<br>![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_02.png)
 <br>_(settings: Dark style (left), Light style (right) / Font: Roboto-Medium, 16px / Rounding: 5)_
 
+Code:
 ```cpp
-// C++ code
 // Create a window called "My First Tool", with a menu bar.
 ImGui::Begin("My First Tool", &my_tool_active, ImGuiWindowFlags_MenuBar);
 if (ImGui::BeginMenuBar())
@@ -79,18 +79,18 @@ for (int n = 0; n < 50; n++)
 ImGui::EndChild();
 ImGui::End();
 ```
-![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_03_color.gif)
-<br>_(Gif compression added dithering to the color wheel)_
+Result:
+<br>![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_03_color.gif)
 
 ### How it works
 
-Check out the References section if you want to understand the core principles behind the immediate-mode gui paradigm.
+Check out the References section if you want to understand the core principles behind the IMGUI paradigm. An IMGUI tries to minimize state synchronization and storage from the user's point of view. It is less error prone (less code and less bugs) than traditional retained-mode interfaces, and lends itself to create dynamic user interfaces.
 
-Dear ImGui outputs vertex buffers and simple command-lists that you can trivially render in your application. The number of draw calls and state changes is typically very small. Because it doesn't know or touch graphics state directly, you can call ImGui commands anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate dear imgui with your existing codebase. 
+Dear ImGui outputs vertex buffers and command lists that you can easily render in your application. The number of draw calls and state changes is typically very small. Because it doesn't know or touch graphics state directly, you can call ImGui commands anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate dear imgui with your existing codebase. 
 
 _A common misunderstanding is to mistake immediate mode gui for immediate mode rendering, which usually implies hammering your driver/GPU with a bunch of inefficient draw calls and state changes as the gui functions are called. This is NOT what Dear ImGui does. Dear ImGui outputs vertex buffers and a small list of draw calls batches. It never touches your GPU directly. The draw call batches are decently optimal and you can render them later, in your app or even remotely._
 
-Dear ImGui allows you create elaborate tools as well as very short-lived ones. On the extreme side of short-liveness: using the Edit&Continue feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! Dear ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, an entire game making editor/framework, etc.  
+Dear ImGui allows you create elaborate tools as well as very short-lived ones. On the extreme side of short-liveness: using the Edit&Continue (hot code reload) feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! Dear ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, an entire game making editor/framework, etc.  
 
 Demo Binaries
 -------------
@@ -158,7 +158,6 @@ Some of the goals for 2018 are:
 - Make Columns better (they are currently pretty terrible!).
 - Make the examples look better, improve styles, improve font support, make the examples hi-DPI aware.
 
-
 Gallery
 -------
 
@@ -180,12 +179,12 @@ Various tools
 [![screenshot profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler-880.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler.png)
 
 Dear ImGui can load TTF/OTF fonts. UTF-8 is supported for text display and input. Here using Arial Unicode font to display Japanese. Initialize custom font with:
+Code:
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
 io.Fonts->AddFontFromFileTTF("NotoSansCJKjp-Medium.otf", 20.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
 ```
 ```cpp
-// C++ code
 ImGui::Text(u8"こんにちは！テスト %d", 123);
 if (ImGui::Button(u8"ロード"))
 {
@@ -194,7 +193,8 @@ if (ImGui::Button(u8"ロード"))
 ImGui::InputText("string", buf, IM_ARRAYSIZE(buf));
 ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 ```
-![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_02_jp.png)
+Result:
+<br>![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_02_jp.png)
 <br>_(settings: Dark style (left), Light style (right) / Font: NotoSansCJKjp-Medium, 20px / Rounding: 5)_
 
 References
