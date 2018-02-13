@@ -50,7 +50,7 @@ ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 
 ```cpp
 // C++ code
-// Created a window called "My First Tool" with a menu bar.
+// Create a window called "My First Tool", with a menu bar.
 ImGui::Begin("My First Tool", &my_tool_active, ImGuiWindowFlags_MenuBar);
 if (ImGui::BeginMenuBar())
 {
@@ -73,7 +73,7 @@ ImGui::PlotLines("Frame Times", my_values, IM_ARRAYSIZE(my_values));
  
 // Display contents in a scrolling region
 ImGui::TextColored(ImVec4(1,1,0,1), "Important Stuff");
-ImGui::BeginChild("Scrolling", ImVec2(0,0), true);
+ImGui::BeginChild("Scrolling");
 for (int n = 0; n < 50; n++)
     ImGui::Text("%04d: Some text", n);
 ImGui::EndChild();
