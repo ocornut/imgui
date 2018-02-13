@@ -50,6 +50,8 @@ ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 <br>_(settings: Dark style (left), Light style (right) / Font: Roboto-Medium, 16px / Rounding: 5)_
 
 ```cpp
+// C++ code
+// Created a window called "My First Tool" with a menu bar.
 ImGui::Begin("My First Tool", &my_tool_active, ImGuiWindowFlags_MenuBar);
 if (ImGui::BeginMenuBar())
 {
@@ -62,11 +64,15 @@ if (ImGui::BeginMenuBar())
     }
     ImGui::EndMenuBar();
 }
+
+// Edit a color (stored as ~4 floats)
 ImGui::ColorEdit4("Color", my_color);
 
+// Plot some values
 const float my_values[] = { 0.2f, 0.1f, 1.0f, 0.5f, 0.9f, 2.2f };
 ImGui::PlotLines("Frame Times", my_values, IM_ARRAYSIZE(my_values));
-            
+ 
+// Display contents in a scrolling region
 ImGui::TextColored(ImVec4(1,1,0,1), "Important Stuff");
 ImGui::BeginChild("Scrolling", ImVec2(0,0), true);
 for (int n = 0; n < 50; n++)
@@ -82,13 +88,11 @@ ImGui::End();
 
 Check out the References section if you want to understand the core principles behind the immediate-mode gui paradigm.
 
-Dear ImGui outputs vertex buffers and simple command-lists that you can render in your application. The number of draw calls and state changes is typically very small. Because it doesn't know or touch graphics state directly, you can call ImGui commands anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate dear imgui with your existing codebase. 
+Dear ImGui outputs vertex buffers and simple command-lists that you can trivially render in your application. The number of draw calls and state changes is typically very small. Because it doesn't know or touch graphics state directly, you can call ImGui commands anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate dear imgui with your existing codebase. 
 
-_A common misunderstanding is to think that immediate mode gui == immediate mode rendering, which usually implies hammering your driver/GPU with a bunch of inefficient draw calls and state changes, as the gui functions are called by the user. This is NOT what Dear ImGui does. Dear ImGui outputs vertex buffers and a small list of draw calls batches. It never touches your GPU directly. The draw call batches are decently optimal and you can render them later, in your app or even remotely._
+_A common misunderstanding is to mistake immediate mode gui for immediate mode rendering, which usually implies hammering your driver/GPU with a bunch of inefficient draw calls and state changes as the gui functions are called. This is NOT what Dear ImGui does. Dear ImGui outputs vertex buffers and a small list of draw calls batches. It never touches your GPU directly. The draw call batches are decently optimal and you can render them later, in your app or even remotely._
 
 Dear ImGui allows you create elaborate tools as well as very short-lived ones. On the extreme side of short-liveness: using the Edit&Continue feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! Dear ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, an entire game making editor/framework, etc.  
-
-You may read 
 
 Demo Binaries
 -------------
@@ -96,7 +100,7 @@ Demo Binaries
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
 - [imgui-demo-binaries-20180207.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20180207.zip) (Windows binaries, Dear ImGui 1.60 WIP built 2018/01/07, 5 executables)
 
-The demo applications are unfortunately not yet DPI aware so expect some blurryness on a 4K screen. 
+The demo applications are unfortunately not yet DPI aware so expect some blurryness on a 4K screen. For DPI awareness you can load/reload your font at different scale, and scale your Style with `style.ScaleAllSizes()`.
 
 Bindings
 --------
@@ -121,7 +125,7 @@ Languages:
 - Rust (imgui-rs): https://github.com/Gekkio/imgui-rs
 
 Frameworks:
-- Main ImGui repository include examples for DirectX9, DirectX10, DirectX11, OpenGL2/3, Vulkan, Allegro 5, SDL+GL2/3, iOS and Marmalade: https://github.com/ocornut/imgui/tree/master/examples
+- This repository include examples for DirectX9, DirectX10, DirectX11, OpenGL2/3, Vulkan, Allegro 5, SDL+GL2/3, iOS and Marmalade: https://github.com/ocornut/imgui/tree/master/examples
 - PR: DirectX12: https://github.com/ocornut/imgui/pull/301
 - PR: SDL2 + OpenGLES + Emscripten: https://github.com/ocornut/imgui/pull/336
 - PR: FreeGlut + OpenGL2: https://github.com/ocornut/imgui/pull/801
@@ -155,25 +159,18 @@ User screenshots:
 <br>[Gallery Part 5](https://github.com/ocornut/imgui/issues/1269) (Aug 2017 onward)
 <br>Also see the [Mega screenshots](https://github.com/ocornut/imgui/issues/1273) for an idea of the available features.
 
-![screenshot 1](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_01.png)
-
 Various tools
 <br>[![screenshot game](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v149/gallery_TheDragonsTrap-01-thumb.jpg)](https://cloud.githubusercontent.com/assets/8225057/20628927/33e14cac-b329-11e6-80f6-9524e93b048a.png)
+
+<br>[![screenshot game](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/editor_white_preview.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/editor_white.png)
+
+<br>![screenshot 1](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/examples_01.png)
 
 Custom profiler
 <br>[![screenshot profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler-880.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v148/profiler.png)
 
 Color Pickers
 <br>![screenshot picker](https://user-images.githubusercontent.com/8225057/29062188-471e95ba-7c53-11e7-9618-c4484c0b75fe.PNG)
-
-Menus
-<br>![screenshot 5](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v151/menus.png)
-
-Colors
-<br>![screenshot 6](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v143/skinning_sample_02.png)
-
-Custom rendering
-<br>![screenshot 7](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/v160-drawdatabase.jpg)
 
 Dear ImGui can load TTF/OTF fonts. UTF-8 is supported for text display and input. Here using Arial Unicode font to display Japanese. Initialize custom font with:
 ```cpp
