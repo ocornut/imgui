@@ -105,46 +105,46 @@ Bindings
 
 Integrating Dear ImGui within your custom engine is a matter of wiring mouse/keyboard inputs and providing a render function that can bind a texture and render simple textured triangles. The examples/ folder is populated with applications doing just that. If you are an experienced programmer it should take you less than an hour to integrate Dear ImGui in your custom engine, but make sure to spend time reading the FAQ, the comments and other documentation!
 
-_NB: those third-party bindings may be more or less maintained, more or less close to the spirit of original API and therefore I cannot give much guarantee about them. People who create language bindings sometimes haven't used the C++ API themselves (for the good reason that they aren't C++ users). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
+_NB: those third-party bindings may be more or less maintained, more or less close to the original API (as people who create language bindings sometimes haven't used the C++ API themselves.. for the good reason that they aren't C++ users). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
 
-Languages:
-- C (cimgui): https://github.com/Extrawurst/cimgui
-- C#/.Net (ImGui.NET): https://github.com/mellinoe/ImGui.NET
-- ChaiScript: https://github.com/JuJuBoSc/imgui-chaiscript
-- D (DerelictImgui): https://github.com/Extrawurst/DerelictImgui
-- Go (go-imgui): https://github.com/Armored-Dragon/go-imgui
-- Haxe/hxcpp (linc_imgui): https://github.com/Aidan63/linc_imgui
-- JavaScript (imgui-js): https://github.com/flyover/imgui-js
-- Lua: https://github.com/patrickriordan/imgui_lua_bindings
-- Odin: https://github.com/ThisDrunkDane/odin-dear_imgui
-- Pascal (imgui-pas): https://github.com/dpethes/imgui-pas
-- Python (CyImGui): https://github.com/chromy/cyimgui
-- Python (pyimgui): https://github.com/swistakm/pyimgui
-- Rust (imgui-rs): https://github.com/Gekkio/imgui-rs
+Languages: (third-party bindinds)
+- C: [cimgui](https://github.com/Extrawurst/cimgui)
+- C#/.Net: [ImGui.NET](https://github.com/mellinoe/ImGui.NET)
+- ChaiScript: [imgui-chaiscript](https://github.com/JuJuBoSc/imgui-chaiscript)
+- D: [DerelictImgui](https://github.com/Extrawurst/DerelictImgui)
+- Go: [go-imgui](https://github.com/Armored-Dragon/go-imgui)
+- Haxe/hxcpp: [linc_imgui](https://github.com/Aidan63/linc_imgui)
+- JavaScript: [imgui-js](https://github.com/flyover/imgui-js)
+- Lua: [imgui_lua_bindings](https://github.com/patrickriordan/imgui_lua_bindings)
+- Odin: [odin-dear_imgui](https://github.com/ThisDrunkDane/odin-dear_imgui)
+- Pascal: [imgui-pas](https://github.com/dpethes/imgui-pas)
+- Python [CyImGui](https://github.com/chromy/cyimgui)
+- Python [pyimgui](https://github.com/swistakm/pyimgui)
+- Rust: [imgui-rs](https://github.com/Gekkio/imgui-rs)
 
 Frameworks:
-- DirectX 9, DirectX 10, DirectX 11: [github/ocornut/imgui/tree/master/examples](https://github.com/ocornut/imgui/tree/master/examples) (this repository)
-- OpenGL 2/3 (with GLFW or SDL): [github/ocornut/imgui/tree/master/examples](https://github.com/ocornut/imgui/tree/master/examples) (this repository)
-- Vulkan (with GLFW): [github/ocornut/imgui/tree/master/examples](https://github.com/ocornut/imgui/tree/master/examples) (this repository)
-- Allegro 5, iOS, Marmalade: [github/ocornut/imgui/tree/master/examples](https://github.com/ocornut/imgui/tree/master/examples) (this repository)
-- Unmerged PR: DirectX12: [github/ocornut/imgui/pull/301](https://github.com/ocornut/imgui/pull/301)
-- Unmerged PR: SDL2 + OpenGLES + Emscripten: [github/ocornut/imgui/pull/336](https://github.com/ocornut/imgui/pull/336)
-- Unmerged PR: FreeGlut + OpenGL2: [github/ocornut/imgui/pull/801](https://github.com/ocornut/imgui/pull/801)
-- Unmerged PR: Native Win32 and OSX: [github/ocornut/imgui/pull/281](https://github.com/ocornut/imgui/pull/281)
-- Unmerged PR: Android: [github/ocornut/imgui/pull/421](https://github.com/ocornut/imgui/pull/421)
-- Cinder: [github/simongeilfus/Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
-- Cocos2d-x: [github/c0i/imguix](https://github.com/c0i/imguix), [github/ocornut/imgui/issues/551](https://github.com/ocornut/imgui/issues/551)
-- Flexium/SFML (FlexGUI): [github/DXsmiley/FlexGUI](https://github.com/DXsmiley/FlexGUI)
-- GML/GameMakerStudio2 (ImGuiGML): [marketplace.yoyogames.com/assets/6221/imguigml](https://marketplace.yoyogames.com/assets/6221/imguigml)
-- Irrlicht (IrrIMGUI): [github/ZahlGraf/IrrIMGUI](https://github.com/ZahlGraf/IrrIMGUI)
-- Ogre: [bitbucket.org/LMCrashy/ogreimgui/src](https://bitbucket.org/LMCrashy/ogreimgui/src)
-- OpenFrameworks (ofxImGui): [github/jvcleave/ofxImGui](https://github.com/jvcleave/ofxImGui)
+- DirectX 9, DirectX 10, DirectX 11: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
+- OpenGL 2/3 (with GLFW or SDL): [examples/](https://github.com/ocornut/imgui/tree/master/examples)
+- Vulkan (with GLFW): [examples/](https://github.com/ocornut/imgui/tree/master/examples)
+- Allegro 5, iOS, Marmalade: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
+- Unmerged PR: DirectX12: [#301](https://github.com/ocornut/imgui/pull/301)
+- Unmerged PR: SDL2 + OpenGLES + Emscripten: [#336](https://github.com/ocornut/imgui/pull/336)
+- Unmerged PR: FreeGlut + OpenGL2: [#801](https://github.com/ocornut/imgui/pull/801)
+- Unmerged PR: Native Win32 and OSX: [#281](https://github.com/ocornut/imgui/pull/281)
+- Unmerged PR: Android: [#421](https://github.com/ocornut/imgui/pull/421)
+- Cinder: [Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
+- Cocos2d-x: [imguix](https://github.com/c0i/imguix), [issue #551](https://github.com/ocornut/imgui/issues/551)
+- Flexium/SFML: [FlexGUI](https://github.com/DXsmiley/FlexGUI)
+- GML/GameMakerStudio2: [ImGuiGML](https://marketplace.yoyogames.com/assets/6221/imguigml)
+- Irrlicht: [IrrIMGUI](https://github.com/ZahlGraf/IrrIMGUI)
+- Ogre: [ogreimgui](https://bitbucket.org/LMCrashy/ogreimgui/src)
+- OpenFrameworks: [ofxImGui](https://github.com/jvcleave/ofxImGui)
 - OpenSceneGraph/OSG: [gist](https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c)
-- LÖVE: [github/slages/love-imgui](https://github.com/slages/love-imgui)
-- NanoRT: [github/syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
-- Qt3d: [github/alpqr/imgui-qt3d](https://github.com/alpqr/imgui-qt3d)
-- Unreal Engine 4: [github/segross/UnrealImGui](https://github.com/segross/UnrealImGui) or [github/sronsse/UnrealEngine_ImGui](https://github.com/sronsse/UnrealEngine_ImGui)
-- SFML: [github.com/EliasD/imgui-sfml](https://github.com/EliasD/imgui-sfml) or [Mischa-Alff/imgui-backends](https://github.com/Mischa-Alff/imgui-backends)
+- LÖVE: [love-imgui](https://github.com/slages/love-imgui)
+- NanoRT: [syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
+- Qt3d: [imgui-qt3d](https://github.com/alpqr/imgui-qt3d)
+- Unreal Engine 4: [segross/UnrealImGui](https://github.com/segross/UnrealImGui) or [sronsse/UnrealEngine_ImGui](https://github.com/sronsse/UnrealEngine_ImGui)
+- SFML: [imgui-sfml](https://github.com/EliasD/imgui-sfml) or [imgui-backends](https://github.com/Mischa-Alff/imgui-backends)
 
 For other bindings: see [this page](https://github.com/ocornut/imgui/wiki/Links/).
 Please contact me with the Issues tracker or Twitter to fix/update this list.
