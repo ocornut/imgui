@@ -33,7 +33,19 @@ No specific build process is required. You can add the .cpp files to your projec
 
 Your code passes mouse/keyboard inputs and settings to Dear ImGui (see example applications for more details). After Dear ImGui is setup, you can use it like in this example:
 
-![screenshot of sample code alongside its output with dear imgui](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/code_sample_01.png)
+```cpp
+// C++ code
+ImGui::Text("Hello, world %d", 123);
+if (ImGui::Button("Save"))
+{
+    // do stuff
+}
+ImGui::InputText("string", buf, IM_ARRAYSIZE(buf));
+ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+```
+
+![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_02.png)
+<br>_(settings: Dark style (left), Light style (right) / Font: Roboto-Medium, 16px / Rounding: 5)_
 
 Dear ImGui outputs vertex buffers and simple command-lists that you can render in your application. The number of draw calls and state changes is typically very small. Because it doesn't know or touch graphics state directly, you can call ImGui commands anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate dear imgui with your existing codebase. 
 
