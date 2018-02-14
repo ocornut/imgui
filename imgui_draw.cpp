@@ -1360,15 +1360,16 @@ static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_Count_][
 
 ImFontAtlas::ImFontAtlas()
 {
+    Flags = 0x00;
     TexID = NULL;
     TexDesiredWidth = 0;
     TexGlyphPadding = 1;
+
     TexPixelsAlpha8 = NULL;
     TexPixelsRGBA32 = NULL;
     TexWidth = TexHeight = 0;
     TexUvScale = ImVec2(0.0f, 0.0f);
     TexUvWhitePixel = ImVec2(0.0f, 0.0f);
-    Flags = 0x00;
     for (int n = 0; n < IM_ARRAYSIZE(CustomRectIds); n++)
         CustomRectIds[n] = -1;
 }
