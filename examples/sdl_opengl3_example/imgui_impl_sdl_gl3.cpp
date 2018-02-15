@@ -10,6 +10,23 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+// CHANGELOG
+//  2018-02-06: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
+//  2018-02-06: SDL: Added mapping for ImGuiKey_Space.
+//  2018-02-05: SDL: Using SDL_GetPerformanceCounter() instead of SDL_GetTicks() to be able to handle very high framerate (1000+ FPS).
+//  2018-02-05: SDL: Keyboard mapping is using scancodes everywhere instead of a confusing mixture of keycodes and scancodes. 
+//  2018-01-20: SDL: Added Horizontal Mouse Wheel support.
+//  2018-01-19: SDL: When available (SDL 2.0.4+) using SDL_CaptureMouse() to retrieve coordinates outside of client area when dragging. Otherwise (SDL 2.0.3 and before) testing for SDL_WINDOW_INPUT_FOCUS instead of SDL_WINDOW_MOUSE_FOCUS.
+//  2018-01-18: SDL: Added mapping for ImGuiKey_Insert.
+//  2018-01-07: OpenGL: Changed GLSL shader version from 330 to 150.
+//  2017-09-01: OpenGL: Save and restore current bound sampler. Save and restore current polygon mode.
+//  2017-08-25: SDL: MousePos set to -FLT_MAX,-FLT_MAX when mouse is unavailable/missing (instead of -1,-1).
+//  2017-05-01: OpenGL: Fixed save and restore of current blend func state.
+//  2017-05-01: OpenGL: Fixed save and restore of current GL_ACTIVE_TEXTURE.
+//  2016-10-15: Added a void* user_data parameter to Clipboard function handlers.
+//  2016-09-05: OpenGL: Fixed save and restore of current scissor rectangle.
+//  2016-07-29: OpenGL: Explicitly setting GL_UNPACK_ROW_LENGTH to reduce issues because SDL changes it. (#752)
+
 #include "imgui.h"
 #include "imgui_impl_sdl_gl3.h"
 
