@@ -1522,6 +1522,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 
     const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
     ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_cfg.SizePixels, &font_cfg, GetGlyphRangesDefault());
+    font->DisplayOffset.y = 1.0f;
     return font;
 }
 
@@ -2133,7 +2134,7 @@ ImFont::ImFont()
 {
     Scale = 1.0f;
     FallbackChar = (ImWchar)'?';
-    DisplayOffset = ImVec2(0.0f, 1.0f);
+    DisplayOffset = ImVec2(0.0f, 0.0f);
     ClearOutputData();
 }
 

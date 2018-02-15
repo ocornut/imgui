@@ -1733,7 +1733,7 @@ struct ImFont
     // Members: Hot ~62/78 bytes
     float                       FontSize;           // <user set>   // Height of characters, set during loading (don't change after loading)
     float                       Scale;              // = 1.f        // Base font scale, multiplied by the per-window font scale which you can adjust with SetFontScale()
-    ImVec2                      DisplayOffset;      // = (0.f,1.f)  // Offset font rendering by xx pixels
+    ImVec2                      DisplayOffset;      // = (0.f,0.f)  // Offset font rendering by xx pixels
     ImVector<ImFontGlyph>       Glyphs;             //              // All glyphs.
     ImVector<float>             IndexAdvanceX;      //              // Sparse. Glyphs->AdvanceX in a directly indexable way (more cache-friendly, for CalcTextSize functions which are often bottleneck in large UI).
     ImVector<unsigned short>    IndexLookup;        //              // Sparse. Index glyphs by Unicode code-point.
