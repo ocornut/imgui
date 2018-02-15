@@ -1820,8 +1820,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
         stbtt_GetFontVMetrics(&tmp.FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
 
-        const float ascent = unscaled_ascent * font_scale;
-        const float descent = unscaled_descent * font_scale;
+        const float ascent = ImFloor(unscaled_ascent * font_scale + ((unscaled_ascent > 0.0f) ? +1 : -1));
+        const float descent = ImFloor(unscaled_descent * font_scale + ((unscaled_descent > 0.0f) ? +1 : -1));
         ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
         const float off_x = cfg.GlyphOffset.x;
         const float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
