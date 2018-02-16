@@ -143,13 +143,15 @@
     <ClInclude Include="..\..\imconfig.h" />
     <ClInclude Include="..\..\imgui.h" />
     <ClInclude Include="..\..\imgui_internal.h" />
-    <ClInclude Include="imgui_impl_dx10.h" />
+    <ClInclude Include="..\imgui_impl_dx10.h" />
+    <ClInclude Include="..\imgui_impl_win32.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\imgui.cpp" />
     <ClCompile Include="..\..\imgui_demo.cpp" />
     <ClCompile Include="..\..\imgui_draw.cpp" />
-    <ClCompile Include="imgui_impl_dx10.cpp" />
+    <ClCompile Include="..\imgui_impl_dx10.cpp" />
+    <ClCompile Include="..\imgui_impl_win32.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
