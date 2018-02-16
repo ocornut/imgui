@@ -33,6 +33,10 @@ sdl_opengl3_example/Debug/*
 sdl_opengl3_example/Release/*
 sdl_opengl3_example/ipch/*
 sdl_opengl3_example/x64/*
+vulkan_example/Debug/*
+vulkan_example/Release/*
+vulkan_example/ipch/*
+vulkan_example/x64/*
 *.opensdf
 *.sdf
 *.suo
