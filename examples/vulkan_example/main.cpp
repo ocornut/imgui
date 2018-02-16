@@ -507,7 +507,7 @@ static void cleanup_vulkan()
 static void frame_begin()
 {
     VkResult err;
-    while (true)
+    for (;;)
     {
         err = vkWaitForFences(g_Device, 1, &g_Fence[g_FrameIndex], VK_TRUE, 100);
         if (err == VK_SUCCESS) break;

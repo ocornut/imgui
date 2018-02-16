@@ -170,6 +170,8 @@ void ImGui_ImplGlfwVulkan_RenderDrawData(ImDrawData* draw_data)
 {
     VkResult err;
     ImGuiIO& io = ImGui::GetIO();
+    if (draw_data->TotalVtxCount == 0)
+        return;
 
     // Create the Vertex Buffer:
     size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
