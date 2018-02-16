@@ -42,6 +42,7 @@
 static Uint64       g_Time = 0;
 static bool         g_MousePressed[3] = { false, false, false };
 static GLuint       g_FontTexture = 0;
+static SDL_Cursor  *g_SdlCursorMap[ImGuiMouseCursor_Count_];
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so. 
@@ -206,6 +207,14 @@ bool ImGui_ImplSdlGL2_CreateDeviceObjects()
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
 
+    g_SdlCursorMap[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+    g_SdlCursorMap[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
+    g_SdlCursorMap[ImGuiMouseCursor_Move] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+    g_SdlCursorMap[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
+    g_SdlCursorMap[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
+    g_SdlCursorMap[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
+    g_SdlCursorMap[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
+
     return true;
 }
 
@@ -217,6 +226,9 @@ void    ImGui_ImplSdlGL2_InvalidateDeviceObjects()
         ImGui::GetIO().Fonts->TexID = 0;
         g_FontTexture = 0;
     }
+
+    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
+        SDL_FreeCursor(g_SdlCursorMap[cursor_n]);
 }
 
 bool    ImGui_ImplSdlGL2_Init(SDL_Window* window)
@@ -314,7 +326,14 @@ void ImGui_ImplSdlGL2_NewFrame(SDL_Window *window)
 #endif
 
     // Hide OS mouse cursor if ImGui is drawing it
-    SDL_ShowCursor(io.MouseDrawCursor ? 0 : 1);
+    if (io.MouseDrawCursor)
+        SDL_ShowCursor(0);
+    else
+    {
+        SDL_Cursor *cursor = g_SdlCursorMap[ImGui::GetMouseCursor()];
+        SDL_SetCursor(cursor);
+        SDL_ShowCursor(1);
+    }
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
