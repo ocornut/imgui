@@ -207,14 +207,6 @@ bool ImGui_ImplSdlGL2_CreateDeviceObjects()
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
 
-    g_SdlCursorMap[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-    g_SdlCursorMap[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
-    g_SdlCursorMap[ImGuiMouseCursor_Move] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
-    g_SdlCursorMap[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
-    g_SdlCursorMap[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
-    g_SdlCursorMap[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
-    g_SdlCursorMap[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
-
     return true;
 }
 
@@ -226,9 +218,6 @@ void    ImGui_ImplSdlGL2_InvalidateDeviceObjects()
         ImGui::GetIO().Fonts->TexID = 0;
         g_FontTexture = 0;
     }
-
-    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
-        SDL_FreeCursor(g_SdlCursorMap[cursor_n]);
 }
 
 bool    ImGui_ImplSdlGL2_Init(SDL_Window* window)
@@ -262,6 +251,14 @@ bool    ImGui_ImplSdlGL2_Init(SDL_Window* window)
     io.GetClipboardTextFn = ImGui_ImplSdlGL2_GetClipboardText;
     io.ClipboardUserData = NULL;
 
+    g_SdlCursorMap[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+    g_SdlCursorMap[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
+    g_SdlCursorMap[ImGuiMouseCursor_Move] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+    g_SdlCursorMap[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
+    g_SdlCursorMap[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
+    g_SdlCursorMap[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
+    g_SdlCursorMap[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
+
 #ifdef _WIN32
     SDL_SysWMinfo wmInfo;
     SDL_VERSION(&wmInfo.version);
@@ -277,6 +274,9 @@ bool    ImGui_ImplSdlGL2_Init(SDL_Window* window)
 void ImGui_ImplSdlGL2_Shutdown()
 {
     ImGui_ImplSdlGL2_InvalidateDeviceObjects();
+
+    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
+        SDL_FreeCursor(g_SdlCursorMap[cursor_n]);
 }
 
 void ImGui_ImplSdlGL2_NewFrame(SDL_Window *window)
