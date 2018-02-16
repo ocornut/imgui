@@ -5,7 +5,7 @@
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
 #include "imgui.h"
-#include "imgui_impl_a5.h"
+#include "../imgui_impl_allegro5.h"
 
 int main(int, char**)
 {
@@ -25,7 +25,7 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui_ImplA5_Init(display);
+    ImGui_ImplAllegro5_Init(display);
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
 
     // Setup style
@@ -62,17 +62,17 @@ int main(int, char**)
         ALLEGRO_EVENT ev;
         while (al_get_next_event(queue, &ev))
         {
-            ImGui_ImplA5_ProcessEvent(&ev);
+            ImGui_ImplAllegro5_ProcessEvent(&ev);
             if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE) 
                 running = false;
             if (ev.type == ALLEGRO_EVENT_DISPLAY_RESIZE)
             {
-                ImGui_ImplA5_InvalidateDeviceObjects();
+                ImGui_ImplAllegro5_InvalidateDeviceObjects();
                 al_acknowledge_resize(display);
-                Imgui_ImplA5_CreateDeviceObjects();
+                ImGui_ImplAllegro5_CreateDeviceObjects();
             }
         }
-        ImGui_ImplA5_NewFrame();
+        ImGui_ImplAllegro5_NewFrame();
 
         // 1. Show a simple window.
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
@@ -114,12 +114,12 @@ int main(int, char**)
         // Rendering
         al_clear_to_color(al_map_rgba_f(clear_color.x, clear_color.y, clear_color.z, clear_color.w));
         ImGui::Render();
-        ImGui_ImplA5_RenderDrawData(ImGui::GetDrawData());
+        ImGui_ImplAllegro5_RenderDrawData(ImGui::GetDrawData());
         al_flip_display();
     }
 
     // Cleanup
-    ImGui_ImplA5_Shutdown();
+    ImGui_ImplAllegro5_Shutdown();
     ImGui::DestroyContext();
     al_destroy_event_queue(queue);
     al_destroy_display(display);

@@ -34,11 +34,11 @@ files
     ../../imgui_draw.cpp
     ../../imconfig.h
     ../../imgui.h
-   ../../imgui_internal.h
+    ../../imgui_internal.h
 
     ["imgui","Marmalade binding"]
-    imgui_impl_marmalade.h
-    imgui_impl_marmalade.cpp
+    ../imgui_impl_marmalade.h
+    ../imgui_impl_marmalade.cpp
     main.cpp
 
 }
