@@ -7,7 +7,8 @@
 // See imgui_impl_glfw.cpp for details.
 
 #include "imgui.h"
-#include "imgui_impl_glfw_gl2.h"
+#include "../imgui_impl_glfw.h"
+#include "../imgui_impl_opengl2.h"
 #include <stdio.h>
 #include <GLFW/glfw3.h>
 
@@ -29,7 +30,8 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui_ImplGlfwGL2_Init(window, true);
+    ImGui_ImplGlfw_Init(window, true);
+    ImGui_ImplOpenGL2_Init();
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
 
     // Setup style
@@ -63,7 +65,8 @@ int main(int, char**)
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
-        ImGui_ImplGlfwGL2_NewFrame();
+        ImGui_ImplOpenGL2_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
 
         // 1. Show a simple window.
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
@@ -110,12 +113,13 @@ int main(int, char**)
         glClear(GL_COLOR_BUFFER_BIT);
         //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound, but prefer using the GL3+ code.
         ImGui::Render();
-        ImGui_ImplGlfwGL2_RenderDrawData(ImGui::GetDrawData());
+        ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
     }
 
     // Cleanup
-    ImGui_ImplGlfwGL2_Shutdown();
+    ImGui_ImplOpenGL2_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwTerminate();
 
