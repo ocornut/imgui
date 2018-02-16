@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-02-16: Inputs: Added support for mouse cursors, honoring ImGui::GetMouseCursor() value.
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplSdlGL2_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
@@ -43,7 +44,7 @@
 static Uint64       g_Time = 0;
 static bool         g_MousePressed[3] = { false, false, false };
 static GLuint       g_FontTexture = 0;
-static SDL_Cursor  *g_SdlCursorMap[ImGuiMouseCursor_Count_];
+static SDL_Cursor*  g_SdlCursors[ImGuiMouseCursor_Count_] = { 0 };
 
 // OpenGL2 Render function.
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
@@ -251,13 +252,13 @@ bool    ImGui_ImplSdlGL2_Init(SDL_Window* window)
     io.GetClipboardTextFn = ImGui_ImplSdlGL2_GetClipboardText;
     io.ClipboardUserData = NULL;
 
-    g_SdlCursorMap[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-    g_SdlCursorMap[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
-    g_SdlCursorMap[ImGuiMouseCursor_ResizeAll] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
-    g_SdlCursorMap[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
-    g_SdlCursorMap[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
-    g_SdlCursorMap[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
-    g_SdlCursorMap[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
+    g_SdlCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+    g_SdlCursors[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
+    g_SdlCursors[ImGuiMouseCursor_ResizeAll] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
+    g_SdlCursors[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
+    g_SdlCursors[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
+    g_SdlCursors[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
+    g_SdlCursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
 
 #ifdef _WIN32
     SDL_SysWMinfo wmInfo;
@@ -276,7 +277,7 @@ void ImGui_ImplSdlGL2_Shutdown()
     ImGui_ImplSdlGL2_InvalidateDeviceObjects();
 
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
-        SDL_FreeCursor(g_SdlCursorMap[cursor_n]);
+        SDL_FreeCursor(g_SdlCursors[cursor_n]);
 }
 
 void ImGui_ImplSdlGL2_NewFrame(SDL_Window *window)
@@ -326,12 +327,14 @@ void ImGui_ImplSdlGL2_NewFrame(SDL_Window *window)
 #endif
 
     // Hide OS mouse cursor if ImGui is drawing it
-    if (io.MouseDrawCursor)
+    ImGuiMouseCursor cursor = ImGui::GetMouseCursor();
+    if (io.MouseDrawCursor || cursor == ImGuiMouseCursor_None)
+    {
         SDL_ShowCursor(0);
+    }
     else
     {
-        SDL_Cursor *cursor = g_SdlCursorMap[ImGui::GetMouseCursor()];
-        SDL_SetCursor(cursor);
+        SDL_SetCursor(g_SdlCursors[cursor]);
         SDL_ShowCursor(1);
     }
 
