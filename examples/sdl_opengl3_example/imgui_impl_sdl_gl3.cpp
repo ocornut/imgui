@@ -367,7 +367,7 @@ bool    ImGui_ImplSdlGL3_Init(SDL_Window* window)
 
     g_SdlCursorMap[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
     g_SdlCursorMap[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
-    g_SdlCursorMap[ImGuiMouseCursor_Move] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+    g_SdlCursorMap[ImGuiMouseCursor_ResizeAll] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
     g_SdlCursorMap[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
     g_SdlCursorMap[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
     g_SdlCursorMap[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
