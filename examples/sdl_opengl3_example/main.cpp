@@ -4,7 +4,8 @@
 // (GL3W is a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc.)
 
 #include "imgui.h"
-#include "imgui_impl_sdl_gl3.h"
+#include "../imgui_impl_sdl2.h"
+#include "../imgui_impl_opengl3.h"
 #include <stdio.h>
 #include <GL/gl3w.h>    // This example is using gl3w to access OpenGL functions (because it is small). You may use glew/glad/glLoadGen/etc. whatever already works for you.
 #include <SDL.h>
@@ -36,7 +37,8 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui_ImplSdlGL3_Init(window);
+    ImGui_ImplSDL2_Init(window);
+    ImGui_ImplOpenGL3_Init();
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;
 
     // Setup style
@@ -73,11 +75,12 @@ int main(int, char**)
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
-            ImGui_ImplSdlGL3_ProcessEvent(&event);
+            ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
                 done = true;
         }
-        ImGui_ImplSdlGL3_NewFrame(window);
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDL2_NewFrame(window);
 
         // 1. Show a simple window.
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
@@ -121,12 +124,13 @@ int main(int, char**)
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui::Render();
-        ImGui_ImplSdlGL3_RenderDrawData(ImGui::GetDrawData());
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         SDL_GL_SwapWindow(window);
     }
 
     // Cleanup
-    ImGui_ImplSdlGL3_Shutdown();
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
     SDL_GL_DeleteContext(glcontext);

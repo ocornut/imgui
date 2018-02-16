@@ -22,7 +22,10 @@
     <ClCompile Include="main.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="imgui_impl_sdl_gl2.cpp">
+    <ClCompile Include="..\imgui_impl_sdl2.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui_impl_opengl2.cpp">
       <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -36,7 +39,10 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="imgui_impl_sdl_gl2.h">
+    <ClInclude Include="..\imgui_impl_opengl2.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui_impl_sdl2.h">
       <Filter>sources</Filter>
     </ClInclude>
   </ItemGroup>
