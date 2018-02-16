@@ -11,6 +11,12 @@
 // Copyright (C) 2015 by Giovanni Zito
 // This file is part of ImGui
 
+// CHANGELOG
+// (minor and older changes stripped away, please see git history for details)
+//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_Marmalade_RenderDrawData() in the .h file so you can call it yourself.
+//  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
+//  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
+
 #include "imgui.h"
 #include "imgui_impl_marmalade.h"
 
@@ -30,8 +36,9 @@ static bool         g_osdKeyboardEnabled = false;
 // use this setting to scale the interface - e.g. on device you could use 2 or 3 scale factor
 static ImVec2       g_RenderScale = ImVec2(1.0f,1.0f);
 
-// This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
-void ImGui_Marmalade_RenderDrawLists(ImDrawData* draw_data)
+// Render function.
+// (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
+void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
 {
     // Handle cases of screen coordinates != from framebuffer coordinates (e.g. retina displays)
     ImGuiIO& io = ImGui::GetIO();
@@ -232,7 +239,6 @@ bool    ImGui_Marmalade_Init(bool install_callbacks)
     io.KeyMap[ImGuiKey_Y] = s3eKeyY;
     io.KeyMap[ImGuiKey_Z] = s3eKeyZ;
 
-    io.RenderDrawListsFn = ImGui_Marmalade_RenderDrawLists;      // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
     io.SetClipboardTextFn = ImGui_Marmalade_SetClipboardText;
     io.GetClipboardTextFn = ImGui_Marmalade_GetClipboardText;
 

@@ -18,6 +18,7 @@ union ALLEGRO_EVENT;
 IMGUI_API bool    ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display);
 IMGUI_API void    ImGui_ImplA5_Shutdown();
 IMGUI_API void    ImGui_ImplA5_NewFrame();
+IMGUI_API void    ImGui_ImplA5_RenderDrawData(ImDrawData* draw_data);
 IMGUI_API bool    ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT* event);
 
 // Use if you want to reset your rendering device without losing ImGui state.

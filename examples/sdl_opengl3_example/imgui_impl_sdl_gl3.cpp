@@ -12,6 +12,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplSdlGL3_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
 //  2018-02-05: Misc: Using SDL_GetPerformanceCounter() instead of SDL_GetTicks() to be able to handle very high framerate (1000+ FPS).
@@ -48,7 +49,7 @@ static unsigned int g_VboHandle = 0, g_VaoHandle = 0, g_ElementsHandle = 0;
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so. 
 // If text or lines are blurry when integrating ImGui in your engine: in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-void ImGui_ImplSdlGL3_RenderDrawLists(ImDrawData* draw_data)
+void ImGui_ImplSdlGL3_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     ImGuiIO& io = ImGui::GetIO();
@@ -359,7 +360,6 @@ bool    ImGui_ImplSdlGL3_Init(SDL_Window* window)
     io.KeyMap[ImGuiKey_Y] = SDL_SCANCODE_Y;
     io.KeyMap[ImGuiKey_Z] = SDL_SCANCODE_Z;
 
-    io.RenderDrawListsFn = ImGui_ImplSdlGL3_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
     io.SetClipboardTextFn = ImGui_ImplSdlGL3_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplSdlGL3_GetClipboardText;
     io.ClipboardUserData = NULL;

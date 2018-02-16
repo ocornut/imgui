@@ -169,6 +169,7 @@ int main(int, char**)
         if (g_pd3dDevice->BeginScene() >= 0)
         {
             ImGui::Render();
+            ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
             g_pd3dDevice->EndScene();
         }
         HRESULT result = g_pd3dDevice->Present(NULL, NULL, NULL, NULL);

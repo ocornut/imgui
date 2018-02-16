@@ -10,6 +10,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback, ImGui_ImplGlfwVulkan_Render() calls ImGui_ImplGlfwVulkan_RenderDrawData() itself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
 //  2018-01-20: Inputs: Added Horizontal Mouse Wheel support.
@@ -165,7 +166,7 @@ static void ImGui_ImplGlfwVulkan_VkResult(VkResult err)
 }
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
-void ImGui_ImplGlfwVulkan_RenderDrawLists(ImDrawData* draw_data)
+void ImGui_ImplGlfwVulkan_RenderDrawData(ImDrawData* draw_data)
 {
     VkResult err;
     ImGuiIO& io = ImGui::GetIO();
@@ -778,7 +779,6 @@ bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, Im
     io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
     io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
 
-    io.RenderDrawListsFn = ImGui_ImplGlfwVulkan_RenderDrawLists;       // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
     io.SetClipboardTextFn = ImGui_ImplGlfwVulkan_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplGlfwVulkan_GetClipboardText;
     io.ClipboardUserData = g_Window;
@@ -851,6 +851,7 @@ void ImGui_ImplGlfwVulkan_Render(VkCommandBuffer command_buffer)
 {
     g_CommandBuffer = command_buffer;
     ImGui::Render();
+    ImGui_ImplGlfwVulkan_RenderDrawData(ImGui::GetDrawData());
     g_CommandBuffer = VK_NULL_HANDLE;
     g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 }

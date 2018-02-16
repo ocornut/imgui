@@ -131,7 +131,6 @@
      ImGuiIO& io = ImGui::GetIO();
      io.DisplaySize.x = 1920.0f;
      io.DisplaySize.y = 1280.0f;
-     io.RenderDrawListsFn = MyRenderFunction;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access render data.
      // TODO: Fill others settings of the io structure later.
 
      // Load texture atlas (there is a default font so you don't need to care about choosing a font yet)
@@ -162,6 +161,7 @@
      
         // Render & swap video buffers
         ImGui::Render();
+        MyImGuiRenderFunction(ImGui::GetDrawData());
         SwapBuffers();
      }
 
@@ -250,6 +250,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2018/02/16 (1.60) - obsoleted the io.RenderDrawListsFn callback, you can call your graphics engine render function after ImGui::Render(). Use ImGui::GetDrawData() to retrieve the ImDrawData* to display.
  - 2018/02/07 (1.60) - reorganized context handling to be more explicit,
                        - YOU NOW NEED TO CALL ImGui::CreateContext() AT THE BEGINNING OF YOUR APP, AND CALL ImGui::DestroyContext() AT THE END.
                        - removed Shutdown() function, as DestroyContext() serve this purpose.
@@ -882,14 +883,17 @@ ImGuiIO::ImGuiIO()
     OptMacOSXBehaviors = false;
 #endif
     OptCursorBlink = true;
-                                
+
     // Settings (User Functions)
-    RenderDrawListsFn = NULL;
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
     ClipboardUserData = NULL;
     ImeSetInputScreenPosFn = ImeSetInputScreenPosFn_DefaultImpl;
     ImeWindowHandle = NULL;
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    RenderDrawListsFn = NULL;
+#endif
 
     // Input (NB: we already have memset zero the entire structure)
     MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
@@ -2657,7 +2661,7 @@ ImGuiStyle& ImGui::GetStyle()
     return GImGui->Style;
 }
 
-// Same value as passed to your RenderDrawListsFn() function. valid after Render() and until the next call to NewFrame()
+// Same value as passed to the old io.RenderDrawListsFn function. Valid after Render() and until the next call to NewFrame()
 ImDrawData* ImGui::GetDrawData()
 {
     return GImGui->DrawData.Valid ? &GImGui->DrawData : NULL;
@@ -4079,8 +4083,10 @@ void ImGui::Render()
         g.IO.MetricsRenderIndices = g.DrawData.TotalIdxCount;
 
         // Render. If user hasn't set a callback then they may retrieve the draw data via GetDrawData()
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
         if (g.DrawData.CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
             g.IO.RenderDrawListsFn(&g.DrawData);
+#endif
     }
 }
 

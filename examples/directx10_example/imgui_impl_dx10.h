@@ -13,6 +13,7 @@ struct ID3D10Device;
 IMGUI_API bool        ImGui_ImplDX10_Init(void* hwnd, ID3D10Device* device);
 IMGUI_API void        ImGui_ImplDX10_Shutdown();
 IMGUI_API void        ImGui_ImplDX10_NewFrame();
+IMGUI_API void        ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data);
 
 // Use if you want to reset your rendering device without losing ImGui state.
 IMGUI_API void        ImGui_ImplDX10_InvalidateDeviceObjects();

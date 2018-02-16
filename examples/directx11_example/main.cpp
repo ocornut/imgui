@@ -209,6 +209,7 @@ int main(int, char**)
         g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, NULL);
         g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, (float*)&clear_color);
         ImGui::Render();
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
         g_pSwapChain->Present(1, 0); // Present with vsync
         //g_pSwapChain->Present(0, 0); // Present without vsync
