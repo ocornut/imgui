@@ -2,7 +2,8 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 
 #include "imgui.h"
-#include "imgui_impl_glfw_vulkan.h"
+#include "../imgui_impl_glfw.h"
+#include "../imgui_impl_vulkan.h"
 
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
@@ -616,7 +617,7 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui_ImplGlfwVulkan_Init_Data init_data = {};
+    ImGui_ImplVulkan_InitData init_data = {};
     init_data.allocator = g_Allocator;
     init_data.gpu = g_Gpu;
     init_data.device = g_Device;
@@ -624,7 +625,8 @@ int main(int, char**)
     init_data.pipeline_cache = g_PipelineCache;
     init_data.descriptor_pool = g_DescriptorPool;
     init_data.check_vk_result = check_vk_result;
-    ImGui_ImplGlfwVulkan_Init(window, true, &init_data);
+    ImGui_ImplVulkan_Init(&init_data);
+    ImGui_ImplGlfw_Init(window, true);
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
 
     // Setup style
@@ -657,7 +659,7 @@ int main(int, char**)
         err = vkBeginCommandBuffer(g_CommandBuffer[g_FrameIndex], &begin_info);
         check_vk_result(err);
 
-        ImGui_ImplGlfwVulkan_CreateFontsTexture(g_CommandBuffer[g_FrameIndex]);
+        ImGui_ImplVulkan_CreateFontsTexture(g_CommandBuffer[g_FrameIndex]);
 
         VkSubmitInfo end_info = {};
         end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -670,7 +672,7 @@ int main(int, char**)
 
         err = vkDeviceWaitIdle(g_Device);
         check_vk_result(err);
-        ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects();
+        ImGui_ImplVulkan_InvalidateFontUploadObjects();
     }
 
     bool show_demo_window = true;
@@ -681,9 +683,9 @@ int main(int, char**)
     // Hence we must render once and increase the g_FrameIndex without presenting, which we do before entering the render loop.
     // This is also the reason why frame_end() is split into frame_end() and frame_present(), the later one not being called here.
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
-    ImGui_ImplGlfwVulkan_NewFrame();
+    ImGui_ImplVulkan_NewFrame();
     frame_begin();
-    ImGui_ImplGlfwVulkan_Render(g_CommandBuffer[g_FrameIndex]);
+    ImGui_ImplVulkan_Render(g_CommandBuffer[g_FrameIndex]);
     frame_end();
     g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 #endif // IMGUI_UNLIMITED_FRAME_RATE
@@ -696,7 +698,7 @@ int main(int, char**)
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
-        ImGui_ImplGlfwVulkan_NewFrame();
+        ImGui_ImplVulkan_NewFrame();
 
         // 1. Show a simple window.
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
@@ -737,7 +739,7 @@ int main(int, char**)
 
         memcpy(&g_ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
         frame_begin();
-        ImGui_ImplGlfwVulkan_Render(g_CommandBuffer[g_FrameIndex]);
+        ImGui_ImplVulkan_Render(g_CommandBuffer[g_FrameIndex]);
         frame_end();
         frame_present();
     }
@@ -745,7 +747,7 @@ int main(int, char**)
     // Cleanup
     VkResult err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
-    ImGui_ImplGlfwVulkan_Shutdown();
+    ImGui_ImplVulkan_Shutdown();
     ImGui::DestroyContext();
     cleanup_vulkan();
     glfwTerminate();

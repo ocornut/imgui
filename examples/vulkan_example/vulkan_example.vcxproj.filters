@@ -22,7 +22,10 @@
     <ClCompile Include="main.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="imgui_impl_glfw_vulkan.cpp">
+    <ClCompile Include="..\imgui_impl_glfw.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui_impl_vulkan.cpp">
       <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -36,7 +39,10 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="imgui_impl_glfw_vulkan.h">
+    <ClInclude Include="..\imgui_impl_glfw.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui_impl_vulkan.h">
       <Filter>sources</Filter>
     </ClInclude>
   </ItemGroup>
