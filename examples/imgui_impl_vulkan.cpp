@@ -10,6 +10,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-XX-XX: Draw: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback, ImGui_ImplVulkan_Render() calls ImGui_ImplVulkan_RenderDrawData() itself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
@@ -266,21 +267,22 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data)
         VkViewport viewport;
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = ImGui::GetIO().DisplaySize.x;
-        viewport.height = ImGui::GetIO().DisplaySize.y;
+        viewport.width = io.DisplaySize.x;
+        viewport.height = io.DisplaySize.y;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(g_CommandBuffer, 0, 1, &viewport);
     }
 
     // Setup scale and translation:
+    // (Our visible imgui space lies from io.DisplayPos (top left) to io.DisplayPos+io.DisplaySize (bottom right). io.DisplayPos is typically (0,0) for single viewport applications.)
     {
         float scale[2];
-        scale[0] = 2.0f/io.DisplaySize.x;
-        scale[1] = 2.0f/io.DisplaySize.y;
+        scale[0] = 2.0f / io.DisplaySize.x;
+        scale[1] = 2.0f / io.DisplaySize.y;
         float translate[2];
-        translate[0] = -1.0f;
-        translate[1] = -1.0f;
+        translate[0] = -1.0f - io.DisplayPos.x * scale[0];
+        translate[1] = -1.0f - io.DisplayPos.y * scale[1];
         vkCmdPushConstants(g_CommandBuffer, g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
         vkCmdPushConstants(g_CommandBuffer, g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
     }
@@ -300,12 +302,16 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data)
             }
             else
             {
+                // Apply scissor/clipping rectangle
+                // FIXME: We could clamp width/height based on clamped min/max values.
                 VkRect2D scissor;
-                scissor.offset.x = (int32_t)(pcmd->ClipRect.x) > 0 ? (int32_t)(pcmd->ClipRect.x) : 0;
-                scissor.offset.y = (int32_t)(pcmd->ClipRect.y) > 0 ? (int32_t)(pcmd->ClipRect.y) : 0;
+                scissor.offset.x = (int32_t)(pcmd->ClipRect.x - io.DisplayPos.x) > 0 ? (int32_t)(pcmd->ClipRect.x - io.DisplayPos.y) : 0;
+                scissor.offset.y = (int32_t)(pcmd->ClipRect.y - io.DisplayPos.y) > 0 ? (int32_t)(pcmd->ClipRect.y - io.DisplayPos.y) : 0;
                 scissor.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
                 scissor.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y + 1); // FIXME: Why +1 here?
                 vkCmdSetScissor(g_CommandBuffer, 0, 1, &scissor);
+                
+                // Draw
                 vkCmdDrawIndexed(g_CommandBuffer, pcmd->ElemCount, 1, idx_offset, vtx_offset, 0);
             }
             idx_offset += pcmd->ElemCount;
@@ -420,6 +426,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
         ImGui_ImplVulkan_VkResult(err);
         vkUnmapMemory(g_Device, g_UploadBufferMemory);
     }
+
     // Copy to Image:
     {
         VkImageMemoryBarrier copy_barrier[1] = {};
