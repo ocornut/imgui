@@ -684,6 +684,7 @@ int main(int, char**)
     // This is also the reason why frame_end() is split into frame_end() and frame_present(), the later one not being called here.
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
     ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
     frame_begin();
     ImGui_ImplVulkan_Render(g_CommandBuffer[g_FrameIndex]);
     frame_end();
@@ -699,6 +700,7 @@ int main(int, char**)
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
         ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
 
         // 1. Show a simple window.
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
@@ -748,6 +750,7 @@ int main(int, char**)
     VkResult err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
     ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     cleanup_vulkan();
     glfwTerminate();
