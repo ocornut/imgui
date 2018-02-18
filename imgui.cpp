@@ -2636,6 +2636,7 @@ ImGuiContext* ImGui::CreateContext(ImFontAtlas* shared_font_atlas)
     ImGuiContext* ctx = IM_NEW(ImGuiContext)(shared_font_atlas);
     if (GImGui == NULL)
         SetCurrentContext(ctx);
+    Initialize(ctx);
     return ctx;
 }
 
@@ -3280,6 +3281,7 @@ void ImGui::NewFrame()
 
     // Check user data
     // (We pass an error message in the assert expression as a trick to get it visible to programmers who are not using a debugger, as most assert handlers display their argument)
+    IM_ASSERT(g.Initialized);
     IM_ASSERT(g.IO.DeltaTime >= 0.0f                                    && "Need a positive DeltaTime (zero is tolerated but will cause some timing issues)");
     IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f  && "Invalid DisplaySize value");
     IM_ASSERT(g.IO.Fonts->Fonts.Size > 0                                && "Font Atlas not built. Did you call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8() ?");
@@ -3294,9 +3296,13 @@ void ImGui::NewFrame()
     if (g.IO.NavFlags & ImGuiNavFlags_EnableKeyboard)
         IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
 
-    // Initialize on first frame
-    if (!g.Initialized)
-        Initialize(&g);
+    // Load settings on first frame
+    if (!g.SettingsLoaded)
+    {
+        IM_ASSERT(g.SettingsWindows.empty());
+        LoadIniSettingsFromDisk(g.IO.IniFilename);
+        g.SettingsLoaded = true;
+    }
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
@@ -3602,6 +3608,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSetting
 void ImGui::Initialize(ImGuiContext* context)
 {
     ImGuiContext& g = *context;
+    IM_ASSERT(!g.Initialized && !g.SettingsLoaded);
     g.LogClipboard = IM_NEW(ImGuiTextBuffer)();
 
     // Add .ini handle for ImGuiWindow type
@@ -3613,9 +3620,6 @@ void ImGui::Initialize(ImGuiContext* context)
     ini_handler.WriteAllFn = SettingsHandlerWindow_WriteAll;
     g.SettingsHandlers.push_front(ini_handler);
 
-    // Load .ini file
-    IM_ASSERT(g.SettingsWindows.empty());
-    LoadIniSettingsFromDisk(g.IO.IniFilename);
     g.Initialized = true;
 }
 
@@ -3765,6 +3769,7 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
         }
     }
     ImGui::MemFree(buf);
+    g.SettingsLoaded = true;
 }
 
 static void SaveIniSettingsToDisk(const char* ini_filename)
