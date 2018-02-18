@@ -11,9 +11,9 @@ static INT64        g_TicksPerSecond = 0;
 // Functions
 bool    ImGui_ImplWin32_Init(void* hwnd)
 {
-    if (!QueryPerformanceFrequency((LARGE_INTEGER *)&g_TicksPerSecond))
+    if (!::QueryPerformanceFrequency((LARGE_INTEGER *)&g_TicksPerSecond))
         return false;
-    if (!QueryPerformanceCounter((LARGE_INTEGER *)&g_Time))
+    if (!::QueryPerformanceCounter((LARGE_INTEGER *)&g_Time))
         return false;
 
     g_hWnd = (HWND)hwnd;
@@ -55,19 +55,19 @@ void    ImGui_ImplWin32_NewFrame()
 
     // Setup display size (every frame to accommodate for window resizing)
     RECT rect;
-    GetClientRect(g_hWnd, &rect);
+    ::GetClientRect(g_hWnd, &rect);
     io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
 
     // Setup time step
     INT64 current_time;
-    QueryPerformanceCounter((LARGE_INTEGER *)&current_time);
+    ::QueryPerformanceCounter((LARGE_INTEGER *)&current_time);
     io.DeltaTime = (float)(current_time - g_Time) / g_TicksPerSecond;
     g_Time = current_time;
 
     // Read keyboard modifiers inputs
-    io.KeyCtrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
-    io.KeyShift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
-    io.KeyAlt = (GetKeyState(VK_MENU) & 0x8000) != 0;
+    io.KeyCtrl = (::GetKeyState(VK_CONTROL) & 0x8000) != 0;
+    io.KeyShift = (::GetKeyState(VK_SHIFT) & 0x8000) != 0;
+    io.KeyAlt = (::GetKeyState(VK_MENU) & 0x8000) != 0;
     io.KeySuper = false;
     // io.KeysDown : filled by WM_KEYDOWN/WM_KEYUP events
     // io.MousePos : filled by WM_MOUSEMOVE events
@@ -78,13 +78,13 @@ void    ImGui_ImplWin32_NewFrame()
     if (io.WantMoveMouse)
     {
         POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
-        ClientToScreen(g_hWnd, &pos);
-        SetCursorPos(pos.x, pos.y);
+        ::ClientToScreen(g_hWnd, &pos);
+        ::SetCursorPos(pos.x, pos.y);
     }
 
     // Hide OS mouse cursor if ImGui is drawing it
     if (io.MouseDrawCursor)
-        SetCursor(NULL);
+        ::SetCursor(NULL);
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
