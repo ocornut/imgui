@@ -2429,7 +2429,8 @@ static void ShowExampleAppFixedOverlay(bool* p_open)
 {
     const float DISTANCE = 10.0f;
     static int corner = 0;
-    ImVec2 window_pos = ImVec2((corner & 1) ? ImGui::GetIO().DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? ImGui::GetIO().DisplaySize.y - DISTANCE : DISTANCE);
+    ImGuiIO& io = ImGui::GetIO();
+    ImVec2 window_pos = ImVec2(io.DisplayPos.x + ((corner & 1) ? io.DisplaySize.x - DISTANCE : DISTANCE), io.DisplayPos.y + ((corner & 2) ? io.DisplaySize.y - DISTANCE : DISTANCE));
     ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
     ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
     ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
