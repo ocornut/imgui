@@ -150,7 +150,10 @@ bool    ImGui_ImplSDL2_Init(SDL_Window* window)
 void ImGui_ImplSDL2_Shutdown()
 {
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
+    {
         SDL_FreeCursor(g_MouseCursors[cursor_n]);
+        g_MouseCursors[cursor_n] = NULL;
+    }
 }
 
 void ImGui_ImplSDL2_NewFrame(SDL_Window* window)

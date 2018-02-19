@@ -13,6 +13,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-XX-XX: Inputs: Added support for mouse cursors, honoring ImGui::GetMouseCursor() value.
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplGlfwGL3_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
@@ -43,6 +44,7 @@
 static GLFWwindow*  g_Window = NULL;
 static double       g_Time = 0.0f;
 static bool         g_MouseJustPressed[3] = { false, false, false };
+static GLFWcursor*  g_MouseCursors[ImGuiMouseCursor_Count_] = { 0 };
 
 static const char* ImGui_ImplGlfwGL3_GetClipboardText(void* user_data)
 {
@@ -123,6 +125,14 @@ bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
     io.ImeWindowHandle = glfwGetWin32Window(g_Window);
 #endif
 
+    g_MouseCursors[ImGuiMouseCursor_Arrow] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+    g_MouseCursors[ImGuiMouseCursor_TextInput] = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
+    g_MouseCursors[ImGuiMouseCursor_ResizeAll] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);   // FIXME: GLFW doesn't have this.
+    g_MouseCursors[ImGuiMouseCursor_ResizeNS] = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR);
+    g_MouseCursors[ImGuiMouseCursor_ResizeEW] = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR);
+    g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);  // FIXME: GLFW doesn't have this.
+    g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);  // FIXME: GLFW doesn't have this.
+
     if (install_callbacks)
     {
         glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
@@ -136,6 +146,11 @@ bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
 
 void ImGui_ImplGlfw_Shutdown()
 {
+    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
+    {
+        glfwDestroyCursor(g_MouseCursors[cursor_n]);
+        g_MouseCursors[cursor_n] = NULL;
+    }
 }
 
 void ImGui_ImplGlfw_NewFrame()
@@ -184,7 +199,16 @@ void ImGui_ImplGlfw_NewFrame()
     }
 
     // Hide OS mouse cursor if ImGui is drawing it
-    glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
+    ImGuiMouseCursor cursor = ImGui::GetMouseCursor();
+    if (io.MouseDrawCursor || cursor == ImGuiMouseCursor_None)
+    {
+        glfwSetInputMode(g_Window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    }
+    else
+    {
+        glfwSetInputMode(g_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        glfwSetCursor(g_Window, g_MouseCursors[cursor]);
+    }
 
     // Gamepad navigation mapping [BETA]
     memset(io.NavInputs, 0, sizeof(io.NavInputs));
