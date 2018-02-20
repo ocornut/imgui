@@ -10,6 +10,7 @@
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
+//  2018-02-20: Inputs: Added support for mouse cursors (ImGui::GetMouseCursor() value and WM_SETCURSOR message handling).
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplDX10_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
@@ -32,11 +33,13 @@
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
-// Data
+// Win32 Data
+static HWND                     g_hWnd = 0;
 static INT64                    g_Time = 0;
 static INT64                    g_TicksPerSecond = 0;
+static ImGuiMouseCursor         g_LastMouseCursor = ImGuiMouseCursor_Count_;
 
-static HWND                     g_hWnd = 0;
+// DirectX data
 static ID3D10Device*            g_pd3dDevice = NULL;
 static ID3D10Buffer*            g_pVB = NULL;
 static ID3D10Buffer*            g_pIB = NULL;
@@ -240,6 +243,33 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     ctx->IASetInputLayout(old.InputLayout); if (old.InputLayout) old.InputLayout->Release();
 }
 
+static void ImGui_ImplWin32_UpdateMouseCursor()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuiMouseCursor imgui_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
+    if (imgui_cursor == ImGuiMouseCursor_None)
+    {
+        // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
+        ::SetCursor(NULL);
+    }
+    else
+    {
+        // Hardware cursor type
+        LPTSTR win32_cursor = IDC_ARROW;
+        switch (imgui_cursor)
+        {
+        case ImGuiMouseCursor_Arrow:        win32_cursor = IDC_ARROW; break;
+        case ImGuiMouseCursor_TextInput:    win32_cursor = IDC_IBEAM; break;
+        case ImGuiMouseCursor_ResizeAll:    win32_cursor = IDC_SIZEALL; break;
+        case ImGuiMouseCursor_ResizeEW:     win32_cursor = IDC_SIZEWE; break;
+        case ImGuiMouseCursor_ResizeNS:     win32_cursor = IDC_SIZENS; break;
+        case ImGuiMouseCursor_ResizeNESW:   win32_cursor = IDC_SIZENESW; break;
+        case ImGuiMouseCursor_ResizeNWSE:   win32_cursor = IDC_SIZENWSE; break;
+        }
+        ::SetCursor(::LoadCursor(NULL, win32_cursor));
+    }
+}
+
 // Process Win32 mouse/keyboard inputs. 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
@@ -305,6 +335,13 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
         if (wParam > 0 && wParam < 0x10000)
             io.AddInputCharacter((unsigned short)wParam);
+        return 0;
+    case WM_SETCURSOR:
+        if (LOWORD(lParam) == HTCLIENT)
+        {
+            ImGui_ImplWin32_UpdateMouseCursor();
+            return 1;
+        }
         return 0;
     }
     return 0;
@@ -618,9 +655,13 @@ void ImGui_ImplDX10_NewFrame()
         SetCursorPos(pos.x, pos.y);
     }
 
-    // Hide OS mouse cursor if ImGui is drawing it
-    if (io.MouseDrawCursor)
-        SetCursor(NULL);
+    // Update OS mouse cursor with the cursor requested by imgui
+    ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
+    if (g_LastMouseCursor != mouse_cursor)
+    {
+        g_LastMouseCursor = mouse_cursor;
+        ImGui_ImplWin32_UpdateMouseCursor();
+    }
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
