@@ -46,7 +46,7 @@ static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
 static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
 static unsigned int g_VboHandle = 0, g_VaoHandle = 0, g_ElementsHandle = 0;
-static SDL_Cursor*  g_SdlCursors[ImGuiMouseCursor_Count_] = { 0 };
+static SDL_Cursor*  g_MouseCursors[ImGuiMouseCursor_Count_] = { 0 };
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so. 
@@ -366,13 +366,13 @@ bool    ImGui_ImplSdlGL3_Init(SDL_Window* window)
     io.GetClipboardTextFn = ImGui_ImplSdlGL3_GetClipboardText;
     io.ClipboardUserData = NULL;
 
-    g_SdlCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-    g_SdlCursors[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
-    g_SdlCursors[ImGuiMouseCursor_ResizeAll] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
-    g_SdlCursors[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
-    g_SdlCursors[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
-    g_SdlCursors[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
-    g_SdlCursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
+    g_MouseCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+    g_MouseCursors[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
+    g_MouseCursors[ImGuiMouseCursor_ResizeAll] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
+    g_MouseCursors[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
+    g_MouseCursors[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
+    g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
+    g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
 
 #ifdef _WIN32
     SDL_SysWMinfo wmInfo;
@@ -388,10 +388,13 @@ bool    ImGui_ImplSdlGL3_Init(SDL_Window* window)
 
 void ImGui_ImplSdlGL3_Shutdown()
 {
-    ImGui_ImplSdlGL3_InvalidateDeviceObjects();
-
+    // Destroy SDL mouse cursors
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
-        SDL_FreeCursor(g_SdlCursors[cursor_n]);
+        SDL_FreeCursor(g_MouseCursors[cursor_n]);
+    memset(g_MouseCursors, 0, sizeof(g_MouseCursors));
+
+    // Destroy OpenGL objects
+    ImGui_ImplSdlGL3_InvalidateDeviceObjects();
 }
 
 void ImGui_ImplSdlGL3_NewFrame(SDL_Window* window)
@@ -440,7 +443,7 @@ void ImGui_ImplSdlGL3_NewFrame(SDL_Window* window)
         io.MousePos = ImVec2((float)mx, (float)my);
 #endif
 
-    // Hide OS mouse cursor if ImGui is drawing it
+    // Update OS/hardware mouse cursor if imgui isn't drawing a software cursor
     ImGuiMouseCursor cursor = ImGui::GetMouseCursor();
     if (io.MouseDrawCursor || cursor == ImGuiMouseCursor_None)
     {
@@ -448,7 +451,7 @@ void ImGui_ImplSdlGL3_NewFrame(SDL_Window* window)
     }
     else
     {
-        SDL_SetCursor(g_SdlCursors[cursor]);
+        SDL_SetCursor(g_MouseCursors[cursor] ? g_MouseCursors[cursor] : g_MouseCursors[ImGuiMouseCursor_Arrow]);
         SDL_ShowCursor(1);
     }
 

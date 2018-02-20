@@ -337,7 +337,7 @@ void ImGui_ImplGlfwGL2_NewFrame()
         g_MouseJustPressed[i] = false;
     }
 
-    // Update mouse cursor
+    // Update OS/hardware mouse cursor if imgui isn't drawing a software cursor
     ImGuiMouseCursor cursor = ImGui::GetMouseCursor();
     if (io.MouseDrawCursor || cursor == ImGuiMouseCursor_None)
     {
@@ -345,8 +345,8 @@ void ImGui_ImplGlfwGL2_NewFrame()
     }
     else
     {
-        glfwSetInputMode(g_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         glfwSetCursor(g_Window, g_MouseCursors[cursor] ? g_MouseCursors[cursor] : g_MouseCursors[ImGuiMouseCursor_Arrow]);
+        glfwSetInputMode(g_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
