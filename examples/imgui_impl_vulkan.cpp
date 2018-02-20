@@ -26,7 +26,7 @@
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
 
-// Vulkan Data
+// Vulkan data
 static VkAllocationCallbacks* g_Allocator = NULL;
 static VkPhysicalDevice       g_Gpu = VK_NULL_HANDLE;
 static VkDevice               g_Device = VK_NULL_HANDLE;
@@ -703,7 +703,6 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitData *init_data)
     g_CheckVkResult = init_data->check_vk_result;
 
     ImGui_ImplVulkan_CreateDeviceObjects();
-
     return true;
 }
 

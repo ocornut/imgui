@@ -8,7 +8,11 @@
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
-//  2018-XX-XX: Draw: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
+//  2018-XX-XX: OpenGL: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
+//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplGlfwGL2_RenderDrawData() in the .h file so you can call it yourself.
+//  2017-09-01: OpenGL: Save and restore current polygon mode.
+//  2016-09-10: OpenGL: Uploading font texture as RGBA32 to increase compatibility with users shaders (not ideal).
+//  2016-09-05: OpenGL: Fixed save and restore of current scissor rectangle.
 
 #include "imgui.h"
 #include "imgui_impl_opengl2.h"
@@ -26,7 +30,7 @@
 #include <GL/GL.h>
 #endif
 
-// Data
+// OpenGL Data
 static GLuint       g_FontTexture = 0;
 
 // Functions
@@ -134,7 +138,7 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glPopAttrib();
-    glPolygonMode(GL_FRONT, last_polygon_mode[0]); glPolygonMode(GL_BACK, last_polygon_mode[1]);
+    glPolygonMode(GL_FRONT, (GLenum)last_polygon_mode[0]); glPolygonMode(GL_BACK, (GLenum)last_polygon_mode[1]);
     glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 }

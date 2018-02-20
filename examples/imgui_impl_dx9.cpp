@@ -12,7 +12,6 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplDX9_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
-//  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
 
 #include "imgui.h"
 #include "imgui_impl_dx9.h"
@@ -22,7 +21,7 @@
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
-// Data
+// DirectX data
 static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
 static LPDIRECT3DVERTEXBUFFER9  g_pVB = NULL;
 static LPDIRECT3DINDEXBUFFER9   g_pIB = NULL;
@@ -175,7 +174,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     d3d9_state_block->Release();
 }
 
-bool    ImGui_ImplDX9_Init(IDirect3DDevice9* device)
+bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
 {
     g_pd3dDevice = device;
     return true;

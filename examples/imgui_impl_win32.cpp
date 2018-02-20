@@ -3,10 +3,23 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-// Data
-static HWND         g_hWnd = 0;
-static INT64        g_Time = 0;
-static INT64        g_TicksPerSecond = 0;
+// CHANGELOG
+//  2018-02-20: Inputs: Added support for mouse cursors (ImGui::GetMouseCursor() value and WM_SETCURSOR message handling).
+//  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
+//  2018-02-06: Inputs: Honoring the io.WantMoveMouse by repositioning the mouse by using navigation and ImGuiNavFlags_MoveMouse is set.
+//  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
+//  2018-01-20: Inputs: Added Horizontal Mouse Wheel support.
+//  2018-01-08: Inputs: Added mapping for ImGuiKey_Insert.
+//  2018-01-05: Inputs: Added WM_LBUTTONDBLCLK double-click handlers for window classes with the CS_DBLCLKS flag.
+//  2017-10-23: Inputs: Added WM_SYSKEYDOWN / WM_SYSKEYUP handlers so e.g. the VK_MENU key can be read.
+//  2017-10-23: Inputs: Using Win32 ::SetCapture/::GetCapture() to retrieve mouse positions outside the client area when dragging. 
+//  2016-11-12: Inputs: Only call Win32 ::SetCursor(NULL) when io.MouseDrawCursor is set.
+
+// Win32 Data
+static HWND                 g_hWnd = 0;
+static INT64                g_Time = 0;
+static INT64                g_TicksPerSecond = 0;
+static ImGuiMouseCursor     g_LastMouseCursor = ImGuiMouseCursor_Count_;
 
 // Functions
 bool    ImGui_ImplWin32_Init(void* hwnd)
@@ -49,6 +62,33 @@ void    ImGui_ImplWin32_Shutdown()
     g_hWnd = (HWND)0;
 }
 
+static void ImGui_ImplWin32_UpdateMouseCursor()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuiMouseCursor imgui_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
+    if (imgui_cursor == ImGuiMouseCursor_None)
+    {
+        // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
+        ::SetCursor(NULL);
+    }
+    else
+    {
+        // Hardware cursor type
+        LPTSTR win32_cursor = IDC_ARROW;
+        switch (imgui_cursor)
+        {
+        case ImGuiMouseCursor_Arrow:        win32_cursor = IDC_ARROW; break;
+        case ImGuiMouseCursor_TextInput:    win32_cursor = IDC_IBEAM; break;
+        case ImGuiMouseCursor_ResizeAll:    win32_cursor = IDC_SIZEALL; break;
+        case ImGuiMouseCursor_ResizeEW:     win32_cursor = IDC_SIZEWE; break;
+        case ImGuiMouseCursor_ResizeNS:     win32_cursor = IDC_SIZENS; break;
+        case ImGuiMouseCursor_ResizeNESW:   win32_cursor = IDC_SIZENESW; break;
+        case ImGuiMouseCursor_ResizeNWSE:   win32_cursor = IDC_SIZENWSE; break;
+        }
+        ::SetCursor(::LoadCursor(NULL, win32_cursor));
+    }
+}
+
 void    ImGui_ImplWin32_NewFrame()
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -82,9 +122,13 @@ void    ImGui_ImplWin32_NewFrame()
         ::SetCursorPos(pos.x, pos.y);
     }
 
-    // Hide OS mouse cursor if ImGui is drawing it
-    if (io.MouseDrawCursor)
-        ::SetCursor(NULL);
+    // Update OS mouse cursor with the cursor requested by imgui
+    ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
+    if (g_LastMouseCursor != mouse_cursor)
+    {
+        g_LastMouseCursor = mouse_cursor;
+        ImGui_ImplWin32_UpdateMouseCursor();
+    }
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
@@ -155,6 +199,13 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
         if (wParam > 0 && wParam < 0x10000)
             io.AddInputCharacter((unsigned short)wParam);
+        return 0;
+    case WM_SETCURSOR:
+        if (LOWORD(lParam) == HTCLIENT)
+        {
+            ImGui_ImplWin32_UpdateMouseCursor();
+            return 1;
+        }
         return 0;
     }
     return 0;

@@ -13,7 +13,6 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2018-02-16: Inputs: Added support for mouse cursors, honoring ImGui::GetMouseCursor() value.
-//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplSdlGL3_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
 //  2018-02-05: Misc: Using SDL_GetPerformanceCounter() instead of SDL_GetTicks() to be able to handle very high framerate (1000+ FPS).
@@ -21,14 +20,8 @@
 //  2018-01-20: Inputs: Added Horizontal Mouse Wheel support.
 //  2018-01-19: Inputs: When available (SDL 2.0.4+) using SDL_CaptureMouse() to retrieve coordinates outside of client area when dragging. Otherwise (SDL 2.0.3 and before) testing for SDL_WINDOW_INPUT_FOCUS instead of SDL_WINDOW_MOUSE_FOCUS.
 //  2018-01-18: Inputs: Added mapping for ImGuiKey_Insert.
-//  2018-01-07: OpenGL: Changed GLSL shader version from 330 to 150.
-//  2017-09-01: OpenGL: Save and restore current bound sampler. Save and restore current polygon mode.
 //  2017-08-25: Inputs: MousePos set to -FLT_MAX,-FLT_MAX when mouse is unavailable/missing (instead of -1,-1).
-//  2017-05-01: OpenGL: Fixed save and restore of current blend func state.
-//  2017-05-01: OpenGL: Fixed save and restore of current GL_ACTIVE_TEXTURE.
 //  2016-10-15: Misc: Added a void* user_data parameter to Clipboard function handlers.
-//  2016-09-05: OpenGL: Fixed save and restore of current scissor rectangle.
-//  2016-07-29: OpenGL: Explicitly setting GL_UNPACK_ROW_LENGTH to reduce issues because SDL changes it. (#752)
 
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
@@ -149,11 +142,10 @@ bool    ImGui_ImplSDL2_Init(SDL_Window* window)
 
 void ImGui_ImplSDL2_Shutdown()
 {
+    // Destroy SDL mouse cursors
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
-    {
         SDL_FreeCursor(g_MouseCursors[cursor_n]);
-        g_MouseCursors[cursor_n] = NULL;
-    }
+    memset(g_MouseCursors, 0, sizeof(g_MouseCursors));
 }
 
 void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
@@ -200,7 +192,7 @@ void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
         io.MousePos = ImVec2((float)mx, (float)my);
 #endif
 
-    // Hide OS mouse cursor if ImGui is drawing it
+    // Update OS/hardware mouse cursor if imgui isn't drawing a software cursor
     ImGuiMouseCursor cursor = ImGui::GetMouseCursor();
     if (io.MouseDrawCursor || cursor == ImGuiMouseCursor_None)
     {
@@ -208,7 +200,7 @@ void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
     }
     else
     {
-        SDL_SetCursor(g_MouseCursors[cursor]);
+        SDL_SetCursor(g_MouseCursors[cursor] ? g_MouseCursors[cursor] : g_MouseCursors[ImGuiMouseCursor_Arrow]);
         SDL_ShowCursor(1);
     }
 

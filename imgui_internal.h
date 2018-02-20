@@ -687,6 +687,7 @@ struct ImGuiContext
     ImVec2                  OsImePosRequest, OsImePosSet;       // Cursor position request & last passed to the OS Input Method Editor
 
     // Settings
+    bool                           SettingsLoaded;
     float                          SettingsDirtyTimer;          // Save .ini Settings on disk when time reaches zero
     ImVector<ImGuiWindowSettings>  SettingsWindows;             // .ini settings for ImGuiWindow
     ImVector<ImGuiSettingsHandler> SettingsHandlers;            // List of .ini settings handlers
@@ -789,6 +790,7 @@ struct ImGuiContext
         TooltipOverrideCount = 0;
         OsImePosRequest = OsImePosSet = ImVec2(-1.0f, -1.0f);
 
+        SettingsLoaded = false;
         SettingsDirtyTimer = 0.0f;
 
         LogEnabled = false;
