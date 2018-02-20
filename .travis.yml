@@ -16,7 +16,7 @@ before_install:
        sudo apt-get install -y --no-install-recommends libxrandr-dev libxi-dev libxxf86vm-dev libsdl2-dev;
        wget https://github.com/glfw/glfw/releases/download/3.2.1/glfw-3.2.1.zip;
        unzip glfw-3.2.1.zip && cd glfw-3.2.1; 
-       cmake -DCMAKE_INSTALL_PREFIX=$HOME -DBUILD_SHARED_LIBS=true -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false .;
+       cmake -DBUILD_SHARED_LIBS=true -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false .;
        sudo make -j $CPU_NUM install && cd ..;
     fi
   - if [ $TRAVIS_OS_NAME == osx ]; then 
