@@ -1,4 +1,5 @@
-// ImGui GLFW binding with Vulkan + shaders
+// ImGui Renderer for: Vulkan
+// This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
 
 // Missing features:
 //  [ ] User texture binding. Changes of ImTextureID aren't supported by this binding! See https://github.com/ocornut/imgui/pull/914

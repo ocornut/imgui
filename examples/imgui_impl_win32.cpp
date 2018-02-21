@@ -1,3 +1,6 @@
+// ImGui Platform Binding for: Windows (standard windows API for 32 and 64 bits applications)
+// This needs to be used along with a Renderer (e.g. DirectX11, OpenGL3, Vulkan..)
+
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #define WIN32_LEAN_AND_MEAN

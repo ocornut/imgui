@@ -1,4 +1,5 @@
-// ImGui Win32 + DirectX9 binding
+// ImGui Renderer for: DirectX9
+// This needs to be used along with a Platform Binding (e.g. Win32)
 
 // Implemented features:
 //  [X] User texture binding. Use 'LPDIRECT3DTEXTURE9' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.

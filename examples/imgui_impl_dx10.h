@@ -1,4 +1,5 @@
-// ImGui Win32 + DirectX10 binding
+// ImGui Renderer for: DirectX10
+// This needs to be used along with a Platform Binding (e.g. Win32)
 
 // Implemented features:
 //  [X] User texture binding. Use 'ID3D10ShaderResourceView*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.

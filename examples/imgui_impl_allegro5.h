@@ -1,4 +1,5 @@
-// ImGui Allegro 5 bindings
+// ImGui Renderer + Platform Binding for: Allegro 5
+// (Info: Allegro 5 is a cross-platform general purpose library for handling windows, inputs, graphics, etc.)
 
 // Implemented features:
 //  [X] User texture binding. Use 'ALLEGRO_BITMAP*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.

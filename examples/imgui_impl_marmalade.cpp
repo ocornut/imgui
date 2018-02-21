@@ -1,4 +1,4 @@
-// ImGui Marmalade binding with IwGx
+// ImGui Renderer + Platform Binding for: Marmalade + IwGx
 
 // Implemented features:
 //  [X] User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.

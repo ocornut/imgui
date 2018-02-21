@@ -1,3 +1,7 @@
+// ImGui Renderer for: OpenGL3 (modern OpenGL with shaders / programmatic pipeline)
+// This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
+// (Note: We are using GL3W as a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc..)
+
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
 //  2018-XX-XX: OpenGL: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
