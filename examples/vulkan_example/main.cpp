@@ -1,4 +1,4 @@
-// ImGui - standalone example application for Glfw + Vulkan, using programmable pipeline
+// ImGui - standalone example application for Glfw + Vulkan
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 
 #include "imgui.h"
@@ -10,6 +10,7 @@
 #define GLFW_INCLUDE_NONE
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <vulkan/vulkan.h>
 
 #define IMGUI_MAX_POSSIBLE_BACK_BUFFERS 16
 #define IMGUI_UNLIMITED_FRAME_RATE
@@ -29,7 +30,7 @@ static VkQueue                  g_Queue = VK_NULL_HANDLE;
 static VkDebugReportCallbackEXT g_Debug_Report = VK_NULL_HANDLE;
 
 static VkSurfaceFormatKHR       g_SurfaceFormat;
-static VkImageSubresourceRange  g_ImageRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+static VkImageSubresourceRange  g_ImageRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 static VkPresentModeKHR         g_PresentMode;
 
 static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
@@ -59,7 +60,7 @@ static void check_vk_result(VkResult err)
         abort();
 }
 
-static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
+static void resize_vulkan(GLFWwindow*, int w, int h)
 {
     VkResult err;
     VkSwapchainKHR old_swapchain = g_Swapchain;
@@ -194,37 +195,34 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(
     VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
-    printf("[vulkan] ObjectType: %i\nMessage: %s\n\n", objectType, pMessage );
+    printf("[vulkan] ObjectType: %i\nMessage: %s\n\n", objectType, pMessage);
     return VK_FALSE;
 }
 #endif // IMGUI_VULKAN_DEBUG_REPORT
 
-static void setup_vulkan(GLFWwindow* window)
+static void setup_vulkan(GLFWwindow* window, const char** extensions, uint32_t extensions_count)
 {
     VkResult err;
 
     // Create Vulkan Instance
     {
-        uint32_t extensions_count;
-        const char** glfw_extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
-
         VkInstanceCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         create_info.enabledExtensionCount = extensions_count;
-        create_info.ppEnabledExtensionNames = glfw_extensions;
+        create_info.ppEnabledExtensionNames = extensions;
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
         // enabling multiple validation layers grouped as lunarg standard validation
-        const char* layers[] = {"VK_LAYER_LUNARG_standard_validation"};
+        const char* layers[] = { "VK_LAYER_LUNARG_standard_validation" };
         create_info.enabledLayerCount = 1;
         create_info.ppEnabledLayerNames = layers;
 
         // need additional storage for char pointer to debug report extension
         const char** extensions = (const char**)malloc(sizeof(const char*) * (extensions_count + 1));
         for (size_t i = 0; i < extensions_count; i++)
-            extensions[i] = glfw_extensions[i];
-        extensions[ extensions_count ] = "VK_EXT_debug_report";
-        create_info.enabledExtensionCount = extensions_count+1;
+            extensions[i] = extensions[i];
+        extensions[extensions_count] = "VK_EXT_debug_report";
+        create_info.enabledExtensionCount = extensions_count + 1;
         create_info.ppEnabledExtensionNames = extensions;
 #endif // IMGUI_VULKAN_DEBUG_REPORT
 
@@ -235,7 +233,7 @@ static void setup_vulkan(GLFWwindow* window)
         free(extensions);
 
         // create the debug report callback
-        VkDebugReportCallbackCreateInfoEXT debug_report_ci ={};
+        VkDebugReportCallbackCreateInfoEXT debug_report_ci = {};
         debug_report_ci.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
         debug_report_ci.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
         debug_report_ci.pfnCallback = debug_report;
@@ -245,12 +243,12 @@ static void setup_vulkan(GLFWwindow* window)
         PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT = 
             (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkCreateDebugReportCallbackEXT");
 
-        err = vkCreateDebugReportCallbackEXT( g_Instance, &debug_report_ci, g_Allocator, &g_Debug_Report );
+        err = vkCreateDebugReportCallbackEXT(g_Instance, &debug_report_ci, g_Allocator, &g_Debug_Report);
         check_vk_result(err);
 #endif // IMGUI_VULKAN_DEBUG_REPORT
     }
 
-    // Create Window Surface
+    // Create Window Surface (with GLFW)
     {
         err = glfwCreateWindowSurface(g_Instance, window, g_Allocator, &g_Surface);
         check_vk_result(err);
@@ -315,7 +313,7 @@ static void setup_vulkan(GLFWwindow* window)
         // first check if only one format, VK_FORMAT_UNDEFINED, is available, which would imply that any format is available
         if (count == 1)
         {
-            if( formats[0].format == VK_FORMAT_UNDEFINED )
+            if (formats[0].format == VK_FORMAT_UNDEFINED)
             {
                 g_SurfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
                 g_SurfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
@@ -328,14 +326,13 @@ static void setup_vulkan(GLFWwindow* window)
         else
         {
             // request several formats, the first found will be used 
-            VkFormat requestSurfaceImageFormat[] = {VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM};
+            VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
             VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
             bool requestedFound = false;
             for (size_t i = 0; i < sizeof(requestSurfaceImageFormat) / sizeof(requestSurfaceImageFormat[0]); i++)
             {
-                if( requestedFound ) {
+                if (requestedFound)
                     break;
-                }
                 for (uint32_t j = 0; j < count; j++)
                 {
                     if (formats[j].format == requestSurfaceImageFormat[i] && formats[j].colorSpace == requestSurfaceColorSpace)
@@ -375,7 +372,7 @@ static void setup_vulkan(GLFWwindow* window)
                 break;
             }
         }
-        if( !presentModeAvailable )
+        if (!presentModeAvailable)
             g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;   // always available
     }
 
@@ -383,10 +380,10 @@ static void setup_vulkan(GLFWwindow* window)
     // Create Logical Device
     {
         int device_extension_count = 1;
-        const char* device_extensions[] = {"VK_KHR_swapchain"};
+        const char* device_extensions[] = { "VK_KHR_swapchain" };
         const uint32_t queue_index = 0;
         const uint32_t queue_count = 1;
-        const float queue_priority[] = {1.0f};
+        const float queue_priority[] = { 1.0f };
         VkDeviceQueueCreateInfo queue_info[1] = {};
         queue_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queue_info[0].queueFamilyIndex = g_QueueFamily;
@@ -394,7 +391,7 @@ static void setup_vulkan(GLFWwindow* window)
         queue_info[0].pQueuePriorities = queue_priority;
         VkDeviceCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        create_info.queueCreateInfoCount = sizeof(queue_info)/sizeof(queue_info[0]);
+        create_info.queueCreateInfoCount = sizeof(queue_info) / sizeof(queue_info[0]);
         create_info.pQueueCreateInfos = queue_info;
         create_info.enabledExtensionCount = device_extension_count;
         create_info.ppEnabledExtensionNames = device_extensions;
@@ -576,8 +573,8 @@ static void frame_present()
     uint32_t PresentIndex = g_FrameIndex;
 #endif // IMGUI_UNLIMITED_FRAME_RATE
 
-    VkSwapchainKHR swapchains[1] = {g_Swapchain};
-    uint32_t indices[1] = {g_BackbufferIndices[PresentIndex]};
+    VkSwapchainKHR swapchains[1] = { g_Swapchain };
+    uint32_t indices[1] = { g_BackbufferIndices[PresentIndex] };
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
@@ -612,7 +609,9 @@ int main(int, char**)
         printf("GLFW: Vulkan Not Supported\n");
         return 1;
     }
-    setup_vulkan(window);
+    uint32_t extensions_count = 0;
+    const char** glfw_extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
+    setup_vulkan(window, glfw_extensions, extensions_count);
 
     // Setup ImGui binding
     ImGui::CreateContext();
@@ -739,6 +738,7 @@ int main(int, char**)
             ImGui::ShowDemoWindow(&show_demo_window);
         }
 
+        // Rendering
         memcpy(&g_ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
         frame_begin();
         ImGui_ImplVulkan_Render(g_CommandBuffer[g_FrameIndex]);
