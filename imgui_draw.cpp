@@ -450,7 +450,7 @@ void ImDrawList::PopClipRect()
     UpdateClipRect();
 }
 
-void ImDrawList::PushTextureID(const ImTextureID& texture_id)
+void ImDrawList::PushTextureID(ImTextureID texture_id)
 {
     _TextureIdStack.push_back(texture_id);
     UpdateTextureID();
