@@ -2349,7 +2349,7 @@ static bool NavMoveRequestButNoResultYet()
     return g.NavMoveRequest && g.NavMoveResultLocal.ID == 0 && g.NavMoveResultOther.ID == 0;
 }
 
-static void NavMoveRequestCancel()
+void ImGui::NavMoveRequestCancel()
 {
     ImGuiContext& g = *GImGui;
     g.NavMoveRequest = false;
@@ -5006,7 +5006,7 @@ static void NavProcessMoveRequestWrapAround(ImGuiWindow* window)
         if ((g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down) && g.NavMoveRequestForward == ImGuiNavForward_None && g.NavLayer == 0)
         {
             g.NavMoveRequestForward = ImGuiNavForward_ForwardQueued;
-            NavMoveRequestCancel();
+            ImGui::NavMoveRequestCancel();
             g.NavWindow->NavRectRel[0].Min.y = g.NavWindow->NavRectRel[0].Max.y = ((g.NavMoveDir == ImGuiDir_Up) ? ImMax(window->SizeFull.y, window->SizeContents.y) : 0.0f) - window->Scroll.y;
         }
 }
