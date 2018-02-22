@@ -4,8 +4,8 @@ Binaries of some of those demos: http://www.miracleworld.net/imgui/binaries
 Third party languages and frameworks bindings: 
   https://github.com/ocornut/imgui/wiki/Links
 (languages: C, C#, ChaiScript, D, Go, Haxe, Odin, Python, Rust, Lua, Pascal)
-(frameworks: DX12, OpenGLES, FreeGlut, Cinder, Cocos2d-x, SFML, GML/GameMaker Studio, Irrlicht, Ogre, 
- OpenSceneGraph, openFrameworks, LOVE, NanoRT, Qt3d, SFML, Unreal Engine 4, etc.)
+(other frameworks: OpenGLES, FreeGlut, Cinder, Cocos2d-x, SFML, GML/GameMaker Studio, Irrlicht,
+ Ogre, OpenSceneGraph, openFrameworks, LOVE, NanoRT, Qt3d, SFML, Unreal Engine 4, etc.)
 (extras: RemoteImGui, ImWindow, imgui_wm, etc.)
 
 

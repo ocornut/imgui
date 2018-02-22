@@ -123,11 +123,10 @@ Languages: (third-party bindinds)
 - Rust: [imgui-rs](https://github.com/Gekkio/imgui-rs)
 
 Frameworks:
-- DirectX 9, DirectX 10, DirectX 11: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
+- DirectX 9, DirectX 10, DirectX 11, DirectX 12: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - OpenGL 2/3 (with GLFW or SDL): [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Vulkan (with GLFW): [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Allegro 5, iOS, Marmalade: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
-- Unmerged PR: DirectX12: [#301](https://github.com/ocornut/imgui/pull/301)
 - Unmerged PR: SDL2 + OpenGLES + Emscripten: [#336](https://github.com/ocornut/imgui/pull/336)
 - Unmerged PR: FreeGlut + OpenGL2: [#801](https://github.com/ocornut/imgui/pull/801)
 - Unmerged PR: Native Win32 and OSX: [#281](https://github.com/ocornut/imgui/pull/281)
