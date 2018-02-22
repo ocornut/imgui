@@ -74,6 +74,10 @@ directx11_example/
     DirectX11 example, Windows only.
     This is quite long and tedious, because: DirectX11.
 	
+directx12_example/
+    DirectX12 example, Windows only.
+    This is quite long and tedious, because: DirectX12.
+	
 apple_example/
     OSX & iOS example.
     On iOS, Using Synergy to access keyboard/mouse data from server computer.

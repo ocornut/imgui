@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "directx9_example", "directx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "directx11_example", "directx11_example\directx11_example.vcxproj", "{9F316E83-5AE5-4939-A723-305A94F48005}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "directx12_example", "directx12_example\directx12_example.vcxproj", "{B4CF9797-519D-4AFE-A8F4-5141A6B521D3}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "opengl3_example", "opengl3_example\opengl3_example.vcxproj", "{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "directx10_example", "directx10_example\directx10_example.vcxproj", "{345A953E-A004-4648-B442-DC5F9F11068C}"
@@ -43,6 +45,14 @@ Global
 		{9F316E83-5AE5-4939-A723-305A94F48005}.Release|Win32.Build.0 = Release|Win32
 		{9F316E83-5AE5-4939-A723-305A94F48005}.Release|x64.ActiveCfg = Release|x64
 		{9F316E83-5AE5-4939-A723-305A94F48005}.Release|x64.Build.0 = Release|x64
+		{B4CF9797-519D-4AFE-A8F4-5141A6B521D3}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B4CF9797-519D-4AFE-A8F4-5141A6B521D3}.Debug|Win32.Build.0 = Debug|Win32
+		{B4CF9797-519D-4AFE-A8F4-5141A6B521D3}.Debug|x64.ActiveCfg = Debug|x64
+		{B4CF9797-519D-4AFE-A8F4-5141A6B521D3}.Debug|x64.Build.0 = Debug|x64
+		{B4CF9797-519D-4AFE-A8F4-5141A6B521D3}.Release|Win32.ActiveCfg = Release|Win32
+		{B4CF9797-519D-4AFE-A8F4-5141A6B521D3}.Release|Win32.Build.0 = Release|Win32
+		{B4CF9797-519D-4AFE-A8F4-5141A6B521D3}.Release|x64.ActiveCfg = Release|x64
+		{B4CF9797-519D-4AFE-A8F4-5141A6B521D3}.Release|x64.Build.0 = Release|x64
 		{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}.Debug|Win32.ActiveCfg = Debug|Win32
 		{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}.Debug|Win32.Build.0 = Debug|Win32
 		{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}.Debug|x64.ActiveCfg = Debug|x64
