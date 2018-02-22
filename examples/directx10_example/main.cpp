@@ -16,17 +16,9 @@ static ID3D10RenderTargetView*  g_mainRenderTargetView = NULL;
 
 void CreateRenderTarget()
 {
-    DXGI_SWAP_CHAIN_DESC sd;
-    g_pSwapChain->GetDesc(&sd);
-
-    // Create the render target
     ID3D10Texture2D* pBackBuffer;
-    D3D10_RENDER_TARGET_VIEW_DESC render_target_view_desc;
-    ZeroMemory(&render_target_view_desc, sizeof(render_target_view_desc));
-    render_target_view_desc.Format = sd.BufferDesc.Format;
-    render_target_view_desc.ViewDimension = D3D10_RTV_DIMENSION_TEXTURE2D;
     g_pSwapChain->GetBuffer(0, __uuidof(ID3D10Texture2D), (LPVOID*)&pBackBuffer);
-    g_pd3dDevice->CreateRenderTargetView(pBackBuffer, &render_target_view_desc, &g_mainRenderTargetView);
+    g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &g_mainRenderTargetView);
     pBackBuffer->Release();
 }
 
