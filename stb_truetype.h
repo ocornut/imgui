@@ -2463,6 +2463,7 @@ static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, i
                             if (valueFormat2 != 0) return 0;
 
                             STBTT_assert(coverageIndex < pairSetCount);
+                            STBTT__NOTUSED(pairSetCount);
 
                             needle=glyph2;
                             r=pairValueCount-1;
