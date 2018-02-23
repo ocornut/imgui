@@ -151,6 +151,7 @@ void ImGui_ImplSdlGL3_RenderDrawData(ImDrawData* draw_data)
             idx_buffer_offset += pcmd->ElemCount;
         }
     }
+    glDeleteVertexArrays(1, &vao_handle);
 
     // Restore modified GL state
     glUseProgram(last_program);
