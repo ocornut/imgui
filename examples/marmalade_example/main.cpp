@@ -100,6 +100,7 @@ int main(int, char**)
         IwGxSetColClear(clear_color.x * 255, clear_color.y * 255, clear_color.z * 255, clear_color.w * 255);
         IwGxClear();
         ImGui::Render();
+        ImGui_Marmalade_RenderDrawData(ImGui::GetDrawData());
         IwGxSwapBuffers();
 
         s3eDeviceYield(0);

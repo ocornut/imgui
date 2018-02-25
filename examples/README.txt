@@ -4,8 +4,8 @@ Binaries of some of those demos: http://www.miracleworld.net/imgui/binaries
 Third party languages and frameworks bindings: 
   https://github.com/ocornut/imgui/wiki/Links
 (languages: C, C#, ChaiScript, D, Go, Haxe, Odin, Python, Rust, Lua, Pascal)
-(frameworks: DX12, OpenGLES, FreeGlut, Cinder, Cocos2d-x, SFML, GML/GameMaker Studio, Irrlicht, Ogre, 
- OpenSceneGraph, openFrameworks, LOVE, NanoRT, Qt3d, SFML, Unreal Engine 4, etc.)
+(other frameworks: OpenGLES, FreeGlut, Cinder, Cocos2d-x, SFML, GML/GameMaker Studio, Irrlicht,
+ Ogre, OpenSceneGraph, openFrameworks, LOVE, NanoRT, Qt3d, SFML, Unreal Engine 4, etc.)
 (extras: RemoteImGui, ImWindow, imgui_wm, etc.)
 
 
@@ -13,7 +13,7 @@ TL;DR;
  - Newcomers, read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup ImGui in your codebase.
  - If you are using of the backend provided here, so you can copy the imgui_impl_xxx.cpp/h files
    to your project and use them unmodified.
- - To LEARN how the library is setup, you may refer to 'opengl2_example' because is the simplest one to read.
+ - To LEARN how to setup imgui, you may refer to 'opengl2_example' because is the simplest one to read.
    However, do NOT USE the 'opengl2_example' if your code is using any modern GL3+ calls.
    Mixing old fixed-pipeline OpenGL2 and modern OpenGL3+ is going to make everything more complicated.
    Read comments below for details. If you are not sure, in doubt, use 'opengl3_example'.
@@ -53,15 +53,15 @@ opengl2_example/
     **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
     **Prefer using the code in the opengl3_example/ folder**
     GLFW + OpenGL example (legacy, fixed pipeline).
-    This code is mostly provided as a reference to learn how ImGui integration works, because it is shorter to read.
-    If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything more
-    complicated, will require your code to reset every single OpenGL attributes to their initial state, and might
-    confuse your GPU driver. 
+    This code is mostly provided as a reference to learn how ImGui integration works, because it is shorter.
+    If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
+    make things more complicated, will require your code to several OpenGL attributes to their initial state,
+    and might confuse your GPU driver. 
 
 opengl3_example/
     GLFW + OpenGL example (programmable pipeline, binding modern functions with GL3W).
     This uses more modern OpenGL calls and custom shaders. 
-    Prefer using that if you are using modern OpenGL in your application (anything with shaders, vbo, vao, etc.).
+    Prefer using that if you are using modern OpenGL in your application (anything with shaders).
 
 directx9_example/
     DirectX9 example, Windows only.
@@ -74,6 +74,10 @@ directx11_example/
     DirectX11 example, Windows only.
     This is quite long and tedious, because: DirectX11.
 	
+directx12_example/
+    DirectX12 example, Windows only.
+    This is quite longer and tedious, because: DirectX12.
+	
 apple_example/
     OSX & iOS example.
     On iOS, Using Synergy to access keyboard/mouse data from server computer.
@@ -83,15 +87,15 @@ sdl_opengl2_example/
     **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
     **Prefer using the code in the sdl_opengl3_example/ folder**
     SDL2 + OpenGL example (legacy, fixed pipeline).
-    This code is mostly provided as a reference to learn how ImGui integration works, because it is shorter to read.
-    If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything more
-    complicated, will require your code to reset every single OpenGL attributes to their initial state, and might
-    confuse your GPU driver. 
+    This code is mostly provided as a reference to learn how ImGui integration works, because it is shorter.
+    If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
+    make things more complicated, will require your code to several OpenGL attributes to their initial state,
+    and might confuse your GPU driver. 
 
 sdl_opengl3_example/
     SDL2 + OpenGL3 example.
     This uses more modern OpenGL calls and custom shaders. 
-    Prefer using that if you are using modern OpenGL in your application (anything with shaders, vbo, vao, etc.).
+    Prefer using that if you are using modern OpenGL in your application (anything with shaders).
 
 allegro5_example/
     Allegro 5 example.
@@ -100,7 +104,5 @@ marmalade_example/
     Marmalade example using IwGx
     
 vulkan_example/
-	Vulkan example.
-	This is quite long and tedious, because: Vulkan.
-
-TODO: Apple, SDL GL2/GL3, Allegro, Marmalade, Vulkan examples do not honor the io.WantMoveMouse flag.
+    Vulkan example.
+    This is quite longer and tedious, because: Vulkan.

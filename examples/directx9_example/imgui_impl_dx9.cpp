@@ -8,6 +8,13 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+// CHANGELOG 
+// (minor and older changes stripped away, please see git history for details)
+//  2018-02-20: Inputs: Added support for mouse cursors (ImGui::GetMouseCursor() value and WM_SETCURSOR message handling).
+//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplDX9_RenderDrawData() in the .h file so you can call it yourself.
+//  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
+//  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
+
 #include "imgui.h"
 #include "imgui_impl_dx9.h"
 
@@ -16,10 +23,13 @@
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
-// Data
+// Win32 data
 static HWND                     g_hWnd = 0;
 static INT64                    g_Time = 0;
 static INT64                    g_TicksPerSecond = 0;
+static ImGuiMouseCursor         g_LastMouseCursor = ImGuiMouseCursor_Count_;
+
+// DirectX data
 static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
 static LPDIRECT3DVERTEXBUFFER9  g_pVB = NULL;
 static LPDIRECT3DINDEXBUFFER9   g_pIB = NULL;
@@ -34,10 +44,9 @@ struct CUSTOMVERTEX
 };
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
 
-// This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
-// If text or lines are blurry when integrating ImGui in your engine:
-// - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
+// Render function.
+// (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
+void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized
     ImGuiIO& io = ImGui::GetIO();
@@ -173,13 +182,31 @@ void ImGui_ImplDX9_RenderDrawLists(ImDrawData* draw_data)
     d3d9_state_block->Release();
 }
 
-static bool IsAnyMouseButtonDown()
+static void ImGui_ImplWin32_UpdateMouseCursor()
 {
     ImGuiIO& io = ImGui::GetIO();
-    for (int n = 0; n < IM_ARRAYSIZE(io.MouseDown); n++)
-        if (io.MouseDown[n])
-            return true;
-    return false;
+    ImGuiMouseCursor imgui_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
+    if (imgui_cursor == ImGuiMouseCursor_None)
+    {
+        // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
+        ::SetCursor(NULL);
+    }
+    else
+    {
+        // Hardware cursor type
+        LPTSTR win32_cursor = IDC_ARROW;
+        switch (imgui_cursor)
+        {
+        case ImGuiMouseCursor_Arrow:        win32_cursor = IDC_ARROW; break;
+        case ImGuiMouseCursor_TextInput:    win32_cursor = IDC_IBEAM; break;
+        case ImGuiMouseCursor_ResizeAll:    win32_cursor = IDC_SIZEALL; break;
+        case ImGuiMouseCursor_ResizeEW:     win32_cursor = IDC_SIZEWE; break;
+        case ImGuiMouseCursor_ResizeNS:     win32_cursor = IDC_SIZENS; break;
+        case ImGuiMouseCursor_ResizeNESW:   win32_cursor = IDC_SIZENESW; break;
+        case ImGuiMouseCursor_ResizeNWSE:   win32_cursor = IDC_SIZENWSE; break;
+        }
+        ::SetCursor(::LoadCursor(NULL, win32_cursor));
+    }
 }
 
 // Process Win32 mouse/keyboard inputs. 
@@ -205,8 +232,8 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
         if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONDBLCLK) button = 0;
         if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONDBLCLK) button = 1;
         if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONDBLCLK) button = 2;
-        if (!IsAnyMouseButtonDown() && GetCapture() == NULL)
-            SetCapture(hwnd);
+        if (!ImGui::IsAnyMouseDown() && ::GetCapture() == NULL)
+            ::SetCapture(hwnd);
         io.MouseDown[button] = true;
         return 0;
     }
@@ -219,8 +246,8 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
         if (msg == WM_RBUTTONUP) button = 1;
         if (msg == WM_MBUTTONUP) button = 2;
         io.MouseDown[button] = false;
-        if (!IsAnyMouseButtonDown() && GetCapture() == hwnd)
-            ReleaseCapture();
+        if (!ImGui::IsAnyMouseDown() && ::GetCapture() == hwnd)
+            ::ReleaseCapture();
         return 0;
     }
     case WM_MOUSEWHEEL:
@@ -247,6 +274,13 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
         if (wParam > 0 && wParam < 0x10000)
             io.AddInputCharacter((unsigned short)wParam);
+        return 0;
+    case WM_SETCURSOR:
+        if (LOWORD(lParam) == HTCLIENT)
+        {
+            ImGui_ImplWin32_UpdateMouseCursor();
+            return 1;
+        }
         return 0;
     }
     return 0;
@@ -285,7 +319,6 @@ bool    ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device)
     io.KeyMap[ImGuiKey_Y] = 'Y';
     io.KeyMap[ImGuiKey_Z] = 'Z';
 
-    io.RenderDrawListsFn = ImGui_ImplDX9_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
     io.ImeWindowHandle = g_hWnd;
 
     return true;
@@ -392,9 +425,13 @@ void ImGui_ImplDX9_NewFrame()
         SetCursorPos(pos.x, pos.y);
     }
 
-    // Hide OS mouse cursor if ImGui is drawing it
-    if (io.MouseDrawCursor)
-        SetCursor(NULL);
+    // Update OS mouse cursor with the cursor requested by imgui
+    ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
+    if (g_LastMouseCursor != mouse_cursor)
+    {
+        g_LastMouseCursor = mouse_cursor;
+        ImGui_ImplWin32_UpdateMouseCursor();
+    }
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();

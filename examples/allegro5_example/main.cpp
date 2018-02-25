@@ -114,6 +114,7 @@ int main(int, char**)
         // Rendering
         al_clear_to_color(al_map_rgba_f(clear_color.x, clear_color.y, clear_color.z, clear_color.w));
         ImGui::Render();
+        ImGui_ImplA5_RenderDrawData(ImGui::GetDrawData());
         al_flip_display();
     }
 

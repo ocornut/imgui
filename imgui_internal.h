@@ -687,6 +687,7 @@ struct ImGuiContext
     ImVec2                  OsImePosRequest, OsImePosSet;       // Cursor position request & last passed to the OS Input Method Editor
 
     // Settings
+    bool                           SettingsLoaded;
     float                          SettingsDirtyTimer;          // Save .ini Settings on disk when time reaches zero
     ImVector<ImGuiWindowSettings>  SettingsWindows;             // .ini settings for ImGuiWindow
     ImVector<ImGuiSettingsHandler> SettingsHandlers;            // List of .ini settings handlers
@@ -789,6 +790,7 @@ struct ImGuiContext
         TooltipOverrideCount = 0;
         OsImePosRequest = OsImePosSet = ImVec2(-1.0f, -1.0f);
 
+        SettingsLoaded = false;
         SettingsDirtyTimer = 0.0f;
 
         LogEnabled = false;
@@ -832,7 +834,7 @@ struct IMGUI_API ImGuiDrawContext
     float                   PrevLineTextBaseOffset;
     float                   LogLinePosY;
     int                     TreeDepth;
-    ImU32                   TreeDepthMayCloseOnPop; // Store a copy of !g.NavIdIsAlive for TreeDepth 0..31
+    ImU32                   TreeDepthMayJumpToParentOnPop; // Store a copy of !g.NavIdIsAlive for TreeDepth 0..31
     ImGuiID                 LastItemId;
     ImGuiItemStatusFlags    LastItemStatusFlags;
     ImRect                  LastItemRect;           // Interaction rect
@@ -872,7 +874,7 @@ struct IMGUI_API ImGuiDrawContext
         CurrentLineTextBaseOffset = PrevLineTextBaseOffset = 0.0f;
         LogLinePosY = -1.0f;
         TreeDepth = 0;
-        TreeDepthMayCloseOnPop = 0x00;
+        TreeDepthMayJumpToParentOnPop = 0x00;
         LastItemId = 0;
         LastItemStatusFlags = 0;
         LastItemRect = LastItemDisplayRect = ImRect();
@@ -957,10 +959,11 @@ struct IMGUI_API ImGuiWindow
     float                   FontWindowScale;                    // Scale multiplier per-window
     ImDrawList*             DrawList;
     ImGuiWindow*            ParentWindow;                       // If we are a child _or_ popup window, this is pointing to our parent. Otherwise NULL.
-    ImGuiWindow*            RootWindow;                         // Generally point to ourself. If we are a child window, this is pointing to the first non-child parent window.
-    ImGuiWindow*            RootNonPopupWindow;                 // Generally point to ourself. Used to display TitleBgActive color and for selecting which window to use for NavWindowing
+    ImGuiWindow*            RootWindow;                         // Point to ourself or first ancestor that is not a child window.
+    ImGuiWindow*            RootWindowForTitleBarHighlight;     // Point to ourself or first ancestor which will display TitleBgActive color when this window is active.
+    ImGuiWindow*            RootWindowForTabbing;               // Point to ourself or first ancestor which can be CTRL-Tabbed into.
+    ImGuiWindow*            RootWindowForNav;                   // Point to ourself or first ancestor which doesn't have the NavFlattened flag.
 
-    ImGuiWindow*            NavRootWindow;                      // Generally point to ourself. If we are a child window with the NavFlattened flag, point to a parent window. 
     ImGuiWindow*            NavLastChildNavWindow;              // When going to the menu bar, we remember the child window we came from. (This could probably be made implicit if we kept g.Windows sorted by last focused including child window.)
     ImGuiID                 NavLastIds[2];                      // Last known NavId for this window, per layer (0/1)
     ImRect                  NavRectRel[2];                      // Reference rectangle, in window relative space
@@ -1063,6 +1066,7 @@ namespace ImGui
     IMGUI_API void          BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_tooltip = true);
 
     IMGUI_API void          NavInitWindow(ImGuiWindow* window, bool force_reinit);
+    IMGUI_API void          NavMoveRequestCancel();
     IMGUI_API void          ActivateItem(ImGuiID id);   // Remotely activate a button, checkbox, tree node etc. given its unique ID. activation is queued and processed on the next frame when the item is encountered again.
 
     IMGUI_API float         GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode);

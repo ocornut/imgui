@@ -46,7 +46,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 int main(int, char**)
 {
     // Create application window
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, LoadCursor(NULL, IDC_ARROW), NULL, NULL, _T("ImGui Example"), NULL };
+    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, _T("ImGui Example"), NULL };
     RegisterClassEx(&wc);
     HWND hwnd = CreateWindow(_T("ImGui Example"), _T("ImGui DirectX9 Example"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
 
@@ -169,6 +169,7 @@ int main(int, char**)
         if (g_pd3dDevice->BeginScene() >= 0)
         {
             ImGui::Render();
+            ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
             g_pd3dDevice->EndScene();
         }
         HRESULT result = g_pd3dDevice->Present(NULL, NULL, NULL, NULL);

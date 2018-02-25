@@ -17,6 +17,23 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+// CHANGELOG
+// (minor and older changes stripped away, please see git history for details)
+//  2018-02-16: Inputs: Added support for mouse cursors, honoring ImGui::GetMouseCursor() value.
+//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplSdlGL2_RenderDrawData() in the .h file so you can call it yourself.
+//  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
+//  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
+//  2018-02-05: Misc: Using SDL_GetPerformanceCounter() instead of SDL_GetTicks() to be able to handle very high framerate (1000+ FPS).
+//  2018-02-05: Inputs: Keyboard mapping is using scancodes everywhere instead of a confusing mixture of keycodes and scancodes. 
+//  2018-01-20: Inputs: Added Horizontal Mouse Wheel support.
+//  2018-01-19: Inputs: When available (SDL 2.0.4+) using SDL_CaptureMouse() to retrieve coordinates outside of client area when dragging. Otherwise (SDL 2.0.3 and before) testing for SDL_WINDOW_INPUT_FOCUS instead of SDL_WINDOW_MOUSE_FOCUS.
+//  2018-01-18: Inputs: Added mapping for ImGuiKey_Insert.
+//  2017-09-01: OpenGL: Save and restore current polygon mode.
+//  2017-08-25: Inputs: MousePos set to -FLT_MAX,-FLT_MAX when mouse is unavailable/missing (instead of -1,-1).
+//  2016-10-15: Misc: Added a void* user_data parameter to Clipboard function handlers.
+//  2016-09-05: OpenGL: Fixed save and restore of current scissor rectangle.
+//  2016-07-29: OpenGL: Explicitly setting GL_UNPACK_ROW_LENGTH to reduce issues because SDL changes it. (#752)
+
 #include <SDL.h>
 #include <SDL_syswm.h>
 #include <SDL_opengl.h>
@@ -27,11 +44,12 @@
 static Uint64       g_Time = 0;
 static bool         g_MousePressed[3] = { false, false, false };
 static GLuint       g_FontTexture = 0;
+static SDL_Cursor*  g_MouseCursors[ImGuiMouseCursor_Count_] = { 0 };
 
-// This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
+// OpenGL2 Render function.
+// (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so. 
-// If text or lines are blurry when integrating ImGui in your engine: in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-void ImGui_ImplSdlGL2_RenderDrawLists(ImDrawData* draw_data)
+void ImGui_ImplSdlGL2_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     ImGuiIO& io = ImGui::GetIO();
@@ -107,7 +125,7 @@ void ImGui_ImplSdlGL2_RenderDrawLists(ImDrawData* draw_data)
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glPopAttrib();
-    glPolygonMode(GL_FRONT, last_polygon_mode[0]); glPolygonMode(GL_BACK, last_polygon_mode[1]);
+    glPolygonMode(GL_FRONT, (GLenum)last_polygon_mode[0]); glPolygonMode(GL_BACK, (GLenum)last_polygon_mode[1]);
     glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 }
@@ -230,10 +248,17 @@ bool    ImGui_ImplSdlGL2_Init(SDL_Window* window)
     io.KeyMap[ImGuiKey_Y] = SDL_SCANCODE_Y;
     io.KeyMap[ImGuiKey_Z] = SDL_SCANCODE_Z;
 
-    io.RenderDrawListsFn = ImGui_ImplSdlGL2_RenderDrawLists;   // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
     io.SetClipboardTextFn = ImGui_ImplSdlGL2_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplSdlGL2_GetClipboardText;
     io.ClipboardUserData = NULL;
+
+    g_MouseCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+    g_MouseCursors[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
+    g_MouseCursors[ImGuiMouseCursor_ResizeAll] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
+    g_MouseCursors[ImGuiMouseCursor_ResizeNS] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS);
+    g_MouseCursors[ImGuiMouseCursor_ResizeEW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE);
+    g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
+    g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
 
 #ifdef _WIN32
     SDL_SysWMinfo wmInfo;
@@ -249,6 +274,12 @@ bool    ImGui_ImplSdlGL2_Init(SDL_Window* window)
 
 void ImGui_ImplSdlGL2_Shutdown()
 {
+    // Destroy SDL mouse cursors
+    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
+        SDL_FreeCursor(g_MouseCursors[cursor_n]);
+    memset(g_MouseCursors, 0, sizeof(g_MouseCursors));
+
+    // Destroy OpenGL objects
     ImGui_ImplSdlGL2_InvalidateDeviceObjects();
 }
 
@@ -298,8 +329,17 @@ void ImGui_ImplSdlGL2_NewFrame(SDL_Window *window)
         io.MousePos = ImVec2((float)mx, (float)my);
 #endif
 
-    // Hide OS mouse cursor if ImGui is drawing it
-    SDL_ShowCursor(io.MouseDrawCursor ? 0 : 1);
+    // Update OS/hardware mouse cursor if imgui isn't drawing a software cursor
+    ImGuiMouseCursor cursor = ImGui::GetMouseCursor();
+    if (io.MouseDrawCursor || cursor == ImGuiMouseCursor_None)
+    {
+        SDL_ShowCursor(0);
+    }
+    else
+    {
+        SDL_SetCursor(g_MouseCursors[cursor] ? g_MouseCursors[cursor] : g_MouseCursors[ImGuiMouseCursor_Arrow]);
+        SDL_ShowCursor(1);
+    }
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();

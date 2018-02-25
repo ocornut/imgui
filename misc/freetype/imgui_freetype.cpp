@@ -295,7 +295,7 @@ bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
     atlas->TexHeight = (int)(min_rects_per_column * (max_glyph_size.y + 1.0f));
 
     // Create texture
-    atlas->TexHeight = ImUpperPowerOfTwo(atlas->TexHeight);
+    atlas->TexHeight = (atlas->Flags & ImFontAtlasFlags_NoPowerOfTwoHeight) ? (atlas->TexHeight + 1) : ImUpperPowerOfTwo(atlas->TexHeight);
     atlas->TexUvScale = ImVec2(1.0f / atlas->TexWidth, 1.0f / atlas->TexHeight);
     atlas->TexPixelsAlpha8 = (unsigned char*)ImGui::MemAlloc(atlas->TexWidth * atlas->TexHeight);
     memset(atlas->TexPixelsAlpha8, 0, atlas->TexWidth * atlas->TexHeight);

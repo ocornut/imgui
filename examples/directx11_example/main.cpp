@@ -18,17 +18,9 @@ static ID3D11RenderTargetView*  g_mainRenderTargetView = NULL;
 
 void CreateRenderTarget()
 {
-    DXGI_SWAP_CHAIN_DESC sd;
-    g_pSwapChain->GetDesc(&sd);
-
-    // Create the render target
     ID3D11Texture2D* pBackBuffer;
-    D3D11_RENDER_TARGET_VIEW_DESC render_target_view_desc;
-    ZeroMemory(&render_target_view_desc, sizeof(render_target_view_desc));
-    render_target_view_desc.Format = sd.BufferDesc.Format;
-    render_target_view_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
     g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
-    g_pd3dDevice->CreateRenderTargetView(pBackBuffer, &render_target_view_desc, &g_mainRenderTargetView);
+    g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &g_mainRenderTargetView);
     pBackBuffer->Release();
 }
 
@@ -108,7 +100,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 int main(int, char**)
 {
     // Create application window
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, LoadCursor(NULL, IDC_ARROW), NULL, NULL, _T("ImGui Example"), NULL };
+    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, _T("ImGui Example"), NULL };
     RegisterClassEx(&wc);
     HWND hwnd = CreateWindow(_T("ImGui Example"), _T("ImGui DirectX11 Example"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
 
@@ -213,6 +205,7 @@ int main(int, char**)
         g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, NULL);
         g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, (float*)&clear_color);
         ImGui::Render();
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
         g_pSwapChain->Present(1, 0); // Present with vsync
         //g_pSwapChain->Present(0, 0); // Present without vsync
