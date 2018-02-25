@@ -247,7 +247,7 @@ void    ImGui::BeginTabBar(const char* str_id, ImGuiTabBarFlags flags)
 
     // Draw separator
 #if 1
-    bool unfocused = !g.NavWindow || g.NavWindow->RootNonPopupWindow != window->RootWindow;
+    bool unfocused = !g.NavWindow || g.NavWindow->RootWindowForTitleBarHighlight != window->RootWindow;
 #else
     bool unfocused = false;
 #endif
@@ -678,7 +678,7 @@ bool    ImGui::TabItem(const char* label, bool* p_open, ImGuiTabItemFlags flags)
             bb.Translate(ImVec2(0.0f, (float)(int)((1.0f - tab->AppearAnim) * size.y)));
 
 #if 1
-        bool unfocused = (tab_selected) && (!g.NavWindow || g.NavWindow->RootNonPopupWindow != window->RootWindow);
+        bool unfocused = (tab_selected) && (!g.NavWindow || g.NavWindow->RootWindowForTitleBarHighlight != window->RootWindow);
 #else
         bool unfocused = false;
 #endif

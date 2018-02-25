@@ -1,6 +1,9 @@
 // dear imgui, v1.60 WIP
 // (headers)
 
+//-- EARLY TABS DRAFT for users who are eager to use tabs. See https://github.com/ocornut/imgui/issues/261
+//-- Note that the Tabs are being reworked/rewritten as part of the Docking branch.
+
 // See imgui.cpp file for documentation.
 // Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp for demo code.
 // Read 'Programmer guide' in imgui.cpp for notes on how to setup ImGui in your codebase.
