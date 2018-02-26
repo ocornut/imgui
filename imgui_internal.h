@@ -546,7 +546,7 @@ struct ImGuiViewport
     bool                PlatformRequestResize;  // Platform window requested resize
     void*               RendererUserData;       // void* to hold custom data structure for the renderer (e.g. framebuffer)
 
-    ImGuiViewport(ImGuiID id, int idx)  { ID = id; Idx = idx; Flags = 0; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Window = NULL; PlatformDpiScale = 1.0f; PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestResize = false; RendererUserData = NULL; }
+    ImGuiViewport(ImGuiID id, int idx)  { ID = id; Idx = idx; Flags = 0; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Window = NULL; PlatformDpiScale = 0.0f; PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestResize = false; RendererUserData = NULL; }
     ~ImGuiViewport()                    { IM_ASSERT(PlatformUserData == NULL && RendererUserData == NULL); }
     ImRect  GetRect() const             { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     float   GetNextX() const            { const float SPACING = 4.0f; return Pos.x + Size.x + SPACING; }
@@ -1092,6 +1092,7 @@ namespace ImGui
     IMGUI_API ImGuiViewport*        FindViewportByID(ImGuiID id);
     IMGUI_API ImGuiViewport*        FindViewportByPlatformHandle(void* platform_handle);
     IMGUI_API void                  SetNextWindowViewport(ImGuiID id);
+    IMGUI_API void                  ScaleWindowsInViewport(ImGuiViewport* viewport, float scale);
     IMGUI_API void                  ShowViewportThumbnails();
     IMGUI_API void                  DestroyViewportsPlaformData(ImGuiContext* context);
     IMGUI_API void                  DestroyViewportsRendererData(ImGuiContext* context);

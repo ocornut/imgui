@@ -3347,13 +3347,13 @@ static void ImGui::UpdateViewports()
     const ImVec2 mouse_os_pos = ConvertViewportPosToOsDesktopPos(g.IO.MousePos, viewport_ref);
 
     g.CurrentViewport = NULL;
-    for (int n = 1; n < g.Viewports.Size; n++)
+    for (int n = 0; n < g.Viewports.Size; n++)
     {
         // Erase unused viewports
         ImGuiViewport* viewport = g.Viewports[n];
         IM_ASSERT(viewport->Idx == n);
-        IM_ASSERT(!(viewport->Flags & ImGuiViewportFlags_MainViewport));
-        if (viewport->LastFrameActive < g.FrameCount - 2)
+
+        if (n > 0 && viewport->LastFrameActive < g.FrameCount - 2)
         {
             // Translate windows like if we were resizing the viewport to be zero-width
             ResizeViewportTranslateWindows(n + 1, g.Viewports.Size, viewport->Pos.x - viewport->GetNextX(), -1, viewport);
@@ -3380,6 +3380,19 @@ static void ImGui::UpdateViewports()
             if (dx != 0.0f)
                 ResizeViewportTranslateWindows(viewport->Idx + 1, g.Viewports.Size, dx, 0, NULL);
         }
+
+        // Update DPI Scale
+        float new_dpi_scale;
+        if (g.IO.PlatformInterface.GetWindowDpiScale)
+            new_dpi_scale = g.IO.PlatformInterface.GetWindowDpiScale(viewport);
+        else
+            new_dpi_scale = (viewport->PlatformDpiScale != 0.0f) ? viewport->PlatformDpiScale : 1.0f;
+        if (viewport->PlatformDpiScale != 0.0f && new_dpi_scale != viewport->PlatformDpiScale)
+        {
+            float scale_factor = new_dpi_scale / viewport->PlatformDpiScale;
+            ScaleWindowsInViewport(viewport, scale_factor);
+        }
+        viewport->PlatformDpiScale = new_dpi_scale;
     }
 
     // Update main viewport with current size (and OS window position, if known)
@@ -13767,6 +13780,31 @@ static void RenderViewportThumbnail(ImDrawList* draw_list, const ImRect& bb, con
         window->DrawList->AddRect(thumb_r_scaled.Min, thumb_r_scaled.Max, ImGui::GetColorU32(ImGuiCol_Border));
     }
     draw_list->AddRect(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_Border));
+}
+
+static void ScaleWindow(ImGuiWindow* window, float scale)
+{
+    ImVec2 origin = window->Viewport->Pos;
+    window->Pos = window->PosFloat = ImFloor((window->PosFloat - origin) * scale + origin);
+    window->Size = ImFloor(window->Size * scale);
+    window->SizeFull = ImFloor(window->SizeFull * scale);
+    window->SizeContents = ImFloor(window->SizeContents * scale);
+}
+
+// Scale all windows (position, size). Use when e.g. changing DPI. (This is a lossy operation!)
+void ImGui::ScaleWindowsInViewport(ImGuiViewport* viewport, float scale)
+{
+    if (viewport->Window)
+    {
+        ScaleWindow(viewport->Window, scale);
+    }
+    else
+    {
+        ImGuiContext& g = *GImGui;
+        for (int i = 0; i != g.Windows.Size; i++)
+            if (g.Windows[i]->Viewport == viewport)
+                ScaleWindow(g.Windows[i], scale);
+    }
 }
 
 void ImGui::ShowViewportThumbnails()

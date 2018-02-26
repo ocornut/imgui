@@ -964,6 +964,7 @@ struct ImGuiPlatformInterface
     void    (*SwapBuffers)(ImGuiViewport* viewport);
 
     // FIXME-DPI
+    float   (*GetWindowDpiScale)(ImGuiViewport* viewport);  // (Optional)
     void    (*BeginViewport)(ImGuiViewport* viewport);      // (Optional) Called during Begin() every time the viewport we are outputting into changes (viewport = next viewport)
     void    (*EndViewport)(ImGuiViewport* viewport);        // (Optional) Called during Begin() every time the viewport we are outputting into changes (viewport = previous viewport)
 };
