@@ -5657,14 +5657,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             SetWindowPos(window, g.NextWindowData.PosVal, g.NextWindowData.PosCond);
         }
-        g.NextWindowData.PosCond = 0;
     }
     if (g.NextWindowData.SizeCond)
     {
         window_size_x_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindowData.SizeCond) != 0 && (g.NextWindowData.SizeVal.x > 0.0f);
         window_size_y_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindowData.SizeCond) != 0 && (g.NextWindowData.SizeVal.y > 0.0f);
         SetWindowSize(window, g.NextWindowData.SizeVal, g.NextWindowData.SizeCond);
-        g.NextWindowData.SizeCond = 0;
     }
     if (g.NextWindowData.ContentSizeCond)
     {
@@ -5672,22 +5670,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->SizeContentsExplicit = g.NextWindowData.ContentSizeVal;
         if (window->SizeContentsExplicit.y != 0.0f)
             window->SizeContentsExplicit.y += window->TitleBarHeight() + window->MenuBarHeight();
-        g.NextWindowData.ContentSizeCond = 0;
     }
     else if (first_begin_of_the_frame)
     {
         window->SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     }
     if (g.NextWindowData.CollapsedCond)
-    {
         SetWindowCollapsed(window, g.NextWindowData.CollapsedVal, g.NextWindowData.CollapsedCond);
-        g.NextWindowData.CollapsedCond = 0;
-    }
     if (g.NextWindowData.FocusCond)
-    {
         SetWindowFocus();
-        g.NextWindowData.FocusCond = 0;
-    }
     if (window->Appearing)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, false);
 
@@ -5714,7 +5705,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->LastFrameActive = current_frame;
         window->IDStack.resize(1);
 
-        // Lock window rounding, border size and rounding so that altering the border sizes for children doesn't have side-effects.
+        // Lock window rounding, border size and padding for the frame (so that altering them doesn't cause inconsistencies)
         window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
         window->WindowBorderSize = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildBorderSize : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupBorderSize : style.WindowBorderSize;
         window->WindowPadding = style.WindowPadding;
@@ -5948,10 +5939,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Window background
             ImU32 bg_col = GetColorU32(GetWindowBgColorIdxFromFlags(flags));
             if (g.NextWindowData.BgAlphaCond != 0)
-            {
                 bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(g.NextWindowData.BgAlphaVal) << IM_COL32_A_SHIFT);
-                g.NextWindowData.BgAlphaCond = 0;
-            }
             window->DrawList->AddRectFilled(window->Pos+ImVec2(0,window->TitleBarHeight()), window->Pos+window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawCornerFlags_All : ImDrawCornerFlags_Bot);
 
             // Title bar
@@ -6090,7 +6078,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             {
                 ImGuiID id = window->GetID("#COLLAPSE");
                 ImRect bb(window->Pos + style.FramePadding + ImVec2(1,1), window->Pos + style.FramePadding + ImVec2(g.FontSize,g.FontSize) - ImVec2(1,1));
-                ItemAdd(bb, id); // To allow navigation
+                ItemAdd(bb, id);
                 if (ButtonBehavior(bb, id, NULL, NULL))
                     window->CollapseToggleWanted = true; // Defer collapsing to next frame as we are too far in the Begin() function
                 RenderNavHighlight(bb, id);
@@ -6166,7 +6154,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->WriteAccessed = false;
 
     window->BeginCount++;
-    g.NextWindowData.SizeConstraintCond = 0;
+    g.NextWindowData.Clear();
 
     // Child window can be out of sight and have "negative" clip windows.
     // Mark them as collapsed so commands are skipped earlier (we can't manually collapse because they have no title bar).

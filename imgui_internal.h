@@ -543,7 +543,7 @@ struct ImGuiNextWindowData
     ImVec2                  SizeVal;
     ImVec2                  ContentSizeVal;
     bool                    CollapsedVal;
-    ImRect                  SizeConstraintRect;                 // Valid if 'SetNextWindowSizeConstraint' is true
+    ImRect                  SizeConstraintRect;
     ImGuiSizeCallback       SizeCallback;
     void*                   SizeCallbackUserData;
     float                   BgAlphaVal;
@@ -940,9 +940,10 @@ struct IMGUI_API ImGuiWindow
     int                     AutoFitChildAxises;
     ImGuiDir                AutoPosLastDirection;
     int                     HiddenFrames;
-    ImGuiCond               SetWindowPosAllowFlags;             // store condition flags for next SetWindowPos() call.
-    ImGuiCond               SetWindowSizeAllowFlags;            // store condition flags for next SetWindowSize() call.
-    ImGuiCond               SetWindowCollapsedAllowFlags;       // store condition flags for next SetWindowCollapsed() call.
+    ImGuiCond               SetWindowPosAllowFlags;             // store accepted condition flags for SetNextWindowPos() use.
+    ImGuiCond               SetWindowSizeAllowFlags;            // store accepted condition flags for SetNextWindowSize() use.
+    ImGuiCond               SetWindowCollapsedAllowFlags;       // store accepted condition flags for SetNextWindowCollapsed() use.
+
     ImVec2                  SetWindowPosVal;                    // store window position when using a non-zero Pivot (position set needs to be processed when we know the window size)
     ImVec2                  SetWindowPosPivot;                  // store window pivot for positioning. ImVec2(0,0) when positioning from top-left corner; ImVec2(0.5f,0.5f) for centering; ImVec2(1,1) for bottom right.
 
