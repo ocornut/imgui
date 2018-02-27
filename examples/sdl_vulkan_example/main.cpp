@@ -624,7 +624,7 @@ int main(int, char**)
     init_data.descriptor_pool = g_DescriptorPool;
     init_data.check_vk_result = check_vk_result;
     ImGui_ImplVulkan_Init(&init_data);
-    ImGui_ImplSDL2_Init(window);
+    ImGui_ImplSDL2_Init(window, NULL);
 
     // Setup style
     ImGui::StyleColorsDark();

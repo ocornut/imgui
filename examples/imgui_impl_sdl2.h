@@ -10,7 +10,7 @@
 struct SDL_Window;
 typedef union SDL_Event SDL_Event;
 
-IMGUI_API bool        ImGui_ImplSDL2_Init(SDL_Window* window);
-IMGUI_API void        ImGui_ImplSDL2_Shutdown();
-IMGUI_API void        ImGui_ImplSDL2_NewFrame(SDL_Window* window);
-IMGUI_API bool        ImGui_ImplSDL2_ProcessEvent(SDL_Event* event);
+IMGUI_API bool      ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context);
+IMGUI_API void      ImGui_ImplSDL2_Shutdown();
+IMGUI_API void      ImGui_ImplSDL2_NewFrame(SDL_Window* window);
+IMGUI_API bool      ImGui_ImplSDL2_ProcessEvent(SDL_Event* event);

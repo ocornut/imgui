@@ -30,16 +30,18 @@ int main(int, char**)
     SDL_DisplayMode current;
     SDL_GetCurrentDisplayMode(0, &current);
     SDL_Window *window = SDL_CreateWindow("ImGui SDL2+OpenGL3 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
-    SDL_GLContext glcontext = SDL_GL_CreateContext(window);
+    SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_SetSwapInterval(1); // Enable vsync
     gl3wInit();
 
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui_ImplSDL2_Init(window);
-    ImGui_ImplOpenGL3_Init();
+    io.ConfigFlags |= ImGuiConfigFlags_MultiViewports;
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;
+
+    ImGui_ImplSDL2_Init(window, gl_context);
+    ImGui_ImplOpenGL3_Init();
 
     // Setup style
     ImGui::StyleColorsDark();
@@ -77,6 +79,8 @@ int main(int, char**)
         {
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
+                done = true;
+            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
         }
         ImGui_ImplOpenGL3_NewFrame();
@@ -120,11 +124,17 @@ int main(int, char**)
         }
 
         // Rendering
-        glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
+        SDL_GL_MakeCurrent(window, gl_context);
+        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindows();
+
+        SDL_GL_MakeCurrent(window, gl_context);
         SDL_GL_SwapWindow(window);
     }
 
@@ -133,7 +143,7 @@ int main(int, char**)
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_GL_DeleteContext(glcontext);
+    SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
     SDL_Quit();
 
