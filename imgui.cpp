@@ -3732,6 +3732,10 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
 
         if (line[0] == '[' && line_end > line && line_end[-1] == ']')
         {
+            // Close last entry
+            if (entry_data && entry_handler && entry_handler->ReadCloseFn)
+                entry_handler->ReadCloseFn(&g, entry_handler, entry_data);
+
             // Parse "[Type][Name]". Note that 'Name' can itself contains [] characters, which is acceptable with the current format and parsing code.
             line_end[-1] = 0;
             const char* name_end = line_end - 1; 
@@ -3757,6 +3761,11 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
             entry_handler->ReadLineFn(&g, entry_handler, entry_data, line);
         }
     }
+
+    // Close last entry
+    if (entry_data && entry_handler && entry_handler->ReadCloseFn)
+        entry_handler->ReadCloseFn(&g, entry_handler, entry_data);
+
     ImGui::MemFree(buf);
     g.SettingsLoaded = true;
 }
