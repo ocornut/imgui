@@ -34,11 +34,13 @@ int main(int, char**)
 
     // Setup ImGui binding
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui_ImplGlfw_Init(window, true);
-    ImGui_ImplOpenGL3_Init();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_MultiViewports;
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
     //io.NavFlags |= ImGuiNavFlags_EnableGamepad;   // Enable Gamepad Controls
+
+    ImGui_ImplGlfw_Init(window, true);
+    ImGui_ImplOpenGL3_Init();
 
     // Setup style
     ImGui::StyleColorsDark();
@@ -113,12 +115,18 @@ int main(int, char**)
 
         // Rendering
         int display_w, display_h;
+        glfwMakeContextCurrent(window);
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindows();
+
+        glfwMakeContextCurrent(window);
         glfwSwapBuffers(window);
     }
 

@@ -25,14 +25,20 @@ static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
 static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
 static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
 
+// Forward Declarations
+static void ImGui_ImplOpenGL3_InitPlatformInterface();
+static void ImGui_ImplOpenGL3_ShutdownPlatformInterface();
+
 // Functions
 bool    ImGui_ImplOpenGL3_Init()
 {
+    ImGui_ImplOpenGL3_InitPlatformInterface();
     return true;
 }
 
 void    ImGui_ImplOpenGL3_Shutdown()
 {
+    ImGui_ImplOpenGL3_ShutdownPlatformInterface();
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 }
 
@@ -297,4 +303,30 @@ void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
     g_ShaderHandle = 0;
 
     ImGui_ImplOpenGL3_DestroyFontsTexture();
+}
+
+// --------------------------------------------------------------------------------------------------------
+// Platform Windows
+// --------------------------------------------------------------------------------------------------------
+
+#include "imgui_internal.h"     // ImGuiViewport
+
+static void ImGui_ImplOpenGL3_RenderViewport(ImGuiViewport* viewport)
+{
+    ImVec4 clear_color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
+    glClearColor(clear_color.x, clear_color.y, clear_color.z, 1.0f);    // FIXME-PLATFORM
+    glClear(GL_COLOR_BUFFER_BIT);
+    ImGui_ImplOpenGL3_RenderDrawData(&viewport->DrawData);
+}
+
+void ImGui_ImplOpenGL3_InitPlatformInterface()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    io.RendererInterface.RenderViewport = ImGui_ImplOpenGL3_RenderViewport;
+}
+
+void ImGui_ImplOpenGL3_ShutdownPlatformInterface()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    memset(&io.RendererInterface, 0, sizeof(io.RendererInterface));
 }
