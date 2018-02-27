@@ -360,7 +360,7 @@ static void setup_vulkan(GLFWwindow* window, const char** extensions, uint32_t e
         g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 #endif
         uint32_t count = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, nullptr);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, NULL);
         VkPresentModeKHR* presentModes = (VkPresentModeKHR*)malloc(sizeof(VkQueueFamilyProperties) * count);
         vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, presentModes);
         bool presentModeAvailable = false;

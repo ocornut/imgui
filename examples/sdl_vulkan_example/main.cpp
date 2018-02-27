@@ -361,7 +361,7 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
         g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 #endif
         uint32_t count = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, nullptr);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, NULL);
         VkPresentModeKHR* presentModes = (VkPresentModeKHR*)malloc(sizeof(VkQueueFamilyProperties) * count);
         vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, presentModes);
         bool presentModeAvailable = false;
@@ -604,7 +604,7 @@ int main(int, char**)
 
     // Setup Vulkan
     uint32_t extensions_count;
-    SDL_Vulkan_GetInstanceExtensions(window, &extensions_count, nullptr);
+    SDL_Vulkan_GetInstanceExtensions(window, &extensions_count, NULL);
     const char** sdl_extensions = new const char*[extensions_count];
     SDL_Vulkan_GetInstanceExtensions(window, &extensions_count, sdl_extensions);
     setup_vulkan(window, sdl_extensions, extensions_count);
