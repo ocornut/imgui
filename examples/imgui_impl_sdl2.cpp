@@ -26,7 +26,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 
-// SDL,GL3W
+// SDL
 #include <SDL.h>
 #include <SDL_syswm.h>
 
