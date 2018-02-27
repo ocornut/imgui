@@ -93,7 +93,7 @@ void ResizeSwapChain(HWND hWnd, int width, int height)
     sd.Width = width;
     sd.Height = height;
 
-    IDXGIFactory4* dxgiFactory = nullptr;
+    IDXGIFactory4* dxgiFactory = NULL;
     g_pSwapChain->GetParent(IID_PPV_ARGS(&dxgiFactory));
 
     g_pSwapChain->Release();
@@ -289,7 +289,9 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_MultiViewports;
     //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
+
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX12_Init(g_pd3dDevice, NUM_FRAMES_IN_FLIGHT, DXGI_FORMAT_R8G8B8A8_UNORM,
                         g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(), g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
@@ -398,6 +400,9 @@ int main(int, char**)
         g_pd3dCommandList->Close();
 
         g_pd3dCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&g_pd3dCommandList);
+
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindows();
 
         g_pSwapChain->Present(1, 0); // Present with vsync
         //g_pSwapChain->Present(0, 0); // Present without vsync

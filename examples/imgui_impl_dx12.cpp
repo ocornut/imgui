@@ -18,6 +18,7 @@
 
 // DirectX
 #include <d3d12.h>
+#include <dxgi1_4.h>
 #include <d3dcompiler.h>
 
 // DirectX data
@@ -47,6 +48,10 @@ struct VERTEX_CONSTANT_BUFFER
 {
     float        mvp[4][4];
 };
+
+// Forward Declarations
+static void ImGui_ImplDX12_InitPlatformInterface();
+static void ImGui_ImplDX12_ShutdownPlatformInterface();
 
 // Render function
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
@@ -587,7 +592,7 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     g_RTVFormat = rtv_format;
     g_hFontSrvCpuDescHandle = font_srv_cpu_desc_handle;
     g_hFontSrvGpuDescHandle = font_srv_gpu_desc_handle;
-    g_pFrameResources = new FrameResources [num_frames_in_flight];
+    g_pFrameResources = new FrameResources[num_frames_in_flight];
     g_numFramesInFlight = num_frames_in_flight;
     g_frameIndex = UINT_MAX;
 
@@ -599,11 +604,16 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
         g_pFrameResources[i].IndexBufferSize = 10000;
     }
 
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+        ImGui_ImplDX12_InitPlatformInterface();
+
     return true;
 }
 
 void ImGui_ImplDX12_Shutdown()
 {
+    ImGui_ImplDX12_ShutdownPlatformInterface();
     ImGui_ImplDX12_InvalidateDeviceObjects();
     delete[] g_pFrameResources;
     g_pd3dDevice = NULL;
@@ -622,3 +632,135 @@ void ImGui_ImplDX12_NewFrame(ID3D12GraphicsCommandList* command_list)
 
     g_pd3dCommandList = command_list;
 }
+
+// --------------------------------------------------------------------------------------------------------
+// Platform Windows
+// --------------------------------------------------------------------------------------------------------
+
+#include "imgui_internal.h"     // ImGuiViewport
+
+struct ImGuiPlatformDataDx12
+{
+    IDXGISwapChain3*            SwapChain;
+
+    ImGuiPlatformDataDx12() { SwapChain = NULL; }
+    ~ImGuiPlatformDataDx12() { IM_ASSERT(SwapChain == NULL); }
+};
+
+static void ImGui_ImplDX12_CreateViewport(ImGuiViewport* viewport)
+{
+    ImGuiPlatformDataDx12* data = IM_NEW(ImGuiPlatformDataDx12)();
+    viewport->RendererUserData = data;
+    IM_ASSERT(0);
+
+    /*
+    // FIXME-PLATFORM
+    HWND hwnd = (HWND)viewport->PlatformHandle;
+    IM_ASSERT(hwnd != 0);
+
+    // Create swap chain
+    DXGI_SWAP_CHAIN_DESC sd;
+    ZeroMemory(&sd, sizeof(sd));
+    sd.BufferDesc.Width = (UINT)viewport->Size.x;
+    sd.BufferDesc.Height = (UINT)viewport->Size.y;
+    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    sd.SampleDesc.Count = 1;
+    sd.SampleDesc.Quality = 0;
+    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    sd.BufferCount = 1;
+    sd.OutputWindow = hwnd;
+    sd.Windowed = TRUE;
+    sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+    sd.Flags = 0;
+
+    IM_ASSERT(data->SwapChain == NULL && data->RTView == NULL);
+    g_pFactory->CreateSwapChain(g_pd3dDevice, &sd, &data->SwapChain);
+
+    // Create the render target
+    if (data->SwapChain)
+    {
+        ID3D11Texture2D* pBackBuffer;
+        data->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+        g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &data->RTView);
+        pBackBuffer->Release();
+    }
+    */
+}
+
+static void ImGui_ImplDX12_DestroyViewport(ImGuiViewport* viewport)
+{
+    if (ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData)
+    {
+        IM_ASSERT(0);
+        /*
+        if (data->SwapChain)
+            data->SwapChain->Release();
+        data->SwapChain = NULL;
+        if (data->RTView)
+            data->RTView->Release();
+        data->RTView = NULL;
+        IM_DELETE(data);
+        */
+    }
+    viewport->RendererUserData = NULL;
+}
+
+static void ImGui_ImplDX12_ResizeViewport(ImGuiViewport* viewport, int w, int h)
+{
+    ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData;
+    IM_ASSERT(0);
+    /*
+    if (data->RTView)
+    {
+        data->RTView->Release();
+        data->RTView = NULL;
+    }
+    if (data->SwapChain)
+    {
+        ID3D11Texture2D* pBackBuffer = NULL;
+        data->SwapChain->ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, 0);
+        data->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+        g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &data->RTView);
+        pBackBuffer->Release();
+    }
+    */
+}
+
+static void ImGui_ImplDX12_RenderViewport(ImGuiViewport* viewport)
+{
+    ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData;
+    IM_ASSERT(0);
+    /*
+    ImVec4 clear_color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg]; // FIXME-PLATFORM
+    clear_color.w = 1.0f;
+    g_pd3dDeviceContext->OMSetRenderTargets(1, &data->RTView, NULL);
+    g_pd3dDeviceContext->ClearRenderTargetView(data->RTView, (float*)&clear_color);
+    */
+    ImGui_ImplDX12_RenderDrawData(&viewport->DrawData);
+}
+
+static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport)
+{
+    ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData;
+    IM_ASSERT(0);
+    /*
+    data->SwapChain->Present(0, 0); // Present without vsync
+    */
+}
+
+void ImGui_ImplDX12_InitPlatformInterface()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    io.RendererInterface.CreateViewport = ImGui_ImplDX12_CreateViewport;
+    io.RendererInterface.DestroyViewport = ImGui_ImplDX12_DestroyViewport;
+    io.RendererInterface.ResizeViewport = ImGui_ImplDX12_ResizeViewport;
+    io.RendererInterface.RenderViewport = ImGui_ImplDX12_RenderViewport;
+    io.RendererInterface.SwapBuffers = ImGui_ImplDX12_SwapBuffers;
+}
+
+void ImGui_ImplDX12_ShutdownPlatformInterface()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    memset(&io.RendererInterface, 0, sizeof(io.RendererInterface));
+}
+
