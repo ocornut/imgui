@@ -3847,7 +3847,7 @@ static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, 
     }
 }
 
-static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_render_list, ImDrawList* draw_list)
+static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list)
 {
     if (draw_list->CmdBuffer.empty())
         return;
@@ -3877,17 +3877,17 @@ static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_render_list, ImDraw
     if (sizeof(ImDrawIdx) == 2)
         IM_ASSERT(draw_list->_VtxCurrentIdx < (1 << 16) && "Too many vertices in ImDrawList using 16-bit indices. Read comment above");
 
-    out_render_list->push_back(draw_list);
+    out_list->push_back(draw_list);
 }
 
-static void AddWindowToDrawData(ImVector<ImDrawList*>* out_render_list, ImGuiWindow* window)
+static void AddWindowToDrawData(ImVector<ImDrawList*>* out_list, ImGuiWindow* window)
 {
-    AddDrawListToDrawData(out_render_list, window->DrawList);
+    AddDrawListToDrawData(out_list, window->DrawList);
     for (int i = 0; i < window->DC.ChildWindows.Size; i++)
     {
         ImGuiWindow* child = window->DC.ChildWindows[i];
         if (child->Active && child->HiddenFrames <= 0) // clipped children may have been marked not active
-            AddWindowToDrawData(out_render_list, child);
+            AddWindowToDrawData(out_list, child);
     }
 }
 
