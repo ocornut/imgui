@@ -22,6 +22,7 @@
 #include <string.h>         // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
 #define IMGUI_VERSION       "1.60 WIP"
+#define IMGUI_HAS_VIEWPORT  1 // Viewport WIP branch
 
 // Define attributes of all API symbols declarations, e.g. for DLL under Windows.
 #ifndef IMGUI_API
@@ -72,6 +73,7 @@ struct ImGuiTextEditCallbackData;   // Shared state of ImGui::InputText() when u
 struct ImGuiSizeCallbackData;       // Structure used to constraint window size in custom ways when using custom ImGuiSizeCallback (rare/advanced use)
 struct ImGuiListClipper;            // Helper to manually clip large list of items
 struct ImGuiPayload;                // User data payload for drag and drop operations
+struct ImGuiViewport;               // Viewport (generally ~1 per window to output to at the OS level. Need per-platform support to use multiple viewports)
 struct ImGuiContext;                // ImGui context (opaque)
 
 // Typedefs and Enumerations (declared as int for compatibility and to not pollute the top of this file)
@@ -90,6 +92,7 @@ typedef int ImDrawListFlags;        // flags: for ImDrawList                    
 typedef int ImFontAtlasFlags;       // flags: for ImFontAtlas                   // enum ImFontAtlasFlags_
 typedef int ImGuiColorEditFlags;    // flags: for ColorEdit*(), ColorPicker*()  // enum ImGuiColorEditFlags_
 typedef int ImGuiColumnsFlags;      // flags: for *Columns*()                   // enum ImGuiColumnsFlags_
+typedef int ImGuiConfigFlags;       // flags: for io.ConfigFlags                // enum ImGuiConfigFlags_
 typedef int ImGuiDragDropFlags;     // flags: for *DragDrop*()                  // enum ImGuiDragDropFlags_
 typedef int ImGuiComboFlags;        // flags: for BeginCombo()                  // enum ImGuiComboFlags_
 typedef int ImGuiFocusedFlags;      // flags: for IsWindowFocused()             // enum ImGuiFocusedFlags_
@@ -150,6 +153,7 @@ namespace ImGui
     IMGUI_API void          NewFrame();                                 // start a new ImGui frame, you can submit any command from this point until Render()/EndFrame().
     IMGUI_API void          Render();                                   // ends the ImGui frame, finalize the draw data. (Obsolete: optionally call io.RenderDrawListsFn if set. Nowadays, prefer calling your render function yourself.)
     IMGUI_API ImDrawData*   GetDrawData();                              // valid after Render() and until the next call to NewFrame(). this is what you have to render. (Obsolete: this used to be passed to your io.RenderDrawListsFn() function.)
+    IMGUI_API ImDrawData*   GetDrawDataForViewport(ImGuiID viewport_id);// ImDrawData filtered to hold only the ImDrawList covering a given viewport. valid after Render() and until the next call to NewFrame()
     IMGUI_API void          EndFrame();                                 // ends the ImGui frame. automatically called by Render(), so most likely don't need to ever call that yourself directly. If you don't need to render you may call EndFrame() but you'll have wasted CPU already. If you don't need to render, better to not create any imgui windows instead!
 
     // Demo, Debug, Informations
@@ -259,8 +263,8 @@ namespace ImGui
     IMGUI_API void          SetCursorPosX(float x);                                             // "
     IMGUI_API void          SetCursorPosY(float y);                                             // "
     IMGUI_API ImVec2        GetCursorStartPos();                                                // initial cursor position
-    IMGUI_API ImVec2        GetCursorScreenPos();                                               // cursor position in absolute screen coordinates [0..io.DisplaySize] (useful to work with ImDrawList API)
-    IMGUI_API void          SetCursorScreenPos(const ImVec2& pos);                              // cursor position in absolute screen coordinates [0..io.DisplaySize]
+    IMGUI_API ImVec2        GetCursorScreenPos();                                               // cursor position in screen coordinates [0..io.DisplaySize] (or [io.ViewportPos..io.ViewportPos + io.ViewportSize] when using multiple viewport). useful to work with ImDrawList API.
+    IMGUI_API void          SetCursorScreenPos(const ImVec2& pos);                              // cursor position in screen coordinates [0..io.DisplaySize] (or [io.ViewportPos..io.ViewportPos + io.ViewportSize] when using multiple viewport) 
     IMGUI_API void          AlignTextToFramePadding();                                          // vertically align/lower upcoming text to FramePadding.y so that it will aligns to upcoming widgets (call if you have text on a line before regular widgets)
     IMGUI_API float         GetTextLineHeight();                                                // ~ FontSize
     IMGUI_API float         GetTextLineHeightWithSpacing();                                     // ~ FontSize + style.ItemSpacing.y (distance in pixels between 2 consecutive lines of text)
@@ -527,6 +531,10 @@ namespace ImGui
     // Clipboard Utilities (also see the LogToClipboard() function to capture or output text data to the clipboard)
     IMGUI_API const char*   GetClipboardText();
     IMGUI_API void          SetClipboardText(const char* text);
+    
+    // Additional OS/Platform Windows (when ImGuiConfigFlags_MultiViewports is set)
+    IMGUI_API void          UpdatePlatformWindows(); // FIXME-PLATFORM
+    IMGUI_API void          RenderPlatformWindows(); // FIXME-PLATFORM
 
     // Memory Utilities
     // All those functions are not reliant on the current context.
@@ -568,7 +576,8 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_Tooltip                = 1 << 25,  // Don't use! For internal use by BeginTooltip()
     ImGuiWindowFlags_Popup                  = 1 << 26,  // Don't use! For internal use by BeginPopup()
     ImGuiWindowFlags_Modal                  = 1 << 27,  // Don't use! For internal use by BeginPopupModal()
-    ImGuiWindowFlags_ChildMenu              = 1 << 28   // Don't use! For internal use by BeginMenu()
+    ImGuiWindowFlags_ChildMenu              = 1 << 28,  // Don't use! For internal use by BeginMenu()
+    ImGuiWindowFlags_FullViewport           = 1 << 29   // Don't use! For internal use by Begin() and viewports.
 };
 
 // Flags for ImGui::InputText()
@@ -904,6 +913,46 @@ enum ImGuiCond_
 #endif
 };
 
+// [BETA] Configuration flags, mostly setup by imgui back-end, stored in io.ConfigFlags
+enum ImGuiConfigFlags_
+{
+    ImGuiConfigFlags_MultiViewports                     = 1 << 0,   // User enable multiple viewports (require io.PlatformInterface + io.RendererInterface)
+    ImGuiConfigFlags_PlatformHasMouseHoveredViewport    = 1 << 1,   // Back-end knows how to set io.MouseHoveredViewport to the viewport directly under the mouse _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag and _REGARDLESS_ of whether another viewport is focused and may have mouse capture. This info is not easy to provide correctly with most high-level engines.
+    ImGuiConfigFlags_PlatformHasWantMoveMouseSupport    = 1 << 2,   // Back-end honors io.WantMoveMouse request by updating the OS mouse cursor position (currently only used by ImGuiNavFlags_MoveMouse feature, will be useful for widgets teleporting/wrapping the cursor)
+    ImGuiConfigFlags_PlatformHasWindowAlpha             = 1 << 3,   // Back-end can have transparent windows
+    
+    ImGuiConfigFlags_IsSRGB                             = 1 << 10,  // Back-end is SRGB-aware (Storage flag to allow your back-end to communicate to shared widgets. Not used by core ImGui)
+    ImGuiConfigFlags_IsTouchScreen                      = 1 << 11,  // Back-end is using a touch screen instead of a mouse (Storage flag to allow your back-end to communicate to shared widgets. Not used by core ImGui)
+    ImGuiConfigFlags_IsOnScreenKeyboard                 = 1 << 12   // Back-end uses an on-screen keyboard when io.WantTextInput is set.
+};
+
+// (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_EnableMultiViewport) is enabled
+struct ImGuiPlatformInterface
+{
+    void    (*CreateViewport)(ImGuiViewport* viewport);
+    void    (*DestroyViewport)(ImGuiViewport* viewport);
+    void    (*ShowWindow)(ImGuiViewport* viewport);
+    void    (*SetWindowPos)(ImGuiViewport* viewport, ImVec2 pos);
+    ImVec2  (*GetWindowPos)(ImGuiViewport* viewport);
+    void    (*SetWindowSize)(ImGuiViewport* viewport, ImVec2 size);
+    ImVec2  (*GetWindowSize)(ImGuiViewport* viewport);
+    void    (*SetWindowTitle)(ImGuiViewport* viewport, const char* name);
+    void    (*SetWindowAlpha)(ImGuiViewport* viewport, float alpha);
+    void    (*RenderViewport)(ImGuiViewport* viewport);
+    void    (*SwapBuffers)(ImGuiViewport* viewport);
+};
+
+// (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_EnableMultiViewport) is enabled
+struct ImGuiRendererInterface
+{
+    void    (*CreateViewport)(ImGuiViewport* viewport);
+    void    (*DestroyViewport)(ImGuiViewport* viewport);
+    void    (*ResizeViewport)(ImGuiViewport* viewport, int w, int h);
+    void    (*RenderViewport)(ImGuiViewport* viewport);    // Setup render output, clear targets, call Renderer_RenderDrawData
+    void    (*RenderDrawData)(ImDrawData* draw_data);      // Render a ImDrawList (collection of ImDrawList) for the area covering (io.DisplayPos) to (io.DisplayPos + io.DisplaySize)
+    void    (*SwapBuffers)(ImGuiViewport* viewport);       // Call Present/SwapBuffers
+};
+
 // You may modify the ImGui::GetStyle() main instance during initialization and before NewFrame().
 // During the frame, prefer using ImGui::PushStyleVar(ImGuiStyleVar_XXXX)/PopStyleVar() to alter the main style values, and ImGui::PushStyleColor(ImGuiCol_XXX)/PopStyleColor() for colors.
 struct ImGuiStyle
@@ -951,8 +1000,9 @@ struct ImGuiIO
     // Settings (fill once)                 // Default value:
     //------------------------------------------------------------------
 
-    ImVec2        DisplaySize;              // <unset>              // Display size, in pixels. For clamping windows positions.
+    ImVec2        DisplaySize;              // <unset>              // Main display size. Used e.g. to clamp windows positions. This is the default viewport. Use BeginViewport() for other viewports.
     float         DeltaTime;                // = 1.0f/60.0f         // Time elapsed since last frame, in seconds.
+    ImGuiConfigFlags ConfigFlags;           // = 0                  // Set ImGuiConfigFlags_. Features/options flags for ImGui back-ends.
     ImGuiNavFlags NavFlags;                 // = 0x00               // See ImGuiNavFlags_. Gamepad/keyboard navigation options.
     float         IniSavingRate;            // = 5.0f               // Maximum time between saving positions/sizes to .ini file, in seconds.
     const char*   IniFilename;              // = "imgui.ini"        // Path to .ini file. NULL to disable .ini saving.
@@ -985,6 +1035,10 @@ struct ImGuiIO
     void        (*SetClipboardTextFn)(void* user_data, const char* text);
     void*       ClipboardUserData;
 
+    // Optional: platform interface to use multiple viewports
+    ImGuiPlatformInterface  PlatformInterface;
+    ImGuiRendererInterface  RendererInterface;
+
     // Optional: notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME in Windows)
     // (default to use native imm32 api on Windows)
     void        (*ImeSetInputScreenPosFn)(int x, int y);
@@ -1004,6 +1058,8 @@ struct ImGuiIO
     bool        MouseDown[5];                   // Mouse buttons: left, right, middle + extras. ImGui itself mostly only uses left button (BeginPopupContext** are using right button). Others buttons allows us to track if the mouse is being used by your application + available to user as a convenience via IsMouse** API.
     float       MouseWheel;                     // Mouse wheel Vertical: 1 unit scrolls about 5 lines text. 
     float       MouseWheelH;                    // Mouse wheel Horizontal. Most users don't have a mouse with an horizontal wheel, may not be filled by all back-ends.
+    ImGuiID     MousePosViewport;               // (Optional) When using multiple viewports: viewport from which io.MousePos is based from (when dragging this is generally the captured/focused viewport, even though we can drag outside of it and then it's not hovered anymore). (0 == default viewport)
+    ImGuiID     MouseHoveredViewport;           // (Optional) When using multiple viewports: viewport the OS mouse cursor is hovering. (0 == default viewport)
     bool        MouseDrawCursor;                // Request ImGui to draw a mouse cursor for you (if you are on a platform without a mouse cursor).
     bool        KeyCtrl;                        // Keyboard modifier pressed: Control
     bool        KeyShift;                       // Keyboard modifier pressed: Shift
@@ -1022,7 +1078,7 @@ struct ImGuiIO
     // Output - Retrieve after calling NewFrame()
     //------------------------------------------------------------------
 
-    ImVec2      DisplayPos;                 // Always ImVec2(0,0) for now. (In upcoming multiple viewports branch, this will be repositioned by API on a per-viewport basis). The display area goes from DisplayPos to DisplayPos+DisplaySize.
+    ImVec2      DisplayPos;                 // Generally ImVec2(0,0). When using multiple viewports this can be repositioned by imgui. The display area goes from DisplayPos to DisplayPos+DisplaySize.
     bool        WantCaptureMouse;           // When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application. This is set by ImGui when it wants to use your mouse (e.g. unclicked mouse is hovering a window, or a widget is active). 
     bool        WantCaptureKeyboard;        // When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application. This is set by ImGui when it wants to use your keyboard inputs.
     bool        WantTextInput;              // Mobile/console: when io.WantTextInput is true, you may display an on-screen keyboard. This is set by ImGui when it wants textual keyboard input to happen (e.g. when a InputText widget is active).
@@ -1079,7 +1135,7 @@ namespace ImGui
     bool                Begin(const char* name, bool* p_open, const ImVec2& size_on_first_use, float bg_alpha_override = -1.0f, ImGuiWindowFlags flags = 0); // Use SetNextWindowSize(size, ImGuiCond_FirstUseEver) + SetNextWindowBgAlpha() instead.
     static inline bool  IsRootWindowOrAnyChildHovered()       { return IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows); }
     static inline void  AlignFirstTextHeightToWidgets()       { AlignTextToFramePadding(); }
-    static inline void  SetNextWindowPosCenter(ImGuiCond c=0) { ImGuiIO& io = GetIO(); SetNextWindowPos(ImVec2(io.DisplayPos.x + io.DisplaySize.x * 0.5f, io.DisplayPos.y + io.DisplaySize.y * 0.5f), c, ImVec2(0.5f, 0.5f)); }
+    static inline void  SetNextWindowPosCenter(ImGuiCond c=0) { ImGuiIO& io = GetIO(); SetNextWindowPos(ImVec2(io.DisplayPos.x + io.DisplaySize.x * 0.5f, io.DisplayPos.y + io.DisplaySize.y * 0.5f), c, ImVec2(0.5f, 0.5f)); } // FIXME-VIEWPORT: Select viewport based on mouse position
     // OBSOLETED in 1.51 (between Jun 2017 and Aug 2017)
     static inline bool  IsItemHoveredRect()                   { return IsItemHovered(ImGuiHoveredFlags_RectOnly); }
     static inline bool  IsPosHoveringAnyWindow(const ImVec2&) { IM_ASSERT(0); return false; } // This was misleading and partly broken. You probably want to use the ImGui::GetIO().WantCaptureMouse flag instead.
