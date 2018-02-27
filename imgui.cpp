@@ -13100,7 +13100,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::Text("%d vertices, %d indices (%d triangles)", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices, ImGui::GetIO().MetricsRenderIndices / 3);
         ImGui::Text("%d allocations", (int)GImAllocatorActiveAllocationsCount);
         static bool show_clip_rects = true;
+        static bool show_window_begin_order = false;
         ImGui::Checkbox("Show clipping rectangles when hovering draw commands", &show_clip_rects);
+        ImGui::Checkbox("Show window begin order", &show_window_begin_order);
         ImGui::Separator();
 
         struct Funcs
@@ -13194,7 +13196,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     (flags & ImGuiWindowFlags_ChildWindow) ? "Child " : "", (flags & ImGuiWindowFlags_Tooltip)   ? "Tooltip "   : "", (flags & ImGuiWindowFlags_Popup) ? "Popup " : "",
                     (flags & ImGuiWindowFlags_Modal)       ? "Modal " : "", (flags & ImGuiWindowFlags_ChildMenu) ? "ChildMenu " : "", (flags & ImGuiWindowFlags_NoSavedSettings) ? "NoSavedSettings " : "");
                 ImGui::BulletText("Scroll: (%.2f/%.2f,%.2f/%.2f)", window->Scroll.x, GetScrollMaxX(window), window->Scroll.y, GetScrollMaxY(window));
-                ImGui::BulletText("Active: %d, WriteAccessed: %d", window->Active, window->WriteAccessed);
+                ImGui::BulletText("Active: %d, WriteAccessed: %d, BeginOrderWithinContext: %d", window->Active, window->WriteAccessed, (window->Active || window->WasActive) ? window->BeginOrderWithinContext : -1);
                 ImGui::BulletText("NavLastIds: 0x%08X,0x%08X, NavLayerActiveMask: %X", window->NavLastIds[0], window->NavLastIds[1], window->DC.NavLayerActiveMask);
                 ImGui::BulletText("NavLastChildNavWindow: %s", window->NavLastChildNavWindow ? window->NavLastChildNavWindow->Name : "NULL");
                 if (window->NavRectRel[0].IsInverted())
@@ -13241,6 +13243,20 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
             ImGui::Text("DragDrop: %d, SourceId = 0x%08X, Payload \"%s\" (%d bytes)", g.DragDropActive, g.DragDropPayload.SourceId, g.DragDropPayload.DataType, g.DragDropPayload.DataSize);
             ImGui::TreePop();
+        }
+        if (show_window_begin_order)
+        {
+            for (int n = 0; n < g.Windows.Size; n++)
+            {
+                ImGuiWindow* window = g.Windows[n];
+                if ((window->Flags & ImGuiWindowFlags_ChildWindow) || !window->WasActive)
+                    continue;
+                char buf[32];
+                ImFormatString(buf, IM_ARRAYSIZE(buf), "%d", window->BeginOrderWithinContext);
+                float font_size = ImGui::GetFontSize() * 2;
+                g.OverlayDrawList.AddRectFilled(window->Pos, window->Pos + ImVec2(font_size, font_size), IM_COL32(200, 100, 100, 255));
+                g.OverlayDrawList.AddText(NULL, font_size, window->Pos, IM_COL32(255, 255, 255, 255), buf);
+            }
         }
     }
     ImGui::End();
