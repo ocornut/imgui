@@ -11,6 +11,7 @@
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
+//  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiRendererInterface.
 //  2018-XX-XX: DirectX10: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplDX10_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
@@ -26,6 +27,7 @@
 
 // DirectX data
 static ID3D10Device*            g_pd3dDevice = NULL;
+static IDXGIFactory*            g_pFactory = NULL;
 static ID3D10Buffer*            g_pVB = NULL;
 static ID3D10Buffer*            g_pIB = NULL;
 static ID3D10Blob *             g_pVertexShaderBlob = NULL;
@@ -45,6 +47,10 @@ struct VERTEX_CONSTANT_BUFFER
 {
     float        mvp[4][4];
 };
+
+// Forward Declarations
+static void ImGui_ImplDX10_InitPlatformInterface();
+static void ImGui_ImplDX10_ShutdownPlatformInterface();
 
 // Render function
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
@@ -302,7 +308,7 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
         ImGui_ImplDX10_InvalidateDeviceObjects();
 
     // By using D3DCompile() from <d3dcompiler.h> / d3dcompiler.lib, we introduce a dependency to a given version of d3dcompiler_XX.dll (see D3DCOMPILER_DLL_A)
-    // If you would like to use this DX11 sample code but remove this dependency you can: 
+    // If you would like to use this DX10 sample code but remove this dependency you can: 
     //  1) compile once, save the compiled shader blobs into a file or source code and pass them to CreateVertexShader()/CreatePixelShader() [preferred solution]
     //  2) use code to detect any version of the DLL and grab a pointer to D3DCompile from the DLL. 
     // See https://github.com/ocornut/imgui/pull/638 for sources and details.
@@ -459,12 +465,28 @@ void    ImGui_ImplDX10_InvalidateDeviceObjects()
 
 bool    ImGui_ImplDX10_Init(ID3D10Device* device)
 {
+    // Get factory from device
+    IDXGIDevice* pDXGIDevice = NULL;
+    IDXGIAdapter* pDXGIAdapter = NULL;
+    IDXGIFactory* pFactory = NULL;
+    if (device->QueryInterface(IID_PPV_ARGS(&pDXGIDevice)) != S_OK)
+        return false;
+    if (pDXGIDevice->GetParent(IID_PPV_ARGS(&pDXGIAdapter)) != S_OK)
+        return false;
+    if (pDXGIAdapter->GetParent(IID_PPV_ARGS(&pFactory)) != S_OK)
+        return false;
+
+    ImGuiIO& io = ImGui::GetIO();
     g_pd3dDevice = device;
+    g_pFactory = pFactory;
+    if (io.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+        ImGui_ImplDX10_InitPlatformInterface();
     return true;
 }
 
 void ImGui_ImplDX10_Shutdown()
 {
+    ImGui_ImplDX10_ShutdownPlatformInterface();
     ImGui_ImplDX10_InvalidateDeviceObjects();
     g_pd3dDevice = NULL;
 }
@@ -474,3 +496,122 @@ void ImGui_ImplDX10_NewFrame()
     if (!g_pFontSampler)
         ImGui_ImplDX10_CreateDeviceObjects();
 }
+
+
+// --------------------------------------------------------------------------------------------------------
+// Platform Windows
+// --------------------------------------------------------------------------------------------------------
+
+#include "imgui_internal.h"     // ImGuiViewport
+
+struct ImGuiPlatformDataDx10
+{
+    IDXGISwapChain*             SwapChain;
+    ID3D10RenderTargetView*     RTView;
+
+    ImGuiPlatformDataDx10()     { SwapChain = NULL; RTView = NULL; }
+    ~ImGuiPlatformDataDx10()    { IM_ASSERT(SwapChain == NULL && RTView == NULL); }
+};
+
+static void ImGui_ImplDX10_CreateViewport(ImGuiViewport* viewport)
+{
+    ImGuiPlatformDataDx10* data = IM_NEW(ImGuiPlatformDataDx10)();
+    viewport->RendererUserData = data;
+
+    // FIXME-PLATFORM
+    HWND hwnd = (HWND)viewport->PlatformHandle;
+    IM_ASSERT(hwnd != 0);
+
+    // Create swap chain
+    DXGI_SWAP_CHAIN_DESC sd;
+    ZeroMemory(&sd, sizeof(sd));
+    sd.BufferDesc.Width = (UINT)viewport->Size.x;
+    sd.BufferDesc.Height = (UINT)viewport->Size.y;
+    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    sd.SampleDesc.Count = 1;
+    sd.SampleDesc.Quality = 0;
+    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    sd.BufferCount = 1;
+    sd.OutputWindow = hwnd;
+    sd.Windowed = TRUE;
+    sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+    sd.Flags = 0;
+
+    IM_ASSERT(data->SwapChain == NULL && data->RTView == NULL);
+    g_pFactory->CreateSwapChain(g_pd3dDevice, &sd, &data->SwapChain);
+
+    // Create the render target
+    if (data->SwapChain)
+    {
+        ID3D10Texture2D* pBackBuffer;
+        data->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+        g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &data->RTView);
+        pBackBuffer->Release();
+    }
+}
+
+static void ImGui_ImplDX10_DestroyViewport(ImGuiViewport* viewport)
+{
+    if (ImGuiPlatformDataDx10* data = (ImGuiPlatformDataDx10*)viewport->RendererUserData)
+    {
+        if (data->SwapChain)
+            data->SwapChain->Release();
+        data->SwapChain = NULL;
+        if (data->RTView)
+            data->RTView->Release();
+        data->RTView = NULL;
+        IM_DELETE(data);
+    }
+    viewport->RendererUserData = NULL;
+}
+
+static void ImGui_ImplDX10_ResizeViewport(ImGuiViewport* viewport, int w, int h)
+{
+    ImGuiPlatformDataDx10* data = (ImGuiPlatformDataDx10*)viewport->RendererUserData;
+    if (data->RTView)
+    {
+        data->RTView->Release();
+        data->RTView = NULL;
+    }
+    if (data->SwapChain)
+    {
+        ID3D10Texture2D* pBackBuffer = NULL;
+        data->SwapChain->ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, 0);
+        data->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+        g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &data->RTView);
+        pBackBuffer->Release();
+    }
+}
+
+static void ImGui_ImplDX10_RenderViewport(ImGuiViewport* viewport)
+{
+    ImGuiPlatformDataDx10* data = (ImGuiPlatformDataDx10*)viewport->RendererUserData;
+    ImVec4 clear_color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg]; // FIXME-PLATFORM
+    clear_color.w = 1.0f;
+    g_pd3dDevice->OMSetRenderTargets(1, &data->RTView, NULL);
+    g_pd3dDevice->ClearRenderTargetView(data->RTView, (float*)&clear_color);
+    ImGui_ImplDX10_RenderDrawData(&viewport->DrawData);
+}
+
+static void ImGui_ImplDX10_SwapBuffers(ImGuiViewport* viewport)
+{
+    ImGuiPlatformDataDx10* data = (ImGuiPlatformDataDx10*)viewport->RendererUserData;
+    data->SwapChain->Present(0, 0); // Present without vsync
+}
+
+void ImGui_ImplDX10_InitPlatformInterface()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    io.RendererInterface.CreateViewport = ImGui_ImplDX10_CreateViewport;
+    io.RendererInterface.DestroyViewport = ImGui_ImplDX10_DestroyViewport;
+    io.RendererInterface.ResizeViewport = ImGui_ImplDX10_ResizeViewport;
+    io.RendererInterface.RenderViewport = ImGui_ImplDX10_RenderViewport;
+    io.RendererInterface.SwapBuffers = ImGui_ImplDX10_SwapBuffers;
+}
+
+void ImGui_ImplDX10_ShutdownPlatformInterface()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    memset(&io.RendererInterface, 0, sizeof(io.RendererInterface));
+}
+
