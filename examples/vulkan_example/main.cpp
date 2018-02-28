@@ -615,7 +615,7 @@ int main(int, char**)
 
     // Setup ImGui binding
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
     ImGui_ImplVulkan_InitData init_data = {};
     init_data.allocator = g_Allocator;
     init_data.gpu = g_Gpu;
@@ -624,9 +624,11 @@ int main(int, char**)
     init_data.pipeline_cache = g_PipelineCache;
     init_data.descriptor_pool = g_DescriptorPool;
     init_data.check_vk_result = check_vk_result;
+
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     ImGui_ImplVulkan_Init(&init_data);
     ImGui_ImplGlfw_Init(window, true);
-    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
 
     // Setup style
     ImGui::StyleColorsDark();

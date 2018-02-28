@@ -38,7 +38,7 @@ int main(int, char**)
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_MultiViewports;
-    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
     ImGui_ImplSDL2_Init(window, gl_context);
     ImGui_ImplOpenGL3_Init();
