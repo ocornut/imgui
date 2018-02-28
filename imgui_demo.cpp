@@ -2211,10 +2211,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 ImGui::Text("Fallback character: '%c' (%d)", font->FallbackChar, font->FallbackChar);
                 ImGui::Text("Texture surface: %d pixels (approx) ~ %dx%d", font->MetricsTotalSurface, (int)sqrtf((float)font->MetricsTotalSurface), (int)sqrtf((float)font->MetricsTotalSurface));
                 for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
-                {
-                    ImFontConfig* cfg = &font->ConfigData[config_i];
-                    ImGui::BulletText("Input %d: \'%s\', Oversample: (%d,%d), PixelSnapH: %d", config_i, cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH);
-                }
+                    if (ImFontConfig* cfg = &font->ConfigData[config_i])
+                        ImGui::BulletText("Input %d: \'%s\', Oversample: (%d,%d), PixelSnapH: %d", config_i, cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH);
                 if (ImGui::TreeNode("Glyphs", "Glyphs (%d)", font->Glyphs.Size))
                 {
                     // Display all glyphs of the fonts in separate pages of 256 characters

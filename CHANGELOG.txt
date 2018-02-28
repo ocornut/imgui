@@ -126,6 +126,8 @@ Other Changes:
 - Misc: Added misc/natvis/imgui.natvis for visual studio debugger users to easily visualizer imgui internal types. Added to examples projects.
 - Misc: Added IMGUI_USER_CONFIG to define a custom configuration filename. (#255, #1573, #1144, #41)
 - Misc: Updated stb_rect_pack from 0.10 to 0.11 (minor changes).
+- Misc: Added ImGuiConfigFlags_IsSRGB and ImGuiConfigFlags_IsTouchScreen user flags (for io.ConfigFlags). 
+  (Those flags are not used by ImGui itself, they only exists to make it easy for the engine/back-end to pass information to the application in a standard manner.)
 - Fonts: Updated stb_truetype from 1.14 to stb_truetype 1.19. (w/ include fix from some platforms #1622)
 - Fonts: Added optional FreeType rasterizer in misc/freetype. Moved from imgui_club repo. (#618) [@Vuhdo, @mikesart, @ocornut]
 - Fonts: Moved extra_fonts/ to misc/fonts/.
