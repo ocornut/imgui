@@ -4,7 +4,7 @@
 
 // Implemented features:
 //  [X] User texture binding. Cast 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
-//  [X] Gamepad navigation mapping. Enable with 'io.NavFlags |= ImGuiNavFlags_EnableGamepad'.
+//  [X] Gamepad navigation mapping. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -19,8 +19,8 @@
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplGlfwGL3_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
-//  2018-01-25: Inputs: Added gamepad support if ImGuiNavFlags_EnableGamepad is set.
-//  2018-01-25: Inputs: Honoring the io.WantMoveMouse by repositioning the mouse by using navigation and ImGuiNavFlags_MoveMouse is set.
+//  2018-01-25: Inputs: Added gamepad support if ImGuiConfigFlags_NavEnableGamepad is set.
+//  2018-01-25: Inputs: Honoring the io.WantMoveMouse by repositioning the mouse (when using navigation and ImGuiConfigFlags_NavMoveMouse is set).
 //  2018-01-20: Inputs: Added Horizontal Mouse Wheel support.
 //  2018-01-18: Inputs: Added mapping for ImGuiKey_Insert.
 //  2018-01-07: OpenGL: Changed GLSL shader version from 330 to 150. (Also changed GL context from 3.3 to 3.2 in example's main.cpp)
@@ -469,7 +469,7 @@ void ImGui_ImplGlfwGL3_NewFrame()
 
     // Gamepad navigation mapping [BETA]
     memset(io.NavInputs, 0, sizeof(io.NavInputs));
-    if (io.NavFlags & ImGuiNavFlags_EnableGamepad)
+    if (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad)
     {
         // Update gamepad inputs
         #define MAP_BUTTON(NAV_NO, BUTTON_NO)       { if (buttons_count > BUTTON_NO && buttons[BUTTON_NO] == GLFW_PRESS) io.NavInputs[NAV_NO] = 1.0f; }

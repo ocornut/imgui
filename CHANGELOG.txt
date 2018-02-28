@@ -66,11 +66,11 @@ Other Changes:
 - Navigation: merged in the gamepad/keyboard navigation (about one million changes!). (#787, #323)
   The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable.
  - To use Keyboard Navigation:
-    - Set io.NavFlags |= ImGuiNavFlags_EnableKeyboard to enable. NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
-    - When keyboard navigation is active (io.NavActive + NavFlags_EnableKeyboard), the io.WantCaptureKeyboard flag will be set.
+    - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable. NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
+    - When keyboard navigation is active (io.NavActive + ImGuiConfigFlags_NavEnableKeyboard), the io.WantCaptureKeyboard flag will be set.
       For more advanced uses, you may want to read from io.NavActive or io.NavVisible. Read imgui.cpp for more details.
  - To use Gamepad Navigation:
-    - Set io.NavFlags |= ImGuiNavFlags_EnableGamepad to enable. Fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
+    - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad to enable. Fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
     - See https://github.com/ocornut/imgui/issues/1599 for recommended gamepad mapping.
     - See 'enum ImGuiNavInput_' in imgui.h for a description of inputs. Read imgui.cpp for more details.
 - Navigation: SetItemDefaultFocus() sets the navigation position in addition to scrolling. (#787)
@@ -78,7 +78,7 @@ Other Changes:
 - Navigation: Added window flags: ImGuiWindowFlags_NoNav (ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus).
 - Navigation: Style: Added ImGuiCol_NavHighlight, ImGuiCol_NavWindowingHighlight colors. (#787)
 - Navigation: TreeNode: Added ImGuiTreeNodeFlags_NavLeftJumpsBackHere flag to allow Nav Left direction to jump back to parent tree node from any of its child. (#1079) 
-- Navigation: IO: Added io.NavFlags (input), io.NavActive (output), io.NavVisible (output). (#787)
+- Navigation: IO: Added io.ConfigFlags (input), io.NavActive (output), io.NavVisible (output). (#787)
 - Context: Removed the default global context and font atlas instances, which caused various problems to users of multiple contexts and DLL users. (#1565)
   YOU NOW NEED TO CALL ImGui::CreateContext() AT THE BEGINNING OF YOUR APP, AND CALL ImGui::DestroyContext() AT THE END. Existing apps will assert/crash without it.
 - Context: Removed allocator parameters from CreateContext(), they are now setup with SetAllocatorFunctions() and shared by all contexts. (#1565, #586, #992, #1007, #1558)
