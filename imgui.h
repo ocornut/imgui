@@ -95,7 +95,7 @@ typedef int ImGuiComboFlags;        // flags: for BeginCombo()                  
 typedef int ImGuiFocusedFlags;      // flags: for IsWindowFocused()             // enum ImGuiFocusedFlags_
 typedef int ImGuiHoveredFlags;      // flags: for IsItemHovered() etc.          // enum ImGuiHoveredFlags_
 typedef int ImGuiInputTextFlags;    // flags: for InputText*()                  // enum ImGuiInputTextFlags_
-typedef int ImGuiNavFlags;          // flags: for io.NavFlags                   // enum ImGuiNavFlags_
+typedef int ImGuiConfigFlags;       // flags: for io.ConfigFlags                // enum ImGuiConfigFlags_
 typedef int ImGuiSelectableFlags;   // flags: for Selectable()                  // enum ImGuiSelectableFlags_
 typedef int ImGuiTreeNodeFlags;     // flags: for TreeNode*(),CollapsingHeader()// enum ImGuiTreeNodeFlags_
 typedef int ImGuiWindowFlags;       // flags: for Begin*()                      // enum ImGuiWindowFlags_
@@ -710,8 +710,8 @@ enum ImGuiKey_
 };
 
 // [BETA] Gamepad/Keyboard directional navigation
-// Keyboard: Set io.NavFlags |= ImGuiNavFlags_EnableKeyboard to enable. NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
-// Gamepad:  Set io.NavFlags |= ImGuiNavFlags_EnableGamepad to enable. Fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
+// Keyboard: Set io.ConfigFlags |= ImGuiConfigFlags_EnableKeyboard to enable. NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
+// Gamepad:  Set io.ConfigFlags |= ImGuiConfigFlags_EnableGamepad to enable. Fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
 // Read instructions in imgui.cpp for more details.
 enum ImGuiNavInput_
 {
@@ -744,13 +744,13 @@ enum ImGuiNavInput_
     ImGuiNavInput_InternalStart_ = ImGuiNavInput_KeyMenu_
 };
 
-// [BETA] Gamepad/Keyboard directional navigation flags, stored in io.NavFlags
-enum ImGuiNavFlags_
+// Configuration flags stored in io.ConfigFlags
+enum ImGuiConfigFlags_
 {
-    ImGuiNavFlags_EnableKeyboard    = 1 << 0,   // Master keyboard navigation enable flag. NewFrame() will automatically fill io.NavInputs[] based on io.KeyDown[].
-    ImGuiNavFlags_EnableGamepad     = 1 << 1,   // Master gamepad navigation enable flag. This is mostly to instruct your imgui back-end to fill io.NavInputs[].
-    ImGuiNavFlags_MoveMouse         = 1 << 2,   // Request navigation to allow moving the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantMoveMouse=true. If enabled you MUST honor io.WantMoveMouse requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
-    ImGuiNavFlags_NoCaptureKeyboard = 1 << 3    // Do not set the io.WantCaptureKeyboard flag with io.NavActive is set. 
+    ImGuiConfigFlags_NavEnableKeyboard    = 1 << 0,   // Master keyboard navigation enable flag. NewFrame() will automatically fill io.NavInputs[] based on io.KeyDown[].
+    ImGuiConfigFlags_NavEnableGamepad     = 1 << 1,   // Master gamepad navigation enable flag. This is mostly to instruct your imgui back-end to fill io.NavInputs[].
+    ImGuiConfigFlags_NavMoveMouse         = 1 << 2,   // Request navigation to allow moving the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantMoveMouse=true. If enabled you MUST honor io.WantMoveMouse requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
+    ImGuiConfigFlags_NavNoCaptureKeyboard = 1 << 3    // Do not set the io.WantCaptureKeyboard flag with io.NavActive is set. 
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -953,7 +953,7 @@ struct ImGuiIO
 
     ImVec2        DisplaySize;              // <unset>              // Display size, in pixels. For clamping windows positions.
     float         DeltaTime;                // = 1.0f/60.0f         // Time elapsed since last frame, in seconds.
-    ImGuiNavFlags NavFlags;                 // = 0x00               // See ImGuiNavFlags_. Gamepad/keyboard navigation options.
+    ImGuiConfigFlags ConfigFlags;           // = 0                  // See ImGuiConfigFlags_ enum. Gamepad/keyboard navigation options, etc.
     float         IniSavingRate;            // = 5.0f               // Maximum time between saving positions/sizes to .ini file, in seconds.
     const char*   IniFilename;              // = "imgui.ini"        // Path to .ini file. NULL to disable .ini saving.
     const char*   LogFilename;              // = "imgui_log.txt"    // Path to .log file (default parameter to ImGui::LogToFile when no file is specified).
@@ -1028,7 +1028,7 @@ struct ImGuiIO
     bool        WantCaptureMouse;           // When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application. This is set by ImGui when it wants to use your mouse (e.g. unclicked mouse is hovering a window, or a widget is active). 
     bool        WantCaptureKeyboard;        // When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application. This is set by ImGui when it wants to use your keyboard inputs.
     bool        WantTextInput;              // Mobile/console: when io.WantTextInput is true, you may display an on-screen keyboard. This is set by ImGui when it wants textual keyboard input to happen (e.g. when a InputText widget is active).
-    bool        WantMoveMouse;              // MousePos has been altered, back-end should reposition mouse on next frame. Set only when ImGuiNavFlags_MoveMouse flag is enabled in io.NavFlags.
+    bool        WantMoveMouse;              // MousePos has been altered, back-end should reposition mouse on next frame. Set only when ImGuiConfigFlags_NavMoveMouse flag is enabled.
     bool        NavActive;                  // Directional navigation is currently allowed (will handle ImGuiKey_NavXXX events) = a window is focused and it doesn't use the ImGuiWindowFlags_NoNavInputs flag.
     bool        NavVisible;                 // Directional navigation is visible and allowed (will handle ImGuiKey_NavXXX events).
     float       Framerate;                  // Application framerate estimation, in frame per second. Solely for convenience. Rolling average estimation based on IO.DeltaTime over 120 frames

@@ -37,9 +37,9 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     ImGui_ImplSDL2_Init(window);
     ImGui_ImplOpenGL3_Init();
-    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;
 
     // Setup style
     ImGui::StyleColorsDark();

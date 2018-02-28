@@ -248,7 +248,7 @@ See the FAQ in imgui.cpp for answers.
 
 <b>How do you use Dear ImGui on a platform that may not have a mouse or keyboard?</b>
 
-You can control Dear ImGui with a gamepad, see the explanation in imgui.cpp about how to use the navigation feature (short version: map your gamepad inputs into the `io.NavInputs[]` array and set `io.NavFlags |= ImGuiNavFlags_EnableGamepad`).
+You can control Dear ImGui with a gamepad, see the explanation in imgui.cpp about how to use the navigation feature (short version: map your gamepad inputs into the `io.NavInputs[]` array and set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad`).
 
 You can share your computer mouse seamlessy with your console/tablet/phone using [Synergy](http://synergy-project.org). This is the prefered solution for developer productivity. In particular, their [micro-synergy-client](https://github.com/symless/micro-synergy-client) repo there is _uSynergy.c_ sources for a small embeddable that you can use on any platform to connect to your host PC. You may also use a third party solution such as [Remote  ImGui](https://github.com/JordiRos/remoteimgui).
 

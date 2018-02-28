@@ -216,15 +216,15 @@
  - Ask questions and report issues at https://github.com/ocornut/imgui/issues/787
  - The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable.
  - Keyboard:
-    - Set io.NavFlags |= ImGuiNavFlags_EnableKeyboard to enable. NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
-    - When keyboard navigation is active (io.NavActive + NavFlags_EnableKeyboard), the io.WantCaptureKeyboard flag will be set.
+    - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable. NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
+    - When keyboard navigation is active (io.NavActive + ImGuiConfigFlags_NavEnableKeyboard), the io.WantCaptureKeyboard flag will be set.
       For more advanced uses, you may want to read from:
        - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
        - io.NavVisible: true when the navigation cursor is visible (and usually goes false when mouse is used).
        - or query focus information with e.g. IsWindowFocused(), IsItemFocused() etc. functions.
       Please reach out if you think the game vs navigation input sharing could be improved.
  - Gamepad:
-    - Set io.NavFlags |= ImGuiNavFlags_EnableGamepad to enable. Fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
+    - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad to enable. Fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
     - See 'enum ImGuiNavInput_' in imgui.h for a description of inputs. For each entry of io.NavInputs[], set the following values:
          0.0f= not held. 1.0f= fully held. Pass intermediate 0.0f..1.0f values for analog triggers/sticks.
     - We uses a simple >0.0f test for activation testing, and won't attempt to test for a dead-zone.
@@ -234,11 +234,11 @@
  - Mouse:
     - PS4 users: Consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
     - Consoles/Tablet/Phone users: Consider using Synergy host (on your computer) + uSynergy.c (in your console/tablet/phone app) to use your PC mouse/keyboard.
-    - On a TV/console system where readability may be lower or mouse inputs may be awkward, you may want to set the ImGuiNavFlags_MoveMouse flag in io.NavFlags.
-      Enabling ImGuiNavFlags_MoveMouse instructs dear imgui to move your mouse cursor along with navigation movements.
+    - On a TV/console system where readability may be lower or mouse inputs may be awkward, you may want to set the ImGuiConfigFlags_NavMoveMouse flag.
+      Enabling ImGuiConfigFlags_NavMoveMouse instructs dear imgui to move your mouse cursor along with navigation movements.
       When enabled, the NewFrame() function may alter 'io.MousePos' and set 'io.WantMoveMouse' to notify you that it wants the mouse cursor to be moved.
       When that happens your back-end NEEDS to move the OS or underlying mouse cursor on the next frame. Some of the binding in examples/ do that.
-      (If you set the ImGuiNavFlags_MoveMouse flag but don't honor 'io.WantMoveMouse' properly, imgui will misbehave as it will see your mouse as moving back and forth.)
+      (If you set the NavMoveMouse flag but don't honor 'io.WantMoveMouse' properly, imgui will misbehave as it will see your mouse as moving back and forth!)
       (In a setup when you may not have easy control over the mouse cursor, e.g. uSynergy.c doesn't expose moving remote mouse cursor, you may want
        to set a boolean to ignore your other external mouse positions until the external source is moved again.)
 
@@ -847,7 +847,7 @@ ImGuiIO::ImGuiIO()
     // Settings
     DisplaySize = ImVec2(-1.0f, -1.0f);
     DeltaTime = 1.0f/60.0f;
-    NavFlags = 0x00;
+    ConfigFlags = 0x00;
     IniSavingRate = 5.0f;
     IniFilename = "imgui.ini";
     LogFilename = "imgui_log.txt";
@@ -2810,7 +2810,7 @@ static void ImGui::NavUpdateWindowing()
     bool apply_toggle_layer = false;
 
     bool start_windowing_with_gamepad = !g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_Menu, ImGuiInputReadMode_Pressed);
-    bool start_windowing_with_keyboard = !g.NavWindowingTarget && g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab) && (g.IO.NavFlags & ImGuiNavFlags_EnableKeyboard);
+    bool start_windowing_with_keyboard = !g.NavWindowingTarget && g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab) && (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard);
     if (start_windowing_with_gamepad || start_windowing_with_keyboard)
         if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavigable(g.Windows.Size - 1, -INT_MAX, -1))
         {
@@ -2965,7 +2965,7 @@ static void ImGui::NavUpdate()
 
     // Update Keyboard->Nav inputs mapping
     memset(g.IO.NavInputs + ImGuiNavInput_InternalStart_, 0, (ImGuiNavInput_COUNT - ImGuiNavInput_InternalStart_) * sizeof(g.IO.NavInputs[0]));
-    if (g.IO.NavFlags & ImGuiNavFlags_EnableKeyboard)
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
     {
         #define NAV_MAP_KEY(_KEY, _NAV_INPUT)   if (g.IO.KeyMap[_KEY] != -1 && IsKeyDown(g.IO.KeyMap[_KEY])) g.IO.NavInputs[_NAV_INPUT] = 1.0f;
         NAV_MAP_KEY(ImGuiKey_Space,     ImGuiNavInput_Activate );
@@ -3037,7 +3037,7 @@ static void ImGui::NavUpdate()
     if (g.NavMousePosDirty && g.NavIdIsAlive)
     {
         // Set mouse position given our knowledge of the nav widget position from last frame
-        if (g.IO.NavFlags & ImGuiNavFlags_MoveMouse)
+        if (g.IO.ConfigFlags & ImGuiConfigFlags_NavMoveMouse)
         {
             g.IO.MousePos = g.IO.MousePosPrev = NavCalcPreferredMousePos();
             g.IO.WantMoveMouse = true;
@@ -3057,7 +3057,7 @@ static void ImGui::NavUpdate()
     NavUpdateWindowing();
 
     // Set output flags for user application
-    g.IO.NavActive = (g.IO.NavFlags & (ImGuiNavFlags_EnableGamepad | ImGuiNavFlags_EnableKeyboard)) && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
+    g.IO.NavActive = (g.IO.ConfigFlags & (ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NavEnableKeyboard)) && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
     g.IO.NavVisible = (g.IO.NavActive && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL) || g.NavInitRequest;
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
@@ -3282,7 +3282,7 @@ void ImGui::NewFrame()
         IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..512, or -1 for unmapped key)");
 
     // Do a simple check for required key mapping (we intentionally do NOT check all keys to not pressure user into setting up everything, but Space is required and was super recently added in 1.60 WIP)
-    if (g.IO.NavFlags & ImGuiNavFlags_EnableKeyboard)
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
         IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
 
     // Load settings on first frame
@@ -3449,7 +3449,7 @@ void ImGui::NewFrame()
         g.IO.WantCaptureKeyboard = (g.WantCaptureKeyboardNextFrame != 0);
     else
         g.IO.WantCaptureKeyboard = (g.ActiveId != 0) || (modal_window != NULL);
-    if (g.IO.NavActive && (g.IO.NavFlags & ImGuiNavFlags_EnableKeyboard) && !(g.IO.NavFlags & ImGuiNavFlags_NoCaptureKeyboard))
+    if (g.IO.NavActive && (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) && !(g.IO.ConfigFlags & ImGuiConfigFlags_NavNoCaptureKeyboard))
         g.IO.WantCaptureKeyboard = true;
 
     g.IO.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : 0;
@@ -5844,7 +5844,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             float sc = g.Style.MouseCursorScale;
             ImVec2 ref_pos = (!g.NavDisableHighlight && g.NavDisableMouseHover) ? NavCalcPreferredMousePos() : g.IO.MousePos;
             ImRect rect_to_avoid;
-            if (!g.NavDisableHighlight && g.NavDisableMouseHover && !(g.IO.NavFlags & ImGuiNavFlags_MoveMouse))
+            if (!g.NavDisableHighlight && g.NavDisableMouseHover && !(g.IO.ConfigFlags & ImGuiConfigFlags_NavMoveMouse))
                 rect_to_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 16, ref_pos.y + 8); 
             else
                 rect_to_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24 * sc, ref_pos.y + 24 * sc); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.

@@ -3,7 +3,7 @@
 // (Info: GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 
 // Implemented features:
-//  [X] Gamepad navigation mapping. Enable with 'io.NavFlags |= ImGuiNavFlags_EnableGamepad'.
+//  [X] Gamepad navigation mapping. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -15,8 +15,8 @@
 //  2018-XX-XX: Inputs: Added support for mouse cursors, honoring ImGui::GetMouseCursor() value.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
-//  2018-01-25: Inputs: Added gamepad support if ImGuiNavFlags_EnableGamepad is set.
-//  2018-01-25: Inputs: Honoring the io.WantMoveMouse by repositioning the mouse by using navigation and ImGuiNavFlags_MoveMouse is set.
+//  2018-01-25: Inputs: Added gamepad support if ImGuiConfigFlags_NavEnableGamepad is set.
+//  2018-01-25: Inputs: Honoring the io.WantMoveMouse by repositioning the mouse (when using navigation and ImGuiConfigFlags_NavMoveMouse is set).
 //  2018-01-20: Inputs: Added Horizontal Mouse Wheel support.
 //  2018-01-18: Inputs: Added mapping for ImGuiKey_Insert.
 //  2017-08-25: Inputs: MousePos set to -FLT_MAX,-FLT_MAX when mouse is unavailable/missing (instead of -1,-1).
@@ -152,6 +152,7 @@ void ImGui_ImplGlfw_Shutdown()
 static void ImGui_ImplGlfw_UpdateMousePosButtons()
 {
     // Update buttons
+    ImGuiIO& io = ImGui::GetIO();
     for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
     {
         // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
@@ -214,7 +215,7 @@ void ImGui_ImplGlfw_NewFrame()
 
     // Gamepad navigation mapping [BETA]
     memset(io.NavInputs, 0, sizeof(io.NavInputs));
-    if (io.NavFlags & ImGuiNavFlags_EnableGamepad)
+    if (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad)
     {
         // Update gamepad inputs
         #define MAP_BUTTON(NAV_NO, BUTTON_NO)       { if (buttons_count > BUTTON_NO && buttons[BUTTON_NO] == GLFW_PRESS) io.NavInputs[NAV_NO] = 1.0f; }

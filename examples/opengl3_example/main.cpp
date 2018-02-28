@@ -35,10 +35,10 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
     ImGui_ImplGlfw_Init(window, true);
     ImGui_ImplOpenGL3_Init();
-    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
-    //io.NavFlags |= ImGuiNavFlags_EnableGamepad;   // Enable Gamepad Controls
 
     // Setup style
     ImGui::StyleColorsDark();

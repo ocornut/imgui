@@ -9,7 +9,7 @@
 // CHANGELOG
 //  2018-02-20: Inputs: Added support for mouse cursors (ImGui::GetMouseCursor() value and WM_SETCURSOR message handling).
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
-//  2018-02-06: Inputs: Honoring the io.WantMoveMouse by repositioning the mouse by using navigation and ImGuiNavFlags_MoveMouse is set.
+//  2018-02-06: Inputs: Honoring the io.WantMoveMouse by repositioning the mouse (when using navigation and ImGuiConfigFlags_NavMoveMouse is set).
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-01-20: Inputs: Added Horizontal Mouse Wheel support.
 //  2018-01-08: Inputs: Added mapping for ImGuiKey_Insert.
