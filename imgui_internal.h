@@ -81,6 +81,11 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit ImGui context pointe
 //-----------------------------------------------------------------------------
 
 #define IM_PI           3.14159265358979323846f
+#ifdef _WIN32
+#define IM_NEWLINE      "\r\n"   // Play it nice with Windows users (2018: Notepad _still_ doesn't display files properly when they use Unix-style carriage returns)
+#else
+#define IM_NEWLINE      "\n"
+#endif
 
 // Helpers: UTF-8 <> wchar
 IMGUI_API int           ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count

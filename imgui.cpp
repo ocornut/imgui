@@ -924,13 +924,6 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
 #define IM_F32_TO_INT8_UNBOUND(_VAL)    ((int)((_VAL) * 255.0f + ((_VAL)>=0 ? 0.5f : -0.5f)))   // Unsaturated, for display purpose 
 #define IM_F32_TO_INT8_SAT(_VAL)        ((int)(ImSaturate(_VAL) * 255.0f + 0.5f))               // Saturated, always output 0..255
 
-// Play it nice with Windows users. Notepad in 2015 still doesn't display text data with Unix-style \n.
-#ifdef _WIN32
-#define IM_NEWLINE "\r\n"
-#else
-#define IM_NEWLINE "\n"
-#endif
-
 ImVec2 ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p)
 {
     ImVec2 ap = p - a;
