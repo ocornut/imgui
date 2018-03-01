@@ -5891,7 +5891,7 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
     }
 
     const bool window_is_mouse_tooltip = (flags & ImGuiWindowFlags_Tooltip) && g.NavDisableHighlight && !g.NavDisableMouseHover;
-    const bool window_follow_mouse_viewport = window_is_mouse_tooltip || (g.MovingWindow && g.MovingWindow->RootWindow == window);
+    const bool window_follow_mouse_viewport = (window_is_mouse_tooltip || (g.MovingWindow && g.MovingWindow->RootWindow == window));
 
     bool created_viewport = false;
 
@@ -5899,17 +5899,15 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
     if (g.NextWindowData.ViewportCond)
     {
         window->Viewport = prev_viewport = FindViewportByID(g.NextWindowData.ViewportId);
-        window->ViewportId = g.NextWindowData.ViewportId;
+        window->ViewportId = g.NextWindowData.ViewportId; // Store ID even if Viewport isn't resolved.
     }
     else if (flags & ImGuiWindowFlags_ChildWindow)// || (flags & ImGuiWindowFlags_Popup))
     {
         IM_ASSERT(window->ParentWindow);
         window->Viewport = prev_viewport = window->ParentWindow->Viewport;
     }
-    else if (window_follow_mouse_viewport)
+    else if (window_follow_mouse_viewport && IsMousePosValid())
     {
-        IM_ASSERT(IsMousePosValid());
-
         // Calculate mouse position in OS/platform coordinates
         if (!window_is_mouse_tooltip && !GetViewportRect(window).Contains(window->Rect()))
         {
