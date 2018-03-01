@@ -38,6 +38,7 @@ int main(int, char**)
     io.ConfigFlags |= ImGuiConfigFlags_MultiViewports;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
+
     ImGui_ImplGlfw_Init(window, true);
     ImGui_ImplOpenGL3_Init();
 

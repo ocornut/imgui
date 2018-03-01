@@ -11,7 +11,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2018-XX-XX: Vulkan: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
+//  2018-03-01: Vulkan: Renamed ImGui_ImplVulkan_Init_Info to ImGui_ImplVulkan_InitInfo and fields to match more closely Vulkan terminology.
+//  2018-02-18: Vulkan: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback, ImGui_ImplVulkan_Render() calls ImGui_ImplVulkan_RenderDrawData() itself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2017-05-15: Vulkan: Fix scissor offset being negative. Fix new Vulkan validation warnings. Set required depth member for buffer image copy.
@@ -23,13 +24,13 @@
 #include "imgui_impl_vulkan.h"
 
 // Vulkan data
-static VkAllocationCallbacks* g_Allocator = NULL;
-static VkPhysicalDevice       g_Gpu = VK_NULL_HANDLE;
-static VkDevice               g_Device = VK_NULL_HANDLE;
-static VkRenderPass           g_RenderPass = VK_NULL_HANDLE;
-static VkPipelineCache        g_PipelineCache = VK_NULL_HANDLE;
-static VkDescriptorPool       g_DescriptorPool = VK_NULL_HANDLE;
-static void (*g_CheckVkResult)(VkResult err) = NULL;
+static const VkAllocationCallbacks* g_Allocator = NULL;
+static VkPhysicalDevice             g_PhysicalDevice = VK_NULL_HANDLE;
+static VkDevice                     g_Device = VK_NULL_HANDLE;
+static VkRenderPass                 g_RenderPass = VK_NULL_HANDLE;
+static VkPipelineCache              g_PipelineCache = VK_NULL_HANDLE;
+static VkDescriptorPool             g_DescriptorPool = VK_NULL_HANDLE;
+static void                         (*g_CheckVkResult)(VkResult err) = NULL;
 
 static VkCommandBuffer        g_CommandBuffer = VK_NULL_HANDLE;
 static VkDeviceSize           g_BufferMemoryAlignment = 256;
@@ -133,7 +134,7 @@ static uint32_t __glsl_shader_frag_spv[] =
 static uint32_t ImGui_ImplVulkan_MemoryType(VkMemoryPropertyFlags properties, uint32_t type_bits)
 {
     VkPhysicalDeviceMemoryProperties prop;
-    vkGetPhysicalDeviceMemoryProperties(g_Gpu, &prop);
+    vkGetPhysicalDeviceMemoryProperties(g_PhysicalDevice, &prop);
     for (uint32_t i = 0; i < prop.memoryTypeCount; i++)
         if ((prop.memoryTypes[i].propertyFlags & properties) == properties && type_bits & (1<<i))
             return i;
@@ -688,15 +689,15 @@ void    ImGui_ImplVulkan_InvalidateDeviceObjects()
     if (g_Pipeline)             { vkDestroyPipeline(g_Device, g_Pipeline, g_Allocator); g_Pipeline = VK_NULL_HANDLE; }
 }
 
-bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitData *init_data)
+bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo *init_data)
 {
-    g_Allocator = init_data->allocator;
-    g_Gpu = init_data->gpu;
-    g_Device = init_data->device;
-    g_RenderPass = init_data->render_pass;
-    g_PipelineCache = init_data->pipeline_cache;
-    g_DescriptorPool = init_data->descriptor_pool;
-    g_CheckVkResult = init_data->check_vk_result;
+    g_Allocator = init_data->Allocator;
+    g_PhysicalDevice = init_data->PhysicalDevice;
+    g_Device = init_data->Device;
+    g_RenderPass = init_data->RenderPass;
+    g_PipelineCache = init_data->PipelineCache;
+    g_DescriptorPool = init_data->DescriptorPool;
+    g_CheckVkResult = init_data->CheckVkResultFn;
 
     ImGui_ImplVulkan_CreateDeviceObjects();
     return true;
@@ -718,4 +719,74 @@ void ImGui_ImplVulkan_Render(VkCommandBuffer command_buffer)
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData());
     g_CommandBuffer = VK_NULL_HANDLE;
     g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
+}
+
+//-------------------------------------------------------------------------
+// Miscellaneous Vulkan Helpers
+// (Those are currently not strictly needed by the binding, but will be once if we support multi-viewports)
+//-------------------------------------------------------------------------
+
+#include <stdlib.h> // malloc
+
+VkSurfaceFormatKHR ImGui_ImplVulkan_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space)
+{
+    IM_ASSERT(request_formats != NULL);
+    IM_ASSERT(request_formats_count > 0);
+
+    // Per Spec Format and View Format are expected to be the same unless VK_IMAGE_CREATE_MUTABLE_BIT was set at image creation
+    // Assuming that the default behavior is without setting this bit, there is no need for separate Swapchain image and image view format
+    // Additionally several new color spaces were introduced with Vulkan Spec v1.0.40,
+    // hence we must make sure that a format with the mostly available color space, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR, is found and used.
+    uint32_t avail_count;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &avail_count, NULL);
+    ImVector<VkSurfaceFormatKHR> avail_format;
+    avail_format.resize((int)avail_count);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &avail_count, avail_format.Data);
+
+    // First check if only one format, VK_FORMAT_UNDEFINED, is available, which would imply that any format is available
+    if (avail_count == 1)
+    {
+        if (avail_format[0].format == VK_FORMAT_UNDEFINED)
+        {
+            VkSurfaceFormatKHR ret;
+            ret.format = request_formats[0];
+            ret.colorSpace = request_color_space;
+            return ret;
+        }
+        else
+        {
+            // No point in searching another format
+            return avail_format[0];
+        }
+    }
+    else
+    {
+        // Request several formats, the first found will be used 
+        for (int request_i = 0; request_i < request_formats_count; request_i++)
+            for (uint32_t avail_i = 0; avail_i < avail_count; avail_i++)
+                if (avail_format[avail_i].format == request_formats[request_i] && avail_format[avail_i].colorSpace == request_color_space)
+                    return avail_format[avail_i];
+
+        // If none of the requested image formats could be found, use the first available
+        return avail_format[0];
+    }
+}
+
+VkPresentModeKHR ImGui_ImplVulkan_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count)
+{
+    IM_ASSERT(request_modes != NULL);
+    IM_ASSERT(request_modes_count > 0);
+
+    // Request a certain mode and confirm that it is available. If not use VK_PRESENT_MODE_FIFO_KHR which is mandatory
+    uint32_t avail_count = 0;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &avail_count, NULL);
+    ImVector<VkPresentModeKHR> avail_modes;
+    avail_modes.resize((int)avail_count);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &avail_count, avail_modes.Data);
+    for (int request_i = 0; request_i < request_modes_count; request_i++)
+        for (uint32_t avail_i = 0; avail_i < avail_count; avail_i++)
+            if (request_modes[request_i] == avail_modes[avail_i])
+                return request_modes[request_i];
+
+    return VK_PRESENT_MODE_FIFO_KHR; // Always available
 }
