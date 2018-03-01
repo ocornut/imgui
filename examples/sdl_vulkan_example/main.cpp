@@ -189,9 +189,9 @@ static void resize_vulkan(SDL_Window*, int w, int h)
 }
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
-static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(
-    VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
+static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
+    (void)flags; (void)object; (void)location; (void)messageCode; (void)pUserData; (void)pLayerPrefix; // Unused arguemnts
     printf("[vulkan] ObjectType: %i\nMessage: %s\n\n", objectType, pMessage);
     return VK_FALSE;
 }
@@ -209,25 +209,24 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
         create_info.ppEnabledExtensionNames = extensions;
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
-        // enabling multiple validation layers grouped as lunarg standard validation
+        // Enabling multiple validation layers grouped as LunarG standard validation
         const char* layers[] = { "VK_LAYER_LUNARG_standard_validation" };
         create_info.enabledLayerCount = 1;
         create_info.ppEnabledLayerNames = layers;
 
-        // need additional storage for char pointer to debug report extension
-        const char** extensions = (const char**)malloc(sizeof(const char*) * (extensions_count + 1));
-        for (size_t i = 0; i < extensions_count; i++)
-            extensions[i] = extensions[i];
-        extensions[extensions_count] = "VK_EXT_debug_report";
+        // Enable debug report extension (we need additional storage, so we duplicate the user array to add our new extension to it)
+        const char** extensions_ext = (const char**)malloc(sizeof(const char*) * (extensions_count + 1));
+        memcpy(extensions_ext, extensions, extensions_count * sizeof(const char*));
+        extensions_ext[extensions_count] = "VK_EXT_debug_report";
         create_info.enabledExtensionCount = extensions_count + 1;
-        create_info.ppEnabledExtensionNames = extensions;
+        create_info.ppEnabledExtensionNames = extensions_ext;
 #endif // IMGUI_VULKAN_DEBUG_REPORT
 
         err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
         check_vk_result(err);
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
-        free(extensions);
+        free(extensions_ext);
 
         // create the debug report callback
         VkDebugReportCallbackCreateInfoEXT debug_report_ci = {};
