@@ -294,71 +294,23 @@ static void setup_vulkan(GLFWwindow* window, const char** extensions, uint32_t e
         }
     }
 
+
     // Get Surface Format
     {
-        // Per Spec Format and View Format are expected to be the same unless VK_IMAGE_CREATE_MUTABLE_BIT was set at image creation
-        // Assuming that the default behavior is without setting this bit, there is no need for separate Swapchain image and image view format
-        // Additionally several new color spaces were introduced with Vulkan Spec v1.0.40,
-        // hence we must make sure that a format with the mostly available color space, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR, is found and used.
-        uint32_t count;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(g_PhysicalDevice, g_Surface, &count, NULL);
-        VkSurfaceFormatKHR* formats = (VkSurfaceFormatKHR*)malloc(sizeof(VkSurfaceFormatKHR) * count);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(g_PhysicalDevice, g_Surface, &count, formats);
-
-        // First check if only one format, VK_FORMAT_UNDEFINED, is available, which would imply that any format is available
-        if (count == 1)
-        {
-            if (formats[0].format == VK_FORMAT_UNDEFINED)
-            {
-                g_SurfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
-                g_SurfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-            }
-            else
-            {
-                // No point in searching another format
-                g_SurfaceFormat = formats[0];
-            }
-        }
-        else
-        {
-            // Request several formats, the first found will be used 
-            VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
-            VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-            bool found = false;
-            for (size_t i = 0; found == false && i < sizeof(requestSurfaceImageFormat) / sizeof(requestSurfaceImageFormat[0]); i++)
-                for (uint32_t j = 0; j < count; j++)
-                    if (formats[j].format == requestSurfaceImageFormat[i] && formats[j].colorSpace == requestSurfaceColorSpace)
-                    {
-                        g_SurfaceFormat = formats[j];
-                        found = true;
-                    }
-
-            // If none of the requested image formats could be found, use the first available
-            if (!found)
-                g_SurfaceFormat = formats[0];
-        }
-        free(formats);
+        const VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
+        const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+        g_SurfaceFormat = ImGui_ImplVulkan_SelectSurfaceFormat(g_PhysicalDevice, g_Surface, requestSurfaceImageFormat, (size_t)IM_ARRAYSIZE(requestSurfaceImageFormat), requestSurfaceColorSpace);
     }
 
 
     // Get Present Mode
     {
-        // Request a certain mode and confirm that it is available. If not use VK_PRESENT_MODE_FIFO_KHR which is mandatory
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
-        g_PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        VkPresentModeKHR present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 #else
-        g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
+        VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
 #endif
-        uint32_t count = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(g_PhysicalDevice, g_Surface, &count, nullptr);
-        VkPresentModeKHR* presentModes = (VkPresentModeKHR*)malloc(sizeof(VkQueueFamilyProperties) * count);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(g_PhysicalDevice, g_Surface, &count, presentModes);
-        bool presentModeAvailable = false;
-        for (size_t i = 0; i < count && !presentModeAvailable; i++) 
-            if (presentModes[i] == g_PresentMode)
-                presentModeAvailable = true;
-        if (!presentModeAvailable)
-            g_PresentMode = VK_PRESENT_MODE_FIFO_KHR; // Always available
+        g_PresentMode = ImGui_ImplVulkan_SelectPresentMode(g_PhysicalDevice, g_Surface, &present_mode, 1);
     }
 
 

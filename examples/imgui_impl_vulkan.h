@@ -34,3 +34,7 @@ IMGUI_API void        ImGui_ImplVulkan_InvalidateFontUploadObjects();
 IMGUI_API void        ImGui_ImplVulkan_InvalidateDeviceObjects();
 IMGUI_API bool        ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
 IMGUI_API bool        ImGui_ImplVulkan_CreateDeviceObjects();
+
+// Miscellaneous Vulkan Helpers
+IMGUI_API VkSurfaceFormatKHR    ImGui_ImplVulkan_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space);
+IMGUI_API VkPresentModeKHR      ImGui_ImplVulkan_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
