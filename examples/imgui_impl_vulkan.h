@@ -13,18 +13,18 @@
 
 #define IMGUI_VK_QUEUED_FRAMES 2
 
-struct ImGui_ImplVulkan_InitData
+struct ImGui_ImplVulkan_InitInfo
 {
-    VkAllocationCallbacks* allocator;
-    VkPhysicalDevice       gpu;
-    VkDevice               device;
-    VkRenderPass           render_pass;
-    VkPipelineCache        pipeline_cache;
-    VkDescriptorPool       descriptor_pool;
-    void (*check_vk_result)(VkResult err);
+    const VkAllocationCallbacks*    Allocator;
+    VkPhysicalDevice                PhysicalDevice;
+    VkDevice                        Device;
+    VkRenderPass                    RenderPass;
+    VkPipelineCache                 PipelineCache;
+    VkDescriptorPool                DescriptorPool;
+    void                            (*CheckVkResultFn)(VkResult err);
 };
 
-IMGUI_API bool        ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitData *init_data);
+IMGUI_API bool        ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo *init_data);
 IMGUI_API void        ImGui_ImplVulkan_Shutdown();
 IMGUI_API void        ImGui_ImplVulkan_NewFrame();
 IMGUI_API void        ImGui_ImplVulkan_Render(VkCommandBuffer command_buffer);

@@ -9,6 +9,7 @@
 #include <SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 
+// FIXME-VULKAN: Resizing with IMGUI_UNLIMITED_FRAME_RATE triggers errors from the validation layer.
 #define IMGUI_MAX_POSSIBLE_BACK_BUFFERS 16
 #define IMGUI_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
@@ -18,16 +19,15 @@
 static VkAllocationCallbacks*   g_Allocator = NULL;
 static VkInstance               g_Instance = VK_NULL_HANDLE;
 static VkSurfaceKHR             g_Surface = VK_NULL_HANDLE;
-static VkPhysicalDevice         g_Gpu = VK_NULL_HANDLE;
+static VkPhysicalDevice         g_PhysicalDevice = VK_NULL_HANDLE;
 static VkDevice                 g_Device = VK_NULL_HANDLE;
 static VkSwapchainKHR           g_Swapchain = VK_NULL_HANDLE;
 static VkRenderPass             g_RenderPass = VK_NULL_HANDLE;
-static uint32_t                 g_QueueFamily = 0;
+static uint32_t                 g_QueueFamily = (uint32_t)-1;
 static VkQueue                  g_Queue = VK_NULL_HANDLE;
 static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
 
 static VkSurfaceFormatKHR       g_SurfaceFormat;
-static VkImageSubresourceRange  g_ImageRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 static VkPresentModeKHR         g_PresentMode;
 
 static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
@@ -64,17 +64,18 @@ static void resize_vulkan(SDL_Window*, int w, int h)
     err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
 
-    // Destroy old Framebuffer:
+    // Destroy old Framebuffer
     for (uint32_t i = 0; i < g_BackBufferCount; i++)
+    {
         if (g_BackBufferView[i])
             vkDestroyImageView(g_Device, g_BackBufferView[i], g_Allocator);
-    for (uint32_t i = 0; i < g_BackBufferCount; i++)
         if (g_Framebuffer[i])
             vkDestroyFramebuffer(g_Device, g_Framebuffer[i], g_Allocator);
+    }
     if (g_RenderPass)
         vkDestroyRenderPass(g_Device, g_RenderPass, g_Allocator);
 
-    // Create Swapchain:
+    // Create Swapchain
     {
         VkSwapchainCreateInfoKHR info = {};
         info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -82,15 +83,15 @@ static void resize_vulkan(SDL_Window*, int w, int h)
         info.imageFormat = g_SurfaceFormat.format;
         info.imageColorSpace = g_SurfaceFormat.colorSpace;
         info.imageArrayLayers = 1;
-        info.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;           // Assume that graphics family == present family
         info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
         info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         info.presentMode = g_PresentMode;
         info.clipped = VK_TRUE;
         info.oldSwapchain = old_swapchain;
         VkSurfaceCapabilitiesKHR cap;
-        err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_Gpu, g_Surface, &cap);
+        err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_PhysicalDevice, g_Surface, &cap);
         check_vk_result(err);
         if (cap.maxImageCount > 0)
             info.minImageCount = (cap.minImageCount + 2 < cap.maxImageCount) ? (cap.minImageCount + 2) : cap.maxImageCount;
@@ -99,17 +100,13 @@ static void resize_vulkan(SDL_Window*, int w, int h)
 
         if (cap.currentExtent.width == 0xffffffff)
         {
-            fb_width = w;
-            fb_height = h;
-            info.imageExtent.width = fb_width;
-            info.imageExtent.height = fb_height;
+            info.imageExtent.width = fb_width = w;
+            info.imageExtent.height = fb_height = h;
         }
         else
         {
-            fb_width = cap.currentExtent.width;
-            fb_height = cap.currentExtent.height;
-            info.imageExtent.width = fb_width;
-            info.imageExtent.height = fb_height;
+            info.imageExtent.width = fb_width = cap.currentExtent.width;
+            info.imageExtent.height = fb_height = cap.currentExtent.height;
         }
         err = vkCreateSwapchainKHR(g_Device, &info, g_Allocator, &g_Swapchain);
         check_vk_result(err);
@@ -121,7 +118,7 @@ static void resize_vulkan(SDL_Window*, int w, int h)
     if (old_swapchain)
         vkDestroySwapchainKHR(g_Device, old_swapchain, g_Allocator);
 
-    // Create the Render Pass:
+    // Create the Render Pass
     {
         VkAttachmentDescription attachment = {};
         attachment.format = g_SurfaceFormat.format;
@@ -159,7 +156,8 @@ static void resize_vulkan(SDL_Window*, int w, int h)
         info.components.g = VK_COMPONENT_SWIZZLE_G;
         info.components.b = VK_COMPONENT_SWIZZLE_B;
         info.components.a = VK_COMPONENT_SWIZZLE_A;
-        info.subresourceRange = g_ImageRange;
+        VkImageSubresourceRange image_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+        info.subresourceRange = image_range;
         for (uint32_t i = 0; i < g_BackBufferCount; i++)
         {
             info.image = g_BackBuffer[i];
@@ -168,7 +166,7 @@ static void resize_vulkan(SDL_Window*, int w, int h)
         }
     }
 
-    // Create Framebuffer:
+    // Create Framebuffer
     {
         VkImageView attachment[1];
         VkFramebufferCreateInfo info = {};
@@ -253,7 +251,7 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
         }
     }
 
-    // Get GPU
+    // Select GPU
     {
         uint32_t gpu_count;
         err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, NULL);
@@ -266,31 +264,30 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
         // If a number >1 of GPUs got reported, you should find the best fit GPU for your purpose
         // e.g. VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU if available, or with the greatest memory available, etc.
         // for sake of simplicity we'll just take the first one, assuming it has a graphics queue family.
-        g_Gpu = gpus[0];
+        g_PhysicalDevice = gpus[0];
         free(gpus);
     }
 
-    // Get queue
+    // Select graphics queue family
     {
         uint32_t count;
-        vkGetPhysicalDeviceQueueFamilyProperties(g_Gpu, &count, NULL);
+        vkGetPhysicalDeviceQueueFamilyProperties(g_PhysicalDevice, &count, NULL);
         VkQueueFamilyProperties* queues = (VkQueueFamilyProperties*)malloc(sizeof(VkQueueFamilyProperties) * count);
-        vkGetPhysicalDeviceQueueFamilyProperties(g_Gpu, &count, queues);
+        vkGetPhysicalDeviceQueueFamilyProperties(g_PhysicalDevice, &count, queues);
         for (uint32_t i = 0; i < count; i++)
-        {
             if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
             {
                 g_QueueFamily = i;
                 break;
             }
-        }
         free(queues);
+        IM_ASSERT(g_QueueFamily != -1);
     }
 
     // Check for WSI support
     {
         VkBool32 res;
-        vkGetPhysicalDeviceSurfaceSupportKHR(g_Gpu, g_QueueFamily, g_Surface, &res);
+        vkGetPhysicalDeviceSurfaceSupportKHR(g_PhysicalDevice, g_QueueFamily, g_Surface, &res);
         if (res != VK_TRUE)
         {
             fprintf(stderr, "Error no WSI support on physical device 0\n");
@@ -301,15 +298,15 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
     // Get Surface Format
     {
         // Per Spec Format and View Format are expected to be the same unless VK_IMAGE_CREATE_MUTABLE_BIT was set at image creation
-        // Assuming that the default behavior is without setting this bit, there is no need for separate Spawchain image and image view format
-        // additionally several new color spaces were introduced with Vulkan Spec v1.0.40
-        // hence we must make sure that a format with the mostly available color space, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR, is found and used
+        // Assuming that the default behavior is without setting this bit, there is no need for separate Swapchain image and image view format
+        // Additionally several new color spaces were introduced with Vulkan Spec v1.0.40,
+        // hence we must make sure that a format with the mostly available color space, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR, is found and used.
         uint32_t count;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, NULL);
-        VkSurfaceFormatKHR *formats = (VkSurfaceFormatKHR*)malloc(sizeof(VkSurfaceFormatKHR) * count);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(g_Gpu, g_Surface, &count, formats);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(g_PhysicalDevice, g_Surface, &count, NULL);
+        VkSurfaceFormatKHR* formats = (VkSurfaceFormatKHR*)malloc(sizeof(VkSurfaceFormatKHR) * count);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(g_PhysicalDevice, g_Surface, &count, formats);
 
-        // first check if only one format, VK_FORMAT_UNDEFINED, is available, which would imply that any format is available
+        // First check if only one format, VK_FORMAT_UNDEFINED, is available, which would imply that any format is available
         if (count == 1)
         {
             if (formats[0].format == VK_FORMAT_UNDEFINED)
@@ -318,32 +315,27 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
                 g_SurfaceFormat.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
             }
             else
-            {   // no point in searching another format
+            {
+                // No point in searching another format
                 g_SurfaceFormat = formats[0];
             }
         }
         else
         {
-            // request several formats, the first found will be used 
+            // Request several formats, the first found will be used 
             VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
             VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-            bool requestedFound = false;
-            for (size_t i = 0; i < sizeof(requestSurfaceImageFormat) / sizeof(requestSurfaceImageFormat[0]); i++)
-            {
-                if (requestedFound)
-                    break;
+            bool found = false;
+            for (size_t i = 0; found == false && i < sizeof(requestSurfaceImageFormat) / sizeof(requestSurfaceImageFormat[0]); i++)
                 for (uint32_t j = 0; j < count; j++)
-                {
                     if (formats[j].format == requestSurfaceImageFormat[i] && formats[j].colorSpace == requestSurfaceColorSpace)
                     {
                         g_SurfaceFormat = formats[j];
-                        requestedFound = true;
+                        found = true;
                     }
-                }
-            }
 
-            // if none of the requested image formats could be found, use the first available
-            if (!requestedFound)
+            // If none of the requested image formats could be found, use the first available
+            if (!found)
                 g_SurfaceFormat = formats[0];
         }
         free(formats);
@@ -352,41 +344,34 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
 
     // Get Present Mode
     {
-        // Requst a certain mode and confirm that it is available. If not use VK_PRESENT_MODE_FIFO_KHR which is mandatory
+        // Request a certain mode and confirm that it is available. If not use VK_PRESENT_MODE_FIFO_KHR which is mandatory
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
         g_PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 #else
         g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 #endif
         uint32_t count = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, nullptr);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(g_PhysicalDevice, g_Surface, &count, nullptr);
         VkPresentModeKHR* presentModes = (VkPresentModeKHR*)malloc(sizeof(VkQueueFamilyProperties) * count);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, presentModes);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(g_PhysicalDevice, g_Surface, &count, presentModes);
         bool presentModeAvailable = false;
-        for (size_t i = 0; i < count; i++)
-        {
+        for (size_t i = 0; i < count && !presentModeAvailable; i++) 
             if (presentModes[i] == g_PresentMode)
-            {
                 presentModeAvailable = true;
-                break;
-            }
-        }
         if (!presentModeAvailable)
-            g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;   // always available
+            g_PresentMode = VK_PRESENT_MODE_FIFO_KHR; // Always available
     }
 
 
-    // Create Logical Device
+    // Create Logical Device (with 1 queue)
     {
         int device_extension_count = 1;
         const char* device_extensions[] = { "VK_KHR_swapchain" };
-        const uint32_t queue_index = 0;
-        const uint32_t queue_count = 1;
         const float queue_priority[] = { 1.0f };
         VkDeviceQueueCreateInfo queue_info[1] = {};
         queue_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queue_info[0].queueFamilyIndex = g_QueueFamily;
-        queue_info[0].queueCount = queue_count;
+        queue_info[0].queueCount = 1;
         queue_info[0].pQueuePriorities = queue_priority;
         VkDeviceCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -394,10 +379,11 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
         create_info.pQueueCreateInfos = queue_info;
         create_info.enabledExtensionCount = device_extension_count;
         create_info.ppEnabledExtensionNames = device_extensions;
-        err = vkCreateDevice(g_Gpu, &create_info, g_Allocator, &g_Device);
+        err = vkCreateDevice(g_PhysicalDevice, &create_info, g_Allocator, &g_Device);
         check_vk_result(err);
-        vkGetDeviceQueue(g_Device, g_QueueFamily, queue_index, &g_Queue);
+        vkGetDeviceQueue(g_Device, g_QueueFamily, 0, &g_Queue);
     }
+
 
     // Create Framebuffers
     {
@@ -405,6 +391,7 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
         SDL_GetWindowSize(window, &w, &h);
         resize_vulkan(window, w, h);
     }
+
 
     // Create Command Buffers
     for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
@@ -611,18 +598,18 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
 
-    ImGui_ImplVulkan_InitData init_data = {};
-    init_data.allocator = g_Allocator;
-    init_data.gpu = g_Gpu;
-    init_data.device = g_Device;
-    init_data.render_pass = g_RenderPass;
-    init_data.pipeline_cache = g_PipelineCache;
-    init_data.descriptor_pool = g_DescriptorPool;
-    init_data.check_vk_result = check_vk_result;
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Allocator = g_Allocator;
+    init_info.PhysicalDevice = g_PhysicalDevice;
+    init_info.Device = g_Device;
+    init_info.RenderPass = g_RenderPass;
+    init_info.PipelineCache = g_PipelineCache;
+    init_info.DescriptorPool = g_DescriptorPool;
+    init_info.CheckVkResultFn = check_vk_result;
 
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-    ImGui_ImplVulkan_Init(&init_data);
+    ImGui_ImplVulkan_Init(&init_info);
     ImGui_ImplSDL2_Init(window);
 
     // Setup style

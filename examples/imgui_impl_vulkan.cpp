@@ -11,7 +11,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2018-XX-XX: Vulkan: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
+//  2018-03-01: Vulkan: Renamed ImGui_ImplVulkan_Init_Info to ImGui_ImplVulkan_InitInfo and fields to match more closely Vulkan terminology.
+//  2018-02-18: Vulkan: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback, ImGui_ImplVulkan_Render() calls ImGui_ImplVulkan_RenderDrawData() itself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2017-05-15: Vulkan: Fix scissor offset being negative. Fix new Vulkan validation warnings. Set required depth member for buffer image copy.
@@ -23,13 +24,13 @@
 #include "imgui_impl_vulkan.h"
 
 // Vulkan data
-static VkAllocationCallbacks* g_Allocator = NULL;
-static VkPhysicalDevice       g_Gpu = VK_NULL_HANDLE;
-static VkDevice               g_Device = VK_NULL_HANDLE;
-static VkRenderPass           g_RenderPass = VK_NULL_HANDLE;
-static VkPipelineCache        g_PipelineCache = VK_NULL_HANDLE;
-static VkDescriptorPool       g_DescriptorPool = VK_NULL_HANDLE;
-static void (*g_CheckVkResult)(VkResult err) = NULL;
+static const VkAllocationCallbacks* g_Allocator = NULL;
+static VkPhysicalDevice             g_PhysicalDevice = VK_NULL_HANDLE;
+static VkDevice                     g_Device = VK_NULL_HANDLE;
+static VkRenderPass                 g_RenderPass = VK_NULL_HANDLE;
+static VkPipelineCache              g_PipelineCache = VK_NULL_HANDLE;
+static VkDescriptorPool             g_DescriptorPool = VK_NULL_HANDLE;
+static void                         (*g_CheckVkResult)(VkResult err) = NULL;
 
 static VkCommandBuffer        g_CommandBuffer = VK_NULL_HANDLE;
 static VkDeviceSize           g_BufferMemoryAlignment = 256;
@@ -133,7 +134,7 @@ static uint32_t __glsl_shader_frag_spv[] =
 static uint32_t ImGui_ImplVulkan_MemoryType(VkMemoryPropertyFlags properties, uint32_t type_bits)
 {
     VkPhysicalDeviceMemoryProperties prop;
-    vkGetPhysicalDeviceMemoryProperties(g_Gpu, &prop);
+    vkGetPhysicalDeviceMemoryProperties(g_PhysicalDevice, &prop);
     for (uint32_t i = 0; i < prop.memoryTypeCount; i++)
         if ((prop.memoryTypes[i].propertyFlags & properties) == properties && type_bits & (1<<i))
             return i;
@@ -688,15 +689,15 @@ void    ImGui_ImplVulkan_InvalidateDeviceObjects()
     if (g_Pipeline)             { vkDestroyPipeline(g_Device, g_Pipeline, g_Allocator); g_Pipeline = VK_NULL_HANDLE; }
 }
 
-bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitData *init_data)
+bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo *init_data)
 {
-    g_Allocator = init_data->allocator;
-    g_Gpu = init_data->gpu;
-    g_Device = init_data->device;
-    g_RenderPass = init_data->render_pass;
-    g_PipelineCache = init_data->pipeline_cache;
-    g_DescriptorPool = init_data->descriptor_pool;
-    g_CheckVkResult = init_data->check_vk_result;
+    g_Allocator = init_data->Allocator;
+    g_PhysicalDevice = init_data->PhysicalDevice;
+    g_Device = init_data->Device;
+    g_RenderPass = init_data->RenderPass;
+    g_PipelineCache = init_data->PipelineCache;
+    g_DescriptorPool = init_data->DescriptorPool;
+    g_CheckVkResult = init_data->CheckVkResultFn;
 
     ImGui_ImplVulkan_CreateDeviceObjects();
     return true;
