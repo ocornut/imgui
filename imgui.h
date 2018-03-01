@@ -712,12 +712,12 @@ enum ImGuiKey_
 // [BETA] Gamepad/Keyboard directional navigation
 // Keyboard: Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable. NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
 // Gamepad:  Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad to enable. Fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
-// Read instructions in imgui.cpp for more details.
+// Read instructions in imgui.cpp for more details. Download PNG/PSD at goo.gl/9LgVZW.
 enum ImGuiNavInput_
 {
     // Gamepad Mapping
-    ImGuiNavInput_Activate,      // activate / open / toggle / tweak value       // e.g. Circle (PS4), A (Xbox), B (Switch), Space (Keyboard)
-    ImGuiNavInput_Cancel,        // cancel / close / exit                        // e.g. Cross  (PS4), B (Xbox), A (Switch), Escape (Keyboard)
+    ImGuiNavInput_Activate,      // activate / open / toggle / tweak value       // e.g. Circle (PS4), A (Xbox), A (Switch), Space (Keyboard)
+    ImGuiNavInput_Cancel,        // cancel / close / exit                        // e.g. Cross  (PS4), B (Xbox), B (Switch), Escape (Keyboard)
     ImGuiNavInput_Input,         // text input / on-screen keyboard              // e.g. Triang.(PS4), Y (Xbox), X (Switch), Return (Keyboard)
     ImGuiNavInput_Menu,          // tap: toggle menu / hold: focus, move, resize // e.g. Square (PS4), X (Xbox), Y (Switch), Alt (Keyboard)
     ImGuiNavInput_DpadLeft,      // move / tweak / resize window (w/ PadMenu)    // e.g. D-pad Left/Right/Up/Down (Gamepads), Arrow keys (Keyboard)
