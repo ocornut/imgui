@@ -11,9 +11,9 @@
 
 #define IMGUI_MAX_POSSIBLE_BACK_BUFFERS 16
 #define IMGUI_UNLIMITED_FRAME_RATE
-//#ifdef _DEBUG
-//#define IMGUI_VULKAN_DEBUG_REPORT
-//#endif
+#ifdef _DEBUG
+#define IMGUI_VULKAN_DEBUG_REPORT
+#endif
 
 static VkAllocationCallbacks*   g_Allocator = NULL;
 static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -24,7 +24,7 @@ static VkSwapchainKHR           g_Swapchain = VK_NULL_HANDLE;
 static VkRenderPass             g_RenderPass = VK_NULL_HANDLE;
 static uint32_t                 g_QueueFamily = 0;
 static VkQueue                  g_Queue = VK_NULL_HANDLE;
-static VkDebugReportCallbackEXT g_Debug_Report = VK_NULL_HANDLE;
+static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
 
 static VkSurfaceFormatKHR       g_SurfaceFormat;
 static VkImageSubresourceRange  g_ImageRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
@@ -228,18 +228,17 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
         free(extensions_ext);
 
-        // create the debug report callback
+        // Get the function pointer (required for any extensions)
+        auto vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkCreateDebugReportCallbackEXT");
+        IM_ASSERT(vkCreateDebugReportCallbackEXT != NULL);
+
+        // Setup the debug report callback
         VkDebugReportCallbackCreateInfoEXT debug_report_ci = {};
         debug_report_ci.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
         debug_report_ci.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
         debug_report_ci.pfnCallback = debug_report;
         debug_report_ci.pUserData = NULL;
-
-        // get the proc address of the function pointer, required for used extensions
-        PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT =
-            (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkCreateDebugReportCallbackEXT");
-
-        err = vkCreateDebugReportCallbackEXT(g_Instance, &debug_report_ci, g_Allocator, &g_Debug_Report);
+        err = vkCreateDebugReportCallbackEXT(g_Instance, &debug_report_ci, g_Allocator, &g_DebugReport);
         check_vk_result(err);
 #endif // IMGUI_VULKAN_DEBUG_REPORT
     }
@@ -492,9 +491,9 @@ static void cleanup_vulkan()
     vkDestroySurfaceKHR(g_Instance, g_Surface, g_Allocator);
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
-    // get the proc address of the function pointer, required for used extensions
+    // Remove the debug report callback
     auto vkDestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkDestroyDebugReportCallbackEXT");
-    vkDestroyDebugReportCallbackEXT(g_Instance, g_Debug_Report, g_Allocator);
+    vkDestroyDebugReportCallbackEXT(g_Instance, g_DebugReport, g_Allocator);
 #endif // IMGUI_VULKAN_DEBUG_REPORT
 
     vkDestroyDevice(g_Device, g_Allocator);
