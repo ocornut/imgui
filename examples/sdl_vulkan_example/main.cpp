@@ -57,7 +57,7 @@ static void check_vk_result(VkResult err)
         abort();
 }
 
-static void resize_vulkan(SDL_Window*, int w, int h)
+static void CreateOrResizeSwapChainAndFrameBuffer(int w, int h)
 {
     VkResult err;
     VkSwapchainKHR old_swapchain = g_Swapchain;
@@ -340,7 +340,7 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
     {
         int w, h;
         SDL_GetWindowSize(window, &w, &h);
-        resize_vulkan(window, w, h);
+        CreateOrResizeSwapChainAndFrameBuffer(w, h);
     }
 
 
@@ -639,6 +639,8 @@ int main(int, char**)
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
                 done = true;
+            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window)) 
+                CreateOrResizeSwapChainAndFrameBuffer((int)event.window.data1, (int)event.window.data2);
         }
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplSDL2_NewFrame(window);

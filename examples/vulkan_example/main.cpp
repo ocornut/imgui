@@ -60,7 +60,7 @@ static void check_vk_result(VkResult err)
         abort();
 }
 
-static void resize_vulkan(GLFWwindow*, int w, int h)
+static void CreateOrResizeSwapChainAndFrameBuffer(int w, int h)
 {
     VkResult err;
     VkSwapchainKHR old_swapchain = g_Swapchain;
@@ -187,6 +187,11 @@ static void resize_vulkan(GLFWwindow*, int w, int h)
             check_vk_result(err);
         }
     }
+}
+
+static void GlfwResizeCallback(GLFWwindow*, int w, int h)
+{
+    CreateOrResizeSwapChainAndFrameBuffer(w, h);
 }
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
@@ -340,8 +345,8 @@ static void setup_vulkan(GLFWwindow* window, const char** extensions, uint32_t e
     {
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);
-        resize_vulkan(window, w, h);
-        glfwSetFramebufferSizeCallback(window, resize_vulkan);
+        CreateOrResizeSwapChainAndFrameBuffer(w, h);
+        glfwSetFramebufferSizeCallback(window, GlfwResizeCallback);
     }
 
 
