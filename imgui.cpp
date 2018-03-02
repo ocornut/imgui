@@ -3548,6 +3548,9 @@ void ImGui::NewFrame()
 
     if (g.IO.ConfigFlags & ImGuiConfigFlags_MultiViewports)
     {
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+        IM_ASSERT(g.IO.RenderDrawListsFn == NULL);  // Call ImGui::Render() then pass ImGui::GetDrawData() yourself to your render function!
+#endif
         IM_ASSERT(g.IO.PlatformInterface.CreateViewport != NULL);
         IM_ASSERT(g.IO.PlatformInterface.DestroyViewport != NULL);
         //IM_ASSERT(g.IO.PlatformInterface.RenderViewport != NULL || g.IO.RendererInterface.RenderViewport != NULL);  // Missing rendering function
