@@ -47,12 +47,12 @@ IMGUI_API bool        ImGui_ImplVulkan_CreateDeviceObjects();
 
 struct ImGui_ImplVulkan_FrameData;
 struct ImGui_ImplVulkan_WindowData;
-struct ImGui_ImplVulkan_WindowDataCreateInfo;
 
+IMGUI_API void                  ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, ImGui_ImplVulkan_WindowData* wd, const VkAllocationCallbacks* allocator);
+IMGUI_API void                  ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkan_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h);
+IMGUI_API void                  ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, ImGui_ImplVulkan_WindowData* wd, const VkAllocationCallbacks* allocator);
 IMGUI_API VkSurfaceFormatKHR    ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space);
 IMGUI_API VkPresentModeKHR      ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
-IMGUI_API void                  ImGui_ImplVulkanH_CreateOrResizeWindowData(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkan_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h);
-IMGUI_API void                  ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, ImGui_ImplVulkan_WindowData* wd, const VkAllocationCallbacks* allocator);
 
 struct ImGui_ImplVulkan_FrameData
 {
@@ -68,7 +68,8 @@ struct ImGui_ImplVulkan_FrameData
 
 struct ImGui_ImplVulkan_WindowData
 {
-    int                 Width, Height;
+    int                 Width;
+    int                 Height;
     VkSwapchainKHR      Swapchain;
     VkSurfaceKHR        Surface;
     VkSurfaceFormatKHR  SurfaceFormat;

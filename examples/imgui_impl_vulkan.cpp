@@ -11,6 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-03-03: Vulkan: Various refactor, created a couple of ImGui_ImplVulkanH_XXX helper that the example can use and that viewport support will use.
 //  2018-03-01: Vulkan: Renamed ImGui_ImplVulkan_Init_Info to ImGui_ImplVulkan_InitInfo and fields to match more closely Vulkan terminology.
 //  2018-02-18: Vulkan: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback, ImGui_ImplVulkan_Render() calls ImGui_ImplVulkan_RenderDrawData() itself.
@@ -720,7 +721,6 @@ void ImGui_ImplVulkan_NewFrame()
 
 void ImGui_ImplVulkan_Render(VkCommandBuffer command_buffer)
 {
-    ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(command_buffer, ImGui::GetDrawData());
     g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 }
@@ -821,10 +821,53 @@ VkPresentModeKHR ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_d
     return VK_PRESENT_MODE_FIFO_KHR; // Always available
 }
 
-void ImGui_ImplVulkanH_CreateOrResizeWindowData(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkan_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h)
+void ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, ImGui_ImplVulkan_WindowData* wd, const VkAllocationCallbacks* allocator)
 {
     IM_ASSERT(physical_device != NULL && device != NULL);
+    (void)allocator;
 
+    // Create Command Buffers
+    VkResult err;
+    for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
+    {
+        ImGui_ImplVulkan_FrameData* fd = &wd->Frames[i];
+        {
+            VkCommandPoolCreateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+            info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+            info.queueFamilyIndex = queue_family;
+            err = vkCreateCommandPool(device, &info, allocator, &fd->CommandPool);
+            check_vk_result(err);
+        }
+        {
+            VkCommandBufferAllocateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            info.commandPool = fd->CommandPool;
+            info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            info.commandBufferCount = 1;
+            err = vkAllocateCommandBuffers(device, &info, &fd->CommandBuffer);
+            check_vk_result(err);
+        }
+        {
+            VkFenceCreateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            err = vkCreateFence(device, &info, allocator, &fd->Fence);
+            check_vk_result(err);
+        }
+        {
+            VkSemaphoreCreateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+            err = vkCreateSemaphore(device, &info, allocator, &fd->PresentCompleteSemaphore);
+            check_vk_result(err);
+            err = vkCreateSemaphore(device, &info, allocator, &fd->RenderCompleteSemaphore);
+            check_vk_result(err);
+        }
+    }
+}
+
+void ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkan_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h)
+{
     VkResult err;
     VkSwapchainKHR old_swapchain = wd->Swapchain;
     err = vkDeviceWaitIdle(device);
@@ -972,6 +1015,7 @@ void ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, I
     vkDestroyRenderPass(device, wd->RenderPass, allocator);
     vkDestroySwapchainKHR(device, wd->Swapchain, allocator);
     vkDestroySurfaceKHR(instance, wd->Surface, allocator);
+    *wd = ImGui_ImplVulkan_WindowData();
 }
 
 //--------------------------------------------------------------------------------------------------------
