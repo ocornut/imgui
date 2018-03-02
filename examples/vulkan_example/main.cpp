@@ -18,17 +18,17 @@
 #define IMGUI_VULKAN_DEBUG_REPORT
 #endif
 
-static VkAllocationCallbacks*   g_Allocator = NULL;
-static VkInstance               g_Instance = VK_NULL_HANDLE;
-static VkPhysicalDevice         g_PhysicalDevice = VK_NULL_HANDLE;
-static VkDevice                 g_Device = VK_NULL_HANDLE;
-static uint32_t                 g_QueueFamily = (uint32_t)-1;
-static VkQueue                  g_Queue = VK_NULL_HANDLE;
-static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
-static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
-static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
+static VkAllocationCallbacks*       g_Allocator = NULL;
+static VkInstance                   g_Instance = VK_NULL_HANDLE;
+static VkPhysicalDevice             g_PhysicalDevice = VK_NULL_HANDLE;
+static VkDevice                     g_Device = VK_NULL_HANDLE;
+static uint32_t                     g_QueueFamily = (uint32_t)-1;
+static VkQueue                      g_Queue = VK_NULL_HANDLE;
+static VkDebugReportCallbackEXT     g_DebugReport = VK_NULL_HANDLE;
+static VkPipelineCache              g_PipelineCache = VK_NULL_HANDLE;
+static VkDescriptorPool             g_DescriptorPool = VK_NULL_HANDLE;
 
-static ImGui_ImplVulkan_WindowData               g_WindowData;
+static ImGui_ImplVulkan_WindowData  g_WindowData;
 
 static void check_vk_result(VkResult err)
 {
@@ -36,137 +36,6 @@ static void check_vk_result(VkResult err)
     printf("VkResult %d\n", err);
     if (err < 0)
         abort();
-}
-
-static void CreateOrResizeSwapChainAndFrameBuffer(ImGui_ImplVulkan_WindowData* wd, int w, int h)
-{
-    VkResult err;
-    VkSwapchainKHR old_swapchain = wd->Swapchain;
-    err = vkDeviceWaitIdle(g_Device);
-    check_vk_result(err);
-
-    // Destroy old Framebuffer
-    for (uint32_t i = 0; i < wd->BackBufferCount; i++)
-    {
-        if (wd->BackBufferView[i])
-            vkDestroyImageView(g_Device, wd->BackBufferView[i], g_Allocator);
-        if (wd->Framebuffer[i])
-            vkDestroyFramebuffer(g_Device, wd->Framebuffer[i], g_Allocator);
-    }
-    wd->BackBufferCount = 0;
-    if (wd->RenderPass)
-        vkDestroyRenderPass(g_Device, wd->RenderPass, g_Allocator);
-
-    // Create Swapchain
-    {
-        VkSwapchainCreateInfoKHR info = {};
-        info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        info.surface = wd->Surface;
-        info.imageFormat = wd->SurfaceFormat.format;
-        info.imageColorSpace = wd->SurfaceFormat.colorSpace;
-        info.imageArrayLayers = 1;
-        info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;           // Assume that graphics family == present family
-        info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-        info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        info.presentMode = wd->PresentMode;
-        info.clipped = VK_TRUE;
-        info.oldSwapchain = old_swapchain;
-        VkSurfaceCapabilitiesKHR cap;
-        err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_PhysicalDevice, wd->Surface, &cap);
-        check_vk_result(err);
-        if (cap.maxImageCount > 0)
-            info.minImageCount = (cap.minImageCount + 2 < cap.maxImageCount) ? (cap.minImageCount + 2) : cap.maxImageCount;
-        else
-            info.minImageCount = cap.minImageCount + 2;
-
-        if (cap.currentExtent.width == 0xffffffff)
-        {
-            info.imageExtent.width = wd->Width = w;
-            info.imageExtent.height = wd->Height = h;
-        }
-        else
-        {
-            info.imageExtent.width = wd->Width = cap.currentExtent.width;
-            info.imageExtent.height = wd->Height = cap.currentExtent.height;
-        }
-        err = vkCreateSwapchainKHR(g_Device, &info, g_Allocator, &wd->Swapchain);
-        check_vk_result(err);
-        err = vkGetSwapchainImagesKHR(g_Device, wd->Swapchain, &wd->BackBufferCount, NULL);
-        check_vk_result(err);
-        IM_ASSERT(wd->BackBufferCount < IM_ARRAYSIZE(wd->BackBuffer));
-        err = vkGetSwapchainImagesKHR(g_Device, wd->Swapchain, &wd->BackBufferCount, wd->BackBuffer);
-        check_vk_result(err);
-    }
-    if (old_swapchain)
-        vkDestroySwapchainKHR(g_Device, old_swapchain, g_Allocator);
-
-    // Create the Render Pass
-    {
-        VkAttachmentDescription attachment = {};
-        attachment.format = wd->SurfaceFormat.format;
-        attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        VkAttachmentReference color_attachment = {};
-        color_attachment.attachment = 0;
-        color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        VkSubpassDescription subpass = {};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &color_attachment;
-        VkRenderPassCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        info.attachmentCount = 1;
-        info.pAttachments = &attachment;
-        info.subpassCount = 1;
-        info.pSubpasses = &subpass;
-        err = vkCreateRenderPass(g_Device, &info, g_Allocator, &wd->RenderPass);
-        check_vk_result(err);
-    }
-
-    // Create The Image Views
-    {
-        VkImageViewCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        info.format = wd->SurfaceFormat.format;
-        info.components.r = VK_COMPONENT_SWIZZLE_R;
-        info.components.g = VK_COMPONENT_SWIZZLE_G;
-        info.components.b = VK_COMPONENT_SWIZZLE_B;
-        info.components.a = VK_COMPONENT_SWIZZLE_A;
-        VkImageSubresourceRange image_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-        info.subresourceRange = image_range;
-        for (uint32_t i = 0; i < wd->BackBufferCount; i++)
-        {
-            info.image = wd->BackBuffer[i];
-            err = vkCreateImageView(g_Device, &info, g_Allocator, &wd->BackBufferView[i]);
-            check_vk_result(err);
-        }
-    }
-
-    // Create Framebuffer
-    {
-        VkImageView attachment[1];
-        VkFramebufferCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        info.renderPass = wd->RenderPass;
-        info.attachmentCount = 1;
-        info.pAttachments = attachment;
-        info.width = wd->Width;
-        info.height = wd->Height;
-        info.layers = 1;
-        for (uint32_t i = 0; i < wd->BackBufferCount; i++)
-        {
-            attachment[0] = wd->BackBufferView[i];
-            err = vkCreateFramebuffer(g_Device, &info, g_Allocator, &wd->Framebuffer[i]);
-            check_vk_result(err);
-        }
-    }
 }
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
@@ -226,6 +95,8 @@ static void CreateVulkanInstance(const char** extensions, uint32_t extensions_co
 
 static void SetupVulkan(ImGui_ImplVulkan_WindowData* wd)
 {
+    IM_ASSERT(wd->Surface != NULL);
+
     VkResult err;
 
     // Select GPU
@@ -276,7 +147,7 @@ static void SetupVulkan(ImGui_ImplVulkan_WindowData* wd)
     {
         const VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
         const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-        wd->SurfaceFormat = ImGui_ImplVulkan_SelectSurfaceFormat(g_PhysicalDevice, wd->Surface, requestSurfaceImageFormat, (size_t)IM_ARRAYSIZE(requestSurfaceImageFormat), requestSurfaceColorSpace);
+        wd->SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(g_PhysicalDevice, wd->Surface, requestSurfaceImageFormat, (size_t)IM_ARRAYSIZE(requestSurfaceImageFormat), requestSurfaceColorSpace);
     }
 
     // Get Present Mode
@@ -286,7 +157,7 @@ static void SetupVulkan(ImGui_ImplVulkan_WindowData* wd)
 #else
         VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
 #endif
-        wd->PresentMode = ImGui_ImplVulkan_SelectPresentMode(g_PhysicalDevice, wd->Surface, &present_mode, 1);
+        wd->PresentMode = ImGui_ImplVulkanH_SelectPresentMode(g_PhysicalDevice, wd->Surface, &present_mode, 1);
     }
 
     // Create Logical Device (with 1 queue)
@@ -379,23 +250,7 @@ static void cleanup_vulkan()
 {
     ImGui_ImplVulkan_WindowData* wd = &g_WindowData;
     vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
-    for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
-    {
-        ImGui_ImplVulkan_FrameData* fd = &wd->Frames[i];
-        vkDestroyFence(g_Device, fd->Fence, g_Allocator);
-        vkFreeCommandBuffers(g_Device, fd->CommandPool, 1, &fd->CommandBuffer);
-        vkDestroyCommandPool(g_Device, fd->CommandPool, g_Allocator);
-        vkDestroySemaphore(g_Device, fd->PresentCompleteSemaphore, g_Allocator);
-        vkDestroySemaphore(g_Device, fd->RenderCompleteSemaphore, g_Allocator);
-    }
-    for (uint32_t i = 0; i < wd->BackBufferCount; i++)
-    {
-        vkDestroyImageView(g_Device, wd->BackBufferView[i], g_Allocator);
-        vkDestroyFramebuffer(g_Device, wd->Framebuffer[i], g_Allocator);
-    }
-    vkDestroyRenderPass(g_Device, wd->RenderPass, g_Allocator);
-    vkDestroySwapchainKHR(g_Device, wd->Swapchain, g_Allocator);
-    vkDestroySurfaceKHR(g_Instance, wd->Surface, g_Allocator);
+    ImGui_ImplVulkanH_DestroyWindowData(g_Instance, g_Device, wd, g_Allocator);
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
     // Remove the debug report callback
@@ -499,7 +354,7 @@ static void glfw_error_callback(int error, const char* description)
 
 static void glfw_resize_callback(GLFWwindow*, int w, int h)
 {
-    CreateOrResizeSwapChainAndFrameBuffer(&g_WindowData, w, h);
+    ImGui_ImplVulkanH_CreateOrResizeWindowData(g_PhysicalDevice, g_Device, &g_WindowData, g_Allocator, w, h);
 }
 
 int main(int, char**)
@@ -524,38 +379,33 @@ int main(int, char**)
 
     // Create Window Surface
     ImGui_ImplVulkan_WindowData* wd = &g_WindowData;
-    {
-        VkResult err = glfwCreateWindowSurface(g_Instance, window, g_Allocator, &wd->Surface);
-        check_vk_result(err);
-    }
+    VkResult err = glfwCreateWindowSurface(g_Instance, window, g_Allocator, &wd->Surface);
+    check_vk_result(err);
 
     SetupVulkan(wd);
 
     // Create Framebuffers
-    {
-        int w, h;
-        glfwGetFramebufferSize(window, &w, &h);
-        CreateOrResizeSwapChainAndFrameBuffer(wd, w, h);
-        glfwSetFramebufferSizeCallback(window, glfw_resize_callback);
-    }
+    int w, h;
+    glfwGetFramebufferSize(window, &w, &h);
+    ImGui_ImplVulkanH_CreateOrResizeWindowData(g_PhysicalDevice, g_Device, wd, g_Allocator, w, h);
+    glfwSetFramebufferSizeCallback(window, glfw_resize_callback);
 
     // Setup ImGui binding
     ImGui::CreateContext();
 
-    ImGui_ImplVulkan_InitInfo init_info = {};
-    init_info.Allocator = g_Allocator;
-    init_info.PhysicalDevice = g_PhysicalDevice;
-    init_info.Device = g_Device;
-    init_info.RenderPass = wd->RenderPass;
-    init_info.PipelineCache = g_PipelineCache;
-    init_info.DescriptorPool = g_DescriptorPool;
-    init_info.CheckVkResultFn = check_vk_result;
-
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_MultiViewports;
+    io.ConfigFlags |= ImGuiConfigFlags_MultiViewports;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
-    ImGui_ImplVulkan_Init(&init_info);
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance = g_Instance;
+    init_info.PhysicalDevice = g_PhysicalDevice;
+    init_info.Device = g_Device;
+    init_info.PipelineCache = g_PipelineCache;
+    init_info.DescriptorPool = g_DescriptorPool;
+    init_info.Allocator = g_Allocator;
+    init_info.CheckVkResultFn = check_vk_result;
+    ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
     ImGui_ImplGlfw_InitForVulkan(window, true);
 
     // Setup style
@@ -683,7 +533,7 @@ int main(int, char**)
     }
 
     // Cleanup
-    VkResult err = vkDeviceWaitIdle(g_Device);
+    err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
