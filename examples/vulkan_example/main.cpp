@@ -13,7 +13,6 @@
 #include <vulkan/vulkan.h>
 
 // FIXME-VULKAN: Resizing with IMGUI_UNLIMITED_FRAME_RATE triggers errors from the validation layer.
-#define IMGUI_MAX_POSSIBLE_BACK_BUFFERS 16
 #define IMGUI_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
 #define IMGUI_VULKAN_DEBUG_REPORT
@@ -29,59 +28,7 @@ static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
 static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
-struct FrameData
-{
-    uint32_t            BackbufferIndex;    // keep track of recently rendered swapchain frame indices
-    VkCommandPool       CommandPool;
-    VkCommandBuffer     CommandBuffer;
-    VkFence             Fence;
-    VkSemaphore         PresentCompleteSemaphore;
-    VkSemaphore         RenderCompleteSemaphore;
-
-    FrameData()
-    {
-        BackbufferIndex = 0;
-        CommandPool = VK_NULL_HANDLE;
-        CommandBuffer = VK_NULL_HANDLE;
-        Fence = VK_NULL_HANDLE;
-        PresentCompleteSemaphore = VK_NULL_HANDLE;
-        RenderCompleteSemaphore = VK_NULL_HANDLE;
-    }
-};
-
-struct WindowData
-{
-    int                 Width, Height;
-    VkSwapchainKHR      Swapchain;
-    VkSurfaceKHR        Surface;
-    VkSurfaceFormatKHR  SurfaceFormat;
-    VkPresentModeKHR    PresentMode;
-    VkRenderPass        RenderPass;
-    VkClearValue        ClearValue;
-    uint32_t            BackBufferCount;
-    VkImage             BackBuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS];
-    VkImageView         BackBufferView[IMGUI_MAX_POSSIBLE_BACK_BUFFERS];
-    VkFramebuffer       Framebuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS];
-    uint32_t            FrameIndex;
-    FrameData           Frames[IMGUI_VK_QUEUED_FRAMES];
-
-    WindowData()
-    {
-        Width = Height = 0;
-        Swapchain = VK_NULL_HANDLE;
-        Surface = VK_NULL_HANDLE;
-        memset(&SurfaceFormat, 0, sizeof(SurfaceFormat));
-        PresentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;
-        RenderPass = VK_NULL_HANDLE;
-        memset(&ClearValue, 0, sizeof(ClearValue));
-        BackBufferCount = 0;
-        memset(&BackBuffer, 0, sizeof(BackBuffer)); 
-        memset(&BackBufferView, 0, sizeof(BackBufferView));
-        memset(&Framebuffer, 0, sizeof(Framebuffer));
-        FrameIndex = 0;
-    }
-};
-static WindowData               g_WindowData;
+static ImGui_ImplVulkan_WindowData               g_WindowData;
 
 static void check_vk_result(VkResult err)
 {
@@ -91,7 +38,7 @@ static void check_vk_result(VkResult err)
         abort();
 }
 
-static void CreateOrResizeSwapChainAndFrameBuffer(WindowData* wd, int w, int h)
+static void CreateOrResizeSwapChainAndFrameBuffer(ImGui_ImplVulkan_WindowData* wd, int w, int h)
 {
     VkResult err;
     VkSwapchainKHR old_swapchain = wd->Swapchain;
@@ -147,6 +94,7 @@ static void CreateOrResizeSwapChainAndFrameBuffer(WindowData* wd, int w, int h)
         check_vk_result(err);
         err = vkGetSwapchainImagesKHR(g_Device, wd->Swapchain, &wd->BackBufferCount, NULL);
         check_vk_result(err);
+        IM_ASSERT(wd->BackBufferCount < IM_ARRAYSIZE(wd->BackBuffer));
         err = vkGetSwapchainImagesKHR(g_Device, wd->Swapchain, &wd->BackBufferCount, wd->BackBuffer);
         check_vk_result(err);
     }
@@ -234,50 +182,49 @@ static void CreateVulkanInstance(const char** extensions, uint32_t extensions_co
 {
     VkResult err;
 
+    VkInstanceCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    create_info.enabledExtensionCount = extensions_count;
+    create_info.ppEnabledExtensionNames = extensions;
+
+#ifdef IMGUI_VULKAN_DEBUG_REPORT
+    // Enabling multiple validation layers grouped as LunarG standard validation
+    const char* layers[] = { "VK_LAYER_LUNARG_standard_validation" };
+    create_info.enabledLayerCount = 1;
+    create_info.ppEnabledLayerNames = layers;
+
+    // Enable debug report extension (we need additional storage, so we duplicate the user array to add our new extension to it)
+    const char** extensions_ext = (const char**)malloc(sizeof(const char*) * (extensions_count + 1));
+    memcpy(extensions_ext, extensions, extensions_count * sizeof(const char*));
+    extensions_ext[extensions_count] = "VK_EXT_debug_report";
+    create_info.enabledExtensionCount = extensions_count + 1;
+    create_info.ppEnabledExtensionNames = extensions_ext;
+
     // Create Vulkan Instance
-    {
-        VkInstanceCreateInfo create_info = {};
-        create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        create_info.enabledExtensionCount = extensions_count;
-        create_info.ppEnabledExtensionNames = extensions;
+    err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
+    check_vk_result(err);
+    free(extensions_ext);
 
-#ifdef IMGUI_VULKAN_DEBUG_REPORT
-        // Enabling multiple validation layers grouped as LunarG standard validation
-        const char* layers[] = { "VK_LAYER_LUNARG_standard_validation" };
-        create_info.enabledLayerCount = 1;
-        create_info.ppEnabledLayerNames = layers;
+    // Get the function pointer (required for any extensions)
+    auto vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkCreateDebugReportCallbackEXT");
+    IM_ASSERT(vkCreateDebugReportCallbackEXT != NULL);
 
-        // Enable debug report extension (we need additional storage, so we duplicate the user array to add our new extension to it)
-        const char** extensions_ext = (const char**)malloc(sizeof(const char*) * (extensions_count + 1));
-        memcpy(extensions_ext, extensions, extensions_count * sizeof(const char*));
-        extensions_ext[extensions_count] = "VK_EXT_debug_report";
-        create_info.enabledExtensionCount = extensions_count + 1;
-        create_info.ppEnabledExtensionNames = extensions_ext;
-#endif // IMGUI_VULKAN_DEBUG_REPORT
-
-        err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
-        check_vk_result(err);
-
-#ifdef IMGUI_VULKAN_DEBUG_REPORT
-        free(extensions_ext);
-
-        // Get the function pointer (required for any extensions)
-        auto vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkCreateDebugReportCallbackEXT");
-        IM_ASSERT(vkCreateDebugReportCallbackEXT != NULL);
-
-        // Setup the debug report callback
-        VkDebugReportCallbackCreateInfoEXT debug_report_ci = {};
-        debug_report_ci.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-        debug_report_ci.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-        debug_report_ci.pfnCallback = debug_report;
-        debug_report_ci.pUserData = NULL;
-        err = vkCreateDebugReportCallbackEXT(g_Instance, &debug_report_ci, g_Allocator, &g_DebugReport);
-        check_vk_result(err);
-#endif // IMGUI_VULKAN_DEBUG_REPORT
-    }
+    // Setup the debug report callback
+    VkDebugReportCallbackCreateInfoEXT debug_report_ci = {};
+    debug_report_ci.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+    debug_report_ci.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+    debug_report_ci.pfnCallback = debug_report;
+    debug_report_ci.pUserData = NULL;
+    err = vkCreateDebugReportCallbackEXT(g_Instance, &debug_report_ci, g_Allocator, &g_DebugReport);
+    check_vk_result(err);
+#else
+    // Create Vulkan Instance without any debug feature
+    err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
+    check_vk_result(err);
+#endif
 }
 
-static void SetupVulkan(WindowData* wd)
+static void SetupVulkan(ImGui_ImplVulkan_WindowData* wd)
 {
     VkResult err;
 
@@ -325,14 +272,12 @@ static void SetupVulkan(WindowData* wd)
         }
     }
 
-
     // Get Surface Format
     {
         const VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
         const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
         wd->SurfaceFormat = ImGui_ImplVulkan_SelectSurfaceFormat(g_PhysicalDevice, wd->Surface, requestSurfaceImageFormat, (size_t)IM_ARRAYSIZE(requestSurfaceImageFormat), requestSurfaceColorSpace);
     }
-
 
     // Get Present Mode
     {
@@ -343,7 +288,6 @@ static void SetupVulkan(WindowData* wd)
 #endif
         wd->PresentMode = ImGui_ImplVulkan_SelectPresentMode(g_PhysicalDevice, wd->Surface, &present_mode, 1);
     }
-
 
     // Create Logical Device (with 1 queue)
     {
@@ -369,7 +313,7 @@ static void SetupVulkan(WindowData* wd)
     // Create Command Buffers
     for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
     {
-        FrameData* fd = &wd->Frames[i];
+        ImGui_ImplVulkan_FrameData* fd = &wd->Frames[i];
         {
             VkCommandPoolCreateInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -433,11 +377,11 @@ static void SetupVulkan(WindowData* wd)
 
 static void cleanup_vulkan()
 {
-    WindowData* wd = &g_WindowData;
+    ImGui_ImplVulkan_WindowData* wd = &g_WindowData;
     vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
     for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
     {
-        FrameData* fd = &wd->Frames[i];
+        ImGui_ImplVulkan_FrameData* fd = &wd->Frames[i];
         vkDestroyFence(g_Device, fd->Fence, g_Allocator);
         vkFreeCommandBuffers(g_Device, fd->CommandPool, 1, &fd->CommandBuffer);
         vkDestroyCommandPool(g_Device, fd->CommandPool, g_Allocator);
@@ -463,9 +407,9 @@ static void cleanup_vulkan()
     vkDestroyInstance(g_Instance, g_Allocator);
 }
 
-static void frame_begin(WindowData* wd)
+static void frame_begin(ImGui_ImplVulkan_WindowData* wd)
 {
-    FrameData* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkan_FrameData* fd = &wd->Frames[wd->FrameIndex];
     VkResult err;
     for (;;)
     {
@@ -500,9 +444,9 @@ static void frame_begin(WindowData* wd)
     }
 }
 
-static void frame_end(WindowData* wd)
+static void frame_end(ImGui_ImplVulkan_WindowData* wd)
 {
-    FrameData* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkan_FrameData* fd = &wd->Frames[wd->FrameIndex];
     VkResult err;
     vkCmdEndRenderPass(fd->CommandBuffer);
     {
@@ -526,7 +470,7 @@ static void frame_end(WindowData* wd)
     }
 }
 
-static void frame_present(WindowData* wd)
+static void frame_present(ImGui_ImplVulkan_WindowData* wd)
 {
     VkResult err;
     // If IMGUI_UNLIMITED_FRAME_RATE is defined we present the latest but one frame. Otherwise we present the latest rendered frame
@@ -536,7 +480,7 @@ static void frame_present(WindowData* wd)
     uint32_t PresentIndex = g_FrameIndex;
 #endif // IMGUI_UNLIMITED_FRAME_RATE
 
-    FrameData* fd = &wd->Frames[PresentIndex];
+    ImGui_ImplVulkan_FrameData* fd = &wd->Frames[PresentIndex];
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
@@ -579,7 +523,7 @@ int main(int, char**)
     CreateVulkanInstance(glfw_extensions, glfw_extensions_count);
 
     // Create Window Surface
-    WindowData* wd = &g_WindowData;
+    ImGui_ImplVulkan_WindowData* wd = &g_WindowData;
     {
         VkResult err = glfwCreateWindowSurface(g_Instance, window, g_Allocator, &wd->Surface);
         check_vk_result(err);
@@ -724,6 +668,8 @@ int main(int, char**)
         ImGui_ImplVulkan_Render(wd->Frames[wd->FrameIndex].CommandBuffer);
         frame_end(wd);
 
+		ImGui::RenderAdditionalViewports();
+
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
         // When IMGUI_UNLIMITED_FRAME_RATE is defined we render into latest image acquired from the swapchain but we display the image which was rendered before.
         // Hence we must render once and increase the FrameIndex without presenting.
@@ -734,8 +680,6 @@ int main(int, char**)
 #endif
         swap_chain_has_at_least_one_image = true;
         wd->FrameIndex = (wd->FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
-
-        //ImGui::RenderAdditionalViewports();
     }
 
     // Cleanup

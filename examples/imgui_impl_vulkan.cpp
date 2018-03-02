@@ -727,6 +727,34 @@ void ImGui_ImplVulkan_Render(VkCommandBuffer command_buffer)
 
 #include <stdlib.h> // malloc
 
+ImGui_ImplVulkan_FrameData::ImGui_ImplVulkan_FrameData()
+{
+    BackbufferIndex = 0;
+    CommandPool = VK_NULL_HANDLE;
+    CommandBuffer = VK_NULL_HANDLE;
+    Fence = VK_NULL_HANDLE;
+    PresentCompleteSemaphore = VK_NULL_HANDLE;
+    RenderCompleteSemaphore = VK_NULL_HANDLE;
+}
+
+ImGui_ImplVulkan_WindowData::ImGui_ImplVulkan_WindowData()
+{
+    Width = Height = 0;
+    Swapchain = VK_NULL_HANDLE;
+    Surface = VK_NULL_HANDLE;
+    memset(&SurfaceFormat, 0, sizeof(SurfaceFormat));
+    PresentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;
+    RenderPass = VK_NULL_HANDLE;
+    memset(&ClearValue, 0, sizeof(ClearValue));
+    BackBufferCount = 0;
+    memset(&BackBuffer, 0, sizeof(BackBuffer));
+    memset(&BackBufferView, 0, sizeof(BackBufferView));
+    memset(&Framebuffer, 0, sizeof(Framebuffer));
+    FrameIndex = 0;
+}
+
+
+
 VkSurfaceFormatKHR ImGui_ImplVulkan_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space)
 {
     IM_ASSERT(request_formats != NULL);
@@ -790,9 +818,9 @@ VkPresentModeKHR ImGui_ImplVulkan_SelectPresentMode(VkPhysicalDevice physical_de
     return VK_PRESENT_MODE_FIFO_KHR; // Always available
 }
 
-// --------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
 // Platform Windows (OPTIONAL/EXPERIMENTAL)
-// --------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
 
 #include "imgui_internal.h"     // ImGuiViewport
 
@@ -868,4 +896,3 @@ void ImGui_ImplVulkan_ShutdownPlatformInterface()
     ImGuiIO& io = ImGui::GetIO();
     memset(&io.RendererInterface, 0, sizeof(io.RendererInterface));
 }
-
