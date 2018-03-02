@@ -709,6 +709,7 @@ static void ImGui_ImplDX12_ResizeViewport(ImGuiViewport* viewport, int w, int h)
 {
     ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData;
     IM_ASSERT(0);
+    (void)data; (void)w; (void)h;
     /*
     if (data->RTView)
     {
@@ -730,6 +731,7 @@ static void ImGui_ImplDX12_RenderViewport(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData;
     IM_ASSERT(0);
+    (void)data;
     /*
     ImVec4 clear_color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg]; // FIXME-PLATFORM
     clear_color.w = 1.0f;
@@ -743,6 +745,7 @@ static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData;
     IM_ASSERT(0);
+    (void)data;
     /*
     data->SwapChain->Present(0, 0); // Present without vsync
     */

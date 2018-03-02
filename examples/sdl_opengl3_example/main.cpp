@@ -130,9 +130,7 @@ int main(int, char**)
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindows();
+        ImGui::RenderAdditionalViewports();
 
         SDL_GL_MakeCurrent(window, gl_context);
         SDL_GL_SwapWindow(window);

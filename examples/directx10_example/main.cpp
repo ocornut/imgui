@@ -205,8 +205,7 @@ int main(int, char**)
         ImGui::Render();
         ImGui_ImplDX10_RenderDrawData(ImGui::GetDrawData());
 
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindows();
+        ImGui::RenderAdditionalViewports();
 
         g_pSwapChain->Present(1, 0); // Present with vsync
         //g_pSwapChain->Present(0, 0); // Present without vsync

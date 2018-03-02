@@ -151,6 +151,7 @@ namespace ImGui
     IMGUI_API ImGuiStyle&   GetStyle();
     IMGUI_API void          NewFrame();                                 // start a new ImGui frame, you can submit any command from this point until Render()/EndFrame().
     IMGUI_API void          Render();                                   // ends the ImGui frame, finalize the draw data. (Obsolete: optionally call io.RenderDrawListsFn if set. Nowadays, prefer calling your render function yourself.)
+    IMGUI_API void          RenderAdditionalViewports();
     IMGUI_API ImDrawData*   GetDrawData();                              // valid after Render() and until the next call to NewFrame(). this is what you have to render. (Obsolete: this used to be passed to your io.RenderDrawListsFn() function.)
     IMGUI_API ImDrawData*   GetDrawDataForViewport(ImGuiID viewport_id);// ImDrawData filtered to hold only the ImDrawList covering a given viewport. valid after Render() and until the next call to NewFrame()
     IMGUI_API void          EndFrame();                                 // ends the ImGui frame. automatically called by Render(), so most likely don't need to ever call that yourself directly. If you don't need to render you may call EndFrame() but you'll have wasted CPU already. If you don't need to render, better to not create any imgui windows instead!
@@ -530,10 +531,6 @@ namespace ImGui
     // Clipboard Utilities (also see the LogToClipboard() function to capture or output text data to the clipboard)
     IMGUI_API const char*   GetClipboardText();
     IMGUI_API void          SetClipboardText(const char* text);
-    
-    // Additional OS/Platform Windows (when ImGuiConfigFlags_MultiViewports is set)
-    IMGUI_API void          UpdatePlatformWindows(); // FIXME-PLATFORM
-    IMGUI_API void          RenderPlatformWindows(); // FIXME-PLATFORM
 
     // Memory Utilities
     // All those functions are not reliant on the current context.

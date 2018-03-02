@@ -735,9 +735,7 @@ int main(int, char**)
         swap_chain_has_at_least_one_image = true;
         wd->FrameIndex = (wd->FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 
-        // FIXME-PLATFORM
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindows();
+        //ImGui::RenderAdditionalViewports();
     }
 
     // Cleanup

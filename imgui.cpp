@@ -3450,12 +3450,10 @@ static void ImGui::UpdateViewports()
     IM_ASSERT(g.MouseViewport != NULL);
 }
 
-void ImGui::UpdatePlatformWindows()
+static void UpdatePlatformWindows()
 {
     // Create/resize windows
     ImGuiContext& g = *GImGui;
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_MultiViewports))
-        return;
     for (int i = 0; i < g.Viewports.Size; i++)
     {
         ImGuiViewport* viewport = g.Viewports[i];
@@ -3492,12 +3490,12 @@ void ImGui::UpdatePlatformWindows()
     }
 }
 
-void ImGui::RenderPlatformWindows()
+static void RenderPlatformWindows()
 {
     // Render
     ImGuiContext& g = *GImGui;
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_MultiViewports))
-        return;
+    ImVec2 backup_display_pos = g.IO.DisplayPos;
+    ImVec2 backup_display_size = g.IO.DisplaySize;
     for (int i = 0; i < g.Viewports.Size; i++)
     {
         ImGuiViewport* viewport = g.Viewports[i];
@@ -3510,6 +3508,8 @@ void ImGui::RenderPlatformWindows()
         if (g.IO.RendererInterface.RenderViewport)
             g.IO.RendererInterface.RenderViewport(viewport);
     }
+    g.IO.DisplayPos = backup_display_pos;
+    g.IO.DisplaySize = backup_display_size;
 
     // Swap
     for (int i = 0; i < g.Viewports.Size; i++)
@@ -4347,6 +4347,9 @@ void ImGui::EndFrame()
     memset(g.IO.NavInputs, 0, sizeof(g.IO.NavInputs));
 
     g.FrameCountEnded = g.FrameCount;
+
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+        UpdatePlatformWindows();
 }
 
 void ImGui::Render()
@@ -4360,7 +4363,8 @@ void ImGui::Render()
 
     // Skip render altogether if alpha is 0.0
     // Note that vertex buffers have been created and are wasted, so it is best practice that you don't create windows in the first place, or consistently respond to Begin() returning false.
-    if (g.Style.Alpha > 0.0f)
+    bool disable_render = (g.Style.Alpha <= 0.0f);
+    if (!disable_render)
     {
         // Gather windows to render
         g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
@@ -4402,13 +4406,23 @@ void ImGui::Render()
             g.IO.MetricsRenderVertices += viewport->DrawData.TotalVtxCount;
             g.IO.MetricsRenderIndices += viewport->DrawData.TotalIdxCount;
         }
+    }
 
+    if (!disable_render)
+    {
         // Render. If user hasn't set a callback then they may retrieve the draw data via GetDrawData()
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
         if (g.Viewports[0]->DrawData.CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
             g.IO.RenderDrawListsFn(&g.Viewports[0]->DrawData);
 #endif
     }
+}
+
+void ImGui::RenderAdditionalViewports()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+        RenderPlatformWindows();
 }
 
 ImGuiViewport* ImGui::FindViewportByID(ImGuiID id)
