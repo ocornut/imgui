@@ -528,8 +528,6 @@ static void frame_present()
     info.pImageIndices = &fd->BackbufferIndex;
     err = vkQueuePresentKHR(g_Queue, &info);
     check_vk_result(err);
-
-    g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 }
 
 int main(int, char**)
@@ -699,6 +697,7 @@ int main(int, char**)
         frame_present();
 #endif
         swap_chain_has_at_least_one_image = true;
+        g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
     }
 
     // Cleanup

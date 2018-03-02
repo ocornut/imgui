@@ -533,8 +533,6 @@ static void frame_present()
     info.pImageIndices = &fd->BackbufferIndex;
     err = vkQueuePresentKHR(g_Queue, &info);
     check_vk_result(err);
-
-    g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 }
 
 static void glfw_error_callback(int error, const char* description)
@@ -699,7 +697,10 @@ int main(int, char**)
 #else
         frame_present();
 #endif
+        swap_chain_has_at_least_one_image = true;
+        g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 
+        // FIXME-PLATFORM
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindows();
     }
