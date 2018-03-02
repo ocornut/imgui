@@ -57,6 +57,10 @@ static VkBuffer               g_IndexBuffer[IMGUI_VK_QUEUED_FRAMES] = {};
 static VkDeviceMemory         g_UploadBufferMemory = VK_NULL_HANDLE;
 static VkBuffer               g_UploadBuffer = VK_NULL_HANDLE;
 
+// Forward Declarations
+static void ImGui_ImplVulkan_InitPlatformInterface();
+static void ImGui_ImplVulkan_ShutdownPlatformInterface();
+
 static uint32_t __glsl_shader_vert_spv[] =
 {
     0x07230203,0x00010000,0x00080001,0x0000002e,0x00000000,0x00020011,0x00000001,0x0006000b,
@@ -699,12 +703,17 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo *init_data)
     g_DescriptorPool = init_data->DescriptorPool;
     g_CheckVkResult = init_data->CheckVkResultFn;
 
+    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplVulkan_CreateDeviceObjects();
+    if (io.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+        ImGui_ImplVulkan_InitPlatformInterface();
+
     return true;
 }
 
 void ImGui_ImplVulkan_Shutdown()
 {
+    ImGui_ImplVulkan_ShutdownPlatformInterface();
     ImGui_ImplVulkan_InvalidateDeviceObjects();
 }
 
@@ -790,3 +799,83 @@ VkPresentModeKHR ImGui_ImplVulkan_SelectPresentMode(VkPhysicalDevice physical_de
 
     return VK_PRESENT_MODE_FIFO_KHR; // Always available
 }
+
+// --------------------------------------------------------------------------------------------------------
+// Platform Windows (OPTIONAL/EXPERIMENTAL)
+// --------------------------------------------------------------------------------------------------------
+
+#include "imgui_internal.h"     // ImGuiViewport
+
+struct ImGuiPlatformDataVulkan
+{
+    // store swap chain, render target/frame buffer, etc.
+
+    ImGuiPlatformDataVulkan() { }
+    ~ImGuiPlatformDataVulkan() { }
+};
+
+static void ImGui_ImplVulkan_CreateViewport(ImGuiViewport* viewport)
+{
+    ImGuiPlatformDataVulkan* data = IM_NEW(ImGuiPlatformDataVulkan)();
+    viewport->RendererUserData = data;
+
+    // FIXME-PLATFORM
+    //HWND hwnd = (HWND)viewport->PlatformHandle;
+    //IM_ASSERT(hwnd != 0);
+
+    //...
+}
+
+static void ImGui_ImplVulkan_DestroyViewport(ImGuiViewport* viewport)
+{
+    if (ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData)
+    {
+        //...
+        IM_DELETE(data);
+    }
+    viewport->RendererUserData = NULL;
+}
+
+static void ImGui_ImplVulkan_ResizeViewport(ImGuiViewport* viewport, int w, int h)
+{
+    ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData;
+    //...
+    (void)data;
+    (void)w;
+    (void)h;
+}
+
+static void ImGui_ImplVulkan_RenderViewport(ImGuiViewport* viewport)
+{
+    ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData;
+    ImVec4 clear_color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg]; // FIXME-PLATFORM
+    clear_color.w = 1.0f;
+
+    (void)data;
+    // clear
+    // call ImGui_ImplVulkan_RenderDrawData(&viewport->DrawData)
+}
+
+static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport)
+{
+    ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData;
+    (void)data;
+    //...
+}
+
+void ImGui_ImplVulkan_InitPlatformInterface()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    io.RendererInterface.CreateViewport = ImGui_ImplVulkan_CreateViewport;
+    io.RendererInterface.DestroyViewport = ImGui_ImplVulkan_DestroyViewport;
+    io.RendererInterface.ResizeViewport = ImGui_ImplVulkan_ResizeViewport;
+    io.RendererInterface.RenderViewport = ImGui_ImplVulkan_RenderViewport;
+    io.RendererInterface.SwapBuffers = ImGui_ImplVulkan_SwapBuffers;
+}
+
+void ImGui_ImplVulkan_ShutdownPlatformInterface()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    memset(&io.RendererInterface, 0, sizeof(io.RendererInterface));
+}
+

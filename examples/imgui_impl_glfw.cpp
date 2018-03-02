@@ -36,10 +36,17 @@
 #endif
 
 // Data
-static GLFWwindow*  g_Window = NULL;
-static double       g_Time = 0.0f;
-static bool         g_MouseJustPressed[5] = { false, false, false, false, false };
-static GLFWcursor*  g_MouseCursors[ImGuiMouseCursor_Count_] = { 0 };
+enum GlfwClientApi
+{
+    GlfwClientApi_Unknown,
+    GlfwClientApi_OpenGL,
+    GlfwClientApi_Vulkan
+};
+static GLFWwindow*      g_Window = NULL;
+static GlfwClientApi    g_ClientApi = GlfwClientApi_Unknown;
+static double           g_Time = 0.0f;
+static bool             g_MouseJustPressed[5] = { false, false, false, false, false };
+static GLFWcursor*      g_MouseCursors[ImGuiMouseCursor_Count_] = { 0 };
 
 // Forward Declarations
 static void ImGui_ImplGlfw_InitPlatformInterface();
@@ -98,7 +105,7 @@ void ImGui_ImplGlfw_InstallCallbacks(GLFWwindow* window)
     glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
 }
 
-bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
+bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
 {
     g_Window = window;
 
@@ -149,6 +156,15 @@ bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
     if (io.ConfigFlags & ImGuiConfigFlags_MultiViewports)
         ImGui_ImplGlfw_InitPlatformInterface();
 
+    g_ClientApi = GlfwClientApi_OpenGL;
+    return true;
+}
+
+bool ImGui_ImplGlfw_InitForVulkan(GLFWwindow* window, bool install_callbacks)
+{
+    if (!ImGui_ImplGlfw_Init(window, install_callbacks))
+        return false;
+    g_ClientApi = GlfwClientApi_Vulkan;
     return true;
 }
 
@@ -161,6 +177,7 @@ void ImGui_ImplGlfw_Shutdown()
         glfwDestroyCursor(g_MouseCursors[cursor_n]);
         g_MouseCursors[cursor_n] = NULL;
     }
+    g_ClientApi = GlfwClientApi_Unknown;
 }
 
 static void ImGui_ImplGlfw_UpdateMouse()
@@ -176,7 +193,6 @@ static void ImGui_ImplGlfw_UpdateMouse()
     io.MouseHoveredViewport = 0;
 
     // Update buttons
-    ImGuiIO& io = ImGui::GetIO();
     for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
     {
         // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
@@ -296,7 +312,8 @@ static void ImGui_ImplGlfw_CreateViewport(ImGuiViewport* viewport)
     glfwWindowHint(GLFW_VISIBLE, false);
     glfwWindowHint(GLFW_FOCUSED, false);
     glfwWindowHint(GLFW_DECORATED, (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? false : true);
-    data->Window = glfwCreateWindow((int)viewport->Size.x, (int)viewport->Size.y, "No Title Yet", NULL, g_Window);
+    GLFWwindow* share_window = (g_ClientApi == GlfwClientApi_OpenGL) ? g_Window : NULL;
+    data->Window = glfwCreateWindow((int)viewport->Size.x, (int)viewport->Size.y, "No Title Yet", NULL, share_window);
     data->WindowOwned = true;
     viewport->PlatformHandle = (void*)data->Window;
     viewport->Name = NULL;
@@ -405,7 +422,8 @@ static void ImGui_ImplGlfw_SetWindowTitle(ImGuiViewport* viewport, const char* t
 static void ImGui_ImplGlfw_RenderViewport(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataGlfw* data = (ImGuiPlatformDataGlfw*)viewport->PlatformUserData;
-    glfwMakeContextCurrent(data->Window);
+    if (g_ClientApi == GlfwClientApi_OpenGL)
+        glfwMakeContextCurrent(data->Window);
 
     if (glfwWindowShouldClose(data->Window))
         viewport->PlatformRequestClose = true;
@@ -414,7 +432,8 @@ static void ImGui_ImplGlfw_RenderViewport(ImGuiViewport* viewport)
 static void ImGui_ImplGlfw_SwapBuffers(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataGlfw* data = (ImGuiPlatformDataGlfw*)viewport->PlatformUserData;
-    glfwSwapBuffers(data->Window);
+    if (g_ClientApi == GlfwClientApi_OpenGL)
+        glfwSwapBuffers(data->Window);
 }
 
 static void ImGui_ImplGlfw_InitPlatformInterface()

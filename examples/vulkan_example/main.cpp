@@ -568,10 +568,11 @@ int main(int, char**)
     init_info.CheckVkResultFn = check_vk_result;
 
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_MultiViewports;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
     ImGui_ImplVulkan_Init(&init_info);
-    ImGui_ImplGlfw_Init(window, true);
+    ImGui_ImplGlfw_InitForVulkan(window, true);
 
     // Setup style
     ImGui::StyleColorsDark();
@@ -689,6 +690,9 @@ int main(int, char**)
         ImGui_ImplVulkan_Render(g_CommandBuffer[g_FrameIndex]);
         frame_end();
         frame_present();
+
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindows();
     }
 
     // Cleanup
