@@ -28,6 +28,7 @@ IMGUI_API bool        ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo *init_data
 IMGUI_API void        ImGui_ImplVulkan_Shutdown();
 IMGUI_API void        ImGui_ImplVulkan_NewFrame();
 IMGUI_API void        ImGui_ImplVulkan_Render(VkCommandBuffer command_buffer);
+IMGUI_API void        ImGui_ImplVulkan_RenderDrawData(VkCommandBuffer command_buffer, ImDrawData* draw_data);
 
 // Called by Init/NewFrame/Shutdown
 IMGUI_API void        ImGui_ImplVulkan_InvalidateFontUploadObjects();

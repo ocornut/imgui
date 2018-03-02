@@ -34,18 +34,22 @@ static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
 static int                      fb_width, fb_height;
-static uint32_t                 g_BackbufferIndices[IMGUI_VK_QUEUED_FRAMES];    // keep track of recently rendered swapchain frame indices
 static uint32_t                 g_BackBufferCount = 0;
 static VkImage                  g_BackBuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
 static VkImageView              g_BackBufferView[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
 static VkFramebuffer            g_Framebuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
 
+struct FrameData
+{
+    uint32_t        BackbufferIndex;    // keep track of recently rendered swapchain frame indices
+    VkCommandPool   CommandPool;
+    VkCommandBuffer CommandBuffer;
+    VkFence         Fence;
+    VkSemaphore     PresentCompleteSemaphore;
+    VkSemaphore     RenderCompleteSemaphore;
+};
 static uint32_t                 g_FrameIndex = 0;
-static VkCommandPool            g_CommandPool[IMGUI_VK_QUEUED_FRAMES];
-static VkCommandBuffer          g_CommandBuffer[IMGUI_VK_QUEUED_FRAMES];
-static VkFence                  g_Fence[IMGUI_VK_QUEUED_FRAMES];
-static VkSemaphore              g_PresentCompleteSemaphore[IMGUI_VK_QUEUED_FRAMES];
-static VkSemaphore              g_RenderCompleteSemaphore[IMGUI_VK_QUEUED_FRAMES];
+static FrameData                g_Frames[IMGUI_VK_QUEUED_FRAMES] = {};
 
 static VkClearValue             g_ClearValue = {};
 
@@ -295,6 +299,7 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
         }
     }
 
+
     // Get Surface Format
     {
         const VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
@@ -347,43 +352,44 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
     // Create Command Buffers
     for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
     {
+        FrameData* fd = &g_Frames[i];
         {
             VkCommandPoolCreateInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
             info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             info.queueFamilyIndex = g_QueueFamily;
-            err = vkCreateCommandPool(g_Device, &info, g_Allocator, &g_CommandPool[i]);
+            err = vkCreateCommandPool(g_Device, &info, g_Allocator, &fd->CommandPool);
             check_vk_result(err);
         }
         {
             VkCommandBufferAllocateInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            info.commandPool = g_CommandPool[i];
+            info.commandPool = fd->CommandPool;
             info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
             info.commandBufferCount = 1;
-            err = vkAllocateCommandBuffers(g_Device, &info, &g_CommandBuffer[i]);
+            err = vkAllocateCommandBuffers(g_Device, &info, &fd->CommandBuffer);
             check_vk_result(err);
         }
         {
             VkFenceCreateInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
             info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-            err = vkCreateFence(g_Device, &info, g_Allocator, &g_Fence[i]);
+            err = vkCreateFence(g_Device, &info, g_Allocator, &fd->Fence);
             check_vk_result(err);
         }
         {
             VkSemaphoreCreateInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-            err = vkCreateSemaphore(g_Device, &info, g_Allocator, &g_PresentCompleteSemaphore[i]);
+            err = vkCreateSemaphore(g_Device, &info, g_Allocator, &fd->PresentCompleteSemaphore);
             check_vk_result(err);
-            err = vkCreateSemaphore(g_Device, &info, g_Allocator, &g_RenderCompleteSemaphore[i]);
+            err = vkCreateSemaphore(g_Device, &info, g_Allocator, &fd->RenderCompleteSemaphore);
             check_vk_result(err);
         }
     }
 
     // Create Descriptor Pool
     {
-        VkDescriptorPoolSize pool_size[11] =
+        VkDescriptorPoolSize pool_sizes[] =
         {
             { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
@@ -400,9 +406,9 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
         VkDescriptorPoolCreateInfo pool_info = {};
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-        pool_info.maxSets = 1000 * 11;
-        pool_info.poolSizeCount = 11;
-        pool_info.pPoolSizes = pool_size;
+        pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
+        pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+        pool_info.pPoolSizes = pool_sizes;
         err = vkCreateDescriptorPool(g_Device, &pool_info, g_Allocator, &g_DescriptorPool);
         check_vk_result(err);
     }
@@ -413,11 +419,12 @@ static void cleanup_vulkan()
     vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
     for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
     {
-        vkDestroyFence(g_Device, g_Fence[i], g_Allocator);
-        vkFreeCommandBuffers(g_Device, g_CommandPool[i], 1, &g_CommandBuffer[i]);
-        vkDestroyCommandPool(g_Device, g_CommandPool[i], g_Allocator);
-        vkDestroySemaphore(g_Device, g_PresentCompleteSemaphore[i], g_Allocator);
-        vkDestroySemaphore(g_Device, g_RenderCompleteSemaphore[i], g_Allocator);
+        FrameData* fd = &g_Frames[i];
+        vkDestroyFence(g_Device, fd->Fence, g_Allocator);
+        vkFreeCommandBuffers(g_Device, fd->CommandPool, 1, &fd->CommandBuffer);
+        vkDestroyCommandPool(g_Device, fd->CommandPool, g_Allocator);
+        vkDestroySemaphore(g_Device, fd->PresentCompleteSemaphore, g_Allocator);
+        vkDestroySemaphore(g_Device, fd->RenderCompleteSemaphore, g_Allocator);
     }
     for (uint32_t i = 0; i < g_BackBufferCount; i++)
     {
@@ -440,61 +447,63 @@ static void cleanup_vulkan()
 
 static void frame_begin()
 {
+    FrameData* fd = &g_Frames[g_FrameIndex];
     VkResult err;
     for (;;)
     {
-        err = vkWaitForFences(g_Device, 1, &g_Fence[g_FrameIndex], VK_TRUE, 100);
+        err = vkWaitForFences(g_Device, 1, &fd->Fence, VK_TRUE, 100);
         if (err == VK_SUCCESS) break;
         if (err == VK_TIMEOUT) continue;
         check_vk_result(err);
     }
     {
-        err = vkAcquireNextImageKHR(g_Device, g_Swapchain, UINT64_MAX, g_PresentCompleteSemaphore[g_FrameIndex], VK_NULL_HANDLE, &g_BackbufferIndices[g_FrameIndex]);
+        err = vkAcquireNextImageKHR(g_Device, g_Swapchain, UINT64_MAX, fd->PresentCompleteSemaphore, VK_NULL_HANDLE, &fd->BackbufferIndex);
         check_vk_result(err);
     }
     {
-        err = vkResetCommandPool(g_Device, g_CommandPool[g_FrameIndex], 0);
+        err = vkResetCommandPool(g_Device, fd->CommandPool, 0);
         check_vk_result(err);
         VkCommandBufferBeginInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        err = vkBeginCommandBuffer(g_CommandBuffer[g_FrameIndex], &info);
+        err = vkBeginCommandBuffer(fd->CommandBuffer, &info);
         check_vk_result(err);
     }
     {
         VkRenderPassBeginInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         info.renderPass = g_RenderPass;
-        info.framebuffer = g_Framebuffer[g_BackbufferIndices[g_FrameIndex]];
+        info.framebuffer = g_Framebuffer[fd->BackbufferIndex];
         info.renderArea.extent.width = fb_width;
         info.renderArea.extent.height = fb_height;
         info.clearValueCount = 1;
         info.pClearValues = &g_ClearValue;
-        vkCmdBeginRenderPass(g_CommandBuffer[g_FrameIndex], &info, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
     }
 }
 
 static void frame_end()
 {
+    FrameData* fd = &g_Frames[g_FrameIndex];
     VkResult err;
-    vkCmdEndRenderPass(g_CommandBuffer[g_FrameIndex]);
+    vkCmdEndRenderPass(fd->CommandBuffer);
     {
         VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         VkSubmitInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         info.waitSemaphoreCount = 1;
-        info.pWaitSemaphores = &g_PresentCompleteSemaphore[g_FrameIndex];
+        info.pWaitSemaphores = &fd->PresentCompleteSemaphore;
         info.pWaitDstStageMask = &wait_stage;
         info.commandBufferCount = 1;
-        info.pCommandBuffers = &g_CommandBuffer[g_FrameIndex];
+        info.pCommandBuffers = &fd->CommandBuffer;
         info.signalSemaphoreCount = 1;
-        info.pSignalSemaphores = &g_RenderCompleteSemaphore[g_FrameIndex];
+        info.pSignalSemaphores = &fd->RenderCompleteSemaphore;
 
-        err = vkEndCommandBuffer(g_CommandBuffer[g_FrameIndex]);
+        err = vkEndCommandBuffer(fd->CommandBuffer);
         check_vk_result(err);
-        err = vkResetFences(g_Device, 1, &g_Fence[g_FrameIndex]);
+        err = vkResetFences(g_Device, 1, &fd->Fence);
         check_vk_result(err);
-        err = vkQueueSubmit(g_Queue, 1, &info, g_Fence[g_FrameIndex]);
+        err = vkQueueSubmit(g_Queue, 1, &info, fd->Fence);
         check_vk_result(err);
     }
 }
@@ -509,15 +518,14 @@ static void frame_present()
     uint32_t PresentIndex = g_FrameIndex;
 #endif // IMGUI_UNLIMITED_FRAME_RATE
 
-    VkSwapchainKHR swapchains[1] = { g_Swapchain };
-    uint32_t indices[1] = { g_BackbufferIndices[PresentIndex] };
+    FrameData* fd = &g_Frames[PresentIndex];
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
-    info.pWaitSemaphores = &g_RenderCompleteSemaphore[PresentIndex];
+    info.pWaitSemaphores = &fd->RenderCompleteSemaphore;
     info.swapchainCount = 1;
-    info.pSwapchains = swapchains;
-    info.pImageIndices = indices;
+    info.pSwapchains = &g_Swapchain;
+    info.pImageIndices = &fd->BackbufferIndex;
     err = vkQueuePresentKHR(g_Queue, &info);
     check_vk_result(err);
 
@@ -584,22 +592,26 @@ int main(int, char**)
 
     // Upload Fonts
     {
+        // Use any command queue
+        VkCommandPool command_pool = g_Frames[g_FrameIndex].CommandPool;
+        VkCommandBuffer command_buffer = g_Frames[g_FrameIndex].CommandBuffer;
+
         VkResult err;
-        err = vkResetCommandPool(g_Device, g_CommandPool[g_FrameIndex], 0);
+        err = vkResetCommandPool(g_Device, command_pool, 0);
         check_vk_result(err);
         VkCommandBufferBeginInfo begin_info = {};
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        err = vkBeginCommandBuffer(g_CommandBuffer[g_FrameIndex], &begin_info);
+        err = vkBeginCommandBuffer(command_buffer, &begin_info);
         check_vk_result(err);
 
-        ImGui_ImplVulkan_CreateFontsTexture(g_CommandBuffer[g_FrameIndex]);
+        ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
 
         VkSubmitInfo end_info = {};
         end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         end_info.commandBufferCount = 1;
-        end_info.pCommandBuffers = &g_CommandBuffer[g_FrameIndex];
-        err = vkEndCommandBuffer(g_CommandBuffer[g_FrameIndex]);
+        end_info.pCommandBuffers = &command_buffer;
+        err = vkEndCommandBuffer(command_buffer);
         check_vk_result(err);
         err = vkQueueSubmit(g_Queue, 1, &end_info, VK_NULL_HANDLE);
         check_vk_result(err);
@@ -620,7 +632,7 @@ int main(int, char**)
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL2_NewFrame(window);
     frame_begin();
-    ImGui_ImplVulkan_Render(g_CommandBuffer[g_FrameIndex]);
+    ImGui_ImplVulkan_Render(g_Frames[g_FrameIndex].CommandBuffer);
     frame_end();
     g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 #endif // IMGUI_UNLIMITED_FRAME_RATE
@@ -685,7 +697,7 @@ int main(int, char**)
         // Rendering
         memcpy(&g_ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
         frame_begin();
-        ImGui_ImplVulkan_Render(g_CommandBuffer[g_FrameIndex]);
+        ImGui_ImplVulkan_Render(g_Frames[g_FrameIndex].CommandBuffer);
         frame_end();
         frame_present();
     }
