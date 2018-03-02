@@ -18,26 +18,13 @@
 
 static VkAllocationCallbacks*   g_Allocator = NULL;
 static VkInstance               g_Instance = VK_NULL_HANDLE;
-static VkSurfaceKHR             g_Surface = VK_NULL_HANDLE;
 static VkPhysicalDevice         g_PhysicalDevice = VK_NULL_HANDLE;
 static VkDevice                 g_Device = VK_NULL_HANDLE;
-static VkSwapchainKHR           g_Swapchain = VK_NULL_HANDLE;
-static VkRenderPass             g_RenderPass = VK_NULL_HANDLE;
 static uint32_t                 g_QueueFamily = (uint32_t)-1;
 static VkQueue                  g_Queue = VK_NULL_HANDLE;
 static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
-
-static VkSurfaceFormatKHR       g_SurfaceFormat;
-static VkPresentModeKHR         g_PresentMode;
-
 static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
-
-static int                      fb_width, fb_height;
-static uint32_t                 g_BackBufferCount = 0;
-static VkImage                  g_BackBuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
-static VkImageView              g_BackBufferView[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
-static VkFramebuffer            g_Framebuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
 
 struct FrameData
 {
@@ -47,11 +34,51 @@ struct FrameData
     VkFence         Fence;
     VkSemaphore     PresentCompleteSemaphore;
     VkSemaphore     RenderCompleteSemaphore;
-};
-static uint32_t                 g_FrameIndex = 0;
-static FrameData                g_Frames[IMGUI_VK_QUEUED_FRAMES] = {};
 
-static VkClearValue             g_ClearValue = {};
+    FrameData()
+    {
+        BackbufferIndex = 0;
+        CommandPool = VK_NULL_HANDLE;
+        CommandBuffer = VK_NULL_HANDLE;
+        Fence = VK_NULL_HANDLE;
+        PresentCompleteSemaphore = VK_NULL_HANDLE;
+        RenderCompleteSemaphore = VK_NULL_HANDLE;
+    }
+};
+
+struct WindowData
+{
+    int                 Width, Height;
+    VkSwapchainKHR      Swapchain;
+    VkSurfaceKHR        Surface;
+    VkSurfaceFormatKHR  SurfaceFormat;
+    VkPresentModeKHR    PresentMode;
+    VkRenderPass        RenderPass;
+    VkClearValue        ClearValue;
+    uint32_t            BackBufferCount;
+    VkImage             BackBuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS];
+    VkImageView         BackBufferView[IMGUI_MAX_POSSIBLE_BACK_BUFFERS];
+    VkFramebuffer       Framebuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS];
+    uint32_t            FrameIndex;
+    FrameData           Frames[IMGUI_VK_QUEUED_FRAMES];
+
+    WindowData()
+    {
+        Width = Height = 0;
+        Swapchain = VK_NULL_HANDLE;
+        Surface = VK_NULL_HANDLE;
+        memset(&SurfaceFormat, 0, sizeof(SurfaceFormat));
+        PresentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;
+        RenderPass = VK_NULL_HANDLE;
+        memset(&ClearValue, 0, sizeof(ClearValue));
+        BackBufferCount = 0;
+        memset(&BackBuffer, 0, sizeof(BackBuffer)); 
+        memset(&BackBufferView, 0, sizeof(BackBufferView));
+        memset(&Framebuffer, 0, sizeof(Framebuffer));
+        FrameIndex = 0;
+    }
+};
+static WindowData               g_WindowData;
 
 static void check_vk_result(VkResult err)
 {
@@ -61,41 +88,42 @@ static void check_vk_result(VkResult err)
         abort();
 }
 
-static void CreateOrResizeSwapChainAndFrameBuffer(int w, int h)
+static void CreateOrResizeSwapChainAndFrameBuffer(WindowData* wd, int w, int h)
 {
     VkResult err;
-    VkSwapchainKHR old_swapchain = g_Swapchain;
+    VkSwapchainKHR old_swapchain = wd->Swapchain;
     err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
 
     // Destroy old Framebuffer
-    for (uint32_t i = 0; i < g_BackBufferCount; i++)
+    for (uint32_t i = 0; i < wd->BackBufferCount; i++)
     {
-        if (g_BackBufferView[i])
-            vkDestroyImageView(g_Device, g_BackBufferView[i], g_Allocator);
-        if (g_Framebuffer[i])
-            vkDestroyFramebuffer(g_Device, g_Framebuffer[i], g_Allocator);
+        if (wd->BackBufferView[i])
+            vkDestroyImageView(g_Device, wd->BackBufferView[i], g_Allocator);
+        if (wd->Framebuffer[i])
+            vkDestroyFramebuffer(g_Device, wd->Framebuffer[i], g_Allocator);
     }
-    if (g_RenderPass)
-        vkDestroyRenderPass(g_Device, g_RenderPass, g_Allocator);
+    wd->BackBufferCount = 0;
+    if (wd->RenderPass)
+        vkDestroyRenderPass(g_Device, wd->RenderPass, g_Allocator);
 
     // Create Swapchain
     {
         VkSwapchainCreateInfoKHR info = {};
         info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        info.surface = g_Surface;
-        info.imageFormat = g_SurfaceFormat.format;
-        info.imageColorSpace = g_SurfaceFormat.colorSpace;
+        info.surface = wd->Surface;
+        info.imageFormat = wd->SurfaceFormat.format;
+        info.imageColorSpace = wd->SurfaceFormat.colorSpace;
         info.imageArrayLayers = 1;
         info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;           // Assume that graphics family == present family
         info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
         info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        info.presentMode = g_PresentMode;
+        info.presentMode = wd->PresentMode;
         info.clipped = VK_TRUE;
         info.oldSwapchain = old_swapchain;
         VkSurfaceCapabilitiesKHR cap;
-        err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_PhysicalDevice, g_Surface, &cap);
+        err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_PhysicalDevice, wd->Surface, &cap);
         check_vk_result(err);
         if (cap.maxImageCount > 0)
             info.minImageCount = (cap.minImageCount + 2 < cap.maxImageCount) ? (cap.minImageCount + 2) : cap.maxImageCount;
@@ -104,19 +132,19 @@ static void CreateOrResizeSwapChainAndFrameBuffer(int w, int h)
 
         if (cap.currentExtent.width == 0xffffffff)
         {
-            info.imageExtent.width = fb_width = w;
-            info.imageExtent.height = fb_height = h;
+            info.imageExtent.width = wd->Width = w;
+            info.imageExtent.height = wd->Height = h;
         }
         else
         {
-            info.imageExtent.width = fb_width = cap.currentExtent.width;
-            info.imageExtent.height = fb_height = cap.currentExtent.height;
+            info.imageExtent.width = wd->Width = cap.currentExtent.width;
+            info.imageExtent.height = wd->Height = cap.currentExtent.height;
         }
-        err = vkCreateSwapchainKHR(g_Device, &info, g_Allocator, &g_Swapchain);
+        err = vkCreateSwapchainKHR(g_Device, &info, g_Allocator, &wd->Swapchain);
         check_vk_result(err);
-        err = vkGetSwapchainImagesKHR(g_Device, g_Swapchain, &g_BackBufferCount, NULL);
+        err = vkGetSwapchainImagesKHR(g_Device, wd->Swapchain, &wd->BackBufferCount, NULL);
         check_vk_result(err);
-        err = vkGetSwapchainImagesKHR(g_Device, g_Swapchain, &g_BackBufferCount, g_BackBuffer);
+        err = vkGetSwapchainImagesKHR(g_Device, wd->Swapchain, &wd->BackBufferCount, wd->BackBuffer);
         check_vk_result(err);
     }
     if (old_swapchain)
@@ -125,7 +153,7 @@ static void CreateOrResizeSwapChainAndFrameBuffer(int w, int h)
     // Create the Render Pass
     {
         VkAttachmentDescription attachment = {};
-        attachment.format = g_SurfaceFormat.format;
+        attachment.format = wd->SurfaceFormat.format;
         attachment.samples = VK_SAMPLE_COUNT_1_BIT;
         attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -146,7 +174,7 @@ static void CreateOrResizeSwapChainAndFrameBuffer(int w, int h)
         info.pAttachments = &attachment;
         info.subpassCount = 1;
         info.pSubpasses = &subpass;
-        err = vkCreateRenderPass(g_Device, &info, g_Allocator, &g_RenderPass);
+        err = vkCreateRenderPass(g_Device, &info, g_Allocator, &wd->RenderPass);
         check_vk_result(err);
     }
 
@@ -155,17 +183,17 @@ static void CreateOrResizeSwapChainAndFrameBuffer(int w, int h)
         VkImageViewCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        info.format = g_SurfaceFormat.format;
+        info.format = wd->SurfaceFormat.format;
         info.components.r = VK_COMPONENT_SWIZZLE_R;
         info.components.g = VK_COMPONENT_SWIZZLE_G;
         info.components.b = VK_COMPONENT_SWIZZLE_B;
         info.components.a = VK_COMPONENT_SWIZZLE_A;
         VkImageSubresourceRange image_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
         info.subresourceRange = image_range;
-        for (uint32_t i = 0; i < g_BackBufferCount; i++)
+        for (uint32_t i = 0; i < wd->BackBufferCount; i++)
         {
-            info.image = g_BackBuffer[i];
-            err = vkCreateImageView(g_Device, &info, g_Allocator, &g_BackBufferView[i]);
+            info.image = wd->BackBuffer[i];
+            err = vkCreateImageView(g_Device, &info, g_Allocator, &wd->BackBufferView[i]);
             check_vk_result(err);
         }
     }
@@ -175,16 +203,16 @@ static void CreateOrResizeSwapChainAndFrameBuffer(int w, int h)
         VkImageView attachment[1];
         VkFramebufferCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        info.renderPass = g_RenderPass;
+        info.renderPass = wd->RenderPass;
         info.attachmentCount = 1;
         info.pAttachments = attachment;
-        info.width = fb_width;
-        info.height = fb_height;
+        info.width = wd->Width;
+        info.height = wd->Height;
         info.layers = 1;
-        for (uint32_t i = 0; i < g_BackBufferCount; i++)
+        for (uint32_t i = 0; i < wd->BackBufferCount; i++)
         {
-            attachment[0] = g_BackBufferView[i];
-            err = vkCreateFramebuffer(g_Device, &info, g_Allocator, &g_Framebuffer[i]);
+            attachment[0] = wd->BackBufferView[i];
+            err = vkCreateFramebuffer(g_Device, &info, g_Allocator, &wd->Framebuffer[i]);
             check_vk_result(err);
         }
     }
@@ -199,7 +227,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(VkDebugReportFlagsEXT flags, 
 }
 #endif // IMGUI_VULKAN_DEBUG_REPORT
 
-static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t extensions_count)
+static void CreateVulkanInstance(const char** extensions, uint32_t extensions_count)
 {
     VkResult err;
 
@@ -244,16 +272,11 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
         check_vk_result(err);
 #endif // IMGUI_VULKAN_DEBUG_REPORT
     }
+}
 
-    // Create Window Surface (with SDL)
-    {
-        SDL_bool result = SDL_Vulkan_CreateSurface(window, g_Instance, &g_Surface);
-        if (result == 0) 
-        {
-            printf("failed to create Vulkan surface\n");
-            abort();
-        }
-    }
+static void SetupVulkan(WindowData* wd)
+{
+    VkResult err;
 
     // Select GPU
     {
@@ -291,7 +314,7 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
     // Check for WSI support
     {
         VkBool32 res;
-        vkGetPhysicalDeviceSurfaceSupportKHR(g_PhysicalDevice, g_QueueFamily, g_Surface, &res);
+        vkGetPhysicalDeviceSurfaceSupportKHR(g_PhysicalDevice, g_QueueFamily, wd->Surface, &res);
         if (res != VK_TRUE)
         {
             fprintf(stderr, "Error no WSI support on physical device 0\n");
@@ -304,7 +327,7 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
     {
         const VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
         const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-        g_SurfaceFormat = ImGui_ImplVulkan_SelectSurfaceFormat(g_PhysicalDevice, g_Surface, requestSurfaceImageFormat, (size_t)IM_ARRAYSIZE(requestSurfaceImageFormat), requestSurfaceColorSpace);
+        wd->SurfaceFormat = ImGui_ImplVulkan_SelectSurfaceFormat(g_PhysicalDevice, wd->Surface, requestSurfaceImageFormat, (size_t)IM_ARRAYSIZE(requestSurfaceImageFormat), requestSurfaceColorSpace);
     }
 
 
@@ -315,7 +338,7 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
 #else
         VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
 #endif
-        g_PresentMode = ImGui_ImplVulkan_SelectPresentMode(g_PhysicalDevice, g_Surface, &present_mode, 1);
+        wd->PresentMode = ImGui_ImplVulkan_SelectPresentMode(g_PhysicalDevice, wd->Surface, &present_mode, 1);
     }
 
 
@@ -340,19 +363,10 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
         vkGetDeviceQueue(g_Device, g_QueueFamily, 0, &g_Queue);
     }
 
-
-    // Create Framebuffers
-    {
-        int w, h;
-        SDL_GetWindowSize(window, &w, &h);
-        CreateOrResizeSwapChainAndFrameBuffer(w, h);
-    }
-
-
     // Create Command Buffers
     for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
     {
-        FrameData* fd = &g_Frames[i];
+        FrameData* fd = &wd->Frames[i];
         {
             VkCommandPoolCreateInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -416,24 +430,25 @@ static void setup_vulkan(SDL_Window* window, const char** extensions, uint32_t e
 
 static void cleanup_vulkan()
 {
+    WindowData* wd = &g_WindowData;
     vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
     for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
     {
-        FrameData* fd = &g_Frames[i];
+        FrameData* fd = &wd->Frames[i];
         vkDestroyFence(g_Device, fd->Fence, g_Allocator);
         vkFreeCommandBuffers(g_Device, fd->CommandPool, 1, &fd->CommandBuffer);
         vkDestroyCommandPool(g_Device, fd->CommandPool, g_Allocator);
         vkDestroySemaphore(g_Device, fd->PresentCompleteSemaphore, g_Allocator);
         vkDestroySemaphore(g_Device, fd->RenderCompleteSemaphore, g_Allocator);
     }
-    for (uint32_t i = 0; i < g_BackBufferCount; i++)
+    for (uint32_t i = 0; i < wd->BackBufferCount; i++)
     {
-        vkDestroyImageView(g_Device, g_BackBufferView[i], g_Allocator);
-        vkDestroyFramebuffer(g_Device, g_Framebuffer[i], g_Allocator);
+        vkDestroyImageView(g_Device, wd->BackBufferView[i], g_Allocator);
+        vkDestroyFramebuffer(g_Device, wd->Framebuffer[i], g_Allocator);
     }
-    vkDestroyRenderPass(g_Device, g_RenderPass, g_Allocator);
-    vkDestroySwapchainKHR(g_Device, g_Swapchain, g_Allocator);
-    vkDestroySurfaceKHR(g_Instance, g_Surface, g_Allocator);
+    vkDestroyRenderPass(g_Device, wd->RenderPass, g_Allocator);
+    vkDestroySwapchainKHR(g_Device, wd->Swapchain, g_Allocator);
+    vkDestroySurfaceKHR(g_Instance, wd->Surface, g_Allocator);
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
     // Remove the debug report callback
@@ -445,9 +460,9 @@ static void cleanup_vulkan()
     vkDestroyInstance(g_Instance, g_Allocator);
 }
 
-static void frame_begin()
+static void frame_begin(WindowData* wd)
 {
-    FrameData* fd = &g_Frames[g_FrameIndex];
+    FrameData* fd = &wd->Frames[wd->FrameIndex];
     VkResult err;
     for (;;)
     {
@@ -457,7 +472,7 @@ static void frame_begin()
         check_vk_result(err);
     }
     {
-        err = vkAcquireNextImageKHR(g_Device, g_Swapchain, UINT64_MAX, fd->PresentCompleteSemaphore, VK_NULL_HANDLE, &fd->BackbufferIndex);
+        err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, fd->PresentCompleteSemaphore, VK_NULL_HANDLE, &fd->BackbufferIndex);
         check_vk_result(err);
     }
     {
@@ -472,19 +487,19 @@ static void frame_begin()
     {
         VkRenderPassBeginInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        info.renderPass = g_RenderPass;
-        info.framebuffer = g_Framebuffer[fd->BackbufferIndex];
-        info.renderArea.extent.width = fb_width;
-        info.renderArea.extent.height = fb_height;
+        info.renderPass = wd->RenderPass;
+        info.framebuffer = wd->Framebuffer[fd->BackbufferIndex];
+        info.renderArea.extent.width = wd->Width;
+        info.renderArea.extent.height = wd->Height;
         info.clearValueCount = 1;
-        info.pClearValues = &g_ClearValue;
+        info.pClearValues = &wd->ClearValue;
         vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
     }
 }
 
-static void frame_end()
+static void frame_end(WindowData* wd)
 {
-    FrameData* fd = &g_Frames[g_FrameIndex];
+    FrameData* fd = &wd->Frames[wd->FrameIndex];
     VkResult err;
     vkCmdEndRenderPass(fd->CommandBuffer);
     {
@@ -508,23 +523,23 @@ static void frame_end()
     }
 }
 
-static void frame_present()
+static void frame_present(WindowData* wd)
 {
     VkResult err;
     // If IMGUI_UNLIMITED_FRAME_RATE is defined we present the latest but one frame. Otherwise we present the latest rendered frame
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
-    uint32_t PresentIndex = (g_FrameIndex + IMGUI_VK_QUEUED_FRAMES - 1) % IMGUI_VK_QUEUED_FRAMES;
+    uint32_t PresentIndex = (wd->FrameIndex + IMGUI_VK_QUEUED_FRAMES - 1) % IMGUI_VK_QUEUED_FRAMES;
 #else
     uint32_t PresentIndex = g_FrameIndex;
 #endif // IMGUI_UNLIMITED_FRAME_RATE
 
-    FrameData* fd = &g_Frames[PresentIndex];
+    FrameData* fd = &wd->Frames[PresentIndex];
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
     info.pWaitSemaphores = &fd->RenderCompleteSemaphore;
     info.swapchainCount = 1;
-    info.pSwapchains = &g_Swapchain;
+    info.pSwapchains = &wd->Swapchain;
     info.pImageIndices = &fd->BackbufferIndex;
     err = vkQueuePresentKHR(g_Queue, &info);
     check_vk_result(err);
@@ -545,12 +560,30 @@ int main(int, char**)
     SDL_Window* window = SDL_CreateWindow("ImGui SDL2+Vulkan example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_VULKAN|SDL_WINDOW_RESIZABLE);
 
     // Setup Vulkan
-    uint32_t extensions_count;
-    SDL_Vulkan_GetInstanceExtensions(window, &extensions_count, NULL);
-    const char** sdl_extensions = new const char*[extensions_count];
-    SDL_Vulkan_GetInstanceExtensions(window, &extensions_count, sdl_extensions);
-    setup_vulkan(window, sdl_extensions, extensions_count);
+    uint32_t sdl_extensions_count;
+    SDL_Vulkan_GetInstanceExtensions(window, &sdl_extensions_count, NULL);
+    const char** sdl_extensions = new const char*[sdl_extensions_count];
+    SDL_Vulkan_GetInstanceExtensions(window, &sdl_extensions_count, sdl_extensions);
+    CreateVulkanInstance(sdl_extensions, sdl_extensions_count);
     delete[] sdl_extensions;
+
+    // Create Window Surface
+    WindowData* wd = &g_WindowData;
+    SDL_bool result = SDL_Vulkan_CreateSurface(window, g_Instance, &wd->Surface);
+    if (result == 0) 
+    {
+        printf("Failed to create Vulkan surface.\n");
+        return 1;
+    }
+
+    SetupVulkan(wd);
+
+    // Create Framebuffers
+    {
+        int w, h;
+        SDL_GetWindowSize(window, &w, &h);
+        CreateOrResizeSwapChainAndFrameBuffer(wd, w, h);
+    }
 
     // Setup ImGui binding
     ImGui::CreateContext();
@@ -559,13 +592,15 @@ int main(int, char**)
     init_info.Allocator = g_Allocator;
     init_info.PhysicalDevice = g_PhysicalDevice;
     init_info.Device = g_Device;
-    init_info.RenderPass = g_RenderPass;
+    init_info.RenderPass = wd->RenderPass;
     init_info.PipelineCache = g_PipelineCache;
     init_info.DescriptorPool = g_DescriptorPool;
     init_info.CheckVkResultFn = check_vk_result;
 
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_MultiViewports;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+
     ImGui_ImplVulkan_Init(&init_info);
     ImGui_ImplSDL2_Init(window, NULL);
 
@@ -591,8 +626,8 @@ int main(int, char**)
     // Upload Fonts
     {
         // Use any command queue
-        VkCommandPool command_pool = g_Frames[g_FrameIndex].CommandPool;
-        VkCommandBuffer command_buffer = g_Frames[g_FrameIndex].CommandBuffer;
+        VkCommandPool command_pool = wd->Frames[wd->FrameIndex].CommandPool;
+        VkCommandBuffer command_buffer = wd->Frames[wd->FrameIndex].CommandBuffer;
 
         VkResult err;
         err = vkResetCommandPool(g_Device, command_pool, 0);
@@ -640,7 +675,7 @@ int main(int, char**)
             if (event.type == SDL_QUIT)
                 done = true;
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window)) 
-                CreateOrResizeSwapChainAndFrameBuffer((int)event.window.data1, (int)event.window.data2);
+                CreateOrResizeSwapChainAndFrameBuffer(wd, (int)event.window.data1, (int)event.window.data2);
         }
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplSDL2_NewFrame(window);
@@ -683,21 +718,25 @@ int main(int, char**)
         }
 
         // Rendering
-        memcpy(&g_ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
-        frame_begin();
-        ImGui_ImplVulkan_Render(g_Frames[g_FrameIndex].CommandBuffer);
-        frame_end();
+        memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
+        frame_begin(wd);
+        ImGui_ImplVulkan_Render(wd->Frames[wd->FrameIndex].CommandBuffer);
+        frame_end(wd);
 
-        // When IMGUI_UNLIMITED_FRAME_RATE is defined we render into latest image acquired from the swapchain but we display the image which was rendered before.
-        // Hence we must render once and increase the g_FrameIndex without presenting, which we do before entering the render loop.
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
+        // When IMGUI_UNLIMITED_FRAME_RATE is defined we render into latest image acquired from the swapchain but we display the image which was rendered before.
+        // Hence we must render once and increase the FrameIndex without presenting.
         if (swap_chain_has_at_least_one_image)
-            frame_present();
+            frame_present(wd);
 #else
-        frame_present();
+        frame_present(wd);
 #endif
         swap_chain_has_at_least_one_image = true;
-        g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
+        wd->FrameIndex = (wd->FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
+
+        // FIXME-PLATFORM
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindows();
     }
 
     // Cleanup
