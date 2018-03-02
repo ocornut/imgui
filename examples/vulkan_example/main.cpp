@@ -635,17 +635,7 @@ int main(int, char**)
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    // When IMGUI_UNLIMITED_FRAME_RATE is defined we render into latest image acquired from the swapchain but we display the image which was rendered before.
-    // Hence we must render once and increase the g_FrameIndex without presenting, which we do before entering the render loop.
-    // This is also the reason why frame_end() is split into frame_end() and frame_present(), the later one not being called here.
-#ifdef IMGUI_UNLIMITED_FRAME_RATE
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    frame_begin();
-    ImGui_ImplVulkan_Render(g_Frames[g_FrameIndex].CommandBuffer);
-    frame_end();
-    g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
-#endif // IMGUI_UNLIMITED_FRAME_RATE
+    bool swap_chain_has_at_least_one_image = false;
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -700,7 +690,15 @@ int main(int, char**)
         frame_begin();
         ImGui_ImplVulkan_Render(g_Frames[g_FrameIndex].CommandBuffer);
         frame_end();
+
+        // When IMGUI_UNLIMITED_FRAME_RATE is defined we render into latest image acquired from the swapchain but we display the image which was rendered before.
+        // Hence we must render once and increase the g_FrameIndex without presenting, which we do before entering the render loop.
+#ifdef IMGUI_UNLIMITED_FRAME_RATE
+        if (swap_chain_has_at_least_one_image)
+            frame_present();
+#else
         frame_present();
+#endif
 
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindows();
