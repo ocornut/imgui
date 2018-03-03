@@ -859,11 +859,11 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_GrabMinSize,         // float     GrabMinSize
     ImGuiStyleVar_GrabRounding,        // float     GrabRounding
     ImGuiStyleVar_ButtonTextAlign,     // ImVec2    ButtonTextAlign
-    ImGuiStyleVar_Count_
+    ImGuiStyleVar_COUNT
 
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    , ImGuiStyleVar_ChildWindowRounding = ImGuiStyleVar_ChildRounding
+    , ImGuiStyleVar_Count_ = ImGuiStyleVar_COUNT, ImGuiStyleVar_ChildWindowRounding = ImGuiStyleVar_ChildRounding
 #endif
 };
 
@@ -908,7 +908,12 @@ enum ImGuiMouseCursor_
     ImGuiMouseCursor_ResizeEW,          // When hovering over a vertical border or a column
     ImGuiMouseCursor_ResizeNESW,        // When hovering over the bottom-left corner of a window
     ImGuiMouseCursor_ResizeNWSE,        // When hovering over the bottom-right corner of a window
-    ImGuiMouseCursor_Count_
+    ImGuiMouseCursor_COUNT
+
+    // Obsolete names (will be removed)
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    , ImGuiMouseCursor_Count_ = ImGuiMouseCursor_COUNT
+#endif
 };
 
 // Condition for ImGui::SetWindow***(), SetNextWindow***(), SetNextTreeNode***() functions

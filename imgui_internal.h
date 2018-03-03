@@ -267,7 +267,7 @@ enum ImGuiInputSource
     ImGuiInputSource_Nav,
     ImGuiInputSource_NavKeyboard,   // Only used occasionally for storage, not tested/handled by most code
     ImGuiInputSource_NavGamepad,    // "
-    ImGuiInputSource_Count_,
+    ImGuiInputSource_COUNT,
 };
 
 // FIXME-NAV: Clarify/expose various repeat delay/rate

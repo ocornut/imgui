@@ -27,7 +27,7 @@
 static HWND                     g_hWnd = 0;
 static INT64                    g_Time = 0;
 static INT64                    g_TicksPerSecond = 0;
-static ImGuiMouseCursor         g_LastMouseCursor = ImGuiMouseCursor_Count_;
+static ImGuiMouseCursor         g_LastMouseCursor = ImGuiMouseCursor_COUNT;
 
 // DirectX data
 static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
