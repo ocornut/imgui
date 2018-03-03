@@ -300,6 +300,12 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 ImGui::PopID();
             }
 
+            // Arrow buttons
+            float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+            if (ImGui::ArrowButton("##left", ImGuiDir_Left)) {}
+            ImGui::SameLine(0.0f, spacing);
+            if (ImGui::ArrowButton("##left", ImGuiDir_Right)) {}
+
             ImGui::Text("Hover over me");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("I am a tooltip");

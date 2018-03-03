@@ -4306,7 +4306,7 @@ void ImGui::RenderArrow(ImVec2 p_min, ImGuiDir dir, float scale)
         c = ImVec2(-0.500f,-0.866f) * r;
         break;
     case ImGuiDir_None: 
-    case ImGuiDir_Count_: 
+    case ImGuiDir_COUNT: 
         IM_ASSERT(0);
         break;
     }
@@ -5200,8 +5200,8 @@ static ImVec2 FindBestWindowPosForPopup(const ImVec2& ref_pos, const ImVec2& siz
     // Combo Box policy (we want a connecting edge)
     if (policy == ImGuiPopupPositionPolicy_ComboBox)
     {
-        const ImGuiDir dir_prefered_order[ImGuiDir_Count_] = { ImGuiDir_Down, ImGuiDir_Right, ImGuiDir_Left, ImGuiDir_Up };
-        for (int n = (*last_dir != ImGuiDir_None) ? -1 : 0; n < ImGuiDir_Count_; n++)
+        const ImGuiDir dir_prefered_order[ImGuiDir_COUNT] = { ImGuiDir_Down, ImGuiDir_Right, ImGuiDir_Left, ImGuiDir_Up };
+        for (int n = (*last_dir != ImGuiDir_None) ? -1 : 0; n < ImGuiDir_COUNT; n++)
         {
             const ImGuiDir dir = (n == -1) ? *last_dir : dir_prefered_order[n];
             if (n != -1 && dir == *last_dir) // Already tried this direction?
@@ -5219,8 +5219,8 @@ static ImVec2 FindBestWindowPosForPopup(const ImVec2& ref_pos, const ImVec2& siz
     }
 
     // Default popup policy
-    const ImGuiDir dir_prefered_order[ImGuiDir_Count_] = { ImGuiDir_Right, ImGuiDir_Down, ImGuiDir_Up, ImGuiDir_Left };
-    for (int n = (*last_dir != ImGuiDir_None) ? -1 : 0; n < ImGuiDir_Count_; n++)
+    const ImGuiDir dir_prefered_order[ImGuiDir_COUNT] = { ImGuiDir_Right, ImGuiDir_Down, ImGuiDir_Up, ImGuiDir_Left };
+    for (int n = (*last_dir != ImGuiDir_None) ? -1 : 0; n < ImGuiDir_COUNT; n++)
     {
         const ImGuiDir dir = (n == -1) ? *last_dir : dir_prefered_order[n];
         if (n != -1 && dir == *last_dir) // Already tried this direction?
@@ -7660,6 +7660,32 @@ bool ImGui::SmallButton(const char* label)
     g.Style.FramePadding.y = 0.0f;
     bool pressed = ButtonEx(label, ImVec2(0,0), ImGuiButtonFlags_AlignTextBaseLine);
     g.Style.FramePadding.y = backup_padding_y;
+    return pressed;
+}
+
+bool ImGui::ArrowButton(const char* str_id, ImGuiDir dir)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiID id = window->GetID(str_id);
+    float sz = ImGui::GetFrameHeight();
+    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(sz, sz));
+    ItemSize(bb);
+    if (!ItemAdd(bb, id))
+        return false;
+
+    bool hovered, held;
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+
+    // Render
+    const ImU32 col = GetColorU32((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+    RenderNavHighlight(bb, id);
+    RenderFrame(bb.Min, bb.Max, col, true, g.Style.FrameRounding);
+    RenderArrow(bb.Min + g.Style.FramePadding, dir);
+
     return pressed;
 }
 
@@ -11734,7 +11760,7 @@ static void RenderArrow(ImDrawList* draw_list, ImVec2 pos, ImVec2 half_sz, ImGui
     case ImGuiDir_Right: draw_list->AddTriangleFilled(ImVec2(pos.x - half_sz.x, pos.y + half_sz.y), ImVec2(pos.x - half_sz.x, pos.y - half_sz.y), pos, col); return;
     case ImGuiDir_Up:    draw_list->AddTriangleFilled(ImVec2(pos.x + half_sz.x, pos.y + half_sz.y), ImVec2(pos.x - half_sz.x, pos.y + half_sz.y), pos, col); return;
     case ImGuiDir_Down:  draw_list->AddTriangleFilled(ImVec2(pos.x - half_sz.x, pos.y - half_sz.y), ImVec2(pos.x + half_sz.x, pos.y - half_sz.y), pos, col); return;
-    case ImGuiDir_None: case ImGuiDir_Count_: break; // Fix warnings
+    case ImGuiDir_None: case ImGuiDir_COUNT: break; // Fix warnings
     }
 }
 

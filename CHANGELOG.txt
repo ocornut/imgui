@@ -92,6 +92,7 @@ Other Changes:
 - Window: Added SetNextWindowBgAlpha() helper. Particularly helpul since the legacy 5-parameters version of Begin() has been marked as obsolete in 1.53. (#1567)
 - Window: Fixed SetNextWindowContentSize() with 0.0f on Y axis (or SetNextWindowContentWidth()) overwriting the contents size. Got broken on Dec 10 (1.53). (#1363)
 - Window: CloseButton: Fixed cross positioning being a little off.
+- ArrowButton: Added ArrowButton() given a cardinal direction (e.g. ImGuiDir_Left).
 - InputText: Added alternative clipboard shortcuts: Shift+Delete (cut), Ctrl+Insert (copy), Shift+Insert (paste). (#1541)
 - InputText: Fixed losing Cursor X position when clicking outside on an item that's submitted after the InputText(). It was only noticeable when restoring focus programmatically. (#1418, #1554)
 - Style: Enable window border by default. (#707)
