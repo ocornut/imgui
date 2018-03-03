@@ -327,6 +327,7 @@ void ImGui_ImplOpenGL3_InitPlatformInterface()
 
 void ImGui_ImplOpenGL3_ShutdownPlatformInterface()
 {
+    ImGui::DestroyViewportsRendererData(ImGui::GetCurrentContext());
     ImGuiIO& io = ImGui::GetIO();
     memset(&io.RendererInterface, 0, sizeof(io.RendererInterface));
 }

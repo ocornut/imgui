@@ -3909,6 +3909,20 @@ void ImGui::Initialize(ImGuiContext* context)
     g.Initialized = true;
 }
 
+void ImGui::DestroyViewportsPlaformData(ImGuiContext* context)
+{
+    if (context->IO.PlatformInterface.DestroyViewport)
+        for (int i = 0; i < context->Viewports.Size; i++)
+            context->IO.PlatformInterface.DestroyViewport(context->Viewports[i]);
+}
+
+void ImGui::DestroyViewportsRendererData(ImGuiContext* context)
+{
+    if (context->IO.RendererInterface.DestroyViewport)
+        for (int i = 0; i < context->Viewports.Size; i++)
+            context->IO.RendererInterface.DestroyViewport(context->Viewports[i]);
+}
+
 // This function is merely here to free heap allocations.
 void ImGui::Shutdown(ImGuiContext* context)
 {
@@ -3945,16 +3959,11 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.OpenPopupStack.clear();
     g.CurrentPopupStack.clear();
     g.MouseViewport = g.MouseLastHoveredViewport = NULL;
+    DestroyViewportsPlaformData(context);
+    DestroyViewportsRendererData(context);
     for (int i = 0; i < g.Viewports.Size; i++)
     {
         ImGuiViewport* viewport = g.Viewports[i];
-        if (!(viewport->Flags & ImGuiViewportFlags_MainViewport)) // FIXME-VIEWPORT
-        {
-            if (g.IO.RendererInterface.DestroyViewport)
-                g.IO.RendererInterface.DestroyViewport(viewport);
-            if (g.IO.PlatformInterface.DestroyViewport)
-                g.IO.PlatformInterface.DestroyViewport(viewport);
-        }
         viewport->PlatformUserData = viewport->PlatformHandle = viewport->RendererUserData = NULL;
         IM_DELETE(viewport);
     }

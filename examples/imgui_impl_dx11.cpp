@@ -619,6 +619,7 @@ void ImGui_ImplDX11_InitPlatformInterface()
 
 void ImGui_ImplDX11_ShutdownPlatformInterface()
 {
+    ImGui::DestroyViewportsRendererData(ImGui::GetCurrentContext());
     ImGuiIO& io = ImGui::GetIO();
     memset(&io.RendererInterface, 0, sizeof(io.RendererInterface));
 }

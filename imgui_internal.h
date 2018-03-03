@@ -1093,6 +1093,8 @@ namespace ImGui
     IMGUI_API ImGuiViewport*        FindViewportByPlatformHandle(void* platform_handle);
     IMGUI_API void                  SetNextWindowViewport(ImGuiID id);
     IMGUI_API void                  ShowViewportThumbnails();
+    IMGUI_API void                  DestroyViewportsPlaformData(ImGuiContext* context);
+    IMGUI_API void                  DestroyViewportsRendererData(ImGuiContext* context);
 
     IMGUI_API void                  MarkIniSettingsDirty();
     IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);
