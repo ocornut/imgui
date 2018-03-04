@@ -12537,19 +12537,10 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
         }
     }
 
-    for (int n = 0; n < columns_count + 1; n++)
+    for (int n = 0; n < columns_count; n++)
     {
-        // Clamp position
-        ImGuiColumnData* column = &columns->Columns[n];
-        float t = column->OffsetNorm;
-        if (!(columns->Flags & ImGuiColumnsFlags_NoForceWithinWindow))
-            t = ImMin(t, PixelsToOffsetNorm(columns, (columns->MaxX - columns->MinX) - g.Style.ColumnsMinSpacing * (columns->Count - n)));
-        column->OffsetNorm = t;
-
-        if (n == columns_count)
-            continue;
-
         // Compute clipping rectangle
+        ImGuiColumnData* column = &columns->Columns[n];
         float clip_x1 = ImFloor(0.5f + window->Pos.x + GetColumnOffset(n) - 1.0f);
         float clip_x2 = ImFloor(0.5f + window->Pos.x + GetColumnOffset(n + 1) - 1.0f);
         column->ClipRect = ImRect(clip_x1, -FLT_MAX, clip_x2, +FLT_MAX);
