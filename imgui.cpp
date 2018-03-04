@@ -12514,7 +12514,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     // Set state for first column
     const float content_region_width = (window->SizeContentsExplicit.x != 0.0f) ? (window->SizeContentsExplicit.x) : (window->Size.x -window->ScrollbarSizes.x);
     columns->MinX = window->DC.IndentX - g.Style.ItemSpacing.x; // Lock our horizontal range
-    columns->MaxX = content_region_width - window->Scroll.x;
+    columns->MaxX = ImMax(content_region_width - window->Scroll.x, columns->MinX + 1.0f);
     columns->StartPosY = window->DC.CursorPos.y;
     columns->StartMaxPosX = window->DC.CursorMaxPos.x;
     columns->CellMinY = columns->CellMaxY = window->DC.CursorPos.y;
