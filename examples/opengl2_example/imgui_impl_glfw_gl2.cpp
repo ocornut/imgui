@@ -50,7 +50,7 @@
 static GLFWwindow*  g_Window = NULL;
 static double       g_Time = 0.0f;
 static bool         g_MouseJustPressed[3] = { false, false, false };
-static GLFWcursor*  g_MouseCursors[ImGuiMouseCursor_Count_] = { 0 };
+static GLFWcursor*  g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
 
 // OpenGL data
 static GLuint       g_FontTexture = 0;
@@ -282,7 +282,7 @@ bool    ImGui_ImplGlfwGL2_Init(GLFWwindow* window, bool install_callbacks)
 void ImGui_ImplGlfwGL2_Shutdown()
 {
     // Destroy GLFW mouse cursors
-    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
+    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         glfwDestroyCursor(g_MouseCursors[cursor_n]);
     memset(g_MouseCursors, 0, sizeof(g_MouseCursors));
 

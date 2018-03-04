@@ -42,7 +42,7 @@
 // SDL data
 static Uint64       g_Time = 0;
 static bool         g_MousePressed[3] = { false, false, false };
-static SDL_Cursor*  g_MouseCursors[ImGuiMouseCursor_Count_] = { 0 };
+static SDL_Cursor*  g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
 
 // OpenGL data
 static GLuint       g_FontTexture = 0;
@@ -394,7 +394,7 @@ bool    ImGui_ImplSdlGL3_Init(SDL_Window* window)
 void ImGui_ImplSdlGL3_Shutdown()
 {
     // Destroy SDL mouse cursors
-    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
+    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         SDL_FreeCursor(g_MouseCursors[cursor_n]);
     memset(g_MouseCursors, 0, sizeof(g_MouseCursors));
 

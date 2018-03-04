@@ -55,6 +55,7 @@ Breaking Changes:
    - removed allocator parameters from CreateContext(), they are now setup with SetAllocatorFunctions(), and shared by all contexts.
    - removed the default global context and font atlas instance, which were confusing for users of DLL reloading and users of multiple contexts.
  - Moved sample TTF files from extra_fonts/ to misc/fonts/. If you loaded files directly from the imgui repo you may need to update your paths.
+ - Renamed ImGuiStyleVar_Count_ to ImGuiStyleVar_COUNT and ImGuiMouseCursor_Count_ to ImGuiMouseCursor_COUNT for consistency with other public enums.
  - Obsoleted IsAnyWindowHovered() in favor of IsWindowHovered(ImGuiHoveredFlags_AnyWindow). Kept redirection function (will obsolete).
  - Obsoleted IsAnyWindowFocused() in favor of IsWindowFocused(ImGuiFocusedFlags_AnyWindow). Kept redirection function (will obsolete).
  - Renamed ImGuiSizeConstraintCallback to ImGuiSizeCallback, ImGuiSizeConstraintCallbackData to ImGuiSizeCallbackData.
@@ -92,6 +93,7 @@ Other Changes:
 - Window: Added SetNextWindowBgAlpha() helper. Particularly helpul since the legacy 5-parameters version of Begin() has been marked as obsolete in 1.53. (#1567)
 - Window: Fixed SetNextWindowContentSize() with 0.0f on Y axis (or SetNextWindowContentWidth()) overwriting the contents size. Got broken on Dec 10 (1.53). (#1363)
 - Window: CloseButton: Fixed cross positioning being a little off.
+- ArrowButton: Added ArrowButton() given a cardinal direction (e.g. ImGuiDir_Left).
 - InputText: Added alternative clipboard shortcuts: Shift+Delete (cut), Ctrl+Insert (copy), Shift+Insert (paste). (#1541)
 - InputText: Fixed losing Cursor X position when clicking outside on an item that's submitted after the InputText(). It was only noticeable when restoring focus programmatically. (#1418, #1554)
 - Style: Enable window border by default. (#707)
@@ -112,6 +114,10 @@ Other Changes:
 - Drag and Drop: Increased payload type string to 12 characters instead of 8. (#143)
 - Drag and Drop: TreeNode as drop target displays rectangle over full frame. (#1597, #143)
 - DragFloat: Fix/workaround for backends which do not preserve a valid mouse position when dragged out of bounds. (#1559)
+- Slider, Combo: Use ImGuiCol_FrameBgHovered color when hovered. (#1456) [@stfx]
+- Combo: BeginCombo(): Added ImGuiComboFlags_NoArrowButton to disable the arrow button and only display the wide value preview box.
+- Combo: BeginCombo(): Added ImGuiComboFlags_NoPreview to disable the preview and only display a square arrow button. 
+- Combo: Arrow button isn't displayed over frame background so its blended color matches other buttons. Left side of the button isn't rounded.
 - PlotLines: plot a flat line if scale_min==scale_max. (#1621)
 - ImFontAtlas: Handle stb_truetype stbtt_InitFont() and stbtt_PackBegin() possible failures more gracefully, GetTexDataAsRGBA32() won't crash during conversion. (#1527)
 - ImFontAtlas: Moved mouse cursor data out of ImGuiContext, fix drawing them with multiple contexts. Also remove the last remaining undesirable dependency on ImGui in imgui_draw.cpp. (#939)
