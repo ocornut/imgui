@@ -12384,7 +12384,7 @@ static float GetDraggedColumnOffset(ImGuiColumnsSet* columns, int column_index)
     // window creates a feedback loop because we store normalized positions. So while dragging we enforce absolute positioning.
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    IM_ASSERT(column_index > 0); // We cannot drag column 0. If you get this assert you may have a conflict between the ID of your columns and another widgets.
+    IM_ASSERT(column_index > 0); // We are not supposed to drag column 0.
     IM_ASSERT(g.ActiveId == columns->ID + ImGuiID(column_index));
 
     float x = g.IO.MousePos.x - g.ActiveIdClickOffset.x + GetColumnsRectHalfWidth() - window->Pos.x;
@@ -12404,16 +12404,6 @@ float ImGui::GetColumnOffset(int column_index)
     if (column_index < 0)
         column_index = columns->Current;
     IM_ASSERT(column_index < columns->Columns.Size);
-
-    /*
-    if (g.ActiveId)
-    {
-        ImGuiContext& g = *GImGui;
-        const ImGuiID column_id = columns->ColumnsSetId + ImGuiID(column_index);
-        if (g.ActiveId == column_id)
-            return GetDraggedColumnOffset(columns, column_index);
-    }
-    */
 
     const float t = columns->Columns[column_index].OffsetNorm;
     const float x_offset = ImLerp(columns->MinX, columns->MaxX, t);
@@ -12524,7 +12514,6 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     // Set state for first column
     const float content_region_width = (window->SizeContentsExplicit.x != 0.0f) ? (window->SizeContentsExplicit.x) : (window->Size.x -window->ScrollbarSizes.x);
     columns->MinX = window->DC.IndentX - g.Style.ItemSpacing.x; // Lock our horizontal range
-    //column->MaxX = content_region_width - window->Scroll.x - ((window->Flags & ImGuiWindowFlags_NoScrollbar) ? 0 : g.Style.ScrollbarSize);// - window->WindowPadding().x;
     columns->MaxX = content_region_width - window->Scroll.x;
     columns->StartPosY = window->DC.CursorPos.y;
     columns->StartMaxPosX = window->DC.CursorMaxPos.x;
@@ -12640,7 +12629,7 @@ void ImGui::EndColumns()
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
 }
 
-// [2017/12: This is currently the only public API, while we are working on making BeginColumns/EndColumns user-facing]
+// [2018-03: This is currently the only public API, while we are working on making BeginColumns/EndColumns user-facing]
 void ImGui::Columns(int columns_count, const char* id, bool border)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -13237,6 +13226,21 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     ImGui::BulletText("NavRectRel[0]: <None>");
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
+                if (window->ColumnsStorage.Size > 0 && ImGui::TreeNode("Columns", "Columns sets (%d)", window->ColumnsStorage.Size))
+                {
+                    for (int n = 0; n < window->ColumnsStorage.Size; n++)
+                    {
+                        const ImGuiColumnsSet* columns = &window->ColumnsStorage[n];
+                        if (ImGui::TreeNode((void*)columns->ID, "Columns Id: 0x%08X, Count: %d, Flags: 0x%04X", columns->ID, columns->Count, columns->Flags))
+                        {
+                            ImGui::BulletText("Width: %.1f (MinX: %.1f, MaxX: %.1f)", columns->MaxX - columns->MinX, columns->MinX, columns->MaxX);
+                            for (int column_n = 0; column_n < columns->Columns.Size; column_n++)
+                                ImGui::BulletText("Column %02d: OffsetNorm %.3f (= %.1f px)", column_n, columns->Columns[column_n].OffsetNorm, OffsetNormToPixels(columns, columns->Columns[column_n].OffsetNorm));
+                            ImGui::TreePop();
+                        }
+                    }
+                    ImGui::TreePop();
+                }
                 ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.Size * (int)sizeof(ImGuiStorage::Pair));
                 ImGui::TreePop();
             }
