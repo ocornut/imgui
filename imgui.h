@@ -958,6 +958,10 @@ struct ImGuiPlatformInterface
     void    (*SetWindowAlpha)(ImGuiViewport* viewport, float alpha);
     void    (*RenderViewport)(ImGuiViewport* viewport);
     void    (*SwapBuffers)(ImGuiViewport* viewport);
+
+    // FIXME-DPI
+    void    (*BeginViewport)(ImGuiViewport* viewport);      // (Optional) Called during Begin() every time the viewport we are outputting into changes (viewport = next viewport)
+    void    (*EndViewport)(ImGuiViewport* viewport);        // (Optional) Called during Begin() every time the viewport we are outputting into changes (viewport = previous viewport)
 };
 
 // (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_EnableMultiViewport) is enabled
@@ -966,9 +970,8 @@ struct ImGuiRendererInterface
     void    (*CreateViewport)(ImGuiViewport* viewport);
     void    (*DestroyViewport)(ImGuiViewport* viewport);
     void    (*ResizeViewport)(ImGuiViewport* viewport, int w, int h);
-    void    (*RenderViewport)(ImGuiViewport* viewport);    // Setup render output, clear targets, call Renderer_RenderDrawData
-    void    (*RenderDrawData)(ImDrawData* draw_data);      // Render a ImDrawList (collection of ImDrawList) for the area covering (io.DisplayPos) to (io.DisplayPos + io.DisplaySize)
-    void    (*SwapBuffers)(ImGuiViewport* viewport);       // Call Present/SwapBuffers
+    void    (*RenderViewport)(ImGuiViewport* viewport);     // Setup render output, clear targets, call Renderer_RenderDrawData
+    void    (*SwapBuffers)(ImGuiViewport* viewport);        // Call Present/SwapBuffers
 };
 
 // You may modify the ImGui::GetStyle() main instance during initialization and before NewFrame().

@@ -745,6 +745,7 @@ static inline ImVec2    ConvertViewportPosToOsDesktopPos(const ImVec2& imgui_pos
 static inline ImVec2    ConvertOsDesktopPosToViewportPos(const ImVec2& os_pos, ImGuiViewport* viewport) { return os_pos - viewport->PlatformOsDesktopPos + viewport->Pos; }
 static void             UpdateViewports();
 static void             UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set_by_api);
+static void             SetCurrentViewport(ImGuiViewport* viewport);
 static void             SetWindowViewportTranslateToPreservePlatformPos(ImGuiWindow* window, ImGuiViewport* old_viewport, ImGuiViewport* new_viewport);
 static void             ResizeViewport(ImGuiViewport* viewport, const ImVec2& size);
 static void             ResizeViewportTranslateWindows(int viewport_idx_min, int viewport_idx_max, float pos_x_delta, int idx_delta, ImGuiViewport* viewport_to_erase);
@@ -892,6 +893,9 @@ ImGuiIO::ImGuiIO()
     ClipboardUserData = NULL;
     ImeSetInputScreenPosFn = ImeSetInputScreenPosFn_DefaultImpl;
     ImeWindowHandle = NULL;
+
+    memset(&PlatformInterface, 0, sizeof(PlatformInterface));
+    memset(&RendererInterface, 0, sizeof(RendererInterface));
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     RenderDrawListsFn = NULL;
@@ -3347,6 +3351,7 @@ static void ImGui::UpdateViewports()
     ImGuiViewport* viewport_ref = g.IO.MousePosViewport ? FindViewportByID(g.IO.MousePosViewport) : g.Viewports[0];
     const ImVec2 mouse_os_pos = ConvertViewportPosToOsDesktopPos(g.IO.MousePos, viewport_ref);
 
+    g.CurrentViewport = NULL;
     for (int n = 1; n < g.Viewports.Size; n++)
     {
         // Erase unused viewports
@@ -3953,7 +3958,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.FontStack.clear();
     g.OpenPopupStack.clear();
     g.CurrentPopupStack.clear();
-    g.MouseViewport = g.MouseLastHoveredViewport = NULL;
+    g.CurrentViewport = g.MouseViewport = g.MouseLastViewport = g.MouseLastHoveredViewport = NULL;
     DestroyViewportsPlaformData(context);
     DestroyViewportsRendererData(context);
     for (int i = 0; i < g.Viewports.Size; i++)
@@ -4283,6 +4288,8 @@ void ImGui::EndFrame()
         g.CurrentWindow->Active = false;
     End();
 
+    SetCurrentViewport(NULL);
+
     if (g.ActiveId == 0 && g.HoveredId == 0)
     {
         if (!g.NavWindow || !g.NavWindow->Appearing) // Unless we just made a window/popup appear
@@ -4465,6 +4472,7 @@ static void ImGui::ResizeViewportTranslateWindows(int viewport_idx_min, int view
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(pos_x_delta != 0.0f || idx_delta != 0);
+    IM_ASSERT(g.CurrentViewport == NULL); // We only resize at the beginning of the frame
     for (int n = 0; n < g.Windows.Size; n++)
     {
         ImGuiWindow* window = g.Windows[n];
@@ -4486,19 +4494,26 @@ static void ImGui::ResizeViewportTranslateWindows(int viewport_idx_min, int view
 static void ImGui::ResizeViewport(ImGuiViewport* viewport, const ImVec2& size)
 {
     ImGuiContext& g = *GImGui;
-    if (viewport->Size.x != size.x || viewport->Size.y != size.y)
-    {
-        // We defer translating windows to the beginning of the frame. 
-        // Our viewport system already works with fully overlapped viewports, it's only certain user interactions that don't and they can't be performed while resizing.
-        viewport->Size = size;
-        //if (viewport->Idx + 1 < g.Viewports.Size) // If this isn't the last viewport, translate following viewports
-        //    ResizeViewportTranslateWindows(viewport->Idx + 1, g.Viewports.Size, viewport->GetNextX() - g.Viewports[viewport->Idx + 1]->Pos.x, 0, NULL);
-    }
+    // We defer translating windows to the beginning of the frame. 
+    // Our viewport system already works with fully overlapped viewports, it's only certain user interactions that don't and they can't be performed while resizing.
+    viewport->Size = size;
     if (viewport == g.Viewports[0])
     {
         g.IO.DisplayPos = viewport->Pos;
         g.IO.DisplaySize = viewport->Size;
     }
+}
+
+void ImGui::SetCurrentViewport(ImGuiViewport* viewport)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.CurrentViewport == viewport)
+        return;
+    if (g.CurrentViewport && g.IO.PlatformInterface.EndViewport)
+        g.IO.PlatformInterface.EndViewport(g.CurrentViewport);
+    g.CurrentViewport = viewport;
+    if (g.CurrentViewport && g.IO.PlatformInterface.BeginViewport)
+        g.IO.PlatformInterface.BeginViewport(g.CurrentViewport);
 }
 
 ImGuiViewport* ImGui::Viewport(ImGuiID id, ImGuiViewportFlags flags, const ImVec2& os_desktop_pos, const ImVec2& size)
@@ -6318,6 +6333,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // VIEWPORT
 
         UpdateWindowViewport(window, window_pos_set_by_api);
+        SetCurrentViewport(window->Viewport);
         flags = window->Flags;
         if (p_open != NULL && window->Viewport->PlatformRequestClose && !(window->Viewport->Flags & ImGuiViewportFlags_MainViewport))
         {

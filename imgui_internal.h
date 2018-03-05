@@ -654,6 +654,7 @@ struct ImGuiContext
 
     // Viewports
     ImVector<ImGuiViewport*>Viewports;
+    ImGuiViewport*          CurrentViewport;
     ImGuiViewport*          MouseViewport;
     ImGuiViewport*          MouseLastViewport;
     ImGuiViewport*          MouseLastHoveredViewport;
@@ -783,6 +784,7 @@ struct ImGuiContext
         NextTreeNodeOpenVal = false;
         NextTreeNodeOpenCond = 0;
 
+        CurrentViewport = NULL;
         MouseViewport = NULL;
         MouseLastViewport = MouseLastHoveredViewport = NULL;
 
