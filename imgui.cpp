@@ -4028,52 +4028,47 @@ void ImGui::Render()
         ImGui::EndFrame();
     g.FrameCountRendered = g.FrameCount;
 
-    // Skip render altogether if alpha is 0.0
-    // Note that vertex buffers have been created and are wasted, so it is best practice that you don't create windows in the first place, or consistently respond to Begin() returning false.
-    if (g.Style.Alpha > 0.0f)
+    // Gather windows to render
+    g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
+    g.DrawDataBuilder.Clear();
+    ImGuiWindow* window_to_render_front_most = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget : NULL;
+    for (int n = 0; n != g.Windows.Size; n++)
     {
-        // Gather windows to render
-        g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
-        g.DrawDataBuilder.Clear();
-        ImGuiWindow* window_to_render_front_most = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget : NULL;
-        for (int n = 0; n != g.Windows.Size; n++)
-        {
-            ImGuiWindow* window = g.Windows[n];
-            if (window->Active && window->HiddenFrames <= 0 && (window->Flags & (ImGuiWindowFlags_ChildWindow)) == 0 && window != window_to_render_front_most)
-                AddWindowToDrawDataSelectLayer(window);
-        }
-        if (window_to_render_front_most && window_to_render_front_most->Active && window_to_render_front_most->HiddenFrames <= 0) // NavWindowingTarget is always temporarily displayed as the front-most window
-            AddWindowToDrawDataSelectLayer(window_to_render_front_most);
-        g.DrawDataBuilder.FlattenIntoSingleLayer();
-
-        // Draw software mouse cursor if requested
-        ImVec2 offset, size, uv[4];
-        if (g.IO.MouseDrawCursor && g.IO.Fonts->GetMouseCursorTexData(g.MouseCursor, &offset, &size, &uv[0], &uv[2]))
-        {
-            const ImVec2 pos = g.IO.MousePos - offset;
-            const ImTextureID tex_id = g.IO.Fonts->TexID;
-            const float sc = g.Style.MouseCursorScale;
-            g.OverlayDrawList.PushTextureID(tex_id);
-            g.OverlayDrawList.AddImage(tex_id, pos + ImVec2(1,0)*sc, pos+ImVec2(1,0)*sc + size*sc, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
-            g.OverlayDrawList.AddImage(tex_id, pos + ImVec2(2,0)*sc, pos+ImVec2(2,0)*sc + size*sc, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
-            g.OverlayDrawList.AddImage(tex_id, pos,                  pos + size*sc,                uv[2], uv[3], IM_COL32(0,0,0,255));       // Black border
-            g.OverlayDrawList.AddImage(tex_id, pos,                  pos + size*sc,                uv[0], uv[1], IM_COL32(255,255,255,255)); // White fill
-            g.OverlayDrawList.PopTextureID();
-        }
-        if (!g.OverlayDrawList.VtxBuffer.empty())
-            AddDrawListToDrawData(&g.DrawDataBuilder.Layers[0], &g.OverlayDrawList);
-
-        // Setup ImDrawData structure for end-user
-        SetupDrawData(&g.DrawDataBuilder.Layers[0], &g.DrawData);
-        g.IO.MetricsRenderVertices = g.DrawData.TotalVtxCount;
-        g.IO.MetricsRenderIndices = g.DrawData.TotalIdxCount;
-
-        // Render. If user hasn't set a callback then they may retrieve the draw data via GetDrawData()
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-        if (g.DrawData.CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
-            g.IO.RenderDrawListsFn(&g.DrawData);
-#endif
+        ImGuiWindow* window = g.Windows[n];
+        if (window->Active && window->HiddenFrames <= 0 && (window->Flags & ImGuiWindowFlags_ChildWindow) == 0 && window != window_to_render_front_most)
+            AddWindowToDrawDataSelectLayer(window);
     }
+    if (window_to_render_front_most && window_to_render_front_most->Active && window_to_render_front_most->HiddenFrames <= 0) // NavWindowingTarget is always temporarily displayed as the front-most window
+        AddWindowToDrawDataSelectLayer(window_to_render_front_most);
+    g.DrawDataBuilder.FlattenIntoSingleLayer();
+
+    // Draw software mouse cursor if requested
+    ImVec2 offset, size, uv[4];
+    if (g.IO.MouseDrawCursor && g.IO.Fonts->GetMouseCursorTexData(g.MouseCursor, &offset, &size, &uv[0], &uv[2]))
+    {
+        const ImVec2 pos = g.IO.MousePos - offset;
+        const ImTextureID tex_id = g.IO.Fonts->TexID;
+        const float sc = g.Style.MouseCursorScale;
+        g.OverlayDrawList.PushTextureID(tex_id);
+        g.OverlayDrawList.AddImage(tex_id, pos + ImVec2(1,0)*sc, pos+ImVec2(1,0)*sc + size*sc, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
+        g.OverlayDrawList.AddImage(tex_id, pos + ImVec2(2,0)*sc, pos+ImVec2(2,0)*sc + size*sc, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
+        g.OverlayDrawList.AddImage(tex_id, pos,                  pos + size*sc,                uv[2], uv[3], IM_COL32(0,0,0,255));       // Black border
+        g.OverlayDrawList.AddImage(tex_id, pos,                  pos + size*sc,                uv[0], uv[1], IM_COL32(255,255,255,255)); // White fill
+        g.OverlayDrawList.PopTextureID();
+    }
+    if (!g.OverlayDrawList.VtxBuffer.empty())
+        AddDrawListToDrawData(&g.DrawDataBuilder.Layers[0], &g.OverlayDrawList);
+
+    // Setup ImDrawData structure for end-user
+    SetupDrawData(&g.DrawDataBuilder.Layers[0], &g.DrawData);
+    g.IO.MetricsRenderVertices = g.DrawData.TotalVtxCount;
+    g.IO.MetricsRenderIndices = g.DrawData.TotalIdxCount;
+
+    // Render. If user hasn't set a callback then they may retrieve the draw data via GetDrawData()
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    if (g.DrawData.CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
+        g.IO.RenderDrawListsFn(&g.DrawData);
+#endif
 }
 
 const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end)
