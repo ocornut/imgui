@@ -13216,7 +13216,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     for (int n = 0; n < window->ColumnsStorage.Size; n++)
                     {
                         const ImGuiColumnsSet* columns = &window->ColumnsStorage[n];
-                        if (ImGui::TreeNode((void*)columns->ID, "Columns Id: 0x%08X, Count: %d, Flags: 0x%04X", columns->ID, columns->Count, columns->Flags))
+                        if (ImGui::TreeNode((void*)(uintptr_t)columns->ID, "Columns Id: 0x%08X, Count: %d, Flags: 0x%04X", columns->ID, columns->Count, columns->Flags))
                         {
                             ImGui::BulletText("Width: %.1f (MinX: %.1f, MaxX: %.1f)", columns->MaxX - columns->MinX, columns->MinX, columns->MaxX);
                             for (int column_n = 0; column_n < columns->Columns.Size; column_n++)
