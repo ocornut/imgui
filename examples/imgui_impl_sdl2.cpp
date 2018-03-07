@@ -149,8 +149,11 @@ bool    ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = (void*)window;
-    if (io.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+#if SDL_VERSION_ATLEAST(2,0,4)
+    io.ConfigFlags |= ImGuiConfigFlags_PlatformHasViewports;
+    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         ImGui_ImplSDL2_InitPlatformInterface(window, sdl_gl_context);
+#endif
 
     return true;
 }
@@ -172,7 +175,6 @@ static void ImGui_ImplSDL2_UpdateMouse()
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     io.MousePosViewport = 0;
     io.MouseHoveredViewport = 0;
-    io.ConfigFlags &= ~ImGuiConfigFlags_PlatformHasMouseHoveredViewport; // FIXME-VIEWPORT: We can't get this info properly with SDL, capture is messing up with SDL_WINDOW_MOUSE_FOCUS report and we'd need to handle _NoInputs
 
     int mx, my;
     Uint32 mouse_buttons = SDL_GetMouseState(&mx, &my);

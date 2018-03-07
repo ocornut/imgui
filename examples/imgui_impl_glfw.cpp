@@ -153,7 +153,8 @@ bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = (void*)g_Window;
-    if (io.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+    io.ConfigFlags |= ImGuiConfigFlags_PlatformHasViewports;
+    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         ImGui_ImplGlfw_InitPlatformInterface();
 
     g_ClientApi = GlfwClientApi_OpenGL;

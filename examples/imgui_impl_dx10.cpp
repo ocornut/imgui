@@ -479,7 +479,8 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
     ImGuiIO& io = ImGui::GetIO();
     g_pd3dDevice = device;
     g_pFactory = pFactory;
-    if (io.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+    io.ConfigFlags |= ImGuiConfigFlags_RendererHasViewports;
+    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         ImGui_ImplDX10_InitPlatformInterface();
     return true;
 }

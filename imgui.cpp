@@ -3246,7 +3246,7 @@ static void ImGui::UpdateMovingWindowDropViewport(ImGuiWindow* window)
     // On release we either drop window over an existing viewport or create a new one
     // (We convert position from one viewport space to another, which is unnecessary at the moment but allows us to have viewport overlapping in term of imgui position)
     ImGuiContext& g = *GImGui;
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_MultiViewports))
+    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
         return;
 
     ImRect mouse_viewport_rect = g.MouseViewport->GetRect();
@@ -3386,11 +3386,11 @@ static void ImGui::UpdateViewports()
     ImGuiViewport* main_viewport = g.Viewports[0];
     IM_ASSERT(main_viewport->ID == IMGUI_VIEWPORT_DEFAULT_ID);
     ImVec2 main_viewport_os_desktop_pos = ImVec2(0.0f, 0.0f);
-    if ((g.IO.ConfigFlags & ImGuiConfigFlags_MultiViewports))
+    if ((g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
         main_viewport_os_desktop_pos = g.IO.PlatformInterface.GetWindowPos(main_viewport);
     Viewport(IMGUI_VIEWPORT_DEFAULT_ID, ImGuiViewportFlags_MainViewport, main_viewport_os_desktop_pos, g.IO.DisplaySize);
 
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_MultiViewports))
+    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
     {
         g.MouseViewport = g.MouseLastViewport = main_viewport;
         return;
@@ -3541,15 +3541,23 @@ void ImGui::NewFrame()
     if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
         IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
 
-    if (g.IO.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports)
     {
+        if ((g.IO.ConfigFlags & ImGuiConfigFlags_PlatformHasViewports) && (g.IO.ConfigFlags & ImGuiConfigFlags_RendererHasViewports))
+        {
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-        IM_ASSERT(g.IO.RenderDrawListsFn == NULL);  // Call ImGui::Render() then pass ImGui::GetDrawData() yourself to your render function!
+            IM_ASSERT(g.IO.RenderDrawListsFn == NULL);  // Call ImGui::Render() then pass ImGui::GetDrawData() yourself to your render function!
 #endif
-        IM_ASSERT(g.IO.PlatformInterface.CreateViewport != NULL);
-        IM_ASSERT(g.IO.PlatformInterface.DestroyViewport != NULL);
-        //IM_ASSERT(g.IO.PlatformInterface.RenderViewport != NULL || g.IO.RendererInterface.RenderViewport != NULL);  // Missing rendering function
-        IM_ASSERT(g.Viewports[0]->PlatformUserData != NULL);        // Platform init function didn't setup main viewport
+            IM_ASSERT(g.IO.PlatformInterface.CreateViewport != NULL);
+            IM_ASSERT(g.IO.PlatformInterface.DestroyViewport != NULL);
+            //IM_ASSERT(g.IO.PlatformInterface.RenderViewport != NULL || g.IO.RendererInterface.RenderViewport != NULL);  // Missing rendering function
+            IM_ASSERT(g.Viewports[0]->PlatformUserData != NULL);        // Platform init function didn't setup main viewport
+        }
+        else
+        {
+            // Disable feature, our back-ends do not support it
+            g.IO.ConfigFlags &= ~ImGuiConfigFlags_EnableViewports;
+        }
     }
 
     // Load settings on first frame
@@ -4354,7 +4362,7 @@ void ImGui::EndFrame()
 
     g.FrameCountEnded = g.FrameCount;
 
-    if (g.IO.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         UpdatePlatformWindows();
 }
 
@@ -4418,7 +4426,7 @@ void ImGui::Render()
 void ImGui::RenderAdditionalViewports()
 {
     ImGuiContext& g = *GImGui;
-    if (g.IO.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         RenderPlatformWindows();
 }
 
@@ -5908,7 +5916,7 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
 
     // Restore main viewport if multi viewports are not supported by the back-end
     ImGuiViewport* main_viewport = g.Viewports[0];
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_MultiViewports))
+    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
     {
         window->Viewport = main_viewport;
         window->ViewportId = main_viewport->ID;

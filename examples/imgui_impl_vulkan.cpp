@@ -703,7 +703,8 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
 
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplVulkan_CreateDeviceObjects();
-    if (io.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+    io.ConfigFlags |= ImGuiConfigFlags_RendererHasViewports;
+    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         ImGui_ImplVulkan_InitPlatformInterface();
 
     return true;

@@ -605,7 +605,8 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     }
 
     ImGuiIO& io = ImGui::GetIO();
-    if (io.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+    io.ConfigFlags |= ImGuiConfigFlags_RendererHasViewports; // FIXME-VIEWPORT: Actually unfinshed..
+    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         ImGui_ImplDX12_InitPlatformInterface();
 
     return true;

@@ -487,7 +487,8 @@ bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_co
     g_pd3dDevice = device;
     g_pd3dDeviceContext = device_context;
     g_pFactory = pFactory;
-    if (io.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+    io.ConfigFlags |= ImGuiConfigFlags_RendererHasViewports;
+    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         ImGui_ImplDX11_InitPlatformInterface();
     return true;
 }

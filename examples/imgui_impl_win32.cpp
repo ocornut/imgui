@@ -71,7 +71,8 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = (void*)g_hWnd;
 
-    if (io.ConfigFlags & ImGuiConfigFlags_MultiViewports)
+    io.ConfigFlags |= ImGuiConfigFlags_PlatformHasViewports;
+    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         ImGui_ImplWin32_InitPlatformInterface();
 
     return true;

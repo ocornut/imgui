@@ -45,7 +45,10 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     strcpy(g_GlslVersion, glsl_version);
     strcat(g_GlslVersion, "\n");
 
-    ImGui_ImplOpenGL3_InitPlatformInterface();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_RendererHasViewports;
+    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
+        ImGui_ImplOpenGL3_InitPlatformInterface();
     return true;
 }
 
