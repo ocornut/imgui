@@ -517,9 +517,10 @@ struct ImDrawDataBuilder
 enum ImGuiViewportFlags_
 {
     ImGuiViewportFlags_MainViewport         = 1 << 0,
-    ImGuiViewportFlags_NoDecoration         = 1 << 1,   // Platform Window: Disable platform title bar, borders, etc.
-    ImGuiViewportFlags_NoFocusOnAppearing   = 1 << 2,   // Platform Window: Don't take focus when created.
-    ImGuiViewportFlags_NoInputs             = 1 << 3    // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
+    ImGuiViewportFlags_HostOtherWindows     = 1 << 1,
+    ImGuiViewportFlags_NoDecoration         = 1 << 2,   // Platform Window: Disable platform title bar, borders, etc.
+    ImGuiViewportFlags_NoFocusOnAppearing   = 1 << 3,   // Platform Window: Don't take focus when created.
+    ImGuiViewportFlags_NoInputs             = 1 << 4    // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
 };
 
 struct ImGuiViewport

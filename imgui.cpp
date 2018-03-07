@@ -3252,7 +3252,7 @@ static void ImGui::UpdateMovingWindowDropViewport(ImGuiWindow* window)
     ImRect mouse_viewport_rect = g.MouseViewport->GetRect();
     ImVec2 window_pos_in_mouse_viewport = ConvertOsDesktopPosToViewportPos(ConvertViewportPosToOsDesktopPos(window->Pos, window->Viewport), g.MouseViewport);
     ImRect window_rect_in_mouse_viewport = ImRect(window_pos_in_mouse_viewport, window_pos_in_mouse_viewport + window->Size);
-    if (mouse_viewport_rect.Contains(window_rect_in_mouse_viewport))
+    if ((g.MouseViewport->Flags & ImGuiViewportFlags_HostOtherWindows) &&  mouse_viewport_rect.Contains(window_rect_in_mouse_viewport))
     {
         // Drop on an existing viewport
         ImGuiViewport* old_viewport = window->Viewport;
@@ -3388,7 +3388,7 @@ static void ImGui::UpdateViewports()
     ImVec2 main_viewport_os_desktop_pos = ImVec2(0.0f, 0.0f);
     if ((g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
         main_viewport_os_desktop_pos = g.IO.PlatformInterface.GetWindowPos(main_viewport);
-    Viewport(IMGUI_VIEWPORT_DEFAULT_ID, ImGuiViewportFlags_MainViewport, main_viewport_os_desktop_pos, g.IO.DisplaySize);
+    Viewport(IMGUI_VIEWPORT_DEFAULT_ID, ImGuiViewportFlags_MainViewport | ImGuiViewportFlags_HostOtherWindows, main_viewport_os_desktop_pos, g.IO.DisplaySize);
 
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
     {
