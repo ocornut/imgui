@@ -6515,9 +6515,14 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         else
             PushClipRect(viewport_rect.Min, viewport_rect.Max, true);
 
-        // Draw modal window background (darkens what is behind them)
-        if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow())
+        // Draw modal window background (darkens what is behind them, all viewports)
+        if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow() && window->HiddenFrames <= 0)
+        {
             window->DrawList->AddRectFilled(viewport_rect.Min, viewport_rect.Max, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
+            for (int viewport_n = 0; viewport_n < g.Viewports.Size; viewport_n++)
+                if (g.Viewports[viewport_n] != window->Viewport)
+                    g.OverlayDrawList.AddRectFilled(g.Viewports[viewport_n]->Pos, g.Viewports[viewport_n]->Pos + g.Viewports[viewport_n]->Size, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
+        }
 
         // Draw navigation selection/windowing rectangle background
         if (g.NavWindowingTarget == window)
