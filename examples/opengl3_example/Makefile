@@ -15,7 +15,7 @@
 #CXX = clang++
 
 EXE = opengl3_example
-SOURCES = main.cpp imgui_impl_glfw_gl3.cpp
+SOURCES = main.cpp ../imgui_impl_glfw.cpp ../imgui_impl_opengl3.cpp
 SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp
 SOURCES += ../libs/gl3w/GL/gl3w.c
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
@@ -54,6 +54,9 @@ endif
 
 
 %.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o:../%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o:../../%.cpp
