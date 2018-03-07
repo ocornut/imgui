@@ -4479,9 +4479,9 @@ static void ImGui::ResizeViewportTranslateWindows(int viewport_idx_min, int view
 
 static void ImGui::ResizeViewport(ImGuiViewport* viewport, const ImVec2& size)
 {
-    ImGuiContext& g = *GImGui;
     // We defer translating windows to the beginning of the frame. 
     // Our viewport system already works with fully overlapped viewports, it's only certain user interactions that don't and they can't be performed while resizing.
+    ImGuiContext& g = *GImGui;
     viewport->Size = size;
     if (viewport == g.Viewports[0])
     {
@@ -4492,6 +4492,8 @@ static void ImGui::ResizeViewport(ImGuiViewport* viewport, const ImVec2& size)
 
 void ImGui::SetCurrentViewport(ImGuiViewport* viewport)
 {
+    // Notify platform interface of viewport changes
+    // FIXME-DPI: This is only currently used for experimenting with handling of multiple DPI
     ImGuiContext& g = *GImGui;
     if (g.CurrentViewport == viewport)
         return;
@@ -5902,6 +5904,7 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindowFlags flags = window->Flags;
+    (void)window_pos_set_by_api;
 
     // Restore main viewport if multi viewports are not supported by the back-end
     ImGuiViewport* main_viewport = g.Viewports[0];
@@ -5917,16 +5920,16 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
 
     bool created_viewport = false;
 
-    ImGuiViewport* prev_viewport = window->Viewport;
     if (g.NextWindowData.ViewportCond)
     {
-        window->Viewport = prev_viewport = FindViewportByID(g.NextWindowData.ViewportId);
+        // Code explicitly request a viewport
+        window->Viewport = FindViewportByID(g.NextWindowData.ViewportId);
         window->ViewportId = g.NextWindowData.ViewportId; // Store ID even if Viewport isn't resolved.
     }
-    else if (flags & ImGuiWindowFlags_ChildWindow)// || (flags & ImGuiWindowFlags_Popup))
+    else if (flags & ImGuiWindowFlags_ChildWindow)
     {
         IM_ASSERT(window->ParentWindow);
-        window->Viewport = prev_viewport = window->ParentWindow->Viewport;
+        window->Viewport = window->ParentWindow->Viewport;
     }
     else if (window_follow_mouse_viewport && IsMousePosValid())
     {
@@ -5938,7 +5941,7 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
             ImGuiViewportFlags viewport_flags =  ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs;
             ImGuiViewport* viewport = Viewport(window->ID, viewport_flags, os_desktop_pos, window->Size);
             window->Flags |= ImGuiWindowFlags_FullViewport | ImGuiWindowFlags_NoBringToFrontOnFocus;
-            window->Viewport = prev_viewport = viewport;
+            window->Viewport = viewport;
             created_viewport = true;
 
             // Preserve relative mouse position so docking title bar test stays valid mid-frame (since it isn't latched)
@@ -5950,20 +5953,24 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
             // This is so we don't require of the multi-viewport windowing back-end to preserve mouse buttons after a window closure, making it easier to implement them.
             bool preserve_temporary_viewport = g.MovingWindow && g.MovingWindow->RootWindow == window && (window->Viewport->Flags & ImGuiWindowFlags_FullViewport);
             if (!preserve_temporary_viewport)
-                window->Viewport = prev_viewport = g.MouseViewport;
+                window->Viewport = g.MouseViewport;
         }
     }
     else if (g.NavWindow != NULL && g.NavWindow != window && (flags & ImGuiWindowFlags_Tooltip))
     {
-        window->Viewport = prev_viewport = g.NavWindow->Viewport;
+        window->Viewport = g.NavWindow->Viewport;
     }
-    
-    // Appearing popups grabs the viewport from their parent window
+
+    // Appearing popups reset their viewport so they can inherit again
     const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames == 1);
-    if ((flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api && window_just_appearing_after_hidden_for_resize)
+    if ((flags & ImGuiWindowFlags_Popup) && window_just_appearing_after_hidden_for_resize)
+        window->Viewport = NULL;
+
+    // By default inherit from parent window
+    if (window->Viewport == NULL && window->ParentWindow)
         window->Viewport = window->ParentWindow->Viewport;
 
-    // If we stored a viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportOsDesktopPos'
+    // Restore a viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportOsDesktopPos'
     if (window->Viewport == NULL && window->ViewportId != 0)
     {
         window->Viewport = FindViewportByID(window->ViewportId);
@@ -5973,7 +5980,7 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
             {
                 ImGuiViewport* viewport = Viewport(window->ID, ImGuiViewportFlags_NoDecoration, window->ViewportOsDesktopPos, window->Size);
                 window->Flags |= ImGuiWindowFlags_FullViewport | ImGuiWindowFlags_NoBringToFrontOnFocus;
-                window->Viewport = prev_viewport = viewport;
+                window->Viewport = viewport;
                 created_viewport = true;
             }
             else
@@ -5983,13 +5990,11 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
         }
     }
 
-    if (window->Viewport == NULL && window->ParentWindow)
-        window->Viewport = window->ParentWindow->Viewport;
-
     // Fallback to default viewport
     if (window->Viewport == NULL)
-        window->Viewport = g.Viewports[0];
+        window->Viewport = main_viewport;
 
+    // When we own the viewport update its size
     if (window->ID == window->Viewport->ID && !created_viewport)
     {
         window->Viewport->Flags |= ImGuiViewportFlags_NoDecoration;
@@ -5999,19 +6004,13 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
     }
 
     // Disable rounding for the window
-    if (window->Viewport != g.Viewports[0])
+    if (window->Viewport != main_viewport)
         window->WindowRounding = 0.0f;
 
     if (window->Flags & ImGuiWindowFlags_FullViewport)
         SetWindowPos(window, window->Viewport->Pos, ImGuiCond_Always);
 
     window->ViewportId = window->Viewport->ID;
-    window->Viewport->LastFrameActive = g.FrameCount;
-
-    // On unexpected viewport changes, we try to preserve the same position in OS space.
-    if (prev_viewport != window->Viewport && prev_viewport != NULL && window->WasActive)
-        if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip) && !window_pos_set_by_api)
-            SetWindowViewportTranslateToPreservePlatformPos(window, prev_viewport, window->Viewport);
 }
 
 struct ImGuiResizeGripDef
@@ -6320,7 +6319,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         UpdateWindowViewport(window, window_pos_set_by_api);
         SetCurrentViewport(window->Viewport);
+        window->Viewport->LastFrameActive = g.FrameCount;
         flags = window->Flags;
+
         if (p_open != NULL && window->Viewport->PlatformRequestClose && !(window->Viewport->Flags & ImGuiViewportFlags_MainViewport))
         {
             window->Viewport->PlatformRequestClose = false;
@@ -11882,7 +11883,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     if (menu_is_open)
     {
         SetNextWindowPos(popup_pos, ImGuiCond_Always);
-        ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ((window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu)) ? ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_ChildWindow : ImGuiWindowFlags_ChildMenu);
+        ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ((window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu)) ? ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_ChildWindow : ImGuiWindowFlags_ChildMenu);
         menu_is_open = BeginPopupEx(id, flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
     }
 
