@@ -27,7 +27,6 @@
 
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
-
 #include "imgui_internal.h" // FIXME-PLATFORM
 
 // SDL
@@ -149,11 +148,14 @@ bool    ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = (void*)window;
+
+    // We need SDL_CaptureMouse(), SDL_GetGlobalMouseState() from SDL 2.0.4+ to support multiple viewports.
+    // We left the call to ImGui_ImplSDL2_InitPlatformInterface() outside of #ifdef to avoid unused-function warnings.
 #if SDL_VERSION_ATLEAST(2,0,4)
     io.ConfigFlags |= ImGuiConfigFlags_PlatformHasViewports;
-    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
-        ImGui_ImplSDL2_InitPlatformInterface(window, sdl_gl_context);
 #endif
+    if ((io.ConfigFlags & ImGuiConfigFlags_EnableViewports) && (io.ConfigFlags & ImGuiConfigFlags_PlatformHasViewports))
+        ImGui_ImplSDL2_InitPlatformInterface(window, sdl_gl_context);
 
     return true;
 }
@@ -252,9 +254,7 @@ void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
 // Platform Windows
 // --------------------------------------------------------------------------------------------------------
 
-#include "imgui_internal.h"
-
-#define SDL_HAS_WINDOW_OPACITY  SDL_VERSION_ATLEAST(2,0,5)
+#define SDL_HAS_WINDOW_OPACITY      SDL_VERSION_ATLEAST(2,0,5)
 
 struct ImGuiPlatformDataSDL2
 {
@@ -331,8 +331,8 @@ static void ImGui_ImplSDL2_ShowWindow(ImGuiViewport* viewport)
             return;
         }
 }
-
 #endif
+
     SDL_ShowWindow(data->Window);
 }
 
