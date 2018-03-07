@@ -35,6 +35,7 @@
 #include <SDL_syswm.h>
 
 // Data
+static SDL_Window*  g_Window = NULL;
 static Uint64       g_Time = 0;
 static bool         g_MousePressed[3] = { false, false, false };
 static SDL_Cursor*  g_MouseCursors[ImGuiMouseCursor_Count_] = { 0 };
@@ -100,6 +101,8 @@ bool ImGui_ImplSDL2_ProcessEvent(SDL_Event* event)
 
 bool    ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
 {
+    g_Window = window;
+
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
@@ -141,8 +144,6 @@ bool    ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
     SDL_VERSION(&wmInfo.version);
     SDL_GetWindowWMInfo(window, &wmInfo);
     io.ImeWindowHandle = wmInfo.info.win.window;
-#else
-    (void)window;
 #endif
 
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
@@ -157,6 +158,7 @@ bool    ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
 void ImGui_ImplSDL2_Shutdown()
 {
     ImGui_ImplSDL2_ShutdownPlatformInterface();
+    g_Window = NULL;
 
     // Destroy SDL mouse cursors
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
@@ -179,6 +181,7 @@ static void ImGui_ImplSDL2_UpdateMouse()
     io.MouseDown[2] = g_MousePressed[2] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
     g_MousePressed[0] = g_MousePressed[1] = g_MousePressed[2] = false;
 
+#if SDL_VERSION_ATLEAST(2,0,4)
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     if (focused_window)
     {
@@ -198,9 +201,11 @@ static void ImGui_ImplSDL2_UpdateMouse()
 
     // We already retrieve global mouse position, SDL_CaptureMouse() also let the OS know our drag outside boundaries shouldn't trigger, e.g.: OS window resize cursor
     // The function is only supported from SDL 2.0.4 (released Jan 2016)
-#if (SDL_MAJOR_VERSION >= 2) && (SDL_MINOR_VERSION >= 0) && (SDL_PATCHLEVEL >= 4)
     bool any_mouse_button_down = ImGui::IsAnyMouseDown();
     SDL_CaptureMouse(any_mouse_button_down ? SDL_TRUE : SDL_FALSE);
+#else
+    if (SDL_GetWindowFlags(g_Window) & SDL_WINDOW_INPUT_FOCUS)
+        io.MousePos = ImVec2((float)mx, (float)my);
 #endif
 
     // Update OS/hardware mouse cursor if imgui isn't drawing a software cursor
