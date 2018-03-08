@@ -46,6 +46,8 @@ Various internal refactors have also been done, as part of the navigation work a
 Breaking Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.60)
 
+ - Fonts: changed ImFont::DisplayOffset.y to defaults to 0 instead of +1. Fixed vertical rounding of Ascent/Descent to match TrueType renderer. 
+   If you were adding or subtracting to ImFont::DisplayOffset check if your fonts are correctly aligned vertically. (#1619)
  - BeginDragDropSource(): temporarily removed the optional mouse_button=0 parameter because it is not really usable in many situations at the moment. 
  - Obsoleted the io.RenderDrawListsFn callback, you can call your graphics engine render function after ImGui::Render(). Use ImGui::GetDrawData() to retrieve the ImDrawData* to display.
  - Reorganized context handling to be more explicit,
@@ -121,14 +123,17 @@ Other Changes:
 - Combo: BeginCombo(): Added ImGuiComboFlags_NoPreview to disable the preview and only display a square arrow button. 
 - Combo: Arrow button isn't displayed over frame background so its blended color matches other buttons. Left side of the button isn't rounded.
 - PlotLines: plot a flat line if scale_min==scale_max. (#1621)
+- Fonts: Changed DisplayOffset.y to defaults to 0 instead of +1. Fixed rounding of Ascent/Descent to match TrueType renderer. 
+  If you were adding or subtracting to ImFont::DisplayOffset check if your fonts are correctly aligned vertically. (#1619)
+- Fonts: Updated stb_truetype from 1.14 to stb_truetype 1.19. (w/ include fix from some platforms #1622)
+- Fonts: Added optional FreeType rasterizer in misc/freetype. Moved from imgui_club repo. (#618) [@Vuhdo, @mikesart, @ocornut]
+- Fonts: Moved extra_fonts/ to misc/fonts/.
+- ImFontAtlas: Fixed cfg.MergeMode not reusing existing glyphs if available (always overwrote).
 - ImFontAtlas: Handle stb_truetype stbtt_InitFont() and stbtt_PackBegin() possible failures more gracefully, GetTexDataAsRGBA32() won't crash during conversion. (#1527)
 - ImFontAtlas: Moved mouse cursor data out of ImGuiContext, fix drawing them with multiple contexts. Also remove the last remaining undesirable dependency on ImGui in imgui_draw.cpp. (#939)
 - ImFontAtlas: Added ImFontAtlasFlags_NoPowerOfTwoHeight flag to disable padding font height to nearest power of two. (#1613)
 - ImFontAtlas: Added ImFontAtlasFlags_NoMouseCursors flag to disable baking software mouse cursors, mostly to save texture memory on very low end hardware. (#1613)
 - ImDrawList: Fixed AddRect() with antialiasing disabled (lower-right corner pixel was often missing, rounding looks a little better.) (#1646)
-- Fonts: Updated stb_truetype from 1.14 to stb_truetype 1.19. (w/ include fix from some platforms #1622)
-- Fonts: Added optional FreeType rasterizer in misc/freetype. Moved from imgui_club repo. (#618) [@Vuhdo, @mikesart, @ocornut]
-- Fonts: Moved extra_fonts/ to misc/fonts/.
 - Misc: Functions passed to libc qsort are explicitely marked cdecl to support compiling with vectorcall as the default calling convention. (#1230, #1611) [@RandyGaul]
 - Misc: ImVec2: added [] operator. This is becoming desirable for some types of code, better added sooner than later.
 - Misc: Exposed IM_OFFSETOF() helper in imgui.h.
@@ -270,7 +275,6 @@ Other Changes:
 - ImGuiStorage: Added BuildSortByKey() helper to rebuild storage from stratch.
 - ImFont: Added GetDebugName() helper.
 - ImFontAtlas: Added missing Thai punctuation in the GetGlyphRangesThai() ranges. (#1396) [@nProtect]
-- ImFontAtlas: Fixed cfg.MergeMode not reusing existing glyphs if available (always overwrote).
 - ImDrawList: Removed 'bool anti_aliased = true' final parameter of ImDrawList::AddPolyline() and ImDrawList::AddConvexPolyFilled(). Anti-aliasing is controlled via the regular style.AntiAliased flags.
 - ImDrawList: Added ImDrawList::AddImageRounded() helper. (#845) [@thedmd] 
 - ImDrawList: Refactored to make ImDrawList independant of ImGui. Removed static variable in PathArcToFast() which caused linking issues to some.
