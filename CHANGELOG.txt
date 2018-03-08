@@ -268,8 +268,9 @@ Other Changes:
 - NewFrame(): using literal strings in the most-frequently firing IM_ASSERT expressions to increase the odd of programmers seeing them (especially those who don't use a debugger).
 - NewFrame() now asserts if neither Render or EndFrame have been called. Exposed EndFrame(). Made it legal to call EndFrame() more than one. (#1423)
 - ImGuiStorage: Added BuildSortByKey() helper to rebuild storage from stratch.
-- ImFont: Added GetDebugName() helper. 
+- ImFont: Added GetDebugName() helper.
 - ImFontAtlas: Added missing Thai punctuation in the GetGlyphRangesThai() ranges. (#1396) [@nProtect]
+- ImFontAtlas: Fixed cfg.MergeMode not reusing existing glyphs if available (always overwrote).
 - ImDrawList: Removed 'bool anti_aliased = true' final parameter of ImDrawList::AddPolyline() and ImDrawList::AddConvexPolyFilled(). Anti-aliasing is controlled via the regular style.AntiAliased flags.
 - ImDrawList: Added ImDrawList::AddImageRounded() helper. (#845) [@thedmd] 
 - ImDrawList: Refactored to make ImDrawList independant of ImGui. Removed static variable in PathArcToFast() which caused linking issues to some.
