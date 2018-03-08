@@ -1628,7 +1628,7 @@ struct ImFontConfig
     float           RasterizerMultiply;         // 1.0f     // Brighten (>1.0f) or darken (<1.0f) font output. Brightening small fonts may be a good workaround to make them more readable.
 
     // [Internal]
-    char            Name[32];                               // Name (strictly to ease debugging)
+    char            Name[40];                               // Name (strictly to ease debugging)
     ImFont*         DstFont;
 
     IMGUI_API ImFontConfig();
