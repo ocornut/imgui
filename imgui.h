@@ -753,7 +753,7 @@ enum ImGuiNavInput_
     ImGuiNavInput_TweakFast,     // faster tweaks                                // e.g. R1 or R2 (PS4), RB or RT (Xbox), R or ZL (Switch)
 
     // [Internal] Don't use directly! This is used internally to differentiate keyboard from gamepad inputs for behaviors that require to differentiate them.
-    // Keyboard behavior that have no corresponding gamepad mapping (e.g. CTRL+TAB) may be directly reading from io.KeyDown[] instead of io.NavInputs[].
+    // Keyboard behavior that have no corresponding gamepad mapping (e.g. CTRL+TAB) will be directly reading from io.KeyDown[] instead of io.NavInputs[].
     ImGuiNavInput_KeyMenu_,      // toggle menu                                  // = io.KeyAlt
     ImGuiNavInput_KeyLeft_,      // move left                                    // = Arrow keys
     ImGuiNavInput_KeyRight_,     // move right

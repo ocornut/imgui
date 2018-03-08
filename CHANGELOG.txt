@@ -104,11 +104,13 @@ Other Changes:
 - Popup: Better handling of user mistakenly calling OpenPopup() every frame (with reopen_existing option). The error will now be more visible and easier to understand. (#1497)
 - Popup: BeginPopup(): Exposed extra_flags parameter that are passed through to Begin(). (#1533)
 - Popup: BeginPopupModal: fixed the conditional test for SetNextWindowPos() which was polling the wrong window, which in practice made the test succeed all the time.
-- Tooltip: BeginTooltip() sets NoInputs flag.
+- Tooltip: BeginTooltip() sets ImGuiWindowFlags_NoInputs flag.
 - Scrollbar: Fixed ScrollbarY enable test after ScrollbarX has been enabled being a little off (small regression from Nov 2017). (#1574)
 - Scrollbar: Fixed ScrollbarX enable test subtracting WindowPadding.x (this has been there since the addition of horizontal scroll bar!).
 - Columns: Clear offsets data when columns count changed. (#1525)
 - Columns: Fixed a memory leak of ImGuiColumnsSet's Columns vector. (#1529) [@unprompted]
+- Columns: Fixed resizing a window very small breaking some columns positioning (broken in 1.53).
+- Columns: The available column extent takes consideration of the right-most clipped pixel, so the right-most column may look a little wider but will contain the same amount of visible contents.
 - MenuBar: Fixed menu bar pushing a clipping rect outside of its allocated bound (usually unnoticeable).
 - TreeNode: nodes with the ImGuiTreeNodeFlags_Leaf flag correctly disable highlight when DragDrop is active. (#143, #581)
 - Drag and Drop: Increased payload type string to 32 characters instead of 8. (#143)
@@ -124,6 +126,9 @@ Other Changes:
 - ImFontAtlas: Added ImFontAtlasFlags_NoPowerOfTwoHeight flag to disable padding font height to nearest power of two. (#1613)
 - ImFontAtlas: Added ImFontAtlasFlags_NoMouseCursors flag to disable baking software mouse cursors, mostly to save texture memory on very low end hardware. (#1613)
 - ImDrawList: Fixed AddRect() with antialiasing disabled (lower-right corner pixel was often missing, rounding looks a little better.) (#1646)
+- Fonts: Updated stb_truetype from 1.14 to stb_truetype 1.19. (w/ include fix from some platforms #1622)
+- Fonts: Added optional FreeType rasterizer in misc/freetype. Moved from imgui_club repo. (#618) [@Vuhdo, @mikesart, @ocornut]
+- Fonts: Moved extra_fonts/ to misc/fonts/.
 - Misc: Functions passed to libc qsort are explicitely marked cdecl to support compiling with vectorcall as the default calling convention. (#1230, #1611) [@RandyGaul]
 - Misc: ImVec2: added [] operator. This is becoming desirable for some types of code, better added sooner than later.
 - Misc: Exposed IM_OFFSETOF() helper in imgui.h.
@@ -134,18 +139,17 @@ Other Changes:
 - Misc: Updated stb_rect_pack from 0.10 to 0.11 (minor changes).
 - Misc: Added ImGuiConfigFlags_IsSRGB and ImGuiConfigFlags_IsTouchScreen user flags (for io.ConfigFlags). 
   (Those flags are not used by ImGui itself, they only exists to make it easy for the engine/back-end to pass information to the application in a standard manner.)
-- Fonts: Updated stb_truetype from 1.14 to stb_truetype 1.19. (w/ include fix from some platforms #1622)
-- Fonts: Added optional FreeType rasterizer in misc/freetype. Moved from imgui_club repo. (#618) [@Vuhdo, @mikesart, @ocornut]
-- Fonts: Moved extra_fonts/ to misc/fonts/.
+- Metrics: Added display of Columns state.
 - Demo: Improved Selectable() examples. (#1528)
 - Demo: Tweaked the Child demos, added a menu bar to the second child to test some navigation functions.
 - Demo: Console: Using ImGuiCol_Text to be more friendly to color changes. 
 - Demo: Using IM_COL32() instead of ImColor() in ImDrawList centric contexts. Trying to phase out use of the ImColor helper whenever possible.
 - Examples: Files in examples/ now include their own changelog so it is easier to occasionally update your bindings if needed.
 - Examples: Using Dark theme by default. (#707). Tweaked demo code.
-- Examples: Added support for horizontal mouse wheel for API that allows it. (#1463)
+- Examples: Added support for horizontal mouse wheel for API that allows it. (#1463) [@tseeker]
 - Examples: DirectX12: Added DirectX 12 example. (#301) [@jdm3]
-- Examples: OpenGL3+GLFW,SDL: Changed GLSL shader version to 150 (#1466, #1504).
+- Examples: OpenGL3+GLFW,SDL: Changed GLSL shader version from 330 to 150. (#1466, #1504)
+- Examples: OpenGL3+GLFW,SDL: Added a way to override the GLSL version string in the Init function. (#1466, #1504).
 - Examples: OpenGL3+GLFW,SDL: Creating VAO in the render function so it can be more easily used by multiple shared OpenGL contexts. (#1217)
 - Examples: OpenGL3+GLFW: Using 3.2 context instead of 3.3. (#1466)
 - Examples: OpenGL: Setting up glPixelStorei() explicitly before uploading texture.
