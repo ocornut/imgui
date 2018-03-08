@@ -450,7 +450,7 @@ void ImDrawList::PopClipRect()
     UpdateClipRect();
 }
 
-void ImDrawList::PushTextureID(const ImTextureID& texture_id)
+void ImDrawList::PushTextureID(ImTextureID texture_id)
 {
     _TextureIdStack.push_back(texture_id);
     UpdateTextureID();
@@ -982,7 +982,10 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    PathRect(a + ImVec2(0.5f,0.5f), b - ImVec2(0.5f,0.5f), rounding, rounding_corners_flags);
+    if (Flags & ImDrawListFlags_AntiAliasedLines)
+        PathRect(a + ImVec2(0.5f,0.5f), b - ImVec2(0.50f,0.50f), rounding, rounding_corners_flags);
+    else
+        PathRect(a + ImVec2(0.5f,0.5f), b - ImVec2(0.49f,0.49f), rounding, rounding_corners_flags); // Better looking lower-right corner and rounded non-AA shapes.
     PathStroke(col, true, thickness);
 }
 
@@ -1346,12 +1349,12 @@ static const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA
     "                                                      -    XX           XX    -           "
 };
 
-static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_Count_][3] =
+static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3] =
 {
     // Pos ........ Size ......... Offset ......
     { ImVec2(0,3),  ImVec2(12,19), ImVec2( 0, 0) }, // ImGuiMouseCursor_Arrow
     { ImVec2(13,0), ImVec2(7,16),  ImVec2( 4, 8) }, // ImGuiMouseCursor_TextInput
-    { ImVec2(31,0), ImVec2(23,23), ImVec2(11,11) }, // ImGuiMouseCursor_Move
+    { ImVec2(31,0), ImVec2(23,23), ImVec2(11,11) }, // ImGuiMouseCursor_ResizeAll
     { ImVec2(21,0), ImVec2( 9,23), ImVec2( 5,11) }, // ImGuiMouseCursor_ResizeNS
     { ImVec2(55,18),ImVec2(23, 9), ImVec2(11, 5) }, // ImGuiMouseCursor_ResizeEW
     { ImVec2(73,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNESW
@@ -1388,7 +1391,7 @@ void    ImFontAtlas::ClearInputData()
             ConfigData[i].FontData = NULL;
         }
 
-    // When clearing this we lose access to  the font name and other information used to build the font.
+    // When clearing this we lose access to the font name and other information used to build the font.
     for (int i = 0; i < Fonts.Size; i++)
         if (Fonts[i]->ConfigData >= ConfigData.Data && Fonts[i]->ConfigData < ConfigData.Data + ConfigData.Size)
         {
@@ -1541,7 +1544,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
         // Store a short copy of filename into into the font name for convenience
         const char* p;
         for (p = filename + strlen(filename); p > filename && p[-1] != '/' && p[-1] != '\\'; p--) {}
-        snprintf(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s, %.0fpx", p, size_pixels);
+        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s, %.0fpx", p, size_pixels);
     }
     return AddFontFromMemoryTTF(data, data_size, size_pixels, &font_cfg, glyph_ranges);
 }
@@ -1620,7 +1623,7 @@ void ImFontAtlas::CalcCustomRectUV(const CustomRect* rect, ImVec2* out_uv_min, I
 
 bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2])
 {
-    if (cursor_type <= ImGuiMouseCursor_None || cursor_type >= ImGuiMouseCursor_Count_)
+    if (cursor_type <= ImGuiMouseCursor_None || cursor_type >= ImGuiMouseCursor_COUNT)
         return false;
     if (Flags & ImFontAtlasFlags_NoMouseCursors)
         return false;
@@ -1815,6 +1818,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         ImFontConfig& cfg = atlas->ConfigData[input_i];
         ImFontTempBuildData& tmp = tmp_array[input_i];
         ImFont* dst_font = cfg.DstFont; // We can have multiple input fonts writing into a same destination font (when using MergeMode=true)
+        if (cfg.MergeMode)
+            dst_font->BuildLookupTable();
 
         const float font_scale = stbtt_ScaleForPixelHeight(&tmp.FontInfo, cfg.SizePixels);
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
@@ -1958,7 +1963,8 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
 
     // Build all fonts lookup tables
     for (int i = 0; i < atlas->Fonts.Size; i++)
-        atlas->Fonts[i]->BuildLookupTable();
+        if (atlas->Fonts[i]->DirtyLookupTables)
+            atlas->Fonts[i]->BuildLookupTable();
 }
 
 // Retrieve list of range (2 int per range, values are inclusive)
@@ -2054,7 +2060,7 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesJapanese()
         // Unpack
         int codepoint = 0x4e00;
         memcpy(full_ranges, base_ranges, sizeof(base_ranges));
-        ImWchar* dst = full_ranges + IM_ARRAYSIZE(base_ranges);;
+        ImWchar* dst = full_ranges + IM_ARRAYSIZE(base_ranges);
         for (int n = 0; n < IM_ARRAYSIZE(offsets_from_0x4E00); n++, dst += 2)
             dst[0] = dst[1] = (ImWchar)(codepoint += (offsets_from_0x4E00[n] + 1));
         dst[0] = 0;
@@ -2163,6 +2169,7 @@ void    ImFont::ClearOutputData()
     ConfigData = NULL;
     ContainerAtlas = NULL;
     Ascent = Descent = 0.0f;
+    DirtyLookupTables = true;
     MetricsTotalSurface = 0;
 }
 
@@ -2175,6 +2182,7 @@ void ImFont::BuildLookupTable()
     IM_ASSERT(Glyphs.Size < 0xFFFF); // -1 is reserved
     IndexAdvanceX.clear();
     IndexLookup.clear();
+    DirtyLookupTables = false;
     GrowIndex(max_codepoint + 1);
     for (int i = 0; i < Glyphs.Size; i++)
     {
@@ -2239,6 +2247,7 @@ void ImFont::AddGlyph(ImWchar codepoint, float x0, float y0, float x1, float y1,
         glyph.AdvanceX = (float)(int)(glyph.AdvanceX + 0.5f);
     
     // Compute rough surface usage metrics (+1 to account for average padding, +0.99 to round)
+    DirtyLookupTables = true;
     MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * ContainerAtlas->TexWidth + 1.99f) * (int)((glyph.V1 - glyph.V0) * ContainerAtlas->TexHeight + 1.99f);
 }
 

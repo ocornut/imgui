@@ -25,8 +25,8 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     ImGui_ImplA5_Init(display);
-    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
 
     // Setup style
     ImGui::StyleColorsDark();
@@ -114,6 +114,7 @@ int main(int, char**)
         // Rendering
         al_clear_to_color(al_map_rgba_f(clear_color.x, clear_color.y, clear_color.z, clear_color.w));
         ImGui::Render();
+        ImGui_ImplA5_RenderDrawData(ImGui::GetDrawData());
         al_flip_display();
     }
 

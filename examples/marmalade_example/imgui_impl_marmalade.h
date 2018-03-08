@@ -14,6 +14,7 @@
 IMGUI_API bool        ImGui_Marmalade_Init(bool install_callbacks);
 IMGUI_API void        ImGui_Marmalade_Shutdown();
 IMGUI_API void        ImGui_Marmalade_NewFrame();
+IMGUI_API void        ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data);
 
 // Use if you want to reset your rendering device without losing ImGui state.
 IMGUI_API void        ImGui_Marmalade_InvalidateDeviceObjects();

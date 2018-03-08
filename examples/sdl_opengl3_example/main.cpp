@@ -36,8 +36,8 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     ImGui_ImplSdlGL3_Init(window);
-    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;
 
     // Setup style
     ImGui::StyleColorsDark();
@@ -121,6 +121,7 @@ int main(int, char**)
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui::Render();
+        ImGui_ImplSdlGL3_RenderDrawData(ImGui::GetDrawData());
         SDL_GL_SwapWindow(window);
     }
 

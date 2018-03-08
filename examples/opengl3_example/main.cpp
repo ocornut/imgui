@@ -34,9 +34,9 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
     ImGui_ImplGlfwGL3_Init(window, true);
-    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
-    //io.NavFlags |= ImGuiNavFlags_EnableGamepad;   // Enable Gamepad Controls
 
     // Setup style
     ImGui::StyleColorsDark();
@@ -115,6 +115,7 @@ int main(int, char**)
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui::Render();
+        ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
     }
 

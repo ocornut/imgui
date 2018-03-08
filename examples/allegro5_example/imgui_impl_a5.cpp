@@ -10,6 +10,12 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui, Original code by @birthggd
 
+// CHANGELOG
+// (minor and older changes stripped away, please see git history for details)
+//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplA5_RenderDrawData() in the .h file so you can call it yourself.
+//  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
+//  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
+
 #include <stdint.h>     // uint64_t
 #include <cstring>      // memcpy
 #include "imgui.h"
@@ -35,7 +41,9 @@ struct ImDrawVertAllegro
     ALLEGRO_COLOR col;
 };
 
-void ImGui_ImplA5_RenderDrawLists(ImDrawData* draw_data)
+// Render function.
+// (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
+void ImGui_ImplA5_RenderDrawData(ImDrawData* draw_data)
 {
     int op, src, dst;
     al_get_blender(&op, &src, &dst);
@@ -190,7 +198,6 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_Y] = ALLEGRO_KEY_Y;
     io.KeyMap[ImGuiKey_Z] = ALLEGRO_KEY_Z;
 
-    io.RenderDrawListsFn = ImGui_ImplA5_RenderDrawLists;        // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
 #ifdef _WIN32
     io.ImeWindowHandle = al_get_win_window_handle(g_Display);
 #endif
@@ -284,7 +291,7 @@ void ImGui_ImplA5_NewFrame()
         switch (ImGui::GetMouseCursor())
         {
         case ImGuiMouseCursor_TextInput:    cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_EDIT; break;
-        case ImGuiMouseCursor_Move:         cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_MOVE; break;
+        case ImGuiMouseCursor_ResizeAll:    cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_MOVE; break;
         case ImGuiMouseCursor_ResizeNS:     cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_N; break;
         case ImGuiMouseCursor_ResizeEW:     cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_E; break;
         case ImGuiMouseCursor_ResizeNESW:   cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_NE; break;

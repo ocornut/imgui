@@ -36,8 +36,8 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     ImGui_ImplSdlGL2_Init(window);
-    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
 
     // Setup style
     ImGui::StyleColorsDark();
@@ -122,6 +122,7 @@ int main(int, char**)
         glClear(GL_COLOR_BUFFER_BIT);
         //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
         ImGui::Render();
+        ImGui_ImplSdlGL2_RenderDrawData(ImGui::GetDrawData());
         SDL_GL_SwapWindow(window);
     }
 

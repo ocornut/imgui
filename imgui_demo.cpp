@@ -300,6 +300,12 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 ImGui::PopID();
             }
 
+            // Arrow buttons
+            float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+            if (ImGui::ArrowButton("##left", ImGuiDir_Left)) {}
+            ImGui::SameLine(0.0f, spacing);
+            if (ImGui::ArrowButton("##left", ImGuiDir_Right)) {}
+
             ImGui::Text("Hover over me");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("I am a tooltip");
@@ -1806,9 +1812,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
         ImGui::Checkbox("io.MouseDrawCursor", &io.MouseDrawCursor);
         ImGui::SameLine(); ShowHelpMarker("Request ImGui to render a mouse cursor for you in software. Note that a mouse cursor rendered via your application GPU rendering path will feel more laggy than hardware cursor, but will be more in sync with your other visuals.\n\nSome desktop applications may use both kinds of cursors (e.g. enable software cursor only when resizing/dragging something).");
-        ImGui::CheckboxFlags("io.NavFlags: EnableGamepad", (unsigned int *)&io.NavFlags, ImGuiNavFlags_EnableGamepad);
-        ImGui::CheckboxFlags("io.NavFlags: EnableKeyboard", (unsigned int *)&io.NavFlags, ImGuiNavFlags_EnableKeyboard);
-        ImGui::CheckboxFlags("io.NavFlags: MoveMouse", (unsigned int *)&io.NavFlags, ImGuiNavFlags_MoveMouse);
+        ImGui::CheckboxFlags("io.ConfigFlags: NavEnableGamepad", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableGamepad);
+        ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
+        ImGui::CheckboxFlags("io.ConfigFlags: NavMoveMouse", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavMoveMouse);
         ImGui::SameLine(); ShowHelpMarker("Request ImGui to move your move cursor when using gamepad/keyboard navigation. NewFrame() will change io.MousePos and set the io.WantMoveMouse flag, your backend will need to apply the new mouse position.");
 
         if (ImGui::TreeNode("Keyboard, Mouse & Navigation State"))
@@ -1987,12 +1993,12 @@ void ImGui::ShowDemoWindow(bool* p_open)
         if (ImGui::TreeNode("Mouse cursors"))
         {
             const char* mouse_cursors_names[] = { "Arrow", "TextInput", "Move", "ResizeNS", "ResizeEW", "ResizeNESW", "ResizeNWSE" };
-            IM_ASSERT(IM_ARRAYSIZE(mouse_cursors_names) == ImGuiMouseCursor_Count_);
+            IM_ASSERT(IM_ARRAYSIZE(mouse_cursors_names) == ImGuiMouseCursor_COUNT);
 
             ImGui::Text("Current mouse cursor = %d: %s", ImGui::GetMouseCursor(), mouse_cursors_names[ImGui::GetMouseCursor()]);
             ImGui::Text("Hover to see mouse cursors:");
             ImGui::SameLine(); ShowHelpMarker("Your application can render a different mouse cursor based on what ImGui::GetMouseCursor() returns. If software cursor rendering (io.MouseDrawCursor) is set ImGui will draw the right cursor for you, otherwise your backend needs to handle it.");
-            for (int i = 0; i < ImGuiMouseCursor_Count_; i++)
+            for (int i = 0; i < ImGuiMouseCursor_COUNT; i++)
             {
                 char label[32];
                 sprintf(label, "Mouse cursor %d: %s", i, mouse_cursors_names[i]);
@@ -2211,10 +2217,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 ImGui::Text("Fallback character: '%c' (%d)", font->FallbackChar, font->FallbackChar);
                 ImGui::Text("Texture surface: %d pixels (approx) ~ %dx%d", font->MetricsTotalSurface, (int)sqrtf((float)font->MetricsTotalSurface), (int)sqrtf((float)font->MetricsTotalSurface));
                 for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
-                {
-                    ImFontConfig* cfg = &font->ConfigData[config_i];
-                    ImGui::BulletText("Input %d: \'%s\', Oversample: (%d,%d), PixelSnapH: %d", config_i, cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH);
-                }
+                    if (ImFontConfig* cfg = &font->ConfigData[config_i])
+                        ImGui::BulletText("Input %d: \'%s\', Oversample: (%d,%d), PixelSnapH: %d", config_i, cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH);
                 if (ImGui::TreeNode("Glyphs", "Glyphs (%d)", font->Glyphs.Size))
                 {
                     // Display all glyphs of the fonts in separate pages of 256 characters
@@ -2235,7 +2239,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                             {
                                 ImVec2 cell_p1(base_pos.x + (n % 16) * (cell_size.x + cell_spacing), base_pos.y + (n / 16) * (cell_size.y + cell_spacing));
                                 ImVec2 cell_p2(cell_p1.x + cell_size.x, cell_p1.y + cell_size.y);
-                                const ImFontGlyph* glyph = font->FindGlyph((ImWchar)(base+n));;
+                                const ImFontGlyph* glyph = font->FindGlyph((ImWchar)(base+n));
                                 draw_list->AddRect(cell_p1, cell_p2, glyph ? IM_COL32(255,255,255,100) : IM_COL32(255,255,255,50));
                                 font->RenderChar(draw_list, cell_size.x, cell_p1, ImGui::GetColorU32(ImGuiCol_Text), (ImWchar)(base+n)); // We use ImFont::RenderChar as a shortcut because we don't have UTF-8 conversion functions available to generate a string.
                                 if (glyph && ImGui::IsMouseHoveringRect(cell_p1, cell_p2))
