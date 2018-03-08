@@ -566,7 +566,7 @@ static void ImGui_ImplDX10_DestroyViewport(ImGuiViewport* viewport)
     viewport->RendererUserData = NULL;
 }
 
-static void ImGui_ImplDX10_ResizeViewport(ImGuiViewport* viewport, int w, int h)
+static void ImGui_ImplDX10_ResizeViewport(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGuiPlatformDataDx10* data = (ImGuiPlatformDataDx10*)viewport->RendererUserData;
     if (data->RTView)
@@ -577,7 +577,7 @@ static void ImGui_ImplDX10_ResizeViewport(ImGuiViewport* viewport, int w, int h)
     if (data->SwapChain)
     {
         ID3D10Texture2D* pBackBuffer = NULL;
-        data->SwapChain->ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, 0);
+        data->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, DXGI_FORMAT_UNKNOWN, 0);
         data->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
         g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &data->RTView);
         pBackBuffer->Release();

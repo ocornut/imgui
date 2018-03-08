@@ -418,7 +418,7 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
             if (!data->ExternalResize)
                 viewport->PlatformRequestResize = true;
             if (io.RendererInterface.ResizeViewport)
-                io.RendererInterface.ResizeViewport(viewport, (int)LOWORD(lParam), (int)HIWORD(lParam));
+                io.RendererInterface.ResizeViewport(viewport, ImVec2((float)LOWORD(lParam), (float)HIWORD(lParam)));
             break;
         }
     }

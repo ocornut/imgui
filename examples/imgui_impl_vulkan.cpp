@@ -1055,13 +1055,12 @@ static void ImGui_ImplVulkan_DestroyViewport(ImGuiViewport* viewport)
     viewport->RendererUserData = NULL;
 }
 
-static void ImGui_ImplVulkan_ResizeViewport(ImGuiViewport* viewport, int w, int h)
+static void ImGui_ImplVulkan_ResizeViewport(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData;
     //...
     (void)data;
-    (void)w;
-    (void)h;
+    (void)size;
 }
 
 static void ImGui_ImplVulkan_RenderViewport(ImGuiViewport* viewport)

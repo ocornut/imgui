@@ -973,7 +973,7 @@ struct ImGuiRendererInterface
 {
     void    (*CreateViewport)(ImGuiViewport* viewport);
     void    (*DestroyViewport)(ImGuiViewport* viewport);
-    void    (*ResizeViewport)(ImGuiViewport* viewport, int w, int h);
+    void    (*ResizeViewport)(ImGuiViewport* viewport, ImVec2 size);
     void    (*RenderViewport)(ImGuiViewport* viewport);     // Setup render output, clear targets, call Renderer_RenderDrawData
     void    (*SwapBuffers)(ImGuiViewport* viewport);        // Call Present/SwapBuffers
 };
