@@ -111,7 +111,7 @@ Other Changes:
 - Columns: Fixed a memory leak of ImGuiColumnsSet's Columns vector. (#1529) [@unprompted]
 - MenuBar: Fixed menu bar pushing a clipping rect outside of its allocated bound (usually unnoticeable).
 - TreeNode: nodes with the ImGuiTreeNodeFlags_Leaf flag correctly disable highlight when DragDrop is active. (#143, #581)
-- Drag and Drop: Increased payload type string to 12 characters instead of 8. (#143)
+- Drag and Drop: Increased payload type string to 32 characters instead of 8. (#143)
 - Drag and Drop: TreeNode as drop target displays rectangle over full frame. (#1597, #143)
 - DragFloat: Fix/workaround for backends which do not preserve a valid mouse position when dragged out of bounds. (#1559)
 - Slider, Combo: Use ImGuiCol_FrameBgHovered color when hovered. (#1456) [@stfx]
