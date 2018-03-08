@@ -3269,7 +3269,7 @@ static void ImGui::UpdateMovingWindowDropViewport(ImGuiWindow* window)
     {
         // Create new viewport
         ImVec2 os_pos = ConvertViewportPosToOsDesktopPos(window->Pos, window->Viewport);
-        ImGuiViewport* viewport = Viewport(window->ID, 0, os_pos, window->Size);
+        ImGuiViewport* viewport = Viewport(window, window->ID, 0, os_pos, window->Size);
         SetWindowViewportTranslateToPreservePlatformPos(window, window->Viewport, viewport);
     }
 }
@@ -3388,7 +3388,7 @@ static void ImGui::UpdateViewports()
     ImVec2 main_viewport_os_desktop_pos = ImVec2(0.0f, 0.0f);
     if ((g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
         main_viewport_os_desktop_pos = g.IO.PlatformInterface.GetWindowPos(main_viewport);
-    Viewport(IMGUI_VIEWPORT_DEFAULT_ID, ImGuiViewportFlags_MainViewport | ImGuiViewportFlags_HostOtherWindows, main_viewport_os_desktop_pos, g.IO.DisplaySize);
+    Viewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, ImGuiViewportFlags_MainViewport | ImGuiViewportFlags_HostOtherWindows, main_viewport_os_desktop_pos, g.IO.DisplaySize);
 
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
     {
@@ -3454,6 +3454,7 @@ static void UpdatePlatformWindows()
         ImGuiViewport* viewport = g.Viewports[i];
         if ((viewport->Flags & ImGuiViewportFlags_MainViewport) || (viewport->LastFrameActive < g.FrameCount))
             continue;
+        IM_ASSERT(viewport->Window != NULL);
         viewport->PlatformRequestClose = false;
 
         // FIXME-PLATFORM
@@ -3466,13 +3467,17 @@ static void UpdatePlatformWindows()
         g.IO.PlatformInterface.SetWindowPos(viewport, viewport->PlatformOsDesktopPos);
         g.IO.PlatformInterface.SetWindowSize(viewport, viewport->Size);
 
-        char name[20];
-        sprintf(name, "Viewport_%08X", viewport->ID);
-        if (viewport->Name == NULL || strcmp(viewport->Name, name) != 0)
+        // Update title bar
+        const char* title_begin = viewport->Window->Name;
+        const char* title_end = ImGui::FindRenderedTextEnd(title_begin);
+        const ImGuiID title_hash = ImHash(title_begin, (int)(title_end - title_begin));
+        if (viewport->LastNameHash != title_hash )
         {
-            g.IO.PlatformInterface.SetWindowTitle(viewport, name);
-            ImGui::MemFree(viewport->Name);
-            viewport->Name = ImStrdup(name);
+            viewport->LastNameHash = title_hash;
+            char* title_displayed = ImStrdup(viewport->Window->Name);
+            title_displayed[title_end - title_begin] = 0;
+            g.IO.PlatformInterface.SetWindowTitle(viewport, title_displayed);
+            ImGui::MemFree(title_displayed);
         }
 
         if (is_new_window)
@@ -4512,7 +4517,7 @@ void ImGui::SetCurrentViewport(ImGuiViewport* viewport)
         g.IO.PlatformInterface.BeginViewport(g.CurrentViewport);
 }
 
-ImGuiViewport* ImGui::Viewport(ImGuiID id, ImGuiViewportFlags flags, const ImVec2& os_desktop_pos, const ImVec2& size)
+ImGuiViewport* ImGui::Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& os_desktop_pos, const ImVec2& size)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(id != 0);
@@ -4532,6 +4537,7 @@ ImGuiViewport* ImGui::Viewport(ImGuiID id, ImGuiViewportFlags flags, const ImVec
     }
 
     IM_ASSERT(viewport->Pos.y == 0.0f);
+    viewport->Window = window;
     viewport->Flags = flags;
     viewport->PlatformOsDesktopPos = os_desktop_pos;
     viewport->LastFrameActive = g.FrameCount;
@@ -5940,8 +5946,8 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
         {
             // Create an undecorated, temporary OS/platform window
             ImVec2 os_desktop_pos = ConvertViewportPosToOsDesktopPos(g.IO.MousePos - g.ActiveIdClickOffset, g.MouseViewport);
-            ImGuiViewportFlags viewport_flags =  ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs;
-            ImGuiViewport* viewport = Viewport(window->ID, viewport_flags, os_desktop_pos, window->Size);
+            ImGuiViewportFlags viewport_flags = ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs;
+            ImGuiViewport* viewport = Viewport(window, window->ID, viewport_flags, os_desktop_pos, window->Size);
             window->Flags |= ImGuiWindowFlags_FullViewport | ImGuiWindowFlags_NoBringToFrontOnFocus;
             window->Viewport = viewport;
             created_viewport = true;
@@ -5980,7 +5986,7 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
         {
             if (window->ViewportOsDesktopPos.x != FLT_MAX && window->ViewportOsDesktopPos.y != FLT_MAX)
             {
-                ImGuiViewport* viewport = Viewport(window->ID, ImGuiViewportFlags_NoDecoration, window->ViewportOsDesktopPos, window->Size);
+                ImGuiViewport* viewport = Viewport(window, window->ID, ImGuiViewportFlags_NoDecoration, window->ViewportOsDesktopPos, window->Size);
                 window->Flags |= ImGuiWindowFlags_FullViewport | ImGuiWindowFlags_NoBringToFrontOnFocus;
                 window->Viewport = viewport;
                 created_viewport = true;
@@ -6004,6 +6010,10 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
         window->Viewport->PlatformOsDesktopPos = ConvertViewportPosToOsDesktopPos(window->Pos, window->Viewport);
         window->Flags |= ImGuiWindowFlags_FullViewport | ImGuiWindowFlags_NoBringToFrontOnFocus;
     }
+
+    // If the OS window has a title bar, hide our imgui title bar
+    if ((window->Flags & ImGuiWindowFlags_FullViewport) && !(window->Viewport->Flags & ImGuiViewportFlags_NoDecoration))
+        window->Flags |= ImGuiWindowFlags_NoTitleBar;
 
     // Disable rounding for the window
     if (window->Viewport != main_viewport)
@@ -13933,6 +13943,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, DrawLists: %d, Size: (%.0f,%.0f)", i, viewport->ID, draw_data->Layers[0].Size, viewport->Size.x, viewport->Size.y))
                 {
                     ImGui::BulletText("Pos: (%.0f,%.0f)", viewport->Pos.x, viewport->Pos.y);
+                    ImGui::BulletText("Flags: 0x%04X", viewport->Flags);
+                    ImGui::BulletText("PlatformOsDesktopPos: (%.0f,%.0f)", viewport->PlatformOsDesktopPos.x, viewport->PlatformOsDesktopPos.y);
                     for (int draw_list_i = 0; draw_list_i < viewport->DrawDataBuilder.Layers[0].Size; draw_list_i++)
                         Funcs::NodeDrawList(NULL, viewport->DrawDataBuilder.Layers[0][draw_list_i], "DrawList");
                     ImGui::TreePop();

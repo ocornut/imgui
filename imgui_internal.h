@@ -530,7 +530,8 @@ struct ImGuiViewport
     ImGuiViewportFlags  Flags;
     int                 LastFrameActive;        
     int                 LastFrameAsRefViewport; // Last frame number this viewport was io.MouseViewportRef
-    char*               Name;                   // Name (OPTIONAL)
+    ImGuiID             LastNameHash;
+    ImGuiWindow*        Window;
     ImVec2              Pos;                    // Position in imgui virtual space (Pos.y == 0.0)
     ImVec2              Size;
     ImDrawData          DrawData;
@@ -538,14 +539,15 @@ struct ImGuiViewport
 
     // [Optional] OS/Platform Layer data. This is to allow the creation/manipulate of multiple OS/Platform windows. Not all back-ends will allow this.
     ImVec2              PlatformOsDesktopPos;   // Position in OS desktop/native space
+    float               PlatformDpiScale;       // FIXME-DPI: Unused
     void*               PlatformUserData;       // void* to hold custom data structure for the platform (e.g. windowing info, render context)
     void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. HWND, GlfwWindow*)
     bool                PlatformRequestClose;   // Platform window requested closure
     bool                PlatformRequestResize;  // Platform window requested resize
     void*               RendererUserData;       // void* to hold custom data structure for the renderer (e.g. framebuffer)
 
-    ImGuiViewport(ImGuiID id, int idx)  { ID = id; Idx = idx; Flags = 0; LastFrameActive = LastFrameAsRefViewport = -1; Name = NULL; PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestResize = false; RendererUserData = NULL; }
-    ~ImGuiViewport()                    { IM_ASSERT(PlatformUserData == NULL && RendererUserData == NULL); if (Name) ImGui::MemFree(Name); }
+    ImGuiViewport(ImGuiID id, int idx)  { ID = id; Idx = idx; Flags = 0; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Window = NULL; PlatformDpiScale = 1.0f; PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestResize = false; RendererUserData = NULL; }
+    ~ImGuiViewport()                    { IM_ASSERT(PlatformUserData == NULL && RendererUserData == NULL); }
     ImRect  GetRect() const             { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     float   GetNextX() const            { const float SPACING = 4.0f; return Pos.x + Size.x + SPACING; }
 };
@@ -1084,7 +1086,7 @@ namespace ImGui
     IMGUI_API void          Shutdown(ImGuiContext* context);    // Since 1.60 this is a _private_ function. You can call DestroyContext() to destroy the context created by CreateContext().
 
     // Viewports
-    IMGUI_API ImGuiViewport*        Viewport(ImGuiID id, ImGuiViewportFlags flags, const ImVec2& os_desktop_pos, const ImVec2& size);   // os_desktop_pos allows imgui to reposition windows relative to each order when moving from one viewport to the other.
+    IMGUI_API ImGuiViewport*        Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& os_desktop_pos, const ImVec2& size);   // os_desktop_pos allows imgui to reposition windows relative to each order when moving from one viewport to the other.
     inline ImVector<ImGuiViewport*>&GetViewports() { return GImGui->Viewports; }
     inline ImGuiViewport*           GetMainViewport() { return GImGui->Viewports[0]; }
     IMGUI_API ImGuiViewport*        FindViewportByID(ImGuiID id);

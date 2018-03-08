@@ -779,16 +779,17 @@ enum ImGuiConfigFlags_
 
     // [BETA] Viewports
     ImGuiConfigFlags_EnableViewports                    = 1 << 4,   // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
-    ImGuiConfigFlags_PlatformHasViewports               = 1 << 5,   // Back-end Platform supports multiple viewports
-    ImGuiConfigFlags_PlatformHasMouseHoveredViewport    = 1 << 6,   // Back-end Platform supports setting io.MouseHoveredViewport to the viewport directly under the mouse _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag and _REGARDLESS_ of whether another viewport is focused and may be capturing the mouse. This information is _NOT EASY_ to provide correctly with most high-level engines. Don't see this without studying how the examples/ back-end handle it.
-    ImGuiConfigFlags_PlatformHasWantMoveMouseSupport    = 1 << 7,   // Back-end Platform supports io.WantMoveMouse request by updating the OS mouse cursor position (currently only used by ImGuiConfigFlags_NavMoveMouse feature, will be useful for widgets teleporting/wrapping the cursor)
-    ImGuiConfigFlags_PlatformHasWindowAlpha             = 1 << 8,   // Back-end Platform supports transparent windows
-    ImGuiConfigFlags_RendererHasViewports               = 1 << 9,   // Back-end Renderer supports multiple viewports
+    ImGuiConfigFlags_PlatformNoTaskBar                  = 1 << 5,
+    ImGuiConfigFlags_PlatformHasViewports               = 1 << 6,   // Back-end Platform supports multiple viewports
+    ImGuiConfigFlags_PlatformHasMouseHoveredViewport    = 1 << 7,   // Back-end Platform supports setting io.MouseHoveredViewport to the viewport directly under the mouse _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag and _REGARDLESS_ of whether another viewport is focused and may be capturing the mouse. This information is _NOT EASY_ to provide correctly with most high-level engines. Don't see this without studying how the examples/ back-end handle it.
+    ImGuiConfigFlags_PlatformHasWantMoveMouseSupport    = 1 << 8,   // Back-end Platform supports io.WantMoveMouse request by updating the OS mouse cursor position (currently only used by ImGuiConfigFlags_NavMoveMouse feature, will be useful for widgets teleporting/wrapping the cursor)
+    ImGuiConfigFlags_PlatformHasWindowAlpha             = 1 << 9,   // Back-end Platform supports transparent windows
+    ImGuiConfigFlags_RendererHasViewports               = 1 << 10,  // Back-end Renderer supports multiple viewports
     
     // Platform Info (free of use, for user/application convenience)
-    ImGuiConfigFlags_IsSRGB                             = 1 << 10,  // Back-end is SRGB-aware (Storage flag to allow your back-end to communicate to shared widgets. Not used by core ImGui)
-    ImGuiConfigFlags_IsTouchScreen                      = 1 << 11,  // Back-end is using a touch screen instead of a mouse (Storage flag to allow your back-end to communicate to shared widgets. Not used by core ImGui)
-    ImGuiConfigFlags_IsOnScreenKeyboard                 = 1 << 12   // Back-end uses an on-screen keyboard when io.WantTextInput is set.
+    ImGuiConfigFlags_IsSRGB                             = 1 << 20,  // Back-end is SRGB-aware (Storage flag to allow your back-end to communicate to shared widgets. Not used by core ImGui)
+    ImGuiConfigFlags_IsTouchScreen                      = 1 << 21,  // Back-end is using a touch screen instead of a mouse (Storage flag to allow your back-end to communicate to shared widgets. Not used by core ImGui)
+    ImGuiConfigFlags_IsOnScreenKeyboard                 = 1 << 22   // Back-end uses an on-screen keyboard when io.WantTextInput is set.
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()

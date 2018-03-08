@@ -316,7 +316,8 @@ static void ImGui_ImplSDL2_ShowWindow(ImGuiViewport* viewport)
 
         // SDL hack: Hide icon from task bar
         // Note: SDL 2.0.6+ has a SDL_WINDOW_SKIP_TASKBAR flag which is supported under Windows but the way it create the window breaks our seamless transition.
-        if (viewport->Flags & ImGuiViewportFlags_NoDecoration)
+        ImGuiIO& io = ImGui::GetIO();
+        if (io.ConfigFlags & ImGuiConfigFlags_PlatformNoTaskBar)
         {
             LONG ex_style = ::GetWindowLong(hwnd, GWL_EXSTYLE);
             ex_style &= ~WS_EX_APPWINDOW;
