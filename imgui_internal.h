@@ -534,19 +534,19 @@ struct ImGuiViewport
     ImGuiWindow*        Window;
     ImVec2              Pos;                    // Position in imgui virtual space (Pos.y == 0.0)
     ImVec2              Size;
+    float               DpiScale;
     ImDrawData          DrawData;
     ImDrawDataBuilder   DrawDataBuilder;
 
     // [Optional] OS/Platform Layer data. This is to allow the creation/manipulate of multiple OS/Platform windows. Not all back-ends will allow this.
     ImVec2              PlatformOsDesktopPos;   // Position in OS desktop/native space
-    float               PlatformDpiScale;       // FIXME-DPI: Unused
     void*               PlatformUserData;       // void* to hold custom data structure for the platform (e.g. windowing info, render context)
     void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. HWND, GlfwWindow*)
     bool                PlatformRequestClose;   // Platform window requested closure
     bool                PlatformRequestResize;  // Platform window requested resize
     void*               RendererUserData;       // void* to hold custom data structure for the renderer (e.g. framebuffer)
 
-    ImGuiViewport(ImGuiID id, int idx)  { ID = id; Idx = idx; Flags = 0; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Window = NULL; PlatformDpiScale = 0.0f; PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestResize = false; RendererUserData = NULL; }
+    ImGuiViewport(ImGuiID id, int idx)  { ID = id; Idx = idx; Flags = 0; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Window = NULL; DpiScale = 0.0f; PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestResize = false; RendererUserData = NULL; }
     ~ImGuiViewport()                    { IM_ASSERT(PlatformUserData == NULL && RendererUserData == NULL); }
     ImRect  GetRect() const             { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     float   GetNextX() const            { const float SPACING = 4.0f; return Pos.x + Size.x + SPACING; }
@@ -1010,7 +1010,8 @@ struct IMGUI_API ImGuiWindow
     ImGuiMenuColumns        MenuColumns;                        // Simplified columns storage for menu items
     ImGuiStorage            StateStorage;
     ImVector<ImGuiColumnsSet> ColumnsStorage;
-    float                   FontWindowScale;                    // Scale multiplier per-window
+    float                   FontWindowScale;                    // User scale multiplier per-window
+    float                   FontDpiScale;
     ImDrawList*             DrawList;
     ImGuiWindow*            ParentWindow;                       // If we are a child _or_ popup window, this is pointing to our parent. Otherwise NULL.
     ImGuiWindow*            RootWindow;                         // Point to ourself or first ancestor that is not a child window.
@@ -1042,7 +1043,7 @@ public:
 
     // We don't use g.FontSize because the window may be != g.CurrentWidow.
     ImRect      Rect() const                            { return ImRect(Pos.x, Pos.y, Pos.x+Size.x, Pos.y+Size.y); }
-    float       CalcFontSize() const                    { return GImGui->FontBaseSize * FontWindowScale; }
+    float       CalcFontSize() const                    { return GImGui->FontBaseSize * FontWindowScale * FontDpiScale; }
     float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0.0f : CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f; }
     ImRect      TitleBarRect() const                    { return ImRect(Pos, ImVec2(Pos.x + SizeFull.x, Pos.y + TitleBarHeight())); }
     float       MenuBarHeight() const                   { return (Flags & ImGuiWindowFlags_MenuBar) ? CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f : 0.0f; }

@@ -1944,7 +1944,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
 
     LastFrameActive = -1;
     ItemWidthDefault = 0.0f;
-    FontWindowScale = 1.0f;
+    FontWindowScale = FontDpiScale = 1.0f;
 
     DrawList = IM_NEW(ImDrawList)(&context->DrawListSharedData);
     DrawList->_OwnerName = Name;
@@ -3388,13 +3388,20 @@ static void ImGui::UpdateViewports()
         if (g.IO.PlatformInterface.GetWindowDpiScale)
             new_dpi_scale = g.IO.PlatformInterface.GetWindowDpiScale(viewport);
         else
-            new_dpi_scale = (viewport->PlatformDpiScale != 0.0f) ? viewport->PlatformDpiScale : 1.0f;
-        if (viewport->PlatformDpiScale != 0.0f && new_dpi_scale != viewport->PlatformDpiScale)
+            new_dpi_scale = (viewport->DpiScale != 0.0f) ? viewport->DpiScale : 1.0f;
+        if (viewport->DpiScale != 0.0f && new_dpi_scale != viewport->DpiScale)
         {
-            float scale_factor = new_dpi_scale / viewport->PlatformDpiScale;
-            ScaleWindowsInViewport(viewport, scale_factor);
+            float scale_factor = new_dpi_scale / viewport->DpiScale;
+            if (g.IO.ConfigFlags & ImGuiConfigFlags_EnableDpiScaleViewports)
+                ScaleWindowsInViewport(viewport, scale_factor);
+            //if (viewport == GetMainViewport())
+            //    g.IO.PlatformInterface.SetWindowSize(viewport, viewport->Size * scale_factor);
+
+            // FIXME-DPI: We need to preserve our pivots
+            //if (g.MovingWindow)
+            //    g.ActiveIdClickOffset = g.ActiveIdClickOffset * scale_factor;
         }
-        viewport->PlatformDpiScale = new_dpi_scale;
+        viewport->DpiScale = new_dpi_scale;
     }
 
     // Update main viewport with current size (and OS window position, if known)
@@ -4527,11 +4534,9 @@ void ImGui::SetCurrentViewport(ImGuiViewport* viewport)
         viewport->LastFrameActive = g.FrameCount;
     if (g.CurrentViewport == viewport)
         return;
-    if (g.CurrentViewport && g.IO.PlatformInterface.EndViewport)
-        g.IO.PlatformInterface.EndViewport(g.CurrentViewport);
     g.CurrentViewport = viewport;
-    if (g.CurrentViewport && g.IO.PlatformInterface.BeginViewport)
-        g.IO.PlatformInterface.BeginViewport(g.CurrentViewport);
+    if (g.CurrentViewport && g.IO.PlatformInterface.ChangedViewport)
+        g.IO.PlatformInterface.ChangedViewport(g.CurrentViewport);
 }
 
 ImGuiViewport* ImGui::Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& os_desktop_pos, const ImVec2& size)
@@ -4558,6 +4563,10 @@ ImGuiViewport* ImGui::Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFla
     viewport->Flags = flags;
     viewport->PlatformOsDesktopPos = os_desktop_pos;
     viewport->LastFrameActive = g.FrameCount;
+
+    // Request an initial DpiScale before the OS platform window creation
+    if (g.IO.PlatformInterface.GetWindowDpiScale)
+        viewport->DpiScale = g.IO.PlatformInterface.GetWindowDpiScale(viewport);
     return viewport;
 }
 
@@ -6322,6 +6331,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         UpdateWindowViewport(window, window_pos_set_by_api);
         SetCurrentViewport(window->Viewport);
+        window->FontDpiScale = (g.IO.ConfigFlags & ImGuiConfigFlags_EnableDpiScaleFonts) ? window->Viewport->DpiScale : 1.0f;
         SetCurrentWindow(window);
         flags = window->Flags;
 
@@ -13805,6 +13815,11 @@ static void ScaleWindow(ImGuiWindow* window, float scale)
 void ImGui::ScaleWindowsInViewport(ImGuiViewport* viewport, float scale)
 {
     ImGuiContext& g = *GImGui;
+    if (g.IO.MousePosViewport == viewport->ID)
+    {
+        //g.IO.MousePos = g.IO.MousePosPrev = ImFloor((g.IO.MousePos - viewport->Pos) * scale) + viewport->Pos;
+        //g.IO.MouseDelta = ImVec2(0,0);
+    }
     if (viewport->Window)
     {
         ScaleWindow(viewport->Window, scale);
@@ -13992,7 +14007,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 {
                     ImGui::BulletText("Pos: (%.0f,%.0f)", viewport->Pos.x, viewport->Pos.y);
                     ImGui::BulletText("Flags: 0x%04X", viewport->Flags);
-                    ImGui::BulletText("PlatformOsDesktopPos: (%.0f,%.0f); DpiScale: %.0f%%", viewport->PlatformOsDesktopPos.x, viewport->PlatformOsDesktopPos.y, viewport->PlatformDpiScale * 100.0f);
+                    ImGui::BulletText("PlatformOsDesktopPos: (%.0f,%.0f); DpiScale: %.0f%%", viewport->PlatformOsDesktopPos.x, viewport->PlatformOsDesktopPos.y, viewport->DpiScale * 100.0f);
                     for (int draw_list_i = 0; draw_list_i < viewport->DrawDataBuilder.Layers[0].Size; draw_list_i++)
                         Funcs::NodeDrawList(NULL, viewport->DrawDataBuilder.Layers[0][draw_list_i], "DrawList");
                     ImGui::TreePop();

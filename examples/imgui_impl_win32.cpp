@@ -470,6 +470,18 @@ static void ImGui_ImplWin32_SetWindowTitle(ImGuiViewport* viewport, const char* 
     ::SetWindowTextA(data->Hwnd, title);
 }
 
+static float ImGui_ImplWin32_GetWindowDpiScale(ImGuiViewport* viewport)
+{
+    ImGuiPlatformDataWin32* data = (ImGuiPlatformDataWin32*)viewport->PlatformUserData;
+    if (data && data->Hwnd)
+        return ImGui_ImplWin32_GetDpiScaleForHwnd(data->Hwnd);
+
+    // The first frame a viewport is created we don't have a window yet
+    return ImGui_ImplWin32_GetDpiScaleForRect(
+        (int)(viewport->PlatformOsDesktopPos.x), (int)(viewport->PlatformOsDesktopPos.y),
+        (int)(viewport->PlatformOsDesktopPos.x + viewport->Size.x), (int)(viewport->PlatformOsDesktopPos.y + viewport->Size.y));
+}
+
 static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
@@ -531,6 +543,7 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     io.PlatformInterface.SetWindowSize = ImGui_ImplWin32_SetWindowSize;
     io.PlatformInterface.GetWindowSize = ImGui_ImplWin32_GetWindowSize;
     io.PlatformInterface.SetWindowTitle = ImGui_ImplWin32_SetWindowTitle;
+    io.PlatformInterface.GetWindowDpiScale = ImGui_ImplWin32_GetWindowDpiScale;
 
     // Register main window handle
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();

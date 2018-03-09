@@ -779,12 +779,15 @@ enum ImGuiConfigFlags_
 
     // [BETA] Viewports
     ImGuiConfigFlags_EnableViewports                    = 1 << 4,   // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
-    ImGuiConfigFlags_PlatformNoTaskBar                  = 1 << 5,
-    ImGuiConfigFlags_PlatformHasViewports               = 1 << 6,   // Back-end Platform supports multiple viewports
-    ImGuiConfigFlags_PlatformHasMouseHoveredViewport    = 1 << 7,   // Back-end Platform supports setting io.MouseHoveredViewport to the viewport directly under the mouse _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag and _REGARDLESS_ of whether another viewport is focused and may be capturing the mouse. This information is _NOT EASY_ to provide correctly with most high-level engines. Don't see this without studying how the examples/ back-end handle it.
-    ImGuiConfigFlags_PlatformHasWantMoveMouseSupport    = 1 << 8,   // Back-end Platform supports io.WantMoveMouse request by updating the OS mouse cursor position (currently only used by ImGuiConfigFlags_NavMoveMouse feature, will be useful for widgets teleporting/wrapping the cursor)
-    ImGuiConfigFlags_PlatformHasWindowAlpha             = 1 << 9,   // Back-end Platform supports transparent windows
-    ImGuiConfigFlags_RendererHasViewports               = 1 << 10,  // Back-end Renderer supports multiple viewports
+    ImGuiConfigFlags_EnableDpiScaleViewports            = 1 << 5,
+    ImGuiConfigFlags_EnableDpiScaleFonts                = 1 << 6,
+
+    ImGuiConfigFlags_PlatformNoTaskBar                  = 1 << 10,
+    ImGuiConfigFlags_PlatformHasViewports               = 1 << 11,  // Back-end Platform supports multiple viewports
+    ImGuiConfigFlags_PlatformHasMouseHoveredViewport    = 1 << 12,  // Back-end Platform supports setting io.MouseHoveredViewport to the viewport directly under the mouse _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag and _REGARDLESS_ of whether another viewport is focused and may be capturing the mouse. This information is _NOT EASY_ to provide correctly with most high-level engines. Don't see this without studying how the examples/ back-end handle it.
+    ImGuiConfigFlags_PlatformHasWantMoveMouseSupport    = 1 << 13,  // Back-end Platform supports io.WantMoveMouse request by updating the OS mouse cursor position (currently only used by ImGuiConfigFlags_NavMoveMouse feature, will be useful for widgets teleporting/wrapping the cursor)
+    ImGuiConfigFlags_PlatformHasWindowAlpha             = 1 << 14,  // Back-end Platform supports transparent windows
+    ImGuiConfigFlags_RendererHasViewports               = 1 << 15,  // Back-end Renderer supports multiple viewports
     
     // Platform Info (free of use, for user/application convenience)
     ImGuiConfigFlags_IsSRGB                             = 1 << 20,  // Back-end is SRGB-aware (Storage flag to allow your back-end to communicate to shared widgets. Not used by core ImGui)
@@ -965,8 +968,7 @@ struct ImGuiPlatformInterface
 
     // FIXME-DPI
     float   (*GetWindowDpiScale)(ImGuiViewport* viewport);  // (Optional)
-    void    (*BeginViewport)(ImGuiViewport* viewport);      // (Optional) Called during Begin() every time the viewport we are outputting into changes (viewport = next viewport)
-    void    (*EndViewport)(ImGuiViewport* viewport);        // (Optional) Called during Begin() every time the viewport we are outputting into changes (viewport = previous viewport)
+    void    (*ChangedViewport)(ImGuiViewport* viewport);    // (Optional) Called during Begin() every time the viewport we are outputting into changes (viewport = next viewport)
 };
 
 // (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_EnableMultiViewport) is enabled
