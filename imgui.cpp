@@ -4523,6 +4523,8 @@ void ImGui::SetCurrentViewport(ImGuiViewport* viewport)
     // Notify platform interface of viewport changes
     // FIXME-DPI: This is only currently used for experimenting with handling of multiple DPI
     ImGuiContext& g = *GImGui;
+    if (viewport)
+        viewport->LastFrameActive = g.FrameCount;
     if (g.CurrentViewport == viewport)
         return;
     if (g.CurrentViewport && g.IO.PlatformInterface.EndViewport)
@@ -6030,10 +6032,6 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
     if ((window->Flags & ImGuiWindowFlags_FullViewport) && !(window->Viewport->Flags & ImGuiViewportFlags_NoDecoration))
         window->Flags |= ImGuiWindowFlags_NoTitleBar;
 
-    // Disable rounding for the window
-    if (window->Viewport != main_viewport)
-        window->WindowRounding = 0.0f;
-
     if (window->Flags & ImGuiWindowFlags_FullViewport)
         SetWindowPos(window, window->Viewport->Pos, ImGuiCond_Always);
 
@@ -6238,8 +6236,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     IM_ASSERT(parent_window != NULL || !(flags & ImGuiWindowFlags_ChildWindow));
 
     // Add to stack
+    // We intentionally set g.CurrentWindow to NULL to prevent usage until when the viewport is set, then will call SetCurrentWindow()
     g.CurrentWindowStack.push_back(window);
-    SetCurrentWindow(window);
+    g.CurrentWindow = NULL;
     CheckStacksSize(window, true);
     if (flags & ImGuiWindowFlags_Popup)
     {
@@ -6322,7 +6321,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         UpdateWindowViewport(window, window_pos_set_by_api);
         SetCurrentViewport(window->Viewport);
-        window->Viewport->LastFrameActive = g.FrameCount;
+        SetCurrentWindow(window);
         flags = window->Flags;
 
         if (p_open != NULL && window->Viewport->PlatformRequestClose && !(window->Viewport->Flags & ImGuiViewportFlags_MainViewport))
@@ -6333,6 +6332,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Lock window rounding, border size and padding for the frame (so that altering them doesn't cause inconsistencies)
         window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
+        if (window->Viewport != GetMainViewport())
+            window->WindowRounding = 0.0f;
         window->WindowBorderSize = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildBorderSize : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupBorderSize : style.WindowBorderSize;
         window->WindowPadding = style.WindowPadding;
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_Popup)) && window->WindowBorderSize == 0.0f)
@@ -6785,6 +6786,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.LastItemId = window->MoveId;
         window->DC.LastItemStatusFlags = IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0;
         window->DC.LastItemRect = title_bar_rect;
+    }
+    else
+    {
+        SetCurrentViewport(window->Viewport);
+        SetCurrentWindow(window);
     }
 
     PushClipRect(window->InnerClipRect.Min, window->InnerClipRect.Max, true);
