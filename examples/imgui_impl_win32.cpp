@@ -272,6 +272,84 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
 }
 
 // --------------------------------------------------------------------------------------------------------
+// DPI handling
+// Those in theory should be simple calls but Windows has multiple ways to handle DPI, and most of them
+// require recent Windows versions at runtime or recent Windows SDK at compile-time. Neither we want to depend on.
+// So we dynamically select and load those functions to avoid dependencies. This is the scheme successfully 
+// used by GLFW (from which we borrowed some of the code here) and other applications aiming to be portable.
+//---------------------------------------------------------------------------------------------------------
+// FIXME-DPI: For now we just call SetProcessDpiAwareness(PROCESS_PER_MONITOR_AWARE) without requiring SDK 8.1 or 10.
+// We may allow/aim calling the most-recent-available version, e.g. Windows 10 Creators Update has SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+// At this point ImGui_ImplWin32_EnableDpiAwareness() is just a helper called by main.cpp, we don't call it ourselves.
+//---------------------------------------------------------------------------------------------------------
+
+static BOOL IsWindowsVersionOrGreater(WORD major, WORD minor, WORD sp)
+{
+    OSVERSIONINFOEXW osvi = { sizeof(osvi), major, minor, 0, 0,{ 0 }, sp };
+    DWORD mask = VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR;
+    ULONGLONG cond = VerSetConditionMask(0, VER_MAJORVERSION, VER_GREATER_EQUAL);
+    cond = VerSetConditionMask(cond, VER_MINORVERSION, VER_GREATER_EQUAL);
+    cond = VerSetConditionMask(cond, VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
+    return VerifyVersionInfoW(&osvi, mask, cond);
+}
+#define IsWindows8Point1OrGreater()  IsWindowsVersionOrGreater(HIBYTE(0x0602), LOBYTE(0x0602), 0) // _WIN32_WINNT_WINBLUE
+#define IsWindows10OrGreater()       IsWindowsVersionOrGreater(HIBYTE(0x0A00), LOBYTE(0x0A00), 0) // _WIN32_WINNT_WIN10
+
+#ifndef DPI_ENUMS_DECLARED
+typedef enum { PROCESS_DPI_UNAWARE = 0, PROCESS_SYSTEM_DPI_AWARE = 1, PROCESS_PER_MONITOR_DPI_AWARE = 2 } PROCESS_DPI_AWARENESS;
+typedef enum { MDT_EFFECTIVE_DPI = 0, MDT_ANGULAR_DPI = 1, MDT_RAW_DPI = 2, MDT_DEFAULT = MDT_EFFECTIVE_DPI } MONITOR_DPI_TYPE;
+#endif
+typedef HRESULT(WINAPI * PFN_SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS);              // Shcore.lib+dll, Windows 8.1
+typedef HRESULT(WINAPI * PFN_GetDpiForMonitor)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*); // Shcore.lib+dll, Windows 8.1
+
+void ImGui_ImplWin32_EnableDpiAwareness()
+{
+    if (IsWindows8Point1OrGreater())
+    {
+        static HINSTANCE shcore_dll = ::LoadLibraryA("shcore.dll"); // Reference counted per-process
+        if (PFN_SetProcessDpiAwareness SetProcessDpiAwarenessFn = (PFN_SetProcessDpiAwareness)::GetProcAddress(shcore_dll, "SetProcessDpiAwareness"))
+            SetProcessDpiAwarenessFn(PROCESS_PER_MONITOR_DPI_AWARE);
+    }
+    else
+    {
+        SetProcessDPIAware();
+    }
+}
+
+float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
+{
+    UINT xdpi = 96, ydpi = 96;
+    if (IsWindows8Point1OrGreater())
+    {
+        static HINSTANCE shcore_dll = ::LoadLibraryA("shcore.dll"); // Reference counted per-process
+        if (PFN_GetDpiForMonitor GetDpiForMonitorFn = (PFN_GetDpiForMonitor)::GetProcAddress(shcore_dll, "GetDpiForMonitor"))
+            GetDpiForMonitorFn((HMONITOR)monitor, MDT_EFFECTIVE_DPI, &xdpi, &ydpi);
+    }
+    else
+    {
+        const HDC dc = ::GetDC(NULL);
+        xdpi = ::GetDeviceCaps(dc, LOGPIXELSX);
+        ydpi = ::GetDeviceCaps(dc, LOGPIXELSY);
+        ::ReleaseDC(NULL, dc);
+    }
+    IM_ASSERT(xdpi == ydpi); // Please contact me if you hit this assert!
+    return xdpi / 96.0f;
+}
+
+float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)
+{
+    HMONITOR monitor = ::MonitorFromWindow((HWND)hwnd, MONITOR_DEFAULTTONEAREST);
+    return ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
+}
+
+float ImGui_ImplWin32_GetDpiScaleForRect(int x1, int y1, int x2, int y2)
+{
+    RECT viewport_rect = { (UINT)x1, (UINT)y1, (UINT)x2, (UINT)y2 };
+    HMONITOR monitor = ::MonitorFromRect(&viewport_rect, MONITOR_DEFAULTTONEAREST);
+    return ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
+}
+
+// --------------------------------------------------------------------------------------------------------
 // Platform Windows
 // --------------------------------------------------------------------------------------------------------
 

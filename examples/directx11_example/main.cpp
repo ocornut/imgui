@@ -96,27 +96,9 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-// FIXME-DPI: For now we just want to call SetProcessDpiAwareness(PROCESS_PER_MONITOR_AWARE) without requiring SDK 8.1 or 10
-void SetupDpiAwareness()
-{
-    typedef enum PROCESS_DPI_AWARENESS
-    {
-        PROCESS_DPI_UNAWARE = 0,
-        PROCESS_SYSTEM_DPI_AWARE = 1,
-        PROCESS_PER_MONITOR_DPI_AWARE = 2
-    } PROCESS_DPI_AWARENESS;
-    if (HINSTANCE shcore_dll = ::LoadLibraryA("shcore.dll"))
-    {
-        typedef HRESULT(WINAPI * PFN_SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS);
-        if (PFN_SetProcessDpiAwareness SetProcessDpiAwarenessFn = (PFN_SetProcessDpiAwareness)::GetProcAddress(shcore_dll, "SetProcessDpiAwareness"))
-            SetProcessDpiAwarenessFn(PROCESS_PER_MONITOR_DPI_AWARE);
-        ::FreeLibrary(shcore_dll);
-    }
-}
-
 int main(int, char**)
 {
-    SetupDpiAwareness();
+    ImGui_ImplWin32_EnableDpiAwareness();
 
     // Create application window
     WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, _T("ImGui Example"), NULL };

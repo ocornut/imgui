@@ -13804,13 +13804,13 @@ static void ScaleWindow(ImGuiWindow* window, float scale)
 // Scale all windows (position, size). Use when e.g. changing DPI. (This is a lossy operation!)
 void ImGui::ScaleWindowsInViewport(ImGuiViewport* viewport, float scale)
 {
+    ImGuiContext& g = *GImGui;
     if (viewport->Window)
     {
         ScaleWindow(viewport->Window, scale);
     }
     else
     {
-        ImGuiContext& g = *GImGui;
         for (int i = 0; i != g.Windows.Size; i++)
             if (g.Windows[i]->Viewport == viewport)
                 ScaleWindow(g.Windows[i], scale);
@@ -13992,7 +13992,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 {
                     ImGui::BulletText("Pos: (%.0f,%.0f)", viewport->Pos.x, viewport->Pos.y);
                     ImGui::BulletText("Flags: 0x%04X", viewport->Flags);
-                    ImGui::BulletText("PlatformOsDesktopPos: (%.0f,%.0f)", viewport->PlatformOsDesktopPos.x, viewport->PlatformOsDesktopPos.y);
+                    ImGui::BulletText("PlatformOsDesktopPos: (%.0f,%.0f); DpiScale: %.0f%%", viewport->PlatformOsDesktopPos.x, viewport->PlatformOsDesktopPos.y, viewport->PlatformDpiScale * 100.0f);
                     for (int draw_list_i = 0; draw_list_i < viewport->DrawDataBuilder.Layers[0].Size; draw_list_i++)
                         Funcs::NodeDrawList(NULL, viewport->DrawDataBuilder.Layers[0][draw_list_i], "DrawList");
                     ImGui::TreePop();
