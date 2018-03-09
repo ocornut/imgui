@@ -1525,6 +1525,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 
     const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
     ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_cfg.SizePixels, &font_cfg, GetGlyphRangesDefault());
+    font->DisplayOffset.y = 1.0f;
     return font;
 }
 
@@ -1824,8 +1825,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
         stbtt_GetFontVMetrics(&tmp.FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
 
-        const float ascent = unscaled_ascent * font_scale;
-        const float descent = unscaled_descent * font_scale;
+        const float ascent = ImFloor(unscaled_ascent * font_scale + ((unscaled_ascent > 0.0f) ? +1 : -1));
+        const float descent = ImFloor(unscaled_descent * font_scale + ((unscaled_descent > 0.0f) ? +1 : -1));
         ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
         const float off_x = cfg.GlyphOffset.x;
         const float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
@@ -2139,7 +2140,7 @@ ImFont::ImFont()
 {
     Scale = 1.0f;
     FallbackChar = (ImWchar)'?';
-    DisplayOffset = ImVec2(0.0f, 1.0f);
+    DisplayOffset = ImVec2(0.0f, 0.0f);
     ClearOutputData();
 }
 
