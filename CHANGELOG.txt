@@ -46,6 +46,8 @@ Various internal refactors have also been done, as part of the navigation work a
 Breaking Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.60)
 
+ - Fonts: changed ImFont::DisplayOffset.y to defaults to 0 instead of +1. Fixed vertical rounding of Ascent/Descent to match TrueType renderer. 
+   If you were adding or subtracting to ImFont::DisplayOffset check if your fonts are correctly aligned vertically. (#1619)
  - BeginDragDropSource(): temporarily removed the optional mouse_button=0 parameter because it is not really usable in many situations at the moment. 
  - Obsoleted the io.RenderDrawListsFn callback, you can call your graphics engine render function after ImGui::Render(). Use ImGui::GetDrawData() to retrieve the ImDrawData* to display.
  - Reorganized context handling to be more explicit,
@@ -104,14 +106,16 @@ Other Changes:
 - Popup: Better handling of user mistakenly calling OpenPopup() every frame (with reopen_existing option). The error will now be more visible and easier to understand. (#1497)
 - Popup: BeginPopup(): Exposed extra_flags parameter that are passed through to Begin(). (#1533)
 - Popup: BeginPopupModal: fixed the conditional test for SetNextWindowPos() which was polling the wrong window, which in practice made the test succeed all the time.
-- Tooltip: BeginTooltip() sets NoInputs flag.
+- Tooltip: BeginTooltip() sets ImGuiWindowFlags_NoInputs flag.
 - Scrollbar: Fixed ScrollbarY enable test after ScrollbarX has been enabled being a little off (small regression from Nov 2017). (#1574)
 - Scrollbar: Fixed ScrollbarX enable test subtracting WindowPadding.x (this has been there since the addition of horizontal scroll bar!).
 - Columns: Clear offsets data when columns count changed. (#1525)
 - Columns: Fixed a memory leak of ImGuiColumnsSet's Columns vector. (#1529) [@unprompted]
+- Columns: Fixed resizing a window very small breaking some columns positioning (broken in 1.53).
+- Columns: The available column extent takes consideration of the right-most clipped pixel, so the right-most column may look a little wider but will contain the same amount of visible contents.
 - MenuBar: Fixed menu bar pushing a clipping rect outside of its allocated bound (usually unnoticeable).
 - TreeNode: nodes with the ImGuiTreeNodeFlags_Leaf flag correctly disable highlight when DragDrop is active. (#143, #581)
-- Drag and Drop: Increased payload type string to 12 characters instead of 8. (#143)
+- Drag and Drop: Increased payload type string to 32 characters instead of 8. (#143)
 - Drag and Drop: TreeNode as drop target displays rectangle over full frame. (#1597, #143)
 - DragFloat: Fix/workaround for backends which do not preserve a valid mouse position when dragged out of bounds. (#1559)
 - Slider, Combo: Use ImGuiCol_FrameBgHovered color when hovered. (#1456) [@stfx]
@@ -119,6 +123,12 @@ Other Changes:
 - Combo: BeginCombo(): Added ImGuiComboFlags_NoPreview to disable the preview and only display a square arrow button. 
 - Combo: Arrow button isn't displayed over frame background so its blended color matches other buttons. Left side of the button isn't rounded.
 - PlotLines: plot a flat line if scale_min==scale_max. (#1621)
+- Fonts: Changed DisplayOffset.y to defaults to 0 instead of +1. Fixed rounding of Ascent/Descent to match TrueType renderer. 
+  If you were adding or subtracting to ImFont::DisplayOffset check if your fonts are correctly aligned vertically. (#1619)
+- Fonts: Updated stb_truetype from 1.14 to stb_truetype 1.19. (w/ include fix from some platforms #1622)
+- Fonts: Added optional FreeType rasterizer in misc/freetype. Moved from imgui_club repo. (#618) [@Vuhdo, @mikesart, @ocornut]
+- Fonts: Moved extra_fonts/ to misc/fonts/.
+- ImFontAtlas: Fixed cfg.MergeMode not reusing existing glyphs if available (always overwrote).
 - ImFontAtlas: Handle stb_truetype stbtt_InitFont() and stbtt_PackBegin() possible failures more gracefully, GetTexDataAsRGBA32() won't crash during conversion. (#1527)
 - ImFontAtlas: Moved mouse cursor data out of ImGuiContext, fix drawing them with multiple contexts. Also remove the last remaining undesirable dependency on ImGui in imgui_draw.cpp. (#939)
 - ImFontAtlas: Added ImFontAtlasFlags_NoPowerOfTwoHeight flag to disable padding font height to nearest power of two. (#1613)
@@ -134,18 +144,17 @@ Other Changes:
 - Misc: Updated stb_rect_pack from 0.10 to 0.11 (minor changes).
 - Misc: Added ImGuiConfigFlags_IsSRGB and ImGuiConfigFlags_IsTouchScreen user flags (for io.ConfigFlags). 
   (Those flags are not used by ImGui itself, they only exists to make it easy for the engine/back-end to pass information to the application in a standard manner.)
-- Fonts: Updated stb_truetype from 1.14 to stb_truetype 1.19. (w/ include fix from some platforms #1622)
-- Fonts: Added optional FreeType rasterizer in misc/freetype. Moved from imgui_club repo. (#618) [@Vuhdo, @mikesart, @ocornut]
-- Fonts: Moved extra_fonts/ to misc/fonts/.
+- Metrics: Added display of Columns state.
 - Demo: Improved Selectable() examples. (#1528)
 - Demo: Tweaked the Child demos, added a menu bar to the second child to test some navigation functions.
 - Demo: Console: Using ImGuiCol_Text to be more friendly to color changes. 
 - Demo: Using IM_COL32() instead of ImColor() in ImDrawList centric contexts. Trying to phase out use of the ImColor helper whenever possible.
 - Examples: Files in examples/ now include their own changelog so it is easier to occasionally update your bindings if needed.
 - Examples: Using Dark theme by default. (#707). Tweaked demo code.
-- Examples: Added support for horizontal mouse wheel for API that allows it. (#1463)
+- Examples: Added support for horizontal mouse wheel for API that allows it. (#1463) [@tseeker]
 - Examples: DirectX12: Added DirectX 12 example. (#301) [@jdm3]
-- Examples: OpenGL3+GLFW,SDL: Changed GLSL shader version to 150 (#1466, #1504).
+- Examples: OpenGL3+GLFW,SDL: Changed GLSL shader version from 330 to 150. (#1466, #1504)
+- Examples: OpenGL3+GLFW,SDL: Added a way to override the GLSL version string in the Init function. (#1466, #1504).
 - Examples: OpenGL3+GLFW,SDL: Creating VAO in the render function so it can be more easily used by multiple shared OpenGL contexts. (#1217)
 - Examples: OpenGL3+GLFW: Using 3.2 context instead of 3.3. (#1466)
 - Examples: OpenGL: Setting up glPixelStorei() explicitly before uploading texture.
@@ -264,7 +273,7 @@ Other Changes:
 - NewFrame(): using literal strings in the most-frequently firing IM_ASSERT expressions to increase the odd of programmers seeing them (especially those who don't use a debugger).
 - NewFrame() now asserts if neither Render or EndFrame have been called. Exposed EndFrame(). Made it legal to call EndFrame() more than one. (#1423)
 - ImGuiStorage: Added BuildSortByKey() helper to rebuild storage from stratch.
-- ImFont: Added GetDebugName() helper. 
+- ImFont: Added GetDebugName() helper.
 - ImFontAtlas: Added missing Thai punctuation in the GetGlyphRangesThai() ranges. (#1396) [@nProtect]
 - ImDrawList: Removed 'bool anti_aliased = true' final parameter of ImDrawList::AddPolyline() and ImDrawList::AddConvexPolyFilled(). Anti-aliasing is controlled via the regular style.AntiAliased flags.
 - ImDrawList: Added ImDrawList::AddImageRounded() helper. (#845) [@thedmd] 

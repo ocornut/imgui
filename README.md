@@ -145,8 +145,7 @@ Frameworks:
 - Unreal Engine 4: [segross/UnrealImGui](https://github.com/segross/UnrealImGui) or [sronsse/UnrealEngine_ImGui](https://github.com/sronsse/UnrealEngine_ImGui)
 - SFML: [imgui-sfml](https://github.com/EliasD/imgui-sfml) or [imgui-backends](https://github.com/Mischa-Alff/imgui-backends)
 
-For other bindings: see [this page](https://github.com/ocornut/imgui/wiki/Links/).
-Please contact me with the Issues tracker or Twitter to fix/update this list.
+For other bindings: see [this page](https://github.com/ocornut/imgui/wiki/Links/). Also see [wiki](https://github.com/ocornut/imgui/wiki) for a few other links and ideas. Contact me if you would like to add to those lists.
 
 Roadmap
 -------
