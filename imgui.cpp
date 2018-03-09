@@ -5959,13 +5959,14 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
     else if (window_follow_mouse_viewport && IsMousePosValid())
     {
         // Calculate mouse position in OS/platform coordinates
-        if (!window_is_mouse_tooltip && !GetViewportRect(window).Contains(window->Rect()))
+        ImGuiViewport* current_viewport = window->Viewport;
+        if (!window_is_mouse_tooltip && !current_viewport->GetRect().Contains(window->Rect()))
         {
             // Create an undecorated, temporary OS/platform window
             ImVec2 os_desktop_pos = ConvertViewportPosToOsDesktopPos(g.IO.MousePos - g.ActiveIdClickOffset, g.MouseViewport);
             ImGuiViewportFlags viewport_flags = ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs;
             ImGuiViewport* viewport = Viewport(window, window->ID, viewport_flags, os_desktop_pos, window->Size);
-            window->Flags |= ImGuiWindowFlags_FullViewport | ImGuiWindowFlags_NoBringToFrontOnFocus;
+            window->Flags |= ImGuiWindowFlags_FullViewport;
             window->Viewport = viewport;
             created_viewport = true;
 
@@ -6004,7 +6005,7 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
             if (window->ViewportOsDesktopPos.x != FLT_MAX && window->ViewportOsDesktopPos.y != FLT_MAX)
             {
                 ImGuiViewport* viewport = Viewport(window, window->ID, ImGuiViewportFlags_NoDecoration, window->ViewportOsDesktopPos, window->Size);
-                window->Flags |= ImGuiWindowFlags_FullViewport | ImGuiWindowFlags_NoBringToFrontOnFocus;
+                window->Flags |= ImGuiWindowFlags_FullViewport;
                 window->Viewport = viewport;
                 created_viewport = true;
             }
@@ -6025,7 +6026,7 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
         window->Viewport->Flags |= ImGuiViewportFlags_NoDecoration;
         window->Viewport->Size = window->Size;
         window->Viewport->PlatformOsDesktopPos = ConvertViewportPosToOsDesktopPos(window->Pos, window->Viewport);
-        window->Flags |= ImGuiWindowFlags_FullViewport | ImGuiWindowFlags_NoBringToFrontOnFocus;
+        window->Flags |= ImGuiWindowFlags_FullViewport;
     }
 
     // If the OS window has a title bar, hide our imgui title bar
