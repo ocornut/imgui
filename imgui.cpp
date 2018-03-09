@@ -6291,7 +6291,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     if (g.NextWindowData.CollapsedCond)
         SetWindowCollapsed(window, g.NextWindowData.CollapsedVal, g.NextWindowData.CollapsedCond);
     if (g.NextWindowData.FocusCond)
-        SetWindowFocus();
+        FocusWindow(window);
     if (window->Appearing)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, false);
 
@@ -6317,6 +6317,20 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->LastFrameActive = current_frame;
         window->IDStack.resize(1);
 
+        // VIEWPORT
+        // We need to do this before using any style/font sizes, as viewport with a different DPI will affect those sizes.
+
+        UpdateWindowViewport(window, window_pos_set_by_api);
+        SetCurrentViewport(window->Viewport);
+        window->Viewport->LastFrameActive = g.FrameCount;
+        flags = window->Flags;
+
+        if (p_open != NULL && window->Viewport->PlatformRequestClose && !(window->Viewport->Flags & ImGuiViewportFlags_MainViewport))
+        {
+            window->Viewport->PlatformRequestClose = false;
+            *p_open = false;
+        }
+
         // Lock window rounding, border size and padding for the frame (so that altering them doesn't cause inconsistencies)
         window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
         window->WindowBorderSize = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildBorderSize : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupBorderSize : style.WindowBorderSize;
@@ -6341,19 +6355,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->Collapsed = false;
         }
         window->CollapseToggleWanted = false;
-
-        // VIEWPORT
-
-        UpdateWindowViewport(window, window_pos_set_by_api);
-        SetCurrentViewport(window->Viewport);
-        window->Viewport->LastFrameActive = g.FrameCount;
-        flags = window->Flags;
-
-        if (p_open != NULL && window->Viewport->PlatformRequestClose && !(window->Viewport->Flags & ImGuiViewportFlags_MainViewport))
-        {
-            window->Viewport->PlatformRequestClose = false;
-            *p_open = false;
-        }
 
         // SIZE
 
