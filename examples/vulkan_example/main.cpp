@@ -12,9 +12,9 @@
 
 #define IMGUI_MAX_POSSIBLE_BACK_BUFFERS 16
 #define IMGUI_UNLIMITED_FRAME_RATE
-//#ifdef _DEBUG
-//#define IMGUI_VULKAN_DEBUG_REPORT
-//#endif
+#ifdef _DEBUG
+#define IMGUI_VULKAN_DEBUG_REPORT
+#endif
 
 static VkAllocationCallbacks*   g_Allocator = NULL;
 static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -568,19 +568,12 @@ static void frame_end()
 static void frame_present()
 {
     VkResult err;
-    // If IMGUI_UNLIMITED_FRAME_RATE is defined we present the latest but one frame. Otherwise we present the latest rendered frame
-#ifdef IMGUI_UNLIMITED_FRAME_RATE
-    uint32_t PresentIndex = (g_FrameIndex + IMGUI_VK_QUEUED_FRAMES - 1) % IMGUI_VK_QUEUED_FRAMES;
-#else
-    uint32_t PresentIndex = g_FrameIndex;
-#endif // IMGUI_UNLIMITED_FRAME_RATE
-
     VkSwapchainKHR swapchains[1] = {g_Swapchain};
-    uint32_t indices[1] = {g_BackbufferIndices[PresentIndex]};
+    uint32_t indices[1] = {g_BackbufferIndices[g_FrameIndex]};
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
-    info.pWaitSemaphores = &g_RenderCompleteSemaphore[PresentIndex];
+    info.pWaitSemaphores = &g_RenderCompleteSemaphore[g_FrameIndex];
     info.swapchainCount = 1;
     info.pSwapchains = swapchains;
     info.pImageIndices = indices;
@@ -678,16 +671,6 @@ int main(int, char**)
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    // When IMGUI_UNLIMITED_FRAME_RATE is defined we render into latest image acquired from the swapchain but we display the image which was rendered before.
-    // Hence we must render once and increase the g_FrameIndex without presenting, which we do before entering the render loop.
-    // This is also the reason why frame_end() is split into frame_end() and frame_present(), the later one not being called here.
-#ifdef IMGUI_UNLIMITED_FRAME_RATE
-    ImGui_ImplGlfwVulkan_NewFrame();
-    frame_begin();
-    ImGui_ImplGlfwVulkan_Render(g_CommandBuffer[g_FrameIndex]);
-    frame_end();
-    g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
-#endif // IMGUI_UNLIMITED_FRAME_RATE
 
     // Main loop
     while (!glfwWindowShouldClose(window))
