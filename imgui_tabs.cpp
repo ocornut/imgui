@@ -136,7 +136,7 @@ static bool ArrowButton(ImGuiID id, ImGuiDir dir, ImVec2 padding, ImGuiButtonFla
     const ImU32 col = ImGui::GetColorU32((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     ImGui::RenderNavHighlight(bb, id);
     ImGui::RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
-    ImGui::RenderTriangle(bb.Min + padding, dir, 1.0f);
+    ImGui::RenderArrow(bb.Min + padding, dir, 1.0f);
 
     return pressed;
 }
@@ -713,15 +713,11 @@ bool    ImGui::TabItem(const char* label, bool* p_open, ImGuiTabItemFlags flags)
             if (hovered_regular || g.ActiveId == close_button_id)
             {
                 close_button_visible = true;
-                ImVec4 close_col = GetStyleColorVec4(ImGuiCol_CloseButton); // FIXME: Tab style
-                close_col.w *= 0.70f;
-                PushStyleColor(ImGuiCol_CloseButton, close_col);
                 ImGuiItemHoveredDataBackup last_item_backup;
                 last_item_backup.Backup();
                 if (CloseButton(close_button_id, ImVec2(bb.Max.x - style.FramePadding.x - close_button_sz, bb.Min.y + style.FramePadding.y + close_button_sz), close_button_sz))
                     just_closed = true;
                 last_item_backup.Restore();
-                PopStyleColor();
 
                 // Close with middle mouse button
                 if (!(tab_bar->Flags & ImGuiTabBarFlags_NoCloseWithMiddleMouseButton) && IsMouseClicked(2))
