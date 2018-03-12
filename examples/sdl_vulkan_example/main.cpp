@@ -479,7 +479,7 @@ int main(int, char**)
         ImGui::Render();
         memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
         FrameBegin(wd);
-        ImGui_ImplVulkan_Render(wd->Frames[wd->FrameIndex].CommandBuffer);
+        ImGui_ImplVulkan_RenderDrawData(wd->Frames[wd->FrameIndex].CommandBuffer, ImGui::GetDrawData());
         FrameEnd(wd);
 
 		ImGui::RenderAdditionalViewports();

@@ -29,7 +29,6 @@ struct ImGui_ImplVulkan_InitInfo
 IMGUI_API bool        ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass);
 IMGUI_API void        ImGui_ImplVulkan_Shutdown();
 IMGUI_API void        ImGui_ImplVulkan_NewFrame();
-IMGUI_API void        ImGui_ImplVulkan_Render(VkCommandBuffer command_buffer);
 IMGUI_API void        ImGui_ImplVulkan_RenderDrawData(VkCommandBuffer command_buffer, ImDrawData* draw_data);
 
 // Called by Init/NewFrame/Shutdown
@@ -55,6 +54,7 @@ IMGUI_API void                  ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFr
 IMGUI_API void                  ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, ImGui_ImplVulkan_WindowData* wd, const VkAllocationCallbacks* allocator);
 IMGUI_API VkSurfaceFormatKHR    ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space);
 IMGUI_API VkPresentModeKHR      ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
+IMGUI_API int                   ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
 
 struct ImGui_ImplVulkan_FrameData
 {
@@ -62,7 +62,7 @@ struct ImGui_ImplVulkan_FrameData
     VkCommandPool       CommandPool;
     VkCommandBuffer     CommandBuffer;
     VkFence             Fence;
-    VkSemaphore         PresentCompleteSemaphore;
+    VkSemaphore         ImageAcquiredSemaphore;
     VkSemaphore         RenderCompleteSemaphore;
 
     IMGUI_API ImGui_ImplVulkan_FrameData();

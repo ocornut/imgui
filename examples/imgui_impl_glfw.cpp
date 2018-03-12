@@ -452,6 +452,9 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
     io.PlatformInterface.RenderViewport = ImGui_ImplGlfw_RenderViewport;
     io.PlatformInterface.SwapBuffers = ImGui_ImplGlfw_SwapBuffers;
 
+    // We let the user set up the link to glfwCreateWindowSurface() here, so this binding can work with old GLFW and without Vulkan headers
+    io.PlatformInterface.CreateVkSurface = NULL;
+
     // Register main window handle
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGuiPlatformDataGlfw* data = IM_NEW(ImGuiPlatformDataGlfw)();
