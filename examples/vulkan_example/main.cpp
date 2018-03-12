@@ -624,8 +624,9 @@ int main(int, char**)
     init_data.pipeline_cache = g_PipelineCache;
     init_data.descriptor_pool = g_DescriptorPool;
     init_data.check_vk_result = check_vk_result;
+
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     ImGui_ImplGlfwVulkan_Init(window, true, &init_data);
-    //io.NavFlags |= ImGuiNavFlags_EnableKeyboard;  // Enable Keyboard Controls
 
     // Setup style
     ImGui::StyleColorsDark();

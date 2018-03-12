@@ -315,6 +315,8 @@ bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
         ImFontConfig& cfg = atlas->ConfigData[input_i];
         FreeTypeFont& font_face = fonts[input_i];
         ImFont* dst_font = cfg.DstFont;
+        if (cfg.MergeMode)
+            dst_font->BuildLookupTable();
 
         const float ascent = font_face.Info.Ascender;
         const float descent = font_face.Info.Descender;
@@ -331,7 +333,7 @@ bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
         {
             for (uint32_t codepoint = in_range[0]; codepoint <= in_range[1]; ++codepoint) 
             {
-                if (cfg.MergeMode && dst_font->FindGlyph((unsigned short)codepoint))
+                if (cfg.MergeMode && dst_font->FindGlyphNoFallback((unsigned short)codepoint))
                     continue;
 
                 FT_Glyph ft_glyph = NULL;

@@ -81,6 +81,11 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit ImGui context pointe
 //-----------------------------------------------------------------------------
 
 #define IM_PI           3.14159265358979323846f
+#ifdef _WIN32
+#define IM_NEWLINE      "\r\n"   // Play it nice with Windows users (2018: Notepad _still_ doesn't display files properly when they use Unix-style carriage returns)
+#else
+#define IM_NEWLINE      "\n"
+#endif
 
 // Helpers: UTF-8 <> wchar
 IMGUI_API int           ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
@@ -255,16 +260,6 @@ enum ImGuiDataType
     ImGuiDataType_Float2
 };
 
-enum ImGuiDir
-{
-    ImGuiDir_None    = -1,
-    ImGuiDir_Left    = 0,
-    ImGuiDir_Right   = 1,
-    ImGuiDir_Up      = 2,
-    ImGuiDir_Down    = 3,
-    ImGuiDir_Count_
-};
-
 enum ImGuiInputSource
 {
     ImGuiInputSource_None = 0,
@@ -272,7 +267,7 @@ enum ImGuiInputSource
     ImGuiInputSource_Nav,
     ImGuiInputSource_NavKeyboard,   // Only used occasionally for storage, not tested/handled by most code
     ImGuiInputSource_NavGamepad,    // "
-    ImGuiInputSource_Count_,
+    ImGuiInputSource_COUNT,
 };
 
 // FIXME-NAV: Clarify/expose various repeat delay/rate
@@ -341,7 +336,6 @@ struct IMGUI_API ImRect
     void        Floor()                             { Min.x = (float)(int)Min.x; Min.y = (float)(int)Min.y; Max.x = (float)(int)Max.x; Max.y = (float)(int)Max.y; }
     void        FixInverted()                       { if (Min.x > Max.x) ImSwap(Min.x, Max.x); if (Min.y > Max.y) ImSwap(Min.y, Max.y); }
     bool        IsInverted() const                  { return Min.x > Max.x || Min.y > Max.y; }
-    bool        IsFinite() const                    { return Min.x != FLT_MAX; }
 };
 
 // Stacked color modifier, backup of modified data so we can restore it
@@ -468,9 +462,9 @@ struct ImGuiColumnsSet
     int                 Current;
     int                 Count;
     float               MinX, MaxX;
-    float               StartPosY;
-    float               StartMaxPosX;       // Backup of CursorMaxPos
-    float               CellMinY, CellMaxY;
+    float               LineMinY, LineMaxY;
+    float               StartPosY;          // Copy of CursorPos
+    float               StartMaxPosX;       // Copy of CursorMaxPos
     ImVector<ImGuiColumnData> Columns;
 
     ImGuiColumnsSet()   { Clear(); }
@@ -483,9 +477,9 @@ struct ImGuiColumnsSet
         Current = 0;
         Count = 1;
         MinX = MaxX = 0.0f;
+        LineMinY = LineMaxY = 0.0f;
         StartPosY = 0.0f;
         StartMaxPosX = 0.0f;
-        CellMinY = CellMaxY = 0.0f;
         Columns.clear();
     }
 };
@@ -634,8 +628,8 @@ struct ImGuiContext
     int                     NavLayer;                           // Layer we are navigating on. For now the system is hard-coded for 0=main contents and 1=menu/title bar, may expose layers later.
     int                     NavIdTabCounter;                    // == NavWindow->DC.FocusIdxTabCounter at time of NavId processing
     bool                    NavIdIsAlive;                       // Nav widget has been seen this frame ~~ NavRefRectRel is valid
-    bool                    NavMousePosDirty;                   // When set we will update mouse position if (NavFlags & ImGuiNavFlags_MoveMouse) if set (NB: this not enabled by default)
-    bool                    NavDisableHighlight;                // When user starts using mouse, we hide gamepad/keyboard highlight (nb: but they are still available, which is why NavDisableHighlight isn't always != NavDisableMouseHover)
+    bool                    NavMousePosDirty;                   // When set we will update mouse position if (io.ConfigFlags & ImGuiConfigFlags_NavMoveMouse) if set (NB: this not enabled by default)
+    bool                    NavDisableHighlight;                // When user starts using mouse, we hide gamepad/keyboard highlight (NB: but they are still available, which is why NavDisableHighlight isn't always != NavDisableMouseHover)
     bool                    NavDisableMouseHover;               // When user starts using gamepad/keyboard, we hide mouse hovering highlight until mouse is touched again.
     bool                    NavAnyRequest;                      // ~~ NavMoveRequest || NavInitRequest
     bool                    NavInitRequest;                     // Init request for appearing window to select first item
@@ -668,7 +662,7 @@ struct ImGuiContext
     ImGuiID                 DragDropAcceptIdPrev;               // Target item id from previous frame (we need to store this to allow for overlapping drag and drop targets)
     int                     DragDropAcceptFrameCount;           // Last time a target expressed a desire to accept the source
     ImVector<unsigned char> DragDropPayloadBufHeap;             // We don't expose the ImVector<> directly
-    unsigned char           DragDropPayloadBufLocal[8];
+    unsigned char           DragDropPayloadBufLocal[8];         // Local buffer for small payloads
 
     // Widget state
     ImGuiTextEditState      InputTextState;
@@ -950,7 +944,7 @@ struct IMGUI_API ImGuiWindow
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
     ImRect                  ClipRect;                           // = DrawList->clip_rect_stack.back(). Scissoring / clipping rectangle. x1, y1, x2, y2.
     ImRect                  WindowRectClipped;                  // = WindowRect just after setup in Begin(). == window->Rect() for root window.
-    ImRect                  InnerRect;
+    ImRect                  InnerRect, InnerClipRect;
     int                     LastFrameActive;
     float                   ItemWidthDefault;
     ImGuiMenuColumns        MenuColumns;                        // Simplified columns storage for menu items
@@ -1094,7 +1088,7 @@ namespace ImGui
     IMGUI_API void          RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
     IMGUI_API void          RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding = 0.0f);
     IMGUI_API void          RenderColorRectWithAlphaCheckerboard(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, float grid_step, ImVec2 grid_off, float rounding = 0.0f, int rounding_corners_flags = ~0);
-    IMGUI_API void          RenderTriangle(ImVec2 pos, ImGuiDir dir, float scale = 1.0f);
+    IMGUI_API void          RenderArrow(ImVec2 pos, ImGuiDir dir, float scale = 1.0f);
     IMGUI_API void          RenderBullet(ImVec2 pos);
     IMGUI_API void          RenderCheckMark(ImVec2 pos, ImU32 col, float sz);
     IMGUI_API void          RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFlags flags = ImGuiNavHighlightFlags_TypeDefault); // Navigation highlight

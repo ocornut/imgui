@@ -212,7 +212,10 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - pie menus patterns (#434)
  - markup: simple markup language for color change? (#902)
 
- - font: better vertical centering (based e.g on height of lowercase 'x'?). currently Roboto-Medium size 16 px isn't currently centered.
+!- font: need handling of missing glyphs by not packing/rasterizing glyph 0 of a given font.
+ - font: MergeMode: flags to select overwriting or not.
+ - font: MergeMode: duplicate glyphs are stored in the atlas texture which is suboptimal.
+ - font: better vertical centering (based e.g on height of lowercase 'x'?). currently Roboto-Medium size 16 px isn't currently centered. (#1619)
  - font: free the Alpha buffer if user only requested RGBA.
 !- font: better CalcTextSizeA() API, at least for simple use cases. current one is horrible (perhaps have simple vs extended versions).
  - font: enforce monospace through ImFontConfig (for icons?) + create dual ImFont output from same input, reusing rasterized data but with different glyphs/AdvanceX
