@@ -11,7 +11,7 @@
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
-//  2018-XX-XX: OpenGL: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
+//  2018-XX-XX: OpenGL: Offset projection matrix and clipping rectangle by draw_data->DisplayPos (which will be non-zero for multi-viewport applications).
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplGlfwGL2_RenderDrawData() in the .h file so you can call it yourself.
 //  2017-09-01: OpenGL: Save and restore current polygon mode.
 //  2016-09-10: OpenGL: Uploading font texture as RGBA32 to increase compatibility with users shaders (not ideal).
@@ -86,17 +86,18 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
 
     // Setup viewport, orthographic projection matrix
-    // Our visible imgui space lies from io.DisplayPos (top left) to io.DisplayPos+io.DisplaySize (bottom right). io.DisplayPos is typically (0,0) for single viewport applications.
+    // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
     glViewport(0, 0, (GLsizei)fb_width, (GLsizei)fb_height);
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
-    glOrtho(io.DisplayPos.x, io.DisplayPos.x + io.DisplaySize.x, io.DisplayPos.y + io.DisplaySize.y, io.DisplayPos.y, -1.0f, +1.0f);
+    glOrtho(draw_data->DisplayPos.x, draw_data->DisplayPos.x + draw_data->DisplaySize.x, draw_data->DisplayPos.y + draw_data->DisplaySize.y, draw_data->DisplayPos.y, -1.0f, +1.0f);
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
 
     // Render command lists
+    ImVec2 display_pos = draw_data->DisplayPos;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -116,7 +117,7 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
             }
             else
             {
-                ImVec4 clip_rect = ImVec4(pcmd->ClipRect.x - io.DisplayPos.x, pcmd->ClipRect.y - io.DisplayPos.y, pcmd->ClipRect.z - io.DisplayPos.x, pcmd->ClipRect.w - io.DisplayPos.y);
+                ImVec4 clip_rect = ImVec4(pcmd->ClipRect.x - display_pos.x, pcmd->ClipRect.y - display_pos.y, pcmd->ClipRect.z - display_pos.x, pcmd->ClipRect.w - display_pos.y);
                 if (clip_rect.x < fb_width && clip_rect.y < fb_height && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
                 {
                     // Apply scissor/clipping rectangle

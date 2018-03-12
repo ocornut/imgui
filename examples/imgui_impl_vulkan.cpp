@@ -13,7 +13,7 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2018-03-03: Vulkan: Various refactor, created a couple of ImGui_ImplVulkanH_XXX helper that the example can use and that viewport support will use.
 //  2018-03-01: Vulkan: Renamed ImGui_ImplVulkan_Init_Info to ImGui_ImplVulkan_InitInfo and fields to match more closely Vulkan terminology.
-//  2018-02-18: Vulkan: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
+//  2018-02-18: Vulkan: Offset projection matrix and clipping rectangle by draw_data->DisplayPos (which will be non-zero for multi-viewport applications).
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback, ImGui_ImplVulkan_Render() calls ImGui_ImplVulkan_RenderDrawData() itself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2017-05-15: Vulkan: Fix scissor offset being negative. Fix new Vulkan validation warnings. Set required depth member for buffer image copy.
@@ -271,14 +271,14 @@ void ImGui_ImplVulkan_RenderDrawData(VkCommandBuffer command_buffer, ImDrawData*
     }
 
     // Setup scale and translation:
-    // (Our visible imgui space lies from io.DisplayPos (top left) to io.DisplayPos+io.DisplaySize (bottom right). io.DisplayPos is typically (0,0) for single viewport applications.)
+    // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
     {
         float scale[2];
-        scale[0] = 2.0f / io.DisplaySize.x;
-        scale[1] = 2.0f / io.DisplaySize.y;
+        scale[0] = 2.0f / draw_data->DisplaySize.x;
+        scale[1] = 2.0f / draw_data->DisplaySize.y;
         float translate[2];
-        translate[0] = -1.0f - io.DisplayPos.x * scale[0];
-        translate[1] = -1.0f - io.DisplayPos.y * scale[1];
+        translate[0] = -1.0f - draw_data->DisplayPos.x * scale[0];
+        translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
         vkCmdPushConstants(command_buffer, g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
         vkCmdPushConstants(command_buffer, g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
     }
@@ -286,6 +286,7 @@ void ImGui_ImplVulkan_RenderDrawData(VkCommandBuffer command_buffer, ImDrawData*
     // Render the command lists:
     int vtx_offset = 0;
     int idx_offset = 0;
+    ImVec2 display_pos = draw_data->DisplayPos;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -301,8 +302,8 @@ void ImGui_ImplVulkan_RenderDrawData(VkCommandBuffer command_buffer, ImDrawData*
                 // Apply scissor/clipping rectangle
                 // FIXME: We could clamp width/height based on clamped min/max values.
                 VkRect2D scissor;
-                scissor.offset.x = (int32_t)(pcmd->ClipRect.x - io.DisplayPos.x) > 0 ? (int32_t)(pcmd->ClipRect.x - io.DisplayPos.x) : 0;
-                scissor.offset.y = (int32_t)(pcmd->ClipRect.y - io.DisplayPos.y) > 0 ? (int32_t)(pcmd->ClipRect.y - io.DisplayPos.y) : 0;
+                scissor.offset.x = (int32_t)(pcmd->ClipRect.x - display_pos.x) > 0 ? (int32_t)(pcmd->ClipRect.x - display_pos.x) : 0;
+                scissor.offset.y = (int32_t)(pcmd->ClipRect.y - display_pos.y) > 0 ? (int32_t)(pcmd->ClipRect.y - display_pos.y) : 0;
                 scissor.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
                 scissor.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y + 1); // FIXME: Why +1 here?
                 vkCmdSetScissor(command_buffer, 0, 1, &scissor);

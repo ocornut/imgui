@@ -12,7 +12,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiRendererInterface.
-//  2018-XX-XX: DirectX11: Offset projection matrix and clipping rectangle by io.DisplayPos (which will be non-zero for multi-viewport applications).
+//  2018-XX-XX: DirectX11: Offset projection matrix and clipping rectangle by draw_data->DisplayPos (which will be non-zero for multi-viewport applications).
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplDX11_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2016-05-07: DirectX11: Disabling depth-write.
@@ -107,17 +107,16 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
     ctx->Unmap(g_pIB, 0);
 
     // Setup orthographic projection matrix into our constant buffer
-    // Our visible imgui space lies from io.DisplayPos (top left) to io.DisplayPos+io.DisplaySize (bottom right). io.DisplayPos is typically (0,0) for single viewport applications.
-    ImGuiIO& io = ImGui::GetIO();
+    // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
     {
         D3D11_MAPPED_SUBRESOURCE mapped_resource;
         if (ctx->Map(g_pVertexConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource) != S_OK)
             return;
         VERTEX_CONSTANT_BUFFER* constant_buffer = (VERTEX_CONSTANT_BUFFER*)mapped_resource.pData;
-        float L = io.DisplayPos.x;
-        float R = io.DisplayPos.x + io.DisplaySize.x;
-        float T = io.DisplayPos.y;
-        float B = io.DisplayPos.y + io.DisplaySize.y;
+        float L = draw_data->DisplayPos.x;
+        float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
+        float T = draw_data->DisplayPos.y;
+        float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
         float mvp[4][4] =
         {
             { 2.0f/(R-L),   0.0f,           0.0f,       0.0f },
@@ -174,8 +173,8 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
     // Setup viewport
     D3D11_VIEWPORT vp;
     memset(&vp, 0, sizeof(D3D11_VIEWPORT));
-    vp.Width =  io.DisplaySize.x;
-    vp.Height = io.DisplaySize.y;
+    vp.Width =  draw_data->DisplaySize.x;
+    vp.Height = draw_data->DisplaySize.y;
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     vp.TopLeftX = vp.TopLeftY = 0;
@@ -202,6 +201,7 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
     // Render command lists
     int vtx_offset = 0;
     int idx_offset = 0;
+    ImVec2 display_pos = draw_data->DisplayPos;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -216,7 +216,7 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
             else
             {
                 // Apply scissor/clipping rectangle
-                const ImVec4 clip_rect = ImVec4(pcmd->ClipRect.x - io.DisplayPos.x, pcmd->ClipRect.y - io.DisplayPos.y, pcmd->ClipRect.z - io.DisplayPos.x, pcmd->ClipRect.w - io.DisplayPos.y);
+                const ImVec4 clip_rect = ImVec4(pcmd->ClipRect.x - display_pos.x, pcmd->ClipRect.y - display_pos.y, pcmd->ClipRect.z - display_pos.x, pcmd->ClipRect.w - display_pos.y);
                 const D3D11_RECT clip_rect_dx = { (LONG)clip_rect.x, (LONG)clip_rect.y, (LONG)clip_rect.z, (LONG)clip_rect.w };
                 ctx->RSSetScissorRects(1, &clip_rect_dx);
 

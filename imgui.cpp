@@ -254,7 +254,7 @@
  - 2018/03/12 (1.60) - Removed ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered as the closing cross uses regular button colors now.
  - 2018/03/08 (1.60) - Changed ImFont::DisplayOffset.y to default to 0 instead of +1. Fixed rounding of Ascent/Descent to match TrueType renderer. If you were adding or subtracting to ImFont::DisplayOffset check if your fonts are correctly aligned vertically.
  - 2018/03/03 (1.60) - Renamed ImGuiStyleVar_Count_ to ImGuiStyleVar_COUNT and ImGuiMouseCursor_Count_ to ImGuiMouseCursor_COUNT for consistency with other public enums.
- - 2018/02/27 (1.XX) - removed io.DisplayVisibleMin, io.DisplayVisibleMax settings (it was used to clip within the DisplayPos..DisplayPos+Size range, I don't know of anyone using it)
+ - 2018/02/27 (1.XX) - removed io.DisplayVisibleMin, io.DisplayVisibleMax settings (it was used to clip within the DisplayMin..DisplayMax range, I don't know of anyone using it)
  - 2018/02/18 (1.60) - BeginDragDropSource(): temporarily removed the optional mouse_button=0 parameter because it is not really usable in many situations at the moment.
  - 2018/02/16 (1.60) - obsoleted the io.RenderDrawListsFn callback, you can call your graphics engine render function after ImGui::Render(). Use ImGui::GetDrawData() to retrieve the ImDrawData* to display.
  - 2018/02/07 (1.60) - reorganized context handling to be more explicit,
@@ -745,7 +745,6 @@ static void             UpdateViewports();
 static void             UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set_by_api);
 static void             SetCurrentViewport(ImGuiViewport* viewport);
 static void             SetWindowViewportTranslateToPreservePlatformPos(ImGuiWindow* window, ImGuiViewport* old_viewport, ImGuiViewport* new_viewport);
-static void             ResizeViewport(ImGuiViewport* viewport, const ImVec2& size);
 static void             ResizeViewportTranslateWindows(int viewport_idx_min, int viewport_idx_max, float pos_x_delta, int idx_delta, ImGuiViewport* viewport_to_erase);
 }
 
@@ -3517,8 +3516,6 @@ static void UpdatePlatformWindows()
 void ImGui::RenderAdditionalViewports()
 {
     ImGuiContext& g = *GImGui;
-    ImVec2 backup_display_pos = g.IO.DisplayPos;
-    ImVec2 backup_display_size = g.IO.DisplaySize;
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
         return;
         
@@ -3527,15 +3524,11 @@ void ImGui::RenderAdditionalViewports()
         ImGuiViewport* viewport = g.Viewports[i];
         if ((viewport->Flags & ImGuiViewportFlags_MainViewport) || (viewport->LastFrameActive < g.FrameCount))
             continue;
-        g.IO.DisplayPos = viewport->Pos;        // For legacy reason our render functions are viewport agnostic so we pass our coordinates via the IO structure
-        g.IO.DisplaySize = viewport->Size;
         if (g.IO.PlatformInterface.RenderViewport)
             g.IO.PlatformInterface.RenderViewport(viewport);
         if (g.IO.RendererInterface.RenderViewport)
             g.IO.RendererInterface.RenderViewport(viewport);
     }
-    g.IO.DisplayPos = backup_display_pos;
-    g.IO.DisplaySize = backup_display_size;
 
     // Swap
     for (int i = 0; i < g.Viewports.Size; i++)
@@ -4273,16 +4266,18 @@ void ImDrawDataBuilder::FlattenIntoSingleLayer()
     }
 }
 
-static void SetupDrawData(ImVector<ImDrawList*>* draw_lists, ImDrawData* out_draw_data)
+static void SetupViewportDrawData(ImGuiViewport* viewport, ImVector<ImDrawList*>* draw_lists)
 {
-    out_draw_data->Valid = true;
-    out_draw_data->CmdLists = (draw_lists->Size > 0) ? draw_lists->Data : NULL;
-    out_draw_data->CmdListsCount = draw_lists->Size;
-    out_draw_data->TotalVtxCount = out_draw_data->TotalIdxCount = 0;
+    viewport->DrawData.Valid = true;
+    viewport->DrawData.CmdLists = (draw_lists->Size > 0) ? draw_lists->Data : NULL;
+    viewport->DrawData.CmdListsCount = draw_lists->Size;
+    viewport->DrawData.TotalVtxCount = viewport->DrawData.TotalIdxCount = 0;
+    viewport->DrawData.DisplayPos = viewport->Pos;
+    viewport->DrawData.DisplaySize = viewport->Size;
     for (int n = 0; n < draw_lists->Size; n++)
     {
-        out_draw_data->TotalVtxCount += draw_lists->Data[n]->VtxBuffer.Size;
-        out_draw_data->TotalIdxCount += draw_lists->Data[n]->IdxBuffer.Size;
+        viewport->DrawData.TotalVtxCount += draw_lists->Data[n]->VtxBuffer.Size;
+        viewport->DrawData.TotalIdxCount += draw_lists->Data[n]->IdxBuffer.Size;
     }
 }
 
@@ -4442,7 +4437,7 @@ void ImGui::Render()
         ImGuiViewport* viewport = g.Viewports[n];
         viewport->DrawDataBuilder.FlattenIntoSingleLayer();
         AddDrawListToDrawData(&viewport->DrawDataBuilder.Layers[0], &g.OverlayDrawList);
-        SetupDrawData(&viewport->DrawDataBuilder.Layers[0], &viewport->DrawData);
+        SetupViewportDrawData(viewport, &viewport->DrawDataBuilder.Layers[0]);
         g.IO.MetricsRenderVertices += viewport->DrawData.TotalVtxCount;
         g.IO.MetricsRenderIndices += viewport->DrawData.TotalIdxCount;
     }
@@ -4509,19 +4504,6 @@ static void ImGui::ResizeViewportTranslateWindows(int viewport_idx_min, int view
     }
 }
 
-static void ImGui::ResizeViewport(ImGuiViewport* viewport, const ImVec2& size)
-{
-    // We defer translating windows to the beginning of the frame. 
-    // Our viewport system already works with fully overlapped viewports, it's only certain user interactions that don't and they can't be performed while resizing.
-    ImGuiContext& g = *GImGui;
-    viewport->Size = size;
-    if (viewport == g.Viewports[0])
-    {
-        g.IO.DisplayPos = viewport->Pos;
-        g.IO.DisplaySize = viewport->Size;
-    }
-}
-
 void ImGui::SetCurrentViewport(ImGuiViewport* viewport)
 {
     // Notify platform interface of viewport changes
@@ -4544,7 +4526,9 @@ ImGuiViewport* ImGui::Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFla
     ImGuiViewport* viewport = FindViewportByID(id);
     if (viewport)
     {
-        ResizeViewport(viewport, size);
+        // We defer translating windows to the beginning of the frame. 
+        // Our viewport system already works with fully overlapped viewports, it's only certain user interactions that don't and they can't be performed while resizing.
+        viewport->Size = size;
     }
     else
     {
@@ -6537,7 +6521,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         if (flags & ImGuiWindowFlags_FullViewport)
             if (window->Size.x != window->Viewport->Size.x || window->Size.y != window->Viewport->Size.y)
             {
-                ResizeViewport(window->Viewport, window->SizeFull);
+                window->Viewport->Size = window->SizeFull;
                 viewport_rect = GetViewportRect(window);
             }
 
@@ -11706,7 +11690,7 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool* p_selected, 
 bool ImGui::BeginMainMenuBar()
 {
     ImGuiContext& g = *GImGui;
-    SetNextWindowPos(g.IO.DisplayPos);
+    SetNextWindowPos(ImVec2(0.0f, 0.0f));
     SetNextWindowSize(ImVec2(g.IO.DisplaySize.x, g.FontBaseSize + g.Style.FramePadding.y * 2.0f));
     PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0,0));
