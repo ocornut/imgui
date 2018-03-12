@@ -3514,12 +3514,14 @@ static void UpdatePlatformWindows()
     }
 }
 
-static void RenderPlatformWindows()
+void ImGui::RenderAdditionalViewports()
 {
-    // Render
     ImGuiContext& g = *GImGui;
     ImVec2 backup_display_pos = g.IO.DisplayPos;
     ImVec2 backup_display_size = g.IO.DisplaySize;
+    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
+        return;
+        
     for (int i = 0; i < g.Viewports.Size; i++)
     {
         ImGuiViewport* viewport = g.Viewports[i];
@@ -4450,13 +4452,6 @@ void ImGui::Render()
     if (g.Viewports[0]->DrawData.CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
         g.IO.RenderDrawListsFn(&g.Viewports[0]->DrawData);
 #endif
-}
-
-void ImGui::RenderAdditionalViewports()
-{
-    ImGuiContext& g = *GImGui;
-    if (g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports)
-        RenderPlatformWindows();
 }
 
 ImGuiViewport* ImGui::FindViewportByID(ImGuiID id)
