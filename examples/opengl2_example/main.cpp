@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <GLFW/glfw3.h>
 
-static void error_callback(int error, const char* description)
+static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Error %d: %s\n", error, description);
 }
@@ -19,7 +19,7 @@ static void error_callback(int error, const char* description)
 int main(int, char**)
 {
     // Setup window
-    glfwSetErrorCallback(error_callback);
+    glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
     GLFWwindow* window = glfwCreateWindow(1280, 720, "ImGui OpenGL2 example", NULL, NULL);
