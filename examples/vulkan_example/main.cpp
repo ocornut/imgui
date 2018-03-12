@@ -35,18 +35,18 @@ static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
 static int                      fb_width, fb_height;
-static uint32_t                 g_BackbufferIndices[IMGUI_VK_QUEUED_FRAMES];    // keep track of recently rendered swapchain frame indices
+static uint32_t*                g_BackbufferIndices;    // keep track of recently rendered swapchain frame indices
 static uint32_t                 g_BackBufferCount = 0;
 static VkImage                  g_BackBuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
 static VkImageView              g_BackBufferView[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
 static VkFramebuffer            g_Framebuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
 
 static uint32_t                 g_FrameIndex = 0;
-static VkCommandPool            g_CommandPool[IMGUI_VK_QUEUED_FRAMES];
-static VkCommandBuffer          g_CommandBuffer[IMGUI_VK_QUEUED_FRAMES];
-static VkFence                  g_Fence[IMGUI_VK_QUEUED_FRAMES];
-static VkSemaphore              g_PresentCompleteSemaphore[IMGUI_VK_QUEUED_FRAMES];
-static VkSemaphore              g_RenderCompleteSemaphore[IMGUI_VK_QUEUED_FRAMES];
+static VkCommandPool*           g_CommandPool;
+static VkCommandBuffer*         g_CommandBuffer;
+static VkFence*                 g_Fence;
+static VkSemaphore*             g_PresentCompleteSemaphore;
+static VkSemaphore*             g_RenderCompleteSemaphore;
 
 static VkClearValue             g_ClearValue = {};
 
@@ -187,6 +187,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
             check_vk_result(err);
         }
     }
+    ImGui_ImplGlfwVulkan_QueuedFramesChanged(g_BackBufferCount);
 }
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
@@ -200,6 +201,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(
 
 static void setup_vulkan(GLFWwindow* window)
 {
+
     VkResult err;
 
     // Create Vulkan Instance
@@ -362,7 +364,7 @@ static void setup_vulkan(GLFWwindow* window)
         g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 #endif
         uint32_t count = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, nullptr);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, NULL);
         VkPresentModeKHR* presentModes = (VkPresentModeKHR*)malloc(sizeof(VkQueueFamilyProperties) * count);
         vkGetPhysicalDeviceSurfacePresentModesKHR(g_Gpu, g_Surface, &count, presentModes);
         bool presentModeAvailable = false;
@@ -410,8 +412,15 @@ static void setup_vulkan(GLFWwindow* window)
         glfwSetFramebufferSizeCallback(window, resize_vulkan);
     }
 
+    g_BackbufferIndices = (uint32_t*)malloc(sizeof(uint32_t) * g_BackBufferCount);
+    g_CommandPool = (VkCommandPool*)(malloc(sizeof(VkCommandPool) * g_BackBufferCount));
+    g_CommandBuffer = (VkCommandBuffer*)(malloc(sizeof(VkCommandBuffer) * g_BackBufferCount));
+    g_Fence = (VkFence*)(malloc(sizeof(VkFence) * g_BackBufferCount));
+    g_PresentCompleteSemaphore = (VkSemaphore*)(malloc(sizeof(VkSemaphore) * g_BackBufferCount));
+    g_RenderCompleteSemaphore = (VkSemaphore*)(malloc(sizeof(VkSemaphore) * g_BackBufferCount));
+
     // Create Command Buffers
-    for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
+    for (int i = 0; i < g_BackBufferCount; i++)
     {
         {
             VkCommandPoolCreateInfo info = {};
@@ -477,7 +486,7 @@ static void setup_vulkan(GLFWwindow* window)
 static void cleanup_vulkan()
 {
     vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
-    for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
+    for (int i = 0; i < g_BackBufferCount; i++)
     {
         vkDestroyFence(g_Device, g_Fence[i], g_Allocator);
         vkFreeCommandBuffers(g_Device, g_CommandPool[i], 1, &g_CommandBuffer[i]);
@@ -570,7 +579,7 @@ static void frame_present()
     VkResult err;
     // If IMGUI_UNLIMITED_FRAME_RATE is defined we present the latest but one frame. Otherwise we present the latest rendered frame
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
-    uint32_t PresentIndex = (g_FrameIndex + IMGUI_VK_QUEUED_FRAMES - 1) % IMGUI_VK_QUEUED_FRAMES;
+    uint32_t PresentIndex = (g_FrameIndex + g_BackBufferCount - 1) % g_BackBufferCount;
 #else
     uint32_t PresentIndex = g_FrameIndex;
 #endif // IMGUI_UNLIMITED_FRAME_RATE
@@ -587,7 +596,7 @@ static void frame_present()
     err = vkQueuePresentKHR(g_Queue, &info);
     check_vk_result(err);
 
-    g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
+    g_FrameIndex = (g_FrameIndex + 1) % g_BackBufferCount;
 }
 
 static void error_callback(int error, const char* description)
@@ -623,6 +632,7 @@ int main(int, char**)
     init_data.render_pass = g_RenderPass;
     init_data.pipeline_cache = g_PipelineCache;
     init_data.descriptor_pool = g_DescriptorPool;
+    init_data.vk_queued_frames = g_BackBufferCount;
     init_data.check_vk_result = check_vk_result;
 
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
@@ -686,7 +696,7 @@ int main(int, char**)
     frame_begin();
     ImGui_ImplGlfwVulkan_Render(g_CommandBuffer[g_FrameIndex]);
     frame_end();
-    g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
+    g_FrameIndex = (g_FrameIndex + 1) % g_BackBufferCount;
 #endif // IMGUI_UNLIMITED_FRAME_RATE
 
     // Main loop
@@ -750,6 +760,13 @@ int main(int, char**)
     ImGui::DestroyContext();
     cleanup_vulkan();
     glfwTerminate();
+
+    free(g_BackbufferIndices);
+    free(g_CommandPool);
+    free(g_CommandBuffer);
+    free(g_Fence);
+    free(g_PresentCompleteSemaphore);
+    free(g_RenderCompleteSemaphore);
 
     return 0;
 }

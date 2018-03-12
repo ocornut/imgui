@@ -68,12 +68,14 @@ static VkDeviceMemory         g_FontMemory = VK_NULL_HANDLE;
 static VkImage                g_FontImage = VK_NULL_HANDLE;
 static VkImageView            g_FontView = VK_NULL_HANDLE;
 
-static VkDeviceMemory         g_VertexBufferMemory[IMGUI_VK_QUEUED_FRAMES] = {};
-static VkDeviceMemory         g_IndexBufferMemory[IMGUI_VK_QUEUED_FRAMES] = {};
-static VkDeviceSize           g_VertexBufferSize[IMGUI_VK_QUEUED_FRAMES] = {};
-static VkDeviceSize           g_IndexBufferSize[IMGUI_VK_QUEUED_FRAMES] = {};
-static VkBuffer               g_VertexBuffer[IMGUI_VK_QUEUED_FRAMES] = {};
-static VkBuffer               g_IndexBuffer[IMGUI_VK_QUEUED_FRAMES] = {};
+static int                     g_VkQueuedFrames;
+
+static VkDeviceMemory*         g_VertexBufferMemory = NULL;
+static VkDeviceMemory*         g_IndexBufferMemory = NULL;
+static VkDeviceSize*           g_VertexBufferSize = NULL;
+static VkDeviceSize*           g_IndexBufferSize = NULL;
+static VkBuffer*               g_VertexBuffer = NULL;
+static VkBuffer*               g_IndexBuffer = NULL;
 
 static VkDeviceMemory         g_UploadBufferMemory = VK_NULL_HANDLE;
 static VkBuffer               g_UploadBuffer = VK_NULL_HANDLE;
@@ -530,6 +532,9 @@ bool ImGui_ImplGlfwVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
 
 bool ImGui_ImplGlfwVulkan_CreateDeviceObjects()
 {
+
+    ImGui_ImplGlfwVulkan_InitialiseDevicePointers();
+
     VkResult err;
     VkShaderModule vert_module;
     VkShaderModule frag_module;
@@ -714,6 +719,54 @@ bool ImGui_ImplGlfwVulkan_CreateDeviceObjects()
     return true;
 }
 
+void    ImGui_ImplGlfwVulkan_InitialiseDevicePointers()
+{
+    if (g_VertexBufferMemory)
+        free(g_VertexBufferMemory);
+
+    if (g_IndexBufferMemory)
+        free(g_IndexBufferMemory);
+
+    if (g_VertexBufferSize)
+        free(g_VertexBufferSize);
+
+    if (g_IndexBufferSize)
+        free(g_IndexBufferSize);
+
+    if (g_VertexBuffer)
+        free(g_VertexBuffer);
+
+    if (g_IndexBuffer)
+        free(g_IndexBuffer);
+
+    g_VertexBufferMemory = (VkDeviceMemory*)(malloc(sizeof(VkDeviceMemory) * g_VkQueuedFrames));
+    g_IndexBufferMemory = (VkDeviceMemory*)(malloc(sizeof(VkDeviceMemory) * g_VkQueuedFrames));
+    g_VertexBufferSize = (VkDeviceSize*)(malloc(sizeof(VkDeviceSize) * g_VkQueuedFrames));
+    g_IndexBufferSize = (VkDeviceSize*)(malloc(sizeof(VkDeviceSize) * g_VkQueuedFrames));
+    g_VertexBuffer = (VkBuffer*)(malloc(sizeof(VkBuffer) * g_VkQueuedFrames));
+    g_IndexBuffer = (VkBuffer*)(malloc(sizeof(VkBuffer) * g_VkQueuedFrames));
+
+    for (int i = 0; i < g_VkQueuedFrames; ++i)
+    {
+        g_VertexBufferMemory[i] = VK_NULL_HANDLE;
+        g_IndexBufferMemory[i] = VK_NULL_HANDLE;
+        g_VertexBufferSize[i] = VK_NULL_HANDLE;
+        g_IndexBufferSize[i] = VK_NULL_HANDLE;
+        g_VertexBuffer[i] = VK_NULL_HANDLE;
+        g_IndexBuffer[i] = VK_NULL_HANDLE;
+    }
+}
+
+void    ImGui_ImplGlfwVulkan_QueuedFramesChanged(int new_queued_frame_count)
+{
+    if (new_queued_frame_count == g_VkQueuedFrames)
+        return;
+
+    ImGui_ImplGlfwVulkan_InvalidateFrameDeviceObjects();
+    g_VkQueuedFrames = new_queued_frame_count;
+    ImGui_ImplGlfwVulkan_InitialiseDevicePointers();
+}
+
 void    ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects()
 {
     if (g_UploadBuffer)
@@ -728,18 +781,19 @@ void    ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects()
     }
 }
 
-void    ImGui_ImplGlfwVulkan_InvalidateDeviceObjects()
+void    ImGui_ImplGlfwVulkan_InvalidateFrameDeviceObjects()
 {
-    ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects();
-
-    for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
+    for (int i = 0; i < g_VkQueuedFrames; i++)
     {
         if (g_VertexBuffer[i])          { vkDestroyBuffer(g_Device, g_VertexBuffer[i], g_Allocator); g_VertexBuffer[i] = VK_NULL_HANDLE; }
         if (g_VertexBufferMemory[i])    { vkFreeMemory(g_Device, g_VertexBufferMemory[i], g_Allocator); g_VertexBufferMemory[i] = VK_NULL_HANDLE; }
         if (g_IndexBuffer[i])           { vkDestroyBuffer(g_Device, g_IndexBuffer[i], g_Allocator); g_IndexBuffer[i] = VK_NULL_HANDLE; }
         if (g_IndexBufferMemory[i])     { vkFreeMemory(g_Device, g_IndexBufferMemory[i], g_Allocator); g_IndexBufferMemory[i] = VK_NULL_HANDLE; }
     }
+}
 
+void    ImGui_ImplGlfwVulkan_InvalidateDeviceObjects()
+{
     if (g_FontView)             { vkDestroyImageView(g_Device, g_FontView, g_Allocator); g_FontView = VK_NULL_HANDLE; }
     if (g_FontImage)            { vkDestroyImage(g_Device, g_FontImage, g_Allocator); g_FontImage = VK_NULL_HANDLE; }
     if (g_FontMemory)           { vkFreeMemory(g_Device, g_FontMemory, g_Allocator); g_FontMemory = VK_NULL_HANDLE; }
@@ -747,6 +801,13 @@ void    ImGui_ImplGlfwVulkan_InvalidateDeviceObjects()
     if (g_DescriptorSetLayout)  { vkDestroyDescriptorSetLayout(g_Device, g_DescriptorSetLayout, g_Allocator); g_DescriptorSetLayout = VK_NULL_HANDLE; }
     if (g_PipelineLayout)       { vkDestroyPipelineLayout(g_Device, g_PipelineLayout, g_Allocator); g_PipelineLayout = VK_NULL_HANDLE; }
     if (g_Pipeline)             { vkDestroyPipeline(g_Device, g_Pipeline, g_Allocator); g_Pipeline = VK_NULL_HANDLE; }
+}
+
+void    ImGui_ImplGlfwVulkan_InvalidateAllDeviceObjects()
+{
+    ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects();
+    ImGui_ImplGlfwVulkan_InvalidateFrameDeviceObjects();
+    ImGui_ImplGlfwVulkan_InvalidateDeviceObjects();
 }
 
 static void ImGui_ImplGlfw_InstallCallbacks(GLFWwindow* window)
@@ -766,6 +827,7 @@ bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, Im
     g_PipelineCache = init_data->pipeline_cache;
     g_DescriptorPool = init_data->descriptor_pool;
     g_CheckVkResult = init_data->check_vk_result;
+    g_VkQueuedFrames = init_data->vk_queued_frames;
 
     g_Window = window;
 
@@ -825,7 +887,7 @@ void ImGui_ImplGlfwVulkan_Shutdown()
     memset(g_MouseCursors, 0, sizeof(g_MouseCursors));
 
     // Destroy Vulkan objects
-    ImGui_ImplGlfwVulkan_InvalidateDeviceObjects();
+    ImGui_ImplGlfwVulkan_InvalidateAllDeviceObjects();
 }
 
 void ImGui_ImplGlfwVulkan_NewFrame()
@@ -886,5 +948,5 @@ void ImGui_ImplGlfwVulkan_Render(VkCommandBuffer command_buffer)
     ImGui::Render();
     ImGui_ImplGlfwVulkan_RenderDrawData(ImGui::GetDrawData());
     g_CommandBuffer = VK_NULL_HANDLE;
-    g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
+    g_FrameIndex = (g_FrameIndex + 1) % g_VkQueuedFrames;
 }
