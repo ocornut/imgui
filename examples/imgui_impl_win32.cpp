@@ -344,7 +344,7 @@ float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)
 
 float ImGui_ImplWin32_GetDpiScaleForRect(int x1, int y1, int x2, int y2)
 {
-    RECT viewport_rect = { (UINT)x1, (UINT)y1, (UINT)x2, (UINT)y2 };
+    RECT viewport_rect = { (LONG)x1, (LONG)y1, (LONG)x2, (LONG)y2 };
     HMONITOR monitor = ::MonitorFromRect(&viewport_rect, MONITOR_DEFAULTTONEAREST);
     return ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
 }
