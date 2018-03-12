@@ -17,8 +17,9 @@
 //  The default imgui styles will be impacted by this change (alpha values will need tweaking).
 
 // TODO:
-// - Output texture has excessive resolution (lots of vertical waste)
+// - Output texture has excessive resolution (lots of vertical waste).
 // - FreeType's memory allocator is not overridden.
+// - cfg.OversampleH, OversampleV are ignored (but perhaps not so necessary with this rasterizer).
 
 #include "imgui_freetype.h"
 #include "imgui_internal.h"   // ImMin,ImMax,ImFontAtlasBuild*,
