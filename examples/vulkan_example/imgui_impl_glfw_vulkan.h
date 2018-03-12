@@ -12,8 +12,6 @@ struct GLFWwindow;
 
 #include <vulkan/vulkan.h>
 
-#define IMGUI_VK_QUEUED_FRAMES 2
-
 struct ImGui_ImplGlfwVulkan_Init_Data
 {
     VkAllocationCallbacks* allocator;
@@ -22,6 +20,7 @@ struct ImGui_ImplGlfwVulkan_Init_Data
     VkRenderPass           render_pass;
     VkPipelineCache        pipeline_cache;
     VkDescriptorPool       descriptor_pool;
+    int                    vk_queued_frames;
     void (*check_vk_result)(VkResult err);
 };
 
@@ -31,8 +30,13 @@ IMGUI_API void        ImGui_ImplGlfwVulkan_NewFrame();
 IMGUI_API void        ImGui_ImplGlfwVulkan_Render(VkCommandBuffer command_buffer);
 
 // Use if you want to reset your rendering device without losing ImGui state.
+// TODO: Could someone help out with a better name for this function?
+IMGUI_API void        ImGui_ImplGlfwVulkan_InitialiseDevicePointers();
+IMGUI_API void        ImGui_ImplGlfwVulkan_QueuedFramesChanged(int new_queued_frame_count);
 IMGUI_API void        ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects();
+IMGUI_API void        ImGui_ImplGlfwVulkan_InvalidateFrameDeviceObjects();
 IMGUI_API void        ImGui_ImplGlfwVulkan_InvalidateDeviceObjects();
+IMGUI_API void        ImGui_ImplGlfwVulkan_InvalidateAllDeviceObjects();
 IMGUI_API bool        ImGui_ImplGlfwVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
 IMGUI_API bool        ImGui_ImplGlfwVulkan_CreateDeviceObjects();
 
