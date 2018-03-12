@@ -34,7 +34,9 @@ static VkPresentModeKHR         g_PresentMode;
 static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
-static int                      fb_width, fb_height;
+static int                      fb_width = 0, fb_height = 0;
+static bool                     g_ResizeWanted = false;
+static int                      g_ResizeWidth = 0, g_ResizeHeight = 0;
 static uint32_t                 g_BackbufferIndices[IMGUI_VK_QUEUED_FRAMES];    // keep track of recently rendered swapchain frame indices
 static uint32_t                 g_BackBufferCount = 0;
 static VkImage                  g_BackBuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
@@ -58,7 +60,7 @@ static void check_vk_result(VkResult err)
         abort();
 }
 
-static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
+static void resize_vulkan(int w, int h)
 {
     VkResult err;
     VkSwapchainKHR old_swapchain = g_Swapchain;
@@ -355,7 +357,7 @@ static void setup_vulkan(GLFWwindow* window)
 
     // Get Present Mode
     {
-        // Requst a certain mode and confirm that it is available. If not use VK_PRESENT_MODE_FIFO_KHR which is mandatory
+        // Request a certain mode and confirm that it is available. If not use VK_PRESENT_MODE_FIFO_KHR which is mandatory
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
         g_PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 #else
@@ -406,8 +408,7 @@ static void setup_vulkan(GLFWwindow* window)
     {
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);
-        resize_vulkan(window, w, h);
-        glfwSetFramebufferSizeCallback(window, resize_vulkan);
+        resize_vulkan(w, h);
     }
 
     // Create Command Buffers
@@ -588,6 +589,13 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Error %d: %s\n", error, description);
 }
 
+static void glfw_resize_callback(GLFWwindow*, int w, int h)
+{
+    g_ResizeWanted = true;
+    g_ResizeWidth = w;
+    g_ResizeHeight = h;
+}
+
 int main(int, char**)
 {
     // Setup window
@@ -605,6 +613,7 @@ int main(int, char**)
         return 1;
     }
     setup_vulkan(window);
+    glfwSetFramebufferSizeCallback(window, glfw_resize_callback);
 
     // Setup ImGui binding
     ImGui::CreateContext();
@@ -680,6 +689,11 @@ int main(int, char**)
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
+
+        if (g_ResizeWanted)
+            resize_vulkan(g_ResizeWidth, g_ResizeHeight);
+        g_ResizeWanted = false;
+
         ImGui_ImplGlfwVulkan_NewFrame();
 
         // 1. Show a simple window.
