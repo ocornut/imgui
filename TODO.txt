@@ -30,6 +30,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 !- scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
 
+ - drawdata: make it easy to clone (or swap?) a ImDrawData so user can easily save that data if they use threaded renderering.
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
  - drawlist: primtiives/helpers to manipulate vertices post submission, so e.g. a quad/rect can be resized to fit later submitted content, _without_ using the ChannelSplit api

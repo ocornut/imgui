@@ -831,9 +831,6 @@ enum ImGuiCol_
     ImGuiCol_ResizeGrip,
     ImGuiCol_ResizeGripHovered,
     ImGuiCol_ResizeGripActive,
-    ImGuiCol_CloseButton,
-    ImGuiCol_CloseButtonHovered,
-    ImGuiCol_CloseButtonActive,
     ImGuiCol_PlotLines,
     ImGuiCol_PlotLinesHovered,
     ImGuiCol_PlotHistogram,
@@ -843,12 +840,15 @@ enum ImGuiCol_
     ImGuiCol_DragDropTarget,
     ImGuiCol_NavHighlight,          // gamepad/keyboard: current highlighted item 
     ImGuiCol_NavWindowingHighlight, // gamepad/keyboard: when holding NavMenu to focus/move/resize windows
-    ImGuiCol_COUNT
 
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    //, ImGuiCol_ComboBg = ImGuiCol_PopupBg     // ComboBg has been merged with PopupBg, so a redirect isn't accurate.
-    , ImGuiCol_ChildWindowBg = ImGuiCol_ChildBg, ImGuiCol_Column = ImGuiCol_Separator, ImGuiCol_ColumnHovered = ImGuiCol_SeparatorHovered, ImGuiCol_ColumnActive = ImGuiCol_SeparatorActive
+    ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered, // [unused since 1.60+] the close button now uses regular button colors.
+    ImGuiCol_ComboBg,                                                              // [unused since 1.53+] ComboBg has been merged with PopupBg, so a redirect isn't accurate.
+    ImGuiCol_COUNT,
+    ImGuiCol_ChildWindowBg = ImGuiCol_ChildBg, ImGuiCol_Column = ImGuiCol_Separator, ImGuiCol_ColumnHovered = ImGuiCol_SeparatorHovered, ImGuiCol_ColumnActive = ImGuiCol_SeparatorActive
+#else
+    ImGuiCol_COUNT
 #endif
 };
 
@@ -1839,6 +1839,7 @@ struct ImFont
     IMGUI_API void              ClearOutputData();
     IMGUI_API void              BuildLookupTable();
     IMGUI_API const ImFontGlyph*FindGlyph(ImWchar c) const;
+    IMGUI_API const ImFontGlyph*FindGlyphNoFallback(ImWchar c) const;
     IMGUI_API void              SetFallbackChar(ImWchar c);
     float                       GetCharAdvance(ImWchar c) const     { return ((int)c < IndexAdvanceX.Size) ? IndexAdvanceX[(int)c] : FallbackAdvanceX; }
     bool                        IsLoaded() const                    { return ContainerAtlas != NULL; }

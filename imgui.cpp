@@ -251,6 +251,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2018/03/12 (1.60) - Removed ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered as the closing cross uses regular button colors now.
  - 2018/03/08 (1.60) - Changed ImFont::DisplayOffset.y to default to 0 instead of +1. Fixed rounding of Ascent/Descent to match TrueType renderer. If you were adding or subtracting to ImFont::DisplayOffset check if your fonts are correctly aligned vertically.
  - 2018/03/03 (1.60) - Renamed ImGuiStyleVar_Count_ to ImGuiStyleVar_COUNT and ImGuiMouseCursor_Count_ to ImGuiMouseCursor_COUNT for consistency with other public enums.
  - 2018/02/27 (1.XX) - removed io.DisplayVisibleMin, io.DisplayVisibleMax settings (it was used to clip within the DisplayPos..DisplayPos+Size range, I don't know of anyone using it)
@@ -1821,13 +1822,14 @@ float ImGuiMenuColumns::CalcExtraSpace(float avail_w)
 static void SetCursorPosYAndSetupDummyPrevLine(float pos_y, float line_height)
 {
     // Set cursor position and a few other things so that SetScrollHere() and Columns() can work when seeking cursor. 
-    // FIXME: It is problematic that we have to do that here, because custom/equivalent end-user code would stumble on the same issue. Consider moving within SetCursorXXX functions?
+    // FIXME: It is problematic that we have to do that here, because custom/equivalent end-user code would stumble on the same issue. 
+    // The clipper should probably have a 4th step to display the last item in a regular manner.
     ImGui::SetCursorPosY(pos_y);
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     window->DC.CursorPosPrevLine.y = window->DC.CursorPos.y - line_height;      // Setting those fields so that SetScrollHere() can properly function after the end of our clipper usage.
     window->DC.PrevLineHeight = (line_height - GImGui->Style.ItemSpacing.y);    // If we end up needing more accurate data (to e.g. use SameLine) we may as well make the clipper have a fourth step to let user process and display the last item in their list.
     if (window->DC.ColumnsSet)
-        window->DC.ColumnsSet->CellMinY = window->DC.CursorPos.y;           // Setting this so that cell Y position are set properly
+        window->DC.ColumnsSet->LineMinY = window->DC.CursorPos.y;           // Setting this so that cell Y position are set properly
 }
 
 // Use case A: Begin() called from constructor with items_height<0, then called again from Sync() in StepNo 1
@@ -6741,9 +6743,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Close button
             if (p_open != NULL)
             {
-                const float PAD = 2.0f;
-                const float rad = (window->TitleBarHeight() - PAD*2.0f) * 0.5f;
-                if (CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-PAD - rad, PAD + rad), rad))
+                const float pad = style.FramePadding.y;
+                const float rad = g.FontSize * 0.5f;
+                if (CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-pad - rad, pad + rad), rad + 1))
                     *p_open = false;
             }
 
@@ -7343,9 +7345,6 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_ResizeGrip: return "ResizeGrip";
     case ImGuiCol_ResizeGripHovered: return "ResizeGripHovered";
     case ImGuiCol_ResizeGripActive: return "ResizeGripActive";
-    case ImGuiCol_CloseButton: return "CloseButton";
-    case ImGuiCol_CloseButtonHovered: return "CloseButtonHovered";
-    case ImGuiCol_CloseButtonActive: return "CloseButtonActive";
     case ImGuiCol_PlotLines: return "PlotLines";
     case ImGuiCol_PlotLinesHovered: return "PlotLinesHovered";
     case ImGuiCol_PlotHistogram: return "PlotHistogram";
@@ -8394,17 +8393,16 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
         return pressed;
 
     // Render
-    const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_CloseButtonActive : hovered ? ImGuiCol_CloseButtonHovered : ImGuiCol_CloseButton);
     ImVec2 center = bb.GetCenter();
-    window->DrawList->AddCircleFilled(center, ImMax(2.0f, radius), col, 12);
-
-    const float cross_extent = (radius * 0.7071f) - 1.0f;
     if (hovered)
-    {
-        center -= ImVec2(0.5f, 0.5f);
-        window->DrawList->AddLine(center + ImVec2(+cross_extent,+cross_extent), center + ImVec2(-cross_extent,-cross_extent), GetColorU32(ImGuiCol_Text));
-        window->DrawList->AddLine(center + ImVec2(+cross_extent,-cross_extent), center + ImVec2(-cross_extent,+cross_extent), GetColorU32(ImGuiCol_Text));
-    }
+        window->DrawList->AddCircleFilled(center, ImMax(2.0f, radius), GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered), 9);
+
+    float cross_extent = (radius * 0.7071f) - 1.0f;
+    ImU32 cross_col = GetColorU32(ImGuiCol_Text);
+    center -= ImVec2(0.5f, 0.5f);
+    window->DrawList->AddLine(center + ImVec2(+cross_extent,+cross_extent), center + ImVec2(-cross_extent,-cross_extent), cross_col, 1.0f);
+    window->DrawList->AddLine(center + ImVec2(+cross_extent,-cross_extent), center + ImVec2(-cross_extent,+cross_extent), cross_col, 1.0f);
+
     return pressed;
 }
 
@@ -12778,7 +12776,7 @@ void ImGui::Separator()
     if (window->DC.ColumnsSet)
     {
         PushColumnClipRect();
-        window->DC.ColumnsSet->CellMinY = window->DC.CursorPos.y;
+        window->DC.ColumnsSet->LineMinY = window->DC.CursorPos.y;
     }
 }
 
@@ -12997,7 +12995,7 @@ void ImGui::NextColumn()
     PopClipRect();
 
     ImGuiColumnsSet* columns = window->DC.ColumnsSet;
-    columns->CellMaxY = ImMax(columns->CellMaxY, window->DC.CursorPos.y);
+    columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
     if (++columns->Current < columns->Count)
     {
         // Columns 1+ cancel out IndentX
@@ -13009,10 +13007,10 @@ void ImGui::NextColumn()
         window->DC.ColumnsOffsetX = 0.0f;
         window->DrawList->ChannelsSetCurrent(0);
         columns->Current = 0;
-        columns->CellMinY = columns->CellMaxY;
+        columns->LineMinY = columns->LineMaxY;
     }
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
-    window->DC.CursorPos.y = columns->CellMinY;
+    window->DC.CursorPos.y = columns->LineMinY;
     window->DC.CurrentLineHeight = 0.0f;
     window->DC.CurrentLineTextBaseOffset = 0.0f;
 
@@ -13183,7 +13181,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     columns->MaxX = ImMax(content_region_width - window->Scroll.x, columns->MinX + 1.0f);
     columns->StartPosY = window->DC.CursorPos.y;
     columns->StartMaxPosX = window->DC.CursorMaxPos.x;
-    columns->CellMinY = columns->CellMaxY = window->DC.CursorPos.y;
+    columns->LineMinY = columns->LineMaxY = window->DC.CursorPos.y;
     window->DC.ColumnsOffsetX = 0.0f;
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
 
@@ -13230,8 +13228,8 @@ void ImGui::EndColumns()
     PopClipRect();
     window->DrawList->ChannelsMerge();
 
-    columns->CellMaxY = ImMax(columns->CellMaxY, window->DC.CursorPos.y);
-    window->DC.CursorPos.y = columns->CellMaxY;
+    columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
+    window->DC.CursorPos.y = columns->LineMaxY;
     if (!(columns->Flags & ImGuiColumnsFlags_GrowParentContentsSize))
         window->DC.CursorMaxPos.x = ImMax(columns->StartMaxPosX, columns->MaxX);  // Restore cursor max pos, as columns don't grow parent
 

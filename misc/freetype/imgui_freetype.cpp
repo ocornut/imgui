@@ -17,8 +17,9 @@
 //  The default imgui styles will be impacted by this change (alpha values will need tweaking).
 
 // TODO:
-// - Output texture has excessive resolution (lots of vertical waste)
+// - Output texture has excessive resolution (lots of vertical waste).
 // - FreeType's memory allocator is not overridden.
+// - cfg.OversampleH, OversampleV are ignored (but perhaps not so necessary with this rasterizer).
 
 #include "imgui_freetype.h"
 #include "imgui_internal.h"   // ImMin,ImMax,ImFontAtlasBuild*,
@@ -333,7 +334,7 @@ bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
         {
             for (uint32_t codepoint = in_range[0]; codepoint <= in_range[1]; ++codepoint) 
             {
-                if (cfg.MergeMode && dst_font->FindGlyph((unsigned short)codepoint))
+                if (cfg.MergeMode && dst_font->FindGlyphNoFallback((unsigned short)codepoint))
                     continue;
 
                 FT_Glyph ft_glyph = NULL;

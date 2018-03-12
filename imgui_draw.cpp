@@ -165,9 +165,6 @@ void ImGui::StyleColorsDark(ImGuiStyle* dst)
     colors[ImGuiCol_ResizeGrip]             = ImVec4(0.26f, 0.59f, 0.98f, 0.25f);
     colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
     colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
-    colors[ImGuiCol_CloseButton]            = ImVec4(0.41f, 0.41f, 0.41f, 0.50f);
-    colors[ImGuiCol_CloseButtonHovered]     = ImVec4(0.98f, 0.39f, 0.36f, 1.00f);
-    colors[ImGuiCol_CloseButtonActive]      = ImVec4(0.98f, 0.39f, 0.36f, 1.00f);
     colors[ImGuiCol_PlotLines]              = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
     colors[ImGuiCol_PlotLinesHovered]       = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
     colors[ImGuiCol_PlotHistogram]          = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
@@ -217,9 +214,6 @@ void ImGui::StyleColorsClassic(ImGuiStyle* dst)
     colors[ImGuiCol_ResizeGrip]             = ImVec4(1.00f, 1.00f, 1.00f, 0.16f);
     colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.78f, 0.82f, 1.00f, 0.60f);
     colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.78f, 0.82f, 1.00f, 0.90f);
-    colors[ImGuiCol_CloseButton]            = ImVec4(0.50f, 0.50f, 0.90f, 0.50f);
-    colors[ImGuiCol_CloseButtonHovered]     = ImVec4(0.70f, 0.70f, 0.90f, 0.60f);
-    colors[ImGuiCol_CloseButtonActive]      = ImVec4(0.70f, 0.70f, 0.70f, 1.00f);
     colors[ImGuiCol_PlotLines]              = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
     colors[ImGuiCol_PlotLinesHovered]       = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
     colors[ImGuiCol_PlotHistogram]          = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
@@ -272,9 +266,6 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
     colors[ImGuiCol_ResizeGrip]             = ImVec4(0.80f, 0.80f, 0.80f, 0.56f);
     colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
     colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
-    colors[ImGuiCol_CloseButton]            = ImVec4(0.59f, 0.59f, 0.59f, 0.50f);
-    colors[ImGuiCol_CloseButtonHovered]     = ImVec4(0.98f, 0.39f, 0.36f, 1.00f);
-    colors[ImGuiCol_CloseButtonActive]      = ImVec4(0.98f, 0.39f, 0.36f, 1.00f);
     colors[ImGuiCol_PlotLines]              = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
     colors[ImGuiCol_PlotLinesHovered]       = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
     colors[ImGuiCol_PlotHistogram]          = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
@@ -1841,7 +1832,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
                     continue;
 
                 const int codepoint = range.first_unicode_codepoint_in_range + char_idx;
-                if (cfg.MergeMode && dst_font->FindGlyph((unsigned short)codepoint))
+                if (cfg.MergeMode && dst_font->FindGlyphNoFallback((unsigned short)codepoint))
                     continue;
 
                 stbtt_aligned_quad q;
@@ -2205,8 +2196,7 @@ void ImFont::BuildLookupTable()
         IndexLookup[(int)tab_glyph.Codepoint] = (unsigned short)(Glyphs.Size-1);
     }
 
-    FallbackGlyph = NULL;
-    FallbackGlyph = FindGlyph(FallbackChar);
+    FallbackGlyph = FindGlyphNoFallback(FallbackChar);
     FallbackAdvanceX = FallbackGlyph ? FallbackGlyph->AdvanceX : 0.0f;
     for (int i = 0; i < max_codepoint + 1; i++)
         if (IndexAdvanceX[i] < 0.0f)
@@ -2268,13 +2258,22 @@ void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
 
 const ImFontGlyph* ImFont::FindGlyph(ImWchar c) const
 {
-    if (c < IndexLookup.Size)
-    {
-        const unsigned short i = IndexLookup[c];
-        if (i != (unsigned short)-1)
-            return &Glyphs.Data[i];
-    }
-    return FallbackGlyph;
+    if (c >= IndexLookup.Size)
+        return FallbackGlyph;
+    const unsigned short i = IndexLookup[c];
+    if (i == (unsigned short)-1)
+        return FallbackGlyph;
+    return &Glyphs.Data[i];
+}
+
+const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar c) const
+{
+    if (c >= IndexLookup.Size)
+        return NULL;
+    const unsigned short i = IndexLookup[c];
+    if (i == (unsigned short)-1)
+        return NULL;
+    return &Glyphs.Data[i];
 }
 
 const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const

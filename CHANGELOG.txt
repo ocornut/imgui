@@ -60,6 +60,7 @@ Breaking Changes:
  - Renamed ImGuiStyleVar_Count_ to ImGuiStyleVar_COUNT and ImGuiMouseCursor_Count_ to ImGuiMouseCursor_COUNT for consistency with other public enums.
  - Obsoleted IsAnyWindowHovered() in favor of IsWindowHovered(ImGuiHoveredFlags_AnyWindow). Kept redirection function (will obsolete).
  - Obsoleted IsAnyWindowFocused() in favor of IsWindowFocused(ImGuiFocusedFlags_AnyWindow). Kept redirection function (will obsolete).
+ - Removed ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered style colors as the closing cross uses regular button colors now.
  - Renamed ImGuiSizeConstraintCallback to ImGuiSizeCallback, ImGuiSizeConstraintCallbackData to ImGuiSizeCallbackData.
  - Removed CalcItemRectClosestPoint() which was weird and not really used by anyone except demo code. If you need it it's easy to replicate on your side.
 
@@ -101,6 +102,7 @@ Other Changes:
 - Style: Enable window border by default. (#707)
 - Style: Exposed ImGuiStyleVar_WindowTitleAlign, ImGuiStyleVar_ScrollbarSize, ImGuiStyleVar_ScrollbarRounding, ImGuiStyleVar_GrabRounding + added an assert to reduce accidental breakage. (#1181)
 - Style: Added style.MouseCursorScale help when using the software mouse cursor facility. (#939).
+- Style: Close button nows display a cross before hovering. Uses button colors for highlight when hovering. (#707)
 - Popup: OpenPopup() Always reopen existing popup. (Removed imgui_internal.h's OpenPopupEx() which was used for this.) (#1497, #1533).
 - Popup: BeginPopupContextItem(), BeginPopupContextWindow(), BeginPopupContextVoid(), OpenPopupOnItemClick() all react on mouse release instead of mouse press. (~#439)
 - Popup: Better handling of user mistakenly calling OpenPopup() every frame (with reopen_existing option). The error will now be more visible and easier to understand. (#1497)
