@@ -1807,13 +1807,14 @@ float ImGuiMenuColumns::CalcExtraSpace(float avail_w)
 static void SetCursorPosYAndSetupDummyPrevLine(float pos_y, float line_height)
 {
     // Set cursor position and a few other things so that SetScrollHere() and Columns() can work when seeking cursor. 
-    // FIXME: It is problematic that we have to do that here, because custom/equivalent end-user code would stumble on the same issue. Consider moving within SetCursorXXX functions?
+    // FIXME: It is problematic that we have to do that here, because custom/equivalent end-user code would stumble on the same issue. 
+    // The clipper should probably have a 4th step to display the last item in a regular manner.
     ImGui::SetCursorPosY(pos_y);
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     window->DC.CursorPosPrevLine.y = window->DC.CursorPos.y - line_height;      // Setting those fields so that SetScrollHere() can properly function after the end of our clipper usage.
     window->DC.PrevLineHeight = (line_height - GImGui->Style.ItemSpacing.y);    // If we end up needing more accurate data (to e.g. use SameLine) we may as well make the clipper have a fourth step to let user process and display the last item in their list.
     if (window->DC.ColumnsSet)
-        window->DC.ColumnsSet->CellMinY = window->DC.CursorPos.y;           // Setting this so that cell Y position are set properly
+        window->DC.ColumnsSet->LineMinY = window->DC.CursorPos.y;           // Setting this so that cell Y position are set properly
 }
 
 // Use case A: Begin() called from constructor with items_height<0, then called again from Sync() in StepNo 1
@@ -12103,7 +12104,7 @@ void ImGui::Separator()
     if (window->DC.ColumnsSet)
     {
         PushColumnClipRect();
-        window->DC.ColumnsSet->CellMinY = window->DC.CursorPos.y;
+        window->DC.ColumnsSet->LineMinY = window->DC.CursorPos.y;
     }
 }
 
@@ -12322,7 +12323,7 @@ void ImGui::NextColumn()
     PopClipRect();
 
     ImGuiColumnsSet* columns = window->DC.ColumnsSet;
-    columns->CellMaxY = ImMax(columns->CellMaxY, window->DC.CursorPos.y);
+    columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
     if (++columns->Current < columns->Count)
     {
         // Columns 1+ cancel out IndentX
@@ -12334,10 +12335,10 @@ void ImGui::NextColumn()
         window->DC.ColumnsOffsetX = 0.0f;
         window->DrawList->ChannelsSetCurrent(0);
         columns->Current = 0;
-        columns->CellMinY = columns->CellMaxY;
+        columns->LineMinY = columns->LineMaxY;
     }
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
-    window->DC.CursorPos.y = columns->CellMinY;
+    window->DC.CursorPos.y = columns->LineMinY;
     window->DC.CurrentLineHeight = 0.0f;
     window->DC.CurrentLineTextBaseOffset = 0.0f;
 
@@ -12508,7 +12509,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     columns->MaxX = ImMax(content_region_width - window->Scroll.x, columns->MinX + 1.0f);
     columns->StartPosY = window->DC.CursorPos.y;
     columns->StartMaxPosX = window->DC.CursorMaxPos.x;
-    columns->CellMinY = columns->CellMaxY = window->DC.CursorPos.y;
+    columns->LineMinY = columns->LineMaxY = window->DC.CursorPos.y;
     window->DC.ColumnsOffsetX = 0.0f;
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.IndentX + window->DC.ColumnsOffsetX);
 
@@ -12555,8 +12556,8 @@ void ImGui::EndColumns()
     PopClipRect();
     window->DrawList->ChannelsMerge();
 
-    columns->CellMaxY = ImMax(columns->CellMaxY, window->DC.CursorPos.y);
-    window->DC.CursorPos.y = columns->CellMaxY;
+    columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
+    window->DC.CursorPos.y = columns->LineMaxY;
     if (!(columns->Flags & ImGuiColumnsFlags_GrowParentContentsSize))
         window->DC.CursorMaxPos.x = ImMax(columns->StartMaxPosX, columns->MaxX);  // Restore cursor max pos, as columns don't grow parent
 

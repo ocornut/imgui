@@ -462,9 +462,9 @@ struct ImGuiColumnsSet
     int                 Current;
     int                 Count;
     float               MinX, MaxX;
-    float               StartPosY;
-    float               StartMaxPosX;       // Backup of CursorMaxPos
-    float               CellMinY, CellMaxY;
+    float               LineMinY, LineMaxY;
+    float               StartPosY;          // Copy of CursorPos
+    float               StartMaxPosX;       // Copy of CursorMaxPos
     ImVector<ImGuiColumnData> Columns;
 
     ImGuiColumnsSet()   { Clear(); }
@@ -477,9 +477,9 @@ struct ImGuiColumnsSet
         Current = 0;
         Count = 1;
         MinX = MaxX = 0.0f;
+        LineMinY = LineMaxY = 0.0f;
         StartPosY = 0.0f;
         StartMaxPosX = 0.0f;
-        CellMinY = CellMaxY = 0.0f;
         Columns.clear();
     }
 };
