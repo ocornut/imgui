@@ -29,6 +29,8 @@ static const VkAllocationCallbacks* g_Allocator = NULL;
 static VkPhysicalDevice             g_PhysicalDevice = VK_NULL_HANDLE;
 static VkInstance                   g_Instance = VK_NULL_HANDLE;
 static VkDevice                     g_Device = VK_NULL_HANDLE;
+static uint32_t                     g_QueueFamily = (uint32_t)-1;
+static VkQueue                      g_Queue = VK_NULL_HANDLE;
 static VkPipelineCache              g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool             g_DescriptorPool = VK_NULL_HANDLE;
 static VkRenderPass                 g_RenderPass = VK_NULL_HANDLE;
@@ -298,7 +300,7 @@ void ImGui_ImplVulkan_RenderDrawData(VkCommandBuffer command_buffer, ImDrawData*
                 // Apply scissor/clipping rectangle
                 // FIXME: We could clamp width/height based on clamped min/max values.
                 VkRect2D scissor;
-                scissor.offset.x = (int32_t)(pcmd->ClipRect.x - io.DisplayPos.x) > 0 ? (int32_t)(pcmd->ClipRect.x - io.DisplayPos.y) : 0;
+                scissor.offset.x = (int32_t)(pcmd->ClipRect.x - io.DisplayPos.x) > 0 ? (int32_t)(pcmd->ClipRect.x - io.DisplayPos.x) : 0;
                 scissor.offset.y = (int32_t)(pcmd->ClipRect.y - io.DisplayPos.y) > 0 ? (int32_t)(pcmd->ClipRect.y - io.DisplayPos.y) : 0;
                 scissor.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
                 scissor.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y + 1); // FIXME: Why +1 here?
@@ -624,7 +626,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     VkDynamicState dynamic_states[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamic_state = {};
     dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_state.dynamicStateCount = 2;
+    dynamic_state.dynamicStateCount = (uint32_t)IM_ARRAYSIZE(dynamic_states);
     dynamic_state.pDynamicStates = dynamic_states;
 
     VkGraphicsPipelineCreateInfo info = {};
@@ -692,13 +694,19 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     IM_ASSERT(info->Instance != NULL);
     IM_ASSERT(info->PhysicalDevice != NULL);
     IM_ASSERT(info->Device != NULL);
+    IM_ASSERT(info->Queue != NULL);
+    IM_ASSERT(info->DescriptorPool != NULL);
+    IM_ASSERT(render_pass != NULL);
 
-    g_Allocator = info->Allocator;
+    g_Instance = info->Instance;
     g_PhysicalDevice = info->PhysicalDevice;
     g_Device = info->Device;
+    g_QueueFamily = info->QueueFamily;
+    g_Queue = info->Queue;
     g_RenderPass = render_pass;
     g_PipelineCache = info->PipelineCache;
     g_DescriptorPool = info->DescriptorPool;
+    g_Allocator = info->Allocator;
     g_CheckVkResultFn = info->CheckVkResultFn;
 
     ImGuiIO& io = ImGui::GetIO();
@@ -999,6 +1007,7 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice 
 
 void ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, ImGui_ImplVulkan_WindowData* wd, const VkAllocationCallbacks* allocator)
 {
+    vkDeviceWaitIdle(device);
     for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
     {
         ImGui_ImplVulkan_FrameData* fd = &wd->Frames[i];
@@ -1027,7 +1036,7 @@ void ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, I
 
 struct ImGuiPlatformDataVulkan
 {
-    ImGui_ImplVulkan_WindowData Wd;
+    ImGui_ImplVulkan_WindowData WindowData;
 
     ImGuiPlatformDataVulkan() { }
     ~ImGuiPlatformDataVulkan() { }

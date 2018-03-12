@@ -18,6 +18,8 @@ struct ImGui_ImplVulkan_InitInfo
     VkInstance                      Instance;
     VkPhysicalDevice                PhysicalDevice;
     VkDevice                        Device;
+    uint32_t                        QueueFamily;
+    VkQueue                         Queue;
     VkPipelineCache                 PipelineCache;
     VkDescriptorPool                DescriptorPool;
     const VkAllocationCallbacks*    Allocator;
