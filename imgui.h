@@ -113,16 +113,12 @@ typedef unsigned __int64 ImU64;     // 64-bit unsigned integer
 typedef unsigned long long ImU64;   // 64-bit unsigned integer
 #endif 
 
-// Others helpers at bottom of the file:
-// class ImVector<>                 // Lightweight std::vector like class.
-// IMGUI_ONCE_UPON_A_FRAME          // Execute a block of code once per frame only (convenient for creating UI within deep-nested code that runs multiple times)
-
 struct ImVec2
 {
     float x, y;
     ImVec2() { x = y = 0.0f; }
     ImVec2(float _x, float _y) { x = _x; y = _y; }
-    float  operator[] (size_t idx) const { IM_ASSERT(idx == 0 || idx == 1); return (&x)[idx]; }    // We very rarely use this [] operator, thus an assert is fine.
+    float  operator[] (size_t idx) const { IM_ASSERT(idx <= 1); return (&x)[idx]; }    // We very rarely use this [] operator, thus an assert is fine.
 #ifdef IM_VEC2_CLASS_EXTRA          // Define constructor and implicit cast operators in imconfig.h to convert back<>forth from your math types and ImVec2.
     IM_VEC2_CLASS_EXTRA
 #endif
@@ -680,22 +676,22 @@ enum ImGuiHoveredFlags_
 enum ImGuiDragDropFlags_
 {
     // BeginDragDropSource() flags
-    ImGuiDragDropFlags_SourceNoPreviewTooltip       = 1 << 0,       // By default, a successful call to BeginDragDropSource opens a tooltip so you can display a preview or description of the source contents. This flag disable this behavior.
-    ImGuiDragDropFlags_SourceNoDisableHover         = 1 << 1,       // By default, when dragging we clear data so that IsItemHovered() will return true, to avoid subsequent user code submitting tooltips. This flag disable this behavior so you can still call IsItemHovered() on the source item.
-    ImGuiDragDropFlags_SourceNoHoldToOpenOthers     = 1 << 2,       // Disable the behavior that allows to open tree nodes and collapsing header by holding over them while dragging a source item.
-    ImGuiDragDropFlags_SourceAllowNullID            = 1 << 3,       // Allow items such as Text(), Image() that have no unique identifier to be used as drag source, by manufacturing a temporary identifier based on their window-relative position. This is extremely unusual within the dear imgui ecosystem and so we made it explicit.
-    ImGuiDragDropFlags_SourceExtern                 = 1 << 4,       // External source (from outside of imgui), won't attempt to read current item/window info. Will always return true. Only one Extern source can be active simultaneously.
+    ImGuiDragDropFlags_SourceNoPreviewTooltip       = 1 << 0,   // By default, a successful call to BeginDragDropSource opens a tooltip so you can display a preview or description of the source contents. This flag disable this behavior.
+    ImGuiDragDropFlags_SourceNoDisableHover         = 1 << 1,   // By default, when dragging we clear data so that IsItemHovered() will return true, to avoid subsequent user code submitting tooltips. This flag disable this behavior so you can still call IsItemHovered() on the source item.
+    ImGuiDragDropFlags_SourceNoHoldToOpenOthers     = 1 << 2,   // Disable the behavior that allows to open tree nodes and collapsing header by holding over them while dragging a source item.
+    ImGuiDragDropFlags_SourceAllowNullID            = 1 << 3,   // Allow items such as Text(), Image() that have no unique identifier to be used as drag source, by manufacturing a temporary identifier based on their window-relative position. This is extremely unusual within the dear imgui ecosystem and so we made it explicit.
+    ImGuiDragDropFlags_SourceExtern                 = 1 << 4,   // External source (from outside of imgui), won't attempt to read current item/window info. Will always return true. Only one Extern source can be active simultaneously.
     // AcceptDragDropPayload() flags
-    ImGuiDragDropFlags_AcceptBeforeDelivery         = 1 << 10,      // AcceptDragDropPayload() will returns true even before the mouse button is released. You can then call IsDelivery() to test if the payload needs to be delivered.
-    ImGuiDragDropFlags_AcceptNoDrawDefaultRect      = 1 << 11,      // Do not draw the default highlight rectangle when hovering over target.
+    ImGuiDragDropFlags_AcceptBeforeDelivery         = 1 << 10,  // AcceptDragDropPayload() will returns true even before the mouse button is released. You can then call IsDelivery() to test if the payload needs to be delivered.
+    ImGuiDragDropFlags_AcceptNoDrawDefaultRect      = 1 << 11,  // Do not draw the default highlight rectangle when hovering over target.
     ImGuiDragDropFlags_AcceptPeekOnly               = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect  // For peeking ahead and inspecting the payload before delivery.
 };
 
 // Standard Drag and Drop payload types. You can define you own payload types using 12-characters long strings. Types starting with '_' are defined by Dear ImGui.
-#define IMGUI_PAYLOAD_TYPE_COLOR_3F     "_COL3F"    // float[3]     // Standard type for colors, without alpha. User code may use this type. 
-#define IMGUI_PAYLOAD_TYPE_COLOR_4F     "_COL4F"    // float[4]     // Standard type for colors. User code may use this type.
+#define IMGUI_PAYLOAD_TYPE_COLOR_3F     "_COL3F"    // float[3]: Standard type for colors, without alpha. User code may use this type. 
+#define IMGUI_PAYLOAD_TYPE_COLOR_4F     "_COL4F"    // float[4]: Standard type for colors. User code may use this type.
 
-// A direction
+// A cardinal direction
 enum ImGuiDir_
 {
     ImGuiDir_None    = -1,
@@ -840,15 +836,13 @@ enum ImGuiCol_
     ImGuiCol_DragDropTarget,
     ImGuiCol_NavHighlight,          // gamepad/keyboard: current highlighted item 
     ImGuiCol_NavWindowingHighlight, // gamepad/keyboard: when holding NavMenu to focus/move/resize windows
+    ImGuiCol_COUNT
 
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered, // [unused since 1.60+] the close button now uses regular button colors.
-    ImGuiCol_ComboBg,                                                              // [unused since 1.53+] ComboBg has been merged with PopupBg, so a redirect isn't accurate.
-    ImGuiCol_COUNT,
-    ImGuiCol_ChildWindowBg = ImGuiCol_ChildBg, ImGuiCol_Column = ImGuiCol_Separator, ImGuiCol_ColumnHovered = ImGuiCol_SeparatorHovered, ImGuiCol_ColumnActive = ImGuiCol_SeparatorActive
-#else
-    ImGuiCol_COUNT
+    , ImGuiCol_ChildWindowBg = ImGuiCol_ChildBg, ImGuiCol_Column = ImGuiCol_Separator, ImGuiCol_ColumnHovered = ImGuiCol_SeparatorHovered, ImGuiCol_ColumnActive = ImGuiCol_SeparatorActive
+    //ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered, // [unused since 1.60+] the close button now uses regular button colors.
+    //ImGuiCol_ComboBg,                                                              // [unused since 1.53+] ComboBg has been merged with PopupBg, so a redirect isn't accurate.
 #endif
 };
 
@@ -898,6 +892,7 @@ enum ImGuiColorEditFlags_
     ImGuiColorEditFlags_NoTooltip       = 1 << 6,   //              // ColorEdit, ColorPicker, ColorButton: disable tooltip when hovering the preview.
     ImGuiColorEditFlags_NoLabel         = 1 << 7,   //              // ColorEdit, ColorPicker: disable display of inline text label (the label is still forwarded to the tooltip and picker).
     ImGuiColorEditFlags_NoSidePreview   = 1 << 8,   //              // ColorPicker: disable bigger color preview on right side of the picker, use small colored square preview instead.
+    
     // User Options (right-click on widget to change some of them). You can set application defaults using SetColorEditOptions(). The idea is that you probably don't want to override them in most of your calls, let the user choose and/or call SetColorEditOptions() during startup.
     ImGuiColorEditFlags_AlphaBar        = 1 << 9,   //              // ColorEdit, ColorPicker: show vertical alpha bar/gradient in picker.
     ImGuiColorEditFlags_AlphaPreview    = 1 << 10,  //              // ColorEdit, ColorPicker, ColorButton: display preview as a transparent color over a checkerboard, instead of opaque.
@@ -910,7 +905,8 @@ enum ImGuiColorEditFlags_
     ImGuiColorEditFlags_Float           = 1 << 17,  // [DataType]   // ColorEdit, ColorPicker, ColorButton: _display_ values formatted as 0.0f..1.0f floats instead of 0..255 integers. No round-trip of value via integers.
     ImGuiColorEditFlags_PickerHueBar    = 1 << 18,  // [PickerMode] // ColorPicker: bar for Hue, rectangle for Sat/Value.
     ImGuiColorEditFlags_PickerHueWheel  = 1 << 19,  // [PickerMode] // ColorPicker: wheel for Hue, triangle for Sat/Value.
-    // Internals/Masks
+
+    // [Internal] Masks
     ImGuiColorEditFlags__InputsMask     = ImGuiColorEditFlags_RGB|ImGuiColorEditFlags_HSV|ImGuiColorEditFlags_HEX,
     ImGuiColorEditFlags__DataTypeMask   = ImGuiColorEditFlags_Uint8|ImGuiColorEditFlags_Float,
     ImGuiColorEditFlags__PickerMask     = ImGuiColorEditFlags_PickerHueWheel|ImGuiColorEditFlags_PickerHueBar,
@@ -1180,7 +1176,7 @@ namespace ImGui
 // Helpers
 //-----------------------------------------------------------------------------
 
-// Lightweight std::vector<> like class to avoid dragging dependencies (also: windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug).
+// Lightweight std::vector<> like class to avoid dragging dependencies (also: Windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug).
 // Our implementation does NOT call C++ constructors/destructors. This is intentional and we do not require it. Do not use this class as a straight std::vector replacement in your code!
 template<typename T>
 class ImVector
@@ -1200,7 +1196,6 @@ public:
     inline bool                 empty() const                   { return Size == 0; }
     inline int                  size() const                    { return Size; }
     inline int                  capacity() const                { return Capacity; }
-
     inline value_type&          operator[](int i)               { IM_ASSERT(i < Size); return Data[i]; }
     inline const value_type&    operator[](int i) const         { IM_ASSERT(i < Size); return Data[i]; }
 
@@ -1215,11 +1210,10 @@ public:
     inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size - 1]; }
     inline void                 swap(ImVector<T>& rhs)          { int rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; int rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
 
-    inline int                  _grow_capacity(int sz) const    { int new_capacity = Capacity ? (Capacity + Capacity/2) : 8; return new_capacity > sz ? new_capacity : sz; }
-
-    inline void                 resize(int new_size)            { if (new_size > Capacity) reserve(_grow_capacity(new_size)); Size = new_size; }
-    inline void                 resize(int new_size, const T& v){ if (new_size > Capacity) reserve(_grow_capacity(new_size)); if (new_size > Size) for (int n = Size; n < new_size; n++) Data[n] = v; Size = new_size; }
-    inline void                 reserve(int new_capacity)
+    inline int          _grow_capacity(int sz) const            { int new_capacity = Capacity ? (Capacity + Capacity/2) : 8; return new_capacity > sz ? new_capacity : sz; }
+    inline void         resize(int new_size)                    { if (new_size > Capacity) reserve(_grow_capacity(new_size)); Size = new_size; }
+    inline void         resize(int new_size, const T& v)        { if (new_size > Capacity) reserve(_grow_capacity(new_size)); if (new_size > Size) for (int n = Size; n < new_size; n++) Data[n] = v; Size = new_size; }
+    inline void         reserve(int new_capacity)
     {
         if (new_capacity <= Capacity) 
             return;
@@ -1232,20 +1226,26 @@ public:
     }
 
     // NB: &v cannot be pointing inside the ImVector Data itself! e.g. v.push_back(v[10]) is forbidden.
-    inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(_grow_capacity(Size + 1)); Data[Size++] = v; }
-    inline void                 pop_back()                      { IM_ASSERT(Size > 0); Size--; }
-    inline void                 push_front(const value_type& v) { if (Size == 0) push_back(v); else insert(Data, v); }
-
-    inline iterator             erase(const_iterator it)                        { IM_ASSERT(it >= Data && it < Data+Size); const ptrdiff_t off = it - Data; memmove(Data + off, Data + off + 1, ((size_t)Size - (size_t)off - 1) * sizeof(value_type)); Size--; return Data + off; }
-    inline iterator             insert(const_iterator it, const value_type& v)  { IM_ASSERT(it >= Data && it <= Data+Size); const ptrdiff_t off = it - Data; if (Size == Capacity) reserve(_grow_capacity(Size + 1)); if (off < (int)Size) memmove(Data + off + 1, Data + off, ((size_t)Size - (size_t)off) * sizeof(value_type)); Data[off] = v; Size++; return Data + off; }
-    inline bool                 contains(const value_type& v) const             { const T* data = Data;  const T* data_end = Data + Size; while (data < data_end) if (*data++ == v) return true; return false; }
+    inline void         push_back(const value_type& v)                  { if (Size == Capacity) reserve(_grow_capacity(Size + 1)); Data[Size++] = v; }
+    inline void         pop_back()                                      { IM_ASSERT(Size > 0); Size--; }
+    inline void         push_front(const value_type& v)                 { if (Size == 0) push_back(v); else insert(Data, v); }
+    inline iterator     erase(const_iterator it)                        { IM_ASSERT(it >= Data && it < Data+Size); const ptrdiff_t off = it - Data; memmove(Data + off, Data + off + 1, ((size_t)Size - (size_t)off - 1) * sizeof(value_type)); Size--; return Data + off; }
+    inline iterator     insert(const_iterator it, const value_type& v)  { IM_ASSERT(it >= Data && it <= Data+Size); const ptrdiff_t off = it - Data; if (Size == Capacity) reserve(_grow_capacity(Size + 1)); if (off < (int)Size) memmove(Data + off + 1, Data + off, ((size_t)Size - (size_t)off) * sizeof(value_type)); Data[off] = v; Size++; return Data + off; }
+    inline bool         contains(const value_type& v) const             { const T* data = Data;  const T* data_end = Data + Size; while (data < data_end) if (*data++ == v) return true; return false; }
 };
 
+// Helper: IM_NEW(), IM_PLACEMENT_NEW(), IM_DELETE() macros to call MemAlloc + Placement New, Placement Delete + MemFree
+// We call C++ constructor on own allocated memory via the placement "new(ptr) Type()" syntax.
+// Defining a custom placement new() with a dummy parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
+struct ImNewDummy {};
+inline void* operator new(size_t, ImNewDummy, void* ptr) { return ptr; }
+inline void  operator delete(void*, ImNewDummy, void*)   {} // This is only required so we can use the symetrical new()
+#define IM_PLACEMENT_NEW(_PTR)              new(ImNewDummy(), _PTR)
+#define IM_NEW(_TYPE)                       new(ImNewDummy(), ImGui::MemAlloc(sizeof(_TYPE))) _TYPE
+template<typename T> void IM_DELETE(T*& p)  { if (p) { p->~T(); ImGui::MemFree(p); p = NULL; } }
+
 // Helper: execute a block of code at maximum once a frame. Convenient if you want to quickly create an UI within deep-nested code that runs multiple times every frame.
-// Usage:
-//   static ImGuiOnceUponAFrame oaf;
-//   if (oaf)
-//       ImGui::Text("This will be called only once per frame");
+// Usage: static ImGuiOnceUponAFrame oaf; if (oaf) ImGui::Text("This will be called only once per frame");
 struct ImGuiOnceUponAFrame
 {
     ImGuiOnceUponAFrame() { RefFrame = -1; }
@@ -1670,22 +1670,23 @@ struct ImDrawData
 
 struct ImFontConfig
 {
-    void*           FontData;                   //          // TTF/OTF data
-    int             FontDataSize;               //          // TTF/OTF data size
-    bool            FontDataOwnedByAtlas;       // true     // TTF/OTF data ownership taken by the container ImFontAtlas (will delete memory itself).
-    int             FontNo;                     // 0        // Index of font within TTF/OTF file
-    float           SizePixels;                 //          // Size in pixels for rasterizer.
-    int             OversampleH, OversampleV;   // 3, 1     // Rasterize at higher quality for sub-pixel positioning. We don't use sub-pixel positions on the Y axis.
-    bool            PixelSnapH;                 // false    // Align every glyph to pixel boundary. Useful e.g. if you are merging a non-pixel aligned font with the default font. If enabled, you can set OversampleH/V to 1.
-    ImVec2          GlyphExtraSpacing;          // 0, 0     // Extra spacing (in pixels) between glyphs. Only X axis is supported for now.
-    ImVec2          GlyphOffset;                // 0, 0     // Offset all glyphs from this font input.
-    const ImWchar*  GlyphRanges;                // NULL     // Pointer to a user-provided list of Unicode range (2 value per range, values are inclusive, zero-terminated list). THE ARRAY DATA NEEDS TO PERSIST AS LONG AS THE FONT IS ALIVE.
-    bool            MergeMode;                  // false    // Merge into previous ImFont, so you can combine multiple inputs font into one ImFont (e.g. ASCII font + icons + Japanese glyphs). You may want to use GlyphOffset.y when merge font of different heights.
-    unsigned int    RasterizerFlags;            // 0x00     // Settings for custom font rasterizer (e.g. ImGuiFreeType). Leave as zero if you aren't using one.
-    float           RasterizerMultiply;         // 1.0f     // Brighten (>1.0f) or darken (<1.0f) font output. Brightening small fonts may be a good workaround to make them more readable.
+    void*           FontData;               //          // TTF/OTF data
+    int             FontDataSize;           //          // TTF/OTF data size
+    bool            FontDataOwnedByAtlas;   // true     // TTF/OTF data ownership taken by the container ImFontAtlas (will delete memory itself).
+    int             FontNo;                 // 0        // Index of font within TTF/OTF file
+    float           SizePixels;             //          // Size in pixels for rasterizer.
+    int             OversampleH;            // 3        // Rasterize at higher quality for sub-pixel positioning. We don't use sub-pixel positions on the Y axis.
+    int             OversampleV;            // 1        // Rasterize at higher quality for sub-pixel positioning. We don't use sub-pixel positions on the Y axis.
+    bool            PixelSnapH;             // false    // Align every glyph to pixel boundary. Useful e.g. if you are merging a non-pixel aligned font with the default font. If enabled, you can set OversampleH/V to 1.
+    ImVec2          GlyphExtraSpacing;      // 0, 0     // Extra spacing (in pixels) between glyphs. Only X axis is supported for now.
+    ImVec2          GlyphOffset;            // 0, 0     // Offset all glyphs from this font input.
+    const ImWchar*  GlyphRanges;            // NULL     // Pointer to a user-provided list of Unicode range (2 value per range, values are inclusive, zero-terminated list). THE ARRAY DATA NEEDS TO PERSIST AS LONG AS THE FONT IS ALIVE.
+    bool            MergeMode;              // false    // Merge into previous ImFont, so you can combine multiple inputs font into one ImFont (e.g. ASCII font + icons + Japanese glyphs). You may want to use GlyphOffset.y when merge font of different heights.
+    unsigned int    RasterizerFlags;        // 0x00     // Settings for custom font rasterizer (e.g. ImGuiFreeType). Leave as zero if you aren't using one.
+    float           RasterizerMultiply;     // 1.0f     // Brighten (>1.0f) or darken (<1.0f) font output. Brightening small fonts may be a good workaround to make them more readable.
 
     // [Internal]
-    char            Name[40];                               // Name (strictly to ease debugging)
+    char            Name[40];               // Name (strictly to ease debugging)
     ImFont*         DstFont;
 
     IMGUI_API ImFontConfig();
@@ -1786,7 +1787,7 @@ struct ImFontAtlas
     IMGUI_API int       AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0,0));   // Id needs to be < 0x10000 to register a rectangle to map into a specific font.
     const CustomRect*   GetCustomRectByIndex(int index) const { if (index < 0) return NULL; return &CustomRects[index]; }
 
-    // Internals
+    // [Internal]
     IMGUI_API void      CalcCustomRectUV(const CustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max);
     IMGUI_API bool      GetMouseCursorTexData(ImGuiMouseCursor cursor, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2]);
 

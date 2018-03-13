@@ -9,4 +9,4 @@ ImGui::ThisIsMoreCode();
 ```
 For multiline snippets.
 
-(Clear this form before submitting your issue)
+(Clear this form before submitting your issue. Please read the CONTRIBUTING.md file!)
