@@ -32,6 +32,9 @@
 // SDL
 #include <SDL.h>
 #include <SDL_syswm.h>
+#define SDL_HAS_CAPTURE_MOUSE   SDL_VERSION_ATLEAST(2,0,4)
+#define SDL_HAS_WINDOW_OPACITY  SDL_VERSION_ATLEAST(2,0,5)
+#define SDL_HAS_VULKAN          SDL_VERSION_ATLEAST(2,0,6)
 
 // Data
 static SDL_Window*  g_Window = NULL;
@@ -151,7 +154,7 @@ bool    ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
 
     // We need SDL_CaptureMouse(), SDL_GetGlobalMouseState() from SDL 2.0.4+ to support multiple viewports.
     // We left the call to ImGui_ImplSDL2_InitPlatformInterface() outside of #ifdef to avoid unused-function warnings.
-#if SDL_VERSION_ATLEAST(2,0,4)
+#if SDL_HAS_CAPTURE_MOUSE
     io.ConfigFlags |= ImGuiConfigFlags_PlatformHasViewports;
 #endif
     if ((io.ConfigFlags & ImGuiConfigFlags_EnableViewports) && (io.ConfigFlags & ImGuiConfigFlags_PlatformHasViewports))
@@ -185,7 +188,7 @@ static void ImGui_ImplSDL2_UpdateMouse()
     io.MouseDown[2] = g_MousePressed[2] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
     g_MousePressed[0] = g_MousePressed[1] = g_MousePressed[2] = false;
 
-#if SDL_VERSION_ATLEAST(2,0,4)
+#if SDL_HAS_CAPTURE_MOUSE
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     if (focused_window)
     {
@@ -254,8 +257,6 @@ void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
 // Platform Windows
 // --------------------------------------------------------------------------------------------------------
 
-#define SDL_HAS_WINDOW_OPACITY      SDL_VERSION_ATLEAST(2,0,5)
-
 struct ImGuiPlatformDataSDL2
 {
     SDL_Window*     Window;
@@ -280,12 +281,13 @@ static void ImGui_ImplSDL2_CreateViewport(ImGuiViewport* viewport)
 
     // We don't enable SDL_WINDOW_RESIZABLE because it enforce windows decorations
     Uint32 sdl_flags = 0;
-    sdl_flags |= SDL_WINDOW_OPENGL; // FIXME-PLATFORM
+    sdl_flags |= main_viewport_data->GLContext ? SDL_WINDOW_OPENGL : SDL_WINDOW_VULKAN;
     sdl_flags |= SDL_WINDOW_HIDDEN;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
     data->Window = SDL_CreateWindow("No Title Yet", 0, 0, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
-    data->GLContext = SDL_GL_CreateContext(data->Window);
+    if (main_viewport_data->GLContext)
+        data->GLContext = SDL_GL_CreateContext(data->Window);
     viewport->PlatformHandle = (void*)data->Window;
 }
 
@@ -374,15 +376,32 @@ static void ImGui_ImplSDL2_SetWindowTitle(ImGuiViewport* viewport, const char* t
 static void ImGui_ImplSDL2_RenderViewport(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataSDL2* data = (ImGuiPlatformDataSDL2*)viewport->PlatformUserData;
-    SDL_GL_MakeCurrent(data->Window, data->GLContext);
+    if (data->GLContext)
+        SDL_GL_MakeCurrent(data->Window, data->GLContext);
 }
 
 static void ImGui_ImplSDL2_SwapBuffers(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataSDL2* data = (ImGuiPlatformDataSDL2*)viewport->PlatformUserData;
-    SDL_GL_MakeCurrent(data->Window, data->GLContext);  // FIXME-PLATFORM2
-    SDL_GL_SwapWindow(data->Window);
+    if (data->GLContext)
+    {
+        SDL_GL_MakeCurrent(data->Window, data->GLContext);  // FIXME-PLATFORM2
+        SDL_GL_SwapWindow(data->Window);
+    }
 }
+
+// Vulkan support (the Vulkan renderer needs to call a platform-side support function to create the surface)
+// SDL is graceful enough to _not_ need <vulkan/vulkan.h> so we can safely include this.
+#if SDL_HAS_VULKAN
+#include <SDL_vulkan.h>
+static int ImGui_ImplSDL2_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_instance, const void* vk_allocator, ImU64* out_vk_surface)
+{
+    ImGuiPlatformDataSDL2* data = (ImGuiPlatformDataSDL2*)viewport->PlatformUserData;
+    (void)vk_allocator;
+    SDL_bool ret = SDL_Vulkan_CreateSurface(data->Window, (VkInstance)vk_instance, (VkSurfaceKHR*)out_vk_surface);
+    return ret ? 0 : 1; // ret ? VK_SUCCESS : VK_NOT_READY 
+}
+#endif // SDL_HAS_VULKAN
 
 static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_gl_context)
 {
@@ -398,6 +417,9 @@ static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_g
     io.PlatformInterface.SetWindowTitle = ImGui_ImplSDL2_SetWindowTitle;
     io.PlatformInterface.RenderViewport = ImGui_ImplSDL2_RenderViewport;
     io.PlatformInterface.SwapBuffers = ImGui_ImplSDL2_SwapBuffers;
+#if SDL_HAS_VULKAN
+    io.PlatformInterface.CreateVkSurface = ImGui_ImplSDL2_CreateVkSurface;
+#endif
 
     io.ConfigFlags |= SDL_HAS_WINDOW_OPACITY ? ImGuiConfigFlags_PlatformHasWindowAlpha : 0;
 

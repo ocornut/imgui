@@ -963,7 +963,7 @@ struct ImGuiPlatformInterface
     void    (*SwapBuffers)(ImGuiViewport* viewport);
 
     // FIXME-VIEWPORT: Experimenting with back-end abstraction. This probably shouldn't stay as is.
-    int     (*CreateVkSurface)(void* platform_handle, ImU64 vk_instance, const void* vk_allocator, ImU64* out_vk_surface);
+    int     (*CreateVkSurface)(ImGuiViewport* viewport, ImU64 vk_instance, const void* vk_allocator, ImU64* out_vk_surface);
 
     // FIXME-DPI
     float   (*GetWindowDpiScale)(ImGuiViewport* viewport);  // (Optional)

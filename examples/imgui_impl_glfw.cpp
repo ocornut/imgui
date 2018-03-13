@@ -34,6 +34,12 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h> // for glfwGetWin32Window
 #endif
+#ifdef GLFW_HOVERED
+#define GLFW_HAS_GLFW_HOVERED   1
+#else
+#define GLFW_HAS_GLFW_HOVERED   0
+#endif
+#define GLFW_HAS_VULKAN         (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+
 
 // Data
 enum GlfwClientApi
@@ -437,6 +443,31 @@ static void ImGui_ImplGlfw_SwapBuffers(ImGuiViewport* viewport)
         glfwSwapBuffers(data->Window);
 }
 
+// Vulkan support (the Vulkan renderer needs to call a platform-side support function to create the surface)
+// Avoid including <vulkan.h> so we can build without it
+#if GLFW_HAS_VULKAN
+#ifndef VULKAN_H_
+#define VK_DEFINE_HANDLE(object) typedef struct object##_T* object;
+#if defined(__LP64__) || defined(_WIN64) || defined(__x86_64__) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(__powerpc64__)
+#define VK_DEFINE_NON_DISPATCHABLE_HANDLE(object) typedef struct object##_T *object;
+#else
+#define VK_DEFINE_NON_DISPATCHABLE_HANDLE(object) typedef uint64_t object;
+#endif
+VK_DEFINE_HANDLE(VkInstance)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSurfaceKHR)
+struct VkAllocationCallbacks;
+enum VkResult { VK_RESULT_MAX_ENUM = 0x7FFFFFFF };
+#endif // VULKAN_H_
+extern "C" { extern GLFWAPI VkResult glfwCreateWindowSurface(VkInstance instance, GLFWwindow* window, const VkAllocationCallbacks* allocator, VkSurfaceKHR* surface); }
+static int ImGui_ImplGlfw_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_instance, const void* vk_allocator, ImU64* out_vk_surface)
+{
+    ImGuiPlatformDataGlfw* data = (ImGuiPlatformDataGlfw*)viewport->PlatformUserData;
+    IM_ASSERT(g_ClientApi == GlfwClientApi_Vulkan);
+    VkResult err = glfwCreateWindowSurface((VkInstance)vk_instance, data->Window, (const VkAllocationCallbacks*)vk_allocator, (VkSurfaceKHR*)out_vk_surface);
+    return (int)err;
+}
+#endif // GLFW_HAS_VULKAN
+
 static void ImGui_ImplGlfw_InitPlatformInterface()
 {
     // Register platform interface (will be coupled with a renderer interface)
@@ -451,9 +482,9 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
     io.PlatformInterface.SetWindowTitle = ImGui_ImplGlfw_SetWindowTitle;
     io.PlatformInterface.RenderViewport = ImGui_ImplGlfw_RenderViewport;
     io.PlatformInterface.SwapBuffers = ImGui_ImplGlfw_SwapBuffers;
-
-    // We let the user set up the link to glfwCreateWindowSurface() here, so this binding can work with old GLFW and without Vulkan headers
-    io.PlatformInterface.CreateVkSurface = NULL;
+#if GLFW_HAS_VULKAN
+    io.PlatformInterface.CreateVkSurface = ImGui_ImplGlfw_CreateVkSurface;
+#endif
 
     // Register main window handle
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();

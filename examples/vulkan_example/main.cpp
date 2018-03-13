@@ -311,17 +311,6 @@ static void glfw_resize_callback(GLFWwindow*, int w, int h)
 	g_ResizeHeight = h;
 }
 
-static int glfw_create_vk_surface(void* platform_handle, ImU64 vk_instance, const void* vk_allocator, ImU64* out_vk_surface)
-{
-    GLFWwindow* window = (GLFWwindow*)platform_handle;
-    VkInstance instance = (VkInstance)vk_instance;
-    const VkAllocationCallbacks* allocator = (const VkAllocationCallbacks*)vk_allocator;
-    VkSurfaceKHR* surface = (VkSurfaceKHR*)out_vk_surface;
-    VkResult err = glfwCreateWindowSurface(instance, window, allocator, surface);
-    check_vk_result(err);
-    return (int)err;
-}
-
 int main(int, char**)
 {
 	// Setup window
@@ -363,7 +352,6 @@ int main(int, char**)
 
     // Setup GLFW binding
     ImGui_ImplGlfw_InitForVulkan(window, true);
-    io.PlatformInterface.CreateVkSurface = glfw_create_vk_surface;
 
     // Setup Vulkan binding
     ImGui_ImplVulkan_InitInfo init_info = {};

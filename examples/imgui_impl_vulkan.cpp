@@ -199,7 +199,6 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
 void ImGui_ImplVulkan_RenderDrawData(VkCommandBuffer command_buffer, ImDrawData* draw_data)
 {
     VkResult err;
-    ImGuiIO& io = ImGui::GetIO();
     if (draw_data->TotalVtxCount == 0)
         return;
 
@@ -1070,7 +1069,7 @@ static void ImGui_ImplVulkan_CreateViewport(ImGuiViewport* viewport)
 
     // Create surface
     ImGuiIO& io = ImGui::GetIO();
-    VkResult err = (VkResult)io.PlatformInterface.CreateVkSurface(viewport->PlatformHandle, (ImU64)g_Instance, (const void*)g_Allocator, (ImU64*)&wd->Surface);
+    VkResult err = (VkResult)io.PlatformInterface.CreateVkSurface(viewport, (ImU64)g_Instance, (const void*)g_Allocator, (ImU64*)&wd->Surface);
     check_vk_result(err);
 
     // Check for WSI support
