@@ -9,7 +9,6 @@
 #include <SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 
-// FIXME-VULKAN: Resizing with IMGUI_UNLIMITED_FRAME_RATE triggers errors from the validation layer.
 #define IMGUI_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
 #define IMGUI_VULKAN_DEBUG_REPORT
@@ -220,19 +219,20 @@ static void CleanupVulkan()
     vkDestroyInstance(g_Instance, g_Allocator);
 }
 
-static void FrameBegin(ImGui_ImplVulkan_WindowData* wd)
+static void FrameRender(ImGui_ImplVulkan_WindowData* wd)
 {
+	VkResult err;
+
+	VkSemaphore& image_acquired_semaphore  = wd->Frames[wd->FrameIndex].ImageAcquiredSemaphore;
+	err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
+	check_vk_result(err);
+
     ImGui_ImplVulkan_FrameData* fd = &wd->Frames[wd->FrameIndex];
-    VkResult err;
-    for (;;)
     {
-        err = vkWaitForFences(g_Device, 1, &fd->Fence, VK_TRUE, 100);
-        if (err == VK_SUCCESS) break;
-        if (err == VK_TIMEOUT) continue;
+		err = vkWaitForFences(g_Device, 1, &fd->Fence, VK_TRUE, UINT64_MAX);	// wait indefinitely instead of periodically checking
         check_vk_result(err);
-    }
-    {
-        err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, fd->PresentCompleteSemaphore, VK_NULL_HANDLE, &fd->BackbufferIndex);
+
+		err = vkResetFences(g_Device, 1, &fd->Fence);
         check_vk_result(err);
     }
     {
@@ -248,26 +248,25 @@ static void FrameBegin(ImGui_ImplVulkan_WindowData* wd)
         VkRenderPassBeginInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         info.renderPass = wd->RenderPass;
-        info.framebuffer = wd->Framebuffer[fd->BackbufferIndex];
+		info.framebuffer = wd->Framebuffer[wd->FrameIndex];
         info.renderArea.extent.width = wd->Width;
         info.renderArea.extent.height = wd->Height;
         info.clearValueCount = 1;
         info.pClearValues = &wd->ClearValue;
         vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
     }
-}
 
-static void FrameEnd(ImGui_ImplVulkan_WindowData* wd)
-{
-    ImGui_ImplVulkan_FrameData* fd = &wd->Frames[wd->FrameIndex];
-    VkResult err;
+	// Record Imgui Draw Data and draw funcs into command buffer
+	ImGui_ImplVulkan_RenderDrawData(fd->CommandBuffer, ImGui::GetDrawData());
+
+	// Submit command buffer
     vkCmdEndRenderPass(fd->CommandBuffer);
     {
         VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         VkSubmitInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         info.waitSemaphoreCount = 1;
-        info.pWaitSemaphores = &fd->PresentCompleteSemaphore;
+		info.pWaitSemaphores = &image_acquired_semaphore;
         info.pWaitDstStageMask = &wait_stage;
         info.commandBufferCount = 1;
         info.pCommandBuffers = &fd->CommandBuffer;
@@ -276,8 +275,6 @@ static void FrameEnd(ImGui_ImplVulkan_WindowData* wd)
 
         err = vkEndCommandBuffer(fd->CommandBuffer);
         check_vk_result(err);
-        err = vkResetFences(g_Device, 1, &fd->Fence);
-        check_vk_result(err);
         err = vkQueueSubmit(g_Queue, 1, &info, fd->Fence);
         check_vk_result(err);
     }
@@ -285,23 +282,15 @@ static void FrameEnd(ImGui_ImplVulkan_WindowData* wd)
 
 static void FramePresent(ImGui_ImplVulkan_WindowData* wd)
 {
-    VkResult err;
-    // If IMGUI_UNLIMITED_FRAME_RATE is defined we present the latest but one frame. Otherwise we present the latest rendered frame
-#ifdef IMGUI_UNLIMITED_FRAME_RATE
-    uint32_t PresentIndex = (wd->FrameIndex + IMGUI_VK_QUEUED_FRAMES - 1) % IMGUI_VK_QUEUED_FRAMES;
-#else
-    uint32_t PresentIndex = wd->FrameIndex;
-#endif // IMGUI_UNLIMITED_FRAME_RATE
-
-    ImGui_ImplVulkan_FrameData* fd = &wd->Frames[PresentIndex];
+    ImGui_ImplVulkan_FrameData* fd = &wd->Frames[wd->FrameIndex];
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
     info.pWaitSemaphores = &fd->RenderCompleteSemaphore;
     info.swapchainCount = 1;
     info.pSwapchains = &wd->Swapchain;
-    info.pImageIndices = &fd->BackbufferIndex;
-    err = vkQueuePresentKHR(g_Queue, &info);
+	info.pImageIndices = &wd->FrameIndex;
+	VkResult err = vkQueuePresentKHR(g_Queue, &info);
     check_vk_result(err);
 }
 
@@ -329,6 +318,7 @@ int main(int, char**)
 
     // Create Window Surface
     VkSurfaceKHR surface;
+    VkResult err;
     if (SDL_Vulkan_CreateSurface(window, g_Instance, &surface) == 0)
     {
         printf("Failed to create Vulkan surface.\n");
@@ -348,6 +338,9 @@ int main(int, char**)
     io.ConfigFlags |= ImGuiConfigFlags_PlatformNoTaskBar;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
+    // Setup SDL binding
+    ImGui_ImplSDL2_Init(window, NULL);
+
     // Setup Vulkan binding
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = g_Instance;
@@ -359,7 +352,6 @@ int main(int, char**)
     init_info.DescriptorPool = g_DescriptorPool;
     init_info.Allocator = g_Allocator;
     init_info.CheckVkResultFn = check_vk_result;
-    ImGui_ImplSDL2_Init(window, NULL);
     ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 
     // Setup style
@@ -387,7 +379,6 @@ int main(int, char**)
         VkCommandPool command_pool = wd->Frames[wd->FrameIndex].CommandPool;
         VkCommandBuffer command_buffer = wd->Frames[wd->FrameIndex].CommandBuffer;
 
-        VkResult err;
         err = vkResetCommandPool(g_Device, command_pool, 0);
         check_vk_result(err);
         VkCommandBufferBeginInfo begin_info = {};
@@ -415,8 +406,6 @@ int main(int, char**)
     bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-    bool swap_chain_has_at_least_one_image = false;
 
     // Main loop
     bool done = false;
@@ -478,26 +467,13 @@ int main(int, char**)
         // Rendering
         ImGui::Render();
         memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
-        FrameBegin(wd);
-        ImGui_ImplVulkan_RenderDrawData(wd->Frames[wd->FrameIndex].CommandBuffer, ImGui::GetDrawData());
-        FrameEnd(wd);
-
+		FrameRender(wd);
 		ImGui::RenderAdditionalViewports();
-
-#ifdef IMGUI_UNLIMITED_FRAME_RATE
-        // When IMGUI_UNLIMITED_FRAME_RATE is defined we render into latest image acquired from the swapchain but we display the image which was rendered before.
-        // Hence we must render once and increase the FrameIndex without presenting.
-        if (swap_chain_has_at_least_one_image)
-            FramePresent(wd);
-#else
         FramePresent(wd);
-#endif
-        swap_chain_has_at_least_one_image = true;
-        wd->FrameIndex = (wd->FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
     }
 
     // Cleanup
-    VkResult err = vkDeviceWaitIdle(g_Device);
+    err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();

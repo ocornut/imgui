@@ -60,8 +60,8 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     ImGuiIO& io = ImGui::GetIO();
-    int fb_width = (int)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
-    int fb_height = (int)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
+    int fb_width = (int)(draw_data->DisplaySize.x * io.DisplayFramebufferScale.x);
+    int fb_height = (int)(draw_data->DisplaySize.y * io.DisplayFramebufferScale.y);
     if (fb_width == 0 || fb_height == 0)
         return;
     draw_data->ScaleClipRects(io.DisplayFramebufferScale);

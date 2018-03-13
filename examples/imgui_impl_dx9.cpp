@@ -42,8 +42,7 @@ struct CUSTOMVERTEX
 void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized
-    ImGuiIO& io = ImGui::GetIO();
-    if (io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f)
+    if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
         return;
 
     // Create and grow buffers if needed
@@ -101,8 +100,8 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     // Setup viewport
     D3DVIEWPORT9 vp;
     vp.X = vp.Y = 0;
-    vp.Width = (DWORD)io.DisplaySize.x;
-    vp.Height = (DWORD)io.DisplaySize.y;
+    vp.Width = (DWORD)draw_data->DisplaySize.x;
+    vp.Height = (DWORD)draw_data->DisplaySize.y;
     vp.MinZ = 0.0f;
     vp.MaxZ = 1.0f;
     g_pd3dDevice->SetViewport(&vp);
@@ -131,7 +130,10 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     // Setup orthographic projection matrix
     // Being agnostic of whether <d3dx9.h> or <DirectXMath.h> can be used, we aren't relying on D3DXMatrixIdentity()/D3DXMatrixOrthoOffCenterLH() or DirectX::XMMatrixIdentity()/DirectX::XMMatrixOrthographicOffCenterLH()
     {
-        const float L = 0.5f, R = io.DisplaySize.x+0.5f, T = 0.5f, B = io.DisplaySize.y+0.5f;
+        float L = draw_data->DisplayPos.x + 0.5f;
+        float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x + 0.5f;
+        float T = draw_data->DisplayPos.y + 0.5f;
+        float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y + 0.5f;
         D3DMATRIX mat_identity = { { 1.0f, 0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f, 0.0f,  0.0f, 0.0f, 1.0f, 0.0f,  0.0f, 0.0f, 0.0f, 1.0f } };
         D3DMATRIX mat_projection =
         {

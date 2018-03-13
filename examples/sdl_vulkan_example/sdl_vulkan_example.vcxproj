@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{BAE3D0B5-9695-4EB1-AD0F-75890EB4A3B3}</ProjectGuid>
-    <RootNamespace>opengl3_example</RootNamespace>
+    <RootNamespace>sdl_vulkan_example</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

@@ -263,8 +263,8 @@ void ImGui_ImplVulkan_RenderDrawData(VkCommandBuffer command_buffer, ImDrawData*
         VkViewport viewport;
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = io.DisplaySize.x;
-        viewport.height = io.DisplaySize.y;
+        viewport.width = draw_data->DisplaySize.x;
+        viewport.height = draw_data->DisplaySize.y;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(command_buffer, 0, 1, &viewport);
