@@ -4422,12 +4422,14 @@ void ImGui::Render()
         const ImVec2 pos = g.IO.MousePos - offset;
         const ImTextureID tex_id = g.IO.Fonts->TexID;
         const float sc = g.Style.MouseCursorScale;
+        g.OverlayDrawList.PushClipRect(g.MouseViewport->Pos, g.MouseViewport->Pos + g.MouseViewport->Size);
         g.OverlayDrawList.PushTextureID(tex_id);
         g.OverlayDrawList.AddImage(tex_id, pos + ImVec2(1,0)*sc, pos+ImVec2(1,0)*sc + size*sc, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
         g.OverlayDrawList.AddImage(tex_id, pos + ImVec2(2,0)*sc, pos+ImVec2(2,0)*sc + size*sc, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
         g.OverlayDrawList.AddImage(tex_id, pos,                  pos + size*sc,                uv[2], uv[3], IM_COL32(0,0,0,255));       // Black border
         g.OverlayDrawList.AddImage(tex_id, pos,                  pos + size*sc,                uv[0], uv[1], IM_COL32(255,255,255,255)); // White fill
         g.OverlayDrawList.PopTextureID();
+        g.OverlayDrawList.PopClipRect();
     }
 
     // Setup ImDrawData structures for end-user

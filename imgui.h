@@ -492,7 +492,7 @@ namespace ImGui
     IMGUI_API bool          IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max);      // test if rectangle (in screen space) is visible / not clipped. to perform coarse clipping on user's side.
     IMGUI_API float         GetTime();
     IMGUI_API int           GetFrameCount();
-    IMGUI_API ImDrawList*   GetOverlayDrawList();                                               // this draw list will be the last rendered one, useful to quickly draw overlays shapes/text
+    IMGUI_API ImDrawList*   GetOverlayDrawList();                                               // this draw list will be the last rendered one, it covers all viewports. useful to quickly draw overlays shapes/text
     IMGUI_API ImDrawListSharedData* GetDrawListSharedData();
     IMGUI_API const char*   GetStyleColorName(ImGuiCol idx);
     IMGUI_API ImVec2        CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
