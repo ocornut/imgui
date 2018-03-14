@@ -13980,15 +13980,15 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             for (int i = 0; i < g.Viewports.Size; i++)
             {
                 ImGuiViewport* viewport = g.Viewports[i];
-                ImDrawDataBuilder* draw_data = &viewport->DrawDataBuilder; // Because we avoid create an extra list when there's only one viewport
                 ImGui::SetNextTreeNodeOpen(true, ImGuiCond_Once);
-                if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, DrawLists: %d, Size: (%.0f,%.0f)", i, viewport->ID, draw_data->Layers[0].Size, viewport->Size.x, viewport->Size.y))
+                if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, DrawLists: %d, Size: (%.0f,%.0f)", i, viewport->ID, viewport->DrawDataBuilder.GetDrawListCount(), viewport->Size.x, viewport->Size.y))
                 {
                     ImGui::BulletText("Pos: (%.0f,%.0f)", viewport->Pos.x, viewport->Pos.y);
                     ImGui::BulletText("Flags: 0x%04X", viewport->Flags);
                     ImGui::BulletText("PlatformOsDesktopPos: (%.0f,%.0f); DpiScale: %.0f%%", viewport->PlatformOsDesktopPos.x, viewport->PlatformOsDesktopPos.y, viewport->DpiScale * 100.0f);
-                    for (int draw_list_i = 0; draw_list_i < viewport->DrawDataBuilder.Layers[0].Size; draw_list_i++)
-                        Funcs::NodeDrawList(NULL, viewport->DrawDataBuilder.Layers[0][draw_list_i], "DrawList");
+                    for (int layer_i = 0; layer_i < IM_ARRAYSIZE(viewport->DrawDataBuilder.Layers); layer_i++)
+                        for (int draw_list_i = 0; draw_list_i < viewport->DrawDataBuilder.Layers[layer_i].Size; draw_list_i++)
+                            Funcs::NodeDrawList(NULL, viewport->DrawDataBuilder.Layers[layer_i][draw_list_i], "DrawList");
                     ImGui::TreePop();
                 }
             }
