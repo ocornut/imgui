@@ -739,8 +739,8 @@ static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
 // Viewport
 const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using a constant instead of e.g. ImHash("ViewportDefault", 0); so it's easier to spot in the debugger. The exact value doesn't matter.
 static inline ImRect    GetViewportRect(ImGuiWindow* window) { return window->Viewport->GetRect(); }
-static inline ImVec2    ConvertViewportPosToOsDesktopPos(const ImVec2& imgui_pos, ImGuiViewport* viewport) { return imgui_pos - viewport->Pos + viewport->PlatformOsDesktopPos; }
-static inline ImVec2    ConvertOsDesktopPosToViewportPos(const ImVec2& os_pos, ImGuiViewport* viewport) { return os_pos - viewport->PlatformOsDesktopPos + viewport->Pos; }
+static inline ImVec2    ConvertViewportPosToPlatformPos(const ImVec2& imgui_pos, ImGuiViewport* viewport) { return imgui_pos - viewport->Pos + viewport->PlatformPos; }
+static inline ImVec2    ConvertPlatformPosToViewportPos(const ImVec2& platform_pos, ImGuiViewport* viewport) { return platform_pos - viewport->PlatformPos + viewport->Pos; }
 static void             UpdateViewports();
 static void             UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set_by_api);
 static void             SetCurrentViewport(ImGuiViewport* viewport);
@@ -1910,7 +1910,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     Flags = FlagsPreviousFrame = 0;
     Viewport = NULL;
     ViewportId = 0;
-    ViewportOsDesktopPos = ImVec2(FLT_MAX, FLT_MAX);
+    ViewportPlatformPos = ImVec2(FLT_MAX, FLT_MAX);
     PosFloat = Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContents = SizeContentsExplicit = ImVec2(0.0f, 0.0f);
@@ -3253,7 +3253,7 @@ static void ImGui::UpdateMovingWindowDropViewport(ImGuiWindow* window)
         return;
 
     ImRect mouse_viewport_rect = g.MouseViewport->GetRect();
-    ImVec2 window_pos_in_mouse_viewport = ConvertOsDesktopPosToViewportPos(ConvertViewportPosToOsDesktopPos(window->Pos, window->Viewport), g.MouseViewport);
+    ImVec2 window_pos_in_mouse_viewport = ConvertPlatformPosToViewportPos(ConvertViewportPosToPlatformPos(window->Pos, window->Viewport), g.MouseViewport);
     ImRect window_rect_in_mouse_viewport = ImRect(window_pos_in_mouse_viewport, window_pos_in_mouse_viewport + window->Size);
     if ((g.MouseViewport->Flags & ImGuiViewportFlags_HostOtherWindows) &&  mouse_viewport_rect.Contains(window_rect_in_mouse_viewport))
     {
@@ -3271,8 +3271,8 @@ static void ImGui::UpdateMovingWindowDropViewport(ImGuiWindow* window)
     else
     {
         // Create new viewport
-        ImVec2 os_pos = ConvertViewportPosToOsDesktopPos(window->Pos, window->Viewport);
-        ImGuiViewport* viewport = Viewport(window, window->ID, 0, os_pos, window->Size);
+        ImVec2 platform_pos = ConvertViewportPosToPlatformPos(window->Pos, window->Viewport);
+        ImGuiViewport* viewport = Viewport(window, window->ID, 0, platform_pos, window->Size);
         SetWindowViewportTranslateToPreservePlatformPos(window, window->Viewport, viewport);
     }
 }
@@ -3326,15 +3326,15 @@ static void ImGui::UpdateMovingWindow()
 
 // If the back-end doesn't set MouseLastHoveredViewport or doesn't honor ImGuiViewportFlags_NoInputs, we do a search ourselves.
 // This search won't take account of the possibility that non-imgui windows may be in-between our dragged window and our target window.
-static ImGuiViewport* FindViewportHoveredFromOsWindowStack(const ImVec2 mouse_os_pos)
+static ImGuiViewport* FindViewportHoveredFromPlatformWindowStack(const ImVec2 mouse_platform_pos)
 {
     ImGuiContext& g = *GImGui;
     ImGuiViewport* best_candidate = NULL;
     for (int n = 0; n < g.Viewports.Size; n++)
     {
         ImGuiViewport* viewport = g.Viewports[n];
-        ImRect os_rect = ImRect(viewport->PlatformOsDesktopPos, viewport->PlatformOsDesktopPos + viewport->Size);
-        if (!(viewport->Flags & ImGuiViewportFlags_NoInputs) && os_rect.Contains(mouse_os_pos))
+        ImRect platform_rect = ImRect(viewport->PlatformPos, viewport->PlatformPos + viewport->Size);
+        if (!(viewport->Flags & ImGuiViewportFlags_NoInputs) && platform_rect.Contains(mouse_platform_pos))
             if (best_candidate == NULL || best_candidate->LastFrameAsRefViewport < viewport->LastFrameAsRefViewport)
                 best_candidate = viewport;
     }
@@ -3347,7 +3347,7 @@ static void ImGui::UpdateViewports()
 
     // Mouse handling: latch the expected mouse OS position (if any) before processing viewport erasure
     ImGuiViewport* viewport_ref = g.IO.MousePosViewport ? FindViewportByID(g.IO.MousePosViewport) : g.Viewports[0];
-    const ImVec2 mouse_os_pos = ConvertViewportPosToOsDesktopPos(g.IO.MousePos, viewport_ref);
+    const ImVec2 mouse_platform_pos = ConvertViewportPosToPlatformPos(g.IO.MousePos, viewport_ref);
 
     g.CurrentViewport = NULL;
     for (int n = 0; n < g.Viewports.Size; n++)
@@ -3414,10 +3414,10 @@ static void ImGui::UpdateViewports()
     // Update main viewport with current size (and OS window position, if known)
     ImGuiViewport* main_viewport = g.Viewports[0];
     IM_ASSERT(main_viewport->ID == IMGUI_VIEWPORT_DEFAULT_ID);
-    ImVec2 main_viewport_os_desktop_pos = ImVec2(0.0f, 0.0f);
+    ImVec2 main_viewport_platform_pos = ImVec2(0.0f, 0.0f);
     if ((g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
-        main_viewport_os_desktop_pos = g.IO.PlatformInterface.GetWindowPos(main_viewport);
-    Viewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, ImGuiViewportFlags_MainViewport | ImGuiViewportFlags_HostOtherWindows, main_viewport_os_desktop_pos, g.IO.DisplaySize);
+        main_viewport_platform_pos = g.IO.PlatformInterface.GetWindowPos(main_viewport);
+    Viewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, ImGuiViewportFlags_MainViewport | ImGuiViewportFlags_HostOtherWindows, main_viewport_platform_pos, g.IO.DisplaySize);
 
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
     {
@@ -3434,14 +3434,14 @@ static void ImGui::UpdateViewports()
         {
             // Back-end failed at honoring its contract
             IM_ASSERT(0);
-            viewport_hovered = FindViewportHoveredFromOsWindowStack(mouse_os_pos);
+            viewport_hovered = FindViewportHoveredFromPlatformWindowStack(mouse_platform_pos);
         }
     }
     else
     {
         // If the back-end doesn't set MouseLastHoveredViewport or doesn't honor ImGuiViewportFlags_NoInputs, we do a search ourselves.
         // This search won't take account of the possibility that non-imgui windows may be in-between our dragged window and our target window.
-        viewport_hovered = FindViewportHoveredFromOsWindowStack(mouse_os_pos);
+        viewport_hovered = FindViewportHoveredFromPlatformWindowStack(mouse_platform_pos);
     }
     if (viewport_hovered != NULL)
         g.MouseLastHoveredViewport = viewport_hovered;
@@ -3450,7 +3450,7 @@ static void ImGui::UpdateViewports()
     if (viewport_ref == NULL)
     {
         viewport_ref = main_viewport;
-        g.IO.MousePos = ConvertOsDesktopPosToViewportPos(mouse_os_pos, viewport_ref);
+        g.IO.MousePos = ConvertPlatformPosToViewportPos(mouse_platform_pos, viewport_ref);
     }
 
     g.MouseLastViewport = g.MouseViewport;
@@ -3466,7 +3466,7 @@ static void ImGui::UpdateViewports()
             viewport_hovered = g.MouseLastHoveredViewport;
         if (viewport_hovered != NULL && viewport_hovered != g.MouseViewport && !(viewport_hovered->Flags & ImGuiViewportFlags_NoInputs))
         {
-            g.IO.MousePos = ConvertOsDesktopPosToViewportPos(ConvertViewportPosToOsDesktopPos(g.IO.MousePos, g.MouseViewport), viewport_hovered);
+            g.IO.MousePos = ConvertPlatformPosToViewportPos(ConvertViewportPosToPlatformPos(g.IO.MousePos, g.MouseViewport), viewport_hovered);
             g.MouseViewport = viewport_hovered;
         }
     }
@@ -3486,7 +3486,7 @@ static void UpdatePlatformWindows()
         IM_ASSERT(viewport->Window != NULL);
 
         if (viewport->PlatformRequestMove)
-            viewport->PlatformOsDesktopPos = g.IO.PlatformInterface.GetWindowPos(viewport);
+            viewport->PlatformPos = g.IO.PlatformInterface.GetWindowPos(viewport);
 
         bool is_new_window = viewport->PlatformHandle == NULL && viewport->PlatformUserData == NULL && viewport->RendererUserData == NULL;
         if (is_new_window && viewport->PlatformHandle == NULL && viewport->PlatformUserData == NULL)
@@ -3501,7 +3501,7 @@ static void UpdatePlatformWindows()
 
         // Update Pos/Size for Platform
         if (!viewport->PlatformRequestMove)
-            g.IO.PlatformInterface.SetWindowPos(viewport, viewport->PlatformOsDesktopPos);
+            g.IO.PlatformInterface.SetWindowPos(viewport, viewport->PlatformPos);
         if (!viewport->PlatformRequestResize)
             g.IO.PlatformInterface.SetWindowSize(viewport, viewport->Size);
 
@@ -3891,7 +3891,7 @@ static void SettingsHandlerWindow_ReadLine(ImGuiContext*, ImGuiSettingsHandler*,
     if (sscanf(line, "Pos=%f,%f", &x, &y) == 2)                     { settings->Pos = ImVec2(x, y); }
     else if (sscanf(line, "Size=%f,%f", &x, &y) == 2)               { settings->Size = ImMax(ImVec2(x, y), GImGui->Style.WindowMinSize); }
     else if (sscanf(line, "ViewportId=0x%08X", &u1) == 1)           { settings->ViewportId = u1; }
-    else if (sscanf(line, "ViewportOsDesktopPos=%f,%f", &x, &y)==2) { settings->ViewportOsDesktopPos = ImVec2(x, y); }
+    else if (sscanf(line, "ViewportPlatformPos=%f,%f", &x, &y)==2)  { settings->ViewportPlatformPos = ImVec2(x, y); }
     else if (sscanf(line, "Collapsed=%d", &i) == 1)                 { settings->Collapsed = (i != 0); }
 }
 
@@ -3910,7 +3910,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSetting
         settings->Pos = window->Pos;// - window->Viewport->Pos;
         settings->Size = window->SizeFull;
         settings->ViewportId = window->ViewportId;
-        settings->ViewportOsDesktopPos = window->ViewportOsDesktopPos;
+        settings->ViewportPlatformPos = window->ViewportPlatformPos;
         settings->Collapsed = window->Collapsed;
     }
 
@@ -3931,8 +3931,8 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSetting
         if (settings->ViewportId != 0 && settings->ViewportId != ImGui::IMGUI_VIEWPORT_DEFAULT_ID)
         {
             buf->appendf("ViewportId=0x%08X\n", settings->ViewportId);
-            if (settings->ViewportOsDesktopPos.x != FLT_MAX && settings->ViewportOsDesktopPos.y != FLT_MAX)
-                buf->appendf("ViewportOsDesktopPos=%d,%d\n", (int)settings->ViewportOsDesktopPos.x, (int)settings->ViewportOsDesktopPos.y);
+            if (settings->ViewportPlatformPos.x != FLT_MAX && settings->ViewportPlatformPos.y != FLT_MAX)
+                buf->appendf("ViewportPlatformPos=%d,%d\n", (int)settings->ViewportPlatformPos.x, (int)settings->ViewportPlatformPos.y);
         }
         buf->appendf("Collapsed=%d\n", settings->Collapsed);
         buf->appendf("\n");
@@ -4545,7 +4545,7 @@ void ImGui::SetCurrentViewport(ImGuiViewport* viewport)
         g.IO.PlatformInterface.ChangedViewport(g.CurrentViewport);
 }
 
-ImGuiViewport* ImGui::Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& os_desktop_pos, const ImVec2& size)
+ImGuiViewport* ImGui::Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& platform_pos, const ImVec2& size)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(id != 0);
@@ -4569,7 +4569,7 @@ ImGuiViewport* ImGui::Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFla
     IM_ASSERT(viewport->Pos.y == 0.0f);
     viewport->Window = window;
     viewport->Flags = flags;
-    viewport->PlatformOsDesktopPos = os_desktop_pos;
+    viewport->PlatformPos = platform_pos;
     viewport->LastFrameActive = g.FrameCount;
 
     // Request an initial DpiScale before the OS platform window creation
@@ -5779,8 +5779,8 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
             window->Collapsed = settings->Collapsed;
             if (settings->ViewportId)
                 window->ViewportId = settings->ViewportId;
-            if (settings->ViewportOsDesktopPos.x != FLT_MAX && settings->ViewportOsDesktopPos.y != FLT_MAX)
-                window->ViewportOsDesktopPos = settings->ViewportOsDesktopPos;
+            if (settings->ViewportPlatformPos.x != FLT_MAX && settings->ViewportPlatformPos.y != FLT_MAX)
+                window->ViewportPlatformPos = settings->ViewportPlatformPos;
             if (ImLengthSqr(settings->Size) > 0.00001f)
                 size = settings->Size;
         }
@@ -5926,7 +5926,7 @@ static void ImGui::SetWindowViewportTranslateToPreservePlatformPos(ImGuiWindow* 
 {
     if (prev_viewport == curr_viewport)
         return;
-    ImVec2 new_pos = ConvertOsDesktopPosToViewportPos(ConvertViewportPosToOsDesktopPos(window->PosFloat, prev_viewport), curr_viewport);
+    ImVec2 new_pos = ConvertPlatformPosToViewportPos(ConvertViewportPosToPlatformPos(window->PosFloat, prev_viewport), curr_viewport);
     if ((window->FlagsPreviousFrame ^ window->Flags) & ImGuiWindowFlags_NoTitleBar)
     {
         // As a convenience, automatically adjust for client rect difference for the common use case of toggling the imgui title-bar when we move our tools to a separate OS window
@@ -5980,9 +5980,9 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
         if (!window_is_mouse_tooltip && !current_viewport->GetRect().Contains(window->Rect()))
         {
             // Create an undecorated, temporary OS/platform window
-            ImVec2 os_desktop_pos = ConvertViewportPosToOsDesktopPos(g.IO.MousePos - g.ActiveIdClickOffset, g.MouseViewport);
+            ImVec2 platform_pos = ConvertViewportPosToPlatformPos(g.IO.MousePos - g.ActiveIdClickOffset, g.MouseViewport);
             ImGuiViewportFlags viewport_flags = ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs;
-            ImGuiViewport* viewport = Viewport(window, window->ID, viewport_flags, os_desktop_pos, window->Size);
+            ImGuiViewport* viewport = Viewport(window, window->ID, viewport_flags, platform_pos, window->Size);
             window->Flags |= ImGuiWindowFlags_FullViewport;
             window->Viewport = viewport;
             created_viewport = true;
@@ -6013,15 +6013,15 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
     if (window->Viewport == NULL && window->ParentWindow)
         window->Viewport = window->ParentWindow->Viewport;
 
-    // Restore a viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportOsDesktopPos'
+    // Restore a viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportPlatformPos'
     if (window->Viewport == NULL && window->ViewportId != 0)
     {
         window->Viewport = FindViewportByID(window->ViewportId);
         if (window->Viewport == NULL)
         {
-            if (window->ViewportOsDesktopPos.x != FLT_MAX && window->ViewportOsDesktopPos.y != FLT_MAX)
+            if (window->ViewportPlatformPos.x != FLT_MAX && window->ViewportPlatformPos.y != FLT_MAX)
             {
-                ImGuiViewport* viewport = Viewport(window, window->ID, ImGuiViewportFlags_NoDecoration, window->ViewportOsDesktopPos, window->Size);
+                ImGuiViewport* viewport = Viewport(window, window->ID, ImGuiViewportFlags_NoDecoration, window->ViewportPlatformPos, window->Size);
                 window->Flags |= ImGuiWindowFlags_FullViewport;
                 window->Viewport = viewport;
                 created_viewport = true;
@@ -6043,7 +6043,7 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
         window->Viewport->Flags |= ImGuiViewportFlags_NoDecoration;
         if (!window->Viewport->PlatformRequestResize)
             window->Viewport->Size = window->Size;
-        window->Viewport->PlatformOsDesktopPos = ConvertViewportPosToOsDesktopPos(window->Pos, window->Viewport);
+        window->Viewport->PlatformPos = ConvertViewportPosToPlatformPos(window->Pos, window->Viewport);
         window->Flags |= ImGuiWindowFlags_FullViewport;
     }
 
@@ -6192,7 +6192,7 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     if (pos_target.x != FLT_MAX)
     {
         if (window->Flags & ImGuiWindowFlags_FullViewport)
-            window->Viewport->PlatformOsDesktopPos = ConvertViewportPosToOsDesktopPos(ImFloor(pos_target), window->Viewport);
+            window->Viewport->PlatformPos = ConvertViewportPosToPlatformPos(ImFloor(pos_target), window->Viewport);
         else
             window->Pos = window->PosFloat = ImFloor(pos_target);
         MarkIniSettingsDirty(window);
@@ -6553,7 +6553,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             UpdateManualResize(window, size_auto_fit, &border_held, resize_grip_count, &resize_grip_col[0]);
 
         // When a window is marked as owning its viewport, we immediately update the viewport after a resize
-        window->ViewportOsDesktopPos = window->Viewport->PlatformOsDesktopPos;
+        window->ViewportPlatformPos = window->Viewport->PlatformPos;
         if (flags & ImGuiWindowFlags_FullViewport)
             if (window->Size.x != window->Viewport->Size.x || window->Size.y != window->Viewport->Size.y)
             {
@@ -14020,8 +14020,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, DrawLists: %d, Size: (%.0f,%.0f)", i, viewport->ID, viewport->DrawDataBuilder.GetDrawListCount(), viewport->Size.x, viewport->Size.y))
                 {
                     ImGui::BulletText("Pos: (%.0f,%.0f)", viewport->Pos.x, viewport->Pos.y);
+                    ImGui::BulletText("PlatformPos: (%.0f,%.0f); DpiScale: %.0f%%", viewport->PlatformPos.x, viewport->PlatformPos.y, viewport->DpiScale * 100.0f);
                     ImGui::BulletText("Flags: 0x%04X", viewport->Flags);
-                    ImGui::BulletText("PlatformOsDesktopPos: (%.0f,%.0f); DpiScale: %.0f%%", viewport->PlatformOsDesktopPos.x, viewport->PlatformOsDesktopPos.y, viewport->DpiScale * 100.0f);
                     for (int layer_i = 0; layer_i < IM_ARRAYSIZE(viewport->DrawDataBuilder.Layers); layer_i++)
                         for (int draw_list_i = 0; draw_list_i < viewport->DrawDataBuilder.Layers[layer_i].Size; draw_list_i++)
                             Funcs::NodeDrawList(NULL, viewport->DrawDataBuilder.Layers[layer_i][draw_list_i], "DrawList");

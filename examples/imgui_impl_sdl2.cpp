@@ -311,7 +311,7 @@ static void ImGui_ImplSDL2_CreateViewport(ImGuiViewport* viewport)
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
     data->Window = SDL_CreateWindow("No Title Yet", 
-        (int)viewport->PlatformOsDesktopPos.x, (int)viewport->PlatformOsDesktopPos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+        (int)viewport->PlatformPos.x, (int)viewport->PlatformPos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
     if (use_opengl)
         data->GLContext = SDL_GL_CreateContext(data->Window);
     if (use_opengl && backup_context)

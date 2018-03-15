@@ -383,7 +383,7 @@ static void ImGui_ImplWin32_CreateViewport(ImGuiViewport* viewport)
     }
 
     // Create window
-    RECT rect = { (LONG)viewport->PlatformOsDesktopPos.x, (LONG)viewport->PlatformOsDesktopPos.y, (LONG)(viewport->PlatformOsDesktopPos.x + viewport->Size.x), (LONG)(viewport->PlatformOsDesktopPos.y + viewport->Size.y) };
+    RECT rect = { (LONG)viewport->PlatformPos.x, (LONG)viewport->PlatformPos.y, (LONG)(viewport->PlatformPos.x + viewport->Size.x), (LONG)(viewport->PlatformPos.y + viewport->Size.y) };
     ::AdjustWindowRectEx(&rect, data->DwStyle, FALSE, data->DwExStyle);
     data->Hwnd = ::CreateWindowExA(
         data->DwExStyle, "ImGui Platform", "No Title Yet", data->DwStyle,       // Style, class name, window name
@@ -472,8 +472,8 @@ static float ImGui_ImplWin32_GetWindowDpiScale(ImGuiViewport* viewport)
 
     // The first frame a viewport is created we don't have a window yet
     return ImGui_ImplWin32_GetDpiScaleForRect(
-        (int)(viewport->PlatformOsDesktopPos.x), (int)(viewport->PlatformOsDesktopPos.y),
-        (int)(viewport->PlatformOsDesktopPos.x + viewport->Size.x), (int)(viewport->PlatformOsDesktopPos.y + viewport->Size.y));
+        (int)(viewport->PlatformPos.x), (int)(viewport->PlatformPos.y),
+        (int)(viewport->PlatformPos.x + viewport->Size.x), (int)(viewport->PlatformPos.y + viewport->Size.y));
 }
 
 static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)

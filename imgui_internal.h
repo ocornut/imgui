@@ -408,11 +408,11 @@ struct ImGuiWindowSettings
     ImGuiID     Id;
     ImVec2      Pos;
     ImVec2      Size;
-    ImVec2      ViewportOsDesktopPos;
+    ImVec2      ViewportPlatformPos;
     ImGuiID     ViewportId;
     bool        Collapsed;
 
-    ImGuiWindowSettings() { Name = NULL; Id = ViewportId = 0; Pos = Size = ImVec2(0,0); ViewportOsDesktopPos = ImVec2(FLT_MAX, FLT_MAX); Collapsed = false; }
+    ImGuiWindowSettings() { Name = NULL; Id = ViewportId = 0; Pos = Size = ImVec2(0,0); ViewportPlatformPos = ImVec2(FLT_MAX, FLT_MAX); Collapsed = false; }
 };
 
 struct ImGuiSettingsHandler
@@ -532,7 +532,7 @@ struct ImGuiViewport
     ImDrawDataBuilder   DrawDataBuilder;
 
     // [Optional] OS/Platform Layer data. This is to allow the creation/manipulate of multiple OS/Platform windows. Not all back-ends will allow this.
-    ImVec2              PlatformOsDesktopPos;   // Position in OS desktop/native space
+    ImVec2              PlatformPos;   // Position in OS desktop/native space
     void*               PlatformUserData;       // void* to hold custom data structure for the platform (e.g. windowing info, render context)
     void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. HWND, GlfwWindow*)
     bool                PlatformRequestClose;   // Platform window requested closure
@@ -952,7 +952,7 @@ struct IMGUI_API ImGuiWindow
     ImGuiWindowFlags        Flags, FlagsPreviousFrame;          // See enum ImGuiWindowFlags_
     ImGuiViewport*          Viewport;                           // Always set in Begin(), only inactive windows may have a NULL value here
     ImGuiID                 ViewportId;                         // Inactive windows preserve their last viewport id (since the viewport may disappear with the window inactivity)
-    ImVec2                  ViewportOsDesktopPos;
+    ImVec2                  ViewportPlatformPos;
     ImVec2                  PosFloat;
     ImVec2                  Pos;                                // Position rounded-up to nearest pixel
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
@@ -1082,7 +1082,7 @@ namespace ImGui
     IMGUI_API void          Shutdown(ImGuiContext* context);    // Since 1.60 this is a _private_ function. You can call DestroyContext() to destroy the context created by CreateContext().
 
     // Viewports
-    IMGUI_API ImGuiViewport*        Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& os_desktop_pos, const ImVec2& size);   // os_desktop_pos allows imgui to reposition windows relative to each order when moving from one viewport to the other.
+    IMGUI_API ImGuiViewport*        Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& platform_pos, const ImVec2& size);
     inline ImVector<ImGuiViewport*>&GetViewports() { return GImGui->Viewports; }
     inline ImGuiViewport*           GetMainViewport() { return GImGui->Viewports[0]; }
     IMGUI_API ImGuiViewport*        FindViewportByID(ImGuiID id);
