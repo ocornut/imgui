@@ -294,19 +294,28 @@ static void ImGui_ImplSDL2_CreateViewport(ImGuiViewport* viewport)
     // FIXME-PLATFORM
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGuiPlatformDataSDL2* main_viewport_data = (ImGuiPlatformDataSDL2*)main_viewport->PlatformUserData;
-    SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-    SDL_GL_MakeCurrent(main_viewport_data->Window, main_viewport_data->GLContext);
+
+    bool use_opengl = (main_viewport_data->GLContext != NULL);
+    SDL_GLContext backup_context = NULL;
+    if (use_opengl)
+    {
+        backup_context = SDL_GL_GetCurrentContext();
+        SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+        SDL_GL_MakeCurrent(main_viewport_data->Window, main_viewport_data->GLContext);
+    }
 
     // We don't enable SDL_WINDOW_RESIZABLE because it enforce windows decorations
     Uint32 sdl_flags = 0;
-    sdl_flags |= main_viewport_data->GLContext ? SDL_WINDOW_OPENGL : SDL_WINDOW_VULKAN;
+    sdl_flags |= use_opengl ? SDL_WINDOW_OPENGL : SDL_WINDOW_VULKAN;
     sdl_flags |= SDL_WINDOW_HIDDEN;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
     data->Window = SDL_CreateWindow("No Title Yet", 
         (int)viewport->PlatformOsDesktopPos.x, (int)viewport->PlatformOsDesktopPos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
-    if (main_viewport_data->GLContext)
+    if (use_opengl)
         data->GLContext = SDL_GL_CreateContext(data->Window);
+    if (use_opengl && backup_context)
+        SDL_GL_MakeCurrent(data->Window, backup_context);
     viewport->PlatformHandle = (void*)data->Window;
 }
 
@@ -404,7 +413,7 @@ static void ImGui_ImplSDL2_SwapBuffers(ImGuiViewport* viewport)
     ImGuiPlatformDataSDL2* data = (ImGuiPlatformDataSDL2*)viewport->PlatformUserData;
     if (data->GLContext)
     {
-        SDL_GL_MakeCurrent(data->Window, data->GLContext);  // FIXME-PLATFORM2
+        SDL_GL_MakeCurrent(data->Window, data->GLContext);
         SDL_GL_SwapWindow(data->Window);
     }
 }
