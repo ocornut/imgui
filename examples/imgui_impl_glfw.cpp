@@ -111,7 +111,7 @@ void ImGui_ImplGlfw_InstallCallbacks(GLFWwindow* window)
     glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
 }
 
-bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
+static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
 {
     g_Window = window;
 
@@ -163,16 +163,18 @@ bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
     if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         ImGui_ImplGlfw_InitPlatformInterface();
 
-    g_ClientApi = GlfwClientApi_OpenGL;
+    g_ClientApi = client_api;
     return true;
+}
+
+bool ImGui_ImplGlfw_InitForOpenGL(GLFWwindow* window, bool install_callbacks)
+{
+    return ImGui_ImplGlfw_Init(window, install_callbacks, GlfwClientApi_OpenGL);
 }
 
 bool ImGui_ImplGlfw_InitForVulkan(GLFWwindow* window, bool install_callbacks)
 {
-    if (!ImGui_ImplGlfw_Init(window, install_callbacks))
-        return false;
-    g_ClientApi = GlfwClientApi_Vulkan;
-    return true;
+    return ImGui_ImplGlfw_Init(window, install_callbacks, GlfwClientApi_Vulkan);
 }
 
 void ImGui_ImplGlfw_Shutdown()
