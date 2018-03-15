@@ -1108,8 +1108,9 @@ static void ImGui_ImplVulkan_DestroyViewport(ImGuiViewport* viewport)
 static void ImGui_ImplVulkan_ResizeViewport(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData;
-    ImGui_ImplVulkan_WindowData* wd = &data->WindowData;
-    ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, wd, g_Allocator, (int)size.x, (int)size.y);
+    if (data == NULL) // This is NULL for the main viewport (which is left to the user/app to handle)
+        return;
+    ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, &data->WindowData, g_Allocator, (int)size.x, (int)size.y);
 }
 
 static void ImGui_ImplVulkan_RenderViewport(ImGuiViewport* viewport)

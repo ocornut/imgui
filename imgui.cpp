@@ -3384,6 +3384,12 @@ static void ImGui::UpdateViewports()
                 ResizeViewportTranslateWindows(viewport->Idx + 1, g.Viewports.Size, dx, 0, NULL);
         }
 
+        // Apply Platform Size to ImGui Size if requested
+        // We do it here instead of UpdatePlatformWindows() to allow the platform back-end to set PlatformRequestResize early 
+        // (e.g. in their own message handler before NewFrame) and not have a frame of lag with it.
+        if (viewport->PlatformRequestResize)
+            viewport->Size = g.IO.PlatformInterface.GetWindowSize(viewport);
+
         // Update DPI Scale
         float new_dpi_scale;
         if (g.IO.PlatformInterface.GetWindowDpiScale)
@@ -3478,17 +3484,31 @@ static void UpdatePlatformWindows()
         if ((viewport->Flags & ImGuiViewportFlags_MainViewport) || (viewport->LastFrameActive < g.FrameCount))
             continue;
         IM_ASSERT(viewport->Window != NULL);
-        viewport->PlatformRequestClose = false;
 
-        // FIXME-PLATFORM
+        if (viewport->PlatformRequestMove)
+            viewport->PlatformOsDesktopPos = g.IO.PlatformInterface.GetWindowPos(viewport);
+
         bool is_new_window = viewport->PlatformHandle == NULL && viewport->PlatformUserData == NULL && viewport->RendererUserData == NULL;
         if (is_new_window && viewport->PlatformHandle == NULL && viewport->PlatformUserData == NULL)
+        {
             g.IO.PlatformInterface.CreateViewport(viewport);
+        }
         if (is_new_window && viewport->RendererUserData == NULL && g.IO.RendererInterface.CreateViewport != NULL)
+        {
             g.IO.RendererInterface.CreateViewport(viewport);
+            viewport->RendererLastSize = viewport->Size;
+        }
 
-        g.IO.PlatformInterface.SetWindowPos(viewport, viewport->PlatformOsDesktopPos);
-        g.IO.PlatformInterface.SetWindowSize(viewport, viewport->Size);
+        // Update Pos/Size for Platform
+        if (!viewport->PlatformRequestMove)
+            g.IO.PlatformInterface.SetWindowPos(viewport, viewport->PlatformOsDesktopPos);
+        if (!viewport->PlatformRequestResize)
+            g.IO.PlatformInterface.SetWindowSize(viewport, viewport->Size);
+
+        // Update Size for Renderer
+        if (g.IO.RendererInterface.ResizeViewport && (viewport->RendererLastSize.x != viewport->Size.x || viewport->RendererLastSize.y != viewport->Size.y))
+            g.IO.RendererInterface.ResizeViewport(viewport, viewport->Size);
+        viewport->RendererLastSize = viewport->Size;
 
         // Update title bar
         const char* title_begin = viewport->Window->Name;
@@ -3503,13 +3523,18 @@ static void UpdatePlatformWindows()
             ImGui::MemFree(title_displayed);
         }
 
+        // Show window. On startup ensure platform window don't get focus.
         if (is_new_window)
         {
-            // On startup ensure platform window don't get focus.
             if (g.FrameCount < 2)
                 viewport->Flags |= ImGuiViewportFlags_NoFocusOnAppearing;
             g.IO.PlatformInterface.ShowWindow(viewport);
         }
+
+        // Clear request flags
+        viewport->PlatformRequestClose = false;
+        viewport->PlatformRequestMove = false;
+        viewport->PlatformRequestResize = false;
     }
 }
 
@@ -6013,10 +6038,11 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
         window->Viewport = main_viewport;
 
     // When we own the viewport update its size
-    if (window->ID == window->Viewport->ID && !created_viewport)
+    if (window == window->Viewport->Window && !created_viewport)
     {
         window->Viewport->Flags |= ImGuiViewportFlags_NoDecoration;
-        window->Viewport->Size = window->Size;
+        if (!window->Viewport->PlatformRequestResize)
+            window->Viewport->Size = window->Size;
         window->Viewport->PlatformOsDesktopPos = ConvertViewportPosToOsDesktopPos(window->Pos, window->Viewport);
         window->Flags |= ImGuiWindowFlags_FullViewport;
     }
@@ -6026,7 +6052,11 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
         window->Flags |= ImGuiWindowFlags_NoTitleBar;
 
     if (window->Flags & ImGuiWindowFlags_FullViewport)
+    {
         SetWindowPos(window, window->Viewport->Pos, ImGuiCond_Always);
+        if (window->Viewport->PlatformRequestResize)
+            SetWindowSize(window, window->Viewport->Size, ImGuiCond_Always);
+    }
 
     window->ViewportId = window->Viewport->ID;
 }

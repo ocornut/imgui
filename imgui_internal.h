@@ -535,10 +535,12 @@ struct ImGuiViewport
     void*               PlatformUserData;       // void* to hold custom data structure for the platform (e.g. windowing info, render context)
     void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. HWND, GlfwWindow*)
     bool                PlatformRequestClose;   // Platform window requested closure
-    bool                PlatformRequestResize;  // Platform window requested resize
+    bool                PlatformRequestMove;    // Platform window requested move (e.g. window was moved using OS windowing facility)
+    bool                PlatformRequestResize;  // Platform window requested resize (e.g. window was resize using OS windowing facility)
     void*               RendererUserData;       // void* to hold custom data structure for the renderer (e.g. framebuffer)
+    ImVec2              RendererLastSize;
 
-    ImGuiViewport(ImGuiID id, int idx)  { ID = id; Idx = idx; Flags = 0; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Window = NULL; DpiScale = 0.0f; PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestResize = false; RendererUserData = NULL; }
+    ImGuiViewport(ImGuiID id, int idx)  { ID = id; Idx = idx; Flags = 0; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Window = NULL; DpiScale = 0.0f; PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestMove = PlatformRequestResize = false; RendererUserData = NULL; RendererLastSize = ImVec2(-1.0f,-1.0f); }
     ~ImGuiViewport()                    { IM_ASSERT(PlatformUserData == NULL && RendererUserData == NULL); }
     ImRect  GetRect() const             { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     float   GetNextX() const            { const float SPACING = 4.0f; return Pos.x + Size.x + SPACING; }

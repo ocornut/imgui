@@ -310,6 +310,24 @@ struct ImGuiPlatformDataGlfw
     ~ImGuiPlatformDataGlfw() { IM_ASSERT(Window == NULL); }
 };
 
+static void ImGui_ImplGlfw_WindowCloseCallback(GLFWwindow* window)
+{
+    if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window))
+        viewport->PlatformRequestClose = true;
+}
+
+static void ImGui_ImplGlfw_WindowPosCallback(GLFWwindow* window, int, int)
+{
+    if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window))
+        viewport->PlatformRequestMove = true;
+}
+
+static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
+{
+    if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window))
+        viewport->PlatformRequestResize = true;
+}
+
 static void ImGui_ImplGlfw_CreateViewport(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataGlfw* data = IM_NEW(ImGuiPlatformDataGlfw)();
@@ -324,6 +342,9 @@ static void ImGui_ImplGlfw_CreateViewport(ImGuiViewport* viewport)
     data->WindowOwned = true;
     viewport->PlatformHandle = (void*)data->Window;
     ImGui_ImplGlfw_InstallCallbacks(data->Window);
+    glfwSetWindowCloseCallback(data->Window, ImGui_ImplGlfw_WindowCloseCallback);
+    glfwSetWindowPosCallback(data->Window, ImGui_ImplGlfw_WindowPosCallback);
+    glfwSetWindowSizeCallback(data->Window, ImGui_ImplGlfw_WindowSizeCallback);
 }
 
 static void ImGui_ImplGlfw_DestroyViewport(ImGuiViewport* viewport)
@@ -431,9 +452,6 @@ static void ImGui_ImplGlfw_RenderViewport(ImGuiViewport* viewport)
     ImGuiPlatformDataGlfw* data = (ImGuiPlatformDataGlfw*)viewport->PlatformUserData;
     if (g_ClientApi == GlfwClientApi_OpenGL)
         glfwMakeContextCurrent(data->Window);
-
-    if (glfwWindowShouldClose(data->Window))
-        viewport->PlatformRequestClose = true;
 }
 
 static void ImGui_ImplGlfw_SwapBuffers(ImGuiViewport* viewport)

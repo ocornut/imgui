@@ -100,6 +100,21 @@ bool ImGui_ImplSDL2_ProcessEvent(SDL_Event* event)
             io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
             return true;
         }
+    // Multi-viewport support
+    case SDL_WINDOWEVENT:
+        Uint8 window_event = event->window.event;
+        if (window_event == SDL_WINDOWEVENT_CLOSE || window_event == SDL_WINDOWEVENT_MOVED || window_event == SDL_WINDOWEVENT_RESIZED)
+            if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)SDL_GetWindowFromID(event->window.windowID)))
+            {
+                if (window_event == SDL_WINDOWEVENT_CLOSE)
+                    viewport->PlatformRequestClose = true;
+                if (window_event == SDL_WINDOWEVENT_MOVED)
+                    viewport->PlatformRequestMove = true;
+                if (window_event == SDL_WINDOWEVENT_RESIZED)
+                    viewport->PlatformRequestResize = true;
+                return true;
+            }
+        break;
     }
     return false;
 }
@@ -288,7 +303,8 @@ static void ImGui_ImplSDL2_CreateViewport(ImGuiViewport* viewport)
     sdl_flags |= SDL_WINDOW_HIDDEN;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
-    data->Window = SDL_CreateWindow("No Title Yet", 0, 0, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+    data->Window = SDL_CreateWindow("No Title Yet", 
+        (int)viewport->PlatformOsDesktopPos.x, (int)viewport->PlatformOsDesktopPos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
     if (main_viewport_data->GLContext)
         data->GLContext = SDL_GL_CreateContext(data->Window);
     viewport->PlatformHandle = (void*)data->Window;
@@ -328,7 +344,7 @@ static void ImGui_ImplSDL2_ShowWindow(ImGuiViewport* viewport)
             ex_style &= ~WS_EX_APPWINDOW;
             ex_style |= WS_EX_TOOLWINDOW;
             ::SetWindowLong(hwnd, GWL_EXSTYLE, ex_style);
-    }
+        }
 
         // SDL hack: SDL always activate/focus windows :/
         if (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing)
@@ -336,7 +352,7 @@ static void ImGui_ImplSDL2_ShowWindow(ImGuiViewport* viewport)
             ::ShowWindow(hwnd, SW_SHOWNA);
             return;
         }
-}
+    }
 #endif
 
     SDL_ShowWindow(data->Window);

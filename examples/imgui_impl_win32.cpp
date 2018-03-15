@@ -356,11 +356,10 @@ float ImGui_ImplWin32_GetDpiScaleForRect(int x1, int y1, int x2, int y2)
 struct ImGuiPlatformDataWin32
 {
     HWND    Hwnd;
-    bool    ExternalResize;
     DWORD   DwStyle;
     DWORD   DwExStyle;
 
-    ImGuiPlatformDataWin32() { Hwnd = NULL; ExternalResize = false; DwStyle = DwExStyle = 0; }
+    ImGuiPlatformDataWin32() { Hwnd = NULL; DwStyle = DwExStyle = 0; }
     ~ImGuiPlatformDataWin32() { IM_ASSERT(Hwnd == NULL); }
 };
 
@@ -386,12 +385,11 @@ static void ImGui_ImplWin32_CreateViewport(ImGuiViewport* viewport)
     // Create window
     RECT rect = { (LONG)viewport->PlatformOsDesktopPos.x, (LONG)viewport->PlatformOsDesktopPos.y, (LONG)(viewport->PlatformOsDesktopPos.x + viewport->Size.x), (LONG)(viewport->PlatformOsDesktopPos.y + viewport->Size.y) };
     ::AdjustWindowRectEx(&rect, data->DwStyle, FALSE, data->DwExStyle);
-    data->ExternalResize = true;
     data->Hwnd = ::CreateWindowExA(
         data->DwExStyle, "ImGui Platform", "No Title Yet", data->DwStyle,       // Style, class name, window name
         rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,    // Window area
         g_hWnd, NULL, ::GetModuleHandle(NULL), NULL);                           // Parent window, Menu, Instance, Param
-    data->ExternalResize = false;
+    viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = data->Hwnd;
 }
 
@@ -417,12 +415,10 @@ static void ImGui_ImplWin32_ShowWindow(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataWin32* data = (ImGuiPlatformDataWin32*)viewport->PlatformUserData;
     IM_ASSERT(data->Hwnd != 0);
-    data->ExternalResize = true;
     if (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing)
         ::ShowWindow(data->Hwnd, SW_SHOWNA);
     else
         ::ShowWindow(data->Hwnd, SW_SHOW);
-    data->ExternalResize = false;
 }
 
 static ImVec2 ImGui_ImplWin32_GetWindowPos(ImGuiViewport* viewport)
@@ -456,11 +452,9 @@ static void ImGui_ImplWin32_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGuiPlatformDataWin32* data = (ImGuiPlatformDataWin32*)viewport->PlatformUserData;
     IM_ASSERT(data->Hwnd != 0);
-    data->ExternalResize = true;
     RECT rect = { 0, 0, (LONG)size.x, (LONG)size.y };
     ::AdjustWindowRectEx(&rect, data->DwStyle, FALSE, data->DwExStyle); // Client to Screen
     ::SetWindowPos(data->Hwnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE);
-    data->ExternalResize = false;
 }
 
 static void ImGui_ImplWin32_SetWindowTitle(ImGuiViewport* viewport, const char* title)
@@ -489,26 +483,21 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
 
     if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hWnd))
     {
-        ImGuiIO& io = ImGui::GetIO();
-        ImGuiPlatformDataWin32* data = (ImGuiPlatformDataWin32*)viewport->PlatformUserData;
         switch (msg)
         {
         case WM_CLOSE:
             viewport->PlatformRequestClose = true;
             return 0;
         case WM_MOVE:
-            viewport->PlatformOsDesktopPos = ImVec2((float)(short)LOWORD(lParam), (float)(short)HIWORD(lParam));
+            viewport->PlatformRequestMove = true;
+            break;
+        case WM_SIZE:
+            viewport->PlatformRequestResize = true;
             break;
         case WM_NCHITTEST:
             // Let mouse pass-through the window, this is used while e.g. dragging a window, we creates a temporary overlay but want the cursor to aim behind our overlay.
             if (viewport->Flags & ImGuiViewportFlags_NoInputs)
                 return HTTRANSPARENT;
-            break;
-        case WM_SIZE:
-            if (!data->ExternalResize)
-                viewport->PlatformRequestResize = true;
-            if (io.RendererInterface.ResizeViewport)
-                io.RendererInterface.ResizeViewport(viewport, ImVec2((float)LOWORD(lParam), (float)HIWORD(lParam)));
             break;
         }
     }
