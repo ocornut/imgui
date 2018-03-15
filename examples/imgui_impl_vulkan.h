@@ -77,6 +77,7 @@ struct ImGui_ImplVulkan_WindowData
     VkSurfaceFormatKHR  SurfaceFormat;
     VkPresentModeKHR    PresentMode;
     VkRenderPass        RenderPass;
+    bool                ClearEnable;
     VkClearValue        ClearValue;
     uint32_t            BackBufferCount;
     VkImage             BackBuffer[16];

@@ -757,6 +757,7 @@ ImGui_ImplVulkan_WindowData::ImGui_ImplVulkan_WindowData()
     memset(&SurfaceFormat, 0, sizeof(SurfaceFormat));
     PresentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;
     RenderPass = VK_NULL_HANDLE;
+    ClearEnable = true;
     memset(&ClearValue, 0, sizeof(ClearValue));
     BackBufferCount = 0;
     memset(&BackBuffer, 0, sizeof(BackBuffer));
@@ -959,7 +960,7 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice 
         VkAttachmentDescription attachment = {};
         attachment.format = wd->SurfaceFormat.format;
         attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachment.loadOp = wd->ClearEnable ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1091,6 +1092,7 @@ static void ImGui_ImplVulkan_CreateViewport(ImGuiViewport* viewport)
     wd->PresentMode = ImGui_ImplVulkanH_SelectPresentMode(g_PhysicalDevice, wd->Surface, &present_mode, 1);
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
+    wd->ClearEnable = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? false : true;
     ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, wd, g_Allocator);
     ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, wd, g_Allocator, (int)viewport->Size.x, (int)viewport->Size.y);
 }
@@ -1110,6 +1112,7 @@ static void ImGui_ImplVulkan_ResizeViewport(ImGuiViewport* viewport, ImVec2 size
     ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData;
     if (data == NULL) // This is NULL for the main viewport (which is left to the user/app to handle)
         return;
+    data->WindowData.ClearEnable = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? false : true;
     ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, &data->WindowData, g_Allocator, (int)size.x, (int)size.y);
 }
 
@@ -1118,9 +1121,6 @@ static void ImGui_ImplVulkan_RenderViewport(ImGuiViewport* viewport)
     ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData;
     ImGui_ImplVulkan_WindowData* wd = &data->WindowData;
     VkResult err;
-
-    ImVec4 clear_color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg]; // FIXME-PLATFORM
-    clear_color.w = 1.0f;
 
     {
         ImGui_ImplVulkan_FrameData* fd = &wd->Frames[wd->FrameIndex];
@@ -1145,19 +1145,21 @@ static void ImGui_ImplVulkan_RenderViewport(ImGuiViewport* viewport)
             check_vk_result(err);
         }
         {
+            ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+            memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
+
             VkRenderPassBeginInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             info.renderPass = wd->RenderPass;
             info.framebuffer = wd->Framebuffer[fd->BackbufferIndex];
             info.renderArea.extent.width = wd->Width;
             info.renderArea.extent.height = wd->Height;
-            info.clearValueCount = 1;
-            info.pClearValues = &wd->ClearValue;
+            info.clearValueCount = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? 0 : 1;
+            info.pClearValues = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? NULL : &wd->ClearValue;
             vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
         }
     }
 
-    memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
     ImGui_ImplVulkan_RenderDrawData(wd->Frames[wd->FrameIndex].CommandBuffer, &viewport->DrawData);
 
     {

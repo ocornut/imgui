@@ -510,9 +510,10 @@ enum ImGuiViewportFlags_
 {
     ImGuiViewportFlags_MainViewport         = 1 << 0,
     ImGuiViewportFlags_HostOtherWindows     = 1 << 1,
-    ImGuiViewportFlags_NoDecoration         = 1 << 2,   // Platform Window: Disable platform title bar, borders, etc.
-    ImGuiViewportFlags_NoFocusOnAppearing   = 1 << 3,   // Platform Window: Don't take focus when created.
-    ImGuiViewportFlags_NoInputs             = 1 << 4    // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
+    ImGuiViewportFlags_NoRendererClear      = 1 << 2,   // Platform Window: Renderer doesn't need to clear the framebuffer ahead.
+    ImGuiViewportFlags_NoDecoration         = 1 << 3,   // Platform Window: Disable platform title bar, borders, etc.
+    ImGuiViewportFlags_NoFocusOnAppearing   = 1 << 4,   // Platform Window: Don't take focus when created.
+    ImGuiViewportFlags_NoInputs             = 1 << 5    // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
 };
 
 struct ImGuiViewport

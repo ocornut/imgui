@@ -6053,6 +6053,10 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
 
     if (window->Flags & ImGuiWindowFlags_FullViewport)
     {
+        // We currently have window fully covering a viewport and we disable WindowBg alpha, so clearing is not necessary
+        window->Viewport->Flags |= ImGuiViewportFlags_NoRendererClear;
+
+        // Position
         SetWindowPos(window, window->Viewport->Pos, ImGuiCond_Always);
         if (window->Viewport->PlatformRequestResize)
             SetWindowSize(window, window->Viewport->Size, ImGuiCond_Always);
@@ -6606,6 +6610,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             ImU32 bg_col = GetColorU32(GetWindowBgColorIdxFromFlags(flags));
             if (g.NextWindowData.BgAlphaCond != 0)
                 bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(g.NextWindowData.BgAlphaVal) << IM_COL32_A_SHIFT);
+            if (window->Flags & ImGuiWindowFlags_FullViewport)
+                bg_col = (bg_col | IM_COL32_A_MASK);
             window->DrawList->AddRectFilled(window->Pos+ImVec2(0,window->TitleBarHeight()), window->Pos+window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawCornerFlags_All : ImDrawCornerFlags_Bot);
 
             // Title bar

@@ -587,10 +587,10 @@ static void ImGui_ImplDX10_ResizeViewport(ImGuiViewport* viewport, ImVec2 size)
 static void ImGui_ImplDX10_RenderViewport(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataDx10* data = (ImGuiPlatformDataDx10*)viewport->RendererUserData;
-    ImVec4 clear_color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg]; // FIXME-PLATFORM
-    clear_color.w = 1.0f;
+    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
     g_pd3dDevice->OMSetRenderTargets(1, &data->RTView, NULL);
-    g_pd3dDevice->ClearRenderTargetView(data->RTView, (float*)&clear_color);
+    if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
+        g_pd3dDevice->ClearRenderTargetView(data->RTView, (float*)&clear_color);
     ImGui_ImplDX10_RenderDrawData(&viewport->DrawData);
 }
 

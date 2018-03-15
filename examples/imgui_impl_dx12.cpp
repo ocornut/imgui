@@ -734,10 +734,10 @@ static void ImGui_ImplDX12_RenderViewport(ImGuiViewport* viewport)
     IM_ASSERT(0);
     (void)data;
     /*
-    ImVec4 clear_color = ImGui::GetStyle().Colors[ImGuiCol_WindowBg]; // FIXME-PLATFORM
-    clear_color.w = 1.0f;
+    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
     g_pd3dDeviceContext->OMSetRenderTargets(1, &data->RTView, NULL);
-    g_pd3dDeviceContext->ClearRenderTargetView(data->RTView, (float*)&clear_color);
+    if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
+        g_pd3dDeviceContext->ClearRenderTargetView(data->RTView, (float*)&clear_color);
     */
     ImGui_ImplDX12_RenderDrawData(&viewport->DrawData);
 }
