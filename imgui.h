@@ -1596,6 +1596,7 @@ struct ImDrawList
 };
 
 // All draw data to render an ImGui frame
+// (NB: the style and the naming convention here is a little inconsistent but we preserve them for backward compatibility purpose)
 struct ImDrawData
 {
     bool            Valid;                  // Only valid after Render() is called and before the next NewFrame() is called.

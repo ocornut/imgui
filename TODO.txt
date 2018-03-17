@@ -137,8 +137,10 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
 
  - combo: use clipper: make it easier to disable clipper with a single flag.
- - combo: option for BeginCombo to not return true when unchanged (#1182)
+ - combo: flag for BeginCombo to not return true when unchanged (#1182)
+ - combo: a way/helper to customize the combo preview (#1658)
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
+ - listbox: refactor and clean the begin/end api
  - listbox: multiple selection.
  - listbox: unselect option (#1208)
  - listbox: make it easier/more natural to implement range-select (need some sort of info/ref about the last clicked/focused item that user can translate to an index?) (wip stash)
@@ -207,6 +209,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
 
  - drag and drop: add demo. (#143, #479)
+ - drag and drop: allow using with other mouse buttons (where activeid won't be set). (#1637)
  - drag and drop: test with reordering nodes (in a list, or a tree node). (#143)
  - drag and drop: test integrating with os drag and drop.
  - node/graph editor (#306)
@@ -258,6 +261,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - misc: make the ImGuiCond values linear (non-power-of-two). internal storage for ImGuiWindow can use integers to combine into flags (Why?)
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: fix for compilation settings where stdcall isn't the default (e.g. vectorcall) (#1230)
+ - misc: PushItemFlag(): add a flag to disable keyboard capture when used with mouse? (#1682)
+
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
 
  - demo: add vertical separator demo
