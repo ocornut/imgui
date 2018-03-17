@@ -1120,7 +1120,7 @@ namespace ImGui
 //-----------------------------------------------------------------------------
 
 // Lightweight std::vector<> like class to avoid dragging dependencies (also: Windows implementation of STL with debug enabled is absurdly slow, so let's bypass it so our code runs fast in debug).
-// Our implementation does NOT call C++ constructors/destructors. This is intentional and we do not require it. Do not use this class as a straight std::vector replacement in your code!
+// Important: Our implementation does NOT call C++ constructors/destructors. This is intentional, we do not require it but you have to be mindful of that. Do not use this class as a straight std::vector replacement in your code!
 template<typename T>
 class ImVector
 {
@@ -1151,18 +1151,18 @@ public:
     inline const value_type&    front() const                   { IM_ASSERT(Size > 0); return Data[0]; }
     inline value_type&          back()                          { IM_ASSERT(Size > 0); return Data[Size - 1]; }
     inline const value_type&    back() const                    { IM_ASSERT(Size > 0); return Data[Size - 1]; }
-    inline void                 swap(ImVector<T>& rhs)          { int rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; int rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
+    inline void                 swap(ImVector<value_type>& rhs) { int rhs_size = rhs.Size; rhs.Size = Size; Size = rhs_size; int rhs_cap = rhs.Capacity; rhs.Capacity = Capacity; Capacity = rhs_cap; value_type* rhs_data = rhs.Data; rhs.Data = Data; Data = rhs_data; }
 
     inline int          _grow_capacity(int sz) const            { int new_capacity = Capacity ? (Capacity + Capacity/2) : 8; return new_capacity > sz ? new_capacity : sz; }
     inline void         resize(int new_size)                    { if (new_size > Capacity) reserve(_grow_capacity(new_size)); Size = new_size; }
-    inline void         resize(int new_size, const T& v)        { if (new_size > Capacity) reserve(_grow_capacity(new_size)); if (new_size > Size) for (int n = Size; n < new_size; n++) Data[n] = v; Size = new_size; }
+    inline void         resize(int new_size,const value_type& v){ if (new_size > Capacity) reserve(_grow_capacity(new_size)); if (new_size > Size) for (int n = Size; n < new_size; n++) Data[n] = v; Size = new_size; }
     inline void         reserve(int new_capacity)
     {
         if (new_capacity <= Capacity) 
             return;
-        T* new_data = (value_type*)ImGui::MemAlloc((size_t)new_capacity * sizeof(T));
+        value_type* new_data = (value_type*)ImGui::MemAlloc((size_t)new_capacity * sizeof(value_type));
         if (Data)
-            memcpy(new_data, Data, (size_t)Size * sizeof(T));
+            memcpy(new_data, Data, (size_t)Size * sizeof(value_type));
         ImGui::MemFree(Data);
         Data = new_data;
         Capacity = new_capacity;
